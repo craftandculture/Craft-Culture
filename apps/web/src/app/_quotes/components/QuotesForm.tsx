@@ -2,7 +2,8 @@
 
 import { IconPlus } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
-import React, { useState } from 'react';
+import { parseAsArrayOf, parseAsJson, useQueryState } from 'nuqs';
+import React, { useMemo } from 'react';
 
 import { Product } from '@/app/_products/controller/productsGetMany';
 import Button from '@/app/_ui/components/Button/Button';
@@ -19,67 +20,110 @@ export interface LineItem {
   id: string;
   offerId?: string;
   quantity?: number;
-  product?: Product; // Store the full product object
+  product?: Product;
+}
+
+interface URLLineItem {
+  productId: string;
+  offerId: string;
+  quantity: number;
 }
 
 const QuotesForm = () => {
   const api = useTRPC();
 
-  const [lineItems, setLineItems] = useState<LineItem[]>([
-    { id: crypto.randomUUID() },
-  ]);
+  // URL is the single source of truth
+  const [urlLineItems, setUrlLineItems] = useQueryState<URLLineItem[]>(
+    'items',
+    parseAsArrayOf(
+      parseAsJson<URLLineItem>((value) => {
+        if (
+          typeof value === 'object' &&
+          value !== null &&
+          'productId' in value &&
+          'offerId' in value &&
+          'quantity' in value
+        ) {
+          return value as URLLineItem;
+        }
+        return null;
+      }),
+    ).withDefault([]),
+  );
 
-  // Get complete line items for quote calculation
-  const completeLineItems = lineItems
-    .filter(
-      (item) =>
-        item.offerId &&
-        item.offerId !== '' &&
-        typeof item.quantity === 'number' &&
-        item.quantity > 0,
-    )
-    .map((item) => ({
-      offerId: item.offerId!,
-      quantity: item.quantity!,
+  // Fetch products for URL line items
+  const productIds = useMemo(
+    () => [...new Set(urlLineItems.map((item) => item.productId))],
+    [urlLineItems],
+  );
+
+  const { data: productsData } = useQuery({
+    ...api.products.getMany.queryOptions({
+      productIds,
+    }),
+    enabled: productIds.length > 0,
+  });
+
+  // Derive line items from URL and products data
+  const lineItems = useMemo<LineItem[]>(() => {
+    if (urlLineItems.length === 0) {
+      return [{ id: crypto.randomUUID() }];
+    }
+
+    const productMap = productsData
+      ? new Map(productsData.data.map((p) => [p.id, p]))
+      : new Map();
+
+    return urlLineItems.map((item) => ({
+      id: `${item.productId}-${item.offerId}`,
+      offerId: item.offerId,
+      quantity: item.quantity,
+      product: productMap.get(item.productId),
     }));
+  }, [urlLineItems, productsData]);
 
   // Fetch quote data
   const { data: quoteData, isLoading: isQuoteLoading } = useQuery({
     ...api.quotes.get.queryOptions({
-      lineItems: completeLineItems,
+      lineItems: urlLineItems,
     }),
-    enabled: completeLineItems.length > 0,
+    enabled: urlLineItems.length > 0,
   });
 
   const handleAddRow = () => {
-    if (lineItems.length < 10) {
-      setLineItems((prev) => [...prev, { id: crypto.randomUUID() }]);
+    if (urlLineItems.length < 10) {
+      void setUrlLineItems([...urlLineItems, {} as URLLineItem]);
     }
   };
 
   const handleRemoveRow = (id: string) => {
-    setLineItems((prev) => prev.filter((item) => item.id !== id));
+    const index = lineItems.findIndex((item) => item.id === id);
+    if (index !== -1) {
+      const newItems = urlLineItems.filter((_, i) => i !== index);
+      void setUrlLineItems(newItems.length > 0 ? newItems : []);
+    }
   };
 
   const handleProductChange = (id: string, product: Product) => {
-    setLineItems((prev) =>
-      prev.map((item) =>
-        item.id === id
-          ? {
-              ...item,
-              offerId: product.productOffers?.[0]?.id,
-              product: product, // Store the full product
-              quantity: product.productOffers?.[0]?.availableQuantity ?? 1,
-            }
-          : item,
-      ),
-    );
+    const index = lineItems.findIndex((item) => item.id === id);
+    if (index !== -1) {
+      const newItems = [...urlLineItems];
+      newItems[index] = {
+        productId: product.id,
+        offerId: product.productOffers?.[0]?.id || '',
+        quantity: 1,
+      };
+      void setUrlLineItems(newItems);
+    }
   };
 
   const handleQuantityChange = (id: string, quantity: number) => {
-    setLineItems((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, quantity } : item)),
-    );
+    const index = lineItems.findIndex((item) => item.id === id);
+    if (index !== -1 && urlLineItems[index]) {
+      const newItems = [...urlLineItems];
+      newItems[index] = { ...newItems[index]!, quantity };
+      void setUrlLineItems(newItems);
+    }
   };
 
   return (
@@ -89,7 +133,7 @@ const QuotesForm = () => {
         {/* Header Row - Hidden on mobile */}
         {lineItems.length > 0 && (
           <div className="hidden grid-cols-12 gap-3 px-2 md:grid">
-            <div className="col-span-6">
+            <div className="col-span-5">
               <Typography
                 variant="bodyXs"
                 className="text-text-muted font-medium uppercase"
@@ -97,7 +141,7 @@ const QuotesForm = () => {
                 Product
               </Typography>
             </div>
-            <div className="col-span-2">
+            <div className="col-span-3">
               <Typography
                 variant="bodyXs"
                 className="text-text-muted font-medium uppercase"

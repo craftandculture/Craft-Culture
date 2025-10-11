@@ -37,6 +37,7 @@ const columnRangeSchema = z
 
 const cellMappingSchema = z.object({
   name: columnRangeSchema.optional(),
+  lwin18: columnRangeSchema.optional(),
   region: columnRangeSchema.optional(),
   producer: columnRangeSchema.optional(),
   vintage: columnRangeSchema.optional(),

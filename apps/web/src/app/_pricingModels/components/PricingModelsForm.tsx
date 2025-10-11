@@ -34,18 +34,19 @@ import createPricingModelSchema, {
 
 const defaultCellMappings = {
   name: "'Example Pricing Model'!A7:A16",
-  region: "'Example Pricing Model'!B7:B16",
-  producer: "'Example Pricing Model'!C7:C16",
-  vintage: "'Example Pricing Model'!D7:D16",
-  quantity: "'Example Pricing Model'!E7:E16",
-  unitCount: "'Example Pricing Model'!F7:F16",
-  unitSize: "'Example Pricing Model'!G7:G16",
-  source: "'Example Pricing Model'!H7:H16",
-  price: "'Example Pricing Model'!I7:I16",
-  currency: "'Example Pricing Model'!J7:J16",
-  exchangeRateUsd: "'Example Pricing Model'!K7:K16",
-  basePriceUsd: "'Example Pricing Model'!L7:L16",
-  priceUsd: "'Example Pricing Model'!Q7:Q16",
+  lwin18: "'Example Pricing Model'!B7:B16",
+  region: "'Example Pricing Model'!C7:C16",
+  producer: "'Example Pricing Model'!D7:D16",
+  vintage: "'Example Pricing Model'!E7:E16",
+  quantity: "'Example Pricing Model'!F7:F16",
+  unitCount: "'Example Pricing Model'!G7:G16",
+  unitSize: "'Example Pricing Model'!H7:H16",
+  source: "'Example Pricing Model'!I7:I16",
+  price: "'Example Pricing Model'!J7:J16",
+  currency: "'Example Pricing Model'!K7:K16",
+  exchangeRateUsd: "'Example Pricing Model'!L7:L16",
+  basePriceUsd: "'Example Pricing Model'!M7:M16",
+  priceUsd: "'Example Pricing Model'!R7:R16",
   customerName: "'Example Pricing Model'!B1",
   customerEmail: "'Example Pricing Model'!B2",
   customerType: "'Example Pricing Model'!B3",
@@ -262,7 +263,7 @@ const PricingModelsForm = () => {
                 <td className="px-4 py-3">
                   <Input
                     type="text"
-                    placeholder="'Example Pricing Model'!Q7:Q16"
+                    placeholder="'Example Pricing Model'!R7:R16"
                     isDisabled={isSubmitting}
                     {...register('cellMappings.priceUsd')}
                   />
@@ -351,7 +352,7 @@ const PricingModelsForm = () => {
               <tr>
                 <td className="px-4 py-3">
                   <Typography variant="bodySm" className="font-medium">
-                    Region
+                    LWIN18
                   </Typography>
                   <Typography variant="bodySm" className="text-text-muted">
                     Column range (optional, max 10 rows)
@@ -361,6 +362,29 @@ const PricingModelsForm = () => {
                   <Input
                     type="text"
                     placeholder="'Example Pricing Model'!B7:B16"
+                    isDisabled={isSubmitting}
+                    {...register('cellMappings.lwin18')}
+                  />
+                  {errors.cellMappings?.lwin18 && (
+                    <FormFieldError>
+                      {errors.cellMappings.lwin18.message}
+                    </FormFieldError>
+                  )}
+                </td>
+              </tr>
+              <tr>
+                <td className="px-4 py-3">
+                  <Typography variant="bodySm" className="font-medium">
+                    Region
+                  </Typography>
+                  <Typography variant="bodySm" className="text-text-muted">
+                    Column range (optional, max 10 rows)
+                  </Typography>
+                </td>
+                <td className="px-4 py-3">
+                  <Input
+                    type="text"
+                    placeholder="'Example Pricing Model'!C7:C16"
                     isDisabled={isSubmitting}
                     {...register('cellMappings.region')}
                   />
