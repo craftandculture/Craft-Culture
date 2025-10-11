@@ -5,9 +5,9 @@ import Icon, { type IconProp } from '../Icon/Icon';
 
 export const inputStyles = tv({
   slots: {
-    root: 'box-border flex shrink-0 items-center font-sans text-sm font-medium tracking-tight ring-2 ring-transparent transition-all dark:bg-white/10',
+    root: 'box-border flex shrink-0 items-center font-sans font-medium tracking-tight ring-2 ring-transparent transition-all dark:bg-white/10',
     input:
-      'placeholder:text-text-muted/75 text-text-primary block max-w-full grow border-none bg-transparent text-sm focus:outline-none',
+      'placeholder:text-text-muted/75 text-text-primary block max-w-full grow border-none bg-transparent focus:outline-none',
   },
   variants: {
     variant: {

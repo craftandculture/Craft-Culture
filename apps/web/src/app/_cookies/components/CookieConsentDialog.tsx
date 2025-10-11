@@ -44,13 +44,13 @@ const CookieConsentDialog = ({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent preventClosing={!consented} className="max-w-sm">
-        <DialogHeader>
-          <DialogTitle variant="labelMd">Cookie instellingen</DialogTitle>
+        <DialogHeader showCloseButton={false}>
+          <DialogTitle variant="labelMd">Cookie settings</DialogTitle>
         </DialogHeader>
         <DialogBody>
           <DialogDescription colorRole="muted" variant="bodySm">
-            Wij gebruiken cookies om uw ervaring te personaliseren en te
-            analyseren. Lees ons{' '}
+            We use cookies to personalize and analyze your experience. Read
+            our{' '}
             <Link
               href="/policies/privacy"
               onClick={() => hideCookieDialog()}
@@ -58,7 +58,7 @@ const CookieConsentDialog = ({
               colorRole="muted"
               showUnderline
             >
-              Privacybeleid
+              Privacy Policy
             </Link>
             .
           </DialogDescription>
@@ -68,24 +68,24 @@ const CookieConsentDialog = ({
               <div className="flex flex-col gap-1.5">
                 <CookiePreference
                   alwaysActive
-                  title="Noodzakelijk"
-                  description="Zorgt voor de juiste technische werking van onze diensten."
+                  title="Necessary"
+                  description="Ensures the proper technical operation of our services."
                 />
                 <CookiePreference
-                  title="Voorkeuren"
-                  description="Maakt het opslaan van uw voorkeuren en instellingen mogelijk."
+                  title="Preferences"
+                  description="Enables saving your preferences and settings."
                   value={newPreferences}
                   onChange={setPreferences}
                 />
                 <CookiePreference
                   title="Analytics"
-                  description="Maakt analyse en verbetering van de prestaties van onze diensten mogelijk."
+                  description="Enables analysis and improvement of the performance of our services."
                   value={newAnalytics}
                   onChange={setAnalytics}
                 />
                 <CookiePreference
                   title="Marketing"
-                  description="Maakt gerichte communicatie met de meest relevante inhoud en gepersonaliseerde communicatie op onze en derde partij websites mogelijk."
+                  description="Enables targeted communication with the most relevant content and personalized communication on our and third-party websites."
                   value={newMarketing}
                   onChange={setMarketing}
                 />
@@ -109,7 +109,7 @@ const CookieConsentDialog = ({
                     hideCookieDialog();
                   }}
                 >
-                  <ButtonContent>Opslaan</ButtonContent>
+                  <ButtonContent>Save</ButtonContent>
                 </Button>
               </div>
             </>
@@ -125,7 +125,7 @@ const CookieConsentDialog = ({
                     setCustomizationOpen(true);
                   }}
                 >
-                  <ButtonContent>Aanpassen</ButtonContent>
+                  <ButtonContent>Customize</ButtonContent>
                 </Button>
                 <Button
                   className="grow"
@@ -140,7 +140,7 @@ const CookieConsentDialog = ({
                     hideCookieDialog();
                   }}
                 >
-                  <ButtonContent>Alles accepteren</ButtonContent>
+                  <ButtonContent>Accept all</ButtonContent>
                 </Button>
               </div>
             </>
