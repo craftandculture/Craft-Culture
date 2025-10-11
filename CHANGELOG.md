@@ -1,3 +1,13 @@
+# [1.2.0](https://github.com/craftandculture/Craft-Culture/compare/v1.1.0...v1.2.0) (2025-10-11)
+
+
+### Features
+
+* **pricingModels:** creating pricing models ([6194c2b](https://github.com/craftandculture/Craft-Culture/commit/6194c2b97357d7a9d00dc22f783be863bc12c58c))
+* **pricingModels:** working formulas ([7661737](https://github.com/craftandculture/Craft-Culture/commit/76617370744525bfc5e09f8aa63c83ead8217245))
+* working ([f9a9e8f](https://github.com/craftandculture/Craft-Culture/commit/f9a9e8f74c7790b581e817d62d653d46b9a69b3f))
+* working ([a260db6](https://github.com/craftandculture/Craft-Culture/commit/a260db679a24dd740277ffa3dbd847d1237e590e))
+
 # [1.1.0](https://github.com/craftandculture/Craft-Culture/compare/v1.0.0...v1.1.0) (2025-10-11)
 
 
