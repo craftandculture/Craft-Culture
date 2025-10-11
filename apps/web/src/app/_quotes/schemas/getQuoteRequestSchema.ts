@@ -3,6 +3,7 @@ import { z } from 'zod';
 const getQuoteRequestSchema = z.object({
   lineItems: z.array(
     z.object({
+      productId: z.uuid(),
       offerId: z.uuid(),
       quantity: z.number().int().min(1),
     }),
