@@ -1,13 +1,16 @@
-import { zodResolver } from '@hookform/resolvers/zod';
-import { UseFormProps, useForm } from 'react-hook-form';
-import { z } from 'zod';
+import { standardSchemaResolver } from '@hookform/resolvers/standard-schema';
+import { StandardSchemaV1 } from '@trpc/server/unstable-core-do-not-import';
+import { FieldValues, UseFormProps, useForm } from 'react-hook-form';
 
-const useZodForm = <TSchema extends z.ZodSchema, TContext = unknown>(
-  schema: TSchema,
-  props?: UseFormProps<z.infer<TSchema>, TContext>,
+const useZodForm = <
+  TOutput extends FieldValues = FieldValues,
+  TContext = unknown,
+>(
+  schema: StandardSchemaV1<TOutput>,
+  props?: Omit<UseFormProps<TOutput, TContext>, 'resolver'>,
 ) => {
-  return useForm<z.infer<TSchema>>({
-    resolver: zodResolver(schema),
+  return useForm<TOutput, TContext>({
+    resolver: standardSchemaResolver(schema),
     ...props,
   });
 };

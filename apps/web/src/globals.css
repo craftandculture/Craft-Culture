@@ -6,9 +6,9 @@
 @custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
 
 @theme {
-  --font-sans: var(--font-easybooker), var(--default-font-family);
-  --font-heading: var(--font-circular), var(--font-sans), var(--default-font-family);
-  --font-display: var(--font-display), var(--font-sans), var(--default-font-family);
+  --font-sans: var(--font-inter), var(--default-font-family);
+  --font-heading: var(--font-inter), var(--font-sans), var(--default-font-family);
+  --font-display: var(--font-inter), var(--font-sans), var(--default-font-family);
 
   --text-xs: 0.75rem;
   --text-sm: 0.875rem;
