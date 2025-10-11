@@ -124,8 +124,8 @@ class ExchangeRateService {
   ): Promise<MultiDayRateResult> {
     this.validateCurrencySupport(from, to);
 
-    const startDateStr = startDate.toISOString().split('T')[0];
-    const endDateStr = endDate.toISOString().split('T')[0];
+    const startDateStr = startDate.toISOString().split('T')[0] as string;
+    const endDateStr = endDate.toISOString().split('T')[0] as string;
 
     // Determine the ECB API call strategy
     let ecbFromCurrency: SupportedCurrency = 'EUR';
@@ -165,6 +165,7 @@ class ExchangeRateService {
 
       // Combine the rates by date
       const combinedRates: ExchangeRateData[] = [];
+
       const fromToEurMap = new Map(
         fromToEurResult.rates.map((r) => [r.date, r.rate]),
       );
@@ -204,13 +205,18 @@ class ExchangeRateService {
 
       // Find the correct series key (ECB response structure can vary)
       const seriesKeys = Object.keys(data.dataSets[0]?.series || {});
-      const seriesKey = seriesKeys[0]; // Usually '0:0:0:0:0' but can vary
+      const seriesKey = seriesKeys[0] as string; // Usually '0:0:0:0:0' but can vary
 
       if (!data.dataSets?.[0]?.series?.[seriesKey]?.observations) {
         throw new Error('Invalid ECB response structure or no data available');
       }
 
-      const dateValues = data.structure.dimensions.observation[0].values;
+      const dateValues = data.structure.dimensions.observation[0]
+        ?.values as Array<{
+        id: string;
+        name: string;
+      }>;
+
       const observations = data.dataSets[0].series[seriesKey].observations;
 
       const rates: ExchangeRateData[] = [];
@@ -265,7 +271,7 @@ class ExchangeRateService {
     );
 
     // Get the rate for the specific date or the closest available
-    const targetDateStr = date.toISOString().split('T')[0];
+    const targetDateStr = date.toISOString().split('T')[0] as string;
 
     const exactMatch = multiDayResult.rates.find(
       (r) => r.date === targetDateStr,
@@ -283,11 +289,11 @@ class ExchangeRateService {
     const previousRates = sortedRates.filter((r) => r.date <= targetDateStr);
 
     if (previousRates.length > 0) {
-      return previousRates[previousRates.length - 1].rate;
+      return previousRates[previousRates.length - 1]?.rate ?? 0;
     }
 
     // If no previous date found, use the earliest available date
-    return sortedRates[0].rate;
+    return sortedRates[0]?.rate ?? 0;
   }
 
   async convertAmount(
@@ -328,7 +334,7 @@ class ExchangeRateService {
 
       while (currentDate <= endDate) {
         rates.push({
-          date: currentDate.toISOString().split('T')[0],
+          date: currentDate.toISOString().split('T')[0] as string,
           rate: 1.0,
           fromCurrency: from,
           toCurrency: to,
@@ -340,8 +346,8 @@ class ExchangeRateService {
         rates,
         fromCurrency: from,
         toCurrency: to,
-        startDate: startDate.toISOString().split('T')[0],
-        endDate: endDate.toISOString().split('T')[0],
+        startDate: startDate.toISOString().split('T')[0] as string,
+        endDate: endDate.toISOString().split('T')[0] as string,
       };
     }
 
@@ -384,7 +390,7 @@ class ExchangeRateService {
 
     // If exact date exists, use it
     const exactMatch = sortedRates.find(
-      (r) => r.date === targetDate.toISOString().split('T')[0],
+      (r) => r.date === (targetDate.toISOString().split('T')[0] as string),
     );
     if (exactMatch) {
       return exactMatch;
@@ -392,10 +398,10 @@ class ExchangeRateService {
 
     // Find the closest previous date
     const previousRates = sortedRates.filter(
-      (r) => r.date < targetDate.toISOString().split('T')[0],
+      (r) => r.date < (targetDate.toISOString().split('T')[0] as string),
     );
     if (previousRates.length > 0) {
-      return previousRates[previousRates.length - 1];
+      return previousRates[previousRates.length - 1] || null;
     }
 
     // If no previous date found, use the earliest available date
