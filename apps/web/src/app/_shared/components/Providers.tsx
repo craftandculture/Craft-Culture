@@ -6,7 +6,7 @@ const Providers = ({ children }: React.PropsWithChildren) => {
   return (
     <ThemeProvider
       enableSystem={true}
-      storageKey="easybooker.theme"
+      storageKey="craft-culture.theme"
       defaultTheme="light"
     >
       {children}

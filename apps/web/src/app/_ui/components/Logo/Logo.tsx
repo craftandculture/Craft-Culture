@@ -59,7 +59,7 @@ const Logo = ({ colorRole, iconOnly = false, size, className }: LogoProps) => {
       className={wrapper({ colorRole, className, size })}
       xmlns="http://www.w3.org/2000/svg"
     >
-      <title>Easybooker Logo</title>
+      <title>Craft Culture Logo</title>
       <path
         fillRule="evenodd"
         clipRule="evenodd"

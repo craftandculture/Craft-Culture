@@ -25,7 +25,7 @@ const authRoutes = [
 export async function middleware(request: NextRequest) {
   const hasSession =
     getSessionCookie(request, {
-      cookiePrefix: 'easybooker',
+      cookiePrefix: 'craft-culture',
     }) !== null;
 
   const isPublic = publicRoutes.some((route) =>
