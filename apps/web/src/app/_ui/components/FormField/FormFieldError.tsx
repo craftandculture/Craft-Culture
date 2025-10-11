@@ -7,7 +7,6 @@ import Typography, { TypographyProps } from '../Typography/Typography';
 const formFieldErrorStyles = tv({
   slots: {
     wrapper: 'text-text-danger flex items-center gap-1',
-    icon: '-translate-y-px',
   },
 });
 
@@ -16,7 +15,7 @@ export interface FormFieldErrorProps
     VariantProps<typeof formFieldErrorStyles>,
     Omit<TypographyProps, 'asChild'> {}
 
-const { wrapper, icon } = formFieldErrorStyles();
+const { wrapper } = formFieldErrorStyles();
 
 const FormFieldError = ({
   className,
@@ -25,7 +24,7 @@ const FormFieldError = ({
 }: FormFieldErrorProps) => {
   return (
     <Typography variant="bodySm" className={wrapper({ className })} {...props}>
-      <Icon icon={IconAlertCircle} className={icon()} />
+      <Icon icon={IconAlertCircle} />
       {children}
     </Typography>
   );
