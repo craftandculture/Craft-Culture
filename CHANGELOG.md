@@ -1,3 +1,10 @@
+## [1.2.2](https://github.com/craftandculture/Craft-Culture/compare/v1.2.1...v1.2.2) (2025-10-11)
+
+
+### Bug Fixes
+
+* fixes ([c0e94c3](https://github.com/craftandculture/Craft-Culture/commit/c0e94c30102da387ebf371ed3e82971e8dbf4038))
+
 ## [1.2.1](https://github.com/craftandculture/Craft-Culture/compare/v1.2.0...v1.2.1) (2025-10-11)
 
 
