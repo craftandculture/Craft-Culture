@@ -31,3 +31,17 @@ export const protectedProcedure = t.procedure.use(({ ctx, next }) => {
     },
   });
 });
+
+/**
+ * Admin procedure
+ *
+ * Only accessible to users with admin role.
+ * Verifies the user is authenticated and has admin role.
+ *
+ * @see https://trpc.io/docs/procedures
+ */
+export const adminProcedure = protectedProcedure.use(async ({ ctx, next }) => {
+  ctx.accessControl(() => ctx.user.role === 'admin');
+
+  return await next({ ctx });
+});

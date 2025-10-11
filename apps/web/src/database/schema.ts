@@ -9,7 +9,6 @@ import {
   pgTable,
   text,
   timestamp,
-  unique,
   uuid,
 } from 'drizzle-orm/pg-core';
 
@@ -25,18 +24,39 @@ export const productSource = pgEnum('product_source', ['cultx']);
 
 export const customerType = pgEnum('user_type', ['b2b', 'b2c']);
 
+export const userRole = pgEnum('user_role', ['user', 'admin']);
+
+export const sheets = pgTable('sheets', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  name: text('name').notNull(),
+  googleSheetId: text('google_sheet_id').notNull().unique(),
+  formulaData: jsonb('formula_data').notNull(),
+  ...timestamps,
+}).enableRLS();
+
 export const pricingModels = pgTable(
   'pricing_models',
   {
     id: uuid('id').primaryKey().defaultRandom(),
-    isPublic: boolean('is_public').notNull().default(false),
-    isActive: boolean('is_active').notNull().default(true),
-    googleSheetId: text('google_sheet_id').notNull().unique(),
-    sheetIndex: integer('sheet_index').notNull().default(0),
-    formulaData: jsonb('formula_data').notNull(),
+    name: text('name').notNull(),
+    isDefaultB2C: boolean('is_default_b2c').notNull().default(false),
+    isDefaultB2B: boolean('is_default_b2b').notNull().default(false),
+    sheetId: uuid('sheet_id')
+      .references(() => sheets.id, { onDelete: 'cascade' })
+      .notNull(),
+    cellMappings: jsonb('cell_mappings').notNull(),
     ...timestamps,
   },
-  (table) => [unique().on(table.googleSheetId, table.sheetIndex)],
+  (table) => [
+    // Ensure only one default B2C pricing model
+    index('unique_default_b2c')
+      .on(table.isDefaultB2C)
+      .where(sql`${table.isDefaultB2C} = true`),
+    // Ensure only one default B2B pricing model
+    index('unique_default_b2b')
+      .on(table.isDefaultB2B)
+      .where(sql`${table.isDefaultB2B} = true`),
+  ],
 ).enableRLS();
 
 export const users = pgTable('users', {
@@ -45,6 +65,7 @@ export const users = pgTable('users', {
   email: text('email').notNull().unique(),
   emailVerified: boolean('email_verified').notNull().default(false),
   image: text('image'),
+  role: userRole('role').notNull().default('user'),
   customerType: customerType('customer_type').notNull().default('b2c'),
   onboardingCompletedAt: timestamp('onboarding_completed_at', {
     mode: 'date',
