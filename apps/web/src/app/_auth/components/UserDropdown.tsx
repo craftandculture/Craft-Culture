@@ -1,7 +1,8 @@
 'use client';
 
-import { IconLogout } from '@tabler/icons-react';
+import { IconLogout, IconSettings } from '@tabler/icons-react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
 import Button from '@/app/_ui/components/Button/Button';
@@ -50,6 +51,19 @@ const UserDropdown = ({ user }: UserDropdownProps) => {
           </Typography>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
+
+        {user.role === 'admin' && (
+          <>
+            <DropdownMenuItem asChild>
+              <Link href="/platform/admin/pricing-models">
+                <DropdownMenuContentWrapper iconLeft={IconSettings} align="start">
+                  Admin
+                </DropdownMenuContentWrapper>
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+          </>
+        )}
 
         <DropdownMenuItem
           onSelect={() => {
