@@ -1,6 +1,7 @@
 import {
   boolean,
   doublePrecision,
+  index,
   integer,
   pgEnum,
   pgTable,
@@ -8,6 +9,7 @@ import {
   timestamp,
   uuid,
 } from 'drizzle-orm/pg-core';
+import { sql } from 'drizzle-orm';
 
 export const timestamps = {
   createdAt: timestamp('created_at', { mode: 'date' }).notNull().defaultNow(),
@@ -94,16 +96,32 @@ export const passkeys = pgTable('passkeys', {
   ...timestamps,
 }).enableRLS();
 
-export const products = pgTable('products', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  lwin18: text('lwin18').notNull().unique(),
-  name: text('name').notNull(),
-  region: text('region'),
-  producer: text('producer'),
-  year: integer('year'),
-  imageUrl: text('image_url'),
-  ...timestamps,
-}).enableRLS();
+export const products = pgTable(
+  'products',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    lwin18: text('lwin18').notNull().unique(),
+    name: text('name').notNull(),
+    region: text('region'),
+    producer: text('producer'),
+    year: integer('year'),
+    imageUrl: text('image_url'),
+    ...timestamps,
+  },
+  (table) => ({
+    searchIdx: index('products_search_idx')
+      .using('gin', sql`(
+        setweight(to_tsvector('english', coalesce(${table.name}, '')), 'A') ||
+        setweight(to_tsvector('english', coalesce(${table.producer}, '')), 'B') ||
+        setweight(to_tsvector('english', coalesce(${table.region}, '')), 'C') ||
+        setweight(to_tsvector('english', coalesce(${table.year}::text, '')), 'D')
+      )`),
+    nameTrigramIdx: index('products_name_trigram_idx')
+      .using('gin', sql`${table.name} gin_trgm_ops`),
+    producerTrigramIdx: index('products_producer_trigram_idx')
+      .using('gin', sql`${table.producer} gin_trgm_ops`),
+  }),
+).enableRLS();
 
 export const productOffers = pgTable('product_offers', {
   id: uuid('id').primaryKey().defaultRandom(),
