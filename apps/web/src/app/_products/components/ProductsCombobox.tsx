@@ -138,6 +138,8 @@ const ProductsCombobox = ({
             <ProductPreview
               imageUrl={selectedProduct.imageUrl}
               name={selectedProduct.name}
+              unitCount={selectedProduct.productOffers?.[0]?.unitCount}
+              unitSize={selectedProduct.productOffers?.[0]?.unitSize}
               className="flex-1"
             />
           ) : (
@@ -203,13 +205,20 @@ const ProductsCombobox = ({
                             variant="bodyXs"
                             className="text-text-muted"
                           >
+                            {product.productOffers?.[0] && (
+                              <>
+                                {product.productOffers[0].unitCount} ×{' '}
+                                {product.productOffers[0].unitSize}
+                              </>
+                            )}
+                            {product.producer && ' · '}
                             {highlightText(product.producer, debouncedSearch)}
                             {product.producer &&
                               (product.region || product.year) &&
                               ' · '}
                             {highlightText(product.region, debouncedSearch)}
                             {product.region && product.year && ' · '}
-                            {highlightText(product.year, debouncedSearch)}
+                            {highlightText(product.year, debouncedSearch)}{' '}
                           </Typography>
                         )}
                       </div>

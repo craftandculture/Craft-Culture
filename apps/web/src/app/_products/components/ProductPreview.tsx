@@ -22,6 +22,8 @@ interface ProductPreviewProps
   imageUrl?: string | null;
   name: string;
   year?: number | null;
+  unitCount?: number;
+  unitSize?: string;
   className?: string;
 }
 
@@ -45,7 +47,7 @@ const ProductPreview = ({ imageUrl, name, className }: ProductPreviewProps) => {
         )}
       </div>
 
-      {/* Product Name */}
+      {/* Product Name and Unit Info */}
       <div className={nameContainer()}>
         <Typography variant="bodySm" className="truncate text-left">
           {name}

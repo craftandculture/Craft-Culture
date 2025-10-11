@@ -30,22 +30,18 @@ const QuotesForm = () => {
   ]);
 
   // Get complete line items for quote calculation
-  const completeLineItems = React.useMemo(
-    () =>
-      lineItems
-        .filter(
-          (item) =>
-            item.offerId &&
-            item.offerId !== '' &&
-            typeof item.quantity === 'number' &&
-            item.quantity > 0,
-        )
-        .map((item) => ({
-          offerId: item.offerId!,
-          quantity: item.quantity!,
-        })),
-    [lineItems],
-  );
+  const completeLineItems = lineItems
+    .filter(
+      (item) =>
+        item.offerId &&
+        item.offerId !== '' &&
+        typeof item.quantity === 'number' &&
+        item.quantity > 0,
+    )
+    .map((item) => ({
+      offerId: item.offerId!,
+      quantity: item.quantity!,
+    }));
 
   // Fetch quote data
   const { data: quoteData, isLoading: isQuoteLoading } = useQuery({
