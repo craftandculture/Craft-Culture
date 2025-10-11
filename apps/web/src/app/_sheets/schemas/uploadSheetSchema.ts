@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 const uploadSheetSchema = z.object({
-  name: z.string().min(1, 'Name is required'),
+  name: z.string(),
   googleSheetUrl: z.url('Invalid Google Sheets URL'),
 });
 

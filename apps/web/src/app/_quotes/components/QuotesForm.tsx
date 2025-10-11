@@ -17,7 +17,7 @@ import LineItemRow from './LineItemRow';
 
 export interface LineItem {
   id: string;
-  productId?: string;
+  offerId?: string;
   quantity?: number;
   product?: Product; // Store the full product object
 }
@@ -30,18 +30,22 @@ const QuotesForm = () => {
   ]);
 
   // Get complete line items for quote calculation
-  const completeLineItems = lineItems
-    .filter(
-      (item) =>
-        item.productId &&
-        item.productId !== '' &&
-        typeof item.quantity === 'number' &&
-        item.quantity > 0,
-    )
-    .map((item) => ({
-      productId: item.productId!,
-      quantity: item.quantity!,
-    }));
+  const completeLineItems = React.useMemo(
+    () =>
+      lineItems
+        .filter(
+          (item) =>
+            item.offerId &&
+            item.offerId !== '' &&
+            typeof item.quantity === 'number' &&
+            item.quantity > 0,
+        )
+        .map((item) => ({
+          offerId: item.offerId!,
+          quantity: item.quantity!,
+        })),
+    [lineItems],
+  );
 
   // Fetch quote data
   const { data: quoteData, isLoading: isQuoteLoading } = useQuery({
@@ -67,7 +71,7 @@ const QuotesForm = () => {
         item.id === id
           ? {
               ...item,
-              productId: product.id,
+              offerId: product.productOffers?.[0]?.id,
               product: product, // Store the full product
               quantity: product.productOffers?.[0]?.availableQuantity ?? 1,
             }
@@ -124,14 +128,12 @@ const QuotesForm = () => {
 
           // Get all selected product IDs except the current one
           const omitProductIds = lineItems
-            .map((li) => li.productId)
-            .filter((id) => id && id !== item.productId) as string[];
+            .map((li) => li.product?.id)
+            .filter((id) => id && id !== item.product?.id) as string[];
 
-          // Find the corresponding quote line item by matching productId and quantity
+          // Find the corresponding quote line item by matching productId
           const quotedLineItem = quoteData?.lineItems.find(
-            (qli) =>
-              qli.productId === item.productId &&
-              qli.quantity === item.quantity,
+            (qli) => qli.productId === item.product?.id,
           );
 
           return (
@@ -147,8 +149,8 @@ const QuotesForm = () => {
               }
               onRemove={() => handleRemoveRow(item.id)}
               isQuoteLoading={isQuoteLoading}
-              quotePrice={quotedLineItem?.lineTotal}
-              quoteCurrency={quoteData?.currency}
+              quotePrice={quotedLineItem?.lineItemTotalUsd}
+              quoteCurrency="USD"
               omitProductIds={omitProductIds}
               maxQuantity={maxQuantity}
             />
@@ -178,8 +180,8 @@ const QuotesForm = () => {
               <Skeleton className="h-5 w-24" />
             ) : (
               <Typography variant="bodyLg" className="font-semibold">
-                {quoteData?.total
-                  ? formatPrice(quoteData.total, quoteData.currency)
+                {quoteData?.totalUsd
+                  ? formatPrice(quoteData.totalUsd, 'USD')
                   : '—'}
               </Typography>
             )}

@@ -55,8 +55,16 @@ const SheetsList = () => {
               {sheet.name}
             </Typography>
             <Typography variant="bodySm" className="text-text-muted">
-              Saved: {new Date(sheet.createdAt).toLocaleDateString()} • Last
-              Updated: {new Date(sheet.updatedAt).toLocaleDateString()}
+              Saved:{' '}
+              {Intl.DateTimeFormat('en-GB', {
+                dateStyle: 'medium',
+                timeStyle: 'short',
+              }).format(new Date(sheet.createdAt))}{' '}
+              • Last Updated:{' '}
+              {Intl.DateTimeFormat('en-GB', {
+                dateStyle: 'medium',
+                timeStyle: 'short',
+              }).format(new Date(sheet.updatedAt))}
             </Typography>
           </div>
           <Button colorRole="danger" onClick={() => handleDelete(sheet.id)}>
