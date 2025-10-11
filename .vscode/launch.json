@@ -1,0 +1,32 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Next.js: debug server-side",
+      "type": "node-terminal",
+      "request": "launch",
+      "command": "pnpm run dev",
+      "cwd": "${workspaceFolder}/apps/web"
+    },
+    {
+      "name": "Trigger.dev: debug",
+      "type": "node-terminal",
+      "request": "launch",
+      "command": "pnpm run trigger:dev",
+      "cwd": "${workspaceFolder}/apps/web"
+    },
+    {
+      "name": "Test: applyCorrectionStrategies",
+      "type": "node-terminal",
+      "request": "launch",
+      "command": "opnpm vitest run applyCorrectionStrategies.test.ts",
+      "cwd": "${workspaceFolder}/apps/web"
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Next.js + Trigger.dev",
+      "configurations": ["Next.js: debug server-side", "Trigger.dev: debug"]
+    }
+  ]
+}

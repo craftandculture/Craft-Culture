@@ -1,9 +1,4 @@
 import { TRPCError } from '@trpc/server';
-import { eq } from 'drizzle-orm';
-import { after } from 'next/server';
-
-import db from '@/database';
-import { users } from '@/database/schema';
 
 import { t } from './trpc';
 
@@ -28,24 +23,6 @@ export const publicProcedure = t.procedure;
 export const protectedProcedure = t.procedure.use(({ ctx, next }) => {
   if (!ctx.user) {
     throw new TRPCError({ code: 'UNAUTHORIZED' });
-  }
-
-  /**
-   * Update the user's last active at if it's older than 5 minutes. We do this
-   * every 5 minutes to avoid spamming the database.
-   */
-  if (
-    !ctx.user.lastActiveAt ||
-    ctx.user.lastActiveAt < new Date(Date.now() - 1000 * 60 * 5)
-  ) {
-    after(async () => {
-      await db
-        .update(users)
-        .set({
-          lastActiveAt: new Date(),
-        })
-        .where(eq(users.id, ctx.user!.id));
-    });
   }
 
   return next({

@@ -1,0 +1,53 @@
+{
+  "editor.formatOnSave": true,
+  "typescript.tsdk": "apps/web/node_modules/typescript/lib",
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "explicit"
+  },
+  "[typescript]": {
+    "editor.tabSize": 2,
+    "editor.insertSpaces": true
+  },
+  "files.watcherExclude": {
+    "**/.git/**": true,
+  },
+  "files.exclude": {
+    "**/.git": true,
+    "**/.svn": true,
+    "**/.hg": true,
+    "**/CVS": true,
+    "**/.DS_Store": true,
+    "**/Thumbs.db": true,
+  },
+  "notebook.formatOnSave.enabled": true,
+  "tailwindCSS.classAttributes": [
+    "class",
+    "className",
+    "classNames",
+    "tv"
+  ],
+  "tailwindCSS.experimental.classRegex": [
+    [
+      // Match tailwind variants functions
+      "tv\\(([^)(]*(?:\\([^)(]*(?:\\([^)(]*(?:\\([^)(]*\\)[^)(]*)*\\)[^)(]*)*\\)[^)(]*)*)\\)",
+      "'([^']*)'",
+      // Match classNames={{ ... }}
+      "classNames\\s*=\\s*\\{\\s*([^}]*)\\}"
+    ]
+  ],
+  "eslint.workingDirectories": [
+    "./apps/web"
+  ],
+  "[xml]": {
+    "editor.defaultFormatter": "redhat.vscode-xml"
+  },
+  "[json]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "cSpell.words": [
+    "attio",
+    "Easybooker",
+    "moneybird"
+  ]
+}
