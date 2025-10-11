@@ -1,15 +1,17 @@
+import { sql } from 'drizzle-orm';
 import {
   boolean,
   doublePrecision,
   index,
   integer,
+  jsonb,
   pgEnum,
   pgTable,
   text,
   timestamp,
+  unique,
   uuid,
 } from 'drizzle-orm/pg-core';
-import { sql } from 'drizzle-orm';
 
 export const timestamps = {
   createdAt: timestamp('created_at', { mode: 'date' }).notNull().defaultNow(),
@@ -21,12 +23,36 @@ export const timestamps = {
 
 export const productSource = pgEnum('product_source', ['cultx']);
 
+export const userType = pgEnum('user_type', ['b2b', 'b2c']);
+
+export const pricingModels = pgTable(
+  'pricing_models',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    isPublic: boolean('is_public').notNull().default(false),
+    isActive: boolean('is_active').notNull().default(true),
+    googleSheetId: text('google_sheet_id').notNull().unique(),
+    sheetIndex: integer('sheet_index').notNull().default(0),
+    formulaData: jsonb('formula_data').notNull(),
+    ...timestamps,
+  },
+  (table) => [unique().on(table.googleSheetId, table.sheetIndex)],
+).enableRLS();
+
 export const users = pgTable('users', {
   id: uuid('id').primaryKey().defaultRandom(),
   name: text('name').notNull(),
   email: text('email').notNull().unique(),
   emailVerified: boolean('email_verified').notNull().default(false),
   image: text('image'),
+  type: userType('type').notNull().default('b2c'),
+  onboardingCompletedAt: timestamp('onboarding_completed_at', {
+    mode: 'date',
+  }),
+  pricingModelId: uuid('pricing_model_id').references(() => pricingModels.id, {
+    onDelete: 'set null',
+  }),
+
   ...timestamps,
 }).enableRLS();
 
@@ -108,19 +134,30 @@ export const products = pgTable(
     imageUrl: text('image_url'),
     ...timestamps,
   },
-  (table) => ({
-    searchIdx: index('products_search_idx')
-      .using('gin', sql`(
+  (table) => [
+    index('products_search_idx').using(
+      'gin',
+      sql`(
         setweight(to_tsvector('english', coalesce(${table.name}, '')), 'A') ||
-        setweight(to_tsvector('english', coalesce(${table.producer}, '')), 'B') ||
-        setweight(to_tsvector('english', coalesce(${table.region}, '')), 'C') ||
-        setweight(to_tsvector('english', coalesce(${table.year}::text, '')), 'D')
-      )`),
-    nameTrigramIdx: index('products_name_trigram_idx')
-      .using('gin', sql`${table.name} gin_trgm_ops`),
-    producerTrigramIdx: index('products_producer_trigram_idx')
-      .using('gin', sql`${table.producer} gin_trgm_ops`),
-  }),
+        setweight(to_tsvector('english', coalesce(${table.producer}, '')), 'A') ||
+        setweight(to_tsvector('english', coalesce(${table.lwin18}, '')), 'A') ||
+        setweight(to_tsvector('english', coalesce(${table.region}, '')), 'B') ||
+        setweight(to_tsvector('english', coalesce(${table.year}::text, '')), 'C')
+      )`,
+    ),
+    index('products_name_trigram_idx').using(
+      'gin',
+      sql`${table.name} gin_trgm_ops`,
+    ),
+    index('products_producer_trigram_idx').using(
+      'gin',
+      sql`${table.producer} gin_trgm_ops`,
+    ),
+    index('products_lwin_trigram_idx').using(
+      'gin',
+      sql`${table.lwin18} gin_trgm_ops`,
+    ),
+  ],
 ).enableRLS();
 
 export const productOffers = pgTable('product_offers', {

@@ -50,6 +50,22 @@ const authServerClient = betterAuth({
     usePlural: true,
     schema,
   }),
+  user: {
+    additionalFields: {
+      type: {
+        type: 'string',
+        required: true,
+        defaultValue: 'b2c',
+        input: true,
+      },
+      onboardingCompletedAt: {
+        type: 'date',
+        required: false,
+        defaultValue: null,
+        input: true,
+      },
+    },
+  },
   databaseHooks: {
     account: {
       create: {
