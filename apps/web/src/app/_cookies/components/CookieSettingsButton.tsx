@@ -13,7 +13,7 @@ const CookieSettingsButton = () => {
       href="javascript:;"
       onClick={() => showCookieDialog()}
     >
-      <LinkContent>Cookie instellingen</LinkContent>
+      <LinkContent>Cookie settings</LinkContent>
     </Link>
   );
 };

@@ -1,6 +1,6 @@
 import { eq } from 'drizzle-orm';
 
-import db from '@/database';
+import db from '@/database/client';
 import { users } from '@/database/schema';
 import { protectedProcedure } from '@/lib/trpc/procedures';
 

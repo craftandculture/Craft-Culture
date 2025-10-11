@@ -20,6 +20,7 @@ export const dialogHeaderStyles = tv({
 export interface DialogHeaderProps
   extends VariantProps<typeof dialogHeaderStyles> {
   className?: string;
+  showCloseButton?: boolean;
 }
 
 const { wrapper, content, close } = dialogHeaderStyles();
@@ -27,24 +28,27 @@ const { wrapper, content, close } = dialogHeaderStyles();
 const DialogHeader = ({
   className,
   children,
+  showCloseButton = true,
   ...props
 }: React.PropsWithChildren<DialogHeaderProps>) => (
   <header className={wrapper({ className, ...props })}>
     <div className={content()}>{children}</div>
-    <Button
-      size="sm"
-      asChild
-      variant="ghost"
-      shape="circle"
-      className={close()}
-    >
-      <DialogPrimitive.Close>
-        <ButtonContent>
-          <Icon icon={IconX} colorRole="muted" />
-          <span className="sr-only">Close</span>
-        </ButtonContent>
-      </DialogPrimitive.Close>
-    </Button>
+    {showCloseButton && (
+      <Button
+        size="sm"
+        asChild
+        variant="ghost"
+        shape="circle"
+        className={close()}
+      >
+        <DialogPrimitive.Close>
+          <ButtonContent>
+            <Icon icon={IconX} colorRole="muted" />
+            <span className="sr-only">Close</span>
+          </ButtonContent>
+        </DialogPrimitive.Close>
+      </Button>
+    )}
   </header>
 );
 

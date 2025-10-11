@@ -3,7 +3,7 @@ import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { nextCookies } from 'better-auth/next-js';
 import { magicLink } from 'better-auth/plugins';
 
-import db from '@/database';
+import db from '@/database/client';
 import * as schema from '@/database/schema';
 import serverConfig from '@/server.config';
 
