@@ -38,6 +38,19 @@ const relations = defineRelations(schema, (r) => ({
       optional: false
     })
   },
+  products: {
+    productOffers: r.many.productOffers({
+      from: r.products.id,
+      to: r.productOffers.productId
+    })
+  },
+  productOffers: {
+    product: r.one.products({
+      from: r.productOffers.productId,
+      to: r.products.id,
+      optional: false
+    })
+  },
 }));
 
 export default relations;
