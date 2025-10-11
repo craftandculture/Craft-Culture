@@ -32,6 +32,7 @@ const SignInWithUsernamePasswordForm = () => {
     const { error } = await authBrowserClient.signIn.magicLink({
       email: values.email,
       callbackURL: getNextPath() ?? '/platform',
+      newUserCallbackURL: '/welcome',
     });
 
     if (error) {
