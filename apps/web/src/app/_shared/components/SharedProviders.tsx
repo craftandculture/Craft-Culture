@@ -19,11 +19,11 @@ const SharedProviders = async ({
     <>
       <ThemeProvider
         enableSystem={true}
-        storageKey="easybooker.theme"
+        storageKey="craft-culture.theme"
         defaultTheme="light"
         forcedTheme={forcedTheme}
       >
-        <CookieConsentProvider cookieName="easybooker.cookie_consent">
+        <CookieConsentProvider cookieName="craft-culture.cookie_consent">
           <TooltipProvider>
             <TRPCReactProvider>
               <NuqsAdapter>

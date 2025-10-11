@@ -1,25 +1,23 @@
 'use client';
 
 import { IconArrowRight } from '@tabler/icons-react';
-import posthog from 'posthog-js';
-import { useState } from 'react';
 import { SubmitHandler } from 'react-hook-form';
 import { toast } from 'sonner';
 
 import getNextPath from '@/app/_shared/utils/getNextPath';
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
-import FormField from '@/app/_ui/components/FormField/legacy/FormField';
+import FormField from '@/app/_ui/components/FormField/FormField';
+import FormFieldContent from '@/app/_ui/components/FormField/FormFieldContent';
+import FormFieldError from '@/app/_ui/components/FormField/FormFieldError';
+import FormFieldLabel from '@/app/_ui/components/FormField/FormFieldLabel';
 import Input from '@/app/_ui/components/Input/Input';
-import Link from '@/app/_ui/components/Link/Link';
 import useZodForm from '@/app/_ui/hooks/useZodForm';
 import authBrowserClient from '@/lib/better-auth/browser';
 
 import signInSchema, { SignInSchema } from '../schemas/signInSchema';
 
-const SignInForm = () => {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-
+const SignInWithUsernamePasswordForm = () => {
   const {
     register,
     handleSubmit,
@@ -27,88 +25,75 @@ const SignInForm = () => {
   } = useZodForm(signInSchema);
 
   const submitHandler: SubmitHandler<SignInSchema> = async (values) => {
-    const { error, data: session } = await authBrowserClient.signIn.email({
+    const { error } = await authBrowserClient.signIn.magicLink({
       email: values.email,
-      password: values.password,
-      rememberMe: true,
-      callbackURL: getNextPath() ?? '/dashboard',
+      callbackURL: getNextPath() ?? '/platform',
     });
 
     if (error) {
       toast.error(error.message);
       throw error;
     }
-
-    posthog.identify(session.user.id, {
-      email: session.user.email,
-      name: session.user.name,
-    });
-
-    setIsLoggedIn(true);
   };
+
   return (
-    <form
-      className="flex flex-col gap-4"
-      onSubmit={handleSubmit(submitHandler)}
-    >
-      <FormField
-        label="E-mailadres"
-        id="email"
-        errorMessage={errors.email?.message}
-        {...register('email')}
+    <>
+      <form
+        className="flex flex-col gap-4"
+        onSubmit={handleSubmit(submitHandler)}
       >
-        <Input
-          id="email"
-          tabIndex={1}
+        <FormField>
+          <FormFieldLabel asChild>
+            <label htmlFor="email">Email address</label>
+          </FormFieldLabel>
+          <FormFieldContent>
+            <Input
+              id="email"
+              tabIndex={1}
+              size="lg"
+              type="email"
+              placeholder="Email address"
+              autoFocus
+              autoComplete="email"
+              {...register('email')}
+            />
+            {errors.email && (
+              <FormFieldError>{errors.email.message}</FormFieldError>
+            )}
+          </FormFieldContent>
+        </FormField>
+        <FormField>
+          <FormFieldLabel asChild>
+            <label htmlFor="password">Password</label>
+          </FormFieldLabel>
+          <FormFieldContent>
+            <Input
+              id="password"
+              tabIndex={2}
+              size="lg"
+              type="password"
+              placeholder="Password"
+              autoComplete="current-password"
+              {...register('password')}
+            />
+            {errors.password && (
+              <FormFieldError>{errors.password.message}</FormFieldError>
+            )}
+          </FormFieldContent>
+        </FormField>
+        <Button
+          type="submit"
           size="lg"
-          type="email"
-          placeholder="janneke@voorbeeld.nl"
-          autoFocus
-          autoComplete="email"
-          name="email"
-        />
-      </FormField>
-      <FormField
-        id="password"
-        label="Wachtwoord"
-        contentRight={
-          <Link
-            preserveSearch
-            href="/forgot-password"
-            variant="labelSm"
-            colorRole="brand"
-          >
-            Wachtwoord vergeten?
-          </Link>
-        }
-        errorMessage={errors.password?.message}
-        {...register('password')}
-      >
-        <Input
-          id="password"
-          tabIndex={2}
-          size="lg"
-          type="password"
-          placeholder="••••••••••"
-          autoComplete="current-password"
-          name="password"
-        />
-      </FormField>
-      <Button
-        type="submit"
-        size="lg"
-        colorRole="brand"
-        isDisabled={isSubmitting || isLoggedIn}
-      >
-        <ButtonContent
-          iconRight={IconArrowRight}
-          isLoading={isSubmitting || isLoggedIn}
+          colorRole="brand"
+          isDisabled={isSubmitting}
         >
-          Inloggen
-        </ButtonContent>
-      </Button>
-    </form>
+          <ButtonContent iconRight={IconArrowRight} isLoading={isSubmitting}>
+            Continue
+          </ButtonContent>
+        </Button>
+      </form>
+    </>
   );
 };
 
-export default SignInForm;
+export default SignInWithUsernamePasswordForm;
