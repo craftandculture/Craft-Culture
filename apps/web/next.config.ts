@@ -15,6 +15,14 @@ const nextConfig: NextConfig = {
   },
   images: {
     remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'ui-avatars.com',
+      } as const,
+      {
+        protocol: 'https',
+        hostname: 'cwcdst2prdctimgimprtfnct.blob.core.windows.net',
+      } as const,
       ...(process.env.NODE_ENV === 'development'
         ? [
             {
