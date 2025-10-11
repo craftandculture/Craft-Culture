@@ -17,8 +17,8 @@ const CookiePreference = ({
   onChange,
 }: CookiePreferenceProps) => {
   return (
-    <button
-      className="bg-fill-muted/50 hover:bg-fill-muted-hover flex flex-col gap-1.5 p-3 text-start"
+    <div
+      className="bg-fill-muted/50 hover:bg-fill-muted-hover flex cursor-pointer flex-col gap-1.5 rounded-md p-3 text-start"
       onClick={() => onChange && onChange(!value)}
     >
       <div className="flex w-full justify-between">
@@ -32,7 +32,7 @@ const CookiePreference = ({
       <Typography variant="bodySm" colorRole="muted">
         {description}
       </Typography>
-    </button>
+    </div>
   );
 };
 
