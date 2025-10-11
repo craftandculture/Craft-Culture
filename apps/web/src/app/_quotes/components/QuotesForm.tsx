@@ -8,7 +8,7 @@ import { Product } from '@/app/_products/controller/productsGetMany';
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
 import Divider from '@/app/_ui/components/Divider/Divider';
-import Shimmer from '@/app/_ui/components/Shimmer/Shimmer';
+import Skeleton from '@/app/_ui/components/Skeleton/Skeleton';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import useTRPC from '@/lib/trpc/browser';
 import formatPrice from '@/utils/formatPrice';
@@ -175,7 +175,7 @@ const QuotesForm = () => {
               Total
             </Typography>
             {isQuoteLoading ? (
-              <Shimmer variant="price" width="wide" />
+              <Skeleton className="h-5 w-24" />
             ) : (
               <Typography variant="bodyLg" className="font-semibold">
                 {quoteData?.total

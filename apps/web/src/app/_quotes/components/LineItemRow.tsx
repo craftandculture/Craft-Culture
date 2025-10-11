@@ -9,7 +9,7 @@ import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Input from '@/app/_ui/components/Input/Input';
-import Shimmer from '@/app/_ui/components/Shimmer/Shimmer';
+import Skeleton from '@/app/_ui/components/Skeleton/Skeleton';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import useDebounce from '@/app/_ui/hooks/useDebounce';
 import formatPrice from '@/utils/formatPrice';
@@ -105,7 +105,7 @@ const LineItemRow = ({
         {/* Line Price */}
         <div className="col-span-10 flex h-9 items-center justify-start sm:col-span-10 md:col-span-3 md:justify-end">
           {isQuoteLoading ? (
-            <Shimmer variant="price" width="default" />
+            <Skeleton className="h-5 w-20" />
           ) : (
             <Typography variant="bodySm" className="font-medium">
               {quotePrice !== undefined
