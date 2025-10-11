@@ -16,7 +16,6 @@ import Icon from '@/app/_ui/components/Icon/Icon';
 import Popover from '@/app/_ui/components/Popover/Popover';
 import PopoverContent from '@/app/_ui/components/Popover/PopoverContent';
 import Typography from '@/app/_ui/components/Typography/Typography';
-import useDebounce from '@/app/_ui/hooks/useDebounce';
 import useTRPC from '@/lib/trpc/browser';
 
 import ProductPreview from './ProductPreview';
@@ -72,10 +71,29 @@ const ProductsCombobox = ({
 }: ProductsComboboxProps) => {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
-  const [debouncedSearch] = useDebounce(search, 300);
+  const [debouncedSearch, setDebouncedSearch] = useState(search);
   const listRef = useRef<HTMLDivElement>(null);
 
   const api = useTRPC();
+
+  const isDebouncing = search !== debouncedSearch;
+  const handleSearchChange = useCallback((value: string) => {
+    setSearch(value);
+    // Reset scroll to top when starting a new search so results feel snappier.
+    listRef.current?.scrollTo({ top: 0 });
+  }, []);
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 300);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [search]);
+
+  const normalizedSearch = debouncedSearch.trim();
 
   // Infinite query with pagination
   const {
@@ -88,13 +106,14 @@ const ProductsCombobox = ({
   } = useInfiniteQuery({
     ...api.products.getMany.infiniteQueryOptions({
       limit: 20,
-      search: debouncedSearch,
+      search: normalizedSearch.length > 0 ? normalizedSearch : undefined,
       omitProductIds,
     }),
     getNextPageParam: (lastPage) => lastPage.meta.nextCursor,
     initialPageParam: 0,
     // Keep previous data while fetching new results
     placeholderData: (previousData) => previousData,
+    enabled: open && !isDebouncing,
   });
 
   const products = data?.pages.flatMap((page) => page.data) ?? [];
@@ -107,13 +126,20 @@ const ProductsCombobox = ({
 
   // Infinite scroll
   const handleScroll = useCallback(() => {
-    if (!listRef.current || !hasNextPage || isFetchingNextPage) return;
+    if (
+      !listRef.current ||
+      !hasNextPage ||
+      isFetchingNextPage ||
+      isDebouncing
+    ) {
+      return;
+    }
 
     const { scrollTop, scrollHeight, clientHeight } = listRef.current;
     if (scrollHeight - scrollTop <= clientHeight * 1.5) {
       void fetchNextPage();
     }
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage, isDebouncing]);
 
   // Attach scroll listener
   useEffect(() => {
@@ -128,6 +154,7 @@ const ProductsCombobox = ({
     onSelect(product);
     setOpen(false);
     setSearch('');
+    setDebouncedSearch('');
   };
 
   return (
@@ -162,14 +189,16 @@ const ProductsCombobox = ({
           <CommandInput
             placeholder="Search by name, producer, region..."
             value={search}
-            onValueChange={setSearch}
+            onValueChange={handleSearchChange}
           />
           <CommandList ref={listRef} className="max-h-[300px] overflow-y-auto">
             {isInitialLoading ? (
               <div className="py-6 text-center text-sm">Loading...</div>
             ) : products.length === 0 ? (
               <CommandEmpty>
-                {isFetching ? 'Searching...' : 'No products found'}
+                {isDebouncing || isFetching
+                  ? 'Searching...'
+                  : 'No products found'}
               </CommandEmpty>
             ) : (
               <>
@@ -196,7 +225,7 @@ const ProductsCombobox = ({
                       </div>
                       <div className="flex h-full flex-col items-start gap-0.5">
                         <Typography variant="bodySm" className="max-w-md">
-                          {highlightText(product.name, debouncedSearch)}
+                          {highlightText(product.name, search)}
                         </Typography>
                         {(product.producer ||
                           product.region ||
@@ -212,13 +241,13 @@ const ProductsCombobox = ({
                               </>
                             )}
                             {product.producer && ' · '}
-                            {highlightText(product.producer, debouncedSearch)}
+                            {highlightText(product.producer, search)}
                             {product.producer &&
                               (product.region || product.year) &&
                               ' · '}
-                            {highlightText(product.region, debouncedSearch)}
+                            {highlightText(product.region, search)}
                             {product.region && product.year && ' · '}
-                            {highlightText(product.year, debouncedSearch)}{' '}
+                            {highlightText(product.year, search)}{' '}
                           </Typography>
                         )}
                       </div>
