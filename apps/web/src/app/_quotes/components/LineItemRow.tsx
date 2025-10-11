@@ -1,141 +1,105 @@
 'use client';
 
 import { IconTrash } from '@tabler/icons-react';
-import React from 'react';
-import { Controller, useFormContext } from 'react-hook-form';
+import React, { ChangeEvent, useEffect, useState } from 'react';
 
 import ProductsCombobox from '@/app/_products/components/ProductsCombobox';
 import { Product } from '@/app/_products/controller/productsGetMany';
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
-import FormField from '@/app/_ui/components/FormField/FormField';
-import FormFieldError from '@/app/_ui/components/FormField/FormFieldError';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Input from '@/app/_ui/components/Input/Input';
 import Shimmer from '@/app/_ui/components/Shimmer/Shimmer';
 import Typography from '@/app/_ui/components/Typography/Typography';
-
-import { GetQuoteSchema } from '../schemas/getQuoteSchema';
+import useDebounce from '@/app/_ui/hooks/useDebounce';
+import formatPrice from '@/utils/formatPrice';
 
 interface LineItemRowProps {
-  index: number;
-  omitProductIds: string[];
   product?: Product;
+  quantity?: number;
+  omitProductIds: string[];
   maxQuantity?: number;
   isQuoteLoading?: boolean;
   quotePrice?: number;
   quoteCurrency?: string;
+  onProductChange: (product: Product) => void;
+  onQuantityChange: (quantity: number) => void;
   onRemove: () => void;
-  onProductSelect?: (product: Product) => void;
 }
 
 const LineItemRow = ({
-  index,
-  omitProductIds,
   product,
+  quantity,
+  omitProductIds,
   maxQuantity = Infinity,
   isQuoteLoading,
   quotePrice,
   quoteCurrency,
+  onProductChange,
+  onQuantityChange,
   onRemove,
-  onProductSelect,
 }: LineItemRowProps) => {
-  // eslint-disable-next-line react-compiler/react-compiler
-  'use no memo';
+  const [localQuantity, setLocalQuantity] = useState(quantity ?? 1);
+  const [debouncedQuantity] = useDebounce(localQuantity, 300);
 
-  const {
-    control,
-    register,
-    setValue,
-    formState: { errors },
-  } = useFormContext<GetQuoteSchema>();
+  // Update parent when debounced quantity changes
+  useEffect(() => {
+    if (debouncedQuantity !== quantity) {
+      onQuantityChange(debouncedQuantity);
+    }
+  }, [debouncedQuantity, quantity, onQuantityChange]);
 
-  console.log(`LineItemRow ${index} - product prop:`, product);
+  // Sync local quantity when prop changes (e.g., when product is selected)
+  useEffect(() => {
+    if (quantity !== undefined) {
+      setLocalQuantity(quantity);
+    }
+  }, [quantity]);
+
+  const handleQuantityInputChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const value = parseInt(e.target.value);
+    if (!isNaN(value)) {
+      const clampedValue =
+        maxQuantity !== Infinity ? Math.min(value, maxQuantity) : value;
+      setLocalQuantity(clampedValue);
+    }
+  };
 
   return (
     <div className="space-y-2">
       <div className="grid grid-cols-12 items-start gap-3">
         {/* Product Selector */}
         <div className="col-span-12 sm:col-span-8 md:col-span-6">
-          <FormField>
-            <Controller
-              name={`lineItems.${index}.productId`}
-              control={control}
-              render={({ field }) => {
-                console.log(`LineItemRow ${index} - Controller field.value:`, field.value);
-                return (
-                  <ProductsCombobox
-                    value={product ?? null}
-                    onSelect={(selectedProduct) => {
-                      console.log(`LineItemRow ${index} - onSelect called with:`, selectedProduct);
-                      console.log(`LineItemRow ${index} - selectedProduct.id:`, selectedProduct.id);
-
-                      // Store the product ID in form state
-                      field.onChange(selectedProduct.id);
-
-                      // Set quantity to max available quantity
-                      const maxQty = selectedProduct.productOffers?.[0]?.availableQuantity;
-                      if (maxQty !== undefined && maxQty !== null) {
-                        setValue(`lineItems.${index}.quantity`, maxQty);
-                      }
-
-                      // Also store the full product in the parent's cache
-                      onProductSelect?.(selectedProduct);
-
-                      console.log(`LineItemRow ${index} - field.onChange called`);
-                      console.log(`LineItemRow ${index} - field.value after onChange:`, field.value);
-                    }}
-                    placeholder="Select product..."
-                    omitProductIds={omitProductIds}
-                  />
-                );
-              }}
-            />
-            {errors?.lineItems?.[index]?.productId && (
-              <FormFieldError className="mt-1">
-                {errors.lineItems[index].productId.message}
-              </FormFieldError>
-            )}
-          </FormField>
+          <ProductsCombobox
+            value={product ?? null}
+            onSelect={onProductChange}
+            placeholder="Select product..."
+            omitProductIds={omitProductIds}
+          />
         </div>
 
         {/* Quantity Input */}
         <div className="col-span-12 sm:col-span-4 md:col-span-2">
-          <FormField>
-            <div className="flex w-full items-center gap-2">
-              <Input
-                {...register(`lineItems.${index}.quantity`, {
-                  valueAsNumber: true,
-                  onChange: (e) => {
-                    const value = parseInt(e.target.value);
-                    if (maxQuantity !== Infinity && value > maxQuantity) {
-                      setValue(`lineItems.${index}.quantity`, maxQuantity);
-                    }
-                  },
-                })}
-                type="number"
-                size="md"
-                min={1}
-                max={maxQuantity !== Infinity ? maxQuantity : undefined}
-                placeholder="Qty"
-                className="min-w-0 flex-1"
-                isDisabled={!product}
-              />
-              {maxQuantity !== Infinity && (
+          <Input
+            type="number"
+            size="md"
+            min={1}
+            max={maxQuantity !== Infinity ? maxQuantity : undefined}
+            placeholder="Qty"
+            value={localQuantity}
+            onChange={handleQuantityInputChange}
+            isDisabled={!product}
+            contentRight={
+              maxQuantity !== Infinity ? (
                 <Typography
                   variant="bodyXs"
-                  className="text-text-muted shrink-0 font-medium"
+                  className="text-text-muted pr-2.5 font-medium"
                 >
                   / {maxQuantity}
                 </Typography>
-              )}
-            </div>
-            {errors?.lineItems?.[index]?.quantity && (
-              <FormFieldError className="mt-1">
-                {errors.lineItems[index].quantity.message}
-              </FormFieldError>
-            )}
-          </FormField>
+              ) : undefined
+            }
+          />
         </div>
 
         {/* Line Price */}
@@ -145,12 +109,7 @@ const LineItemRow = ({
           ) : (
             <Typography variant="bodySm" className="font-medium">
               {quotePrice !== undefined
-                ? Intl.NumberFormat('en-GB', {
-                    style: 'currency',
-                    currency: quoteCurrency,
-                    minimumFractionDigits: 0,
-                    maximumFractionDigits: 2,
-                  }).format(quotePrice ?? 0)
+                ? formatPrice(quotePrice, quoteCurrency)
                 : '—'}
             </Typography>
           )}
