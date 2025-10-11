@@ -54,7 +54,9 @@ export const syncCultxProductsJob = schedules.task({
             region: product.region,
             producer: product.producer,
             year: product.vintage,
-            imageUrl: product.imageFileName,
+            imageUrl: product.imageFileName
+              ? `https://cwcdst2prdctimgimprtfnct.blob.core.windows.net/height/800/${product.imageFileName}`
+              : null,
           })),
         )
         .onConflictDoUpdate({
