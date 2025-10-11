@@ -11,31 +11,7 @@ const pricingModelsCreate = adminProcedure
   .input(createPricingModelSchema)
   .mutation(
     async ({
-      input: {
-        modelName,
-        sheetId,
-        isDefaultB2C,
-        isDefaultB2B,
-        // Column ranges
-        name,
-        region,
-        producer,
-        vintage,
-        quantity,
-        unitCount,
-        unitSize,
-        source,
-        price,
-        currency,
-        exchangeRateUsd,
-        basePriceUsd,
-        priceUsd,
-        // Single cells
-        customerName,
-        customerEmail,
-        customerType,
-        finalPriceUsd,
-      },
+      input: { modelName, sheetId, isDefaultB2C, isDefaultB2B, cellMappings },
     }) => {
       await db.transaction(async (tx) => {
         const sheet = await tx.query.sheets.findFirst({
@@ -65,29 +41,6 @@ const pricingModelsCreate = adminProcedure
             .set({ isDefaultB2B: false })
             .where(eq(pricingModels.isDefaultB2B, true));
         }
-
-        // Create cell mappings object with all fields
-        const cellMappings = {
-          // Column ranges
-          name,
-          region,
-          producer,
-          vintage,
-          quantity,
-          unitCount,
-          unitSize,
-          source,
-          price,
-          currency,
-          exchangeRateUsd,
-          basePriceUsd,
-          priceUsd,
-          // Single cells
-          customerName,
-          customerEmail,
-          customerType,
-          finalPriceUsd,
-        };
 
         // TODO: Validate cell mappings against a random product from the sheet
         // This will be implemented next to ensure the mappings work correctly
