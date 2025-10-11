@@ -6,6 +6,7 @@ import CookieConsentProvider from '@/app/_cookies/providers/CookieConsentProvide
 import TRPCReactProvider from '@/app/_shared/components/TRPCReactProvider';
 import Toaster from '@/app/_ui/components/Toaster/Toaster';
 import TooltipProvider from '@/app/_ui/components/Tooltip/TooltipProvider';
+import clientConfig from '@/client.config';
 
 export interface SharedProvidersProps {
   forcedTheme?: 'light' | 'dark';
@@ -19,11 +20,13 @@ const SharedProviders = async ({
     <>
       <ThemeProvider
         enableSystem={true}
-        storageKey="craft-culture.theme"
+        storageKey={`${clientConfig.cookiePrefix}.theme`}
         defaultTheme="light"
         forcedTheme={forcedTheme}
       >
-        <CookieConsentProvider cookieName="craft-culture.cookie_consent">
+        <CookieConsentProvider
+          cookieName={`${clientConfig.cookiePrefix}.cookie_consent`}
+        >
           <TooltipProvider>
             <TRPCReactProvider>
               <NuqsAdapter>
