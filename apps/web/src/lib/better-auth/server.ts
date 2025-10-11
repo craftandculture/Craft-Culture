@@ -82,6 +82,22 @@ const authServerClient = betterAuth({
     },
   },
   databaseHooks: {
+    user: {
+      create: {
+        before: async (user) => {
+          return {
+            data: {
+              ...user,
+              role: serverConfig.adminDomains.some((domain) =>
+                user.email.endsWith(`@${domain}`),
+              )
+                ? 'admin'
+                : 'user',
+            },
+          };
+        },
+      },
+    },
     account: {
       create: {
         before: async (account) => {

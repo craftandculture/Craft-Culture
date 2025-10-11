@@ -281,6 +281,7 @@ export function calculateQuote(
     // Set all the offer data in the sheet
     console.log('    📝 Setting cell values...');
     setColumnValue(cellMappings.name, i, offer.product.name);
+    setColumnValue(cellMappings.lwin18, i, offer.product.lwin18);
     setColumnValue(cellMappings.region, i, offer.product.region);
     setColumnValue(cellMappings.producer, i, offer.product.producer);
     setColumnValue(cellMappings.vintage, i, offer.product.year);

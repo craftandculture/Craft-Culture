@@ -9,7 +9,7 @@ const serverConfig = {
   encryptionKey: serverEnv.ENCRYPTION_KEY,
   encryptionKeyBuffer: Buffer.from(serverEnv.ENCRYPTION_KEY, 'base64'),
   loopsApiKey: serverEnv.LOOPS_API_KEY,
-  
+  adminDomains: ['byont.nl', 'craftcultuze.xyz'],
 } as const;
 
 export default serverConfig;
