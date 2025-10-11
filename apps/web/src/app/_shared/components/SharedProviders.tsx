@@ -2,7 +2,6 @@ import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { ThemeProvider } from 'next-themes';
 import { NuqsAdapter } from 'nuqs/adapters/next/app';
 
-import { PostHogProvider } from '@/app/_analytics/PostHogProvider';
 import CookieConsentProvider from '@/app/_cookies/providers/CookieConsentProvider';
 import TRPCReactProvider from '@/app/_shared/components/TRPCReactProvider';
 import Toaster from '@/app/_ui/components/Toaster/Toaster';
@@ -28,14 +27,12 @@ const SharedProviders = async ({
           <TooltipProvider>
             <TRPCReactProvider>
               <NuqsAdapter>
-                <PostHogProvider>
-                  {children}
-                  <ReactQueryDevtools
-                    initialIsOpen={false}
-                    buttonPosition="bottom-right"
-                  />
-                  <Toaster />
-                </PostHogProvider>
+                {children}
+                <ReactQueryDevtools
+                  initialIsOpen={false}
+                  buttonPosition="bottom-right"
+                />
+                <Toaster />
               </NuqsAdapter>
             </TRPCReactProvider>
           </TooltipProvider>

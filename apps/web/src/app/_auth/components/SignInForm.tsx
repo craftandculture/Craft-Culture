@@ -6,7 +6,7 @@ import { useState } from 'react';
 import { SubmitHandler } from 'react-hook-form';
 import { toast } from 'sonner';
 
-import getNextPath from '@/app/_shared-platform/utils/getNextPath';
+import getNextPath from '@/app/_shared/utils/getNextPath';
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
 import FormField from '@/app/_ui/components/FormField/legacy/FormField';

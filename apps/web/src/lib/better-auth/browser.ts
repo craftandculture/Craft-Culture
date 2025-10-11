@@ -10,7 +10,7 @@ import type authServerClient from './server';
 
 const authBrowserClient = createAuthClient({
   baseURL: clientConfig.appUrl.toString(),
-  basePath: '/api/v1/auth',
+  basePath: '/api/auth',
   plugins: [passkeyClient(), inferAdditionalFields<typeof authServerClient>()],
 });
 
