@@ -65,11 +65,13 @@ const LineItemRow = ({
     }
   };
 
+  const offer = product?.productOffers?.[0];
+
   return (
     <div className="space-y-2">
       <div className="grid grid-cols-12 items-start gap-3">
         {/* Product Selector */}
-        <div className="col-span-12 sm:col-span-8 md:col-span-6">
+        <div className="col-span-12 sm:col-span-8 md:col-span-5">
           <ProductsCombobox
             value={product ?? null}
             onSelect={onProductChange}
@@ -79,7 +81,7 @@ const LineItemRow = ({
         </div>
 
         {/* Quantity Input */}
-        <div className="col-span-12 sm:col-span-4 md:col-span-2">
+        <div className="col-span-12 sm:col-span-4 md:col-span-3">
           <Input
             type="number"
             size="md"
@@ -100,6 +102,14 @@ const LineItemRow = ({
               ) : undefined
             }
           />
+          {offer && (
+            <Typography
+              variant="bodyXs"
+              className="text-text-muted mt-1.5 font-medium"
+            >
+              {offer.unitCount} × {offer.unitSize}
+            </Typography>
+          )}
         </div>
 
         {/* Line Price */}

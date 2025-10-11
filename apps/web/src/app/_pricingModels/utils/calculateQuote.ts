@@ -1,9 +1,5 @@
 import { HyperFormula, RawCellContent, Sheets } from 'hyperformula';
 
-import exchangeRateService, {
-  type SupportedCurrency,
-} from '@/lib/currency/exchangeRateService';
-
 import type { CellMappingSchema } from '../schemas/cellMappingSchema';
 
 interface ProductOffer {
@@ -53,13 +49,14 @@ interface StoredFormulaData {
 }
 
 /** Calculates quote data from a pricing model using HyperFormula */
-export async function calculateQuote(
+export function calculateQuote(
   lineItemsInput: LineItemInput[],
   offers: ProductOffer[],
   cellMappings: CellMappingSchema,
   formulaData: Record<string, unknown>,
   customerType: 'b2b' | 'b2c',
-): Promise<QuoteData> {
+  exchangeRateMap: Map<string, number>,
+): QuoteData {
   // Convert stored formula data to HyperFormula format
   const storedData = formulaData as unknown as StoredFormulaData;
   const sheets: Sheets = {};
@@ -205,12 +202,18 @@ export async function calculateQuote(
     console.log(`  Sheet: "${exampleSheet.sheetName}"`);
     console.log(`  Total rows: ${exampleSheet.formulas.length}`);
     // Show rows 6, 7, 8 to see if there's a pattern
-    for (let rowIdx = 5; rowIdx <= 7 && rowIdx < exampleSheet.formulas.length; rowIdx++) {
+    for (
+      let rowIdx = 5;
+      rowIdx <= 7 && rowIdx < exampleSheet.formulas.length;
+      rowIdx++
+    ) {
       console.log(`  Row ${rowIdx + 1} columns L-Q (indices 11-16):`);
       for (let col = 11; col <= 16; col++) {
         const colLetter = String.fromCharCode(65 + col);
         const cellValue = exampleSheet.formulas[rowIdx]?.[col];
-        console.log(`    ${colLetter}${rowIdx + 1}: ${JSON.stringify(cellValue)}`);
+        console.log(
+          `    ${colLetter}${rowIdx + 1}: ${JSON.stringify(cellValue)}`,
+        );
       }
     }
   }
@@ -222,10 +225,14 @@ export async function calculateQuote(
   console.log('\n🔤 COLUMN LETTERS:');
   for (const [key, value] of Object.entries(cellMappings)) {
     if (typeof value === 'string') {
-      const match = value.match(/(?:'([^']+)'!)?([A-Z]+)(\d+)(?::([A-Z]+)(\d+))?$/);
+      const match = value.match(
+        /(?:'([^']+)'!)?([A-Z]+)(\d+)(?::([A-Z]+)(\d+))?$/,
+      );
       if (match) {
-        const [, sheet, startCol, startRow, endCol, endRow] = match;
-        console.log(`  ${key}: Column ${startCol}${endCol ? `-${endCol}` : ''} (${value})`);
+        const [, , startCol, , , endCol, ,] = match;
+        console.log(
+          `  ${key}: Column ${startCol}${endCol ? `-${endCol}` : ''} (${value})`,
+        );
       }
     }
   }
@@ -264,26 +271,12 @@ export async function calculateQuote(
 
     console.log(`\n  ⚙️ [Row ${i}] Processing...`);
 
-    // Get exchange rate from service
-    let exchangeRate = 1;
-    try {
-      // Use yesterday's date to ensure data is available (ECB updates with 1 day delay)
-      const yesterday = new Date();
-      yesterday.setDate(yesterday.getDate() - 1);
-
-      exchangeRate = await exchangeRateService.getExchangeRate(
-        offer.currency as SupportedCurrency,
-        'USD',
-        yesterday,
-      );
-      console.log(
-        `    💱 Exchange Rate (${offer.currency} -> USD):`,
-        exchangeRate,
-      );
-    } catch (error) {
-      console.error('    ❌ Failed to fetch exchange rate:', error);
-      console.log('    ⚠️  Using default exchange rate: 1');
-    }
+    // Get exchange rate from pre-fetched map
+    const exchangeRate = exchangeRateMap.get(offer.currency) ?? 1;
+    console.log(
+      `    💱 Exchange Rate (${offer.currency} -> USD):`,
+      exchangeRate,
+    );
 
     // Set all the offer data in the sheet
     console.log('    📝 Setting cell values...');
@@ -364,6 +357,16 @@ export async function calculateQuote(
   console.log('  Raw Value:', finalPriceUsd);
   console.log('  Value Type:', typeof finalPriceUsd);
 
+  // Check what formula is in the finalPriceUsd cell
+  const finalPriceAddress = parseCellRef(cellMappings.finalPriceUsd);
+  if (finalPriceAddress) {
+    const finalFormula = hf.getCellFormula(finalPriceAddress);
+    console.log(
+      '  📐 Formula in finalPriceUsd cell:',
+      finalFormula || '(no formula)',
+    );
+  }
+
   const totalUsd = typeof finalPriceUsd === 'number' ? finalPriceUsd : 0;
   console.log('  ✓ Final Total USD:', totalUsd);
 
@@ -386,8 +389,8 @@ export async function calculateQuote(
     }
 
     const priceUsd = getColumnValue(cellMappings.priceUsd, i);
-    const lineItemTotalUsd =
-      typeof priceUsd === 'number' ? priceUsd * lineItem.quantity : 0;
+    // priceUsd from the sheet already includes quantity calculation
+    const lineItemTotalUsd = typeof priceUsd === 'number' ? priceUsd : 0;
 
     console.log(`  ✓ [Line Item ${i}]`);
     console.log(`    Product ID: ${offer.productId}`);
