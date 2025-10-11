@@ -13,6 +13,15 @@ const nextConfig: NextConfig = {
     config.resolve.alias.canvas = false;
     return config;
   },
+  redirects: async () => {
+    return [
+      {
+        source: '/',
+        destination: '/platform/quotes',
+        permanent: true,
+      },
+    ];
+  },
   images: {
     remotePatterns: [
       {
