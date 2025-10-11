@@ -105,9 +105,6 @@ const ProductsCombobox = ({
   // Use the value directly as it's already the full product
   const selectedProduct = value;
 
-  console.log('ProductsCombobox - value prop:', value);
-  console.log('ProductsCombobox - selectedProduct:', selectedProduct);
-
   // Infinite scroll
   const handleScroll = useCallback(() => {
     if (!listRef.current || !hasNextPage || isFetchingNextPage) return;
