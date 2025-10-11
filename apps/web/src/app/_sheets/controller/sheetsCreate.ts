@@ -1,8 +1,8 @@
 import { TRPCError } from '@trpc/server';
-import { eq } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { sheets } from '@/database/schema';
+import conflictUpdateSet from '@/database/utils/conflictUpdateSet';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
 import convertToHyperFormula from '../../_pricingModels/utils/convertToHyperFormula';
@@ -26,36 +26,25 @@ const sheetsCreate = adminProcedure
 
     const formulaData = await convertToHyperFormula(buffer);
 
-    const existingSheet = await db.query.sheets.findFirst({
-      where: {
-        googleSheetId,
-      },
-    });
-
-    if (existingSheet) {
-      const [updatedSheet] = await db
-        .update(sheets)
-        .set({
-          name,
-          formulaData,
-          updatedAt: new Date(),
-        })
-        .where(eq(sheets.id, existingSheet.id))
-        .returning();
-
-      return updatedSheet;
-    }
-
-    const [newSheet] = await db
+    // Use onConflictDoUpdate to handle existing sheets
+    const [sheet] = await db
       .insert(sheets)
       .values({
-        name,
+        name: name || googleSheetId,
         googleSheetId,
         formulaData,
       })
+      .onConflictDoUpdate({
+        target: sheets.googleSheetId,
+        set: conflictUpdateSet(sheets, [
+          name ? 'name' : 'googleSheetId',
+          'formulaData',
+          'updatedAt',
+        ]),
+      })
       .returning();
 
-    return newSheet;
+    return sheet;
   });
 
 export default sheetsCreate;
