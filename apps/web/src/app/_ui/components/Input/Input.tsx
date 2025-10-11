@@ -12,7 +12,7 @@ export const inputStyles = tv({
   variants: {
     variant: {
       outline: {
-        root: '[&:not([data-state=disabled])]:hover:border-border-primary-hover border-border-primary bg-fill-primary focus-within:ring-border-primary border',
+        root: '[&:not([data-state=disabled])]:hover:border-border-primary-hover border-border-primary bg-fill-primary focus-within:ring-border-primary border border-b-2',
       },
       ghost: null,
     },
