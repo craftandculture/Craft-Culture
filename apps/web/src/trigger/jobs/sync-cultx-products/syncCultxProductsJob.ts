@@ -1,6 +1,10 @@
 import { AbortTaskRunError, logger, schedules } from '@trigger.dev/sdk';
 
+import db from '@/database/client';
+import { productOffers, products } from '@/database/schema';
+import conflictUpdateSet from '@/database/utils/conflictUpdateSet';
 import createClient from '@/lib/cultx/client';
+import splitArrayBatches from '@/utils/splitArrayBatches';
 
 export const syncCultxProductsJob = schedules.task({
   id: 'sync-cultx-products',
@@ -33,5 +37,69 @@ export const syncCultxProductsJob = schedules.task({
     }
 
     logger.info(`Syncing ${response.data.count} products from CultX`);
+
+    const productBatches = splitArrayBatches(response.data.data, 100);
+
+    for (const [index, batch] of productBatches.entries()) {
+      logger.info(
+        `Processing batch ${index + 1} out of ${productBatches.length}`,
+      );
+
+      const result = await db
+        .insert(products)
+        .values(
+          batch.map((product) => ({
+            lwin18: product.lwin18,
+            name: product.wineName,
+            region: product.region,
+            producer: product.producer,
+            year: product.vintage,
+            imageUrl: product.imageFileName,
+          })),
+        )
+        .onConflictDoUpdate({
+          target: products.lwin18,
+          set: conflictUpdateSet(products, [
+            'name',
+            'region',
+            'producer',
+            'year',
+            'imageUrl',
+          ]),
+        })
+        .returning();
+
+      const lwin18Map = new Map(
+        result.map((product) => [product.lwin18, product.id]),
+      );
+
+      await db
+        .insert(productOffers)
+        .values(
+          batch.map(
+            (product) =>
+              ({
+                productId: lwin18Map.get(product.lwin18)!,
+                externalId: `cultx:${product.productUrn}`,
+                source: 'cultx',
+                price: product.marketValue ?? 0,
+                currency: 'GBP',
+                unitCount: product.unitCount,
+                unitSize: product.unitSize,
+                availableQuantity: product.availableQuantity,
+              }) as const,
+          ),
+        )
+        .onConflictDoUpdate({
+          target: productOffers.externalId,
+          set: conflictUpdateSet(productOffers, [
+            'price',
+            'currency',
+            'unitCount',
+            'unitSize',
+            'availableQuantity',
+          ]),
+        });
+    }
   },
 });
