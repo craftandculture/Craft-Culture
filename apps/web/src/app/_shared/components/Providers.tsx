@@ -2,11 +2,13 @@
 
 import { ThemeProvider } from 'next-themes';
 
+import clientConfig from '@/client.config';
+
 const Providers = ({ children }: React.PropsWithChildren) => {
   return (
     <ThemeProvider
       enableSystem={true}
-      storageKey="craft-culture.theme"
+      storageKey={`${clientConfig.cookiePrefix}.theme`}
       defaultTheme="light"
     >
       {children}

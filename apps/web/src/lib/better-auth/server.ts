@@ -3,6 +3,7 @@ import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { nextCookies } from 'better-auth/next-js';
 import { magicLink } from 'better-auth/plugins';
 
+import clientConfig from '@/client.config';
 import db from '@/database/client';
 import * as schema from '@/database/schema';
 import serverConfig from '@/server.config';
@@ -12,13 +13,21 @@ import loops from '../loops/client';
 
 const authServerClient = betterAuth({
   baseURL: serverConfig.appUrl.toString(),
-  basePath: '/api/v1/auth',
+  basePath: '/api/auth',
   secret: serverConfig.betterAuthSecret,
   plugins: [
     magicLink({
       sendMagicLink: async ({ email, token, url }) => {
+        if (serverConfig.env !== 'production') {
+          console.log('You are in development mode, so no email will be sent');
+          console.log(email);
+          console.log(token);
+          console.log(url);
+          return;
+        }
+
         await loops.sendTransactionalEmail({
-          transactionalId: '',
+          transactionalId: 'cmglxdfzwzzscz00inq1dm56c',
           email,
           dataVariables: {
             token,
@@ -29,18 +38,12 @@ const authServerClient = betterAuth({
     }),
     nextCookies(),
   ],
-  socialProviders: {
-    // google: {
-    //   prompt: 'select_account',
-    //   clientId: serverConfig.googleClientId,
-    //   clientSecret: serverConfig.googleClientSecret,
-    // },
-  },
+  socialProviders: {},
   advanced: {
     database: {
       generateId: () => crypto.randomUUID(),
     },
-    cookiePrefix: 'craft-culture',
+    cookiePrefix: clientConfig.cookiePrefix,
   },
   database: drizzleAdapter(db, {
     provider: 'pg',

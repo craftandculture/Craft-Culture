@@ -33,8 +33,8 @@ const TRPCReactProvider = ({
           transformer: superjson,
           url:
             typeof window !== 'undefined'
-              ? '/api/v1/trpc'
-              : new URL('/api/v1/trpc', getAppUrl()).toString(),
+              ? '/api/trpc'
+              : new URL('/api/trpc', getAppUrl()).toString(),
         }),
       ],
     }),
