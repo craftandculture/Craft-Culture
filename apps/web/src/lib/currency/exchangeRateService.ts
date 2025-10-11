@@ -201,7 +201,13 @@ class ExchangeRateService {
         );
       }
 
-      const data: ECBResponse = await response.json();
+      const responseText = await response.text();
+
+      if (!responseText) {
+        throw new Error('ECB API returned empty response');
+      }
+
+      const data: ECBResponse = JSON.parse(responseText);
 
       // Find the correct series key (ECB response structure can vary)
       const seriesKeys = Object.keys(data.dataSets[0]?.series || {});
@@ -263,6 +269,7 @@ class ExchangeRateService {
     // Fetch rate directly without caching
     const startDate = new Date(date);
     const endDate = new Date(date);
+
     const multiDayResult = await this.fetchECBRates(
       from,
       to,

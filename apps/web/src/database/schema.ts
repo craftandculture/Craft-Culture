@@ -12,6 +12,8 @@ import {
   uuid,
 } from 'drizzle-orm/pg-core';
 
+import { CellMappingSchema } from '@/app/_pricingModels/schemas/cellMappingSchema';
+
 export const timestamps = {
   createdAt: timestamp('created_at', { mode: 'date' }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { mode: 'date' })
@@ -28,7 +30,7 @@ export const userRole = pgEnum('user_role', ['user', 'admin']);
 
 export const sheets = pgTable('sheets', {
   id: uuid('id').primaryKey().defaultRandom(),
-  name: text('name').notNull(),
+  name: text('name').notNull().default(sql`gen_random_uuid()::text`),
   googleSheetId: text('google_sheet_id').notNull().unique(),
   formulaData: jsonb('formula_data').notNull(),
   ...timestamps,
@@ -44,7 +46,7 @@ export const pricingModels = pgTable(
     sheetId: uuid('sheet_id')
       .references(() => sheets.id, { onDelete: 'cascade' })
       .notNull(),
-    cellMappings: jsonb('cell_mappings').notNull(),
+    cellMappings: jsonb('cell_mappings').$type<CellMappingSchema>().notNull(),
     ...timestamps,
   },
   (table) => [

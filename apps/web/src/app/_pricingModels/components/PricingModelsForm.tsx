@@ -7,6 +7,7 @@ import {
   useQueryClient,
   useSuspenseQuery,
 } from '@tanstack/react-query';
+import { useEffect } from 'react';
 import { Controller, SubmitHandler } from 'react-hook-form';
 import { toast } from 'sonner';
 
@@ -31,6 +32,26 @@ import createPricingModelSchema, {
   CreatePricingModelSchema,
 } from '../schemas/createPricingModelSchema';
 
+const defaultCellMappings = {
+  name: "'Example Pricing Model'!A7:A16",
+  region: "'Example Pricing Model'!B7:B16",
+  producer: "'Example Pricing Model'!C7:C16",
+  vintage: "'Example Pricing Model'!D7:D16",
+  quantity: "'Example Pricing Model'!E7:E16",
+  unitCount: "'Example Pricing Model'!F7:F16",
+  unitSize: "'Example Pricing Model'!G7:G16",
+  source: "'Example Pricing Model'!H7:H16",
+  price: "'Example Pricing Model'!I7:I16",
+  currency: "'Example Pricing Model'!J7:J16",
+  exchangeRateUsd: "'Example Pricing Model'!K7:K16",
+  basePriceUsd: "'Example Pricing Model'!L7:L16",
+  priceUsd: "'Example Pricing Model'!Q7:Q16",
+  customerName: "'Example Pricing Model'!B1",
+  customerEmail: "'Example Pricing Model'!B2",
+  customerType: "'Example Pricing Model'!B3",
+  finalPriceUsd: "'Example Pricing Model'!B4",
+};
+
 const PricingModelsForm = () => {
   const api = useTRPC();
   const queryClient = useQueryClient();
@@ -42,31 +63,13 @@ const PricingModelsForm = () => {
     control,
     handleSubmit,
     reset,
-    formState: { isSubmitting, errors },
+    formState: { isSubmitting, errors, isSubmitSuccessful },
   } = useZodForm(createPricingModelSchema, {
     defaultValues: {
       modelName: 'Example Pricing Model',
       isDefaultB2C: false,
       isDefaultB2B: false,
-      // Column ranges
-      name: "'Example Pricing Model'!A7:A16",
-      region: "'Example Pricing Model'!B7:B16",
-      producer: "'Example Pricing Model'!C7:C16",
-      vintage: "'Example Pricing Model'!D7:D16",
-      quantity: "'Example Pricing Model'!E7:E16",
-      unitCount: "'Example Pricing Model'!F7:F16",
-      unitSize: "'Example Pricing Model'!G7:G16",
-      source: "'Example Pricing Model'!H7:H16",
-      price: "'Example Pricing Model'!I7:I16",
-      currency: "'Example Pricing Model'!J7:J16",
-      exchangeRateUsd: "'Example Pricing Model'!K7:K16",
-      basePriceUsd: "'Example Pricing Model'!L7:L16",
-      priceUsd: "'Example Pricing Model'!Q7:Q16",
-      // Single cells
-      customerName: "'Example Pricing Model'!B1",
-      customerEmail: "'Example Pricing Model'!B2",
-      customerType: "'Example Pricing Model'!B3",
-      finalPriceUsd: "'Example Pricing Model'!B4",
+      cellMappings: defaultCellMappings,
     },
   });
 
@@ -91,6 +94,17 @@ const PricingModelsForm = () => {
   ) => {
     await createPricingModel(values);
   };
+
+  useEffect(() => {
+    if (isSubmitSuccessful) {
+      reset({
+        modelName: 'Example Pricing Model',
+        isDefaultB2C: false,
+        isDefaultB2B: false,
+        cellMappings: defaultCellMappings,
+      });
+    }
+  }, [isSubmitSuccessful, reset]);
 
   if (sheets.length === 0) {
     return (
@@ -250,10 +264,12 @@ const PricingModelsForm = () => {
                     type="text"
                     placeholder="'Example Pricing Model'!Q7:Q16"
                     isDisabled={isSubmitting}
-                    {...register('priceUsd')}
+                    {...register('cellMappings.priceUsd')}
                   />
-                  {errors.priceUsd && (
-                    <FormFieldError>{errors.priceUsd.message}</FormFieldError>
+                  {errors.cellMappings?.priceUsd && (
+                    <FormFieldError>
+                      {errors.cellMappings.priceUsd.message}
+                    </FormFieldError>
                   )}
                 </td>
               </tr>
@@ -271,11 +287,11 @@ const PricingModelsForm = () => {
                     type="text"
                     placeholder="'Example Pricing Model'!B4"
                     isDisabled={isSubmitting}
-                    {...register('finalPriceUsd')}
+                    {...register('cellMappings.finalPriceUsd')}
                   />
-                  {errors.finalPriceUsd && (
+                  {errors.cellMappings?.finalPriceUsd && (
                     <FormFieldError>
-                      {errors.finalPriceUsd.message}
+                      {errors.cellMappings.finalPriceUsd.message}
                     </FormFieldError>
                   )}
                 </td>
@@ -323,10 +339,12 @@ const PricingModelsForm = () => {
                     type="text"
                     placeholder="'Example Pricing Model'!A7:A16"
                     isDisabled={isSubmitting}
-                    {...register('name')}
+                    {...register('cellMappings.name')}
                   />
-                  {errors.name && (
-                    <FormFieldError>{errors.name.message}</FormFieldError>
+                  {errors.cellMappings?.name && (
+                    <FormFieldError>
+                      {errors.cellMappings.name.message}
+                    </FormFieldError>
                   )}
                 </td>
               </tr>
@@ -344,10 +362,12 @@ const PricingModelsForm = () => {
                     type="text"
                     placeholder="'Example Pricing Model'!B7:B16"
                     isDisabled={isSubmitting}
-                    {...register('region')}
+                    {...register('cellMappings.region')}
                   />
-                  {errors.region && (
-                    <FormFieldError>{errors.region.message}</FormFieldError>
+                  {errors.cellMappings?.region && (
+                    <FormFieldError>
+                      {errors.cellMappings.region.message}
+                    </FormFieldError>
                   )}
                 </td>
               </tr>
@@ -365,10 +385,12 @@ const PricingModelsForm = () => {
                     type="text"
                     placeholder="'Example Pricing Model'!C7:C16"
                     isDisabled={isSubmitting}
-                    {...register('producer')}
+                    {...register('cellMappings.producer')}
                   />
-                  {errors.producer && (
-                    <FormFieldError>{errors.producer.message}</FormFieldError>
+                  {errors.cellMappings?.producer && (
+                    <FormFieldError>
+                      {errors.cellMappings.producer.message}
+                    </FormFieldError>
                   )}
                 </td>
               </tr>
@@ -386,10 +408,12 @@ const PricingModelsForm = () => {
                     type="text"
                     placeholder="'Example Pricing Model'!D7:D16"
                     isDisabled={isSubmitting}
-                    {...register('vintage')}
+                    {...register('cellMappings.vintage')}
                   />
-                  {errors.vintage && (
-                    <FormFieldError>{errors.vintage.message}</FormFieldError>
+                  {errors.cellMappings?.vintage && (
+                    <FormFieldError>
+                      {errors.cellMappings.vintage.message}
+                    </FormFieldError>
                   )}
                 </td>
               </tr>
@@ -407,10 +431,12 @@ const PricingModelsForm = () => {
                     type="text"
                     placeholder="'Example Pricing Model'!E7:E16"
                     isDisabled={isSubmitting}
-                    {...register('quantity')}
+                    {...register('cellMappings.quantity')}
                   />
-                  {errors.quantity && (
-                    <FormFieldError>{errors.quantity.message}</FormFieldError>
+                  {errors.cellMappings?.quantity && (
+                    <FormFieldError>
+                      {errors.cellMappings.quantity.message}
+                    </FormFieldError>
                   )}
                 </td>
               </tr>
@@ -428,10 +454,12 @@ const PricingModelsForm = () => {
                     type="text"
                     placeholder="'Example Pricing Model'!F7:F16"
                     isDisabled={isSubmitting}
-                    {...register('unitCount')}
+                    {...register('cellMappings.unitCount')}
                   />
-                  {errors.unitCount && (
-                    <FormFieldError>{errors.unitCount.message}</FormFieldError>
+                  {errors.cellMappings?.unitCount && (
+                    <FormFieldError>
+                      {errors.cellMappings.unitCount.message}
+                    </FormFieldError>
                   )}
                 </td>
               </tr>
@@ -449,10 +477,12 @@ const PricingModelsForm = () => {
                     type="text"
                     placeholder="'Example Pricing Model'!G7:G16"
                     isDisabled={isSubmitting}
-                    {...register('unitSize')}
+                    {...register('cellMappings.unitSize')}
                   />
-                  {errors.unitSize && (
-                    <FormFieldError>{errors.unitSize.message}</FormFieldError>
+                  {errors.cellMappings?.unitSize && (
+                    <FormFieldError>
+                      {errors.cellMappings.unitSize.message}
+                    </FormFieldError>
                   )}
                 </td>
               </tr>
@@ -470,10 +500,12 @@ const PricingModelsForm = () => {
                     type="text"
                     placeholder="'Example Pricing Model'!H7:H16"
                     isDisabled={isSubmitting}
-                    {...register('source')}
+                    {...register('cellMappings.source')}
                   />
-                  {errors.source && (
-                    <FormFieldError>{errors.source.message}</FormFieldError>
+                  {errors.cellMappings?.source && (
+                    <FormFieldError>
+                      {errors.cellMappings.source.message}
+                    </FormFieldError>
                   )}
                 </td>
               </tr>
@@ -491,10 +523,12 @@ const PricingModelsForm = () => {
                     type="text"
                     placeholder="'Example Pricing Model'!I7:I16"
                     isDisabled={isSubmitting}
-                    {...register('price')}
+                    {...register('cellMappings.price')}
                   />
-                  {errors.price && (
-                    <FormFieldError>{errors.price.message}</FormFieldError>
+                  {errors.cellMappings?.price && (
+                    <FormFieldError>
+                      {errors.cellMappings.price.message}
+                    </FormFieldError>
                   )}
                 </td>
               </tr>
@@ -512,10 +546,12 @@ const PricingModelsForm = () => {
                     type="text"
                     placeholder="'Example Pricing Model'!J7:J16"
                     isDisabled={isSubmitting}
-                    {...register('currency')}
+                    {...register('cellMappings.currency')}
                   />
-                  {errors.currency && (
-                    <FormFieldError>{errors.currency.message}</FormFieldError>
+                  {errors.cellMappings?.currency && (
+                    <FormFieldError>
+                      {errors.cellMappings.currency.message}
+                    </FormFieldError>
                   )}
                 </td>
               </tr>
@@ -533,11 +569,11 @@ const PricingModelsForm = () => {
                     type="text"
                     placeholder="'Example Pricing Model'!K7:K16"
                     isDisabled={isSubmitting}
-                    {...register('exchangeRateUsd')}
+                    {...register('cellMappings.exchangeRateUsd')}
                   />
-                  {errors.exchangeRateUsd && (
+                  {errors.cellMappings?.exchangeRateUsd && (
                     <FormFieldError>
-                      {errors.exchangeRateUsd.message}
+                      {errors.cellMappings.exchangeRateUsd.message}
                     </FormFieldError>
                   )}
                 </td>
@@ -556,11 +592,11 @@ const PricingModelsForm = () => {
                     type="text"
                     placeholder="'Example Pricing Model'!L7:L16"
                     isDisabled={isSubmitting}
-                    {...register('basePriceUsd')}
+                    {...register('cellMappings.basePriceUsd')}
                   />
-                  {errors.basePriceUsd && (
+                  {errors.cellMappings?.basePriceUsd && (
                     <FormFieldError>
-                      {errors.basePriceUsd.message}
+                      {errors.cellMappings.basePriceUsd.message}
                     </FormFieldError>
                   )}
                 </td>
@@ -581,11 +617,11 @@ const PricingModelsForm = () => {
                     type="text"
                     placeholder="'Example Pricing Model'!B1"
                     isDisabled={isSubmitting}
-                    {...register('customerName')}
+                    {...register('cellMappings.customerName')}
                   />
-                  {errors.customerName && (
+                  {errors.cellMappings?.customerName && (
                     <FormFieldError>
-                      {errors.customerName.message}
+                      {errors.cellMappings.customerName.message}
                     </FormFieldError>
                   )}
                 </td>
@@ -604,11 +640,11 @@ const PricingModelsForm = () => {
                     type="text"
                     placeholder="'Example Pricing Model'!B2"
                     isDisabled={isSubmitting}
-                    {...register('customerEmail')}
+                    {...register('cellMappings.customerEmail')}
                   />
-                  {errors.customerEmail && (
+                  {errors.cellMappings?.customerEmail && (
                     <FormFieldError>
-                      {errors.customerEmail.message}
+                      {errors.cellMappings.customerEmail.message}
                     </FormFieldError>
                   )}
                 </td>
@@ -627,11 +663,11 @@ const PricingModelsForm = () => {
                     type="text"
                     placeholder="'Example Pricing Model'!B3"
                     isDisabled={isSubmitting}
-                    {...register('customerType')}
+                    {...register('cellMappings.customerType')}
                   />
-                  {errors.customerType && (
+                  {errors.cellMappings?.customerType && (
                     <FormFieldError>
-                      {errors.customerType.message}
+                      {errors.cellMappings.customerType.message}
                     </FormFieldError>
                   )}
                 </td>

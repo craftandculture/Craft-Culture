@@ -1,10 +1,13 @@
 import ExcelJS from 'exceljs';
-import { HyperFormula, Sheet } from 'hyperformula';
+import { HyperFormula, RawCellContent, Sheet } from 'hyperformula';
 
-const convertToHyperFormula = async (
-  buffer: ArrayBuffer,
-  sheetName?: string,
-) => {
+interface SheetData {
+  sheetName: string;
+  formulas: RawCellContent[][];
+  values: unknown[][];
+}
+
+const convertToHyperFormula = async (buffer: ArrayBuffer) => {
   const workbook = new ExcelJS.Workbook();
   await workbook.xlsx.load(buffer);
 
@@ -13,13 +16,18 @@ const convertToHyperFormula = async (
   workbook.eachSheet((worksheet) => {
     const sheetData: unknown[][] = [];
 
-    worksheet.eachRow((row) => {
+    // Use worksheet.eachRow with includeEmpty to preserve row numbers
+    worksheet.eachRow({ includeEmpty: true }, (row) => {
       const rowData: unknown[] = [];
 
-      row.eachCell({ includeEmpty: true }, (cell) => {
+      // Get the maximum column number to ensure we include all columns
+      const maxCol = worksheet.columnCount || 100;
+
+      for (let col = 1; col <= maxCol; col++) {
+        const cell = row.getCell(col);
         const cellData = cell.formula ? `=${cell.formula}` : cell.value;
         rowData.push(cellData);
-      });
+      }
 
       sheetData.push(rowData);
     });
@@ -31,29 +39,26 @@ const convertToHyperFormula = async (
     licenseKey: 'gpl-v3',
   });
 
-  const targetSheetName = sheetName ?? Object.keys(sheetsAsJavascriptArrays)[0];
-
-  if (!targetSheetName) {
-    throw new Error('No sheet name provided');
-  }
-
-  const sheetId = hfInstance.getSheetId(targetSheetName);
-
-  if (sheetId === undefined) {
-    throw new Error(
-      `Sheet "${targetSheetName}" not found in workbook. Available sheets: ${Object.keys(sheetsAsJavascriptArrays).join(', ')}`,
-    );
-  }
-
-  const formulas = hfInstance.getSheetSerialized(sheetId);
-  const values = hfInstance.getSheetValues(sheetId);
-
   const namedRanges = workbook.definedNames.model || [];
 
+  // Serialize all sheets
+  const sheets: SheetData[] = [];
+  for (const sheetName of Object.keys(sheetsAsJavascriptArrays)) {
+    const sheetId = hfInstance.getSheetId(sheetName);
+    if (sheetId === undefined) continue;
+
+    const formulas = hfInstance.getSheetSerialized(sheetId);
+    const values = hfInstance.getSheetValues(sheetId);
+
+    sheets.push({
+      sheetName,
+      formulas,
+      values,
+    });
+  }
+
   return {
-    sheetName: targetSheetName,
-    formulas,
-    values,
+    sheets,
     namedExpressions: namedRanges.map((ne) => ({
       name: ne.name,
       ref: ne.ranges?.[0] ?? '',

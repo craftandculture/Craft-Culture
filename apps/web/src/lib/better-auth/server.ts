@@ -52,11 +52,12 @@ const authServerClient = betterAuth({
   }),
   user: {
     additionalFields: {
-      type: {
+      customerType: {
         type: 'string',
         required: true,
         defaultValue: 'b2c',
         input: true,
+        fieldName: 'customer_type',
       },
       role: {
         type: 'string',
@@ -69,6 +70,14 @@ const authServerClient = betterAuth({
         required: false,
         defaultValue: null,
         input: true,
+        fieldName: 'onboarding_completed_at',
+      },
+      pricingModelId: {
+        type: 'string',
+        required: false,
+        defaultValue: null,
+        input: true,
+        fieldName: 'pricing_model_id',
       },
     },
   },
