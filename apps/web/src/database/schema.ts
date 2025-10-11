@@ -23,7 +23,7 @@ export const timestamps = {
 
 export const productSource = pgEnum('product_source', ['cultx']);
 
-export const userType = pgEnum('user_type', ['b2b', 'b2c']);
+export const customerType = pgEnum('user_type', ['b2b', 'b2c']);
 
 export const pricingModels = pgTable(
   'pricing_models',
@@ -45,7 +45,7 @@ export const users = pgTable('users', {
   email: text('email').notNull().unique(),
   emailVerified: boolean('email_verified').notNull().default(false),
   image: text('image'),
-  type: userType('type').notNull().default('b2c'),
+  customerType: customerType('customer_type').notNull().default('b2c'),
   onboardingCompletedAt: timestamp('onboarding_completed_at', {
     mode: 'date',
   }),

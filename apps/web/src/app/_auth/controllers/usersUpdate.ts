@@ -11,7 +11,10 @@ const usersUpdate = protectedProcedure
   .mutation(async ({ ctx, input }) => {
     await db
       .update(users)
-      .set(input)
+      .set({
+        ...input,
+        onboardingCompletedAt: new Date(),
+      })
       .where(eq(users.id, ctx.user.id))
       .returning();
   });
