@@ -45,5 +45,5 @@ export default defineConfig({
       randomize: false,
     },
   },
-  dirs: ['./src/jobs'],
+  dirs: ['./src/trigger/jobs'],
 });

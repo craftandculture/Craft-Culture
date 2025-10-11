@@ -3,13 +3,22 @@
  * value. If the function throws an error, it will be returned as the second
  * element of the tuple.
  *
- * @param promise - The promise to execute
+ * @param fn - The function to execute
  * @returns A tuple of [value, error]
  */
-const tryCatch = async <T, E = Error | DOMException>(promise: Promise<T>) => {
+const tryCatch = async <T, E extends Error = Error>(
+  fn: (() => T | Promise<T>) | Promise<T>,
+) => {
   try {
-    return [await promise, undefined] as const;
+    if (typeof fn === 'function') {
+      return [await fn(), undefined] as const;
+    } else {
+      return [await fn, undefined] as const;
+    }
   } catch (error) {
+    if (!(error instanceof Error)) {
+      throw new Error('Error is not an instance of Error');
+    }
     return [undefined, error as E] as const;
   }
 };
