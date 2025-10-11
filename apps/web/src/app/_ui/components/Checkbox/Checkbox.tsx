@@ -13,19 +13,30 @@ export const checkboxStyles = tv({
     indicator:
       'group flex items-center justify-center overflow-hidden text-current',
   },
+  variants: {
+    isDisabled: {
+      true: { checkbox: 'opacity-50' },
+    },
+  },
 });
 
 const { checkbox, indicator } = checkboxStyles();
 
 export interface CheckboxProps
   extends VariantProps<typeof checkboxStyles>,
-    React.ComponentProps<typeof CheckboxPrimitive.Root> {}
+    React.ComponentProps<typeof CheckboxPrimitive.Root> {
+  isDisabled?: boolean;
+}
 
 const Checkbox = ({
   className,
+  isDisabled,
   ...props
 }: React.PropsWithChildren<CheckboxProps>) => (
-  <CheckboxPrimitive.Root className={checkbox({ className })} {...props}>
+  <CheckboxPrimitive.Root
+    className={checkbox({ className, isDisabled })}
+    {...props}
+  >
     <CheckboxPrimitive.Indicator className={indicator()}>
       <Icon
         icon={IconCheck}

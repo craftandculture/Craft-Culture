@@ -58,6 +58,12 @@ const authServerClient = betterAuth({
         defaultValue: 'b2c',
         input: true,
       },
+      role: {
+        type: 'string',
+        required: true,
+        defaultValue: 'user',
+        input: false,
+      },
       onboardingCompletedAt: {
         type: 'date',
         required: false,
