@@ -1,6 +1,7 @@
 import {
   boolean,
   integer,
+  pgEnum,
   pgTable,
   text,
   timestamp,
@@ -14,6 +15,8 @@ export const timestamps = {
     .defaultNow()
     .$onUpdate(() => new Date()),
 };
+
+export const productSource = pgEnum('product_source', ['cultx']);
 
 export const users = pgTable('users', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -87,5 +90,30 @@ export const passkeys = pgTable('passkeys', {
   deviceType: text('device_type').notNull(),
   backedUp: boolean('backed_up').notNull(),
   transports: text('transports').notNull(),
+  ...timestamps,
+}).enableRLS();
+
+export const products = pgTable('products', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  lwin18: text('lwin18').notNull().unique(),
+  name: text('name').notNull(),
+  region: text('region'),
+  producer: text('producer'),
+  year: integer('year'),
+  imageUrl: text('image_url'),
+  ...timestamps,
+}).enableRLS();
+
+export const productOffers = pgTable('product_offers', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  productId: uuid('product_id')
+    .references(() => products.id, { onDelete: 'cascade' })
+    .notNull(),
+  source: productSource('source').notNull(),
+  price: integer('price').notNull(),
+  currency: text('currency').notNull(),
+  unitCount: integer('unit_count').notNull(),
+  unitSize: text('unit_size').notNull(),
+  availableQuantity: integer('available_quantity').notNull(),
   ...timestamps,
 }).enableRLS();
