@@ -3,7 +3,7 @@
 import { IconPlus } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import { parseAsArrayOf, parseAsJson, useQueryState } from 'nuqs';
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 
 import { Product } from '@/app/_products/controller/productsGetMany';
 import Button from '@/app/_ui/components/Button/Button';
@@ -16,18 +16,30 @@ import formatPrice from '@/utils/formatPrice';
 
 import LineItemRow from './LineItemRow';
 
-export interface LineItem {
-  id: string;
-  offerId?: string;
-  quantity?: number;
-  product?: Product;
-}
-
 interface URLLineItem {
   productId: string;
   offerId: string;
   quantity: number;
 }
+
+const MAX_LINE_ITEMS = 10;
+
+type LineItemBase = {
+  id: string;
+  product?: Product;
+  productId?: string;
+  offerId?: string;
+  quantity?: number;
+};
+
+type DerivedLineItem =
+  | (LineItemBase & {
+      source: 'url';
+      urlIndex: number;
+    })
+  | (LineItemBase & {
+      source: 'placeholder';
+    });
 
 const QuotesForm = () => {
   const api = useTRPC();
@@ -62,25 +74,63 @@ const QuotesForm = () => {
       productIds,
     }),
     enabled: productIds.length > 0,
+    placeholderData: (previousData) => previousData,
   });
 
+  const [placeholderRowIds, setPlaceholderRowIds] = useState<string[]>([]);
+  const [productCache, setProductCache] = useState<Record<string, Product>>({});
+
+  // Guarantee the UI always shows an editable row
+  useEffect(() => {
+    if (urlLineItems.length === 0 && placeholderRowIds.length === 0) {
+      setPlaceholderRowIds([crypto.randomUUID()]);
+    }
+  }, [placeholderRowIds.length, urlLineItems.length]);
+
   // Derive line items from URL and products data
-  const lineItems = useMemo<LineItem[]>(() => {
-    if (urlLineItems.length === 0) {
-      return [{ id: crypto.randomUUID() }];
+  const lineItems = useMemo<DerivedLineItem[]>(() => {
+    const productMap = new Map<string, Product>();
+
+    Object.values(productCache).forEach((product) => {
+      productMap.set(product.id, product);
+    });
+
+    if (productsData) {
+      productsData.data.forEach((product) => {
+        productMap.set(product.id, product);
+      });
     }
 
-    const productMap = productsData
-      ? new Map(productsData.data.map((p) => [p.id, p]))
-      : new Map();
+    const persistedLineItems: DerivedLineItem[] = urlLineItems.map(
+      (item, index) => ({
+        id: `url-${index}`,
+        source: 'url',
+        urlIndex: index,
+        product: productMap.get(item.productId),
+        productId: item.productId,
+        offerId: item.offerId,
+        quantity: item.quantity,
+      }),
+    );
 
-    return urlLineItems.map((item) => ({
-      id: `${item.productId}-${item.offerId}`,
-      offerId: item.offerId,
-      quantity: item.quantity,
-      product: productMap.get(item.productId),
-    }));
-  }, [urlLineItems, productsData]);
+    if (persistedLineItems.length === 0 && placeholderRowIds.length === 0) {
+      return [
+        {
+          id: 'placeholder-fallback',
+          source: 'placeholder',
+        },
+      ];
+    }
+
+    const placeholderLineItems: DerivedLineItem[] = placeholderRowIds.map(
+      (id) => ({
+        id,
+        source: 'placeholder',
+      }),
+    );
+
+    return [...persistedLineItems, ...placeholderLineItems];
+  }, [placeholderRowIds, productCache, productsData, urlLineItems]);
 
   // Fetch quote data
   const { data: quoteData, isLoading: isQuoteLoading } = useQuery({
@@ -90,40 +140,88 @@ const QuotesForm = () => {
     enabled: urlLineItems.length > 0,
   });
 
+  const totalLineItems = lineItems.length;
+  const isAtRowLimit = totalLineItems >= MAX_LINE_ITEMS;
+
   const handleAddRow = () => {
-    if (urlLineItems.length < 10) {
-      void setUrlLineItems([...urlLineItems, {} as URLLineItem]);
+    if (isAtRowLimit) {
+      return;
     }
+    setPlaceholderRowIds((prev) => [...prev, crypto.randomUUID()]);
   };
 
   const handleRemoveRow = (id: string) => {
-    const index = lineItems.findIndex((item) => item.id === id);
-    if (index !== -1) {
-      const newItems = urlLineItems.filter((_, i) => i !== index);
-      void setUrlLineItems(newItems.length > 0 ? newItems : []);
+    const item = lineItems.find((lineItem) => lineItem.id === id);
+    if (!item) {
+      return;
     }
+
+    if (item.source === 'url') {
+      const newItems = urlLineItems.filter((_, i) => i !== item.urlIndex);
+      void setUrlLineItems(newItems);
+      return;
+    }
+
+    setPlaceholderRowIds((prev) => prev.filter((rowId) => rowId !== item.id));
   };
 
   const handleProductChange = (id: string, product: Product) => {
-    const index = lineItems.findIndex((item) => item.id === id);
-    if (index !== -1) {
+    const item = lineItems.find((lineItem) => lineItem.id === id);
+    if (!item) {
+      return;
+    }
+
+    const quantity = Math.max(1, item.quantity ?? 1);
+    const offerId = product.productOffers?.[0]?.id ?? '';
+
+    setProductCache((prev) => ({
+      ...prev,
+      [product.id]: product,
+    }));
+
+    if (item.source === 'url') {
+      if (!urlLineItems[item.urlIndex]) {
+        return;
+      }
+
       const newItems = [...urlLineItems];
-      newItems[index] = {
+      newItems[item.urlIndex] = {
         productId: product.id,
-        offerId: product.productOffers?.[0]?.id || '',
-        quantity: 1,
+        offerId,
+        quantity,
       };
       void setUrlLineItems(newItems);
+      return;
     }
+
+    void setUrlLineItems([
+      ...urlLineItems,
+      {
+        productId: product.id,
+        offerId,
+        quantity,
+      },
+    ]);
+    setPlaceholderRowIds((prev) => prev.filter((rowId) => rowId !== item.id));
   };
 
   const handleQuantityChange = (id: string, quantity: number) => {
-    const index = lineItems.findIndex((item) => item.id === id);
-    if (index !== -1 && urlLineItems[index]) {
-      const newItems = [...urlLineItems];
-      newItems[index] = { ...newItems[index]!, quantity };
-      void setUrlLineItems(newItems);
+    const item = lineItems.find((lineItem) => lineItem.id === id);
+    if (!item) {
+      return;
     }
+
+    if (item.source !== 'url' || !urlLineItems[item.urlIndex]) {
+      return;
+    }
+
+    const nextQuantity = Math.max(1, quantity);
+    const newItems = [...urlLineItems];
+    newItems[item.urlIndex] = {
+      ...newItems[item.urlIndex]!,
+      quantity: nextQuantity,
+    };
+    void setUrlLineItems(newItems);
   };
 
   return (
@@ -203,7 +301,7 @@ const QuotesForm = () => {
         type="button"
         variant="ghost"
         onClick={handleAddRow}
-        isDisabled={lineItems.length >= 10}
+        isDisabled={isAtRowLimit}
       >
         <ButtonContent iconLeft={IconPlus}>Add Product</ButtonContent>
       </Button>

@@ -81,8 +81,9 @@ const LineItemRow = ({
         </div>
 
         {/* Quantity Input */}
-        <div className="col-span-12 sm:col-span-4 md:col-span-3">
+        <div className="col-span-12 flex flex-wrap items-center gap-2 sm:col-span-4 md:col-span-3">
           <Input
+            className="min-w-0 grow"
             type="number"
             size="md"
             min={1}
@@ -97,19 +98,11 @@ const LineItemRow = ({
                   variant="bodyXs"
                   className="text-text-muted pr-2.5 font-medium"
                 >
-                  / {maxQuantity}
+                  {offer?.unitCount} × {offer?.unitSize} (max: {maxQuantity})
                 </Typography>
               ) : undefined
             }
           />
-          {offer && (
-            <Typography
-              variant="bodyXs"
-              className="text-text-muted mt-1.5 font-medium"
-            >
-              {offer.unitCount} × {offer.unitSize}
-            </Typography>
-          )}
         </div>
 
         {/* Line Price */}
