@@ -1,0 +1,48 @@
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
+import { ThemeProvider } from 'next-themes';
+import { NuqsAdapter } from 'nuqs/adapters/next/app';
+
+import { PostHogProvider } from '@/app/_analytics/PostHogProvider';
+import CookieConsentProvider from '@/app/_cookies/providers/CookieConsentProvider';
+import TRPCReactProvider from '@/app/_shared/components/TRPCReactProvider';
+import Toaster from '@/app/_ui/components/Toaster/Toaster';
+import TooltipProvider from '@/app/_ui/components/Tooltip/TooltipProvider';
+
+export interface SharedProvidersProps {
+  forcedTheme?: 'light' | 'dark';
+}
+
+const SharedProviders = async ({
+  children,
+  forcedTheme,
+}: React.PropsWithChildren<SharedProvidersProps>) => {
+  return (
+    <>
+      <ThemeProvider
+        enableSystem={true}
+        storageKey="easybooker.theme"
+        defaultTheme="light"
+        forcedTheme={forcedTheme}
+      >
+        <CookieConsentProvider cookieName="easybooker.cookie_consent">
+          <TooltipProvider>
+            <TRPCReactProvider>
+              <NuqsAdapter>
+                <PostHogProvider>
+                  {children}
+                  <ReactQueryDevtools
+                    initialIsOpen={false}
+                    buttonPosition="bottom-right"
+                  />
+                  <Toaster />
+                </PostHogProvider>
+              </NuqsAdapter>
+            </TRPCReactProvider>
+          </TooltipProvider>
+        </CookieConsentProvider>
+      </ThemeProvider>
+    </>
+  );
+};
+
+export default SharedProviders;

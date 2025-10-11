@@ -1,0 +1,61 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "extends": ["//"],
+  "tasks": {
+    "build": {
+      "outputs": [".next/**", "!.next/cache/**"],
+      "env": [
+        "CI",
+        "SENTRY_AUTH_TOKEN",
+        "NEXT_RUNTIME",
+        "NODE_ENV",
+        "DB_URL",
+        "ENCRYPTION_KEY",
+        "MONEYBIRD_CLIENT_ID",
+        "MONEYBIRD_CLIENT_SECRET",
+        "MONEYBIRD_API_KEY",
+        "MONEYBIRD_ADMINISTRATION_ID",
+        "MONEYBIRD_WEBHOOK_TOKEN",
+        "POSTMARK_API_KEY",
+        "ANTHROPIC_API_KEY",
+        "CRON_SECRET",
+        "NEXT_PUBLIC_APP_URL",
+        "NEXT_PUBLIC_VERCEL_URL",
+        "NEXT_PUBLIC_MONEYBIRD_CLIENT_ID",
+        "NEXT_PUBLIC_EXACT_ONLINE_CLIENT_ID",
+        "NEXT_PUBLIC_POSTHOG_KEY",
+        "NEXT_PUBLIC_POSTHOG_HOST",
+        "LOOPS_API_KEY",
+        "ATTIO_API_KEY",
+        "OPENROUTER_API_KEY",
+        "EXACT_ONLINE_CLIENT_ID",
+        "EXACT_ONLINE_CLIENT_SECRET",
+        "EXACT_ONLINE_WEBHOOK_TOKEN",
+        "GOOGLE_CLOUD_CREDENTIALS",
+        "GOOGLE_CLIENT_ID",
+        "GOOGLE_CLIENT_SECRET",
+        "MAX_LINE_ITEM_INCL_SUM_ERROR",
+        "MAX_LINE_ITEM_EXCL_SUM_ERROR",
+        "MAX_DOCUMENT_PROCESSING_ATTEMPTS",
+        "FORCE_PROCESS_DOCUMENT_JOB",
+        "BETTER_AUTH_SECRET",
+        "BETTER_AUTH_URL",
+        "ENABLE_ATTIO_SYNC",
+        "ENABLE_LOOPS_SYNC"
+      ]
+    },
+    "dev": {
+      "cache": false,
+      "persistent": true
+    },
+    "lint": {
+      "inputs": ["src/**/*"]
+    },
+    "start": {
+      "persistent": true
+    },
+    "studio": {
+      "persistent": true
+    }
+  }
+}

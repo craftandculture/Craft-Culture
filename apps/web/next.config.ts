@@ -1,0 +1,72 @@
+import createMDX from '@next/mdx';
+import { withSentryConfig } from '@sentry/nextjs';
+import { NextConfig } from 'next';
+
+const nextConfig: NextConfig = {
+  experimental: {
+    reactCompiler: true,
+    authInterrupts: true,
+  },
+  allowedDevOrigins: ['jasper.ngrok.app'],
+  pageExtensions: ['ts', 'tsx', 'mdx'],
+  webpack: (config) => {
+    config.resolve.alias.canvas = false;
+    return config;
+  },
+  images: {
+    remotePatterns: [
+      ...(process.env.NODE_ENV === 'development'
+        ? [
+            {
+              protocol: 'http',
+              hostname: 'localhost',
+            } as const,
+            {
+              protocol: 'http',
+              hostname: '127.0.0.1',
+            } as const,
+          ]
+        : []),
+    ].filter(Boolean),
+  },
+};
+
+const withMDX = createMDX({
+  extension: /\.mdx?$/,
+});
+
+const configWithMDX = withMDX(nextConfig);
+
+export default process.env.NODE_ENV === 'development'
+  ? configWithMDX
+  : withSentryConfig(configWithMDX, {
+      // For all available options, see:
+      // https://github.com/getsentry/sentry-webpack-plugin#options
+
+      org: 'bvsc-software-bv',
+      project: 'easybooker-web',
+
+      // Only print logs for uploading source maps in CI
+      silent: !process.env.CI,
+
+      // For all available options, see:
+      // https://docs.sentry.io/platforms/javascript/guides/nextjs/manual-setup/
+
+      // Upload a larger set of source maps for prettier stack traces (increases build time)
+      widenClientFileUpload: true,
+
+      // Uncomment to route browser requests to Sentry through a Next.js rewrite to circumvent ad-blockers.
+      // This can increase your server load as well as your hosting bill.
+      // Note: Check that the configured route will not match with your Next.js middleware, otherwise reporting of client-
+      // side errors will fail.
+      // tunnelRoute: "/monitoring",
+
+      // Automatically tree-shake Sentry logger statements to reduce bundle size
+      disableLogger: true,
+
+      // Enables automatic instrumentation of Vercel Cron Monitors. (Does not yet work with App Router route handlers.)
+      // See the following for more information:
+      // https://docs.sentry.io/product/crons/
+      // https://vercel.com/docs/cron-jobs
+      automaticVercelMonitors: true,
+    });
