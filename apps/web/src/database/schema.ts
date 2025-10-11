@@ -30,7 +30,7 @@ export const userRole = pgEnum('user_role', ['user', 'admin']);
 
 export const sheets = pgTable('sheets', {
   id: uuid('id').primaryKey().defaultRandom(),
-  name: text('name').notNull().default(sql`gen_random_uuid()::text`),
+  name: text('name').notNull(),
   googleSheetId: text('google_sheet_id').notNull().unique(),
   formulaData: jsonb('formula_data').notNull(),
   ...timestamps,
