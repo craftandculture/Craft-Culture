@@ -1,26 +1,12 @@
 import { z } from 'zod';
 
-import isFreeDomain from '@/app/_administrations/data/isFreeDomain';
-
 import getPasswordStrength from '../uitls/passwordStrength';
 
 const signUpSchema = z.object({
   email: z
     .string()
     .email()
-    .transform((v) => v.toLowerCase())
-    .refine(
-      async (v) => {
-        const domain = v.split('@')[1];
-        if (!domain) return false;
-        const isFree = await isFreeDomain(`https://${domain}`);
-        return !isFree;
-      },
-      {
-        message:
-          'Gebruik een zakelijk e-mailadres. Gratis domeinen zoals gmail.com en hotmail.com zijn niet toegestaan.',
-      },
-    ),
+    .transform((v) => v.toLowerCase()),
   password: z
     .string()
     .refine((password) => getPasswordStrength(password) >= 3, {

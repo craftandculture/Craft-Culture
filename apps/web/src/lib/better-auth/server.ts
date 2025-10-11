@@ -1,24 +1,15 @@
-import * as Sentry from '@sentry/nextjs';
 import parse from 'another-name-parser';
 import bcrypt from 'bcrypt';
 import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { nextCookies } from 'better-auth/next-js';
-import { eq } from 'drizzle-orm';
-import { after } from 'next/server';
 
-import getWebsiteFromUserEmail from '@/app/_auth/uitls/getWebsiteFromUserEmail';
 import db from '@/database';
 import * as schema from '@/database/schema';
-import { User, users } from '@/database/schema';
 import serverConfig from '@/server.config';
 
-import createClient from '../attio/client';
-import assertAttioPerson from '../attio/data/assertAttioPerson';
 import encrypt from '../encryption/encrypt';
 import loops from '../loops/client';
-import upsertLoopsContact from '../loops/data/upsertLoopsContact';
-import posthog from '../posthog/server';
 
 const authServerClient = betterAuth({
   baseURL: serverConfig.appUrl.toString(),
@@ -35,14 +26,6 @@ const authServerClient = betterAuth({
           first_name: parse(data.user.name).first ?? data.user.name,
           email: data.user.email,
           confirmation_link: data.url,
-        },
-      });
-
-      posthog.capture({
-        event: 'user:reset_password_email_sent',
-        distinctId: data.user.id,
-        properties: {
-          ...data.user,
         },
       });
     },
@@ -68,14 +51,6 @@ const authServerClient = betterAuth({
           confirmation_link: data.url,
         },
       });
-
-      posthog.capture({
-        event: 'user:signup_email_sent',
-        distinctId: data.user.id,
-        properties: {
-          ...data.user,
-        },
-      });
     },
   },
   user: {
@@ -93,49 +68,16 @@ const authServerClient = betterAuth({
             confirmation_link: data.url,
           },
         });
-
-        posthog.capture({
-          event: 'user:email_change_email_sent',
-          distinctId: data.user.id,
-          properties: {
-            ...data.user,
-          },
-        });
       },
     },
-    additionalFields: {
-      phone: {
-        type: 'string',
-        required: false,
-        defaultValue: null,
-        input: true,
-      },
-      roleAtOrganization: {
-        type: 'string',
-        required: false,
-        defaultValue: null,
-        input: true,
-      },
-      referralSource: {
-        type: 'string',
-        required: false,
-        defaultValue: null,
-        input: true,
-      },
-      onboardingStep: {
-        type: 'string',
-        required: true,
-        defaultValue: 'profile',
-        input: false,
-      },
-    },
+    additionalFields: {},
   },
   socialProviders: {
-    google: {
-      prompt: 'select_account',
-      clientId: serverConfig.googleClientId,
-      clientSecret: serverConfig.googleClientSecret,
-    },
+    // google: {
+    //   prompt: 'select_account',
+    //   clientId: serverConfig.googleClientId,
+    //   clientSecret: serverConfig.googleClientSecret,
+    // },
   },
   plugins: [nextCookies()],
   advanced: {
@@ -150,107 +92,6 @@ const authServerClient = betterAuth({
     schema,
   }),
   databaseHooks: {
-    user: {
-      create: {
-        after: async (user) => {
-          posthog.capture({
-            event: 'user:created',
-            distinctId: user.id,
-            properties: {
-              ...user,
-            },
-          });
-
-          after(async () => {
-            const attio = createClient({
-              apiKey: serverConfig.attioApiKey,
-            });
-
-            try {
-              const [attioPersonId] = await Promise.all([
-                serverConfig.enableAttioSync
-                  ? assertAttioPerson({
-                      client: attio,
-                      properties: {
-                        userId: user.id,
-                        email: user.email,
-                        name: user.name,
-                        phone: (user as User).phone,
-                        roleAtOrganization: (user as User).roleAtOrganization,
-                        referralSource: (user as User).referralSource,
-                        companyWebsite: getWebsiteFromUserEmail(user.email),
-                      },
-                    })
-                  : Promise.resolve(null),
-                serverConfig.enableLoopsSync
-                  ? upsertLoopsContact(user.email, {
-                      lifecycleStage: 'lead',
-                      organizationCount: 0,
-                      administrationCount: 0,
-                    })
-                  : Promise.resolve(),
-              ]);
-              if (!attioPersonId) return;
-
-              await db
-                .update(users)
-                .set({
-                  attioPersonId,
-                })
-                .where(eq(users.id, user.id));
-            } catch (error) {
-              Sentry.captureException(error);
-            }
-          });
-        },
-      },
-      update: {
-        after: async (user) => {
-          posthog.capture({
-            event: 'user:updated',
-            distinctId: user.id,
-            properties: {
-              ...user,
-            },
-          });
-
-          if (!serverConfig.enableAttioSync) return;
-
-          after(async () => {
-            try {
-              const attio = createClient({
-                apiKey: serverConfig.attioApiKey,
-              });
-
-              await assertAttioPerson({
-                client: attio,
-                properties: {
-                  userId: user.id,
-                  email: user.email,
-                  name: user.name,
-                  phone: (user as User).phone,
-                  roleAtOrganization: (user as User).roleAtOrganization,
-                  referralSource: (user as User).referralSource,
-                  companyWebsite: getWebsiteFromUserEmail(user.email),
-                },
-              });
-            } catch (error) {
-              Sentry.captureException(error);
-            }
-          });
-        },
-      },
-    },
-    session: {
-      create: {
-        after: async (session) => {
-          posthog.capture({
-            event: 'user:logged_in',
-            distinctId: session.userId,
-          });
-        },
-      },
-    },
     account: {
       create: {
         before: async (account) => {
