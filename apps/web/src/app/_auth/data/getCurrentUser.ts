@@ -18,7 +18,7 @@ const getCurrentUser = cache(async () => {
     ...session.user,
     firstName: parse(session.user.name).first,
     lastName: parse(session.user.name).last,
-  } as User & {
+  } as unknown as User & {
     firstName: string | null;
     lastName: string | null;
   };
