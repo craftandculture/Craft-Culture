@@ -1,8 +1,7 @@
-import parse from 'another-name-parser';
-import bcrypt from 'bcrypt';
 import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { nextCookies } from 'better-auth/next-js';
+import { magicLink } from 'better-auth/plugins';
 
 import db from '@/database';
 import * as schema from '@/database/schema';
@@ -15,63 +14,21 @@ const authServerClient = betterAuth({
   baseURL: serverConfig.appUrl.toString(),
   basePath: '/api/v1/auth',
   secret: serverConfig.betterAuthSecret,
-  emailAndPassword: {
-    enabled: true,
-    requireEmailVerification: true,
-    async sendResetPassword(data) {
-      await loops.sendTransactionalEmail({
-        transactionalId: 'cmbddd0xj0i5u230hghxozg5g',
-        email: data.user.email,
-        dataVariables: {
-          first_name: parse(data.user.name).first ?? data.user.name,
-          email: data.user.email,
-          confirmation_link: data.url,
-        },
-      });
-    },
-    password: {
-      hash: async (password: string) => {
-        return await bcrypt.hash(password, 10);
-      },
-      verify: async ({ password, hash }) => {
-        return await bcrypt.compare(password, hash);
-      },
-    },
-  },
-  emailVerification: {
-    sendOnSignUp: true,
-    autoSignInAfterVerification: true,
-    async sendVerificationEmail(data) {
-      await loops.sendTransactionalEmail({
-        transactionalId: 'cmbbw5oic2jdv1m0imz1kae3l',
-        email: data.user.email,
-        dataVariables: {
-          name: data.user.name,
-          email: data.user.email,
-          confirmation_link: data.url,
-        },
-      });
-    },
-  },
-  user: {
-    changeEmail: {
-      enabled: true,
-      async sendChangeEmailVerification(data) {
+  plugins: [
+    magicLink({
+      sendMagicLink: async ({ email, token, url }) => {
         await loops.sendTransactionalEmail({
-          transactionalId: 'cmbdlx37j2mic080jv44bylio',
-          email: data.newEmail,
+          transactionalId: '',
+          email,
           dataVariables: {
-            email: data.user.email,
-            old_email: data.user.email,
-            new_email: data.newEmail,
-            first_name: parse(data.user.name).first ?? data.user.name,
-            confirmation_link: data.url,
+            token,
+            url,
           },
         });
       },
-    },
-    additionalFields: {},
-  },
+    }),
+    nextCookies(),
+  ],
   socialProviders: {
     // google: {
     //   prompt: 'select_account',
@@ -79,12 +36,11 @@ const authServerClient = betterAuth({
     //   clientSecret: serverConfig.googleClientSecret,
     // },
   },
-  plugins: [nextCookies()],
   advanced: {
     database: {
       generateId: () => crypto.randomUUID(),
     },
-    cookiePrefix: 'easybooker',
+    cookiePrefix: 'craft-culture',
   },
   database: drizzleAdapter(db, {
     provider: 'pg',

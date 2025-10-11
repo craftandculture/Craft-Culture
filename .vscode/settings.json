@@ -45,9 +45,4 @@
   "[json]": {
     "editor.defaultFormatter": "esbenp.prettier-vscode"
   },
-  "cSpell.words": [
-    "attio",
-    "Easybooker",
-    "moneybird"
-  ]
 }
