@@ -90,7 +90,7 @@ const Avatar = ({
           loader={({ src, width, quality }) => {
             return _src
               ? _src
-              : `/api/v1/favicon/${src}?w=${width}&q=${quality || 75}`;
+              : `/api/favicon/${src}?w=${width}&q=${quality || 75}`;
           }}
           onLoad={() => {
             setIsLoaded(true);
