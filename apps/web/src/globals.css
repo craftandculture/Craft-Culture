@@ -35,6 +35,18 @@
 
   --aspect-square: 1 / 1;
 
+  --color-riptide-50: oklch(0.963 0.031 181.74);
+  --color-riptide-100: oklch(0.923 0.067 180.98);
+  --color-riptide-200: oklch(0.856 0.078 181.49);
+  --color-riptide-300: oklch(0.766 0.07 181.67);
+  --color-riptide-400: oklch(0.674 0.061 181.92);
+  --color-riptide-500: oklch(0.587 0.053 182.55);
+  --color-riptide-600: oklch(0.494 0.045 181.5);
+  --color-riptide-700: oklch(0.409 0.037 180.36);
+  --color-riptide-800: oklch(0.317 0.029 181.66);
+  --color-riptide-900: oklch(0.23 0.02 184.7);
+  --color-riptide-950: oklch(0.175 0.017 181.64);
+
   --color-gray-25: color-mix(in oklch, var(--color-gray-50) 50%, white);
 
   --color-background-primary: var(--color-gray-25);
@@ -50,10 +62,10 @@
   --color-fill-muted-active: color-mix(in oklch, var(--color-gray-100) 95%, black);
   --color-fill-muted-selected: color-mix(in oklch, var(--color-gray-100) 99%, black);
 
-  --color-fill-brand: var(--color-blue-600);
-  --color-fill-brand-hover: color-mix(in oklch, var(--color-blue-600) 97%, black);
-  --color-fill-brand-active: color-mix(in oklch, var(--color-blue-600) 95%, black);
-  --color-fill-brand-selected: color-mix(in oklch, var(--color-blue-600) 95%, black);
+  --color-fill-brand: var(--color-riptide-200);
+  --color-fill-brand-hover: color-mix(in oklch, var(--color-riptide-200) 97%, black);
+  --color-fill-brand-active: color-mix(in oklch, var(--color-riptide-200) 95%, black);
+  --color-fill-brand-selected: color-mix(in oklch, var(--color-riptide-200) 95%, black);
 
   --color-fill-danger: var(--color-red-600);
   --color-fill-danger-hover: color-mix(in oklch, var(--color-red-600) 97%, black);
@@ -85,10 +97,10 @@
   --color-text-muted-active: color-mix(in oklch, var(--color-gray-600) 95%, black);
   --color-text-muted-on-fill: var(--color-gray-800);
 
-  --color-text-brand: var(--color-blue-700);
-  --color-text-brand-hover: color-mix(in oklch, var(--color-blue-700) 97%, black);
-  --color-text-brand-active: color-mix(in oklch, var(--color-blue-700) 95%, black);
-  --color-text-brand-on-fill: var(--color-blue-50);
+  --color-text-brand: var(--color-riptide-600);
+  --color-text-brand-hover: color-mix(in oklch, var(--color-riptide-600) 97%, black);
+  --color-text-brand-active: color-mix(in oklch, var(--color-riptide-600) 95%, black);
+  --color-text-brand-on-fill: var(--color-riptide-950);
 
   --color-text-success: var(--color-green-600);
   --color-text-success-hover: color-mix(in oklch, var(--color-green-600) 97%, black);
@@ -120,10 +132,10 @@
   --color-border-muted-active: color-mix(in oklch, var(--color-gray-100) 95%, black);
   --color-border-muted-selected: color-mix(in oklch, var(--color-gray-100) 95%, black);
 
-  --color-border-brand: color-mix(in oklch, var(--color-blue-700) 95%, black);
-  --color-border-brand-hover: color-mix(in oklch, var(--color-blue-700) 90%, black);
-  --color-border-brand-active: color-mix(in oklch, var(--color-blue-700) 85%, black);
-  --color-border-brand-selected: color-mix(in oklch, var(--color-blue-700) 85%, black);
+  --color-border-brand: color-mix(in oklch, var(--color-riptide-200) 95%, black);
+  --color-border-brand-hover: color-mix(in oklch, var(--color-riptide-200) 90%, black);
+  --color-border-brand-active: color-mix(in oklch, var(--color-riptide-200) 85%, black);
+  --color-border-brand-selected: color-mix(in oklch, var(--color-riptide-200) 85%, black);
 
   --color-border-danger: color-mix(in oklch, var(--color-red-600) 95%, black);
   --color-border-danger-hover: color-mix(in oklch, var(--color-red-600) 90%, black);
@@ -150,10 +162,10 @@
   --color-surface-primary-active: color-mix(in oklch, var(--color-white) 95%, black);
   --color-surface-primary-selected: color-mix(in oklch, var(--color-white) 95%, black);
 
-  --color-surface-info: var(--color-blue-50);
-  --color-surface-info-hover: color-mix(in oklch, var(--color-blue-50) 97%, black);
-  --color-surface-info-active: color-mix(in oklch, var(--color-blue-50) 95%, black);
-  --color-surface-info-selected: color-mix(in oklch, var(--color-blue-50) 95%, black);
+  --color-surface-info: var(--color-riptide-50);
+  --color-surface-info-hover: color-mix(in oklch, var(--color-riptide-50) 97%, black);
+  --color-surface-info-active: color-mix(in oklch, var(--color-riptide-50) 95%, black);
+  --color-surface-info-selected: color-mix(in oklch, var(--color-riptide-50) 95%, black);
 
   --color-surface-muted: var(--color-gray-50);
   --color-surface-muted-hover: color-mix(in oklch, var(--color-gray-100) 97%, black);
@@ -242,10 +254,10 @@
     --color-fill-muted-active: color-mix(in oklch, var(--color-gray-800) 95%, white);
     --color-fill-muted-selected: color-mix(in oklch, var(--color-gray-800) 99%, white);
 
-    --color-fill-brand: var(--color-blue-600);
-    --color-fill-brand-hover: color-mix(in oklch, var(--color-blue-600) 97%, white);
-    --color-fill-brand-active: color-mix(in oklch, var(--color-blue-600) 95%, white);
-    --color-fill-brand-selected: color-mix(in oklch, var(--color-blue-600) 95%, white);
+    --color-fill-brand: var(--color-brand-600);
+    --color-fill-brand-hover: color-mix(in oklch, var(--color-brand-600) 97%, white);
+    --color-fill-brand-active: color-mix(in oklch, var(--color-brand-600) 95%, white);
+    --color-fill-brand-selected: color-mix(in oklch, var(--color-brand-600) 95%, white);
 
     --color-fill-danger: var(--color-red-500);
     --color-fill-danger-hover: color-mix(in oklch, var(--color-red-500) 97%, white);
@@ -277,10 +289,10 @@
     --color-text-muted-active: color-mix(in oklch, var(--color-gray-400) 95%, white);
     --color-text-muted-on-fill: var(--color-gray-600);
 
-    --color-text-brand: var(--color-blue-400);
-    --color-text-brand-hover: color-mix(in oklch, var(--color-blue-400) 97%, white);
-    --color-text-brand-active: color-mix(in oklch, var(--color-blue-400) 95%, white);
-    --color-text-brand-on-fill: var(--color-blue-50);
+    --color-text-brand: var(--color-riptide-600);
+    --color-text-brand-hover: color-mix(in oklch, var(--color-riptide-600) 97%, white);
+    --color-text-brand-active: color-mix(in oklch, var(--color-riptide-600) 95%, white);
+    --color-text-brand-on-fill: var(--color-riptide-50);
 
     --color-text-success: var(--color-green-300);
     --color-text-success-hover: color-mix(in oklch, var(--color-green-300) 97%, white);
@@ -312,10 +324,10 @@
     --color-border-muted-active: color-mix(in oklch, var(--color-gray-800) 95%, white);
     --color-border-muted-selected: color-mix(in oklch, var(--color-gray-800) 95%, white);
 
-    --color-border-brand: var(--color-blue-500);
-    --color-border-brand-hover: color-mix(in oklch, var(--color-blue-500) 90%, white);
-    --color-border-brand-active: color-mix(in oklch, var(--color-blue-500) 85%, white);
-    --color-border-brand-selected: color-mix(in oklch, var(--color-blue-500) 85%, white);
+    --color-border-brand: var(--color-riptide-500);
+    --color-border-brand-hover: color-mix(in oklch, var(--color-riptide-500) 90%, white);
+    --color-border-brand-active: color-mix(in oklch, var(--color-riptide-500) 85%, white);
+    --color-border-brand-selected: color-mix(in oklch, var(--color-riptide-500) 85%, white);
 
     --color-border-danger: var(--color-red-500);
     --color-border-danger-hover: color-mix(in oklch, var(--color-red-500) 97%, white);
