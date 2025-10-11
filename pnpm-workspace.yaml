@@ -1,0 +1,15 @@
+packages:
+  - apps/*
+  - packages/*
+ignoredBuiltDependencies:
+  - '@sentry/cli'
+  - protobufjs
+onlyBuiltDependencies:
+  - '@prisma/client'
+  - '@prisma/engines'
+  - '@tailwindcss/oxide'
+  - core-js
+  - esbuild
+  - prisma
+  - sharp
+  - supabase

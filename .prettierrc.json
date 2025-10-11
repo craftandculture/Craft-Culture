@@ -1,0 +1,28 @@
+{
+  "singleQuote": true,
+  "trailingComma": "all",
+  "tabWidth": 2,
+  "useTabs": false,
+  "printWidth": 80,
+  "plugins": [
+    "prettier-plugin-jsdoc",
+    "prettier-plugin-sql",
+    "prettier-plugin-tailwindcss"
+  ],
+  "tailwindStylesheet": "apps/web/src/globals.css",
+  "tailwindFunctions": ["tv"],
+  "overrides": [
+    {
+      "files": ["*.sql"],
+      "options": {
+        "language": "postgresql"
+      }
+    },
+    {
+      "files": ["*.css"],
+      "options": {
+        "printWidth": 120
+      }
+    }
+  ]
+}
