@@ -1,3 +1,19 @@
+# [1.1.0](https://github.com/craftandculture/Craft-Culture/compare/v1.0.0...v1.1.0) (2025-10-11)
+
+
+### Bug Fixes
+
+* fixes shimmer ([c5077b4](https://github.com/craftandculture/Craft-Culture/commit/c5077b4992ea597b6852a8532cdc47b943ea7763))
+
+
+### Features
+
+* adds pricing model ([950fa66](https://github.com/craftandculture/Craft-Culture/commit/950fa66adabe2f46cd0d01a864c80e401606948e))
+* **cultx:** syncing products ([08f756f](https://github.com/craftandculture/Craft-Culture/commit/08f756f245dd77384ddfd48facf626cc1bc0879f))
+* **db:** support for pgtrim ([8c96833](https://github.com/craftandculture/Craft-Culture/commit/8c96833ed54b28cd49c28a916844edaca85e737e))
+* working form ([5997ade](https://github.com/craftandculture/Craft-Culture/commit/5997ade9c4691e733ebebc16a3fd92409148f970))
+* working product selecting ([97907c0](https://github.com/craftandculture/Craft-Culture/commit/97907c09268e02e445751e2dbe561fec7280e0fb))
+
 # 1.0.0 (2025-10-11)
 
 
