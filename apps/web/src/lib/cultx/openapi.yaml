@@ -1,0 +1,184 @@
+openapi: 3.1.0
+info:
+  title: Cultx Open API
+  description: API for accessing wine market data from Cult Wines
+  version: 1.0.0
+servers:
+  - url: https://cw-fo-uat-apim.azure-api.net/cultx-open-api
+    description: UAT environment
+
+paths:
+  /CultxActiveMarkets:
+    get:
+      summary: Get active wine markets
+      description: Returns a paginated list of active wine markets with trading information
+      operationId: getActiveMarkets
+      parameters:
+        - name: page
+          in: query
+          description: Page number for pagination (0-indexed)
+          required: true
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+        - name: pageSize
+          in: query
+          description: Number of items per page
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+      responses:
+        '200':
+          description: Successful response with active markets data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/WineMarket'
+                  count:
+                    type: integer
+                    description: Total number of wine markets available
+                    example: 3522
+                required:
+                  - data
+                  - count
+        '400':
+          description: Bad request
+        '404':
+          description: Not found
+        '500':
+          description: Internal server error
+
+components:
+  schemas:
+    WineMarket:
+      type: object
+      properties:
+        region:
+          type: string
+          description: Wine region
+          example: 'Bordeaux'
+        producer:
+          type: string
+          description: Wine producer/estate name
+          example: 'Château Lafite Rothschild'
+        wineName:
+          type: string
+          description: Full name of the wine
+          example: 'Château Lafite Rothschild, Pauillac, 1er Cru Classé'
+        vintage:
+          type: integer
+          description: Vintage year
+          example: 2015
+        unitCount:
+          type: integer
+          description: Number of units in a lot
+          example: 12
+        unitSize:
+          type: string
+          description: Size of each unit
+          example: '75cl'
+        lwin18:
+          type: string
+          description: LWIN18 identifier (unique wine identifier)
+          example: '1014223'
+        marketValue:
+          type: number
+          format: double
+          description: Current market value
+          example: 5250.00
+        score:
+          anyOf:
+            - type: number
+            - type: 'null'
+          format: double
+          description: Wine rating/score
+          example: 97.5
+        availableQuantity:
+          type: integer
+          description: Available quantity for trading
+          example: 120
+        highestBid:
+          anyOf:
+            - type: object
+              properties:
+                price:
+                  type: number
+                  format: double
+                  description: Highest bid price
+                quantity:
+                  type: integer
+                  description: Quantity at highest bid
+              required:
+                - price
+                - quantity
+            - type: 'null'
+        lowestOffer:
+          anyOf:
+            - type: object
+              properties:
+                price:
+                  type: number
+                  format: double
+                  description: Lowest offer price
+                quantity:
+                  type: integer
+                  description: Quantity at lowest offer
+                orderId:
+                  type: string
+                  description: Order identifier
+              required:
+                - price
+                - quantity
+                - orderId
+            - type: 'null'
+        lastTradeDateTime:
+          anyOf:
+            - type: string
+            - type: 'null'
+          format: date-time
+          description: Date and time of last trade
+          example: '2024-01-15T14:30:00Z'
+        lastTradePrice:
+          anyOf:
+            - type: number
+            - type: 'null'
+          format: double
+          description: Price of last trade
+          example: 5200.00
+        spread:
+          anyOf:
+            - type: number
+            - type: 'null'
+          format: double
+          description: Spread between bid and offer
+          example: 50.00
+        imageFileName:
+          anyOf:
+            - type: string
+            - type: 'null'
+          description: Filename of wine image
+          example: 'lafite-2015.jpg'
+        productUrn:
+          type: string
+          description: Product URN identifier
+          example: 'urn:product:wine:1014223'
+      required:
+        - region
+        - producer
+        - wineName
+        - vintage
+        - unitCount
+        - unitSize
+        - lwin18
+        - marketValue
+        - availableQuantity
+        - productUrn

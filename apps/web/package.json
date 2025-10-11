@@ -12,7 +12,8 @@
     "studio": "drizzle-kit studio",
     "push": "drizzle-kit push",
     "trigger:dev": "trigger dev",
-    "trigger:deploy": "trigger deploy"
+    "trigger:deploy": "trigger deploy",
+    "cultx:generate-schema": "openapi-typescript ./src/lib/cultx/openapi.yaml -o ./src/lib/cultx/schema.d.ts"
   },
   "dependencies": {
     "@ai-sdk/google": "^2.0.11",
