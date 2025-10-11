@@ -1,5 +1,6 @@
 import {
   boolean,
+  doublePrecision,
   integer,
   pgEnum,
   pgTable,
@@ -109,8 +110,9 @@ export const productOffers = pgTable('product_offers', {
   productId: uuid('product_id')
     .references(() => products.id, { onDelete: 'cascade' })
     .notNull(),
+  externalId: text('external_id').notNull().unique(),
   source: productSource('source').notNull(),
-  price: integer('price').notNull(),
+  price: doublePrecision('price').notNull().default(0),
   currency: text('currency').notNull(),
   unitCount: integer('unit_count').notNull(),
   unitSize: text('unit_size').notNull(),

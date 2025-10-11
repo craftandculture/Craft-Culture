@@ -91,10 +91,12 @@ components:
           description: LWIN18 identifier (unique wine identifier)
           example: '1014223'
         marketValue:
-          type: number
-          format: double
-          description: Current market value
-          example: 5250.00
+          anyOf:
+            - type: number
+              format: double
+              description: Current market value
+              example: 5250.00
+            - type: 'null'
         score:
           anyOf:
             - type: number
