@@ -241,8 +241,8 @@
 
 @layer base {
   *[data-theme='dark'] {
-    --color-background-primary: var(--color-gray-900);
-    --color-background-muted: color-mix(in oklch, var(--color-gray-900) 97%, white);
+    --color-background-primary: color-mix(in oklch, var(--color-gray-950) 97%, white);
+    --color-background-muted: color-mix(in oklch, var(--color-gray-950) 94%, white);
 
     --color-fill-primary: var(--color-gray-900);
     --color-fill-primary-hover: color-mix(in oklch, var(--color-gray-800) 97%, white);
@@ -359,7 +359,7 @@
     --color-surface-info-active: color-mix(in oklch, var(--color-indigo-900) 95%, white);
     --color-surface-info-selected: color-mix(in oklch, var(--color-indigo-900) 95%, white);
 
-    --color-surface-muted: var(--color-gray-800);
+    --color-surface-muted: color-mix(in oklch, var(--color-gray-900) 94%, white);
     --color-surface-muted-hover: color-mix(in oklch, var(--color-gray-800) 97%, white);
     --color-surface-muted-active: color-mix(in oklch, var(--color-gray-800) 95%, white);
     --color-surface-muted-selected: color-mix(in oklch, var(--color-gray-800) 95%, white);
