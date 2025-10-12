@@ -1,9 +1,11 @@
 'use client';
 
-import { IconLogout, IconSettings } from '@tabler/icons-react';
+import { IconLogout, IconMoon, IconSettings, IconSun } from '@tabler/icons-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useTheme } from 'next-themes';
+import { useEffect, useState } from 'react';
 
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
@@ -12,7 +14,12 @@ import DropdownMenuContent from '@/app/_ui/components/DropdownMenu/DropdownMenuC
 import DropdownMenuContentWrapper from '@/app/_ui/components/DropdownMenu/DropdownMenuContentWrapper';
 import DropdownMenuGroup from '@/app/_ui/components/DropdownMenu/DropdownMenuGroup';
 import DropdownMenuItem from '@/app/_ui/components/DropdownMenu/DropdownMenuItem';
+import DropdownMenuRadioGroup from '@/app/_ui/components/DropdownMenu/DropdownMenuRadioGroup';
+import DropdownMenuRadioItem from '@/app/_ui/components/DropdownMenu/DropdownMenuRadioItem';
 import DropdownMenuSeparator from '@/app/_ui/components/DropdownMenu/DropdownMenuSeparator';
+import DropdownMenuSub from '@/app/_ui/components/DropdownMenu/DropdownMenuSub';
+import DropdownMenuSubContent from '@/app/_ui/components/DropdownMenu/DropdownMenuSubContent';
+import DropdownMenuSubTrigger from '@/app/_ui/components/DropdownMenu/DropdownMenuSubTrigger';
 import DropdownMenuTrigger from '@/app/_ui/components/DropdownMenu/DropdownMenuTrigger';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import type { User } from '@/database/schema';
@@ -24,6 +31,12 @@ export interface UserDropdownProps {
 
 const UserDropdown = ({ user }: UserDropdownProps) => {
   const router = useRouter();
+  const [mounted, setMounted] = useState(false);
+  const { theme, setTheme } = useTheme();
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   return (
     <DropdownMenu>
@@ -61,6 +74,35 @@ const UserDropdown = ({ user }: UserDropdownProps) => {
                 </DropdownMenuContentWrapper>
               </Link>
             </DropdownMenuItem>
+            <DropdownMenuSeparator />
+          </>
+        )}
+
+        {mounted && (
+          <>
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger>
+                <DropdownMenuContentWrapper
+                  iconLeft={theme === 'dark' ? IconMoon : IconSun}
+                  align="start"
+                >
+                  Theme
+                </DropdownMenuContentWrapper>
+              </DropdownMenuSubTrigger>
+              <DropdownMenuSubContent>
+                <DropdownMenuRadioGroup value={theme} onValueChange={setTheme}>
+                  <DropdownMenuRadioItem value="light">
+                    Light
+                  </DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="dark">
+                    Dark
+                  </DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="system">
+                    System
+                  </DropdownMenuRadioItem>
+                </DropdownMenuRadioGroup>
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
             <DropdownMenuSeparator />
           </>
         )}
