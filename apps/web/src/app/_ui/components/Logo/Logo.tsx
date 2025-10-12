@@ -4,8 +4,15 @@ import LogoImage from './logo.webp';
 
 export interface LogoProps extends Omit<ImageProps, 'src' | 'alt'> {}
 
-const Logo = ({ ...props }: LogoProps) => {
-  return <Image src={LogoImage} alt="Logo" {...props} />;
+const Logo = ({ className, ...props }: LogoProps) => {
+  return (
+    <Image
+      src={LogoImage}
+      alt="Logo"
+      className={`dark:invert ${className || ''}`}
+      {...props}
+    />
+  );
 };
 
 export default Logo;
