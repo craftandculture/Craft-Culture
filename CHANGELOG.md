@@ -1,3 +1,10 @@
+## [1.3.2](https://github.com/craftandculture/Craft-Culture/compare/v1.3.1...v1.3.2) (2025-10-12)
+
+
+### Bug Fixes
+
+* dark mode fixes and responsive ([afbc803](https://github.com/craftandculture/Craft-Culture/commit/afbc803f79f6a70c8df1514b7420af9338ee301e))
+
 ## [1.3.1](https://github.com/craftandculture/Craft-Culture/compare/v1.3.0...v1.3.1) (2025-10-12)
 
 
