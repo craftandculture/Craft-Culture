@@ -5,78 +5,133 @@ import db from '@/database/client';
 import { products } from '@/database/schema';
 import { protectedProcedure } from '@/lib/trpc/procedures';
 
-const createSearchExpressions = (table: typeof products, rawSearch: string) => {
+interface PreparedSearch {
+  trimmedSearch: string;
+  normalizedTokens: string[];
+}
+
+const prepareSearch = (rawSearch: string): PreparedSearch | undefined => {
   const trimmedSearch = rawSearch.trim();
 
+  if (trimmedSearch.length === 0) {
+    return undefined;
+  }
+
+  const normalizedTokens = Array.from(
+    new Set(
+      trimmedSearch
+        .toLowerCase()
+        .split(/\s+/)
+        .map((token) => token.replace(/[^a-z0-9]/gi, ''))
+        .filter((token) => token.length > 1),
+    ),
+  );
+
+  return { trimmedSearch, normalizedTokens };
+};
+
+const createSearchExpressions = (
+  tableAlias: typeof products,
+  { trimmedSearch, normalizedTokens }: PreparedSearch,
+) => {
   const searchVector = sql`
-    setweight(to_tsvector('english', coalesce(${table.name}, '')), 'A') ||
-    setweight(to_tsvector('english', coalesce(${table.producer}, '')), 'A') ||
-    setweight(to_tsvector('english', coalesce(${table.lwin18}, '')), 'A') ||
-    setweight(to_tsvector('english', coalesce(${table.region}, '')), 'B') ||
-    setweight(to_tsvector('english', coalesce(${table.year}::text, '')), 'C')
+    setweight(to_tsvector('english', coalesce(${tableAlias.name}, '')), 'A') ||
+    setweight(to_tsvector('english', coalesce(${tableAlias.producer}, '')), 'A') ||
+    setweight(to_tsvector('english', coalesce(${tableAlias.lwin18}, '')), 'A') ||
+    setweight(to_tsvector('english', coalesce(${tableAlias.region}, '')), 'B') ||
+    setweight(to_tsvector('english', coalesce(${tableAlias.year}::text, '')), 'C')
   `;
 
   const tsQuery = sql`websearch_to_tsquery('english', ${trimmedSearch})`;
 
-  const trigramSimilarity = sql<number>`
-    greatest(
-      similarity(coalesce(${table.name}, ''), ${trimmedSearch}),
-      similarity(coalesce(${table.producer}, ''), ${trimmedSearch}),
-      similarity(coalesce(${table.region}, ''), ${trimmedSearch}),
-      similarity(coalesce(${table.lwin18}, ''), ${trimmedSearch})
-    )
-  `;
-
-  const searchTokens = trimmedSearch.split(/\s+/).filter(Boolean);
-
-  const tokenConditions = searchTokens.map((token) => {
+  const buildTokenCondition = (token: string) => {
     const partial = `%${token}%`;
     return sql`
       (
-        coalesce(${table.name}, '') ILIKE ${partial} OR
-        coalesce(${table.producer}, '') ILIKE ${partial} OR
-        coalesce(${table.region}, '') ILIKE ${partial} OR
-        coalesce(${table.lwin18}, '') ILIKE ${partial}
+        coalesce(${tableAlias.name}, '') ILIKE ${partial} OR
+        coalesce(${tableAlias.producer}, '') ILIKE ${partial} OR
+        coalesce(${tableAlias.region}, '') ILIKE ${partial} OR
+        coalesce(${tableAlias.lwin18}, '') ILIKE ${partial}
       )
     `;
-  });
+  };
 
-  const matchConditions = [
-    sql`${searchVector} @@ ${tsQuery}`,
-    sql`${trigramSimilarity} > 0.1`,
-  ];
+  const tokenConditions = normalizedTokens.map((token) =>
+    buildTokenCondition(token),
+  );
 
-  if (tokenConditions.length > 0) {
-    matchConditions.push(sql`${sql.join(tokenConditions, sql` AND `)}`);
+  const tokenMatchExpressions = tokenConditions.map(
+    (condition) => sql<number>`CASE WHEN ${condition} THEN 1 ELSE 0 END`,
+  );
+
+  const tokenMatchCount =
+    tokenMatchExpressions.length > 0
+      ? sql<number>`(${sql.join(tokenMatchExpressions, sql` + `)})`
+      : undefined;
+
+  const enforceTokenMatches = normalizedTokens.length >= 2;
+  const tokenMatchThreshold = enforceTokenMatches
+    ? Math.max(1, Math.ceil(normalizedTokens.length * 0.6))
+    : 0;
+
+  const tokenMatchRatio =
+    tokenMatchCount && normalizedTokens.length > 0
+      ? sql<number>`(
+          CAST(${tokenMatchCount} AS double precision) /
+          ${Math.max(1, normalizedTokens.length)}
+        )`
+      : sql<number>`0`;
+
+  const trigramSimilarity = sql<number>`
+    greatest(
+      similarity(coalesce(${tableAlias.name}, ''), ${trimmedSearch}),
+      similarity(coalesce(${tableAlias.producer}, ''), ${trimmedSearch}),
+      similarity(coalesce(${tableAlias.region}, ''), ${trimmedSearch}),
+      similarity(coalesce(${tableAlias.lwin18}, ''), ${trimmedSearch})
+    )
+  `;
+
+  const trigramThreshold = enforceTokenMatches ? 0.25 : 0.12;
+  const trigramCondition = sql`${trigramSimilarity} > ${trigramThreshold}`;
+
+  const matchConditions = [sql`${searchVector} @@ ${tsQuery}`];
+
+  matchConditions.push(trigramCondition);
+
+  if (!enforceTokenMatches && tokenMatchCount) {
+    matchConditions.push(sql`${tokenMatchCount} >= 1`);
   }
-
-  const partialMatchScore =
-    tokenConditions.length > 0
-      ? sql`(${sql.join(
-          tokenConditions.map(
-            (condition) => sql`CASE WHEN ${condition} THEN 1 ELSE 0 END`,
-          ),
-          sql` + `,
-        )}) * 0.05`
-      : sql`0`;
 
   const likeValue = `%${trimmedSearch}%`;
 
   const exactMatchBoost = sql<number>`
     CASE
-      WHEN coalesce(${table.name}, '') ILIKE ${likeValue} THEN 0.2
-      WHEN coalesce(${table.producer}, '') ILIKE ${likeValue} THEN 0.1
+      WHEN coalesce(${tableAlias.lwin18}, '') ILIKE ${likeValue} THEN 1
+      WHEN coalesce(${tableAlias.name}, '') ILIKE ${likeValue} THEN 0.2
+      WHEN coalesce(${tableAlias.producer}, '') ILIKE ${likeValue} THEN 0.1
       ELSE 0
     END
   `;
 
   const tsRank = sql<number>`ts_rank(${searchVector}, ${tsQuery})`;
 
+  const tokenScoreWeight = enforceTokenMatches ? 0.25 : 0.3;
+  const tsRankWeight = enforceTokenMatches ? 0.65 : 0.55;
+  const trigramWeight = enforceTokenMatches ? 0.25 : 0.35;
+
   const score = sql<number>`
-    (${tsRank} * 0.6) + (${trigramSimilarity} * 0.3) + ${exactMatchBoost} + ${partialMatchScore}
+    (${tsRank} * ${tsRankWeight}) +
+    (${trigramSimilarity} * ${trigramWeight}) +
+    ${exactMatchBoost} +
+    (${tokenMatchRatio} * ${tokenScoreWeight})
   `;
 
-  const filter = sql`(${sql.join(matchConditions, sql` OR `)})`;
+  const baseFilter = sql`(${sql.join(matchConditions, sql` OR `)})`;
+
+  const filter =
+    enforceTokenMatches && tokenMatchCount
+      ? sql`${baseFilter} AND ${tokenMatchCount} >= ${tokenMatchThreshold}`
+      : baseFilter;
 
   return {
     filter,
@@ -98,15 +153,21 @@ const productsGetMany = protectedProcedure
     async ({
       input: { cursor, limit, search, productIds, omitProductIds },
     }) => {
+      const preparedSearch =
+        search && search.trim().length > 0
+          ? prepareSearch(search)
+          : undefined;
+
       const productsResult = await db.query.products.findMany({
         where: {
           ...(productIds ? { id: { in: productIds } } : {}),
           ...(omitProductIds && omitProductIds.length > 0
             ? { id: { notIn: omitProductIds } }
             : {}),
-          ...(search && search.trim().length > 0
+          ...(preparedSearch
             ? {
-                RAW: (table) => createSearchExpressions(table, search).filter,
+                RAW: (table) =>
+                  createSearchExpressions(table, preparedSearch).filter,
               }
             : {}),
         },
@@ -120,14 +181,16 @@ const productsGetMany = protectedProcedure
         },
         limit: limit + 1,
         offset: cursor,
-        orderBy: (table, { desc, asc }) => [
-          ...(search && search.trim().length > 0
-            ? [desc(createSearchExpressions(table, search).score)]
-            : []),
-          asc(table.name),
-          desc(table.year),
-          desc(table.id),
-        ],
+        orderBy: (table, { desc, asc }) => {
+          const baseOrder = [asc(table.name), desc(table.year), desc(table.id)];
+
+          if (!preparedSearch) {
+            return baseOrder;
+          }
+
+          const expressions = createSearchExpressions(table, preparedSearch);
+          return [desc(expressions.score), ...baseOrder];
+        },
       });
 
       const nextCursor =
