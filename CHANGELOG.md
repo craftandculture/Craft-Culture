@@ -1,3 +1,11 @@
+## [1.3.1](https://github.com/craftandculture/Craft-Culture/compare/v1.3.0...v1.3.1) (2025-10-12)
+
+
+### Bug Fixes
+
+* fixes search ([3418aa1](https://github.com/craftandculture/Craft-Culture/commit/3418aa1ad637caa1f234f657708a6dd994006f9e))
+* further improves search ([a6977ae](https://github.com/craftandculture/Craft-Culture/commit/a6977ae3d1323e65c7811387d7db990c1de48718))
+
 # [1.3.0](https://github.com/craftandculture/Craft-Culture/compare/v1.2.2...v1.3.0) (2025-10-12)
 
 
