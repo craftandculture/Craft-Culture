@@ -48,7 +48,7 @@ const SheetsList = () => {
       {sheets.map((sheet) => (
         <div
           key={sheet.id}
-          className="border-border-primary flex items-center justify-between rounded-lg border p-4"
+          className="border-border-primary flex flex-col gap-3 rounded-lg border p-4 sm:flex-row sm:items-center sm:justify-between"
         >
           <div className="flex-1">
             <Typography variant="bodyMd" className="font-medium">
@@ -67,7 +67,11 @@ const SheetsList = () => {
               }).format(new Date(sheet.updatedAt))}
             </Typography>
           </div>
-          <Button colorRole="danger" onClick={() => handleDelete(sheet.id)}>
+          <Button
+            colorRole="danger"
+            className="w-full sm:w-auto"
+            onClick={() => handleDelete(sheet.id)}
+          >
             <ButtonContent iconLeft={IconTrash}>Delete</ButtonContent>
           </Button>
         </div>
