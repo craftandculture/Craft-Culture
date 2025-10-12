@@ -53,7 +53,7 @@ const PricingModelsList = () => {
       {pricingModels.map((model) => (
         <div
           key={model.id}
-          className="border-border-primary flex items-center justify-between rounded-lg border p-4"
+          className="border-border-primary flex flex-col gap-3 rounded-lg border p-4 sm:flex-row sm:items-center sm:justify-between"
         >
           <div className="flex-1">
             <Typography variant="bodyMd" className="font-medium">
@@ -65,7 +65,11 @@ const PricingModelsList = () => {
               {new Date(model.createdAt).toLocaleDateString()}
             </Typography>
           </div>
-          <Button colorRole="danger" onClick={() => handleDelete(model.id)}>
+          <Button
+            colorRole="danger"
+            className="w-full sm:w-auto"
+            onClick={() => handleDelete(model.id)}
+          >
             <ButtonContent iconLeft={IconTrash}>Delete</ButtonContent>
           </Button>
         </div>

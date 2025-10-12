@@ -53,6 +53,129 @@ const defaultCellMappings = {
   finalPriceUsd: "'Example Pricing Model'!B4",
 };
 
+type CellMappingKey = keyof CreatePricingModelSchema['cellMappings'];
+
+type CellMappingField = {
+  key: CellMappingKey;
+  label: string;
+  description: string;
+  placeholder: string;
+};
+
+const requiredCellMappingFields: CellMappingField[] = [
+  {
+    key: 'priceUsd',
+    label: 'Price USD *',
+    description: 'Column range (required, max 10 rows)',
+    placeholder: "'Example Pricing Model'!R7:R16",
+  },
+  {
+    key: 'finalPriceUsd',
+    label: 'Final Price USD *',
+    description: 'Single cell (required)',
+    placeholder: "'Example Pricing Model'!B4",
+  },
+];
+
+const optionalCellMappingFields: CellMappingField[] = [
+  {
+    key: 'name',
+    label: 'Name',
+    description: 'Column range (optional, max 10 rows)',
+    placeholder: "'Example Pricing Model'!A7:A16",
+  },
+  {
+    key: 'lwin18',
+    label: 'LWIN18',
+    description: 'Column range (optional, max 10 rows)',
+    placeholder: "'Example Pricing Model'!B7:B16",
+  },
+  {
+    key: 'region',
+    label: 'Region',
+    description: 'Column range (optional, max 10 rows)',
+    placeholder: "'Example Pricing Model'!C7:C16",
+  },
+  {
+    key: 'producer',
+    label: 'Producer',
+    description: 'Column range (optional, max 10 rows)',
+    placeholder: "'Example Pricing Model'!C7:C16",
+  },
+  {
+    key: 'vintage',
+    label: 'Vintage',
+    description: 'Column range (optional, max 10 rows)',
+    placeholder: "'Example Pricing Model'!D7:D16",
+  },
+  {
+    key: 'quantity',
+    label: 'Quantity',
+    description: 'Column range (optional, max 10 rows)',
+    placeholder: "'Example Pricing Model'!E7:E16",
+  },
+  {
+    key: 'unitCount',
+    label: 'Unit Count',
+    description: 'Column range (optional, max 10 rows)',
+    placeholder: "'Example Pricing Model'!F7:F16",
+  },
+  {
+    key: 'unitSize',
+    label: 'Unit Size',
+    description: 'Column range (optional, max 10 rows)',
+    placeholder: "'Example Pricing Model'!G7:G16",
+  },
+  {
+    key: 'source',
+    label: 'Source',
+    description: 'Column range (optional, max 10 rows)',
+    placeholder: "'Example Pricing Model'!H7:H16",
+  },
+  {
+    key: 'price',
+    label: 'Price',
+    description: 'Column range (optional, max 10 rows)',
+    placeholder: "'Example Pricing Model'!I7:I16",
+  },
+  {
+    key: 'currency',
+    label: 'Currency',
+    description: 'Column range (optional, max 10 rows)',
+    placeholder: "'Example Pricing Model'!J7:J16",
+  },
+  {
+    key: 'exchangeRateUsd',
+    label: 'Exchange Rate USD',
+    description: 'Column range (optional, max 10 rows)',
+    placeholder: "'Example Pricing Model'!K7:K16",
+  },
+  {
+    key: 'basePriceUsd',
+    label: 'Base Price USD',
+    description: 'Column range (optional, max 10 rows)',
+    placeholder: "'Example Pricing Model'!L7:L16",
+  },
+  {
+    key: 'customerName',
+    label: 'Customer Name',
+    description: 'Single cell (optional)',
+    placeholder: "'Example Pricing Model'!B1",
+  },
+  {
+    key: 'customerEmail',
+    label: 'Customer Email',
+    description: 'Single cell (optional)',
+    placeholder: "'Example Pricing Model'!B2",
+  },
+  {
+    key: 'customerType',
+    label: 'Customer Type',
+    description: 'Single cell (optional)',
+    placeholder: "'Example Pricing Model'!B3",
+  },
+];
+
 const PricingModelsForm = () => {
   const api = useTRPC();
   const queryClient = useQueryClient();
@@ -114,6 +237,54 @@ const PricingModelsForm = () => {
       </Typography>
     );
   }
+
+  const renderCellMappingFields = (fields: CellMappingField[]) => (
+    <div className="border-border-primary overflow-hidden rounded-lg border">
+      <div className="hidden bg-surface-muted px-4 py-3 text-sm font-medium text-text-primary sm:grid sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] sm:gap-6">
+        <span>Field</span>
+        <span>Cell Reference</span>
+      </div>
+      <div className="divide-y divide-border-primary">
+        {fields.map((field) => {
+          const registerKey = `cellMappings.${field.key}` as const;
+          const fieldError = errors.cellMappings?.[field.key];
+
+          return (
+            <div
+              key={field.key}
+              className="flex flex-col gap-3 px-4 py-3 sm:grid sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] sm:items-start sm:gap-6"
+            >
+              <div>
+                <Typography variant="bodySm" className="font-medium">
+                  {field.label}
+                </Typography>
+                <Typography variant="bodySm" className="text-text-muted">
+                  {field.description}
+                </Typography>
+              </div>
+              <div className="space-y-2 sm:space-y-3">
+                <Typography
+                  variant="bodyXs"
+                  className="text-text-muted uppercase tracking-tight sm:hidden"
+                >
+                  Cell Reference
+                </Typography>
+                <Input
+                  type="text"
+                  placeholder={field.placeholder}
+                  isDisabled={isSubmitting}
+                  {...register(registerKey)}
+                />
+                {fieldError && (
+                  <FormFieldError>{fieldError.message}</FormFieldError>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
 
   return (
     <form className="space-y-8" onSubmit={handleSubmit(submitHandler)}>
@@ -238,68 +409,7 @@ const PricingModelsForm = () => {
           </Typography>
         </div>
 
-        <div className="border-border-primary overflow-hidden rounded-lg border">
-          <table className="w-full">
-            <thead className="bg-surface-muted">
-              <tr>
-                <th className="text-text-primary px-4 py-3 text-left text-sm font-medium">
-                  Field
-                </th>
-                <th className="text-text-primary px-4 py-3 text-left text-sm font-medium">
-                  Cell Reference
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-border-primary divide-y">
-              <tr>
-                <td className="px-4 py-3">
-                  <Typography variant="bodySm" className="font-medium">
-                    Price USD *
-                  </Typography>
-                  <Typography variant="bodySm" className="text-text-muted">
-                    Column range (required, max 10 rows)
-                  </Typography>
-                </td>
-                <td className="px-4 py-3">
-                  <Input
-                    type="text"
-                    placeholder="'Example Pricing Model'!R7:R16"
-                    isDisabled={isSubmitting}
-                    {...register('cellMappings.priceUsd')}
-                  />
-                  {errors.cellMappings?.priceUsd && (
-                    <FormFieldError>
-                      {errors.cellMappings.priceUsd.message}
-                    </FormFieldError>
-                  )}
-                </td>
-              </tr>
-              <tr>
-                <td className="px-4 py-3">
-                  <Typography variant="bodySm" className="font-medium">
-                    Final Price USD *
-                  </Typography>
-                  <Typography variant="bodySm" className="text-text-muted">
-                    Single cell (required)
-                  </Typography>
-                </td>
-                <td className="px-4 py-3">
-                  <Input
-                    type="text"
-                    placeholder="'Example Pricing Model'!B4"
-                    isDisabled={isSubmitting}
-                    {...register('cellMappings.finalPriceUsd')}
-                  />
-                  {errors.cellMappings?.finalPriceUsd && (
-                    <FormFieldError>
-                      {errors.cellMappings.finalPriceUsd.message}
-                    </FormFieldError>
-                  )}
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+        {renderCellMappingFields(requiredCellMappingFields)}
       </div>
 
       <div className="space-y-4">
@@ -312,393 +422,7 @@ const PricingModelsForm = () => {
           </Typography>
         </div>
 
-        <div className="border-border-primary overflow-hidden rounded-lg border">
-          <table className="w-full">
-            <thead className="bg-surface-muted">
-              <tr>
-                <th className="text-text-primary px-4 py-3 text-left text-sm font-medium">
-                  Field
-                </th>
-                <th className="text-text-primary px-4 py-3 text-left text-sm font-medium">
-                  Cell Reference
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-border-primary divide-y">
-              {/* Column Ranges - Product Data */}
-              <tr>
-                <td className="px-4 py-3">
-                  <Typography variant="bodySm" className="font-medium">
-                    Name
-                  </Typography>
-                  <Typography variant="bodySm" className="text-text-muted">
-                    Column range (optional, max 10 rows)
-                  </Typography>
-                </td>
-                <td className="px-4 py-3">
-                  <Input
-                    type="text"
-                    placeholder="'Example Pricing Model'!A7:A16"
-                    isDisabled={isSubmitting}
-                    {...register('cellMappings.name')}
-                  />
-                  {errors.cellMappings?.name && (
-                    <FormFieldError>
-                      {errors.cellMappings.name.message}
-                    </FormFieldError>
-                  )}
-                </td>
-              </tr>
-              <tr>
-                <td className="px-4 py-3">
-                  <Typography variant="bodySm" className="font-medium">
-                    LWIN18
-                  </Typography>
-                  <Typography variant="bodySm" className="text-text-muted">
-                    Column range (optional, max 10 rows)
-                  </Typography>
-                </td>
-                <td className="px-4 py-3">
-                  <Input
-                    type="text"
-                    placeholder="'Example Pricing Model'!B7:B16"
-                    isDisabled={isSubmitting}
-                    {...register('cellMappings.lwin18')}
-                  />
-                  {errors.cellMappings?.lwin18 && (
-                    <FormFieldError>
-                      {errors.cellMappings.lwin18.message}
-                    </FormFieldError>
-                  )}
-                </td>
-              </tr>
-              <tr>
-                <td className="px-4 py-3">
-                  <Typography variant="bodySm" className="font-medium">
-                    Region
-                  </Typography>
-                  <Typography variant="bodySm" className="text-text-muted">
-                    Column range (optional, max 10 rows)
-                  </Typography>
-                </td>
-                <td className="px-4 py-3">
-                  <Input
-                    type="text"
-                    placeholder="'Example Pricing Model'!C7:C16"
-                    isDisabled={isSubmitting}
-                    {...register('cellMappings.region')}
-                  />
-                  {errors.cellMappings?.region && (
-                    <FormFieldError>
-                      {errors.cellMappings.region.message}
-                    </FormFieldError>
-                  )}
-                </td>
-              </tr>
-              <tr>
-                <td className="px-4 py-3">
-                  <Typography variant="bodySm" className="font-medium">
-                    Producer
-                  </Typography>
-                  <Typography variant="bodySm" className="text-text-muted">
-                    Column range (optional, max 10 rows)
-                  </Typography>
-                </td>
-                <td className="px-4 py-3">
-                  <Input
-                    type="text"
-                    placeholder="'Example Pricing Model'!C7:C16"
-                    isDisabled={isSubmitting}
-                    {...register('cellMappings.producer')}
-                  />
-                  {errors.cellMappings?.producer && (
-                    <FormFieldError>
-                      {errors.cellMappings.producer.message}
-                    </FormFieldError>
-                  )}
-                </td>
-              </tr>
-              <tr>
-                <td className="px-4 py-3">
-                  <Typography variant="bodySm" className="font-medium">
-                    Vintage
-                  </Typography>
-                  <Typography variant="bodySm" className="text-text-muted">
-                    Column range (optional, max 10 rows)
-                  </Typography>
-                </td>
-                <td className="px-4 py-3">
-                  <Input
-                    type="text"
-                    placeholder="'Example Pricing Model'!D7:D16"
-                    isDisabled={isSubmitting}
-                    {...register('cellMappings.vintage')}
-                  />
-                  {errors.cellMappings?.vintage && (
-                    <FormFieldError>
-                      {errors.cellMappings.vintage.message}
-                    </FormFieldError>
-                  )}
-                </td>
-              </tr>
-              <tr>
-                <td className="px-4 py-3">
-                  <Typography variant="bodySm" className="font-medium">
-                    Quantity
-                  </Typography>
-                  <Typography variant="bodySm" className="text-text-muted">
-                    Column range (optional, max 10 rows)
-                  </Typography>
-                </td>
-                <td className="px-4 py-3">
-                  <Input
-                    type="text"
-                    placeholder="'Example Pricing Model'!E7:E16"
-                    isDisabled={isSubmitting}
-                    {...register('cellMappings.quantity')}
-                  />
-                  {errors.cellMappings?.quantity && (
-                    <FormFieldError>
-                      {errors.cellMappings.quantity.message}
-                    </FormFieldError>
-                  )}
-                </td>
-              </tr>
-              <tr>
-                <td className="px-4 py-3">
-                  <Typography variant="bodySm" className="font-medium">
-                    Unit Count
-                  </Typography>
-                  <Typography variant="bodySm" className="text-text-muted">
-                    Column range (optional, max 10 rows)
-                  </Typography>
-                </td>
-                <td className="px-4 py-3">
-                  <Input
-                    type="text"
-                    placeholder="'Example Pricing Model'!F7:F16"
-                    isDisabled={isSubmitting}
-                    {...register('cellMappings.unitCount')}
-                  />
-                  {errors.cellMappings?.unitCount && (
-                    <FormFieldError>
-                      {errors.cellMappings.unitCount.message}
-                    </FormFieldError>
-                  )}
-                </td>
-              </tr>
-              <tr>
-                <td className="px-4 py-3">
-                  <Typography variant="bodySm" className="font-medium">
-                    Unit Size
-                  </Typography>
-                  <Typography variant="bodySm" className="text-text-muted">
-                    Column range (optional, max 10 rows)
-                  </Typography>
-                </td>
-                <td className="px-4 py-3">
-                  <Input
-                    type="text"
-                    placeholder="'Example Pricing Model'!G7:G16"
-                    isDisabled={isSubmitting}
-                    {...register('cellMappings.unitSize')}
-                  />
-                  {errors.cellMappings?.unitSize && (
-                    <FormFieldError>
-                      {errors.cellMappings.unitSize.message}
-                    </FormFieldError>
-                  )}
-                </td>
-              </tr>
-              <tr>
-                <td className="px-4 py-3">
-                  <Typography variant="bodySm" className="font-medium">
-                    Source
-                  </Typography>
-                  <Typography variant="bodySm" className="text-text-muted">
-                    Column range (optional, max 10 rows)
-                  </Typography>
-                </td>
-                <td className="px-4 py-3">
-                  <Input
-                    type="text"
-                    placeholder="'Example Pricing Model'!H7:H16"
-                    isDisabled={isSubmitting}
-                    {...register('cellMappings.source')}
-                  />
-                  {errors.cellMappings?.source && (
-                    <FormFieldError>
-                      {errors.cellMappings.source.message}
-                    </FormFieldError>
-                  )}
-                </td>
-              </tr>
-              <tr>
-                <td className="px-4 py-3">
-                  <Typography variant="bodySm" className="font-medium">
-                    Price
-                  </Typography>
-                  <Typography variant="bodySm" className="text-text-muted">
-                    Column range (optional, max 10 rows)
-                  </Typography>
-                </td>
-                <td className="px-4 py-3">
-                  <Input
-                    type="text"
-                    placeholder="'Example Pricing Model'!I7:I16"
-                    isDisabled={isSubmitting}
-                    {...register('cellMappings.price')}
-                  />
-                  {errors.cellMappings?.price && (
-                    <FormFieldError>
-                      {errors.cellMappings.price.message}
-                    </FormFieldError>
-                  )}
-                </td>
-              </tr>
-              <tr>
-                <td className="px-4 py-3">
-                  <Typography variant="bodySm" className="font-medium">
-                    Currency
-                  </Typography>
-                  <Typography variant="bodySm" className="text-text-muted">
-                    Column range (optional, max 10 rows)
-                  </Typography>
-                </td>
-                <td className="px-4 py-3">
-                  <Input
-                    type="text"
-                    placeholder="'Example Pricing Model'!J7:J16"
-                    isDisabled={isSubmitting}
-                    {...register('cellMappings.currency')}
-                  />
-                  {errors.cellMappings?.currency && (
-                    <FormFieldError>
-                      {errors.cellMappings.currency.message}
-                    </FormFieldError>
-                  )}
-                </td>
-              </tr>
-              <tr>
-                <td className="px-4 py-3">
-                  <Typography variant="bodySm" className="font-medium">
-                    Exchange Rate USD
-                  </Typography>
-                  <Typography variant="bodySm" className="text-text-muted">
-                    Column range (optional, max 10 rows)
-                  </Typography>
-                </td>
-                <td className="px-4 py-3">
-                  <Input
-                    type="text"
-                    placeholder="'Example Pricing Model'!K7:K16"
-                    isDisabled={isSubmitting}
-                    {...register('cellMappings.exchangeRateUsd')}
-                  />
-                  {errors.cellMappings?.exchangeRateUsd && (
-                    <FormFieldError>
-                      {errors.cellMappings.exchangeRateUsd.message}
-                    </FormFieldError>
-                  )}
-                </td>
-              </tr>
-              <tr>
-                <td className="px-4 py-3">
-                  <Typography variant="bodySm" className="font-medium">
-                    Base Price USD
-                  </Typography>
-                  <Typography variant="bodySm" className="text-text-muted">
-                    Column range (optional, max 10 rows)
-                  </Typography>
-                </td>
-                <td className="px-4 py-3">
-                  <Input
-                    type="text"
-                    placeholder="'Example Pricing Model'!L7:L16"
-                    isDisabled={isSubmitting}
-                    {...register('cellMappings.basePriceUsd')}
-                  />
-                  {errors.cellMappings?.basePriceUsd && (
-                    <FormFieldError>
-                      {errors.cellMappings.basePriceUsd.message}
-                    </FormFieldError>
-                  )}
-                </td>
-              </tr>
-
-              {/* Single Cells - Customer Data */}
-              <tr>
-                <td className="px-4 py-3">
-                  <Typography variant="bodySm" className="font-medium">
-                    Customer Name
-                  </Typography>
-                  <Typography variant="bodySm" className="text-text-muted">
-                    Single cell (optional)
-                  </Typography>
-                </td>
-                <td className="px-4 py-3">
-                  <Input
-                    type="text"
-                    placeholder="'Example Pricing Model'!B1"
-                    isDisabled={isSubmitting}
-                    {...register('cellMappings.customerName')}
-                  />
-                  {errors.cellMappings?.customerName && (
-                    <FormFieldError>
-                      {errors.cellMappings.customerName.message}
-                    </FormFieldError>
-                  )}
-                </td>
-              </tr>
-              <tr>
-                <td className="px-4 py-3">
-                  <Typography variant="bodySm" className="font-medium">
-                    Customer Email
-                  </Typography>
-                  <Typography variant="bodySm" className="text-text-muted">
-                    Single cell (optional)
-                  </Typography>
-                </td>
-                <td className="px-4 py-3">
-                  <Input
-                    type="text"
-                    placeholder="'Example Pricing Model'!B2"
-                    isDisabled={isSubmitting}
-                    {...register('cellMappings.customerEmail')}
-                  />
-                  {errors.cellMappings?.customerEmail && (
-                    <FormFieldError>
-                      {errors.cellMappings.customerEmail.message}
-                    </FormFieldError>
-                  )}
-                </td>
-              </tr>
-              <tr>
-                <td className="px-4 py-3">
-                  <Typography variant="bodySm" className="font-medium">
-                    Customer Type
-                  </Typography>
-                  <Typography variant="bodySm" className="text-text-muted">
-                    Single cell (optional)
-                  </Typography>
-                </td>
-                <td className="px-4 py-3">
-                  <Input
-                    type="text"
-                    placeholder="'Example Pricing Model'!B3"
-                    isDisabled={isSubmitting}
-                    {...register('cellMappings.customerType')}
-                  />
-                  {errors.cellMappings?.customerType && (
-                    <FormFieldError>
-                      {errors.cellMappings.customerType.message}
-                    </FormFieldError>
-                  )}
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+        {renderCellMappingFields(optionalCellMappingFields)}
       </div>
 
       <Button type="submit" colorRole="brand" isDisabled={isSubmitting}>
