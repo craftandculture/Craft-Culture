@@ -1,3 +1,10 @@
+# [1.3.0](https://github.com/craftandculture/Craft-Culture/compare/v1.2.2...v1.3.0) (2025-10-12)
+
+
+### Features
+
+* add dark mode toggle to user dropdown ([052a5f7](https://github.com/craftandculture/Craft-Culture/commit/052a5f78659a49718374c07ef148fc2700a2a037))
+
 ## [1.2.2](https://github.com/craftandculture/Craft-Culture/compare/v1.2.1...v1.2.2) (2025-10-11)
 
 
