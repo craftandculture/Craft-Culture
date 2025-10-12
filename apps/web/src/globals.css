@@ -241,8 +241,8 @@
 
 @layer base {
   *[data-theme='dark'] {
-    --color-background-primary: var(--color-gray-900);
-    --color-background-muted: color-mix(in oklch, var(--color-gray-900) 97%, white);
+    --color-background-primary: var(--color-gray-950);
+    --color-background-muted: color-mix(in oklch, var(--color-gray-950) 97%, white);
 
     --color-fill-primary: var(--color-gray-900);
     --color-fill-primary-hover: color-mix(in oklch, var(--color-gray-800) 97%, white);

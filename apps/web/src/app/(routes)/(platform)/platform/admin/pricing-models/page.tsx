@@ -17,8 +17,8 @@ import Divider from '@/app/_ui/components/Divider/Divider';
 
 const PricingModelsAdminPage = () => {
   return (
-    <main className="container space-y-8 py-8 md:py-16">
-      <Card className="mx-auto w-full max-w-5xl">
+    <main className="container max-w-7xl space-y-8 py-8 md:py-16">
+      <Card className="mx-auto w-full">
         <CardContent>
           <CardProse>
             <CardTitle>Step 1: Upload Sheet</CardTitle>
@@ -44,7 +44,7 @@ const PricingModelsAdminPage = () => {
         </CardContent>
       </Card>
 
-      <Card className="mx-auto w-full max-w-5xl">
+      <Card className="mx-auto w-full">
         <CardContent>
           <CardProse>
             <CardTitle>Step 2: Create Pricing Model</CardTitle>
@@ -71,7 +71,7 @@ const PricingModelsAdminPage = () => {
         </CardContent>
       </Card>
 
-      <Card className="mx-auto w-full max-w-5xl">
+      <Card className="mx-auto w-full">
         <CardContent>
           <CardProse>
             <CardTitle>User Assignments</CardTitle>
