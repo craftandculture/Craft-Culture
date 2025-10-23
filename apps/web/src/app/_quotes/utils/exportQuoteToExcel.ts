@@ -52,14 +52,14 @@ const exportQuoteToExcel = (
       item.unitSize,
       item.unitsPerCase,
       item.totalBottles,
-      item.pricePerCase,
-      item.pricePerBottle,
-      item.totalPrice,
+      Math.round(item.pricePerCase),
+      Math.round(item.pricePerBottle),
+      Math.round(item.totalPrice),
     ]),
     // Empty row
     [],
     // Total row
-    ['', '', '', '', '', '', '', 'Total:', totalPrice],
+    ['', '', '', '', '', '', '', 'Total:', Math.round(totalPrice)],
   ];
 
   // Create worksheet from data
