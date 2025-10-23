@@ -1,6 +1,6 @@
-# Easybooker Web Application
+# Craft & Culture Web Application
 
-Next.js application for the Easybooker platform. Handles document collection, AI processing, validation, and bank matching workflows.
+Next.js application for the Craft & Culture platform. Helps wine and spirits brands succeed in the GCC markets with product management, quote generation, and sophisticated pricing models.
 
 ## Tech Stack
 
@@ -8,11 +8,11 @@ Next.js application for the Easybooker platform. Handles document collection, AI
 - React 19 with Experimental Compiler
 - TypeScript + Tailwind CSS 4
 - PostgreSQL + Drizzle ORM
-- Supabase Auth
+- Better Auth for authentication
 - tRPC for type-safe APIs
 - Trigger.dev for background jobs
 - Sentry error tracking
-- AI providers for document processing
+- CultX API integration for wine products
 
 ## Getting Started
 
@@ -20,9 +20,8 @@ Next.js application for the Easybooker platform. Handles document collection, AI
 
 - Node.js 18+
 - pnpm 9+
-- PostgreSQL database
-- Supabase project
-- Moneybird API credentials
+- PostgreSQL database (Neon recommended)
+- CultX API credentials
 
 ### Installation
 
