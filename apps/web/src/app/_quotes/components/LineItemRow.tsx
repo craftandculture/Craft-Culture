@@ -155,7 +155,7 @@ const LineItemRow = ({
           {isQuoteLoading ? (
             <Skeleton className="h-5 w-20" />
           ) : (
-            <Typography variant="bodySm" className="font-medium text-xs md:text-sm">
+            <Typography variant="bodySm" className="text-xs font-medium">
               {quotePrice !== undefined
                 ? formatPrice(quotePrice, quoteCurrency)
                 : '—'}
@@ -168,7 +168,7 @@ const LineItemRow = ({
           {isQuoteLoading ? (
             <Skeleton className="h-5 w-20" />
           ) : (
-            <Typography variant="bodySm" className="font-medium text-xs md:text-sm">
+            <Typography variant="bodySm" className="text-xs font-medium">
               {perBottlePrice !== undefined
                 ? formatPrice(perBottlePrice, quoteCurrency)
                 : '—'}
@@ -177,7 +177,7 @@ const LineItemRow = ({
         </div>
 
         {/* Remove Button */}
-        <div className="col-span-4 flex h-9 items-center justify-end sm:col-span-4 md:col-span-1">
+        <div className="col-span-4 flex h-9 items-center justify-end sm:col-span-4 md:col-span-2">
           <Button
             type="button"
             size="sm"
