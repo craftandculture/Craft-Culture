@@ -254,7 +254,7 @@ const QuotesForm = () => {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-2">
       {/* Currency Toggle */}
       <div className="flex justify-end">
         <div className="flex items-center gap-2">
