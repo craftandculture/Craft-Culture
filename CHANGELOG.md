@@ -1,3 +1,10 @@
+# [1.8.0](https://github.com/craftandculture/Craft-Culture/compare/v1.7.0...v1.8.0) (2025-10-23)
+
+
+### Features
+
+* add per bottle price column to quotes ([0b8f174](https://github.com/craftandculture/Craft-Culture/commit/0b8f174c283dcbed3051f9896e8733919007ef15))
+
 # [1.7.0](https://github.com/craftandculture/Craft-Culture/compare/v1.6.0...v1.7.0) (2025-10-23)
 
 
