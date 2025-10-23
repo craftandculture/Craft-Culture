@@ -1,3 +1,10 @@
+# [1.7.0](https://github.com/craftandculture/Craft-Culture/compare/v1.6.0...v1.7.0) (2025-10-23)
+
+
+### Features
+
+* improve vintage column functionality and positioning ([ce32b88](https://github.com/craftandculture/Craft-Culture/commit/ce32b88f21cc3ea18b1defb2aae66e53031dab7a))
+
 # [1.6.0](https://github.com/craftandculture/Craft-Culture/compare/v1.5.0...v1.6.0) (2025-10-23)
 
 
