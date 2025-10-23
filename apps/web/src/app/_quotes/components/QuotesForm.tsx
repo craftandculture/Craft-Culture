@@ -293,7 +293,7 @@ const QuotesForm = () => {
         {/* Header Row - Hidden on mobile */}
         {lineItems.length > 0 && (
           <div className="hidden grid-cols-12 gap-3 px-2 md:grid">
-            <div className="col-span-4 flex justify-start">
+            <div className="col-span-6 flex justify-start">
               <Typography
                 variant="bodyXs"
                 className="text-text-muted font-medium uppercase"
@@ -317,7 +317,7 @@ const QuotesForm = () => {
                 Quantity
               </Typography>
             </div>
-            <div className="col-span-2 flex justify-start">
+            <div className="col-span-1 flex justify-start">
               <Typography
                 variant="bodyXs"
                 className="text-text-muted font-medium uppercase"
@@ -325,7 +325,7 @@ const QuotesForm = () => {
                 Price
               </Typography>
             </div>
-            <div className="col-span-2 flex justify-start">
+            <div className="col-span-1 flex justify-start">
               <Typography
                 variant="bodyXs"
                 className="text-text-muted font-medium uppercase"
