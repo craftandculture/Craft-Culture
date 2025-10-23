@@ -13,7 +13,6 @@ import Skeleton from '@/app/_ui/components/Skeleton/Skeleton';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import useDebounce from '@/app/_ui/hooks/useDebounce';
 import formatPrice from '@/utils/formatPrice';
-import formatPriceMobile from '@/utils/formatPriceMobile';
 
 interface LineItemRowProps {
   vintage?: string;
@@ -152,51 +151,33 @@ const LineItemRow = ({
         </div>
 
         {/* Line Price */}
-        <div className="col-span-4 flex h-9 items-center justify-start sm:col-span-4 md:col-span-1 md:justify-end">
+        <div className="col-span-5 flex h-9 items-center justify-start sm:col-span-5 md:col-span-1 md:justify-end">
           {isQuoteLoading ? (
-            <Skeleton className="h-5 w-20" />
+            <Skeleton className="h-5 w-16" />
           ) : (
-            <>
-              {/* Mobile: compact format without currency code */}
-              <Typography variant="bodySm" className="text-xs font-medium md:hidden">
-                {quotePrice !== undefined
-                  ? formatPriceMobile(quotePrice, quoteCurrency)
-                  : '—'}
-              </Typography>
-              {/* Desktop: full format with currency */}
-              <Typography variant="bodySm" className="hidden text-xs font-medium md:block">
-                {quotePrice !== undefined
-                  ? formatPrice(quotePrice, quoteCurrency)
-                  : '—'}
-              </Typography>
-            </>
+            <Typography variant="bodySm" className="text-xs font-medium">
+              {quotePrice !== undefined
+                ? formatPrice(quotePrice, quoteCurrency)
+                : '—'}
+            </Typography>
           )}
         </div>
 
         {/* Per Bottle Price */}
-        <div className="col-span-4 flex h-9 items-center justify-start sm:col-span-4 md:col-span-1 md:justify-end">
+        <div className="col-span-5 flex h-9 items-center justify-start sm:col-span-5 md:col-span-1 md:justify-end">
           {isQuoteLoading ? (
-            <Skeleton className="h-5 w-20" />
+            <Skeleton className="h-5 w-16" />
           ) : (
-            <>
-              {/* Mobile: compact format without currency code */}
-              <Typography variant="bodySm" className="text-xs font-medium md:hidden">
-                {perBottlePrice !== undefined
-                  ? formatPriceMobile(perBottlePrice, quoteCurrency)
-                  : '—'}
-              </Typography>
-              {/* Desktop: full format with currency */}
-              <Typography variant="bodySm" className="hidden text-xs font-medium md:block">
-                {perBottlePrice !== undefined
-                  ? formatPrice(perBottlePrice, quoteCurrency)
-                  : '—'}
-              </Typography>
-            </>
+            <Typography variant="bodySm" className="text-xs font-medium">
+              {perBottlePrice !== undefined
+                ? formatPrice(perBottlePrice, quoteCurrency)
+                : '—'}
+            </Typography>
           )}
         </div>
 
         {/* Remove Button */}
-        <div className="col-span-4 flex h-9 items-center justify-end sm:col-span-4 md:col-span-1">
+        <div className="col-span-2 flex h-9 items-center justify-end sm:col-span-2 md:col-span-1">
           <Button
             type="button"
             size="sm"
