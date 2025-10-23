@@ -1,3 +1,10 @@
+## [1.8.6](https://github.com/craftandculture/Craft-Culture/compare/v1.8.5...v1.8.6) (2025-10-23)
+
+
+### Bug Fixes
+
+* align Price/Per Bottle headings left and remove period ([ccb93e9](https://github.com/craftandculture/Craft-Culture/commit/ccb93e9477f339d5b810bc737d9566f430006a0c))
+
 ## [1.8.5](https://github.com/craftandculture/Craft-Culture/compare/v1.8.4...v1.8.5) (2025-10-23)
 
 
