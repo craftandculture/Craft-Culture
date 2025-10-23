@@ -1,3 +1,10 @@
+# [1.10.0](https://github.com/craftandculture/Craft-Culture/compare/v1.9.0...v1.10.0) (2025-10-23)
+
+
+### Features
+
+* add mobile labels for price columns and improve responsiveness ([c496269](https://github.com/craftandculture/Craft-Culture/commit/c4962697bda152ebf992338579ab55de5fa921e3))
+
 # [1.9.0](https://github.com/craftandculture/Craft-Culture/compare/v1.8.10...v1.9.0) (2025-10-23)
 
 
