@@ -1,3 +1,10 @@
+# [1.4.0](https://github.com/craftandculture/Craft-Culture/compare/v1.3.3...v1.4.0) (2025-10-23)
+
+
+### Features
+
+* convert USD to AED display with 3.67 rate ([e38fc2b](https://github.com/craftandculture/Craft-Culture/commit/e38fc2b404fd31fa29cca20c353d8cb060f89b32))
+
 ## [1.3.3](https://github.com/craftandculture/Craft-Culture/compare/v1.3.2...v1.3.3) (2025-10-23)
 
 
