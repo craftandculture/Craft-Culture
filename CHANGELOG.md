@@ -1,3 +1,10 @@
+## [1.11.1](https://github.com/craftandculture/Craft-Culture/compare/v1.11.0...v1.11.1) (2025-10-23)
+
+
+### Bug Fixes
+
+* remove intermediate sm breakpoint to prevent price field overlap ([d4f3548](https://github.com/craftandculture/Craft-Culture/commit/d4f354881cff5e4ea73dd44a3f8df7b03ba5fbb9))
+
 # [1.11.0](https://github.com/craftandculture/Craft-Culture/compare/v1.10.0...v1.11.0) (2025-10-23)
 
 
