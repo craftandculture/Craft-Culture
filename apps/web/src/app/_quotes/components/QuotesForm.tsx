@@ -260,7 +260,7 @@ const QuotesForm = () => {
         {/* Header Row - Hidden on mobile */}
         {lineItems.length > 0 && (
           <div className="hidden grid-cols-12 gap-3 px-2 md:grid">
-            <div className="col-span-4">
+            <div className="col-span-5 flex justify-center">
               <Typography
                 variant="bodyXs"
                 className="text-text-muted font-medium uppercase"
@@ -268,7 +268,7 @@ const QuotesForm = () => {
                 Reference
               </Typography>
             </div>
-            <div className="col-span-2">
+            <div className="col-span-1 flex justify-center">
               <Typography
                 variant="bodyXs"
                 className="text-text-muted font-medium uppercase"
@@ -276,7 +276,7 @@ const QuotesForm = () => {
                 Vintage
               </Typography>
             </div>
-            <div className="col-span-2">
+            <div className="col-span-2 flex justify-center">
               <Typography
                 variant="bodyXs"
                 className="text-text-muted font-medium uppercase"
@@ -284,7 +284,7 @@ const QuotesForm = () => {
                 Quantity
               </Typography>
             </div>
-            <div className="col-span-3 flex items-center justify-end gap-3">
+            <div className="col-span-3 flex items-center justify-center gap-3">
               <Typography
                 variant="bodyXs"
                 className="text-text-muted font-medium uppercase"
