@@ -24,16 +24,16 @@ const ThemeToggle = () => {
 
   if (!mounted) {
     return (
-      <div className="fixed bottom-6 right-6 z-50">
+      <div className="fixed right-4 top-4 z-40">
         <Button
-          variant="default"
-          colorRole="brand"
-          size="lg"
+          variant="ghost"
+          colorRole="muted"
+          size="sm"
           shape="circle"
-          className="shadow-lg"
+          className="opacity-60 hover:opacity-100"
         >
           <ButtonContent>
-            <div className="size-5" />
+            <div className="size-4" />
           </ButtonContent>
         </Button>
       </div>
@@ -51,17 +51,17 @@ const ThemeToggle = () => {
   const isDark = resolvedTheme === 'dark';
 
   return (
-    <div className="fixed bottom-6 right-6 z-50">
+    <div className="fixed right-4 top-4 z-40">
       <Button
-        variant="default"
-        colorRole="brand"
-        size="lg"
+        variant="ghost"
+        colorRole="muted"
+        size="sm"
         shape="circle"
         onClick={handleToggle}
-        className="shadow-lg transition-transform hover:scale-105"
+        className="opacity-60 transition-opacity hover:opacity-100"
       >
         <ButtonContent>
-          <Icon icon={isDark ? IconSun : IconMoon} size="lg" />
+          <Icon icon={isDark ? IconSun : IconMoon} size="sm" />
         </ButtonContent>
       </Button>
     </div>
