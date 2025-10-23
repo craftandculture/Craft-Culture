@@ -114,7 +114,7 @@ const LineItemRow = ({
         </div>
 
         {/* Vintage Input */}
-        <div className="col-span-3 md:col-span-1">
+        <div className="col-span-4 md:col-span-1">
           <Input
             type="text"
             size="md"
@@ -126,7 +126,7 @@ const LineItemRow = ({
         </div>
 
         {/* Quantity Input */}
-        <div className="col-span-9 flex flex-wrap items-center gap-2 md:col-span-2">
+        <div className="col-span-8 flex flex-wrap items-center gap-2 md:col-span-2">
           <Input
             className="min-w-0 grow"
             type="number"
@@ -141,7 +141,7 @@ const LineItemRow = ({
               maxQuantity !== Infinity ? (
                 <Typography
                   variant="bodyXs"
-                  className="text-text-muted pr-2.5 font-medium"
+                  className="text-text-muted hidden pr-2.5 font-medium md:inline"
                 >
                   {offer?.unitCount} × {offer?.unitSize} (max: {maxQuantity})
                 </Typography>
@@ -151,7 +151,7 @@ const LineItemRow = ({
         </div>
 
         {/* Line Price */}
-        <div className="col-span-5 flex flex-col justify-center gap-0.5 md:col-span-1 md:h-9 md:flex-row md:items-center md:justify-end md:gap-0">
+        <div className="col-span-6 flex flex-col justify-center gap-0.5 md:col-span-1 md:h-9 md:flex-row md:items-center md:justify-end md:gap-0">
           <Typography
             variant="bodyXs"
             className="text-text-muted font-medium uppercase leading-none md:hidden"
@@ -173,7 +173,7 @@ const LineItemRow = ({
         </div>
 
         {/* Per Bottle Price */}
-        <div className="col-span-5 flex flex-col justify-center gap-0.5 md:col-span-1 md:h-9 md:flex-row md:items-center md:justify-end md:gap-0">
+        <div className="col-span-6 flex flex-col justify-center gap-0.5 md:col-span-1 md:h-9 md:flex-row md:items-center md:justify-end md:gap-0">
           <Typography
             variant="bodyXs"
             className="text-text-muted font-medium uppercase leading-none md:hidden"
@@ -195,7 +195,7 @@ const LineItemRow = ({
         </div>
 
         {/* Remove Button */}
-        <div className="col-span-2 flex items-start justify-end pt-1 md:col-span-1 md:h-9 md:items-center md:pt-0">
+        <div className="col-span-12 flex items-center justify-center md:col-span-1 md:h-9 md:justify-end md:pt-0">
           <Button
             type="button"
             size="sm"
