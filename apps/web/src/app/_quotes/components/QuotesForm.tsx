@@ -1,6 +1,6 @@
 'use client';
 
-import { IconPlus } from '@tabler/icons-react';
+import { IconInfoCircle, IconPlus } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import { parseAsArrayOf, parseAsJson, useQueryState } from 'nuqs';
 import React, { useEffect, useMemo, useState } from 'react';
@@ -9,7 +9,12 @@ import { Product } from '@/app/_products/controller/productsGetMany';
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
 import Divider from '@/app/_ui/components/Divider/Divider';
+import Icon from '@/app/_ui/components/Icon/Icon';
 import Skeleton from '@/app/_ui/components/Skeleton/Skeleton';
+import Tooltip from '@/app/_ui/components/Tooltip/Tooltip';
+import TooltipContent from '@/app/_ui/components/Tooltip/TooltipContent';
+import TooltipProvider from '@/app/_ui/components/Tooltip/TooltipProvider';
+import TooltipTrigger from '@/app/_ui/components/Tooltip/TooltipTrigger';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import useTRPC from '@/lib/trpc/browser';
 import convertUsdToAed from '@/utils/convertUsdToAed';
@@ -46,6 +51,10 @@ type DerivedLineItem =
 
 const QuotesForm = () => {
   const api = useTRPC();
+
+  // Get current user to check customer type
+  const { data: userData } = useQuery(api.users.getMe.queryOptions());
+  const customerType = userData?.customerType;
 
   // Currency display toggle
   const [displayCurrency, setDisplayCurrency] = useState<'USD' | 'AED'>('AED');
@@ -317,21 +326,53 @@ const QuotesForm = () => {
                 Quantity
               </Typography>
             </div>
-            <div className="col-span-1 flex justify-start">
+            <div className="col-span-1 flex items-center justify-start gap-1">
               <Typography
                 variant="bodyXs"
                 className="text-text-muted font-medium uppercase"
               >
                 Price
               </Typography>
+              {customerType === 'b2b' && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="inline-flex">
+                        <Icon
+                          icon={IconInfoCircle}
+                          size="xs"
+                          colorRole="muted"
+                        />
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent>In Bond UAE</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
             </div>
-            <div className="col-span-1 flex justify-start">
+            <div className="col-span-1 flex items-center justify-start gap-1">
               <Typography
                 variant="bodyXs"
                 className="text-text-muted font-medium uppercase"
               >
                 Per Bottle
               </Typography>
+              {customerType === 'b2b' && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="inline-flex">
+                        <Icon
+                          icon={IconInfoCircle}
+                          size="xs"
+                          colorRole="muted"
+                        />
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent>In Bond UAE</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
             </div>
             <div className="col-span-1" />
           </div>
@@ -393,6 +434,7 @@ const QuotesForm = () => {
                   : undefined
               }
               quoteCurrency={displayCurrency}
+              customerType={customerType}
               omitProductIds={omitProductIds}
               maxQuantity={maxQuantity}
             />
