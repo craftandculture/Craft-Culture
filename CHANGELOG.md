@@ -1,3 +1,10 @@
+## [1.11.2](https://github.com/craftandculture/Craft-Culture/compare/v1.11.1...v1.11.2) (2025-10-23)
+
+
+### Bug Fixes
+
+* resolve deployment build errors ([7150489](https://github.com/craftandculture/Craft-Culture/commit/71504898decd2e743270787ca0b213c1f476b20a))
+
 ## [1.11.1](https://github.com/craftandculture/Craft-Culture/compare/v1.11.0...v1.11.1) (2025-10-23)
 
 
