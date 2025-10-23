@@ -273,7 +273,7 @@ const QuotesForm = () => {
                 variant="bodyXs"
                 className="text-text-muted font-medium uppercase"
               >
-                Product
+                Reference
               </Typography>
             </div>
             <div className="col-span-2">
