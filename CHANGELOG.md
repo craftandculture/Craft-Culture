@@ -1,3 +1,10 @@
+# [1.13.0](https://github.com/craftandculture/Craft-Culture/compare/v1.12.0...v1.13.0) (2025-10-23)
+
+
+### Features
+
+* add Excel download button for quote export ([f68a658](https://github.com/craftandculture/Craft-Culture/commit/f68a658882ac53ecfcb4d25c63044af5a38ab03e))
+
 # [1.12.0](https://github.com/craftandculture/Craft-Culture/compare/v1.11.4...v1.12.0) (2025-10-23)
 
 
