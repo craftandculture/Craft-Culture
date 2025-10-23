@@ -1,3 +1,10 @@
+## [1.8.4](https://github.com/craftandculture/Craft-Culture/compare/v1.8.3...v1.8.4) (2025-10-23)
+
+
+### Bug Fixes
+
+* reduce gap between description and table headings ([cbb9a06](https://github.com/craftandculture/Craft-Culture/commit/cbb9a06b94bd7a86b6913f716319281c1eaf2b78))
+
 ## [1.8.3](https://github.com/craftandculture/Craft-Culture/compare/v1.8.2...v1.8.3) (2025-10-23)
 
 
