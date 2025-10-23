@@ -151,11 +151,11 @@ const LineItemRow = ({
         </div>
 
         {/* Line Price */}
-        <div className="col-span-5 flex h-9 items-center justify-start sm:col-span-5 md:col-span-2 md:justify-end">
+        <div className="col-span-4 flex h-9 items-center justify-start sm:col-span-4 md:col-span-2 md:justify-end">
           {isQuoteLoading ? (
             <Skeleton className="h-5 w-20" />
           ) : (
-            <Typography variant="bodySm" className="font-medium">
+            <Typography variant="bodySm" className="font-medium text-xs md:text-sm">
               {quotePrice !== undefined
                 ? formatPrice(quotePrice, quoteCurrency)
                 : '—'}
@@ -164,11 +164,11 @@ const LineItemRow = ({
         </div>
 
         {/* Per Bottle Price */}
-        <div className="col-span-5 flex h-9 items-center justify-start sm:col-span-5 md:col-span-2 md:justify-end">
+        <div className="col-span-4 flex h-9 items-center justify-start sm:col-span-4 md:col-span-2 md:justify-end">
           {isQuoteLoading ? (
             <Skeleton className="h-5 w-20" />
           ) : (
-            <Typography variant="bodySm" className="font-medium">
+            <Typography variant="bodySm" className="font-medium text-xs md:text-sm">
               {perBottlePrice !== undefined
                 ? formatPrice(perBottlePrice, quoteCurrency)
                 : '—'}
@@ -177,7 +177,7 @@ const LineItemRow = ({
         </div>
 
         {/* Remove Button */}
-        <div className="col-span-2 flex h-9 items-center justify-end sm:col-span-2 md:col-span-1">
+        <div className="col-span-4 flex h-9 items-center justify-end sm:col-span-4 md:col-span-1">
           <Button
             type="button"
             size="sm"
