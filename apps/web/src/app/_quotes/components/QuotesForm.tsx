@@ -235,7 +235,7 @@ const QuotesForm = () => {
         {/* Header Row - Hidden on mobile */}
         {lineItems.length > 0 && (
           <div className="hidden grid-cols-12 gap-3 px-2 md:grid">
-            <div className="col-span-5">
+            <div className="col-span-6">
               <Typography
                 variant="bodyXs"
                 className="text-text-muted font-medium uppercase"
@@ -243,7 +243,7 @@ const QuotesForm = () => {
                 Product
               </Typography>
             </div>
-            <div className="col-span-3">
+            <div className="col-span-2">
               <Typography
                 variant="bodyXs"
                 className="text-text-muted font-medium uppercase"
@@ -251,32 +251,36 @@ const QuotesForm = () => {
                 Quantity
               </Typography>
             </div>
-            <div className="col-span-3 flex items-center justify-end gap-2">
+            <div className="col-span-3 flex items-center justify-end gap-3">
               <Typography
                 variant="bodyXs"
                 className="text-text-muted font-medium uppercase"
               >
                 Price
               </Typography>
-              <div className="flex gap-1">
-                <Button
-                  size="xs"
-                  variant="ghost"
-                  colorRole="muted"
-                  isToggled={displayCurrency === 'USD'}
+              <div className="flex gap-0.5 rounded-md border border-border-muted bg-fill-muted p-0.5">
+                <button
+                  type="button"
                   onClick={() => setDisplayCurrency('USD')}
+                  className={`rounded px-1.5 py-0.5 text-xs font-medium transition-colors ${
+                    displayCurrency === 'USD'
+                      ? 'bg-fill-primary text-text-primary'
+                      : 'text-text-muted hover:text-text-primary'
+                  }`}
                 >
                   USD
-                </Button>
-                <Button
-                  size="xs"
-                  variant="ghost"
-                  colorRole="muted"
-                  isToggled={displayCurrency === 'AED'}
+                </button>
+                <button
+                  type="button"
                   onClick={() => setDisplayCurrency('AED')}
+                  className={`rounded px-1.5 py-0.5 text-xs font-medium transition-colors ${
+                    displayCurrency === 'AED'
+                      ? 'bg-fill-primary text-text-primary'
+                      : 'text-text-muted hover:text-text-primary'
+                  }`}
                 >
                   AED
-                </Button>
+                </button>
               </div>
             </div>
             <div className="col-span-1" />
