@@ -104,7 +104,7 @@ const LineItemRow = ({
     <div className="space-y-2">
       <div className="grid grid-cols-12 items-start gap-3">
         {/* Product Selector */}
-        <div className="col-span-12 sm:col-span-8 md:col-span-5">
+        <div className="col-span-12 sm:col-span-8 md:col-span-4">
           <ProductsCombobox
             value={product ?? null}
             onSelect={onProductChange}
@@ -150,7 +150,7 @@ const LineItemRow = ({
         </div>
 
         {/* Line Price */}
-        <div className="col-span-10 flex h-9 items-center justify-start sm:col-span-10 md:col-span-2 md:justify-end">
+        <div className="col-span-5 flex h-9 items-center justify-start sm:col-span-5 md:col-span-2 md:justify-end">
           {isQuoteLoading ? (
             <Skeleton className="h-5 w-20" />
           ) : (
@@ -163,7 +163,7 @@ const LineItemRow = ({
         </div>
 
         {/* Per Bottle Price */}
-        <div className="col-span-10 flex h-9 items-center justify-start sm:col-span-10 md:col-span-2 md:justify-end">
+        <div className="col-span-5 flex h-9 items-center justify-start sm:col-span-5 md:col-span-2 md:justify-end">
           {isQuoteLoading ? (
             <Skeleton className="h-5 w-20" />
           ) : (
@@ -176,7 +176,7 @@ const LineItemRow = ({
         </div>
 
         {/* Remove Button */}
-        <div className="col-span-2 flex h-9 items-center justify-end sm:col-span-2 md:col-span-2">
+        <div className="col-span-2 flex h-9 items-center justify-end sm:col-span-2 md:col-span-1">
           <Button
             type="button"
             size="sm"
