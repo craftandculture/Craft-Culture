@@ -1,3 +1,10 @@
+## [1.13.1](https://github.com/craftandculture/Craft-Culture/compare/v1.13.0...v1.13.1) (2025-10-23)
+
+
+### Bug Fixes
+
+* round all prices to whole numbers with no decimal places ([7bcd184](https://github.com/craftandculture/Craft-Culture/commit/7bcd184a8d386857938af1e246a9f34f6a5611ff))
+
 # [1.13.0](https://github.com/craftandculture/Craft-Culture/compare/v1.12.0...v1.13.0) (2025-10-23)
 
 
