@@ -1,3 +1,10 @@
+# [1.11.0](https://github.com/craftandculture/Craft-Culture/compare/v1.10.0...v1.11.0) (2025-10-23)
+
+
+### Features
+
+* add floating theme toggle button to platform ([0ff24e0](https://github.com/craftandculture/Craft-Culture/commit/0ff24e0fe92564425c4c7c4ca1bfe6b34f32a03b))
+
 # [1.10.0](https://github.com/craftandculture/Craft-Culture/compare/v1.9.0...v1.10.0) (2025-10-23)
 
 
