@@ -24,7 +24,7 @@ const ThemeToggle = () => {
 
   if (!mounted) {
     return (
-      <div className="fixed right-4 top-4 z-40">
+      <div className="fixed bottom-4 left-4 z-40">
         <Button
           variant="ghost"
           colorRole="muted"
@@ -51,7 +51,7 @@ const ThemeToggle = () => {
   const isDark = resolvedTheme === 'dark';
 
   return (
-    <div className="fixed right-4 top-4 z-40">
+    <div className="fixed bottom-4 left-4 z-40">
       <Button
         variant="ghost"
         colorRole="muted"
