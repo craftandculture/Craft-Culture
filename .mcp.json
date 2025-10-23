@@ -1,8 +1,16 @@
 {
   "mcpServers": {
     "browsermcp": {
-      "command": "pnpx",
+      "command": "npx",
       "args": ["@browsermcp/mcp@latest"]
+    },
+    "neon": {
+      "command": "npx",
+      "args": ["mcp-remote", "https://mcp.neon.tech/mcp"]
+    },
+    "vercel": {
+      "command": "npx",
+      "args": ["mcp-remote", "https://mcp.vercel.com"]
     }
   }
 }
