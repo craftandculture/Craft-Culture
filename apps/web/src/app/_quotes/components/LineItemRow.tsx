@@ -76,6 +76,13 @@ const LineItemRow = ({
     }
   }, [vintage]);
 
+  // Auto-fill vintage from product year when product is selected
+  useEffect(() => {
+    if (product?.year) {
+      setLocalVintage(product.year.toString());
+    }
+  }, [product]);
+
   const handleQuantityInputChange = (e: ChangeEvent<HTMLInputElement>) => {
     const value = parseInt(e.target.value);
     if (!isNaN(value)) {
@@ -94,6 +101,16 @@ const LineItemRow = ({
   return (
     <div className="space-y-2">
       <div className="grid grid-cols-12 items-start gap-3">
+        {/* Product Selector */}
+        <div className="col-span-12 sm:col-span-8 md:col-span-4">
+          <ProductsCombobox
+            value={product ?? null}
+            onSelect={onProductChange}
+            placeholder="Select product..."
+            omitProductIds={omitProductIds}
+          />
+        </div>
+
         {/* Vintage Input */}
         <div className="col-span-12 sm:col-span-4 md:col-span-2">
           <Input
@@ -102,16 +119,6 @@ const LineItemRow = ({
             placeholder="Year"
             value={localVintage}
             onChange={handleVintageInputChange}
-          />
-        </div>
-
-        {/* Product Selector */}
-        <div className="col-span-12 sm:col-span-8 md:col-span-4">
-          <ProductsCombobox
-            value={product ?? null}
-            onSelect={onProductChange}
-            placeholder="Select product..."
-            omitProductIds={omitProductIds}
           />
         </div>
 
