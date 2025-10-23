@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 
 import UserDropdown from '@/app/_auth/components/UserDropdown';
 import Logo from '@/app/_ui/components/Logo/Logo';
+import ThemeToggle from '@/app/_ui/components/ThemeToggle/ThemeToggle';
 import getQueryClient from '@/lib/react-query';
 import api from '@/lib/trpc/server';
 import tryCatch from '@/utils/tryCatch';
@@ -33,6 +34,7 @@ const PlatformLayout = async ({ children }: React.PropsWithChildren) => {
         <UserDropdown user={user} />
       </header>
       {children}
+      <ThemeToggle />
     </div>
   );
 };
