@@ -102,7 +102,7 @@ const LineItemRow = ({
     <div className="space-y-2">
       <div className="grid grid-cols-12 items-start gap-3">
         {/* Product Selector */}
-        <div className="col-span-12 sm:col-span-8 md:col-span-4">
+        <div className="col-span-12 sm:col-span-8 md:col-span-5">
           <ProductsCombobox
             value={product ?? null}
             onSelect={onProductChange}
@@ -112,7 +112,7 @@ const LineItemRow = ({
         </div>
 
         {/* Vintage Input */}
-        <div className="col-span-12 sm:col-span-4 md:col-span-2">
+        <div className="col-span-12 sm:col-span-4 md:col-span-1">
           <Input
             type="text"
             size="md"
