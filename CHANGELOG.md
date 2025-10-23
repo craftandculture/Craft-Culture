@@ -1,3 +1,10 @@
+# [1.9.0](https://github.com/craftandculture/Craft-Culture/compare/v1.8.10...v1.9.0) (2025-10-23)
+
+
+### Features
+
+* improve mobile responsiveness with compact price formatting ([43aa0ca](https://github.com/craftandculture/Craft-Culture/commit/43aa0ca1be0f360be859312635b756fd9fd32a1e))
+
 ## [1.8.10](https://github.com/craftandculture/Craft-Culture/compare/v1.8.9...v1.8.10) (2025-10-23)
 
 
