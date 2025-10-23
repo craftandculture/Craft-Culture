@@ -1,3 +1,10 @@
+## [1.8.2](https://github.com/craftandculture/Craft-Culture/compare/v1.8.1...v1.8.2) (2025-10-23)
+
+
+### Bug Fixes
+
+* optimize column widths to prevent delete button overflow ([393c5d7](https://github.com/craftandculture/Craft-Culture/commit/393c5d71a60bfa6649fff77d8145b3a199674bd1))
+
 ## [1.8.1](https://github.com/craftandculture/Craft-Culture/compare/v1.8.0...v1.8.1) (2025-10-23)
 
 
