@@ -1,6 +1,6 @@
 'use client';
 
-import { IconTrash } from '@tabler/icons-react';
+import { IconInfoCircle, IconTrash } from '@tabler/icons-react';
 import React, { ChangeEvent, useEffect, useState } from 'react';
 
 import ProductsCombobox from '@/app/_products/components/ProductsCombobox';
@@ -10,6 +10,10 @@ import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Input from '@/app/_ui/components/Input/Input';
 import Skeleton from '@/app/_ui/components/Skeleton/Skeleton';
+import Tooltip from '@/app/_ui/components/Tooltip/Tooltip';
+import TooltipContent from '@/app/_ui/components/Tooltip/TooltipContent';
+import TooltipProvider from '@/app/_ui/components/Tooltip/TooltipProvider';
+import TooltipTrigger from '@/app/_ui/components/Tooltip/TooltipTrigger';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import useDebounce from '@/app/_ui/hooks/useDebounce';
 import formatPrice from '@/utils/formatPrice';
@@ -24,6 +28,7 @@ interface LineItemRowProps {
   quotePrice?: number;
   perBottlePrice?: number;
   quoteCurrency?: string;
+  customerType?: 'b2b' | 'b2c';
   onVintageChange: (vintage: string) => void;
   onProductChange: (product: Product) => void;
   onQuantityChange: (quantity: number) => void;
@@ -40,6 +45,7 @@ const LineItemRow = ({
   quotePrice,
   perBottlePrice,
   quoteCurrency,
+  customerType,
   onVintageChange,
   onProductChange,
   onQuantityChange,
@@ -152,12 +158,30 @@ const LineItemRow = ({
 
         {/* Line Price */}
         <div className="col-span-6 flex flex-col justify-start gap-0.5 md:col-span-1 md:h-9 md:flex-row md:items-center md:justify-end md:gap-0">
-          <Typography
-            variant="bodyXs"
-            className="text-text-muted font-medium uppercase leading-none md:hidden"
-          >
-            Price
-          </Typography>
+          <div className="flex items-center gap-1 md:hidden">
+            <Typography
+              variant="bodyXs"
+              className="text-text-muted font-medium uppercase leading-none"
+            >
+              Price
+            </Typography>
+            {customerType === 'b2b' && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className="inline-flex">
+                      <Icon
+                        icon={IconInfoCircle}
+                        size="xs"
+                        colorRole="muted"
+                      />
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent>In Bond UAE</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
+          </div>
           {isQuoteLoading ? (
             <Skeleton className="h-5 w-16" />
           ) : (
@@ -174,12 +198,30 @@ const LineItemRow = ({
 
         {/* Per Bottle Price */}
         <div className="col-span-6 flex flex-col justify-start gap-0.5 md:col-span-1 md:h-9 md:flex-row md:items-center md:justify-end md:gap-0">
-          <Typography
-            variant="bodyXs"
-            className="text-text-muted font-medium uppercase leading-none md:hidden"
-          >
-            Per Bottle
-          </Typography>
+          <div className="flex items-center gap-1 md:hidden">
+            <Typography
+              variant="bodyXs"
+              className="text-text-muted font-medium uppercase leading-none"
+            >
+              Per Bottle
+            </Typography>
+            {customerType === 'b2b' && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className="inline-flex">
+                      <Icon
+                        icon={IconInfoCircle}
+                        size="xs"
+                        colorRole="muted"
+                      />
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent>In Bond UAE</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
+          </div>
           {isQuoteLoading ? (
             <Skeleton className="h-5 w-16" />
           ) : (
