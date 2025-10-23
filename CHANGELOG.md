@@ -1,3 +1,10 @@
+## [1.8.9](https://github.com/craftandculture/Craft-Culture/compare/v1.8.8...v1.8.9) (2025-10-23)
+
+
+### Bug Fixes
+
+* correct column widths to prevent row overflow ([64dcb4e](https://github.com/craftandculture/Craft-Culture/commit/64dcb4e84d04259060016ea4cee1acee42c5785b))
+
 ## [1.8.8](https://github.com/craftandculture/Craft-Culture/compare/v1.8.7...v1.8.8) (2025-10-23)
 
 
