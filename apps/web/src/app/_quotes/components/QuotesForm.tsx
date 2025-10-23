@@ -45,6 +45,9 @@ type DerivedLineItem =
 const QuotesForm = () => {
   const api = useTRPC();
 
+  // Currency display toggle
+  const [displayCurrency, setDisplayCurrency] = useState<'USD' | 'AED'>('AED');
+
   // URL is the single source of truth
   const [urlLineItems, setUrlLineItems] = useQueryState<URLLineItem[]>(
     'items',
@@ -248,13 +251,33 @@ const QuotesForm = () => {
                 Quantity
               </Typography>
             </div>
-            <div className="col-span-3 text-right">
+            <div className="col-span-3 flex items-center justify-end gap-2">
               <Typography
                 variant="bodyXs"
                 className="text-text-muted font-medium uppercase"
               >
                 Price
               </Typography>
+              <div className="flex gap-1">
+                <Button
+                  size="xs"
+                  variant="ghost"
+                  colorRole="muted"
+                  isToggled={displayCurrency === 'USD'}
+                  onClick={() => setDisplayCurrency('USD')}
+                >
+                  USD
+                </Button>
+                <Button
+                  size="xs"
+                  variant="ghost"
+                  colorRole="muted"
+                  isToggled={displayCurrency === 'AED'}
+                  onClick={() => setDisplayCurrency('AED')}
+                >
+                  AED
+                </Button>
+              </div>
             </div>
             <div className="col-span-1" />
           </div>
@@ -290,10 +313,12 @@ const QuotesForm = () => {
               isQuoteLoading={isQuoteLoading}
               quotePrice={
                 quotedLineItem?.lineItemTotalUsd
-                  ? convertUsdToAed(quotedLineItem.lineItemTotalUsd)
+                  ? displayCurrency === 'AED'
+                    ? convertUsdToAed(quotedLineItem.lineItemTotalUsd)
+                    : quotedLineItem.lineItemTotalUsd
                   : undefined
               }
-              quoteCurrency="AED"
+              quoteCurrency={displayCurrency}
               omitProductIds={omitProductIds}
               maxQuantity={maxQuantity}
             />
@@ -324,7 +349,12 @@ const QuotesForm = () => {
             ) : (
               <Typography variant="bodyLg" className="font-semibold">
                 {quoteData?.totalUsd
-                  ? formatPrice(convertUsdToAed(quoteData.totalUsd), 'AED')
+                  ? formatPrice(
+                      displayCurrency === 'AED'
+                        ? convertUsdToAed(quoteData.totalUsd)
+                        : quoteData.totalUsd,
+                      displayCurrency,
+                    )
                   : '—'}
               </Typography>
             )}
