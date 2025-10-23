@@ -1,3 +1,10 @@
+## [1.8.1](https://github.com/craftandculture/Craft-Culture/compare/v1.8.0...v1.8.1) (2025-10-23)
+
+
+### Bug Fixes
+
+* align column headings and increase quote form width ([59631db](https://github.com/craftandculture/Craft-Culture/commit/59631dbac7057fa5ad82413f442a8afa027b79d7))
+
 # [1.8.0](https://github.com/craftandculture/Craft-Culture/compare/v1.7.0...v1.8.0) (2025-10-23)
 
 
