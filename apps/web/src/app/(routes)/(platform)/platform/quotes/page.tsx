@@ -46,10 +46,9 @@ const QuotesPage = async ({
         <Card className="mx-auto w-full max-w-5xl">
           <CardContent>
             <CardProse>
-              <CardTitle>Price Quote</CardTitle>
+              <CardTitle>Quotation Tool</CardTitle>
               <CardDescription colorRole="muted">
-                Please fill in the following information to generate a price
-                quote.
+                Please select references to generate a quotation.
               </CardDescription>
             </CardProse>
             <QuotesForm />
