@@ -1,3 +1,10 @@
+## [1.11.3](https://github.com/craftandculture/Craft-Culture/compare/v1.11.2...v1.11.3) (2025-10-23)
+
+
+### Bug Fixes
+
+* prevent price fields from overlapping quantity on mobile ([e204f77](https://github.com/craftandculture/Craft-Culture/commit/e204f776955551ac0e6c6f51256b50654ea43c19))
+
 ## [1.11.2](https://github.com/craftandculture/Craft-Culture/compare/v1.11.1...v1.11.2) (2025-10-23)
 
 
