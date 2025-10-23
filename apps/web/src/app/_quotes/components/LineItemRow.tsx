@@ -71,7 +71,7 @@ const LineItemRow = ({
     <div className="space-y-2">
       <div className="grid grid-cols-12 items-start gap-3">
         {/* Product Selector */}
-        <div className="col-span-12 sm:col-span-8 md:col-span-5">
+        <div className="col-span-12 sm:col-span-8 md:col-span-6">
           <ProductsCombobox
             value={product ?? null}
             onSelect={onProductChange}
@@ -81,7 +81,7 @@ const LineItemRow = ({
         </div>
 
         {/* Quantity Input */}
-        <div className="col-span-12 flex flex-wrap items-center gap-2 sm:col-span-4 md:col-span-3">
+        <div className="col-span-12 flex flex-wrap items-center gap-2 sm:col-span-4 md:col-span-2">
           <Input
             className="min-w-0 grow"
             type="number"
