@@ -1,3 +1,10 @@
+# [1.5.0](https://github.com/craftandculture/Craft-Culture/compare/v1.4.0...v1.5.0) (2025-10-23)
+
+
+### Features
+
+* add USD/AED currency toggle to quotes ([da08d43](https://github.com/craftandculture/Craft-Culture/commit/da08d43afc9c32048edf8f4200744a7643cb4287))
+
 # [1.4.0](https://github.com/craftandculture/Craft-Culture/compare/v1.3.3...v1.4.0) (2025-10-23)
 
 
