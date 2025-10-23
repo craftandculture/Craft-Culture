@@ -21,6 +21,7 @@ interface URLLineItem {
   productId: string;
   offerId: string;
   quantity: number;
+  vintage?: string;
 }
 
 const MAX_LINE_ITEMS = 10;
@@ -31,6 +32,7 @@ type LineItemBase = {
   productId?: string;
   offerId?: string;
   quantity?: number;
+  vintage?: string;
 };
 
 type DerivedLineItem =
@@ -114,6 +116,7 @@ const QuotesForm = () => {
         productId: item.productId,
         offerId: item.offerId,
         quantity: item.quantity,
+        vintage: item.vintage,
       }),
     );
 
@@ -193,6 +196,7 @@ const QuotesForm = () => {
         productId: product.id,
         offerId,
         quantity,
+        vintage: item.vintage,
       };
       void setUrlLineItems(newItems);
       return;
@@ -204,6 +208,7 @@ const QuotesForm = () => {
         productId: product.id,
         offerId,
         quantity,
+        vintage: item.vintage,
       },
     ]);
     setPlaceholderRowIds((prev) => prev.filter((rowId) => rowId !== item.id));
@@ -228,6 +233,26 @@ const QuotesForm = () => {
     void setUrlLineItems(newItems);
   };
 
+  const handleVintageChange = (id: string, vintage: string) => {
+    const item = lineItems.find((lineItem) => lineItem.id === id);
+    if (!item) {
+      return;
+    }
+
+    if (item.source === 'url') {
+      if (!urlLineItems[item.urlIndex]) {
+        return;
+      }
+
+      const newItems = [...urlLineItems];
+      newItems[item.urlIndex] = {
+        ...newItems[item.urlIndex]!,
+        vintage,
+      };
+      void setUrlLineItems(newItems);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Line Items Table */}
@@ -235,7 +260,15 @@ const QuotesForm = () => {
         {/* Header Row - Hidden on mobile */}
         {lineItems.length > 0 && (
           <div className="hidden grid-cols-12 gap-3 px-2 md:grid">
-            <div className="col-span-6">
+            <div className="col-span-2">
+              <Typography
+                variant="bodyXs"
+                className="text-text-muted font-medium uppercase"
+              >
+                Vintage
+              </Typography>
+            </div>
+            <div className="col-span-4">
               <Typography
                 variant="bodyXs"
                 className="text-text-muted font-medium uppercase"
@@ -305,8 +338,12 @@ const QuotesForm = () => {
           return (
             <LineItemRow
               key={item.id}
+              vintage={item.vintage}
               product={item.product}
               quantity={item.quantity}
+              onVintageChange={(vintage) =>
+                handleVintageChange(item.id, vintage)
+              }
               onProductChange={(selectedProduct) =>
                 handleProductChange(item.id, selectedProduct)
               }
