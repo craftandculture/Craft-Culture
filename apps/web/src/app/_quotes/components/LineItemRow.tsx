@@ -22,6 +22,7 @@ interface LineItemRowProps {
   maxQuantity?: number;
   isQuoteLoading?: boolean;
   quotePrice?: number;
+  perBottlePrice?: number;
   quoteCurrency?: string;
   onVintageChange: (vintage: string) => void;
   onProductChange: (product: Product) => void;
@@ -37,6 +38,7 @@ const LineItemRow = ({
   maxQuantity = Infinity,
   isQuoteLoading,
   quotePrice,
+  perBottlePrice,
   quoteCurrency,
   onVintageChange,
   onProductChange,
@@ -148,7 +150,7 @@ const LineItemRow = ({
         </div>
 
         {/* Line Price */}
-        <div className="col-span-10 flex h-9 items-center justify-start sm:col-span-10 md:col-span-3 md:justify-end">
+        <div className="col-span-10 flex h-9 items-center justify-start sm:col-span-10 md:col-span-2 md:justify-end">
           {isQuoteLoading ? (
             <Skeleton className="h-5 w-20" />
           ) : (
@@ -160,8 +162,21 @@ const LineItemRow = ({
           )}
         </div>
 
+        {/* Per Bottle Price */}
+        <div className="col-span-10 flex h-9 items-center justify-start sm:col-span-10 md:col-span-2 md:justify-end">
+          {isQuoteLoading ? (
+            <Skeleton className="h-5 w-20" />
+          ) : (
+            <Typography variant="bodySm" className="font-medium">
+              {perBottlePrice !== undefined
+                ? formatPrice(perBottlePrice, quoteCurrency)
+                : '—'}
+            </Typography>
+          )}
+        </div>
+
         {/* Remove Button */}
-        <div className="col-span-2 flex h-9 items-center justify-end sm:col-span-2 md:col-span-1">
+        <div className="col-span-2 flex h-9 items-center justify-end sm:col-span-2 md:col-span-2">
           <Button
             type="button"
             size="sm"

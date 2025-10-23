@@ -260,7 +260,7 @@ const QuotesForm = () => {
         {/* Header Row - Hidden on mobile */}
         {lineItems.length > 0 && (
           <div className="hidden grid-cols-12 gap-3 px-2 md:grid">
-            <div className="col-span-5 flex justify-center">
+            <div className="col-span-4 flex justify-center">
               <Typography
                 variant="bodyXs"
                 className="text-text-muted font-medium uppercase"
@@ -276,7 +276,7 @@ const QuotesForm = () => {
                 Vintage
               </Typography>
             </div>
-            <div className="col-span-2 flex justify-center">
+            <div className="col-span-1 flex justify-center">
               <Typography
                 variant="bodyXs"
                 className="text-text-muted font-medium uppercase"
@@ -284,39 +284,49 @@ const QuotesForm = () => {
                 Quantity
               </Typography>
             </div>
-            <div className="col-span-3 flex items-center justify-center gap-3">
+            <div className="col-span-2 flex flex-col items-center justify-center gap-1">
+              <div className="flex items-center gap-2">
+                <Typography
+                  variant="bodyXs"
+                  className="text-text-muted font-medium uppercase"
+                >
+                  Price
+                </Typography>
+                <div className="flex gap-0.5 rounded-md border border-border-muted bg-fill-muted p-0.5">
+                  <button
+                    type="button"
+                    onClick={() => setDisplayCurrency('USD')}
+                    className={`rounded px-1.5 py-0.5 text-xs font-medium transition-colors ${
+                      displayCurrency === 'USD'
+                        ? 'bg-fill-primary text-text-primary'
+                        : 'text-text-muted hover:text-text-primary'
+                    }`}
+                  >
+                    USD
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDisplayCurrency('AED')}
+                    className={`rounded px-1.5 py-0.5 text-xs font-medium transition-colors ${
+                      displayCurrency === 'AED'
+                        ? 'bg-fill-primary text-text-primary'
+                        : 'text-text-muted hover:text-text-primary'
+                    }`}
+                  >
+                    AED
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div className="col-span-2 flex justify-center">
               <Typography
                 variant="bodyXs"
                 className="text-text-muted font-medium uppercase"
               >
-                Price
+                Per Bottle
               </Typography>
-              <div className="flex gap-0.5 rounded-md border border-border-muted bg-fill-muted p-0.5">
-                <button
-                  type="button"
-                  onClick={() => setDisplayCurrency('USD')}
-                  className={`rounded px-1.5 py-0.5 text-xs font-medium transition-colors ${
-                    displayCurrency === 'USD'
-                      ? 'bg-fill-primary text-text-primary'
-                      : 'text-text-muted hover:text-text-primary'
-                  }`}
-                >
-                  USD
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setDisplayCurrency('AED')}
-                  className={`rounded px-1.5 py-0.5 text-xs font-medium transition-colors ${
-                    displayCurrency === 'AED'
-                      ? 'bg-fill-primary text-text-primary'
-                      : 'text-text-muted hover:text-text-primary'
-                  }`}
-                >
-                  AED
-                </button>
-              </div>
             </div>
-            <div className="col-span-1" />
+            <div className="col-span-2" />
           </div>
         )}
 
@@ -334,6 +344,15 @@ const QuotesForm = () => {
           const quotedLineItem = quoteData?.lineItems.find(
             (qli) => qli.productId === item.product?.id,
           );
+
+          // Calculate per bottle price
+          const offer = item.product?.productOffers?.[0];
+          const unitCount = offer?.unitCount ?? 1;
+          const totalBottles = (item.quantity ?? 1) * unitCount;
+          const perBottlePrice =
+            quotedLineItem?.lineItemTotalUsd && totalBottles > 0
+              ? quotedLineItem.lineItemTotalUsd / totalBottles
+              : undefined;
 
           return (
             <LineItemRow
@@ -357,6 +376,13 @@ const QuotesForm = () => {
                   ? displayCurrency === 'AED'
                     ? convertUsdToAed(quotedLineItem.lineItemTotalUsd)
                     : quotedLineItem.lineItemTotalUsd
+                  : undefined
+              }
+              perBottlePrice={
+                perBottlePrice
+                  ? displayCurrency === 'AED'
+                    ? convertUsdToAed(perBottlePrice)
+                    : perBottlePrice
                   : undefined
               }
               quoteCurrency={displayCurrency}
