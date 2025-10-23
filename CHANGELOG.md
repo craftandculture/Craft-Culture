@@ -1,3 +1,10 @@
+## [1.8.8](https://github.com/craftandculture/Craft-Culture/compare/v1.8.7...v1.8.8) (2025-10-23)
+
+
+### Bug Fixes
+
+* reduce price output text size across all breakpoints ([2eb1b7e](https://github.com/craftandculture/Craft-Culture/commit/2eb1b7e52f853178d1b4ec355b899ed03001a4f9))
+
 ## [1.8.7](https://github.com/craftandculture/Craft-Culture/compare/v1.8.6...v1.8.7) (2025-10-23)
 
 
