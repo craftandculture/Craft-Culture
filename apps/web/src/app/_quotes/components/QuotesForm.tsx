@@ -284,41 +284,39 @@ const QuotesForm = () => {
                 Quantity
               </Typography>
             </div>
-            <div className="col-span-2 flex flex-col items-start justify-start gap-1">
-              <div className="flex items-center gap-2">
-                <Typography
-                  variant="bodyXs"
-                  className="text-text-muted font-medium uppercase"
+            <div className="col-span-2 flex items-center justify-end gap-2">
+              <Typography
+                variant="bodyXs"
+                className="text-text-muted font-medium uppercase"
+              >
+                Price
+              </Typography>
+              <div className="flex gap-0.5 rounded-md border border-border-muted bg-fill-muted p-0.5">
+                <button
+                  type="button"
+                  onClick={() => setDisplayCurrency('USD')}
+                  className={`rounded px-1.5 py-0.5 text-xs font-medium transition-colors ${
+                    displayCurrency === 'USD'
+                      ? 'bg-fill-primary text-text-primary'
+                      : 'text-text-muted hover:text-text-primary'
+                  }`}
                 >
-                  Price
-                </Typography>
-                <div className="flex gap-0.5 rounded-md border border-border-muted bg-fill-muted p-0.5">
-                  <button
-                    type="button"
-                    onClick={() => setDisplayCurrency('USD')}
-                    className={`rounded px-1.5 py-0.5 text-xs font-medium transition-colors ${
-                      displayCurrency === 'USD'
-                        ? 'bg-fill-primary text-text-primary'
-                        : 'text-text-muted hover:text-text-primary'
-                    }`}
-                  >
-                    USD
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setDisplayCurrency('AED')}
-                    className={`rounded px-1.5 py-0.5 text-xs font-medium transition-colors ${
-                      displayCurrency === 'AED'
-                        ? 'bg-fill-primary text-text-primary'
-                        : 'text-text-muted hover:text-text-primary'
-                    }`}
-                  >
-                    AED
-                  </button>
-                </div>
+                  USD
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDisplayCurrency('AED')}
+                  className={`rounded px-1.5 py-0.5 text-xs font-medium transition-colors ${
+                    displayCurrency === 'AED'
+                      ? 'bg-fill-primary text-text-primary'
+                      : 'text-text-muted hover:text-text-primary'
+                  }`}
+                >
+                  AED
+                </button>
               </div>
             </div>
-            <div className="col-span-2 flex justify-start">
+            <div className="col-span-2 flex justify-end">
               <Typography
                 variant="bodyXs"
                 className="text-text-muted font-medium uppercase"
