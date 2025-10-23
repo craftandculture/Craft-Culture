@@ -1,3 +1,10 @@
+## [1.8.7](https://github.com/craftandculture/Craft-Culture/compare/v1.8.6...v1.8.7) (2025-10-23)
+
+
+### Bug Fixes
+
+* optimize mobile layout for price columns ([f036eea](https://github.com/craftandculture/Craft-Culture/commit/f036eea3a78ba1af3587b35bc56a2a7d1ecd7ebe))
+
 ## [1.8.6](https://github.com/craftandculture/Craft-Culture/compare/v1.8.5...v1.8.6) (2025-10-23)
 
 
