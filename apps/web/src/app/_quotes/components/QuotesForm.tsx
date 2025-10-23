@@ -317,7 +317,7 @@ const QuotesForm = () => {
                 Quantity
               </Typography>
             </div>
-            <div className="col-span-2 flex justify-end">
+            <div className="col-span-2 flex justify-start">
               <Typography
                 variant="bodyXs"
                 className="text-text-muted font-medium uppercase"
@@ -325,7 +325,7 @@ const QuotesForm = () => {
                 Price
               </Typography>
             </div>
-            <div className="col-span-2 flex justify-end">
+            <div className="col-span-2 flex justify-start">
               <Typography
                 variant="bodyXs"
                 className="text-text-muted font-medium uppercase"
