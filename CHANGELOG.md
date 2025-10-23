@@ -1,3 +1,10 @@
+## [1.8.5](https://github.com/craftandculture/Craft-Culture/compare/v1.8.4...v1.8.5) (2025-10-23)
+
+
+### Bug Fixes
+
+* make vintage column non-editable ([7aa9f49](https://github.com/craftandculture/Craft-Culture/commit/7aa9f49cf3301401438c5eda842e2d34b4ffa326))
+
 ## [1.8.4](https://github.com/craftandculture/Craft-Culture/compare/v1.8.3...v1.8.4) (2025-10-23)
 
 
