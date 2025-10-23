@@ -65,13 +65,13 @@ type CellMappingField = {
 const requiredCellMappingFields: CellMappingField[] = [
   {
     key: 'priceUsd',
-    label: 'Price USD *',
+    label: 'Price AED *',
     description: 'Column range (required, max 10 rows)',
     placeholder: "'Example Pricing Model'!R7:R16",
   },
   {
     key: 'finalPriceUsd',
-    label: 'Final Price USD *',
+    label: 'Final Price AED *',
     description: 'Single cell (required)',
     placeholder: "'Example Pricing Model'!B4",
   },
@@ -146,13 +146,13 @@ const optionalCellMappingFields: CellMappingField[] = [
   },
   {
     key: 'exchangeRateUsd',
-    label: 'Exchange Rate USD',
+    label: 'Exchange Rate AED',
     description: 'Column range (optional, max 10 rows)',
     placeholder: "'Example Pricing Model'!K7:K16",
   },
   {
     key: 'basePriceUsd',
-    label: 'Base Price USD',
+    label: 'Base Price AED',
     description: 'Column range (optional, max 10 rows)',
     placeholder: "'Example Pricing Model'!L7:L16",
   },
