@@ -1,3 +1,10 @@
+## [1.8.10](https://github.com/craftandculture/Craft-Culture/compare/v1.8.9...v1.8.10) (2025-10-23)
+
+
+### Bug Fixes
+
+* optimize desktop price column widths and fix mobile vintage field ([0cde653](https://github.com/craftandculture/Craft-Culture/commit/0cde653b5a5b0c697e4de4225f89b6ac121549c2))
+
 ## [1.8.9](https://github.com/craftandculture/Craft-Culture/compare/v1.8.8...v1.8.9) (2025-10-23)
 
 
