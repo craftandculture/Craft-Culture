@@ -260,7 +260,7 @@ const QuotesForm = () => {
         {/* Header Row - Hidden on mobile */}
         {lineItems.length > 0 && (
           <div className="hidden grid-cols-12 gap-3 px-2 md:grid">
-            <div className="col-span-4 flex justify-center">
+            <div className="col-span-5 flex justify-start">
               <Typography
                 variant="bodyXs"
                 className="text-text-muted font-medium uppercase"
@@ -268,7 +268,7 @@ const QuotesForm = () => {
                 Reference
               </Typography>
             </div>
-            <div className="col-span-1 flex justify-center">
+            <div className="col-span-1 flex justify-start">
               <Typography
                 variant="bodyXs"
                 className="text-text-muted font-medium uppercase"
@@ -276,7 +276,7 @@ const QuotesForm = () => {
                 Vintage
               </Typography>
             </div>
-            <div className="col-span-1 flex justify-center">
+            <div className="col-span-2 flex justify-start">
               <Typography
                 variant="bodyXs"
                 className="text-text-muted font-medium uppercase"
@@ -284,7 +284,7 @@ const QuotesForm = () => {
                 Quantity
               </Typography>
             </div>
-            <div className="col-span-2 flex flex-col items-center justify-center gap-1">
+            <div className="col-span-2 flex flex-col items-start justify-start gap-1">
               <div className="flex items-center gap-2">
                 <Typography
                   variant="bodyXs"
@@ -318,7 +318,7 @@ const QuotesForm = () => {
                 </div>
               </div>
             </div>
-            <div className="col-span-2 flex justify-center">
+            <div className="col-span-2 flex justify-start">
               <Typography
                 variant="bodyXs"
                 className="text-text-muted font-medium uppercase"
@@ -326,7 +326,6 @@ const QuotesForm = () => {
                 Per Bottle
               </Typography>
             </div>
-            <div className="col-span-2" />
           </div>
         )}
 
