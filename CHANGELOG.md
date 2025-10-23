@@ -1,3 +1,10 @@
+# [1.6.0](https://github.com/craftandculture/Craft-Culture/compare/v1.5.0...v1.6.0) (2025-10-23)
+
+
+### Features
+
+* add vintage column to quote form ([f6ac008](https://github.com/craftandculture/Craft-Culture/commit/f6ac008ff2a58db9eb1aad1f56a6dbff3842491e))
+
 # [1.5.0](https://github.com/craftandculture/Craft-Culture/compare/v1.4.0...v1.5.0) (2025-10-23)
 
 
