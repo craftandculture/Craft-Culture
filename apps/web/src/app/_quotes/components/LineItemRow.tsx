@@ -151,11 +151,20 @@ const LineItemRow = ({
         </div>
 
         {/* Line Price */}
-        <div className="col-span-5 flex h-9 items-center justify-start sm:col-span-5 md:col-span-1 md:justify-end">
+        <div className="col-span-5 flex flex-col justify-center gap-0.5 sm:col-span-5 md:col-span-1 md:h-9 md:flex-row md:items-center md:justify-end md:gap-0">
+          <Typography
+            variant="bodyXs"
+            className="text-text-muted font-medium uppercase leading-none md:hidden"
+          >
+            Price
+          </Typography>
           {isQuoteLoading ? (
             <Skeleton className="h-5 w-16" />
           ) : (
-            <Typography variant="bodySm" className="text-xs font-medium">
+            <Typography
+              variant="bodySm"
+              className="text-xs font-medium leading-none"
+            >
               {quotePrice !== undefined
                 ? formatPrice(quotePrice, quoteCurrency)
                 : '—'}
@@ -164,11 +173,20 @@ const LineItemRow = ({
         </div>
 
         {/* Per Bottle Price */}
-        <div className="col-span-5 flex h-9 items-center justify-start sm:col-span-5 md:col-span-1 md:justify-end">
+        <div className="col-span-5 flex flex-col justify-center gap-0.5 sm:col-span-5 md:col-span-1 md:h-9 md:flex-row md:items-center md:justify-end md:gap-0">
+          <Typography
+            variant="bodyXs"
+            className="text-text-muted font-medium uppercase leading-none md:hidden"
+          >
+            Per Bottle
+          </Typography>
           {isQuoteLoading ? (
             <Skeleton className="h-5 w-16" />
           ) : (
-            <Typography variant="bodySm" className="text-xs font-medium">
+            <Typography
+              variant="bodySm"
+              className="text-xs font-medium leading-none"
+            >
               {perBottlePrice !== undefined
                 ? formatPrice(perBottlePrice, quoteCurrency)
                 : '—'}
@@ -177,7 +195,7 @@ const LineItemRow = ({
         </div>
 
         {/* Remove Button */}
-        <div className="col-span-2 flex h-9 items-center justify-end sm:col-span-2 md:col-span-1">
+        <div className="col-span-2 flex items-start justify-end pt-1 sm:col-span-2 md:col-span-1 md:h-9 md:items-center md:pt-0">
           <Button
             type="button"
             size="sm"
