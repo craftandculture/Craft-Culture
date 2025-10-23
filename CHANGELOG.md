@@ -1,3 +1,10 @@
+# [1.12.0](https://github.com/craftandculture/Craft-Culture/compare/v1.11.4...v1.12.0) (2025-10-23)
+
+
+### Features
+
+* add 'In Bond UAE' info tooltip for B2B customers ([ae75cc5](https://github.com/craftandculture/Craft-Culture/commit/ae75cc5c00ecef89a343ca791de182a3b769ecd2))
+
 ## [1.11.4](https://github.com/craftandculture/Craft-Culture/compare/v1.11.3...v1.11.4) (2025-10-23)
 
 
