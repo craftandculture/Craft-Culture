@@ -1,3 +1,10 @@
+## [1.11.4](https://github.com/craftandculture/Craft-Culture/compare/v1.11.3...v1.11.4) (2025-10-23)
+
+
+### Bug Fixes
+
+* improve mobile responsive layout for price cells ([25d86a3](https://github.com/craftandculture/Craft-Culture/commit/25d86a39071b407ca12d2ff7fd74027a4f0fd4a7))
+
 ## [1.11.3](https://github.com/craftandculture/Craft-Culture/compare/v1.11.2...v1.11.3) (2025-10-23)
 
 
