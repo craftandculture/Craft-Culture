@@ -12,6 +12,7 @@ import Divider from '@/app/_ui/components/Divider/Divider';
 import Skeleton from '@/app/_ui/components/Skeleton/Skeleton';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import useTRPC from '@/lib/trpc/browser';
+import convertUsdToAed from '@/utils/convertUsdToAed';
 import formatPrice from '@/utils/formatPrice';
 
 import LineItemRow from './LineItemRow';
@@ -287,8 +288,12 @@ const QuotesForm = () => {
               }
               onRemove={() => handleRemoveRow(item.id)}
               isQuoteLoading={isQuoteLoading}
-              quotePrice={quotedLineItem?.lineItemTotalUsd}
-              quoteCurrency="USD"
+              quotePrice={
+                quotedLineItem?.lineItemTotalUsd
+                  ? convertUsdToAed(quotedLineItem.lineItemTotalUsd)
+                  : undefined
+              }
+              quoteCurrency="AED"
               omitProductIds={omitProductIds}
               maxQuantity={maxQuantity}
             />
@@ -319,7 +324,7 @@ const QuotesForm = () => {
             ) : (
               <Typography variant="bodyLg" className="font-semibold">
                 {quoteData?.totalUsd
-                  ? formatPrice(quoteData.totalUsd, 'USD')
+                  ? formatPrice(convertUsdToAed(quoteData.totalUsd), 'AED')
                   : '—'}
               </Typography>
             )}
