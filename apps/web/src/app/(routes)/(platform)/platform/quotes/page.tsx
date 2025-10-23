@@ -43,7 +43,7 @@ const QuotesPage = async ({
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
       <main className="container py-8 md:py-16">
-        <Card className="mx-auto w-full max-w-5xl">
+        <Card className="mx-auto w-full max-w-6xl">
           <CardContent>
             <CardProse>
               <CardTitle>Quotation Tool</CardTitle>
