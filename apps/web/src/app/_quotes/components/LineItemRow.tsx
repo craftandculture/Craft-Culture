@@ -13,6 +13,7 @@ import Skeleton from '@/app/_ui/components/Skeleton/Skeleton';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import useDebounce from '@/app/_ui/hooks/useDebounce';
 import formatPrice from '@/utils/formatPrice';
+import formatPriceMobile from '@/utils/formatPriceMobile';
 
 interface LineItemRowProps {
   vintage?: string;
@@ -102,9 +103,9 @@ const LineItemRow = ({
 
   return (
     <div className="space-y-2">
-      <div className="grid grid-cols-12 items-start gap-3">
+      <div className="grid grid-cols-12 items-start gap-2 md:gap-3">
         {/* Product Selector */}
-        <div className="col-span-9 sm:col-span-10 md:col-span-6">
+        <div className="col-span-12 sm:col-span-12 md:col-span-6">
           <ProductsCombobox
             value={product ?? null}
             onSelect={onProductChange}
@@ -114,7 +115,7 @@ const LineItemRow = ({
         </div>
 
         {/* Vintage Input */}
-        <div className="col-span-3 sm:col-span-2 md:col-span-1">
+        <div className="col-span-3 sm:col-span-3 md:col-span-1">
           <Input
             type="text"
             size="md"
@@ -126,7 +127,7 @@ const LineItemRow = ({
         </div>
 
         {/* Quantity Input */}
-        <div className="col-span-12 flex flex-wrap items-center gap-2 sm:col-span-4 md:col-span-2">
+        <div className="col-span-9 flex flex-wrap items-center gap-2 sm:col-span-9 md:col-span-2">
           <Input
             className="min-w-0 grow"
             type="number"
@@ -155,11 +156,20 @@ const LineItemRow = ({
           {isQuoteLoading ? (
             <Skeleton className="h-5 w-20" />
           ) : (
-            <Typography variant="bodySm" className="text-xs font-medium">
-              {quotePrice !== undefined
-                ? formatPrice(quotePrice, quoteCurrency)
-                : '—'}
-            </Typography>
+            <>
+              {/* Mobile: compact format without currency code */}
+              <Typography variant="bodySm" className="text-xs font-medium md:hidden">
+                {quotePrice !== undefined
+                  ? formatPriceMobile(quotePrice, quoteCurrency)
+                  : '—'}
+              </Typography>
+              {/* Desktop: full format with currency */}
+              <Typography variant="bodySm" className="hidden text-xs font-medium md:block">
+                {quotePrice !== undefined
+                  ? formatPrice(quotePrice, quoteCurrency)
+                  : '—'}
+              </Typography>
+            </>
           )}
         </div>
 
@@ -168,11 +178,20 @@ const LineItemRow = ({
           {isQuoteLoading ? (
             <Skeleton className="h-5 w-20" />
           ) : (
-            <Typography variant="bodySm" className="text-xs font-medium">
-              {perBottlePrice !== undefined
-                ? formatPrice(perBottlePrice, quoteCurrency)
-                : '—'}
-            </Typography>
+            <>
+              {/* Mobile: compact format without currency code */}
+              <Typography variant="bodySm" className="text-xs font-medium md:hidden">
+                {perBottlePrice !== undefined
+                  ? formatPriceMobile(perBottlePrice, quoteCurrency)
+                  : '—'}
+              </Typography>
+              {/* Desktop: full format with currency */}
+              <Typography variant="bodySm" className="hidden text-xs font-medium md:block">
+                {perBottlePrice !== undefined
+                  ? formatPrice(perBottlePrice, quoteCurrency)
+                  : '—'}
+              </Typography>
+            </>
           )}
         </div>
 
