@@ -45,12 +45,14 @@ const QuotesPage = async ({
       <main className="container py-8 md:py-16">
         <Card className="mx-auto w-full max-w-6xl">
           <CardContent>
-            <CardProse>
-              <CardTitle>Quotation Tool</CardTitle>
-              <CardDescription colorRole="muted">
-                Please select references to generate a quotation.
-              </CardDescription>
-            </CardProse>
+            <div className="flex items-start justify-between gap-4">
+              <CardProse>
+                <CardTitle>Quotation Tool</CardTitle>
+                <CardDescription colorRole="muted">
+                  Please select references to generate a quotation.
+                </CardDescription>
+              </CardProse>
+            </div>
             <QuotesForm />
           </CardContent>
         </Card>
