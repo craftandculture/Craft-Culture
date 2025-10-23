@@ -49,7 +49,7 @@ const QuotesPage = async ({
               <CardProse>
                 <CardTitle>Quotation Tool</CardTitle>
                 <CardDescription colorRole="muted">
-                  Please select references to generate a quotation.
+                  Please select references to generate a quotation
                 </CardDescription>
               </CardProse>
             </div>
