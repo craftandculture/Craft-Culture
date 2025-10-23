@@ -15,6 +15,7 @@ import useDebounce from '@/app/_ui/hooks/useDebounce';
 import formatPrice from '@/utils/formatPrice';
 
 interface LineItemRowProps {
+  vintage?: string;
   product?: Product;
   quantity?: number;
   omitProductIds: string[];
@@ -22,12 +23,14 @@ interface LineItemRowProps {
   isQuoteLoading?: boolean;
   quotePrice?: number;
   quoteCurrency?: string;
+  onVintageChange: (vintage: string) => void;
   onProductChange: (product: Product) => void;
   onQuantityChange: (quantity: number) => void;
   onRemove: () => void;
 }
 
 const LineItemRow = ({
+  vintage,
   product,
   quantity,
   omitProductIds,
@@ -35,12 +38,15 @@ const LineItemRow = ({
   isQuoteLoading,
   quotePrice,
   quoteCurrency,
+  onVintageChange,
   onProductChange,
   onQuantityChange,
   onRemove,
 }: LineItemRowProps) => {
   const [localQuantity, setLocalQuantity] = useState(quantity ?? 1);
   const [debouncedQuantity] = useDebounce(localQuantity, 300);
+  const [localVintage, setLocalVintage] = useState(vintage ?? '');
+  const [debouncedVintage] = useDebounce(localVintage, 300);
 
   // Update parent when debounced quantity changes
   useEffect(() => {
@@ -49,12 +55,26 @@ const LineItemRow = ({
     }
   }, [debouncedQuantity, quantity, onQuantityChange]);
 
+  // Update parent when debounced vintage changes
+  useEffect(() => {
+    if (debouncedVintage !== vintage) {
+      onVintageChange(debouncedVintage);
+    }
+  }, [debouncedVintage, vintage, onVintageChange]);
+
   // Sync local quantity when prop changes (e.g., when product is selected)
   useEffect(() => {
     if (quantity !== undefined) {
       setLocalQuantity(quantity);
     }
   }, [quantity]);
+
+  // Sync local vintage when prop changes
+  useEffect(() => {
+    if (vintage !== undefined) {
+      setLocalVintage(vintage);
+    }
+  }, [vintage]);
 
   const handleQuantityInputChange = (e: ChangeEvent<HTMLInputElement>) => {
     const value = parseInt(e.target.value);
@@ -65,13 +85,28 @@ const LineItemRow = ({
     }
   };
 
+  const handleVintageInputChange = (e: ChangeEvent<HTMLInputElement>) => {
+    setLocalVintage(e.target.value);
+  };
+
   const offer = product?.productOffers?.[0];
 
   return (
     <div className="space-y-2">
       <div className="grid grid-cols-12 items-start gap-3">
+        {/* Vintage Input */}
+        <div className="col-span-12 sm:col-span-4 md:col-span-2">
+          <Input
+            type="text"
+            size="md"
+            placeholder="Year"
+            value={localVintage}
+            onChange={handleVintageInputChange}
+          />
+        </div>
+
         {/* Product Selector */}
-        <div className="col-span-12 sm:col-span-8 md:col-span-6">
+        <div className="col-span-12 sm:col-span-8 md:col-span-4">
           <ProductsCombobox
             value={product ?? null}
             onSelect={onProductChange}
