@@ -1,6 +1,6 @@
 'use client';
 
-import { IconInfoCircle, IconPlus } from '@tabler/icons-react';
+import { IconDownload, IconInfoCircle, IconPlus } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import { parseAsArrayOf, parseAsJson, useQueryState } from 'nuqs';
 import React, { useEffect, useMemo, useState } from 'react';
@@ -21,6 +21,7 @@ import convertUsdToAed from '@/utils/convertUsdToAed';
 import formatPrice from '@/utils/formatPrice';
 
 import LineItemRow from './LineItemRow';
+import exportQuoteToExcel from '../utils/exportQuoteToExcel';
 
 interface URLLineItem {
   productId: string;
@@ -262,10 +263,77 @@ const QuotesForm = () => {
     }
   };
 
+  const handleDownloadExcel = () => {
+    if (!quoteData || lineItems.length === 0) {
+      return;
+    }
+
+    // Prepare line items for export
+    const exportLineItems = lineItems
+      .filter((item) => item.product)
+      .map((item) => {
+        const quotedLineItem = quoteData.lineItems.find(
+          (qli) => qli.productId === item.product?.id,
+        );
+
+        const offer = item.product?.productOffers?.[0];
+        const unitCount = offer?.unitCount ?? 1;
+        const totalBottles = (item.quantity ?? 1) * unitCount;
+        const perBottlePrice =
+          quotedLineItem?.lineItemTotalUsd && totalBottles > 0
+            ? quotedLineItem.lineItemTotalUsd / totalBottles
+            : 0;
+
+        const linePrice = quotedLineItem?.lineItemTotalUsd ?? 0;
+        const pricePerCase = linePrice / (item.quantity ?? 1);
+
+        return {
+          reference: item.product?.name ?? '',
+          vintage: item.vintage ?? '',
+          quantity: item.quantity ?? 1,
+          unitSize: offer?.unitSize ?? '',
+          unitsPerCase: unitCount,
+          totalBottles,
+          pricePerCase:
+            displayCurrency === 'AED'
+              ? convertUsdToAed(pricePerCase)
+              : pricePerCase,
+          pricePerBottle:
+            displayCurrency === 'AED'
+              ? convertUsdToAed(perBottlePrice)
+              : perBottlePrice,
+          totalPrice:
+            displayCurrency === 'AED'
+              ? convertUsdToAed(linePrice)
+              : linePrice,
+        };
+      });
+
+    const total =
+      displayCurrency === 'AED'
+        ? convertUsdToAed(quoteData.totalUsd)
+        : quoteData.totalUsd;
+
+    exportQuoteToExcel(exportLineItems, displayCurrency, total);
+  };
+
   return (
     <div className="space-y-2">
-      {/* Currency Toggle */}
-      <div className="flex justify-end">
+      {/* Currency Toggle and Download Button */}
+      <div className="flex items-center justify-between gap-4">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={handleDownloadExcel}
+          isDisabled={!quoteData || lineItems.length === 0}
+        >
+          <ButtonContent iconLeft={IconDownload}>
+            <span className="hidden sm:inline">Download Excel</span>
+            <span className="sm:hidden">Export</span>
+          </ButtonContent>
+        </Button>
+
         <div className="flex items-center gap-2">
           <Typography variant="bodyXs" className="text-text-muted font-medium">
             Currency:
