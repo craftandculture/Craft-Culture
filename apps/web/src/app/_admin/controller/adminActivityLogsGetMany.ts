@@ -1,5 +1,4 @@
-import { desc, eq } from 'drizzle-orm';
-import type { SQL } from 'drizzle-orm';
+import { and, desc, eq } from 'drizzle-orm';
 import z from 'zod';
 
 import db from '@/database/client';
@@ -19,26 +18,20 @@ const adminActivityLogsGetMany = adminProcedure
     }),
   )
   .query(async ({ input }) => {
-    const { adminId, action, limit, offset } = input;
+    const { adminId, action, limit, offset} = input;
 
     // Build where conditions
-    const whereConditions: SQL[] = [];
+    const conditions = [];
     if (adminId) {
-      whereConditions.push(eq(adminActivityLogs.adminId, adminId));
+      conditions.push(eq(adminActivityLogs.adminId, adminId));
     }
     if (action) {
-      whereConditions.push(eq(adminActivityLogs.action, action));
+      conditions.push(eq(adminActivityLogs.action, action));
     }
 
     // Fetch logs with admin user information
     const logs = await db.query.adminActivityLogs.findMany({
-      where:
-        whereConditions.length > 0
-          ? (_table) =>
-              whereConditions.reduce((acc, condition) => {
-                return acc ? acc.and(condition) : condition;
-              })
-          : undefined,
+      where: conditions.length > 0 ? and(...conditions) : undefined,
       orderBy: [desc(adminActivityLogs.createdAt)],
       limit,
       offset,
@@ -55,13 +48,7 @@ const adminActivityLogsGetMany = adminProcedure
 
     // Get total count for pagination
     const totalCount = await db.query.adminActivityLogs.findMany({
-      where:
-        whereConditions.length > 0
-          ? (_table) =>
-              whereConditions.reduce((acc, condition) => {
-                return acc ? acc.and(condition) : condition;
-              })
-          : undefined,
+      where: conditions.length > 0 ? and(...conditions) : undefined,
       columns: { id: true },
     });
 
