@@ -1,3 +1,10 @@
+## [1.30.1](https://github.com/craftandculture/Craft-Culture/compare/v1.30.0...v1.30.1) (2025-10-24)
+
+
+### Bug Fixes
+
+* correct tRPC import path in ActivityLogsTable ([9f4b2aa](https://github.com/craftandculture/Craft-Culture/commit/9f4b2aa0c2ce2ce2cf6ba28d0f97f482cfd3add7))
+
 # [1.30.0](https://github.com/craftandculture/Craft-Culture/compare/v1.29.0...v1.30.0) (2025-10-24)
 
 
