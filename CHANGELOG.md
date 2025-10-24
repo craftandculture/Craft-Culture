@@ -1,3 +1,10 @@
+## [1.27.1](https://github.com/craftandculture/Craft-Culture/compare/v1.27.0...v1.27.1) (2025-10-24)
+
+
+### Bug Fixes
+
+* improve tooltip width in mobile landscape mode ([8362da7](https://github.com/craftandculture/Craft-Culture/commit/8362da7c855686534e49d4f01d2d5572a061cf99))
+
 # [1.27.0](https://github.com/craftandculture/Craft-Culture/compare/v1.26.0...v1.27.0) (2025-10-24)
 
 
