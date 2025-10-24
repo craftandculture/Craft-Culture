@@ -27,14 +27,16 @@ const PlatformLayout = async ({ children }: React.PropsWithChildren) => {
 
   return (
     <div className="bg-background-primary h-dvh min-h-dvh">
-      <header className="container flex h-14 items-center justify-between">
+      <header className="container flex h-14 items-center justify-between gap-4">
         <Link href="/platform">
           <Logo height={24} />
         </Link>
-        <UserDropdown user={user} />
+        <div className="flex items-center gap-2 sm:gap-3">
+          <ThemeToggle />
+          <UserDropdown user={user} />
+        </div>
       </header>
       {children}
-      <ThemeToggle />
     </div>
   );
 };
