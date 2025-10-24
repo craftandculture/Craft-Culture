@@ -1,3 +1,10 @@
+## [1.16.1](https://github.com/craftandculture/Craft-Culture/compare/v1.16.0...v1.16.1) (2025-10-24)
+
+
+### Bug Fixes
+
+* prevent price field overlap on browser resize ([3a85ece](https://github.com/craftandculture/Craft-Culture/commit/3a85eceda668ea2a39986ba3f60fe81fb440d417))
+
 # [1.16.0](https://github.com/craftandculture/Craft-Culture/compare/v1.15.0...v1.16.0) (2025-10-24)
 
 
