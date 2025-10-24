@@ -1,6 +1,6 @@
 'use client';
 
-import { IconFilter, IconX } from '@tabler/icons-react';
+import { IconChevronDown, IconFilter, IconX } from '@tabler/icons-react';
 import { useQueryStates } from 'nuqs';
 import { useState } from 'react';
 
@@ -81,30 +81,40 @@ const ProductFilters = ({
   return (
     <div className="space-y-3">
       {/* Filter Header */}
-      <div className="flex items-center justify-between">
-        <button
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <Button
           type="button"
+          variant="outline"
+          size="md"
           onClick={() => setIsExpanded(!isExpanded)}
-          className="flex items-center gap-2 text-text-primary transition-colors hover:text-text-muted"
+          className="w-full justify-between sm:w-auto"
         >
-          <Icon icon={IconFilter} size="sm" colorRole="muted" />
-          <Typography variant="bodyMd" className="font-medium">
-            Filters
-            {activeFilterCount > 0 && (
-              <span className="ml-2 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-fill-accent px-1.5 text-xs font-semibold text-text-primary">
-                {activeFilterCount}
-              </span>
-            )}
-          </Typography>
-        </button>
+          <ButtonContent iconLeft={IconFilter}>
+            <span className="flex items-center gap-2">
+              Filters
+              {activeFilterCount > 0 && (
+                <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-fill-accent px-1.5 text-xs font-semibold text-text-primary">
+                  {activeFilterCount}
+                </span>
+              )}
+            </span>
+          </ButtonContent>
+          <Icon
+            icon={IconChevronDown}
+            size="sm"
+            className={`ml-2 transition-transform duration-200 ${
+              isExpanded ? 'rotate-180' : ''
+            }`}
+          />
+        </Button>
 
         {hasActiveFilters && (
           <Button
             type="button"
             variant="ghost"
-            size="sm"
+            size="md"
             onClick={handleClearAll}
-            className="text-xs"
+            className="w-full sm:w-auto"
           >
             <ButtonContent iconLeft={IconX}>Clear All</ButtonContent>
           </Button>
@@ -112,34 +122,42 @@ const ProductFilters = ({
       </div>
 
       {/* Filter Options */}
-      {isExpanded && (
-        <div className="grid gap-4 rounded-lg border border-border-muted bg-surface-muted p-4 md:grid-cols-3">
+      <div
+        className={`grid gap-4 overflow-hidden transition-all duration-300 ${
+          isExpanded
+            ? 'max-h-[800px] opacity-100'
+            : 'max-h-0 opacity-0'
+        }`}
+      >
+        <div className="grid gap-4 rounded-lg border border-border-muted bg-surface-muted p-4 sm:p-6 md:grid-cols-3">
           {/* Region Filter */}
-          <div className="space-y-2">
+          <div className="space-y-3">
             <Typography
               variant="bodyXs"
-              className="font-medium uppercase text-text-muted"
+              className="font-semibold uppercase tracking-wide text-text-muted"
             >
               Region
             </Typography>
-            <div className="max-h-48 space-y-1 overflow-y-auto">
+            <div className="max-h-48 space-y-1 overflow-y-auto rounded-md">
               {availableRegions.length === 0 ? (
-                <Typography variant="bodySm" className="text-text-muted">
+                <Typography variant="bodySm" className="px-2 py-4 text-center text-text-muted">
                   No regions available
                 </Typography>
               ) : (
                 availableRegions.map((region) => (
                   <label
                     key={region}
-                    className="flex cursor-pointer items-center gap-2 rounded p-2 transition-colors hover:bg-fill-muted"
+                    className="flex cursor-pointer items-center gap-2 rounded-md px-3 py-2 transition-colors hover:bg-fill-muted"
                   >
                     <input
                       type="checkbox"
                       checked={filters.regions.includes(region)}
                       onChange={() => handleRegionToggle(region)}
-                      className="h-4 w-4 rounded border-border-muted text-fill-accent focus:ring-2 focus:ring-fill-accent focus:ring-offset-2"
+                      className="size-4 rounded border-border-muted text-fill-accent transition-colors focus:ring-2 focus:ring-fill-accent focus:ring-offset-2"
                     />
-                    <Typography variant="bodySm">{region}</Typography>
+                    <Typography variant="bodySm" className="flex-1">
+                      {region}
+                    </Typography>
                   </label>
                 ))
               )}
@@ -147,31 +165,33 @@ const ProductFilters = ({
           </div>
 
           {/* Producer Filter */}
-          <div className="space-y-2">
+          <div className="space-y-3">
             <Typography
               variant="bodyXs"
-              className="font-medium uppercase text-text-muted"
+              className="font-semibold uppercase tracking-wide text-text-muted"
             >
               Producer
             </Typography>
-            <div className="max-h-48 space-y-1 overflow-y-auto">
+            <div className="max-h-48 space-y-1 overflow-y-auto rounded-md">
               {availableProducers.length === 0 ? (
-                <Typography variant="bodySm" className="text-text-muted">
+                <Typography variant="bodySm" className="px-2 py-4 text-center text-text-muted">
                   No producers available
                 </Typography>
               ) : (
                 availableProducers.map((producer) => (
                   <label
                     key={producer}
-                    className="flex cursor-pointer items-center gap-2 rounded p-2 transition-colors hover:bg-fill-muted"
+                    className="flex cursor-pointer items-center gap-2 rounded-md px-3 py-2 transition-colors hover:bg-fill-muted"
                   >
                     <input
                       type="checkbox"
                       checked={filters.producers.includes(producer)}
                       onChange={() => handleProducerToggle(producer)}
-                      className="h-4 w-4 rounded border-border-muted text-fill-accent focus:ring-2 focus:ring-fill-accent focus:ring-offset-2"
+                      className="size-4 rounded border-border-muted text-fill-accent transition-colors focus:ring-2 focus:ring-fill-accent focus:ring-offset-2"
                     />
-                    <Typography variant="bodySm">{producer}</Typography>
+                    <Typography variant="bodySm" className="flex-1">
+                      {producer}
+                    </Typography>
                   </label>
                 ))
               )}
@@ -179,31 +199,31 @@ const ProductFilters = ({
           </div>
 
           {/* Vintage Filter */}
-          <div className="space-y-2">
+          <div className="space-y-3">
             <Typography
               variant="bodyXs"
-              className="font-medium uppercase text-text-muted"
+              className="font-semibold uppercase tracking-wide text-text-muted"
             >
               Vintage
             </Typography>
-            <div className="max-h-48 space-y-1 overflow-y-auto">
+            <div className="max-h-48 space-y-1 overflow-y-auto rounded-md">
               {availableVintages.length === 0 ? (
-                <Typography variant="bodySm" className="text-text-muted">
+                <Typography variant="bodySm" className="px-2 py-4 text-center text-text-muted">
                   No vintages available
                 </Typography>
               ) : (
                 availableVintages.map((vintage) => (
                   <label
                     key={vintage}
-                    className="flex cursor-pointer items-center gap-2 rounded p-2 transition-colors hover:bg-fill-muted"
+                    className="flex cursor-pointer items-center gap-2 rounded-md px-3 py-2 transition-colors hover:bg-fill-muted"
                   >
                     <input
                       type="checkbox"
                       checked={filters.vintages.includes(vintage)}
                       onChange={() => handleVintageToggle(vintage)}
-                      className="h-4 w-4 rounded border-border-muted text-fill-accent focus:ring-2 focus:ring-fill-accent focus:ring-offset-2"
+                      className="size-4 rounded border-border-muted text-fill-accent transition-colors focus:ring-2 focus:ring-fill-accent focus:ring-offset-2"
                     />
-                    <Typography variant="bodySm">
+                    <Typography variant="bodySm" className="flex-1">
                       {vintage === 0 ? 'NV' : vintage}
                     </Typography>
                   </label>
@@ -212,7 +232,7 @@ const ProductFilters = ({
             </div>
           </div>
         </div>
-      )}
+      </div>
     </div>
   );
 };
