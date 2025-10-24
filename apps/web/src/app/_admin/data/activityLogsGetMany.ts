@@ -43,8 +43,7 @@ const activityLogsGetMany = async (params: ActivityLogsGetManyParams) => {
       admin: {
         id: users.id,
         email: users.email,
-        firstName: users.firstName,
-        lastName: users.lastName,
+        name: users.name,
       },
     })
     .from(adminActivityLogs)

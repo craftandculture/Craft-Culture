@@ -1,5 +1,6 @@
 'use client';
 
+import parse from 'another-name-parser';
 import { format } from 'date-fns';
 import { useState } from 'react';
 
@@ -60,11 +61,19 @@ const ActivityLogsTable = () => {
               <TableCell>
                 <div>
                   <Typography variant="bodySm">
-                    {log.admin?.firstName && log.admin?.lastName
-                      ? `${log.admin.firstName} ${log.admin.lastName}`
+                    {log.admin?.name
+                      ? (() => {
+                          const parsed = parse(log.admin.name);
+                          return parsed.first || parsed.last
+                            ? `${parsed.first} ${parsed.last}`.trim()
+                            : log.admin.email ?? 'Unknown';
+                        })()
                       : log.admin?.email ?? 'Unknown'}
                   </Typography>
-                  {log.admin?.email && (log.admin.firstName || log.admin.lastName) && (
+                  {log.admin?.email && log.admin.name && (() => {
+                    const parsed = parse(log.admin.name);
+                    return parsed.first || parsed.last;
+                  })() && (
                     <Typography variant="bodySm" colorRole="muted" className="text-xs">
                       {log.admin.email}
                     </Typography>
