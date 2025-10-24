@@ -353,7 +353,7 @@ const QuotesForm = () => {
       </div>
 
       {/* Line Items Table */}
-      <div className="space-y-3">
+      <div className="space-y-3 pt-4">
         {/* Header Row - Hidden on mobile */}
         {lineItems.length > 0 && (
           <div className="hidden grid-cols-12 gap-3 px-2 md:grid">
