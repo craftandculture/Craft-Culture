@@ -21,6 +21,7 @@ import convertUsdToAed from '@/utils/convertUsdToAed';
 import formatPrice from '@/utils/formatPrice';
 
 import LineItemRow from './LineItemRow';
+import exportInventoryToExcel from '../utils/exportInventoryToExcel';
 import exportQuoteToExcel from '../utils/exportQuoteToExcel';
 
 interface URLLineItem {
@@ -317,6 +318,50 @@ const QuotesForm = () => {
     exportQuoteToExcel(exportLineItems, displayCurrency, total);
   };
 
+  // Fetch all products for inventory download
+  const { data: allProductsData, isLoading: isLoadingInventory } = useQuery({
+    ...api.products.getMany.queryOptions({
+      limit: 10000, // Fetch all products
+    }),
+  });
+
+  const handleDownloadInventory = () => {
+    if (!allProductsData || allProductsData.data.length === 0) {
+      return;
+    }
+
+    // Prepare inventory items for export
+    const inventoryItems = allProductsData.data
+      .filter((product) => product.productOffers && product.productOffers.length > 0)
+      .map((product) => {
+        const offer = product.productOffers![0];
+        const unitCount = offer?.unitCount ?? 1;
+        const pricePerCase = offer?.price ?? 0;
+        const perBottlePrice = pricePerCase / unitCount;
+
+        return {
+          reference: product.name ?? '',
+          producer: product.producer ?? '',
+          vintage: product.year?.toString() ?? '',
+          region: product.region ?? '',
+          lwin18: product.lwin18 ?? '',
+          unitSize: offer?.unitSize ?? '',
+          unitsPerCase: unitCount,
+          pricePerCase:
+            displayCurrency === 'AED'
+              ? convertUsdToAed(pricePerCase)
+              : pricePerCase,
+          pricePerBottle:
+            displayCurrency === 'AED'
+              ? convertUsdToAed(perBottlePrice)
+              : perBottlePrice,
+          availableQuantity: offer?.availableQuantity ?? 0,
+        };
+      });
+
+    exportInventoryToExcel(inventoryItems, displayCurrency);
+  };
+
   return (
     <div className="space-y-2">
       {/* Currency Toggle */}
@@ -544,6 +589,19 @@ const QuotesForm = () => {
             >
               <ButtonContent iconLeft={IconDownload}>
                 Download Quote as Excel
+              </ButtonContent>
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              colorRole="muted"
+              size="md"
+              onClick={handleDownloadInventory}
+              isDisabled={isLoadingInventory || !allProductsData || allProductsData.data.length === 0}
+              className="w-full sm:w-auto"
+            >
+              <ButtonContent iconLeft={IconDownload}>
+                Download Inventory List
               </ButtonContent>
             </Button>
           </div>
