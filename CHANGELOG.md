@@ -1,3 +1,10 @@
+# [1.14.0](https://github.com/craftandculture/Craft-Culture/compare/v1.13.2...v1.14.0) (2025-10-24)
+
+
+### Features
+
+* move Download Excel button to bottom with helpful description ([84dea1b](https://github.com/craftandculture/Craft-Culture/commit/84dea1b8a5760995de45cfc341b0521d497871de))
+
 ## [1.13.2](https://github.com/craftandculture/Craft-Culture/compare/v1.13.1...v1.13.2) (2025-10-24)
 
 
