@@ -1,3 +1,10 @@
+# [1.21.0](https://github.com/craftandculture/Craft-Culture/compare/v1.20.0...v1.21.0) (2025-10-24)
+
+
+### Features
+
+* remove max-width constraint on quotes page ([547db08](https://github.com/craftandculture/Craft-Culture/commit/547db08ede0e1f78f2cd9801e324ecb18c86c874))
+
 # [1.20.0](https://github.com/craftandculture/Craft-Culture/compare/v1.19.1...v1.20.0) (2025-10-24)
 
 
