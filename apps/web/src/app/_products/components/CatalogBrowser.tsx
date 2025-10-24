@@ -72,6 +72,7 @@ const CatalogBrowser = ({
       regions: filters.regions.length > 0 ? filters.regions : undefined,
       producers: filters.producers.length > 0 ? filters.producers : undefined,
       vintages: filters.vintages.length > 0 ? filters.vintages : undefined,
+      sortBy,
     }),
     getNextPageParam: (lastPage) => lastPage.meta.nextCursor,
     initialPageParam: 0,
@@ -83,34 +84,21 @@ const CatalogBrowser = ({
     [data?.pages],
   );
 
-  // Sort products
-  const sortedProducts = useMemo(() => {
-    const sorted = [...products];
+  const totalCount = data?.pages[0]?.meta.totalCount ?? 0;
 
-    switch (sortBy) {
-      case 'name-asc':
-        return sorted.sort((a, b) => a.name.localeCompare(b.name));
-      case 'name-desc':
-        return sorted.sort((a, b) => b.name.localeCompare(a.name));
-      case 'price-asc':
-        return sorted.sort((a, b) => {
-          const priceA = a.productOffers?.[0]?.price ?? 0;
-          const priceB = b.productOffers?.[0]?.price ?? 0;
-          return priceA - priceB;
-        });
-      case 'price-desc':
-        return sorted.sort((a, b) => {
-          const priceA = a.productOffers?.[0]?.price ?? 0;
-          const priceB = b.productOffers?.[0]?.price ?? 0;
-          return priceB - priceA;
-        });
-      case 'vintage-asc':
-        return sorted.sort((a, b) => (a.year ?? 0) - (b.year ?? 0));
-      case 'vintage-desc':
-        return sorted.sort((a, b) => (b.year ?? 0) - (a.year ?? 0));
-      default:
-        return sorted;
+  // Sort products client-side only for price (server sorts name and vintage)
+  const sortedProducts = useMemo(() => {
+    // Price sorting requires client-side since it's in related table
+    if (sortBy === 'price-asc' || sortBy === 'price-desc') {
+      const sorted = [...products];
+      return sorted.sort((a, b) => {
+        const priceA = a.productOffers?.[0]?.price ?? 0;
+        const priceB = b.productOffers?.[0]?.price ?? 0;
+        return sortBy === 'price-asc' ? priceA - priceB : priceB - priceA;
+      });
     }
+    // Name and vintage sorting handled server-side
+    return products;
   }, [products, sortBy]);
 
   // Infinite scroll handler
@@ -158,7 +146,7 @@ const CatalogBrowser = ({
               'Loading...'
             ) : (
               <>
-                {products.length} product{products.length !== 1 ? 's' : ''} available
+                {totalCount} product{totalCount !== 1 ? 's' : ''} available
               </>
             )}
           </Typography>
