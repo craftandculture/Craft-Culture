@@ -1,3 +1,10 @@
+## [1.19.1](https://github.com/craftandculture/Craft-Culture/compare/v1.19.0...v1.19.1) (2025-10-24)
+
+
+### Bug Fixes
+
+* use parseAsString instead of z.string for filter params ([3cc1f8a](https://github.com/craftandculture/Craft-Culture/commit/3cc1f8abed73257dba090bf40d52b9e57c958c1c))
+
 # [1.19.0](https://github.com/craftandculture/Craft-Culture/compare/v1.18.1...v1.19.0) (2025-10-24)
 
 
