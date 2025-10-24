@@ -1,3 +1,10 @@
+# [1.26.0](https://github.com/craftandculture/Craft-Culture/compare/v1.25.0...v1.26.0) (2025-10-24)
+
+
+### Features
+
+* improve responsive design for mobile and desktop ([d436ac1](https://github.com/craftandculture/Craft-Culture/commit/d436ac172ac40dde9886febc3c12b8cac063e1e1))
+
 # [1.25.0](https://github.com/craftandculture/Craft-Culture/compare/v1.24.0...v1.25.0) (2025-10-24)
 
 
