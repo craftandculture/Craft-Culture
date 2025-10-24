@@ -1,3 +1,10 @@
+# [1.17.0](https://github.com/craftandculture/Craft-Culture/compare/v1.16.1...v1.17.0) (2025-10-24)
+
+
+### Features
+
+* widen quote tool content area for better presentation ([e49e00a](https://github.com/craftandculture/Craft-Culture/commit/e49e00ab65ce4a0438f3f9aefec1273a5d395527))
+
 ## [1.16.1](https://github.com/craftandculture/Craft-Culture/compare/v1.16.0...v1.16.1) (2025-10-24)
 
 
