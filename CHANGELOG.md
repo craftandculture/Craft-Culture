@@ -1,3 +1,15 @@
+# [1.27.0](https://github.com/craftandculture/Craft-Culture/compare/v1.26.0...v1.27.0) (2025-10-24)
+
+
+### Bug Fixes
+
+* change download button text to 'Download Excel Quote' ([0cb4630](https://github.com/craftandculture/Craft-Culture/commit/0cb4630fd0960d779e53e6c9391b05145d4a2248))
+
+
+### Features
+
+* add hover tooltips for product details with delay ([b848524](https://github.com/craftandculture/Craft-Culture/commit/b848524cde7c6d39520b73c44274181dbe248ff3))
+
 # [1.26.0](https://github.com/craftandculture/Craft-Culture/compare/v1.25.0...v1.26.0) (2025-10-24)
 
 
