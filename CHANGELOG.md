@@ -1,3 +1,10 @@
+# [1.28.0](https://github.com/craftandculture/Craft-Culture/compare/v1.27.1...v1.28.0) (2025-10-24)
+
+
+### Features
+
+* add admin activity logging and update page title ([2669b30](https://github.com/craftandculture/Craft-Culture/commit/2669b307b9e386dd5c81a2be6de11c061b571d05))
+
 ## [1.27.1](https://github.com/craftandculture/Craft-Culture/compare/v1.27.0...v1.27.1) (2025-10-24)
 
 
