@@ -1,3 +1,10 @@
+# [1.19.0](https://github.com/craftandculture/Craft-Culture/compare/v1.18.1...v1.19.0) (2025-10-24)
+
+
+### Features
+
+* add product filtering by region, producer, and vintage ([ce3e2e8](https://github.com/craftandculture/Craft-Culture/commit/ce3e2e80932d4fdf65e51f3856f920006a61c19e))
+
 ## [1.18.1](https://github.com/craftandculture/Craft-Culture/compare/v1.18.0...v1.18.1) (2025-10-24)
 
 
