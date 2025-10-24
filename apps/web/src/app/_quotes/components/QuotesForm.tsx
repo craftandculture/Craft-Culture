@@ -605,7 +605,7 @@ const QuotesForm = () => {
               <Button
                 type="button"
                 variant="default"
-                size="md"
+                size="sm"
                 onClick={handleDownloadExcel}
                 isDisabled={!quoteData || lineItems.length === 0}
                 className="w-full sm:w-auto"
