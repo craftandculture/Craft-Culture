@@ -47,7 +47,7 @@ const QuotesPage = async ({
           <CardContent>
             <div className="flex items-start justify-between gap-4">
               <CardProse>
-                <CardTitle>Quotation Tool</CardTitle>
+                <CardTitle>Fine Wine Quotation Tool</CardTitle>
                 <CardDescription colorRole="muted">
                   Please select references to generate a quotation
                 </CardDescription>

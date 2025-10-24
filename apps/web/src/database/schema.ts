@@ -197,3 +197,25 @@ export const productOffers = pgTable('product_offers', {
   availableQuantity: integer('available_quantity').notNull(),
   ...timestamps,
 }).enableRLS();
+
+export const adminActivityLogs = pgTable(
+  'admin_activity_logs',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    adminId: uuid('admin_id')
+      .references(() => users.id, { onDelete: 'cascade' })
+      .notNull(),
+    action: text('action').notNull(),
+    entityType: text('entity_type'),
+    entityId: text('entity_id'),
+    metadata: jsonb('metadata'),
+    ipAddress: text('ip_address'),
+    userAgent: text('user_agent'),
+    ...timestamps,
+  },
+  (table) => [
+    index('admin_activity_logs_admin_id_idx').on(table.adminId),
+    index('admin_activity_logs_created_at_idx').on(table.createdAt),
+    index('admin_activity_logs_action_idx').on(table.action),
+  ],
+).enableRLS();
