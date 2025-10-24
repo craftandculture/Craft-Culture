@@ -9,7 +9,7 @@ import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
 import Icon from '@/app/_ui/components/Icon/Icon';
 
 /**
- * Floating theme toggle button that switches between light and dark modes
+ * Theme toggle button that switches between light and dark modes
  *
  * @example
  *   <ThemeToggle />
@@ -24,19 +24,17 @@ const ThemeToggle = () => {
 
   if (!mounted) {
     return (
-      <div className="fixed right-4 top-20 z-40">
-        <Button
-          variant="ghost"
-          colorRole="muted"
-          size="sm"
-          shape="circle"
-          className="opacity-60 hover:opacity-100"
-        >
-          <ButtonContent>
-            <div className="size-4" />
-          </ButtonContent>
-        </Button>
-      </div>
+      <Button
+        variant="ghost"
+        colorRole="muted"
+        size="sm"
+        shape="circle"
+        className="shrink-0"
+      >
+        <ButtonContent>
+          <div className="size-4" />
+        </ButtonContent>
+      </Button>
     );
   }
 
@@ -51,20 +49,18 @@ const ThemeToggle = () => {
   const isDark = resolvedTheme === 'dark';
 
   return (
-    <div className="fixed right-4 top-20 z-40">
-      <Button
-        variant="ghost"
-        colorRole="muted"
-        size="sm"
-        shape="circle"
-        onClick={handleToggle}
-        className="opacity-60 transition-opacity hover:opacity-100"
-      >
-        <ButtonContent>
-          <Icon icon={isDark ? IconSun : IconMoon} size="sm" />
-        </ButtonContent>
-      </Button>
-    </div>
+    <Button
+      variant="ghost"
+      colorRole="muted"
+      size="sm"
+      shape="circle"
+      onClick={handleToggle}
+      className="shrink-0"
+    >
+      <ButtonContent>
+        <Icon icon={isDark ? IconSun : IconMoon} size="sm" />
+      </ButtonContent>
+    </Button>
   );
 };
 
