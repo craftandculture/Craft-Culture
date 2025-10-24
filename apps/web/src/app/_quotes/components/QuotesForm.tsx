@@ -441,22 +441,22 @@ const QuotesForm = () => {
               >
                 Price
               </Typography>
-              {customerType === 'b2b' && (
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <span className="inline-flex">
-                        <Icon
-                          icon={IconInfoCircle}
-                          size="sm"
-                          colorRole="muted"
-                        />
-                      </span>
-                    </TooltipTrigger>
-                    <TooltipContent>In Bond UAE</TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              )}
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className="inline-flex">
+                      <Icon
+                        icon={IconInfoCircle}
+                        size="sm"
+                        colorRole="muted"
+                      />
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {customerType === 'b2b' ? 'In-Bond UAE' : 'Client Price'}
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </div>
             <div className="col-span-1 flex items-center justify-end gap-1">
               <Typography
@@ -465,22 +465,22 @@ const QuotesForm = () => {
               >
                 Per Bottle
               </Typography>
-              {customerType === 'b2b' && (
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <span className="inline-flex">
-                        <Icon
-                          icon={IconInfoCircle}
-                          size="sm"
-                          colorRole="muted"
-                        />
-                      </span>
-                    </TooltipTrigger>
-                    <TooltipContent>In Bond UAE</TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              )}
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className="inline-flex">
+                      <Icon
+                        icon={IconInfoCircle}
+                        size="sm"
+                        colorRole="muted"
+                      />
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {customerType === 'b2b' ? 'In-Bond UAE' : 'Client Price'}
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </div>
             <div className="col-span-1" />
           </div>
