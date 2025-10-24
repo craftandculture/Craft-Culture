@@ -5,7 +5,7 @@ import { useMemo } from 'react';
 
 import DataTable from '@/app/_ui/components/DataTable/DataTable';
 import Typography from '@/app/_ui/components/Typography/Typography';
-import api from '@/lib/trpc/client';
+import api from '@/lib/trpc/browser';
 import formatDate from '@/utils/formatDate';
 
 interface ActivityLog {
