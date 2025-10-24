@@ -1,3 +1,10 @@
+## [1.31.3](https://github.com/craftandculture/Craft-Culture/compare/v1.31.2...v1.31.3) (2025-10-24)
+
+
+### Bug Fixes
+
+* remove admin activity logs and fix deployment issues ([eda5440](https://github.com/craftandculture/Craft-Culture/commit/eda544020b47e03b0c3d37f379d80ed25561e379))
+
 ## [1.31.2](https://github.com/craftandculture/Craft-Culture/compare/v1.31.1...v1.31.2) (2025-10-24)
 
 
