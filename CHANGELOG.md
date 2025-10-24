@@ -1,3 +1,10 @@
+## [1.22.2](https://github.com/craftandculture/Craft-Culture/compare/v1.22.1...v1.22.2) (2025-10-24)
+
+
+### Bug Fixes
+
+* replace isLoading with isDisabled in ProductCard button ([cf6489a](https://github.com/craftandculture/Craft-Culture/commit/cf6489a7d4f81cbb532e625b31e9c77c7386c733))
+
 ## [1.22.1](https://github.com/craftandculture/Craft-Culture/compare/v1.22.0...v1.22.1) (2025-10-24)
 
 
