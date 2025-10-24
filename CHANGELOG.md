@@ -1,3 +1,10 @@
+# [1.16.0](https://github.com/craftandculture/Craft-Culture/compare/v1.15.0...v1.16.0) (2025-10-24)
+
+
+### Features
+
+* improve price field responsiveness and reorganize download buttons ([59aa338](https://github.com/craftandculture/Craft-Culture/commit/59aa3385b5fa07cea5c83c4018f8ac1bb88ed86e))
+
 # [1.15.0](https://github.com/craftandculture/Craft-Culture/compare/v1.14.1...v1.15.0) (2025-10-24)
 
 
