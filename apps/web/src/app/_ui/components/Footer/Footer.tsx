@@ -89,13 +89,20 @@ const Footer = () => {
           <Typography variant="bodySm" colorRole="muted">
             © {currentYear} Craft & Culture. All rights reserved.
           </Typography>
-          <Typography
-            variant="monoSm"
-            colorRole="muted"
-            className="text-text-subtle"
+          <Link
+            href="https://github.com/craftandculture/Craft-Culture/releases"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-text-muted hover:text-text-primary transition-colors"
           >
-            v{packageJson.version}
-          </Typography>
+            <Typography
+              variant="monoSm"
+              colorRole="muted"
+              className="hover:text-text-primary"
+            >
+              v{packageJson.version}
+            </Typography>
+          </Link>
         </div>
       </div>
     </footer>
