@@ -1,3 +1,10 @@
+## [1.13.2](https://github.com/craftandculture/Craft-Culture/compare/v1.13.1...v1.13.2) (2025-10-24)
+
+
+### Bug Fixes
+
+* change Icon size from 'xs' to 'sm' for TypeScript compliance ([61e9b99](https://github.com/craftandculture/Craft-Culture/commit/61e9b99e8a90552388d83f4f304849aae87956a5))
+
 ## [1.13.1](https://github.com/craftandculture/Craft-Culture/compare/v1.13.0...v1.13.1) (2025-10-23)
 
 
