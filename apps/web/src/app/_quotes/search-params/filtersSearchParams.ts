@@ -1,4 +1,9 @@
-import { parseAsArrayOf, parseAsInteger, parseAsJson } from 'nuqs/server';
+import {
+  parseAsArrayOf,
+  parseAsInteger,
+  parseAsJson,
+  parseAsString,
+} from 'nuqs/server';
 import { z } from 'zod';
 
 const urlLineItemSchema = z.object({
@@ -10,8 +15,8 @@ const urlLineItemSchema = z.object({
 
 const quotesSearchParams = {
   items: parseAsArrayOf(parseAsJson(urlLineItemSchema)).withDefault([]),
-  regions: parseAsArrayOf(z.string()).withDefault([]),
-  producers: parseAsArrayOf(z.string()).withDefault([]),
+  regions: parseAsArrayOf(parseAsString).withDefault([]),
+  producers: parseAsArrayOf(parseAsString).withDefault([]),
   vintages: parseAsArrayOf(parseAsInteger).withDefault([]),
 };
 
