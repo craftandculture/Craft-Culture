@@ -1,10 +1,11 @@
 import Link from 'next/link';
 
 import Typography from '@/app/_ui/components/Typography/Typography';
-import packageJson from '@root/package.json';
+import getAppVersion from '@/utils/getAppVersion';
 
 const Footer = () => {
   const currentYear = new Date().getFullYear();
+  const version = getAppVersion();
 
   return (
     <footer className="border-border-primary mt-auto border-t">
@@ -93,15 +94,9 @@ const Footer = () => {
             href="https://github.com/craftandculture/Craft-Culture/releases"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-text-muted hover:text-text-primary transition-colors"
+            className="text-text-tertiary hover:text-text-secondary text-xs transition-colors"
           >
-            <Typography
-              variant="monoSm"
-              colorRole="muted"
-              className="hover:text-text-primary"
-            >
-              v{packageJson.version}
-            </Typography>
+            v{version}
           </Link>
         </div>
       </div>
