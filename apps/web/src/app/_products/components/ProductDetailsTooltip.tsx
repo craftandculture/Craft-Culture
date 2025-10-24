@@ -30,89 +30,98 @@ const ProductDetailsTooltip = ({
     <TooltipProvider delayDuration={500}>
       <Tooltip>
         <TooltipTrigger asChild>{children}</TooltipTrigger>
-        <TooltipContent className="max-w-xs space-y-2 p-3">
+        <TooltipContent className="max-w-sm space-y-3 p-4">
           {/* Product Name */}
-          <div>
-            <Typography variant="bodySm" className="font-semibold">
+          <div className="border-b border-border-muted pb-2">
+            <Typography variant="bodyMd" className="font-semibold leading-tight">
               {product.name}
             </Typography>
           </div>
 
-          {/* Producer */}
-          {product.producer && (
-            <div className="space-y-0.5">
-              <Typography
-                variant="bodyXs"
-                className="text-text-muted font-medium uppercase"
-              >
-                Producer
-              </Typography>
-              <Typography variant="bodySm">{product.producer}</Typography>
-            </div>
-          )}
-
-          {/* Region */}
-          {product.region && (
-            <div className="space-y-0.5">
-              <Typography
-                variant="bodyXs"
-                className="text-text-muted font-medium uppercase"
-              >
-                Region
-              </Typography>
-              <Typography variant="bodySm">{product.region}</Typography>
-            </div>
-          )}
-
-          {/* Vintage */}
-          {product.year !== null && (
-            <div className="space-y-0.5">
-              <Typography
-                variant="bodyXs"
-                className="text-text-muted font-medium uppercase"
-              >
-                Vintage
-              </Typography>
-              <Typography variant="bodySm">
-                {product.year === 0 ? 'NV (Non-Vintage)' : product.year}
-              </Typography>
-            </div>
-          )}
-
-          {/* LWIN18 */}
-          {product.lwin18 && (
-            <div className="space-y-0.5">
-              <Typography
-                variant="bodyXs"
-                className="text-text-muted font-medium uppercase"
-              >
-                LWIN18
-              </Typography>
-              <Typography variant="bodySm" className="font-mono text-xs">
-                {product.lwin18}
-              </Typography>
-            </div>
-          )}
-
-          {/* Unit Details */}
-          {offer && (
-            <div className="space-y-0.5">
-              <Typography
-                variant="bodyXs"
-                className="text-text-muted font-medium uppercase"
-              >
-                Unit Details
-              </Typography>
-              <Typography variant="bodySm">
-                {offer.unitCount} × {offer.unitSize}
-              </Typography>
-              {offer.availableQuantity > 0 && (
-                <Typography variant="bodyXs" className="text-text-muted">
-                  Available: {offer.availableQuantity} cases
+          <div className="space-y-2.5">
+            {/* Producer */}
+            {product.producer && (
+              <div className="space-y-1">
+                <Typography
+                  variant="bodyXs"
+                  className="text-text-muted text-xs font-medium uppercase tracking-wide"
+                >
+                  Producer
                 </Typography>
-              )}
-            </div>
-          )}
+                <Typography variant="bodySm" className="text-text-primary">
+                  {product.producer}
+                </Typography>
+              </div>
+            )}
+
+            {/* Region & Vintage - Combined on one line if both exist */}
+            {(product.region || product.year !== null) && (
+              <div className="grid grid-cols-2 gap-3">
+                {product.region && (
+                  <div className="space-y-1">
+                    <Typography
+                      variant="bodyXs"
+                      className="text-text-muted text-xs font-medium uppercase tracking-wide"
+                    >
+                      Region
+                    </Typography>
+                    <Typography variant="bodySm" className="text-text-primary">
+                      {product.region}
+                    </Typography>
+                  </div>
+                )}
+
+                {product.year !== null && (
+                  <div className="space-y-1">
+                    <Typography
+                      variant="bodyXs"
+                      className="text-text-muted text-xs font-medium uppercase tracking-wide"
+                    >
+                      Vintage
+                    </Typography>
+                    <Typography variant="bodySm" className="text-text-primary">
+                      {product.year === 0 ? 'NV' : product.year}
+                    </Typography>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* LWIN18 */}
+            {product.lwin18 && (
+              <div className="space-y-1">
+                <Typography
+                  variant="bodyXs"
+                  className="text-text-muted text-xs font-medium uppercase tracking-wide"
+                >
+                  LWIN18
+                </Typography>
+                <Typography variant="bodyXs" className="text-text-primary font-mono">
+                  {product.lwin18}
+                </Typography>
+              </div>
+            )}
+
+            {/* Unit Details */}
+            {offer && (
+              <div className="space-y-1 rounded-md bg-surface-muted p-2.5">
+                <Typography
+                  variant="bodyXs"
+                  className="text-text-muted text-xs font-medium uppercase tracking-wide"
+                >
+                  Unit Details
+                </Typography>
+                <Typography variant="bodySm" className="text-text-primary font-medium">
+                  {offer.unitCount} × {offer.unitSize}
+                </Typography>
+                {offer.availableQuantity > 0 && (
+                  <Typography variant="bodyXs" className="text-text-muted">
+                    {offer.availableQuantity} {offer.availableQuantity === 1 ? 'case' : 'cases'} available
+                  </Typography>
+                )}
+              </div>
+            )}
+          </div>
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>
