@@ -1,3 +1,10 @@
+## [1.28.2](https://github.com/craftandculture/Craft-Culture/compare/v1.28.1...v1.28.2) (2025-10-24)
+
+
+### Bug Fixes
+
+* use Drizzle and() function for where conditions ([47ec7df](https://github.com/craftandculture/Craft-Culture/commit/47ec7df8cbd1bb6df5912b041042c90f045f340b))
+
 ## [1.28.1](https://github.com/craftandculture/Craft-Culture/compare/v1.28.0...v1.28.1) (2025-10-24)
 
 
