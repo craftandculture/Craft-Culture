@@ -1,3 +1,10 @@
+# [1.18.0](https://github.com/craftandculture/Craft-Culture/compare/v1.17.0...v1.18.0) (2025-10-24)
+
+
+### Features
+
+* reposition dark mode toggle and add B2C client price tooltips ([8e4c7e5](https://github.com/craftandculture/Craft-Culture/commit/8e4c7e507d11f9984aabf7cfa22a5e2817c09123))
+
 # [1.17.0](https://github.com/craftandculture/Craft-Culture/compare/v1.16.1...v1.17.0) (2025-10-24)
 
 
