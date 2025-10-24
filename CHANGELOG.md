@@ -1,3 +1,10 @@
+## [1.31.2](https://github.com/craftandculture/Craft-Culture/compare/v1.31.1...v1.31.2) (2025-10-24)
+
+
+### Bug Fixes
+
+* remove package.json import from Footer to resolve build error ([6e27a4b](https://github.com/craftandculture/Craft-Culture/commit/6e27a4b4c261730b3a26999f694d314ac069cfe9))
+
 ## [1.31.1](https://github.com/craftandculture/Craft-Culture/compare/v1.31.0...v1.31.1) (2025-10-24)
 
 
