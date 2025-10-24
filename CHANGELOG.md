@@ -1,3 +1,11 @@
+# [1.20.0](https://github.com/craftandculture/Craft-Culture/compare/v1.19.1...v1.20.0) (2025-10-24)
+
+
+### Features
+
+* add search functionality to product filters ([ac3631e](https://github.com/craftandculture/Craft-Culture/commit/ac3631e6f2d2cefd979bc9a2b2d7b3ad4ac4b83a))
+* improve filters UI and reposition theme toggle ([47c6a1b](https://github.com/craftandculture/Craft-Culture/commit/47c6a1bb9330bd4c2390e48f08ad4021c1e95edb))
+
 ## [1.19.1](https://github.com/craftandculture/Craft-Culture/compare/v1.19.0...v1.19.1) (2025-10-24)
 
 
