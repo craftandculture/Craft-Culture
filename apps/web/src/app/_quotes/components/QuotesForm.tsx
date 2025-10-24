@@ -381,7 +381,7 @@ const QuotesForm = () => {
                 Quantity
               </Typography>
             </div>
-            <div className="col-span-1 flex items-center justify-start gap-1">
+            <div className="col-span-1 flex items-center justify-end gap-1">
               <Typography
                 variant="bodyXs"
                 className="text-text-muted font-medium uppercase"
@@ -405,7 +405,7 @@ const QuotesForm = () => {
                 </TooltipProvider>
               )}
             </div>
-            <div className="col-span-1 flex items-center justify-start gap-1">
+            <div className="col-span-1 flex items-center justify-end gap-1">
               <Typography
                 variant="bodyXs"
                 className="text-text-muted font-medium uppercase"
