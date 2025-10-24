@@ -86,21 +86,6 @@ const CatalogBrowser = ({
 
   const totalCount = data?.pages[0]?.meta.totalCount ?? 0;
 
-  // Sort products client-side only for price (server sorts name and vintage)
-  const sortedProducts = useMemo(() => {
-    // Price sorting requires client-side since it's in related table
-    if (sortBy === 'price-asc' || sortBy === 'price-desc') {
-      const sorted = [...products];
-      return sorted.sort((a, b) => {
-        const priceA = a.productOffers?.[0]?.price ?? 0;
-        const priceB = b.productOffers?.[0]?.price ?? 0;
-        return sortBy === 'price-asc' ? priceA - priceB : priceB - priceA;
-      });
-    }
-    // Name and vintage sorting handled server-side
-    return products;
-  }, [products, sortBy]);
-
   // Infinite scroll handler
   const handleScroll = useCallback(() => {
     if (!gridRef.current || !hasNextPage || isFetchingNextPage) {
@@ -208,7 +193,7 @@ const CatalogBrowser = ({
               </div>
             ))}
           </div>
-        ) : sortedProducts.length === 0 ? (
+        ) : products.length === 0 ? (
           <div className="flex h-64 items-center justify-center">
             <Typography variant="bodySm" className="text-text-muted">
               {catalogSearch.trim()
@@ -219,7 +204,7 @@ const CatalogBrowser = ({
         ) : (
           <>
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
-              {sortedProducts.map((product) => (
+              {products.map((product) => (
                 <ProductCard
                   key={product.id}
                   product={product}
@@ -245,7 +230,7 @@ const CatalogBrowser = ({
             )}
 
             {/* End of results */}
-            {!hasNextPage && sortedProducts.length > 0 && (
+            {!hasNextPage && products.length > 0 && (
               <div className="mt-6 text-center">
                 <Typography variant="bodySm" className="text-text-muted">
                   You&apos;ve reached the end of the catalog
