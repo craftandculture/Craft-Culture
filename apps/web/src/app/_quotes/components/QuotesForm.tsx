@@ -533,13 +533,6 @@ const QuotesForm = () => {
           <Divider />
           {/* Download Excel Section */}
           <div className="flex flex-col items-center gap-3 px-2 pt-4">
-            <Typography
-              variant="bodySm"
-              className="text-text-muted text-center"
-            >
-              Download this quote as an Excel spreadsheet for easy sharing and
-              record keeping
-            </Typography>
             <Button
               type="button"
               variant="default"

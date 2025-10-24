@@ -107,8 +107,8 @@ const LineItemRow = ({
   const offer = product?.productOffers?.[0];
 
   return (
-    <div className="space-y-2">
-      <div className="grid grid-cols-12 items-start gap-2 md:gap-3">
+    <div className="space-y-3 md:space-y-2">
+      <div className="grid grid-cols-12 items-start gap-3 md:gap-3">
         {/* Product Selector */}
         <div className="col-span-12 md:col-span-6">
           <ProductsCombobox
@@ -120,7 +120,7 @@ const LineItemRow = ({
         </div>
 
         {/* Vintage Input */}
-        <div className="col-span-3 md:col-span-1">
+        <div className="col-span-4 md:col-span-1">
           <Input
             type="text"
             size="md"
@@ -132,7 +132,7 @@ const LineItemRow = ({
         </div>
 
         {/* Quantity Input */}
-        <div className="col-span-9 flex flex-wrap items-center gap-2 md:col-span-2">
+        <div className="col-span-8 flex flex-wrap items-center gap-2 md:col-span-2">
           <Input
             className="min-w-0 grow"
             type="number"
@@ -157,7 +157,7 @@ const LineItemRow = ({
         </div>
 
         {/* Line Price */}
-        <div className="col-span-6 flex flex-col justify-start gap-0.5 md:col-span-1 md:h-9 md:flex-row md:items-center md:justify-end md:gap-0">
+        <div className="col-span-6 flex flex-col gap-1 md:col-span-1 md:h-9 md:flex-row md:items-center md:justify-end md:gap-0">
           <div className="flex items-center gap-1 md:hidden">
             <Typography
               variant="bodyXs"
@@ -187,7 +187,7 @@ const LineItemRow = ({
           ) : (
             <Typography
               variant="bodySm"
-              className="text-xs font-medium leading-none"
+              className="text-sm font-semibold leading-none md:text-xs md:font-medium"
             >
               {quotePrice !== undefined
                 ? formatPrice(quotePrice, quoteCurrency)
@@ -197,7 +197,7 @@ const LineItemRow = ({
         </div>
 
         {/* Per Bottle Price */}
-        <div className="col-span-6 flex flex-col justify-start gap-0.5 md:col-span-1 md:h-9 md:flex-row md:items-center md:justify-end md:gap-0">
+        <div className="col-span-6 flex flex-col gap-1 md:col-span-1 md:h-9 md:flex-row md:items-center md:justify-end md:gap-0">
           <div className="flex items-center gap-1 md:hidden">
             <Typography
               variant="bodyXs"
@@ -227,7 +227,7 @@ const LineItemRow = ({
           ) : (
             <Typography
               variant="bodySm"
-              className="text-xs font-medium leading-none"
+              className="text-sm font-semibold leading-none md:text-xs md:font-medium"
             >
               {perBottlePrice !== undefined
                 ? formatPrice(perBottlePrice, quoteCurrency)
@@ -237,7 +237,7 @@ const LineItemRow = ({
         </div>
 
         {/* Remove Button */}
-        <div className="col-span-12 flex items-center justify-center md:col-span-1 md:h-9 md:justify-end md:pt-0">
+        <div className="col-span-12 mt-2 flex items-center justify-center border-t border-border-muted pt-3 md:col-span-1 md:mt-0 md:h-9 md:justify-end md:border-0 md:pt-0">
           <Button
             type="button"
             size="sm"
