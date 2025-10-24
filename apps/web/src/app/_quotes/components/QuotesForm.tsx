@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { parseAsArrayOf, parseAsJson, useQueryState } from 'nuqs';
 import React, { useEffect, useMemo, useState } from 'react';
 
+import CatalogBrowser from '@/app/_products/components/CatalogBrowser';
 import { Product } from '@/app/_products/controller/productsGetMany';
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
@@ -615,6 +616,50 @@ const QuotesForm = () => {
           </div>
         </>
       )}
+
+      {/* Catalog Browser */}
+      <CatalogBrowser
+        onAddProduct={(product) => {
+          // Find first available placeholder or add new line item
+          const firstPlaceholder = lineItems.find(
+            (item) => item.source === 'placeholder',
+          );
+
+          if (firstPlaceholder && lineItems.length < MAX_LINE_ITEMS) {
+            // Use the placeholder - simulate product selection
+            const offer = product.productOffers?.[0];
+            if (offer) {
+              const newUrlItems = [
+                ...urlLineItems,
+                {
+                  productId: product.id,
+                  offerId: offer.id,
+                  quantity: 1,
+                },
+              ];
+              void setUrlLineItems(newUrlItems);
+            }
+          } else if (lineItems.length < MAX_LINE_ITEMS) {
+            // Add new line item
+            const offer = product.productOffers?.[0];
+            if (offer) {
+              const newUrlItems = [
+                ...urlLineItems,
+                {
+                  productId: product.id,
+                  offerId: offer.id,
+                  quantity: 1,
+                },
+              ];
+              void setUrlLineItems(newUrlItems);
+            }
+          }
+          // Scroll to top to show the added item
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }}
+        displayCurrency={displayCurrency}
+        omitProductIds={urlLineItems.map((item) => item.productId)}
+      />
     </div>
   );
 };
