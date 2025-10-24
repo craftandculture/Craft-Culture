@@ -580,39 +580,41 @@ const QuotesForm = () => {
       {lineItems.length > 0 && (
         <>
           <Divider />
-          <div className="flex items-center justify-between px-2">
-            <Typography variant="bodyLg" className="font-semibold">
-              Total
-            </Typography>
-            {isQuoteLoading ? (
-              <Skeleton className="h-5 w-24" />
-            ) : (
+          <div className="flex flex-col gap-3 px-2">
+            <div className="flex items-center justify-between">
               <Typography variant="bodyLg" className="font-semibold">
-                {quoteData?.totalUsd
-                  ? formatPrice(
-                      displayCurrency === 'AED'
-                        ? convertUsdToAed(quoteData.totalUsd)
-                        : quoteData.totalUsd,
-                      displayCurrency,
-                    )
-                  : '—'}
+                Total
               </Typography>
-            )}
-          </div>
-          {/* Download Quote Button */}
-          <div className="flex justify-center pt-3">
-            <Button
-              type="button"
-              variant="default"
-              size="md"
-              onClick={handleDownloadExcel}
-              isDisabled={!quoteData || lineItems.length === 0}
-              className="w-full sm:w-auto bg-[#bdece3] hover:bg-[#a8ddd3] text-gray-900"
-            >
-              <ButtonContent iconLeft={IconDownload}>
-                Download Quote as Excel
-              </ButtonContent>
-            </Button>
+              {isQuoteLoading ? (
+                <Skeleton className="h-5 w-24" />
+              ) : (
+                <Typography variant="bodyLg" className="font-semibold">
+                  {quoteData?.totalUsd
+                    ? formatPrice(
+                        displayCurrency === 'AED'
+                          ? convertUsdToAed(quoteData.totalUsd)
+                          : quoteData.totalUsd,
+                        displayCurrency,
+                      )
+                    : '—'}
+                </Typography>
+              )}
+            </div>
+            {/* Download Quote Button */}
+            <div className="flex justify-end">
+              <Button
+                type="button"
+                variant="default"
+                size="md"
+                onClick={handleDownloadExcel}
+                isDisabled={!quoteData || lineItems.length === 0}
+                className="w-full sm:w-auto"
+              >
+                <ButtonContent iconLeft={IconDownload}>
+                  Download Quote as Excel
+                </ButtonContent>
+              </Button>
+            </div>
           </div>
         </>
       )}
