@@ -365,7 +365,7 @@ const QuotesForm = () => {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {/* Product Filters */}
       {filterOptions && (
         <ProductFilters
@@ -376,7 +376,7 @@ const QuotesForm = () => {
       )}
 
       {/* Currency Toggle and Inventory Download */}
-      <div className="flex flex-col items-end gap-3 sm:flex-row sm:items-center sm:justify-end">
+      <div className="flex flex-col items-end gap-2 sm:flex-row sm:items-center sm:justify-end">
         <div className="flex items-center gap-2">
           <Typography variant="bodyXs" className="text-text-muted font-medium">
             Currency:
@@ -421,7 +421,7 @@ const QuotesForm = () => {
       </div>
 
       {/* Line Items Table */}
-      <div className="space-y-3 pt-4">
+      <div className="space-y-3">
         {/* Header Row - Hidden on mobile */}
         {lineItems.length > 0 && (
           <div className="hidden grid-cols-12 gap-3 px-2 md:grid">
