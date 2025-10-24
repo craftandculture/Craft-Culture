@@ -1,21 +1,18 @@
-import Image, { ImageProps } from 'next/image';
 import { twMerge } from 'tailwind-merge';
 
-import LogoImage from './logo.webp';
+export interface LogoProps {
+  className?: string;
+  height?: number;
+}
 
-export interface LogoProps extends Omit<ImageProps, 'src' | 'alt'> {}
-
-const Logo = ({ className, ...props }: LogoProps) => {
+const Logo = ({ className, height = 32 }: LogoProps) => {
   return (
-    <Image
-      src={LogoImage}
-      alt="Logo"
-      className={twMerge(
-        'transition-[filter] dark:invert dark:brightness-0 dark:contrast-100',
-        className,
-      )}
-      {...props}
-    />
+    <div
+      className={twMerge('font-semibold tracking-tight', className)}
+      style={{ fontSize: `${height * 0.6}px` }}
+    >
+      Craft & Culture
+    </div>
   );
 };
 
