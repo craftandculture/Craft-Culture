@@ -43,7 +43,7 @@ const QuotesPage = async ({
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
       <main className="container py-4 landscape:py-2 md:py-16">
-        <Card className="mx-auto w-full max-w-7xl">
+        <Card className="w-full">
           <CardContent>
             <div className="flex items-start justify-between gap-4">
               <CardProse>
