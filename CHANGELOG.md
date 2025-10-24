@@ -1,3 +1,10 @@
+# [1.25.0](https://github.com/craftandculture/Craft-Culture/compare/v1.24.0...v1.25.0) (2025-10-24)
+
+
+### Features
+
+* implement server-side price sorting for entire catalog ([42ef13a](https://github.com/craftandculture/Craft-Culture/commit/42ef13a3aef8a2123a2b4983c5465e3e801b2ed6))
+
 # [1.24.0](https://github.com/craftandculture/Craft-Culture/compare/v1.23.2...v1.24.0) (2025-10-24)
 
 
