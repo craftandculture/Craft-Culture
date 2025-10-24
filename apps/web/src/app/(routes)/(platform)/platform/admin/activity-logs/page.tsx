@@ -1,12 +1,9 @@
-import { Suspense } from 'react';
-
-import ActivityLogsTable from '@/app/_admin/components/ActivityLogsTable';
-import ActivityLogsTableSkeleton from '@/app/_admin/components/ActivityLogsTableSkeleton';
 import Card from '@/app/_ui/components/Card/Card';
 import CardContent from '@/app/_ui/components/Card/CardContent';
 import CardDescription from '@/app/_ui/components/Card/CardDescription';
 import CardProse from '@/app/_ui/components/Card/CardProse';
 import CardTitle from '@/app/_ui/components/Card/CardTitle';
+import Typography from '@/app/_ui/components/Typography/Typography';
 
 const ActivityLogsPage = () => {
   return (
@@ -19,9 +16,12 @@ const ActivityLogsPage = () => {
               View all administrative actions performed in the system
             </CardDescription>
           </CardProse>
-          <Suspense fallback={<ActivityLogsTableSkeleton />}>
-            <ActivityLogsTable />
-          </Suspense>
+          <div className="mt-8 text-center">
+            <Typography variant="bodySm" colorRole="muted">
+              Activity logs feature is currently being updated. Please check
+              back later.
+            </Typography>
+          </div>
         </CardContent>
       </Card>
     </main>
