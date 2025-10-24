@@ -3,6 +3,7 @@
 import { IconInfoCircle, IconTrash } from '@tabler/icons-react';
 import React, { ChangeEvent, useEffect, useState } from 'react';
 
+import ProductDetailsTooltip from '@/app/_products/components/ProductDetailsTooltip';
 import ProductsCombobox from '@/app/_products/components/ProductsCombobox';
 import { Product } from '@/app/_products/controller/productsGetMany';
 import Button from '@/app/_ui/components/Button/Button';
@@ -111,12 +112,25 @@ const LineItemRow = ({
       <div className="grid grid-cols-12 items-start gap-3 md:gap-3">
         {/* Product Selector */}
         <div className="col-span-12 md:col-span-6">
-          <ProductsCombobox
-            value={product ?? null}
-            onSelect={onProductChange}
-            placeholder="Select product..."
-            omitProductIds={omitProductIds}
-          />
+          {product ? (
+            <ProductDetailsTooltip product={product}>
+              <div>
+                <ProductsCombobox
+                  value={product}
+                  onSelect={onProductChange}
+                  placeholder="Select product..."
+                  omitProductIds={omitProductIds}
+                />
+              </div>
+            </ProductDetailsTooltip>
+          ) : (
+            <ProductsCombobox
+              value={null}
+              onSelect={onProductChange}
+              placeholder="Select product..."
+              omitProductIds={omitProductIds}
+            />
+          )}
         </div>
 
         {/* Vintage Input */}
