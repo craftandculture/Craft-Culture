@@ -330,14 +330,14 @@ const QuotesForm = () => {
       return;
     }
 
-    // Prepare inventory items for export
+    // Prepare inventory items for export with both USD and AED pricing
     const inventoryItems = allProductsData.data
       .filter((product) => product.productOffers && product.productOffers.length > 0)
       .map((product) => {
         const offer = product.productOffers![0];
         const unitCount = offer?.unitCount ?? 1;
-        const pricePerCase = offer?.price ?? 0;
-        const perBottlePrice = pricePerCase / unitCount;
+        const pricePerCaseUsd = offer?.price ?? 0;
+        const pricePerBottleUsd = pricePerCaseUsd / unitCount;
 
         return {
           reference: product.name ?? '',
@@ -347,25 +347,21 @@ const QuotesForm = () => {
           lwin18: product.lwin18 ?? '',
           unitSize: offer?.unitSize ?? '',
           unitsPerCase: unitCount,
-          pricePerCase:
-            displayCurrency === 'AED'
-              ? convertUsdToAed(pricePerCase)
-              : pricePerCase,
-          pricePerBottle:
-            displayCurrency === 'AED'
-              ? convertUsdToAed(perBottlePrice)
-              : perBottlePrice,
+          pricePerCaseUsd,
+          pricePerBottleUsd,
+          pricePerCaseAed: convertUsdToAed(pricePerCaseUsd),
+          pricePerBottleAed: convertUsdToAed(pricePerBottleUsd),
           availableQuantity: offer?.availableQuantity ?? 0,
         };
       });
 
-    exportInventoryToExcel(inventoryItems, displayCurrency);
+    exportInventoryToExcel(inventoryItems);
   };
 
   return (
     <div className="space-y-2">
-      {/* Currency Toggle */}
-      <div className="flex justify-end">
+      {/* Currency Toggle and Inventory Download */}
+      <div className="flex flex-col items-end gap-3 sm:flex-row sm:items-center sm:justify-end">
         <div className="flex items-center gap-2">
           <Typography variant="bodyXs" className="text-text-muted font-medium">
             Currency:
@@ -395,6 +391,17 @@ const QuotesForm = () => {
             </button>
           </div>
         </div>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={handleDownloadInventory}
+          isDisabled={isLoadingInventory || !allProductsData || allProductsData.data.length === 0}
+        >
+          <ButtonContent iconLeft={IconDownload}>
+            Download Full Inventory
+          </ButtonContent>
+        </Button>
       </div>
 
       {/* Line Items Table */}
@@ -575,33 +582,18 @@ const QuotesForm = () => {
               </Typography>
             )}
           </div>
-          <Divider />
-          {/* Download Excel Section */}
-          <div className="flex flex-col items-center gap-3 px-2 pt-4">
+          {/* Download Quote Button */}
+          <div className="flex justify-center pt-3">
             <Button
               type="button"
               variant="default"
-              colorRole="brand"
               size="md"
               onClick={handleDownloadExcel}
               isDisabled={!quoteData || lineItems.length === 0}
-              className="w-full sm:w-auto"
+              className="w-full sm:w-auto bg-[#bdece3] hover:bg-[#a8ddd3] text-gray-900"
             >
               <ButtonContent iconLeft={IconDownload}>
                 Download Quote as Excel
-              </ButtonContent>
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              colorRole="muted"
-              size="md"
-              onClick={handleDownloadInventory}
-              isDisabled={isLoadingInventory || !allProductsData || allProductsData.data.length === 0}
-              className="w-full sm:w-auto"
-            >
-              <ButtonContent iconLeft={IconDownload}>
-                Download Inventory List
               </ButtonContent>
             </Button>
           </div>
