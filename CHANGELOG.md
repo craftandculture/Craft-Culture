@@ -1,3 +1,10 @@
+# [1.31.0](https://github.com/craftandculture/Craft-Culture/compare/v1.30.1...v1.31.0) (2025-10-24)
+
+
+### Features
+
+* add polished footer with version info and links ([7d6f191](https://github.com/craftandculture/Craft-Culture/commit/7d6f191890d722529544eb2775feb55c28b27937))
+
 ## [1.30.1](https://github.com/craftandculture/Craft-Culture/compare/v1.30.0...v1.30.1) (2025-10-24)
 
 
