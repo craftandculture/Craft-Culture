@@ -611,7 +611,7 @@ const QuotesForm = () => {
                 className="w-full sm:w-auto"
               >
                 <ButtonContent iconLeft={IconDownload}>
-                  Download Quote as Excel
+                  Download Excel Quote
                 </ButtonContent>
               </Button>
             </div>
