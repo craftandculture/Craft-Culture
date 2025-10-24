@@ -8,8 +8,10 @@ interface InventoryItemExport {
   lwin18: string;
   unitSize: string;
   unitsPerCase: number;
-  pricePerCase: number;
-  pricePerBottle: number;
+  pricePerCaseUsd: number;
+  pricePerBottleUsd: number;
+  pricePerCaseAed: number;
+  pricePerBottleAed: number;
   availableQuantity: number;
 }
 
@@ -17,15 +19,11 @@ interface InventoryItemExport {
  * Export inventory data to Excel file
  *
  * @example
- *   exportInventoryToExcel(inventoryItems, 'USD');
+ *   exportInventoryToExcel(inventoryItems);
  *
  * @param inventoryItems - Array of inventory items to export
- * @param currency - Currency code (USD or AED)
  */
-const exportInventoryToExcel = (
-  inventoryItems: InventoryItemExport[],
-  currency: string,
-) => {
+const exportInventoryToExcel = (inventoryItems: InventoryItemExport[]) => {
   // Create workbook and worksheet
   const wb = XLSX.utils.book_new();
 
@@ -40,8 +38,10 @@ const exportInventoryToExcel = (
       'LWIN18',
       'Unit Size',
       'Units per Case',
-      `Price per Case (${currency})`,
-      `Price per Bottle (${currency})`,
+      'Price per Case (USD)',
+      'Price per Bottle (USD)',
+      'Price per Case (AED)',
+      'Price per Bottle (AED)',
       'Available Quantity',
     ],
     // Data rows
@@ -53,8 +53,10 @@ const exportInventoryToExcel = (
       item.lwin18,
       item.unitSize,
       item.unitsPerCase,
-      Math.round(item.pricePerCase),
-      Math.round(item.pricePerBottle),
+      Math.round(item.pricePerCaseUsd),
+      Math.round(item.pricePerBottleUsd),
+      Math.round(item.pricePerCaseAed),
+      Math.round(item.pricePerBottleAed),
       item.availableQuantity,
     ]),
   ];
@@ -71,8 +73,10 @@ const exportInventoryToExcel = (
     { wch: 20 }, // LWIN18
     { wch: 12 }, // Unit Size
     { wch: 15 }, // Units per Case
-    { wch: 20 }, // Price per Case
-    { wch: 20 }, // Price per Bottle
+    { wch: 20 }, // Price per Case (USD)
+    { wch: 20 }, // Price per Bottle (USD)
+    { wch: 20 }, // Price per Case (AED)
+    { wch: 20 }, // Price per Bottle (AED)
     { wch: 18 }, // Available Quantity
   ];
 
