@@ -1,3 +1,10 @@
+## [1.23.2](https://github.com/craftandculture/Craft-Culture/compare/v1.23.1...v1.23.2) (2025-10-24)
+
+
+### Bug Fixes
+
+* reduce download quote button size from md to sm ([7c3c38f](https://github.com/craftandculture/Craft-Culture/commit/7c3c38f160770c56778f3f9909d41e14da333bf3))
+
 ## [1.23.1](https://github.com/craftandculture/Craft-Culture/compare/v1.23.0...v1.23.1) (2025-10-24)
 
 
