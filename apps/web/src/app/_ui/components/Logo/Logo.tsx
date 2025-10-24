@@ -1,4 +1,6 @@
-import { twMerge } from 'tailwind-merge';
+import Image from 'next/image';
+
+import logo from './logo.webp';
 
 export interface LogoProps {
   className?: string;
@@ -7,12 +9,13 @@ export interface LogoProps {
 
 const Logo = ({ className, height = 32 }: LogoProps) => {
   return (
-    <div
-      className={twMerge('font-semibold tracking-tight', className)}
-      style={{ fontSize: `${height * 0.6}px` }}
-    >
-      Craft & Culture
-    </div>
+    <Image
+      src={logo}
+      alt="Craft & Culture"
+      height={height}
+      className={className}
+      priority
+    />
   );
 };
 
