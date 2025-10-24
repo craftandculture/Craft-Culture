@@ -1,3 +1,10 @@
+## [1.22.1](https://github.com/craftandculture/Craft-Culture/compare/v1.22.0...v1.22.1) (2025-10-24)
+
+
+### Bug Fixes
+
+* remove totalCount reference from catalog browser ([6740d92](https://github.com/craftandculture/Craft-Culture/commit/6740d924f820cad0238406f131877e4a4f3e9b76))
+
 # [1.22.0](https://github.com/craftandculture/Craft-Culture/compare/v1.21.0...v1.22.0) (2025-10-24)
 
 
