@@ -151,7 +151,7 @@ const CatalogBrowser = ({
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <Typography variant="bodyLg" className="font-semibold">
-            Browse Complete Catalog
+            Browse Full Inventory
           </Typography>
           <Typography variant="bodyXs" className="text-text-muted">
             {isLoading ? (

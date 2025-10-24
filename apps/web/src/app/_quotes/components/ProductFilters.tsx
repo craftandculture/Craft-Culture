@@ -110,31 +110,36 @@ const ProductFilters = ({
     <div className="space-y-3">
       {/* Filter Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <Button
-          type="button"
-          variant="outline"
-          size="md"
-          onClick={() => setIsExpanded(!isExpanded)}
-          className="w-full justify-between sm:w-auto"
-        >
-          <ButtonContent iconLeft={IconFilter}>
-            <span className="flex items-center gap-2">
-              Filters
-              {activeFilterCount > 0 && (
-                <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-fill-accent px-1.5 text-xs font-semibold text-text-primary">
-                  {activeFilterCount}
-                </span>
-              )}
-            </span>
-          </ButtonContent>
-          <Icon
-            icon={IconChevronDown}
-            size="sm"
-            className={`ml-2 transition-transform duration-200 ${
-              isExpanded ? 'rotate-180' : ''
-            }`}
-          />
-        </Button>
+        <div className="flex flex-col gap-1">
+          <Button
+            type="button"
+            variant="outline"
+            size="md"
+            onClick={() => setIsExpanded(!isExpanded)}
+            className="w-full justify-between sm:w-auto"
+          >
+            <ButtonContent iconLeft={IconFilter}>
+              <span className="flex items-center gap-2">
+                Filters
+                {activeFilterCount > 0 && (
+                  <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-fill-accent px-1.5 text-xs font-semibold text-text-primary">
+                    {activeFilterCount}
+                  </span>
+                )}
+              </span>
+            </ButtonContent>
+            <Icon
+              icon={IconChevronDown}
+              size="sm"
+              className={`ml-2 transition-transform duration-200 ${
+                isExpanded ? 'rotate-180' : ''
+              }`}
+            />
+          </Button>
+          <Typography variant="bodyXs" className="text-text-muted">
+            Use filters to refine selection
+          </Typography>
+        </div>
 
         {hasActiveFilters && (
           <Button
