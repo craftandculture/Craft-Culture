@@ -407,18 +407,6 @@ const QuotesForm = () => {
             </button>
           </div>
         </div>
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          onClick={handleDownloadInventory}
-          isDisabled={isLoadingInventory || !allProductsData || allProductsData.data.length === 0}
-          className="text-text-muted hover:text-text-primary text-xs font-normal"
-        >
-          <ButtonContent iconLeft={IconDownload}>
-            Download Full Inventory
-          </ButtonContent>
-        </Button>
       </div>
 
       {/* Line Items Table */}
@@ -600,8 +588,20 @@ const QuotesForm = () => {
                 </Typography>
               )}
             </div>
-            {/* Download Quote Button */}
-            <div className="flex justify-end">
+            {/* Download Buttons */}
+            <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={handleDownloadInventory}
+                isDisabled={isLoadingInventory || !allProductsData || allProductsData.data.length === 0}
+                className="w-full sm:w-auto"
+              >
+                <ButtonContent iconLeft={IconDownload}>
+                  Download Full Inventory
+                </ButtonContent>
+              </Button>
               <Button
                 type="button"
                 variant="default"
