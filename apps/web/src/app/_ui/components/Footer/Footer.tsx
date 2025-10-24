@@ -1,6 +1,5 @@
 import Link from 'next/link';
 
-import Typography from '@/app/_ui/components/Typography/Typography';
 import getAppVersion from '@/utils/getAppVersion';
 
 const Footer = () => {
@@ -8,29 +7,29 @@ const Footer = () => {
   const version = getAppVersion();
 
   return (
-    <footer className="border-border-primary mt-auto border-t">
+    <footer className="border-border-primary mt-auto border-t bg-fill-secondary/30">
       <div className="container py-6 md:py-8">
-        <div className="grid gap-8 md:grid-cols-3">
+        <div className="grid gap-6 md:grid-cols-3 md:gap-8">
           {/* Company Info */}
-          <div className="space-y-3">
-            <Typography variant="headingSm" className="font-semibold">
+          <div className="space-y-2">
+            <h3 className="text-text-primary text-sm font-semibold">
               Craft & Culture
-            </Typography>
-            <Typography variant="bodySm" colorRole="muted">
+            </h3>
+            <p className="text-text-muted text-xs leading-relaxed">
               Empowering wine & spirits brands to succeed in GCC markets with
               comprehensive services.
-            </Typography>
+            </p>
           </div>
 
           {/* Quick Links */}
-          <div className="space-y-3">
-            <Typography variant="headingSm" className="font-semibold">
+          <div className="space-y-2">
+            <h3 className="text-text-primary text-sm font-semibold">
               Quick Links
-            </Typography>
-            <nav className="flex flex-col space-y-2">
+            </h3>
+            <nav className="flex flex-col space-y-1.5">
               <Link
                 href="/platform/quotes"
-                className="text-text-muted hover:text-text-primary text-sm transition-colors"
+                className="text-text-muted hover:text-text-primary text-xs transition-colors"
               >
                 Quote Tool
               </Link>
@@ -38,7 +37,7 @@ const Footer = () => {
                 href="https://craftculture.xyz"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-text-muted hover:text-text-primary text-sm transition-colors"
+                className="text-text-muted hover:text-text-primary text-xs transition-colors"
               >
                 About Us
               </Link>
@@ -46,7 +45,7 @@ const Footer = () => {
                 href="https://craftculture.xyz/contact"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-text-muted hover:text-text-primary text-sm transition-colors"
+                className="text-text-muted hover:text-text-primary text-xs transition-colors"
               >
                 Contact
               </Link>
@@ -54,14 +53,14 @@ const Footer = () => {
           </div>
 
           {/* Legal & Support */}
-          <div className="space-y-3">
-            <Typography variant="headingSm" className="font-semibold">
+          <div className="space-y-2">
+            <h3 className="text-text-primary text-sm font-semibold">
               Support
-            </Typography>
-            <nav className="flex flex-col space-y-2">
+            </h3>
+            <nav className="flex flex-col space-y-1.5">
               <Link
                 href="mailto:support@craftculture.xyz"
-                className="text-text-muted hover:text-text-primary text-sm transition-colors"
+                className="text-text-muted hover:text-text-primary text-xs transition-colors"
               >
                 Support
               </Link>
@@ -69,7 +68,7 @@ const Footer = () => {
                 href="https://craftculture.xyz/privacy"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-text-muted hover:text-text-primary text-sm transition-colors"
+                className="text-text-muted hover:text-text-primary text-xs transition-colors"
               >
                 Privacy Policy
               </Link>
@@ -77,7 +76,7 @@ const Footer = () => {
                 href="https://craftculture.xyz/terms"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-text-muted hover:text-text-primary text-sm transition-colors"
+                className="text-text-muted hover:text-text-primary text-xs transition-colors"
               >
                 Terms of Service
               </Link>
@@ -86,15 +85,15 @@ const Footer = () => {
         </div>
 
         {/* Bottom Bar */}
-        <div className="border-border-primary mt-8 flex flex-col items-center justify-between gap-4 border-t pt-6 sm:flex-row">
-          <Typography variant="bodySm" colorRole="muted">
+        <div className="border-border-primary mt-6 flex flex-col items-center justify-between gap-3 border-t pt-4 sm:flex-row md:mt-8 md:pt-6">
+          <p className="text-text-muted text-xs">
             © {currentYear} Craft & Culture. All rights reserved.
-          </Typography>
+          </p>
           <Link
             href="https://github.com/craftandculture/Craft-Culture/releases"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-text-tertiary hover:text-text-secondary text-xs transition-colors"
+            className="text-text-tertiary hover:text-text-secondary font-mono text-xs transition-colors"
           >
             v{version}
           </Link>
