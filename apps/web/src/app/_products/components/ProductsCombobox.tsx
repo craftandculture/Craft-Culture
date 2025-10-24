@@ -4,6 +4,7 @@ import * as PopoverPrimitive from '@radix-ui/react-popover';
 import { IconCameraOff, IconChevronDown } from '@tabler/icons-react';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import Image from 'next/image';
+import { useQueryStates } from 'nuqs';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import Button from '@/app/_ui/components/Button/Button';
@@ -19,6 +20,7 @@ import Typography from '@/app/_ui/components/Typography/Typography';
 import useTRPC from '@/lib/trpc/browser';
 
 import ProductPreview from './ProductPreview';
+import quotesSearchParams from '../../_quotes/search-params/filtersSearchParams';
 import { Product } from '../controller/productsGetMany';
 
 interface ProductsComboboxProps {
@@ -76,6 +78,9 @@ const ProductsCombobox = ({
 
   const api = useTRPC();
 
+  // Get active filters from URL
+  const [filters] = useQueryStates(quotesSearchParams);
+
   const isDebouncing = search !== debouncedSearch;
   const handleSearchChange = useCallback((value: string) => {
     setSearch(value);
@@ -108,6 +113,9 @@ const ProductsCombobox = ({
       limit: 20,
       search: normalizedSearch.length > 0 ? normalizedSearch : undefined,
       omitProductIds,
+      regions: filters.regions.length > 0 ? filters.regions : undefined,
+      producers: filters.producers.length > 0 ? filters.producers : undefined,
+      vintages: filters.vintages.length > 0 ? filters.vintages : undefined,
     }),
     getNextPageParam: (lastPage) => lastPage.meta.nextCursor,
     initialPageParam: 0,

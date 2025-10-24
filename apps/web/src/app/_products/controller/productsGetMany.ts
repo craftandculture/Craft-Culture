@@ -147,11 +147,23 @@ const productsGetMany = protectedProcedure
       search: z.string().optional(),
       productIds: z.array(z.uuid()).optional(),
       omitProductIds: z.array(z.uuid()).optional(),
+      regions: z.array(z.string()).optional(),
+      producers: z.array(z.string()).optional(),
+      vintages: z.array(z.number()).optional(),
     }),
   )
   .query(
     async ({
-      input: { cursor, limit, search, productIds, omitProductIds },
+      input: {
+        cursor,
+        limit,
+        search,
+        productIds,
+        omitProductIds,
+        regions,
+        producers,
+        vintages,
+      },
     }) => {
       const preparedSearch =
         search && search.trim().length > 0
@@ -163,6 +175,15 @@ const productsGetMany = protectedProcedure
           ...(productIds ? { id: { in: productIds } } : {}),
           ...(omitProductIds && omitProductIds.length > 0
             ? { id: { notIn: omitProductIds } }
+            : {}),
+          ...(regions && regions.length > 0
+            ? { region: { in: regions } }
+            : {}),
+          ...(producers && producers.length > 0
+            ? { producer: { in: producers } }
+            : {}),
+          ...(vintages && vintages.length > 0
+            ? { year: { in: vintages } }
             : {}),
           ...(preparedSearch
             ? {
