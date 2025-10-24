@@ -1,3 +1,11 @@
+# [1.23.0](https://github.com/craftandculture/Craft-Culture/compare/v1.22.2...v1.23.0) (2025-10-24)
+
+
+### Features
+
+* add filter helper text and update catalog heading ([cbdaff8](https://github.com/craftandculture/Craft-Culture/commit/cbdaff80d1f31f7f0eadd934047b3c5cc2b40a8d))
+* improve catalog and quote UI with multiple enhancements ([3c08bbc](https://github.com/craftandculture/Craft-Culture/commit/3c08bbc1fc7901de2fbdb9fd5b49c7f20ee4941b))
+
 ## [1.22.2](https://github.com/craftandculture/Craft-Culture/compare/v1.22.1...v1.22.2) (2025-10-24)
 
 
