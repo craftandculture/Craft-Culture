@@ -1,3 +1,10 @@
+## [1.18.1](https://github.com/craftandculture/Craft-Culture/compare/v1.18.0...v1.18.1) (2025-10-24)
+
+
+### Bug Fixes
+
+* add B2C tooltips to desktop headers and update text to In-Bond UAE ([0c39a20](https://github.com/craftandculture/Craft-Culture/commit/0c39a2024d204d2fe6acc4420da60b96d3e1f3ff))
+
 # [1.18.0](https://github.com/craftandculture/Craft-Culture/compare/v1.17.0...v1.18.0) (2025-10-24)
 
 
