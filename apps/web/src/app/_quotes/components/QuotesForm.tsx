@@ -408,7 +408,7 @@ const QuotesForm = () => {
                       <span className="inline-flex">
                         <Icon
                           icon={IconInfoCircle}
-                          size="xs"
+                          size="sm"
                           colorRole="muted"
                         />
                       </span>
@@ -432,7 +432,7 @@ const QuotesForm = () => {
                       <span className="inline-flex">
                         <Icon
                           icon={IconInfoCircle}
-                          size="xs"
+                          size="sm"
                           colorRole="muted"
                         />
                       </span>
