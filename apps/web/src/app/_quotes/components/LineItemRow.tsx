@@ -172,7 +172,7 @@ const LineItemRow = ({
                     <span className="inline-flex">
                       <Icon
                         icon={IconInfoCircle}
-                        size="xs"
+                        size="sm"
                         colorRole="muted"
                       />
                     </span>
@@ -212,7 +212,7 @@ const LineItemRow = ({
                     <span className="inline-flex">
                       <Icon
                         icon={IconInfoCircle}
-                        size="xs"
+                        size="sm"
                         colorRole="muted"
                       />
                     </span>
