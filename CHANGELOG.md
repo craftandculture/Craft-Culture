@@ -1,3 +1,10 @@
+# [1.24.0](https://github.com/craftandculture/Craft-Culture/compare/v1.23.2...v1.24.0) (2025-10-24)
+
+
+### Features
+
+* relocate download full inventory button next to quote download ([4cf943b](https://github.com/craftandculture/Craft-Culture/commit/4cf943b7480992a6cc2ff5cd534eab0ecd26ec33))
+
 ## [1.23.2](https://github.com/craftandculture/Craft-Culture/compare/v1.23.1...v1.23.2) (2025-10-24)
 
 
