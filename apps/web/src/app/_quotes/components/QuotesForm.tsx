@@ -397,6 +397,7 @@ const QuotesForm = () => {
           size="sm"
           onClick={handleDownloadInventory}
           isDisabled={isLoadingInventory || !allProductsData || allProductsData.data.length === 0}
+          className="text-text-muted hover:text-text-primary text-xs font-normal"
         >
           <ButtonContent iconLeft={IconDownload}>
             Download Full Inventory
