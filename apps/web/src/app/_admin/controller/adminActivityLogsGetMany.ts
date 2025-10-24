@@ -1,4 +1,5 @@
 import { desc, eq } from 'drizzle-orm';
+import type { SQL } from 'drizzle-orm';
 import z from 'zod';
 
 import db from '@/database/client';
@@ -21,7 +22,7 @@ const adminActivityLogsGetMany = adminProcedure
     const { adminId, action, limit, offset } = input;
 
     // Build where conditions
-    const whereConditions = [];
+    const whereConditions: SQL[] = [];
     if (adminId) {
       whereConditions.push(eq(adminActivityLogs.adminId, adminId));
     }
