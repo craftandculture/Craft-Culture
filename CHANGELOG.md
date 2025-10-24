@@ -1,3 +1,10 @@
+## [1.28.1](https://github.com/craftandculture/Craft-Culture/compare/v1.28.0...v1.28.1) (2025-10-24)
+
+
+### Bug Fixes
+
+* add explicit type annotation for whereConditions array ([07fce2d](https://github.com/craftandculture/Craft-Culture/commit/07fce2da1c47db663dfae7ba7fccffee5c1d14e7))
+
 # [1.28.0](https://github.com/craftandculture/Craft-Culture/compare/v1.27.1...v1.28.0) (2025-10-24)
 
 
