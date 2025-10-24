@@ -1,8 +1,8 @@
 'use client';
 
-import { IconChevronDown, IconFilter, IconX } from '@tabler/icons-react';
+import { IconChevronDown, IconFilter, IconSearch, IconX } from '@tabler/icons-react';
 import { useQueryStates } from 'nuqs';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
@@ -37,6 +37,9 @@ const ProductFilters = ({
   });
 
   const [isExpanded, setIsExpanded] = useState(false);
+  const [regionSearch, setRegionSearch] = useState('');
+  const [producerSearch, setProducerSearch] = useState('');
+  const [vintageSearch, setVintageSearch] = useState('');
 
   const hasActiveFilters =
     filters.regions.length > 0 ||
@@ -77,6 +80,31 @@ const ProductFilters = ({
       vintages: [],
     });
   };
+
+  // Filtered lists based on search
+  const filteredRegions = useMemo(() => {
+    if (!regionSearch.trim()) return availableRegions;
+    const search = regionSearch.toLowerCase();
+    return availableRegions.filter((region) =>
+      region.toLowerCase().includes(search),
+    );
+  }, [availableRegions, regionSearch]);
+
+  const filteredProducers = useMemo(() => {
+    if (!producerSearch.trim()) return availableProducers;
+    const search = producerSearch.toLowerCase();
+    return availableProducers.filter((producer) =>
+      producer.toLowerCase().includes(search),
+    );
+  }, [availableProducers, producerSearch]);
+
+  const filteredVintages = useMemo(() => {
+    if (!vintageSearch.trim()) return availableVintages;
+    const search = vintageSearch.toLowerCase();
+    return availableVintages.filter((vintage) =>
+      (vintage === 0 ? 'nv' : vintage.toString()).includes(search),
+    );
+  }, [availableVintages, vintageSearch]);
 
   return (
     <div className="space-y-3">
@@ -138,13 +166,32 @@ const ProductFilters = ({
             >
               Region
             </Typography>
+            {availableRegions.length > 5 && (
+              <div className="relative">
+                <Icon
+                  icon={IconSearch}
+                  size="sm"
+                  className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2"
+                  colorRole="muted"
+                />
+                <input
+                  type="text"
+                  value={regionSearch}
+                  onChange={(e) => setRegionSearch(e.target.value)}
+                  placeholder="Search regions..."
+                  className="h-9 w-full rounded-md border border-border-muted bg-background-primary pl-9 pr-3 text-sm transition-colors placeholder:text-text-muted focus:border-border-brand focus:outline-none focus:ring-2 focus:ring-fill-accent focus:ring-offset-2"
+                />
+              </div>
+            )}
             <div className="max-h-48 space-y-1 overflow-y-auto rounded-md">
-              {availableRegions.length === 0 ? (
+              {filteredRegions.length === 0 ? (
                 <Typography variant="bodySm" className="px-2 py-4 text-center text-text-muted">
-                  No regions available
+                  {regionSearch.trim()
+                    ? 'No matching regions'
+                    : 'No regions available'}
                 </Typography>
               ) : (
-                availableRegions.map((region) => (
+                filteredRegions.map((region) => (
                   <label
                     key={region}
                     className="flex cursor-pointer items-center gap-2 rounded-md px-3 py-2 transition-colors hover:bg-fill-muted"
@@ -172,13 +219,32 @@ const ProductFilters = ({
             >
               Producer
             </Typography>
+            {availableProducers.length > 5 && (
+              <div className="relative">
+                <Icon
+                  icon={IconSearch}
+                  size="sm"
+                  className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2"
+                  colorRole="muted"
+                />
+                <input
+                  type="text"
+                  value={producerSearch}
+                  onChange={(e) => setProducerSearch(e.target.value)}
+                  placeholder="Search producers..."
+                  className="h-9 w-full rounded-md border border-border-muted bg-background-primary pl-9 pr-3 text-sm transition-colors placeholder:text-text-muted focus:border-border-brand focus:outline-none focus:ring-2 focus:ring-fill-accent focus:ring-offset-2"
+                />
+              </div>
+            )}
             <div className="max-h-48 space-y-1 overflow-y-auto rounded-md">
-              {availableProducers.length === 0 ? (
+              {filteredProducers.length === 0 ? (
                 <Typography variant="bodySm" className="px-2 py-4 text-center text-text-muted">
-                  No producers available
+                  {producerSearch.trim()
+                    ? 'No matching producers'
+                    : 'No producers available'}
                 </Typography>
               ) : (
-                availableProducers.map((producer) => (
+                filteredProducers.map((producer) => (
                   <label
                     key={producer}
                     className="flex cursor-pointer items-center gap-2 rounded-md px-3 py-2 transition-colors hover:bg-fill-muted"
@@ -206,13 +272,32 @@ const ProductFilters = ({
             >
               Vintage
             </Typography>
+            {availableVintages.length > 5 && (
+              <div className="relative">
+                <Icon
+                  icon={IconSearch}
+                  size="sm"
+                  className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2"
+                  colorRole="muted"
+                />
+                <input
+                  type="text"
+                  value={vintageSearch}
+                  onChange={(e) => setVintageSearch(e.target.value)}
+                  placeholder="Search vintages..."
+                  className="h-9 w-full rounded-md border border-border-muted bg-background-primary pl-9 pr-3 text-sm transition-colors placeholder:text-text-muted focus:border-border-brand focus:outline-none focus:ring-2 focus:ring-fill-accent focus:ring-offset-2"
+                />
+              </div>
+            )}
             <div className="max-h-48 space-y-1 overflow-y-auto rounded-md">
-              {availableVintages.length === 0 ? (
+              {filteredVintages.length === 0 ? (
                 <Typography variant="bodySm" className="px-2 py-4 text-center text-text-muted">
-                  No vintages available
+                  {vintageSearch.trim()
+                    ? 'No matching vintages'
+                    : 'No vintages available'}
                 </Typography>
               ) : (
-                availableVintages.map((vintage) => (
+                filteredVintages.map((vintage) => (
                   <label
                     key={vintage}
                     className="flex cursor-pointer items-center gap-2 rounded-md px-3 py-2 transition-colors hover:bg-fill-muted"
