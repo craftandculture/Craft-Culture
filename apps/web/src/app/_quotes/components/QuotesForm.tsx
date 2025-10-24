@@ -21,6 +21,7 @@ import convertUsdToAed from '@/utils/convertUsdToAed';
 import formatPrice from '@/utils/formatPrice';
 
 import LineItemRow from './LineItemRow';
+import ProductFilters from './ProductFilters';
 import exportInventoryToExcel from '../utils/exportInventoryToExcel';
 import exportQuoteToExcel from '../utils/exportQuoteToExcel';
 
@@ -57,6 +58,11 @@ const QuotesForm = () => {
   // Get current user to check customer type
   const { data: userData } = useQuery(api.users.getMe.queryOptions());
   const customerType = userData?.customerType;
+
+  // Fetch filter options for dropdowns
+  const { data: filterOptions } = useQuery(
+    api.products.getFilterOptions.queryOptions(),
+  );
 
   // Currency display toggle
   const [displayCurrency, setDisplayCurrency] = useState<'USD' | 'AED'>('AED');
@@ -359,7 +365,16 @@ const QuotesForm = () => {
   };
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-4">
+      {/* Product Filters */}
+      {filterOptions && (
+        <ProductFilters
+          availableRegions={filterOptions.regions}
+          availableProducers={filterOptions.producers}
+          availableVintages={filterOptions.vintages}
+        />
+      )}
+
       {/* Currency Toggle and Inventory Download */}
       <div className="flex flex-col items-end gap-3 sm:flex-row sm:items-center sm:justify-end">
         <div className="flex items-center gap-2">
