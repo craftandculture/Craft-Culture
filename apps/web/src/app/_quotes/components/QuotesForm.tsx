@@ -599,7 +599,7 @@ const QuotesForm = () => {
                 className="w-full sm:w-auto"
               >
                 <ButtonContent iconLeft={IconDownload}>
-                  Download Full Inventory
+                  <span className="text-xs">Download Full Inventory</span>
                 </ButtonContent>
               </Button>
               <Button

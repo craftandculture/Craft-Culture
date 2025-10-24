@@ -10,6 +10,7 @@ import Icon from '@/app/_ui/components/Icon/Icon';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import formatPrice from '@/utils/formatPrice';
 
+import ProductDetailsTooltip from './ProductDetailsTooltip';
 import type { Product } from '../controller/productsGetMany';
 
 interface ProductCardProps {
@@ -37,9 +38,10 @@ const ProductCard = ({
     displayCurrency === 'AED' ? price * 3.67 : price;
 
   return (
-    <Card className="group relative flex h-full flex-col overflow-hidden transition-shadow hover:shadow-md">
-      {/* Product Image */}
-      <div className="bg-surface-muted relative aspect-square w-full overflow-hidden">
+    <ProductDetailsTooltip product={product}>
+      <Card className="group relative flex h-full flex-col overflow-hidden transition-shadow hover:shadow-md">
+        {/* Product Image */}
+        <div className="bg-surface-muted relative aspect-square w-full overflow-hidden">
         {product.imageUrl ? (
           <Image
             src={product.imageUrl}
@@ -120,6 +122,7 @@ const ProductCard = ({
         </Button>
       </div>
     </Card>
+    </ProductDetailsTooltip>
   );
 };
 
