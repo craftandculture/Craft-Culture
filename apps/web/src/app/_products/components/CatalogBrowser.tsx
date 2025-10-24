@@ -1,11 +1,13 @@
 'use client';
 
-import { IconSearch } from '@tabler/icons-react';
+import { IconDownload, IconSearch } from '@tabler/icons-react';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { useQueryStates } from 'nuqs';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import quotesSearchParams from '@/app/_quotes/search-params/filtersSearchParams';
+import Button from '@/app/_ui/components/Button/Button';
+import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
 import Divider from '@/app/_ui/components/Divider/Divider';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Skeleton from '@/app/_ui/components/Skeleton/Skeleton';
@@ -19,6 +21,8 @@ interface CatalogBrowserProps {
   onAddProduct: (product: Product) => void;
   displayCurrency: 'USD' | 'AED';
   omitProductIds?: string[];
+  onDownloadInventory?: () => void;
+  isDownloadingInventory?: boolean;
 }
 
 type SortOption = 'name-asc' | 'name-desc' | 'price-asc' | 'price-desc' | 'vintage-asc' | 'vintage-desc';
@@ -33,6 +37,8 @@ const CatalogBrowser = ({
   onAddProduct,
   displayCurrency,
   omitProductIds = [],
+  onDownloadInventory,
+  isDownloadingInventory = false,
 }: CatalogBrowserProps) => {
   const api = useTRPC();
   const [catalogSearch, setCatalogSearch] = useState('');
@@ -136,6 +142,20 @@ const CatalogBrowser = ({
             )}
           </Typography>
         </div>
+        {onDownloadInventory && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={onDownloadInventory}
+            isDisabled={isDownloadingInventory || totalCount === 0}
+            className="w-full sm:w-auto"
+          >
+            <ButtonContent iconLeft={IconDownload}>
+              <span className="text-xs">Download Full Inventory</span>
+            </ButtonContent>
+          </Button>
+        )}
       </div>
 
       {/* Search and Sort Toolbar */}
