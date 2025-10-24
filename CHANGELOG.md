@@ -1,3 +1,10 @@
+## [1.23.1](https://github.com/craftandculture/Craft-Culture/compare/v1.23.0...v1.23.1) (2025-10-24)
+
+
+### Bug Fixes
+
+* add explicit type annotation for Drizzle ORM RAW callback ([9685421](https://github.com/craftandculture/Craft-Culture/commit/9685421d86446426d3f4ed4c6ea52a02ad1ef54a))
+
 # [1.23.0](https://github.com/craftandculture/Craft-Culture/compare/v1.22.2...v1.23.0) (2025-10-24)
 
 
