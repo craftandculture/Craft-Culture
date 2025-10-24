@@ -193,7 +193,7 @@ const productsGetMany = protectedProcedure
         ...(vintages && vintages.length > 0 ? { year: { in: vintages } } : {}),
         ...(preparedSearch
           ? {
-              RAW: (table) =>
+              RAW: (table: typeof products) =>
                 createSearchExpressions(table, preparedSearch).filter,
             }
           : {}),
