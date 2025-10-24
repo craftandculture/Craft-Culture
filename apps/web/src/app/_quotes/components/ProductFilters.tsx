@@ -109,20 +109,20 @@ const ProductFilters = ({
   return (
     <div className="space-y-3">
       {/* Filter Header */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex flex-col gap-1">
           <Button
             type="button"
             variant="outline"
-            size="md"
+            size="sm"
             onClick={() => setIsExpanded(!isExpanded)}
             className="w-full justify-between sm:w-auto"
           >
             <ButtonContent iconLeft={IconFilter}>
-              <span className="flex items-center gap-2">
-                Filters
+              <span className="flex items-center gap-1.5">
+                <span className="text-xs">Filters</span>
                 {activeFilterCount > 0 && (
-                  <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-fill-accent px-1.5 text-xs font-semibold text-text-primary">
+                  <span className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-fill-accent px-1 text-xs font-semibold text-text-primary">
                     {activeFilterCount}
                   </span>
                 )}
@@ -131,12 +131,12 @@ const ProductFilters = ({
             <Icon
               icon={IconChevronDown}
               size="sm"
-              className={`ml-2 transition-transform duration-200 ${
+              className={`ml-1.5 transition-transform duration-200 ${
                 isExpanded ? 'rotate-180' : ''
               }`}
             />
           </Button>
-          <Typography variant="bodyXs" className="text-text-muted">
+          <Typography variant="bodyXs" className="text-text-muted text-xs">
             Use filters to refine selection
           </Typography>
         </div>
@@ -145,11 +145,13 @@ const ProductFilters = ({
           <Button
             type="button"
             variant="ghost"
-            size="md"
+            size="sm"
             onClick={handleClearAll}
             className="w-full sm:w-auto"
           >
-            <ButtonContent iconLeft={IconX}>Clear All</ButtonContent>
+            <ButtonContent iconLeft={IconX}>
+              <span className="text-xs">Clear All</span>
+            </ButtonContent>
           </Button>
         )}
       </div>
