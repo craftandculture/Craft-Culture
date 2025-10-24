@@ -366,50 +366,62 @@ const QuotesForm = () => {
   };
 
   return (
-    <div className="space-y-4 md:space-y-5">
-      {/* Product Filters */}
-      {filterOptions && (
-        <ProductFilters
-          availableRegions={filterOptions.regions}
-          availableProducers={filterOptions.producers}
-          availableVintages={filterOptions.vintages}
-        />
-      )}
-
-      {/* Currency Toggle and Inventory Download */}
-      <div className="flex flex-col items-end gap-2 sm:flex-row sm:items-center sm:justify-end">
-        <div className="flex items-center gap-2">
-          <Typography variant="bodyXs" className="text-text-muted font-medium">
-            Currency:
+    <div className="space-y-6 md:space-y-8">
+      {/* Pricing Tool Section */}
+      <section className="space-y-4 md:space-y-5">
+        {/* Section Header */}
+        <div className="space-y-2">
+          <Typography variant="headingLg" className="font-semibold">
+            Quote Builder
           </Typography>
-          <div className="flex gap-0.5 rounded-md border border-border-muted bg-fill-muted p-0.5">
-            <button
-              type="button"
-              onClick={() => setDisplayCurrency('USD')}
-              className={`rounded px-2 py-1 text-xs font-medium transition-colors ${
-                displayCurrency === 'USD'
-                  ? 'bg-fill-primary text-text-primary'
-                  : 'text-text-muted hover:text-text-primary'
-              }`}
-            >
-              USD
-            </button>
-            <button
-              type="button"
-              onClick={() => setDisplayCurrency('AED')}
-              className={`rounded px-2 py-1 text-xs font-medium transition-colors ${
-                displayCurrency === 'AED'
-                  ? 'bg-fill-primary text-text-primary'
-                  : 'text-text-muted hover:text-text-primary'
-              }`}
-            >
-              AED
-            </button>
+          <Typography variant="bodySm" colorRole="muted">
+            Select products and quantities to generate your custom quote
+          </Typography>
+        </div>
+
+        {/* Product Filters */}
+        {filterOptions && (
+          <ProductFilters
+            availableRegions={filterOptions.regions}
+            availableProducers={filterOptions.producers}
+            availableVintages={filterOptions.vintages}
+          />
+        )}
+
+        {/* Currency Toggle and Inventory Download */}
+        <div className="flex flex-col items-end gap-2 sm:flex-row sm:items-center sm:justify-end">
+          <div className="flex items-center gap-2">
+            <Typography variant="bodyXs" className="text-text-muted font-medium">
+              Currency:
+            </Typography>
+            <div className="flex gap-0.5 rounded-md border border-border-muted bg-fill-muted p-0.5">
+              <button
+                type="button"
+                onClick={() => setDisplayCurrency('USD')}
+                className={`rounded px-2 py-1 text-xs font-medium transition-colors ${
+                  displayCurrency === 'USD'
+                    ? 'bg-fill-primary text-text-primary'
+                    : 'text-text-muted hover:text-text-primary'
+                }`}
+              >
+                USD
+              </button>
+              <button
+                type="button"
+                onClick={() => setDisplayCurrency('AED')}
+                className={`rounded px-2 py-1 text-xs font-medium transition-colors ${
+                  displayCurrency === 'AED'
+                    ? 'bg-fill-primary text-text-primary'
+                    : 'text-text-muted hover:text-text-primary'
+                }`}
+              >
+                AED
+              </button>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Line Items Table */}
+        {/* Line Items Table */}
       <div className="space-y-3">
         {/* Header Row - Hidden on mobile */}
         {lineItems.length > 0 && (
@@ -606,9 +618,25 @@ const QuotesForm = () => {
           </div>
         </>
       )}
+      </section>
 
-      {/* Catalog Browser */}
-      <CatalogBrowser
+      {/* Divider between sections */}
+      <Divider />
+
+      {/* Product Catalogue Section */}
+      <section className="space-y-4">
+        {/* Section Header */}
+        <div className="space-y-2">
+          <Typography variant="headingLg" className="font-semibold">
+            Product Catalogue
+          </Typography>
+          <Typography variant="bodySm" colorRole="muted">
+            Browse our full inventory and add products to your quote
+          </Typography>
+        </div>
+
+        {/* Catalog Browser */}
+        <CatalogBrowser
         onAddProduct={(product) => {
           // Find first available placeholder or add new line item
           const firstPlaceholder = lineItems.find(
@@ -652,6 +680,7 @@ const QuotesForm = () => {
         onDownloadInventory={handleDownloadInventory}
         isDownloadingInventory={isLoadingInventory}
       />
+      </section>
     </div>
   );
 };
