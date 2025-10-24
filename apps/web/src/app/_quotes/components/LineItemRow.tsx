@@ -120,7 +120,7 @@ const LineItemRow = ({
         </div>
 
         {/* Vintage Input */}
-        <div className="col-span-4 md:col-span-1">
+        <div className="col-span-5 md:col-span-1">
           <Input
             type="text"
             size="md"
@@ -132,7 +132,7 @@ const LineItemRow = ({
         </div>
 
         {/* Quantity Input */}
-        <div className="col-span-8 flex flex-wrap items-center gap-2 md:col-span-2">
+        <div className="col-span-7 flex flex-wrap items-center gap-2 md:col-span-2">
           <Input
             className="min-w-0 grow"
             type="number"
@@ -157,7 +157,7 @@ const LineItemRow = ({
         </div>
 
         {/* Line Price */}
-        <div className="col-span-5 flex flex-col gap-1 md:col-span-1 md:h-9 md:flex-row md:items-center md:justify-end md:gap-0">
+        <div className="col-span-6 flex flex-col gap-1 md:col-span-1 md:h-9 md:flex-row md:items-center md:justify-end md:gap-0">
           <div className="flex items-center gap-1 md:hidden">
             <Typography
               variant="bodyXs"
@@ -197,7 +197,7 @@ const LineItemRow = ({
         </div>
 
         {/* Per Bottle Price */}
-        <div className="col-span-5 flex flex-col gap-1 md:col-span-1 md:h-9 md:flex-row md:items-center md:justify-end md:gap-0">
+        <div className="col-span-6 flex flex-col gap-1 md:col-span-1 md:h-9 md:flex-row md:items-center md:justify-end md:gap-0">
           <div className="flex items-center gap-1 md:hidden">
             <Typography
               variant="bodyXs"
