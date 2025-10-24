@@ -2,7 +2,7 @@ import { sql } from 'drizzle-orm';
 import z from 'zod';
 
 import db from '@/database/client';
-import { products } from '@/database/schema';
+import { productOffers, products } from '@/database/schema';
 import { protectedProcedure } from '@/lib/trpc/procedures';
 
 interface PreparedSearch {
@@ -224,6 +224,13 @@ const productsGetMany = protectedProcedure
               ];
             }
 
+            // Subquery for minimum price from product_offers
+            const minPrice = sql<number>`(
+              SELECT MIN(${productOffers.price})
+              FROM ${productOffers}
+              WHERE ${productOffers.productId} = ${table.id}
+            )`;
+
             // Handle sorting based on sortBy parameter
             switch (sortBy) {
               case 'name-desc':
@@ -232,9 +239,10 @@ const productsGetMany = protectedProcedure
                 return [asc(table.year), asc(table.name), desc(table.id)];
               case 'vintage-desc':
                 return [desc(table.year), asc(table.name), desc(table.id)];
-              // Price sorting will be handled client-side after fetch
               case 'price-asc':
+                return [asc(minPrice), asc(table.name), desc(table.id)];
               case 'price-desc':
+                return [desc(minPrice), asc(table.name), desc(table.id)];
               case 'name-asc':
               default:
                 return [asc(table.name), desc(table.year), desc(table.id)];
