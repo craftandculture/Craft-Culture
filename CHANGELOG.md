@@ -1,3 +1,10 @@
+# [1.29.0](https://github.com/craftandculture/Craft-Culture/compare/v1.28.2...v1.29.0) (2025-10-24)
+
+
+### Features
+
+* add Activity Log menu item to admin user dropdown ([0b00e2c](https://github.com/craftandculture/Craft-Culture/commit/0b00e2c29ff35eae941f8ecfc246527deaa90ed0))
+
 ## [1.28.2](https://github.com/craftandculture/Craft-Culture/compare/v1.28.1...v1.28.2) (2025-10-24)
 
 
