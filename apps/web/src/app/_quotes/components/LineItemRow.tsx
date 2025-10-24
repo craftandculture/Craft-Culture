@@ -177,7 +177,7 @@ const LineItemRow = ({
                   </span>
                 </TooltipTrigger>
                 <TooltipContent>
-                  {customerType === 'b2b' ? 'In Bond UAE' : 'Client Price'}
+                  {customerType === 'b2b' ? 'In-Bond UAE' : 'Client Price'}
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
@@ -217,7 +217,7 @@ const LineItemRow = ({
                   </span>
                 </TooltipTrigger>
                 <TooltipContent>
-                  {customerType === 'b2b' ? 'In Bond UAE' : 'Client Price'}
+                  {customerType === 'b2b' ? 'In-Bond UAE' : 'Client Price'}
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
