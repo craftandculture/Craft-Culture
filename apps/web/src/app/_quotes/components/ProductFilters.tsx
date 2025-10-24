@@ -308,7 +308,7 @@ const ProductFilters = ({
                       onChange={() => handleVintageToggle(vintage)}
                       className="size-4 rounded border-border-muted text-fill-accent transition-colors focus:ring-2 focus:ring-fill-accent focus:ring-offset-2"
                     />
-                    <Typography variant="bodySm" className="flex-1">
+                    <Typography variant="bodyXs" className="flex-1">
                       {vintage === 0 ? 'NV' : vintage}
                     </Typography>
                   </label>
