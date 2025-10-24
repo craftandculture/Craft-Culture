@@ -30,7 +30,7 @@ const ProductDetailsTooltip = ({
     <TooltipProvider delayDuration={500}>
       <Tooltip>
         <TooltipTrigger asChild>{children}</TooltipTrigger>
-        <TooltipContent className="max-w-sm space-y-3 p-4">
+        <TooltipContent className="max-w-sm space-y-3 p-4 landscape:max-w-md">
           {/* Product Name */}
           <div className="border-b border-border-muted pb-2">
             <Typography variant="bodyMd" className="font-semibold leading-tight">
