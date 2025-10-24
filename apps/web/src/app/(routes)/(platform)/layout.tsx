@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 
 import UserDropdown from '@/app/_auth/components/UserDropdown';
+import Footer from '@/app/_ui/components/Footer/Footer';
 import Logo from '@/app/_ui/components/Logo/Logo';
 import ThemeToggle from '@/app/_ui/components/ThemeToggle/ThemeToggle';
 import getQueryClient from '@/lib/react-query';
@@ -26,7 +27,7 @@ const PlatformLayout = async ({ children }: React.PropsWithChildren) => {
   }
 
   return (
-    <div className="bg-background-primary h-dvh min-h-dvh">
+    <div className="bg-background-primary flex min-h-dvh flex-col">
       <header className="container flex h-14 items-center justify-between gap-4">
         <Link href="/platform">
           <Logo height={24} />
@@ -36,7 +37,8 @@ const PlatformLayout = async ({ children }: React.PropsWithChildren) => {
           <UserDropdown user={user} />
         </div>
       </header>
-      {children}
+      <div className="flex-1">{children}</div>
+      <Footer />
     </div>
   );
 };
