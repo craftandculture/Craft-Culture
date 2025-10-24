@@ -1,3 +1,10 @@
+## [1.31.1](https://github.com/craftandculture/Craft-Culture/compare/v1.31.0...v1.31.1) (2025-10-24)
+
+
+### Bug Fixes
+
+* replace logo image with text to resolve LFS build issues ([323d894](https://github.com/craftandculture/Craft-Culture/commit/323d89484bcdd3fa8fab105f131ffc2fefd04e83))
+
 # [1.31.0](https://github.com/craftandculture/Craft-Culture/compare/v1.30.1...v1.31.0) (2025-10-24)
 
 
