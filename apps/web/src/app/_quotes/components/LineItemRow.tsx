@@ -165,22 +165,22 @@ const LineItemRow = ({
             >
               Price
             </Typography>
-            {customerType === 'b2b' && (
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <span className="inline-flex">
-                      <Icon
-                        icon={IconInfoCircle}
-                        size="sm"
-                        colorRole="muted"
-                      />
-                    </span>
-                  </TooltipTrigger>
-                  <TooltipContent>In Bond UAE</TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            )}
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="inline-flex">
+                    <Icon
+                      icon={IconInfoCircle}
+                      size="sm"
+                      colorRole="muted"
+                    />
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {customerType === 'b2b' ? 'In Bond UAE' : 'Client Price'}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
           {isQuoteLoading ? (
             <Skeleton className="h-5 w-16" />
@@ -205,22 +205,22 @@ const LineItemRow = ({
             >
               Per Bottle
             </Typography>
-            {customerType === 'b2b' && (
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <span className="inline-flex">
-                      <Icon
-                        icon={IconInfoCircle}
-                        size="sm"
-                        colorRole="muted"
-                      />
-                    </span>
-                  </TooltipTrigger>
-                  <TooltipContent>In Bond UAE</TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            )}
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="inline-flex">
+                    <Icon
+                      icon={IconInfoCircle}
+                      size="sm"
+                      colorRole="muted"
+                    />
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {customerType === 'b2b' ? 'In Bond UAE' : 'Client Price'}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
           {isQuoteLoading ? (
             <Skeleton className="h-5 w-16" />
