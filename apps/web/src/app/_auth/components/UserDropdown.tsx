@@ -1,6 +1,12 @@
 'use client';
 
-import { IconLogout, IconMoon, IconSettings, IconSun } from '@tabler/icons-react';
+import {
+  IconClipboardList,
+  IconLogout,
+  IconMoon,
+  IconSettings,
+  IconSun,
+} from '@tabler/icons-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -71,6 +77,13 @@ const UserDropdown = ({ user }: UserDropdownProps) => {
               <Link href="/platform/admin/pricing-models">
                 <DropdownMenuContentWrapper iconLeft={IconSettings} align="start">
                   Admin
+                </DropdownMenuContentWrapper>
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link href="/platform/admin/activity-logs">
+                <DropdownMenuContentWrapper iconLeft={IconClipboardList} align="start">
+                  Activity Log
                 </DropdownMenuContentWrapper>
               </Link>
             </DropdownMenuItem>
