@@ -1,6 +1,7 @@
 import Link from 'next/link';
 
 import Typography from '@/app/_ui/components/Typography/Typography';
+import packageJson from '@root/package.json';
 
 const Footer = () => {
   const currentYear = new Date().getFullYear();
@@ -84,9 +85,16 @@ const Footer = () => {
         </div>
 
         {/* Bottom Bar */}
-        <div className="border-border-primary mt-8 border-t pt-6 text-center">
+        <div className="border-border-primary mt-8 flex flex-col items-center justify-between gap-4 border-t pt-6 sm:flex-row">
           <Typography variant="bodySm" colorRole="muted">
             © {currentYear} Craft & Culture. All rights reserved.
+          </Typography>
+          <Typography
+            variant="monoSm"
+            colorRole="muted"
+            className="text-text-subtle"
+          >
+            v{packageJson.version}
           </Typography>
         </div>
       </div>
