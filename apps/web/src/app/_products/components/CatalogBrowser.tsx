@@ -143,9 +143,6 @@ const CatalogBrowser = ({
     }
   };
 
-  const totalCount = data?.pages[0]?.meta.totalCount ?? 0;
-  const filteredCount = products.length;
-
   return (
     <div className="space-y-4">
       <Divider />
@@ -161,7 +158,7 @@ const CatalogBrowser = ({
               'Loading...'
             ) : (
               <>
-                Showing {filteredCount} of {totalCount} products
+                {products.length} product{products.length !== 1 ? 's' : ''} available
               </>
             )}
           </Typography>
