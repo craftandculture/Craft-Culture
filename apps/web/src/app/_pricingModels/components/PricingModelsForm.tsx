@@ -425,7 +425,7 @@ const PricingModelsForm = () => {
         {renderCellMappingFields(optionalCellMappingFields)}
       </div>
 
-      <Button type="submit" colorRole="brand" isDisabled={isSubmitting}>
+      <Button type="submit" isDisabled={isSubmitting} className="bg-[#bdece3] hover:bg-[#a8ddd3] text-gray-900">
         <ButtonContent iconLeft={IconPlus} isLoading={isSubmitting}>
           Create Pricing Model
         </ButtonContent>
