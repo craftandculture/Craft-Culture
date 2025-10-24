@@ -1,3 +1,10 @@
+## [1.14.1](https://github.com/craftandculture/Craft-Culture/compare/v1.14.0...v1.14.1) (2025-10-24)
+
+
+### Bug Fixes
+
+* align Price and Per Bottle headers to the right ([3d23e03](https://github.com/craftandculture/Craft-Culture/commit/3d23e03bfcb3189559a1659a1790042b597d9328))
+
 # [1.14.0](https://github.com/craftandculture/Craft-Culture/compare/v1.13.2...v1.14.0) (2025-10-24)
 
 
