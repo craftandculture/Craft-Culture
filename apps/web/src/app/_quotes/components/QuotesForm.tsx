@@ -319,21 +319,8 @@ const QuotesForm = () => {
 
   return (
     <div className="space-y-2">
-      {/* Currency Toggle and Download Button */}
-      <div className="flex items-center justify-between gap-4">
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={handleDownloadExcel}
-          isDisabled={!quoteData || lineItems.length === 0}
-        >
-          <ButtonContent iconLeft={IconDownload}>
-            <span className="hidden sm:inline">Download Excel</span>
-            <span className="sm:hidden">Export</span>
-          </ButtonContent>
-        </Button>
-
+      {/* Currency Toggle */}
+      <div className="flex justify-end">
         <div className="flex items-center gap-2">
           <Typography variant="bodyXs" className="text-text-muted font-medium">
             Currency:
@@ -542,6 +529,30 @@ const QuotesForm = () => {
                   : '—'}
               </Typography>
             )}
+          </div>
+          <Divider />
+          {/* Download Excel Section */}
+          <div className="flex flex-col items-center gap-3 px-2 pt-4">
+            <Typography
+              variant="bodySm"
+              className="text-text-muted text-center"
+            >
+              Download this quote as an Excel spreadsheet for easy sharing and
+              record keeping
+            </Typography>
+            <Button
+              type="button"
+              variant="default"
+              colorRole="brand"
+              size="md"
+              onClick={handleDownloadExcel}
+              isDisabled={!quoteData || lineItems.length === 0}
+              className="w-full sm:w-auto"
+            >
+              <ButtonContent iconLeft={IconDownload}>
+                Download Quote as Excel
+              </ButtonContent>
+            </Button>
           </div>
         </>
       )}
