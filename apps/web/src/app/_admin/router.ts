@@ -1,11 +1,11 @@
-import { router } from '@/lib/trpc';
 import { adminProcedure } from '@/lib/trpc/procedures';
+import { createTRPCRouter } from '@/lib/trpc/trpc';
 
 import activityLogsGetManyController from './controllers/activityLogsGetMany';
 import activityLogsGetManyInputSchema from './schemas/activityLogsGetManyInputSchema';
 
-const adminRouter = router({
-  activityLogs: router({
+const adminRouter = createTRPCRouter({
+  activityLogs: createTRPCRouter({
     getMany: adminProcedure
       .input(activityLogsGetManyInputSchema)
       .query(async ({ input }) => {
