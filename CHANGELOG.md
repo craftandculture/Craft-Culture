@@ -1,3 +1,10 @@
+# [1.30.0](https://github.com/craftandculture/Craft-Culture/compare/v1.29.0...v1.30.0) (2025-10-24)
+
+
+### Features
+
+* add Activity Log page for admin users ([592ce38](https://github.com/craftandculture/Craft-Culture/commit/592ce3877a8a9af90373ee75da0f04a79a77a7d3))
+
 # [1.29.0](https://github.com/craftandculture/Craft-Culture/compare/v1.28.2...v1.29.0) (2025-10-24)
 
 
