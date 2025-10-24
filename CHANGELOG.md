@@ -1,3 +1,10 @@
+# [1.15.0](https://github.com/craftandculture/Craft-Culture/compare/v1.14.1...v1.15.0) (2025-10-24)
+
+
+### Features
+
+* add Download Inventory List functionality ([2284348](https://github.com/craftandculture/Craft-Culture/commit/2284348fb0ad12b21c851b36ba452990ca6abe1d))
+
 ## [1.14.1](https://github.com/craftandculture/Craft-Culture/compare/v1.14.0...v1.14.1) (2025-10-24)
 
 
