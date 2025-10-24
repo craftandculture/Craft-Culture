@@ -5,7 +5,6 @@ import QuotesForm from '@/app/_quotes/components/QuotesForm';
 import quotesSearchParams from '@/app/_quotes/search-params/filtersSearchParams';
 import Card from '@/app/_ui/components/Card/Card';
 import CardContent from '@/app/_ui/components/Card/CardContent';
-import CardDescription from '@/app/_ui/components/Card/CardDescription';
 import CardProse from '@/app/_ui/components/Card/CardProse';
 import CardTitle from '@/app/_ui/components/Card/CardTitle';
 import getQueryClient from '@/lib/react-query';
@@ -48,9 +47,6 @@ const QuotesPage = async ({
             <div className="flex items-start justify-between gap-4">
               <CardProse>
                 <CardTitle>Fine Wine Quotation Tool</CardTitle>
-                <CardDescription colorRole="muted">
-                  Please select references to generate a quotation
-                </CardDescription>
               </CardProse>
             </div>
             <QuotesForm />
