@@ -11,7 +11,7 @@ const Footer = () => {
         <div className="grid gap-8 md:grid-cols-3">
           {/* Company Info */}
           <div className="space-y-3">
-            <Typography variant="h6" className="font-semibold">
+            <Typography variant="headingSm" className="font-semibold">
               Craft & Culture
             </Typography>
             <Typography variant="bodySm" colorRole="muted">
@@ -22,7 +22,7 @@ const Footer = () => {
 
           {/* Quick Links */}
           <div className="space-y-3">
-            <Typography variant="h6" className="font-semibold">
+            <Typography variant="headingSm" className="font-semibold">
               Quick Links
             </Typography>
             <nav className="flex flex-col space-y-2">
@@ -53,7 +53,7 @@ const Footer = () => {
 
           {/* Legal & Support */}
           <div className="space-y-3">
-            <Typography variant="h6" className="font-semibold">
+            <Typography variant="headingSm" className="font-semibold">
               Support
             </Typography>
             <nav className="flex flex-col space-y-2">
