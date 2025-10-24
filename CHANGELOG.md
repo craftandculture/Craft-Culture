@@ -1,3 +1,10 @@
+# [1.22.0](https://github.com/craftandculture/Craft-Culture/compare/v1.21.0...v1.22.0) (2025-10-24)
+
+
+### Features
+
+* add catalog browser section with infinite scroll ([624d2c0](https://github.com/craftandculture/Craft-Culture/commit/624d2c024d7828519b1ce0e96275b879d13eb7e4))
+
 # [1.21.0](https://github.com/craftandculture/Craft-Culture/compare/v1.20.0...v1.21.0) (2025-10-24)
 
 
