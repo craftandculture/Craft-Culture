@@ -113,7 +113,7 @@ const ProductCard = ({
           type="button"
           size="sm"
           onClick={() => onAdd(product)}
-          isLoading={isAdding}
+          isDisabled={isAdding}
           className="mt-2 w-full"
         >
           <ButtonContent iconLeft={IconPlus}>Add to Quote</ButtonContent>
