@@ -366,7 +366,7 @@ const QuotesForm = () => {
   };
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4 md:space-y-5">
       {/* Product Filters */}
       {filterOptions && (
         <ProductFilters

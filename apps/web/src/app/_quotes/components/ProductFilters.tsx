@@ -162,7 +162,7 @@ const ProductFilters = ({
             : 'max-h-0 opacity-0'
         }`}
       >
-        <div className="grid gap-4 rounded-lg border border-border-muted bg-surface-muted p-4 sm:p-6 md:grid-cols-3">
+        <div className="grid gap-4 rounded-lg border border-border-muted bg-surface-muted p-3 sm:p-4 md:grid-cols-3 md:p-6">
           {/* Region Filter */}
           <div className="space-y-3">
             <Typography

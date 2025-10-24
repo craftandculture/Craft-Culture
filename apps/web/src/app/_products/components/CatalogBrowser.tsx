@@ -117,11 +117,11 @@ const CatalogBrowser = ({
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 md:space-y-5">
       <Divider />
 
       {/* Header */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
         <div>
           <Typography variant="bodyLg" className="font-semibold">
             Browse Full Inventory
@@ -180,10 +180,10 @@ const CatalogBrowser = ({
       {/* Product Grid */}
       <div
         ref={gridRef}
-        className="max-h-[800px] overflow-y-auto rounded-lg border border-border-muted bg-background-primary p-4"
+        className="max-h-[600px] overflow-y-auto rounded-lg border border-border-muted bg-background-primary p-3 md:max-h-[800px] md:p-4"
       >
         {isLoading ? (
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+          <div className="grid grid-cols-1 gap-3 min-[480px]:grid-cols-2 sm:grid-cols-3 md:grid-cols-4 md:gap-4 lg:grid-cols-5 xl:grid-cols-6">
             {Array.from({ length: 12 }).map((_, i) => (
               <div key={i} className="space-y-3">
                 <Skeleton className="aspect-square w-full" />
@@ -203,7 +203,7 @@ const CatalogBrowser = ({
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+            <div className="grid grid-cols-1 gap-3 min-[480px]:grid-cols-2 sm:grid-cols-3 md:grid-cols-4 md:gap-4 lg:grid-cols-5 xl:grid-cols-6">
               {products.map((product) => (
                 <ProductCard
                   key={product.id}
@@ -217,7 +217,7 @@ const CatalogBrowser = ({
 
             {/* Loading More Indicator */}
             {isFetchingNextPage && (
-              <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+              <div className="mt-3 grid grid-cols-1 gap-3 min-[480px]:grid-cols-2 sm:grid-cols-3 md:grid-cols-4 md:mt-4 md:gap-4 lg:grid-cols-5 xl:grid-cols-6">
                 {Array.from({ length: 6 }).map((_, i) => (
                   <div key={i} className="space-y-3">
                     <Skeleton className="aspect-square w-full" />
