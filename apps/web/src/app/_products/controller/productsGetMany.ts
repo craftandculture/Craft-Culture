@@ -150,6 +150,16 @@ const productsGetMany = protectedProcedure
       regions: z.array(z.string()).optional(),
       producers: z.array(z.string()).optional(),
       vintages: z.array(z.number()).optional(),
+      sortBy: z
+        .enum([
+          'name-asc',
+          'name-desc',
+          'price-asc',
+          'price-desc',
+          'vintage-asc',
+          'vintage-desc',
+        ])
+        .optional(),
     }),
   )
   .query(
@@ -163,6 +173,7 @@ const productsGetMany = protectedProcedure
         regions,
         producers,
         vintages,
+        sortBy,
       },
     }) => {
       const preparedSearch =
@@ -170,49 +181,73 @@ const productsGetMany = protectedProcedure
           ? prepareSearch(search)
           : undefined;
 
-      const productsResult = await db.query.products.findMany({
-        where: {
-          ...(productIds ? { id: { in: productIds } } : {}),
-          ...(omitProductIds && omitProductIds.length > 0
-            ? { id: { notIn: omitProductIds } }
-            : {}),
-          ...(regions && regions.length > 0
-            ? { region: { in: regions } }
-            : {}),
-          ...(producers && producers.length > 0
-            ? { producer: { in: producers } }
-            : {}),
-          ...(vintages && vintages.length > 0
-            ? { year: { in: vintages } }
-            : {}),
-          ...(preparedSearch
-            ? {
-                RAW: (table) =>
-                  createSearchExpressions(table, preparedSearch).filter,
-              }
-            : {}),
-        },
-        with: {
-          productOffers: {
-            orderBy: {
-              price: 'asc',
+      const whereConditions = {
+        ...(productIds ? { id: { in: productIds } } : {}),
+        ...(omitProductIds && omitProductIds.length > 0
+          ? { id: { notIn: omitProductIds } }
+          : {}),
+        ...(regions && regions.length > 0 ? { region: { in: regions } } : {}),
+        ...(producers && producers.length > 0
+          ? { producer: { in: producers } }
+          : {}),
+        ...(vintages && vintages.length > 0 ? { year: { in: vintages } } : {}),
+        ...(preparedSearch
+          ? {
+              RAW: (table) =>
+                createSearchExpressions(table, preparedSearch).filter,
+            }
+          : {}),
+      };
+
+      const [productsResult, countResult] = await Promise.all([
+        db.query.products.findMany({
+          where: whereConditions,
+          with: {
+            productOffers: {
+              orderBy: {
+                price: 'asc',
+              },
+              limit: 1,
             },
-            limit: 1,
           },
-        },
-        limit: limit + 1,
-        offset: cursor,
-        orderBy: (table, { desc, asc }) => {
-          const baseOrder = [asc(table.name), desc(table.year), desc(table.id)];
+          limit: limit + 1,
+          offset: cursor,
+          orderBy: (table, { desc, asc }) => {
+            // If search is active, prioritize search score
+            if (preparedSearch) {
+              const expressions = createSearchExpressions(table, preparedSearch);
+              return [
+                desc(expressions.score),
+                asc(table.name),
+                desc(table.year),
+                desc(table.id),
+              ];
+            }
 
-          if (!preparedSearch) {
-            return baseOrder;
-          }
-
-          const expressions = createSearchExpressions(table, preparedSearch);
-          return [desc(expressions.score), ...baseOrder];
-        },
-      });
+            // Handle sorting based on sortBy parameter
+            switch (sortBy) {
+              case 'name-desc':
+                return [desc(table.name), desc(table.year), desc(table.id)];
+              case 'vintage-asc':
+                return [asc(table.year), asc(table.name), desc(table.id)];
+              case 'vintage-desc':
+                return [desc(table.year), asc(table.name), desc(table.id)];
+              // Price sorting will be handled client-side after fetch
+              case 'price-asc':
+              case 'price-desc':
+              case 'name-asc':
+              default:
+                return [asc(table.name), desc(table.year), desc(table.id)];
+            }
+          },
+        }),
+        db.query.products.findMany({
+          where: whereConditions,
+          columns: {
+            id: true,
+          },
+        }),
+      ]);
 
       const nextCursor =
         productsResult.length > limit ? cursor + limit : undefined;
@@ -221,6 +256,7 @@ const productsGetMany = protectedProcedure
         data: productsResult.slice(0, limit),
         meta: {
           nextCursor,
+          totalCount: countResult.length,
         },
       };
     },
