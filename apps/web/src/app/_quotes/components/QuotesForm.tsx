@@ -588,20 +588,8 @@ const QuotesForm = () => {
                 </Typography>
               )}
             </div>
-            {/* Download Buttons */}
-            <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={handleDownloadInventory}
-                isDisabled={isLoadingInventory || !allProductsData || allProductsData.data.length === 0}
-                className="w-full sm:w-auto"
-              >
-                <ButtonContent iconLeft={IconDownload}>
-                  <span className="text-xs">Download Full Inventory</span>
-                </ButtonContent>
-              </Button>
+            {/* Download Button */}
+            <div className="flex justify-end">
               <Button
                 type="button"
                 variant="default"
@@ -661,6 +649,8 @@ const QuotesForm = () => {
         }}
         displayCurrency={displayCurrency}
         omitProductIds={urlLineItems.map((item) => item.productId)}
+        onDownloadInventory={handleDownloadInventory}
+        isDownloadingInventory={isLoadingInventory}
       />
     </div>
   );
