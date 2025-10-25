@@ -5,8 +5,6 @@ import QuotesForm from '@/app/_quotes/components/QuotesForm';
 import quotesSearchParams from '@/app/_quotes/search-params/filtersSearchParams';
 import Card from '@/app/_ui/components/Card/Card';
 import CardContent from '@/app/_ui/components/Card/CardContent';
-import CardProse from '@/app/_ui/components/Card/CardProse';
-import CardTitle from '@/app/_ui/components/Card/CardTitle';
 import getQueryClient from '@/lib/react-query';
 import api from '@/lib/trpc/server';
 
@@ -44,11 +42,6 @@ const QuotesPage = async ({
       <main className="container py-4 landscape:py-2 md:py-16">
         <Card className="w-full">
           <CardContent>
-            <div className="flex items-start justify-between gap-4">
-              <CardProse>
-                <CardTitle>Fine Wine Quotation Tool</CardTitle>
-              </CardProse>
-            </div>
             <QuotesForm />
           </CardContent>
         </Card>
