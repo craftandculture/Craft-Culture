@@ -39,7 +39,7 @@ const ProductCard = ({
 
   return (
     <ProductDetailsTooltip product={product}>
-      <Card className="group relative flex h-full flex-col overflow-hidden transition-shadow hover:shadow-md">
+      <Card className="group relative flex h-full flex-col overflow-hidden shadow-sm transition-shadow hover:shadow-lg">
         {/* Product Image */}
         <div className="bg-surface-muted relative aspect-square w-full overflow-hidden">
         {product.imageUrl ? (
