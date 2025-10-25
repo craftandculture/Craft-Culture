@@ -1,6 +1,6 @@
 'use client';
 
-import { IconDownload, IconInfoCircle, IconPlus } from '@tabler/icons-react';
+import { IconDownload, IconPlus } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import { parseAsArrayOf, parseAsJson, useQueryState } from 'nuqs';
 import React, { useEffect, useMemo, useState } from 'react';
@@ -10,7 +10,6 @@ import { Product } from '@/app/_products/controller/productsGetMany';
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
 import Divider from '@/app/_ui/components/Divider/Divider';
-import Icon from '@/app/_ui/components/Icon/Icon';
 import LiveStatus from '@/app/_ui/components/LiveStatus/LiveStatus';
 import Skeleton from '@/app/_ui/components/Skeleton/Skeleton';
 import Tooltip from '@/app/_ui/components/Tooltip/Tooltip';
@@ -23,6 +22,7 @@ import convertUsdToAed from '@/utils/convertUsdToAed';
 import formatPrice from '@/utils/formatPrice';
 
 import LineItemRow from './LineItemRow';
+import PriceInfoTooltip from './PriceInfoTooltip';
 import ProductFilters from './ProductFilters';
 import exportInventoryToExcel from '../utils/exportInventoryToExcel';
 import exportQuoteToExcel from '../utils/exportQuoteToExcel';
@@ -461,22 +461,7 @@ const QuotesForm = () => {
               >
                 Price
               </Typography>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <span className="inline-flex">
-                      <Icon
-                        icon={IconInfoCircle}
-                        size="sm"
-                        colorRole="muted"
-                      />
-                    </span>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    {customerType === 'b2b' ? 'In-Bond UAE' : 'Client Price'}
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+              <PriceInfoTooltip customerType={customerType} />
             </div>
             <div className="col-span-1 flex items-center justify-end gap-1">
               <Typography
@@ -485,22 +470,7 @@ const QuotesForm = () => {
               >
                 Per Bottle
               </Typography>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <span className="inline-flex">
-                      <Icon
-                        icon={IconInfoCircle}
-                        size="sm"
-                        colorRole="muted"
-                      />
-                    </span>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    {customerType === 'b2b' ? 'In-Bond UAE' : 'Client Price'}
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+              <PriceInfoTooltip customerType={customerType} />
             </div>
             <div className="col-span-1" />
           </div>
@@ -658,11 +628,11 @@ const QuotesForm = () => {
       <section className="space-y-4 rounded-lg border border-border-muted bg-fill-secondary/30 p-4 md:p-6">
         {/* Section Header */}
         <div className="space-y-2">
-          <Typography variant="headingMd" className="font-semibold">
-            Browse Inventory
+          <Typography variant="headingLg" className="font-semibold">
+            Product Inventory
           </Typography>
           <Typography variant="bodySm" colorRole="muted">
-            Browse our full inventory and add products to your quote
+            View and select from our complete wine & spirits collection
           </Typography>
         </div>
 
