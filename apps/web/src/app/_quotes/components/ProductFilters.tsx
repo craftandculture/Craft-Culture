@@ -209,49 +209,64 @@ const ProductFilters = ({
     <div className="space-y-2">
       {/* Filter Header */}
       <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => setIsExpanded(!isExpanded)}
-            className="gap-2"
-          >
-            <Icon icon={IconFilter} size="sm" />
-            <span className="text-xs font-medium">Filters</span>
-            {activeFilterCount > 0 && (
-              <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-fill-accent px-1.5 text-xs font-semibold text-text-primary">
-                {activeFilterCount}
-              </span>
-            )}
-            <Icon
-              icon={IconChevronDown}
+        <div className="flex w-full items-center justify-between gap-2 sm:w-auto">
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
               size="sm"
-              className={`transition-transform duration-200 ${
-                isExpanded ? 'rotate-180' : ''
-              }`}
-            />
-          </Button>
+              onClick={() => setIsExpanded(!isExpanded)}
+              className="gap-2"
+            >
+              <Icon icon={IconFilter} size="sm" />
+              <span className="text-xs font-medium">Filters</span>
+              {activeFilterCount > 0 && (
+                <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-fill-accent px-1.5 text-xs font-semibold text-text-primary">
+                  {activeFilterCount}
+                </span>
+              )}
+              <Icon
+                icon={IconChevronDown}
+                size="sm"
+                className={`transition-transform duration-200 ${
+                  isExpanded ? 'rotate-180' : ''
+                }`}
+              />
+            </Button>
 
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button type="button" className="inline-flex cursor-help">
-                  <Icon
-                    icon={IconInfoCircle}
-                    size="sm"
-                    colorRole="muted"
-                    className="h-4 w-4"
-                  />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <Typography variant="bodyXs">
-                  Cascading filters: Select countries first to filter regions, producers & vintages
-                </Typography>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button type="button" className="inline-flex cursor-help">
+                    <Icon
+                      icon={IconInfoCircle}
+                      size="sm"
+                      colorRole="muted"
+                      className="h-4 w-4"
+                    />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <Typography variant="bodyXs">
+                    Cascading filters: Select countries first to filter regions, producers & vintages
+                  </Typography>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+
+          {hasActiveFilters && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={handleClearAll}
+              className="sm:hidden"
+            >
+              <Icon icon={IconX} size="sm" />
+              <span className="text-xs">Clear</span>
+            </Button>
+          )}
         </div>
 
         {hasActiveFilters && (
@@ -260,6 +275,7 @@ const ProductFilters = ({
             variant="ghost"
             size="sm"
             onClick={handleClearAll}
+            className="hidden sm:flex"
           >
             <Icon icon={IconX} size="sm" />
             <span className="text-xs">Clear</span>
@@ -271,11 +287,11 @@ const ProductFilters = ({
       <div
         className={`overflow-hidden transition-all duration-300 ease-in-out ${
           isExpanded
-            ? 'max-h-[500px] opacity-100'
+            ? 'max-h-[600px] opacity-100 md:max-h-[500px]'
             : 'max-h-0 opacity-0'
         }`}
       >
-        <div className="grid gap-2.5 rounded-lg border border-border-muted bg-background-primary p-2.5 shadow-sm sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid gap-3 rounded-lg border border-border-muted bg-background-primary p-3 shadow-sm sm:grid-cols-2 md:gap-2.5 md:p-2.5 xl:grid-cols-4">
           {/* Country Filter */}
           <div className="space-y-2">
             <div className="flex items-baseline justify-between">
@@ -309,7 +325,7 @@ const ProductFilters = ({
                 />
               </div>
             )}
-            <div className="max-h-[280px] space-y-0.5 overflow-y-auto rounded-md">
+            <div className="max-h-[200px] space-y-0.5 overflow-y-auto rounded-md md:max-h-[280px]">
               {filteredCountries.length === 0 ? (
                 <Typography variant="bodyXs" className="px-2 py-3 text-center text-text-muted">
                   {countrySearch.trim()
@@ -373,7 +389,7 @@ const ProductFilters = ({
                 />
               </div>
             )}
-            <div className="max-h-[280px] space-y-0.5 overflow-y-auto rounded-md">
+            <div className="max-h-[200px] space-y-0.5 overflow-y-auto rounded-md md:max-h-[280px]">
               {filteredRegions.length === 0 ? (
                 <Typography variant="bodyXs" className="px-2 py-3 text-center text-text-muted">
                   {regionSearch.trim()
@@ -437,7 +453,7 @@ const ProductFilters = ({
                 />
               </div>
             )}
-            <div className="max-h-[280px] space-y-0.5 overflow-y-auto rounded-md">
+            <div className="max-h-[200px] space-y-0.5 overflow-y-auto rounded-md md:max-h-[280px]">
               {filteredProducers.length === 0 ? (
                 <Typography variant="bodyXs" className="px-2 py-3 text-center text-text-muted">
                   {producerSearch.trim()
@@ -501,7 +517,7 @@ const ProductFilters = ({
                 />
               </div>
             )}
-            <div className="max-h-[280px] space-y-0.5 overflow-y-auto rounded-md">
+            <div className="max-h-[200px] space-y-0.5 overflow-y-auto rounded-md md:max-h-[280px]">
               {filteredVintages.length === 0 ? (
                 <Typography variant="bodyXs" className="px-2 py-3 text-center text-text-muted">
                   {vintageSearch.trim()

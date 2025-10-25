@@ -1,16 +1,33 @@
-import { sql } from 'drizzle-orm';
+import { and, inArray, sql } from 'drizzle-orm';
+import { z } from 'zod';
 
 import db from '@/database/client';
 import { products } from '@/database/schema';
 import { protectedProcedure } from '@/lib/trpc/procedures';
 
+const inputSchema = z.object({
+  countries: z.array(z.string()).optional(),
+  regions: z.array(z.string()).optional(),
+  producers: z.array(z.string()).optional(),
+});
+
 /**
  * Get distinct filter options for products with country associations
  *
+ * Accepts optional filter parameters to refine the results dynamically.
+ * When filters are provided, the vintages query will only return years
+ * associated with products matching those filters.
+ *
  * @example
- *   const filterOptions = await api.products.getFilterOptions.query();
+ *   const filterOptions = await api.products.getFilterOptions.query({
+ *     countries: ['France'],
+ *     regions: ['Bordeaux'],
+ *     producers: ['Château Margaux'],
+ *   });
  */
-const productsGetFilterOptions = protectedProcedure.query(async () => {
+const productsGetFilterOptions = protectedProcedure
+  .input(inputSchema)
+  .query(async ({ input }) => {
   // Get countries with counts
   const countriesResult = await db
     .select({
@@ -50,6 +67,21 @@ const productsGetFilterOptions = protectedProcedure.query(async () => {
     .orderBy(products.producer);
 
   // Get vintages with their associated countries and counts
+  // Apply filters to show only relevant vintages
+  const vintageConditions = [sql`${products.year} IS NOT NULL`];
+
+  if (input.countries && input.countries.length > 0) {
+    vintageConditions.push(inArray(products.country, input.countries));
+  }
+
+  if (input.regions && input.regions.length > 0) {
+    vintageConditions.push(inArray(products.region, input.regions));
+  }
+
+  if (input.producers && input.producers.length > 0) {
+    vintageConditions.push(inArray(products.producer, input.producers));
+  }
+
   const vintagesResult = await db
     .select({
       vintage: products.year,
@@ -57,7 +89,7 @@ const productsGetFilterOptions = protectedProcedure.query(async () => {
       count: sql<number>`COUNT(DISTINCT ${products.id})`,
     })
     .from(products)
-    .where(sql`${products.year} IS NOT NULL`)
+    .where(and(...vintageConditions))
     .groupBy(products.year, products.country)
     .orderBy(sql`${products.year} DESC`);
 
