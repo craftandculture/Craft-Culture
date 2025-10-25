@@ -6,11 +6,12 @@ import {
   IconTemperature,
   IconWind,
 } from '@tabler/icons-react';
+import { useQuery } from '@tanstack/react-query';
 import { useEffect } from 'react';
 
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Typography from '@/app/_ui/components/Typography/Typography';
-import { api } from '@/lib/trpc/browser';
+import useTRPC from '@/lib/trpc/browser';
 
 /**
  * Get icon for sensor type
@@ -68,17 +69,16 @@ const getSensorDisplayName = (sensorId: string, sensorType: string) => {
  *   <WarehouseDataFeed />
  */
 const WarehouseDataFeed = () => {
-  const { data, refetch } = api.warehouse.getLatestReadings.useQuery(
-    undefined,
-    {
-      refetchInterval: 5000, // Refresh every 5 seconds
-      refetchIntervalInBackground: true,
-    },
-  );
+  const api = useTRPC();
+  const { data, refetch } = useQuery({
+    ...api.warehouse.getLatestReadings.queryOptions(),
+    refetchInterval: 5000, // Refresh every 5 seconds
+    refetchIntervalInBackground: true,
+  });
 
   // Force refetch on mount
   useEffect(() => {
-    refetch();
+    void refetch();
   }, [refetch]);
 
   if (!data || data.readings.length === 0) {
