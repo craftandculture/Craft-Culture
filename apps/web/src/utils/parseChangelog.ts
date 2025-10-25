@@ -63,10 +63,10 @@ const parseChangelog = (): ChangelogVersion[] => {
 
     // Match list items: * description ([commit](url))
     if (line.startsWith('* ') && currentVersion) {
-      // Remove the markdown link part [commit](url)
+      // Remove the markdown link part ([commit](url))
       const description = line
         .substring(2)
-        .replace(/\s*\([a-f0-9]+\]\(.*?\)\s*$/, '')
+        .replace(/\s*\(\[[a-f0-9]+\]\(.*?\)\)\s*$/, '')
         .trim();
 
       if (description) {
