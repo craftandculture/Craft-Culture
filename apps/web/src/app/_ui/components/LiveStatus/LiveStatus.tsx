@@ -36,19 +36,11 @@ const LiveStatus = () => {
             </div>
 
             {/* Status text */}
-            <div className="flex items-center gap-1.5">
-              <Typography variant="bodyXs" colorRole="muted" className="font-medium">
-                DATABASE
+            {lastUpdate && (
+              <Typography variant="bodyXs" colorRole="muted">
+                Updated {formatDistanceToNow(new Date(lastUpdate), { addSuffix: true })}
               </Typography>
-              {lastUpdate && (
-                <>
-                  <span className="text-text-muted">•</span>
-                  <Typography variant="bodyXs" colorRole="muted">
-                    Updated {formatDistanceToNow(new Date(lastUpdate), { addSuffix: true })}
-                  </Typography>
-                </>
-              )}
-            </div>
+            )}
           </div>
         </TooltipTrigger>
         <TooltipContent>
