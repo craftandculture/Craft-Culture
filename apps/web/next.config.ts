@@ -32,6 +32,10 @@ const nextConfig: NextConfig = {
         protocol: 'https',
         hostname: 'cwcdst2prdctimgimprtfnct.blob.core.windows.net',
       } as const,
+      {
+        protocol: 'https',
+        hostname: 'craft-and-culture.gitbook.io',
+      } as const,
       ...(process.env.NODE_ENV === 'development'
         ? [
             {
