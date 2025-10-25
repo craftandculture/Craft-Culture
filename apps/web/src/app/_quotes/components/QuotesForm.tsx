@@ -638,6 +638,16 @@ const QuotesForm = () => {
           </Typography>
         </div>
 
+        {/* Product Filters - Duplicate for catalog browsing */}
+        {filterOptions && (
+          <ProductFilters
+            countriesWithCounts={filterOptions.countriesWithCounts}
+            regionsByCountryWithCounts={filterOptions.regionsByCountryWithCounts}
+            producersByCountryWithCounts={filterOptions.producersByCountryWithCounts}
+            vintagesByCountryWithCounts={filterOptions.vintagesByCountryWithCounts}
+          />
+        )}
+
         {/* Catalog Browser */}
         <CatalogBrowser
         onAddProduct={(product) => {
