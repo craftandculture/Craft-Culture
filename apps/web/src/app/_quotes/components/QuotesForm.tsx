@@ -21,6 +21,7 @@ import useTRPC from '@/lib/trpc/browser';
 import convertUsdToAed from '@/utils/convertUsdToAed';
 import formatPrice from '@/utils/formatPrice';
 
+import FloatingFilterButton from './FloatingFilterButton';
 import LineItemRow from './LineItemRow';
 import PriceInfoTooltip from './PriceInfoTooltip';
 import ProductFilters from './ProductFilters';
@@ -683,6 +684,9 @@ const QuotesForm = () => {
         isDownloadingInventory={isLoadingInventory}
       />
       </section>
+
+      {/* Floating Filter Button */}
+      {filterOptions && <FloatingFilterButton filterOptions={filterOptions} />}
     </div>
   );
 };
