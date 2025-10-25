@@ -66,6 +66,7 @@ const QuotesForm = () => {
   const [filterState] = useQueryStates(quotesSearchParams, {
     shallow: true,
     scroll: false,
+    history: 'replace',
   });
 
   // Fetch filter options for dropdowns, passing current filters to refine vintages
