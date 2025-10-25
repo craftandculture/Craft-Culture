@@ -15,28 +15,28 @@ import Typography from '@/app/_ui/components/Typography/Typography';
 import quotesSearchParams from '../search-params/filtersSearchParams';
 
 interface ProductFiltersProps {
-  availableCountries: string[];
-  regionsByCountry: Record<string, string[]>;
-  producersByCountry: Record<string, string[]>;
-  vintagesByCountry: Record<string, number[]>;
+  countriesWithCounts: Array<{ value: string; count: number }>;
+  regionsByCountryWithCounts: Record<string, Array<{ value: string; count: number }>>;
+  producersByCountryWithCounts: Record<string, Array<{ value: string; count: number }>>;
+  vintagesByCountryWithCounts: Record<string, Array<{ value: number; count: number }>>;
 }
 
 /**
- * Product filtering component for quotes page with cascading filters
+ * Product filtering component for quotes page with cascading filters and item counts
  *
  * @example
  *   <ProductFilters
- *     availableCountries={['France', 'Italy']}
- *     regionsByCountry={{ France: ['Bordeaux', 'Champagne'], Italy: ['Tuscany'] }}
- *     producersByCountry={{ France: ['Dom Perignon'], Italy: ['Antinori'] }}
- *     vintagesByCountry={{ France: [2015, 2016], Italy: [2017] }}
+ *     countriesWithCounts={[{ value: 'France', count: 100 }]}
+ *     regionsByCountryWithCounts={{ France: [{ value: 'Bordeaux', count: 50 }] }}
+ *     producersByCountryWithCounts={{ France: [{ value: 'Château', count: 25 }] }}
+ *     vintagesByCountryWithCounts={{ France: [{ value: 2015, count: 10 }] }}
  *   />
  */
 const ProductFilters = ({
-  availableCountries,
-  regionsByCountry,
-  producersByCountry,
-  vintagesByCountry,
+  countriesWithCounts,
+  regionsByCountryWithCounts,
+  producersByCountryWithCounts,
+  vintagesByCountryWithCounts,
 }: ProductFiltersProps) => {
   const [filters, setFilters] = useQueryStates(quotesSearchParams, {
     shallow: false,
@@ -69,9 +69,9 @@ const ProductFilters = ({
 
     // When removing a country, also remove regions/producers/vintages from that country
     if (isRemoving) {
-      const countryRegions = regionsByCountry[country] ?? [];
-      const countryProducers = producersByCountry[country] ?? [];
-      const countryVintages = vintagesByCountry[country] ?? [];
+      const countryRegions = (regionsByCountryWithCounts[country] ?? []).map((r) => r.value);
+      const countryProducers = (producersByCountryWithCounts[country] ?? []).map((p) => p.value);
+      const countryVintages = (vintagesByCountryWithCounts[country] ?? []).map((v) => v.value);
 
       void setFilters({
         countries: newCountries,
@@ -117,66 +117,66 @@ const ProductFilters = ({
     });
   };
 
-  // Filtered lists based on search
+  // Filtered lists based on search with counts
   const filteredCountries = useMemo(() => {
-    if (!countrySearch.trim()) return availableCountries;
+    if (!countrySearch.trim()) return countriesWithCounts;
     const search = countrySearch.toLowerCase();
-    return availableCountries.filter((country) =>
-      country.toLowerCase().includes(search),
+    return countriesWithCounts.filter(({ value }) =>
+      value.toLowerCase().includes(search),
     );
-  }, [availableCountries, countrySearch]);
+  }, [countriesWithCounts, countrySearch]);
 
-  // Get available regions based on selected countries (cascading filter)
+  // Get available regions based on selected countries (cascading filter) with counts
   const availableRegions = useMemo(() => {
     if (filters.countries.length === 0) {
       // No countries selected - show all regions
-      return Object.values(regionsByCountry).flat();
+      return Object.values(regionsByCountryWithCounts).flat();
     }
     // Show only regions from selected countries
-    return filters.countries.flatMap((country) => regionsByCountry[country] ?? []);
-  }, [filters.countries, regionsByCountry]);
+    return filters.countries.flatMap((country) => regionsByCountryWithCounts[country] ?? []);
+  }, [filters.countries, regionsByCountryWithCounts]);
 
   const filteredRegions = useMemo(() => {
     if (!regionSearch.trim()) return availableRegions;
     const search = regionSearch.toLowerCase();
-    return availableRegions.filter((region) =>
-      region.toLowerCase().includes(search),
+    return availableRegions.filter(({ value }) =>
+      value.toLowerCase().includes(search),
     );
   }, [availableRegions, regionSearch]);
 
-  // Get available producers based on selected countries (cascading filter)
+  // Get available producers based on selected countries (cascading filter) with counts
   const availableProducers = useMemo(() => {
     if (filters.countries.length === 0) {
       // No countries selected - show all producers
-      return Object.values(producersByCountry).flat();
+      return Object.values(producersByCountryWithCounts).flat();
     }
     // Show only producers from selected countries
-    return filters.countries.flatMap((country) => producersByCountry[country] ?? []);
-  }, [filters.countries, producersByCountry]);
+    return filters.countries.flatMap((country) => producersByCountryWithCounts[country] ?? []);
+  }, [filters.countries, producersByCountryWithCounts]);
 
   const filteredProducers = useMemo(() => {
     if (!producerSearch.trim()) return availableProducers;
     const search = producerSearch.toLowerCase();
-    return availableProducers.filter((producer) =>
-      producer.toLowerCase().includes(search),
+    return availableProducers.filter(({ value }) =>
+      value.toLowerCase().includes(search),
     );
   }, [availableProducers, producerSearch]);
 
-  // Get available vintages based on selected countries (cascading filter)
+  // Get available vintages based on selected countries (cascading filter) with counts
   const availableVintages = useMemo(() => {
     if (filters.countries.length === 0) {
       // No countries selected - show all vintages
-      return Object.values(vintagesByCountry).flat();
+      return Object.values(vintagesByCountryWithCounts).flat();
     }
     // Show only vintages from selected countries
-    return filters.countries.flatMap((country) => vintagesByCountry[country] ?? []);
-  }, [filters.countries, vintagesByCountry]);
+    return filters.countries.flatMap((country) => vintagesByCountryWithCounts[country] ?? []);
+  }, [filters.countries, vintagesByCountryWithCounts]);
 
   const filteredVintages = useMemo(() => {
     if (!vintageSearch.trim()) return availableVintages;
     const search = vintageSearch.toLowerCase();
-    return availableVintages.filter((vintage) =>
-      (vintage === 0 ? 'nv' : vintage.toString()).includes(search),
+    return availableVintages.filter(({ value }) =>
+      (value === 0 ? 'nv' : value.toString()).includes(search),
     );
   }, [availableVintages, vintageSearch]);
 
@@ -292,7 +292,7 @@ const ProductFilters = ({
                     : 'None available'}
                 </Typography>
               ) : (
-                filteredCountries.map((country) => (
+                filteredCountries.map(({ value: country, count }) => (
                   <label
                     key={country}
                     className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 transition-colors hover:bg-fill-muted"
@@ -305,6 +305,9 @@ const ProductFilters = ({
                     />
                     <Typography variant="bodyXs" className="flex-1">
                       {country}
+                    </Typography>
+                    <Typography variant="bodyXs" className="text-text-muted">
+                      ({count})
                     </Typography>
                   </label>
                 ))
@@ -353,7 +356,7 @@ const ProductFilters = ({
                     : 'None available'}
                 </Typography>
               ) : (
-                filteredRegions.map((region) => (
+                filteredRegions.map(({ value: region, count }) => (
                   <label
                     key={region}
                     className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 transition-colors hover:bg-fill-muted"
@@ -366,6 +369,9 @@ const ProductFilters = ({
                     />
                     <Typography variant="bodyXs" className="flex-1">
                       {region}
+                    </Typography>
+                    <Typography variant="bodyXs" className="text-text-muted">
+                      ({count})
                     </Typography>
                   </label>
                 ))
@@ -414,7 +420,7 @@ const ProductFilters = ({
                     : 'None available'}
                 </Typography>
               ) : (
-                filteredProducers.map((producer) => (
+                filteredProducers.map(({ value: producer, count }) => (
                   <label
                     key={producer}
                     className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 transition-colors hover:bg-fill-muted"
@@ -427,6 +433,9 @@ const ProductFilters = ({
                     />
                     <Typography variant="bodyXs" className="flex-1">
                       {producer}
+                    </Typography>
+                    <Typography variant="bodyXs" className="text-text-muted">
+                      ({count})
                     </Typography>
                   </label>
                 ))
@@ -475,7 +484,7 @@ const ProductFilters = ({
                     : 'None available'}
                 </Typography>
               ) : (
-                filteredVintages.map((vintage) => (
+                filteredVintages.map(({ value: vintage, count }) => (
                   <label
                     key={vintage}
                     className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 transition-colors hover:bg-fill-muted"
@@ -488,6 +497,9 @@ const ProductFilters = ({
                     />
                     <Typography variant="bodyXs" className="flex-1">
                       {vintage === 0 ? 'NV' : vintage}
+                    </Typography>
+                    <Typography variant="bodyXs" className="text-text-muted">
+                      ({count})
                     </Typography>
                   </label>
                 ))
