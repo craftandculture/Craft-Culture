@@ -79,9 +79,17 @@ const Footer = () => {
 
         {/* Bottom Bar */}
         <div className="border-border-primary mt-6 border-t pt-4 md:mt-8 md:pt-6">
-          <p className="text-text-muted text-center text-xs">
-            © {currentYear} Craft & Culture. All rights reserved.
-          </p>
+          <div className="flex flex-col items-center justify-center gap-2 sm:flex-row sm:justify-between">
+            <p className="text-text-muted text-center text-xs">
+              © {currentYear} Craft & Culture. All rights reserved.
+            </p>
+            <Link
+              href="/platform/development-log"
+              className="text-text-muted hover:text-text-primary text-xs font-light transition-colors"
+            >
+              v1.31.2
+            </Link>
+          </div>
         </div>
       </div>
     </footer>
