@@ -342,7 +342,10 @@ const ProductFilters = ({
                     <input
                       type="checkbox"
                       checked={filters.countries.includes(country)}
-                      onChange={() => handleCountryToggle(country)}
+                      onChange={(e) => {
+                        e.stopPropagation();
+                        handleCountryToggle(country);
+                      }}
                       className="size-4 rounded border-border-muted text-fill-accent transition-colors focus:ring-1 focus:ring-fill-accent focus:ring-offset-1 md:size-3.5"
                     />
                     <Typography variant="bodyXs" className="flex-1">
@@ -407,7 +410,10 @@ const ProductFilters = ({
                     <input
                       type="checkbox"
                       checked={filters.regions.includes(region)}
-                      onChange={() => handleRegionToggle(region)}
+                      onChange={(e) => {
+                        e.stopPropagation();
+                        handleRegionToggle(region);
+                      }}
                       className="size-4 rounded border-border-muted text-fill-accent transition-colors focus:ring-1 focus:ring-fill-accent focus:ring-offset-1 md:size-3.5"
                     />
                     <Typography variant="bodyXs" className="flex-1">
@@ -472,7 +478,10 @@ const ProductFilters = ({
                     <input
                       type="checkbox"
                       checked={filters.producers.includes(producer)}
-                      onChange={() => handleProducerToggle(producer)}
+                      onChange={(e) => {
+                        e.stopPropagation();
+                        handleProducerToggle(producer);
+                      }}
                       className="size-4 rounded border-border-muted text-fill-accent transition-colors focus:ring-1 focus:ring-fill-accent focus:ring-offset-1 md:size-3.5"
                     />
                     <Typography variant="bodyXs" className="flex-1">
@@ -537,7 +546,10 @@ const ProductFilters = ({
                     <input
                       type="checkbox"
                       checked={filters.vintages.includes(vintage)}
-                      onChange={() => handleVintageToggle(vintage)}
+                      onChange={(e) => {
+                        e.stopPropagation();
+                        handleVintageToggle(vintage);
+                      }}
                       disabled={isLoadingVintages}
                       className="size-4 rounded border-border-muted text-fill-accent transition-colors focus:ring-1 focus:ring-fill-accent focus:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50 md:size-3.5"
                     />
