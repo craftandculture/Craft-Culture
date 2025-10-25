@@ -11,6 +11,7 @@ import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
 import Divider from '@/app/_ui/components/Divider/Divider';
 import Icon from '@/app/_ui/components/Icon/Icon';
+import LiveStatus from '@/app/_ui/components/LiveStatus/LiveStatus';
 import Skeleton from '@/app/_ui/components/Skeleton/Skeleton';
 import Tooltip from '@/app/_ui/components/Tooltip/Tooltip';
 import TooltipContent from '@/app/_ui/components/Tooltip/TooltipContent';
@@ -371,9 +372,12 @@ const QuotesForm = () => {
       <section className="space-y-4 md:space-y-5">
         {/* Section Header */}
         <div className="space-y-2">
-          <Typography variant="headingLg" className="font-semibold">
-            Quote Builder
-          </Typography>
+          <div className="flex items-center justify-between">
+            <Typography variant="headingLg" className="font-semibold">
+              Quote Builder
+            </Typography>
+            <LiveStatus />
+          </div>
           <Typography variant="bodySm" colorRole="muted">
             Select products and quantities to generate your custom quote
           </Typography>
