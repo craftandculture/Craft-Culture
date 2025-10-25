@@ -1,10 +1,7 @@
 import Link from 'next/link';
 
-import getAppVersion from '@/utils/getAppVersion';
-
 const Footer = () => {
   const currentYear = new Date().getFullYear();
-  const version = getAppVersion();
 
   return (
     <footer className="border-border-primary mt-auto border-t bg-fill-secondary/30">
@@ -65,12 +62,10 @@ const Footer = () => {
                 Support
               </Link>
               <Link
-                href="https://craftculture.xyz/privacy"
-                target="_blank"
-                rel="noopener noreferrer"
+                href="/platform/development-log"
                 className="text-text-muted hover:text-text-primary text-xs transition-colors"
               >
-                Privacy Policy
+                Development Log
               </Link>
               <Link
                 href="https://craftculture.xyz/terms"
@@ -85,18 +80,10 @@ const Footer = () => {
         </div>
 
         {/* Bottom Bar */}
-        <div className="border-border-primary mt-6 flex flex-col items-center justify-between gap-3 border-t pt-4 sm:flex-row md:mt-8 md:pt-6">
-          <p className="text-text-muted text-xs">
+        <div className="border-border-primary mt-6 border-t pt-4 md:mt-8 md:pt-6">
+          <p className="text-text-muted text-center text-xs">
             © {currentYear} Craft & Culture. All rights reserved.
           </p>
-          <Link
-            href="https://github.com/craftandculture/Craft-Culture/releases"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-text-tertiary hover:text-text-secondary font-mono text-xs transition-colors"
-          >
-            v{version}
-          </Link>
         </div>
       </div>
     </footer>
