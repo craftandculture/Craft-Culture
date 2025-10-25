@@ -1,7 +1,5 @@
 'use client';
 
-import { format } from 'date-fns';
-
 import type { Product } from '@/app/_products/controller/productsGetMany';
 import Tooltip from '@/app/_ui/components/Tooltip/Tooltip';
 import TooltipContent from '@/app/_ui/components/Tooltip/TooltipContent';
@@ -128,7 +126,7 @@ const ProductDetailsTooltip = ({
                       </TooltipTrigger>
                       <TooltipContent>
                         <Typography variant="bodyXs">
-                          Last updated: {product.updatedAt ? format(new Date(product.updatedAt), 'MMM d, yyyy HH:mm') : 'Unknown'}
+                          Inventory synced daily from CultX
                         </Typography>
                       </TooltipContent>
                     </Tooltip>
