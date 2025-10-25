@@ -33,15 +33,19 @@ const SupportPage = () => {
                 </Typography>
               </div>
               <Typography variant="bodyMd" colorRole="muted" className="mb-4 leading-relaxed">
-                All products in our catalog are sourced through Craft & Culture&apos;s extensive
-                network of trusted partners across global wine and spirits markets. We work directly
-                with producers, importers, and distributors to ensure authentic, high-quality
-                products for the GCC region.
+                All products in our catalogue are sourced through Craft & Culture&apos;s extensive
+                global network of trusted partners across the wine and spirits industry.
+              </Typography>
+              <Typography variant="bodyMd" colorRole="muted" className="mb-4 leading-relaxed">
+                We work directly with brands and producers to secure authentic, high-quality
+                products tailored for the GCC region. Every item we handle undergoes a rigorous
+                sourcing and verification process — including provenance checks, quality assurance,
+                and full compliance with regional import and distribution regulations.
               </Typography>
               <Typography variant="bodyMd" colorRole="muted" className="leading-relaxed">
-                Our sourcing process includes rigorous quality checks, authenticity verification,
-                and compliance with all relevant regulations for import and distribution in UAE and
-                broader GCC markets.
+                This approach ensures not only the integrity and traceability of every bottle but
+                also delivers the consistency and confidence our partners expect when operating in
+                tightly regulated markets such as the UAE and wider Gulf region.
               </Typography>
             </section>
 
