@@ -75,6 +75,7 @@ const CatalogBrowser = ({
       limit: 24,
       search: normalizedSearch.length > 0 ? normalizedSearch : undefined,
       omitProductIds,
+      countries: filters.countries.length > 0 ? filters.countries : undefined,
       regions: filters.regions.length > 0 ? filters.regions : undefined,
       producers: filters.producers.length > 0 ? filters.producers : undefined,
       vintages: filters.vintages.length > 0 ? filters.vintages : undefined,

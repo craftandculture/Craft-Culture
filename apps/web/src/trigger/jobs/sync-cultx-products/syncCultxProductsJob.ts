@@ -4,6 +4,7 @@ import db from '@/database/client';
 import { productOffers, products } from '@/database/schema';
 import conflictUpdateSet from '@/database/utils/conflictUpdateSet';
 import createClient from '@/lib/cultx/client';
+import getCountryFromRegion from '@/utils/getCountryFromRegion';
 import splitArrayBatches from '@/utils/splitArrayBatches';
 
 export const syncCultxProductsJob = schedules.task({
@@ -53,6 +54,7 @@ export const syncCultxProductsJob = schedules.task({
             name: product.wineName,
             region: product.region,
             producer: product.producer,
+            country: getCountryFromRegion(product.region, product.producer),
             year: product.vintage,
             imageUrl: product.imageFileName
               ? `https://cwcdst2prdctimgimprtfnct.blob.core.windows.net/height/800/${product.imageFileName}`
@@ -65,6 +67,7 @@ export const syncCultxProductsJob = schedules.task({
             'name',
             'region',
             'producer',
+            'country',
             'year',
             'imageUrl',
           ]),

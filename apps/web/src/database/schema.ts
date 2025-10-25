@@ -153,6 +153,7 @@ export const products = pgTable(
     name: text('name').notNull(),
     region: text('region'),
     producer: text('producer'),
+    country: text('country'),
     year: integer('year'),
     imageUrl: text('image_url'),
     ...timestamps,

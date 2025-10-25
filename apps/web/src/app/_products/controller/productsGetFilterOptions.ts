@@ -11,6 +11,12 @@ import { protectedProcedure } from '@/lib/trpc/procedures';
  *   const filterOptions = await api.products.getFilterOptions.query();
  */
 const productsGetFilterOptions = protectedProcedure.query(async () => {
+  const countriesResult = await db
+    .selectDistinct({ value: products.country })
+    .from(products)
+    .where(sql`${products.country} IS NOT NULL AND ${products.country} != ''`)
+    .orderBy(products.country);
+
   const regionsResult = await db
     .selectDistinct({ value: products.region })
     .from(products)
@@ -32,6 +38,9 @@ const productsGetFilterOptions = protectedProcedure.query(async () => {
     .orderBy(sql`${products.year} DESC`);
 
   return {
+    countries: countriesResult
+      .map((c) => c.value)
+      .filter((v): v is string => !!v),
     regions: regionsResult.map((r) => r.value).filter((v): v is string => !!v),
     producers: producersResult
       .map((p) => p.value)

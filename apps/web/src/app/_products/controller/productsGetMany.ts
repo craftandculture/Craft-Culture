@@ -147,6 +147,7 @@ const productsGetMany = protectedProcedure
       search: z.string().optional(),
       productIds: z.array(z.uuid()).optional(),
       omitProductIds: z.array(z.uuid()).optional(),
+      countries: z.array(z.string()).optional(),
       regions: z.array(z.string()).optional(),
       producers: z.array(z.string()).optional(),
       vintages: z.array(z.number()).optional(),
@@ -170,6 +171,7 @@ const productsGetMany = protectedProcedure
         search,
         productIds,
         omitProductIds,
+        countries,
         regions,
         producers,
         vintages,
@@ -185,6 +187,9 @@ const productsGetMany = protectedProcedure
         ...(productIds ? { id: { in: productIds } } : {}),
         ...(omitProductIds && omitProductIds.length > 0
           ? { id: { notIn: omitProductIds } }
+          : {}),
+        ...(countries && countries.length > 0
+          ? { country: { in: countries } }
           : {}),
         ...(regions && regions.length > 0 ? { region: { in: regions } } : {}),
         ...(producers && producers.length > 0
