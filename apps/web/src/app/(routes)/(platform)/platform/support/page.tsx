@@ -143,10 +143,10 @@ const SupportPage = () => {
                     </Typography>
                     <div className="overflow-hidden rounded-md border border-border-muted">
                       <Image
-                        src="https://craft-and-culture.gitbook.io/accessmiddleeast/~gitbook/image?url=https%3A%2F%2F1032101154-files.gitbook.io%2F%7E%2Ffiles%2Fv0%2Fb%2Fgitbook-x-prod.appspot.com%2Fo%2Fspaces%252FzevGLhW4lSYr4ZX17ksK%252Fuploads%252F3R8NkKzhCBHMX9TP4D6Z%252FIMG_4210%25202.JPG%3Falt%3Dmedia%26token%3D00f96b1b-970b-4303-bbfb-8ec3f9ed5bf4&width=768&dpr=4&quality=100&sign=d4759cc7&sv=2"
+                        src="https://craft-and-culture.gitbook.io/accessmiddleeast/~gitbook/image?url=https%3A%2F%2F1032101154-files.gitbook.io%2F%7E%2Ffiles%2Fv0%2Fb%2Fgitbook-x-prod.appspot.com%2Fo%2Fspaces%252FzevGLhW4lSYr4ZX17ksK%252Fuploads%252F3R8NkKzhCBHMX9TP4D6Z%252FIMG_4210%25202.JPG%3Falt%3Dmedia%26token%3D00f96b1b-970b-4303-bbfb-8ec3f9ed5bf4&width=400&dpr=2&quality=85&sign=d4759cc7&sv=2"
                         alt="Proprietary liquid temperature monitoring system for wine storage"
-                        width={768}
-                        height={432}
+                        width={400}
+                        height={300}
                         className="h-auto w-full"
                         unoptimized
                       />
@@ -206,10 +206,10 @@ const SupportPage = () => {
                 </Typography>
                 <div className="overflow-hidden rounded-lg border border-border-muted shadow-sm">
                   <Image
-                    src="https://craft-and-culture.gitbook.io/accessmiddleeast/~gitbook/image?url=https%3A%2F%2F1032101154-files.gitbook.io%2F%7E%2Ffiles%2Fv0%2Fb%2Fgitbook-x-prod.appspot.com%2Fo%2Fspaces%252FzevGLhW4lSYr4ZX17ksK%252Fuploads%252Fc0fflvuLeHTye4jxs7zm%252FScreenshot%25202025-08-07%2520at%252010.44.45.png%3Falt%3Dmedia%26token%3D6ffe9e93-57b6-40b0-8479-24f0e322f325&width=768&dpr=4&quality=100&sign=9ce3d136&sv=2"
+                    src="https://craft-and-culture.gitbook.io/accessmiddleeast/~gitbook/image?url=https%3A%2F%2F1032101154-files.gitbook.io%2F%7E%2Ffiles%2Fv0%2Fb%2Fgitbook-x-prod.appspot.com%2Fo%2Fspaces%252FzevGLhW4lSYr4ZX17ksK%252Fuploads%252Fc0fflvuLeHTye4jxs7zm%252FScreenshot%25202025-08-07%2520at%252010.44.45.png%3Falt%3Dmedia%26token%3D6ffe9e93-57b6-40b0-8479-24f0e322f325&width=600&dpr=2&quality=85&sign=9ce3d136&sv=2"
                     alt="Warehouse monitoring system dashboard showing real-time temperature, humidity, and environmental controls"
-                    width={768}
-                    height={432}
+                    width={600}
+                    height={400}
                     className="h-auto w-full"
                     unoptimized
                   />
