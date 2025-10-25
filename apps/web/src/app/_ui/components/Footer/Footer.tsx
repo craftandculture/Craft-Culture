@@ -13,8 +13,8 @@ const Footer = () => {
               Craft & Culture
             </h3>
             <p className="text-text-muted text-xs leading-relaxed">
-              Empowering wine & spirits brands to succeed in GCC markets with
-              comprehensive services.
+              Building the bridge for wine & spirits brands to access, activate,
+              and scale across the GCC.
             </p>
           </div>
 
@@ -68,12 +68,10 @@ const Footer = () => {
                 Development Log
               </Link>
               <Link
-                href="https://craftculture.xyz/terms"
-                target="_blank"
-                rel="noopener noreferrer"
+                href="/platform/terms-of-use"
                 className="text-text-muted hover:text-text-primary text-xs transition-colors"
               >
-                Terms of Service
+                Terms Of Use
               </Link>
             </nav>
           </div>
