@@ -50,6 +50,7 @@ const ProductFilters = ({
   const [filters, setFilters] = useQueryStates(quotesSearchParams, {
     shallow: true,
     scroll: false,
+    history: 'replace',
   });
 
   const [isExpanded, setIsExpanded] = useState(false);
