@@ -22,7 +22,8 @@ export interface ChangelogVersion {
  * @returns Array of parsed changelog versions
  */
 const parseChangelog = (): ChangelogVersion[] => {
-  const changelogPath = path.join(process.cwd(), 'CHANGELOG.md');
+  // Go up two levels from apps/web to reach monorepo root
+  const changelogPath = path.join(process.cwd(), '..', '..', 'CHANGELOG.md');
 
   if (!fs.existsSync(changelogPath)) {
     return [];

@@ -13,6 +13,13 @@ export const preferredRegion = ['fra1'];
 
 export const revalidate = 43_200; // 12 hours
 
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
+  userScalable: true,
+};
+
 export const metadata: Metadata = {
   title:
     serverConfig.env === 'development'
