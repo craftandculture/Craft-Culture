@@ -387,9 +387,9 @@ const QuotesForm = () => {
         {filterOptions && (
           <ProductFilters
             availableCountries={filterOptions.countries}
-            availableRegions={filterOptions.regions}
-            availableProducers={filterOptions.producers}
-            availableVintages={filterOptions.vintages}
+            regionsByCountry={filterOptions.regionsByCountry}
+            producersByCountry={filterOptions.producersByCountry}
+            vintagesByCountry={filterOptions.vintagesByCountry}
           />
         )}
 

@@ -17,26 +17,27 @@ import quotesSearchParams from '../search-params/filtersSearchParams';
 
 interface ProductFiltersProps {
   availableCountries: string[];
-  availableRegions: string[];
-  availableProducers: string[];
-  availableVintages: number[];
+  regionsByCountry: Record<string, string[]>;
+  producersByCountry: Record<string, string[]>;
+  vintagesByCountry: Record<string, number[]>;
 }
 
 /**
- * Product filtering component for quotes page
+ * Product filtering component for quotes page with cascading filters
  *
  * @example
  *   <ProductFilters
- *     availableRegions={['Bordeaux', 'Champagne']}
- *     availableProducers={['Dom Perignon']}
- *     availableVintages={[2015, 2016]}
+ *     availableCountries={['France', 'Italy']}
+ *     regionsByCountry={{ France: ['Bordeaux', 'Champagne'], Italy: ['Tuscany'] }}
+ *     producersByCountry={{ France: ['Dom Perignon'], Italy: ['Antinori'] }}
+ *     vintagesByCountry={{ France: [2015, 2016], Italy: [2017] }}
  *   />
  */
 const ProductFilters = ({
   availableCountries,
-  availableRegions,
-  availableProducers,
-  availableVintages,
+  regionsByCountry,
+  producersByCountry,
+  vintagesByCountry,
 }: ProductFiltersProps) => {
   const [filters, setFilters] = useQueryStates(quotesSearchParams, {
     shallow: false,
@@ -58,14 +59,30 @@ const ProductFilters = ({
     filters.countries.length +
     filters.regions.length +
     filters.producers.length +
+    filters.producers.length +
     filters.vintages.length;
 
   const handleCountryToggle = (country: string) => {
-    const newCountries = filters.countries.includes(country)
+    const isRemoving = filters.countries.includes(country);
+    const newCountries = isRemoving
       ? filters.countries.filter((c) => c !== country)
       : [...filters.countries, country];
 
-    void setFilters({ countries: newCountries });
+    // When removing a country, also remove regions/producers/vintages from that country
+    if (isRemoving) {
+      const countryRegions = regionsByCountry[country] ?? [];
+      const countryProducers = producersByCountry[country] ?? [];
+      const countryVintages = vintagesByCountry[country] ?? [];
+
+      void setFilters({
+        countries: newCountries,
+        regions: filters.regions.filter((r) => !countryRegions.includes(r)),
+        producers: filters.producers.filter((p) => !countryProducers.includes(p)),
+        vintages: filters.vintages.filter((v) => !countryVintages.includes(v)),
+      });
+    } else {
+      void setFilters({ countries: newCountries });
+    }
   };
 
   const handleRegionToggle = (region: string) => {
@@ -110,6 +127,16 @@ const ProductFilters = ({
     );
   }, [availableCountries, countrySearch]);
 
+  // Get available regions based on selected countries (cascading filter)
+  const availableRegions = useMemo(() => {
+    if (filters.countries.length === 0) {
+      // No countries selected - show all regions
+      return Object.values(regionsByCountry).flat();
+    }
+    // Show only regions from selected countries
+    return filters.countries.flatMap((country) => regionsByCountry[country] ?? []);
+  }, [filters.countries, regionsByCountry]);
+
   const filteredRegions = useMemo(() => {
     if (!regionSearch.trim()) return availableRegions;
     const search = regionSearch.toLowerCase();
@@ -118,6 +145,16 @@ const ProductFilters = ({
     );
   }, [availableRegions, regionSearch]);
 
+  // Get available producers based on selected countries (cascading filter)
+  const availableProducers = useMemo(() => {
+    if (filters.countries.length === 0) {
+      // No countries selected - show all producers
+      return Object.values(producersByCountry).flat();
+    }
+    // Show only producers from selected countries
+    return filters.countries.flatMap((country) => producersByCountry[country] ?? []);
+  }, [filters.countries, producersByCountry]);
+
   const filteredProducers = useMemo(() => {
     if (!producerSearch.trim()) return availableProducers;
     const search = producerSearch.toLowerCase();
@@ -125,6 +162,16 @@ const ProductFilters = ({
       producer.toLowerCase().includes(search),
     );
   }, [availableProducers, producerSearch]);
+
+  // Get available vintages based on selected countries (cascading filter)
+  const availableVintages = useMemo(() => {
+    if (filters.countries.length === 0) {
+      // No countries selected - show all vintages
+      return Object.values(vintagesByCountry).flat();
+    }
+    // Show only vintages from selected countries
+    return filters.countries.flatMap((country) => vintagesByCountry[country] ?? []);
+  }, [filters.countries, vintagesByCountry]);
 
   const filteredVintages = useMemo(() => {
     if (!vintageSearch.trim()) return availableVintages;
