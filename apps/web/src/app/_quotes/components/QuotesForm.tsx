@@ -374,7 +374,7 @@ const QuotesForm = () => {
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <Typography variant="headingLg" className="font-semibold">
-              Quote Builder
+              Quotation Builder
             </Typography>
             <LiveStatus />
           </div>
