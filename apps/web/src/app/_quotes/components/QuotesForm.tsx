@@ -384,16 +384,6 @@ const QuotesForm = () => {
           </Typography>
         </div>
 
-        {/* Product Filters */}
-        {filterOptions && (
-          <ProductFilters
-            countriesWithCounts={filterOptions.countriesWithCounts}
-            regionsByCountryWithCounts={filterOptions.regionsByCountryWithCounts}
-            producersByCountryWithCounts={filterOptions.producersByCountryWithCounts}
-            vintagesByCountryWithCounts={filterOptions.vintagesByCountryWithCounts}
-          />
-        )}
-
         {/* Currency Toggle and Inventory Download */}
         <div className="flex flex-col items-end gap-2 sm:flex-row sm:items-center sm:justify-end">
           <div className="flex items-center gap-2">
