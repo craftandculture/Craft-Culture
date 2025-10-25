@@ -70,13 +70,14 @@ const QuotesForm = () => {
   });
 
   // Fetch filter options for dropdowns, passing current filters to refine vintages
-  const { data: filterOptions } = useQuery(
-    api.products.getFilterOptions.queryOptions({
+  const { data: filterOptions } = useQuery({
+    ...api.products.getFilterOptions.queryOptions({
       countries: filterState.countries,
       regions: filterState.regions,
       producers: filterState.producers,
     }),
-  );
+    placeholderData: (previousData) => previousData,
+  });
 
   // Currency display toggle
   const [displayCurrency, setDisplayCurrency] = useState<'USD' | 'AED'>('AED');
