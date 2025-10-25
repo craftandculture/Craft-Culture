@@ -592,16 +592,29 @@ const QuotesForm = () => {
               {isQuoteLoading ? (
                 <Skeleton className="h-5 w-24" />
               ) : (
-                <Typography variant="bodyLg" className="font-semibold">
-                  {quoteData?.totalUsd
-                    ? formatPrice(
-                        displayCurrency === 'AED'
-                          ? convertUsdToAed(quoteData.totalUsd)
-                          : quoteData.totalUsd,
-                        displayCurrency,
-                      )
-                    : '—'}
-                </Typography>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="cursor-help">
+                        <Typography variant="bodyLg" className="font-semibold">
+                          {quoteData?.totalUsd
+                            ? formatPrice(
+                                displayCurrency === 'AED'
+                                  ? convertUsdToAed(quoteData.totalUsd)
+                                  : quoteData.totalUsd,
+                                displayCurrency,
+                              )
+                            : '—'}
+                        </Typography>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <Typography variant="bodyXs">
+                        {customerType === 'b2b' ? 'In-Bond UAE' : 'Price to Client'}
+                      </Typography>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               )}
             </div>
             {/* Download Button */}
