@@ -267,7 +267,7 @@ const ProductFilters = ({
                 ({filteredCountries.length})
               </Typography>
             </div>
-            {availableCountries.length > 5 && (
+            {countriesWithCounts.length > 5 && (
               <div className="relative">
                 <Icon
                   icon={IconSearch}
@@ -331,7 +331,7 @@ const ProductFilters = ({
                 ({filteredRegions.length})
               </Typography>
             </div>
-            {availableRegions.length > 5 && (
+            {Object.values(regionsByCountryWithCounts).flat().length > 5 && (
               <div className="relative">
                 <Icon
                   icon={IconSearch}
@@ -395,7 +395,7 @@ const ProductFilters = ({
                 ({filteredProducers.length})
               </Typography>
             </div>
-            {availableProducers.length > 5 && (
+            {Object.values(producersByCountryWithCounts).flat().length > 5 && (
               <div className="relative">
                 <Icon
                   icon={IconSearch}
@@ -459,7 +459,7 @@ const ProductFilters = ({
                 ({filteredVintages.length})
               </Typography>
             </div>
-            {availableVintages.length > 5 && (
+            {Object.values(vintagesByCountryWithCounts).flat().length > 5 && (
               <div className="relative">
                 <Icon
                   icon={IconSearch}
