@@ -2,7 +2,9 @@ import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { nextCookies } from 'better-auth/next-js';
 import { magicLink } from 'better-auth/plugins';
+import { eq } from 'drizzle-orm';
 
+import logAdminActivity from '@/app/_admin/utils/logAdminActivity';
 import clientConfig from '@/client.config';
 import db from '@/database/client';
 import * as schema from '@/database/schema';
@@ -120,28 +122,27 @@ const authServerClient = betterAuth({
         },
       },
     },
-    // TODO: Re-enable session login tracking once Drizzle query type issues are resolved
-    // session: {
-    //   create: {
-    //     after: async (session) => {
-    //       const user = await db.query.users.findFirst({
-    //         where: (users, { eq }) => eq(users.id, session.userId),
-    //       });
-    //
-    //       if (user?.role === 'admin') {
-    //         void logAdminActivity({
-    //           adminId: session.userId,
-    //           action: 'admin.login',
-    //           ipAddress: session.ipAddress ?? undefined,
-    //           userAgent: session.userAgent ?? undefined,
-    //           metadata: {
-    //             sessionId: session.id,
-    //           },
-    //         });
-    //       }
-    //     },
-    //   },
-    // },
+    session: {
+      create: {
+        after: async (session) => {
+          const user = await db.query.users.findFirst({
+            where: eq(schema.users.id, session.userId),
+          });
+
+          if (user?.role === 'admin') {
+            void logAdminActivity({
+              adminId: session.userId,
+              action: 'admin.login',
+              ipAddress: session.ipAddress ?? undefined,
+              userAgent: session.userAgent ?? undefined,
+              metadata: {
+                sessionId: session.id,
+              },
+            });
+          }
+        },
+      },
+    },
   },
 });
 
