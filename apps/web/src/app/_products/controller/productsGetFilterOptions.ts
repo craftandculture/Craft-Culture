@@ -34,18 +34,19 @@ const productsGetFilterOptions = protectedProcedure.query(async () => {
     .groupBy(products.region, products.country)
     .orderBy(products.region);
 
-  // Get producers with their associated countries and counts
+  // Get producers with their associated countries, regions, and counts
   const producersResult = await db
     .select({
       producer: products.producer,
       country: products.country,
+      region: products.region,
       count: sql<number>`COUNT(DISTINCT ${products.id})`,
     })
     .from(products)
     .where(
       sql`${products.producer} IS NOT NULL AND ${products.producer} != ''`,
     )
-    .groupBy(products.producer, products.country)
+    .groupBy(products.producer, products.country, products.region)
     .orderBy(products.producer);
 
   // Get vintages with their associated countries and counts
@@ -87,24 +88,38 @@ const productsGetFilterOptions = protectedProcedure.query(async () => {
       ),
     producersByCountryWithCounts: producersResult
       .filter(
-        (p): p is { producer: string; country: string; count: number } =>
-          !!p.producer,
+        (p): p is {
+          producer: string;
+          country: string;
+          region: string | null;
+          count: number;
+        } => !!p.producer,
       )
       .reduce(
-        (acc, { producer, country, count }) => {
+        (acc, { producer, country, region, count }) => {
           const countryKey = country ?? 'Unknown';
           if (!acc[countryKey]) {
             acc[countryKey] = [];
           }
           const existing = acc[countryKey].find((p) => p.value === producer);
           if (!existing) {
-            acc[countryKey].push({ value: producer, count });
+            acc[countryKey].push({
+              value: producer,
+              count,
+              regions: region ? [region] : [],
+            });
           } else {
             existing.count += count;
+            if (region && !existing.regions.includes(region)) {
+              existing.regions.push(region);
+            }
           }
           return acc;
         },
-        {} as Record<string, Array<{ value: string; count: number }>>,
+        {} as Record<
+          string,
+          Array<{ value: string; count: number; regions: string[] }>
+        >,
       ),
     vintagesByCountryWithCounts: vintagesResult
       .filter(
