@@ -56,7 +56,7 @@ const Footer = () => {
             </h3>
             <nav className="flex flex-col space-y-1.5">
               <Link
-                href="mailto:support@craftculture.xyz"
+                href="/platform/support"
                 className="text-text-muted hover:text-text-primary text-xs transition-colors"
               >
                 Support
