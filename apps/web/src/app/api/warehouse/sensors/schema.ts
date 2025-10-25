@@ -27,7 +27,7 @@ export const sensorDataSchema = z.object({
       unit: z.string().min(1),
       location: z.string().optional(),
       timestamp: z.string().datetime().optional(),
-      metadata: z.record(z.unknown()).optional(),
+      metadata: z.record(z.string(), z.unknown()).optional(),
     }),
   ),
 });
