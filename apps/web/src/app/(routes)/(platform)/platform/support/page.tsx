@@ -1,4 +1,10 @@
-import { IconBuildingWarehouse, IconMail, IconPackage, IconTruck } from '@tabler/icons-react';
+import {
+  IconBuildingWarehouse,
+  IconChartLine,
+  IconMail,
+  IconPackage,
+  IconTruck,
+} from '@tabler/icons-react';
 import Link from 'next/link';
 
 import Card from '@/app/_ui/components/Card/Card';
@@ -17,7 +23,8 @@ const SupportPage = () => {
           <CardProse>
             <CardTitle>Support & Information</CardTitle>
             <CardDescription colorRole="muted">
-              Everything you need to know about our products, logistics, and services
+              Comprehensive information about our products, infrastructure, and operational
+              capabilities
             </CardDescription>
           </CardProse>
 
@@ -124,6 +131,33 @@ const SupportPage = () => {
                   </svg>
                 </Link>
               </div>
+            </section>
+
+            {/* Logistics Data Logging */}
+            <section className="rounded-lg border border-border-muted bg-fill-secondary/30 p-6">
+              <div className="mb-4 flex items-center gap-3">
+                <div className="rounded-lg bg-fill-accent/10 p-2">
+                  <Icon icon={IconChartLine} size="md" colorRole="brand" />
+                </div>
+                <Typography variant="headingMd" className="font-semibold">
+                  Logistics Data Logging
+                </Typography>
+              </div>
+              <Typography variant="bodyMd" colorRole="muted" className="mb-4 leading-relaxed">
+                We log temperature data end-to-end to ensure full cold chain integrity throughout the
+                entire supply journey.
+              </Typography>
+              <Typography variant="bodyMd" colorRole="muted" className="mb-4 leading-relaxed">
+                From the moment products leave our bonded warehouse facility until delivery to our
+                partners, comprehensive temperature monitoring is maintained to protect the quality
+                and condition of fine wines and premium spirits.
+              </Typography>
+              <Typography variant="bodyMd" colorRole="muted" className="leading-relaxed">
+                This continuous data logging provides complete traceability and accountability,
+                ensuring that every shipment maintains optimal storage conditions and arrives in
+                perfect condition — a critical requirement for premium wine logistics in the GCC
+                climate.
+              </Typography>
             </section>
 
             {/* B2B & B2C Sales Models */}
