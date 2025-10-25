@@ -66,6 +66,19 @@ const SupportPage = () => {
                   Warehouse & Storage Facilities
                 </Typography>
               </div>
+
+              {/* Warehouse Image Placeholder */}
+              <div className="mb-6 overflow-hidden rounded-lg border border-border-muted bg-fill-muted">
+                <div className="flex aspect-video items-center justify-center">
+                  <div className="text-center">
+                    <Icon icon={IconBuildingWarehouse} size="lg" colorRole="muted" />
+                    <Typography variant="bodySm" colorRole="muted" className="mt-2">
+                      Warehouse facility image
+                    </Typography>
+                  </div>
+                </div>
+              </div>
+
               <Typography variant="bodyMd" colorRole="muted" className="mb-4 leading-relaxed">
                 All products are stored within Craft & Culture&apos;s state-of-the-art bonded
                 warehouse facility in the United Arab Emirates, purpose-built for the optimal storage
