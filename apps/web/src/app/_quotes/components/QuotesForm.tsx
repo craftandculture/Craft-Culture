@@ -369,7 +369,7 @@ const QuotesForm = () => {
   return (
     <div className="space-y-6 md:space-y-8">
       {/* Pricing Tool Section */}
-      <section className="space-y-4 md:space-y-5">
+      <section className="space-y-4 rounded-lg border border-border-muted bg-fill-secondary/30 p-4 md:space-y-5 md:p-6">
         {/* Section Header */}
         <div className="space-y-2">
           <div className="flex items-center justify-between">
@@ -627,11 +627,11 @@ const QuotesForm = () => {
       {/* Enhanced Section Divider */}
       <div className="relative my-8 md:my-12">
         <div className="absolute inset-0 flex items-center" aria-hidden="true">
-          <div className="w-full border-t border-border-primary" />
+          <div className="w-full border-t-2 border-border-primary" />
         </div>
         <div className="relative flex justify-center">
           <span className="bg-fill-primary px-4 py-2 text-text-muted">
-            <Typography variant="bodySm" className="font-medium uppercase tracking-wider">
+            <Typography variant="bodySm" className="font-semibold uppercase tracking-wider">
               Product Catalog
             </Typography>
           </span>
@@ -639,9 +639,12 @@ const QuotesForm = () => {
       </div>
 
       {/* Product Catalogue Section */}
-      <section className="space-y-4">
+      <section className="space-y-4 rounded-lg border border-border-muted bg-fill-secondary/30 p-4 md:p-6">
         {/* Section Header */}
         <div className="space-y-2">
+          <Typography variant="headingMd" className="font-semibold">
+            Browse Inventory
+          </Typography>
           <Typography variant="bodySm" colorRole="muted">
             Browse our full inventory and add products to your quote
           </Typography>
