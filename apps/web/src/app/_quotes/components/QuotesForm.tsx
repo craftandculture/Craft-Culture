@@ -625,13 +625,16 @@ const QuotesForm = () => {
       </section>
 
       {/* Enhanced Section Divider */}
-      <div className="relative my-8 md:my-12">
+      <div className="relative my-8 md:my-12 lg:my-16">
         <div className="absolute inset-0 flex items-center" aria-hidden="true">
-          <div className="w-full border-t-2 border-border-primary" />
+          <div className="w-full border-t-2 border-border-primary md:border-t-[3px]" />
         </div>
         <div className="relative flex justify-center">
-          <span className="bg-fill-primary px-4 py-2 text-text-muted">
-            <Typography variant="bodySm" className="font-semibold uppercase tracking-wider">
+          <span className="bg-fill-primary px-3 py-1.5 md:px-6 md:py-3">
+            <Typography
+              variant="bodySm"
+              className="text-sm font-bold uppercase tracking-wider text-text-primary md:text-base"
+            >
               Product Catalog
             </Typography>
           </span>
