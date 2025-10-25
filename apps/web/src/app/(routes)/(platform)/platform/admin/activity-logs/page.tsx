@@ -1,4 +1,3 @@
-import ActivityLogsTable from '@/app/_admin/components/ActivityLogsTable';
 import Card from '@/app/_ui/components/Card/Card';
 import CardContent from '@/app/_ui/components/Card/CardContent';
 import CardDescription from '@/app/_ui/components/Card/CardDescription';
@@ -17,7 +16,9 @@ const ActivityLogsPage = () => {
             </CardDescription>
           </CardProse>
           <div className="mt-8">
-            <ActivityLogsTable />
+            <p className="text-center text-sm text-gray-500">
+              Activity logs feature is being configured...
+            </p>
           </div>
         </CardContent>
       </Card>
