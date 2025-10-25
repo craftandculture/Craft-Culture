@@ -39,7 +39,8 @@ const ProductFilters = ({
   vintagesByCountryWithCounts,
 }: ProductFiltersProps) => {
   const [filters, setFilters] = useQueryStates(quotesSearchParams, {
-    shallow: false,
+    shallow: true,
+    scroll: false,
   });
 
   const [isExpanded, setIsExpanded] = useState(false);
