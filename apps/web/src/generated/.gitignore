@@ -1,3 +1,3 @@
 # This directory contains auto-generated files
-*
-!.gitignore
+# Version file is committed to ensure it's available in deployments
+!version.ts
