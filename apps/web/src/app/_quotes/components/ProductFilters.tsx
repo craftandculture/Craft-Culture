@@ -16,9 +16,18 @@ import quotesSearchParams from '../search-params/filtersSearchParams';
 
 interface ProductFiltersProps {
   countriesWithCounts: Array<{ value: string; count: number }>;
-  regionsByCountryWithCounts: Record<string, Array<{ value: string; count: number }>>;
-  producersByCountryWithCounts: Record<string, Array<{ value: string; count: number }>>;
-  vintagesByCountryWithCounts: Record<string, Array<{ value: number; count: number }>>;
+  regionsByCountryWithCounts: Record<
+    string,
+    Array<{ value: string; count: number }>
+  >;
+  producersByCountryWithCounts: Record<
+    string,
+    Array<{ value: string; count: number; regions: string[] }>
+  >;
+  vintagesByCountryWithCounts: Record<
+    string,
+    Array<{ value: number; count: number }>
+  >;
 }
 
 /**
@@ -145,15 +154,30 @@ const ProductFilters = ({
     );
   }, [availableRegions, regionSearch]);
 
-  // Get available producers based on selected countries (cascading filter) with counts
+  // Get available producers based on selected countries and regions (cascading filter) with counts
   const availableProducers = useMemo(() => {
+    let producers: Array<{ value: string; count: number; regions: string[] }> =
+      [];
+
     if (filters.countries.length === 0) {
       // No countries selected - show all producers
-      return Object.values(producersByCountryWithCounts).flat();
+      producers = Object.values(producersByCountryWithCounts).flat();
+    } else {
+      // Show only producers from selected countries
+      producers = filters.countries.flatMap(
+        (country) => producersByCountryWithCounts[country] ?? [],
+      );
     }
-    // Show only producers from selected countries
-    return filters.countries.flatMap((country) => producersByCountryWithCounts[country] ?? []);
-  }, [filters.countries, producersByCountryWithCounts]);
+
+    // Further filter by selected regions if any
+    if (filters.regions.length > 0) {
+      producers = producers.filter((producer) =>
+        producer.regions.some((region) => filters.regions.includes(region)),
+      );
+    }
+
+    return producers;
+  }, [filters.countries, filters.regions, producersByCountryWithCounts]);
 
   const filteredProducers = useMemo(() => {
     if (!producerSearch.trim()) return availableProducers;
