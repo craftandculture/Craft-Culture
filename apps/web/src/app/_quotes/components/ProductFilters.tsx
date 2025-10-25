@@ -185,42 +185,30 @@ const ProductFilters = ({
     <div className="space-y-2">
       {/* Filter Header */}
       <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() => setIsExpanded(!isExpanded)}
-          className="w-full gap-2 sm:w-auto"
-        >
-          <Icon icon={IconFilter} size="sm" />
-          <span className="text-xs font-medium">Filters</span>
-          {activeFilterCount > 0 && (
-            <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-fill-accent px-1.5 text-xs font-semibold text-text-primary">
-              {activeFilterCount}
-            </span>
-          )}
-          <Icon
-            icon={IconChevronDown}
+        <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            variant="outline"
             size="sm"
-            className={`ml-auto transition-transform duration-200 ${
-              isExpanded ? 'rotate-180' : ''
-            }`}
-          />
-        </Button>
-
-        <div className="flex w-full items-center gap-2 sm:w-auto">
-          {hasActiveFilters && (
-            <Button
-              type="button"
-              variant="ghost"
+            onClick={() => setIsExpanded(!isExpanded)}
+            className="gap-2"
+          >
+            <Icon icon={IconFilter} size="sm" />
+            <span className="text-xs font-medium">Filters</span>
+            {activeFilterCount > 0 && (
+              <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-fill-accent px-1.5 text-xs font-semibold text-text-primary">
+                {activeFilterCount}
+              </span>
+            )}
+            <Icon
+              icon={IconChevronDown}
               size="sm"
-              onClick={handleClearAll}
-              className="flex-1 sm:flex-none"
-            >
-              <Icon icon={IconX} size="sm" />
-              <span className="text-xs">Clear</span>
-            </Button>
-          )}
+              className={`transition-transform duration-200 ${
+                isExpanded ? 'rotate-180' : ''
+              }`}
+            />
+          </Button>
+
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -241,6 +229,18 @@ const ProductFilters = ({
             </Tooltip>
           </TooltipProvider>
         </div>
+
+        {hasActiveFilters && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={handleClearAll}
+          >
+            <Icon icon={IconX} size="sm" />
+            <span className="text-xs">Clear</span>
+          </Button>
+        )}
       </div>
 
       {/* Filter Options */}
