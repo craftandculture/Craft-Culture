@@ -20,7 +20,7 @@ const TermsOfUsePage = () => {
           <div className="mt-8 space-y-6">
             {/* Platform Purpose */}
             <section>
-              <Typography variant="h6" className="mb-3 font-semibold">
+              <Typography variant="headingSm" className="mb-3 font-semibold">
                 Platform Purpose
               </Typography>
               <Typography variant="bodyMd" colorRole="secondary" className="leading-relaxed">
@@ -32,7 +32,7 @@ const TermsOfUsePage = () => {
 
             {/* Access and Authorization */}
             <section>
-              <Typography variant="h6" className="mb-3 font-semibold">
+              <Typography variant="headingSm" className="mb-3 font-semibold">
                 Access and Authorization
               </Typography>
               <Typography variant="bodyMd" colorRole="secondary" className="leading-relaxed">
@@ -44,7 +44,7 @@ const TermsOfUsePage = () => {
 
             {/* Intended Use */}
             <section>
-              <Typography variant="h6" className="mb-3 font-semibold">
+              <Typography variant="headingSm" className="mb-3 font-semibold">
                 Intended Use
               </Typography>
               <Typography variant="bodyMd" colorRole="secondary" className="mb-3 leading-relaxed">
@@ -60,7 +60,7 @@ const TermsOfUsePage = () => {
 
             {/* Data and Pricing */}
             <section>
-              <Typography variant="h6" className="mb-3 font-semibold">
+              <Typography variant="headingSm" className="mb-3 font-semibold">
                 Data and Pricing Information
               </Typography>
               <Typography variant="bodyMd" colorRole="secondary" className="leading-relaxed">
@@ -72,7 +72,7 @@ const TermsOfUsePage = () => {
 
             {/* Confidentiality */}
             <section>
-              <Typography variant="h6" className="mb-3 font-semibold">
+              <Typography variant="headingSm" className="mb-3 font-semibold">
                 Confidentiality
               </Typography>
               <Typography variant="bodyMd" colorRole="secondary" className="leading-relaxed">
@@ -85,7 +85,7 @@ const TermsOfUsePage = () => {
 
             {/* Support */}
             <section>
-              <Typography variant="h6" className="mb-3 font-semibold">
+              <Typography variant="headingSm" className="mb-3 font-semibold">
                 Support and Questions
               </Typography>
               <Typography variant="bodyMd" colorRole="secondary" className="leading-relaxed">
