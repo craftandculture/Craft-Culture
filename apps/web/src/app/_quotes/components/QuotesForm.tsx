@@ -620,16 +620,24 @@ const QuotesForm = () => {
       )}
       </section>
 
-      {/* Divider between sections */}
-      <Divider />
+      {/* Enhanced Section Divider */}
+      <div className="relative my-8 md:my-12">
+        <div className="absolute inset-0 flex items-center" aria-hidden="true">
+          <div className="w-full border-t border-border-primary" />
+        </div>
+        <div className="relative flex justify-center">
+          <span className="bg-fill-primary px-4 py-2 text-text-muted">
+            <Typography variant="bodySm" className="font-medium uppercase tracking-wider">
+              Product Catalog
+            </Typography>
+          </span>
+        </div>
+      </div>
 
       {/* Product Catalogue Section */}
       <section className="space-y-4">
         {/* Section Header */}
         <div className="space-y-2">
-          <Typography variant="headingLg" className="font-semibold">
-            Product Catalogue
-          </Typography>
           <Typography variant="bodySm" colorRole="muted">
             Browse our full inventory and add products to your quote
           </Typography>

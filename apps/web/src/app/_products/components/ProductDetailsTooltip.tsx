@@ -1,5 +1,7 @@
 'use client';
 
+import { format } from 'date-fns';
+
 import type { Product } from '@/app/_products/controller/productsGetMany';
 import Tooltip from '@/app/_ui/components/Tooltip/Tooltip';
 import TooltipContent from '@/app/_ui/components/Tooltip/TooltipContent';
@@ -115,9 +117,22 @@ const ProductDetailsTooltip = ({
                   {offer.unitCount} × {offer.unitSize}
                 </Typography>
                 {offer.availableQuantity > 0 && (
-                  <Typography variant="bodyXs" className="text-text-muted">
-                    {offer.availableQuantity} {offer.availableQuantity === 1 ? 'case' : 'cases'} available
-                  </Typography>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="cursor-help">
+                          <Typography variant="bodyXs" className="text-text-muted">
+                            {offer.availableQuantity} {offer.availableQuantity === 1 ? 'case' : 'cases'} available
+                          </Typography>
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <Typography variant="bodyXs">
+                          Last updated: {product.updatedAt ? format(new Date(product.updatedAt), 'MMM d, yyyy HH:mm') : 'Unknown'}
+                        </Typography>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 )}
               </div>
             )}
