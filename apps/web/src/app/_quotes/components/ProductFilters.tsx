@@ -188,15 +188,12 @@ const ProductFilters = ({
     );
   }, [availableProducers, producerSearch]);
 
-  // Get available vintages based on selected countries (cascading filter) with counts
+  // Get available vintages - server already filters based on all selected filters
   const availableVintages = useMemo(() => {
-    if (filters.countries.length === 0) {
-      // No countries selected - show all vintages
-      return Object.values(vintagesByCountryWithCounts).flat();
-    }
-    // Show only vintages from selected countries
-    return filters.countries.flatMap((country) => vintagesByCountryWithCounts[country] ?? []);
-  }, [filters.countries, vintagesByCountryWithCounts]);
+    // Server-side filtering handles countries, regions, and producers
+    // Just flatten all vintages returned from the server
+    return Object.values(vintagesByCountryWithCounts).flat();
+  }, [vintagesByCountryWithCounts]);
 
   const filteredVintages = useMemo(() => {
     if (!vintageSearch.trim()) return availableVintages;
