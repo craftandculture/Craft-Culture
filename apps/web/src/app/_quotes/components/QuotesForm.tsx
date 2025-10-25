@@ -369,7 +369,7 @@ const QuotesForm = () => {
   return (
     <div className="space-y-6 md:space-y-8">
       {/* Pricing Tool Section */}
-      <section className="space-y-4 rounded-lg border border-border-muted bg-fill-secondary/30 p-4 md:space-y-5 md:p-6">
+      <section className="space-y-4 rounded-lg border border-border-muted bg-fill-secondary/30 p-4 shadow-sm md:space-y-5 md:p-6">
         {/* Section Header */}
         <div className="space-y-2">
           <div className="flex items-center justify-between">
@@ -625,7 +625,7 @@ const QuotesForm = () => {
       </div>
 
       {/* Product Catalogue Section */}
-      <section className="space-y-4 rounded-lg border border-border-muted bg-fill-secondary/30 p-4 md:p-6">
+      <section className="space-y-4 rounded-lg border border-border-muted bg-fill-secondary/30 p-4 shadow-sm md:p-6">
         {/* Section Header */}
         <div className="space-y-2">
           <Typography variant="headingLg" className="font-semibold">
