@@ -1,12 +1,16 @@
 'use client';
 
-import { IconChevronDown, IconFilter, IconSearch, IconX } from '@tabler/icons-react';
+import { IconChevronDown, IconFilter, IconInfoCircle, IconSearch, IconX } from '@tabler/icons-react';
 import { useQueryStates } from 'nuqs';
 import { useMemo, useState } from 'react';
 
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
 import Icon from '@/app/_ui/components/Icon/Icon';
+import Tooltip from '@/app/_ui/components/Tooltip/Tooltip';
+import TooltipContent from '@/app/_ui/components/Tooltip/TooltipContent';
+import TooltipProvider from '@/app/_ui/components/Tooltip/TooltipProvider';
+import TooltipTrigger from '@/app/_ui/components/Tooltip/TooltipTrigger';
 import Typography from '@/app/_ui/components/Typography/Typography';
 
 import quotesSearchParams from '../search-params/filtersSearchParams';
@@ -136,9 +140,30 @@ const ProductFilters = ({
               }`}
             />
           </Button>
-          <Typography variant="bodyXs" className="text-text-muted text-xs">
-            Use filters to refine selection
-          </Typography>
+          <div className="flex items-center gap-1.5">
+            <Typography variant="bodyXs" className="text-text-muted text-xs">
+              Use filters to refine selection
+            </Typography>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button type="button" className="inline-flex cursor-help">
+                    <Icon
+                      icon={IconInfoCircle}
+                      size="sm"
+                      colorRole="muted"
+                      className="h-3.5 w-3.5"
+                    />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <Typography variant="bodyXs">
+                    Filters apply to Quote Tool & Full catalogue
+                  </Typography>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
         </div>
 
         {hasActiveFilters && (
