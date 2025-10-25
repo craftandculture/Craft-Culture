@@ -386,6 +386,7 @@ const QuotesForm = () => {
         {/* Product Filters */}
         {filterOptions && (
           <ProductFilters
+            availableCountries={filterOptions.countries}
             availableRegions={filterOptions.regions}
             availableProducers={filterOptions.producers}
             availableVintages={filterOptions.vintages}

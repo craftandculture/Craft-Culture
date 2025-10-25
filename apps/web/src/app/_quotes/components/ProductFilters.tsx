@@ -16,6 +16,7 @@ import Typography from '@/app/_ui/components/Typography/Typography';
 import quotesSearchParams from '../search-params/filtersSearchParams';
 
 interface ProductFiltersProps {
+  availableCountries: string[];
   availableRegions: string[];
   availableProducers: string[];
   availableVintages: number[];
@@ -32,6 +33,7 @@ interface ProductFiltersProps {
  *   />
  */
 const ProductFilters = ({
+  availableCountries,
   availableRegions,
   availableProducers,
   availableVintages,
@@ -41,17 +43,30 @@ const ProductFilters = ({
   });
 
   const [isExpanded, setIsExpanded] = useState(false);
+  const [countrySearch, setCountrySearch] = useState('');
   const [regionSearch, setRegionSearch] = useState('');
   const [producerSearch, setProducerSearch] = useState('');
   const [vintageSearch, setVintageSearch] = useState('');
 
   const hasActiveFilters =
+    filters.countries.length > 0 ||
     filters.regions.length > 0 ||
     filters.producers.length > 0 ||
     filters.vintages.length > 0;
 
   const activeFilterCount =
-    filters.regions.length + filters.producers.length + filters.vintages.length;
+    filters.countries.length +
+    filters.regions.length +
+    filters.producers.length +
+    filters.vintages.length;
+
+  const handleCountryToggle = (country: string) => {
+    const newCountries = filters.countries.includes(country)
+      ? filters.countries.filter((c) => c !== country)
+      : [...filters.countries, country];
+
+    void setFilters({ countries: newCountries });
+  };
 
   const handleRegionToggle = (region: string) => {
     const newRegions = filters.regions.includes(region)
@@ -79,6 +94,7 @@ const ProductFilters = ({
 
   const handleClearAll = () => {
     void setFilters({
+      countries: [],
       regions: [],
       producers: [],
       vintages: [],
@@ -86,6 +102,14 @@ const ProductFilters = ({
   };
 
   // Filtered lists based on search
+  const filteredCountries = useMemo(() => {
+    if (!countrySearch.trim()) return availableCountries;
+    const search = countrySearch.toLowerCase();
+    return availableCountries.filter((country) =>
+      country.toLowerCase().includes(search),
+    );
+  }, [availableCountries, countrySearch]);
+
   const filteredRegions = useMemo(() => {
     if (!regionSearch.trim()) return availableRegions;
     const search = regionSearch.toLowerCase();
@@ -189,7 +213,60 @@ const ProductFilters = ({
             : 'max-h-0 opacity-0'
         }`}
       >
-        <div className="grid gap-4 rounded-lg border border-border-muted bg-surface-muted p-3 sm:p-4 md:grid-cols-3 md:p-6">
+        <div className="grid gap-4 rounded-lg border border-border-muted bg-surface-muted p-3 sm:p-4 md:grid-cols-2 md:p-6 lg:grid-cols-4">
+          {/* Country Filter */}
+          <div className="space-y-3">
+            <Typography
+              variant="bodyXs"
+              className="font-semibold uppercase tracking-wide text-text-muted"
+            >
+              Country
+            </Typography>
+            {availableCountries.length > 5 && (
+              <div className="relative">
+                <Icon
+                  icon={IconSearch}
+                  size="sm"
+                  className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2"
+                  colorRole="muted"
+                />
+                <input
+                  type="text"
+                  value={countrySearch}
+                  onChange={(e) => setCountrySearch(e.target.value)}
+                  placeholder="Search countries..."
+                  className="h-9 w-full rounded-md border border-border-muted bg-background-primary pl-9 pr-3 text-sm transition-colors placeholder:text-text-muted focus:border-border-brand focus:outline-none focus:ring-2 focus:ring-fill-accent focus:ring-offset-2"
+                />
+              </div>
+            )}
+            <div className="max-h-48 space-y-1 overflow-y-auto rounded-md">
+              {filteredCountries.length === 0 ? (
+                <Typography variant="bodySm" className="px-2 py-4 text-center text-text-muted">
+                  {countrySearch.trim()
+                    ? 'No matching countries'
+                    : 'No countries available'}
+                </Typography>
+              ) : (
+                filteredCountries.map((country) => (
+                  <label
+                    key={country}
+                    className="flex cursor-pointer items-center gap-2 rounded-md px-3 py-2 transition-colors hover:bg-fill-muted"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={filters.countries.includes(country)}
+                      onChange={() => handleCountryToggle(country)}
+                      className="size-4 rounded border-border-muted text-fill-accent transition-colors focus:ring-2 focus:ring-fill-accent focus:ring-offset-2"
+                    />
+                    <Typography variant="bodySm" className="flex-1">
+                      {country}
+                    </Typography>
+                  </label>
+                ))
+              )}
+            </div>
+          </div>
+
           {/* Region Filter */}
           <div className="space-y-3">
             <Typography

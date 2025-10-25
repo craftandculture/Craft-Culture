@@ -15,6 +15,7 @@ const urlLineItemSchema = z.object({
 
 const quotesSearchParams = {
   items: parseAsArrayOf(parseAsJson(urlLineItemSchema)).withDefault([]),
+  countries: parseAsArrayOf(parseAsString).withDefault([]),
   regions: parseAsArrayOf(parseAsString).withDefault([]),
   producers: parseAsArrayOf(parseAsString).withDefault([]),
   vintages: parseAsArrayOf(parseAsInteger).withDefault([]),
