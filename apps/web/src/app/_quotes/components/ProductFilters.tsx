@@ -337,6 +337,7 @@ const ProductFilters = ({
                   <label
                     key={country}
                     className="flex cursor-pointer items-center gap-2.5 rounded px-2 py-2 transition-colors hover:bg-fill-muted active:bg-fill-muted md:gap-2 md:py-1.5"
+                    onClick={(e) => e.stopPropagation()}
                   >
                     <input
                       type="checkbox"
@@ -401,6 +402,7 @@ const ProductFilters = ({
                   <label
                     key={region}
                     className="flex cursor-pointer items-center gap-2.5 rounded px-2 py-2 transition-colors hover:bg-fill-muted active:bg-fill-muted md:gap-2 md:py-1.5"
+                    onClick={(e) => e.stopPropagation()}
                   >
                     <input
                       type="checkbox"
@@ -465,6 +467,7 @@ const ProductFilters = ({
                   <label
                     key={producer}
                     className="flex cursor-pointer items-center gap-2.5 rounded px-2 py-2 transition-colors hover:bg-fill-muted active:bg-fill-muted md:gap-2 md:py-1.5"
+                    onClick={(e) => e.stopPropagation()}
                   >
                     <input
                       type="checkbox"
@@ -529,6 +532,7 @@ const ProductFilters = ({
                   <label
                     key={vintage}
                     className="flex cursor-pointer items-center gap-2.5 rounded px-2 py-2 transition-colors hover:bg-fill-muted active:bg-fill-muted md:gap-2 md:py-1.5"
+                    onClick={(e) => e.stopPropagation()}
                   >
                     <input
                       type="checkbox"
