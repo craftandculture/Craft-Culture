@@ -73,66 +73,135 @@ const SupportPage = () => {
                 warehouse facility in the United Arab Emirates, purpose-built for the optimal storage
                 and handling of fine wines and premium spirits.
               </Typography>
-              <Typography variant="bodyMd" colorRole="muted" className="mb-4 leading-relaxed">
-                Our infrastructure combines advanced technology with meticulous environmental control
-                to ensure the highest standards of product integrity, featuring:
-              </Typography>
-              <ul className="mb-4 ml-6 list-disc space-y-2 text-sm text-text-secondary">
-                <li>
-                  Precision temperature-controlled environments calibrated for long-term wine
-                  preservation
-                </li>
-                <li>Humidity-regulated storage zones to maintain label and cork condition</li>
-                <li>
-                  Real time data dashboard featuring multi zone air temperature, liquid temperature,
-                  humidity, air quality and motion detection
-                </li>
-                <li>
-                  24/7 on-site security and monitoring systems ensuring full asset protection
-                </li>
-                <li>
-                  Bonded warehouse status for seamless customs compliance and duty-suspended storage
-                </li>
-                <li>
-                  Advanced inventory and tracking systems providing real-time visibility and control
-                </li>
-                <li>
-                  Integrated logistics infrastructure enabling efficient movement and regional
-                  distribution
-                </li>
-              </ul>
-              <Typography variant="bodyMd" colorRole="muted" className="mb-4 leading-relaxed">
+
+              {/* Facility Overview */}
+              <div className="mb-6">
+                <Typography variant="bodySm" className="mb-3 font-semibold">
+                  Bonded Warehouse Facility
+                </Typography>
+                <Typography variant="bodySm" colorRole="muted" className="leading-relaxed">
+                  Our bonded warehouse facility enables duty-free product storage until distribution
+                  or sale, optimizing cash flow and minimizing upfront costs for our partners across
+                  the GCC region.
+                </Typography>
+              </div>
+
+              {/* Infrastructure & Design */}
+              <div className="mb-6">
+                <Typography variant="bodySm" className="mb-3 font-semibold">
+                  Infrastructure & Design
+                </Typography>
+                <div className="space-y-3">
+                  <div>
+                    <Typography variant="bodyXs" className="mb-2 font-medium">
+                      Modular Architecture
+                    </Typography>
+                    <ul className="ml-6 list-disc space-y-1.5 text-xs text-text-secondary">
+                      <li>
+                        Cold room modules constructed from 110mm insulated sandwich panels with
+                        interlocking joints
+                      </li>
+                      <li>Each module measures 150 square meters</li>
+                      <li>
+                        Infinitely scalable design allows capacity expansion without operational
+                        disruption
+                      </li>
+                    </ul>
+                  </div>
+                  <div>
+                    <Typography variant="bodyXs" className="mb-2 font-medium">
+                      Climate Control
+                    </Typography>
+                    <ul className="ml-6 list-disc space-y-1.5 text-xs text-text-secondary">
+                      <li>Target temperature: 13-14°C for optimal wine preservation</li>
+                      <li>Redundant chiller architecture ensuring continuous reliability</li>
+                      <li>
+                        Purpose-built for temperature-sensitive products including fine wines, beers,
+                        and premium beverages
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+              {/* Monitoring Systems */}
+              <div className="mb-6">
+                <Typography variant="bodySm" className="mb-3 font-semibold">
+                  Advanced Monitoring Systems
+                </Typography>
+                <div className="space-y-3">
+                  <div>
+                    <Typography variant="bodyXs" className="mb-2 font-medium">
+                      Temperature & Humidity Monitoring
+                    </Typography>
+                    <ul className="ml-6 list-disc space-y-1.5 text-xs text-text-secondary">
+                      <li>Real-time monitoring with multi-position sensors in cold rooms</li>
+                      <li>Automated alerts for fluctuations outside acceptable ranges</li>
+                      <li>Humidity regulation to maintain label and cork condition</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <Typography variant="bodyXs" className="mb-2 font-medium">
+                      Proprietary Liquid Monitoring
+                    </Typography>
+                    <Typography variant="bodyXs" colorRole="muted" className="leading-relaxed">
+                      Our in-house designed system tracks the temperature of the liquid itself,
+                      offering precise data rather than relying solely on air sensors. This ensures
+                      product authenticity and integrity for investment-grade wines.
+                    </Typography>
+                  </div>
+                  <div>
+                    <Typography variant="bodyXs" className="mb-2 font-medium">
+                      Air Quality Control
+                    </Typography>
+                    <ul className="ml-6 list-disc space-y-1.5 text-xs text-text-secondary">
+                      <li>Particle size counting at various levels</li>
+                      <li>CO₂ monitoring systems</li>
+                      <li>Real-time data dashboard with comprehensive environmental tracking</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+              {/* Security & Access Control */}
+              <div className="mb-6">
+                <Typography variant="bodySm" className="mb-3 font-semibold">
+                  Security & Access Control
+                </Typography>
+                <ul className="ml-6 list-disc space-y-1.5 text-xs text-text-secondary">
+                  <li>24/7 CCTV with HD cameras and PTZ capabilities for movement tracking</li>
+                  <li>Restricted personnel access protocols</li>
+                  <li>Door contact sensors with audible alarms for temperature maintenance</li>
+                  <li>Alert systems for environmental parameter deviations</li>
+                  <li>Full asset protection and monitoring</li>
+                </ul>
+              </div>
+
+              {/* Additional Features */}
+              <div className="mb-4">
+                <Typography variant="bodySm" className="mb-3 font-semibold">
+                  Additional Features
+                </Typography>
+                <ul className="ml-6 list-disc space-y-1.5 text-xs text-text-secondary">
+                  <li>
+                    Energy-efficient LED lighting with motion activation and minimal maintenance
+                  </li>
+                  <li>
+                    Daily sanitation protocols with scheduled deep cleaning using food-safe
+                    disinfectants
+                  </li>
+                  <li>Recorded cleaning logs for full traceability</li>
+                  <li>Configurable racking systems per client specifications</li>
+                  <li>Advanced inventory and tracking systems with real-time visibility</li>
+                  <li>Integrated logistics infrastructure for efficient regional distribution</li>
+                </ul>
+              </div>
+
+              <Typography variant="bodyMd" colorRole="muted" className="leading-relaxed">
                 This modern facility forms the backbone of our regional operations — ensuring that
                 every product is stored, managed, and delivered to the highest international
-                standards.
+                standards while maintaining complete regulatory compliance.
               </Typography>
-              <div className="mt-4 rounded-md bg-fill-muted p-4">
-                <Typography variant="bodySm" colorRole="muted" className="mb-2">
-                  For detailed warehouse specifications, including capacity, certifications, and
-                  technical details, please visit:
-                </Typography>
-                <Link
-                  href="https://craft-and-culture.gitbook.io/accessmiddleeast/logistic-and-freight-management/warehouse-specifications"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 text-sm text-text-brand transition-colors hover:text-text-brand-hover hover:underline"
-                >
-                  Warehouse Specifications Documentation
-                  <svg
-                    className="h-4 w-4"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
-                    />
-                  </svg>
-                </Link>
-              </div>
             </section>
 
             {/* Logistics Data Logging */}
