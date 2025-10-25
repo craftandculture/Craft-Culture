@@ -635,7 +635,7 @@ const QuotesForm = () => {
               variant="bodySm"
               className="text-sm font-bold uppercase tracking-wider text-text-primary md:text-base"
             >
-              Product Catalog
+              Product Catalogue
             </Typography>
           </span>
         </div>
