@@ -106,7 +106,7 @@ const WarehouseDataFeed = () => {
               >
                 <Icon
                   icon={getSensorIcon(reading.sensorType)}
-                  size="xs"
+                  size="sm"
                   colorRole="muted"
                 />
                 <Typography variant="bodyXs" colorRole="muted">
