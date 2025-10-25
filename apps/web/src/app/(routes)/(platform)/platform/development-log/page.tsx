@@ -4,8 +4,7 @@ import CardDescription from '@/app/_ui/components/Card/CardDescription';
 import CardProse from '@/app/_ui/components/Card/CardProse';
 import CardTitle from '@/app/_ui/components/Card/CardTitle';
 import Typography from '@/app/_ui/components/Typography/Typography';
-import parseChangelog from '@/utils/parseChangelog';
-import type { ChangelogVersion } from '@/utils/parseChangelog';
+import fetchGitHubReleases from '@/utils/fetchGitHubReleases';
 
 /**
  * Format a date string to a more readable format
@@ -26,21 +25,50 @@ const formatDate = (dateString: string) => {
 };
 
 /**
- * Group changelog entries by type
+ * Parse GitHub release body to extract changes by type
  *
- * @param version - Changelog version object
- * @returns Grouped entries by type
+ * @example
+ *   parseReleaseBody('### Features\n\n* feat: add feature\n\n### Bug Fixes\n\n* fix: fix bug');
+ *
+ * @param body - GitHub release body markdown
+ * @returns Parsed changes grouped by type
  */
-const groupEntriesByType = (version: ChangelogVersion) => {
-  const features = version.entries.filter((entry) => entry.type === 'feature');
-  const fixes = version.entries.filter((entry) => entry.type === 'fix');
-  const other = version.entries.filter((entry) => entry.type === 'other');
+const parseReleaseBody = (body: string) => {
+  const features: string[] = [];
+  const fixes: string[] = [];
+  const other: string[] = [];
+
+  const sections = body.split(/^### /gm).filter(Boolean);
+
+  for (const section of sections) {
+    const lines = section.split('\n');
+    const heading = lines[0]?.trim().toLowerCase() ?? '';
+    const items = lines
+      .slice(1)
+      .filter((line) => line.trim().startsWith('*'))
+      .map((line) =>
+        line
+          .replace(/^\*\s*/, '')
+          .replace(/\s*\([a-f0-9]+\)$/, '')
+          .replace(/\s*\(\[[a-f0-9]+\]\(.*?\)\)\s*$/, '')
+          .trim(),
+      )
+      .filter(Boolean);
+
+    if (heading.includes('feature')) {
+      features.push(...items);
+    } else if (heading.includes('fix')) {
+      fixes.push(...items);
+    } else if (items.length > 0) {
+      other.push(...items);
+    }
+  }
 
   return { features, fixes, other };
 };
 
-const DevelopmentLogPage = () => {
-  const versions = parseChangelog();
+const DevelopmentLogPage = async () => {
+  const releases = await fetchGitHubReleases();
 
   return (
     <main className="container py-8 md:py-16">
@@ -54,25 +82,27 @@ const DevelopmentLogPage = () => {
           </CardProse>
 
           <div className="mt-8 max-h-[600px] space-y-8 overflow-y-auto pr-2">
-            {versions.length === 0 ? (
+            {releases.length === 0 ? (
               <Typography variant="bodySm" colorRole="muted">
                 No version history available.
               </Typography>
             ) : (
-              versions.map((version) => {
-                const { features, fixes, other } = groupEntriesByType(version);
+              releases.map((release) => {
+                const { features, fixes, other } = parseReleaseBody(
+                  release.body,
+                );
 
                 return (
                   <div
-                    key={version.version}
+                    key={release.version}
                     className="border-border-primary border-l-2 pl-4"
                   >
                     <div className="mb-2 flex items-baseline gap-3">
                       <Typography variant="headingMd" className="font-mono">
-                        v{version.version}
+                        v{release.version}
                       </Typography>
                       <Typography variant="bodySm" colorRole="muted">
-                        {formatDate(version.date)}
+                        {formatDate(release.date)}
                       </Typography>
                     </div>
 
@@ -87,7 +117,7 @@ const DevelopmentLogPage = () => {
                           </Typography>
                           <ul className="text-text-secondary ml-4 list-disc space-y-1 text-sm">
                             {features.map((entry, index) => (
-                              <li key={index}>{entry.description}</li>
+                              <li key={index}>{entry}</li>
                             ))}
                           </ul>
                         </div>
@@ -103,7 +133,7 @@ const DevelopmentLogPage = () => {
                           </Typography>
                           <ul className="text-text-secondary ml-4 list-disc space-y-1 text-sm">
                             {fixes.map((entry, index) => (
-                              <li key={index}>{entry.description}</li>
+                              <li key={index}>{entry}</li>
                             ))}
                           </ul>
                         </div>
@@ -119,7 +149,7 @@ const DevelopmentLogPage = () => {
                           </Typography>
                           <ul className="text-text-secondary ml-4 list-disc space-y-1 text-sm">
                             {other.map((entry, index) => (
-                              <li key={index}>{entry.description}</li>
+                              <li key={index}>{entry}</li>
                             ))}
                           </ul>
                         </div>
