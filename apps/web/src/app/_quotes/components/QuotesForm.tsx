@@ -76,6 +76,7 @@ const QuotesForm = () => {
       regions: filterState.regions,
       producers: filterState.producers,
     }),
+    placeholderData: (previousData) => previousData,
   });
 
   // Currency display toggle
