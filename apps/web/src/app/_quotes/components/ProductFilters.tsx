@@ -287,11 +287,11 @@ const ProductFilters = ({
       <div
         className={`overflow-hidden transition-all duration-300 ease-in-out ${
           isExpanded
-            ? 'max-h-[600px] opacity-100 md:max-h-[500px]'
+            ? 'max-h-[800px] opacity-100 md:max-h-[600px]'
             : 'max-h-0 opacity-0'
         }`}
       >
-        <div className="grid gap-3 rounded-lg border border-border-muted bg-background-primary p-3 shadow-sm sm:grid-cols-2 md:gap-2.5 md:p-2.5 xl:grid-cols-4">
+        <div className="grid gap-3 rounded-lg border border-border-muted bg-background-primary p-3 shadow-sm md:grid-cols-2 md:gap-2.5 md:p-2.5 xl:grid-cols-4">
           {/* Country Filter */}
           <div className="space-y-2">
             <div className="flex items-baseline justify-between">
@@ -321,11 +321,11 @@ const ProductFilters = ({
                   value={countrySearch}
                   onChange={(e) => setCountrySearch(e.target.value)}
                   placeholder="Search..."
-                  className="h-8 w-full rounded-md border border-border-muted bg-background-primary pl-8 pr-2.5 text-xs transition-colors placeholder:text-text-muted focus:border-border-brand focus:outline-none focus:ring-1 focus:ring-fill-accent"
+                  className="h-10 w-full rounded-md border border-border-muted bg-background-primary pl-8 pr-2.5 text-xs transition-colors placeholder:text-text-muted focus:border-border-brand focus:outline-none focus:ring-1 focus:ring-fill-accent md:h-8"
                 />
               </div>
             )}
-            <div className="max-h-[200px] space-y-0.5 overflow-y-auto rounded-md md:max-h-[280px]">
+            <div className="max-h-[280px] space-y-0.5 overflow-y-auto rounded-md md:max-h-[240px]">
               {filteredCountries.length === 0 ? (
                 <Typography variant="bodyXs" className="px-2 py-3 text-center text-text-muted">
                   {countrySearch.trim()
@@ -336,13 +336,13 @@ const ProductFilters = ({
                 filteredCountries.map(({ value: country, count }) => (
                   <label
                     key={country}
-                    className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 transition-colors hover:bg-fill-muted"
+                    className="flex cursor-pointer items-center gap-2.5 rounded px-2 py-2 transition-colors hover:bg-fill-muted active:bg-fill-muted md:gap-2 md:py-1.5"
                   >
                     <input
                       type="checkbox"
                       checked={filters.countries.includes(country)}
                       onChange={() => handleCountryToggle(country)}
-                      className="size-3.5 rounded border-border-muted text-fill-accent transition-colors focus:ring-1 focus:ring-fill-accent focus:ring-offset-1"
+                      className="size-4 rounded border-border-muted text-fill-accent transition-colors focus:ring-1 focus:ring-fill-accent focus:ring-offset-1 md:size-3.5"
                     />
                     <Typography variant="bodyXs" className="flex-1">
                       {country}
@@ -385,11 +385,11 @@ const ProductFilters = ({
                   value={regionSearch}
                   onChange={(e) => setRegionSearch(e.target.value)}
                   placeholder="Search..."
-                  className="h-8 w-full rounded-md border border-border-muted bg-background-primary pl-8 pr-2.5 text-xs transition-colors placeholder:text-text-muted focus:border-border-brand focus:outline-none focus:ring-1 focus:ring-fill-accent"
+                  className="h-10 w-full rounded-md border border-border-muted bg-background-primary pl-8 pr-2.5 text-xs transition-colors placeholder:text-text-muted focus:border-border-brand focus:outline-none focus:ring-1 focus:ring-fill-accent md:h-8"
                 />
               </div>
             )}
-            <div className="max-h-[200px] space-y-0.5 overflow-y-auto rounded-md md:max-h-[280px]">
+            <div className="max-h-[280px] space-y-0.5 overflow-y-auto rounded-md md:max-h-[240px]">
               {filteredRegions.length === 0 ? (
                 <Typography variant="bodyXs" className="px-2 py-3 text-center text-text-muted">
                   {regionSearch.trim()
@@ -400,13 +400,13 @@ const ProductFilters = ({
                 filteredRegions.map(({ value: region, count }) => (
                   <label
                     key={region}
-                    className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 transition-colors hover:bg-fill-muted"
+                    className="flex cursor-pointer items-center gap-2.5 rounded px-2 py-2 transition-colors hover:bg-fill-muted active:bg-fill-muted md:gap-2 md:py-1.5"
                   >
                     <input
                       type="checkbox"
                       checked={filters.regions.includes(region)}
                       onChange={() => handleRegionToggle(region)}
-                      className="size-3.5 rounded border-border-muted text-fill-accent transition-colors focus:ring-1 focus:ring-fill-accent focus:ring-offset-1"
+                      className="size-4 rounded border-border-muted text-fill-accent transition-colors focus:ring-1 focus:ring-fill-accent focus:ring-offset-1 md:size-3.5"
                     />
                     <Typography variant="bodyXs" className="flex-1">
                       {region}
@@ -449,11 +449,11 @@ const ProductFilters = ({
                   value={producerSearch}
                   onChange={(e) => setProducerSearch(e.target.value)}
                   placeholder="Search..."
-                  className="h-8 w-full rounded-md border border-border-muted bg-background-primary pl-8 pr-2.5 text-xs transition-colors placeholder:text-text-muted focus:border-border-brand focus:outline-none focus:ring-1 focus:ring-fill-accent"
+                  className="h-10 w-full rounded-md border border-border-muted bg-background-primary pl-8 pr-2.5 text-xs transition-colors placeholder:text-text-muted focus:border-border-brand focus:outline-none focus:ring-1 focus:ring-fill-accent md:h-8"
                 />
               </div>
             )}
-            <div className="max-h-[200px] space-y-0.5 overflow-y-auto rounded-md md:max-h-[280px]">
+            <div className="max-h-[280px] space-y-0.5 overflow-y-auto rounded-md md:max-h-[240px]">
               {filteredProducers.length === 0 ? (
                 <Typography variant="bodyXs" className="px-2 py-3 text-center text-text-muted">
                   {producerSearch.trim()
@@ -464,13 +464,13 @@ const ProductFilters = ({
                 filteredProducers.map(({ value: producer, count }) => (
                   <label
                     key={producer}
-                    className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 transition-colors hover:bg-fill-muted"
+                    className="flex cursor-pointer items-center gap-2.5 rounded px-2 py-2 transition-colors hover:bg-fill-muted active:bg-fill-muted md:gap-2 md:py-1.5"
                   >
                     <input
                       type="checkbox"
                       checked={filters.producers.includes(producer)}
                       onChange={() => handleProducerToggle(producer)}
-                      className="size-3.5 rounded border-border-muted text-fill-accent transition-colors focus:ring-1 focus:ring-fill-accent focus:ring-offset-1"
+                      className="size-4 rounded border-border-muted text-fill-accent transition-colors focus:ring-1 focus:ring-fill-accent focus:ring-offset-1 md:size-3.5"
                     />
                     <Typography variant="bodyXs" className="flex-1">
                       {producer}
@@ -513,11 +513,11 @@ const ProductFilters = ({
                   value={vintageSearch}
                   onChange={(e) => setVintageSearch(e.target.value)}
                   placeholder="Search..."
-                  className="h-8 w-full rounded-md border border-border-muted bg-background-primary pl-8 pr-2.5 text-xs transition-colors placeholder:text-text-muted focus:border-border-brand focus:outline-none focus:ring-1 focus:ring-fill-accent"
+                  className="h-10 w-full rounded-md border border-border-muted bg-background-primary pl-8 pr-2.5 text-xs transition-colors placeholder:text-text-muted focus:border-border-brand focus:outline-none focus:ring-1 focus:ring-fill-accent md:h-8"
                 />
               </div>
             )}
-            <div className="max-h-[200px] space-y-0.5 overflow-y-auto rounded-md md:max-h-[280px]">
+            <div className="max-h-[280px] space-y-0.5 overflow-y-auto rounded-md md:max-h-[240px]">
               {filteredVintages.length === 0 ? (
                 <Typography variant="bodyXs" className="px-2 py-3 text-center text-text-muted">
                   {vintageSearch.trim()
@@ -528,14 +528,14 @@ const ProductFilters = ({
                 filteredVintages.map(({ value: vintage, count }) => (
                   <label
                     key={vintage}
-                    className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 transition-colors hover:bg-fill-muted"
+                    className="flex cursor-pointer items-center gap-2.5 rounded px-2 py-2 transition-colors hover:bg-fill-muted active:bg-fill-muted md:gap-2 md:py-1.5"
                   >
                     <input
                       type="checkbox"
                       checked={filters.vintages.includes(vintage)}
                       onChange={() => handleVintageToggle(vintage)}
                       disabled={isLoadingVintages}
-                      className="size-3.5 rounded border-border-muted text-fill-accent transition-colors focus:ring-1 focus:ring-fill-accent focus:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50"
+                      className="size-4 rounded border-border-muted text-fill-accent transition-colors focus:ring-1 focus:ring-fill-accent focus:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50 md:size-3.5"
                     />
                     <Typography variant="bodyXs" className="flex-1">
                       {vintage === 0 ? 'NV' : vintage}
