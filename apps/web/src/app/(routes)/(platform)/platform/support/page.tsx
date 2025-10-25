@@ -60,18 +60,43 @@ const SupportPage = () => {
                 </Typography>
               </div>
               <Typography variant="bodyMd" colorRole="muted" className="mb-4 leading-relaxed">
-                Products are stored in our state-of-the-art bonded warehouse facility located in
-                the United Arab Emirates. Our facility is specifically designed for wine and spirits
-                storage, featuring:
+                All products are stored within Craft & Culture&apos;s state-of-the-art bonded
+                warehouse facility in the United Arab Emirates, purpose-built for the optimal storage
+                and handling of fine wines and premium spirits.
+              </Typography>
+              <Typography variant="bodyMd" colorRole="muted" className="mb-4 leading-relaxed">
+                Our infrastructure combines advanced technology with meticulous environmental control
+                to ensure the highest standards of product integrity, featuring:
               </Typography>
               <ul className="mb-4 ml-6 list-disc space-y-2 text-sm text-text-secondary">
-                <li>Temperature-controlled environments optimized for wine preservation</li>
-                <li>Humidity-controlled storage zones</li>
-                <li>24/7 security and monitoring systems</li>
-                <li>Bonded warehouse status for customs compliance</li>
-                <li>Advanced inventory management systems</li>
-                <li>Modern logistics infrastructure for efficient distribution</li>
+                <li>
+                  Precision temperature-controlled environments calibrated for long-term wine
+                  preservation
+                </li>
+                <li>Humidity-regulated storage zones to maintain label and cork condition</li>
+                <li>
+                  Real time data dashboard featuring multi zone air temperature, liquid temperature,
+                  humidity, air quality and motion detection
+                </li>
+                <li>
+                  24/7 on-site security and monitoring systems ensuring full asset protection
+                </li>
+                <li>
+                  Bonded warehouse status for seamless customs compliance and duty-suspended storage
+                </li>
+                <li>
+                  Advanced inventory and tracking systems providing real-time visibility and control
+                </li>
+                <li>
+                  Integrated logistics infrastructure enabling efficient movement and regional
+                  distribution
+                </li>
               </ul>
+              <Typography variant="bodyMd" colorRole="muted" className="mb-4 leading-relaxed">
+                This modern facility forms the backbone of our regional operations — ensuring that
+                every product is stored, managed, and delivered to the highest international
+                standards.
+              </Typography>
               <div className="mt-4 rounded-md bg-fill-muted p-4">
                 <Typography variant="bodySm" colorRole="muted" className="mb-2">
                   For detailed warehouse specifications, including capacity, certifications, and
