@@ -28,6 +28,7 @@ interface ProductFiltersProps {
     string,
     Array<{ value: number; count: number }>
   >;
+  isLoadingVintages?: boolean;
 }
 
 /**
@@ -46,6 +47,7 @@ const ProductFilters = ({
   regionsByCountryWithCounts,
   producersByCountryWithCounts,
   vintagesByCountryWithCounts,
+  isLoadingVintages = false,
 }: ProductFiltersProps) => {
   const [filters, setFilters] = useQueryStates(quotesSearchParams, {
     shallow: true,
@@ -532,7 +534,8 @@ const ProductFilters = ({
                       type="checkbox"
                       checked={filters.vintages.includes(vintage)}
                       onChange={() => handleVintageToggle(vintage)}
-                      className="size-3.5 rounded border-border-muted text-fill-accent transition-colors focus:ring-1 focus:ring-fill-accent focus:ring-offset-1"
+                      disabled={isLoadingVintages}
+                      className="size-3.5 rounded border-border-muted text-fill-accent transition-colors focus:ring-1 focus:ring-fill-accent focus:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50"
                     />
                     <Typography variant="bodyXs" className="flex-1">
                       {vintage === 0 ? 'NV' : vintage}

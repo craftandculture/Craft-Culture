@@ -70,13 +70,12 @@ const QuotesForm = () => {
   });
 
   // Fetch filter options for dropdowns, passing current filters to refine vintages
-  const { data: filterOptions } = useQuery({
+  const { data: filterOptions, isLoading: isLoadingFilterOptions } = useQuery({
     ...api.products.getFilterOptions.queryOptions({
       countries: filterState.countries,
       regions: filterState.regions,
       producers: filterState.producers,
     }),
-    placeholderData: (previousData) => previousData,
   });
 
   // Currency display toggle
@@ -647,6 +646,7 @@ const QuotesForm = () => {
             regionsByCountryWithCounts={filterOptions.regionsByCountryWithCounts}
             producersByCountryWithCounts={filterOptions.producersByCountryWithCounts}
             vintagesByCountryWithCounts={filterOptions.vintagesByCountryWithCounts}
+            isLoadingVintages={isLoadingFilterOptions}
           />
         )}
 
