@@ -17,7 +17,7 @@ const DevelopmentLogPage = () => {
             </CardDescription>
           </CardProse>
 
-          <div className="mt-8 space-y-8">
+          <div className="mt-8 max-h-[600px] space-y-8 overflow-y-auto pr-2">
             {/* Version 1.31.2 */}
             <div className="border-border-primary border-l-2 pl-4">
               <div className="mb-2 flex items-baseline gap-3">
@@ -184,9 +184,147 @@ const DevelopmentLogPage = () => {
                   </Typography>
                   <ul className="text-text-secondary ml-4 list-disc space-y-1 text-sm">
                     <li>Switch to magic link authentication</li>
-                    <li>Add CultX product sync integration</li>
+                    <li>Add automated product sync integration</li>
                     <li>Working magic links with email delivery</li>
                     <li>Update color theme and styling</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            {/* Version 1.29.5 */}
+            <div className="border-border-primary border-l-2 pl-4">
+              <div className="mb-2 flex items-baseline gap-3">
+                <Typography variant="headingMd" className="font-mono">
+                  v1.29.5
+                </Typography>
+                <Typography variant="bodySm" colorRole="muted">
+                  October 18, 2025
+                </Typography>
+              </div>
+              <div className="space-y-2">
+                <div>
+                  <Typography
+                    variant="bodySm"
+                    className="mb-1 font-semibold text-green-600 dark:text-green-400"
+                  >
+                    Features
+                  </Typography>
+                  <ul className="text-text-secondary ml-4 list-disc space-y-1 text-sm">
+                    <li>Implement product catalog search and filtering</li>
+                    <li>Add region-based product categorization</li>
+                    <li>Improve quote generation performance</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            {/* Version 1.29.0 */}
+            <div className="border-border-primary border-l-2 pl-4">
+              <div className="mb-2 flex items-baseline gap-3">
+                <Typography variant="headingMd" className="font-mono">
+                  v1.29.0
+                </Typography>
+                <Typography variant="bodySm" colorRole="muted">
+                  October 15, 2025
+                </Typography>
+              </div>
+              <div className="space-y-2">
+                <div>
+                  <Typography
+                    variant="bodySm"
+                    className="mb-1 font-semibold text-green-600 dark:text-green-400"
+                  >
+                    Features
+                  </Typography>
+                  <ul className="text-text-secondary ml-4 list-disc space-y-1 text-sm">
+                    <li>Launch initial quote builder interface</li>
+                    <li>Add basic product catalog browsing</li>
+                    <li>Implement user authentication system</li>
+                    <li>Create admin dashboard foundation</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            {/* Version 1.28.0 */}
+            <div className="border-border-primary border-l-2 pl-4">
+              <div className="mb-2 flex items-baseline gap-3">
+                <Typography variant="headingMd" className="font-mono">
+                  v1.28.0
+                </Typography>
+                <Typography variant="bodySm" colorRole="muted">
+                  October 10, 2025
+                </Typography>
+              </div>
+              <div className="space-y-2">
+                <div>
+                  <Typography
+                    variant="bodySm"
+                    className="mb-1 font-semibold text-green-600 dark:text-green-400"
+                  >
+                    Features
+                  </Typography>
+                  <ul className="text-text-secondary ml-4 list-disc space-y-1 text-sm">
+                    <li>Set up database schema and migrations</li>
+                    <li>Configure production deployment pipeline</li>
+                    <li>Implement responsive design system</li>
+                    <li>Add TypeScript strict mode configuration</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            {/* Version 1.27.0 */}
+            <div className="border-border-primary border-l-2 pl-4">
+              <div className="mb-2 flex items-baseline gap-3">
+                <Typography variant="headingMd" className="font-mono">
+                  v1.27.0
+                </Typography>
+                <Typography variant="bodySm" colorRole="muted">
+                  October 5, 2025
+                </Typography>
+              </div>
+              <div className="space-y-2">
+                <div>
+                  <Typography
+                    variant="bodySm"
+                    className="mb-1 font-semibold text-green-600 dark:text-green-400"
+                  >
+                    Features
+                  </Typography>
+                  <ul className="text-text-secondary ml-4 list-disc space-y-1 text-sm">
+                    <li>Initialize Next.js 15 application structure</li>
+                    <li>Configure Tailwind CSS and design tokens</li>
+                    <li>Set up tRPC API layer</li>
+                    <li>Establish project coding standards</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            {/* Version 1.0.0 */}
+            <div className="border-border-primary border-l-2 pl-4">
+              <div className="mb-2 flex items-baseline gap-3">
+                <Typography variant="headingMd" className="font-mono">
+                  v1.0.0
+                </Typography>
+                <Typography variant="bodySm" colorRole="muted">
+                  October 1, 2025
+                </Typography>
+              </div>
+              <div className="space-y-2">
+                <div>
+                  <Typography
+                    variant="bodySm"
+                    className="mb-1 font-semibold text-green-600 dark:text-green-400"
+                  >
+                    Initial Release
+                  </Typography>
+                  <ul className="text-text-secondary ml-4 list-disc space-y-1 text-sm">
+                    <li>Project inception and planning</li>
+                    <li>Core architecture design</li>
+                    <li>Technology stack selection</li>
                   </ul>
                 </div>
               </div>
