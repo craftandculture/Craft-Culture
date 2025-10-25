@@ -5,6 +5,7 @@ import {
   IconPackage,
   IconTruck,
 } from '@tabler/icons-react';
+import Image from 'next/image';
 import Link from 'next/link';
 
 import Card from '@/app/_ui/components/Card/Card';
@@ -67,16 +68,16 @@ const SupportPage = () => {
                 </Typography>
               </div>
 
-              {/* Warehouse Image Placeholder */}
-              <div className="mb-6 overflow-hidden rounded-lg border border-border-muted bg-fill-muted">
-                <div className="flex aspect-video items-center justify-center">
-                  <div className="text-center">
-                    <Icon icon={IconBuildingWarehouse} size="lg" colorRole="muted" />
-                    <Typography variant="bodySm" colorRole="muted" className="mt-2">
-                      Warehouse facility image
-                    </Typography>
-                  </div>
-                </div>
+              {/* Warehouse Monitoring System Image */}
+              <div className="mb-6 overflow-hidden rounded-lg border border-border-muted">
+                <Image
+                  src="https://craft-and-culture.gitbook.io/accessmiddleeast/~gitbook/image?url=https%3A%2F%2F1032101154-files.gitbook.io%2F%7E%2Ffiles%2Fv0%2Fb%2Fgitbook-x-prod.appspot.com%2Fo%2Fspaces%252FzevGLhW4lSYr4ZX17ksK%252Fuploads%252Fc0fflvuLeHTye4jxs7zm%252FScreenshot%25202025-08-07%2520at%252010.44.45.png%3Falt%3Dmedia%26token%3D6ffe9e93-57b6-40b0-8479-24f0e322f325&width=768&dpr=4&quality=100&sign=9ce3d136&sv=2"
+                  alt="Warehouse monitoring system dashboard showing real-time temperature, humidity, and environmental controls"
+                  width={768}
+                  height={432}
+                  className="h-auto w-full"
+                  unoptimized
+                />
               </div>
 
               <Typography variant="bodyMd" colorRole="muted" className="mb-4 leading-relaxed">
