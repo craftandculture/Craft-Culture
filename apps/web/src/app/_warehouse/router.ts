@@ -1,8 +1,8 @@
-import { router } from '@/lib/trpc';
+import { createTRPCRouter } from '@/lib/trpc/trpc';
 
 import warehouseGetLatestReadings from './controller/warehouseGetLatestReadings';
 
-const warehouseRouter = router({
+const warehouseRouter = createTRPCRouter({
   getLatestReadings: warehouseGetLatestReadings,
 });
 
