@@ -21,7 +21,7 @@ const DevelopmentLogPage = () => {
             {/* Version 1.31.2 */}
             <div className="border-border-primary border-l-2 pl-4">
               <div className="mb-2 flex items-baseline gap-3">
-                <Typography variant="h6" className="font-mono">
+                <Typography variant="headingMd" className="font-mono">
                   v1.31.2
                 </Typography>
                 <Typography variant="bodySm" colorRole="muted">
@@ -72,7 +72,7 @@ const DevelopmentLogPage = () => {
             {/* Version 1.31.1 */}
             <div className="border-border-primary border-l-2 pl-4">
               <div className="mb-2 flex items-baseline gap-3">
-                <Typography variant="h6" className="font-mono">
+                <Typography variant="headingMd" className="font-mono">
                   v1.31.1
                 </Typography>
                 <Typography variant="bodySm" colorRole="muted">
@@ -100,7 +100,7 @@ const DevelopmentLogPage = () => {
             {/* Version 1.31.0 */}
             <div className="border-border-primary border-l-2 pl-4">
               <div className="mb-2 flex items-baseline gap-3">
-                <Typography variant="h6" className="font-mono">
+                <Typography variant="headingMd" className="font-mono">
                   v1.31.0
                 </Typography>
                 <Typography variant="bodySm" colorRole="muted">
@@ -140,7 +140,7 @@ const DevelopmentLogPage = () => {
             {/* Version 1.30.1 */}
             <div className="border-border-primary border-l-2 pl-4">
               <div className="mb-2 flex items-baseline gap-3">
-                <Typography variant="h6" className="font-mono">
+                <Typography variant="headingMd" className="font-mono">
                   v1.30.1
                 </Typography>
                 <Typography variant="bodySm" colorRole="muted">
@@ -167,7 +167,7 @@ const DevelopmentLogPage = () => {
             {/* Version 1.30.0 */}
             <div className="border-border-primary border-l-2 pl-4">
               <div className="mb-2 flex items-baseline gap-3">
-                <Typography variant="h6" className="font-mono">
+                <Typography variant="headingMd" className="font-mono">
                   v1.30.0
                 </Typography>
                 <Typography variant="bodySm" colorRole="muted">
