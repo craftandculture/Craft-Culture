@@ -220,3 +220,22 @@ export const adminActivityLogs = pgTable(
     index('admin_activity_logs_action_idx').on(table.action),
   ],
 ).enableRLS();
+
+export const warehouseSensorReadings = pgTable(
+  'warehouse_sensor_readings',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    sensorId: text('sensor_id').notNull(),
+    sensorType: text('sensor_type').notNull(),
+    value: doublePrecision('value').notNull(),
+    unit: text('unit').notNull(),
+    location: text('location'),
+    timestamp: timestamp('timestamp', { mode: 'date' }).notNull().defaultNow(),
+    metadata: jsonb('metadata'),
+  },
+  (table) => [
+    index('warehouse_sensor_readings_sensor_id_idx').on(table.sensorId),
+    index('warehouse_sensor_readings_timestamp_idx').on(table.timestamp),
+    index('warehouse_sensor_readings_sensor_type_idx').on(table.sensorType),
+  ],
+).enableRLS();

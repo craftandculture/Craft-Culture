@@ -15,7 +15,8 @@
         "NEXT_PUBLIC_VERCEL_URL",
         "LOOPS_API_KEY",
         "BETTER_AUTH_SECRET",
-        "BETTER_AUTH_URL"
+        "BETTER_AUTH_URL",
+        "WAREHOUSE_API_KEY"
       ]
     },
     "dev": {

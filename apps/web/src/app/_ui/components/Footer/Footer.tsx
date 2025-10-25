@@ -1,10 +1,15 @@
 import Link from 'next/link';
 
+import WarehouseDataFeed from '@/app/_warehouse/components/WarehouseDataFeed';
+
 const Footer = () => {
   const currentYear = new Date().getFullYear();
 
   return (
     <footer className="border-border-primary mt-auto border-t bg-fill-secondary/30">
+      {/* Live warehouse sensor data feed */}
+      <WarehouseDataFeed />
+
       <div className="container py-6 md:py-8">
         <div className="grid gap-6 md:grid-cols-3 md:gap-8">
           {/* Company Info */}
