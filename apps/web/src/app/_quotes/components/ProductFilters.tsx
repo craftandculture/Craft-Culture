@@ -5,7 +5,6 @@ import { useQueryStates } from 'nuqs';
 import { useMemo, useState } from 'react';
 
 import Button from '@/app/_ui/components/Button/Button';
-import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Tooltip from '@/app/_ui/components/Tooltip/Tooltip';
 import TooltipContent from '@/app/_ui/components/Tooltip/TooltipContent';
@@ -184,33 +183,43 @@ const ProductFilters = ({
   return (
     <div className="space-y-2">
       {/* Filter Header */}
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-2">
-          <Button
-            type="button"
-            variant="outline"
+      <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => setIsExpanded(!isExpanded)}
+          className="w-full gap-2 sm:w-auto"
+        >
+          <Icon icon={IconFilter} size="sm" />
+          <span className="text-xs font-medium">Filters</span>
+          {activeFilterCount > 0 && (
+            <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-fill-accent px-1.5 text-xs font-semibold text-text-primary">
+              {activeFilterCount}
+            </span>
+          )}
+          <Icon
+            icon={IconChevronDown}
             size="sm"
-            onClick={() => setIsExpanded(!isExpanded)}
-            className="justify-between sm:w-auto"
-          >
-            <ButtonContent iconLeft={IconFilter}>
-              <span className="flex items-center gap-1.5">
-                <span className="text-xs">Filters</span>
-                {activeFilterCount > 0 && (
-                  <span className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-fill-accent px-1 text-xs font-semibold text-text-primary">
-                    {activeFilterCount}
-                  </span>
-                )}
-              </span>
-            </ButtonContent>
-            <Icon
-              icon={IconChevronDown}
+            className={`ml-auto transition-transform duration-200 ${
+              isExpanded ? 'rotate-180' : ''
+            }`}
+          />
+        </Button>
+
+        <div className="flex w-full items-center gap-2 sm:w-auto">
+          {hasActiveFilters && (
+            <Button
+              type="button"
+              variant="ghost"
               size="sm"
-              className={`ml-1.5 transition-transform duration-200 ${
-                isExpanded ? 'rotate-180' : ''
-              }`}
-            />
-          </Button>
+              onClick={handleClearAll}
+              className="flex-1 sm:flex-none"
+            >
+              <Icon icon={IconX} size="sm" />
+              <span className="text-xs">Clear</span>
+            </Button>
+          )}
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -219,51 +228,45 @@ const ProductFilters = ({
                     icon={IconInfoCircle}
                     size="sm"
                     colorRole="muted"
-                    className="h-3.5 w-3.5"
+                    className="h-4 w-4"
                   />
                 </button>
               </TooltipTrigger>
               <TooltipContent>
                 <Typography variant="bodyXs">
-                  Filters apply to Quote Tool & Full catalogue
+                  Cascading filters: Select countries first to filter regions, producers & vintages
                 </Typography>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
         </div>
-
-        {hasActiveFilters && (
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={handleClearAll}
-            className="w-full sm:w-auto"
-          >
-            <ButtonContent iconLeft={IconX}>
-              <span className="text-xs">Clear All</span>
-            </ButtonContent>
-          </Button>
-        )}
       </div>
 
       {/* Filter Options */}
       <div
-        className={`overflow-hidden transition-all duration-300 ${
+        className={`overflow-hidden transition-all duration-300 ease-in-out ${
           isExpanded
-            ? 'max-h-[600px] opacity-100'
+            ? 'max-h-[500px] opacity-100'
             : 'max-h-0 opacity-0'
         }`}
       >
-        <div className="grid gap-3 rounded-lg border border-border-muted bg-surface-muted p-3 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-2.5 rounded-lg border border-border-muted bg-background-primary p-2.5 shadow-sm sm:grid-cols-2 xl:grid-cols-4">
           {/* Country Filter */}
           <div className="space-y-2">
-            <Typography
-              variant="bodyXs"
-              className="font-semibold uppercase tracking-wide text-text-muted"
-            >
-              Country
-            </Typography>
+            <div className="flex items-baseline justify-between">
+              <Typography
+                variant="bodyXs"
+                className="font-semibold uppercase tracking-wide text-text-muted"
+              >
+                Country
+              </Typography>
+              <Typography
+                variant="bodyXs"
+                className="text-text-muted"
+              >
+                ({filteredCountries.length})
+              </Typography>
+            </div>
             {availableCountries.length > 5 && (
               <div className="relative">
                 <Icon
@@ -311,12 +314,20 @@ const ProductFilters = ({
 
           {/* Region Filter */}
           <div className="space-y-2">
-            <Typography
-              variant="bodyXs"
-              className="font-semibold uppercase tracking-wide text-text-muted"
-            >
-              Region
-            </Typography>
+            <div className="flex items-baseline justify-between">
+              <Typography
+                variant="bodyXs"
+                className="font-semibold uppercase tracking-wide text-text-muted"
+              >
+                Region
+              </Typography>
+              <Typography
+                variant="bodyXs"
+                className="text-text-muted"
+              >
+                ({filteredRegions.length})
+              </Typography>
+            </div>
             {availableRegions.length > 5 && (
               <div className="relative">
                 <Icon
@@ -364,12 +375,20 @@ const ProductFilters = ({
 
           {/* Producer Filter */}
           <div className="space-y-2">
-            <Typography
-              variant="bodyXs"
-              className="font-semibold uppercase tracking-wide text-text-muted"
-            >
-              Producer
-            </Typography>
+            <div className="flex items-baseline justify-between">
+              <Typography
+                variant="bodyXs"
+                className="font-semibold uppercase tracking-wide text-text-muted"
+              >
+                Producer
+              </Typography>
+              <Typography
+                variant="bodyXs"
+                className="text-text-muted"
+              >
+                ({filteredProducers.length})
+              </Typography>
+            </div>
             {availableProducers.length > 5 && (
               <div className="relative">
                 <Icon
@@ -417,12 +436,20 @@ const ProductFilters = ({
 
           {/* Vintage Filter */}
           <div className="space-y-2">
-            <Typography
-              variant="bodyXs"
-              className="font-semibold uppercase tracking-wide text-text-muted"
-            >
-              Vintage
-            </Typography>
+            <div className="flex items-baseline justify-between">
+              <Typography
+                variant="bodyXs"
+                className="font-semibold uppercase tracking-wide text-text-muted"
+              >
+                Vintage
+              </Typography>
+              <Typography
+                variant="bodyXs"
+                className="text-text-muted"
+              >
+                ({filteredVintages.length})
+              </Typography>
+            </div>
             {availableVintages.length > 5 && (
               <div className="relative">
                 <Icon
