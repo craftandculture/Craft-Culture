@@ -1,8 +1,9 @@
 'use client';
 
+import { useQuery } from '@tanstack/react-query';
 import { formatDistanceToNow } from 'date-fns';
 
-import api from '@/lib/trpc/client';
+import useTRPC from '@/lib/trpc/browser';
 
 import Typography from '../Typography/Typography';
 
@@ -13,7 +14,9 @@ import Typography from '../Typography/Typography';
  *   <LiveStatus />
  */
 const LiveStatus = () => {
-  const { data: lastUpdate } = api.products.getLastUpdate.useQuery(undefined, {
+  const api = useTRPC();
+  const { data: lastUpdate } = useQuery({
+    ...api.products.getLastUpdate.queryOptions(),
     refetchInterval: 60000, // Refetch every minute
   });
 
