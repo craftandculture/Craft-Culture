@@ -38,7 +38,7 @@ const LiveStatus = () => {
             {/* Status text */}
             <div className="flex items-center gap-1.5">
               <Typography variant="bodyXs" colorRole="muted" className="font-medium">
-                Live Data
+                DATABASE
               </Typography>
               {lastUpdate && (
                 <>
