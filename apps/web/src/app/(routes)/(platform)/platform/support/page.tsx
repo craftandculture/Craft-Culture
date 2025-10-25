@@ -36,7 +36,7 @@ const SupportPage = () => {
                 <div className="flex-shrink-0 rounded-lg bg-fill-accent/10 p-2">
                   <Icon icon={IconPackage} size="md" colorRole="brand" />
                 </div>
-                <Typography variant="headingMd" className="font-semibold">
+                <Typography variant="headingSm" className="font-semibold">
                   Product Sourcing
                 </Typography>
               </div>
@@ -65,7 +65,7 @@ const SupportPage = () => {
                 <div className="flex-shrink-0 rounded-lg bg-fill-accent/10 p-2">
                   <Icon icon={IconBuildingWarehouse} size="md" colorRole="brand" />
                 </div>
-                <Typography variant="headingMd" className="font-semibold">
+                <Typography variant="headingSm" className="font-semibold">
                   Warehouse & Storage Facilities
                 </Typography>
               </div>
@@ -78,7 +78,7 @@ const SupportPage = () => {
 
               {/* Facility Overview */}
               <div className="mb-5 rounded-md bg-background-primary/50 p-4">
-                <Typography variant="bodySm" className="mb-2 font-semibold">
+                <Typography variant="bodyXs" className="mb-2 font-semibold">
                   Bonded Warehouse Facility
                 </Typography>
                 <Typography variant="bodyXs" colorRole="muted" className="leading-relaxed">
@@ -90,7 +90,7 @@ const SupportPage = () => {
 
               {/* Infrastructure & Design */}
               <div className="mb-5">
-                <Typography variant="bodySm" className="mb-3 font-semibold">
+                <Typography variant="bodyXs" className="mb-3 font-semibold">
                   Infrastructure & Design
                 </Typography>
                 <div className="grid gap-4 sm:grid-cols-2">
@@ -98,20 +98,56 @@ const SupportPage = () => {
                     <Typography variant="bodyXs" className="mb-2 font-medium">
                       Modular Architecture
                     </Typography>
-                    <ul className="ml-4 list-disc space-y-1 text-xs text-text-secondary">
-                      <li>110mm insulated sandwich panels with interlocking joints</li>
-                      <li>150 square meter modules</li>
-                      <li>Scalable design for seamless expansion</li>
+                    <ul className="ml-4 space-y-1">
+                      <Typography
+                        variant="bodyXs"
+                        colorRole="muted"
+                        className="list-item list-disc"
+                      >
+                        110mm insulated sandwich panels with interlocking joints
+                      </Typography>
+                      <Typography
+                        variant="bodyXs"
+                        colorRole="muted"
+                        className="list-item list-disc"
+                      >
+                        150 square meter modules
+                      </Typography>
+                      <Typography
+                        variant="bodyXs"
+                        colorRole="muted"
+                        className="list-item list-disc"
+                      >
+                        Scalable design for seamless expansion
+                      </Typography>
                     </ul>
                   </div>
                   <div className="rounded-md border border-border-muted bg-background-primary/50 p-3">
                     <Typography variant="bodyXs" className="mb-2 font-medium">
                       Climate Control
                     </Typography>
-                    <ul className="ml-4 list-disc space-y-1 text-xs text-text-secondary">
-                      <li>Target temperature: 13-14°C</li>
-                      <li>Redundant chiller architecture</li>
-                      <li>Optimal for fine wines and premium spirits</li>
+                    <ul className="ml-4 space-y-1">
+                      <Typography
+                        variant="bodyXs"
+                        colorRole="muted"
+                        className="list-item list-disc"
+                      >
+                        Target temperature: 13-14°C
+                      </Typography>
+                      <Typography
+                        variant="bodyXs"
+                        colorRole="muted"
+                        className="list-item list-disc"
+                      >
+                        Redundant chiller architecture
+                      </Typography>
+                      <Typography
+                        variant="bodyXs"
+                        colorRole="muted"
+                        className="list-item list-disc"
+                      >
+                        Optimal for fine wines and premium spirits
+                      </Typography>
                     </ul>
                   </div>
                 </div>
@@ -119,7 +155,7 @@ const SupportPage = () => {
 
               {/* Monitoring Systems */}
               <div className="mb-5">
-                <Typography variant="bodySm" className="mb-3 font-semibold">
+                <Typography variant="bodyXs" className="mb-3 font-semibold">
                   Advanced Monitoring Systems
                 </Typography>
                 <div className="space-y-3">
@@ -127,10 +163,28 @@ const SupportPage = () => {
                     <Typography variant="bodyXs" className="mb-2 font-medium">
                       Temperature & Humidity Monitoring
                     </Typography>
-                    <ul className="ml-4 list-disc space-y-1 text-xs text-text-secondary">
-                      <li>Real-time multi-position sensors</li>
-                      <li>Automated alerts for parameter deviations</li>
-                      <li>Humidity control for label and cork preservation</li>
+                    <ul className="ml-4 space-y-1">
+                      <Typography
+                        variant="bodyXs"
+                        colorRole="muted"
+                        className="list-item list-disc"
+                      >
+                        Real-time multi-position sensors
+                      </Typography>
+                      <Typography
+                        variant="bodyXs"
+                        colorRole="muted"
+                        className="list-item list-disc"
+                      >
+                        Automated alerts for parameter deviations
+                      </Typography>
+                      <Typography
+                        variant="bodyXs"
+                        colorRole="muted"
+                        className="list-item list-disc"
+                      >
+                        Humidity control for label and cork preservation
+                      </Typography>
                     </ul>
                   </div>
                   <div className="rounded-md border border-border-muted bg-background-primary/50 p-3">
@@ -156,10 +210,28 @@ const SupportPage = () => {
                     <Typography variant="bodyXs" className="mb-2 font-medium">
                       Air Quality Control
                     </Typography>
-                    <ul className="ml-4 list-disc space-y-1 text-xs text-text-secondary">
-                      <li>Particle size counting at multiple levels</li>
-                      <li>CO₂ monitoring systems</li>
-                      <li>Comprehensive environmental tracking dashboard</li>
+                    <ul className="ml-4 space-y-1">
+                      <Typography
+                        variant="bodyXs"
+                        colorRole="muted"
+                        className="list-item list-disc"
+                      >
+                        Particle size counting at multiple levels
+                      </Typography>
+                      <Typography
+                        variant="bodyXs"
+                        colorRole="muted"
+                        className="list-item list-disc"
+                      >
+                        CO₂ monitoring systems
+                      </Typography>
+                      <Typography
+                        variant="bodyXs"
+                        colorRole="muted"
+                        className="list-item list-disc"
+                      >
+                        Comprehensive environmental tracking dashboard
+                      </Typography>
                     </ul>
                   </div>
                 </div>
@@ -168,34 +240,54 @@ const SupportPage = () => {
               {/* Security & Additional Features Grid */}
               <div className="mb-5 grid gap-4 sm:grid-cols-2">
                 <div>
-                  <Typography variant="bodySm" className="mb-3 font-semibold">
+                  <Typography variant="bodyXs" className="mb-3 font-semibold">
                     Security & Access Control
                   </Typography>
-                  <ul className="ml-4 list-disc space-y-1 text-xs text-text-secondary">
-                    <li>24/7 CCTV with HD cameras and PTZ tracking</li>
-                    <li>Restricted personnel access protocols</li>
-                    <li>Door sensors with audible alarms</li>
-                    <li>Environmental deviation alerts</li>
-                    <li>Full asset protection monitoring</li>
+                  <ul className="ml-4 space-y-1">
+                    <Typography variant="bodyXs" colorRole="muted" className="list-item list-disc">
+                      24/7 CCTV with HD cameras and PTZ tracking
+                    </Typography>
+                    <Typography variant="bodyXs" colorRole="muted" className="list-item list-disc">
+                      Restricted personnel access protocols
+                    </Typography>
+                    <Typography variant="bodyXs" colorRole="muted" className="list-item list-disc">
+                      Door sensors with audible alarms
+                    </Typography>
+                    <Typography variant="bodyXs" colorRole="muted" className="list-item list-disc">
+                      Environmental deviation alerts
+                    </Typography>
+                    <Typography variant="bodyXs" colorRole="muted" className="list-item list-disc">
+                      Full asset protection monitoring
+                    </Typography>
                   </ul>
                 </div>
                 <div>
-                  <Typography variant="bodySm" className="mb-3 font-semibold">
+                  <Typography variant="bodyXs" className="mb-3 font-semibold">
                     Additional Features
                   </Typography>
-                  <ul className="ml-4 list-disc space-y-1 text-xs text-text-secondary">
-                    <li>Motion-activated LED lighting</li>
-                    <li>Daily sanitation with food-safe products</li>
-                    <li>Recorded cleaning logs</li>
-                    <li>Configurable racking systems</li>
-                    <li>Real-time inventory tracking</li>
+                  <ul className="ml-4 space-y-1">
+                    <Typography variant="bodyXs" colorRole="muted" className="list-item list-disc">
+                      Motion-activated LED lighting
+                    </Typography>
+                    <Typography variant="bodyXs" colorRole="muted" className="list-item list-disc">
+                      Daily sanitation with food-safe products
+                    </Typography>
+                    <Typography variant="bodyXs" colorRole="muted" className="list-item list-disc">
+                      Recorded cleaning logs
+                    </Typography>
+                    <Typography variant="bodyXs" colorRole="muted" className="list-item list-disc">
+                      Configurable racking systems
+                    </Typography>
+                    <Typography variant="bodyXs" colorRole="muted" className="list-item list-disc">
+                      Real-time inventory tracking
+                    </Typography>
                   </ul>
                 </div>
               </div>
 
               {/* Monitoring Dashboard */}
               <div>
-                <Typography variant="bodySm" className="mb-3 font-semibold">
+                <Typography variant="bodyXs" className="mb-3 font-semibold">
                   Real-Time Monitoring Dashboard
                 </Typography>
                 <Typography variant="bodyXs" colorRole="muted" className="mb-3 leading-relaxed">
@@ -223,7 +315,7 @@ const SupportPage = () => {
                 <div className="flex-shrink-0 rounded-lg bg-fill-accent/10 p-2">
                   <Icon icon={IconChartLine} size="md" colorRole="brand" />
                 </div>
-                <Typography variant="headingMd" className="font-semibold">
+                <Typography variant="headingSm" className="font-semibold">
                   Logistics Data Logging
                 </Typography>
               </div>
@@ -252,7 +344,7 @@ const SupportPage = () => {
                 <div className="flex-shrink-0 rounded-lg bg-fill-accent/10 p-2">
                   <Icon icon={IconTruck} size="md" colorRole="brand" />
                 </div>
-                <Typography variant="headingMd" className="font-semibold">
+                <Typography variant="headingSm" className="font-semibold">
                   B2B & B2C Sales Models
                 </Typography>
               </div>
@@ -265,43 +357,63 @@ const SupportPage = () => {
               <div className="grid gap-4 sm:grid-cols-2">
                 {/* B2B Section */}
                 <div className="rounded-md border border-border-muted bg-background-primary p-4">
-                  <Typography variant="bodySm" className="mb-2 font-semibold">
+                  <Typography variant="bodyXs" className="mb-2 font-semibold">
                     B2B (Business-to-Business)
                   </Typography>
                   <Typography variant="bodyXs" colorRole="muted" className="mb-3 leading-relaxed">
                     Serving licensed retailers, hotels, restaurants, bars, and hospitality venues
                     across the GCC region.
                   </Typography>
-                  <ul className="ml-4 list-disc space-y-1 text-xs text-text-secondary">
-                    <li>Bulk ordering and wholesale pricing</li>
-                    <li>Dedicated account management</li>
-                    <li>Flexible payment terms</li>
-                    <li>Custom product sourcing</li>
-                    <li>Inventory replenishment programs</li>
+                  <ul className="ml-4 space-y-1">
+                    <Typography variant="bodyXs" colorRole="muted" className="list-item list-disc">
+                      Bulk ordering and wholesale pricing
+                    </Typography>
+                    <Typography variant="bodyXs" colorRole="muted" className="list-item list-disc">
+                      Dedicated account management
+                    </Typography>
+                    <Typography variant="bodyXs" colorRole="muted" className="list-item list-disc">
+                      Flexible payment terms
+                    </Typography>
+                    <Typography variant="bodyXs" colorRole="muted" className="list-item list-disc">
+                      Custom product sourcing
+                    </Typography>
+                    <Typography variant="bodyXs" colorRole="muted" className="list-item list-disc">
+                      Inventory replenishment programs
+                    </Typography>
                   </ul>
                 </div>
 
                 {/* B2C Section */}
                 <div className="rounded-md border border-border-muted bg-background-primary p-4">
-                  <Typography variant="bodySm" className="mb-2 font-semibold">
+                  <Typography variant="bodyXs" className="mb-2 font-semibold">
                     B2C (Business-to-Consumer)
                   </Typography>
                   <Typography variant="bodyXs" colorRole="muted" className="mb-3 leading-relaxed">
                     Direct sales to individual consumers through licensed retail channels in
                     compliance with local regulations.
                   </Typography>
-                  <ul className="ml-4 list-disc space-y-1 text-xs text-text-secondary">
-                    <li>Retail pricing for individual purchases</li>
-                    <li>Home delivery in permitted jurisdictions</li>
-                    <li>Age verification and compliance</li>
-                    <li>Personal wine recommendations</li>
-                    <li>Special orders and rare bottle sourcing</li>
+                  <ul className="ml-4 space-y-1">
+                    <Typography variant="bodyXs" colorRole="muted" className="list-item list-disc">
+                      Retail pricing for individual purchases
+                    </Typography>
+                    <Typography variant="bodyXs" colorRole="muted" className="list-item list-disc">
+                      Home delivery in permitted jurisdictions
+                    </Typography>
+                    <Typography variant="bodyXs" colorRole="muted" className="list-item list-disc">
+                      Age verification and compliance
+                    </Typography>
+                    <Typography variant="bodyXs" colorRole="muted" className="list-item list-disc">
+                      Personal wine recommendations
+                    </Typography>
+                    <Typography variant="bodyXs" colorRole="muted" className="list-item list-disc">
+                      Special orders and rare bottle sourcing
+                    </Typography>
                   </ul>
                 </div>
               </div>
 
               <div className="mt-4 rounded-md bg-fill-accent/10 p-3">
-                <Typography variant="bodyXs" className="mb-1 font-medium text-text-brand">
+                <Typography variant="bodyXs" className="mb-1 font-semibold text-text-brand">
                   Licensed Entity Operations
                 </Typography>
                 <Typography variant="bodyXs" colorRole="muted" className="leading-relaxed">
@@ -318,7 +430,7 @@ const SupportPage = () => {
                 <div className="flex-shrink-0 rounded-lg bg-fill-accent/10 p-2">
                   <Icon icon={IconTruck} size="md" colorRole="brand" />
                 </div>
-                <Typography variant="headingMd" className="font-semibold">
+                <Typography variant="headingSm" className="font-semibold">
                   Logistics & Distribution
                 </Typography>
               </div>
@@ -326,12 +438,22 @@ const SupportPage = () => {
                 We provide comprehensive logistics solutions for wine and spirits distribution
                 across the GCC region, including:
               </Typography>
-              <ul className="ml-4 list-disc space-y-1.5 text-xs text-text-secondary sm:columns-2 sm:gap-4">
-                <li>Temperature-controlled transport</li>
-                <li>Customs clearance and compliance</li>
-                <li>Last-mile delivery services</li>
-                <li>Real-time shipment tracking</li>
-                <li>Specialized premium wine handling</li>
+              <ul className="ml-4 space-y-1 sm:columns-2 sm:gap-4">
+                <Typography variant="bodyXs" colorRole="muted" className="list-item list-disc">
+                  Temperature-controlled transport
+                </Typography>
+                <Typography variant="bodyXs" colorRole="muted" className="list-item list-disc">
+                  Customs clearance and compliance
+                </Typography>
+                <Typography variant="bodyXs" colorRole="muted" className="list-item list-disc">
+                  Last-mile delivery services
+                </Typography>
+                <Typography variant="bodyXs" colorRole="muted" className="list-item list-disc">
+                  Real-time shipment tracking
+                </Typography>
+                <Typography variant="bodyXs" colorRole="muted" className="list-item list-disc">
+                  Specialized premium wine handling
+                </Typography>
               </ul>
             </section>
 
@@ -341,7 +463,7 @@ const SupportPage = () => {
                 <div className="flex-shrink-0 rounded-lg bg-fill-accent/10 p-2">
                   <Icon icon={IconMail} size="md" colorRole="brand" />
                 </div>
-                <Typography variant="headingMd" className="font-semibold">
+                <Typography variant="headingSm" className="font-semibold">
                   Contact Support
                 </Typography>
               </div>
@@ -365,7 +487,7 @@ const SupportPage = () => {
 
             {/* Additional Resources */}
             <section className="border-t border-border-muted pt-6">
-              <Typography variant="bodySm" className="mb-4 font-semibold">
+              <Typography variant="bodyXs" className="mb-4 font-semibold">
                 Additional Resources
               </Typography>
               <div className="grid gap-3 sm:grid-cols-2">
@@ -378,7 +500,7 @@ const SupportPage = () => {
                   <Typography variant="bodyXs" className="mb-1 font-medium">
                     About Craft & Culture
                   </Typography>
-                  <Typography variant="bodyXs" colorRole="muted" className="text-xs">
+                  <Typography variant="bodyXs" colorRole="muted">
                     Learn more about our company and mission
                   </Typography>
                 </Link>
@@ -389,7 +511,7 @@ const SupportPage = () => {
                   <Typography variant="bodyXs" className="mb-1 font-medium">
                     Terms of Use
                   </Typography>
-                  <Typography variant="bodyXs" colorRole="muted" className="text-xs">
+                  <Typography variant="bodyXs" colorRole="muted">
                     Platform terms and conditions
                   </Typography>
                 </Link>
