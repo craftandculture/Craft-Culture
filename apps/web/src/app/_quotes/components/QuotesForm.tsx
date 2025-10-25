@@ -2,7 +2,7 @@
 
 import { IconDownload, IconPlus } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
-import { parseAsArrayOf, parseAsJson, useQueryState } from 'nuqs';
+import { parseAsArrayOf, parseAsJson, useQueryState, useQueryStates } from 'nuqs';
 import React, { useEffect, useMemo, useState } from 'react';
 
 import CatalogBrowser from '@/app/_products/components/CatalogBrowser';
@@ -21,10 +21,10 @@ import useTRPC from '@/lib/trpc/browser';
 import convertUsdToAed from '@/utils/convertUsdToAed';
 import formatPrice from '@/utils/formatPrice';
 
-import FloatingFilterButton from './FloatingFilterButton';
 import LineItemRow from './LineItemRow';
 import PriceInfoTooltip from './PriceInfoTooltip';
 import ProductFilters from './ProductFilters';
+import quotesSearchParams from '../search-params/filtersSearchParams';
 import exportInventoryToExcel from '../utils/exportInventoryToExcel';
 import exportQuoteToExcel from '../utils/exportQuoteToExcel';
 
@@ -62,9 +62,19 @@ const QuotesForm = () => {
   const { data: userData } = useQuery(api.users.getMe.queryOptions());
   const customerType = userData?.customerType;
 
-  // Fetch filter options for dropdowns
+  // Get current filter state from URL
+  const [filterState] = useQueryStates(quotesSearchParams, {
+    shallow: true,
+    scroll: false,
+  });
+
+  // Fetch filter options for dropdowns, passing current filters to refine vintages
   const { data: filterOptions } = useQuery(
-    api.products.getFilterOptions.queryOptions(),
+    api.products.getFilterOptions.queryOptions({
+      countries: filterState.countries,
+      regions: filterState.regions,
+      producers: filterState.producers,
+    }),
   );
 
   // Currency display toggle
@@ -684,9 +694,6 @@ const QuotesForm = () => {
         isDownloadingInventory={isLoadingInventory}
       />
       </section>
-
-      {/* Floating Filter Button */}
-      {filterOptions && <FloatingFilterButton filterOptions={filterOptions} />}
     </div>
   );
 };
