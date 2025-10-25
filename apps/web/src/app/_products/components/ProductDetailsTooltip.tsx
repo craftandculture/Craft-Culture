@@ -126,7 +126,7 @@ const ProductDetailsTooltip = ({
                       </TooltipTrigger>
                       <TooltipContent>
                         <Typography variant="bodyXs">
-                          Inventory synced daily from CultX
+                          Inventory synced daily
                         </Typography>
                       </TooltipContent>
                     </Tooltip>
