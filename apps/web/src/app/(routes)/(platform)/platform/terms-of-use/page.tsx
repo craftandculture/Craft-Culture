@@ -7,9 +7,9 @@ import Typography from '@/app/_ui/components/Typography/Typography';
 
 const TermsOfUsePage = () => {
   return (
-    <main className="container py-8 md:py-16">
-      <Card className="mx-auto w-full max-w-4xl">
-        <CardContent>
+    <main className="container py-6 sm:py-8 md:py-12 lg:py-16">
+      <Card className="mx-auto w-full max-w-5xl">
+        <CardContent className="p-4 sm:p-6 md:p-8">
           <CardProse>
             <CardTitle>Terms Of Use</CardTitle>
             <CardDescription colorRole="muted">
@@ -17,13 +17,13 @@ const TermsOfUsePage = () => {
             </CardDescription>
           </CardProse>
 
-          <div className="mt-8 space-y-6">
+          <div className="mt-6 space-y-6 sm:mt-8 md:space-y-8">
             {/* Platform Purpose */}
             <section>
               <Typography variant="headingSm" className="mb-3 font-semibold">
                 Platform Purpose
               </Typography>
-              <Typography variant="bodyMd" colorRole="muted" className="leading-relaxed">
+              <Typography variant="bodySm" colorRole="muted" className="leading-relaxed">
                 This is an internal quotation tool designed exclusively for authorized Craft &
                 Culture team members and business partners. It is not a public-facing platform or
                 e-commerce site.
@@ -35,7 +35,7 @@ const TermsOfUsePage = () => {
               <Typography variant="headingSm" className="mb-3 font-semibold">
                 Access and Authorization
               </Typography>
-              <Typography variant="bodyMd" colorRole="muted" className="leading-relaxed">
+              <Typography variant="bodySm" colorRole="muted" className="leading-relaxed">
                 Access to this platform is restricted to authorized users only. By using this
                 tool, you confirm that you have been granted explicit permission by Craft &
                 Culture to access and use the quotation system.
@@ -47,14 +47,22 @@ const TermsOfUsePage = () => {
               <Typography variant="headingSm" className="mb-3 font-semibold">
                 Intended Use
               </Typography>
-              <Typography variant="bodyMd" colorRole="muted" className="mb-3 leading-relaxed">
+              <Typography variant="bodySm" colorRole="muted" className="mb-3 leading-relaxed">
                 This platform is designed to:
               </Typography>
-              <ul className="text-text-secondary ml-6 list-disc space-y-2 text-sm">
-                <li>Generate price quotations for wine and spirits products</li>
-                <li>Browse and filter the Craft & Culture product catalog</li>
-                <li>Export quotations and inventory lists for business purposes</li>
-                <li>Support B2B and B2C pricing models for GCC markets</li>
+              <ul className="ml-6 space-y-2">
+                <Typography variant="bodySm" colorRole="muted" className="list-item list-disc">
+                  Generate price quotations for wine and spirits products
+                </Typography>
+                <Typography variant="bodySm" colorRole="muted" className="list-item list-disc">
+                  Browse and filter the Craft & Culture product catalog
+                </Typography>
+                <Typography variant="bodySm" colorRole="muted" className="list-item list-disc">
+                  Export quotations and inventory lists for business purposes
+                </Typography>
+                <Typography variant="bodySm" colorRole="muted" className="list-item list-disc">
+                  Support B2B and B2C pricing models for GCC markets
+                </Typography>
               </ul>
             </section>
 
@@ -63,7 +71,7 @@ const TermsOfUsePage = () => {
               <Typography variant="headingSm" className="mb-3 font-semibold">
                 Data and Pricing Information
               </Typography>
-              <Typography variant="bodyMd" colorRole="muted" className="leading-relaxed">
+              <Typography variant="bodySm" colorRole="muted" className="leading-relaxed">
                 All product information, pricing, and quotations generated through this platform
                 are for internal business use only. Prices are subject to change and should be
                 confirmed before finalizing any business transactions.
@@ -75,7 +83,7 @@ const TermsOfUsePage = () => {
               <Typography variant="headingSm" className="mb-3 font-semibold">
                 Confidentiality
               </Typography>
-              <Typography variant="bodyMd" colorRole="muted" className="leading-relaxed">
+              <Typography variant="bodySm" colorRole="muted" className="leading-relaxed">
                 Information accessed through this platform, including pricing models, product
                 details, and business data, is confidential and proprietary to Craft & Culture.
                 Users agree not to share, distribute, or use this information outside of authorized
@@ -88,7 +96,7 @@ const TermsOfUsePage = () => {
               <Typography variant="headingSm" className="mb-3 font-semibold">
                 Support and Questions
               </Typography>
-              <Typography variant="bodyMd" colorRole="muted" className="leading-relaxed">
+              <Typography variant="bodySm" colorRole="muted" className="leading-relaxed">
                 For questions about platform usage, access, or technical support, please contact
                 our team at{' '}
                 <a
