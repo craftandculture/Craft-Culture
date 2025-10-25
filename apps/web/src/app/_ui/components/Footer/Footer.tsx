@@ -1,9 +1,12 @@
 import Link from 'next/link';
 
 import WarehouseDataFeed from '@/app/_warehouse/components/WarehouseDataFeed';
+import fetchGitHubReleases from '@/utils/fetchGitHubReleases';
 
-const Footer = () => {
+const Footer = async () => {
   const currentYear = new Date().getFullYear();
+  const releases = await fetchGitHubReleases();
+  const latestVersion = releases[0]?.version ?? '1.0.0';
 
   return (
     <footer className="border-border-primary mt-auto border-t bg-fill-secondary/30">
@@ -92,7 +95,7 @@ const Footer = () => {
               href="/platform/development-log"
               className="text-text-muted hover:text-text-primary text-xs font-light transition-colors"
             >
-              v1.31.2
+              v{latestVersion}
             </Link>
           </div>
         </div>
