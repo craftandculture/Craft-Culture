@@ -94,7 +94,7 @@ const B2BCalculator = ({ inBondPriceUsd }: B2BCalculatorProps) => {
         <div className="flex items-center gap-2 sm:gap-2.5">
           <IconCalculator className="h-4 w-4 text-text-muted sm:h-5 sm:w-5" />
           <div className="flex flex-col items-start gap-0.5">
-            <Typography variant="bodySm" colorRole="default" className="sm:text-base">
+            <Typography variant="bodySm" className="sm:text-base">
               B2B pricing calculator
             </Typography>
             <Typography
