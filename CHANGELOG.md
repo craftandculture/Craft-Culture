@@ -1,3 +1,9 @@
+## [1.32.5](https://github.com/craftandculture/Craft-Culture/compare/v1.32.4...v1.32.5) (2025-10-26)
+
+### Bug Fixes
+
+* remove 'US' prefix from USD currency formatting ([abaff7c](https://github.com/craftandculture/Craft-Culture/commit/abaff7c015c37fe9acfff4bbefeae7c050343022))
+
 ## [1.32.4](https://github.com/craftandculture/Craft-Culture/compare/v1.32.3...v1.32.4) (2025-10-26)
 
 ### Bug Fixes
