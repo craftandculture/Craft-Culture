@@ -98,6 +98,66 @@ const B2BCalculator = ({ inBondPriceUsd, lineItems }: B2BCalculatorProps) => {
     [inBondPriceUsd, transferCost, importTax, marginType, marginValue],
   );
 
+  // Calculate actual quote totals when using per-product margins
+  const actualQuoteTotals = useMemo(() => {
+    if (!lineItems || lineItems.length === 0) {
+      return calculatedQuote;
+    }
+
+    // Calculate total quantity for transfer cost allocation
+    const totalQuantity = lineItems.reduce((sum, item) => sum + item.quantity, 0);
+
+    // Calculate totals by summing per-product calculations
+    let totalInBond = 0;
+    let totalImportTax = 0;
+    let totalTransferCost = 0;
+    let totalMargin = 0;
+    let totalVAT = 0;
+    let totalCustomerPrice = 0;
+
+    lineItems.forEach((item, index) => {
+      const inBondPerCase = item.lineItemTotalUsd / item.quantity;
+      const importTaxPerCase = inBondPerCase * (importTax / 100);
+      const transferCostPerCase = transferCost / totalQuantity;
+      const landedPrice = inBondPerCase + importTaxPerCase + transferCostPerCase;
+
+      // Get margin config (override or global)
+      const marginConfig = productMargins[index] ?? { type: marginType, value: marginValue };
+
+      // Calculate price after margin
+      const priceAfterMargin =
+        marginConfig.type === 'percentage'
+          ? landedPrice / (1 - marginConfig.value / 100)
+          : landedPrice + marginConfig.value;
+
+      const marginAmount = priceAfterMargin - landedPrice;
+      const vat = priceAfterMargin * 0.05;
+      const customerPrice = priceAfterMargin + vat;
+
+      // Accumulate totals (multiply by quantity)
+      totalInBond += inBondPerCase * item.quantity;
+      totalImportTax += importTaxPerCase * item.quantity;
+      totalTransferCost += transferCostPerCase * item.quantity;
+      totalMargin += marginAmount * item.quantity;
+      totalVAT += vat * item.quantity;
+      totalCustomerPrice += customerPrice * item.quantity;
+    });
+
+    const totalLanded = totalInBond + totalImportTax + totalTransferCost;
+    const totalAfterMargin = totalLanded + totalMargin;
+
+    return {
+      inBondPrice: totalInBond,
+      importTax: totalImportTax,
+      transferCost: totalTransferCost,
+      landedPrice: totalLanded,
+      distributorMargin: totalMargin,
+      priceAfterMargin: totalAfterMargin,
+      vat: totalVAT,
+      customerQuotePrice: totalCustomerPrice,
+    };
+  }, [lineItems, transferCost, importTax, marginType, marginValue, productMargins, calculatedQuote]);
+
   // Reset to default values
   const handleReset = () => {
     setTransferCost(200);
@@ -108,7 +168,7 @@ const B2BCalculator = ({ inBondPriceUsd, lineItems }: B2BCalculatorProps) => {
 
   // Export to Excel
   const handleExport = () => {
-    exportB2BQuoteToExcel(calculatedQuote, displayCurrency, lineItems);
+    exportB2BQuoteToExcel(actualQuoteTotals, displayCurrency, lineItems);
   };
 
   // Toggle currency display
@@ -251,7 +311,7 @@ const B2BCalculator = ({ inBondPriceUsd, lineItems }: B2BCalculatorProps) => {
 
               {/* Pricing Breakdown */}
               <B2BCalculatorBreakdown
-                calculatedQuote={calculatedQuote}
+                calculatedQuote={actualQuoteTotals}
                 currency={displayCurrency}
                 importTaxPercent={importTax}
                 distributorMarginType={marginType}
