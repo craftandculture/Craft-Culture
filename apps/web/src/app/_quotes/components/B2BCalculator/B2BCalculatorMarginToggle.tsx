@@ -65,7 +65,7 @@ const B2BCalculatorMarginToggle = ({
   return (
     <div className="flex flex-col space-y-1.5">
       <div className="flex flex-col space-y-0.5">
-        <Typography variant="bodySm" colorRole="default">
+        <Typography variant="bodySm">
           Distributor margin
         </Typography>
         <Typography variant="bodyXs" colorRole="muted">
