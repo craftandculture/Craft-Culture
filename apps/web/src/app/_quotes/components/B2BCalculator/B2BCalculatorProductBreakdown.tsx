@@ -1,6 +1,13 @@
 'use client';
 
+import { IconInfoCircle } from '@tabler/icons-react';
+
 import Input from '@/app/_ui/components/Input/Input';
+import Switch from '@/app/_ui/components/Switch/Switch';
+import Tooltip from '@/app/_ui/components/Tooltip/Tooltip';
+import TooltipContent from '@/app/_ui/components/Tooltip/TooltipContent';
+import TooltipProvider from '@/app/_ui/components/Tooltip/TooltipProvider';
+import TooltipTrigger from '@/app/_ui/components/Tooltip/TooltipTrigger';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import convertUsdToAed from '@/utils/convertUsdToAed';
 import formatPrice from '@/utils/formatPrice';
@@ -12,16 +19,18 @@ export interface B2BCalculatorProductBreakdownProps {
   lineItems: B2BCalculatorLineItem[];
   /** Display currency */
   currency: 'USD' | 'AED';
-  /** Global margin percentage (from main calculator) */
-  globalMarginPercent?: number;
+  /** Global margin type (from main calculator) */
+  globalMarginType: 'percentage' | 'fixed';
+  /** Global margin value (from main calculator) */
+  globalMarginValue: number;
   /** Import tax percentage */
   importTaxPercent: number;
   /** Total transfer cost to allocate */
   transferCostTotal: number;
   /** Per-product margin overrides (index-based) */
-  productMargins: Record<number, number>;
+  productMargins: Record<number, { type: 'percentage' | 'fixed'; value: number }>;
   /** Handler for updating product margins */
-  onProductMarginChange: (productIndex: number, marginPercent: number) => void;
+  onProductMarginChange: (productIndex: number, type: 'percentage' | 'fixed', value: number) => void;
 }
 
 /**
@@ -30,14 +39,16 @@ export interface B2BCalculatorProductBreakdownProps {
  * Shows each product with:
  * - Product name and quantity
  * - In-Bond price per case
- * - Editable margin percentage
+ * - Editable margin (percentage or fixed dollar amount)
+ * - Margin profit amount
  * - Customer price per case (with all costs applied)
  *
  * @example
  *   <B2BCalculatorProductBreakdown
  *     lineItems={items}
  *     currency="USD"
- *     globalMarginPercent={15}
+ *     globalMarginType="percentage"
+ *     globalMarginValue={15}
  *     importTaxPercent={20}
  *     transferCostTotal={200}
  *     productMargins={{}}
@@ -47,7 +58,8 @@ export interface B2BCalculatorProductBreakdownProps {
 const B2BCalculatorProductBreakdown = ({
   lineItems,
   currency,
-  globalMarginPercent = 15,
+  globalMarginType,
+  globalMarginValue,
   importTaxPercent,
   transferCostTotal,
   productMargins,
@@ -61,95 +73,159 @@ const B2BCalculatorProductBreakdown = ({
   // Calculate total in-bond price for allocation
   const totalInBondPrice = lineItems.reduce((sum, item) => sum + item.lineItemTotalUsd, 0);
 
+  // Get margin configuration for a product (override or global)
+  const getProductMarginConfig = (productIndex: number) => {
+    return productMargins[productIndex] ?? { type: globalMarginType, value: globalMarginValue };
+  };
+
+  // Calculate margin amount for a product
+  const calculateMarginAmount = (item: B2BCalculatorLineItem, productIndex: number) => {
+    const config = getProductMarginConfig(productIndex);
+    const basePricePerCase = item.basePriceUsd;
+
+    if (config.type === 'percentage') {
+      return basePricePerCase * (config.value / 100);
+    }
+    // Fixed dollar amount
+    return config.value;
+  };
+
   // Calculate customer price per case for each product with individual margin
   const getCustomerPricePerCase = (item: B2BCalculatorLineItem, productIndex: number) => {
     const basePricePerCase = item.basePriceUsd;
-
-    // Get margin for this product (override or global)
-    const marginPercent = productMargins[productIndex] ?? globalMarginPercent;
+    const marginAmount = calculateMarginAmount(item, productIndex);
 
     // Calculate components per case
     const importTax = basePricePerCase * (importTaxPercent / 100);
-    const margin = basePricePerCase * (marginPercent / 100);
 
     // Allocate transfer cost proportionally based on line item total
     const transferCostPerCase =
       (item.lineItemTotalUsd / totalInBondPrice) * transferCostTotal / item.quantity;
 
-    return basePricePerCase + importTax + margin + transferCostPerCase;
+    return basePricePerCase + importTax + marginAmount + transferCostPerCase;
   };
 
-  // Get margin for a product (override or global)
-  const getProductMargin = (productIndex: number) => {
-    return productMargins[productIndex] ?? globalMarginPercent;
-  };
-
-  // Handle margin input change
-  const handleMarginChange = (productIndex: number, value: string) => {
+  // Handle margin value change
+  const handleMarginValueChange = (productIndex: number, value: string) => {
+    const config = getProductMarginConfig(productIndex);
     const numValue = parseFloat(value);
-    if (!isNaN(numValue) && numValue >= 0 && numValue <= 100) {
-      onProductMarginChange(productIndex, numValue);
-    }
+
+    if (isNaN(numValue) || numValue < 0) return;
+
+    onProductMarginChange(productIndex, config.type, numValue);
+  };
+
+  // Handle margin type toggle (% ↔ $)
+  const handleMarginTypeToggle = (productIndex: number, checked: boolean) => {
+    const config = getProductMarginConfig(productIndex);
+    const newType = checked ? 'fixed' : 'percentage';
+    onProductMarginChange(productIndex, newType, config.value);
   };
 
   return (
     <div className="flex flex-col space-y-3 rounded-lg border border-border-muted bg-fill-muted/50 p-4 sm:p-5">
-      <Typography
-        variant="bodySm"
-        colorRole="muted"
-        className="text-xs font-bold uppercase tracking-wide sm:text-sm"
-      >
-        Product breakdown
-      </Typography>
+      <div className="flex items-center gap-1.5">
+        <Typography
+          variant="bodySm"
+          colorRole="muted"
+          className="text-xs font-bold uppercase tracking-wide sm:text-sm"
+        >
+          Product breakdown
+        </Typography>
+        <TooltipProvider delayDuration={300}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button type="button" className="inline-flex">
+                <IconInfoCircle className="h-3.5 w-3.5 text-text-muted" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <Typography variant="bodyXs">
+                Override the global margin for individual products. Set custom % or $ margins per product.
+              </Typography>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      </div>
 
       <div className="flex flex-col space-y-3">
-        {lineItems.map((item, index) => (
-          <div key={index} className="flex flex-col space-y-1.5">
-            <Typography variant="bodyXs" className="text-xs font-medium sm:text-sm">
-              {item.productName}
-            </Typography>
-            <div className="flex items-baseline justify-between gap-2">
-              <Typography variant="bodyXs" colorRole="muted" className="text-xs sm:text-sm">
-                {item.quantity} {item.quantity === 1 ? 'case' : 'cases'}
-              </Typography>
-            </div>
-            <div className="flex items-baseline justify-between gap-2">
-              <Typography variant="bodyXs" colorRole="muted" className="text-[11px] sm:text-xs">
-                In-Bond: {formatPrice(convertValue(item.basePriceUsd), currency)}/case
-              </Typography>
-            </div>
+        {lineItems.map((item, index) => {
+          const config = getProductMarginConfig(index);
+          const marginAmount = calculateMarginAmount(item, index);
 
-            {/* Editable Margin */}
-            <div className="flex items-center gap-2">
-              <Typography variant="bodyXs" colorRole="muted" className="text-[11px] sm:text-xs">
-                Margin:
+          return (
+            <div key={index} className="flex flex-col space-y-1.5">
+              <Typography variant="bodyXs" className="text-xs font-medium sm:text-sm">
+                {item.productName}
               </Typography>
-              <Input
-                type="number"
-                value={getProductMargin(index)}
-                onChange={(e) => handleMarginChange(index, e.target.value)}
-                min={0}
-                max={100}
-                step={0.5}
-                size="sm"
-                className="w-16 text-xs"
-              />
-              <Typography variant="bodyXs" colorRole="muted" className="text-[11px] sm:text-xs">
-                %
-              </Typography>
-            </div>
+              <div className="flex items-baseline justify-between gap-2">
+                <Typography variant="bodyXs" colorRole="muted" className="text-xs sm:text-sm">
+                  {item.quantity} {item.quantity === 1 ? 'case' : 'cases'}
+                </Typography>
+              </div>
+              <div className="flex items-baseline justify-between gap-2">
+                <Typography variant="bodyXs" colorRole="muted" className="text-[11px] sm:text-xs">
+                  In-Bond: {formatPrice(convertValue(item.basePriceUsd), currency)}/case
+                </Typography>
+              </div>
 
-            {/* Customer Price */}
-            <div className="flex items-baseline justify-between gap-2 pt-1">
-              <Typography variant="bodyXs" colorRole="muted" className="text-[11px] sm:text-xs">
-                Customer price:
-              </Typography>
-              <Typography variant="bodyXs" className="tabular-nums text-xs font-medium sm:text-sm">
-                {formatPrice(convertValue(getCustomerPricePerCase(item, index)), currency)}/case
-              </Typography>
+              {/* Editable Margin with toggle */}
+              <div className="flex items-center gap-2 flex-wrap">
+                <Typography variant="bodyXs" colorRole="muted" className="text-[11px] sm:text-xs">
+                  Margin:
+                </Typography>
+                <div className="flex items-center gap-1.5">
+                  <Input
+                    type="number"
+                    value={config.value === 0 ? '' : config.value}
+                    onChange={(e) => handleMarginValueChange(index, e.target.value)}
+                    min={0}
+                    step={config.type === 'percentage' ? 0.5 : 1}
+                    size="sm"
+                    placeholder="0"
+                    className="w-14 text-xs"
+                  />
+                  <Typography variant="bodyXs" colorRole="muted" className="text-[11px] sm:text-xs">
+                    {config.type === 'percentage' ? '%' : '$'}
+                  </Typography>
+                  <Switch
+                    checked={config.type === 'fixed'}
+                    onCheckedChange={(checked) => handleMarginTypeToggle(index, checked)}
+                    size="sm"
+                    aria-label="Toggle between percentage and fixed margin"
+                  />
+                  <Typography
+                    variant="bodyXs"
+                    colorRole={config.type === 'fixed' ? 'primary' : 'muted'}
+                    className="text-[11px] sm:text-xs"
+                  >
+                    $
+                  </Typography>
+                </div>
+              </div>
+
+              {/* Margin Profit Display */}
+              <div className="flex items-baseline justify-between gap-2">
+                <Typography variant="bodyXs" colorRole="muted" className="text-[11px] sm:text-xs">
+                  Profit/case:
+                </Typography>
+                <Typography variant="bodyXs" className="tabular-nums text-[11px] font-medium sm:text-xs">
+                  {formatPrice(convertValue(marginAmount), currency)}
+                </Typography>
+              </div>
+
+              {/* Customer Price */}
+              <div className="flex items-baseline justify-between gap-2 pt-1">
+                <Typography variant="bodyXs" colorRole="muted" className="text-[11px] sm:text-xs">
+                  Customer price:
+                </Typography>
+                <Typography variant="bodyXs" className="tabular-nums text-xs font-medium sm:text-sm">
+                  {formatPrice(convertValue(getCustomerPricePerCase(item, index)), currency)}/case
+                </Typography>
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

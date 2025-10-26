@@ -70,11 +70,27 @@ const B2BCalculatorMarginToggle = ({
   return (
     <div className="flex flex-col space-y-1.5">
       <div className="flex flex-col space-y-0.5">
-        <Typography variant="bodySm">
-          Distributor margin
-        </Typography>
+        <div className="flex items-center gap-1.5">
+          <Typography variant="bodySm">
+            Distributor margin
+          </Typography>
+          <TooltipProvider delayDuration={300}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button type="button" className="inline-flex">
+                  <IconInfoCircle className="h-3.5 w-3.5 text-text-muted" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <Typography variant="bodyXs">
+                  Overall margin applies unless overridden per product
+                </Typography>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
         <Typography variant="bodyXs" colorRole="muted">
-          Applied to In bond price
+          Applied to In-Bond UAE Price
         </Typography>
       </div>
 
