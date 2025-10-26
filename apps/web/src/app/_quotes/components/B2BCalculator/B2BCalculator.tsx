@@ -11,7 +11,6 @@ import { useMemo, useState } from 'react';
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
 import Divider from '@/app/_ui/components/Divider/Divider';
-import Switch from '@/app/_ui/components/Switch/Switch';
 import Tooltip from '@/app/_ui/components/Tooltip/Tooltip';
 import TooltipContent from '@/app/_ui/components/Tooltip/TooltipContent';
 import TooltipProvider from '@/app/_ui/components/Tooltip/TooltipProvider';
@@ -26,9 +25,22 @@ import B2BCalculatorMarginToggle from './B2BCalculatorMarginToggle';
 import calculateB2BQuote from '../../utils/calculateB2BQuote';
 import exportB2BQuoteToExcel from '../../utils/exportB2BQuoteToExcel';
 
+export interface B2BCalculatorLineItem {
+  /** Product name */
+  productName: string;
+  /** Quantity */
+  quantity: number;
+  /** Base price per unit in USD */
+  basePriceUsd: number;
+  /** Line item total in USD */
+  lineItemTotalUsd: number;
+}
+
 export interface B2BCalculatorProps {
   /** Base in bond UAE price in USD */
   inBondPriceUsd: number;
+  /** Optional line items for detailed Excel export */
+  lineItems?: B2BCalculatorLineItem[];
 }
 
 /**
@@ -42,7 +54,7 @@ export interface B2BCalculatorProps {
  * @example
  *   <B2BCalculator inBondPriceUsd={5000} />
  */
-const B2BCalculator = ({ inBondPriceUsd }: B2BCalculatorProps) => {
+const B2BCalculator = ({ inBondPriceUsd, lineItems }: B2BCalculatorProps) => {
   // Accordion expansion state
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -80,7 +92,7 @@ const B2BCalculator = ({ inBondPriceUsd }: B2BCalculatorProps) => {
 
   // Export to Excel
   const handleExport = () => {
-    exportB2BQuoteToExcel(calculatedQuote, displayCurrency);
+    exportB2BQuoteToExcel(calculatedQuote, displayCurrency, lineItems);
   };
 
   // Toggle currency display
