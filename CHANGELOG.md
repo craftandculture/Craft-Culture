@@ -1,3 +1,9 @@
+## [1.32.3](https://github.com/craftandculture/Craft-Culture/compare/v1.32.2...v1.32.3) (2025-10-26)
+
+### Bug Fixes
+
+* prevent filter info tooltip from closing on click ([b33af80](https://github.com/craftandculture/Craft-Culture/commit/b33af8042dc255166d9710cfa47c1a61fa56852f))
+
 ## [1.32.2](https://github.com/craftandculture/Craft-Culture/compare/v1.32.1...v1.32.2) (2025-10-26)
 
 ### Code Refactoring
