@@ -1,6 +1,12 @@
 'use client';
 
+import { IconInfoCircle } from '@tabler/icons-react';
+
 import Input from '@/app/_ui/components/Input/Input';
+import Tooltip from '@/app/_ui/components/Tooltip/Tooltip';
+import TooltipContent from '@/app/_ui/components/Tooltip/TooltipContent';
+import TooltipProvider from '@/app/_ui/components/Tooltip/TooltipProvider';
+import TooltipTrigger from '@/app/_ui/components/Tooltip/TooltipTrigger';
 import Typography from '@/app/_ui/components/Typography/Typography';
 
 export interface B2BCalculatorInputProps {
@@ -8,6 +14,8 @@ export interface B2BCalculatorInputProps {
   label: string;
   /** Optional helper text below label */
   helperText?: string;
+  /** Optional tooltip text */
+  tooltipText?: string;
   /** Input value */
   value: number;
   /** Change handler */
@@ -38,6 +46,7 @@ export interface B2BCalculatorInputProps {
 const B2BCalculatorInput = ({
   label,
   helperText,
+  tooltipText,
   value,
   onChange,
   suffix,
@@ -70,9 +79,25 @@ const B2BCalculatorInput = ({
   return (
     <div className="flex flex-col space-y-1.5">
       <div className="flex flex-col space-y-0.5">
-        <Typography variant="bodySm">
-          {label}
-        </Typography>
+        <div className="flex items-center gap-1.5">
+          <Typography variant="bodySm">
+            {label}
+          </Typography>
+          {tooltipText && (
+            <TooltipProvider delayDuration={300}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button type="button" className="inline-flex">
+                    <IconInfoCircle className="h-3.5 w-3.5 text-text-muted" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <Typography variant="bodyXs">{tooltipText}</Typography>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
+        </div>
         {helperText && (
           <Typography variant="bodyXs" colorRole="muted">
             {helperText}

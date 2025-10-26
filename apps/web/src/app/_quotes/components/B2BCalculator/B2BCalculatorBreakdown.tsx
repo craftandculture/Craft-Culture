@@ -12,6 +12,10 @@ export interface B2BCalculatorBreakdownProps {
   calculatedQuote: B2BCalculatorResult;
   /** Display currency */
   currency: 'USD' | 'AED';
+  /** Import tax percentage */
+  importTaxPercent: number;
+  /** Distributor margin percentage (if applicable) */
+  distributorMarginPercent?: number;
 }
 
 /**
@@ -26,6 +30,8 @@ export interface B2BCalculatorBreakdownProps {
 const B2BCalculatorBreakdown = ({
   calculatedQuote,
   currency,
+  importTaxPercent,
+  distributorMarginPercent,
 }: B2BCalculatorBreakdownProps) => {
   // Convert values to display currency
   const convertValue = (usdValue: number) => {
@@ -46,7 +52,7 @@ const B2BCalculatorBreakdown = ({
         {/* In bond price */}
         <div className="flex items-baseline justify-between gap-2">
           <Typography variant="bodyXs" colorRole="muted" className="text-xs sm:text-sm">
-            In bond price
+            In Bond UAE Price
           </Typography>
           <Typography variant="bodyXs" className="tabular-nums text-xs sm:text-sm">
             {formatPrice(convertValue(calculatedQuote.inBondPrice), currency)}
@@ -56,7 +62,7 @@ const B2BCalculatorBreakdown = ({
         {/* Import tax */}
         <div className="flex items-baseline justify-between gap-2">
           <Typography variant="bodyXs" colorRole="muted" className="text-xs sm:text-sm">
-            Import tax (20%)
+            Import tax ({importTaxPercent}%)
           </Typography>
           <Typography variant="bodyXs" className="tabular-nums text-xs sm:text-sm">
             {formatPrice(convertValue(calculatedQuote.importTax), currency)}
@@ -66,7 +72,8 @@ const B2BCalculatorBreakdown = ({
         {/* Distributor margin */}
         <div className="flex items-baseline justify-between gap-2">
           <Typography variant="bodyXs" colorRole="muted" className="text-xs sm:text-sm">
-            Distributor margin (15%)
+            Distributor margin
+            {distributorMarginPercent !== undefined && ` (${distributorMarginPercent}%)`}
           </Typography>
           <Typography variant="bodyXs" className="tabular-nums text-xs sm:text-sm">
             {formatPrice(convertValue(calculatedQuote.distributorMargin), currency)}
