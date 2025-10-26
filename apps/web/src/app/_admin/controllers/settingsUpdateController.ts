@@ -14,7 +14,9 @@ import { settings } from '@/database/schema';
  */
 const settingsUpdateController = async (input: { key: string; value: string }) => {
   const existingSetting = await db.query.settings.findFirst({
-    where: eq(settings.key, input.key),
+    where: {
+      key: input.key,
+    },
   });
 
   if (existingSetting) {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 
 import Button from '@/app/_ui/components/Button/Button';
@@ -49,18 +49,18 @@ const SettingsForm = () => {
   }
 
   // Mutations for updating settings
-  // eslint-disable-next-line react-compiler/react-compiler
-  const updateLeadTimeMin = api.admin.settings.update.useMutation();
-  // eslint-disable-next-line react-compiler/react-compiler
-  const updateLeadTimeMax = api.admin.settings.update.useMutation();
+  const { mutateAsync: updateLeadTimeMinAsync, isPending: isUpdatingMin } =
+    useMutation(api.admin.settings.update.mutationOptions());
+  const { mutateAsync: updateLeadTimeMaxAsync, isPending: isUpdatingMax } =
+    useMutation(api.admin.settings.update.mutationOptions());
 
   const handleSave = async () => {
     await Promise.all([
-      updateLeadTimeMin.mutateAsync({
+      updateLeadTimeMinAsync({
         key: 'leadTimeMin',
         value: String(leadTimeMin),
       }),
-      updateLeadTimeMax.mutateAsync({
+      updateLeadTimeMaxAsync({
         key: 'leadTimeMax',
         value: String(leadTimeMax),
       }),
@@ -70,7 +70,7 @@ const SettingsForm = () => {
     void queryClient.invalidateQueries();
   };
 
-  const isSaving = updateLeadTimeMin.isPending || updateLeadTimeMax.isPending;
+  const isSaving = isUpdatingMin || isUpdatingMax;
 
   return (
     <div className="space-y-6">
@@ -123,7 +123,7 @@ const SettingsForm = () => {
         </div>
 
         <Typography variant="bodyXs" colorRole="muted" className="italic">
-          Customers will see: &quot;{leadTimeMin}-{leadTimeMax} days via air freight&quot;
+          Customers will see: &quot;{leadTimeMin}-{leadTimeMax} days via air freight, ex works - In-Bond UAE&quot;
         </Typography>
       </div>
 
