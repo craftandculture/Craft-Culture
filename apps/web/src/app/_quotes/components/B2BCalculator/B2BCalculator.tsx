@@ -209,7 +209,7 @@ const B2BCalculator = ({ inBondPriceUsd }: B2BCalculatorProps) => {
               />
 
               {/* Currency Toggle */}
-              <div className="flex items-center justify-between rounded-lg border border-border-muted bg-fill-primary px-3 py-2">
+              <div className="flex items-center gap-2 self-start rounded-md border border-border-muted bg-fill-primary px-2.5 py-1.5">
                 <Typography variant="bodyXs" colorRole="muted" className="text-xs">
                   Display in AED
                 </Typography>
