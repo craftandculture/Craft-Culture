@@ -47,7 +47,7 @@ const B2BCalculatorBreakdown = ({
       <Typography
         variant="bodyXs"
         colorRole="muted"
-        className="text-[10px] uppercase tracking-wide sm:text-xs"
+        className="text-[10px] font-bold uppercase tracking-wide sm:text-xs"
       >
         Total Price Breakdown
       </Typography>
@@ -63,10 +63,10 @@ const B2BCalculatorBreakdown = ({
           </Typography>
         </div>
 
-        {/* Import tax */}
+        {/* Import duty */}
         <div className="flex items-baseline justify-between gap-2">
           <Typography variant="bodyXs" colorRole="muted" className="text-[11px] sm:text-xs">
-            Import tax ({importTaxPercent}%)
+            Import duty ({importTaxPercent}%)
           </Typography>
           <Typography variant="bodyXs" className="tabular-nums text-[11px] sm:text-xs">
             {formatPrice(convertValue(calculatedQuote.importTax), currency)}

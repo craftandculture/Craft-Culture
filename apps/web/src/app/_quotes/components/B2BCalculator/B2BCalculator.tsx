@@ -35,6 +35,8 @@ export interface B2BCalculatorLineItem {
   basePriceUsd: number;
   /** Line item total in USD */
   lineItemTotalUsd: number;
+  /** Optional margin override (percentage) for this specific product */
+  marginOverride?: number;
 }
 
 export interface B2BCalculatorProps {
@@ -68,6 +70,17 @@ const B2BCalculator = ({ inBondPriceUsd, lineItems }: B2BCalculatorProps) => {
   // Currency display toggle
   const [displayCurrency, setDisplayCurrency] = useState<'USD' | 'AED'>('USD');
 
+  // Per-product margin overrides (index-based map)
+  const [productMargins, setProductMargins] = useState<Record<number, number>>({});
+
+  // Handler to update individual product margin
+  const handleProductMarginChange = (productIndex: number, marginPercent: number) => {
+    setProductMargins((prev) => ({
+      ...prev,
+      [productIndex]: marginPercent,
+    }));
+  };
+
   // Calculate quote based on inputs
   const calculatedQuote = useMemo(
     () =>
@@ -82,11 +95,6 @@ const B2BCalculator = ({ inBondPriceUsd, lineItems }: B2BCalculatorProps) => {
       }),
     [inBondPriceUsd, transferCost, importTax, marginType, marginValue],
   );
-
-  // Calculate price multiplier for per-case pricing
-  const priceMultiplier = useMemo(() => {
-    return calculatedQuote.customerQuotePrice / calculatedQuote.inBondPrice;
-  }, [calculatedQuote]);
 
   // Reset to default values
   const handleReset = () => {
@@ -152,9 +160,9 @@ const B2BCalculator = ({ inBondPriceUsd, lineItems }: B2BCalculatorProps) => {
           </div>
 
           {/* Two-column layout on desktop, stacked on mobile */}
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-[auto_1fr] lg:gap-8">
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(auto,280px)_1fr] lg:gap-8">
             {/* Left Column - Input Controls (Compact) */}
-            <div className="flex flex-col space-y-3">
+            <div className="flex flex-col space-y-3 lg:max-w-[280px]">
               {/* Baseline Price (read-only) */}
               <div className="rounded-lg border border-border-muted bg-fill-primary p-3">
                 <div className="mb-1.5 flex items-center gap-1.5">
@@ -206,8 +214,8 @@ const B2BCalculator = ({ inBondPriceUsd, lineItems }: B2BCalculatorProps) => {
                 />
 
                 <B2BCalculatorInput
-                  label="Import tax"
-                  helperText="Applied to In bond price"
+                  label="Import duty"
+                  helperText="Applied to In-Bond UAE Price"
                   value={importTax}
                   onChange={setImportTax}
                   suffix="%"
@@ -230,7 +238,11 @@ const B2BCalculator = ({ inBondPriceUsd, lineItems }: B2BCalculatorProps) => {
                 <B2BCalculatorProductBreakdown
                   lineItems={lineItems}
                   currency={displayCurrency}
-                  priceMultiplier={priceMultiplier}
+                  globalMarginPercent={marginType === 'percentage' ? marginValue : undefined}
+                  importTaxPercent={importTax}
+                  transferCostTotal={transferCost}
+                  productMargins={productMargins}
+                  onProductMarginChange={handleProductMarginChange}
                 />
               )}
 

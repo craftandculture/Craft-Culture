@@ -73,7 +73,7 @@ const exportB2BQuoteToExcel = (
       Math.round(convertValue(calculatedQuote.inBondPrice)),
     ],
     [
-      'Import Tax',
+      'Import Duty',
       'Applied to in bond price',
       '',
       Math.round(convertValue(calculatedQuote.importTax)),
