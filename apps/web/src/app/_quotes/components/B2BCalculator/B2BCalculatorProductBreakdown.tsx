@@ -179,7 +179,7 @@ const B2BCalculatorProductBreakdown = ({
                 </Typography>
               </div>
 
-              {/* Editable Margin with toggle and profit display inline */}
+              {/* Editable Margin with toggle */}
               <div className="flex items-center gap-2 flex-wrap">
                 <Typography variant="bodyXs" colorRole="muted" className="text-[11px] sm:text-xs">
                   Margin:
@@ -211,10 +211,17 @@ const B2BCalculatorProductBreakdown = ({
                   >
                     $
                   </Typography>
-                  <Typography variant="bodyXs" colorRole="muted" className="text-[10px] sm:text-[11px]">
-                    (Profit: {formatPrice(convertValue(marginAmount), currency)})
-                  </Typography>
                 </div>
+              </div>
+
+              {/* Profit Display - Right Aligned */}
+              <div className="flex items-baseline justify-between gap-2">
+                <Typography variant="bodyXs" colorRole="muted" className="text-[10px] sm:text-[11px]">
+                  Profit/case:
+                </Typography>
+                <Typography variant="bodyXs" colorRole="muted" className="tabular-nums text-[10px] sm:text-[11px]">
+                  {formatPrice(convertValue(marginAmount), currency)}
+                </Typography>
               </div>
             </div>
           );
