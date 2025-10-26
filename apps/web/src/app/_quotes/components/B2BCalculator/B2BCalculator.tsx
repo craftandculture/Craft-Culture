@@ -35,6 +35,8 @@ export interface B2BCalculatorLineItem {
   basePriceUsd: number;
   /** Line item total In-Bond UAE price in USD (distributor price from pricing model) */
   lineItemTotalUsd: number;
+  /** Number of bottles per case (e.g., 6, 12, 3) */
+  unitCount: number;
   /** Optional margin override (percentage) for this specific product */
   marginOverride?: number;
 }
