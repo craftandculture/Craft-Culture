@@ -137,6 +137,14 @@ const B2BCalculator = ({ inBondPriceUsd, lineItems }: B2BCalculatorProps) => {
       {/* Accordion Content */}
       {isExpanded && (
         <div className="border-t border-border-muted px-3 py-4 sm:p-5">
+          {/* Description */}
+          <div className="mb-5 rounded-lg border border-border-muted bg-fill-muted/30 px-3 py-2.5 sm:px-4 sm:py-3">
+            <Typography variant="bodyXs" colorRole="muted" className="text-xs leading-relaxed sm:text-sm">
+              Internal distributor tool for calculating customer pricing and generating quick quotations.
+              Adjust tax rates, margins, and transfer costs to create accurate customer quotes.
+            </Typography>
+          </div>
+
           {/* Two-column layout on desktop, stacked on mobile */}
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:gap-8">
             {/* Left Column - Input Controls */}
