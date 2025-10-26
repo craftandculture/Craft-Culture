@@ -21,6 +21,7 @@ import useTRPC from '@/lib/trpc/browser';
 import convertUsdToAed from '@/utils/convertUsdToAed';
 import formatPrice from '@/utils/formatPrice';
 
+import B2BCalculator from './B2BCalculator';
 import CommissionBreakdown from './CommissionBreakdown';
 import LineItemRow from './LineItemRow';
 import PriceInfoTooltip from './PriceInfoTooltip';
@@ -676,6 +677,14 @@ const QuotesForm = () => {
                 </TooltipProvider>
               )}
             </div>
+
+            {/* B2B Calculator - B2B Only */}
+            {customerType === 'b2b' && quoteData && (
+              <>
+                <Divider />
+                <B2BCalculator inBondPriceUsd={quoteData.totalUsd} />
+              </>
+            )}
 
             {/* Download Button */}
             <div className="flex justify-end">
