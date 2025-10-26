@@ -109,6 +109,12 @@ const B2BCalculatorProductBreakdown = ({
     return inBondPricePerCase + importTax + marginAmount + transferCostPerCase;
   };
 
+  // Calculate customer price per bottle
+  const getCustomerPricePerBottle = (item: B2BCalculatorLineItem, productIndex: number) => {
+    const customerPricePerCase = getCustomerPricePerCase(item, productIndex);
+    return customerPricePerCase / item.unitCount;
+  };
+
   // Handle margin value change
   const handleMarginValueChange = (productIndex: number, value: string) => {
     const config = getProductMarginConfig(productIndex);
@@ -181,6 +187,16 @@ const B2BCalculatorProductBreakdown = ({
                 </Typography>
                 <Typography variant="bodyXs" className="tabular-nums text-xs font-medium sm:text-sm">
                   {formatPrice(convertValue(getCustomerPricePerCase(item, index)), currency)}/case
+                </Typography>
+              </div>
+
+              {/* Per Bottle Price */}
+              <div className="flex items-baseline justify-between gap-2">
+                <Typography variant="bodyXs" colorRole="muted" className="text-[11px] sm:text-xs">
+                  Per bottle:
+                </Typography>
+                <Typography variant="bodyXs" className="tabular-nums text-xs font-medium sm:text-sm">
+                  {formatPrice(convertValue(getCustomerPricePerBottle(item, index)), currency)}/bottle ({item.unitCount}-pack)
                 </Typography>
               </div>
 
