@@ -3,6 +3,8 @@ import { getCookie } from 'cookies-next/client';
 import { atomWithStorage } from 'jotai/utils';
 import { z } from 'zod';
 
+import logger from '@/utils/logger';
+
 /**
  * Creates an atom that stores its value in a cookie with Zod validation
  *
@@ -34,11 +36,11 @@ const createCookieAtom = <T extends z.ZodType>(
         if (result.success) {
           return result.data;
         } else {
-          console.warn(`Invalid cookie data for ${key}:`, result.error);
+          logger.warn(`Invalid cookie data for ${key}:`, result.error);
           return initialValue;
         }
       } catch (e) {
-        console.warn(`Error parsing cookie ${key}:`, e);
+        logger.warn(`Error parsing cookie ${key}:`, e);
         return initialValue;
       }
     },
