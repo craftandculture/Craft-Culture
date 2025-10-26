@@ -78,12 +78,18 @@ const B2BCalculatorProductBreakdown = ({
     return productMargins[productIndex] ?? { type: globalMarginType, value: globalMarginValue };
   };
 
-  // Calculate margin amount for a product using its individual In-Bond price
+  // Get In-Bond UAE price per case (distributor price from pricing model)
+  const getInBondPricePerCase = (item: B2BCalculatorLineItem) => {
+    return item.lineItemTotalUsd / item.quantity;
+  };
+
+  // Calculate margin amount for a product using its individual In-Bond UAE price
   const calculateMarginAmount = (item: B2BCalculatorLineItem, productIndex: number) => {
     const config = getProductMarginConfig(productIndex);
+    const inBondPricePerCase = getInBondPricePerCase(item);
 
     if (config.type === 'percentage') {
-      return item.basePriceUsd * (config.value / 100);
+      return inBondPricePerCase * (config.value / 100);
     }
     // Fixed dollar amount
     return config.value;
@@ -91,15 +97,16 @@ const B2BCalculatorProductBreakdown = ({
 
   // Calculate customer price per case for each product with individual margin
   const getCustomerPricePerCase = (item: B2BCalculatorLineItem, productIndex: number) => {
+    const inBondPricePerCase = getInBondPricePerCase(item);
     const marginAmount = calculateMarginAmount(item, productIndex);
 
     // Calculate components per case
-    const importTax = item.basePriceUsd * (importTaxPercent / 100);
+    const importTax = inBondPricePerCase * (importTaxPercent / 100);
 
     // Allocate transfer cost per case
     const transferCostPerCase = transferCostTotal / totalQuantity;
 
-    return item.basePriceUsd + importTax + marginAmount + transferCostPerCase;
+    return inBondPricePerCase + importTax + marginAmount + transferCostPerCase;
   };
 
   // Handle margin value change
@@ -148,6 +155,7 @@ const B2BCalculatorProductBreakdown = ({
       <div className="flex flex-col space-y-3">
         {lineItems.map((item, index) => {
           const config = getProductMarginConfig(index);
+          const inBondPricePerCase = getInBondPricePerCase(item);
           const marginAmount = calculateMarginAmount(item, index);
 
           return (
@@ -162,7 +170,7 @@ const B2BCalculatorProductBreakdown = ({
               </div>
               <div className="flex items-baseline justify-between gap-2">
                 <Typography variant="bodyXs" colorRole="muted" className="text-[11px] sm:text-xs">
-                  In-Bond: {formatPrice(convertValue(item.basePriceUsd), currency)}/case
+                  In-Bond: {formatPrice(convertValue(inBondPricePerCase), currency)}/case
                 </Typography>
               </div>
 
