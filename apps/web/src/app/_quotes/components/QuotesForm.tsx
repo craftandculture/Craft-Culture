@@ -81,6 +81,17 @@ const QuotesForm = () => {
     placeholderData: (previousData) => previousData,
   });
 
+  // Fetch lead time settings from database
+  const { data: leadTimeMinData } = useQuery(
+    api.admin.settings.get.queryOptions({ key: 'leadTimeMin' }),
+  );
+  const { data: leadTimeMaxData } = useQuery(
+    api.admin.settings.get.queryOptions({ key: 'leadTimeMax' }),
+  );
+
+  const leadTimeMin = leadTimeMinData ? Number(leadTimeMinData) : 14;
+  const leadTimeMax = leadTimeMaxData ? Number(leadTimeMaxData) : 21;
+
   // Currency display toggle
   const [displayCurrency, setDisplayCurrency] = useState<'USD' | 'AED'>('AED');
 
@@ -426,7 +437,7 @@ const QuotesForm = () => {
                 Estimated Lead Time:
               </Typography>
               <Typography variant="bodySm" className="text-text-brand font-semibold">
-                14-21 days via air freight
+                {leadTimeMin}-{leadTimeMax} days via air freight
               </Typography>
             </div>
           </div>

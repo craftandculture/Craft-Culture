@@ -1,8 +1,13 @@
+import { publicProcedure } from '@/lib/trpc/procedures';
 import { adminProcedure } from '@/lib/trpc/procedures';
 import { createTRPCRouter } from '@/lib/trpc/trpc';
 
 import activityLogsGetManyController from './controllers/activityLogsGetMany';
+import settingsGetController from './controllers/settingsGetController';
+import settingsUpdateController from './controllers/settingsUpdateController';
 import activityLogsGetManyInputSchema from './schemas/activityLogsGetManyInputSchema';
+import settingsGetInputSchema from './schemas/settingsGetInputSchema';
+import settingsUpdateInputSchema from './schemas/settingsUpdateInputSchema';
 
 const activityLogsRouter = createTRPCRouter({
   getMany: adminProcedure
@@ -12,8 +17,22 @@ const activityLogsRouter = createTRPCRouter({
     }),
 });
 
+const settingsRouter = createTRPCRouter({
+  get: publicProcedure
+    .input(settingsGetInputSchema)
+    .query(async ({ input }) => {
+      return await settingsGetController(input);
+    }),
+  update: adminProcedure
+    .input(settingsUpdateInputSchema)
+    .mutation(async ({ input }) => {
+      return await settingsUpdateController(input);
+    }),
+});
+
 const adminRouter = createTRPCRouter({
   activityLogs: activityLogsRouter,
+  settings: settingsRouter,
 });
 
 export default adminRouter;
