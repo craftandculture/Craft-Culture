@@ -1,6 +1,6 @@
 'use client';
 
-import { IconDownload, IconPlus } from '@tabler/icons-react';
+import { IconDownload, IconInfoCircle, IconPlus } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import { parseAsArrayOf, parseAsJson, useQueryState, useQueryStates } from 'nuqs';
 import React, { useEffect, useMemo, useState } from 'react';
@@ -678,6 +678,36 @@ const QuotesForm = () => {
               )}
             </div>
 
+            {/* Download Button */}
+            <div className="flex items-center justify-end gap-2">
+              <Button
+                type="button"
+                variant="default"
+                size="sm"
+                onClick={handleDownloadExcel}
+                isDisabled={!quoteData || lineItems.length === 0}
+                className="w-full sm:w-auto"
+              >
+                <ButtonContent iconLeft={IconDownload}>
+                  Download Excel Quote
+                </ButtonContent>
+              </Button>
+              <TooltipProvider delayDuration={300}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button type="button" className="inline-flex">
+                      <IconInfoCircle className="h-4 w-4 text-text-muted" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <Typography variant="bodyXs">
+                      Export In Bond UAE Product list
+                    </Typography>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+
             {/* B2B Calculator - B2B Only */}
             {customerType === 'b2b' && quoteData && (
               <>
@@ -703,22 +733,6 @@ const QuotesForm = () => {
                 />
               </>
             )}
-
-            {/* Download Button */}
-            <div className="flex justify-end">
-              <Button
-                type="button"
-                variant="default"
-                size="sm"
-                onClick={handleDownloadExcel}
-                isDisabled={!quoteData || lineItems.length === 0}
-                className="w-full sm:w-auto"
-              >
-                <ButtonContent iconLeft={IconDownload}>
-                  Download Excel Quote
-                </ButtonContent>
-              </Button>
-            </div>
           </div>
         </>
       )}

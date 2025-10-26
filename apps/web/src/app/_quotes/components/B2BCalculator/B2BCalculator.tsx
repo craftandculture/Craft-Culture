@@ -227,15 +227,31 @@ const B2BCalculator = ({ inBondPriceUsd, lineItems }: B2BCalculatorProps) => {
 
           {/* Action Buttons */}
           <div className="flex flex-col gap-3 sm:flex-row sm:justify-between">
-            <Button
-              variant="default"
-              colorRole="brand"
-              size="md"
-              onClick={handleExport}
-              className="w-full sm:w-auto"
-            >
-              <ButtonContent iconLeft={IconDownload}>Export to Excel</ButtonContent>
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="default"
+                colorRole="brand"
+                size="md"
+                onClick={handleExport}
+                className="w-full sm:w-auto"
+              >
+                <ButtonContent iconLeft={IconDownload}>Export to Excel</ButtonContent>
+              </Button>
+              <TooltipProvider delayDuration={300}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button type="button" className="inline-flex">
+                      <IconInfoCircle className="h-4 w-4 text-text-muted" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <Typography variant="bodyXs">
+                      Export product & distributor margin calculations
+                    </Typography>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
 
             <Button
               variant="ghost"
