@@ -169,7 +169,17 @@ const B2BCalculatorProductBreakdown = ({
                 </Typography>
               </div>
 
-              {/* Editable Margin with toggle */}
+              {/* Customer Price */}
+              <div className="flex items-baseline justify-between gap-2 pt-1">
+                <Typography variant="bodyXs" colorRole="muted" className="text-[11px] sm:text-xs">
+                  Customer price:
+                </Typography>
+                <Typography variant="bodyXs" className="tabular-nums text-xs font-medium sm:text-sm">
+                  {formatPrice(convertValue(getCustomerPricePerCase(item, index)), currency)}/case
+                </Typography>
+              </div>
+
+              {/* Editable Margin with toggle and profit display inline */}
               <div className="flex items-center gap-2 flex-wrap">
                 <Typography variant="bodyXs" colorRole="muted" className="text-[11px] sm:text-xs">
                   Margin:
@@ -201,27 +211,10 @@ const B2BCalculatorProductBreakdown = ({
                   >
                     $
                   </Typography>
+                  <Typography variant="bodyXs" colorRole="muted" className="text-[10px] sm:text-[11px]">
+                    (Profit: {formatPrice(convertValue(marginAmount), currency)})
+                  </Typography>
                 </div>
-              </div>
-
-              {/* Margin Profit Display */}
-              <div className="flex items-baseline justify-between gap-2">
-                <Typography variant="bodyXs" colorRole="muted" className="text-[11px] sm:text-xs">
-                  Profit/case:
-                </Typography>
-                <Typography variant="bodyXs" className="tabular-nums text-[11px] font-medium sm:text-xs">
-                  {formatPrice(convertValue(marginAmount), currency)}
-                </Typography>
-              </div>
-
-              {/* Customer Price */}
-              <div className="flex items-baseline justify-between gap-2 pt-1">
-                <Typography variant="bodyXs" colorRole="muted" className="text-[11px] sm:text-xs">
-                  Customer price:
-                </Typography>
-                <Typography variant="bodyXs" className="tabular-nums text-xs font-medium sm:text-sm">
-                  {formatPrice(convertValue(getCustomerPricePerCase(item, index)), currency)}/case
-                </Typography>
               </div>
             </div>
           );
