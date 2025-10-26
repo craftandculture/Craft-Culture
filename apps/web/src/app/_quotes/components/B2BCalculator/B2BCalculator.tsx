@@ -22,6 +22,7 @@ import formatPrice from '@/utils/formatPrice';
 import B2BCalculatorBreakdown from './B2BCalculatorBreakdown';
 import B2BCalculatorInput from './B2BCalculatorInput';
 import B2BCalculatorMarginToggle from './B2BCalculatorMarginToggle';
+import B2BCalculatorProductBreakdown from './B2BCalculatorProductBreakdown';
 import calculateB2BQuote from '../../utils/calculateB2BQuote';
 import exportB2BQuoteToExcel from '../../utils/exportB2BQuoteToExcel';
 
@@ -81,6 +82,11 @@ const B2BCalculator = ({ inBondPriceUsd, lineItems }: B2BCalculatorProps) => {
       }),
     [inBondPriceUsd, transferCost, importTax, marginType, marginValue],
   );
+
+  // Calculate price multiplier for per-case pricing
+  const priceMultiplier = useMemo(() => {
+    return calculatedQuote.customerQuotePrice / calculatedQuote.inBondPrice;
+  }, [calculatedQuote]);
 
   // Reset to default values
   const handleReset = () => {
@@ -219,6 +225,16 @@ const B2BCalculator = ({ inBondPriceUsd, lineItems }: B2BCalculatorProps) => {
 
             {/* Right Column - Results Breakdown */}
             <div className="flex flex-col space-y-4">
+              {/* Product Breakdown - Only show if line items are available */}
+              {lineItems && lineItems.length > 0 && (
+                <B2BCalculatorProductBreakdown
+                  lineItems={lineItems}
+                  currency={displayCurrency}
+                  priceMultiplier={priceMultiplier}
+                />
+              )}
+
+              {/* Pricing Breakdown */}
               <B2BCalculatorBreakdown
                 calculatedQuote={calculatedQuote}
                 currency={displayCurrency}
