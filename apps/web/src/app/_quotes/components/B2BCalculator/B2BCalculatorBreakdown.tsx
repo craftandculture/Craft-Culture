@@ -43,69 +43,69 @@ const B2BCalculatorBreakdown = ({
   };
 
   return (
-    <div className="flex flex-col space-y-3 rounded-lg border border-border-muted bg-fill-muted/50 p-4 sm:p-5">
+    <div className="flex flex-col space-y-2.5 rounded-lg border border-border-muted bg-fill-muted/30 p-3 sm:p-4">
       <Typography
-        variant="bodySm"
+        variant="bodyXs"
         colorRole="muted"
-        className="text-xs uppercase tracking-wide sm:text-sm"
+        className="text-[10px] uppercase tracking-wide sm:text-xs"
       >
-        Pricing breakdown
+        Total Price Breakdown
       </Typography>
 
-      <div className="flex flex-col space-y-2.5">
+      <div className="flex flex-col space-y-1.5">
         {/* In bond price */}
         <div className="flex items-baseline justify-between gap-2">
-          <Typography variant="bodyXs" colorRole="muted" className="text-xs sm:text-sm">
+          <Typography variant="bodyXs" colorRole="muted" className="text-[11px] sm:text-xs">
             In Bond UAE Price
           </Typography>
-          <Typography variant="bodyXs" className="tabular-nums text-xs sm:text-sm">
+          <Typography variant="bodyXs" className="tabular-nums text-[11px] sm:text-xs">
             {formatPrice(convertValue(calculatedQuote.inBondPrice), currency)}
           </Typography>
         </div>
 
         {/* Import tax */}
         <div className="flex items-baseline justify-between gap-2">
-          <Typography variant="bodyXs" colorRole="muted" className="text-xs sm:text-sm">
+          <Typography variant="bodyXs" colorRole="muted" className="text-[11px] sm:text-xs">
             Import tax ({importTaxPercent}%)
           </Typography>
-          <Typography variant="bodyXs" className="tabular-nums text-xs sm:text-sm">
+          <Typography variant="bodyXs" className="tabular-nums text-[11px] sm:text-xs">
             {formatPrice(convertValue(calculatedQuote.importTax), currency)}
           </Typography>
         </div>
 
         {/* Distributor margin */}
         <div className="flex items-baseline justify-between gap-2">
-          <Typography variant="bodyXs" colorRole="muted" className="text-xs sm:text-sm">
+          <Typography variant="bodyXs" colorRole="muted" className="text-[11px] sm:text-xs">
             Distributor margin
             {distributorMarginPercent !== undefined && ` (${distributorMarginPercent}%)`}
           </Typography>
-          <Typography variant="bodyXs" className="tabular-nums text-xs sm:text-sm">
+          <Typography variant="bodyXs" className="tabular-nums text-[11px] sm:text-xs">
             {formatPrice(convertValue(calculatedQuote.distributorMargin), currency)}
           </Typography>
         </div>
 
         {/* Transfer cost */}
         <div className="flex items-baseline justify-between gap-2">
-          <Typography variant="bodyXs" colorRole="muted" className="text-xs sm:text-sm">
+          <Typography variant="bodyXs" colorRole="muted" className="text-[11px] sm:text-xs">
             Transfer cost
           </Typography>
-          <Typography variant="bodyXs" className="tabular-nums text-xs sm:text-sm">
+          <Typography variant="bodyXs" className="tabular-nums text-[11px] sm:text-xs">
             {formatPrice(convertValue(calculatedQuote.transferCost), currency)}
           </Typography>
         </div>
       </div>
 
-      <Divider />
+      <Divider className="my-1" />
 
       {/* Customer quote price (total) */}
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-2">
         <div className="flex items-baseline justify-between gap-2">
-          <Typography variant="bodySm" className="text-sm sm:text-base">
+          <Typography variant="bodyXs" className="text-xs font-medium sm:text-sm">
             Customer price
           </Typography>
           <Typography
-            variant="bodySm"
-            className="tabular-nums text-base font-medium sm:text-lg"
+            variant="bodyXs"
+            className="tabular-nums text-sm font-medium sm:text-base"
           >
             {formatPrice(convertValue(calculatedQuote.customerQuotePrice), currency)}
           </Typography>
