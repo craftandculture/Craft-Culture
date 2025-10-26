@@ -25,11 +25,17 @@ export interface B2BCalculatorResult {
   inBondPrice: number;
   /** Calculated import tax (% of in bond price) */
   importTax: number;
-  /** Calculated distributor margin (% of in bond price or fixed) */
-  distributorMargin: number;
   /** Transfer cost */
   transferCost: number;
-  /** Final customer quote price (sum of all components) */
+  /** Landed price (In-Bond + Import Tax + Transfer) */
+  landedPrice: number;
+  /** Calculated distributor margin profit */
+  distributorMargin: number;
+  /** Price after margin (before VAT) */
+  priceAfterMargin: number;
+  /** VAT (5% of price after margin) */
+  vat: number;
+  /** Final customer quote price (including VAT) */
   customerQuotePrice: number;
 }
 
@@ -38,17 +44,22 @@ export interface B2BCalculatorResult {
  *
  * Formula:
  * - Import tax = In bond price × (importTaxPercent / 100)
- * - Distributor margin = In bond price × (marginPercent / 100) OR fixed value
- * - Customer price = In bond + Import tax + Distributor margin + Transfer
+ * - Landed price = In bond + Import tax + Transfer cost
+ * - Apply margin: Landed price / (1 - margin%) OR Landed price + fixed $
+ * - VAT = Price after margin × 5%
+ * - Customer price = Price after margin + VAT
  *
  * @example
  *   calculateB2BQuote({
- *     inBondPriceUsd: 5000,
- *     transferCostUsd: 200,
+ *     inBondPriceUsd: 1000,
+ *     transferCostUsd: 20,
  *     importTaxPercent: 20,
  *     distributorMargin: { type: 'percentage', value: 15 },
  *   });
- *   // Returns: { inBondPrice: 5000, importTax: 1000, distributorMargin: 750, transferCost: 200, customerQuotePrice: 6950 }
+ *   // Landed: 1000 + 200 + 20 = 1220
+ *   // After 15% margin: 1220 / 0.85 = 1435.29
+ *   // VAT: 1435.29 × 5% = 71.76
+ *   // Final: 1435.29 + 71.76 = 1507.05
  *
  * @param inputs - Calculator input values
  * @returns Calculated pricing breakdown
@@ -56,23 +67,35 @@ export interface B2BCalculatorResult {
 const calculateB2BQuote = (inputs: B2BCalculatorInputs): B2BCalculatorResult => {
   const { inBondPriceUsd, transferCostUsd, importTaxPercent, distributorMargin } = inputs;
 
-  // Import tax calculated on in bond price only
+  // Import tax calculated on in bond price
   const importTax = inBondPriceUsd * (importTaxPercent / 100);
 
-  // Distributor margin calculated on in bond price only
-  const margin =
-    distributorMargin.type === 'percentage'
-      ? inBondPriceUsd * (distributorMargin.value / 100)
-      : distributorMargin.value;
+  // Landed price = In-Bond + Import Tax + Transfer
+  const landedPrice = inBondPriceUsd + importTax + transferCostUsd;
 
-  // Total = In bond + Import tax + Distributor margin + Transfer
-  const customerQuotePrice = inBondPriceUsd + importTax + margin + transferCostUsd;
+  // Apply margin to landed price
+  const priceAfterMargin =
+    distributorMargin.type === 'percentage'
+      ? landedPrice / (1 - distributorMargin.value / 100)
+      : landedPrice + distributorMargin.value;
+
+  // Calculate actual margin profit
+  const margin = priceAfterMargin - landedPrice;
+
+  // Calculate 5% VAT on price after margin
+  const vat = priceAfterMargin * 0.05;
+
+  // Final customer price
+  const customerQuotePrice = priceAfterMargin + vat;
 
   return {
     inBondPrice: inBondPriceUsd,
     importTax,
-    distributorMargin: margin,
     transferCost: transferCostUsd,
+    landedPrice,
+    distributorMargin: margin,
+    priceAfterMargin,
+    vat,
     customerQuotePrice,
   };
 };
