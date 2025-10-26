@@ -265,6 +265,15 @@ const B2BCalculator = ({ inBondPriceUsd, lineItems }: B2BCalculatorProps) => {
 
           {/* Action Buttons */}
           <div className="flex flex-col gap-3 sm:flex-row sm:justify-between">
+            <Button
+              variant="ghost"
+              size="md"
+              onClick={handleReset}
+              className="w-full sm:w-auto"
+            >
+              <ButtonContent>Reset to Defaults</ButtonContent>
+            </Button>
+
             <div className="flex items-center gap-2">
               <Button
                 variant="default"
@@ -290,15 +299,6 @@ const B2BCalculator = ({ inBondPriceUsd, lineItems }: B2BCalculatorProps) => {
                 </Tooltip>
               </TooltipProvider>
             </div>
-
-            <Button
-              variant="ghost"
-              size="md"
-              onClick={handleReset}
-              className="w-full sm:w-auto"
-            >
-              <ButtonContent>Reset to Defaults</ButtonContent>
-            </Button>
           </div>
         </div>
       )}
