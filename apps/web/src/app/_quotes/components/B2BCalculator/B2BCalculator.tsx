@@ -208,7 +208,8 @@ const B2BCalculator = ({ inBondPriceUsd }: B2BCalculatorProps) => {
           {/* Action Buttons */}
           <div className="flex flex-col gap-3 sm:flex-row sm:justify-between">
             <Button
-              variant="secondary"
+              variant="default"
+              colorRole="brand"
               size="md"
               onClick={handleExport}
               className="w-full sm:w-auto"
