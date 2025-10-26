@@ -1,3 +1,9 @@
+## [1.32.6](https://github.com/craftandculture/Craft-Culture/compare/v1.32.5...v1.32.6) (2025-10-26)
+
+### Code Refactoring
+
+* update lead time text formatting to EX-Works UAE(In-Bond) ([9b53831](https://github.com/craftandculture/Craft-Culture/commit/9b5383140373161ccbbd108265675d6eda8298af))
+
 ## [1.32.5](https://github.com/craftandculture/Craft-Culture/compare/v1.32.4...v1.32.5) (2025-10-26)
 
 ### Bug Fixes
