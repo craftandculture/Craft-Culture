@@ -682,7 +682,25 @@ const QuotesForm = () => {
             {customerType === 'b2b' && quoteData && (
               <>
                 <Divider />
-                <B2BCalculator inBondPriceUsd={quoteData.totalUsd} />
+                <B2BCalculator
+                  inBondPriceUsd={quoteData.totalUsd}
+                  lineItems={lineItems
+                    .filter((item) => item.product)
+                    .map((item) => {
+                      const quotedLineItem = quoteData.lineItems.find(
+                        (qli) => qli.productId === item.product?.id,
+                      );
+
+                      return {
+                        productName: `${item.product?.name ?? 'Unknown'}${
+                          item.vintage ? ` ${item.vintage}` : ''
+                        }`,
+                        quantity: item.quantity ?? 1,
+                        basePriceUsd: quotedLineItem?.basePriceUsd ?? 0,
+                        lineItemTotalUsd: quotedLineItem?.lineItemTotalUsd ?? 0,
+                      };
+                    })}
+                />
               </>
             )}
 
