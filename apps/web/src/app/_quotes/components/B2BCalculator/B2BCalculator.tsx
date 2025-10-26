@@ -242,6 +242,7 @@ const B2BCalculator = ({ inBondPriceUsd, lineItems }: B2BCalculatorProps) => {
                   globalMarginValue={marginValue}
                   importTaxPercent={importTax}
                   transferCostTotal={transferCost}
+                  inBondTotalUsd={inBondPriceUsd}
                   productMargins={productMargins}
                   onProductMarginChange={handleProductMarginChange}
                 />
