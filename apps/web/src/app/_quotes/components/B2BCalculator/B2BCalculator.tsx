@@ -12,10 +12,9 @@ import { useMemo, useState } from 'react';
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
 import Divider from '@/app/_ui/components/Divider/Divider';
-import Tooltip from '@/app/_ui/components/Tooltip/Tooltip';
-import TooltipContent from '@/app/_ui/components/Tooltip/TooltipContent';
-import TooltipProvider from '@/app/_ui/components/Tooltip/TooltipProvider';
-import TooltipTrigger from '@/app/_ui/components/Tooltip/TooltipTrigger';
+import Popover from '@/app/_ui/components/Popover/Popover';
+import PopoverContent from '@/app/_ui/components/Popover/PopoverContent';
+import PopoverTrigger from '@/app/_ui/components/Popover/PopoverTrigger';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import useTRPC from '@/lib/trpc/browser';
 import convertUsdToAed from '@/utils/convertUsdToAed';
@@ -251,25 +250,18 @@ const B2BCalculator = ({ inBondPriceUsd, lineItems }: B2BCalculatorProps) => {
                   >
                     In-Bond UAE
                   </Typography>
-                  <TooltipProvider delayDuration={300}>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <button
-                          type="button"
-                          className="inline-flex"
-                          onPointerDown={(e) => e.preventDefault()}
-                          onClick={(e) => e.preventDefault()}
-                        >
-                          <IconInfoCircle className="h-3.5 w-3.5 text-text-muted" />
-                        </button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <Typography variant="bodyXs">
-                          Base price before tax, margin, and transfer costs
-                        </Typography>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <button type="button" className="inline-flex">
+                        <IconInfoCircle className="h-3.5 w-3.5 text-text-muted" />
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent className="max-w-xs p-3">
+                      <Typography variant="bodyXs">
+                        Base price before tax, margin, and transfer costs
+                      </Typography>
+                    </PopoverContent>
+                  </Popover>
                 </div>
                 <Typography variant="bodySm" className="tabular-nums text-base font-medium sm:text-lg">
                   {formatPrice(displayValue(inBondPriceUsd), displayCurrency)}
@@ -367,25 +359,18 @@ const B2BCalculator = ({ inBondPriceUsd, lineItems }: B2BCalculatorProps) => {
               >
                 <ButtonContent iconLeft={IconDownload}>Export to Excel</ButtonContent>
               </Button>
-              <TooltipProvider delayDuration={300}>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button
-                      type="button"
-                      className="inline-flex"
-                      onPointerDown={(e) => e.preventDefault()}
-                      onClick={(e) => e.preventDefault()}
-                    >
-                      <IconInfoCircle className="h-4 w-4 text-text-muted" />
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <Typography variant="bodyXs">
-                      Export product & distributor margin calculations
-                    </Typography>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <button type="button" className="inline-flex">
+                    <IconInfoCircle className="h-4 w-4 text-text-muted" />
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="max-w-xs p-3">
+                  <Typography variant="bodyXs">
+                    Export product & distributor margin calculations
+                  </Typography>
+                </PopoverContent>
+              </Popover>
             </div>
           </div>
         </div>

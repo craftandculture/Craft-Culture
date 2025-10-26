@@ -11,11 +11,10 @@ import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
 import Divider from '@/app/_ui/components/Divider/Divider';
 import LiveStatus from '@/app/_ui/components/LiveStatus/LiveStatus';
+import Popover from '@/app/_ui/components/Popover/Popover';
+import PopoverContent from '@/app/_ui/components/Popover/PopoverContent';
+import PopoverTrigger from '@/app/_ui/components/Popover/PopoverTrigger';
 import Skeleton from '@/app/_ui/components/Skeleton/Skeleton';
-import Tooltip from '@/app/_ui/components/Tooltip/Tooltip';
-import TooltipContent from '@/app/_ui/components/Tooltip/TooltipContent';
-import TooltipProvider from '@/app/_ui/components/Tooltip/TooltipProvider';
-import TooltipTrigger from '@/app/_ui/components/Tooltip/TooltipTrigger';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import useTRPC from '@/lib/trpc/browser';
 import convertUsdToAed from '@/utils/convertUsdToAed';
@@ -680,29 +679,27 @@ const QuotesForm = () => {
               {isQuoteLoading ? (
                 <Skeleton className="h-5 w-24" />
               ) : (
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div className="cursor-help">
-                        <Typography variant="bodyLg" className="font-semibold">
-                          {quoteData?.totalUsd
-                            ? formatPrice(
-                                displayCurrency === 'AED'
-                                  ? convertUsdToAed(quoteData.totalUsd)
-                                  : quoteData.totalUsd,
-                                displayCurrency,
-                              )
-                            : '—'}
-                        </Typography>
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <Typography variant="bodyXs">
-                        {customerType === 'b2b' ? 'In-Bond UAE' : 'Price to Client'}
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <div className="cursor-help">
+                      <Typography variant="bodyLg" className="font-semibold">
+                        {quoteData?.totalUsd
+                          ? formatPrice(
+                              displayCurrency === 'AED'
+                                ? convertUsdToAed(quoteData.totalUsd)
+                                : quoteData.totalUsd,
+                              displayCurrency,
+                            )
+                          : '—'}
                       </Typography>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+                    </div>
+                  </PopoverTrigger>
+                  <PopoverContent className="max-w-xs p-3">
+                    <Typography variant="bodyXs">
+                      {customerType === 'b2b' ? 'In-Bond UAE' : 'Price to Client'}
+                    </Typography>
+                  </PopoverContent>
+                </Popover>
               )}
             </div>
 
@@ -720,25 +717,18 @@ const QuotesForm = () => {
                   Download Excel Quote
                 </ButtonContent>
               </Button>
-              <TooltipProvider delayDuration={300}>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button
-                      type="button"
-                      className="inline-flex"
-                      onPointerDown={(e) => e.preventDefault()}
-                      onClick={(e) => e.preventDefault()}
-                    >
-                      <IconInfoCircle className="h-4 w-4 text-text-muted" />
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <Typography variant="bodyXs">
-                      Export In Bond UAE Product list
-                    </Typography>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <button type="button" className="inline-flex">
+                    <IconInfoCircle className="h-4 w-4 text-text-muted" />
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="max-w-xs p-3">
+                  <Typography variant="bodyXs">
+                    Export In Bond UAE Product list
+                  </Typography>
+                </PopoverContent>
+              </Popover>
             </div>
 
             {/* B2B Calculator - B2B Only */}
