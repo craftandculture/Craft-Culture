@@ -1,3 +1,9 @@
+## [1.32.4](https://github.com/craftandculture/Craft-Culture/compare/v1.32.3...v1.32.4) (2025-10-26)
+
+### Bug Fixes
+
+* prevent all info icon tooltips from closing on click ([1cfebab](https://github.com/craftandculture/Craft-Culture/commit/1cfebab97ddb9cb0f23b99c7cd810299d0c31f78))
+
 ## [1.32.3](https://github.com/craftandculture/Craft-Culture/compare/v1.32.2...v1.32.3) (2025-10-26)
 
 ### Bug Fixes
