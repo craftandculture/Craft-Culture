@@ -1,6 +1,7 @@
 'use client';
 
 import Divider from '@/app/_ui/components/Divider/Divider';
+import Switch from '@/app/_ui/components/Switch/Switch';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import convertUsdToAed from '@/utils/convertUsdToAed';
 import formatPrice from '@/utils/formatPrice';
@@ -16,6 +17,8 @@ export interface B2BCalculatorBreakdownProps {
   importTaxPercent: number;
   /** Distributor margin percentage (if applicable) */
   distributorMarginPercent?: number;
+  /** Currency toggle handler */
+  onCurrencyToggle: (checked: boolean) => void;
 }
 
 /**
@@ -32,6 +35,7 @@ const B2BCalculatorBreakdown = ({
   currency,
   importTaxPercent,
   distributorMarginPercent,
+  onCurrencyToggle,
 }: B2BCalculatorBreakdownProps) => {
   // Convert values to display currency
   const convertValue = (usdValue: number) => {
@@ -94,16 +98,31 @@ const B2BCalculatorBreakdown = ({
       <Divider />
 
       {/* Customer quote price (total) */}
-      <div className="flex items-baseline justify-between gap-2">
-        <Typography variant="bodySm" className="text-sm sm:text-base">
-          Customer price
-        </Typography>
-        <Typography
-          variant="bodySm"
-          className="tabular-nums text-base font-medium sm:text-lg"
-        >
-          {formatPrice(convertValue(calculatedQuote.customerQuotePrice), currency)}
-        </Typography>
+      <div className="flex flex-col gap-2">
+        <div className="flex items-baseline justify-between gap-2">
+          <Typography variant="bodySm" className="text-sm sm:text-base">
+            Customer price
+          </Typography>
+          <Typography
+            variant="bodySm"
+            className="tabular-nums text-base font-medium sm:text-lg"
+          >
+            {formatPrice(convertValue(calculatedQuote.customerQuotePrice), currency)}
+          </Typography>
+        </div>
+
+        {/* Currency Toggle - Inline with total */}
+        <div className="flex items-center justify-end gap-2">
+          <Typography variant="bodyXs" colorRole="muted" className="text-[11px]">
+            Display in AED
+          </Typography>
+          <Switch
+            checked={currency === 'AED'}
+            onCheckedChange={onCurrencyToggle}
+            size="sm"
+            aria-label="Toggle currency display"
+          />
+        </div>
       </div>
     </div>
   );

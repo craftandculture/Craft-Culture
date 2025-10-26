@@ -206,20 +206,8 @@ const B2BCalculator = ({ inBondPriceUsd }: B2BCalculatorProps) => {
                 distributorMarginPercent={
                   marginType === 'percentage' ? marginValue : undefined
                 }
+                onCurrencyToggle={handleCurrencyToggle}
               />
-
-              {/* Currency Toggle */}
-              <div className="flex items-center gap-2 self-start rounded-md border border-border-muted bg-fill-primary px-2.5 py-1.5">
-                <Typography variant="bodyXs" colorRole="muted" className="text-xs">
-                  Display in AED
-                </Typography>
-                <Switch
-                  checked={displayCurrency === 'AED'}
-                  onCheckedChange={handleCurrencyToggle}
-                  size="sm"
-                  aria-label="Toggle currency display"
-                />
-              </div>
             </div>
           </div>
 
