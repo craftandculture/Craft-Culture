@@ -27,6 +27,8 @@ export interface B2BCalculatorProductBreakdownProps {
   importTaxPercent: number;
   /** Total transfer cost to allocate */
   transferCostTotal: number;
+  /** Total In-Bond UAE price (distributor price from quote) */
+  inBondTotalUsd: number;
   /** Per-product margin overrides (index-based) */
   productMargins: Record<number, { type: 'percentage' | 'fixed'; value: number }>;
   /** Handler for updating product margins */
@@ -62,6 +64,7 @@ const B2BCalculatorProductBreakdown = ({
   globalMarginValue,
   importTaxPercent,
   transferCostTotal,
+  inBondTotalUsd,
   productMargins,
   onProductMarginChange,
 }: B2BCalculatorProductBreakdownProps) => {
@@ -70,8 +73,11 @@ const B2BCalculatorProductBreakdown = ({
     return currency === 'AED' ? convertUsdToAed(usdValue) : usdValue;
   };
 
-  // Calculate total in-bond price for allocation
-  const totalInBondPrice = lineItems.reduce((sum, item) => sum + item.lineItemTotalUsd, 0);
+  // Calculate total quantity for per-case price calculation
+  const totalQuantity = lineItems.reduce((sum, item) => sum + item.quantity, 0);
+
+  // Calculate In-Bond price per case from total distributor price
+  const inBondPricePerCase = inBondTotalUsd / totalQuantity;
 
   // Get margin configuration for a product (override or global)
   const getProductMarginConfig = (productIndex: number) => {
@@ -79,30 +85,27 @@ const B2BCalculatorProductBreakdown = ({
   };
 
   // Calculate margin amount for a product
-  const calculateMarginAmount = (item: B2BCalculatorLineItem, productIndex: number) => {
+  const calculateMarginAmount = (productIndex: number) => {
     const config = getProductMarginConfig(productIndex);
-    const basePricePerCase = item.basePriceUsd;
 
     if (config.type === 'percentage') {
-      return basePricePerCase * (config.value / 100);
+      return inBondPricePerCase * (config.value / 100);
     }
     // Fixed dollar amount
     return config.value;
   };
 
   // Calculate customer price per case for each product with individual margin
-  const getCustomerPricePerCase = (item: B2BCalculatorLineItem, productIndex: number) => {
-    const basePricePerCase = item.basePriceUsd;
-    const marginAmount = calculateMarginAmount(item, productIndex);
+  const getCustomerPricePerCase = (productIndex: number) => {
+    const marginAmount = calculateMarginAmount(productIndex);
 
     // Calculate components per case
-    const importTax = basePricePerCase * (importTaxPercent / 100);
+    const importTax = inBondPricePerCase * (importTaxPercent / 100);
 
-    // Allocate transfer cost proportionally based on line item total
-    const transferCostPerCase =
-      (item.lineItemTotalUsd / totalInBondPrice) * transferCostTotal / item.quantity;
+    // Allocate transfer cost per case
+    const transferCostPerCase = transferCostTotal / totalQuantity;
 
-    return basePricePerCase + importTax + marginAmount + transferCostPerCase;
+    return inBondPricePerCase + importTax + marginAmount + transferCostPerCase;
   };
 
   // Handle margin value change
@@ -151,7 +154,7 @@ const B2BCalculatorProductBreakdown = ({
       <div className="flex flex-col space-y-3">
         {lineItems.map((item, index) => {
           const config = getProductMarginConfig(index);
-          const marginAmount = calculateMarginAmount(item, index);
+          const marginAmount = calculateMarginAmount(index);
 
           return (
             <div key={index} className="flex flex-col space-y-1.5">
@@ -165,7 +168,7 @@ const B2BCalculatorProductBreakdown = ({
               </div>
               <div className="flex items-baseline justify-between gap-2">
                 <Typography variant="bodyXs" colorRole="muted" className="text-[11px] sm:text-xs">
-                  In-Bond: {formatPrice(convertValue(item.basePriceUsd), currency)}/case
+                  In-Bond: {formatPrice(convertValue(inBondPricePerCase), currency)}/case
                 </Typography>
               </div>
 
@@ -175,7 +178,7 @@ const B2BCalculatorProductBreakdown = ({
                   Customer price:
                 </Typography>
                 <Typography variant="bodyXs" className="tabular-nums text-xs font-medium sm:text-sm">
-                  {formatPrice(convertValue(getCustomerPricePerCase(item, index)), currency)}/case
+                  {formatPrice(convertValue(getCustomerPricePerCase(index)), currency)}/case
                 </Typography>
               </div>
 
@@ -214,8 +217,8 @@ const B2BCalculatorProductBreakdown = ({
                 </div>
               </div>
 
-              {/* Profit Display - Right Aligned */}
-              <div className="flex items-baseline justify-between gap-2">
+              {/* Profit Display - Inline on right */}
+              <div className="flex items-baseline justify-end gap-1">
                 <Typography variant="bodyXs" colorRole="muted" className="text-[10px] sm:text-[11px]">
                   Profit/case:
                 </Typography>
