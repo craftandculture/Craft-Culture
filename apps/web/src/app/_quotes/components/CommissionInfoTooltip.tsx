@@ -25,18 +25,15 @@ const CommissionInfoTooltip = () => {
           </span>
         </TooltipTrigger>
         <TooltipContent>
-          <div className="space-y-1">
-            <Typography variant="bodyXs" className="font-semibold">
-              Sales Agent Commission
-            </Typography>
+          <div className="space-y-0.5">
             <Typography variant="bodyXs">
-              5% of ex-works supplier price
+              5% of supplier ex-works price
             </Typography>
             <Typography variant="bodyXs" colorRole="muted">
-              Included in total price
+              Already included in your total
             </Typography>
             <Typography variant="bodyXs" colorRole="muted">
-              Paid upon order confirmation
+              Payable on order confirmation
             </Typography>
           </div>
         </TooltipContent>
