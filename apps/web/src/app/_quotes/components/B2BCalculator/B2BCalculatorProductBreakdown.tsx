@@ -27,8 +27,6 @@ export interface B2BCalculatorProductBreakdownProps {
   importTaxPercent: number;
   /** Total transfer cost to allocate */
   transferCostTotal: number;
-  /** Total In-Bond UAE price (distributor price from quote) */
-  inBondTotalUsd: number;
   /** Per-product margin overrides (index-based) */
   productMargins: Record<number, { type: 'percentage' | 'fixed'; value: number }>;
   /** Handler for updating product margins */
@@ -64,7 +62,6 @@ const B2BCalculatorProductBreakdown = ({
   globalMarginValue,
   importTaxPercent,
   transferCostTotal,
-  inBondTotalUsd,
   productMargins,
   onProductMarginChange,
 }: B2BCalculatorProductBreakdownProps) => {
@@ -73,39 +70,36 @@ const B2BCalculatorProductBreakdown = ({
     return currency === 'AED' ? convertUsdToAed(usdValue) : usdValue;
   };
 
-  // Calculate total quantity for per-case price calculation
+  // Calculate total quantity for transfer cost allocation
   const totalQuantity = lineItems.reduce((sum, item) => sum + item.quantity, 0);
-
-  // Calculate In-Bond price per case from total distributor price
-  const inBondPricePerCase = inBondTotalUsd / totalQuantity;
 
   // Get margin configuration for a product (override or global)
   const getProductMarginConfig = (productIndex: number) => {
     return productMargins[productIndex] ?? { type: globalMarginType, value: globalMarginValue };
   };
 
-  // Calculate margin amount for a product
-  const calculateMarginAmount = (productIndex: number) => {
+  // Calculate margin amount for a product using its individual In-Bond price
+  const calculateMarginAmount = (item: B2BCalculatorLineItem, productIndex: number) => {
     const config = getProductMarginConfig(productIndex);
 
     if (config.type === 'percentage') {
-      return inBondPricePerCase * (config.value / 100);
+      return item.basePriceUsd * (config.value / 100);
     }
     // Fixed dollar amount
     return config.value;
   };
 
   // Calculate customer price per case for each product with individual margin
-  const getCustomerPricePerCase = (productIndex: number) => {
-    const marginAmount = calculateMarginAmount(productIndex);
+  const getCustomerPricePerCase = (item: B2BCalculatorLineItem, productIndex: number) => {
+    const marginAmount = calculateMarginAmount(item, productIndex);
 
     // Calculate components per case
-    const importTax = inBondPricePerCase * (importTaxPercent / 100);
+    const importTax = item.basePriceUsd * (importTaxPercent / 100);
 
     // Allocate transfer cost per case
     const transferCostPerCase = transferCostTotal / totalQuantity;
 
-    return inBondPricePerCase + importTax + marginAmount + transferCostPerCase;
+    return item.basePriceUsd + importTax + marginAmount + transferCostPerCase;
   };
 
   // Handle margin value change
@@ -154,7 +148,7 @@ const B2BCalculatorProductBreakdown = ({
       <div className="flex flex-col space-y-3">
         {lineItems.map((item, index) => {
           const config = getProductMarginConfig(index);
-          const marginAmount = calculateMarginAmount(index);
+          const marginAmount = calculateMarginAmount(item, index);
 
           return (
             <div key={index} className="flex flex-col space-y-1.5">
@@ -168,7 +162,7 @@ const B2BCalculatorProductBreakdown = ({
               </div>
               <div className="flex items-baseline justify-between gap-2">
                 <Typography variant="bodyXs" colorRole="muted" className="text-[11px] sm:text-xs">
-                  In-Bond: {formatPrice(convertValue(inBondPricePerCase), currency)}/case
+                  In-Bond: {formatPrice(convertValue(item.basePriceUsd), currency)}/case
                 </Typography>
               </div>
 
@@ -178,7 +172,7 @@ const B2BCalculatorProductBreakdown = ({
                   Customer price:
                 </Typography>
                 <Typography variant="bodyXs" className="tabular-nums text-xs font-medium sm:text-sm">
-                  {formatPrice(convertValue(getCustomerPricePerCase(index)), currency)}/case
+                  {formatPrice(convertValue(getCustomerPricePerCase(item, index)), currency)}/case
                 </Typography>
               </div>
 
