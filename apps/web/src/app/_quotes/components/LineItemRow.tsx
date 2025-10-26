@@ -10,11 +10,10 @@ import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Input from '@/app/_ui/components/Input/Input';
+import Popover from '@/app/_ui/components/Popover/Popover';
+import PopoverContent from '@/app/_ui/components/Popover/PopoverContent';
+import PopoverTrigger from '@/app/_ui/components/Popover/PopoverTrigger';
 import Skeleton from '@/app/_ui/components/Skeleton/Skeleton';
-import Tooltip from '@/app/_ui/components/Tooltip/Tooltip';
-import TooltipContent from '@/app/_ui/components/Tooltip/TooltipContent';
-import TooltipProvider from '@/app/_ui/components/Tooltip/TooltipProvider';
-import TooltipTrigger from '@/app/_ui/components/Tooltip/TooltipTrigger';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import useDebounce from '@/app/_ui/hooks/useDebounce';
 import formatPrice from '@/utils/formatPrice';
@@ -179,22 +178,22 @@ const LineItemRow = ({
             >
               Price
             </Typography>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <span className="inline-flex">
-                    <Icon
-                      icon={IconInfoCircle}
-                      size="sm"
-                      colorRole="muted"
-                    />
-                  </span>
-                </TooltipTrigger>
-                <TooltipContent>
+            <Popover>
+              <PopoverTrigger asChild>
+                <button type="button" className="inline-flex">
+                  <Icon
+                    icon={IconInfoCircle}
+                    size="sm"
+                    colorRole="muted"
+                  />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="max-w-xs p-3">
+                <Typography variant="bodyXs">
                   {customerType === 'b2b' ? 'In-Bond UAE' : 'Client Price'}
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+                </Typography>
+              </PopoverContent>
+            </Popover>
           </div>
           {isQuoteLoading ? (
             <Skeleton className="h-5 w-16" />
@@ -219,22 +218,22 @@ const LineItemRow = ({
             >
               Per Bottle
             </Typography>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <span className="inline-flex">
-                    <Icon
-                      icon={IconInfoCircle}
-                      size="sm"
-                      colorRole="muted"
-                    />
-                  </span>
-                </TooltipTrigger>
-                <TooltipContent>
+            <Popover>
+              <PopoverTrigger asChild>
+                <button type="button" className="inline-flex">
+                  <Icon
+                    icon={IconInfoCircle}
+                    size="sm"
+                    colorRole="muted"
+                  />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="max-w-xs p-3">
+                <Typography variant="bodyXs">
                   {customerType === 'b2b' ? 'In-Bond UAE' : 'Client Price'}
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+                </Typography>
+              </PopoverContent>
+            </Popover>
           </div>
           {isQuoteLoading ? (
             <Skeleton className="h-5 w-16" />
