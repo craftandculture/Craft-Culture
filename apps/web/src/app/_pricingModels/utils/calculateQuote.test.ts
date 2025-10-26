@@ -511,4 +511,219 @@ describe('calculateQuote', () => {
       expect(result.totalUsd).toBe(999999);
     });
   });
+
+  describe('commission calculations', () => {
+    it('should calculate 5% commission for B2C customers', () => {
+      const lineItems = [{ offerId: 'offer-1', quantity: 2 }];
+      const offers = [createOffer({ price: 100 })];
+      const cellMappings = createCellMappings();
+      const formulaData = createFormulaData();
+      const customerType = 'b2c';
+      const exchangeRates = new Map([['USD', 1]]);
+
+      const result = calculateQuote(
+        lineItems,
+        offers,
+        cellMappings,
+        formulaData,
+        customerType,
+        exchangeRates,
+      );
+
+      // Base price: 100 USD per case
+      // Commission per case: 100 * 0.05 = 5 USD
+      // Total commission: 5 * 2 = 10 USD
+      expect(result.lineItems[0]?.basePriceUsd).toBe(100);
+      expect(result.lineItems[0]?.commissionUsd).toBe(10);
+      expect(result.totalCommissionUsd).toBe(10);
+    });
+
+    it('should not calculate commission for B2B customers', () => {
+      const lineItems = [{ offerId: 'offer-1', quantity: 2 }];
+      const offers = [createOffer({ price: 100 })];
+      const cellMappings = createCellMappings();
+      const formulaData = createFormulaData();
+      const customerType = 'b2b';
+      const exchangeRates = new Map([['USD', 1]]);
+
+      const result = calculateQuote(
+        lineItems,
+        offers,
+        cellMappings,
+        formulaData,
+        customerType,
+        exchangeRates,
+      );
+
+      // B2B customers should have zero commission
+      expect(result.lineItems[0]?.commissionUsd).toBe(0);
+      expect(result.totalCommissionUsd).toBe(0);
+    });
+
+    it('should calculate subtotal correctly (total - commission)', () => {
+      const lineItems = [{ offerId: 'offer-1', quantity: 1 }];
+      const offers = [createOffer({ price: 100 })];
+      const cellMappings = createCellMappings();
+      const formulaData = createFormulaData();
+      const customerType = 'b2c';
+      const exchangeRates = new Map([['USD', 1]]);
+
+      const result = calculateQuote(
+        lineItems,
+        offers,
+        cellMappings,
+        formulaData,
+        customerType,
+        exchangeRates,
+      );
+
+      // Total: 100 USD
+      // Commission: 5 USD (5% of 100)
+      // Subtotal: 100 - 5 = 95 USD
+      expect(result.totalUsd).toBe(100);
+      expect(result.totalCommissionUsd).toBe(5);
+      expect(result.subtotalBeforeCommissionUsd).toBe(95);
+    });
+
+    it('should calculate commission correctly for multiple line items', () => {
+      const lineItems = [
+        { offerId: 'offer-1', quantity: 2 },
+        { offerId: 'offer-2', quantity: 3 },
+      ];
+      const offers = [
+        createOffer({ id: 'offer-1', productId: 'product-1', price: 100 }),
+        createOffer({ id: 'offer-2', productId: 'product-2', price: 50 }),
+      ];
+      const cellMappings = createCellMappings();
+      const formulaData = createFormulaData();
+      const customerType = 'b2c';
+      const exchangeRates = new Map([['USD', 1]]);
+
+      const result = calculateQuote(
+        lineItems,
+        offers,
+        cellMappings,
+        formulaData,
+        customerType,
+        exchangeRates,
+      );
+
+      // First item: base 100, commission 5 per case × 2 = 10 USD
+      expect(result.lineItems[0]?.commissionUsd).toBe(10);
+      // Second item: base 50, commission 2.5 per case × 3 = 7.5 USD
+      expect(result.lineItems[1]?.commissionUsd).toBe(7.5);
+      // Total commission: 10 + 7.5 = 17.5 USD
+      expect(result.totalCommissionUsd).toBe(17.5);
+      // Total: 200 + 150 = 350 USD
+      // Subtotal: 350 - 17.5 = 332.5 USD
+      expect(result.totalUsd).toBe(350);
+      expect(result.subtotalBeforeCommissionUsd).toBe(332.5);
+    });
+
+    it('should handle commission with currency exchange rates', () => {
+      const lineItems = [{ offerId: 'offer-1', quantity: 1 }];
+      const offers = [
+        createOffer({
+          price: 100,
+          currency: 'EUR',
+        }),
+      ];
+      const cellMappings = createCellMappings();
+      const formulaData = createFormulaData();
+      const customerType = 'b2c';
+      const exchangeRates = new Map([['EUR', 1.1]]); // 1 EUR = 1.1 USD
+
+      const result = calculateQuote(
+        lineItems,
+        offers,
+        cellMappings,
+        formulaData,
+        customerType,
+        exchangeRates,
+      );
+
+      // Base price: 100 EUR * 1.1 = 110 USD
+      // Commission: 110 * 0.05 = 5.5 USD
+      expect(result.lineItems[0]?.basePriceUsd).toBe(110);
+      expect(result.lineItems[0]?.commissionUsd).toBe(5.5);
+      expect(result.totalCommissionUsd).toBe(5.5);
+    });
+
+    it('should handle decimal commission values correctly', () => {
+      const lineItems = [{ offerId: 'offer-1', quantity: 3 }];
+      const offers = [createOffer({ price: 99.99 })];
+      const cellMappings = createCellMappings();
+      const formulaData = createFormulaData();
+      const customerType = 'b2c';
+      const exchangeRates = new Map([['USD', 1]]);
+
+      const result = calculateQuote(
+        lineItems,
+        offers,
+        cellMappings,
+        formulaData,
+        customerType,
+        exchangeRates,
+      );
+
+      // Base price: 99.99 USD per case
+      // Commission per case: 99.99 * 0.05 = 4.9995 USD
+      // Total commission: 4.9995 * 3 = 14.9985 USD
+      expect(result.lineItems[0]?.basePriceUsd).toBe(99.99);
+      expect(result.lineItems[0]?.commissionUsd).toBeCloseTo(14.9985, 4);
+      expect(result.totalCommissionUsd).toBeCloseTo(14.9985, 4);
+    });
+
+    it('should handle zero commission when base price is zero', () => {
+      const lineItems = [{ offerId: 'offer-1', quantity: 5 }];
+      const offers = [createOffer({ price: 0 })];
+      const cellMappings = createCellMappings();
+      const formulaData = createFormulaData();
+      const customerType = 'b2c';
+      const exchangeRates = new Map([['USD', 1]]);
+
+      const result = calculateQuote(
+        lineItems,
+        offers,
+        cellMappings,
+        formulaData,
+        customerType,
+        exchangeRates,
+      );
+
+      // Zero base price means zero commission
+      expect(result.lineItems[0]?.basePriceUsd).toBe(0);
+      expect(result.lineItems[0]?.commissionUsd).toBe(0);
+      expect(result.totalCommissionUsd).toBe(0);
+    });
+
+    it('should return correct basePriceUsd for all line items', () => {
+      const lineItems = [
+        { offerId: 'offer-1', quantity: 1 },
+        { offerId: 'offer-2', quantity: 2 },
+      ];
+      const offers = [
+        createOffer({ id: 'offer-1', productId: 'product-1', price: 150 }),
+        createOffer({ id: 'offer-2', productId: 'product-2', price: 75 }),
+      ];
+      const cellMappings = createCellMappings();
+      const formulaData = createFormulaData();
+      const customerType = 'b2c';
+      const exchangeRates = new Map([['USD', 1]]);
+
+      const result = calculateQuote(
+        lineItems,
+        offers,
+        cellMappings,
+        formulaData,
+        customerType,
+        exchangeRates,
+      );
+
+      // First item base price: 150 USD
+      expect(result.lineItems[0]?.basePriceUsd).toBe(150);
+      // Second item base price: 75 USD
+      expect(result.lineItems[1]?.basePriceUsd).toBe(75);
+    });
+  });
 });

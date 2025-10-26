@@ -10,6 +10,7 @@ interface LineItemExport {
   pricePerCase: number;
   pricePerBottle: number;
   totalPrice: number;
+  commissionPerCase?: number;
 }
 
 /**
@@ -21,52 +22,95 @@ interface LineItemExport {
  * @param lineItems - Array of line items to export
  * @param currency - Currency code (USD or AED)
  * @param totalPrice - Total quote price
+ * @param commissionTotal - Optional total commission (B2C only)
  */
 const exportQuoteToExcel = (
   lineItems: LineItemExport[],
   currency: string,
   totalPrice: number,
+  commissionTotal?: number,
 ) => {
   // Create workbook and worksheet
   const wb = XLSX.utils.book_new();
 
   // Prepare data for export
+  const hasCommission = commissionTotal !== undefined && commissionTotal > 0;
+
+  const headers = [
+    'Reference',
+    'Vintage',
+    'Quantity',
+    'Unit Size',
+    'Units per Case',
+    'Total Bottles',
+    `Price per Case (${currency})`,
+    `Price per Bottle (${currency})`,
+    `Total Price (${currency})`,
+  ];
+
+  // Add commission column header if B2C
+  if (hasCommission) {
+    headers.push(`Commission per Case (${currency})`);
+  }
+
   const data = [
     // Header row
-    [
-      'Reference',
-      'Vintage',
-      'Quantity',
-      'Unit Size',
-      'Units per Case',
-      'Total Bottles',
-      `Price per Case (${currency})`,
-      `Price per Bottle (${currency})`,
-      `Total Price (${currency})`,
-    ],
+    headers,
     // Data rows
-    ...lineItems.map((item) => [
-      item.reference,
-      item.vintage,
-      item.quantity,
-      item.unitSize,
-      item.unitsPerCase,
-      item.totalBottles,
-      Math.round(item.pricePerCase),
-      Math.round(item.pricePerBottle),
-      Math.round(item.totalPrice),
-    ]),
+    ...lineItems.map((item) => {
+      const row = [
+        item.reference,
+        item.vintage,
+        item.quantity,
+        item.unitSize,
+        item.unitsPerCase,
+        item.totalBottles,
+        Math.round(item.pricePerCase),
+        Math.round(item.pricePerBottle),
+        Math.round(item.totalPrice),
+      ];
+
+      // Add commission column if B2C
+      if (hasCommission && item.commissionPerCase !== undefined) {
+        row.push(Math.round(item.commissionPerCase));
+      }
+
+      return row;
+    }),
     // Empty row
     [],
-    // Total row
-    ['', '', '', '', '', '', '', 'Total:', Math.round(totalPrice)],
   ];
+
+  // Add subtotal, commission, and total rows if B2C
+  if (hasCommission) {
+    const subtotal = totalPrice - commissionTotal;
+    data.push(
+      ['', '', '', '', '', '', '', '', 'Subtotal:', Math.round(subtotal), ''],
+      [
+        '',
+        '',
+        '',
+        '',
+        '',
+        '',
+        '',
+        '',
+        'Commission:',
+        Math.round(commissionTotal),
+        '',
+      ],
+      ['', '', '', '', '', '', '', '', 'Total:', Math.round(totalPrice), ''],
+    );
+  } else {
+    // Just total row for B2B
+    data.push(['', '', '', '', '', '', '', '', 'Total:', Math.round(totalPrice)]);
+  }
 
   // Create worksheet from data
   const ws = XLSX.utils.aoa_to_sheet(data);
 
   // Set column widths
-  ws['!cols'] = [
+  const columnWidths = [
     { wch: 40 }, // Reference
     { wch: 10 }, // Vintage
     { wch: 10 }, // Quantity
@@ -77,6 +121,13 @@ const exportQuoteToExcel = (
     { wch: 20 }, // Price per Bottle
     { wch: 20 }, // Total Price
   ];
+
+  // Add commission column width if B2C
+  if (hasCommission) {
+    columnWidths.push({ wch: 25 }); // Commission per Case
+  }
+
+  ws['!cols'] = columnWidths;
 
   // Add worksheet to workbook
   XLSX.utils.book_append_sheet(wb, ws, 'Quote');
