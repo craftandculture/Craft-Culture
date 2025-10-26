@@ -140,8 +140,8 @@ const B2BCalculator = ({ inBondPriceUsd, lineItems }: B2BCalculatorProps) => {
           {/* Description */}
           <div className="mb-5 rounded-lg border border-border-muted bg-fill-muted/30 px-3 py-2.5 sm:px-4 sm:py-3">
             <Typography variant="bodyXs" colorRole="muted" className="text-xs leading-relaxed sm:text-sm">
-              Internal distributor tool for calculating customer pricing and generating quick quotations.
-              Adjust tax rates, margins, and transfer costs to create accurate customer quotes.
+              Your personal pricing assistant. Quickly calculate customer quotes by adjusting margins,
+              tax rates, and transfer costs to find the perfect price for your customers.
             </Typography>
           </div>
 
