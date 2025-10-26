@@ -88,12 +88,11 @@ const B2BCalculatorBreakdown = ({
 
       {/* Customer quote price (total) */}
       <div className="flex items-baseline justify-between gap-2">
-        <Typography variant="bodySm" colorRole="default" className="text-sm sm:text-base">
+        <Typography variant="bodySm" className="text-sm sm:text-base">
           Customer price
         </Typography>
         <Typography
           variant="bodySm"
-          colorRole="default"
           className="tabular-nums text-base font-medium sm:text-lg"
         >
           {formatPrice(convertValue(calculatedQuote.customerQuotePrice), currency)}

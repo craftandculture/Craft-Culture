@@ -138,7 +138,6 @@ const B2BCalculator = ({ inBondPriceUsd }: B2BCalculatorProps) => {
                 </Typography>
                 <Typography
                   variant="bodyLg"
-                  colorRole="default"
                   className="tabular-nums text-xl font-medium sm:text-2xl"
                 >
                   {formatPrice(displayValue(inBondPriceUsd), displayCurrency)}

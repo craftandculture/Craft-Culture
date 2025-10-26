@@ -70,7 +70,7 @@ const B2BCalculatorInput = ({
   return (
     <div className="flex flex-col space-y-1.5">
       <div className="flex flex-col space-y-0.5">
-        <Typography variant="bodySm" colorRole="default">
+        <Typography variant="bodySm">
           {label}
         </Typography>
         {helperText && (
