@@ -241,6 +241,7 @@ const ProductFilters = ({
                     type="button"
                     className="inline-flex cursor-help"
                     onPointerDown={(e) => e.preventDefault()}
+                    onClick={(e) => e.preventDefault()}
                   >
                     <Icon
                       icon={IconInfoCircle}
