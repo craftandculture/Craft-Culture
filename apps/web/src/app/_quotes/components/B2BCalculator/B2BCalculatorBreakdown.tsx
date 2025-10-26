@@ -73,6 +73,16 @@ const B2BCalculatorBreakdown = ({
           </Typography>
         </div>
 
+        {/* Transfer cost */}
+        <div className="flex items-baseline justify-between gap-2">
+          <Typography variant="bodyXs" colorRole="muted" className="text-[11px] sm:text-xs">
+            Transfer cost
+          </Typography>
+          <Typography variant="bodyXs" className="tabular-nums text-[11px] sm:text-xs">
+            {formatPrice(convertValue(calculatedQuote.transferCost), currency)}
+          </Typography>
+        </div>
+
         {/* Distributor margin */}
         <div className="flex items-baseline justify-between gap-2">
           <Typography variant="bodyXs" colorRole="muted" className="text-[11px] sm:text-xs">
@@ -84,13 +94,13 @@ const B2BCalculatorBreakdown = ({
           </Typography>
         </div>
 
-        {/* Transfer cost */}
+        {/* VAT */}
         <div className="flex items-baseline justify-between gap-2">
           <Typography variant="bodyXs" colorRole="muted" className="text-[11px] sm:text-xs">
-            Transfer cost
+            VAT (5%)
           </Typography>
           <Typography variant="bodyXs" className="tabular-nums text-[11px] sm:text-xs">
-            {formatPrice(convertValue(calculatedQuote.transferCost), currency)}
+            {formatPrice(convertValue(calculatedQuote.vat), currency)}
           </Typography>
         </div>
       </div>

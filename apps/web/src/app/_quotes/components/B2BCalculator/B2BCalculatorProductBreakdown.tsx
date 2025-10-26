@@ -83,30 +83,43 @@ const B2BCalculatorProductBreakdown = ({
     return item.lineItemTotalUsd / item.quantity;
   };
 
-  // Calculate margin amount for a product using its individual In-Bond UAE price
-  const calculateMarginAmount = (item: B2BCalculatorLineItem, productIndex: number) => {
-    const config = getProductMarginConfig(productIndex);
+  // Calculate landed price (In-Bond + Import Duty + Transfer Cost)
+  const getLandedPrice = (item: B2BCalculatorLineItem) => {
     const inBondPricePerCase = getInBondPricePerCase(item);
+    const importTax = inBondPricePerCase * (importTaxPercent / 100);
+    const transferCostPerCase = transferCostTotal / totalQuantity;
+
+    return inBondPricePerCase + importTax + transferCostPerCase;
+  };
+
+  // Calculate price after margin (before VAT)
+  const getPriceAfterMargin = (item: B2BCalculatorLineItem, productIndex: number) => {
+    const config = getProductMarginConfig(productIndex);
+    const landedPrice = getLandedPrice(item);
 
     if (config.type === 'percentage') {
-      return inBondPricePerCase * (config.value / 100);
+      // Margin calculation: Landed Price / (1 - Margin%)
+      // e.g., 15% margin means divide by 0.85
+      return landedPrice / (1 - config.value / 100);
     }
     // Fixed dollar amount
-    return config.value;
+    return landedPrice + config.value;
+  };
+
+  // Calculate margin amount (the actual profit)
+  const calculateMarginAmount = (item: B2BCalculatorLineItem, productIndex: number) => {
+    const landedPrice = getLandedPrice(item);
+    const priceAfterMargin = getPriceAfterMargin(item, productIndex);
+
+    return priceAfterMargin - landedPrice;
   };
 
   // Calculate customer price per case for each product with individual margin
   const getCustomerPricePerCase = (item: B2BCalculatorLineItem, productIndex: number) => {
-    const inBondPricePerCase = getInBondPricePerCase(item);
-    const marginAmount = calculateMarginAmount(item, productIndex);
+    const priceAfterMargin = getPriceAfterMargin(item, productIndex);
+    const vat = priceAfterMargin * 0.05; // 5% VAT
 
-    // Calculate components per case
-    const importTax = inBondPricePerCase * (importTaxPercent / 100);
-
-    // Allocate transfer cost per case
-    const transferCostPerCase = transferCostTotal / totalQuantity;
-
-    return inBondPricePerCase + importTax + marginAmount + transferCostPerCase;
+    return priceAfterMargin + vat;
   };
 
   // Calculate customer price per bottle
