@@ -1,3 +1,9 @@
+## [1.32.2](https://github.com/craftandculture/Craft-Culture/compare/v1.32.1...v1.32.2) (2025-10-26)
+
+### Code Refactoring
+
+* change 'catalog' to 'catalogue' in user-facing text ([bb84114](https://github.com/craftandculture/Craft-Culture/commit/bb841149e79f400cb4f27ee70d3c710b7187f3ba))
+
 ## [1.32.1](https://github.com/craftandculture/Craft-Culture/compare/v1.32.0...v1.32.1) (2025-10-26)
 
 ### Documentation
