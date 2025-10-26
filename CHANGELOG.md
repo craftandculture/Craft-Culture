@@ -1,3 +1,9 @@
+## [1.32.1](https://github.com/craftandculture/Craft-Culture/compare/v1.32.0...v1.32.1) (2025-10-26)
+
+### Documentation
+
+* add automated versioning documentation ([3eb98d5](https://github.com/craftandculture/Craft-Culture/commit/3eb98d557e4f52b3b651110c8ea2f612092b09c0))
+
 # 1.0.0 (2025-10-26)
 
 
