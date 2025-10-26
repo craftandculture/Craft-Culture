@@ -1,3 +1,9 @@
+## [1.33.0](https://github.com/craftandculture/Craft-Culture/compare/v1.32.7...v1.33.0) (2025-10-26)
+
+### Features
+
+* convert Price/Per Bottle tooltips to popovers and improve visibility ([027df11](https://github.com/craftandculture/Craft-Culture/commit/027df115b888944f4dedca2c69215e4a493ec98d))
+
 ## [1.32.7](https://github.com/craftandculture/Craft-Culture/compare/v1.32.6...v1.32.7) (2025-10-26)
 
 ### Bug Fixes
