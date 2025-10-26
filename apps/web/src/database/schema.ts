@@ -239,3 +239,12 @@ export const warehouseSensorReadings = pgTable(
     index('warehouse_sensor_readings_sensor_type_idx').on(table.sensorType),
   ],
 ).enableRLS();
+
+export const settings = pgTable('settings', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  key: text('key').notNull().unique(),
+  value: text('value').notNull(),
+  ...timestamps,
+}).enableRLS();
+
+export type Settings = typeof settings.$inferSelect;

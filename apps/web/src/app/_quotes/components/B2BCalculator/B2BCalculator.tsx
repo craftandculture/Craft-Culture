@@ -6,6 +6,7 @@ import {
   IconDownload,
   IconInfoCircle,
 } from '@tabler/icons-react';
+import { useQuery } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 
 import Button from '@/app/_ui/components/Button/Button';
@@ -16,6 +17,7 @@ import TooltipContent from '@/app/_ui/components/Tooltip/TooltipContent';
 import TooltipProvider from '@/app/_ui/components/Tooltip/TooltipProvider';
 import TooltipTrigger from '@/app/_ui/components/Tooltip/TooltipTrigger';
 import Typography from '@/app/_ui/components/Typography/Typography';
+import useTRPC from '@/lib/trpc/browser';
 import convertUsdToAed from '@/utils/convertUsdToAed';
 import formatPrice from '@/utils/formatPrice';
 
@@ -60,6 +62,16 @@ export interface B2BCalculatorProps {
  *   <B2BCalculator inBondPriceUsd={5000} />
  */
 const B2BCalculator = ({ inBondPriceUsd, lineItems }: B2BCalculatorProps) => {
+  const api = useTRPC();
+
+  // Fetch lead time settings from database
+  const { data: leadTimeMinData } = useQuery(
+    api.admin.settings.get.queryOptions({ key: 'leadTimeMin' }),
+  );
+  const { data: leadTimeMaxData } = useQuery(
+    api.admin.settings.get.queryOptions({ key: 'leadTimeMax' }),
+  );
+
   // Accordion expansion state
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -68,8 +80,10 @@ const B2BCalculator = ({ inBondPriceUsd, lineItems }: B2BCalculatorProps) => {
   const [importTax, setImportTax] = useState(20);
   const [marginType, setMarginType] = useState<'percentage' | 'fixed'>('percentage');
   const [marginValue, setMarginValue] = useState(15);
-  const [leadTimeMin, setLeadTimeMin] = useState(14);
-  const [leadTimeMax, setLeadTimeMax] = useState(21);
+
+  // Lead time from settings or defaults
+  const leadTimeMin = leadTimeMinData ? Number(leadTimeMinData) : 14;
+  const leadTimeMax = leadTimeMaxData ? Number(leadTimeMaxData) : 21;
 
   // Currency display toggle
   const [displayCurrency, setDisplayCurrency] = useState<'USD' | 'AED'>('USD');
@@ -166,8 +180,6 @@ const B2BCalculator = ({ inBondPriceUsd, lineItems }: B2BCalculatorProps) => {
     setImportTax(20);
     setMarginType('percentage');
     setMarginValue(15);
-    setLeadTimeMin(14);
-    setLeadTimeMax(21);
   };
 
   // Export to Excel
