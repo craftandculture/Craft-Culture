@@ -1,12 +1,21 @@
 'use client';
 
-import { IconCalculator, IconChevronDown, IconDownload } from '@tabler/icons-react';
+import {
+  IconCalculator,
+  IconChevronDown,
+  IconDownload,
+  IconInfoCircle,
+} from '@tabler/icons-react';
 import { useMemo, useState } from 'react';
 
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
 import Divider from '@/app/_ui/components/Divider/Divider';
 import Switch from '@/app/_ui/components/Switch/Switch';
+import Tooltip from '@/app/_ui/components/Tooltip/Tooltip';
+import TooltipContent from '@/app/_ui/components/Tooltip/TooltipContent';
+import TooltipProvider from '@/app/_ui/components/Tooltip/TooltipProvider';
+import TooltipTrigger from '@/app/_ui/components/Tooltip/TooltipTrigger';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import convertUsdToAed from '@/utils/convertUsdToAed';
 import formatPrice from '@/utils/formatPrice';
@@ -95,14 +104,14 @@ const B2BCalculator = ({ inBondPriceUsd }: B2BCalculatorProps) => {
           <IconCalculator className="h-4 w-4 text-text-muted sm:h-5 sm:w-5" />
           <div className="flex flex-col items-start gap-0.5">
             <Typography variant="bodySm" className="sm:text-base">
-              B2B pricing calculator
+              Your Margin Calculator
             </Typography>
             <Typography
               variant="bodyXs"
               colorRole="muted"
               className="text-[10px] sm:text-xs"
             >
-              Calculate distributor costs and margins
+              Calculate your profit margins in seconds
             </Typography>
           </div>
         </div>
@@ -121,25 +130,31 @@ const B2BCalculator = ({ inBondPriceUsd }: B2BCalculatorProps) => {
             {/* Left Column - Input Controls */}
             <div className="flex flex-col space-y-4">
               {/* Baseline Price (read-only) */}
-              <div className="rounded-lg border border-border-muted bg-fill-primary p-4">
-                <Typography
-                  variant="bodyXs"
-                  colorRole="muted"
-                  className="mb-1.5 text-[10px] uppercase tracking-wide sm:text-xs"
-                >
-                  Baseline price
-                </Typography>
-                <Typography
-                  variant="bodyXs"
-                  colorRole="muted"
-                  className="mb-1 text-xs sm:text-sm"
-                >
-                  In bond UAE price
-                </Typography>
-                <Typography
-                  variant="bodyLg"
-                  className="tabular-nums text-xl font-medium sm:text-2xl"
-                >
+              <div className="rounded-lg border border-border-muted bg-fill-primary p-3.5">
+                <div className="mb-2 flex items-center gap-1.5">
+                  <Typography
+                    variant="bodyXs"
+                    colorRole="muted"
+                    className="text-xs uppercase tracking-wide"
+                  >
+                    In-Bond UAE
+                  </Typography>
+                  <TooltipProvider delayDuration={300}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button type="button" className="inline-flex">
+                          <IconInfoCircle className="h-3.5 w-3.5 text-text-muted" />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <Typography variant="bodyXs">
+                          Base price before tax, margin, and transfer costs
+                        </Typography>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
+                <Typography variant="bodyLg" className="tabular-nums text-xl font-medium">
                   {formatPrice(displayValue(inBondPriceUsd), displayCurrency)}
                 </Typography>
               </div>
@@ -161,6 +176,7 @@ const B2BCalculator = ({ inBondPriceUsd }: B2BCalculatorProps) => {
                   value={transferCost}
                   onChange={setTransferCost}
                   prefix="$"
+                  tooltipText="UAE In Bond -> Mainland Transfer cost inc delivery"
                 />
 
                 <B2BCalculatorInput
@@ -186,11 +202,15 @@ const B2BCalculator = ({ inBondPriceUsd }: B2BCalculatorProps) => {
               <B2BCalculatorBreakdown
                 calculatedQuote={calculatedQuote}
                 currency={displayCurrency}
+                importTaxPercent={importTax}
+                distributorMarginPercent={
+                  marginType === 'percentage' ? marginValue : undefined
+                }
               />
 
               {/* Currency Toggle */}
-              <div className="flex items-center justify-between rounded-lg border border-border-muted bg-fill-primary px-4 py-3">
-                <Typography variant="bodySm" colorRole="muted" className="text-xs sm:text-sm">
+              <div className="flex items-center justify-between rounded-lg border border-border-muted bg-fill-primary px-3 py-2">
+                <Typography variant="bodyXs" colorRole="muted" className="text-xs">
                   Display in AED
                 </Typography>
                 <Switch

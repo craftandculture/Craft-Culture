@@ -1,9 +1,14 @@
 'use client';
 
+import { IconInfoCircle } from '@tabler/icons-react';
 import { useState } from 'react';
 
 import Input from '@/app/_ui/components/Input/Input';
 import Switch from '@/app/_ui/components/Switch/Switch';
+import Tooltip from '@/app/_ui/components/Tooltip/Tooltip';
+import TooltipContent from '@/app/_ui/components/Tooltip/TooltipContent';
+import TooltipProvider from '@/app/_ui/components/Tooltip/TooltipProvider';
+import TooltipTrigger from '@/app/_ui/components/Tooltip/TooltipTrigger';
 import Typography from '@/app/_ui/components/Typography/Typography';
 
 export interface B2BCalculatorMarginToggleProps {
@@ -77,12 +82,13 @@ const B2BCalculatorMarginToggle = ({
         <div className="flex-1">
           <Input
             type="number"
-            value={marginValue}
+            value={marginValue === 0 ? '' : marginValue}
             onChange={handleChange}
             disabled={disabled}
             min={0}
             step="any"
             size="md"
+            placeholder="0"
             contentRight={
               <Typography
                 variant="bodySm"
@@ -104,13 +110,24 @@ const B2BCalculatorMarginToggle = ({
           >
             %
           </Typography>
-          <Switch
-            checked={isChecked}
-            onCheckedChange={handleToggle}
-            disabled={disabled}
-            size="sm"
-            aria-label="Toggle between percentage and fixed margin"
-          />
+          <TooltipProvider delayDuration={300}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="inline-flex">
+                  <Switch
+                    checked={isChecked}
+                    onCheckedChange={handleToggle}
+                    disabled={disabled}
+                    size="sm"
+                    aria-label="Toggle between percentage and fixed margin"
+                  />
+                </div>
+              </TooltipTrigger>
+              <TooltipContent>
+                <Typography variant="bodyXs">Change from % Margin to Cash Margin</Typography>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
           <Typography
             variant="bodyXs"
             colorRole={marginType === 'fixed' ? 'primary' : 'muted'}
@@ -118,6 +135,18 @@ const B2BCalculatorMarginToggle = ({
           >
             $
           </Typography>
+          <TooltipProvider delayDuration={300}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button type="button" className="inline-flex">
+                  <IconInfoCircle className="h-3.5 w-3.5 text-text-muted" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <Typography variant="bodyXs">Change from % Margin to Cash Margin</Typography>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </div>
       </div>
     </div>
