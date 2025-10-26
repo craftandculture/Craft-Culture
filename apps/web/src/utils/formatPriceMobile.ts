@@ -21,7 +21,7 @@ const formatPriceMobile = (price: number, currency?: string) => {
   }
 
   // For USD (and default), show with $ symbol
-  return new Intl.NumberFormat('en-GB', {
+  return new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: currency || 'USD',
     minimumFractionDigits: 0,
