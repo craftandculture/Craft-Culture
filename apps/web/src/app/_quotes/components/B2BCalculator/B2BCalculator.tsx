@@ -254,9 +254,8 @@ const B2BCalculator = ({ inBondPriceUsd, lineItems }: B2BCalculatorProps) => {
                 calculatedQuote={calculatedQuote}
                 currency={displayCurrency}
                 importTaxPercent={importTax}
-                distributorMarginPercent={
-                  marginType === 'percentage' ? marginValue : undefined
-                }
+                distributorMarginType={marginType}
+                distributorMarginValue={marginValue}
                 onCurrencyToggle={handleCurrencyToggle}
               />
             </div>

@@ -15,8 +15,10 @@ export interface B2BCalculatorBreakdownProps {
   currency: 'USD' | 'AED';
   /** Import tax percentage */
   importTaxPercent: number;
-  /** Distributor margin percentage (if applicable) */
-  distributorMarginPercent?: number;
+  /** Distributor margin type */
+  distributorMarginType: 'percentage' | 'fixed';
+  /** Distributor margin value (percentage or fixed dollar amount) */
+  distributorMarginValue: number;
   /** Currency toggle handler */
   onCurrencyToggle: (checked: boolean) => void;
 }
@@ -34,13 +36,21 @@ const B2BCalculatorBreakdown = ({
   calculatedQuote,
   currency,
   importTaxPercent,
-  distributorMarginPercent,
+  distributorMarginType,
+  distributorMarginValue,
   onCurrencyToggle,
 }: B2BCalculatorBreakdownProps) => {
   // Convert values to display currency
   const convertValue = (usdValue: number) => {
     return currency === 'AED' ? convertUsdToAed(usdValue) : usdValue;
   };
+
+  // Format margin display based on type
+  const marginLabel =
+    distributorMarginType === 'percentage'
+      ? `Distributor margin (${distributorMarginValue}%)`
+      : `Distributor margin ($${distributorMarginValue})`;
+
 
   return (
     <div className="flex flex-col space-y-2.5 rounded-lg border border-border-muted bg-fill-muted/30 p-3 sm:p-4">
@@ -86,8 +96,7 @@ const B2BCalculatorBreakdown = ({
         {/* Distributor margin */}
         <div className="flex items-baseline justify-between gap-2">
           <Typography variant="bodyXs" colorRole="muted" className="text-[11px] sm:text-xs">
-            Distributor margin
-            {distributorMarginPercent !== undefined && ` (${distributorMarginPercent}%)`}
+            {marginLabel}
           </Typography>
           <Typography variant="bodyXs" className="tabular-nums text-[11px] sm:text-xs">
             {formatPrice(convertValue(calculatedQuote.distributorMargin), currency)}
