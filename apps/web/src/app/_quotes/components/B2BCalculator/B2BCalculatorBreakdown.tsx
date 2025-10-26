@@ -19,6 +19,10 @@ export interface B2BCalculatorBreakdownProps {
   distributorMarginType: 'percentage' | 'fixed';
   /** Distributor margin value (percentage or fixed dollar amount) */
   distributorMarginValue: number;
+  /** Lead time minimum (days) */
+  leadTimeMin: number;
+  /** Lead time maximum (days) */
+  leadTimeMax: number;
   /** Currency toggle handler */
   onCurrencyToggle: (checked: boolean) => void;
 }
@@ -38,6 +42,8 @@ const B2BCalculatorBreakdown = ({
   importTaxPercent,
   distributorMarginType,
   distributorMarginValue,
+  leadTimeMin,
+  leadTimeMax,
   onCurrencyToggle,
 }: B2BCalculatorBreakdownProps) => {
   // Convert values to display currency
@@ -112,6 +118,18 @@ const B2BCalculatorBreakdown = ({
             {formatPrice(convertValue(calculatedQuote.vat), currency)}
           </Typography>
         </div>
+      </div>
+
+      <Divider className="my-1" />
+
+      {/* Lead Time */}
+      <div className="flex items-baseline justify-between gap-2">
+        <Typography variant="bodyXs" colorRole="muted" className="text-[11px] sm:text-xs">
+          Lead time
+        </Typography>
+        <Typography variant="bodyXs" className="text-[11px] sm:text-xs">
+          {leadTimeMin}-{leadTimeMax} days via air freight
+        </Typography>
       </div>
 
       <Divider className="my-1" />

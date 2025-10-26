@@ -11,6 +11,7 @@ import { useMemo, useState } from 'react';
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
 import Divider from '@/app/_ui/components/Divider/Divider';
+import Input from '@/app/_ui/components/Input/Input';
 import Tooltip from '@/app/_ui/components/Tooltip/Tooltip';
 import TooltipContent from '@/app/_ui/components/Tooltip/TooltipContent';
 import TooltipProvider from '@/app/_ui/components/Tooltip/TooltipProvider';
@@ -68,6 +69,8 @@ const B2BCalculator = ({ inBondPriceUsd, lineItems }: B2BCalculatorProps) => {
   const [importTax, setImportTax] = useState(20);
   const [marginType, setMarginType] = useState<'percentage' | 'fixed'>('percentage');
   const [marginValue, setMarginValue] = useState(15);
+  const [leadTimeMin, setLeadTimeMin] = useState(14);
+  const [leadTimeMax, setLeadTimeMax] = useState(21);
 
   // Currency display toggle
   const [displayCurrency, setDisplayCurrency] = useState<'USD' | 'AED'>('USD');
@@ -164,11 +167,13 @@ const B2BCalculator = ({ inBondPriceUsd, lineItems }: B2BCalculatorProps) => {
     setImportTax(20);
     setMarginType('percentage');
     setMarginValue(15);
+    setLeadTimeMin(14);
+    setLeadTimeMax(21);
   };
 
   // Export to Excel
   const handleExport = () => {
-    exportB2BQuoteToExcel(actualQuoteTotals, displayCurrency, lineItems);
+    exportB2BQuoteToExcel(actualQuoteTotals, displayCurrency, lineItems, leadTimeMin, leadTimeMax);
   };
 
   // Toggle currency display
@@ -290,6 +295,56 @@ const B2BCalculator = ({ inBondPriceUsd, lineItems }: B2BCalculatorProps) => {
                   onMarginTypeChange={setMarginType}
                   onMarginValueChange={setMarginValue}
                 />
+
+                {/* Lead Time */}
+                <div className="flex flex-col space-y-1.5">
+                  <div className="flex items-center gap-1.5">
+                    <Typography variant="bodySm">Lead time (days)</Typography>
+                    <TooltipProvider delayDuration={300}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button type="button" className="inline-flex">
+                            <IconInfoCircle className="h-3.5 w-3.5 text-text-muted" />
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <Typography variant="bodyXs">Estimated delivery time via air freight</Typography>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
+                  <Typography variant="bodyXs" colorRole="muted">
+                    Via air freight
+                  </Typography>
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1.5">
+                      <Typography variant="bodyXs" colorRole="muted">
+                        From
+                      </Typography>
+                      <Input
+                        type="number"
+                        value={leadTimeMin}
+                        onChange={(e) => setLeadTimeMin(Number(e.target.value))}
+                        min={1}
+                        size="sm"
+                        className="w-16 tabular-nums"
+                      />
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <Typography variant="bodyXs" colorRole="muted">
+                        To
+                      </Typography>
+                      <Input
+                        type="number"
+                        value={leadTimeMax}
+                        onChange={(e) => setLeadTimeMax(Number(e.target.value))}
+                        min={1}
+                        size="sm"
+                        className="w-16 tabular-nums"
+                      />
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -316,6 +371,8 @@ const B2BCalculator = ({ inBondPriceUsd, lineItems }: B2BCalculatorProps) => {
                 importTaxPercent={importTax}
                 distributorMarginType={marginType}
                 distributorMarginValue={marginValue}
+                leadTimeMin={leadTimeMin}
+                leadTimeMax={leadTimeMax}
                 onCurrencyToggle={handleCurrencyToggle}
               />
             </div>

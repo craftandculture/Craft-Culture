@@ -9,16 +9,20 @@ import type { B2BCalculatorLineItem } from '../components/B2BCalculator/B2BCalcu
  * Export B2B distributor calculator results to Excel file with line items
  *
  * @example
- *   exportB2BQuoteToExcel(calculatedQuote, 'USD', lineItems);
+ *   exportB2BQuoteToExcel(calculatedQuote, 'USD', lineItems, 14, 21);
  *
  * @param calculatedQuote - Calculator result with pricing breakdown
  * @param currency - Currency code (USD or AED)
  * @param lineItems - Optional array of line items from quote builder
+ * @param leadTimeMin - Minimum lead time in days
+ * @param leadTimeMax - Maximum lead time in days
  */
 const exportB2BQuoteToExcel = (
   calculatedQuote: B2BCalculatorResult,
   currency: string,
   lineItems?: B2BCalculatorLineItem[],
+  leadTimeMin?: number,
+  leadTimeMax?: number,
 ) => {
   // Convert USD to display currency if needed
   const convertValue = (usdValue: number) => {
@@ -110,6 +114,19 @@ const exportB2BQuoteToExcel = (
       Math.round(convertValue(calculatedQuote.customerQuotePrice)),
     ],
   );
+
+  // Add lead time if provided
+  if (leadTimeMin !== undefined && leadTimeMax !== undefined) {
+    data.push(
+      [],
+      [
+        'LEAD TIME',
+        `${leadTimeMin}-${leadTimeMax} days via air freight`,
+        '',
+        '',
+      ],
+    );
+  }
 
   // Create worksheet from data
   const ws = XLSX.utils.aoa_to_sheet(data);
