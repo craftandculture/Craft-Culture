@@ -112,27 +112,29 @@ const B2BCalculatorBreakdown = ({
         </div>
 
         {/* Currency Toggle - Refined design */}
-        <div className="flex items-center justify-end gap-1.5 rounded-md border border-border-muted bg-fill-primary px-2 py-1">
-          <Typography
-            variant="bodyXs"
-            colorRole={currency === 'USD' ? 'primary' : 'muted'}
-            className="text-[10px] font-medium uppercase tracking-wide"
-          >
-            USD
-          </Typography>
-          <Switch
-            checked={currency === 'AED'}
-            onCheckedChange={onCurrencyToggle}
-            size="sm"
-            aria-label="Toggle currency display"
-          />
-          <Typography
-            variant="bodyXs"
-            colorRole={currency === 'AED' ? 'primary' : 'muted'}
-            className="text-[10px] font-medium uppercase tracking-wide"
-          >
-            AED
-          </Typography>
+        <div className="flex justify-end">
+          <div className="inline-flex items-center gap-1.5 rounded-md border border-border-muted bg-fill-primary px-2 py-1">
+            <Typography
+              variant="bodyXs"
+              colorRole={currency === 'USD' ? 'primary' : 'muted'}
+              className="text-[10px] font-medium uppercase tracking-wide"
+            >
+              USD
+            </Typography>
+            <Switch
+              checked={currency === 'AED'}
+              onCheckedChange={onCurrencyToggle}
+              size="sm"
+              aria-label="Toggle currency display"
+            />
+            <Typography
+              variant="bodyXs"
+              colorRole={currency === 'AED' ? 'primary' : 'muted'}
+              className="text-[10px] font-medium uppercase tracking-wide"
+            >
+              AED
+            </Typography>
+          </div>
         </div>
       </div>
     </div>
