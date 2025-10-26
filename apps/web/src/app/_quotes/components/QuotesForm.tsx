@@ -21,6 +21,7 @@ import useTRPC from '@/lib/trpc/browser';
 import convertUsdToAed from '@/utils/convertUsdToAed';
 import formatPrice from '@/utils/formatPrice';
 
+import CommissionBreakdown from './CommissionBreakdown';
 import LineItemRow from './LineItemRow';
 import PriceInfoTooltip from './PriceInfoTooltip';
 import ProductFilters from './ProductFilters';
@@ -309,6 +310,11 @@ const QuotesForm = () => {
         const linePrice = quotedLineItem?.lineItemTotalUsd ?? 0;
         const pricePerCase = linePrice / (item.quantity ?? 1);
 
+        // Calculate commission per case for B2C customers
+        const commissionUsd = quotedLineItem?.commissionUsd ?? 0;
+        const quantity = item.quantity ?? 1;
+        const commissionPerCase = commissionUsd / quantity;
+
         return {
           reference: item.product?.name ?? '',
           vintage: item.vintage ?? '',
@@ -328,6 +334,10 @@ const QuotesForm = () => {
             displayCurrency === 'AED'
               ? convertUsdToAed(linePrice)
               : linePrice,
+          commissionPerCase:
+            displayCurrency === 'AED'
+              ? convertUsdToAed(commissionPerCase)
+              : commissionPerCase,
         };
       });
 
@@ -336,7 +346,15 @@ const QuotesForm = () => {
         ? convertUsdToAed(quoteData.totalUsd)
         : quoteData.totalUsd;
 
-    exportQuoteToExcel(exportLineItems, displayCurrency, total);
+    // Include commission total for B2C customers
+    const commissionTotal =
+      customerType === 'b2c' && quoteData.totalCommissionUsd > 0
+        ? displayCurrency === 'AED'
+          ? convertUsdToAed(quoteData.totalCommissionUsd)
+          : quoteData.totalCommissionUsd
+        : undefined;
+
+    exportQuoteToExcel(exportLineItems, displayCurrency, total, commissionTotal);
   };
 
   // Fetch all products for inventory download
@@ -554,11 +572,78 @@ const QuotesForm = () => {
         <ButtonContent iconLeft={IconPlus}>Add Product</ButtonContent>
       </Button>
 
-      {/* Total Section */}
+      {/* Total Section with Commission Breakdown */}
       {lineItems.length > 0 && (
         <>
           <Divider />
           <div className="flex flex-col gap-3 px-2">
+            {/* Subtotal (before commission) - B2C only */}
+            {customerType === 'b2c' &&
+              quoteData &&
+              quoteData.totalCommissionUsd > 0 && (
+                <div className="flex items-center justify-between">
+                  <Typography variant="bodyMd" colorRole="muted">
+                    Subtotal
+                  </Typography>
+                  {isQuoteLoading ? (
+                    <Skeleton className="h-5 w-24" />
+                  ) : (
+                    <Typography variant="bodyMd" colorRole="muted">
+                      {formatPrice(
+                        displayCurrency === 'AED'
+                          ? convertUsdToAed(quoteData.subtotalBeforeCommissionUsd)
+                          : quoteData.subtotalBeforeCommissionUsd,
+                        displayCurrency,
+                      )}
+                    </Typography>
+                  )}
+                </div>
+              )}
+
+            {/* Sales Commission Breakdown - B2C Only */}
+            {customerType === 'b2c' &&
+              quoteData &&
+              quoteData.totalCommissionUsd > 0 && (
+                <CommissionBreakdown
+                  lineItems={lineItems
+                    .filter((item) => item.product)
+                    .map((item) => {
+                      const quotedLineItem = quoteData.lineItems.find(
+                        (qli) => qli.productId === item.product?.id,
+                      );
+
+                      const commissionUsd = quotedLineItem?.commissionUsd ?? 0;
+                      const quantity = item.quantity ?? 1;
+                      const commissionPerCase = commissionUsd / quantity;
+
+                      return {
+                        productName: item.product?.name ?? '',
+                        quantity,
+                        commissionPerCase:
+                          displayCurrency === 'AED'
+                            ? convertUsdToAed(commissionPerCase)
+                            : commissionPerCase,
+                        lineCommission:
+                          displayCurrency === 'AED'
+                            ? convertUsdToAed(commissionUsd)
+                            : commissionUsd,
+                      };
+                    })}
+                  totalCommission={
+                    displayCurrency === 'AED'
+                      ? convertUsdToAed(quoteData.totalCommissionUsd)
+                      : quoteData.totalCommissionUsd
+                  }
+                  currency={displayCurrency}
+                />
+              )}
+
+            {/* Divider before Total - B2C only */}
+            {customerType === 'b2c' &&
+              quoteData &&
+              quoteData.totalCommissionUsd > 0 && <Divider />}
+
+            {/* Total (unchanged) */}
             <div className="flex items-center justify-between">
               <Typography variant="bodyLg" className="font-semibold">
                 Total
@@ -591,6 +676,7 @@ const QuotesForm = () => {
                 </TooltipProvider>
               )}
             </div>
+
             {/* Download Button */}
             <div className="flex justify-end">
               <Button

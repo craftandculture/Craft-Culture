@@ -32,11 +32,15 @@ interface LineItemInput {
 interface QuoteLineItem {
   productId: string;
   lineItemTotalUsd: number;
+  commissionUsd: number;
+  basePriceUsd: number;
 }
 
 interface QuoteData {
   lineItems: QuoteLineItem[];
   totalUsd: number;
+  totalCommissionUsd: number;
+  subtotalBeforeCommissionUsd: number;
 }
 
 interface StoredSheetData {
@@ -227,6 +231,8 @@ export function calculateQuote(
       return {
         productId: '',
         lineItemTotalUsd: 0,
+        commissionUsd: 0,
+        basePriceUsd: 0,
       };
     }
 
@@ -234,14 +240,35 @@ export function calculateQuote(
     // priceUsd from the sheet already includes quantity calculation
     const lineItemTotalUsd = typeof priceUsd === 'number' ? priceUsd : 0;
 
+    // Get base price from spreadsheet (Column M - already mapped)
+    const basePriceValue = getColumnValue(cellMappings.basePriceUsd, i);
+    const basePriceUsd = typeof basePriceValue === 'number' ? basePriceValue : 0;
+
+    // Calculate commission: 5% of base price per case × quantity
+    const commissionPerCase = basePriceUsd * 0.05;
+    const commissionUsd =
+      customerType === 'b2c' ? commissionPerCase * lineItem.quantity : 0;
+
     return {
       productId: offer.productId,
       lineItemTotalUsd,
+      commissionUsd,
+      basePriceUsd,
     };
   });
+
+  // Calculate total commission and subtotal
+  const totalCommissionUsd = quoteLineItems.reduce(
+    (sum, item) => sum + item.commissionUsd,
+    0,
+  );
+
+  const subtotalBeforeCommissionUsd = totalUsd - totalCommissionUsd;
 
   return {
     lineItems: quoteLineItems,
     totalUsd,
+    totalCommissionUsd,
+    subtotalBeforeCommissionUsd,
   };
 }
