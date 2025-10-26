@@ -71,13 +71,13 @@ const B2BCalculator = ({ inBondPriceUsd, lineItems }: B2BCalculatorProps) => {
   const [displayCurrency, setDisplayCurrency] = useState<'USD' | 'AED'>('USD');
 
   // Per-product margin overrides (index-based map)
-  const [productMargins, setProductMargins] = useState<Record<number, number>>({});
+  const [productMargins, setProductMargins] = useState<Record<number, { type: 'percentage' | 'fixed'; value: number }>>({});
 
   // Handler to update individual product margin
-  const handleProductMarginChange = (productIndex: number, marginPercent: number) => {
+  const handleProductMarginChange = (productIndex: number, type: 'percentage' | 'fixed', value: number) => {
     setProductMargins((prev) => ({
       ...prev,
-      [productIndex]: marginPercent,
+      [productIndex]: { type, value },
     }));
   };
 
@@ -238,7 +238,8 @@ const B2BCalculator = ({ inBondPriceUsd, lineItems }: B2BCalculatorProps) => {
                 <B2BCalculatorProductBreakdown
                   lineItems={lineItems}
                   currency={displayCurrency}
-                  globalMarginPercent={marginType === 'percentage' ? marginValue : undefined}
+                  globalMarginType={marginType}
+                  globalMarginValue={marginValue}
                   importTaxPercent={importTax}
                   transferCostTotal={transferCost}
                   productMargins={productMargins}
