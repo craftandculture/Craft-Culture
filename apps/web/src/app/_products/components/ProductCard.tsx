@@ -21,7 +21,7 @@ interface ProductCardProps {
 }
 
 /**
- * Product card component for catalog browsing
+ * Product card component for catalogue browsing
  *
  * @example
  *   <ProductCard product={product} onAdd={handleAdd} displayCurrency="AED" />

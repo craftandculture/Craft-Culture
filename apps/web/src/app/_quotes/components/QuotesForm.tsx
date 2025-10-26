@@ -796,7 +796,7 @@ const QuotesForm = () => {
           </Typography>
         </div>
 
-        {/* Product Filters - Duplicate for catalog browsing */}
+        {/* Product Filters - Duplicate for catalogue browsing */}
         {filterOptions && (
           <ProductFilters
             countriesWithCounts={filterOptions.countriesWithCounts}
@@ -807,7 +807,7 @@ const QuotesForm = () => {
           />
         )}
 
-        {/* Catalog Browser */}
+        {/* Catalogue Browser */}
         <CatalogBrowser
         onAddProduct={(product) => {
           // Find first available placeholder or add new line item
