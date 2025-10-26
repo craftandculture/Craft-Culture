@@ -128,7 +128,7 @@ const B2BCalculatorBreakdown = ({
           Lead time
         </Typography>
         <Typography variant="bodyXs" className="text-[11px] sm:text-xs">
-          {leadTimeMin}-{leadTimeMax} days via air freight, ex works - In-Bond UAE
+          {leadTimeMin}-{leadTimeMax} days via air freight, ex works, UAE (In Bond)
         </Typography>
       </div>
 
