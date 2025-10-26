@@ -31,9 +31,9 @@ export interface B2BCalculatorLineItem {
   productName: string;
   /** Quantity */
   quantity: number;
-  /** Base price per unit in USD */
+  /** Supplier/buy price per case in USD (NOT the In-Bond UAE price) */
   basePriceUsd: number;
-  /** Line item total in USD */
+  /** Line item total In-Bond UAE price in USD (distributor price from pricing model) */
   lineItemTotalUsd: number;
   /** Optional margin override (percentage) for this specific product */
   marginOverride?: number;
