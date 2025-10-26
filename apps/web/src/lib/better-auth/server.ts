@@ -7,6 +7,7 @@ import clientConfig from '@/client.config';
 import db from '@/database/client';
 import * as schema from '@/database/schema';
 import serverConfig from '@/server.config';
+import logger from '@/utils/logger';
 
 import encrypt from '../encryption/encrypt';
 import loops from '../loops/client';
@@ -19,10 +20,10 @@ const authServerClient = betterAuth({
     magicLink({
       sendMagicLink: async ({ email, token, url }) => {
         if (serverConfig.env !== 'production') {
-          console.log('You are in development mode, so no email will be sent');
-          console.log(email);
-          console.log(token);
-          console.log(url);
+          logger.dev('You are in development mode, so no email will be sent');
+          logger.dev('Email:', email);
+          logger.dev('Token:', token);
+          logger.dev('URL:', url);
           return;
         }
 
