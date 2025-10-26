@@ -1,8 +1,9 @@
 'use client';
 
-import { IconChevronDown } from '@tabler/icons-react';
+import { IconCalculator, IconChevronDown } from '@tabler/icons-react';
 import { useState } from 'react';
 
+import Divider from '@/app/_ui/components/Divider/Divider';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import formatPrice from '@/utils/formatPrice';
 
@@ -47,11 +48,23 @@ const CommissionBreakdown = ({
         onClick={() => setIsExpanded(!isExpanded)}
         className="flex w-full items-center justify-between px-3 py-2.5 transition-colors hover:bg-fill-muted sm:p-3"
       >
-        <div className="flex items-center gap-1.5 sm:gap-2">
-          <Typography variant="bodySm" colorRole="muted" className="sm:text-base">
-            Agent commission
-          </Typography>
-          <CommissionInfoTooltip />
+        <div className="flex items-center gap-2 sm:gap-2.5">
+          <IconCalculator className="h-4 w-4 text-text-muted sm:h-5 sm:w-5" />
+          <div className="flex flex-col items-start gap-0.5">
+            <div className="flex items-center gap-1.5">
+              <Typography variant="bodySm" className="sm:text-base">
+                Your Commission
+              </Typography>
+              <CommissionInfoTooltip />
+            </div>
+            <Typography
+              variant="bodyXs"
+              colorRole="muted"
+              className="text-[10px] sm:text-xs"
+            >
+              Breakdown by product
+            </Typography>
+          </div>
         </div>
         <div className="flex items-center gap-2 sm:gap-3">
           <Typography variant="bodySm" className="sm:text-base">
@@ -67,7 +80,15 @@ const CommissionBreakdown = ({
 
       {/* Accordion Content - Per-line breakdown */}
       {isExpanded && (
-        <div className="border-t border-border-muted px-3 py-3 sm:p-4">
+        <div className="border-t border-border-muted px-3 py-4 sm:p-5">
+          {/* Description */}
+          <div className="mb-5 rounded-lg border border-border-muted bg-fill-muted/30 px-3 py-2.5 sm:px-4 sm:py-3">
+            <Typography variant="bodyXs" colorRole="muted" className="text-xs leading-relaxed sm:text-sm">
+              Your earnings breakdown from this quote. Commission is included in the quoted prices
+              and calculated based on your role and product margins.
+            </Typography>
+          </div>
+
           <Typography
             variant="bodyXs"
             colorRole="muted"
@@ -76,10 +97,10 @@ const CommissionBreakdown = ({
             By product
           </Typography>
 
-          <div className="space-y-2.5 sm:space-y-3">
+          <div className="space-y-3 sm:space-y-3.5">
             {lineItems.map((item, index) => (
-              <div key={index} className="space-y-0.5 sm:space-y-1">
-                <Typography variant="bodyXs" className="text-xs sm:text-sm">
+              <div key={index} className="space-y-1 sm:space-y-1.5">
+                <Typography variant="bodyXs" className="text-xs font-medium sm:text-sm">
                   {item.productName}
                 </Typography>
                 <div className="flex items-baseline justify-between gap-2">
@@ -93,7 +114,7 @@ const CommissionBreakdown = ({
                   </Typography>
                   <Typography
                     variant="bodyXs"
-                    className="text-xs tabular-nums sm:text-sm"
+                    className="tabular-nums text-xs sm:text-sm"
                   >
                     {formatPrice(item.lineCommission, currency)}
                   </Typography>
@@ -102,15 +123,15 @@ const CommissionBreakdown = ({
             ))}
           </div>
 
-          <div className="mt-3 border-t border-border-muted pt-2.5 sm:mt-4 sm:pt-3">
-            <div className="flex items-baseline justify-between">
-              <Typography variant="bodySm" colorRole="muted" className="sm:text-base">
-                Total
-              </Typography>
-              <Typography variant="bodySm" className="tabular-nums sm:text-base">
-                {formatPrice(totalCommission, currency)}
-              </Typography>
-            </div>
+          <Divider className="my-4 sm:my-5" />
+
+          <div className="flex items-baseline justify-between">
+            <Typography variant="bodySm" className="text-sm sm:text-base">
+              Total Commission
+            </Typography>
+            <Typography variant="bodySm" className="tabular-nums text-base font-medium sm:text-lg">
+              {formatPrice(totalCommission, currency)}
+            </Typography>
           </div>
         </div>
       )}
