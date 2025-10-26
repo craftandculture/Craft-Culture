@@ -99,7 +99,7 @@ const B2BCalculatorMarginToggle = ({
         <div className="flex items-center gap-2">
           <Typography
             variant="bodyXs"
-            colorRole={marginType === 'percentage' ? 'default' : 'muted'}
+            colorRole={marginType === 'percentage' ? 'primary' : 'muted'}
             className="text-xs"
           >
             %
@@ -113,7 +113,7 @@ const B2BCalculatorMarginToggle = ({
           />
           <Typography
             variant="bodyXs"
-            colorRole={marginType === 'fixed' ? 'default' : 'muted'}
+            colorRole={marginType === 'fixed' ? 'primary' : 'muted'}
             className="text-xs"
           >
             $
