@@ -1,3 +1,9 @@
+## [1.33.1](https://github.com/craftandculture/Craft-Culture/compare/v1.33.0...v1.33.1) (2025-10-26)
+
+### Bug Fixes
+
+* revert Price/Per Bottle to hover tooltips (opposite of other icons) ([c2a44b2](https://github.com/craftandculture/Craft-Culture/commit/c2a44b2f9ef38bb6e2657374155d85b6d937f002))
+
 ## [1.33.0](https://github.com/craftandculture/Craft-Culture/compare/v1.32.7...v1.33.0) (2025-10-26)
 
 ### Features
