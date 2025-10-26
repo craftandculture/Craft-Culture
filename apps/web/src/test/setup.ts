@@ -23,3 +23,10 @@ vi.mock('next/navigation', () => ({
 
 // Mock environment variables
 process.env.NEXT_PUBLIC_APP_URL = 'http://localhost:3000';
+
+// Mock ResizeObserver for Radix UI components
+global.ResizeObserver = class ResizeObserver {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+};
