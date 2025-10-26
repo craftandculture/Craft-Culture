@@ -437,7 +437,7 @@ const QuotesForm = () => {
                 Estimated Lead Time:
               </Typography>
               <Typography variant="bodySm" className="text-text-brand font-semibold">
-                {leadTimeMin}-{leadTimeMax} days via air freight, ex works, UAE (In Bond)
+                {leadTimeMin}-{leadTimeMax} days via air freight, EX-Works UAE(In-Bond)
               </Typography>
             </div>
           </div>
