@@ -227,7 +227,7 @@ const B2BCalculatorProductBreakdown = ({
                     step={config.type === 'percentage' ? 0.5 : 1}
                     size="sm"
                     placeholder="0"
-                    className="w-14 text-xs"
+                    className="w-20 text-xs"
                   />
                   <Typography variant="bodyXs" colorRole="muted" className="text-[11px] sm:text-xs">
                     {config.type === 'percentage' ? '%' : '$'}
