@@ -152,16 +152,16 @@ const B2BCalculator = ({ inBondPriceUsd, lineItems }: B2BCalculatorProps) => {
           </div>
 
           {/* Two-column layout on desktop, stacked on mobile */}
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:gap-8">
-            {/* Left Column - Input Controls */}
-            <div className="flex flex-col space-y-4">
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-[auto_1fr] lg:gap-8">
+            {/* Left Column - Input Controls (Compact) */}
+            <div className="flex flex-col space-y-3">
               {/* Baseline Price (read-only) */}
-              <div className="rounded-lg border border-border-muted bg-fill-primary p-3.5">
-                <div className="mb-2 flex items-center gap-1.5">
+              <div className="rounded-lg border border-border-muted bg-fill-primary p-3">
+                <div className="mb-1.5 flex items-center gap-1.5">
                   <Typography
                     variant="bodyXs"
                     colorRole="muted"
-                    className="text-xs uppercase tracking-wide"
+                    className="text-[10px] uppercase tracking-wide sm:text-xs"
                   >
                     In-Bond UAE
                   </Typography>
@@ -180,7 +180,7 @@ const B2BCalculator = ({ inBondPriceUsd, lineItems }: B2BCalculatorProps) => {
                     </Tooltip>
                   </TooltipProvider>
                 </div>
-                <Typography variant="bodyLg" className="tabular-nums text-xl font-medium">
+                <Typography variant="bodySm" className="tabular-nums text-base font-medium sm:text-lg">
                   {formatPrice(displayValue(inBondPriceUsd), displayCurrency)}
                 </Typography>
               </div>
@@ -188,7 +188,7 @@ const B2BCalculator = ({ inBondPriceUsd, lineItems }: B2BCalculatorProps) => {
               <Divider />
 
               {/* Cost Inputs */}
-              <div className="flex flex-col space-y-4">
+              <div className="flex flex-col space-y-3">
                 <Typography
                   variant="bodyXs"
                   colorRole="muted"
@@ -223,8 +223,8 @@ const B2BCalculator = ({ inBondPriceUsd, lineItems }: B2BCalculatorProps) => {
               </div>
             </div>
 
-            {/* Right Column - Results Breakdown */}
-            <div className="flex flex-col space-y-4">
+            {/* Right Column - Results Breakdown (Expanded) */}
+            <div className="flex flex-col space-y-3">
               {/* Product Breakdown - Only show if line items are available */}
               {lineItems && lineItems.length > 0 && (
                 <B2BCalculatorProductBreakdown
