@@ -123,7 +123,7 @@ const SettingsForm = () => {
         </div>
 
         <Typography variant="bodyXs" colorRole="muted" className="italic">
-          Customers will see: &quot;{leadTimeMin}-{leadTimeMax} days via air freight, ex works - In-Bond UAE&quot;
+          Customers will see: &quot;{leadTimeMin}-{leadTimeMax} days via air freight, ex works, UAE (In Bond)&quot;
         </Typography>
       </div>
 
