@@ -10,26 +10,17 @@
     "lint": "turbo run lint",
     "semantic-release": "semantic-release"
   },
-  "release": {
-    "branches": [
-      "main"
-    ],
-    "plugins": [
-      "@semantic-release/commit-analyzer",
-      "@semantic-release/release-notes-generator",
-      "@semantic-release/changelog",
-      "@semantic-release/github",
-      "@semantic-release/git"
-    ]
-  },
   "workspaces": [
     "apps/*",
     "packages/*"
   ],
   "devDependencies": {
     "@semantic-release/changelog": "^6.0.3",
+    "@semantic-release/commit-analyzer": "^13.0.1",
     "@semantic-release/git": "^10.0.1",
+    "@semantic-release/release-notes-generator": "^14.1.0",
     "@sentry/cli": "^2.46.0",
+    "conventional-changelog-conventionalcommits": "^9.1.0",
     "prettier": "^3.5.3",
     "prettier-plugin-jsdoc": "^1.3.2",
     "prettier-plugin-sql": "^0.19.1",
