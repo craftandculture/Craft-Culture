@@ -1,6 +1,6 @@
 'use client';
 
-import { IconDownload, IconInfoCircle, IconPlus } from '@tabler/icons-react';
+import { IconDownload, IconInfoCircle, IconPlaneInflight, IconPlus } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import { parseAsArrayOf, parseAsJson, useQueryState, useQueryStates } from 'nuqs';
 import React, { useEffect, useMemo, useState } from 'react';
@@ -413,6 +413,23 @@ const QuotesForm = () => {
           <Typography variant="bodySm" colorRole="muted">
             Select products and quantities to generate your custom quote
           </Typography>
+        </div>
+
+        {/* Lead Time Banner */}
+        <div className="relative overflow-hidden rounded-lg border border-border-muted bg-gradient-to-r from-fill-brand/5 via-fill-brand/10 to-fill-brand/5 px-4 py-3 shadow-sm">
+          <div className="flex items-center justify-center gap-3">
+            <div className="rounded-full bg-fill-brand/10 p-2">
+              <IconPlaneInflight className="h-4 w-4 text-text-brand sm:h-5 sm:w-5" />
+            </div>
+            <div className="flex flex-col sm:flex-row sm:items-baseline sm:gap-2">
+              <Typography variant="bodySm" className="font-medium">
+                Estimated Lead Time:
+              </Typography>
+              <Typography variant="bodySm" className="text-text-brand font-semibold">
+                14-21 days via air freight
+              </Typography>
+            </div>
+          </div>
         </div>
 
         {/* Currency Toggle and Inventory Download */}
