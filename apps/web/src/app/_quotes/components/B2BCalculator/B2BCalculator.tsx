@@ -254,7 +254,12 @@ const B2BCalculator = ({ inBondPriceUsd, lineItems }: B2BCalculatorProps) => {
                   <TooltipProvider delayDuration={300}>
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <button type="button" className="inline-flex">
+                        <button
+                          type="button"
+                          className="inline-flex"
+                          onPointerDown={(e) => e.preventDefault()}
+                          onClick={(e) => e.preventDefault()}
+                        >
                           <IconInfoCircle className="h-3.5 w-3.5 text-text-muted" />
                         </button>
                       </TooltipTrigger>
@@ -365,7 +370,12 @@ const B2BCalculator = ({ inBondPriceUsd, lineItems }: B2BCalculatorProps) => {
               <TooltipProvider delayDuration={300}>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <button type="button" className="inline-flex">
+                    <button
+                      type="button"
+                      className="inline-flex"
+                      onPointerDown={(e) => e.preventDefault()}
+                      onClick={(e) => e.preventDefault()}
+                    >
                       <IconInfoCircle className="h-4 w-4 text-text-muted" />
                     </button>
                   </TooltipTrigger>

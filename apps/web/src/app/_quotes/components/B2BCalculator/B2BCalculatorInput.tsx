@@ -87,7 +87,12 @@ const B2BCalculatorInput = ({
             <TooltipProvider delayDuration={300}>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <button type="button" className="inline-flex">
+                  <button
+                    type="button"
+                    className="inline-flex"
+                    onPointerDown={(e) => e.preventDefault()}
+                    onClick={(e) => e.preventDefault()}
+                  >
                     <IconInfoCircle className="h-3.5 w-3.5 text-text-muted" />
                   </button>
                 </TooltipTrigger>
