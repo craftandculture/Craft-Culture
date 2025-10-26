@@ -237,7 +237,11 @@ const ProductFilters = ({
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <button type="button" className="inline-flex cursor-help">
+                  <button
+                    type="button"
+                    className="inline-flex cursor-help"
+                    onPointerDown={(e) => e.preventDefault()}
+                  >
                     <Icon
                       icon={IconInfoCircle}
                       size="sm"
