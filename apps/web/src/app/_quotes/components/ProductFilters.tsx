@@ -6,10 +6,9 @@ import { useMemo, useState } from 'react';
 
 import Button from '@/app/_ui/components/Button/Button';
 import Icon from '@/app/_ui/components/Icon/Icon';
-import Tooltip from '@/app/_ui/components/Tooltip/Tooltip';
-import TooltipContent from '@/app/_ui/components/Tooltip/TooltipContent';
-import TooltipProvider from '@/app/_ui/components/Tooltip/TooltipProvider';
-import TooltipTrigger from '@/app/_ui/components/Tooltip/TooltipTrigger';
+import Popover from '@/app/_ui/components/Popover/Popover';
+import PopoverContent from '@/app/_ui/components/Popover/PopoverContent';
+import PopoverTrigger from '@/app/_ui/components/Popover/PopoverTrigger';
 import Typography from '@/app/_ui/components/Typography/Typography';
 
 import quotesSearchParams from '../search-params/filtersSearchParams';
@@ -234,30 +233,23 @@ const ProductFilters = ({
               />
             </Button>
 
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    type="button"
-                    className="inline-flex cursor-help"
-                    onPointerDown={(e) => e.preventDefault()}
-                    onClick={(e) => e.preventDefault()}
-                  >
-                    <Icon
-                      icon={IconInfoCircle}
-                      size="sm"
-                      colorRole="muted"
-                      className="h-4 w-4"
-                    />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <Typography variant="bodyXs">
-                    Cascading filters: Select countries first to filter regions, producers & vintages
-                  </Typography>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+            <Popover>
+              <PopoverTrigger asChild>
+                <button type="button" className="inline-flex cursor-help">
+                  <Icon
+                    icon={IconInfoCircle}
+                    size="sm"
+                    colorRole="muted"
+                    className="h-4 w-4"
+                  />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="max-w-xs p-3">
+                <Typography variant="bodyXs">
+                  Cascading filters: Select countries first to filter regions, producers & vintages
+                </Typography>
+              </PopoverContent>
+            </Popover>
           </div>
 
           {hasActiveFilters && (

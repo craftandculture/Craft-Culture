@@ -4,11 +4,10 @@ import { IconInfoCircle } from '@tabler/icons-react';
 import { useState } from 'react';
 
 import Input from '@/app/_ui/components/Input/Input';
+import Popover from '@/app/_ui/components/Popover/Popover';
+import PopoverContent from '@/app/_ui/components/Popover/PopoverContent';
+import PopoverTrigger from '@/app/_ui/components/Popover/PopoverTrigger';
 import Switch from '@/app/_ui/components/Switch/Switch';
-import Tooltip from '@/app/_ui/components/Tooltip/Tooltip';
-import TooltipContent from '@/app/_ui/components/Tooltip/TooltipContent';
-import TooltipProvider from '@/app/_ui/components/Tooltip/TooltipProvider';
-import TooltipTrigger from '@/app/_ui/components/Tooltip/TooltipTrigger';
 import Typography from '@/app/_ui/components/Typography/Typography';
 
 export interface B2BCalculatorMarginToggleProps {
@@ -74,25 +73,18 @@ const B2BCalculatorMarginToggle = ({
           <Typography variant="bodySm">
             Distributor margin
           </Typography>
-          <TooltipProvider delayDuration={300}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  type="button"
-                  className="inline-flex"
-                  onPointerDown={(e) => e.preventDefault()}
-                  onClick={(e) => e.preventDefault()}
-                >
-                  <IconInfoCircle className="h-3.5 w-3.5 text-text-muted" />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <Typography variant="bodyXs">
-                  Overall margin applies unless overridden per product
-                </Typography>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          <Popover>
+            <PopoverTrigger asChild>
+              <button type="button" className="inline-flex">
+                <IconInfoCircle className="h-3.5 w-3.5 text-text-muted" />
+              </button>
+            </PopoverTrigger>
+            <PopoverContent className="max-w-xs p-3">
+              <Typography variant="bodyXs">
+                Overall margin applies unless overridden per product
+              </Typography>
+            </PopoverContent>
+          </Popover>
         </div>
         <Typography variant="bodyXs" colorRole="muted">
           Applied to In-Bond UAE Price
@@ -131,24 +123,13 @@ const B2BCalculatorMarginToggle = ({
           >
             %
           </Typography>
-          <TooltipProvider delayDuration={300}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div className="inline-flex">
-                  <Switch
-                    checked={isChecked}
-                    onCheckedChange={handleToggle}
-                    disabled={disabled}
-                    size="sm"
-                    aria-label="Toggle between percentage and fixed margin"
-                  />
-                </div>
-              </TooltipTrigger>
-              <TooltipContent>
-                <Typography variant="bodyXs">Change from % Margin to Cash Margin</Typography>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          <Switch
+            checked={isChecked}
+            onCheckedChange={handleToggle}
+            disabled={disabled}
+            size="sm"
+            aria-label="Toggle between percentage and fixed margin"
+          />
           <Typography
             variant="bodyXs"
             colorRole={marginType === 'fixed' ? 'primary' : 'muted'}
@@ -156,23 +137,16 @@ const B2BCalculatorMarginToggle = ({
           >
             $
           </Typography>
-          <TooltipProvider delayDuration={300}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  type="button"
-                  className="inline-flex"
-                  onPointerDown={(e) => e.preventDefault()}
-                  onClick={(e) => e.preventDefault()}
-                >
-                  <IconInfoCircle className="h-3.5 w-3.5 text-text-muted" />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <Typography variant="bodyXs">Change from % Margin to Cash Margin</Typography>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          <Popover>
+            <PopoverTrigger asChild>
+              <button type="button" className="inline-flex">
+                <IconInfoCircle className="h-3.5 w-3.5 text-text-muted" />
+              </button>
+            </PopoverTrigger>
+            <PopoverContent className="max-w-xs p-3">
+              <Typography variant="bodyXs">Change from % Margin to Cash Margin</Typography>
+            </PopoverContent>
+          </Popover>
         </div>
       </div>
     </div>

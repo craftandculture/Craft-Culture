@@ -3,10 +3,9 @@
 import { IconInfoCircle } from '@tabler/icons-react';
 
 import Input from '@/app/_ui/components/Input/Input';
-import Tooltip from '@/app/_ui/components/Tooltip/Tooltip';
-import TooltipContent from '@/app/_ui/components/Tooltip/TooltipContent';
-import TooltipProvider from '@/app/_ui/components/Tooltip/TooltipProvider';
-import TooltipTrigger from '@/app/_ui/components/Tooltip/TooltipTrigger';
+import Popover from '@/app/_ui/components/Popover/Popover';
+import PopoverContent from '@/app/_ui/components/Popover/PopoverContent';
+import PopoverTrigger from '@/app/_ui/components/Popover/PopoverTrigger';
 import Typography from '@/app/_ui/components/Typography/Typography';
 
 export interface B2BCalculatorInputProps {
@@ -84,23 +83,16 @@ const B2BCalculatorInput = ({
             {label}
           </Typography>
           {tooltipText && (
-            <TooltipProvider delayDuration={300}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    type="button"
-                    className="inline-flex"
-                    onPointerDown={(e) => e.preventDefault()}
-                    onClick={(e) => e.preventDefault()}
-                  >
-                    <IconInfoCircle className="h-3.5 w-3.5 text-text-muted" />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <Typography variant="bodyXs">{tooltipText}</Typography>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+            <Popover>
+              <PopoverTrigger asChild>
+                <button type="button" className="inline-flex">
+                  <IconInfoCircle className="h-3.5 w-3.5 text-text-muted" />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="max-w-xs p-3">
+                <Typography variant="bodyXs">{tooltipText}</Typography>
+              </PopoverContent>
+            </Popover>
           )}
         </div>
         {helperText && (
