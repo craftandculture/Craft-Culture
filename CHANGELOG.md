@@ -1,3 +1,9 @@
+## [1.32.7](https://github.com/craftandculture/Craft-Culture/compare/v1.32.6...v1.32.7) (2025-10-26)
+
+### Bug Fixes
+
+* replace Tooltip with Popover for info icons to prevent closing on click ([7732c70](https://github.com/craftandculture/Craft-Culture/commit/7732c70bd654391e7d5ca1728a280037a80a3326))
+
 ## [1.32.6](https://github.com/craftandculture/Craft-Culture/compare/v1.32.5...v1.32.6) (2025-10-26)
 
 ### Code Refactoring
