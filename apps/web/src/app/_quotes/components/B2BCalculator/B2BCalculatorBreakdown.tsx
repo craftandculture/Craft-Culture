@@ -98,7 +98,7 @@ const B2BCalculatorBreakdown = ({
       <Divider />
 
       {/* Customer quote price (total) */}
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-3">
         <div className="flex items-baseline justify-between gap-2">
           <Typography variant="bodySm" className="text-sm sm:text-base">
             Customer price
@@ -111,10 +111,14 @@ const B2BCalculatorBreakdown = ({
           </Typography>
         </div>
 
-        {/* Currency Toggle - Inline with total */}
-        <div className="flex items-center justify-end gap-2">
-          <Typography variant="bodyXs" colorRole="muted" className="text-[11px]">
-            Display in AED
+        {/* Currency Toggle - Refined design */}
+        <div className="flex items-center justify-end gap-1.5 rounded-md border border-border-muted bg-fill-primary px-2 py-1">
+          <Typography
+            variant="bodyXs"
+            colorRole={currency === 'USD' ? 'primary' : 'muted'}
+            className="text-[10px] font-medium uppercase tracking-wide"
+          >
+            USD
           </Typography>
           <Switch
             checked={currency === 'AED'}
@@ -122,6 +126,13 @@ const B2BCalculatorBreakdown = ({
             size="sm"
             aria-label="Toggle currency display"
           />
+          <Typography
+            variant="bodyXs"
+            colorRole={currency === 'AED' ? 'primary' : 'muted'}
+            className="text-[10px] font-medium uppercase tracking-wide"
+          >
+            AED
+          </Typography>
         </div>
       </div>
     </div>
