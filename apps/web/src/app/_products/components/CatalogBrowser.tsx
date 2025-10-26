@@ -28,7 +28,7 @@ interface CatalogBrowserProps {
 type SortOption = 'name-asc' | 'name-desc' | 'price-asc' | 'price-desc' | 'vintage-asc' | 'vintage-desc';
 
 /**
- * Catalog browser component with infinite scroll
+ * Catalogue browser component with infinite scroll
  *
  * @example
  *   <CatalogBrowser onAddProduct={handleAdd} displayCurrency="AED" />
@@ -173,7 +173,7 @@ const CatalogBrowser = ({
             type="text"
             value={catalogSearch}
             onChange={(e) => setCatalogSearch(e.target.value)}
-            placeholder="Search catalog..."
+            placeholder="Search catalogue..."
             className="h-10 w-full rounded-md border border-border-muted bg-background-primary pl-9 pr-3 text-sm transition-colors placeholder:text-text-muted focus:border-border-brand focus:outline-none focus:ring-2 focus:ring-fill-accent focus:ring-offset-2"
           />
         </div>
@@ -254,7 +254,7 @@ const CatalogBrowser = ({
             {!hasNextPage && products.length > 0 && (
               <div className="mt-6 text-center">
                 <Typography variant="bodySm" className="text-text-muted">
-                  You&apos;ve reached the end of the catalog
+                  You&apos;ve reached the end of the catalogue
                 </Typography>
               </div>
             )}

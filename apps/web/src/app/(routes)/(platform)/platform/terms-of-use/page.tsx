@@ -55,7 +55,7 @@ const TermsOfUsePage = () => {
                   Generate price quotations for wine and spirits products
                 </Typography>
                 <Typography variant="bodySm" colorRole="muted" className="list-item list-disc">
-                  Browse and filter the Craft & Culture product catalog
+                  Browse and filter the Craft & Culture product catalogue
                 </Typography>
                 <Typography variant="bodySm" colorRole="muted" className="list-item list-disc">
                   Export quotations and inventory lists for business purposes
