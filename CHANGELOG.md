@@ -1,3 +1,9 @@
+## [1.41.0](https://github.com/craftandculture/Craft-Culture/compare/v1.40.0...v1.41.0) (2025-10-27)
+
+### Features
+
+* add mark-as-read button to notification bell tooltip ([5c1c555](https://github.com/craftandculture/Craft-Culture/commit/5c1c5558b4bb0c63b247c63c223a259d06d5ba74))
+
 ## [1.40.0](https://github.com/craftandculture/Craft-Culture/compare/v1.39.6...v1.40.0) (2025-10-27)
 
 ### Features
