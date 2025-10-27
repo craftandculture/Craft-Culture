@@ -1,3 +1,9 @@
+## [1.42.0](https://github.com/craftandculture/Craft-Culture/compare/v1.41.5...v1.42.0) (2025-10-27)
+
+### Features
+
+* enhance product hover popout with rich details and responsive design ([fd43317](https://github.com/craftandculture/Craft-Culture/commit/fd4331761f590f5a032fc00a3d4fb90afacd9bb7))
+
 ## [1.41.5](https://github.com/craftandculture/Craft-Culture/compare/v1.41.4...v1.41.5) (2025-10-27)
 
 ### Bug Fixes
