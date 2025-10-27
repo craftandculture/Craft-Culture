@@ -5,15 +5,25 @@ import { createTRPCRouter } from '@/lib/trpc/trpc';
 import activityLogsGetManyController from './controllers/activityLogsGetMany';
 import settingsGetController from './controllers/settingsGetController';
 import settingsUpdateController from './controllers/settingsUpdateController';
+import userActivityLogsGetManyController from './controllers/userActivityLogsGetMany';
 import activityLogsGetManyInputSchema from './schemas/activityLogsGetManyInputSchema';
 import settingsGetInputSchema from './schemas/settingsGetInputSchema';
 import settingsUpdateInputSchema from './schemas/settingsUpdateInputSchema';
+import userActivityLogsGetManyInputSchema from './schemas/userActivityLogsGetManyInputSchema';
 
 const activityLogsRouter = createTRPCRouter({
   getMany: adminProcedure
     .input(activityLogsGetManyInputSchema)
     .query(async ({ input }) => {
       return await activityLogsGetManyController(input);
+    }),
+});
+
+const userActivityLogsRouter = createTRPCRouter({
+  getMany: adminProcedure
+    .input(userActivityLogsGetManyInputSchema)
+    .query(async ({ input }) => {
+      return await userActivityLogsGetManyController(input);
     }),
 });
 
@@ -32,6 +42,7 @@ const settingsRouter = createTRPCRouter({
 
 const adminRouter = createTRPCRouter({
   activityLogs: activityLogsRouter,
+  userActivityLogs: userActivityLogsRouter,
   settings: settingsRouter,
 });
 

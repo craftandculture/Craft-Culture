@@ -221,6 +221,28 @@ export const adminActivityLogs = pgTable(
   ],
 ).enableRLS();
 
+export const userActivityLogs = pgTable(
+  'user_activity_logs',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .references(() => users.id, { onDelete: 'cascade' })
+      .notNull(),
+    action: text('action').notNull(),
+    entityType: text('entity_type'),
+    entityId: text('entity_id'),
+    metadata: jsonb('metadata'),
+    ipAddress: text('ip_address'),
+    userAgent: text('user_agent'),
+    ...timestamps,
+  },
+  (table) => [
+    index('user_activity_logs_user_id_idx').on(table.userId),
+    index('user_activity_logs_created_at_idx').on(table.createdAt),
+    index('user_activity_logs_action_idx').on(table.action),
+  ],
+).enableRLS();
+
 export const warehouseSensorReadings = pgTable(
   'warehouse_sensor_readings',
   {
