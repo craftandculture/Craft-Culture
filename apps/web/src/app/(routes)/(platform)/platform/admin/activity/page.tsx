@@ -148,7 +148,7 @@ const ActivityFeedPage = () => {
                         <Typography variant="bodySm" className="text-text-secondary">
                           {getActionLabel(log.action)}
                         </Typography>
-                        {log.metadata && (
+                        {log.metadata ? (
                           <div className="mt-1 flex flex-wrap gap-2">
                             {Object.entries(log.metadata as Record<string, unknown>).map(
                               ([key, value]) => (
@@ -161,7 +161,7 @@ const ActivityFeedPage = () => {
                               ),
                             )}
                           </div>
-                        )}
+                        ) : null}
                       </div>
                       {log.ipAddress && (
                         <Typography variant="bodyXs" className="text-text-muted mt-1">
