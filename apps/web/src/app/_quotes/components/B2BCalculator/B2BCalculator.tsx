@@ -195,6 +195,21 @@ const B2BCalculator = ({ inBondPriceUsd, lineItems }: B2BCalculatorProps) => {
       marginValue,
       productMargins,
     );
+
+    // Log B2B quote download activity
+    void api.admin.userActivityLogs.create.mutate({
+      action: 'b2b_quote.download',
+      entityType: 'b2b_quote',
+      metadata: {
+        lineItemCount: lineItems.length,
+        currency: displayCurrency,
+        marginType,
+        marginValue,
+        importTax,
+        transferCost,
+        total: actualQuoteTotals.customerQuotePrice,
+      },
+    });
   };
 
   // Toggle currency display
