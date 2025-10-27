@@ -1,3 +1,9 @@
+## [1.33.2](https://github.com/craftandculture/Craft-Culture/compare/v1.33.1...v1.33.2) (2025-10-27)
+
+### Bug Fixes
+
+* make all popovers and tooltips fully opaque ([054043f](https://github.com/craftandculture/Craft-Culture/commit/054043f345faed21fcaaff9a691cc23000c671f3))
+
 ## [1.33.1](https://github.com/craftandculture/Craft-Culture/compare/v1.33.0...v1.33.1) (2025-10-26)
 
 ### Bug Fixes
