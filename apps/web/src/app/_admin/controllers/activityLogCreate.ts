@@ -1,3 +1,4 @@
+import { headers } from 'next/headers';
 import type { z } from 'zod';
 
 import getUserOrRedirect from '@/app/_auth/data/getUserOrRedirect';
@@ -13,13 +14,13 @@ import type activityLogCreateInputSchema from '../schemas/activityLogCreateInput
  */
 const activityLogCreate = async (
   input: z.infer<typeof activityLogCreateInputSchema>,
-  ctx: { headers: Headers },
 ) => {
   const user = await getUserOrRedirect();
 
   // Extract IP and User Agent from request headers
-  const ipAddress = ctx.headers.get('x-forwarded-for') ?? ctx.headers.get('x-real-ip');
-  const userAgent = ctx.headers.get('user-agent');
+  const headersList = await headers();
+  const ipAddress = headersList.get('x-forwarded-for') ?? headersList.get('x-real-ip');
+  const userAgent = headersList.get('user-agent');
 
   await logUserActivity({
     userId: user.id,

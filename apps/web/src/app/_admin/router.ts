@@ -28,8 +28,8 @@ const userActivityLogsRouter = createTRPCRouter({
     }),
   create: protectedProcedure
     .input(activityLogCreateInputSchema)
-    .mutation(async ({ input, ctx }) => {
-      return await activityLogCreate(input, ctx);
+    .mutation(async ({ input }) => {
+      return await activityLogCreate(input);
     }),
 });
 
