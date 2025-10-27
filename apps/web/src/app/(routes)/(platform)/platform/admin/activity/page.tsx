@@ -2,8 +2,9 @@
 
 import { IconDownload, IconLogin, IconUser, IconUserPlus } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
+import markActivitiesAsViewed from '@/app/_admin/actions/markActivitiesAsViewed';
 import Card from '@/app/_ui/components/Card/Card';
 import CardContent from '@/app/_ui/components/Card/CardContent';
 import CardDescription from '@/app/_ui/components/Card/CardDescription';
@@ -29,6 +30,11 @@ const ActivityFeedPage = () => {
 
   const [actionFilter, setActionFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
+
+  // Mark activities as viewed when page opens
+  useEffect(() => {
+    void markActivitiesAsViewed();
+  }, []);
 
   const { data: activityData, isLoading } = useQuery({
     ...api.admin.userActivityLogs.getMany.queryOptions({

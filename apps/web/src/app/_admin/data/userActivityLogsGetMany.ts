@@ -1,13 +1,15 @@
-import { desc, eq, sql } from 'drizzle-orm';
+import { desc, eq, gt, sql } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { userActivityLogs, users } from '@/database/schema';
+import getCurrentUserId from '@/utils/getCurrentUserId';
 
 interface UserActivityLogsGetManyParams {
   limit?: number;
   offset?: number;
   userId?: string;
   action?: string;
+  unreadOnly?: boolean;
 }
 
 /**
@@ -17,7 +19,7 @@ interface UserActivityLogsGetManyParams {
  * @returns Activity logs with user details
  */
 const userActivityLogsGetMany = async (params: UserActivityLogsGetManyParams) => {
-  const { limit = 50, offset = 0, userId, action } = params;
+  const { limit = 50, offset = 0, userId, action, unreadOnly = false } = params;
 
   const whereConditions = [];
 
@@ -27,6 +29,20 @@ const userActivityLogsGetMany = async (params: UserActivityLogsGetManyParams) =>
 
   if (action) {
     whereConditions.push(eq(userActivityLogs.action, action));
+  }
+
+  // Filter for unread activities only
+  if (unreadOnly) {
+    const currentUserId = await getCurrentUserId();
+    const [currentUser] = await db
+      .select({ lastViewedActivityAt: users.lastViewedActivityAt })
+      .from(users)
+      .where(eq(users.id, currentUserId))
+      .limit(1);
+
+    if (currentUser?.lastViewedActivityAt) {
+      whereConditions.push(gt(userActivityLogs.createdAt, currentUser.lastViewedActivityAt));
+    }
   }
 
   const logs = await db

@@ -5,6 +5,7 @@ const userActivityLogsGetManyInputSchema = z.object({
   offset: z.number().min(0).optional().default(0),
   userId: z.string().uuid().optional(),
   action: z.string().optional(),
+  unreadOnly: z.boolean().optional().default(false),
 });
 
 export default userActivityLogsGetManyInputSchema;

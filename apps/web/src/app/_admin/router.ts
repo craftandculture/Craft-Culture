@@ -6,6 +6,7 @@ import activityLogsGetManyController from './controllers/activityLogsGetMany';
 import settingsGetController from './controllers/settingsGetController';
 import settingsUpdateController from './controllers/settingsUpdateController';
 import userActivityLogsGetManyController from './controllers/userActivityLogsGetMany';
+import userActivityLogsMarkAsViewed from './controllers/userActivityLogsMarkAsViewed';
 import activityLogCreateInputSchema from './schemas/activityLogCreateInputSchema';
 import activityLogsGetManyInputSchema from './schemas/activityLogsGetManyInputSchema';
 import settingsGetInputSchema from './schemas/settingsGetInputSchema';
@@ -31,6 +32,9 @@ const userActivityLogsRouter = createTRPCRouter({
     .mutation(async ({ input }) => {
       return await activityLogCreate(input);
     }),
+  markAsViewed: adminProcedure.mutation(async () => {
+    return await userActivityLogsMarkAsViewed();
+  }),
 });
 
 const settingsRouter = createTRPCRouter({

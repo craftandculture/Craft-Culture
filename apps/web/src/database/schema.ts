@@ -75,6 +75,9 @@ export const users = pgTable('users', {
   pricingModelId: uuid('pricing_model_id').references(() => pricingModels.id, {
     onDelete: 'set null',
   }),
+  lastViewedActivityAt: timestamp('last_viewed_activity_at', {
+    mode: 'date',
+  }),
 
   ...timestamps,
 }).enableRLS();
