@@ -1,7 +1,7 @@
 'use client';
 
 import { IconDownload, IconInfoCircle, IconPlaneInflight, IconPlus } from '@tabler/icons-react';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { parseAsArrayOf, parseAsJson, useQueryState, useQueryStates } from 'nuqs';
 import React, { useEffect, useMemo, useState } from 'react';
 
@@ -58,6 +58,9 @@ type DerivedLineItem =
 
 const QuotesForm = () => {
   const api = useTRPC();
+
+  // Activity logging mutation
+  const logActivity = useMutation(api.admin.userActivityLogs.create);
 
   // Get current user to check customer type
   const { data: userData } = useQuery(api.users.getMe.queryOptions());
@@ -368,7 +371,7 @@ const QuotesForm = () => {
     exportQuoteToExcel(exportLineItems, displayCurrency, total, commissionTotal);
 
     // Log quote download activity
-    void api.admin.userActivityLogs.create.mutate({
+    logActivity.mutate({
       action: 'quote.download',
       entityType: 'quote',
       metadata: {
@@ -420,7 +423,7 @@ const QuotesForm = () => {
     exportInventoryToExcel(inventoryItems);
 
     // Log inventory download activity
-    void api.admin.userActivityLogs.create.mutate({
+    logActivity.mutate({
       action: 'inventory.download',
       entityType: 'inventory',
       metadata: {
