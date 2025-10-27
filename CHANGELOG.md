@@ -1,3 +1,9 @@
+## [1.34.0](https://github.com/craftandculture/Craft-Culture/compare/v1.33.4...v1.34.0) (2025-10-27)
+
+### Features
+
+* prevent scroll jump and add success feedback when adding products ([45a8db5](https://github.com/craftandculture/Craft-Culture/commit/45a8db5508c0f23304334dbdb1e6018adffbc675))
+
 ## [1.33.4](https://github.com/craftandculture/Craft-Culture/compare/v1.33.3...v1.33.4) (2025-10-27)
 
 ### Bug Fixes
