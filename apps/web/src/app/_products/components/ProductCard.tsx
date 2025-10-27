@@ -138,7 +138,7 @@ const ProductCard = ({
           size="sm"
           onClick={handleAdd}
           isDisabled={isAdding || showSuccess}
-          colorRole="brand"
+          colorRole="primary"
           className="mt-2 w-full transition-all duration-300"
         >
           <ButtonContent iconLeft={showSuccess ? IconCheck : IconPlus}>
