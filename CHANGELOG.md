@@ -1,3 +1,9 @@
+## [1.37.0](https://github.com/craftandculture/Craft-Culture/compare/v1.36.0...v1.37.0) (2025-10-27)
+
+### Features
+
+* add user activity logging system for admin monitoring ([43e8348](https://github.com/craftandculture/Craft-Culture/commit/43e83483a9974fa5350fb2661c414657eb701f09))
+
 ## [1.36.0](https://github.com/craftandculture/Craft-Culture/compare/v1.35.0...v1.36.0) (2025-10-27)
 
 ### Features
