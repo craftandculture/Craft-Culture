@@ -1,3 +1,9 @@
+## [1.39.6](https://github.com/craftandculture/Craft-Culture/compare/v1.39.5...v1.39.6) (2025-10-27)
+
+### Bug Fixes
+
+* remove user query from auth hook to avoid Drizzle type errors ([58a0af2](https://github.com/craftandculture/Craft-Culture/commit/58a0af248366b7c9c8fcf97571c1d766f9d5b392))
+
 ## [1.39.5](https://github.com/craftandculture/Craft-Culture/compare/v1.39.4...v1.39.5) (2025-10-27)
 
 ### Bug Fixes
