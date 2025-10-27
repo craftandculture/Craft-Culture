@@ -36,7 +36,7 @@ interface URLLineItem {
   vintage?: string;
 }
 
-const MAX_LINE_ITEMS = 10;
+const MAX_LINE_ITEMS = 100;
 
 type LineItemBase = {
   id: string;
