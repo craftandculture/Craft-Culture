@@ -1,3 +1,9 @@
+## [1.41.4](https://github.com/craftandculture/Craft-Culture/compare/v1.41.3...v1.41.4) (2025-10-27)
+
+### Bug Fixes
+
+* remove ActivityBell and lastViewedActivityAt to restore platform ([b7bd2c0](https://github.com/craftandculture/Craft-Culture/commit/b7bd2c000170d8a146e18516768f383a43e82cb5))
+
 ## [1.41.3](https://github.com/craftandculture/Craft-Culture/compare/v1.41.2...v1.41.3) (2025-10-27)
 
 ### Bug Fixes
