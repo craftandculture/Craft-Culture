@@ -1,6 +1,6 @@
 'use client';
 
-import { IconDownload, IconSearch } from '@tabler/icons-react';
+import { IconCheck, IconDownload, IconSearch } from '@tabler/icons-react';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { useQueryStates } from 'nuqs';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -127,10 +127,11 @@ const CatalogBrowser = ({
         setSuccessProductId(null);
       }, 2000);
 
-      // Show neutral toast
+      // Show toast with green checkmark
       toast(`${product.name} added to quote`, {
         duration: 3000,
         position: 'bottom-center',
+        icon: <IconCheck className="h-5 w-5 text-green-600" />,
       });
     } catch {
       // Show error toast if add fails
