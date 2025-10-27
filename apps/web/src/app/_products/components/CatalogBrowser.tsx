@@ -127,8 +127,8 @@ const CatalogBrowser = ({
         setSuccessProductId(null);
       }, 2000);
 
-      // Show success toast
-      toast.success(`${product.name} added to quote`, {
+      // Show neutral toast
+      toast(`${product.name} added to quote`, {
         duration: 3000,
         position: 'bottom-center',
       });

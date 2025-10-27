@@ -839,8 +839,7 @@ const QuotesForm = () => {
               void setUrlLineItems(newUrlItems);
             }
           }
-          // Scroll to top to show the added item
-          window.scrollTo({ top: 0, behavior: 'smooth' });
+          // No scroll - user stays in catalogue to continue browsing
         }}
         displayCurrency={displayCurrency}
         omitProductIds={urlLineItems.map((item) => item.productId)}
