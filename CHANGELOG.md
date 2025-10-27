@@ -1,3 +1,9 @@
+## [1.35.0](https://github.com/craftandculture/Craft-Culture/compare/v1.34.2...v1.35.0) (2025-10-27)
+
+### Features
+
+* update product card button color and add green checkmark to toast ([d0e596f](https://github.com/craftandculture/Craft-Culture/commit/d0e596fe209b055ba02ffa50d4e9d1879a00f02c))
+
 ## [1.34.2](https://github.com/craftandculture/Craft-Culture/compare/v1.34.1...v1.34.2) (2025-10-27)
 
 ### Bug Fixes
