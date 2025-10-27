@@ -1,3 +1,9 @@
+## [1.33.4](https://github.com/craftandculture/Craft-Culture/compare/v1.33.3...v1.33.4) (2025-10-27)
+
+### Bug Fixes
+
+* Excel export now shows customer prices matching UI ([a06603c](https://github.com/craftandculture/Craft-Culture/commit/a06603c5042f0caf8f7c6dbfb120ca5f111801e0))
+
 ## [1.33.3](https://github.com/craftandculture/Craft-Culture/compare/v1.33.2...v1.33.3) (2025-10-27)
 
 ### Bug Fixes
