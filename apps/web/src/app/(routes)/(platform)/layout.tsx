@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 
-import ActivityBell from '@/app/_admin/components/ActivityBell';
+// import ActivityBell from '@/app/_admin/components/ActivityBell';
 import UserDropdown from '@/app/_auth/components/UserDropdown';
 import Footer from '@/app/_ui/components/Footer/Footer';
 import Logo from '@/app/_ui/components/Logo/Logo';
@@ -34,7 +34,7 @@ const PlatformLayout = async ({ children }: React.PropsWithChildren) => {
           <Logo height={24} />
         </Link>
         <div className="flex items-center gap-2 sm:gap-3">
-          {user.role === 'admin' && <ActivityBell />}
+          {/* {user.role === 'admin' && <ActivityBell />} */}
           <ThemeToggle />
           <UserDropdown user={user} />
         </div>
