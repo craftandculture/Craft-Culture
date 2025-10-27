@@ -9,13 +9,29 @@ import type { B2BCalculatorLineItem } from '../components/B2BCalculator/B2BCalcu
  * Export B2B distributor calculator results to Excel file with line items
  *
  * @example
- *   exportB2BQuoteToExcel(calculatedQuote, 'USD', lineItems, 14, 21);
+ *   exportB2BQuoteToExcel(
+ *     calculatedQuote,
+ *     'USD',
+ *     lineItems,
+ *     14,
+ *     21,
+ *     20,
+ *     200,
+ *     'percentage',
+ *     15,
+ *     {}
+ *   );
  *
  * @param calculatedQuote - Calculator result with pricing breakdown
  * @param currency - Currency code (USD or AED)
  * @param lineItems - Optional array of line items from quote builder
  * @param leadTimeMin - Minimum lead time in days
  * @param leadTimeMax - Maximum lead time in days
+ * @param importTaxPercent - Import tax percentage for per-product calculations
+ * @param transferCostTotal - Total transfer cost to allocate across products
+ * @param globalMarginType - Global margin type (percentage or fixed)
+ * @param globalMarginValue - Global margin value
+ * @param productMargins - Per-product margin overrides (index-based)
  */
 const exportB2BQuoteToExcel = (
   calculatedQuote: B2BCalculatorResult,
@@ -23,34 +39,97 @@ const exportB2BQuoteToExcel = (
   lineItems?: B2BCalculatorLineItem[],
   leadTimeMin?: number,
   leadTimeMax?: number,
+  importTaxPercent?: number,
+  transferCostTotal?: number,
+  globalMarginType?: 'percentage' | 'fixed',
+  globalMarginValue?: number,
+  productMargins?: Record<number, { type: 'percentage' | 'fixed'; value: number }>,
 ) => {
   // Convert USD to display currency if needed
   const convertValue = (usdValue: number) => {
     return currency === 'AED' ? convertUsdToAed(usdValue) : usdValue;
   };
+
+  // Helper: Calculate customer price per case for a product
+  const calculateCustomerPricePerCase = (
+    item: B2BCalculatorLineItem,
+    productIndex: number,
+  ) => {
+    if (
+      !importTaxPercent ||
+      !transferCostTotal ||
+      !globalMarginType ||
+      globalMarginValue === undefined
+    ) {
+      // Fallback: return In-Bond price if calculation params not provided
+      return item.lineItemTotalUsd / item.quantity;
+    }
+
+    const totalQuantity = lineItems!.reduce((sum, i) => sum + i.quantity, 0);
+    const inBondPerCase = item.lineItemTotalUsd / item.quantity;
+    const importTaxPerCase = inBondPerCase * (importTaxPercent / 100);
+    const transferCostPerCase = transferCostTotal / totalQuantity;
+    const landedPrice = inBondPerCase + importTaxPerCase + transferCostPerCase;
+
+    // Get margin config (override or global)
+    const marginConfig = productMargins?.[productIndex] ?? {
+      type: globalMarginType,
+      value: globalMarginValue,
+    };
+
+    // Calculate price after margin
+    const priceAfterMargin =
+      marginConfig.type === 'percentage'
+        ? landedPrice / (1 - marginConfig.value / 100)
+        : landedPrice + marginConfig.value;
+
+    const vat = priceAfterMargin * 0.05;
+    return priceAfterMargin + vat;
+  };
+
+  // Helper: Calculate customer price per bottle
+  const calculateCustomerPricePerBottle = (
+    item: B2BCalculatorLineItem,
+    productIndex: number,
+  ) => {
+    const pricePerCase = calculateCustomerPricePerCase(item, productIndex);
+    return pricePerCase / item.unitCount;
+  };
+
   // Create workbook and worksheet
   const wb = XLSX.utils.book_new();
 
   // Prepare data array
   const data: (string | number)[][] = [
     // Header
-    ['B2B Distributor Quote Export', '', '', ''],
+    ['B2B Distributor Quote Export', '', '', '', ''],
     [],
   ];
 
   // Add line items section if available
   if (lineItems && lineItems.length > 0) {
     data.push(
-      ['LINE ITEMS', '', '', ''],
-      ['Product', 'Quantity', 'Base Price', `Total (${currency})`],
+      ['LINE ITEMS', '', '', '', ''],
+      [
+        'Product',
+        'Quantity',
+        `In-Bond/Case (${currency})`,
+        `Customer Price/Case (${currency})`,
+        `Customer Price/Bottle (${currency})`,
+      ],
     );
 
-    lineItems.forEach((item) => {
+    lineItems.forEach((item, index) => {
+      const inBondPerCase = item.lineItemTotalUsd / item.quantity;
+      const customerPricePerCase = calculateCustomerPricePerCase(item, index);
+      const customerPricePerBottle = calculateCustomerPricePerBottle(item, index);
+
       data.push([
         item.productName,
-        item.quantity,
-        Math.round(convertValue(item.basePriceUsd)),
-        Math.round(convertValue(item.lineItemTotalUsd)),
+        `${item.quantity} cases`,
+        Math.round(convertValue(inBondPerCase)),
+        Math.round(convertValue(customerPricePerCase)),
+        Math.round(convertValue(customerPricePerBottle) * 100) / 100, // Show cents for per-bottle
       ]);
     });
 
@@ -58,6 +137,7 @@ const exportB2BQuoteToExcel = (
       [],
       [
         'Subtotal (In Bond UAE Price)',
+        '',
         '',
         '',
         Math.round(convertValue(calculatedQuote.inBondPrice)),
@@ -68,11 +148,12 @@ const exportB2BQuoteToExcel = (
 
   // Add B2B calculator breakdown
   data.push(
-    ['B2B DISTRIBUTOR CALCULATIONS', '', '', ''],
-    ['Component', 'Description', '', `Amount (${currency})`],
+    ['B2B DISTRIBUTOR CALCULATIONS', '', '', '', ''],
+    ['Component', 'Description', '', '', `Amount (${currency})`],
     [
       'In Bond UAE Price',
       lineItems ? 'Subtotal from line items above' : 'Base UAE in bond price',
+      '',
       '',
       Math.round(convertValue(calculatedQuote.inBondPrice)),
     ],
@@ -80,11 +161,13 @@ const exportB2BQuoteToExcel = (
       'Import Duty',
       'Applied to in bond price',
       '',
+      '',
       Math.round(convertValue(calculatedQuote.importTax)),
     ],
     [
       'Transfer Cost',
       'UAE In Bond -> Mainland delivery',
+      '',
       '',
       Math.round(convertValue(calculatedQuote.transferCost)),
     ],
@@ -92,11 +175,13 @@ const exportB2BQuoteToExcel = (
       'Landed Price',
       'In Bond + Import Duty + Transfer',
       '',
+      '',
       Math.round(convertValue(calculatedQuote.landedPrice)),
     ],
     [
       'Distributor Margin',
       'Your profit margin on landed price',
+      '',
       '',
       Math.round(convertValue(calculatedQuote.distributorMargin)),
     ],
@@ -104,12 +189,14 @@ const exportB2BQuoteToExcel = (
       'VAT',
       '5% on price after margin',
       '',
+      '',
       Math.round(convertValue(calculatedQuote.vat)),
     ],
     [],
     [
       'CUSTOMER PRICE',
       'Total price for end customer (incl. VAT)',
+      '',
       '',
       Math.round(convertValue(calculatedQuote.customerQuotePrice)),
     ],
@@ -124,6 +211,7 @@ const exportB2BQuoteToExcel = (
         `${leadTimeMin}-${leadTimeMax} days via air freight`,
         '',
         '',
+        '',
       ],
     );
   }
@@ -133,10 +221,11 @@ const exportB2BQuoteToExcel = (
 
   // Set column widths
   ws['!cols'] = [
-    { wch: 30 }, // Product/Component
-    { wch: 20 }, // Quantity/Description
-    { wch: 15 }, // Base Price
-    { wch: 20 }, // Total/Amount
+    { wch: 35 }, // Product/Component
+    { wch: 15 }, // Quantity
+    { wch: 20 }, // In-Bond Price
+    { wch: 22 }, // Customer Price/Case
+    { wch: 22 }, // Customer Price/Bottle or Amount
   ];
 
   // Add worksheet to workbook

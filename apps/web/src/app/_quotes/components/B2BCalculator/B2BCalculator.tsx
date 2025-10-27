@@ -183,7 +183,18 @@ const B2BCalculator = ({ inBondPriceUsd, lineItems }: B2BCalculatorProps) => {
 
   // Export to Excel
   const handleExport = () => {
-    exportB2BQuoteToExcel(actualQuoteTotals, displayCurrency, lineItems, leadTimeMin, leadTimeMax);
+    exportB2BQuoteToExcel(
+      actualQuoteTotals,
+      displayCurrency,
+      lineItems,
+      leadTimeMin,
+      leadTimeMax,
+      importTax,
+      transferCost,
+      marginType,
+      marginValue,
+      productMargins,
+    );
   };
 
   // Toggle currency display
