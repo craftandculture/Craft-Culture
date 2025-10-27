@@ -17,6 +17,7 @@ export const mockUser: User = {
   role: 'user',
   onboardingCompletedAt: null,
   pricingModelId: null,
+  lastViewedActivityAt: null,
 };
 
 /**
