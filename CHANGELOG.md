@@ -1,3 +1,9 @@
+## [1.38.1](https://github.com/craftandculture/Craft-Culture/compare/v1.38.0...v1.38.1) (2025-10-27)
+
+### Bug Fixes
+
+* correct tRPC context type in activityLogCreate controller ([e48340f](https://github.com/craftandculture/Craft-Culture/commit/e48340f5ce78da6ad776d1001e38523cc735b1d7))
+
 ## [1.38.0](https://github.com/craftandculture/Craft-Culture/compare/v1.37.0...v1.38.0) (2025-10-27)
 
 ### Features
