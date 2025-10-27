@@ -1,3 +1,9 @@
+## [1.36.0](https://github.com/craftandculture/Craft-Culture/compare/v1.35.0...v1.36.0) (2025-10-27)
+
+### Features
+
+* increase quotation builder line item limit from 10 to 100 ([00339c7](https://github.com/craftandculture/Craft-Culture/commit/00339c7b9f2b176d5f14652e3a49f4e55ccd80d3))
+
 ## [1.35.0](https://github.com/craftandculture/Craft-Culture/compare/v1.34.2...v1.35.0) (2025-10-27)
 
 ### Features
