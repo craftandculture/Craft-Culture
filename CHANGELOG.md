@@ -1,3 +1,9 @@
+## [1.41.3](https://github.com/craftandculture/Craft-Culture/compare/v1.41.2...v1.41.3) (2025-10-27)
+
+### Bug Fixes
+
+* gracefully handle missing lastViewedActivityAt column ([6b6c720](https://github.com/craftandculture/Craft-Culture/commit/6b6c720cbd4873921fe128c650219596976270ef))
+
 ## [1.41.2](https://github.com/craftandculture/Craft-Culture/compare/v1.41.1...v1.41.2) (2025-10-27)
 
 ### Bug Fixes
