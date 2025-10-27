@@ -1,3 +1,9 @@
+## [1.41.5](https://github.com/craftandculture/Craft-Culture/compare/v1.41.4...v1.41.5) (2025-10-27)
+
+### Bug Fixes
+
+* remove all references to lastViewedActivityAt to unblock build ([ca19b12](https://github.com/craftandculture/Craft-Culture/commit/ca19b1267fdba5e2a4057b3d4b85416c681e70ea))
+
 ## [1.41.4](https://github.com/craftandculture/Craft-Culture/compare/v1.41.3...v1.41.4) (2025-10-27)
 
 ### Bug Fixes
