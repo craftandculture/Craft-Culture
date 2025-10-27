@@ -35,7 +35,8 @@ const ActivityBell = () => {
         <Link href="/platform/admin/activity">
           <Button
             variant="ghost"
-            size="icon"
+            shape="circle"
+            size="md"
             className="relative"
             aria-label="View activity feed"
           >
