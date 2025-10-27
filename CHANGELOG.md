@@ -1,3 +1,9 @@
+## [1.39.2](https://github.com/craftandculture/Craft-Culture/compare/v1.39.1...v1.39.2) (2025-10-27)
+
+### Bug Fixes
+
+* use valid Button props for ActivityBell ([451bb73](https://github.com/craftandculture/Craft-Culture/commit/451bb7331a0923821e5804ed49abb89cea9010ab))
+
 ## [1.39.1](https://github.com/craftandculture/Craft-Culture/compare/v1.39.0...v1.39.1) (2025-10-27)
 
 ### Bug Fixes
