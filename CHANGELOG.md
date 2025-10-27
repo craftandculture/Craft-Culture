@@ -1,3 +1,9 @@
+## [1.38.0](https://github.com/craftandculture/Craft-Culture/compare/v1.37.0...v1.38.0) (2025-10-27)
+
+### Features
+
+* integrate user activity logging across auth and quote operations ([b146289](https://github.com/craftandculture/Craft-Culture/commit/b1462892212e567c41a2f7e88b473c5e7fa4f2d5))
+
 ## [1.37.0](https://github.com/craftandculture/Craft-Culture/compare/v1.36.0...v1.37.0) (2025-10-27)
 
 ### Features
