@@ -1,8 +1,8 @@
 import { desc, eq, gt, sql } from 'drizzle-orm';
 
+import getCurrentUser from '@/app/_auth/data/getCurrentUser';
 import db from '@/database/client';
 import { userActivityLogs, users } from '@/database/schema';
-import getCurrentUserId from '@/utils/getCurrentUserId';
 
 interface UserActivityLogsGetManyParams {
   limit?: number;
@@ -33,11 +33,16 @@ const userActivityLogsGetMany = async (params: UserActivityLogsGetManyParams) =>
 
   // Filter for unread activities only
   if (unreadOnly) {
-    const currentUserId = await getCurrentUserId();
+    const user = await getCurrentUser();
+
+    if (!user) {
+      throw new Error('User not authenticated');
+    }
+
     const [currentUser] = await db
       .select({ lastViewedActivityAt: users.lastViewedActivityAt })
       .from(users)
-      .where(eq(users.id, currentUserId))
+      .where(eq(users.id, user.id))
       .limit(1);
 
     if (currentUser?.lastViewedActivityAt) {
