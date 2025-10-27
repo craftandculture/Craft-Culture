@@ -1,3 +1,9 @@
+## [1.39.1](https://github.com/craftandculture/Craft-Culture/compare/v1.39.0...v1.39.1) (2025-10-27)
+
+### Bug Fixes
+
+* use ternary operator for metadata conditional rendering ([5d4e73f](https://github.com/craftandculture/Craft-Culture/commit/5d4e73f2fac01071abb4efab32711452ac4b3904))
+
 ## [1.39.0](https://github.com/craftandculture/Craft-Culture/compare/v1.38.1...v1.39.0) (2025-10-27)
 
 ### Features
