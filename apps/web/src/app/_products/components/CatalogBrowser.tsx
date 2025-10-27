@@ -4,6 +4,7 @@ import { IconDownload, IconSearch } from '@tabler/icons-react';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { useQueryStates } from 'nuqs';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { toast } from 'sonner';
 
 import quotesSearchParams from '@/app/_quotes/search-params/filtersSearchParams';
 import Button from '@/app/_ui/components/Button/Button';
@@ -45,6 +46,7 @@ const CatalogBrowser = ({
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [sortBy, setSortBy] = useState<SortOption>('name-asc');
   const [addingProductId, setAddingProductId] = useState<string | null>(null);
+  const [successProductId, setSuccessProductId] = useState<string | null>(null);
   const gridRef = useRef<HTMLDivElement>(null);
 
   // Get active filters from URL
@@ -118,6 +120,24 @@ const CatalogBrowser = ({
     setAddingProductId(product.id);
     try {
       await onAddProduct(product);
+
+      // Show success state on card
+      setSuccessProductId(product.id);
+      setTimeout(() => {
+        setSuccessProductId(null);
+      }, 2000);
+
+      // Show success toast
+      toast.success(`${product.name} added to quote`, {
+        duration: 3000,
+        position: 'bottom-center',
+      });
+    } catch {
+      // Show error toast if add fails
+      toast.error('Failed to add product', {
+        duration: 3000,
+        position: 'bottom-center',
+      });
     } finally {
       setAddingProductId(null);
     }
@@ -232,6 +252,7 @@ const CatalogBrowser = ({
                   onAdd={handleAddProduct}
                   displayCurrency={displayCurrency}
                   isAdding={addingProductId === product.id}
+                  showSuccess={successProductId === product.id}
                 />
               ))}
             </div>
