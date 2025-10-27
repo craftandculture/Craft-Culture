@@ -1,3 +1,9 @@
+## [1.39.5](https://github.com/craftandculture/Craft-Culture/compare/v1.39.4...v1.39.5) (2025-10-27)
+
+### Bug Fixes
+
+* correct Drizzle ORM query syntax in Better Auth hooks ([4504688](https://github.com/craftandculture/Craft-Culture/commit/450468844fee2102e459cc7447ef59f30ac493c0))
+
 ## [1.39.4](https://github.com/craftandculture/Craft-Culture/compare/v1.39.3...v1.39.4) (2025-10-27)
 
 ### Bug Fixes
