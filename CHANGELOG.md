@@ -1,3 +1,9 @@
+## [1.39.4](https://github.com/craftandculture/Craft-Culture/compare/v1.39.3...v1.39.4) (2025-10-27)
+
+### Bug Fixes
+
+* remove client-side activity logging to avoid React compiler errors ([ac36032](https://github.com/craftandculture/Craft-Culture/commit/ac3603204ed5e19085e80baf8b264bafb6224baf))
+
 ## [1.39.3](https://github.com/craftandculture/Craft-Culture/compare/v1.39.2...v1.39.3) (2025-10-27)
 
 ### Bug Fixes
