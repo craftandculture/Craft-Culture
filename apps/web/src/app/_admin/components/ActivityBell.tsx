@@ -36,38 +36,56 @@ const ActivityBell = () => {
     void markActivitiesAsViewed();
   };
 
+  const handleClear = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    void markActivitiesAsViewed();
+  };
+
   return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <Link href="/platform/admin/activity" onClick={handleClick}>
-          <Button
-            variant="ghost"
-            shape="circle"
-            size="md"
-            className="relative"
-            aria-label="View activity feed"
-          >
-            <IconBell className="h-5 w-5" />
+    <div className="relative">
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Link href="/platform/admin/activity" onClick={handleClick}>
+            <Button
+              variant="ghost"
+              shape="circle"
+              size="md"
+              className="relative"
+              aria-label="View activity feed"
+            >
+              <IconBell className="h-5 w-5" />
+              {hasUnread && (
+                <>
+                  {/* Badge with count */}
+                  <span className="bg-brand-primary text-text-on-brand absolute right-0 top-0 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-semibold">
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </span>
+                  {/* Pulsing green indicator */}
+                  <span className="absolute -right-1 -top-1 flex h-3 w-3">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75"></span>
+                    <span className="relative inline-flex h-3 w-3 rounded-full bg-green-500"></span>
+                  </span>
+                </>
+              )}
+            </Button>
+          </Link>
+        </TooltipTrigger>
+        <TooltipContent>
+          <div className="flex flex-col gap-1">
+            <p>{hasUnread ? `${unreadCount} new activities` : 'No new activities'}</p>
             {hasUnread && (
-              <>
-                {/* Badge with count */}
-                <span className="bg-brand-primary text-text-on-brand absolute right-0 top-0 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-semibold">
-                  {unreadCount > 99 ? '99+' : unreadCount}
-                </span>
-                {/* Pulsing green indicator */}
-                <span className="absolute -right-1 -top-1 flex h-3 w-3">
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75"></span>
-                  <span className="relative inline-flex h-3 w-3 rounded-full bg-green-500"></span>
-                </span>
-              </>
+              <button
+                onClick={handleClear}
+                className="text-text-muted hover:text-text-primary text-xs underline"
+              >
+                Mark all as read
+              </button>
             )}
-          </Button>
-        </Link>
-      </TooltipTrigger>
-      <TooltipContent>
-        <p>{hasUnread ? `${unreadCount} new activities` : 'No new activities'}</p>
-      </TooltipContent>
-    </Tooltip>
+          </div>
+        </TooltipContent>
+      </Tooltip>
+    </div>
   );
 };
 
