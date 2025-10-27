@@ -1,7 +1,8 @@
 'use client';
 
-import { IconCameraOff, IconPlus } from '@tabler/icons-react';
+import { IconCameraOff, IconCheck, IconPlus } from '@tabler/icons-react';
 import Image from 'next/image';
+import { useEffect, useState } from 'react';
 
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
@@ -18,6 +19,7 @@ interface ProductCardProps {
   onAdd: (product: Product) => void;
   displayCurrency?: 'USD' | 'AED';
   isAdding?: boolean;
+  showSuccess?: boolean;
 }
 
 /**
@@ -31,11 +33,31 @@ const ProductCard = ({
   onAdd,
   displayCurrency = 'AED',
   isAdding = false,
+  showSuccess: externalShowSuccess = false,
 }: ProductCardProps) => {
+  const [showSuccess, setShowSuccess] = useState(false);
   const offer = product.productOffers?.[0];
   const price = offer?.price ?? 0;
   const displayPrice =
     displayCurrency === 'AED' ? price * 3.67 : price;
+
+  // Handle external success state
+  useEffect(() => {
+    if (externalShowSuccess) {
+      setShowSuccess(true);
+      const timer = setTimeout(() => {
+        setShowSuccess(false);
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [externalShowSuccess]);
+
+  const handleAdd = (e: React.MouseEvent<HTMLButtonElement>) => {
+    // Prevent default behavior and stop propagation to avoid scroll jump
+    e.preventDefault();
+    e.stopPropagation();
+    onAdd(product);
+  };
 
   return (
     <ProductDetailsTooltip product={product}>
@@ -114,11 +136,15 @@ const ProductCard = ({
         <Button
           type="button"
           size="sm"
-          onClick={() => onAdd(product)}
-          isDisabled={isAdding}
-          className="mt-2 w-full"
+          onClick={handleAdd}
+          isDisabled={isAdding || showSuccess}
+          variant={showSuccess ? 'default' : 'default'}
+          colorRole={showSuccess ? 'success' : 'brand'}
+          className="mt-2 w-full transition-all duration-300"
         >
-          <ButtonContent iconLeft={IconPlus}>Add to Quote</ButtonContent>
+          <ButtonContent iconLeft={showSuccess ? IconCheck : IconPlus}>
+            {showSuccess ? 'Added!' : 'Add to Quote'}
+          </ButtonContent>
         </Button>
       </div>
     </Card>
