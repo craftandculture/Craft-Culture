@@ -10,22 +10,28 @@ import { users } from '@/database/schema';
  * Updates the user's lastViewedActivityAt timestamp to now
  */
 const userActivityLogsMarkAsViewed = async () => {
-  const user = await getCurrentUser();
+  try {
+    const user = await getCurrentUser();
 
-  if (!user) {
-    throw new Error('User not authenticated');
+    if (!user) {
+      throw new Error('User not authenticated');
+    }
+
+    const userId = user.id;
+
+    await db
+      .update(users)
+      .set({
+        lastViewedActivityAt: new Date(),
+      })
+      .where(eq(users.id, userId));
+
+    return { success: true };
+  } catch (error) {
+    // Gracefully handle if column doesn't exist yet
+    console.warn('Could not mark activities as viewed:', error);
+    return { success: false, error: 'Column not available yet' };
   }
-
-  const userId = user.id;
-
-  await db
-    .update(users)
-    .set({
-      lastViewedActivityAt: new Date(),
-    })
-    .where(eq(users.id, userId));
-
-  return { success: true };
 };
 
 export default userActivityLogsMarkAsViewed;

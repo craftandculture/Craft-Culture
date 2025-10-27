@@ -32,21 +32,27 @@ const userActivityLogsGetMany = async (params: UserActivityLogsGetManyParams) =>
   }
 
   // Filter for unread activities only
+  // Gracefully handle if lastViewedActivityAt column doesn't exist yet
   if (unreadOnly) {
-    const user = await getCurrentUser();
+    try {
+      const user = await getCurrentUser();
 
-    if (!user) {
-      throw new Error('User not authenticated');
-    }
+      if (!user) {
+        throw new Error('User not authenticated');
+      }
 
-    const [currentUser] = await db
-      .select({ lastViewedActivityAt: users.lastViewedActivityAt })
-      .from(users)
-      .where(eq(users.id, user.id))
-      .limit(1);
+      const [currentUser] = await db
+        .select({ lastViewedActivityAt: users.lastViewedActivityAt })
+        .from(users)
+        .where(eq(users.id, user.id))
+        .limit(1);
 
-    if (currentUser?.lastViewedActivityAt) {
-      whereConditions.push(gt(userActivityLogs.createdAt, currentUser.lastViewedActivityAt));
+      if (currentUser?.lastViewedActivityAt) {
+        whereConditions.push(gt(userActivityLogs.createdAt, currentUser.lastViewedActivityAt));
+      }
+    } catch (error) {
+      // If column doesn't exist, just show all activities
+      console.warn('Could not filter unread activities:', error);
     }
   }
 
