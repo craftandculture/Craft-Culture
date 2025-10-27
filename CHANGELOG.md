@@ -1,3 +1,9 @@
+## [1.41.2](https://github.com/craftandculture/Craft-Culture/compare/v1.41.1...v1.41.2) (2025-10-27)
+
+### Bug Fixes
+
+* add lastViewedActivityAt to test mocks ([9182799](https://github.com/craftandculture/Craft-Culture/commit/9182799fd4ab3ce368ea1385eb289fc09e5bc98b))
+
 ## [1.41.1](https://github.com/craftandculture/Craft-Culture/compare/v1.41.0...v1.41.1) (2025-10-27)
 
 ### Bug Fixes
