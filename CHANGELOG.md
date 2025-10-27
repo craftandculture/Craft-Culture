@@ -1,3 +1,9 @@
+## [1.39.0](https://github.com/craftandculture/Craft-Culture/compare/v1.38.1...v1.39.0) (2025-10-27)
+
+### Features
+
+* add activity bell notification and admin activity feed UI ([221c457](https://github.com/craftandculture/Craft-Culture/commit/221c4571d9bf54e195a46a46330e551e092a154d))
+
 ## [1.38.1](https://github.com/craftandculture/Craft-Culture/compare/v1.38.0...v1.38.1) (2025-10-27)
 
 ### Bug Fixes
