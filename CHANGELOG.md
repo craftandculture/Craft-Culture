@@ -1,3 +1,9 @@
+## [1.41.1](https://github.com/craftandculture/Craft-Culture/compare/v1.41.0...v1.41.1) (2025-10-27)
+
+### Bug Fixes
+
+* replace getCurrentUserId with getCurrentUser in activity logging ([b43b2b7](https://github.com/craftandculture/Craft-Culture/commit/b43b2b7d1b7f23ecbc45c706b9bf10d7f088ddd0))
+
 ## [1.41.0](https://github.com/craftandculture/Craft-Culture/compare/v1.40.0...v1.41.0) (2025-10-27)
 
 ### Features
