@@ -1,3 +1,9 @@
+## [1.39.3](https://github.com/craftandculture/Craft-Culture/compare/v1.39.2...v1.39.3) (2025-10-27)
+
+### Bug Fixes
+
+* use useMutation hook for activity logging in client components ([a609d05](https://github.com/craftandculture/Craft-Culture/commit/a609d0550f8dc15c40edfec93453217a2402a5a7))
+
 ## [1.39.2](https://github.com/craftandculture/Craft-Culture/compare/v1.39.1...v1.39.2) (2025-10-27)
 
 ### Bug Fixes
