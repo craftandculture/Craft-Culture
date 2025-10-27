@@ -1,3 +1,9 @@
+## [1.40.0](https://github.com/craftandculture/Craft-Culture/compare/v1.39.6...v1.40.0) (2025-10-27)
+
+### Features
+
+* add unread activity tracking with pulsing notification indicator ([99c64ae](https://github.com/craftandculture/Craft-Culture/commit/99c64ae47cf209d69795805384718c13e846ef14))
+
 ## [1.39.6](https://github.com/craftandculture/Craft-Culture/compare/v1.39.5...v1.39.6) (2025-10-27)
 
 ### Bug Fixes
