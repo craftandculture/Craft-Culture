@@ -2,15 +2,21 @@
 
 import { eq } from 'drizzle-orm';
 
+import getCurrentUser from '@/app/_auth/data/getCurrentUser';
 import db from '@/database/client';
 import { users } from '@/database/schema';
-import getCurrentUserId from '@/utils/getCurrentUserId';
 
 /**
  * Server action to mark all activities as viewed for the current user
  */
 const markActivitiesAsViewed = async () => {
-  const userId = await getCurrentUserId();
+  const user = await getCurrentUser();
+
+  if (!user) {
+    throw new Error('User not authenticated');
+  }
+
+  const userId = user.id;
 
   await db
     .update(users)
