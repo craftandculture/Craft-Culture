@@ -1,3 +1,9 @@
+## [1.42.1](https://github.com/craftandculture/Craft-Culture/compare/v1.42.0...v1.42.1) (2025-10-27)
+
+### Code Refactoring
+
+* remove product image from popover to reduce size ([13d3406](https://github.com/craftandculture/Craft-Culture/commit/13d3406218ca9b3eb42e9e15207f700c2c5cba6c))
+
 ## [1.42.0](https://github.com/craftandculture/Craft-Culture/compare/v1.41.5...v1.42.0) (2025-10-27)
 
 ### Features
