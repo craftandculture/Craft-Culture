@@ -6,7 +6,7 @@ import {
   IconDownload,
   IconInfoCircle,
 } from '@tabler/icons-react';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 
 import Button from '@/app/_ui/components/Button/Button';
@@ -62,9 +62,6 @@ export interface B2BCalculatorProps {
  */
 const B2BCalculator = ({ inBondPriceUsd, lineItems }: B2BCalculatorProps) => {
   const api = useTRPC();
-
-  // Activity logging mutation
-  const logActivity = useMutation(api.admin.userActivityLogs.create);
 
   // Fetch lead time settings from database
   const { data: leadTimeMinData } = useQuery(
@@ -198,21 +195,6 @@ const B2BCalculator = ({ inBondPriceUsd, lineItems }: B2BCalculatorProps) => {
       marginValue,
       productMargins,
     );
-
-    // Log B2B quote download activity
-    logActivity.mutate({
-      action: 'b2b_quote.download',
-      entityType: 'b2b_quote',
-      metadata: {
-        lineItemCount: lineItems.length,
-        currency: displayCurrency,
-        marginType,
-        marginValue,
-        importTax,
-        transferCost,
-        total: actualQuoteTotals.customerQuotePrice,
-      },
-    });
   };
 
   // Toggle currency display
