@@ -366,6 +366,18 @@ const QuotesForm = () => {
         : undefined;
 
     exportQuoteToExcel(exportLineItems, displayCurrency, total, commissionTotal);
+
+    // Log quote download activity
+    void api.admin.userActivityLogs.create.mutate({
+      action: 'quote.download',
+      entityType: 'quote',
+      metadata: {
+        lineItemCount: exportLineItems.length,
+        currency: displayCurrency,
+        customerType,
+        total,
+      },
+    });
   };
 
   // Fetch all products for inventory download
@@ -406,6 +418,15 @@ const QuotesForm = () => {
       });
 
     exportInventoryToExcel(inventoryItems);
+
+    // Log inventory download activity
+    void api.admin.userActivityLogs.create.mutate({
+      action: 'inventory.download',
+      entityType: 'inventory',
+      metadata: {
+        productCount: inventoryItems.length,
+      },
+    });
   };
 
   return (

@@ -8,6 +8,7 @@ import db from '@/database/client';
 import * as schema from '@/database/schema';
 import serverConfig from '@/server.config';
 import logger from '@/utils/logger';
+import logUserActivity from '@/utils/logUserActivity';
 
 import encrypt from '../encryption/encrypt';
 import loops from '../loops/client';
@@ -94,6 +95,22 @@ const authServerClient = betterAuth({
             },
           };
         },
+        after: async (user) => {
+          // Log new user signup for admin monitoring
+          void logUserActivity({
+            userId: user.id,
+            action: 'user.signup',
+            entityType: 'user',
+            entityId: user.id,
+            ipAddress: null,
+            userAgent: null,
+            metadata: {
+              email: user.email,
+              customerType: user.customerType,
+              role: user.role,
+            },
+          });
+        },
       },
     },
     account: {
@@ -121,27 +138,31 @@ const authServerClient = betterAuth({
         },
       },
     },
-    // session: {
-    //   create: {
-    //     after: async (session) => {
-    //       const user = await db.query.users.findFirst({
-    //         where: (users, { eq }) => eq(users.id, session.userId),
-    //       });
+    session: {
+      create: {
+        after: async (session) => {
+          const user = await db.query.users.findFirst({
+            where: (users, { eq }) => eq(users.id, session.userId),
+          });
 
-    //       if (user?.role === 'admin') {
-    //         void logAdminActivity({
-    //           adminId: session.userId,
-    //           action: 'admin.login',
-    //           ipAddress: session.ipAddress ?? undefined,
-    //           userAgent: session.userAgent ?? undefined,
-    //           metadata: {
-    //             sessionId: session.id,
-    //           },
-    //         });
-    //       }
-    //     },
-    //   },
-    // },
+          // Log all user sign-ins for admin monitoring
+          void logUserActivity({
+            userId: session.userId,
+            action: 'user.signin',
+            entityType: 'session',
+            entityId: session.id,
+            ipAddress: session.ipAddress ?? null,
+            userAgent: session.userAgent ?? null,
+            metadata: {
+              sessionId: session.id,
+              email: user?.email,
+              customerType: user?.customerType,
+              role: user?.role,
+            },
+          });
+        },
+      },
+    },
   },
 });
 
