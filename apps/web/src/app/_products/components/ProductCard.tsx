@@ -11,7 +11,7 @@ import Icon from '@/app/_ui/components/Icon/Icon';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import formatPrice from '@/utils/formatPrice';
 
-import ProductDetailsTooltip from './ProductDetailsTooltip';
+import ProductDetailsPopover from './ProductDetailsPopover';
 import type { Product } from '../controller/productsGetMany';
 
 interface ProductCardProps {
@@ -60,7 +60,7 @@ const ProductCard = ({
   };
 
   return (
-    <ProductDetailsTooltip product={product}>
+    <ProductDetailsPopover product={product}>
       <Card className="group relative flex h-full flex-col overflow-hidden shadow-sm transition-shadow hover:shadow-lg">
         {/* Product Image */}
         <div className="bg-surface-muted relative aspect-square w-full overflow-hidden">
@@ -147,7 +147,7 @@ const ProductCard = ({
         </Button>
       </div>
     </Card>
-    </ProductDetailsTooltip>
+    </ProductDetailsPopover>
   );
 };
 
