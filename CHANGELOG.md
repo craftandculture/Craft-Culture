@@ -1,3 +1,9 @@
+## [1.34.2](https://github.com/craftandculture/Craft-Culture/compare/v1.34.1...v1.34.2) (2025-10-27)
+
+### Bug Fixes
+
+* remove scroll jump and green color from product catalogue ([b1481aa](https://github.com/craftandculture/Craft-Culture/commit/b1481aab6cc35abc33c695ea06e60f639ac68861))
+
 ## [1.34.1](https://github.com/craftandculture/Craft-Culture/compare/v1.34.0...v1.34.1) (2025-10-27)
 
 ### Bug Fixes
