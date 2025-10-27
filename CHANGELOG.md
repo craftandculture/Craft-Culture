@@ -1,3 +1,9 @@
+## [1.34.1](https://github.com/craftandculture/Craft-Culture/compare/v1.34.0...v1.34.1) (2025-10-27)
+
+### Bug Fixes
+
+* remove invalid success colorRole from ProductCard button ([39a997e](https://github.com/craftandculture/Craft-Culture/commit/39a997e8e89f03bbbd4bdce59e86b3fba54d2ff9))
+
 ## [1.34.0](https://github.com/craftandculture/Craft-Culture/compare/v1.33.4...v1.34.0) (2025-10-27)
 
 ### Features
