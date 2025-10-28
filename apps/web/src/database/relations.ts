@@ -16,6 +16,10 @@ const relations = defineRelations(schema, (r) => ({
       from: r.users.id,
       to: r.passkeys.userId,
     }),
+    quotes: r.many.quotes({
+      from: r.users.id,
+      to: r.quotes.userId,
+    }),
     pricingModel: r.one.pricingModels({
       from: r.users.pricingModelId,
       to: r.pricingModels.id,
@@ -70,6 +74,13 @@ const relations = defineRelations(schema, (r) => ({
     product: r.one.products({
       from: r.productOffers.productId,
       to: r.products.id,
+      optional: false,
+    }),
+  },
+  quotes: {
+    user: r.one.users({
+      from: r.quotes.userId,
+      to: r.users.id,
       optional: false,
     }),
   },

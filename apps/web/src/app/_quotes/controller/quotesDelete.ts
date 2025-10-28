@@ -1,0 +1,46 @@
+import { TRPCError } from '@trpc/server';
+import { and, eq } from 'drizzle-orm';
+
+import db from '@/database/client';
+import { quotes } from '@/database/schema';
+import { protectedProcedure } from '@/lib/trpc/procedures';
+
+import getQuoteByIdSchema from '../schemas/getQuoteByIdSchema';
+
+/**
+ * Delete a quote by ID
+ *
+ * @example
+ *   await trpcClient.quotes.delete.mutate({ id: "uuid-here" });
+ */
+const quotesDelete = protectedProcedure
+  .input(getQuoteByIdSchema)
+  .mutation(async ({ input, ctx: { user } }) => {
+    // Verify quote exists and belongs to user
+    const existingQuote = await db.query.quotes.findFirst({
+      where: and(eq(quotes.id, input.id), eq(quotes.userId, user.id)),
+    });
+
+    if (!existingQuote) {
+      throw new TRPCError({
+        code: 'NOT_FOUND',
+        message: 'Quote not found',
+      });
+    }
+
+    try {
+      await db
+        .delete(quotes)
+        .where(and(eq(quotes.id, input.id), eq(quotes.userId, user.id)));
+
+      return { success: true };
+    } catch (error) {
+      console.error('Error deleting quote:', error);
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Failed to delete quote',
+      });
+    }
+  });
+
+export default quotesDelete;
