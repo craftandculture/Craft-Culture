@@ -1,3 +1,9 @@
+## [1.44.0](https://github.com/craftandculture/Craft-Culture/compare/v1.43.0...v1.44.0) (2025-10-28)
+
+### Features
+
+* add user management admin UI ([801dc00](https://github.com/craftandculture/Craft-Culture/commit/801dc003ffc0c78016ef145d9ea31bd68cc53c9b))
+
 ## [1.43.0](https://github.com/craftandculture/Craft-Culture/compare/v1.42.1...v1.43.0) (2025-10-28)
 
 ### Features
