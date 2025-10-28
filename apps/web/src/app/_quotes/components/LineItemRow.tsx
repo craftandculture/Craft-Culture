@@ -1,6 +1,6 @@
 'use client';
 
-import { IconInfoCircle, IconTrash } from '@tabler/icons-react';
+import { IconGripVertical, IconInfoCircle, IconTrash } from '@tabler/icons-react';
 import React, { ChangeEvent, useEffect, useState } from 'react';
 
 import ProductDetailsTooltip from '@/app/_products/components/ProductDetailsTooltip';
@@ -34,6 +34,8 @@ interface LineItemRowProps {
   onProductChange: (product: Product) => void;
   onQuantityChange: (quantity: number) => void;
   onRemove: () => void;
+  dragHandleProps?: React.HTMLAttributes<HTMLDivElement>;
+  isDragging?: boolean;
 }
 
 const LineItemRow = ({
@@ -51,6 +53,8 @@ const LineItemRow = ({
   onProductChange,
   onQuantityChange,
   onRemove,
+  dragHandleProps,
+  isDragging = false,
 }: LineItemRowProps) => {
   const [localQuantity, setLocalQuantity] = useState(quantity ?? 1);
   const [debouncedQuantity] = useDebounce(localQuantity, 300);
@@ -108,10 +112,20 @@ const LineItemRow = ({
   const offer = product?.productOffers?.[0];
 
   return (
-    <div className="space-y-3 md:space-y-2">
+    <div
+      className={`space-y-3 md:space-y-2 ${isDragging ? 'opacity-50' : ''}`}
+    >
       <div className="grid grid-cols-12 items-start gap-2 md:gap-3">
+        {/* Drag Handle */}
+        <div
+          {...dragHandleProps}
+          className="col-span-1 flex h-9 cursor-grab items-center justify-center active:cursor-grabbing md:col-span-1"
+        >
+          <Icon icon={IconGripVertical} size="sm" colorRole="muted" />
+        </div>
+
         {/* Product Selector */}
-        <div className="col-span-12 md:col-span-6">
+        <div className="col-span-11 md:col-span-5">
           {product ? (
             <ProductDetailsTooltip product={product}>
               <div>

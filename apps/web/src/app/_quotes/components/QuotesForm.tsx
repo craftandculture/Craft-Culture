@@ -1,5 +1,21 @@
 'use client';
 
+import {
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
+import type { DragEndEvent } from '@dnd-kit/core';
+import {
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { IconDownload, IconInfoCircle, IconPlaneInflight, IconPlus } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import { parseAsArrayOf, parseAsJson, useQueryState, useQueryStates } from 'nuqs';
@@ -28,6 +44,38 @@ import ProductFilters from './ProductFilters';
 import quotesSearchParams from '../search-params/filtersSearchParams';
 import exportInventoryToExcel from '../utils/exportInventoryToExcel';
 import exportQuoteToExcel from '../utils/exportQuoteToExcel';
+
+interface SortableLineItemProps {
+  id: string;
+  children: (dragHandleProps: React.HTMLAttributes<HTMLDivElement>, isDragging: boolean) => React.ReactNode;
+}
+
+const SortableLineItem = ({ id, children }: SortableLineItemProps) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  const dragHandleProps = {
+    ...attributes,
+    ...listeners,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style}>
+      {children(dragHandleProps, isDragging)}
+    </div>
+  );
+};
 
 interface URLLineItem {
   productId: string;
@@ -94,6 +142,14 @@ const QuotesForm = () => {
 
   // Currency display toggle
   const [displayCurrency, setDisplayCurrency] = useState<'USD' | 'AED'>('AED');
+
+  // Drag and drop sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
+  );
 
   // URL is the single source of truth
   const [urlLineItems, setUrlLineItems] = useQueryState<URLLineItem[]>(
@@ -296,6 +352,39 @@ const QuotesForm = () => {
       };
       void setUrlLineItems(newItems);
     }
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (!over || active.id === over.id) {
+      return;
+    }
+
+    // Find the indices of the dragged items
+    const oldIndex = lineItems.findIndex((item) => item.id === active.id);
+    const newIndex = lineItems.findIndex((item) => item.id === over.id);
+
+    if (oldIndex === -1 || newIndex === -1) {
+      return;
+    }
+
+    // Only reorder if both items are from URL (not placeholders)
+    const oldItem = lineItems[oldIndex];
+    const newItem = lineItems[newIndex];
+
+    if (oldItem?.source !== 'url' || newItem?.source !== 'url') {
+      return;
+    }
+
+    // Reorder the URL items array
+    const reorderedItems = [...urlLineItems];
+    const [movedItem] = reorderedItems.splice(oldItem.urlIndex, 1);
+    if (movedItem) {
+      reorderedItems.splice(newItem.urlIndex, 0, movedItem);
+    }
+
+    void setUrlLineItems(reorderedItems);
   };
 
   const handleDownloadExcel = () => {
@@ -558,7 +647,9 @@ const QuotesForm = () => {
         {/* Header Row - Hidden on mobile */}
         {lineItems.length > 0 && (
           <div className="hidden grid-cols-12 gap-3 px-2 md:grid">
-            <div className="col-span-6 flex justify-start">
+            {/* Drag handle column */}
+            <div className="col-span-1" />
+            <div className="col-span-5 flex justify-start">
               <Typography
                 variant="bodyXs"
                 className="text-text-muted font-medium uppercase"
@@ -605,32 +696,42 @@ const QuotesForm = () => {
         )}
 
         {/* Line Item Rows */}
-        {lineItems.map((item) => {
-          const maxQuantity =
-            item.product?.productOffers?.[0]?.availableQuantity ?? Infinity;
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+        >
+          <SortableContext
+            items={lineItems.map((item) => item.id)}
+            strategy={verticalListSortingStrategy}
+          >
+            {lineItems.map((item) => {
+              const maxQuantity =
+                item.product?.productOffers?.[0]?.availableQuantity ?? Infinity;
 
-          // Get all selected product IDs except the current one
-          const omitProductIds = lineItems
-            .map((li) => li.product?.id)
-            .filter((id) => id && id !== item.product?.id) as string[];
+              // Get all selected product IDs except the current one
+              const omitProductIds = lineItems
+                .map((li) => li.product?.id)
+                .filter((id) => id && id !== item.product?.id) as string[];
 
-          // Find the corresponding quote line item by matching productId
-          const quotedLineItem = quoteData?.lineItems.find(
-            (qli) => qli.productId === item.product?.id,
-          );
+              // Find the corresponding quote line item by matching productId
+              const quotedLineItem = quoteData?.lineItems.find(
+                (qli) => qli.productId === item.product?.id,
+              );
 
-          // Calculate per bottle price
-          const offer = item.product?.productOffers?.[0];
-          const unitCount = offer?.unitCount ?? 1;
-          const totalBottles = (item.quantity ?? 1) * unitCount;
-          const perBottlePrice =
-            quotedLineItem?.lineItemTotalUsd && totalBottles > 0
-              ? quotedLineItem.lineItemTotalUsd / totalBottles
-              : undefined;
+              // Calculate per bottle price
+              const offer = item.product?.productOffers?.[0];
+              const unitCount = offer?.unitCount ?? 1;
+              const totalBottles = (item.quantity ?? 1) * unitCount;
+              const perBottlePrice =
+                quotedLineItem?.lineItemTotalUsd && totalBottles > 0
+                  ? quotedLineItem.lineItemTotalUsd / totalBottles
+                  : undefined;
 
-          return (
-            <LineItemRow
-              key={item.id}
+              return (
+                <SortableLineItem key={item.id} id={item.id}>
+                  {(dragHandleProps, isDragging) => (
+                    <LineItemRow
               vintage={item.vintage}
               product={item.product}
               quantity={item.quantity}
@@ -663,9 +764,15 @@ const QuotesForm = () => {
               customerType={customerType}
               omitProductIds={omitProductIds}
               maxQuantity={maxQuantity}
-            />
-          );
-        })}
+              dragHandleProps={dragHandleProps}
+              isDragging={isDragging}
+                    />
+                  )}
+                </SortableLineItem>
+              );
+            })}
+          </SortableContext>
+        </DndContext>
       </div>
 
       {/* Add Row Button */}
