@@ -1,3 +1,9 @@
+## [1.44.1](https://github.com/craftandculture/Craft-Culture/compare/v1.44.0...v1.44.1) (2025-10-28)
+
+### Bug Fixes
+
+* correct Better Auth API usage in pending-approval page ([159b30a](https://github.com/craftandculture/Craft-Culture/commit/159b30ad1e5693db7acb937fc7890caebdef0be5))
+
 ## [1.44.0](https://github.com/craftandculture/Craft-Culture/compare/v1.43.0...v1.44.0) (2025-10-28)
 
 ### Features
