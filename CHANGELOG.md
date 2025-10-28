@@ -1,3 +1,9 @@
+## [1.44.2](https://github.com/craftandculture/Craft-Culture/compare/v1.44.1...v1.44.2) (2025-10-28)
+
+### Bug Fixes
+
+* correct tRPC mutation syntax in admin users page ([796e14e](https://github.com/craftandculture/Craft-Culture/commit/796e14eabce1a8bded5586aedd683e46945feec1))
+
 ## [1.44.1](https://github.com/craftandculture/Craft-Culture/compare/v1.44.0...v1.44.1) (2025-10-28)
 
 ### Bug Fixes
