@@ -1,3 +1,9 @@
+## [1.44.5](https://github.com/craftandculture/Craft-Culture/compare/v1.44.4...v1.44.5) (2025-10-28)
+
+### Bug Fixes
+
+* use correct AdminAction types for user approval/rejection ([e1296b7](https://github.com/craftandculture/Craft-Culture/commit/e1296b75f3a758ab07588c5966491aab8d89f6fc))
+
 ## [1.44.4](https://github.com/craftandculture/Craft-Culture/compare/v1.44.3...v1.44.4) (2025-10-28)
 
 ### Bug Fixes
