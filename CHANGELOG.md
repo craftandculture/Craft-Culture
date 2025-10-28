@@ -1,3 +1,9 @@
+## [1.53.2](https://github.com/craftandculture/Craft-Culture/compare/v1.53.1...v1.53.2) (2025-10-28)
+
+### Bug Fixes
+
+* use correct tRPC hooks API pattern ([5e30b29](https://github.com/craftandculture/Craft-Culture/commit/5e30b29254af5a7ab686d617c966b08aa0989957))
+
 ## [1.53.1](https://github.com/craftandculture/Craft-Culture/compare/v1.53.0...v1.53.1) (2025-10-28)
 
 ### Bug Fixes
