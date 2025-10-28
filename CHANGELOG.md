@@ -1,3 +1,9 @@
+## [1.52.0](https://github.com/craftandculture/Craft-Culture/compare/v1.51.1...v1.52.0) (2025-10-28)
+
+### Features
+
+* run database migrations automatically on build ([8960cab](https://github.com/craftandculture/Craft-Culture/commit/8960cab56d1e3d5bc7d33c38bb5507a5de7282bb))
+
 ## [1.51.1](https://github.com/craftandculture/Craft-Culture/compare/v1.51.0...v1.51.1) (2025-10-28)
 
 ### Bug Fixes
