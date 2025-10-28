@@ -138,8 +138,8 @@ const authServerClient = betterAuth({
               id: user.id,
               email: user.email,
               name: user.name,
-              customerType: user.customerType,
-              createdAt: user.createdAt,
+              customerType: user.customerType as string,
+              createdAt: user.createdAt as Date,
             });
           }
         },
