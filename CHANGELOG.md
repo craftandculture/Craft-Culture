@@ -1,3 +1,9 @@
+## [1.48.7](https://github.com/craftandculture/Craft-Culture/compare/v1.48.6...v1.48.7) (2025-10-28)
+
+### Bug Fixes
+
+* prevent download inventory button from getting stuck disabled ([5c463ea](https://github.com/craftandculture/Craft-Culture/commit/5c463ea861fa051a58999ea44a916ad81254b9be))
+
 ## [1.48.6](https://github.com/craftandculture/Craft-Culture/compare/v1.48.5...v1.48.6) (2025-10-28)
 
 ### Bug Fixes
