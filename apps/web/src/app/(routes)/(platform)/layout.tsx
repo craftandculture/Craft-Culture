@@ -27,6 +27,10 @@ const PlatformLayout = async ({ children }: React.PropsWithChildren) => {
     redirect('/welcome');
   }
 
+  if (user.approvalStatus !== 'approved') {
+    redirect('/pending-approval');
+  }
+
   return (
     <div className="bg-background-primary flex min-h-dvh flex-col">
       <header className="container flex h-14 items-center justify-between gap-4">
