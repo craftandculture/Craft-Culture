@@ -5,6 +5,7 @@ import { createTRPCRouter } from '@/lib/trpc/trpc';
 
 import signOutController from './controllers/signOut';
 import usersApprove from './controllers/usersApprove';
+import usersDelete from './controllers/usersDelete';
 import usersGetMe from './controllers/usersGetMe';
 import usersGetPaginated from './controllers/usersGetPaginated';
 import usersReject from './controllers/usersReject';
@@ -21,6 +22,7 @@ const usersRouter = createTRPCRouter({
   getPaginated: usersGetPaginated,
   approve: usersApprove,
   reject: usersReject,
+  delete: usersDelete,
 });
 
 export default usersRouter;

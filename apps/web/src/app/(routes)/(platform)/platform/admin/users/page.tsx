@@ -1,9 +1,18 @@
 'use client';
 
-import { IconCheck, IconSearch, IconX } from '@tabler/icons-react';
+import { IconCheck, IconSearch, IconTrash, IconX } from '@tabler/icons-react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 
+import AlertDialog from '@/app/_ui/components/AlertDialog/AlertDialog';
+import AlertDialogAction from '@/app/_ui/components/AlertDialog/AlertDialogAction';
+import AlertDialogCancel from '@/app/_ui/components/AlertDialog/AlertDialogCancel';
+import AlertDialogContent from '@/app/_ui/components/AlertDialog/AlertDialogContent';
+import AlertDialogDescription from '@/app/_ui/components/AlertDialog/AlertDialogDescription';
+import AlertDialogFooter from '@/app/_ui/components/AlertDialog/AlertDialogFooter';
+import AlertDialogHeader from '@/app/_ui/components/AlertDialog/AlertDialogHeader';
+import AlertDialogTitle from '@/app/_ui/components/AlertDialog/AlertDialogTitle';
+import AlertDialogTrigger from '@/app/_ui/components/AlertDialog/AlertDialogTrigger';
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
 import Card from '@/app/_ui/components/Card/Card';
@@ -48,6 +57,15 @@ const UserManagementPage = () => {
   // Reject user mutation
   const { mutate: rejectUser, isPending: isRejecting } = useMutation(
     api.users.reject.mutationOptions({
+      onSuccess: () => {
+        void refetch();
+      },
+    }),
+  );
+
+  // Delete user mutation
+  const { mutate: deleteUser, isPending: isDeleting } = useMutation(
+    api.users.delete.mutationOptions({
       onSuccess: () => {
         void refetch();
       },
@@ -228,11 +246,6 @@ const UserManagementPage = () => {
                                 </Button>
                               </>
                             )}
-                            {user.approvalStatus === 'approved' && (
-                              <Typography variant="bodyXs" className="text-text-muted">
-                                No actions
-                              </Typography>
-                            )}
                             {user.approvalStatus === 'rejected' && (
                               <Button
                                 size="sm"
@@ -244,6 +257,37 @@ const UserManagementPage = () => {
                                 <ButtonContent iconLeft={IconCheck}>Approve</ButtonContent>
                               </Button>
                             )}
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  isDisabled={isDeleting}
+                                  className="border-red-500 text-red-600 hover:bg-red-50 dark:border-red-600 dark:text-red-400 dark:hover:bg-red-900/20"
+                                >
+                                  <ButtonContent iconLeft={IconTrash}>Delete</ButtonContent>
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Delete User</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Are you sure you want to delete {user.name}? This action
+                                    cannot be undone and will permanently delete their account and
+                                    all associated data.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    onClick={() => deleteUser({ userId: user.id })}
+                                    className="bg-red-600 hover:bg-red-700 dark:bg-red-600 dark:hover:bg-red-700"
+                                  >
+                                    Delete User
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
                           </div>
                         </td>
                       </tr>
@@ -277,39 +321,72 @@ const UserManagementPage = () => {
                       </Typography>
                     </div>
 
-                    {user.approvalStatus === 'pending' && (
-                      <div className="flex gap-2">
+                    <div className="space-y-2">
+                      {user.approvalStatus === 'pending' && (
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => approveUser({ userId: user.id })}
+                            isDisabled={isApproving}
+                            className="border-green-500 text-green-600 hover:bg-green-50 dark:border-green-600 dark:text-green-400 dark:hover:bg-green-900/20 flex-1"
+                          >
+                            <ButtonContent iconLeft={IconCheck}>Approve</ButtonContent>
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => rejectUser({ userId: user.id })}
+                            isDisabled={isRejecting}
+                            className="border-red-500 text-red-600 hover:bg-red-50 dark:border-red-600 dark:text-red-400 dark:hover:bg-red-900/20 flex-1"
+                          >
+                            <ButtonContent iconLeft={IconX}>Reject</ButtonContent>
+                          </Button>
+                        </div>
+                      )}
+                      {user.approvalStatus === 'rejected' && (
                         <Button
                           size="sm"
                           variant="outline"
                           onClick={() => approveUser({ userId: user.id })}
                           isDisabled={isApproving}
-                          className="border-green-500 text-green-600 hover:bg-green-50 dark:border-green-600 dark:text-green-400 dark:hover:bg-green-900/20 flex-1"
+                          className="border-green-500 text-green-600 hover:bg-green-50 dark:border-green-600 dark:text-green-400 dark:hover:bg-green-900/20 w-full"
                         >
                           <ButtonContent iconLeft={IconCheck}>Approve</ButtonContent>
                         </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => rejectUser({ userId: user.id })}
-                          isDisabled={isRejecting}
-                          className="border-red-500 text-red-600 hover:bg-red-50 dark:border-red-600 dark:text-red-400 dark:hover:bg-red-900/20 flex-1"
-                        >
-                          <ButtonContent iconLeft={IconX}>Reject</ButtonContent>
-                        </Button>
-                      </div>
-                    )}
-                    {user.approvalStatus === 'rejected' && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => approveUser({ userId: user.id })}
-                        isDisabled={isApproving}
-                        className="border-green-500 text-green-600 hover:bg-green-50 dark:border-green-600 dark:text-green-400 dark:hover:bg-green-900/20 w-full"
-                      >
-                        <ButtonContent iconLeft={IconCheck}>Approve</ButtonContent>
-                      </Button>
-                    )}
+                      )}
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            isDisabled={isDeleting}
+                            className="border-red-500 text-red-600 hover:bg-red-50 dark:border-red-600 dark:text-red-400 dark:hover:bg-red-900/20 w-full"
+                          >
+                            <ButtonContent iconLeft={IconTrash}>Delete User</ButtonContent>
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Delete User</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Are you sure you want to delete {user.name}? This action cannot
+                              be undone and will permanently delete their account and all
+                              associated data.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => deleteUser({ userId: user.id })}
+                              className="bg-red-600 hover:bg-red-700 dark:bg-red-600 dark:hover:bg-red-700"
+                            >
+                              Delete User
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
                   </div>
                 ))}
               </div>
