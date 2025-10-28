@@ -61,7 +61,7 @@ const ProductCard = ({
 
   return (
     <ProductDetailsPopover product={product}>
-      <Card className="group relative flex h-full flex-col overflow-hidden shadow-sm transition-shadow hover:shadow-lg">
+      <Card className="group relative flex h-full min-h-[320px] flex-col overflow-hidden shadow-sm transition-shadow hover:shadow-lg sm:min-h-[360px]">
         {/* Product Image */}
         <div className="bg-surface-muted relative aspect-square w-full overflow-hidden">
         {product.imageUrl ? (
@@ -69,7 +69,7 @@ const ProductCard = ({
             src={product.imageUrl}
             alt={product.name}
             fill
-            className="object-contain p-4 transition-transform group-hover:scale-105"
+            className="object-contain p-3 transition-transform group-hover:scale-105 sm:p-4 md:p-5"
             sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, 20vw"
           />
         ) : (
@@ -84,7 +84,7 @@ const ProductCard = ({
         {/* Name */}
         <Typography
           variant="bodySm"
-          className="line-clamp-2 font-semibold leading-tight"
+          className="line-clamp-3 font-semibold leading-tight"
         >
           {product.name}
         </Typography>
@@ -92,21 +92,21 @@ const ProductCard = ({
         {/* Producer & Region & Vintage */}
         <div className="flex flex-col gap-0.5">
           {product.producer && (
-            <Typography variant="bodyXs" className="text-text-muted truncate">
+            <Typography variant="bodyXs" className="text-text-muted line-clamp-1">
               {product.producer}
             </Typography>
           )}
           <div className="flex items-center gap-1 text-xs text-text-muted">
             {product.region && (
-              <Typography variant="bodyXs" className="text-text-muted truncate">
+              <Typography variant="bodyXs" className="text-text-muted line-clamp-1">
                 {product.region}
               </Typography>
             )}
             {product.region && product.year !== null && (
-              <span>·</span>
+              <span className="shrink-0">·</span>
             )}
             {product.year !== null && (
-              <Typography variant="bodyXs" className="text-text-muted">
+              <Typography variant="bodyXs" className="text-text-muted shrink-0">
                 {product.year === 0 ? 'NV' : product.year}
               </Typography>
             )}
@@ -139,10 +139,11 @@ const ProductCard = ({
           onClick={handleAdd}
           isDisabled={isAdding || showSuccess}
           colorRole="primary"
-          className="mt-2 w-full transition-all duration-300"
+          className="mt-2 h-10 w-full transition-all duration-300 sm:h-auto"
         >
           <ButtonContent iconLeft={showSuccess ? IconCheck : IconPlus}>
-            {showSuccess ? 'Added!' : 'Add to Quote'}
+            <span className="hidden sm:inline">{showSuccess ? 'Added!' : 'Add to Quote'}</span>
+            <span className="sm:hidden">{showSuccess ? 'Added!' : 'Add'}</span>
           </ButtonContent>
         </Button>
       </div>

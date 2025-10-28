@@ -222,7 +222,7 @@ const CatalogBrowser = ({
       {/* Product Grid */}
       <div
         ref={gridRef}
-        className="max-h-[600px] overflow-y-auto rounded-lg border border-border-muted bg-background-primary p-3 shadow-sm md:max-h-[800px] md:p-4"
+        className="max-h-[60vh] overflow-y-auto rounded-lg border border-border-muted bg-background-primary p-3 shadow-sm md:max-h-[600px] md:p-4 lg:max-h-[800px]"
       >
         {isLoading ? (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 md:gap-4 lg:grid-cols-5 xl:grid-cols-6">

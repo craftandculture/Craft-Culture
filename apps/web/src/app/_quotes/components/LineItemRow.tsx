@@ -115,19 +115,19 @@ const LineItemRow = ({
 
   return (
     <div
-      className={`space-y-3 md:space-y-2 ${isDragging ? 'opacity-50' : ''}`}
+      className={`space-y-2 md:space-y-2 ${isDragging ? 'opacity-50' : ''}`}
     >
-      <div className="flex items-start gap-2 md:gap-3">
-        {/* Drag Handle */}
+      <div className="flex flex-wrap items-start gap-2 md:flex-nowrap md:gap-3">
+        {/* Drag Handle - Hidden on mobile */}
         <div
           {...dragHandleProps}
-          className="flex h-9 w-6 shrink-0 cursor-grab items-center justify-center active:cursor-grabbing"
+          className="hidden h-9 w-6 shrink-0 cursor-grab items-center justify-center active:cursor-grabbing md:flex"
         >
           <Icon icon={IconGripVertical} size="sm" colorRole="muted" />
         </div>
 
         {/* Product Selector */}
-        <div className="min-w-0 grow md:max-w-[40%]">
+        <div className="min-w-0 w-full grow md:max-w-[40%] md:w-auto">
           {product ? (
             <ProductDetailsTooltip product={product}>
               <div>
@@ -151,7 +151,7 @@ const LineItemRow = ({
 
         {/* Vintage Input - Hidden for placeholder */}
         {!isPlaceholder && (
-          <div className="w-20 shrink-0">
+          <div className="w-24 shrink-0 md:w-20">
             <Input
               type="text"
               size="md"
@@ -167,7 +167,7 @@ const LineItemRow = ({
         {!isPlaceholder && (
           <div className="flex w-full flex-wrap items-center gap-2 md:w-auto md:min-w-[180px]">
           <Input
-            className="min-w-0 grow"
+            className="min-w-0 flex-1 md:grow"
             type="number"
             size="md"
             min={1}
@@ -192,7 +192,7 @@ const LineItemRow = ({
 
         {/* Line Price - Hidden for placeholder */}
         {!isPlaceholder && (
-          <div className="flex w-20 shrink-0 flex-col gap-1 md:h-9 md:flex-row md:items-center md:justify-end md:gap-0">
+          <div className="flex w-full shrink-0 flex-col gap-1 md:h-9 md:w-20 md:flex-row md:items-center md:justify-end md:gap-0">
           <div className="flex items-center gap-1 md:hidden">
             <Typography
               variant="bodyXs"
@@ -222,7 +222,7 @@ const LineItemRow = ({
           ) : (
             <Typography
               variant="bodySm"
-              className="text-sm font-semibold leading-none md:text-xs md:font-medium"
+              className="text-base font-semibold leading-none md:text-xs md:font-medium"
             >
               {quotePrice !== undefined
                 ? formatPrice(quotePrice, quoteCurrency)
@@ -234,7 +234,7 @@ const LineItemRow = ({
 
         {/* Per Bottle Price - Hidden for placeholder */}
         {!isPlaceholder && (
-          <div className="flex w-20 shrink-0 flex-col gap-1 md:h-9 md:flex-row md:items-center md:justify-end md:gap-0">
+          <div className="flex w-full shrink-0 flex-col gap-1 md:h-9 md:w-20 md:flex-row md:items-center md:justify-end md:gap-0">
           <div className="flex items-center gap-1 md:hidden">
             <Typography
               variant="bodyXs"
@@ -264,7 +264,7 @@ const LineItemRow = ({
           ) : (
             <Typography
               variant="bodySm"
-              className="text-sm font-semibold leading-none md:text-xs md:font-medium"
+              className="text-base font-semibold leading-none md:text-xs md:font-medium"
             >
               {perBottlePrice !== undefined
                 ? formatPrice(perBottlePrice, quoteCurrency)
@@ -275,16 +275,17 @@ const LineItemRow = ({
         )}
 
         {/* Remove Button */}
-        <div className="flex h-9 w-10 shrink-0 items-center justify-end">
+        <div className="flex h-9 w-10 shrink-0 items-center justify-end md:justify-center">
           <Button
             type="button"
             size="sm"
             shape="circle"
             variant="ghost"
             onClick={onRemove}
+            className="h-11 w-11 md:h-auto md:w-auto"
           >
             <ButtonContent>
-              <Icon icon={IconTrash} colorRole="muted" />
+              <Icon icon={IconTrash} colorRole="muted" size="md" className="md:h-4 md:w-4" />
             </ButtonContent>
           </Button>
         </div>
