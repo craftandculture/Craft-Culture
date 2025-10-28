@@ -386,48 +386,51 @@ const QuotesForm = () => {
     setIsDownloading(true);
 
     try {
-      // Filter products with offers and create line items for pricing calculation
+      // Filter products with offers
       const productsWithOffers = allProductsData.data.filter(
         (product) => product.productOffers && product.productOffers.length > 0,
       );
 
-      // Create line items for the quotes API (1 case per product for pricing)
+      // Create line items for pricing calculation (1 case per product)
       const lineItemsForQuote = productsWithOffers.map((product) => ({
         productId: product.id,
         offerId: product.productOffers![0]!.id,
-        quantity: 1, // Use 1 case to get per-case pricing
+        quantity: 1,
       }));
 
-      // Batch line items to respect MAX_LINE_ITEMS limit
-      const batchSize = MAX_LINE_ITEMS;
-      const batches: typeof lineItemsForQuote[] = [];
-
-      for (let i = 0; i < lineItemsForQuote.length; i += batchSize) {
-        batches.push(lineItemsForQuote.slice(i, i + batchSize));
-      }
-
-      // Fetch calculated prices for all batches in parallel
-      const quoteBatchPromises = batches.map((batch) =>
-        trpcClient.quotes.get.query({ lineItems: batch }),
-      );
-
-      const quoteBatches = await Promise.all(quoteBatchPromises);
-
-      // Combine all quote line items into a single map for quick lookup
+      // Process in smaller batches (20 items) sequentially to avoid timeout
+      const batchSize = 20;
       const priceMap = new Map<string, number>();
 
-      for (const quoteData of quoteBatches) {
-        for (const lineItem of quoteData.lineItems) {
-          priceMap.set(lineItem.productId, lineItem.lineItemTotalUsd);
+      for (let i = 0; i < lineItemsForQuote.length; i += batchSize) {
+        const batch = lineItemsForQuote.slice(i, i + batchSize);
+
+        try {
+          const quoteData = await trpcClient.quotes.get.query({
+            lineItems: batch,
+          });
+
+          // Store calculated prices
+          for (const lineItem of quoteData.lineItems) {
+            priceMap.set(lineItem.productId, lineItem.lineItemTotalUsd);
+          }
+
+          // Small delay between batches to avoid overwhelming server
+          if (i + batchSize < lineItemsForQuote.length) {
+            await new Promise((resolve) => setTimeout(resolve, 100));
+          }
+        } catch (batchError) {
+          console.error(`Error processing batch ${i / batchSize + 1}:`, batchError);
+          // Continue with next batch even if one fails
         }
       }
 
-      // Prepare inventory items for export with calculated UAE in-bond prices
+      // Prepare inventory items with calculated prices
       const inventoryItems = productsWithOffers.map((product) => {
         const offer = product.productOffers![0];
         const unitCount = offer?.unitCount ?? 1;
 
-        // Use calculated price from quote data (UAE in-bond price)
+        // Use calculated UAE in-bond price, fallback to base price if calculation failed
         const pricePerCaseUsd = priceMap.get(product.id) ?? offer?.price ?? 0;
         const pricePerBottleUsd = pricePerCaseUsd / unitCount;
 
@@ -450,11 +453,6 @@ const QuotesForm = () => {
       exportInventoryToExcel(inventoryItems);
     } catch (error) {
       console.error('Error downloading inventory:', error);
-      console.error('Error details:', {
-        message: error instanceof Error ? error.message : 'Unknown error',
-        stack: error instanceof Error ? error.stack : undefined,
-        error,
-      });
       alert(
         `Failed to download inventory: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again or contact support if the issue persists.`,
       );
