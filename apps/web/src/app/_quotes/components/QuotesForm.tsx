@@ -450,7 +450,14 @@ const QuotesForm = () => {
       exportInventoryToExcel(inventoryItems);
     } catch (error) {
       console.error('Error downloading inventory:', error);
-      alert('Failed to download inventory. Please try again or contact support if the issue persists.');
+      console.error('Error details:', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+        error,
+      });
+      alert(
+        `Failed to download inventory: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again or contact support if the issue persists.`,
+      );
     } finally {
       setIsDownloading(false);
     }
