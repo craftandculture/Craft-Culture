@@ -1,3 +1,9 @@
+## [1.44.6](https://github.com/craftandculture/Craft-Culture/compare/v1.44.5...v1.44.6) (2025-10-28)
+
+### Bug Fixes
+
+* use correct Drizzle query syntax in notifyAdminsOfNewUser ([35cebb0](https://github.com/craftandculture/Craft-Culture/commit/35cebb0e31cc8f460f3c652e503281c628bb42e2))
+
 ## [1.44.5](https://github.com/craftandculture/Craft-Culture/compare/v1.44.4...v1.44.5) (2025-10-28)
 
 ### Bug Fixes
