@@ -23,11 +23,13 @@ const quotesUpdate = protectedProcedure
     const { id, ...updates } = input;
 
     // Verify quote exists and belongs to user
-    const existingQuote = await db.query.quotes.findFirst({
-      where: and(eq(quotes.id, id), eq(quotes.userId, user.id)),
-    });
+    const existingQuote = await db
+      .select()
+      .from(quotes)
+      .where(and(eq(quotes.id, id), eq(quotes.userId, user.id)))
+      .limit(1);
 
-    if (!existingQuote) {
+    if (!existingQuote || existingQuote.length === 0) {
       throw new TRPCError({
         code: 'NOT_FOUND',
         message: 'Quote not found',
@@ -38,7 +40,7 @@ const quotesUpdate = protectedProcedure
       const [updatedQuote] = await db
         .update(quotes)
         .set(updates)
-        .where(and(eq(quotes.id, id), eq(quotes.userId, user.id)))
+        .where(and(eq(quotes.id, id), eq(quotes.userId, user.id))!)
         .returning();
 
       if (!updatedQuote) {
