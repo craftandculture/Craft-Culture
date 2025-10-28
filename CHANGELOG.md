@@ -1,3 +1,9 @@
+## [1.53.0](https://github.com/craftandculture/Craft-Culture/compare/v1.52.0...v1.53.0) (2025-10-28)
+
+### Features
+
+* add quotes list page (Phase 4) ([0bdb764](https://github.com/craftandculture/Craft-Culture/commit/0bdb76431dc3728b4a60142bd89fba913f5c7c1b))
+
 ## [1.52.0](https://github.com/craftandculture/Craft-Culture/compare/v1.51.1...v1.52.0) (2025-10-28)
 
 ### Features
