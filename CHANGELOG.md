@@ -1,3 +1,9 @@
+## [1.44.3](https://github.com/craftandculture/Craft-Culture/compare/v1.44.2...v1.44.3) (2025-10-28)
+
+### Bug Fixes
+
+* use valid Typography variant in admin users page ([c35931b](https://github.com/craftandculture/Craft-Culture/commit/c35931bdf3d7d736d585dcf0fdb9942392bb1cdd))
+
 ## [1.44.2](https://github.com/craftandculture/Craft-Culture/compare/v1.44.1...v1.44.2) (2025-10-28)
 
 ### Bug Fixes
