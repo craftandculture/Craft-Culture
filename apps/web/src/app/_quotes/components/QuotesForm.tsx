@@ -598,12 +598,12 @@ const QuotesForm = () => {
         </div>
 
         {/* Lead Time Banner */}
-        <div className="relative overflow-hidden rounded-lg border border-border-muted bg-gradient-to-r from-fill-brand/5 via-fill-brand/10 to-fill-brand/5 px-4 py-3 shadow-sm">
-          <div className="flex items-center justify-center gap-3">
-            <div className="rounded-full bg-fill-brand/10 p-2">
-              <IconPlaneInflight className="h-4 w-4 text-text-brand sm:h-5 sm:w-5" />
+        <div className="relative overflow-hidden rounded-lg border border-border-muted bg-gradient-to-r from-fill-brand/5 via-fill-brand/10 to-fill-brand/5 px-4 py-4 shadow-sm sm:py-3">
+          <div className="flex flex-col items-center justify-center gap-3 sm:flex-row">
+            <div className="rounded-full bg-fill-brand/10 p-2.5">
+              <IconPlaneInflight className="h-5 w-5 text-text-brand" />
             </div>
-            <div className="flex flex-col sm:flex-row sm:items-baseline sm:gap-2">
+            <div className="flex flex-col gap-1 text-center sm:flex-row sm:items-baseline sm:gap-2 sm:text-left">
               <Typography variant="bodySm" className="font-medium">
                 Estimated Lead Time:
               </Typography>
@@ -615,28 +615,30 @@ const QuotesForm = () => {
         </div>
 
         {/* Currency Toggle and Save Quote Button */}
-        <div className="flex flex-col items-end gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <Button
-            type="button"
-            variant="default"
-            size="sm"
-            onClick={() => setIsSaveDialogOpen(true)}
-            isDisabled={urlLineItems.length === 0}
-            className="w-full sm:w-auto"
-          >
-            <ButtonContent iconLeft={IconBookmark}>
-              <span className="text-xs">Save Quote</span>
-            </ButtonContent>
-          </Button>
-          <div className="flex items-center gap-2">
-            <Typography variant="bodyXs" className="text-text-muted font-medium">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="order-2 sm:order-1">
+            <Button
+              type="button"
+              variant="default"
+              size="sm"
+              onClick={() => setIsSaveDialogOpen(true)}
+              isDisabled={urlLineItems.length === 0}
+              className="w-full sm:w-auto"
+            >
+              <ButtonContent iconLeft={IconBookmark}>
+                <span className="text-sm">Save Quote</span>
+              </ButtonContent>
+            </Button>
+          </div>
+          <div className="order-1 flex items-center justify-between sm:order-2 sm:justify-end sm:gap-2">
+            <Typography variant="bodySm" className="text-text-muted font-medium">
               Currency:
             </Typography>
             <div className="flex gap-0.5 rounded-md border border-border-muted bg-fill-muted p-0.5">
               <button
                 type="button"
                 onClick={() => setDisplayCurrency('USD')}
-                className={`rounded px-2 py-1 text-xs font-medium transition-colors ${
+                className={`rounded px-3 py-2 text-sm font-medium transition-colors ${
                   displayCurrency === 'USD'
                     ? 'bg-fill-primary text-text-primary'
                     : 'text-text-muted hover:text-text-primary'
@@ -647,7 +649,7 @@ const QuotesForm = () => {
               <button
                 type="button"
                 onClick={() => setDisplayCurrency('AED')}
-                className={`rounded px-2 py-1 text-xs font-medium transition-colors ${
+                className={`rounded px-3 py-2 text-sm font-medium transition-colors ${
                   displayCurrency === 'AED'
                     ? 'bg-fill-primary text-text-primary'
                     : 'text-text-muted hover:text-text-primary'
@@ -965,12 +967,12 @@ const QuotesForm = () => {
       </section>
 
       {/* Enhanced Section Divider */}
-      <div className="relative my-8 md:my-12 lg:my-16">
+      <div className="relative my-6 md:my-12 lg:my-16">
         <div className="absolute inset-0 flex items-center" aria-hidden="true">
           <div className="w-full border-t-2 border-border-primary md:border-t-[3px]" />
         </div>
         <div className="relative flex justify-center">
-          <span className="bg-fill-primary px-3 py-1.5 md:px-6 md:py-3">
+          <span className="bg-fill-primary px-4 py-2 md:px-6 md:py-3">
             <Typography
               variant="bodySm"
               className="text-sm font-bold uppercase tracking-wider text-text-primary md:text-base"

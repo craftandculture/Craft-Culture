@@ -114,7 +114,7 @@ const SaveQuoteDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="w-full max-w-[calc(100vw-2rem)] sm:max-w-md">
         {showSuccessState ? (
           <>
             <DialogHeader>
@@ -225,20 +225,20 @@ const SaveQuoteDialog = ({
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 disabled={isSaving}
-                rows={3}
-                className="w-full rounded-md border border-border-muted bg-background-primary px-3 py-2 text-sm transition-colors placeholder:text-text-muted focus:border-border-brand focus:outline-none focus:ring-2 focus:ring-fill-accent focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                rows={4}
+                className="w-full min-h-[100px] rounded-md border border-border-muted bg-background-primary px-3 py-2 text-sm transition-colors placeholder:text-text-muted focus:border-border-brand focus:outline-none focus:ring-2 focus:ring-fill-accent focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               />
             </div>
 
             {/* Action Buttons */}
-            <div className="flex gap-3">
+            <div className="flex flex-col-reverse gap-3 min-[400px]:flex-row">
               <Button
                 type="button"
                 variant="ghost"
                 size="md"
                 onClick={handleClose}
                 isDisabled={isSaving}
-                className="grow"
+                className="w-full min-[400px]:flex-1"
               >
                 <ButtonContent>Cancel</ButtonContent>
               </Button>
@@ -248,7 +248,7 @@ const SaveQuoteDialog = ({
                 size="md"
                 onClick={handleSave}
                 isDisabled={isSaving}
-                className="grow"
+                className="w-full min-[400px]:flex-1"
               >
                 <ButtonContent>{isSaving ? 'Saving...' : 'Save Quote'}</ButtonContent>
               </Button>

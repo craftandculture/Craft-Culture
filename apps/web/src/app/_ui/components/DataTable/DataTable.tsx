@@ -78,8 +78,9 @@ const DataTable = <TData, TValue>({
     data;
 
     return (
-      <div className="border-border-primary shrink-0 overflow-scroll rounded-lg border">
-        <Table className="border-0">
+      <div className="border-border-primary shrink-0 overflow-x-auto rounded-lg border md:overflow-visible">
+        <div className="min-w-[600px] md:min-w-0">
+          <Table className="border-0">
           <TableHeader className="border-0">
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id} isHeaderRow>
@@ -127,6 +128,7 @@ const DataTable = <TData, TValue>({
             )}
           </TableBody>
         </Table>
+        </div>
       </div>
     );
   }, [state, data, table, columns.length]);
