@@ -1,4 +1,7 @@
+import { eq } from 'drizzle-orm';
+
 import db from '@/database/client';
+import { users } from '@/database/schema';
 import loops from '@/lib/loops/client';
 import serverConfig from '@/server.config';
 import logger from '@/utils/logger';
@@ -19,13 +22,13 @@ interface NewUser {
 const notifyAdminsOfNewUser = async (user: NewUser) => {
   try {
     // Query all admin users
-    const adminUsers = await db.query.users.findMany({
-      where: (users, { eq }) => eq(users.role, 'admin'),
-      columns: {
-        email: true,
-        name: true,
-      },
-    });
+    const adminUsers = await db
+      .select({
+        email: users.email,
+        name: users.name,
+      })
+      .from(users)
+      .where(eq(users.role, 'admin'));
 
     if (adminUsers.length === 0) {
       logger.warn('No admin users found to notify of new user signup');
