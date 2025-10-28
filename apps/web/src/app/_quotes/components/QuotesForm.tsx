@@ -16,7 +16,7 @@ import {
 } from '@dnd-kit/sortable';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { IconDownload, IconInfoCircle, IconPlaneInflight, IconPlus } from '@tabler/icons-react';
+import { IconBookmark, IconDownload, IconInfoCircle, IconPlaneInflight, IconPlus } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import { parseAsArrayOf, parseAsJson, useQueryState, useQueryStates } from 'nuqs';
 import React, { useEffect, useMemo, useState } from 'react';
@@ -41,6 +41,7 @@ import CommissionBreakdown from './CommissionBreakdown';
 import LineItemRow from './LineItemRow';
 import PriceInfoTooltip from './PriceInfoTooltip';
 import ProductFilters from './ProductFilters';
+import SaveQuoteDialog from './SaveQuoteDialog';
 import quotesSearchParams from '../search-params/filtersSearchParams';
 import exportInventoryToExcel from '../utils/exportInventoryToExcel';
 import exportQuoteToExcel from '../utils/exportQuoteToExcel';
@@ -142,6 +143,9 @@ const QuotesForm = () => {
 
   // Currency display toggle
   const [displayCurrency, setDisplayCurrency] = useState<'USD' | 'AED'>('AED');
+
+  // Save quote dialog state
+  const [isSaveDialogOpen, setIsSaveDialogOpen] = useState(false);
 
   // Drag and drop sensors
   const sensors = useSensors(
@@ -609,8 +613,20 @@ const QuotesForm = () => {
           </div>
         </div>
 
-        {/* Currency Toggle and Inventory Download */}
-        <div className="flex flex-col items-end gap-2 sm:flex-row sm:items-center sm:justify-end">
+        {/* Currency Toggle and Save Quote Button */}
+        <div className="flex flex-col items-end gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <Button
+            type="button"
+            variant="default"
+            size="sm"
+            onClick={() => setIsSaveDialogOpen(true)}
+            isDisabled={urlLineItems.length === 0}
+            className="w-full sm:w-auto"
+          >
+            <ButtonContent iconLeft={IconBookmark}>
+              <span className="text-xs">Save Quote</span>
+            </ButtonContent>
+          </Button>
           <div className="flex items-center gap-2">
             <Typography variant="bodyXs" className="text-text-muted font-medium">
               Currency:
@@ -1032,6 +1048,24 @@ const QuotesForm = () => {
         isDownloadingInventory={isDownloading}
       />
       </section>
+
+      {/* Save Quote Dialog */}
+      <SaveQuoteDialog
+        open={isSaveDialogOpen}
+        onOpenChange={setIsSaveDialogOpen}
+        lineItems={urlLineItems}
+        quoteData={quoteData}
+        currency={displayCurrency}
+        totalUsd={quoteData?.totalUsd ?? 0}
+        totalAed={
+          displayCurrency === 'AED' && quoteData?.totalUsd
+            ? convertUsdToAed(quoteData.totalUsd)
+            : undefined
+        }
+        onSaveSuccess={(quoteId) => {
+          console.log('Quote saved successfully:', quoteId);
+        }}
+      />
     </div>
   );
 };
