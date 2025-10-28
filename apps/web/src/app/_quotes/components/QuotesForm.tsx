@@ -375,6 +375,12 @@ const QuotesForm = () => {
     console.log('Download inventory button clicked');
     setIsDownloading(true);
 
+    // Safety timeout - ensure button re-enables after 5 minutes max
+    const safetyTimeout = setTimeout(() => {
+      console.error('Download timed out after 5 minutes - resetting state');
+      setIsDownloading(false);
+    }, 300000); // 5 minutes
+
     try {
       // Fetch all products on-demand (not upfront)
       console.log('Fetching all products...');
@@ -386,7 +392,6 @@ const QuotesForm = () => {
 
       if (allProductsData.data.length === 0) {
         alert('No products available to download.');
-        setIsDownloading(false);
         return;
       }
 
@@ -475,7 +480,9 @@ const QuotesForm = () => {
         `Failed to download inventory: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again or contact support if the issue persists.`,
       );
     } finally {
+      clearTimeout(safetyTimeout);
       setIsDownloading(false);
+      console.log('Download state reset - button should be enabled again');
     }
   };
 
