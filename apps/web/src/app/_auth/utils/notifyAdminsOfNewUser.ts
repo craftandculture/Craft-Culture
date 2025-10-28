@@ -53,7 +53,7 @@ const notifyAdminsOfNewUser = async (user: NewUser) => {
           },
         });
 
-        logger.info(`Sent new user approval notification to admin: ${admin.email}`);
+        logger.dev(`Sent new user approval notification to admin: ${admin.email}`);
       } catch (error) {
         logger.error(`Failed to send notification to admin ${admin.email}:`, error);
       }
