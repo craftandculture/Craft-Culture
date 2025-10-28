@@ -8,6 +8,7 @@ import {
   IconSearch,
   IconTrash,
 } from '@tabler/icons-react';
+import { useQuery } from '@tanstack/react-query';
 import type { ColumnDef } from '@tanstack/react-table';
 import { format } from 'date-fns';
 import { useState } from 'react';
@@ -24,38 +25,40 @@ import Icon from '@/app/_ui/components/Icon/Icon';
 import Input from '@/app/_ui/components/Input/Input';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import type { Quote } from '@/database/schema';
-import useTRPC from '@/lib/trpc/browser';
+import { useTRPCClient } from '@/lib/trpc/browser';
 
 /**
  * QuotesList component displays a table of saved quotes with search,
  * filter, and action capabilities
  */
 const QuotesList = () => {
-  const api = useTRPC();
+  const trpcClient = useTRPCClient();
   const [search, setSearch] = useState('');
   const [cursor, setCursor] = useState(0);
 
-  const { data, isLoading, refetch } = api.quotes.getMany({
-    limit: 20,
-    cursor,
-    search: search || undefined,
-  });
-
-  const deleteMutation = api.quotes.delete({
-    onSuccess: () => {
-      toast.success('Quote deleted successfully');
-      void refetch();
-    },
-    onError: (error) => {
-      toast.error(`Failed to delete quote: ${error.message}`);
-    },
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ['quotes.getMany', { limit: 20, cursor, search: search || undefined }],
+    queryFn: () =>
+      trpcClient.quotes.getMany.query({
+        limit: 20,
+        cursor,
+        search: search || undefined,
+      }),
   });
 
   const handleDelete = async (quoteId: string) => {
     if (
       window.confirm('Are you sure you want to delete this quote? This cannot be undone.')
     ) {
-      await deleteMutation.mutateAsync({ id: quoteId });
+      try {
+        await trpcClient.quotes.delete.mutate({ id: quoteId });
+        toast.success('Quote deleted successfully');
+        void refetch();
+      } catch (error) {
+        toast.error(
+          `Failed to delete quote: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        );
+      }
     }
   };
 
