@@ -1,3 +1,9 @@
+## [1.44.13](https://github.com/craftandculture/Craft-Culture/compare/v1.44.12...v1.44.13) (2025-10-28)
+
+### Bug Fixes
+
+* update approval wait time from 1-2 business days to 1-2 hours ([997f541](https://github.com/craftandculture/Craft-Culture/commit/997f5415f4531a3a5ac40efe0fe57abf21cb9a9e))
+
 ## [1.44.12](https://github.com/craftandculture/Craft-Culture/compare/v1.44.11...v1.44.12) (2025-10-28)
 
 ### Bug Fixes
