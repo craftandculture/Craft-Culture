@@ -1,3 +1,9 @@
+## [1.48.0](https://github.com/craftandculture/Craft-Culture/compare/v1.47.0...v1.48.0) (2025-10-28)
+
+### Features
+
+* add local email and SMS testing for development ([e480160](https://github.com/craftandculture/Craft-Culture/commit/e480160756e09565262154e4c5f4683c27c11546))
+
 ## [1.47.0](https://github.com/craftandculture/Craft-Culture/compare/v1.46.0...v1.47.0) (2025-10-28)
 
 ### Features
