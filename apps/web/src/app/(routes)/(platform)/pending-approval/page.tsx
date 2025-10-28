@@ -73,7 +73,7 @@ const PendingApprovalPage = () => {
                   </Typography>
                   <Typography variant="bodySm" className="text-text-secondary">
                     Our team will review your account and send you an email once you&apos;ve
-                    been approved. This usually takes 1-2 business days.
+                    been approved. This usually takes 1-2 hours.
                   </Typography>
                 </div>
               </div>
