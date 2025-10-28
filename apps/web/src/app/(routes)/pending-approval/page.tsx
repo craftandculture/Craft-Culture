@@ -1,9 +1,10 @@
 'use client';
 
-import { IconClock, IconMail } from '@tabler/icons-react';
+import { IconClock, IconMail, IconRefresh } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
@@ -18,12 +19,36 @@ import useTRPC from '@/lib/trpc/browser';
  * Pending approval page shown to users waiting for admin approval
  *
  * This page is shown to both pending and rejected users (same message for softer UX)
+ * Features auto-polling every 10 seconds and manual status check
  */
 const PendingApprovalPage = () => {
   const api = useTRPC();
   const router = useRouter();
+  const [isChecking, setIsChecking] = useState(false);
 
-  const { data: user } = useQuery(api.users.getMe.queryOptions());
+  const { data: user, refetch } = useQuery(api.users.getMe.queryOptions());
+
+  // Auto-poll every 10 seconds to check if user is approved
+  useEffect(() => {
+    const interval = setInterval(() => {
+      void refetch();
+    }, 10000); // 10 seconds
+
+    return () => clearInterval(interval);
+  }, [refetch]);
+
+  // Redirect to platform when approved
+  useEffect(() => {
+    if (user?.approvalStatus === 'approved') {
+      router.push('/platform');
+    }
+  }, [user?.approvalStatus, router]);
+
+  const handleCheckStatus = async () => {
+    setIsChecking(true);
+    await refetch();
+    setIsChecking(false);
+  };
 
   const handleSignOut = () => {
     void authBrowserClient.signOut({
@@ -93,6 +118,28 @@ const PendingApprovalPage = () => {
                   support@craftculture.xyz
                 </a>
               </Typography>
+            </div>
+
+            {/* Status Check Info */}
+            <div className="bg-surface-primary space-y-3 rounded-lg border border-border-primary p-4">
+              <div className="flex items-center justify-between">
+                <Typography variant="bodyXs" className="text-text-muted">
+                  Status: <span className="text-text-primary font-medium">Pending</span>
+                </Typography>
+                <Typography variant="bodyXs" className="text-text-muted">
+                  Auto-checking every 10s
+                </Typography>
+              </div>
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={handleCheckStatus}
+                isDisabled={isChecking}
+              >
+                <ButtonContent iconLeft={IconRefresh}>
+                  {isChecking ? 'Checking...' : 'Check Status Now'}
+                </ButtonContent>
+              </Button>
             </div>
 
             {/* Sign Out Button */}
