@@ -11,6 +11,7 @@ import {
 import { useQuery } from '@tanstack/react-query';
 import type { ColumnDef } from '@tanstack/react-table';
 import { format } from 'date-fns';
+import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
@@ -33,6 +34,7 @@ import { useTRPCClient } from '@/lib/trpc/browser';
  */
 const QuotesList = () => {
   const trpcClient = useTRPCClient();
+  const router = useRouter();
   const [search, setSearch] = useState('');
   const [cursor, setCursor] = useState(0);
 
@@ -66,6 +68,19 @@ const QuotesList = () => {
     // TODO: Implement Excel download
     toast.info('Excel download coming soon');
     console.log('Download Excel for quote:', quote.id);
+  };
+
+  const handleEdit = (quote: Quote) => {
+    try {
+      // Encode line items as URL parameter
+      const itemsParam = encodeURIComponent(JSON.stringify(quote.lineItems));
+
+      // Navigate to quotes form with line items
+      router.push(`/platform/quotes?items=${itemsParam}`);
+    } catch (error) {
+      toast.error('Failed to load quote for editing');
+      console.error('Error loading quote:', error);
+    }
   };
 
   const columns: ColumnDef<Quote>[] = [
@@ -171,12 +186,7 @@ const QuotesList = () => {
                   <Icon icon={IconEye} size="sm" />
                   <span>View Details</span>
                 </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => {
-                    // TODO: Navigate to edit quote
-                    toast.info('Edit quote coming soon');
-                  }}
-                >
+                <DropdownMenuItem onClick={() => handleEdit(quote)}>
                   <Icon icon={IconEdit} size="sm" />
                   <span>Edit</span>
                 </DropdownMenuItem>
