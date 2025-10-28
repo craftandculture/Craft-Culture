@@ -1,6 +1,9 @@
+'use client';
+
 import { IconClock, IconMail } from '@tabler/icons-react';
-import { headers } from 'next/headers';
+import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
@@ -8,19 +11,29 @@ import Card from '@/app/_ui/components/Card/Card';
 import CardContent from '@/app/_ui/components/Card/CardContent';
 import Logo from '@/app/_ui/components/Logo/Logo';
 import Typography from '@/app/_ui/components/Typography/Typography';
-import authServerClient from '@/lib/better-auth/server';
+import authBrowserClient from '@/lib/better-auth/browser';
+import useTRPC from '@/lib/trpc/browser';
 
 /**
  * Pending approval page shown to users waiting for admin approval
  *
  * This page is shown to both pending and rejected users (same message for softer UX)
  */
-const PendingApprovalPage = async () => {
-  const session = await authServerClient.api.getSession({
-    headers: await headers(),
-  });
+const PendingApprovalPage = () => {
+  const api = useTRPC();
+  const router = useRouter();
 
-  const user = session?.user;
+  const { data: user } = useQuery(api.users.getMe.queryOptions());
+
+  const handleSignOut = () => {
+    void authBrowserClient.signOut({
+      fetchOptions: {
+        onSuccess: () => {
+          router.push('/sign-in');
+        },
+      },
+    });
+  };
 
   return (
     <div className="bg-background-primary flex min-h-screen flex-col items-center justify-center p-4">
@@ -83,16 +96,9 @@ const PendingApprovalPage = async () => {
             </div>
 
             {/* Sign Out Button */}
-            <form action={async () => {
-              'use server';
-              await authServerClient.api.signOut({
-                headers: await headers(),
-              });
-            }}>
-              <Button type="submit" variant="outline" className="w-full">
-                <ButtonContent>Sign Out</ButtonContent>
-              </Button>
-            </form>
+            <Button variant="outline" className="w-full" onClick={handleSignOut}>
+              <ButtonContent>Sign Out</ButtonContent>
+            </Button>
           </CardContent>
         </Card>
 
