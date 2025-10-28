@@ -1,3 +1,9 @@
+## [1.44.4](https://github.com/craftandculture/Craft-Culture/compare/v1.44.3...v1.44.4) (2025-10-28)
+
+### Bug Fixes
+
+* use correct Button variant and colorRole props ([5ae11d6](https://github.com/craftandculture/Craft-Culture/commit/5ae11d68a8ce662d36384a269ce400ff90f9bc23))
+
 ## [1.44.3](https://github.com/craftandculture/Craft-Culture/compare/v1.44.2...v1.44.3) (2025-10-28)
 
 ### Bug Fixes
