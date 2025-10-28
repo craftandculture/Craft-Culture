@@ -1,3 +1,9 @@
+## [1.48.1](https://github.com/craftandculture/Craft-Culture/compare/v1.48.0...v1.48.1) (2025-10-28)
+
+### Bug Fixes
+
+* correct mock Loops client type definition ([fc0eeff](https://github.com/craftandculture/Craft-Culture/commit/fc0eeff8b32264233ab859b39b3aef5cdcac4782))
+
 ## [1.48.0](https://github.com/craftandculture/Craft-Culture/compare/v1.47.0...v1.48.0) (2025-10-28)
 
 ### Features
