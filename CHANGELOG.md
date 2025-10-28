@@ -1,3 +1,9 @@
+## [1.45.1](https://github.com/craftandculture/Craft-Culture/compare/v1.45.0...v1.45.1) (2025-10-28)
+
+### Bug Fixes
+
+* check approval status before onboarding in layout ([c93d8ad](https://github.com/craftandculture/Craft-Culture/commit/c93d8ad6c665a31c7f38293e5a4916d6d2df0e69))
+
 ## [1.45.0](https://github.com/craftandculture/Craft-Culture/compare/v1.44.13...v1.45.0) (2025-10-28)
 
 ### Features
