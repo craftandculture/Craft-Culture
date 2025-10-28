@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm';
 import z from 'zod';
 
 import logAdminActivity from '@/app/_admin/utils/logAdminActivity';
+import notifyUserApproved from '@/app/_auth/utils/notifyUserApproved';
 import db from '@/database/client';
 import { users } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
@@ -64,6 +65,12 @@ const usersApprove = adminProcedure
         userName: user.name,
         previousStatus: user.approvalStatus,
       },
+    });
+
+    // Send approval notification email to user
+    void notifyUserApproved({
+      email: user.email,
+      name: user.name,
     });
 
     return { success: true };
