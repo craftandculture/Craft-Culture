@@ -1,3 +1,9 @@
+## [1.51.1](https://github.com/craftandculture/Craft-Culture/compare/v1.51.0...v1.51.1) (2025-10-28)
+
+### Bug Fixes
+
+* update drizzle config to load env vars for migrations ([39bcc94](https://github.com/craftandculture/Craft-Culture/commit/39bcc949b7ac6c5a98f7e6a824b9421f9cb5fbfb))
+
 ## [1.51.0](https://github.com/craftandculture/Craft-Culture/compare/v1.50.0...v1.51.0) (2025-10-28)
 
 ### Features
