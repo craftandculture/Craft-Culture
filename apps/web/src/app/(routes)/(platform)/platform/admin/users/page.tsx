@@ -29,6 +29,7 @@ type StatusFilter = 'all' | 'pending' | 'approved' | 'rejected';
  * - Filter users by approval status
  * - Search users by name or email
  * - Approve or reject user applications
+ * - Delete user accounts with confirmation
  * - Real-time status updates
  */
 const UserManagementPage = () => {
