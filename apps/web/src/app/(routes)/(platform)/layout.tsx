@@ -23,12 +23,13 @@ const PlatformLayout = async ({ children }: React.PropsWithChildren) => {
     redirect('/sign-in?next=/platform');
   }
 
-  if (user.onboardingCompletedAt === null) {
-    redirect('/welcome');
-  }
-
+  // Check approval status first - pending users shouldn't see onboarding
   if (user.approvalStatus !== 'approved') {
     redirect('/pending-approval');
+  }
+
+  if (user.onboardingCompletedAt === null) {
+    redirect('/welcome');
   }
 
   return (
