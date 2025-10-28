@@ -1,3 +1,9 @@
+## [1.56.1](https://github.com/craftandculture/Craft-Culture/compare/v1.56.0...v1.56.1) (2025-10-28)
+
+### Bug Fixes
+
+* correct URL encoding for quote line items ([a8a7328](https://github.com/craftandculture/Craft-Culture/commit/a8a7328d93a51c9588b7c4b59f153d9f7ee9c8c4))
+
 ## [1.56.0](https://github.com/craftandculture/Craft-Culture/compare/v1.55.1...v1.56.0) (2025-10-28)
 
 ### Features
