@@ -1,3 +1,9 @@
+## [1.55.1](https://github.com/craftandculture/Craft-Culture/compare/v1.55.0...v1.55.1) (2025-10-28)
+
+### Bug Fixes
+
+* invalidate quotes cache after saving quote ([1baac37](https://github.com/craftandculture/Craft-Culture/commit/1baac37f261717e6794db0a2859ef094b624529a))
+
 ## [1.55.0](https://github.com/craftandculture/Craft-Culture/compare/v1.54.0...v1.55.0) (2025-10-28)
 
 ### Features
