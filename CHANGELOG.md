@@ -1,3 +1,9 @@
+## [1.44.10](https://github.com/craftandculture/Craft-Culture/compare/v1.44.9...v1.44.10) (2025-10-28)
+
+### Bug Fixes
+
+* remove circular reference in users table schema ([9c526c2](https://github.com/craftandculture/Craft-Culture/commit/9c526c2b462cf374067d8a5839ec4c7f4080a77b))
+
 ## [1.44.9](https://github.com/craftandculture/Craft-Culture/compare/v1.44.8...v1.44.9) (2025-10-28)
 
 ### Bug Fixes
