@@ -1,3 +1,9 @@
+## [1.44.7](https://github.com/craftandculture/Craft-Culture/compare/v1.44.6...v1.44.7) (2025-10-28)
+
+### Bug Fixes
+
+* use correct logger method in notifyAdminsOfNewUser ([65a8b88](https://github.com/craftandculture/Craft-Culture/commit/65a8b88c7d3ae78fbf42241b6daa61eb5b8ba86d))
+
 ## [1.44.6](https://github.com/craftandculture/Craft-Culture/compare/v1.44.5...v1.44.6) (2025-10-28)
 
 ### Bug Fixes
