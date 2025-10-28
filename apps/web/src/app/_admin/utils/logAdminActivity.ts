@@ -6,6 +6,8 @@ export type AdminAction =
   | 'user.created'
   | 'user.updated'
   | 'user.deleted'
+  | 'user.approved'
+  | 'user.rejected'
   | 'quote.viewed'
   | 'quote.created'
   | 'quote.updated'

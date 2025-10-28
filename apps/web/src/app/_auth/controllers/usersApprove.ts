@@ -56,7 +56,7 @@ const usersApprove = adminProcedure
     // Log the approval action
     await logAdminActivity({
       adminId: ctx.user.id,
-      action: 'user_approved',
+      action: 'user.approved',
       entityType: 'user',
       entityId: userId,
       metadata: {

@@ -54,7 +54,7 @@ const usersReject = adminProcedure
     // Log the rejection action
     await logAdminActivity({
       adminId: ctx.user.id,
-      action: 'user_rejected',
+      action: 'user.rejected',
       entityType: 'user',
       entityId: userId,
       metadata: {
