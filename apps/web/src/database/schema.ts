@@ -83,9 +83,7 @@ export const users = pgTable('users', {
   }),
   approvalStatus: approvalStatus('approval_status').notNull().default('pending'),
   approvedAt: timestamp('approved_at', { mode: 'date' }),
-  approvedBy: uuid('approved_by').references(() => users.id, {
-    onDelete: 'set null',
-  }),
+  approvedBy: uuid('approved_by'),
 
   ...timestamps,
 }).enableRLS();
