@@ -1,6 +1,8 @@
 'use client';
 
 import { DialogProps } from '@radix-ui/react-dialog';
+import { IconCheck } from '@tabler/icons-react';
+import Link from 'next/link';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
@@ -12,6 +14,7 @@ import DialogContent from '@/app/_ui/components/Dialog/DialogContent';
 import DialogDescription from '@/app/_ui/components/Dialog/DialogDescription';
 import DialogHeader from '@/app/_ui/components/Dialog/DialogHeader';
 import DialogTitle from '@/app/_ui/components/Dialog/DialogTitle';
+import Icon from '@/app/_ui/components/Icon/Icon';
 import Input from '@/app/_ui/components/Input/Input';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import { useTRPCClient } from '@/lib/trpc/browser';
@@ -48,6 +51,7 @@ const SaveQuoteDialog = ({
   const [clientCompany, setClientCompany] = useState('');
   const [notes, setNotes] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [savedQuoteId, setSavedQuoteId] = useState<string | null>(null);
 
   const handleSave = async () => {
     // Validation
@@ -79,15 +83,8 @@ const SaveQuoteDialog = ({
 
       toast.success(`Quote "${quoteName}" saved successfully!`);
 
-      // Reset form
-      setQuoteName('');
-      setClientName('');
-      setClientEmail('');
-      setClientCompany('');
-      setNotes('');
-
-      // Close dialog
-      onOpenChange?.(false);
+      // Set saved quote ID to show success state
+      setSavedQuoteId(savedQuote.id);
 
       // Callback
       if (onSaveSuccess && savedQuote) {
@@ -101,17 +98,66 @@ const SaveQuoteDialog = ({
     }
   };
 
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle>Save Quote</DialogTitle>
-          <DialogDescription>
-            Save this quote for future reference or to share with clients
-          </DialogDescription>
-        </DialogHeader>
+  const handleClose = () => {
+    // Reset all form state
+    setQuoteName('');
+    setClientName('');
+    setClientEmail('');
+    setClientCompany('');
+    setNotes('');
+    setSavedQuoteId(null);
+    onOpenChange?.(false);
+  };
 
-        <DialogBody>
+  // Show success state if quote was saved
+  const showSuccessState = savedQuoteId !== null;
+
+  return (
+    <Dialog open={open} onOpenChange={handleClose}>
+      <DialogContent className="max-w-md">
+        {showSuccessState ? (
+          <>
+            <DialogHeader>
+              <DialogTitle>Quote Saved Successfully!</DialogTitle>
+              <DialogDescription>
+                Your quote has been saved and can be accessed anytime
+              </DialogDescription>
+            </DialogHeader>
+
+            <DialogBody>
+              <div className="flex flex-col items-center gap-6 py-4">
+                <div className="bg-fill-success flex h-16 w-16 items-center justify-center rounded-full">
+                  <Icon icon={IconCheck} size="xl" className="stroke-white" />
+                </div>
+
+                <div className="flex w-full flex-col gap-3">
+                  <Link href="/platform/my-quotes" onClick={handleClose}>
+                    <Button variant="default" size="md" className="w-full">
+                      <ButtonContent>View All Quotes</ButtonContent>
+                    </Button>
+                  </Link>
+                  <Button
+                    variant="outline"
+                    size="md"
+                    onClick={handleClose}
+                    className="w-full"
+                  >
+                    <ButtonContent>Create Another Quote</ButtonContent>
+                  </Button>
+                </div>
+              </div>
+            </DialogBody>
+          </>
+        ) : (
+          <>
+            <DialogHeader>
+              <DialogTitle>Save Quote</DialogTitle>
+              <DialogDescription>
+                Save this quote for future reference or to share with clients
+              </DialogDescription>
+            </DialogHeader>
+
+            <DialogBody>
           <div className="flex flex-col gap-4">
             {/* Quote Name */}
             <div className="flex flex-col gap-1.5">
@@ -190,7 +236,7 @@ const SaveQuoteDialog = ({
                 type="button"
                 variant="ghost"
                 size="md"
-                onClick={() => onOpenChange?.(false)}
+                onClick={handleClose}
                 isDisabled={isSaving}
                 className="grow"
               >
@@ -208,7 +254,9 @@ const SaveQuoteDialog = ({
               </Button>
             </div>
           </div>
-        </DialogBody>
+            </DialogBody>
+          </>
+        )}
       </DialogContent>
     </Dialog>
   );

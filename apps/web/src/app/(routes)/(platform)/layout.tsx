@@ -34,14 +34,32 @@ const PlatformLayout = async ({ children }: React.PropsWithChildren) => {
 
   return (
     <div className="bg-background-primary flex min-h-dvh flex-col">
-      <header className="container flex h-14 items-center justify-between gap-4">
-        <Link href="/platform">
-          <Logo height={24} />
-        </Link>
-        <div className="flex items-center gap-2 sm:gap-3">
-          {/* {user.role === 'admin' && <ActivityBell />} */}
-          <ThemeToggle />
-          <UserDropdown user={user} />
+      <header className="border-border-primary border-b">
+        <div className="container flex h-14 items-center justify-between gap-4">
+          <div className="flex items-center gap-6">
+            <Link href="/platform/quotes">
+              <Logo height={24} />
+            </Link>
+            <nav className="hidden items-center gap-1 md:flex">
+              <Link
+                href="/platform/quotes"
+                className="text-text-primary hover:bg-fill-secondary rounded-md px-3 py-1.5 text-sm font-medium transition-colors"
+              >
+                Create Quote
+              </Link>
+              <Link
+                href="/platform/my-quotes"
+                className="text-text-primary hover:bg-fill-secondary rounded-md px-3 py-1.5 text-sm font-medium transition-colors"
+              >
+                My Quotes
+              </Link>
+            </nav>
+          </div>
+          <div className="flex items-center gap-2 sm:gap-3">
+            {/* {user.role === 'admin' && <ActivityBell />} */}
+            <ThemeToggle />
+            <UserDropdown user={user} />
+          </div>
         </div>
       </header>
       <div className="flex-1">{children}</div>
