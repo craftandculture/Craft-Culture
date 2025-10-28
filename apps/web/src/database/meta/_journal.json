@@ -15,6 +15,13 @@
       "when": 1760214066629,
       "tag": "0001_broad_silhouette",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1761681345988,
+      "tag": "0002_cooing_microbe",
+      "breakpoints": true
     }
   ]
 }
