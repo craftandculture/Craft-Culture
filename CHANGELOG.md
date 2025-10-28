@@ -1,3 +1,9 @@
+## [1.54.0](https://github.com/craftandculture/Craft-Culture/compare/v1.53.3...v1.54.0) (2025-10-28)
+
+### Features
+
+* improve line items UI and mobile responsiveness ([892af42](https://github.com/craftandculture/Craft-Culture/commit/892af42e1075fe5c5926a91100a890f58ed4d6e5))
+
 ## [1.53.3](https://github.com/craftandculture/Craft-Culture/compare/v1.53.2...v1.53.3) (2025-10-28)
 
 ### Bug Fixes
