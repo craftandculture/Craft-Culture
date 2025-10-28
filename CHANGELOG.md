@@ -1,3 +1,9 @@
+## [1.45.2](https://github.com/craftandculture/Craft-Culture/compare/v1.45.1...v1.45.2) (2025-10-28)
+
+### Bug Fixes
+
+* move pending-approval page outside platform layout ([1ca7e05](https://github.com/craftandculture/Craft-Culture/commit/1ca7e05a402dbdff9e80597ed319723ac4652e7e))
+
 ## [1.45.1](https://github.com/craftandculture/Craft-Culture/compare/v1.45.0...v1.45.1) (2025-10-28)
 
 ### Bug Fixes
