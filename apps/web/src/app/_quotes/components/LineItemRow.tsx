@@ -111,21 +111,23 @@ const LineItemRow = ({
 
   const offer = product?.productOffers?.[0];
 
+  const isPlaceholder = !product;
+
   return (
     <div
       className={`space-y-3 md:space-y-2 ${isDragging ? 'opacity-50' : ''}`}
     >
-      <div className="grid grid-cols-12 items-start gap-2 md:gap-3">
+      <div className="flex items-start gap-2 md:gap-3">
         {/* Drag Handle */}
         <div
           {...dragHandleProps}
-          className="col-span-1 flex h-9 cursor-grab items-center justify-center active:cursor-grabbing md:col-span-1"
+          className="flex h-9 w-6 shrink-0 cursor-grab items-center justify-center active:cursor-grabbing"
         >
           <Icon icon={IconGripVertical} size="sm" colorRole="muted" />
         </div>
 
         {/* Product Selector */}
-        <div className="col-span-11 md:col-span-5">
+        <div className="min-w-0 grow md:max-w-[40%]">
           {product ? (
             <ProductDetailsTooltip product={product}>
               <div>
@@ -147,20 +149,23 @@ const LineItemRow = ({
           )}
         </div>
 
-        {/* Vintage Input */}
-        <div className="col-span-2 md:col-span-1">
-          <Input
-            type="text"
-            size="md"
-            placeholder="Year"
-            value={localVintage}
-            onChange={handleVintageInputChange}
-            isDisabled={true}
-          />
-        </div>
+        {/* Vintage Input - Hidden for placeholder */}
+        {!isPlaceholder && (
+          <div className="w-20 shrink-0">
+            <Input
+              type="text"
+              size="md"
+              placeholder="Year"
+              value={localVintage}
+              onChange={handleVintageInputChange}
+              isDisabled={true}
+            />
+          </div>
+        )}
 
-        {/* Quantity Input */}
-        <div className="col-span-4 flex flex-wrap items-center gap-2 md:col-span-2">
+        {/* Quantity Input - Hidden for placeholder */}
+        {!isPlaceholder && (
+          <div className="flex w-full flex-wrap items-center gap-2 md:w-auto md:min-w-[180px]">
           <Input
             className="min-w-0 grow"
             type="number"
@@ -182,10 +187,12 @@ const LineItemRow = ({
               ) : undefined
             }
           />
-        </div>
+          </div>
+        )}
 
-        {/* Line Price */}
-        <div className="col-span-3 flex flex-col gap-1 md:col-span-1 md:h-9 md:flex-row md:items-center md:justify-end md:gap-0">
+        {/* Line Price - Hidden for placeholder */}
+        {!isPlaceholder && (
+          <div className="flex w-20 shrink-0 flex-col gap-1 md:h-9 md:flex-row md:items-center md:justify-end md:gap-0">
           <div className="flex items-center gap-1 md:hidden">
             <Typography
               variant="bodyXs"
@@ -222,10 +229,12 @@ const LineItemRow = ({
                 : '—'}
             </Typography>
           )}
-        </div>
+          </div>
+        )}
 
-        {/* Per Bottle Price */}
-        <div className="col-span-3 flex flex-col gap-1 md:col-span-1 md:h-9 md:flex-row md:items-center md:justify-end md:gap-0">
+        {/* Per Bottle Price - Hidden for placeholder */}
+        {!isPlaceholder && (
+          <div className="flex w-20 shrink-0 flex-col gap-1 md:h-9 md:flex-row md:items-center md:justify-end md:gap-0">
           <div className="flex items-center gap-1 md:hidden">
             <Typography
               variant="bodyXs"
@@ -262,10 +271,11 @@ const LineItemRow = ({
                 : '—'}
             </Typography>
           )}
-        </div>
+          </div>
+        )}
 
         {/* Remove Button */}
-        <div className="col-span-12 mt-2 flex items-center justify-center border-t border-border-muted pt-3 md:col-span-1 md:mt-0 md:h-9 md:justify-end md:border-0 md:pt-0">
+        <div className="flex h-9 w-10 shrink-0 items-center justify-end">
           <Button
             type="button"
             size="sm"
