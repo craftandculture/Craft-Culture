@@ -1,3 +1,9 @@
+## [1.47.0](https://github.com/craftandculture/Craft-Culture/compare/v1.46.0...v1.47.0) (2025-10-28)
+
+### Features
+
+* add SMS notifications for new user signups ([030716c](https://github.com/craftandculture/Craft-Culture/commit/030716c8d8df690af622424c96fb05877d1a856b))
+
 ## [1.46.0](https://github.com/craftandculture/Craft-Culture/compare/v1.45.2...v1.46.0) (2025-10-28)
 
 ### Features
