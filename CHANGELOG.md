@@ -1,3 +1,9 @@
+## [1.49.0](https://github.com/craftandculture/Craft-Culture/compare/v1.48.7...v1.49.0) (2025-10-28)
+
+### Features
+
+* add drag-and-drop reordering for quotation builder line items ([30b4410](https://github.com/craftandculture/Craft-Culture/commit/30b441003d7fd3b11ea20e000a5691bc1c5a514d))
+
 ## [1.48.7](https://github.com/craftandculture/Craft-Culture/compare/v1.48.6...v1.48.7) (2025-10-28)
 
 ### Bug Fixes
