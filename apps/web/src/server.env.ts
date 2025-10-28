@@ -6,6 +6,10 @@ const rawEnv = {
   DB_URL: process.env.DB_URL,
   ENCRYPTION_KEY: process.env.ENCRYPTION_KEY,
   LOOPS_API_KEY: process.env.LOOPS_API_KEY,
+  TWILIO_ACCOUNT_SID: process.env.TWILIO_ACCOUNT_SID,
+  TWILIO_AUTH_TOKEN: process.env.TWILIO_AUTH_TOKEN,
+  TWILIO_PHONE_NUMBER: process.env.TWILIO_PHONE_NUMBER,
+  ADMIN_PHONE_NUMBER: process.env.ADMIN_PHONE_NUMBER,
 };
 
 const envSchema = z.object({
@@ -21,6 +25,10 @@ const envSchema = z.object({
   DB_URL: z.string(),
   ENCRYPTION_KEY: z.string(),
   LOOPS_API_KEY: z.string(),
+  TWILIO_ACCOUNT_SID: z.string().optional(),
+  TWILIO_AUTH_TOKEN: z.string().optional(),
+  TWILIO_PHONE_NUMBER: z.string().optional(),
+  ADMIN_PHONE_NUMBER: z.string().optional(),
 });
 
 const serverEnv = envSchema.parse(rawEnv);

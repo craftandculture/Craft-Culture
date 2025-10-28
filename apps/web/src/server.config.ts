@@ -9,6 +9,10 @@ const serverConfig = {
   encryptionKey: serverEnv.ENCRYPTION_KEY,
   encryptionKeyBuffer: Buffer.from(serverEnv.ENCRYPTION_KEY, 'base64'),
   loopsApiKey: serverEnv.LOOPS_API_KEY,
+  twilioAccountSid: serverEnv.TWILIO_ACCOUNT_SID,
+  twilioAuthToken: serverEnv.TWILIO_AUTH_TOKEN,
+  twilioPhoneNumber: serverEnv.TWILIO_PHONE_NUMBER,
+  adminPhoneNumber: serverEnv.ADMIN_PHONE_NUMBER,
   adminDomains: ['byont.nl', 'craftcultuze.xyz'],
 } as const;
 

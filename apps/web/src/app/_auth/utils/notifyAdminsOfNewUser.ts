@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm';
 import db from '@/database/client';
 import { users } from '@/database/schema';
 import loops from '@/lib/loops/client';
+import twilioClient from '@/lib/twilio/client';
 import serverConfig from '@/server.config';
 import logger from '@/utils/logger';
 
@@ -60,6 +61,21 @@ const notifyAdminsOfNewUser = async (user: NewUser) => {
     });
 
     await Promise.allSettled(emailPromises);
+
+    // Send SMS notification if Twilio is configured
+    if (twilioClient && serverConfig.adminPhoneNumber && serverConfig.twilioPhoneNumber) {
+      try {
+        await twilioClient.messages.create({
+          body: `🔔 New user signup!\n\n${user.name} (${user.customerType === 'b2b' ? 'B2B' : 'B2C'})\n${user.email}\n\nReview: ${adminUrl}`,
+          from: serverConfig.twilioPhoneNumber,
+          to: serverConfig.adminPhoneNumber,
+        });
+
+        logger.dev('Sent SMS notification to admin phone');
+      } catch (error) {
+        logger.error('Failed to send SMS notification:', error);
+      }
+    }
   } catch (error) {
     logger.error('Failed to notify admins of new user:', error);
   }
