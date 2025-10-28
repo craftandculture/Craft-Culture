@@ -6,6 +6,7 @@ import {
   IconMoon,
   IconSettings,
   IconSun,
+  IconUsers,
 } from '@tabler/icons-react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -84,6 +85,13 @@ const UserDropdown = ({ user }: UserDropdownProps) => {
               <Link href="/platform/admin/activity-logs">
                 <DropdownMenuContentWrapper iconLeft={IconClipboardList} align="start">
                   Activity Log
+                </DropdownMenuContentWrapper>
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link href="/platform/admin/users">
+                <DropdownMenuContentWrapper iconLeft={IconUsers} align="start">
+                  Manage Users
                 </DropdownMenuContentWrapper>
               </Link>
             </DropdownMenuItem>
