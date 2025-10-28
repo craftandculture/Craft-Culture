@@ -1,3 +1,9 @@
+## [1.48.2](https://github.com/craftandculture/Craft-Culture/compare/v1.48.1...v1.48.2) (2025-10-28)
+
+### Bug Fixes
+
+* use pricing model calculations for inventory download ([c305e93](https://github.com/craftandculture/Craft-Culture/commit/c305e93ebdee67f6c07f7cb2f74b40e2a1617252))
+
 ## [1.48.1](https://github.com/craftandculture/Craft-Culture/compare/v1.48.0...v1.48.1) (2025-10-28)
 
 ### Bug Fixes
