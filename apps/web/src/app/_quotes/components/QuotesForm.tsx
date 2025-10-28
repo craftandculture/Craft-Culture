@@ -369,35 +369,27 @@ const QuotesForm = () => {
     exportQuoteToExcel(exportLineItems, displayCurrency, total, commissionTotal);
   };
 
-  // Fetch all products for inventory download
-  const { data: allProductsData, isLoading: isLoadingInventory } = useQuery({
-    ...api.products.getMany.queryOptions({
-      limit: 10000, // Fetch all products
-    }),
-  });
-
   const [isDownloading, setIsDownloading] = useState(false);
 
   const handleDownloadInventory = async () => {
-    console.log('Download inventory clicked', {
-      hasData: !!allProductsData,
-      dataLength: allProductsData?.data.length,
-      isLoading: isLoadingInventory,
-    });
-
-    if (!allProductsData) {
-      alert('Product data is not loaded yet. Please wait and try again.');
-      return;
-    }
-
-    if (allProductsData.data.length === 0) {
-      alert('No products available to download.');
-      return;
-    }
-
+    console.log('Download inventory button clicked');
     setIsDownloading(true);
 
     try {
+      // Fetch all products on-demand (not upfront)
+      console.log('Fetching all products...');
+      const allProductsData = await trpcClient.products.getMany.query({
+        limit: 10000,
+      });
+
+      console.log(`Fetched ${allProductsData.data.length} products`);
+
+      if (allProductsData.data.length === 0) {
+        alert('No products available to download.');
+        setIsDownloading(false);
+        return;
+      }
+
       // Filter products with offers
       const productsWithOffers = allProductsData.data.filter(
         (product) => product.productOffers && product.productOffers.length > 0,
@@ -923,7 +915,7 @@ const QuotesForm = () => {
         displayCurrency={displayCurrency}
         omitProductIds={urlLineItems.map((item) => item.productId)}
         onDownloadInventory={handleDownloadInventory}
-        isDownloadingInventory={isLoadingInventory || isDownloading}
+        isDownloadingInventory={isDownloading}
       />
       </section>
     </div>
