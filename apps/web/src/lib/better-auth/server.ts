@@ -3,6 +3,7 @@ import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { nextCookies } from 'better-auth/next-js';
 import { magicLink } from 'better-auth/plugins';
 
+import notifyAdminsOfNewUser from '@/app/_auth/utils/notifyAdminsOfNewUser';
 import clientConfig from '@/client.config';
 import db from '@/database/client';
 import * as schema from '@/database/schema';
@@ -78,20 +79,39 @@ const authServerClient = betterAuth({
         defaultValue: null,
         input: true,
       },
+      approvalStatus: {
+        type: 'string',
+        required: true,
+        defaultValue: 'pending',
+        input: false,
+      },
+      approvedAt: {
+        type: 'date',
+        required: false,
+        defaultValue: null,
+        input: false,
+      },
+      approvedBy: {
+        type: 'string',
+        required: false,
+        defaultValue: null,
+        input: false,
+      },
     },
   },
   databaseHooks: {
     user: {
       create: {
         before: async (user) => {
+          const isAdmin = serverConfig.adminDomains.some((domain) =>
+            user.email.endsWith(`@${domain}`),
+          );
+
           return {
             data: {
               ...user,
-              role: serverConfig.adminDomains.some((domain) =>
-                user.email.endsWith(`@${domain}`),
-              )
-                ? 'admin'
-                : 'user',
+              role: isAdmin ? 'admin' : 'user',
+              approvalStatus: isAdmin ? 'approved' : 'pending',
             },
           };
         },
@@ -108,8 +128,20 @@ const authServerClient = betterAuth({
               email: user.email,
               customerType: user.customerType,
               role: user.role,
+              approvalStatus: user.approvalStatus,
             },
           });
+
+          // Notify admins if user needs approval
+          if (user.approvalStatus === 'pending') {
+            void notifyAdminsOfNewUser({
+              id: user.id,
+              email: user.email,
+              name: user.name,
+              customerType: user.customerType,
+              createdAt: user.createdAt,
+            });
+          }
         },
       },
     },

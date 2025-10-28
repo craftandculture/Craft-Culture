@@ -17,6 +17,9 @@ export const mockUser: User = {
   role: 'user',
   onboardingCompletedAt: null,
   pricingModelId: null,
+  approvalStatus: 'approved',
+  approvedAt: new Date(),
+  approvedBy: null,
 };
 
 /**

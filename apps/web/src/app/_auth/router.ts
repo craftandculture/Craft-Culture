@@ -4,7 +4,10 @@ import { protectedProcedure } from '@/lib/trpc/procedures';
 import { createTRPCRouter } from '@/lib/trpc/trpc';
 
 import signOutController from './controllers/signOut';
+import usersApprove from './controllers/usersApprove';
 import usersGetMe from './controllers/usersGetMe';
+import usersGetPaginated from './controllers/usersGetPaginated';
+import usersReject from './controllers/usersReject';
 import usersUpdate from './controllers/usersUpdate';
 
 const usersRouter = createTRPCRouter({
@@ -15,6 +18,9 @@ const usersRouter = createTRPCRouter({
   }),
   getManyWithPricingModels: usersGetManyWithPricingModels,
   assignPricingModel: userPricingModelsAssign,
+  getPaginated: usersGetPaginated,
+  approve: usersApprove,
+  reject: usersReject,
 });
 
 export default usersRouter;

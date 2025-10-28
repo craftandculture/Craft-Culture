@@ -28,6 +28,12 @@ export const customerType = pgEnum('user_type', ['b2b', 'b2c']);
 
 export const userRole = pgEnum('user_role', ['user', 'admin']);
 
+export const approvalStatus = pgEnum('approval_status', [
+  'pending',
+  'approved',
+  'rejected',
+]);
+
 export const sheets = pgTable('sheets', {
   id: uuid('id').primaryKey().defaultRandom(),
   name: text('name').notNull(),
@@ -73,6 +79,11 @@ export const users = pgTable('users', {
     mode: 'date',
   }),
   pricingModelId: uuid('pricing_model_id').references(() => pricingModels.id, {
+    onDelete: 'set null',
+  }),
+  approvalStatus: approvalStatus('approval_status').notNull().default('pending'),
+  approvedAt: timestamp('approved_at', { mode: 'date' }),
+  approvedBy: uuid('approved_by').references(() => users.id, {
     onDelete: 'set null',
   }),
 
