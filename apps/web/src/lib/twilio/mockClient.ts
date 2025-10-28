@@ -1,5 +1,3 @@
-import type { Twilio } from 'twilio';
-
 import logger from '@/utils/logger';
 
 /**
@@ -8,24 +6,26 @@ import logger from '@/utils/logger';
  * Logs SMS details to console instead of sending actual messages
  * Useful for local development and testing SMS flows
  */
-const createMockTwilioClient = (): Twilio => {
+const createMockTwilioClient = () => {
   return {
     messages: {
-      create: async (options) => {
+      create: async (options: unknown) => {
+        const opts = options as { to: string; from: string; body: string };
+
         logger.dev('📱 [MOCK SMS] Would send SMS:', {
-          to: options.to,
-          from: options.from,
-          body: options.body,
+          to: opts.to,
+          from: opts.from,
+          body: opts.body,
         });
 
         // Log in a user-friendly format
         console.log('\n╔════════════════════════════════════════════════════════════════╗');
         console.log('║                      📱 MOCK SMS SENT                          ║');
         console.log('╠════════════════════════════════════════════════════════════════╣');
-        console.log(`║ From: ${options.from}`);
-        console.log(`║ To: ${options.to}`);
+        console.log(`║ From: ${opts.from}`);
+        console.log(`║ To: ${opts.to}`);
         console.log('║ Body:');
-        const bodyLines = options.body?.toString().split('\n') || [];
+        const bodyLines = opts.body?.toString().split('\n') || [];
         bodyLines.forEach((line) => {
           console.log(`║   ${line}`);
         });
@@ -34,19 +34,19 @@ const createMockTwilioClient = (): Twilio => {
         return Promise.resolve({
           sid: 'MOCK_MESSAGE_SID',
           status: 'sent',
-          to: options.to as string,
-          from: options.from as string,
-          body: options.body as string,
+          to: opts.to,
+          from: opts.from,
+          body: opts.body,
           dateCreated: new Date(),
           dateUpdated: new Date(),
           dateSent: new Date(),
           accountSid: 'MOCK_ACCOUNT_SID',
           messagingServiceSid: null,
           uri: '/mock/message',
-        });
+        } as never);
       },
     },
-  } as Twilio;
+  };
 };
 
 export default createMockTwilioClient;
