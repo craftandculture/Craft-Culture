@@ -12,7 +12,7 @@ import createMockTwilioClient from './mockClient';
  */
 const twilioClient =
   serverConfig.env === 'development'
-    ? createMockTwilioClient()
+    ? (createMockTwilioClient() as unknown as ReturnType<typeof twilio>)
     : serverConfig.twilioAccountSid && serverConfig.twilioAuthToken
       ? twilio(serverConfig.twilioAccountSid, serverConfig.twilioAuthToken)
       : null;

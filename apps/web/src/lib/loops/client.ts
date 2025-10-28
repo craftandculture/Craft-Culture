@@ -10,9 +10,9 @@ import createMockLoopsClient from './mockClient';
  * In development mode, uses a mock client that logs emails to console
  * In production/preview, uses the real Loops API
  */
-const loops: Pick<LoopsClient, 'sendTransactionalEmail'> | LoopsClient =
+const loops: LoopsClient =
   serverConfig.env === 'development'
-    ? createMockLoopsClient()
+    ? (createMockLoopsClient() as unknown as LoopsClient)
     : new LoopsClient(serverConfig.loopsApiKey);
 
 export default loops;

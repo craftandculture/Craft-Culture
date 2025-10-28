@@ -1,5 +1,3 @@
-import type { LoopsClient } from 'loops';
-
 import logger from '@/utils/logger';
 
 /**
@@ -8,24 +6,29 @@ import logger from '@/utils/logger';
  * Logs email details to console instead of sending actual emails
  * Useful for local development and testing email flows
  */
-const createMockLoopsClient = (): Pick<LoopsClient, 'sendTransactionalEmail'> => {
+const createMockLoopsClient = () => {
   return {
-    sendTransactionalEmail: async (options) => {
+    sendTransactionalEmail: async (options: unknown) => {
+      const opts = options as {
+        transactionalId: string;
+        email: string;
+        dataVariables?: Record<string, unknown>;
+      };
       logger.dev('📧 [MOCK EMAIL] Would send transactional email:', {
-        template: options.transactionalId,
-        to: options.email,
-        variables: options.dataVariables,
+        template: opts.transactionalId,
+        to: opts.email,
+        variables: opts.dataVariables,
       });
 
       // Log in a user-friendly format
       console.log('\n╔════════════════════════════════════════════════════════════╗');
       console.log('║                     📧 MOCK EMAIL SENT                     ║');
       console.log('╠════════════════════════════════════════════════════════════╣');
-      console.log(`║ Template: ${options.transactionalId}`);
-      console.log(`║ To: ${options.email}`);
+      console.log(`║ Template: ${opts.transactionalId}`);
+      console.log(`║ To: ${opts.email}`);
       console.log('║ Variables:');
-      if (options.dataVariables) {
-        Object.entries(options.dataVariables).forEach(([key, value]) => {
+      if (opts.dataVariables) {
+        Object.entries(opts.dataVariables).forEach(([key, value]) => {
           console.log(`║   - ${key}: ${value}`);
         });
       }
@@ -33,8 +36,8 @@ const createMockLoopsClient = (): Pick<LoopsClient, 'sendTransactionalEmail'> =>
 
       return {
         success: true,
-        transactionalId: options.transactionalId,
-      };
+        transactionalId: opts.transactionalId,
+      } as never;
     },
   };
 };

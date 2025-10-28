@@ -1,7 +1,7 @@
 'use client';
 
 import { IconDownload, IconInfoCircle, IconPlaneInflight, IconPlus } from '@tabler/icons-react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { parseAsArrayOf, parseAsJson, useQueryState, useQueryStates } from 'nuqs';
 import React, { useEffect, useMemo, useState } from 'react';
 
@@ -58,6 +58,7 @@ type DerivedLineItem =
 
 const QuotesForm = () => {
   const api = useTRPC();
+  const queryClient = useQueryClient();
 
   // Get current user to check customer type
   const { data: userData } = useQuery(api.users.getMe.queryOptions());
@@ -375,18 +376,57 @@ const QuotesForm = () => {
     }),
   });
 
-  const handleDownloadInventory = () => {
+  const handleDownloadInventory = async () => {
     if (!allProductsData || allProductsData.data.length === 0) {
       return;
     }
 
-    // Prepare inventory items for export with both USD and AED pricing
-    const inventoryItems = allProductsData.data
-      .filter((product) => product.productOffers && product.productOffers.length > 0)
-      .map((product) => {
+    try {
+      // Filter products with offers and create line items for pricing calculation
+      const productsWithOffers = allProductsData.data.filter(
+        (product) => product.productOffers && product.productOffers.length > 0,
+      );
+
+      // Create line items for the quotes API (1 case per product for pricing)
+      const lineItemsForQuote = productsWithOffers.map((product) => ({
+        productId: product.id,
+        offerId: product.productOffers![0]!.id,
+        quantity: 1, // Use 1 case to get per-case pricing
+      }));
+
+      // Batch line items to respect MAX_LINE_ITEMS limit
+      const batchSize = MAX_LINE_ITEMS;
+      const batches: typeof lineItemsForQuote[] = [];
+
+      for (let i = 0; i < lineItemsForQuote.length; i += batchSize) {
+        batches.push(lineItemsForQuote.slice(i, i + batchSize));
+      }
+
+      // Fetch calculated prices for all batches in parallel
+      const quoteBatchPromises = batches.map((batch) =>
+        queryClient.fetchQuery(
+          api.quotes.get.queryOptions({ lineItems: batch }),
+        ),
+      );
+
+      const quoteBatches = await Promise.all(quoteBatchPromises);
+
+      // Combine all quote line items into a single map for quick lookup
+      const priceMap = new Map<string, number>();
+
+      for (const quoteData of quoteBatches) {
+        for (const lineItem of quoteData.lineItems) {
+          priceMap.set(lineItem.productId, lineItem.lineItemTotalUsd);
+        }
+      }
+
+      // Prepare inventory items for export with calculated UAE in-bond prices
+      const inventoryItems = productsWithOffers.map((product) => {
         const offer = product.productOffers![0];
         const unitCount = offer?.unitCount ?? 1;
-        const pricePerCaseUsd = offer?.price ?? 0;
+
+        // Use calculated price from quote data (UAE in-bond price)
+        const pricePerCaseUsd = priceMap.get(product.id) ?? offer?.price ?? 0;
         const pricePerBottleUsd = pricePerCaseUsd / unitCount;
 
         return {
@@ -405,7 +445,11 @@ const QuotesForm = () => {
         };
       });
 
-    exportInventoryToExcel(inventoryItems);
+      exportInventoryToExcel(inventoryItems);
+    } catch (error) {
+      console.error('Error downloading inventory:', error);
+      // Optionally show an error message to the user
+    }
   };
 
   return (
