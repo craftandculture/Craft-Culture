@@ -1,3 +1,9 @@
+## [1.50.0](https://github.com/craftandculture/Craft-Culture/compare/v1.49.0...v1.50.0) (2025-10-28)
+
+### Features
+
+* add database schema and backend API for save quote feature ([57641cf](https://github.com/craftandculture/Craft-Culture/commit/57641cf13cd630e0a3b91a558077bfb28f64e103))
+
 ## [1.49.0](https://github.com/craftandculture/Craft-Culture/compare/v1.48.7...v1.49.0) (2025-10-28)
 
 ### Features
