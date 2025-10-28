@@ -1,7 +1,5 @@
 'use client';
 
-/* eslint-disable react-compiler/react-compiler */
-
 import {
   IconDots,
   IconDownload,
@@ -37,13 +35,13 @@ const QuotesList = () => {
   const [search, setSearch] = useState('');
   const [cursor, setCursor] = useState(0);
 
-  const { data, isLoading, refetch } = api.quotes.getMany.useQuery({
+  const { data, isLoading, refetch } = api.quotes.getMany({
     limit: 20,
     cursor,
     search: search || undefined,
   });
 
-  const deleteMutation = api.quotes.delete.useMutation({
+  const deleteMutation = api.quotes.delete({
     onSuccess: () => {
       toast.success('Quote deleted successfully');
       void refetch();
