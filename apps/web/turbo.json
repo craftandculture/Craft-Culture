@@ -16,7 +16,11 @@
         "LOOPS_API_KEY",
         "BETTER_AUTH_SECRET",
         "BETTER_AUTH_URL",
-        "WAREHOUSE_API_KEY"
+        "WAREHOUSE_API_KEY",
+        "TWILIO_ACCOUNT_SID",
+        "TWILIO_AUTH_TOKEN",
+        "TWILIO_PHONE_NUMBER",
+        "ADMIN_PHONE_NUMBER"
       ]
     },
     "dev": {
