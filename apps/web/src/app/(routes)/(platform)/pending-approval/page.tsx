@@ -1,4 +1,5 @@
 import { IconClock, IconMail } from '@tabler/icons-react';
+import { headers } from 'next/headers';
 import Link from 'next/link';
 
 import Button from '@/app/_ui/components/Button/Button';
@@ -16,7 +17,7 @@ import authServerClient from '@/lib/better-auth/server';
  */
 const PendingApprovalPage = async () => {
   const session = await authServerClient.api.getSession({
-    headers: await authServerClient.$headers(),
+    headers: await headers(),
   });
 
   const user = session?.user;
@@ -85,7 +86,7 @@ const PendingApprovalPage = async () => {
             <form action={async () => {
               'use server';
               await authServerClient.api.signOut({
-                headers: await authServerClient.$headers(),
+                headers: await headers(),
               });
             }}>
               <Button type="submit" variant="outline" className="w-full">
