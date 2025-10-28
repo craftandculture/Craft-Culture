@@ -107,7 +107,8 @@ const UserManagementPage = () => {
               {(['all', 'pending', 'approved', 'rejected'] as const).map((status) => (
                 <Button
                   key={status}
-                  variant={statusFilter === status ? 'primary' : 'outline'}
+                  variant={statusFilter === status ? 'default' : 'outline'}
+                  colorRole={statusFilter === status ? 'brand' : 'primary'}
                   size="sm"
                   onClick={() => setStatusFilter(status)}
                 >
