@@ -16,9 +16,11 @@ import getQuoteByIdSchema from '../schemas/getQuoteByIdSchema';
 const quotesGetOne = protectedProcedure
   .input(getQuoteByIdSchema)
   .query(async ({ input, ctx: { user } }) => {
-    const quote = await db.query.quotes.findFirst({
-      where: and(eq(quotes.id, input.id), eq(quotes.userId, user.id)),
-    });
+    const [quote] = await db
+      .select()
+      .from(quotes)
+      .where(and(eq(quotes.id, input.id), eq(quotes.userId, user.id)))
+      .limit(1);
 
     if (!quote) {
       throw new TRPCError({
