@@ -1,3 +1,9 @@
+## [1.55.0](https://github.com/craftandculture/Craft-Culture/compare/v1.54.0...v1.55.0) (2025-10-28)
+
+### Features
+
+* add navigation and post-save flow for quotes ([aff4c95](https://github.com/craftandculture/Craft-Culture/commit/aff4c95ed7841d821999003d4dfdc0c1fc26f9fc))
+
 ## [1.54.0](https://github.com/craftandculture/Craft-Culture/compare/v1.53.3...v1.54.0) (2025-10-28)
 
 ### Features
