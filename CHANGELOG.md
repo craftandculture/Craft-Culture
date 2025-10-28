@@ -1,3 +1,9 @@
+## [1.43.0](https://github.com/craftandculture/Craft-Culture/compare/v1.42.1...v1.43.0) (2025-10-28)
+
+### Features
+
+* implement user approval system (backend) ([4730436](https://github.com/craftandculture/Craft-Culture/commit/47304365a0a5d6c7ad273f9e0dfd48073b0e3800))
+
 ## [1.42.1](https://github.com/craftandculture/Craft-Culture/compare/v1.42.0...v1.42.1) (2025-10-27)
 
 ### Code Refactoring
