@@ -80,11 +80,11 @@ const QuotesList = () => {
     },
     {
       accessorKey: 'clientName',
-      header: 'Client',
+      header: () => <span className="hidden md:inline">Client</span>,
       cell: ({ row }) => {
         const { clientName, clientCompany } = row.original;
         return (
-          <div className="flex flex-col gap-0.5">
+          <div className="hidden flex-col gap-0.5 md:flex">
             {clientName && (
               <Typography variant="bodySm">{clientName}</Typography>
             )}
@@ -139,9 +139,9 @@ const QuotesList = () => {
     },
     {
       accessorKey: 'createdAt',
-      header: 'Created',
+      header: () => <span className="hidden md:inline">Created</span>,
       cell: ({ row }) => (
-        <Typography variant="bodySm" colorRole="muted">
+        <Typography variant="bodySm" colorRole="muted" className="hidden md:block">
           {format(new Date(row.original.createdAt), 'MMM d, yyyy')}
         </Typography>
       ),
@@ -216,11 +216,11 @@ const QuotesList = () => {
       {/* Search Input */}
       <div className="flex items-center gap-2">
         <Input
-          placeholder="Search by quote name, client name, or company..."
+          placeholder="Search quotes..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           iconLeft={IconSearch}
-          className="max-w-md"
+          className="w-full md:max-w-md"
         />
       </div>
 
