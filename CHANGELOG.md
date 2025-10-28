@@ -1,3 +1,9 @@
+## [1.48.3](https://github.com/craftandculture/Craft-Culture/compare/v1.48.2...v1.48.3) (2025-10-28)
+
+### Bug Fixes
+
+* add loading state and error handling for inventory download ([0c9748e](https://github.com/craftandculture/Craft-Culture/commit/0c9748ec030f9bf851e52d1f4effdd18b68597d6))
+
 ## [1.48.2](https://github.com/craftandculture/Craft-Culture/compare/v1.48.1...v1.48.2) (2025-10-28)
 
 ### Bug Fixes
