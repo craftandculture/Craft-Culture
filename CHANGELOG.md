@@ -1,3 +1,9 @@
+## [1.53.3](https://github.com/craftandculture/Craft-Culture/compare/v1.53.2...v1.53.3) (2025-10-28)
+
+### Bug Fixes
+
+* use tRPC client with vanilla React Query ([6ef0f98](https://github.com/craftandculture/Craft-Culture/commit/6ef0f98049012d48edce1fb4abcbfddda587e821))
+
 ## [1.53.2](https://github.com/craftandculture/Craft-Culture/compare/v1.53.1...v1.53.2) (2025-10-28)
 
 ### Bug Fixes
