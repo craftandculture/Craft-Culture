@@ -1,3 +1,9 @@
+## [1.53.1](https://github.com/craftandculture/Craft-Culture/compare/v1.53.0...v1.53.1) (2025-10-28)
+
+### Bug Fixes
+
+* replace CardHeader with CardTitle and CardDescription ([897879c](https://github.com/craftandculture/Craft-Culture/commit/897879c4e94d8240a35f447654768f34f7b20ccd))
+
 ## [1.53.0](https://github.com/craftandculture/Craft-Culture/compare/v1.52.0...v1.53.0) (2025-10-28)
 
 ### Features
