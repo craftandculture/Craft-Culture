@@ -1,3 +1,9 @@
+## [1.48.4](https://github.com/craftandculture/Craft-Culture/compare/v1.48.3...v1.48.4) (2025-10-28)
+
+### Bug Fixes
+
+* use tRPC client directly for inventory download API calls ([1f1be46](https://github.com/craftandculture/Craft-Culture/commit/1f1be461782feafc207dc76da651f4608eafb94d))
+
 ## [1.48.3](https://github.com/craftandculture/Craft-Culture/compare/v1.48.2...v1.48.3) (2025-10-28)
 
 ### Bug Fixes
