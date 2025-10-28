@@ -1,3 +1,9 @@
+## [1.45.0](https://github.com/craftandculture/Craft-Culture/compare/v1.44.13...v1.45.0) (2025-10-28)
+
+### Features
+
+* add user deletion with confirmation dialog in admin panel ([26452fb](https://github.com/craftandculture/Craft-Culture/commit/26452fb46cb288d6d6b9ab1a2b6f73cd27a83938))
+
 ## [1.44.13](https://github.com/craftandculture/Craft-Culture/compare/v1.44.12...v1.44.13) (2025-10-28)
 
 ### Bug Fixes
