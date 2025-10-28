@@ -1,3 +1,9 @@
+## [1.44.12](https://github.com/craftandculture/Craft-Culture/compare/v1.44.11...v1.44.12) (2025-10-28)
+
+### Bug Fixes
+
+* convert pending-approval page to client component ([be7676c](https://github.com/craftandculture/Craft-Culture/commit/be7676cbe1007eb9616fc13f732b90a9b02fb941))
+
 ## [1.44.11](https://github.com/craftandculture/Craft-Culture/compare/v1.44.10...v1.44.11) (2025-10-28)
 
 ### Bug Fixes
