@@ -1,3 +1,9 @@
+## [1.44.11](https://github.com/craftandculture/Craft-Culture/compare/v1.44.10...v1.44.11) (2025-10-28)
+
+### Bug Fixes
+
+* add type assertions for Better Auth user fields ([38ac6d8](https://github.com/craftandculture/Craft-Culture/commit/38ac6d8a814a01fb69c4cf13f1600eb84c7ccfce))
+
 ## [1.44.10](https://github.com/craftandculture/Craft-Culture/compare/v1.44.9...v1.44.10) (2025-10-28)
 
 ### Bug Fixes
