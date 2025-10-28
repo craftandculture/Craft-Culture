@@ -1,7 +1,7 @@
 'use client';
 
 import { IconDownload, IconInfoCircle, IconPlaneInflight, IconPlus } from '@tabler/icons-react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { parseAsArrayOf, parseAsJson, useQueryState, useQueryStates } from 'nuqs';
 import React, { useEffect, useMemo, useState } from 'react';
 
@@ -16,7 +16,7 @@ import PopoverContent from '@/app/_ui/components/Popover/PopoverContent';
 import PopoverTrigger from '@/app/_ui/components/Popover/PopoverTrigger';
 import Skeleton from '@/app/_ui/components/Skeleton/Skeleton';
 import Typography from '@/app/_ui/components/Typography/Typography';
-import useTRPC from '@/lib/trpc/browser';
+import useTRPC, { useTRPCClient } from '@/lib/trpc/browser';
 import convertUsdToAed from '@/utils/convertUsdToAed';
 import formatPrice from '@/utils/formatPrice';
 
@@ -58,7 +58,7 @@ type DerivedLineItem =
 
 const QuotesForm = () => {
   const api = useTRPC();
-  const queryClient = useQueryClient();
+  const trpcClient = useTRPCClient();
 
   // Get current user to check customer type
   const { data: userData } = useQuery(api.users.getMe.queryOptions());
@@ -408,9 +408,7 @@ const QuotesForm = () => {
 
       // Fetch calculated prices for all batches in parallel
       const quoteBatchPromises = batches.map((batch) =>
-        queryClient.fetchQuery(
-          api.quotes.get.queryOptions({ lineItems: batch }),
-        ),
+        trpcClient.quotes.get.query({ lineItems: batch }),
       );
 
       const quoteBatches = await Promise.all(quoteBatchPromises);
