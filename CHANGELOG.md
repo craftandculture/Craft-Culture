@@ -1,3 +1,9 @@
+## [1.44.9](https://github.com/craftandculture/Craft-Culture/compare/v1.44.8...v1.44.9) (2025-10-28)
+
+### Bug Fixes
+
+* add explicit return type to usersGetMe query ([f939575](https://github.com/craftandculture/Craft-Culture/commit/f939575566f3718ad00ed3926852176ab1ab2cca))
+
 ## [1.44.8](https://github.com/craftandculture/Craft-Culture/compare/v1.44.7...v1.44.8) (2025-10-28)
 
 ### Bug Fixes
