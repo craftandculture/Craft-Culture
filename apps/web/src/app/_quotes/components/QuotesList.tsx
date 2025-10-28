@@ -72,8 +72,19 @@ const QuotesList = () => {
 
   const handleEdit = (quote: Quote) => {
     try {
-      // Encode line items as URL parameter
-      const itemsParam = encodeURIComponent(JSON.stringify(quote.lineItems));
+      // Format line items for nuqs parseAsArrayOf(parseAsJson(...))
+      // Each array element should be comma-separated JSON objects
+      const lineItemsArray = quote.lineItems as Array<{
+        productId: string;
+        offerId: string;
+        quantity: number;
+        vintage?: string;
+      }>;
+
+      // Stringify each item and join with commas
+      const itemsParam = lineItemsArray
+        .map((item) => encodeURIComponent(JSON.stringify(item)))
+        .join(',');
 
       // Navigate to quotes form with line items
       router.push(`/platform/quotes?items=${itemsParam}`);
