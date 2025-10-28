@@ -1,3 +1,9 @@
+## [1.44.8](https://github.com/craftandculture/Craft-Culture/compare/v1.44.7...v1.44.8) (2025-10-28)
+
+### Bug Fixes
+
+* correct parameter destructuring in usersGetMe query ([044d399](https://github.com/craftandculture/Craft-Culture/commit/044d399cc4c16557c6dcca07df3e3e4e504959b5))
+
 ## [1.44.7](https://github.com/craftandculture/Craft-Culture/compare/v1.44.6...v1.44.7) (2025-10-28)
 
 ### Bug Fixes
