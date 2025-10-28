@@ -1,3 +1,9 @@
+## [1.57.0](https://github.com/craftandculture/Craft-Culture/compare/v1.56.1...v1.57.0) (2025-10-28)
+
+### Features
+
+* comprehensive mobile and desktop UX/UI improvements ([ef180e1](https://github.com/craftandculture/Craft-Culture/commit/ef180e14b02e4902d10a903781293d99e47bec8c))
+
 ## [1.56.1](https://github.com/craftandculture/Craft-Culture/compare/v1.56.0...v1.56.1) (2025-10-28)
 
 ### Bug Fixes
