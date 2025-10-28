@@ -1,3 +1,9 @@
+## [1.48.5](https://github.com/craftandculture/Craft-Culture/compare/v1.48.4...v1.48.5) (2025-10-28)
+
+### Bug Fixes
+
+* implement sequential batching for inventory download ([6e8c200](https://github.com/craftandculture/Craft-Culture/commit/6e8c20050dec4acd3a0927cd059491ffb314aeea))
+
 ## [1.48.4](https://github.com/craftandculture/Craft-Culture/compare/v1.48.3...v1.48.4) (2025-10-28)
 
 ### Bug Fixes
