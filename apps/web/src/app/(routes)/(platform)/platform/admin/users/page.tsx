@@ -91,7 +91,7 @@ const UserManagementPage = () => {
       <div className="space-y-6">
         {/* Header */}
         <div>
-          <Typography variant="headingXl" className="font-bold">
+          <Typography variant="displaySm" className="font-bold">
             User Management
           </Typography>
           <Typography variant="bodyMd" className="text-text-secondary mt-1">
