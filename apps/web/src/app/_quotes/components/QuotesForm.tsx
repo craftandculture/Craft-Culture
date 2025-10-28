@@ -17,7 +17,7 @@ import {
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { IconBookmark, IconDownload, IconInfoCircle, IconPlaneInflight, IconPlus } from '@tabler/icons-react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { parseAsArrayOf, parseAsJson, useQueryState, useQueryStates } from 'nuqs';
 import React, { useEffect, useMemo, useState } from 'react';
 
@@ -108,6 +108,7 @@ type DerivedLineItem =
 const QuotesForm = () => {
   const api = useTRPC();
   const trpcClient = useTRPCClient();
+  const queryClient = useQueryClient();
 
   // Get current user to check customer type
   const { data: userData } = useQuery(api.users.getMe.queryOptions());
@@ -1064,6 +1065,7 @@ const QuotesForm = () => {
         }
         onSaveSuccess={(quoteId) => {
           console.log('Quote saved successfully:', quoteId);
+          void queryClient.invalidateQueries({ queryKey: ['quotes.getMany'] });
         }}
       />
     </div>
