@@ -1,12 +1,12 @@
-import type { Config } from 'drizzle-kit';
+import 'dotenv/config';
 
-import serverConfig from '@/server.config';
+import type { Config } from 'drizzle-kit';
 
 export default {
   schema: './src/database/schema.ts',
   out: './src/database',
   dialect: 'postgresql',
   dbCredentials: {
-    url: serverConfig.dbUrl
-  }
+    url: process.env.DB_URL!,
+  },
 } satisfies Config;
