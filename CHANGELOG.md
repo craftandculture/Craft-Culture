@@ -1,3 +1,13 @@
+## [1.51.0](https://github.com/craftandculture/Craft-Culture/compare/v1.50.0...v1.51.0) (2025-10-28)
+
+### Features
+
+* implement save quote dialog and integration (Phase 3) ([ef6fb8d](https://github.com/craftandculture/Craft-Culture/commit/ef6fb8d7a1320ef6909906e6b4543b60fefc5bb6))
+
+### Bug Fixes
+
+* resolve TypeScript errors in quote controllers ([b00ce44](https://github.com/craftandculture/Craft-Culture/commit/b00ce4454de51ac41acdf49d4ad2c24bb53ad93b))
+
 ## [1.50.0](https://github.com/craftandculture/Craft-Culture/compare/v1.49.0...v1.50.0) (2025-10-28)
 
 ### Features
