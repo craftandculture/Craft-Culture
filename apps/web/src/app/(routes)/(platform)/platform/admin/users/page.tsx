@@ -37,22 +37,22 @@ const UserManagementPage = () => {
   });
 
   // Approve user mutation
-  const approveMutation = useMutation({
-    mutationFn: (userId: string) =>
-      api.users.approve.mutate({ userId }),
-    onSuccess: () => {
-      void refetch();
-    },
-  });
+  const { mutate: approveUser, isPending: isApproving } = useMutation(
+    api.users.approve.mutationOptions({
+      onSuccess: () => {
+        void refetch();
+      },
+    }),
+  );
 
   // Reject user mutation
-  const rejectMutation = useMutation({
-    mutationFn: (userId: string) =>
-      api.users.reject.mutate({ userId }),
-    onSuccess: () => {
-      void refetch();
-    },
-  });
+  const { mutate: rejectUser, isPending: isRejecting } = useMutation(
+    api.users.reject.mutationOptions({
+      onSuccess: () => {
+        void refetch();
+      },
+    }),
+  );
 
   const users = data?.data ?? [];
   const totalCount = data?.meta.totalCount ?? 0;
@@ -210,8 +210,8 @@ const UserManagementPage = () => {
                                 <Button
                                   size="sm"
                                   variant="outline"
-                                  onClick={() => approveMutation.mutate(user.id)}
-                                  isDisabled={approveMutation.isPending}
+                                  onClick={() => approveUser({ userId: user.id })}
+                                  isDisabled={isApproving}
                                   className="border-green-500 text-green-600 hover:bg-green-50 dark:border-green-600 dark:text-green-400 dark:hover:bg-green-900/20"
                                 >
                                   <ButtonContent iconLeft={IconCheck}>Approve</ButtonContent>
@@ -219,8 +219,8 @@ const UserManagementPage = () => {
                                 <Button
                                   size="sm"
                                   variant="outline"
-                                  onClick={() => rejectMutation.mutate(user.id)}
-                                  isDisabled={rejectMutation.isPending}
+                                  onClick={() => rejectUser({ userId: user.id })}
+                                  isDisabled={isRejecting}
                                   className="border-red-500 text-red-600 hover:bg-red-50 dark:border-red-600 dark:text-red-400 dark:hover:bg-red-900/20"
                                 >
                                   <ButtonContent iconLeft={IconX}>Reject</ButtonContent>
@@ -236,8 +236,8 @@ const UserManagementPage = () => {
                               <Button
                                 size="sm"
                                 variant="outline"
-                                onClick={() => approveMutation.mutate(user.id)}
-                                isDisabled={approveMutation.isPending}
+                                onClick={() => approveUser({ userId: user.id })}
+                                isDisabled={isApproving}
                                 className="border-green-500 text-green-600 hover:bg-green-50 dark:border-green-600 dark:text-green-400 dark:hover:bg-green-900/20"
                               >
                                 <ButtonContent iconLeft={IconCheck}>Approve</ButtonContent>
@@ -281,8 +281,8 @@ const UserManagementPage = () => {
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => approveMutation.mutate(user.id)}
-                          isDisabled={approveMutation.isPending}
+                          onClick={() => approveUser({ userId: user.id })}
+                          isDisabled={isApproving}
                           className="border-green-500 text-green-600 hover:bg-green-50 dark:border-green-600 dark:text-green-400 dark:hover:bg-green-900/20 flex-1"
                         >
                           <ButtonContent iconLeft={IconCheck}>Approve</ButtonContent>
@@ -290,8 +290,8 @@ const UserManagementPage = () => {
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => rejectMutation.mutate(user.id)}
-                          isDisabled={rejectMutation.isPending}
+                          onClick={() => rejectUser({ userId: user.id })}
+                          isDisabled={isRejecting}
                           className="border-red-500 text-red-600 hover:bg-red-50 dark:border-red-600 dark:text-red-400 dark:hover:bg-red-900/20 flex-1"
                         >
                           <ButtonContent iconLeft={IconX}>Reject</ButtonContent>
@@ -302,8 +302,8 @@ const UserManagementPage = () => {
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => approveMutation.mutate(user.id)}
-                        isDisabled={approveMutation.isPending}
+                        onClick={() => approveUser({ userId: user.id })}
+                        isDisabled={isApproving}
                         className="border-green-500 text-green-600 hover:bg-green-50 dark:border-green-600 dark:text-green-400 dark:hover:bg-green-900/20 w-full"
                       >
                         <ButtonContent iconLeft={IconCheck}>Approve</ButtonContent>
