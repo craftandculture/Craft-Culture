@@ -376,10 +376,14 @@ const QuotesForm = () => {
     }),
   });
 
+  const [isDownloading, setIsDownloading] = useState(false);
+
   const handleDownloadInventory = async () => {
     if (!allProductsData || allProductsData.data.length === 0) {
       return;
     }
+
+    setIsDownloading(true);
 
     try {
       // Filter products with offers and create line items for pricing calculation
@@ -448,7 +452,9 @@ const QuotesForm = () => {
       exportInventoryToExcel(inventoryItems);
     } catch (error) {
       console.error('Error downloading inventory:', error);
-      // Optionally show an error message to the user
+      alert('Failed to download inventory. Please try again or contact support if the issue persists.');
+    } finally {
+      setIsDownloading(false);
     }
   };
 
@@ -888,7 +894,7 @@ const QuotesForm = () => {
         displayCurrency={displayCurrency}
         omitProductIds={urlLineItems.map((item) => item.productId)}
         onDownloadInventory={handleDownloadInventory}
-        isDownloadingInventory={isLoadingInventory}
+        isDownloadingInventory={isLoadingInventory || isDownloading}
       />
       </section>
     </div>
