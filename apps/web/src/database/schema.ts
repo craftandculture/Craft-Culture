@@ -34,6 +34,14 @@ export const approvalStatus = pgEnum('approval_status', [
   'rejected',
 ]);
 
+export const quoteStatus = pgEnum('quote_status', [
+  'draft',
+  'sent',
+  'accepted',
+  'rejected',
+  'expired',
+]);
+
 export const sheets = pgTable('sheets', {
   id: uuid('id').primaryKey().defaultRandom(),
   name: text('name').notNull(),
@@ -279,3 +287,33 @@ export const settings = pgTable('settings', {
 }).enableRLS();
 
 export type Settings = typeof settings.$inferSelect;
+
+export const quotes = pgTable(
+  'quotes',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .references(() => users.id, { onDelete: 'cascade' })
+      .notNull(),
+    name: text('name').notNull(),
+    status: quoteStatus('status').notNull().default('draft'),
+    lineItems: jsonb('line_items').notNull(),
+    quoteData: jsonb('quote_data').notNull(),
+    clientName: text('client_name'),
+    clientEmail: text('client_email'),
+    clientCompany: text('client_company'),
+    notes: text('notes'),
+    currency: text('currency').notNull().default('USD'),
+    totalUsd: doublePrecision('total_usd').notNull(),
+    totalAed: doublePrecision('total_aed'),
+    expiresAt: timestamp('expires_at', { mode: 'date' }),
+    ...timestamps,
+  },
+  (table) => [
+    index('quotes_user_id_idx').on(table.userId),
+    index('quotes_created_at_idx').on(table.createdAt),
+    index('quotes_status_idx').on(table.status),
+  ],
+).enableRLS();
+
+export type Quote = typeof quotes.$inferSelect;
