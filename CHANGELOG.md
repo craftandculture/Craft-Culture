@@ -1,3 +1,9 @@
+## [1.46.0](https://github.com/craftandculture/Craft-Culture/compare/v1.45.2...v1.46.0) (2025-10-28)
+
+### Features
+
+* implement comprehensive approval UX improvements ([36dcac1](https://github.com/craftandculture/Craft-Culture/commit/36dcac152e918413e812edb174491617c01e699e))
+
 ## [1.45.2](https://github.com/craftandculture/Craft-Culture/compare/v1.45.1...v1.45.2) (2025-10-28)
 
 ### Bug Fixes
