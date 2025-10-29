@@ -13,7 +13,7 @@ const Logo = ({ className, height = 96 }: LogoProps) => {
       src={logo}
       alt="Craft & Culture Index"
       height={height}
-      className={className}
+      className={`${className} dark:invert`}
       priority
     />
   );
