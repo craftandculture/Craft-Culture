@@ -1,3 +1,9 @@
+## [1.67.0](https://github.com/craftandculture/Craft-Culture/compare/v1.66.1...v1.67.0) (2025-10-29)
+
+### Features
+
+* add company contact fields for PDF quotes ([a62752d](https://github.com/craftandculture/Craft-Culture/commit/a62752da2c782ddd65b6b464bf2a88ff08bae2f5))
+
 ## [1.66.1](https://github.com/craftandculture/Craft-Culture/compare/v1.66.0...v1.66.1) (2025-10-29)
 
 ### Bug Fixes
