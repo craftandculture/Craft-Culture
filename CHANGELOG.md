@@ -1,3 +1,9 @@
+## [1.65.4](https://github.com/craftandculture/Craft-Culture/compare/v1.65.3...v1.65.4) (2025-10-29)
+
+### Bug Fixes
+
+* convert exportQuoteToPDF to TSX and fix PDF generation ([b6741a4](https://github.com/craftandculture/Craft-Culture/commit/b6741a4a60fe1800c32dda1f60098fc5d9214ef2)), closes [#321](https://github.com/craftandculture/Craft-Culture/issues/321)
+
 ## [1.65.3](https://github.com/craftandculture/Craft-Culture/compare/v1.65.2...v1.65.3) (2025-10-29)
 
 ### Bug Fixes
