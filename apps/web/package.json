@@ -48,6 +48,7 @@
     "@radix-ui/react-tabs": "^1.1.12",
     "@radix-ui/react-tooltip": "^1.2.7",
     "@react-hook/resize-observer": "^2.0.2",
+    "@react-pdf/renderer": "^4.3.1",
     "@sentry/nextjs": "^10",
     "@tabler/icons-react": "^3.33.0",
     "@tailwindcss/typography": "^0.5.16",

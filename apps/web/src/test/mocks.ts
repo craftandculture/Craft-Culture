@@ -14,6 +14,8 @@ export const mockUser: User = {
   createdAt: new Date(),
   updatedAt: new Date(),
   customerType: 'b2c',
+  companyName: null,
+  companyLogo: null,
   role: 'user',
   onboardingCompletedAt: null,
   pricingModelId: null,
