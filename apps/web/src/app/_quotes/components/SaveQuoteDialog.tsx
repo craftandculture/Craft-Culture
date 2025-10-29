@@ -14,10 +14,13 @@ import DialogContent from '@/app/_ui/components/Dialog/DialogContent';
 import DialogDescription from '@/app/_ui/components/Dialog/DialogDescription';
 import DialogHeader from '@/app/_ui/components/Dialog/DialogHeader';
 import DialogTitle from '@/app/_ui/components/Dialog/DialogTitle';
+import Divider from '@/app/_ui/components/Divider/Divider';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Input from '@/app/_ui/components/Input/Input';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import { useTRPCClient } from '@/lib/trpc/browser';
+import convertUsdToAed from '@/utils/convertUsdToAed';
+import formatPrice from '@/utils/formatPrice';
 
 export interface SaveQuoteDialogProps extends DialogProps {
   lineItems: Array<{
@@ -30,6 +33,7 @@ export interface SaveQuoteDialogProps extends DialogProps {
   currency: 'USD' | 'AED';
   totalUsd: number;
   totalAed?: number;
+  customerType?: 'b2b' | 'b2c';
   onSaveSuccess?: (quoteId: string) => void;
 }
 
@@ -41,6 +45,7 @@ const SaveQuoteDialog = ({
   currency,
   totalUsd,
   totalAed,
+  customerType = 'b2b',
   onSaveSuccess,
 }: SaveQuoteDialogProps) => {
   const trpcClient = useTRPCClient();
@@ -52,6 +57,28 @@ const SaveQuoteDialog = ({
   const [notes, setNotes] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [savedQuoteId, setSavedQuoteId] = useState<string | null>(null);
+
+  // B2B margin configuration
+  const [marginType, setMarginType] = useState<'percentage' | 'fixed'>('percentage');
+  const [marginValue, setMarginValue] = useState(15);
+
+  // Calculate customer quote price for B2B with margins
+  const calculateCustomerPrice = () => {
+    if (customerType !== 'b2b') return totalUsd;
+
+    // Simple calculation: In-Bond + Margin
+    // (In production, this should include import tax, transfer cost, VAT, etc.)
+    const inBondPrice = totalUsd;
+    const marginAmount =
+      marginType === 'percentage'
+        ? inBondPrice * (marginValue / 100)
+        : marginValue;
+    const priceAfterMargin = inBondPrice + marginAmount;
+    const vat = priceAfterMargin * 0.05; // 5% VAT
+    return priceAfterMargin + vat;
+  };
+
+  const customerQuotePrice = calculateCustomerPrice();
 
   const handleSave = async () => {
     // Validation
@@ -68,10 +95,23 @@ const SaveQuoteDialog = ({
     setIsSaving(true);
 
     try {
+      // Enhance quoteData with margin configuration for B2B
+      const enhancedQuoteData =
+        customerType === 'b2b'
+          ? {
+              ...(quoteData as object),
+              marginConfig: {
+                type: marginType,
+                value: marginValue,
+              },
+              customerQuotePrice: customerQuotePrice,
+            }
+          : quoteData;
+
       const savedQuote = await trpcClient.quotes.save.mutate({
         name: quoteName.trim(),
         lineItems,
-        quoteData,
+        quoteData: enhancedQuoteData,
         clientName: clientName.trim() || undefined,
         clientEmail: clientEmail.trim() || undefined,
         clientCompany: clientCompany.trim() || undefined,
@@ -172,6 +212,91 @@ const SaveQuoteDialog = ({
                 isDisabled={isSaving}
               />
             </div>
+
+            {/* Pricing & Margins - B2B Only */}
+            {customerType === 'b2b' && (
+              <>
+                <Divider />
+                <div className="flex flex-col gap-3">
+                  <Typography variant="bodySm" className="font-semibold">
+                    Pricing & Margins
+                  </Typography>
+
+                  {/* In-Bond Price (Read-only) */}
+                  <div className="rounded-lg border border-border-muted bg-fill-muted/30 p-3">
+                    <Typography variant="bodyXs" colorRole="muted" className="mb-1">
+                      In-Bond UAE Price
+                    </Typography>
+                    <Typography variant="bodyMd" className="font-semibold">
+                      {formatPrice(
+                        currency === 'AED' && totalAed ? totalAed : totalUsd,
+                        currency,
+                      )}
+                    </Typography>
+                  </div>
+
+                  {/* Margin Configuration */}
+                  <div className="flex flex-col gap-2">
+                    <Typography variant="bodyXs" colorRole="muted">
+                      Distributor Margin
+                    </Typography>
+
+                    {/* Margin Type Toggle */}
+                    <div className="flex gap-2">
+                      <Button
+                        variant={marginType === 'percentage' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setMarginType('percentage')}
+                        isDisabled={isSaving}
+                        className="flex-1"
+                      >
+                        <ButtonContent>Percentage (%)</ButtonContent>
+                      </Button>
+                      <Button
+                        variant={marginType === 'fixed' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setMarginType('fixed')}
+                        isDisabled={isSaving}
+                        className="flex-1"
+                      >
+                        <ButtonContent>Fixed ({currency})</ButtonContent>
+                      </Button>
+                    </div>
+
+                    {/* Margin Value Input */}
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="number"
+                        value={marginValue}
+                        onChange={(e) => setMarginValue(Number(e.target.value))}
+                        isDisabled={isSaving}
+                        min={0}
+                        step={marginType === 'percentage' ? 1 : 10}
+                      />
+                      <Typography variant="bodySm" colorRole="muted" className="min-w-[60px]">
+                        {marginType === 'percentage' ? '%' : currency}
+                      </Typography>
+                    </div>
+                  </div>
+
+                  {/* Customer Quote Price (Calculated) */}
+                  <div className="rounded-lg border border-border-brand bg-fill-brand/10 p-3">
+                    <Typography variant="bodyXs" colorRole="muted" className="mb-1">
+                      Customer Quote Price (Inc. VAT)
+                    </Typography>
+                    <Typography variant="bodyLg" className="font-bold text-text-brand">
+                      {formatPrice(
+                        currency === 'AED' && totalAed
+                          ? convertUsdToAed(customerQuotePrice)
+                          : customerQuotePrice,
+                        currency,
+                      )}
+                    </Typography>
+                  </div>
+                </div>
+                <Divider />
+              </>
+            )}
 
             {/* Client Name */}
             <div className="flex flex-col gap-1.5">
