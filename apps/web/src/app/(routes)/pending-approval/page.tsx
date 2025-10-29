@@ -65,7 +65,7 @@ const PendingApprovalPage = () => {
       <div className="w-full max-w-md space-y-6">
         {/* Logo */}
         <div className="flex justify-center">
-          <Logo height={32} />
+          <Logo height={96} />
         </div>
 
         {/* Main Card */}
