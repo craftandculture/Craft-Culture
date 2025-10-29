@@ -1,3 +1,10 @@
+## [1.58.2](https://github.com/craftandculture/Craft-Culture/compare/v1.58.1...v1.58.2) (2025-10-29)
+
+### Bug Fixes
+
+* ensure logo is visible in dark mode ([e823a59](https://github.com/craftandculture/Craft-Culture/commit/e823a59d15618080695e59ebc08412353586cf7b))
+* increase logo size by 20% for better visibility ([a6a58f3](https://github.com/craftandculture/Craft-Culture/commit/a6a58f3f5f138bc142f9418245f846e91729f0c5))
+
 ## [1.58.1](https://github.com/craftandculture/Craft-Culture/compare/v1.58.0...v1.58.1) (2025-10-29)
 
 ### Bug Fixes
