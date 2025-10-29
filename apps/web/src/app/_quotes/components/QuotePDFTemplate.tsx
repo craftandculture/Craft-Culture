@@ -394,8 +394,16 @@ const QuotePDFTemplate = ({
 
         {/* Footer */}
         <View style={styles.footer}>
-          <Text style={styles.footerText}>Powered by Craft & Culture Index</Text>
-          <Text style={styles.footerText}>www.craftandculture.com</Text>
+          <Text style={styles.footerText}>
+            Craft & Culture Index — Transparent pricing and trade intelligence for fine wine &
+            spirits across the Middle East.
+          </Text>
+          <Text style={styles.footerText}>
+            All prices are subject to final confirmation and availability at the time of order.
+          </Text>
+          <Text style={styles.footerText}>
+            © Craft & Culture FZE. All rights reserved. www.craftculture.xyz
+          </Text>
         </View>
       </Page>
     </Document>
