@@ -55,6 +55,7 @@ export interface B2BCalculatorProps {
     transferCost: number;
     importTax: number;
     customerQuotePrice: number;
+    displayCurrency: 'USD' | 'AED';
   }) => void;
 }
 
@@ -224,6 +225,7 @@ const B2BCalculator = ({ inBondPriceUsd, lineItems, onSaveWithMargins }: B2BCalc
         transferCost,
         importTax,
         customerQuotePrice: actualQuoteTotals.customerQuotePrice,
+        displayCurrency,
       });
     }
   };
