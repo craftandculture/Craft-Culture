@@ -41,7 +41,7 @@ import CommissionBreakdown from './CommissionBreakdown';
 import LineItemRow from './LineItemRow';
 import PriceInfoTooltip from './PriceInfoTooltip';
 import ProductFilters from './ProductFilters';
-import SaveQuoteDialog from './SaveQuoteDialog';
+import SaveQuoteDialog, { type MarginConfig } from './SaveQuoteDialog';
 import quotesSearchParams from '../search-params/filtersSearchParams';
 import exportInventoryToExcel from '../utils/exportInventoryToExcel';
 import exportQuoteToExcel from '../utils/exportQuoteToExcel';
@@ -147,6 +147,7 @@ const QuotesForm = () => {
 
   // Save quote dialog state
   const [isSaveDialogOpen, setIsSaveDialogOpen] = useState(false);
+  const [marginConfig, setMarginConfig] = useState<MarginConfig | undefined>(undefined);
 
   // Drag and drop sensors
   const sensors = useSensors(
@@ -966,6 +967,10 @@ const QuotesForm = () => {
                         unitCount: item.product?.productOffers[0]?.unitCount ?? 12,
                       };
                     })}
+                  onSaveWithMargins={(config) => {
+                    setMarginConfig(config);
+                    setIsSaveDialogOpen(true);
+                  }}
                 />
               </>
             )}
@@ -1063,7 +1068,13 @@ const QuotesForm = () => {
       {/* Save Quote Dialog */}
       <SaveQuoteDialog
         open={isSaveDialogOpen}
-        onOpenChange={setIsSaveDialogOpen}
+        onOpenChange={(open) => {
+          setIsSaveDialogOpen(open);
+          if (!open) {
+            // Clear margin config when dialog closes
+            setMarginConfig(undefined);
+          }
+        }}
         lineItems={urlLineItems}
         quoteData={quoteData}
         currency={displayCurrency}
@@ -1074,6 +1085,7 @@ const QuotesForm = () => {
             : undefined
         }
         customerType={customerType}
+        marginConfig={marginConfig}
         onSaveSuccess={(quoteId) => {
           console.log('Quote saved successfully:', quoteId);
           void queryClient.invalidateQueries({ queryKey: ['quotes.getMany'] });
