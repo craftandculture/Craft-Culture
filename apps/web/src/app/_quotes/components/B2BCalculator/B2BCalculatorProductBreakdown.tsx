@@ -2,6 +2,7 @@
 
 import { IconInfoCircle } from '@tabler/icons-react';
 
+import Divider from '@/app/_ui/components/Divider/Divider';
 import Input from '@/app/_ui/components/Input/Input';
 import Popover from '@/app/_ui/components/Popover/Popover';
 import PopoverContent from '@/app/_ui/components/Popover/PopoverContent';
@@ -145,19 +146,19 @@ const B2BCalculatorProductBreakdown = ({
   };
 
   return (
-    <div className="flex flex-col space-y-3 rounded-lg border border-border-muted bg-fill-muted/50 p-4 sm:p-5">
-      <div className="flex items-center gap-1.5">
+    <div className="flex flex-col space-y-4 rounded-lg border border-border-muted bg-fill-muted/50 p-4 shadow-sm sm:p-5">
+      <div className="flex items-center gap-2">
         <Typography
           variant="bodySm"
           colorRole="muted"
-          className="text-xs font-bold uppercase tracking-wide sm:text-sm"
+          className="font-semibold uppercase tracking-wide"
         >
           Product breakdown
         </Typography>
         <Popover>
           <PopoverTrigger asChild>
             <button type="button" className="inline-flex">
-              <IconInfoCircle className="h-3.5 w-3.5 text-text-muted" />
+              <IconInfoCircle className="h-4 w-4 text-text-muted" />
             </button>
           </PopoverTrigger>
           <PopoverContent className="max-w-xs p-3">
@@ -168,54 +169,67 @@ const B2BCalculatorProductBreakdown = ({
         </Popover>
       </div>
 
-      <div className="flex flex-col space-y-3">
+      <div className="flex flex-col space-y-4">
         {lineItems.map((item, index) => {
           const config = getProductMarginConfig(index);
           const inBondPricePerCase = getInBondPricePerCase(item);
           const marginAmount = calculateMarginAmount(item, index);
 
           return (
-            <div key={index} className="flex flex-col space-y-1.5">
-              <Typography variant="bodyXs" className="text-xs font-medium sm:text-sm">
-                {item.productName}
-              </Typography>
+            <div
+              key={index}
+              className="flex flex-col space-y-3 rounded-lg border border-border-muted bg-background-primary p-3 sm:p-4"
+            >
+              {/* Product Name & Quantity */}
               <div className="flex items-baseline justify-between gap-2">
-                <Typography variant="bodyXs" colorRole="muted" className="text-xs sm:text-sm">
+                <Typography variant="bodySm" className="font-semibold">
+                  {item.productName}
+                </Typography>
+                <Typography variant="bodySm" colorRole="muted">
                   {item.quantity} {item.quantity === 1 ? 'case' : 'cases'}
                 </Typography>
               </div>
+
+              {/* In-Bond Price */}
               <div className="flex items-baseline justify-between gap-2">
-                <Typography variant="bodyXs" colorRole="muted" className="text-[11px] sm:text-xs">
-                  In-Bond: {formatPrice(convertValue(inBondPricePerCase), currency)}/case
+                <Typography variant="bodySm" colorRole="muted">
+                  In-Bond Price
+                </Typography>
+                <Typography variant="bodySm" className="tabular-nums font-medium">
+                  {formatPrice(convertValue(inBondPricePerCase), currency)}/case
                 </Typography>
               </div>
 
-              {/* Customer Price */}
-              <div className="flex items-baseline justify-between gap-2 pt-1">
-                <Typography variant="bodyXs" colorRole="muted" className="text-[11px] sm:text-xs">
-                  Customer price:
-                </Typography>
-                <Typography variant="bodyXs" className="tabular-nums text-xs font-medium sm:text-sm">
-                  {formatPrice(convertValue(getCustomerPricePerCase(item, index)), currency)}/case
-                </Typography>
-              </div>
+              <Divider />
 
-              {/* Per Bottle Price */}
-              <div className="flex items-baseline justify-between gap-2">
-                <Typography variant="bodyXs" colorRole="muted" className="text-[11px] sm:text-xs">
-                  Per bottle:
-                </Typography>
-                <Typography variant="bodyXs" className="tabular-nums text-xs font-medium sm:text-sm">
-                  {formatPrice(convertValue(getCustomerPricePerBottle(item, index)), currency)}/bottle ({item.unitCount}-pack)
-                </Typography>
+              {/* Customer Price - Prominent */}
+              <div className="flex flex-col space-y-2 rounded-md bg-fill-brand/5 p-2.5">
+                <div className="flex items-baseline justify-between gap-2">
+                  <Typography variant="bodySm" className="font-medium">
+                    Customer price
+                  </Typography>
+                  <Typography variant="bodySm" className="tabular-nums font-bold text-text-brand">
+                    {formatPrice(convertValue(getCustomerPricePerCase(item, index)), currency)}/case
+                  </Typography>
+                </div>
+
+                {/* Per Bottle Price */}
+                <div className="flex items-baseline justify-between gap-2">
+                  <Typography variant="bodyXs" colorRole="muted">
+                    Per bottle ({item.unitCount}-pack)
+                  </Typography>
+                  <Typography variant="bodyXs" className="tabular-nums font-medium">
+                    {formatPrice(convertValue(getCustomerPricePerBottle(item, index)), currency)}
+                  </Typography>
+                </div>
               </div>
 
               {/* Editable Margin with toggle */}
-              <div className="flex items-center gap-2 flex-wrap">
-                <Typography variant="bodyXs" colorRole="muted" className="text-[11px] sm:text-xs">
-                  Margin:
+              <div className="flex items-center justify-between gap-3 flex-wrap">
+                <Typography variant="bodySm" colorRole="muted">
+                  Adjust Margin:
                 </Typography>
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-2">
                   <Input
                     type="number"
                     value={config.value === 0 ? '' : config.value}
@@ -224,9 +238,9 @@ const B2BCalculatorProductBreakdown = ({
                     step={config.type === 'percentage' ? 0.5 : 1}
                     size="sm"
                     placeholder="0"
-                    className="w-20 text-xs"
+                    className="w-20"
                   />
-                  <Typography variant="bodyXs" colorRole="muted" className="text-[11px] sm:text-xs">
+                  <Typography variant="bodySm" colorRole="muted">
                     {config.type === 'percentage' ? '%' : '$'}
                   </Typography>
                   <Switch
@@ -236,21 +250,20 @@ const B2BCalculatorProductBreakdown = ({
                     aria-label="Toggle between percentage and fixed margin"
                   />
                   <Typography
-                    variant="bodyXs"
+                    variant="bodySm"
                     colorRole={config.type === 'fixed' ? 'primary' : 'muted'}
-                    className="text-[11px] sm:text-xs"
                   >
                     $
                   </Typography>
                 </div>
               </div>
 
-              {/* Profit Display - Inline on right */}
-              <div className="flex items-baseline justify-end gap-1">
-                <Typography variant="bodyXs" colorRole="muted" className="text-[10px] sm:text-[11px]">
-                  Profit/case:
+              {/* Profit Display */}
+              <div className="flex items-baseline justify-between gap-2 rounded-md bg-fill-muted/30 px-2.5 py-1.5">
+                <Typography variant="bodyXs" colorRole="muted">
+                  Your profit per case
                 </Typography>
-                <Typography variant="bodyXs" colorRole="muted" className="tabular-nums text-[10px] sm:text-[11px]">
+                <Typography variant="bodyXs" className="tabular-nums font-semibold text-text-success">
                   {formatPrice(convertValue(marginAmount), currency)}
                 </Typography>
               </div>
