@@ -240,7 +240,8 @@ const QuotePDFTemplate = ({
         <View style={styles.header}>
           <View>
             {user.companyLogo ? (
-              <Image src={user.companyLogo} style={styles.logo} alt="Company logo" />
+              // eslint-disable-next-line jsx-a11y/alt-text -- @react-pdf/renderer Image doesn't support alt prop
+              <Image src={user.companyLogo} style={styles.logo} />
             ) : user.companyName ? (
               <Text style={styles.companyNameFallback}>{user.companyName}</Text>
             ) : (
