@@ -1,3 +1,9 @@
+## [1.58.0](https://github.com/craftandculture/Craft-Culture/compare/v1.57.0...v1.58.0) (2025-10-29)
+
+### Features
+
+* integrate Craft & Culture Index logo and favicon ([4824ff4](https://github.com/craftandculture/Craft-Culture/commit/4824ff465de495b3b08499aa12af318190a4d8e6))
+
 ## [1.57.0](https://github.com/craftandculture/Craft-Culture/compare/v1.56.1...v1.57.0) (2025-10-28)
 
 ### Features
