@@ -1,3 +1,33 @@
+## [1.62.1](https://github.com/craftandculture/Craft-Culture/compare/v1.62.0...v1.62.1) (2025-10-29)
+
+### ⚠ BREAKING CHANGES
+
+* Quote save flow has changed for B2B users
+
+- Remove margin adjustment UI from Save Quote dialog
+- Add 'Save Quote' button to B2BCalculator section
+- B2B users now adjust margins/costs in calculator, then save
+- SaveQuoteDialog now accepts optional margin configuration
+- Margin config (margins, transfer costs, import tax) saved with quote
+- Dialog shows pricing summary if margins configured
+- Main Save Quote button still available for quick saves
+
+New B2B workflow:
+1. Build quote → Open Margin Calculator
+2. Adjust margins, transfer costs, import tax
+3. Click 'Save Quote' in calculator
+4. Enter client details and save
+
+This simplifies the UX by consolidating all pricing decisions in one location.
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+
+Co-Authored-By: Claude <noreply@anthropic.com>
+
+### Code Refactoring
+
+* move Save Quote to Margin Calculator for simplified B2B workflow ([881427d](https://github.com/craftandculture/Craft-Culture/commit/881427d152ab1bd1215c97033ef1af5b22770f84))
+
 ## [1.62.0](https://github.com/craftandculture/Craft-Culture/compare/v1.61.2...v1.62.0) (2025-10-29)
 
 ### Features
