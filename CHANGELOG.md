@@ -1,3 +1,9 @@
+## [1.64.1](https://github.com/craftandculture/Craft-Culture/compare/v1.64.0...v1.64.1) (2025-10-29)
+
+### Bug Fixes
+
+* add companyName and companyLogo to test mocks ([02d66a3](https://github.com/craftandculture/Craft-Culture/commit/02d66a35a00fbbb68120ced7260e1670075f8955))
+
 ## [1.64.0](https://github.com/craftandculture/Craft-Culture/compare/v1.63.2...v1.64.0) (2025-10-29)
 
 ### Features
