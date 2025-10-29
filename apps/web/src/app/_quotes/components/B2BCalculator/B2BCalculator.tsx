@@ -1,6 +1,7 @@
 'use client';
 
 import {
+  IconBookmark,
   IconCalculator,
   IconChevronDown,
   IconDownload,
@@ -47,6 +48,14 @@ export interface B2BCalculatorProps {
   inBondPriceUsd: number;
   /** Optional line items for detailed Excel export */
   lineItems?: B2BCalculatorLineItem[];
+  /** Callback to open save dialog with margin configuration */
+  onSaveWithMargins?: (marginConfig: {
+    marginType: 'percentage' | 'fixed';
+    marginValue: number;
+    transferCost: number;
+    importTax: number;
+    customerQuotePrice: number;
+  }) => void;
 }
 
 /**
@@ -60,7 +69,7 @@ export interface B2BCalculatorProps {
  * @example
  *   <B2BCalculator inBondPriceUsd={5000} />
  */
-const B2BCalculator = ({ inBondPriceUsd, lineItems }: B2BCalculatorProps) => {
+const B2BCalculator = ({ inBondPriceUsd, lineItems, onSaveWithMargins }: B2BCalculatorProps) => {
   const api = useTRPC();
 
   // Fetch lead time settings from database
@@ -204,6 +213,19 @@ const B2BCalculator = ({ inBondPriceUsd, lineItems }: B2BCalculatorProps) => {
 
   const displayValue = (usdValue: number) => {
     return displayCurrency === 'AED' ? convertUsdToAed(usdValue) : usdValue;
+  };
+
+  // Handle save quote with current margin configuration
+  const handleSaveQuote = () => {
+    if (onSaveWithMargins) {
+      onSaveWithMargins({
+        marginType,
+        marginValue,
+        transferCost,
+        importTax,
+        customerQuotePrice: actualQuoteTotals.customerQuotePrice,
+      });
+    }
   };
 
   return (
@@ -360,28 +382,42 @@ const B2BCalculator = ({ inBondPriceUsd, lineItems }: B2BCalculatorProps) => {
               <ButtonContent>Reset to Defaults</ButtonContent>
             </Button>
 
-            <div className="flex items-center gap-2">
-              <Button
-                variant="default"
-                colorRole="brand"
-                size="md"
-                onClick={handleExport}
-                className="w-full sm:w-auto"
-              >
-                <ButtonContent iconLeft={IconDownload}>Export to Excel</ButtonContent>
-              </Button>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <button type="button" className="inline-flex">
-                    <IconInfoCircle className="h-4 w-4 text-text-muted" />
-                  </button>
-                </PopoverTrigger>
-                <PopoverContent className="max-w-xs p-3">
-                  <Typography variant="bodyXs">
-                    Export product & distributor margin calculations
-                  </Typography>
-                </PopoverContent>
-              </Popover>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              {/* Save Quote Button - Only show if callback provided */}
+              {onSaveWithMargins && (
+                <Button
+                  variant="default"
+                  colorRole="success"
+                  size="md"
+                  onClick={handleSaveQuote}
+                  className="w-full sm:w-auto"
+                >
+                  <ButtonContent iconLeft={IconBookmark}>Save Quote</ButtonContent>
+                </Button>
+              )}
+
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="md"
+                  onClick={handleExport}
+                  className="w-full sm:w-auto"
+                >
+                  <ButtonContent iconLeft={IconDownload}>Export to Excel</ButtonContent>
+                </Button>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button type="button" className="inline-flex">
+                      <IconInfoCircle className="h-4 w-4 text-text-muted" />
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent className="max-w-xs p-3">
+                    <Typography variant="bodyXs">
+                      Export product & distributor margin calculations
+                    </Typography>
+                  </PopoverContent>
+                </Popover>
+              </div>
             </div>
           </div>
         </div>
