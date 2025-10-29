@@ -17,6 +17,7 @@ import Icon from '@/app/_ui/components/Icon/Icon';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import type { Quote } from '@/database/schema';
 import useTRPC from '@/lib/trpc/browser';
+import convertUsdToAed from '@/utils/convertUsdToAed';
 import formatPrice from '@/utils/formatPrice';
 
 interface QuoteDetailsDialogProps extends DialogProps {
