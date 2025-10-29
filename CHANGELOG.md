@@ -1,3 +1,9 @@
+## [1.58.3](https://github.com/craftandculture/Craft-Culture/compare/v1.58.2...v1.58.3) (2025-10-29)
+
+### Bug Fixes
+
+* increase logo size by 25% to be more prominent than navigation ([25f546b](https://github.com/craftandculture/Craft-Culture/commit/25f546bfd3013c3ce50dc19b462d99b0e5e30cbd))
+
 ## [1.58.2](https://github.com/craftandculture/Craft-Culture/compare/v1.58.1...v1.58.2) (2025-10-29)
 
 ### Bug Fixes
