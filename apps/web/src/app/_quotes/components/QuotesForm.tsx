@@ -18,7 +18,7 @@ import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { IconBookmark, IconDownload, IconInfoCircle, IconPlaneInflight, IconPlus } from '@tabler/icons-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { parseAsArrayOf, parseAsJson, useQueryState, useQueryStates } from 'nuqs';
+import { parseAsJson, parseAsNativeArrayOf, useQueryState, useQueryStates } from 'nuqs';
 import React, { useEffect, useMemo, useState } from 'react';
 
 import CatalogBrowser from '@/app/_products/components/CatalogBrowser';
@@ -159,7 +159,7 @@ const QuotesForm = () => {
   // URL is the single source of truth
   const [urlLineItems, setUrlLineItems] = useQueryState<URLLineItem[]>(
     'items',
-    parseAsArrayOf(
+    parseAsNativeArrayOf(
       parseAsJson<URLLineItem>((value) => {
         console.log('Parsing URL item:', value);
         if (
