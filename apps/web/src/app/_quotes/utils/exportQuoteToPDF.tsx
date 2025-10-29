@@ -35,7 +35,7 @@ const exportQuoteToPDF = async (
     quote: {
       name: quote.name,
       quoteNumber: undefined, // TODO: Add quote numbering system
-      createdAt: quote.createdAt,
+      createdAt: new Date(quote.createdAt),
       validUntil: undefined, // TODO: Add validity period
       clientName: quote.clientName,
       clientEmail: quote.clientEmail,
@@ -52,7 +52,7 @@ const exportQuoteToPDF = async (
   };
 
   // Generate PDF blob
-  const blob = await pdf(QuotePDFTemplate(props)).toBlob();
+  const blob = await pdf(<QuotePDFTemplate {...props} />).toBlob();
 
   // Create download link
   const url = URL.createObjectURL(blob);
