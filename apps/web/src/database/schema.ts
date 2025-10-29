@@ -99,6 +99,7 @@ export const users = pgTable('users', {
   approvalStatus: approvalStatus('approval_status').notNull().default('pending'),
   approvedAt: timestamp('approved_at', { mode: 'date' }),
   approvedBy: uuid('approved_by'),
+  termsAcceptedAt: timestamp('terms_accepted_at', { mode: 'date' }),
 
   ...timestamps,
 }).enableRLS();

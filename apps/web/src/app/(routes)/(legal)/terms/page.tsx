@@ -29,9 +29,9 @@ const TermsPage = () => {
               1. Introduction
             </Typography>
             <Typography variant="bodySm" className="mb-4">
-              Welcome to Craft & Culture Index ("we," "our," or "us"). These Terms and Conditions
-              ("Terms") govern your access to and use of our wine and spirits trading platform (the
-              "Platform" or "Service").
+              Welcome to Craft & Culture Index (&quot;we,&quot; &quot;our,&quot; or &quot;us&quot;).
+              These Terms and Conditions (&quot;Terms&quot;) govern your access to and use of our wine
+              and spirits trading platform (the &quot;Platform&quot; or &quot;Service&quot;).
             </Typography>
             <Typography variant="bodySm">
               By creating an account or using our Platform, you agree to be bound by these Terms. If
@@ -98,9 +98,9 @@ const TermsPage = () => {
               6. Limitation of Liability
             </Typography>
             <Typography variant="bodySm" className="mb-4">
-              THE PLATFORM IS PROVIDED ON AN "AS IS" AND "AS AVAILABLE" BASIS WITHOUT WARRANTIES OF
-              ANY KIND. TO THE MAXIMUM EXTENT PERMITTED BY LAW, WE SHALL NOT BE LIABLE FOR ANY
-              INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES.
+              THE PLATFORM IS PROVIDED ON AN &quot;AS IS&quot; AND &quot;AS AVAILABLE&quot; BASIS
+              WITHOUT WARRANTIES OF ANY KIND. TO THE MAXIMUM EXTENT PERMITTED BY LAW, WE SHALL NOT BE
+              LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES.
             </Typography>
           </section>
 

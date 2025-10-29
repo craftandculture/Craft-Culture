@@ -9,11 +9,14 @@ import updateUserSchema from '../schemas/updateUserSchema';
 const usersUpdate = protectedProcedure
   .input(updateUserSchema)
   .mutation(async ({ ctx, input }) => {
+    const { acceptTerms, ...rest } = input;
+
     await db
       .update(users)
       .set({
-        ...input,
+        ...rest,
         onboardingCompletedAt: new Date(),
+        ...(acceptTerms && { termsAcceptedAt: new Date() }),
       })
       .where(eq(users.id, ctx.user.id))
       .returning();
