@@ -1,3 +1,9 @@
+## [1.62.2](https://github.com/craftandculture/Craft-Culture/compare/v1.62.1...v1.62.2) (2025-10-29)
+
+### Bug Fixes
+
+* change Save Quote button colorRole from success to brand ([369b0e0](https://github.com/craftandculture/Craft-Culture/commit/369b0e049e76af0f1471dd356a6a7062e2ab6bd0))
+
 ## [1.62.1](https://github.com/craftandculture/Craft-Culture/compare/v1.62.0...v1.62.1) (2025-10-29)
 
 ### ⚠ BREAKING CHANGES
