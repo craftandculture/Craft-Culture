@@ -1,3 +1,9 @@
+## [1.66.1](https://github.com/craftandculture/Craft-Culture/compare/v1.66.0...v1.66.1) (2025-10-29)
+
+### Bug Fixes
+
+* store logos in database instead of Vercel Blob ([006b59d](https://github.com/craftandculture/Craft-Culture/commit/006b59dd404615428d58cf04709b7978cc8a2ea6))
+
 ## [1.66.0](https://github.com/craftandculture/Craft-Culture/compare/v1.65.4...v1.66.0) (2025-10-29)
 
 ### Features
