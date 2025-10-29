@@ -85,6 +85,11 @@ export const users = pgTable('users', {
   customerType: customerType('customer_type').notNull().default('b2c'),
   companyName: text('company_name'),
   companyLogo: text('company_logo'),
+  companyAddress: text('company_address'),
+  companyPhone: text('company_phone'),
+  companyEmail: text('company_email'),
+  companyWebsite: text('company_website'),
+  companyVatNumber: text('company_vat_number'),
   onboardingCompletedAt: timestamp('onboarding_completed_at', {
     mode: 'date',
   }),
