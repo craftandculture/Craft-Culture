@@ -90,13 +90,19 @@ const QuotesList = () => {
         vintage?: string;
       }>;
 
+      console.log('Original line items:', lineItemsArray);
+
       // Stringify each item and join with commas
       const itemsParam = lineItemsArray
         .map((item) => encodeURIComponent(JSON.stringify(item)))
         .join(',');
 
+      const targetUrl = `/platform/quotes?items=${itemsParam}`;
+      console.log('Navigating to URL:', targetUrl);
+      console.log('Items param:', itemsParam);
+
       // Navigate to quotes form with line items
-      router.push(`/platform/quotes?items=${itemsParam}`);
+      router.push(targetUrl);
     } catch (error) {
       toast.error('Failed to load quote for editing');
       console.error('Error loading quote:', error);

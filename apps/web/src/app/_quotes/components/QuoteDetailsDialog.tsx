@@ -2,7 +2,9 @@
 
 import type { DialogProps } from '@radix-ui/react-dialog';
 import { IconCalendar, IconCurrencyDollar, IconFileText, IconUser } from '@tabler/icons-react';
+import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
+import { useMemo } from 'react';
 
 import Dialog from '@/app/_ui/components/Dialog/Dialog';
 import DialogBody from '@/app/_ui/components/Dialog/DialogBody';
@@ -14,6 +16,7 @@ import Divider from '@/app/_ui/components/Divider/Divider';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import type { Quote } from '@/database/schema';
+import useTRPC from '@/lib/trpc/browser';
 import formatPrice from '@/utils/formatPrice';
 
 interface QuoteDetailsDialogProps extends DialogProps {
@@ -24,14 +27,46 @@ interface QuoteDetailsDialogProps extends DialogProps {
  * Dialog component to display full quote details
  */
 const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogProps) => {
-  if (!quote) return null;
+  const api = useTRPC();
 
-  const lineItems = quote.lineItems as Array<{
-    productId: string;
-    offerId: string;
-    quantity: number;
-    vintage?: string;
-  }>;
+  const lineItems = useMemo(
+    () =>
+      (quote?.lineItems || []) as Array<{
+        productId: string;
+        offerId: string;
+        quantity: number;
+        vintage?: string;
+      }>,
+    [quote?.lineItems],
+  );
+
+  // Extract unique product IDs from line items
+  const productIds = useMemo(
+    () => [...new Set(lineItems.map((item) => item.productId))],
+    [lineItems],
+  );
+
+  // Fetch products for the line items
+  const { data: productsData } = useQuery({
+    ...api.products.getMany.queryOptions({
+      productIds,
+    }),
+    enabled: productIds.length > 0 && open && !!quote,
+  });
+
+  // Create a map of productId -> product for quick lookup
+  const productMap = useMemo(() => {
+    if (!productsData?.data) return {};
+    return productsData.data.reduce(
+      (acc, product) => {
+        acc[product.id] = product;
+        return acc;
+      },
+      {} as Record<string, (typeof productsData.data)[number]>,
+    );
+  }, [productsData]);
+
+  if (!quote) return null;
 
   const statusColors = {
     draft: 'text-text-muted',
@@ -153,39 +188,95 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
               <Typography variant="bodySm" className="mb-3 font-semibold">
                 Line Items ({lineItems.length})
               </Typography>
-              <div className="space-y-2">
-                {lineItems.map((item, index) => (
-                  <div
-                    key={index}
-                    className="rounded-lg border border-border-muted bg-background-primary p-3"
-                  >
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1">
-                        <Typography variant="bodyXs" colorRole="muted">
-                          Product ID
-                        </Typography>
-                        <Typography variant="bodySm" className="font-medium">
-                          {item.productId}
-                        </Typography>
-                      </div>
-                      <div>
-                        <Typography variant="bodyXs" colorRole="muted">
-                          Quantity
-                        </Typography>
-                        <Typography variant="bodySm" className="font-medium">
-                          {item.quantity}
-                        </Typography>
-                      </div>
+              <div className="space-y-3">
+                {lineItems.map((item, index) => {
+                  const product = productMap[item.productId];
+                  return (
+                    <div
+                      key={index}
+                      className="rounded-lg border border-border-muted bg-background-primary p-4"
+                    >
+                      {product ? (
+                        <>
+                          <div className="mb-3 flex items-start justify-between gap-4">
+                            <div className="flex-1">
+                              <Typography variant="bodySm" className="mb-1 font-semibold">
+                                {product.name}
+                              </Typography>
+                              <div className="flex flex-wrap gap-x-3 gap-y-1">
+                                {product.producer && (
+                                  <Typography variant="bodyXs" colorRole="muted">
+                                    {product.producer}
+                                  </Typography>
+                                )}
+                                {product.year && (
+                                  <Typography variant="bodyXs" colorRole="muted">
+                                    {product.year}
+                                  </Typography>
+                                )}
+                                {product.region && (
+                                  <Typography variant="bodyXs" colorRole="muted">
+                                    {product.region}
+                                  </Typography>
+                                )}
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <Typography variant="bodyXs" colorRole="muted" className="mb-1">
+                                Quantity
+                              </Typography>
+                              <Typography variant="bodySm" className="font-semibold">
+                                {item.quantity}
+                              </Typography>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-4 border-t border-border-muted pt-3">
+                            <div>
+                              <Typography variant="bodyXs" colorRole="muted">
+                                Bottle Reference
+                              </Typography>
+                              <Typography variant="bodyXs" className="font-mono">
+                                {product.lwin18}
+                              </Typography>
+                            </div>
+                            {item.vintage && (
+                              <div>
+                                <Typography variant="bodyXs" colorRole="muted">
+                                  Vintage
+                                </Typography>
+                                <Typography variant="bodyXs" className="font-medium">
+                                  {item.vintage}
+                                </Typography>
+                              </div>
+                            )}
+                          </div>
+                        </>
+                      ) : (
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1">
+                            <Typography variant="bodyXs" colorRole="muted" className="mb-1">
+                              Product ID
+                            </Typography>
+                            <Typography variant="bodySm" className="font-mono">
+                              {item.productId}
+                            </Typography>
+                            <Typography variant="bodyXs" colorRole="muted" className="mt-1">
+                              (Product details unavailable)
+                            </Typography>
+                          </div>
+                          <div className="text-right">
+                            <Typography variant="bodyXs" colorRole="muted" className="mb-1">
+                              Quantity
+                            </Typography>
+                            <Typography variant="bodySm" className="font-semibold">
+                              {item.quantity}
+                            </Typography>
+                          </div>
+                        </div>
+                      )}
                     </div>
-                    {item.vintage && (
-                      <div className="mt-2">
-                        <Typography variant="bodyXs" colorRole="muted">
-                          Vintage: {item.vintage}
-                        </Typography>
-                      </div>
-                    )}
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
 
