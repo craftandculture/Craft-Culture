@@ -42,6 +42,12 @@ const styles = StyleSheet.create({
   headerRight: {
     alignItems: 'flex-end',
   },
+  companyInfo: {
+    fontSize: 8,
+    color: '#737373',
+    lineHeight: 1.4,
+    marginTop: 8,
+  },
   title: {
     fontSize: 28,
     fontWeight: 'bold',
@@ -227,6 +233,11 @@ export interface QuotePDFTemplateProps {
   user: {
     companyName?: string | null;
     companyLogo?: string | null;
+    companyAddress?: string | null;
+    companyPhone?: string | null;
+    companyEmail?: string | null;
+    companyWebsite?: string | null;
+    companyVatNumber?: string | null;
   };
 }
 
@@ -259,7 +270,7 @@ const QuotePDFTemplate = ({
       <Page size="A4" style={styles.page}>
         {/* Header */}
         <View style={styles.header}>
-          <View>
+          <View style={{ maxWidth: '60%' }}>
             {user.companyLogo ? (
               // eslint-disable-next-line jsx-a11y/alt-text -- @react-pdf/renderer Image doesn't support alt prop
               <Image src={user.companyLogo} style={styles.logo} />
@@ -267,6 +278,17 @@ const QuotePDFTemplate = ({
               <Text style={styles.companyNameFallback}>{user.companyName}</Text>
             ) : (
               <Text style={styles.companyNameFallback}>Wine Quotation</Text>
+            )}
+
+            {/* Company Information */}
+            {(user.companyAddress || user.companyPhone || user.companyEmail || user.companyWebsite || user.companyVatNumber) && (
+              <View style={styles.companyInfo}>
+                {user.companyAddress && <Text>{user.companyAddress}</Text>}
+                {user.companyPhone && <Text>Tel: {user.companyPhone}</Text>}
+                {user.companyEmail && <Text>Email: {user.companyEmail}</Text>}
+                {user.companyWebsite && <Text>{user.companyWebsite}</Text>}
+                {user.companyVatNumber && <Text>VAT: {user.companyVatNumber}</Text>}
+              </View>
             )}
           </View>
           <View style={styles.headerRight}>

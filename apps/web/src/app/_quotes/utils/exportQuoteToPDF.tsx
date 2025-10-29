@@ -26,6 +26,11 @@ const exportQuoteToPDF = async (
   user: {
     companyName?: string | null;
     companyLogo?: string | null;
+    companyAddress?: string | null;
+    companyPhone?: string | null;
+    companyEmail?: string | null;
+    companyWebsite?: string | null;
+    companyVatNumber?: string | null;
   },
 ) => {
   const props: QuotePDFTemplateProps = {

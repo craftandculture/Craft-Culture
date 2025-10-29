@@ -161,6 +161,11 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
         {
           companyName: settings?.companyName || null,
           companyLogo: settings?.companyLogo || null,
+          companyAddress: settings?.companyAddress || null,
+          companyPhone: settings?.companyPhone || null,
+          companyEmail: settings?.companyEmail || null,
+          companyWebsite: settings?.companyWebsite || null,
+          companyVatNumber: settings?.companyVatNumber || null,
         },
       );
 
