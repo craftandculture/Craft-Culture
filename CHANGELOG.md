@@ -1,3 +1,9 @@
+## [1.63.2](https://github.com/craftandculture/Craft-Culture/compare/v1.63.1...v1.63.2) (2025-10-29)
+
+### Code Refactoring
+
+* refine B2B margin calculator UI/UX ([1cdf218](https://github.com/craftandculture/Craft-Culture/commit/1cdf2185a4244ad9b5108e6bec05902e54e18dc5))
+
 ## [1.63.1](https://github.com/craftandculture/Craft-Culture/compare/v1.63.0...v1.63.1) (2025-10-29)
 
 ### Bug Fixes
