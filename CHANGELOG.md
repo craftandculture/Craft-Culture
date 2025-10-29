@@ -1,3 +1,9 @@
+## [1.58.1](https://github.com/craftandculture/Craft-Culture/compare/v1.58.0...v1.58.1) (2025-10-29)
+
+### Bug Fixes
+
+* significantly increase logo size for better visibility ([e0fb983](https://github.com/craftandculture/Craft-Culture/commit/e0fb9831d90d8823cab5ac2d054f406e627cc55a))
+
 ## [1.58.0](https://github.com/craftandculture/Craft-Culture/compare/v1.57.0...v1.58.0) (2025-10-29)
 
 ### Features
