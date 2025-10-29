@@ -1,3 +1,9 @@
+## [1.65.3](https://github.com/craftandculture/Craft-Culture/compare/v1.65.2...v1.65.3) (2025-10-29)
+
+### Bug Fixes
+
+* use ternary operator for conditional PDF table row styling ([3632b83](https://github.com/craftandculture/Craft-Culture/commit/3632b838bf2578e15185eec39d7ed1d69b95f46a))
+
 ## [1.65.2](https://github.com/craftandculture/Craft-Culture/compare/v1.65.1...v1.65.2) (2025-10-29)
 
 ### Bug Fixes
