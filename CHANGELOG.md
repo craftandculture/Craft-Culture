@@ -1,3 +1,9 @@
+## [1.67.1](https://github.com/craftandculture/Craft-Culture/compare/v1.67.0...v1.67.1) (2025-10-29)
+
+### Bug Fixes
+
+* include new company fields in settings query ([0663738](https://github.com/craftandculture/Craft-Culture/commit/0663738f4030c6d8721a76af24dab48e9c0318c9))
+
 ## [1.67.0](https://github.com/craftandculture/Craft-Culture/compare/v1.66.1...v1.67.0) (2025-10-29)
 
 ### Features
