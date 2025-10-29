@@ -1,3 +1,13 @@
+## [1.59.0](https://github.com/craftandculture/Craft-Culture/compare/v1.58.3...v1.59.0) (2025-10-29)
+
+### Features
+
+* use C icon only for favicon ([ef46d74](https://github.com/craftandculture/Craft-Culture/commit/ef46d74dc795ef4ce6ac748fb47804878862b13d))
+
+### Bug Fixes
+
+* resize favicon to square format for better display ([9aa054c](https://github.com/craftandculture/Craft-Culture/commit/9aa054cd0c50f93cea120b59f98268f2c81d60ab))
+
 ## [1.58.3](https://github.com/craftandculture/Craft-Culture/compare/v1.58.2...v1.58.3) (2025-10-29)
 
 ### Bug Fixes
