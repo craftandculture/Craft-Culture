@@ -8,10 +8,6 @@ import { protectedProcedure } from '@/lib/trpc/procedures';
  * Remove user's company logo
  */
 const logoRemove = protectedProcedure.mutation(async ({ ctx: { user } }) => {
-  // TODO: Delete blob from Vercel Blob storage
-  // This requires the del() function from @vercel/blob
-  // For now, we'll just update the database
-
   const [updatedUser] = await db
     .update(users)
     .set({ companyLogo: null })
