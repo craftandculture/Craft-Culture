@@ -10,8 +10,6 @@ import QuotePDFTemplate, { type QuotePDFTemplateProps } from '../components/Quot
  * @param quote - The quote to export
  * @param lineItems - Product line items with pricing
  * @param user - User/company information for branding
- * @param leadTimeMin - Minimum lead time in days
- * @param leadTimeMax - Maximum lead time in days
  */
 const exportQuoteToPDF = async (
   quote: Quote,
@@ -21,6 +19,7 @@ const exportQuoteToPDF = async (
     region?: string | null;
     year?: string | null;
     quantity: number;
+    bottlesPerCase: number;
     pricePerCase: number;
     lineTotal: number;
   }>,
@@ -28,8 +27,6 @@ const exportQuoteToPDF = async (
     companyName?: string | null;
     companyLogo?: string | null;
   },
-  leadTimeMin: number,
-  leadTimeMax: number,
 ) => {
   const props: QuotePDFTemplateProps = {
     quote: {
@@ -47,8 +44,6 @@ const exportQuoteToPDF = async (
     },
     lineItems,
     user,
-    leadTimeMin,
-    leadTimeMax,
   };
 
   // Generate PDF blob

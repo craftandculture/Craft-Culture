@@ -54,19 +54,6 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
     enabled: !!quote,
   });
 
-  // Fetch lead time settings
-  const { data: leadTimeMinData } = useQuery({
-    ...api.admin.settings.get.queryOptions({ key: 'leadTimeMin' }),
-    enabled: !!quote,
-  });
-  const { data: leadTimeMaxData } = useQuery({
-    ...api.admin.settings.get.queryOptions({ key: 'leadTimeMax' }),
-    enabled: !!quote,
-  });
-
-  const leadTimeMin = leadTimeMinData ? Number(leadTimeMinData) : 14;
-  const leadTimeMax = leadTimeMaxData ? Number(leadTimeMaxData) : 21;
-
   // Extract unique product IDs from line items
   const productIds = useMemo(
     () => [...new Set(lineItems.map((item) => item.productId))],
@@ -153,12 +140,16 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
             ? convertUsdToAed(lineTotal)
             : lineTotal;
 
+        // Get bottles per case from product offer
+        const bottlesPerCase = product?.productOffers?.[0]?.unitCount || 12;
+
         return {
           productName: product?.name || item.productId,
           producer: product?.producer || null,
           region: product?.region || null,
           year: product?.year ? String(product.year) : null,
           quantity: item.quantity,
+          bottlesPerCase,
           pricePerCase: displayPricePerCase,
           lineTotal: displayLineTotal,
         };
@@ -171,8 +162,6 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
           companyName: settings?.companyName || null,
           companyLogo: settings?.companyLogo || null,
         },
-        leadTimeMin,
-        leadTimeMax,
       );
 
       toast.success('PDF exported successfully');
