@@ -161,6 +161,7 @@ const QuotesForm = () => {
     'items',
     parseAsArrayOf(
       parseAsJson<URLLineItem>((value) => {
+        console.log('Parsing URL item:', value);
         if (
           typeof value === 'object' &&
           value !== null &&
@@ -168,12 +169,19 @@ const QuotesForm = () => {
           'offerId' in value &&
           'quantity' in value
         ) {
+          console.log('Valid item found:', value);
           return value as URLLineItem;
         }
+        console.log('Invalid item, returning null');
         return null;
       }),
     ).withDefault([]),
   );
+
+  // Log urlLineItems whenever they change
+  useEffect(() => {
+    console.log('urlLineItems updated:', urlLineItems);
+  }, [urlLineItems]);
 
   // Fetch products for URL line items
   const productIds = useMemo(
