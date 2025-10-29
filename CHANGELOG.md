@@ -1,3 +1,9 @@
+## [1.62.0](https://github.com/craftandculture/Craft-Culture/compare/v1.61.2...v1.62.0) (2025-10-29)
+
+### Features
+
+* add margin adjustment to Save Quote dialog for B2B distributors ([cf17de8](https://github.com/craftandculture/Craft-Culture/commit/cf17de83941c29b8dad9f6b66da40961835237b0))
+
 ## [1.61.2](https://github.com/craftandculture/Craft-Culture/compare/v1.61.1...v1.61.2) (2025-10-29)
 
 ### Bug Fixes
