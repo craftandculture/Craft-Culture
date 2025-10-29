@@ -1,3 +1,9 @@
+## [1.62.3](https://github.com/craftandculture/Craft-Culture/compare/v1.62.2...v1.62.3) (2025-10-29)
+
+### Bug Fixes
+
+* remove top Save Quote button and fix currency mismatch ([2b360fb](https://github.com/craftandculture/Craft-Culture/commit/2b360fb440445a9eb3361b768262779e95f44ec0))
+
 ## [1.62.2](https://github.com/craftandculture/Craft-Culture/compare/v1.62.1...v1.62.2) (2025-10-29)
 
 ### Bug Fixes
