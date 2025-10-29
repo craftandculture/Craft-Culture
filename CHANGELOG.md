@@ -1,3 +1,9 @@
+## [1.65.2](https://github.com/craftandculture/Craft-Culture/compare/v1.65.1...v1.65.2) (2025-10-29)
+
+### Bug Fixes
+
+* remove invalid alt prop from PDF Image component ([4f57997](https://github.com/craftandculture/Craft-Culture/commit/4f57997d488bc45d6970e9cc94b3361aba78bb0d))
+
 ## [1.65.1](https://github.com/craftandculture/Craft-Culture/compare/v1.65.0...v1.65.1) (2025-10-29)
 
 ### Bug Fixes
