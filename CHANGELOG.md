@@ -1,3 +1,9 @@
+## [1.63.1](https://github.com/craftandculture/Craft-Culture/compare/v1.63.0...v1.63.1) (2025-10-29)
+
+### Bug Fixes
+
+* add missing convertUsdToAed import to QuoteDetailsDialog ([588cf7c](https://github.com/craftandculture/Craft-Culture/commit/588cf7c2c2e3b407587bf4fb469e18d168e327d2))
+
 ## [1.63.0](https://github.com/craftandculture/Craft-Culture/compare/v1.62.3...v1.63.0) (2025-10-29)
 
 ### Features
