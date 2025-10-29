@@ -387,7 +387,7 @@ const B2BCalculator = ({ inBondPriceUsd, lineItems, onSaveWithMargins }: B2BCalc
               {onSaveWithMargins && (
                 <Button
                   variant="default"
-                  colorRole="success"
+                  colorRole="brand"
                   size="md"
                   onClick={handleSaveQuote}
                   className="w-full sm:w-auto"
