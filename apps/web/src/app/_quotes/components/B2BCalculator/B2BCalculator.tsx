@@ -236,25 +236,27 @@ const B2BCalculator = ({ inBondPriceUsd, lineItems, onSaveWithMargins }: B2BCalc
       <button
         type="button"
         onClick={() => setIsExpanded(!isExpanded)}
-        className="flex w-full items-center justify-between px-3 py-2.5 transition-colors hover:bg-fill-muted sm:p-3"
+        className="flex w-full items-center justify-between px-4 py-3 transition-colors hover:bg-fill-muted sm:px-5 sm:py-4"
       >
-        <div className="flex items-center gap-2 sm:gap-2.5">
-          <IconCalculator className="h-4 w-4 text-text-muted sm:h-5 sm:w-5" />
+        <div className="flex items-center gap-3">
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-fill-brand/10 sm:h-10 sm:w-10">
+            <IconCalculator className="h-5 w-5 text-text-brand sm:h-5 sm:w-5" />
+          </div>
           <div className="flex flex-col items-start gap-0.5">
-            <Typography variant="bodySm" className="sm:text-base">
+            <Typography variant="bodySm" className="font-semibold sm:text-base">
               Your Margin Calculator
             </Typography>
             <Typography
               variant="bodyXs"
               colorRole="muted"
-              className="text-[10px] sm:text-xs"
+              className="text-xs sm:text-sm"
             >
               Calculate your profit margins in seconds
             </Typography>
           </div>
         </div>
         <IconChevronDown
-          className={`h-3.5 w-3.5 text-text-muted transition-transform sm:h-4 sm:w-4 ${
+          className={`h-4 w-4 text-text-muted transition-transform sm:h-5 sm:w-5 ${
             isExpanded ? 'rotate-180' : ''
           }`}
         />
@@ -262,10 +264,10 @@ const B2BCalculator = ({ inBondPriceUsd, lineItems, onSaveWithMargins }: B2BCalc
 
       {/* Accordion Content */}
       {isExpanded && (
-        <div className="border-t border-border-muted px-3 py-4 sm:p-5">
+        <div className="border-t border-border-muted px-4 py-5 sm:px-5 sm:py-6">
           {/* Description */}
-          <div className="mb-5 rounded-lg border border-border-muted bg-fill-muted/30 px-3 py-2.5 sm:px-4 sm:py-3">
-            <Typography variant="bodyXs" colorRole="muted" className="text-xs leading-relaxed sm:text-sm">
+          <div className="mb-6 rounded-lg border border-border-brand/20 bg-fill-brand/5 px-4 py-3">
+            <Typography variant="bodySm" colorRole="muted" className="leading-relaxed">
               Your personal pricing assistant. Quickly calculate customer quotes by adjusting margins,
               tax rates, and transfer costs to find the perfect price for your customers.
             </Typography>
@@ -274,14 +276,14 @@ const B2BCalculator = ({ inBondPriceUsd, lineItems, onSaveWithMargins }: B2BCalc
           {/* Two-column layout on desktop, stacked on mobile */}
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(auto,280px)_1fr] lg:gap-8">
             {/* Left Column - Input Controls (Compact) */}
-            <div className="flex flex-col space-y-3 lg:max-w-[280px]">
+            <div className="flex flex-col space-y-4 lg:max-w-[280px]">
               {/* Baseline Price (read-only) */}
-              <div className="rounded-lg border border-border-muted bg-fill-primary p-3">
-                <div className="mb-1.5 flex items-center gap-1.5">
+              <div className="rounded-lg border border-border-muted bg-fill-primary p-4 shadow-sm">
+                <div className="mb-2 flex items-center gap-1.5">
                   <Typography
                     variant="bodyXs"
                     colorRole="muted"
-                    className="text-[10px] uppercase tracking-wide sm:text-xs"
+                    className="text-xs font-semibold uppercase tracking-wide"
                   >
                     In-Bond UAE
                   </Typography>
@@ -298,7 +300,7 @@ const B2BCalculator = ({ inBondPriceUsd, lineItems, onSaveWithMargins }: B2BCalc
                     </PopoverContent>
                   </Popover>
                 </div>
-                <Typography variant="bodySm" className="tabular-nums text-base font-medium sm:text-lg">
+                <Typography variant="bodyLg" className="tabular-nums font-semibold">
                   {formatPrice(displayValue(inBondPriceUsd), displayCurrency)}
                 </Typography>
               </div>
@@ -306,11 +308,11 @@ const B2BCalculator = ({ inBondPriceUsd, lineItems, onSaveWithMargins }: B2BCalc
               <Divider />
 
               {/* Cost Inputs */}
-              <div className="flex flex-col space-y-3">
+              <div className="flex flex-col space-y-4">
                 <Typography
                   variant="bodyXs"
                   colorRole="muted"
-                  className="text-[10px] uppercase tracking-wide sm:text-xs"
+                  className="text-xs font-semibold uppercase tracking-wide"
                 >
                   Cost inputs
                 </Typography>

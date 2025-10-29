@@ -59,62 +59,62 @@ const B2BCalculatorBreakdown = ({
 
 
   return (
-    <div className="flex flex-col space-y-2.5 rounded-lg border border-border-muted bg-fill-muted/30 p-3 sm:p-4">
+    <div className="flex flex-col space-y-3 rounded-lg border border-border-muted bg-fill-muted/30 p-4 shadow-sm sm:p-5">
       <Typography
-        variant="bodyXs"
+        variant="bodySm"
         colorRole="muted"
-        className="text-[10px] font-bold uppercase tracking-wide sm:text-xs"
+        className="font-semibold uppercase tracking-wide"
       >
         Total Price Breakdown
       </Typography>
 
-      <div className="flex flex-col space-y-1.5">
+      <div className="flex flex-col space-y-2">
         {/* In bond price */}
         <div className="flex items-baseline justify-between gap-2">
-          <Typography variant="bodyXs" colorRole="muted" className="text-[11px] sm:text-xs">
+          <Typography variant="bodySm" colorRole="muted">
             In Bond UAE Price
           </Typography>
-          <Typography variant="bodyXs" className="tabular-nums text-[11px] sm:text-xs">
+          <Typography variant="bodySm" className="tabular-nums font-medium">
             {formatPrice(convertValue(calculatedQuote.inBondPrice), currency)}
           </Typography>
         </div>
 
         {/* Import duty */}
         <div className="flex items-baseline justify-between gap-2">
-          <Typography variant="bodyXs" colorRole="muted" className="text-[11px] sm:text-xs">
+          <Typography variant="bodySm" colorRole="muted">
             Import duty ({importTaxPercent}%)
           </Typography>
-          <Typography variant="bodyXs" className="tabular-nums text-[11px] sm:text-xs">
+          <Typography variant="bodySm" className="tabular-nums font-medium">
             {formatPrice(convertValue(calculatedQuote.importTax), currency)}
           </Typography>
         </div>
 
         {/* Transfer cost */}
         <div className="flex items-baseline justify-between gap-2">
-          <Typography variant="bodyXs" colorRole="muted" className="text-[11px] sm:text-xs">
+          <Typography variant="bodySm" colorRole="muted">
             Transfer cost
           </Typography>
-          <Typography variant="bodyXs" className="tabular-nums text-[11px] sm:text-xs">
+          <Typography variant="bodySm" className="tabular-nums font-medium">
             {formatPrice(convertValue(calculatedQuote.transferCost), currency)}
           </Typography>
         </div>
 
         {/* Distributor margin */}
         <div className="flex items-baseline justify-between gap-2">
-          <Typography variant="bodyXs" colorRole="muted" className="text-[11px] sm:text-xs">
+          <Typography variant="bodySm" colorRole="muted">
             {marginLabel}
           </Typography>
-          <Typography variant="bodyXs" className="tabular-nums text-[11px] sm:text-xs">
+          <Typography variant="bodySm" className="tabular-nums font-medium">
             {formatPrice(convertValue(calculatedQuote.distributorMargin), currency)}
           </Typography>
         </div>
 
         {/* VAT */}
         <div className="flex items-baseline justify-between gap-2">
-          <Typography variant="bodyXs" colorRole="muted" className="text-[11px] sm:text-xs">
+          <Typography variant="bodySm" colorRole="muted">
             VAT (5%)
           </Typography>
-          <Typography variant="bodyXs" className="tabular-nums text-[11px] sm:text-xs">
+          <Typography variant="bodySm" className="tabular-nums font-medium">
             {formatPrice(convertValue(calculatedQuote.vat), currency)}
           </Typography>
         </div>
@@ -124,25 +124,25 @@ const B2BCalculatorBreakdown = ({
 
       {/* Lead Time */}
       <div className="flex items-baseline justify-between gap-2">
-        <Typography variant="bodyXs" colorRole="muted" className="text-[11px] sm:text-xs">
+        <Typography variant="bodySm" colorRole="muted">
           Lead time
         </Typography>
-        <Typography variant="bodyXs" className="text-[11px] sm:text-xs">
-          {leadTimeMin}-{leadTimeMax} days via air freight, EX-Works UAE(In-Bond)
+        <Typography variant="bodySm" className="text-right">
+          {leadTimeMin}-{leadTimeMax} days via air freight
         </Typography>
       </div>
 
-      <Divider className="my-1" />
+      <Divider className="my-2" />
 
-      {/* Customer quote price (total) */}
-      <div className="flex flex-col gap-2">
+      {/* Customer quote price (total) - Prominent display */}
+      <div className="flex flex-col gap-3 rounded-lg bg-fill-brand/10 p-4">
         <div className="flex items-baseline justify-between gap-2">
-          <Typography variant="bodyXs" className="text-xs font-medium sm:text-sm">
-            Customer price
+          <Typography variant="bodyMd" className="font-semibold">
+            Customer Price
           </Typography>
           <Typography
-            variant="bodyXs"
-            className="tabular-nums text-sm font-medium sm:text-base"
+            variant="bodyLg"
+            className="tabular-nums font-bold text-text-brand"
           >
             {formatPrice(convertValue(calculatedQuote.customerQuotePrice), currency)}
           </Typography>
@@ -150,11 +150,11 @@ const B2BCalculatorBreakdown = ({
 
         {/* Currency Toggle - Refined design */}
         <div className="flex justify-end">
-          <div className="inline-flex items-center gap-1.5 rounded-md border border-border-muted bg-fill-primary px-2 py-1">
+          <div className="inline-flex items-center gap-2 rounded-md border border-border-muted bg-fill-primary px-2.5 py-1.5 shadow-sm">
             <Typography
               variant="bodyXs"
               colorRole={currency === 'USD' ? 'primary' : 'muted'}
-              className="text-[10px] font-medium uppercase tracking-wide"
+              className="text-xs font-semibold uppercase tracking-wide"
             >
               USD
             </Typography>
@@ -167,7 +167,7 @@ const B2BCalculatorBreakdown = ({
             <Typography
               variant="bodyXs"
               colorRole={currency === 'AED' ? 'primary' : 'muted'}
-              className="text-[10px] font-medium uppercase tracking-wide"
+              className="text-xs font-semibold uppercase tracking-wide"
             >
               AED
             </Typography>
