@@ -1,3 +1,9 @@
+## [1.61.1](https://github.com/craftandculture/Craft-Culture/compare/v1.61.0...v1.61.1) (2025-10-29)
+
+### Bug Fixes
+
+* correct EDIT quote URL format for nuqs parseAsArrayOf ([3ad853f](https://github.com/craftandculture/Craft-Culture/commit/3ad853f96fc7ef56ff6bced310d4392d34f36652))
+
 ## [1.61.0](https://github.com/craftandculture/Craft-Culture/compare/v1.60.0...v1.61.0) (2025-10-29)
 
 ### Features
