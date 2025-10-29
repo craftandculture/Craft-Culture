@@ -27,6 +27,7 @@ export const mockUser: User = {
   approvalStatus: 'approved',
   approvedAt: new Date(),
   approvedBy: null,
+  termsAcceptedAt: null,
 };
 
 /**

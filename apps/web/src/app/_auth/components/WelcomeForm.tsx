@@ -11,6 +11,7 @@ import { toast } from 'sonner';
 
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
+import Checkbox from '@/app/_ui/components/Checkbox/Checkbox';
 import FormField from '@/app/_ui/components/FormField/FormField';
 import FormFieldContent from '@/app/_ui/components/FormField/FormFieldContent';
 import FormFieldError from '@/app/_ui/components/FormField/FormFieldError';
@@ -26,12 +27,15 @@ import Typography from '@/app/_ui/components/Typography/Typography';
 import useZodForm from '@/app/_ui/hooks/useZodForm';
 import useTRPC from '@/lib/trpc/browser';
 
+import TermsViewer from './TermsViewer';
 import { UpdateUserSchema } from '../schemas/updateUserSchema';
 import updateUserSchema from '../schemas/updateUserSchema';
 
 const WelcomeForm = () => {
   const router = useRouter();
   const [isRouting, setIsRouting] = useState(false);
+  const [hasScrolledToBottom, setHasScrolledToBottom] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState(false);
 
   const {
     register,
@@ -60,7 +64,11 @@ const WelcomeForm = () => {
   );
 
   const submitHandler: SubmitHandler<UpdateUserSchema> = async (values) => {
-    await updateUser(values);
+    if (!hasScrolledToBottom || !termsAccepted) {
+      toast.error('Please read and accept the Terms and Conditions');
+      return;
+    }
+    await updateUser({ ...values, acceptTerms: true });
   };
 
   return (
@@ -135,11 +143,31 @@ const WelcomeForm = () => {
               )}
             </FormFieldContent>
           </FormField>
+
+          <TermsViewer onScrollToBottom={setHasScrolledToBottom} />
+
+          <FormField>
+            <div className="flex items-start gap-3">
+              <Checkbox
+                id="termsAccepted"
+                checked={termsAccepted}
+                onCheckedChange={(checked) => setTermsAccepted(checked === true)}
+                disabled={!hasScrolledToBottom || isSubmitting || isRouting}
+              />
+              <FormFieldLabel asChild className="cursor-pointer">
+                <label htmlFor="termsAccepted" className="text-sm">
+                  I have read and agree to the Terms and Conditions. I acknowledge that this
+                  Platform is a pricing calculator tool only and not a sales fulfillment system.
+                </label>
+              </FormFieldLabel>
+            </div>
+          </FormField>
+
           <Button
             type="submit"
             size="lg"
             colorRole="brand"
-            isDisabled={isSubmitting || isRouting}
+            isDisabled={!hasScrolledToBottom || !termsAccepted || isSubmitting || isRouting}
           >
             <ButtonContent
               iconRight={IconArrowRight}
