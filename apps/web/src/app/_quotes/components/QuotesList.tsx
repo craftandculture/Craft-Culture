@@ -28,6 +28,8 @@ import Typography from '@/app/_ui/components/Typography/Typography';
 import type { Quote } from '@/database/schema';
 import { useTRPCClient } from '@/lib/trpc/browser';
 
+import QuoteDetailsDialog from './QuoteDetailsDialog';
+
 /**
  * QuotesList component displays a table of saved quotes with search,
  * filter, and action capabilities
@@ -37,6 +39,8 @@ const QuotesList = () => {
   const router = useRouter();
   const [search, setSearch] = useState('');
   const [cursor, setCursor] = useState(0);
+  const [selectedQuote, setSelectedQuote] = useState<Quote | null>(null);
+  const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ['quotes.getMany', { limit: 20, cursor, search: search || undefined }],
@@ -68,6 +72,11 @@ const QuotesList = () => {
     // TODO: Implement Excel download
     toast.info('Excel download coming soon');
     console.log('Download Excel for quote:', quote.id);
+  };
+
+  const handleViewDetails = (quote: Quote) => {
+    setSelectedQuote(quote);
+    setIsDetailsDialogOpen(true);
   };
 
   const handleEdit = (quote: Quote) => {
@@ -188,12 +197,7 @@ const QuotesList = () => {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem
-                  onClick={() => {
-                    // TODO: Navigate to quote details
-                    toast.info('Quote details coming soon');
-                  }}
-                >
+                <DropdownMenuItem onClick={() => handleViewDetails(quote)}>
                   <Icon icon={IconEye} size="sm" />
                   <span>View Details</span>
                 </DropdownMenuItem>
@@ -278,6 +282,13 @@ const QuotesList = () => {
           )}
         </div>
       )}
+
+      {/* Quote Details Dialog */}
+      <QuoteDetailsDialog
+        quote={selectedQuote}
+        open={isDetailsDialogOpen}
+        onOpenChange={setIsDetailsDialogOpen}
+      />
     </div>
   );
 };
