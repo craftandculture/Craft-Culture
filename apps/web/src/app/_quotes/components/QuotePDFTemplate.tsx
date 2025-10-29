@@ -12,88 +12,99 @@ Font.register({
   ],
 });
 
-// PDF Styles
+// PDF Styles - Matching Craft & Culture Index brand colors
 const styles = StyleSheet.create({
   page: {
     padding: 40,
     fontFamily: 'Roboto',
     fontSize: 10,
-    color: '#1a1a1a',
+    color: '#0a0a0a',
+    backgroundColor: '#ffffff',
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 30,
+    marginBottom: 40,
+    paddingBottom: 20,
+    borderBottom: '2px solid #6BBFBF',
   },
   logo: {
-    width: 120,
-    height: 60,
+    width: 168,
+    height: 84,
     objectFit: 'contain',
   },
   companyNameFallback: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: 'bold',
-    color: '#0066cc',
+    color: '#6BBFBF',
   },
   headerRight: {
     alignItems: 'flex-end',
   },
   title: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: 'bold',
-    color: '#0066cc',
-    marginBottom: 8,
+    color: '#0a0a0a',
+    marginBottom: 12,
+    letterSpacing: 1,
   },
   quoteInfo: {
     fontSize: 9,
-    color: '#666',
-    marginBottom: 2,
+    color: '#737373',
+    marginBottom: 3,
+    lineHeight: 1.3,
   },
   section: {
-    marginBottom: 20,
+    marginBottom: 24,
   },
   sectionTitle: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: 'bold',
-    marginBottom: 8,
-    color: '#333',
+    marginBottom: 10,
+    color: '#0a0a0a',
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: 1,
+    paddingBottom: 4,
+    borderBottom: '1px solid #e5e5e5',
   },
   customerBox: {
     backgroundColor: '#f5f5f5',
-    padding: 12,
+    padding: 16,
     borderRadius: 4,
+    borderLeft: '3px solid #6BBFBF',
   },
   customerText: {
     fontSize: 9,
-    marginBottom: 4,
-    lineHeight: 1.4,
+    marginBottom: 5,
+    lineHeight: 1.5,
+    color: '#0a0a0a',
   },
   customerLabel: {
     fontWeight: 'bold',
-    color: '#666',
+    color: '#737373',
   },
   table: {
     width: '100%',
   },
   tableHeader: {
     flexDirection: 'row',
-    backgroundColor: '#0066cc',
-    color: '#fff',
-    padding: 8,
+    backgroundColor: '#6BBFBF',
+    color: '#ffffff',
+    padding: 10,
     fontWeight: 'bold',
     fontSize: 9,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   tableRow: {
     flexDirection: 'row',
-    borderBottom: '1px solid #e0e0e0',
-    padding: 8,
+    borderBottom: '1px solid #e5e5e5',
+    padding: 10,
     fontSize: 9,
   },
   tableRowAlt: {
-    backgroundColor: '#f9f9f9',
+    backgroundColor: '#fafafa',
   },
   colProduct: {
     flex: 3,
@@ -102,63 +113,75 @@ const styles = StyleSheet.create({
     flex: 1,
     textAlign: 'center',
   },
+  colBottlePrice: {
+    flex: 1.2,
+    textAlign: 'right',
+  },
   colPrice: {
-    flex: 1.5,
+    flex: 1.3,
     textAlign: 'right',
   },
   colTotal: {
-    flex: 1.5,
+    flex: 1.3,
     textAlign: 'right',
   },
   productName: {
     fontWeight: 'bold',
-    marginBottom: 2,
+    marginBottom: 3,
+    color: '#0a0a0a',
   },
   productMeta: {
     fontSize: 8,
-    color: '#666',
+    color: '#737373',
+    lineHeight: 1.3,
   },
   pricingSection: {
-    marginTop: 20,
+    marginTop: 24,
     alignItems: 'flex-end',
   },
   pricingRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    width: 200,
-    paddingVertical: 4,
+    width: 220,
+    paddingVertical: 5,
     fontSize: 10,
   },
   pricingLabel: {
-    color: '#666',
+    color: '#737373',
   },
   pricingValue: {
     fontWeight: 'bold',
+    color: '#0a0a0a',
   },
   totalRow: {
-    borderTop: '2px solid #0066cc',
-    paddingTop: 8,
-    marginTop: 4,
+    borderTop: '2px solid #6BBFBF',
+    paddingTop: 10,
+    marginTop: 6,
+    backgroundColor: '#f5f5f5',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
   },
   totalLabel: {
     fontSize: 12,
     fontWeight: 'bold',
+    color: '#0a0a0a',
   },
   totalValue: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: 'bold',
-    color: '#0066cc',
+    color: '#6BBFBF',
   },
   notesBox: {
     backgroundColor: '#f5f5f5',
-    padding: 12,
+    padding: 16,
     borderRadius: 4,
-    marginTop: 20,
+    marginTop: 24,
+    borderLeft: '3px solid #6BBFBF',
   },
   notesText: {
     fontSize: 9,
-    lineHeight: 1.4,
-    color: '#333',
+    lineHeight: 1.6,
+    color: '#0a0a0a',
   },
   footer: {
     position: 'absolute',
@@ -167,12 +190,13 @@ const styles = StyleSheet.create({
     right: 40,
     textAlign: 'center',
     fontSize: 8,
-    color: '#999',
-    borderTop: '1px solid #e0e0e0',
-    paddingTop: 10,
+    color: '#a3a3a3',
+    borderTop: '1px solid #e5e5e5',
+    paddingTop: 12,
   },
   footerText: {
-    marginBottom: 2,
+    marginBottom: 3,
+    lineHeight: 1.4,
   },
 });
 
@@ -196,6 +220,7 @@ export interface QuotePDFTemplateProps {
     region?: string | null;
     year?: string | null;
     quantity: number;
+    bottlesPerCase: number;
     pricePerCase: number;
     lineTotal: number;
   }>;
@@ -203,8 +228,6 @@ export interface QuotePDFTemplateProps {
     companyName?: string | null;
     companyLogo?: string | null;
   };
-  leadTimeMin: number;
-  leadTimeMax: number;
 }
 
 /**
@@ -214,8 +237,6 @@ const QuotePDFTemplate = ({
   quote,
   lineItems,
   user,
-  leadTimeMin,
-  leadTimeMax,
 }: QuotePDFTemplateProps) => {
   const formatPrice = (amount: number, currency: string) => {
     return `${currency} ${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -255,9 +276,6 @@ const QuotePDFTemplate = ({
             )}
             <Text style={styles.quoteInfo}>Date: {formatDate(quote.createdAt)}</Text>
             <Text style={styles.quoteInfo}>Valid Until: {formatDate(validUntil)}</Text>
-            <Text style={styles.quoteInfo}>
-              Lead Time: {leadTimeMin}-{leadTimeMax} days
-            </Text>
           </View>
         </View>
 
@@ -296,33 +314,43 @@ const QuotePDFTemplate = ({
             <View style={styles.tableHeader}>
               <Text style={styles.colProduct}>Product</Text>
               <Text style={styles.colQuantity}>Qty</Text>
-              <Text style={styles.colPrice}>Price/Case</Text>
+              <Text style={styles.colBottlePrice}>Per Btl</Text>
+              <Text style={styles.colPrice}>Per Case</Text>
               <Text style={styles.colTotal}>Total</Text>
             </View>
 
             {/* Table Rows */}
-            {lineItems.map((item, index) => (
-              <View
-                key={index}
-                style={index % 2 === 1 ? [styles.tableRow, styles.tableRowAlt] : styles.tableRow}
-              >
-                <View style={styles.colProduct}>
-                  <Text style={styles.productName}>{item.productName}</Text>
-                  <Text style={styles.productMeta}>
-                    {[item.producer, item.region, item.year].filter(Boolean).join(' • ')}
+            {lineItems.map((item, index) => {
+              const pricePerBottle = item.bottlesPerCase > 0
+                ? item.pricePerCase / item.bottlesPerCase
+                : 0;
+
+              return (
+                <View
+                  key={index}
+                  style={index % 2 === 1 ? [styles.tableRow, styles.tableRowAlt] : styles.tableRow}
+                >
+                  <View style={styles.colProduct}>
+                    <Text style={styles.productName}>{item.productName}</Text>
+                    <Text style={styles.productMeta}>
+                      {[item.producer, item.region, item.year].filter(Boolean).join(' • ')}
+                    </Text>
+                  </View>
+                  <Text style={styles.colQuantity}>
+                    {item.quantity} {item.quantity === 1 ? 'case' : 'cases'}
+                  </Text>
+                  <Text style={styles.colBottlePrice}>
+                    {formatPrice(pricePerBottle, quote.currency)}
+                  </Text>
+                  <Text style={styles.colPrice}>
+                    {formatPrice(item.pricePerCase, quote.currency)}
+                  </Text>
+                  <Text style={styles.colTotal}>
+                    {formatPrice(item.lineTotal, quote.currency)}
                   </Text>
                 </View>
-                <Text style={styles.colQuantity}>
-                  {item.quantity} {item.quantity === 1 ? 'case' : 'cases'}
-                </Text>
-                <Text style={styles.colPrice}>
-                  {formatPrice(item.pricePerCase, quote.currency)}
-                </Text>
-                <Text style={styles.colTotal}>
-                  {formatPrice(item.lineTotal, quote.currency)}
-                </Text>
-              </View>
-            ))}
+              );
+            })}
           </View>
         </View>
 
@@ -344,11 +372,7 @@ const QuotePDFTemplate = ({
 
         {/* Footer */}
         <View style={styles.footer}>
-          <Text style={styles.footerText}>Terms: EX-Works UAE (In-Bond)</Text>
-          <Text style={styles.footerText}>
-            Lead Time: {leadTimeMin}-{leadTimeMax} days via air freight
-          </Text>
-          <Text style={styles.footerText}>Powered by Craft & Culture</Text>
+          <Text style={styles.footerText}>Powered by Craft & Culture Index</Text>
           <Text style={styles.footerText}>www.craftandculture.com</Text>
         </View>
       </Page>
