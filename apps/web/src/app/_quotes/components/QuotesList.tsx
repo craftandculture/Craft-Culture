@@ -82,7 +82,6 @@ const QuotesList = () => {
   const handleEdit = (quote: Quote) => {
     try {
       // Format line items for nuqs parseAsArrayOf(parseAsJson(...))
-      // Each array element should be comma-separated JSON objects
       const lineItemsArray = quote.lineItems as Array<{
         productId: string;
         offerId: string;
@@ -92,14 +91,16 @@ const QuotesList = () => {
 
       console.log('Original line items:', lineItemsArray);
 
-      // Stringify each item and join with commas
-      const itemsParam = lineItemsArray
-        .map((item) => encodeURIComponent(JSON.stringify(item)))
-        .join(',');
+      // Create URLSearchParams with repeated 'items' keys for each line item
+      // This is the format that parseAsArrayOf expects
+      const params = new URLSearchParams();
+      lineItemsArray.forEach((item) => {
+        params.append('items', JSON.stringify(item));
+      });
 
-      const targetUrl = `/platform/quotes?items=${itemsParam}`;
+      const targetUrl = `/platform/quotes?${params.toString()}`;
       console.log('Navigating to URL:', targetUrl);
-      console.log('Items param:', itemsParam);
+      console.log('Search params:', params.toString());
 
       // Navigate to quotes form with line items
       router.push(targetUrl);
