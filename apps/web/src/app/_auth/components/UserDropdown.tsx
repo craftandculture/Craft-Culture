@@ -99,6 +99,14 @@ const UserDropdown = ({ user }: UserDropdownProps) => {
           </>
         )}
 
+        <DropdownMenuItem asChild>
+          <Link href="/platform/settings">
+            <DropdownMenuContentWrapper iconLeft={IconSettings} align="start">
+              Settings
+            </DropdownMenuContentWrapper>
+          </Link>
+        </DropdownMenuItem>
+
         {mounted && (
           <>
             <DropdownMenuSub>

@@ -83,6 +83,8 @@ export const users = pgTable('users', {
   image: text('image'),
   role: userRole('role').notNull().default('user'),
   customerType: customerType('customer_type').notNull().default('b2c'),
+  companyName: text('company_name'),
+  companyLogo: text('company_logo'),
   onboardingCompletedAt: timestamp('onboarding_completed_at', {
     mode: 'date',
   }),
