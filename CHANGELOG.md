@@ -1,3 +1,11 @@
+## [1.68.0](https://github.com/craftandculture/Craft-Culture/compare/v1.67.1...v1.68.0) (2025-10-29)
+
+### Features
+
+* add mandatory T&C acceptance with scroll tracking ([870c665](https://github.com/craftandculture/Craft-Culture/commit/870c665304145a29df28daf46a8b042c9a7c8c68))
+* add Terms & Conditions and Privacy Policy ([1c2c57a](https://github.com/craftandculture/Craft-Culture/commit/1c2c57a885f85b80c0a375bb8648a4a2d81575e0))
+* update PDF quote footer with company branding ([ac83cb4](https://github.com/craftandculture/Craft-Culture/commit/ac83cb453b2d17b9c85215c78365408a78c6f613))
+
 ## [1.67.1](https://github.com/craftandculture/Craft-Culture/compare/v1.67.0...v1.67.1) (2025-10-29)
 
 ### Bug Fixes
