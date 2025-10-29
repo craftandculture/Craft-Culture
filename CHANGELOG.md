@@ -1,3 +1,9 @@
+## [1.63.0](https://github.com/craftandculture/Craft-Culture/compare/v1.62.3...v1.63.0) (2025-10-29)
+
+### Features
+
+* add detailed pricing breakdown to VIEW quote dialog ([2da5c5a](https://github.com/craftandculture/Craft-Culture/commit/2da5c5a61922768f40a7582a383c23dd42a1a100))
+
 ## [1.62.3](https://github.com/craftandculture/Craft-Culture/compare/v1.62.2...v1.62.3) (2025-10-29)
 
 ### Bug Fixes
