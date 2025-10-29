@@ -1073,6 +1073,7 @@ const QuotesForm = () => {
             ? convertUsdToAed(quoteData.totalUsd)
             : undefined
         }
+        customerType={customerType}
         onSaveSuccess={(quoteId) => {
           console.log('Quote saved successfully:', quoteId);
           void queryClient.invalidateQueries({ queryKey: ['quotes.getMany'] });
