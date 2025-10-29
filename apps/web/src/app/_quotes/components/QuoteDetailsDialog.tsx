@@ -66,6 +66,38 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
     );
   }, [productsData]);
 
+  // Extract pricing data from quoteData
+  const quotePricingData = useMemo(() => {
+    if (!quote?.quoteData) return null;
+    const data = quote.quoteData as {
+      lineItems?: Array<{
+        productId: string;
+        lineItemTotalUsd: number;
+        basePriceUsd?: number;
+      }>;
+      marginConfig?: {
+        type: 'percentage' | 'fixed';
+        value: number;
+        transferCost: number;
+        importTax: number;
+      };
+      customerQuotePrice?: number;
+    };
+    return data;
+  }, [quote?.quoteData]);
+
+  // Create pricing map by productId
+  const pricingMap = useMemo(() => {
+    if (!quotePricingData?.lineItems) return {};
+    return quotePricingData.lineItems.reduce(
+      (acc, item) => {
+        acc[item.productId] = item;
+        return acc;
+      },
+      {} as Record<string, { lineItemTotalUsd: number; basePriceUsd?: number }>,
+    );
+  }, [quotePricingData]);
+
   if (!quote) return null;
 
   const statusColors = {
@@ -166,20 +198,79 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
               <div className="mb-3 flex items-center gap-2">
                 <Icon icon={IconCurrencyDollar} size="sm" colorRole="muted" />
                 <Typography variant="bodySm" className="font-semibold">
-                  Total Amount
+                  Pricing
                 </Typography>
               </div>
-              <div className="rounded-lg bg-fill-brand/10 p-4">
+
+              {/* In-Bond Price */}
+              <div className="mb-2 rounded-lg bg-fill-muted/30 p-3">
                 <Typography variant="bodyXs" colorRole="muted" className="mb-1">
-                  Quote Total
+                  In-Bond UAE Price
                 </Typography>
-                <Typography variant="headingMd" className="font-bold text-text-brand">
+                <Typography variant="bodyMd" className="font-semibold">
                   {formatPrice(
                     quote.currency === 'AED' ? quote.totalAed ?? quote.totalUsd : quote.totalUsd,
                     quote.currency as 'USD' | 'AED',
                   )}
                 </Typography>
               </div>
+
+              {/* Margin Configuration (B2B only) */}
+              {quotePricingData?.marginConfig && (
+                <div className="mb-2 space-y-2 rounded-lg border border-border-muted bg-fill-muted/30 p-3">
+                  <Typography variant="bodyXs" className="font-semibold">
+                    Margin Configuration
+                  </Typography>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <Typography variant="bodyXs" colorRole="muted">
+                        Distributor Margin
+                      </Typography>
+                      <Typography variant="bodyXs" className="font-medium">
+                        {quotePricingData.marginConfig.type === 'percentage'
+                          ? `${quotePricingData.marginConfig.value}%`
+                          : formatPrice(
+                              quotePricingData.marginConfig.value,
+                              quote.currency as 'USD' | 'AED',
+                            )}
+                      </Typography>
+                    </div>
+                    <div>
+                      <Typography variant="bodyXs" colorRole="muted">
+                        Import Tax
+                      </Typography>
+                      <Typography variant="bodyXs" className="font-medium">
+                        {quotePricingData.marginConfig.importTax}%
+                      </Typography>
+                    </div>
+                    <div>
+                      <Typography variant="bodyXs" colorRole="muted">
+                        Transfer Cost
+                      </Typography>
+                      <Typography variant="bodyXs" className="font-medium">
+                        ${quotePricingData.marginConfig.transferCost}
+                      </Typography>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Customer Quote Price (if margins applied) */}
+              {quotePricingData?.customerQuotePrice && (
+                <div className="rounded-lg bg-fill-brand/10 p-4">
+                  <Typography variant="bodyXs" colorRole="muted" className="mb-1">
+                    Customer Quote Price (Inc. VAT)
+                  </Typography>
+                  <Typography variant="headingMd" className="font-bold text-text-brand">
+                    {formatPrice(
+                      quote.currency === 'AED'
+                        ? convertUsdToAed(quotePricingData.customerQuotePrice)
+                        : quotePricingData.customerQuotePrice,
+                      quote.currency as 'USD' | 'AED',
+                    )}
+                  </Typography>
+                </div>
+              )}
             </div>
 
             {/* Line Items */}
@@ -191,6 +282,12 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
               <div className="space-y-3">
                 {lineItems.map((item, index) => {
                   const product = productMap[item.productId];
+                  const pricing = pricingMap[item.productId];
+                  const pricePerCase = pricing?.lineItemTotalUsd
+                    ? pricing.lineItemTotalUsd / item.quantity
+                    : 0;
+                  const lineItemTotal = pricing?.lineItemTotalUsd || 0;
+
                   return (
                     <div
                       key={index}
@@ -198,38 +295,75 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                     >
                       {product ? (
                         <>
-                          <div className="mb-3 flex items-start justify-between gap-4">
-                            <div className="flex-1">
-                              <Typography variant="bodySm" className="mb-1 font-semibold">
-                                {product.name}
-                              </Typography>
-                              <div className="flex flex-wrap gap-x-3 gap-y-1">
-                                {product.producer && (
-                                  <Typography variant="bodyXs" colorRole="muted">
-                                    {product.producer}
-                                  </Typography>
-                                )}
-                                {product.year && (
-                                  <Typography variant="bodyXs" colorRole="muted">
-                                    {product.year}
-                                  </Typography>
-                                )}
-                                {product.region && (
-                                  <Typography variant="bodyXs" colorRole="muted">
-                                    {product.region}
-                                  </Typography>
-                                )}
+                          {/* Product Info and Pricing */}
+                          <div className="mb-3">
+                            <div className="mb-2 flex items-start justify-between gap-4">
+                              <div className="flex-1">
+                                <Typography variant="bodySm" className="mb-1 font-semibold">
+                                  {product.name}
+                                </Typography>
+                                <div className="flex flex-wrap gap-x-3 gap-y-1">
+                                  {product.producer && (
+                                    <Typography variant="bodyXs" colorRole="muted">
+                                      {product.producer}
+                                    </Typography>
+                                  )}
+                                  {product.year && (
+                                    <Typography variant="bodyXs" colorRole="muted">
+                                      {product.year}
+                                    </Typography>
+                                  )}
+                                  {product.region && (
+                                    <Typography variant="bodyXs" colorRole="muted">
+                                      {product.region}
+                                    </Typography>
+                                  )}
+                                </div>
                               </div>
                             </div>
-                            <div className="text-right">
-                              <Typography variant="bodyXs" colorRole="muted" className="mb-1">
-                                Quantity
-                              </Typography>
-                              <Typography variant="bodySm" className="font-semibold">
-                                {item.quantity}
-                              </Typography>
-                            </div>
+
+                            {/* Pricing Breakdown */}
+                            {pricing && (
+                              <div className="grid grid-cols-3 gap-2 rounded-lg bg-fill-muted p-3">
+                                <div>
+                                  <Typography variant="bodyXs" colorRole="muted" className="mb-0.5">
+                                    Quantity
+                                  </Typography>
+                                  <Typography variant="bodySm" className="font-semibold">
+                                    {item.quantity} {item.quantity === 1 ? 'case' : 'cases'}
+                                  </Typography>
+                                </div>
+                                <div>
+                                  <Typography variant="bodyXs" colorRole="muted" className="mb-0.5">
+                                    Price/Case
+                                  </Typography>
+                                  <Typography variant="bodySm" className="font-semibold">
+                                    {formatPrice(
+                                      quote.currency === 'AED' && quote.totalAed
+                                        ? convertUsdToAed(pricePerCase)
+                                        : pricePerCase,
+                                      quote.currency as 'USD' | 'AED',
+                                    )}
+                                  </Typography>
+                                </div>
+                                <div className="text-right">
+                                  <Typography variant="bodyXs" colorRole="muted" className="mb-0.5">
+                                    Line Total
+                                  </Typography>
+                                  <Typography variant="bodySm" className="font-bold text-text-brand">
+                                    {formatPrice(
+                                      quote.currency === 'AED' && quote.totalAed
+                                        ? convertUsdToAed(lineItemTotal)
+                                        : lineItemTotal,
+                                      quote.currency as 'USD' | 'AED',
+                                    )}
+                                  </Typography>
+                                </div>
+                              </div>
+                            )}
                           </div>
+
+                          {/* Additional Details */}
                           <div className="flex items-center gap-4 border-t border-border-muted pt-3">
                             <div>
                               <Typography variant="bodyXs" colorRole="muted">
