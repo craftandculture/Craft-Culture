@@ -1,3 +1,9 @@
+## [1.61.0](https://github.com/craftandculture/Craft-Culture/compare/v1.60.0...v1.61.0) (2025-10-29)
+
+### Features
+
+* enhance quote details dialog and add debugging for edit functionality ([1be67f3](https://github.com/craftandculture/Craft-Culture/commit/1be67f3bb40f6b2b5bb92536f2966c2fbdb6a607))
+
 ## [1.60.0](https://github.com/craftandculture/Craft-Culture/compare/v1.59.0...v1.60.0) (2025-10-29)
 
 ### Features
