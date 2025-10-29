@@ -1,3 +1,9 @@
+## [1.64.0](https://github.com/craftandculture/Craft-Culture/compare/v1.63.2...v1.64.0) (2025-10-29)
+
+### Features
+
+* add settings page with company logo upload ([7efd28f](https://github.com/craftandculture/Craft-Culture/commit/7efd28fbfe35a15b5f70787f7ce4a033a158c8f2))
+
 ## [1.63.2](https://github.com/craftandculture/Craft-Culture/compare/v1.63.1...v1.63.2) (2025-10-29)
 
 ### Code Refactoring
