@@ -1,15 +1,19 @@
 'use client';
 
 import type { DialogProps } from '@radix-ui/react-dialog';
-import { IconCalendar, IconCurrencyDollar, IconFileText, IconUser } from '@tabler/icons-react';
+import { IconCalendar, IconCurrencyDollar, IconDownload, IconFileText, IconUser } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
+import { toast } from 'sonner';
 
+import Button from '@/app/_ui/components/Button/Button';
+import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
 import Dialog from '@/app/_ui/components/Dialog/Dialog';
 import DialogBody from '@/app/_ui/components/Dialog/DialogBody';
 import DialogContent from '@/app/_ui/components/Dialog/DialogContent';
 import DialogDescription from '@/app/_ui/components/Dialog/DialogDescription';
+import DialogFooter from '@/app/_ui/components/Dialog/DialogFooter';
 import DialogHeader from '@/app/_ui/components/Dialog/DialogHeader';
 import DialogTitle from '@/app/_ui/components/Dialog/DialogTitle';
 import Divider from '@/app/_ui/components/Divider/Divider';
@@ -20,6 +24,8 @@ import useTRPC from '@/lib/trpc/browser';
 import convertUsdToAed from '@/utils/convertUsdToAed';
 import formatPrice from '@/utils/formatPrice';
 
+import exportQuoteToPDF from '../utils/exportQuoteToPDF';
+
 interface QuoteDetailsDialogProps extends DialogProps {
   quote: Quote | null;
 }
@@ -29,6 +35,7 @@ interface QuoteDetailsDialogProps extends DialogProps {
  */
 const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogProps) => {
   const api = useTRPC();
+  const [isExporting, setIsExporting] = useState(false);
 
   const lineItems = useMemo(
     () =>
@@ -40,6 +47,25 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
       }>,
     [quote?.lineItems],
   );
+
+  // Fetch user settings for logo/company name
+  const { data: settings } = useQuery({
+    ...api.settings.get.queryOptions(),
+    enabled: !!quote,
+  });
+
+  // Fetch lead time settings
+  const { data: leadTimeMinData } = useQuery({
+    ...api.admin.settings.get.queryOptions({ key: 'leadTimeMin' }),
+    enabled: !!quote,
+  });
+  const { data: leadTimeMaxData } = useQuery({
+    ...api.admin.settings.get.queryOptions({ key: 'leadTimeMax' }),
+    enabled: !!quote,
+  });
+
+  const leadTimeMin = leadTimeMinData ? Number(leadTimeMinData) : 14;
+  const leadTimeMax = leadTimeMaxData ? Number(leadTimeMaxData) : 21;
 
   // Extract unique product IDs from line items
   const productIds = useMemo(
@@ -98,6 +124,65 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
       {} as Record<string, { lineItemTotalUsd: number; basePriceUsd?: number }>,
     );
   }, [quotePricingData]);
+
+  // Handle PDF export
+  const handleExportPDF = async () => {
+    if (!quote || !productsData?.data) {
+      toast.error('Cannot export quote - missing data');
+      return;
+    }
+
+    setIsExporting(true);
+    try {
+      // Build line items for PDF
+      const pdfLineItems = lineItems.map((item) => {
+        const product = productMap[item.productId];
+        const pricing = pricingMap[item.productId];
+        const pricePerCase = pricing?.lineItemTotalUsd
+          ? pricing.lineItemTotalUsd / item.quantity
+          : 0;
+        const lineTotal = pricing?.lineItemTotalUsd || 0;
+
+        // Convert to display currency if needed
+        const displayPricePerCase =
+          quote.currency === 'AED' && quote.totalAed
+            ? convertUsdToAed(pricePerCase)
+            : pricePerCase;
+        const displayLineTotal =
+          quote.currency === 'AED' && quote.totalAed
+            ? convertUsdToAed(lineTotal)
+            : lineTotal;
+
+        return {
+          productName: product?.name || item.productId,
+          producer: product?.producer || null,
+          region: product?.region || null,
+          year: product?.year || null,
+          quantity: item.quantity,
+          pricePerCase: displayPricePerCase,
+          lineTotal: displayLineTotal,
+        };
+      });
+
+      await exportQuoteToPDF(
+        quote,
+        pdfLineItems,
+        {
+          companyName: settings?.companyName || null,
+          companyLogo: settings?.companyLogo || null,
+        },
+        leadTimeMin,
+        leadTimeMax,
+      );
+
+      toast.success('PDF exported successfully');
+    } catch (error) {
+      console.error('Error exporting PDF:', error);
+      toast.error('Failed to export PDF');
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   if (!quote) return null;
 
@@ -433,6 +518,20 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
             )}
           </div>
         </DialogBody>
+
+        <DialogFooter>
+          <Button
+            variant="default"
+            colorRole="brand"
+            size="md"
+            onClick={handleExportPDF}
+            isDisabled={isExporting || !productsData?.data}
+          >
+            <ButtonContent iconLeft={IconDownload}>
+              {isExporting ? 'Exporting...' : 'Export PDF'}
+            </ButtonContent>
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
