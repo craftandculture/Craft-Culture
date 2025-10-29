@@ -1,3 +1,9 @@
+## [1.66.0](https://github.com/craftandculture/Craft-Culture/compare/v1.65.4...v1.66.0) (2025-10-29)
+
+### Features
+
+* enhance PDF export with brand colors and per-bottle pricing ([50dfe61](https://github.com/craftandculture/Craft-Culture/commit/50dfe61bd9d99cfded079f9571d914d52a72bf09)), closes [#6](https://github.com/craftandculture/Craft-Culture/issues/6)
+
 ## [1.65.4](https://github.com/craftandculture/Craft-Culture/compare/v1.65.3...v1.65.4) (2025-10-29)
 
 ### Bug Fixes
