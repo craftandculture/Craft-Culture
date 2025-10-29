@@ -157,7 +157,7 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
           productName: product?.name || item.productId,
           producer: product?.producer || null,
           region: product?.region || null,
-          year: product?.year || null,
+          year: product?.year ? String(product.year) : null,
           quantity: item.quantity,
           pricePerCase: displayPricePerCase,
           lineTotal: displayLineTotal,
