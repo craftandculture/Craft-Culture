@@ -304,7 +304,7 @@ const QuotePDFTemplate = ({
             {lineItems.map((item, index) => (
               <View
                 key={index}
-                style={[styles.tableRow, index % 2 === 1 && styles.tableRowAlt]}
+                style={index % 2 === 1 ? [styles.tableRow, styles.tableRowAlt] : styles.tableRow}
               >
                 <View style={styles.colProduct}>
                   <Text style={styles.productName}>{item.productName}</Text>
