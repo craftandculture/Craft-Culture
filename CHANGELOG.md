@@ -1,3 +1,9 @@
+## [1.61.2](https://github.com/craftandculture/Craft-Culture/compare/v1.61.1...v1.61.2) (2025-10-29)
+
+### Bug Fixes
+
+* use parseAsNativeArrayOf for array query parameters ([c49fa1b](https://github.com/craftandculture/Craft-Culture/commit/c49fa1bfe3b077d0e55d187c2d580b06819f5b85))
+
 ## [1.61.1](https://github.com/craftandculture/Craft-Culture/compare/v1.61.0...v1.61.1) (2025-10-29)
 
 ### Bug Fixes
