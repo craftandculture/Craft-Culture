@@ -1,4 +1,3 @@
-import { put } from '@vercel/blob';
 import { eq } from 'drizzle-orm';
 import sharp from 'sharp';
 
@@ -9,11 +8,11 @@ import { protectedProcedure } from '@/lib/trpc/procedures';
 import uploadLogoSchema from '../schemas/uploadLogoSchema';
 
 /**
- * Upload company logo to Vercel Blob storage
+ * Upload company logo and store as optimized base64 data URL
  */
 const logoUpload = protectedProcedure
   .input(uploadLogoSchema)
-  .mutation(async ({ input: { file, filename }, ctx: { user } }) => {
+  .mutation(async ({ input: { file }, ctx: { user } }) => {
     // Convert base64 to buffer
     const base64Data = file.replace(/^data:image\/\w+;base64,/, '');
     const buffer = Buffer.from(base64Data, 'base64');
@@ -32,28 +31,14 @@ const logoUpload = protectedProcedure
       .png({ quality: 90 })
       .toBuffer();
 
-    // Generate unique filename
-    const timestamp = Date.now();
-    const sanitizedFilename = filename.replace(/[^a-zA-Z0-9.-]/g, '_');
-    const blobFilename = `company-logos/${user.id}/${timestamp}-${sanitizedFilename}.png`;
+    // Convert optimized image to base64 data URL
+    const optimizedBase64 = optimizedImage.toString('base64');
+    const dataUrl = `data:image/png;base64,${optimizedBase64}`;
 
-    // Upload to Vercel Blob
-    const blob = await put(blobFilename, optimizedImage, {
-      access: 'public',
-      contentType: 'image/png',
-    });
-
-    // Delete old logo if it exists
-    if (user.companyLogo) {
-      // TODO: Delete old blob from Vercel Blob storage
-      // This requires the del() function from @vercel/blob
-      // For now, we'll just update the database
-    }
-
-    // Update user record with new logo URL
+    // Update user record with new logo data URL
     const [updatedUser] = await db
       .update(users)
-      .set({ companyLogo: blob.url })
+      .set({ companyLogo: dataUrl })
       .where(eq(users.id, user.id))
       .returning();
 
