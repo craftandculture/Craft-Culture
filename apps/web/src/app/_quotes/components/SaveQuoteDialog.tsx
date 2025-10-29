@@ -28,6 +28,7 @@ export interface MarginConfig {
   transferCost: number;
   importTax: number;
   customerQuotePrice: number;
+  displayCurrency: 'USD' | 'AED';
 }
 
 export interface SaveQuoteDialogProps extends DialogProps {
@@ -213,10 +214,10 @@ const SaveQuoteDialog = ({
                   </Typography>
                   <Typography variant="bodyLg" className="font-bold text-text-brand">
                     {formatPrice(
-                      currency === 'AED' && totalAed
+                      marginConfig.displayCurrency === 'AED'
                         ? convertUsdToAed(marginConfig.customerQuotePrice)
                         : marginConfig.customerQuotePrice,
-                      currency,
+                      marginConfig.displayCurrency,
                     )}
                   </Typography>
                 </div>

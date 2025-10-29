@@ -16,7 +16,7 @@ import {
 } from '@dnd-kit/sortable';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { IconBookmark, IconDownload, IconInfoCircle, IconPlaneInflight, IconPlus } from '@tabler/icons-react';
+import { IconDownload, IconInfoCircle, IconPlaneInflight, IconPlus } from '@tabler/icons-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { parseAsJson, parseAsNativeArrayOf, useQueryState, useQueryStates } from 'nuqs';
 import React, { useEffect, useMemo, useState } from 'react';
@@ -623,26 +623,11 @@ const QuotesForm = () => {
           </div>
         </div>
 
-        {/* Currency Toggle and Save Quote Button */}
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="order-2 sm:order-1">
-            <Button
-              type="button"
-              variant="default"
-              size="sm"
-              onClick={() => setIsSaveDialogOpen(true)}
-              isDisabled={urlLineItems.length === 0}
-              className="w-full sm:w-auto"
-            >
-              <ButtonContent iconLeft={IconBookmark}>
-                <span className="text-sm">Save Quote</span>
-              </ButtonContent>
-            </Button>
-          </div>
-          <div className="order-1 flex items-center justify-between sm:order-2 sm:justify-end sm:gap-2">
-            <Typography variant="bodySm" className="text-text-muted font-medium">
-              Currency:
-            </Typography>
+        {/* Currency Toggle */}
+        <div className="flex items-center justify-between sm:justify-end sm:gap-2">
+          <Typography variant="bodySm" className="text-text-muted font-medium">
+            Currency:
+          </Typography>
             <div className="flex gap-0.5 rounded-md border border-border-muted bg-fill-muted p-0.5">
               <button
                 type="button"
@@ -667,7 +652,6 @@ const QuotesForm = () => {
                 AED
               </button>
             </div>
-          </div>
         </div>
 
         {/* Line Items Table */}
