@@ -1,3 +1,9 @@
+## [1.60.0](https://github.com/craftandculture/Craft-Culture/compare/v1.59.0...v1.60.0) (2025-10-29)
+
+### Features
+
+* implement VIEW and fix EDIT quote functionality ([6db8ee0](https://github.com/craftandculture/Craft-Culture/commit/6db8ee03b9cb5fd7cd222c99fbc2606de917ee6f))
+
 ## [1.59.0](https://github.com/craftandculture/Craft-Culture/compare/v1.58.3...v1.59.0) (2025-10-29)
 
 ### Features
