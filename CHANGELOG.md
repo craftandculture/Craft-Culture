@@ -1,3 +1,9 @@
+## [1.65.1](https://github.com/craftandculture/Craft-Culture/compare/v1.65.0...v1.65.1) (2025-10-29)
+
+### Bug Fixes
+
+* convert product year to string for PDF export ([aa23db9](https://github.com/craftandculture/Craft-Culture/commit/aa23db91dcd93f3b562d347e0e00fcb21061944d))
+
 ## [1.65.0](https://github.com/craftandculture/Craft-Culture/compare/v1.64.1...v1.65.0) (2025-10-29)
 
 ### Features
