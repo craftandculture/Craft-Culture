@@ -5,7 +5,7 @@ import { createTRPCReact } from '@trpc/react-query';
 import React, { ReactElement } from 'react';
 import { vi } from 'vitest';
 
-import type { AppRouter } from '@/lib/trpc/trpc';
+import type { AppRouter } from '@/trpc-router';
 
 /**
  * Create a tRPC client for testing
