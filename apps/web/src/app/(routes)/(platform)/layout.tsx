@@ -20,7 +20,7 @@ const PlatformLayout = async ({ children }: React.PropsWithChildren) => {
     queryClient.fetchQuery(api.users.getMe.queryOptions()),
   );
 
-  if (userError) {
+  if (userError || !user) {
     redirect('/sign-in?next=/platform');
   }
 

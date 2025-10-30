@@ -1,6 +1,6 @@
 'use client';
 
-import { IconBell } from '@tabler/icons-react';
+import { IconUserCheck } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 
@@ -40,7 +40,7 @@ const PendingUsersBell = () => {
               className="relative"
               aria-label="View pending user approvals"
             >
-              <IconBell className="h-5 w-5" />
+              <IconUserCheck className="h-5 w-5" />
               {hasPending && (
                 <>
                   {/* Badge with count */}
