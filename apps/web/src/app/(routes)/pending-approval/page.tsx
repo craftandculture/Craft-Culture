@@ -12,6 +12,7 @@ import Card from '@/app/_ui/components/Card/Card';
 import CardContent from '@/app/_ui/components/Card/CardContent';
 import Logo from '@/app/_ui/components/Logo/Logo';
 import Typography from '@/app/_ui/components/Typography/Typography';
+import type { User } from '@/database/schema';
 import authBrowserClient from '@/lib/better-auth/browser';
 import useTRPC from '@/lib/trpc/browser';
 
@@ -27,7 +28,8 @@ const PendingApprovalPage = () => {
   const [isChecking, setIsChecking] = useState(false);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: user, refetch } = useQuery((api.users as any).getMe.queryOptions());
+  const { data, refetch } = useQuery((api.users as any).getMe.queryOptions());
+  const user = data as User | undefined;
 
   // Auto-poll every 10 seconds to check if user is approved
   useEffect(() => {
