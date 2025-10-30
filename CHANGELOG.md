@@ -1,3 +1,9 @@
+## [1.69.3](https://github.com/craftandculture/Craft-Culture/compare/v1.69.2...v1.69.3) (2025-10-30)
+
+### Bug Fixes
+
+* correct admin domain typo from craftcultuze.xyz to craftculture.xyz ([4d330e0](https://github.com/craftandculture/Craft-Culture/commit/4d330e044ac3fe85f0847e0dca3b9bae30c70eaa))
+
 ## [1.69.2](https://github.com/craftandculture/Craft-Culture/compare/v1.69.1...v1.69.2) (2025-10-30)
 
 ### Bug Fixes
