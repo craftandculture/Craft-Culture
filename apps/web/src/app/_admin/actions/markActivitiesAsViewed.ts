@@ -4,6 +4,7 @@ import { eq } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { users } from '@/database/schema';
+import type { User } from '@/database/schema';
 import getQueryClient from '@/lib/react-query';
 import api from '@/lib/trpc/server';
 import tryCatch from '@/utils/tryCatch';
@@ -16,9 +17,11 @@ import tryCatch from '@/utils/tryCatch';
 const markActivitiesAsViewed = async () => {
   const queryClient = getQueryClient();
 
-  const [user, userError] = await tryCatch(
+  const [userData, userError] = await tryCatch(
     queryClient.fetchQuery(api.users.getMe.queryOptions()),
   );
+
+  const user = userData as User | undefined;
 
   if (userError || !user) {
     return { success: false, error: 'Not authenticated' };
