@@ -1,3 +1,9 @@
+## [1.69.2](https://github.com/craftandculture/Craft-Culture/compare/v1.69.1...v1.69.2) (2025-10-30)
+
+### Bug Fixes
+
+* add superjson transformer to test-utils tRPC client ([409895d](https://github.com/craftandculture/Craft-Culture/commit/409895d33bb518dc59ca8f3ef6e46ee92328c452))
+
 ## [1.69.1](https://github.com/craftandculture/Craft-Culture/compare/v1.69.0...v1.69.1) (2025-10-30)
 
 ### Bug Fixes
