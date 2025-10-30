@@ -1,3 +1,9 @@
+## [1.72.12](https://github.com/craftandculture/Craft-Culture/compare/v1.72.11...v1.72.12) (2025-10-30)
+
+### Bug Fixes
+
+* properly type user data in pending-approval page ([639fd7c](https://github.com/craftandculture/Craft-Culture/commit/639fd7cb2c5b0f6e0220838e4394439727b022b5))
+
 ## [1.72.11](https://github.com/craftandculture/Craft-Culture/compare/v1.72.10...v1.72.11) (2025-10-30)
 
 ### Bug Fixes
