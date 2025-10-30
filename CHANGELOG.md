@@ -1,3 +1,9 @@
+## [1.72.1](https://github.com/craftandculture/Craft-Culture/compare/v1.72.0...v1.72.1) (2025-10-30)
+
+### Bug Fixes
+
+* improve build reliability and distinguish notification bells ([e779fb4](https://github.com/craftandculture/Craft-Culture/commit/e779fb4c3774c6178097c124deab0af215a8e18a))
+
 ## [1.72.0](https://github.com/craftandculture/Craft-Culture/compare/v1.71.1...v1.72.0) (2025-10-30)
 
 ### Features
