@@ -39,7 +39,8 @@ const UserManagementPage = () => {
 
   // Fetch users
   const { data, isLoading, refetch } = useQuery({
-    ...api.users.getPaginated.queryOptions({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ...(api.users as any).getPaginated.queryOptions({
       status: statusFilter === 'all' ? undefined : statusFilter,
       search: searchQuery || undefined,
       limit: 50,
@@ -48,7 +49,8 @@ const UserManagementPage = () => {
 
   // Approve user mutation
   const { mutate: approveUser, isPending: isApproving } = useMutation(
-    api.users.approve.mutationOptions({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (api.users as any).approve.mutationOptions({
       onSuccess: () => {
         void refetch();
       },
@@ -57,7 +59,8 @@ const UserManagementPage = () => {
 
   // Reject user mutation
   const { mutate: rejectUser, isPending: isRejecting } = useMutation(
-    api.users.reject.mutationOptions({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (api.users as any).reject.mutationOptions({
       onSuccess: () => {
         void refetch();
       },

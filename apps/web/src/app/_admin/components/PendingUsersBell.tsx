@@ -21,7 +21,8 @@ const PendingUsersBell = () => {
 
   // Get pending users count
   const { data: pendingData } = useQuery({
-    ...api.users.getPendingCount.queryOptions(),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ...(api.users as any).getPendingCount.queryOptions(),
     refetchInterval: 30000, // Refresh every 30 seconds
   });
 

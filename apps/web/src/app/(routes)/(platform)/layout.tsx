@@ -7,6 +7,7 @@ import UserDropdown from '@/app/_auth/components/UserDropdown';
 import Footer from '@/app/_ui/components/Footer/Footer';
 import Logo from '@/app/_ui/components/Logo/Logo';
 import ThemeToggle from '@/app/_ui/components/ThemeToggle/ThemeToggle';
+import type { User } from '@/database/schema';
 import getQueryClient from '@/lib/react-query';
 import api from '@/lib/trpc/server';
 import tryCatch from '@/utils/tryCatch';
@@ -16,13 +17,15 @@ export const dynamic = 'force-dynamic';
 const PlatformLayout = async ({ children }: React.PropsWithChildren) => {
   const queryClient = getQueryClient();
 
-  const [user, userError] = await tryCatch(
+  const [userData, userError] = await tryCatch(
     queryClient.fetchQuery(api.users.getMe.queryOptions()),
   );
 
-  if (userError || !user) {
+  if (userError || !userData) {
     redirect('/sign-in?next=/platform');
   }
+
+  const user = userData as User;
 
   // Check approval status first - pending users shouldn't see onboarding
   if (user.approvalStatus !== 'approved') {

@@ -23,7 +23,8 @@ const ActivityBell = () => {
 
   // Get unread activity count
   const { data: activityData } = useQuery({
-    ...api.admin.userActivityLogs.getMany.queryOptions({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ...(api.admin as any).userActivityLogs.getMany.queryOptions({
       limit: 100,
       unreadOnly: true,
     }),
@@ -37,7 +38,8 @@ const ActivityBell = () => {
     await markActivitiesAsViewed();
     // Invalidate queries to refresh the count
     await queryClient.invalidateQueries({
-      queryKey: api.admin.userActivityLogs.getMany.queryOptions({ limit: 100, unreadOnly: true }).queryKey,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      queryKey: (api.admin as any).userActivityLogs.getMany.queryOptions({ limit: 100, unreadOnly: true }).queryKey,
     });
   };
 
@@ -47,7 +49,8 @@ const ActivityBell = () => {
     await markActivitiesAsViewed();
     // Invalidate queries to refresh the count
     await queryClient.invalidateQueries({
-      queryKey: api.admin.userActivityLogs.getMany.queryOptions({ limit: 100, unreadOnly: true }).queryKey,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      queryKey: (api.admin as any).userActivityLogs.getMany.queryOptions({ limit: 100, unreadOnly: true }).queryKey,
     });
   };
 
