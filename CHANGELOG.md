@@ -1,3 +1,9 @@
+## [1.71.0](https://github.com/craftandculture/Craft-Culture/compare/v1.70.0...v1.71.0) (2025-10-30)
+
+### Features
+
+* enable activity bell for user login notifications ([8aead53](https://github.com/craftandculture/Craft-Culture/commit/8aead53325d7eb9f0e54672d51fb0ac44d77ae47))
+
 ## [1.70.0](https://github.com/craftandculture/Craft-Culture/compare/v1.69.3...v1.70.0) (2025-10-30)
 
 ### Features
