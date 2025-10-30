@@ -1,3 +1,9 @@
+## [1.72.18](https://github.com/craftandculture/Craft-Culture/compare/v1.72.17...v1.72.18) (2025-10-30)
+
+### Bug Fixes
+
+* add lastViewedActivityAt field to mock user ([9872f9c](https://github.com/craftandculture/Craft-Culture/commit/9872f9c36b7f89c2add29a3c4bd82556ef8be362))
+
 ## [1.72.17](https://github.com/craftandculture/Craft-Culture/compare/v1.72.16...v1.72.17) (2025-10-30)
 
 ### Bug Fixes
