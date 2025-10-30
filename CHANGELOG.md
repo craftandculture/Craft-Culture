@@ -1,3 +1,9 @@
+## [1.72.9](https://github.com/craftandculture/Craft-Culture/compare/v1.72.8...v1.72.9) (2025-10-30)
+
+### Bug Fixes
+
+* add type casts for trpcClient.settings in CompanyLogoUpload ([8ab8429](https://github.com/craftandculture/Craft-Culture/commit/8ab842962c29e8f1844557e8eba8872797e135a5))
+
 ## [1.72.8](https://github.com/craftandculture/Craft-Culture/compare/v1.72.7...v1.72.8) (2025-10-30)
 
 ### Bug Fixes
