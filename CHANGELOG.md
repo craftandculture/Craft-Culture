@@ -1,3 +1,9 @@
+## [1.72.7](https://github.com/craftandculture/Craft-Culture/compare/v1.72.6...v1.72.7) (2025-10-30)
+
+### Bug Fixes
+
+* use direct tRPC mutation calls instead of mutationOptions ([b1033da](https://github.com/craftandculture/Craft-Culture/commit/b1033dad8307b9ec723bea9ad4d18421be5bd0ae))
+
 ## [1.72.6](https://github.com/craftandculture/Craft-Culture/compare/v1.72.5...v1.72.6) (2025-10-30)
 
 ### Bug Fixes
