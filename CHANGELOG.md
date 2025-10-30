@@ -1,3 +1,9 @@
+## [1.72.3](https://github.com/craftandculture/Craft-Culture/compare/v1.72.2...v1.72.3) (2025-10-30)
+
+### Bug Fixes
+
+* add type cast for api.users.delete in users page ([d8750d5](https://github.com/craftandculture/Craft-Culture/commit/d8750d523ee09cdcb591730dc4306bbb35c82cd0))
+
 ## [1.72.2](https://github.com/craftandculture/Craft-Culture/compare/v1.72.1...v1.72.2) (2025-10-30)
 
 ### Bug Fixes
