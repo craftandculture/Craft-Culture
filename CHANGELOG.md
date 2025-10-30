@@ -1,3 +1,9 @@
+## [1.72.0](https://github.com/craftandculture/Craft-Culture/compare/v1.71.1...v1.72.0) (2025-10-30)
+
+### Features
+
+* add database migration for lastViewedActivityAt and company fields ([c644032](https://github.com/craftandculture/Craft-Culture/commit/c6440321c05b1fccb3486f2d59f0f454414368e1))
+
 ## [1.71.1](https://github.com/craftandculture/Craft-Culture/compare/v1.71.0...v1.71.1) (2025-10-30)
 
 ### Bug Fixes
