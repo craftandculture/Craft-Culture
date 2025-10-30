@@ -31,7 +31,7 @@ describe('CommissionBreakdown', () => {
       );
 
       expect(
-        screen.getByRole('button', { name: /agent commission/i }),
+        screen.getByRole('button', { name: /your commission breakdown/i }),
       ).toBeInTheDocument();
 
       // Breakdown should not be visible initially
@@ -47,8 +47,8 @@ describe('CommissionBreakdown', () => {
         />,
       );
 
-      // formatPrice rounds to whole number and uses US$ format
-      expect(screen.getByText('US$284')).toBeInTheDocument();
+      // formatPrice rounds to whole number and uses $ format
+      expect(screen.getByText('$284')).toBeInTheDocument();
     });
 
     it('should display commission info tooltip', () => {
@@ -62,7 +62,7 @@ describe('CommissionBreakdown', () => {
 
       // Check for info icon (IconInfoCircle is rendered)
       const infoIcon = screen.getByRole('button', {
-        name: /agent commission/i,
+        name: /your commission breakdown/i,
       }).parentElement;
       expect(infoIcon).toBeInTheDocument();
     });
@@ -76,7 +76,7 @@ describe('CommissionBreakdown', () => {
         />,
       );
 
-      const button = screen.getByRole('button', { name: /agent commission/i });
+      const button = screen.getByRole('button', { name: /your commission breakdown/i });
       const chevronIcon = button.querySelector('[class*="transition-transform"]');
       expect(chevronIcon).toBeInTheDocument();
       expect(chevronIcon).not.toHaveClass('rotate-180');
@@ -94,7 +94,7 @@ describe('CommissionBreakdown', () => {
         />,
       );
 
-      const button = screen.getByRole('button', { name: /agent commission/i });
+      const button = screen.getByRole('button', { name: /your commission breakdown/i });
       await user.click(button);
 
       // Breakdown should now be visible
@@ -111,7 +111,7 @@ describe('CommissionBreakdown', () => {
         />,
       );
 
-      const button = screen.getByRole('button', { name: /agent commission/i });
+      const button = screen.getByRole('button', { name: /your commission breakdown/i });
 
       // Expand
       await user.click(button);
@@ -134,7 +134,7 @@ describe('CommissionBreakdown', () => {
         />,
       );
 
-      const button = screen.getByRole('button', { name: /agent commission/i });
+      const button = screen.getByRole('button', { name: /your commission breakdown/i });
       const chevronIcon = button.querySelector('[class*="transition-transform"]');
 
       await user.click(button);
@@ -154,7 +154,7 @@ describe('CommissionBreakdown', () => {
         />,
       );
 
-      const button = screen.getByRole('button', { name: /agent commission/i });
+      const button = screen.getByRole('button', { name: /your commission breakdown/i });
       await user.click(button);
 
       // Check both product names are displayed
@@ -172,16 +172,16 @@ describe('CommissionBreakdown', () => {
         />,
       );
 
-      const button = screen.getByRole('button', { name: /agent commission/i });
+      const button = screen.getByRole('button', { name: /your commission breakdown/i });
       await user.click(button);
 
-      // Check calculation display: "2 cases × US$100"
+      // Check calculation display: "2 cases × $100"
       expect(screen.getByText(/2 cases/i)).toBeInTheDocument();
-      expect(screen.getByText('US$200')).toBeInTheDocument();
+      expect(screen.getByText('$200')).toBeInTheDocument();
 
-      // Check second item: "1 case × US$84"
+      // Check second item: "1 case × $84"
       expect(screen.getByText(/1 case/i)).toBeInTheDocument();
-      expect(screen.getByText('US$84')).toBeInTheDocument();
+      expect(screen.getByText('$84')).toBeInTheDocument();
     });
 
     it('should pluralize "case" correctly', async () => {
@@ -209,7 +209,7 @@ describe('CommissionBreakdown', () => {
         />,
       );
 
-      const button = screen.getByRole('button', { name: /agent commission/i });
+      const button = screen.getByRole('button', { name: /your commission breakdown/i });
       await user.click(button);
 
       // Check singular "case"
@@ -228,11 +228,11 @@ describe('CommissionBreakdown', () => {
         />,
       );
 
-      const button = screen.getByRole('button', { name: /agent commission/i });
+      const button = screen.getByRole('button', { name: /your commission breakdown/i });
       await user.click(button);
 
       // Check footer total (should appear twice: once in header, once in footer)
-      const totalElements = screen.getAllByText('US$284');
+      const totalElements = screen.getAllByText('$284');
       expect(totalElements).toHaveLength(2);
     });
   });
@@ -248,12 +248,12 @@ describe('CommissionBreakdown', () => {
         />,
       );
 
-      await user.click(screen.getByRole('button', { name: /agent commission/i }));
+      await user.click(screen.getByRole('button', { name: /your commission breakdown/i }));
 
       // formatPrice rounds to whole numbers
       // Each value appears twice: once in "per case" breakdown and once as line total
-      expect(screen.getAllByText(/US\$100/).length).toBeGreaterThanOrEqual(1);
-      expect(screen.getAllByText(/US\$84/).length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText(/\$100/).length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText(/\$84/).length).toBeGreaterThanOrEqual(1);
     });
 
     it('should format AED currency correctly', async () => {
@@ -275,7 +275,7 @@ describe('CommissionBreakdown', () => {
         />,
       );
 
-      await user.click(screen.getByRole('button', { name: /agent commission/i }));
+      await user.click(screen.getByRole('button', { name: /your commission breakdown/i }));
 
       // For AED, formatPrice only shows the number (no symbol)
       // Check that both the commission per case and total are displayed
@@ -302,12 +302,12 @@ describe('CommissionBreakdown', () => {
         />,
       );
 
-      await user.click(screen.getByRole('button', { name: /agent commission/i }));
+      await user.click(screen.getByRole('button', { name: /your commission breakdown/i }));
 
       // formatPrice rounds to whole numbers: 33.33 → 33, 99.99 → 100
       // Each value appears twice: once in "per case" breakdown and once as line total
-      expect(screen.getAllByText(/US\$33/).length).toBeGreaterThanOrEqual(1);
-      expect(screen.getAllByText(/US\$100/).length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText(/\$33/).length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText(/\$100/).length).toBeGreaterThanOrEqual(1);
     });
   });
 
@@ -322,9 +322,9 @@ describe('CommissionBreakdown', () => {
       );
 
       expect(
-        screen.getByRole('button', { name: /agent commission/i }),
+        screen.getByRole('button', { name: /your commission breakdown/i }),
       ).toBeInTheDocument();
-      expect(screen.getByText('US$0')).toBeInTheDocument();
+      expect(screen.getByText('$0')).toBeInTheDocument();
     });
 
     it('should handle single line item', async () => {
@@ -346,7 +346,7 @@ describe('CommissionBreakdown', () => {
         />,
       );
 
-      await user.click(screen.getByRole('button', { name: /agent commission/i }));
+      await user.click(screen.getByRole('button', { name: /your commission breakdown/i }));
 
       expect(screen.getByText('Single Wine')).toBeInTheDocument();
       expect(screen.getByText(/5 cases/i)).toBeInTheDocument();
@@ -370,7 +370,7 @@ describe('CommissionBreakdown', () => {
         />,
       );
 
-      expect(screen.getByText('US$0')).toBeInTheDocument();
+      expect(screen.getByText('$0')).toBeInTheDocument();
     });
 
     it('should handle large commission values', async () => {
@@ -392,12 +392,12 @@ describe('CommissionBreakdown', () => {
         />,
       );
 
-      await user.click(screen.getByRole('button', { name: /agent commission/i }));
+      await user.click(screen.getByRole('button', { name: /your commission breakdown/i }));
 
       // formatPrice uses comma separators and no decimals
       // Each value appears twice: once in "per case" breakdown and once as line total
-      expect(screen.getAllByText(/US\$1,000/).length).toBeGreaterThanOrEqual(1);
-      expect(screen.getAllByText(/US\$100,000/).length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText(/\$1,000/).length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText(/\$100,000/).length).toBeGreaterThanOrEqual(1);
     });
 
     it('should handle very long product names', async () => {
@@ -420,7 +420,7 @@ describe('CommissionBreakdown', () => {
         />,
       );
 
-      await user.click(screen.getByRole('button', { name: /agent commission/i }));
+      await user.click(screen.getByRole('button', { name: /your commission breakdown/i }));
 
       expect(
         screen.getByText(
@@ -448,7 +448,7 @@ describe('CommissionBreakdown', () => {
         />,
       );
 
-      await user.click(screen.getByRole('button', { name: /agent commission/i }));
+      await user.click(screen.getByRole('button', { name: /your commission breakdown/i }));
 
       expect(screen.getByText(/2.5 cases/i)).toBeInTheDocument();
     });
@@ -464,7 +464,7 @@ describe('CommissionBreakdown', () => {
         />,
       );
 
-      const button = screen.getByRole('button', { name: /agent commission/i });
+      const button = screen.getByRole('button', { name: /your commission breakdown/i });
       expect(button).toHaveAttribute('type', 'button');
     });
 
@@ -478,7 +478,7 @@ describe('CommissionBreakdown', () => {
         />,
       );
 
-      const button = screen.getByRole('button', { name: /agent commission/i });
+      const button = screen.getByRole('button', { name: /your commission breakdown/i });
       button.focus();
       await user.keyboard('{Enter}');
 
@@ -495,7 +495,7 @@ describe('CommissionBreakdown', () => {
         />,
       );
 
-      const button = screen.getByRole('button', { name: /agent commission/i });
+      const button = screen.getByRole('button', { name: /your commission breakdown/i });
       button.focus();
       await user.keyboard(' ');
 
@@ -514,7 +514,7 @@ describe('CommissionBreakdown', () => {
       );
 
       const container = screen
-        .getByRole('button', { name: /agent commission/i })
+        .getByRole('button', { name: /your commission breakdown/i })
         .closest('div');
       expect(container).toHaveClass('rounded-lg');
       expect(container).toHaveClass('border');
@@ -529,7 +529,7 @@ describe('CommissionBreakdown', () => {
         />,
       );
 
-      const button = screen.getByRole('button', { name: /agent commission/i });
+      const button = screen.getByRole('button', { name: /your commission breakdown/i });
       expect(button).toHaveClass('hover:bg-fill-muted');
     });
   });

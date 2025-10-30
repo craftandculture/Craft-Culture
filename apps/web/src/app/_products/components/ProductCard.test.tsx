@@ -157,8 +157,8 @@ describe('ProductCard', () => {
 
       render(<ProductCard product={product} onAdd={handleAdd} displayCurrency="USD" />);
 
-      // Price formatted as US$100 (en-GB locale format)
-      expect(screen.getByText('US$100')).toBeInTheDocument();
+      // Price formatted as $100 (en-GB locale format)
+      expect(screen.getByText('$100')).toBeInTheDocument();
     });
 
     it('should handle zero price', () => {
@@ -384,7 +384,7 @@ describe('ProductCard', () => {
       render(<ProductCard product={product} onAdd={handleAdd} />);
 
       expect(screen.getByText(longName)).toBeInTheDocument();
-      expect(screen.getByText(longName)).toHaveClass('line-clamp-2');
+      expect(screen.getByText(longName)).toHaveClass('line-clamp-3');
     });
 
     it('should handle product with all optional fields null', () => {
@@ -425,8 +425,8 @@ describe('ProductCard', () => {
 
       render(<ProductCard product={product} onAdd={handleAdd} displayCurrency="USD" />);
 
-      // formatPrice rounds to whole numbers: 99.99 → US$100
-      expect(screen.getByText('US$100')).toBeInTheDocument();
+      // formatPrice rounds to whole numbers: 99.99 → $100
+      expect(screen.getByText('$100')).toBeInTheDocument();
     });
   });
 });

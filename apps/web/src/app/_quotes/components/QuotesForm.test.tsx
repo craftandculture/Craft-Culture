@@ -1,5 +1,6 @@
-import { render } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
+
+import { renderWithProviders } from '@/test/test-utils';
 
 import QuotesForm from './QuotesForm';
 
@@ -32,54 +33,78 @@ vi.mock('../utils/exportInventoryToExcel', () => ({
 vi.mock('nuqs', () => ({
   parseAsArrayOf: () => ({ withDefault: (val: unknown) => val }),
   parseAsJson: () => ({}),
+  parseAsNativeArrayOf: () => ({ withDefault: (val: unknown) => val }),
   useQueryState: () => [[], vi.fn()],
   useQueryStates: () => [{ countries: [], regions: [], producers: [], vintages: [] }],
 }));
 
-// Mock tRPC
+// Mock useTRPC and useTRPCClient hooks
 vi.mock('@/lib/trpc/browser', () => ({
   default: () => ({
     users: {
       getMe: {
-        queryOptions: () => ({}),
+        queryOptions: vi.fn(() => ({
+          queryKey: ['users.getMe'],
+          queryFn: () => Promise.resolve(null),
+        })),
       },
     },
     products: {
       getFilterOptions: {
-        queryOptions: () => ({}),
+        queryOptions: vi.fn(() => ({
+          queryKey: ['products.getFilterOptions'],
+          queryFn: () => Promise.resolve({}),
+        })),
       },
       getMany: {
-        queryOptions: () => ({}),
+        queryOptions: vi.fn(() => ({
+          queryKey: ['products.getMany'],
+          queryFn: () => Promise.resolve({ items: [], total: 0 }),
+        })),
       },
       getLastUpdate: {
-        queryOptions: () => ({}),
+        queryOptions: vi.fn(() => ({
+          queryKey: ['products.getLastUpdate'],
+          queryFn: () => Promise.resolve(null),
+        })),
       },
     },
     quotes: {
       get: {
-        queryOptions: () => ({}),
+        queryOptions: vi.fn(() => ({
+          queryKey: ['quotes.get'],
+          queryFn: () => Promise.resolve(null),
+        })),
+      },
+    },
+    admin: {
+      settings: {
+        get: {
+          queryOptions: vi.fn(() => ({
+            queryKey: ['admin.settings.get'],
+            queryFn: () => Promise.resolve({ value: '7' }),
+          })),
+        },
       },
     },
   }),
-}));
-
-// Mock @tanstack/react-query
-vi.mock('@tanstack/react-query', () => ({
-  useQuery: () => ({
-    data: undefined,
-    isLoading: false,
+  useTRPCClient: () => ({
+    quotes: {
+      create: { mutate: vi.fn() },
+      update: { mutate: vi.fn() },
+    },
   }),
 }));
 
 describe('QuotesForm', () => {
   describe('rendering', () => {
     it('should render without crashing', () => {
-      const { container } = render(<QuotesForm />);
+      const { container } = renderWithProviders(<QuotesForm />);
       expect(container).toBeInTheDocument();
     });
 
     it('should render main sections', () => {
-      const { getByText } = render(<QuotesForm />);
+      const { getByText } = renderWithProviders(<QuotesForm />);
 
       // Check for main section headers
       expect(getByText('Quotation Builder')).toBeInTheDocument();
@@ -87,13 +112,13 @@ describe('QuotesForm', () => {
     });
 
     it('should render catalog browser', () => {
-      const { getByTestId } = render(<QuotesForm />);
+      const { getByTestId } = renderWithProviders(<QuotesForm />);
 
       expect(getByTestId('catalog-browser')).toBeInTheDocument();
     });
 
     it('should render currency toggle', () => {
-      const { getByText } = render(<QuotesForm />);
+      const { getByText } = renderWithProviders(<QuotesForm />);
 
       expect(getByText('Currency:')).toBeInTheDocument();
       expect(getByText('USD')).toBeInTheDocument();
@@ -101,7 +126,7 @@ describe('QuotesForm', () => {
     });
 
     it('should render total section', () => {
-      const { getByText } = render(<QuotesForm />);
+      const { getByText } = renderWithProviders(<QuotesForm />);
 
       expect(getByText('Total')).toBeInTheDocument();
     });
