@@ -69,7 +69,8 @@ const UserManagementPage = () => {
 
   // Delete user mutation
   const { mutate: deleteUser, isPending: isDeleting } = useMutation(
-    api.users.delete.mutationOptions({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (api.users as any).delete.mutationOptions({
       onSuccess: () => {
         void refetch();
       },
