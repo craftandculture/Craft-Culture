@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbo",
-    "prebuild": "node scripts/generate-version.mjs && drizzle-kit push",
+    "prebuild": "node scripts/prebuild.mjs",
     "build": "next build",
     "test": "vitest",
     "test:ui": "vitest --ui",
