@@ -13,7 +13,7 @@ const serverConfig = {
   twilioAuthToken: serverEnv.TWILIO_AUTH_TOKEN,
   twilioPhoneNumber: serverEnv.TWILIO_PHONE_NUMBER,
   adminPhoneNumber: serverEnv.ADMIN_PHONE_NUMBER,
-  adminDomains: ['byont.nl', 'craftcultuze.xyz'],
+  adminDomains: ['byont.nl', 'craftculture.xyz'],
 } as const;
 
 export default serverConfig;
