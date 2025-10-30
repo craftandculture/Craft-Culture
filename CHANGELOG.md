@@ -1,3 +1,9 @@
+## [1.72.2](https://github.com/craftandculture/Craft-Culture/compare/v1.72.1...v1.72.2) (2025-10-30)
+
+### Bug Fixes
+
+* resolve TypeScript errors in platform layout and activity page ([0d1aa2a](https://github.com/craftandculture/Craft-Culture/commit/0d1aa2a04a71a6fe0bec544605ced591450c0855))
+
 ## [1.72.1](https://github.com/craftandculture/Craft-Culture/compare/v1.72.0...v1.72.1) (2025-10-30)
 
 ### Bug Fixes
