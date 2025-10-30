@@ -1,3 +1,9 @@
+## [1.69.0](https://github.com/craftandculture/Craft-Culture/compare/v1.68.0...v1.69.0) (2025-10-30)
+
+### Features
+
+* add pending user approval notification system ([30cdcbd](https://github.com/craftandculture/Craft-Culture/commit/30cdcbd59c0cb88e1a510e0a69793c317674a0b6))
+
 ## [1.68.0](https://github.com/craftandculture/Craft-Culture/compare/v1.67.1...v1.68.0) (2025-10-29)
 
 ### Features
