@@ -316,7 +316,7 @@ const UserManagementPage = () => {
 
               {/* Mobile Cards */}
               <div className="divide-border-muted divide-y md:hidden">
-                {users.map((user) => (
+                {users.map((user: UserData) => (
                   <div key={user.id} className="space-y-3 p-4">
                     <div className="flex items-start justify-between">
                       <div>
