@@ -1,3 +1,9 @@
+## [1.72.6](https://github.com/craftandculture/Craft-Culture/compare/v1.72.5...v1.72.6) (2025-10-30)
+
+### Bug Fixes
+
+* correct useMutation pattern for approve, reject, and delete mutations ([80627bf](https://github.com/craftandculture/Craft-Culture/commit/80627bfc9a8cf752844a429ed60ff262b7449641))
+
 ## [1.72.5](https://github.com/craftandculture/Craft-Culture/compare/v1.72.4...v1.72.5) (2025-10-30)
 
 ### Bug Fixes
