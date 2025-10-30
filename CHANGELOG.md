@@ -1,3 +1,9 @@
+## [1.72.17](https://github.com/craftandculture/Craft-Culture/compare/v1.72.16...v1.72.17) (2025-10-30)
+
+### Bug Fixes
+
+* define explicit return type interfaces for userActivityLogsGetManyController ([42226ab](https://github.com/craftandculture/Craft-Culture/commit/42226ab80281ce1c788b9394370126e98fd46e59))
+
 ## [1.72.16](https://github.com/craftandculture/Craft-Culture/compare/v1.72.15...v1.72.16) (2025-10-30)
 
 ### Bug Fixes
