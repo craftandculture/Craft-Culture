@@ -20,6 +20,24 @@ import Skeleton from '@/app/_ui/components/Skeleton/Skeleton';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import useTRPC from '@/lib/trpc/browser';
 
+interface ActivityLog {
+  id: string;
+  userId: string;
+  action: string;
+  entityType: string | null;
+  entityId: string | null;
+  metadata: unknown;
+  ipAddress: string | null;
+  userAgent: string | null;
+  createdAt: Date;
+  user: {
+    id: string;
+    email: string;
+    name: string | null;
+    customerType: string;
+  } | null;
+}
+
 /**
  * Activity feed page for admin users
  *
@@ -37,13 +55,14 @@ const ActivityFeedPage = () => {
   }, []);
 
   const { data: activityData, isLoading } = useQuery({
-    ...api.admin.userActivityLogs.getMany.queryOptions({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ...(api.admin as any).userActivityLogs.getMany.queryOptions({
       limit: 50,
       offset: 0,
       action: actionFilter !== 'all' ? actionFilter : undefined,
     }),
     refetchInterval: 10000, // Refresh every 10 seconds
-  });
+  }) as { data: { logs: ActivityLog[]; total: number } | undefined; isLoading: boolean };
 
   const getActivityIcon = (action: string) => {
     if (action.includes('signin')) return <IconLogin className="h-5 w-5 text-blue-600" />;

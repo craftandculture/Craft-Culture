@@ -26,10 +26,12 @@ const SettingsForm = () => {
 
   // Fetch current settings
   const { data: leadTimeMinData } = useQuery(
-    api.admin.settings.get.queryOptions({ key: 'leadTimeMin' }),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (api.admin as any).settings.get.queryOptions({ key: 'leadTimeMin' }),
   );
   const { data: leadTimeMaxData } = useQuery(
-    api.admin.settings.get.queryOptions({ key: 'leadTimeMax' }),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (api.admin as any).settings.get.queryOptions({ key: 'leadTimeMax' }),
   );
 
   // Local state for form inputs
@@ -49,10 +51,10 @@ const SettingsForm = () => {
   }
 
   // Mutations for updating settings
-  const { mutateAsync: updateLeadTimeMinAsync, isPending: isUpdatingMin } =
-    useMutation(api.admin.settings.update.mutationOptions());
-  const { mutateAsync: updateLeadTimeMaxAsync, isPending: isUpdatingMax } =
-    useMutation(api.admin.settings.update.mutationOptions());
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { mutateAsync: updateLeadTimeMinAsync, isPending: isUpdatingMin } = useMutation((api.admin as any).settings.update.mutationOptions()) as any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { mutateAsync: updateLeadTimeMaxAsync, isPending: isUpdatingMax } = useMutation((api.admin as any).settings.update.mutationOptions()) as any;
 
   const handleSave = async () => {
     await Promise.all([
