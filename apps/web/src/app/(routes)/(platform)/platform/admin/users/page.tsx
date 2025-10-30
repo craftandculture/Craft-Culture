@@ -22,6 +22,15 @@ import useTRPC from '@/lib/trpc/browser';
 
 type StatusFilter = 'all' | 'pending' | 'approved' | 'rejected';
 
+interface UserData {
+  id: string;
+  name: string | null;
+  email: string;
+  customerType: string;
+  approvalStatus: string;
+  createdAt: Date | string;
+}
+
 /**
  * Admin page for managing user approvals
  *
@@ -205,7 +214,7 @@ const UserManagementPage = () => {
                     </tr>
                   </thead>
                   <tbody className="divide-border-muted divide-y">
-                    {users.map((user) => (
+                    {users.map((user: UserData) => (
                       <tr key={user.id} className="hover:bg-surface-muted">
                         <td className="px-6 py-4">
                           <div className="flex flex-col">
