@@ -58,34 +58,31 @@ const UserManagementPage = () => {
   }) as any;
 
   // Approve user mutation
-  const { mutate: approveUser, isPending: isApproving } = useMutation(
+  const { mutate: approveUser, isPending: isApproving } = useMutation({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (api.users as any).approve.mutationOptions({
-      onSuccess: () => {
-        void refetch();
-      },
-    }),
-  );
+    ...(api.users as any).approve.mutationOptions(),
+    onSuccess: () => {
+      void refetch();
+    },
+  });
 
   // Reject user mutation
-  const { mutate: rejectUser, isPending: isRejecting } = useMutation(
+  const { mutate: rejectUser, isPending: isRejecting } = useMutation({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (api.users as any).reject.mutationOptions({
-      onSuccess: () => {
-        void refetch();
-      },
-    }),
-  );
+    ...(api.users as any).reject.mutationOptions(),
+    onSuccess: () => {
+      void refetch();
+    },
+  });
 
   // Delete user mutation
-  const { mutate: deleteUser, isPending: isDeleting } = useMutation(
+  const { mutate: deleteUser, isPending: isDeleting } = useMutation({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (api.users as any).delete.mutationOptions({
-      onSuccess: () => {
-        void refetch();
-      },
-    }),
-  );
+    ...(api.users as any).delete.mutationOptions(),
+    onSuccess: () => {
+      void refetch();
+    },
+  });
 
   const users = data?.data ?? [];
   const totalCount = data?.meta.totalCount ?? 0;
