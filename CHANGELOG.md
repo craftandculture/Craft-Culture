@@ -1,3 +1,9 @@
+## [1.72.14](https://github.com/craftandculture/Craft-Culture/compare/v1.72.13...v1.72.14) (2025-10-30)
+
+### Bug Fixes
+
+* properly type data in ActivityBell and PendingUsersBell components ([d093dc1](https://github.com/craftandculture/Craft-Culture/commit/d093dc1edd86f601e119d56090458aab490d611a))
+
 ## [1.72.13](https://github.com/craftandculture/Craft-Culture/compare/v1.72.12...v1.72.13) (2025-10-30)
 
 ### Bug Fixes
