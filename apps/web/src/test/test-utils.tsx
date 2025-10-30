@@ -3,6 +3,7 @@ import { RenderOptions, render } from '@testing-library/react';
 import { httpBatchLink } from '@trpc/client';
 import { createTRPCReact } from '@trpc/react-query';
 import React, { ReactElement } from 'react';
+import superjson from 'superjson';
 import { vi } from 'vitest';
 
 import type { AppRouter } from '@/trpc-router';
@@ -34,6 +35,7 @@ export const createTestWrapper = () => {
       httpBatchLink({
         url: 'http://localhost:3000/api/trpc',
         fetch: vi.fn(),
+        transformer: superjson,
       }),
     ],
   });
