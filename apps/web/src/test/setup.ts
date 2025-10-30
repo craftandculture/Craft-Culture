@@ -23,6 +23,11 @@ vi.mock('next/navigation', () => ({
 
 // Mock environment variables
 process.env.NEXT_PUBLIC_APP_URL = 'http://localhost:3000';
+process.env.BETTER_AUTH_SECRET = 'test-secret-key-for-testing-only';
+process.env.DB_URL = 'postgresql://test:test@localhost:5432/test';
+process.env.ENCRYPTION_KEY = 'test-encryption-key-32-characters';
+process.env.LOOPS_API_KEY = 'test-loops-key';
+process.env.BLOB_READ_WRITE_TOKEN = 'test-blob-token';
 
 // Mock ResizeObserver for Radix UI components
 global.ResizeObserver = class ResizeObserver {

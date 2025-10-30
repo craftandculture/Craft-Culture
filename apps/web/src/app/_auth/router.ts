@@ -8,6 +8,7 @@ import usersApprove from './controllers/usersApprove';
 import usersDelete from './controllers/usersDelete';
 import usersGetMe from './controllers/usersGetMe';
 import usersGetPaginated from './controllers/usersGetPaginated';
+import usersGetPendingCount from './controllers/usersGetPendingCount';
 import usersReject from './controllers/usersReject';
 import usersUpdate from './controllers/usersUpdate';
 
@@ -20,6 +21,7 @@ const usersRouter = createTRPCRouter({
   getManyWithPricingModels: usersGetManyWithPricingModels,
   assignPricingModel: userPricingModelsAssign,
   getPaginated: usersGetPaginated,
+  getPendingCount: usersGetPendingCount,
   approve: usersApprove,
   reject: usersReject,
   delete: usersDelete,

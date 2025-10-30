@@ -155,7 +155,7 @@ describe('CatalogBrowser', () => {
         />
       );
 
-      expect(screen.getByPlaceholderText('Search catalog...')).toBeInTheDocument();
+      expect(screen.getByPlaceholderText('Search catalogue...')).toBeInTheDocument();
     });
 
     it('should render sort dropdown', () => {
@@ -322,7 +322,7 @@ describe('CatalogBrowser', () => {
         />
       );
 
-      const searchInput = screen.getByPlaceholderText('Search catalog...');
+      const searchInput = screen.getByPlaceholderText('Search catalogue...');
       await user.type(searchInput, 'nonexistent');
 
       await waitFor(() => {
@@ -349,7 +349,7 @@ describe('CatalogBrowser', () => {
         />
       );
 
-      const searchInput = screen.getByPlaceholderText('Search catalog...');
+      const searchInput = screen.getByPlaceholderText('Search catalogue...');
       await user.type(searchInput, 'Château');
 
       expect(searchInput).toHaveValue('Château');
@@ -372,7 +372,7 @@ describe('CatalogBrowser', () => {
         />
       );
 
-      const searchInput = screen.getByPlaceholderText('Search catalog...');
+      const searchInput = screen.getByPlaceholderText('Search catalogue...');
       await user.type(searchInput, 'test');
 
       // Search should be debounced (not immediate)
@@ -569,7 +569,7 @@ describe('CatalogBrowser', () => {
         />
       );
 
-      expect(screen.getByText("You've reached the end of the catalog")).toBeInTheDocument();
+      expect(screen.getByText("You've reached the end of the catalogue")).toBeInTheDocument();
     });
 
     it('should not show end message when there are more pages', () => {
@@ -588,7 +588,7 @@ describe('CatalogBrowser', () => {
         />
       );
 
-      expect(screen.queryByText("You've reached the end of the catalog")).not.toBeInTheDocument();
+      expect(screen.queryByText("You've reached the end of the catalogue")).not.toBeInTheDocument();
     });
 
     it('should show loading skeletons when fetching next page', () => {
