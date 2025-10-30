@@ -1,3 +1,9 @@
+## [1.72.10](https://github.com/craftandculture/Craft-Culture/compare/v1.72.9...v1.72.10) (2025-10-30)
+
+### Bug Fixes
+
+* add type casts for trpcClient.settings in CompanyProfileSection ([ffd74c7](https://github.com/craftandculture/Craft-Culture/commit/ffd74c7e8e100ef76b25cb3a03218177445286bd))
+
 ## [1.72.9](https://github.com/craftandculture/Craft-Culture/compare/v1.72.8...v1.72.9) (2025-10-30)
 
 ### Bug Fixes
