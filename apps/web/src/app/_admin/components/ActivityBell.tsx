@@ -1,7 +1,7 @@
 'use client';
 
 import { IconBell } from '@tabler/icons-react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 
 import markActivitiesAsViewed from '@/app/_admin/actions/markActivitiesAsViewed';
@@ -19,6 +19,7 @@ import useTRPC from '@/lib/trpc/browser';
  */
 const ActivityBell = () => {
   const api = useTRPC();
+  const queryClient = useQueryClient();
 
   // Get unread activity count
   const { data: activityData } = useQuery({
@@ -32,14 +33,22 @@ const ActivityBell = () => {
   const unreadCount = activityData?.logs.length ?? 0;
   const hasUnread = unreadCount > 0;
 
-  const handleClick = () => {
-    void markActivitiesAsViewed();
+  const handleClick = async () => {
+    await markActivitiesAsViewed();
+    // Invalidate queries to refresh the count
+    await queryClient.invalidateQueries({
+      queryKey: api.admin.userActivityLogs.getMany.queryOptions({ limit: 100, unreadOnly: true }).queryKey,
+    });
   };
 
-  const handleClear = (e: React.MouseEvent) => {
+  const handleClear = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    void markActivitiesAsViewed();
+    await markActivitiesAsViewed();
+    // Invalidate queries to refresh the count
+    await queryClient.invalidateQueries({
+      queryKey: api.admin.userActivityLogs.getMany.queryOptions({ limit: 100, unreadOnly: true }).queryKey,
+    });
   };
 
   return (

@@ -1,12 +1,36 @@
 'use server';
 
+import { eq } from 'drizzle-orm';
+
+import db from '@/database/client';
+import { users } from '@/database/schema';
+import getQueryClient from '@/lib/react-query';
+import api from '@/lib/trpc/server';
+import tryCatch from '@/utils/tryCatch';
+
 /**
  * Server action to mark all activities as viewed for the current user
  *
- * Note: Temporarily disabled - requires database migration to add lastViewedActivityAt column
+ * Updates the user's lastViewedActivityAt timestamp to mark all current activities as read
  */
 const markActivitiesAsViewed = async () => {
-  // Temporarily disabled until database migration is complete
+  const queryClient = getQueryClient();
+
+  const [user, userError] = await tryCatch(
+    queryClient.fetchQuery(api.users.getMe.queryOptions()),
+  );
+
+  if (userError || !user) {
+    return { success: false, error: 'Not authenticated' };
+  }
+
+  await db
+    .update(users)
+    .set({
+      lastViewedActivityAt: new Date(),
+    })
+    .where(eq(users.id, user.id));
+
   return { success: true };
 };
 

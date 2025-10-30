@@ -1,7 +1,10 @@
-import { desc, eq, sql } from 'drizzle-orm';
+import { desc, eq, gt, sql } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { userActivityLogs, users } from '@/database/schema';
+import getQueryClient from '@/lib/react-query';
+import api from '@/lib/trpc/server';
+import tryCatch from '@/utils/tryCatch';
 
 interface UserActivityLogsGetManyParams {
   limit?: number;
@@ -18,7 +21,7 @@ interface UserActivityLogsGetManyParams {
  * @returns Activity logs with user details
  */
 const userActivityLogsGetMany = async (params: UserActivityLogsGetManyParams) => {
-  const { limit = 50, offset = 0, userId, action, unreadOnly: _unreadOnly = false } = params;
+  const { limit = 50, offset = 0, userId, action, unreadOnly = false } = params;
 
   const whereConditions = [];
 
@@ -30,10 +33,18 @@ const userActivityLogsGetMany = async (params: UserActivityLogsGetManyParams) =>
     whereConditions.push(eq(userActivityLogs.action, action));
   }
 
-  // Note: unreadOnly filter temporarily disabled - requires database migration
-  // if (unreadOnly) {
-  //   // Filter logic will be re-enabled after adding lastViewedActivityAt column
-  // }
+  // Filter for unread activities only
+  if (unreadOnly) {
+    const queryClient = getQueryClient();
+    const [currentUser] = await tryCatch(
+      queryClient.fetchQuery(api.users.getMe.queryOptions()),
+    );
+
+    if (currentUser?.lastViewedActivityAt) {
+      whereConditions.push(gt(userActivityLogs.createdAt, currentUser.lastViewedActivityAt));
+    }
+    // If no lastViewedActivityAt, show all activities as unread
+  }
 
   const logs = await db
     .select({
