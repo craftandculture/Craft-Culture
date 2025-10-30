@@ -1,3 +1,9 @@
+## [1.72.11](https://github.com/craftandculture/Craft-Culture/compare/v1.72.10...v1.72.11) (2025-10-30)
+
+### Bug Fixes
+
+* add type cast for api.users in pending-approval page ([52dfb1f](https://github.com/craftandculture/Craft-Culture/commit/52dfb1f88f7d5a18e7cc4598a00d7ffd598b767f))
+
 ## [1.72.10](https://github.com/craftandculture/Craft-Culture/compare/v1.72.9...v1.72.10) (2025-10-30)
 
 ### Bug Fixes
