@@ -1,3 +1,9 @@
+## [1.72.19](https://github.com/craftandculture/Craft-Culture/compare/v1.72.18...v1.72.19) (2025-10-30)
+
+### Bug Fixes
+
+* disable React Compiler to resolve build initialization error ([46aee4e](https://github.com/craftandculture/Craft-Culture/commit/46aee4eccafcc3becd3ab3f036bf5e049c12dc8b))
+
 ## [1.72.18](https://github.com/craftandculture/Craft-Culture/compare/v1.72.17...v1.72.18) (2025-10-30)
 
 ### Bug Fixes
