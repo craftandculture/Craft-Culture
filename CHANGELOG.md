@@ -1,3 +1,9 @@
+## [1.72.16](https://github.com/craftandculture/Craft-Culture/compare/v1.72.15...v1.72.16) (2025-10-30)
+
+### Bug Fixes
+
+* remove circular return type annotation from userActivityLogsGetManyController ([3efcae8](https://github.com/craftandculture/Craft-Culture/commit/3efcae8b51423ebbcfa68349d9a83f120640d811))
+
 ## [1.72.15](https://github.com/craftandculture/Craft-Culture/compare/v1.72.14...v1.72.15) (2025-10-30)
 
 ### Bug Fixes
