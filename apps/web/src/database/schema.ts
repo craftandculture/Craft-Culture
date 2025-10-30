@@ -100,6 +100,7 @@ export const users = pgTable('users', {
   approvedAt: timestamp('approved_at', { mode: 'date' }),
   approvedBy: uuid('approved_by'),
   termsAcceptedAt: timestamp('terms_accepted_at', { mode: 'date' }),
+  lastViewedActivityAt: timestamp('last_viewed_activity_at', { mode: 'date' }),
 
   ...timestamps,
 }).enableRLS();
