@@ -1,3 +1,9 @@
+## [1.72.4](https://github.com/craftandculture/Craft-Culture/compare/v1.72.3...v1.72.4) (2025-10-30)
+
+### Bug Fixes
+
+* add type cast for useQuery result in users page ([0acbd84](https://github.com/craftandculture/Craft-Culture/commit/0acbd849d180ededf337a2ccdda1cc02376090d6))
+
 ## [1.72.3](https://github.com/craftandculture/Craft-Culture/compare/v1.72.2...v1.72.3) (2025-10-30)
 
 ### Bug Fixes
