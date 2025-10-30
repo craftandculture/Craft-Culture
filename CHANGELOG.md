@@ -1,3 +1,9 @@
+## [1.69.1](https://github.com/craftandculture/Craft-Culture/compare/v1.69.0...v1.69.1) (2025-10-30)
+
+### Bug Fixes
+
+* correct AppRouter import path in test-utils ([02e04d3](https://github.com/craftandculture/Craft-Culture/commit/02e04d389c8328a6b0d0252ec2591c64439a1f92))
+
 ## [1.69.0](https://github.com/craftandculture/Craft-Culture/compare/v1.68.0...v1.69.0) (2025-10-30)
 
 ### Features
