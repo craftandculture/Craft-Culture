@@ -1,3 +1,9 @@
+## [1.72.8](https://github.com/craftandculture/Craft-Culture/compare/v1.72.7...v1.72.8) (2025-10-30)
+
+### Bug Fixes
+
+* add type annotation for mobile user map function ([24cbd25](https://github.com/craftandculture/Craft-Culture/commit/24cbd25036225cb86ea1ff028d7c1c8328514cba))
+
 ## [1.72.7](https://github.com/craftandculture/Craft-Culture/compare/v1.72.6...v1.72.7) (2025-10-30)
 
 ### Bug Fixes
