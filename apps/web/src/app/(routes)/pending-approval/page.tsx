@@ -26,7 +26,8 @@ const PendingApprovalPage = () => {
   const router = useRouter();
   const [isChecking, setIsChecking] = useState(false);
 
-  const { data: user, refetch } = useQuery(api.users.getMe.queryOptions());
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: user, refetch } = useQuery((api.users as any).getMe.queryOptions());
 
   // Auto-poll every 10 seconds to check if user is approved
   useEffect(() => {
