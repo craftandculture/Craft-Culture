@@ -11,6 +11,29 @@ import TooltipContent from '@/app/_ui/components/Tooltip/TooltipContent';
 import TooltipTrigger from '@/app/_ui/components/Tooltip/TooltipTrigger';
 import useTRPC from '@/lib/trpc/browser';
 
+interface ActivityLog {
+  id: string;
+  userId: string;
+  action: string;
+  entityType: string | null;
+  entityId: string | null;
+  metadata: unknown;
+  ipAddress: string | null;
+  userAgent: string | null;
+  createdAt: Date;
+  user: {
+    id: string;
+    email: string;
+    name: string | null;
+    customerType: string;
+  } | null;
+}
+
+interface ActivityData {
+  logs: ActivityLog[];
+  total: number;
+}
+
 /**
  * Activity bell notification component for admin users
  *
@@ -22,7 +45,7 @@ const ActivityBell = () => {
   const queryClient = useQueryClient();
 
   // Get unread activity count
-  const { data: activityData } = useQuery({
+  const { data } = useQuery({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     ...(api.admin as any).userActivityLogs.getMany.queryOptions({
       limit: 100,
@@ -31,6 +54,7 @@ const ActivityBell = () => {
     refetchInterval: 30000, // Refresh every 30 seconds
   });
 
+  const activityData = data as ActivityData | undefined;
   const unreadCount = activityData?.logs.length ?? 0;
   const hasUnread = unreadCount > 0;
 
