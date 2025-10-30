@@ -11,7 +11,7 @@ import type userActivityLogsGetManyInputSchema from '@/app/_admin/schemas/userAc
  */
 const userActivityLogsGetManyController = async (
   input: z.infer<typeof userActivityLogsGetManyInputSchema>,
-): Promise<Awaited<ReturnType<typeof userActivityLogsGetMany>>> => {
+) => {
   const result = await userActivityLogsGetMany(input);
   return result;
 };
