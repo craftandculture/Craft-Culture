@@ -42,7 +42,7 @@ const notifyAdminsOfNewUser = async (user: NewUser) => {
     const emailPromises = adminUsers.map(async (admin) => {
       try {
         await loops.sendTransactionalEmail({
-          transactionalId: 'new-user-approval-needed', // Update with actual Loops template ID
+          transactionalId: 'cmhagixdf7c3z160h3aaga4xp',
           email: admin.email,
           dataVariables: {
             adminName: admin.name,
