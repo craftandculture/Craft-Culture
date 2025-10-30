@@ -59,8 +59,10 @@ const UserManagementPage = () => {
 
   // Approve user mutation
   const { mutate: approveUser, isPending: isApproving } = useMutation({
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    ...(api.users as any).approve.mutationOptions(),
+    mutationFn: async (variables: { userId: string }) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      return await (api.users as any).approve.mutate(variables);
+    },
     onSuccess: () => {
       void refetch();
     },
@@ -68,8 +70,10 @@ const UserManagementPage = () => {
 
   // Reject user mutation
   const { mutate: rejectUser, isPending: isRejecting } = useMutation({
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    ...(api.users as any).reject.mutationOptions(),
+    mutationFn: async (variables: { userId: string }) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      return await (api.users as any).reject.mutate(variables);
+    },
     onSuccess: () => {
       void refetch();
     },
@@ -77,8 +81,10 @@ const UserManagementPage = () => {
 
   // Delete user mutation
   const { mutate: deleteUser, isPending: isDeleting } = useMutation({
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    ...(api.users as any).delete.mutationOptions(),
+    mutationFn: async (variables: { userId: string }) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      return await (api.users as any).delete.mutate(variables);
+    },
     onSuccess: () => {
       void refetch();
     },
