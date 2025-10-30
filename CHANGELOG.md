@@ -1,3 +1,9 @@
+## [1.72.5](https://github.com/craftandculture/Craft-Culture/compare/v1.72.4...v1.72.5) (2025-10-30)
+
+### Bug Fixes
+
+* add explicit type annotation for user parameter in map function ([e5f1a52](https://github.com/craftandculture/Craft-Culture/commit/e5f1a520a4cdd0f0024ab0b0465aba1f1a7df842))
+
 ## [1.72.4](https://github.com/craftandculture/Craft-Culture/compare/v1.72.3...v1.72.4) (2025-10-30)
 
 ### Bug Fixes
