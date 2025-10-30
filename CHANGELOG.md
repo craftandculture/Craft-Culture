@@ -1,3 +1,9 @@
+## [1.71.1](https://github.com/craftandculture/Craft-Culture/compare/v1.71.0...v1.71.1) (2025-10-30)
+
+### Bug Fixes
+
+* implement mark-as-read functionality for activity notifications ([f9a638d](https://github.com/craftandculture/Craft-Culture/commit/f9a638d5b0a30818c050237c91e0a3b94c0a04d5))
+
 ## [1.71.0](https://github.com/craftandculture/Craft-Culture/compare/v1.70.0...v1.71.0) (2025-10-30)
 
 ### Features
