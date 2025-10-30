@@ -10,6 +10,10 @@ import TooltipContent from '@/app/_ui/components/Tooltip/TooltipContent';
 import TooltipTrigger from '@/app/_ui/components/Tooltip/TooltipTrigger';
 import useTRPC from '@/lib/trpc/browser';
 
+interface PendingCountData {
+  count: number;
+}
+
 /**
  * Pending users notification bell for admin users
  *
@@ -20,12 +24,13 @@ const PendingUsersBell = () => {
   const api = useTRPC();
 
   // Get pending users count
-  const { data: pendingData } = useQuery({
+  const { data } = useQuery({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     ...(api.users as any).getPendingCount.queryOptions(),
     refetchInterval: 30000, // Refresh every 30 seconds
   });
 
+  const pendingData = data as PendingCountData | undefined;
   const pendingCount = pendingData?.count ?? 0;
   const hasPending = pendingCount > 0;
 
