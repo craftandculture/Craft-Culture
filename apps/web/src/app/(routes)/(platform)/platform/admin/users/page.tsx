@@ -45,7 +45,8 @@ const UserManagementPage = () => {
       search: searchQuery || undefined,
       limit: 50,
     }),
-  });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  }) as any;
 
   // Approve user mutation
   const { mutate: approveUser, isPending: isApproving } = useMutation(
