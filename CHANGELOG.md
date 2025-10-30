@@ -1,3 +1,9 @@
+## [1.72.13](https://github.com/craftandculture/Craft-Culture/compare/v1.72.12...v1.72.13) (2025-10-30)
+
+### Bug Fixes
+
+* properly type user data in markActivitiesAsViewed action ([3c7ffc7](https://github.com/craftandculture/Craft-Culture/commit/3c7ffc7cde463c35ba68a1dcbed35c79a584f927))
+
 ## [1.72.12](https://github.com/craftandculture/Craft-Culture/compare/v1.72.11...v1.72.12) (2025-10-30)
 
 ### Bug Fixes
