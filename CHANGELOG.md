@@ -1,3 +1,9 @@
+## [1.70.0](https://github.com/craftandculture/Craft-Culture/compare/v1.69.3...v1.70.0) (2025-10-30)
+
+### Features
+
+* configure Loops email template for new user notifications ([87e16ef](https://github.com/craftandculture/Craft-Culture/commit/87e16efd96d0be50377ace26748284bfaa1e1da4))
+
 ## [1.69.3](https://github.com/craftandculture/Craft-Culture/compare/v1.69.2...v1.69.3) (2025-10-30)
 
 ### Bug Fixes
