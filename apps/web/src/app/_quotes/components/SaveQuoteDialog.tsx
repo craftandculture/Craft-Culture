@@ -82,6 +82,11 @@ const SaveQuoteDialog = ({
       return;
     }
 
+    if (!quoteData) {
+      toast.error('Quote data is missing. Please generate a quote first.');
+      return;
+    }
+
     setIsSaving(true);
 
     try {
