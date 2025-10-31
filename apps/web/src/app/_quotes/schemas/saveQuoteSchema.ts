@@ -25,6 +25,7 @@ const saveQuoteSchema = z.object({
       offerId: z.string().uuid(),
       quantity: z.number().int().min(1),
       vintage: z.string().optional(),
+      alternativeVintages: z.array(z.string()).optional(),
     }),
   ),
   quoteData: z.any(),

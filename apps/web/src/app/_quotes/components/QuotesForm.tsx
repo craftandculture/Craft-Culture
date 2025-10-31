@@ -83,6 +83,7 @@ interface URLLineItem {
   offerId: string;
   quantity: number;
   vintage?: string;
+  alternativeVintages?: string[];
 }
 
 const MAX_LINE_ITEMS = 100;
@@ -94,6 +95,7 @@ type LineItemBase = {
   offerId?: string;
   quantity?: number;
   vintage?: string;
+  alternativeVintages?: string[];
 };
 
 type DerivedLineItem =
@@ -232,6 +234,7 @@ const QuotesForm = () => {
         offerId: item.offerId,
         quantity: item.quantity,
         vintage: item.vintage,
+        alternativeVintages: item.alternativeVintages,
       }),
     );
 
@@ -312,6 +315,7 @@ const QuotesForm = () => {
         offerId,
         quantity,
         vintage: item.vintage,
+        alternativeVintages: item.alternativeVintages,
       };
       void setUrlLineItems(newItems);
       return;
@@ -324,6 +328,7 @@ const QuotesForm = () => {
         offerId,
         quantity,
         vintage: item.vintage,
+        alternativeVintages: item.alternativeVintages,
       },
     ]);
     setPlaceholderRowIds((prev) => prev.filter((rowId) => rowId !== item.id));
@@ -363,6 +368,29 @@ const QuotesForm = () => {
       newItems[item.urlIndex] = {
         ...newItems[item.urlIndex]!,
         vintage,
+      };
+      void setUrlLineItems(newItems);
+    }
+  };
+
+  const handleAlternativeVintagesChange = (
+    id: string,
+    alternativeVintages: string[],
+  ) => {
+    const item = lineItems.find((lineItem) => lineItem.id === id);
+    if (!item) {
+      return;
+    }
+
+    if (item.source === 'url') {
+      if (!urlLineItems[item.urlIndex]) {
+        return;
+      }
+
+      const newItems = [...urlLineItems];
+      newItems[item.urlIndex] = {
+        ...newItems[item.urlIndex]!,
+        alternativeVintages,
       };
       void setUrlLineItems(newItems);
     }
@@ -747,6 +775,7 @@ const QuotesForm = () => {
               vintage={item.vintage}
               product={item.product}
               quantity={item.quantity}
+              alternativeVintages={item.alternativeVintages}
               onVintageChange={(vintage) =>
                 handleVintageChange(item.id, vintage)
               }
@@ -755,6 +784,9 @@ const QuotesForm = () => {
               }
               onQuantityChange={(quantity) =>
                 handleQuantityChange(item.id, quantity)
+              }
+              onAlternativeVintagesChange={(vintages) =>
+                handleAlternativeVintagesChange(item.id, vintages)
               }
               onRemove={() => handleRemoveRow(item.id)}
               isQuoteLoading={isQuoteLoading}
