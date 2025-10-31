@@ -23,10 +23,12 @@ import DialogFooter from '@/app/_ui/components/Dialog/DialogFooter';
 import DialogHeader from '@/app/_ui/components/Dialog/DialogHeader';
 import DialogTitle from '@/app/_ui/components/Dialog/DialogTitle';
 import Divider from '@/app/_ui/components/Divider/Divider';
+import Input from '@/app/_ui/components/Input/Input';
 import TextArea from '@/app/_ui/components/TextArea/TextArea';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import type { Quote } from '@/database/schema';
 import useTRPC, { useTRPCClient } from '@/lib/trpc/browser';
+import convertUsdToAed from '@/utils/convertUsdToAed';
 import formatPrice from '@/utils/formatPrice';
 
 interface QuoteApprovalDialogProps extends DialogProps {
@@ -52,6 +54,19 @@ const QuoteApprovalDialog = ({
   // State for confirmation notes
   const [ccNotes, setCcNotes] = useState('');
   const [confirmationNotes, setConfirmationNotes] = useState('');
+  const [deliveryLeadTime, setDeliveryLeadTime] = useState('');
+
+  // State for currency display
+  const [displayCurrency, setDisplayCurrency] = useState<'USD' | 'AED'>('USD');
+
+  // Calculate display amount based on selected currency
+  const displayTotal = useMemo(() => {
+    if (!quote) return 0;
+    if (displayCurrency === 'USD') {
+      return quote.totalUsd;
+    }
+    return quote.totalAed ?? convertUsdToAed(quote.totalUsd);
+  }, [quote, displayCurrency]);
 
   // Parse line items
   const lineItems = useMemo(
@@ -169,8 +184,13 @@ const QuoteApprovalDialog = ({
   const confirmPOMutation = useMutation({
     mutationFn: async () => {
       if (!quote) return;
+      if (!deliveryLeadTime.trim()) {
+        toast.error('Please provide delivery lead time');
+        return;
+      }
       return trpcClient.quotes.confirmPO.mutate({
         quoteId: quote.id,
+        deliveryLeadTime: deliveryLeadTime.trim(),
         poConfirmationNotes: confirmationNotes || undefined,
       });
     },
@@ -178,6 +198,7 @@ const QuoteApprovalDialog = ({
       toast.success('PO confirmed successfully');
       void queryClient.invalidateQueries({ queryKey: ['admin-quotes'] });
       setConfirmationNotes('');
+      setDeliveryLeadTime('');
       if (onOpenChange) onOpenChange(false);
     },
     onError: (error) => {
@@ -218,14 +239,21 @@ const QuoteApprovalDialog = ({
                   )}
                 </div>
                 <div>
-                  <Typography variant="bodyXs" colorRole="muted">
-                    Quote Total
-                  </Typography>
+                  <div className="flex items-center gap-2 mb-1">
+                    <Typography variant="bodyXs" colorRole="muted">
+                      Quote Total
+                    </Typography>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setDisplayCurrency(displayCurrency === 'USD' ? 'AED' : 'USD')}
+                      className="h-5 px-2 text-xs"
+                    >
+                      <ButtonContent>{displayCurrency === 'USD' ? 'Show AED' : 'Show USD'}</ButtonContent>
+                    </Button>
+                  </div>
                   <Typography variant="bodySm" className="font-medium">
-                    {formatPrice(
-                      quote.currency === 'AED' ? quote.totalAed ?? quote.totalUsd : quote.totalUsd,
-                      quote.currency as 'USD' | 'AED',
-                    )}
+                    {formatPrice(displayTotal, displayCurrency)}
                   </Typography>
                 </div>
                 <div>
@@ -467,6 +495,24 @@ const QuoteApprovalDialog = ({
                   )}
                 </div>
                 <div>
+                  <Typography variant="bodySm" className="mb-2 font-medium">
+                    Delivery Lead Time *
+                  </Typography>
+                  <Input
+                    type="text"
+                    placeholder="e.g., 2-3 weeks, 30 days, etc."
+                    value={deliveryLeadTime}
+                    onChange={(e) => setDeliveryLeadTime(e.target.value)}
+                  />
+                  <Typography
+                    variant="bodyXs"
+                    colorRole="muted"
+                    className="mt-1"
+                  >
+                    Expected delivery timeframe for this order
+                  </Typography>
+                </div>
+                <div>
                   <Typography variant="bodySm" className="mb-2">
                     Confirmation Notes (optional)
                   </Typography>
@@ -558,7 +604,7 @@ const QuoteApprovalDialog = ({
               colorRole="brand"
               size="md"
               onClick={() => confirmPOMutation.mutate()}
-              isDisabled={confirmPOMutation.isPending}
+              isDisabled={confirmPOMutation.isPending || !deliveryLeadTime.trim()}
             >
               <ButtonContent iconLeft={IconCheck}>
                 {confirmPOMutation.isPending ? 'Confirming...' : 'Confirm PO'}
