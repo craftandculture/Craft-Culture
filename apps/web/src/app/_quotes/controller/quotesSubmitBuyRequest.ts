@@ -10,7 +10,7 @@ import submitBuyRequestSchema from '../schemas/submitBuyRequestSchema';
 /**
  * Submit a buy request on a quote
  *
- * Transitions status from 'sent' or 'revision_requested' to 'buy_request_submitted'
+ * Transitions status from 'draft', 'sent', or 'revision_requested' to 'buy_request_submitted'
  *
  * @example
  *   await trpcClient.quotes.submitBuyRequest.mutate({
@@ -38,6 +38,7 @@ const quotesSubmitBuyRequest = protectedProcedure
 
     // Verify quote is in correct status
     if (
+      existingQuote.status !== 'draft' &&
       existingQuote.status !== 'sent' &&
       existingQuote.status !== 'revision_requested'
     ) {
