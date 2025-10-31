@@ -27,11 +27,11 @@ const QuoteApprovalsList = () => {
   const [selectedQuote, setSelectedQuote] = useState<Quote | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
-  // Fetch all quotes that need admin attention
+  // Fetch all quotes that need admin attention (using admin endpoint to see all users' quotes)
   const { data: quotesData, isLoading } = useQuery({
     queryKey: ['admin-quotes'],
     queryFn: () =>
-      trpcClient.quotes.getMany.query({
+      trpcClient.quotes.getManyAdmin.query({
         limit: 100,
         cursor: 0,
       }),
