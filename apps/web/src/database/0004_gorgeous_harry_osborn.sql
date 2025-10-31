@@ -1,0 +1,1 @@
+ALTER TABLE "quotes" ADD COLUMN "delivery_lead_time" text;
