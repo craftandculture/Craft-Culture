@@ -359,7 +359,7 @@ const QuoteApprovalDialog = ({
               </Button>
               <Button
                 variant="default"
-                colorRole="success"
+                colorRole="brand"
                 size="md"
                 onClick={() => confirmMutation.mutate()}
                 isDisabled={confirmMutation.isPending}
@@ -404,7 +404,7 @@ const QuoteApprovalDialog = ({
           {quote.status === 'po_submitted' && (
             <Button
               variant="default"
-              colorRole="success"
+              colorRole="brand"
               size="md"
               onClick={() => confirmPOMutation.mutate()}
               isDisabled={confirmPOMutation.isPending}
