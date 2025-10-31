@@ -1,233 +1,94 @@
 # Privacy Policy
 
-**Last Updated: January 2025**
+**Last Updated: October 2025**
 
 ## 1. Introduction
 
-Craft & Culture Index ("we," "our," or "us") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our wine and spirits trading platform (the "Platform").
+Craft & Culture Index ("Craft & Culture," "we," "our," or "us") is committed to protecting the personal data of individuals with whom we deal. This Privacy Policy describes how we collect, use, disclose, store and protect your personal data when you access or use our wine & spirits trading platform, associated websites and services ("Platform").
 
-By using our Platform, you consent to the data practices described in this Privacy Policy. If you do not agree with this policy, please do not use our Platform.
+By using our Platform you acknowledge you have read, understood and consent to the data practices described here in accordance with the PDPL and other applicable UAE laws.
 
-## 2. Information We Collect
+## 2. Scope and Application
 
-### 2.1 Personal Information You Provide
+This Policy applies to all personal data we process in the United Arab Emirates (onshore) and also to any processing of personal data of UAE residents (even if some processing occurs outside the UAE) in line with the extraterritorial scope of the PDPL.
 
-When you create an account or use our Platform, we may collect:
+If you are located in a UAE free zone jurisdiction (for example DIFC Data Protection Commissioner's Office / ADGM Data Protection Regulator) whose own data-protection regime applies, you may need to review additional or alternative privacy policies.
 
-**Account Information:**
-- Full name
-- Email address
-- Phone number
-- Date of birth (for age verification)
-- Password (encrypted)
+## 3. Information We Collect
 
-**Business Information (B2B Users):**
-- Company name
-- Business address
-- Business phone number
-- Business email
-- VAT number/Tax ID
-- Company logo
-- Business registration documents
-- Trading licenses
+### 3.1 Personal Data (Data Subject to the PDPL)
 
-**Profile Information:**
-- Customer type (B2B or B2C)
-- Preferred currency
-- Communication preferences
+We collect the following categories of personal data:
+- **Contact details:** full name, email address, phone number.
+- **Company / Business details (for B2B accounts):** company name, registration number, business address.
+- **Payment, billing and trade information:** bank or payment-card details, invoicing data, order history, transaction records.
+- **Trade / transactional data:** orders placed, shipping and delivery details, correspondence and service communications.
 
-**Transaction Information:**
-- Quote history
-- Product selections
-- Pricing information
-- Order history
-- Payment information (processed through secure third-party payment processors)
+### 3.2 Automatically Collected Data
 
-### 2.2 Information Collected Automatically
+When you interact with our Platform we may collect technical and usage data, including:
+- IP address, device type, operating system, browser type/version.
+- Date/time of access, pages visited, user behaviour / navigation within the Platform.
+- Use of cookies and other tracking technologies (see Section 8).
 
-When you access our Platform, we automatically collect:
+## 4. Purposes & Lawful Basis of Processing
 
-**Technical Information:**
-- IP address
-- Browser type and version
-- Device type and operating system
-- Referring website
-- Pages visited and time spent on pages
-- Click data and navigation patterns
+We process your personal data for the following purposes, relying on one or more lawful bases under the PDPL:
+- **Account setup and management** – to create and maintain your user account (lawful basis: performance of contract / consent).
+- **Order, transaction and trade execution** – to process purchases, sales, deliveries and invoicing (lawful basis: performance of contract).
+- **Customer support** – to respond to your queries, complaints and service requests (lawful basis: legitimate interest / consent).
+- **Transactional communications** – to send you order confirmations, updates and related communications (lawful basis: performance of contract).
+- **Platform improvement and analytics** – to enhance our services, monitor usage and improve user experience (lawful basis: legitimate interest).
+- **Legal & regulatory compliance** – to fulfill obligations under UAE law (such as anti-money-laundering, customs, bonded logistics) (lawful basis: legal obligation).
 
-**Cookies and Tracking Technologies:**
-- Session cookies (essential for Platform functionality)
-- Persistent cookies (for remembering your preferences)
-- Analytics cookies (for understanding Platform usage)
-- Authentication tokens
+We collect only the personal data necessary ("data minimisation") and use it only for the purposes communicated to you ("purpose limitation") in line with PDPL principles.
 
-### 2.3 Information from Third Parties
+## 5. Sharing and Disclosure of Personal Data
 
-We may receive information from:
-- Business verification services (for B2B account approval)
-- Payment processors (for transaction processing)
-- Social media platforms (if you choose to connect your account)
-- Product suppliers (for inventory and pricing updates)
+We do not sell or trade your personal data. We may, however, share data in the following circumstances:
+- **Service providers** – third-party processors acting on our behalf (hosting, payments, analytics, shipping) under contractual obligations to protect your data.
+- **Business partners** – such as licensed suppliers, bonded-warehouse operators or logistics providers, as necessary for trade execution.
+- **Legal/regulatory authorities** – where required by UAE law, or to protect our legal rights and interests.
+- **Corporate transactions** – in the event of a merger, acquisition or sale of our business/assets, your personal data may be transferred to the successor entity, subject to confidentiality and compliance.
 
-## 3. How We Use Your Information
+We ensure that any sharing／transfer of personal data is done in compliance with the PDPL's rules on cross-border transfers (see Section 9).
 
-We use your information for the following purposes:
+## 6. Data Security & Retention
 
-### 3.1 Platform Operations
-- Create and manage your account
-- Authenticate your identity and verify eligibility
-- Process quotes and orders
-- Provide customer support
-- Send transactional emails (order confirmations, quote notifications)
-- Manage pricing models and product catalogs
+We adopt appropriate technical and organisational measures to ensure the confidentiality, integrity and availability of your personal data, including encryption, access controls, secure storage and regular review of our security practices.
 
-### 3.2 Business Purposes
-- Verify business credentials for B2B accounts
-- Generate invoices and quotes
-- Process payments and billing
-- Maintain transaction records
-- Conduct credit checks (for B2B credit terms)
+We will retain your personal data only for as long as necessary to fulfil the purposes set out in this Policy, or for other legitimate and lawful purposes (such as legal or tax retention obligations).
 
-### 3.3 Communication
-- Respond to your inquiries
-- Send Platform updates and announcements
-- Provide product recommendations
-- Send marketing communications (with your consent)
-- Conduct surveys and collect feedback
+## 7. Your Rights under UAE Law
 
-### 3.4 Analytics and Improvement
-- Analyze Platform usage and performance
-- Identify and fix technical issues
-- Improve user experience
-- Develop new features
-- Generate usage statistics
+Under the PDPL you have the following rights in relation to your personal data:
+- **Access:** you may request a copy of the personal data we hold about you, along with information about its processing.
+- **Rectification / Correction:** you may request we correct inaccurate or incomplete personal data.
+- **Erasure / Deletion:** you may request deletion of your personal data, subject to legal or contractual retention obligations.
+- **Restriction of Processing:** you may ask us to restrict processing where data is inaccurate, or objectionable.
+- **Portability:** you may request your personal data in a structured, machine-readable format and transmit it to another controller.
+- **Objection to certain processing:** you may object to processing for direct marketing or automated decision-making.
+- **Withdraw consent:** where processing is based on consent, you may withdraw it at any time (this will not affect processing already carried out lawfully).
 
-### 3.5 Legal and Security
-- Comply with legal obligations
-- Enforce our Terms and Conditions
-- Prevent fraud and abuse
-- Protect our rights and property
-- Respond to legal requests
+To exercise any of these rights, please contact us at privacy@craftandculture.com. We may require verification of your identity prior to actioning a request.
 
-## 4. Legal Basis for Processing (GDPR)
+## 8. Cookies & Tracking Technologies
 
-If you are in the European Economic Area (EEA), we process your personal data based on:
+We use cookies, pixel tags and other similar technologies to:
+- Enable the core functionality of our Platform.
+- Analyse user behaviour, traffic and usage patterns.
+- Provide personalised content and promotional communications (where you have opted-in).
 
-- **Contract Performance:** Processing necessary to provide our services
-- **Legitimate Interests:** Business operations, fraud prevention, improving services
-- **Legal Obligation:** Compliance with laws and regulations
-- **Consent:** Marketing communications and optional features (you may withdraw consent at any time)
+You can control the use of cookies via your browser settings. Disabling certain cookies may affect your ability to use certain parts of the Platform.
 
-## 5. How We Share Your Information
+## 9. International & Cross-Border Data Transfers
 
-We do not sell your personal information. We may share your information with:
-
-### 5.1 Service Providers
-Third-party companies that help us operate our Platform:
-- Cloud hosting providers (Vercel, Neon Database)
-- Authentication services (Better Auth)
-- Email service providers
-- Payment processors
-- Analytics providers (if applicable)
-- Customer support tools
-
-### 5.2 Business Partners
-- Product suppliers (for order fulfillment)
-- Shipping and logistics providers
-- Credit verification services (for B2B accounts)
-
-### 5.3 Legal Requirements
-We may disclose your information if required by law or if we believe such action is necessary to:
-- Comply with legal processes or government requests
-- Enforce our Terms and Conditions
-- Protect our rights, property, or safety
-- Investigate fraud or security issues
-- Protect the rights or safety of others
-
-### 5.4 Business Transfers
-If we are involved in a merger, acquisition, or sale of assets, your information may be transferred to the acquiring entity.
-
-## 6. Data Retention
-
-We retain your information for as long as necessary to:
-- Maintain your account and provide services
-- Comply with legal obligations (e.g., tax records, transaction history)
-- Resolve disputes and enforce agreements
-- Prevent fraud and abuse
-
-**Retention Periods:**
-- Account data: Duration of account plus 7 years for legal compliance
-- Transaction records: 7 years (tax and legal requirements)
-- Marketing data: Until you withdraw consent or close your account
-- Technical logs: 90 days
-
-You may request deletion of your account at any time, subject to legal retention requirements.
-
-## 7. Data Security
-
-We implement appropriate technical and organizational measures to protect your information:
-
-**Security Measures:**
-- Encryption of data in transit (SSL/TLS)
-- Encryption of sensitive data at rest
-- Secure password hashing
-- Regular security assessments
-- Access controls and authentication
-- Regular backups
-- Monitoring for suspicious activity
-
-**However, please note:** No internet transmission or electronic storage is 100% secure. While we strive to protect your information, we cannot guarantee absolute security.
-
-## 8. Your Rights and Choices
-
-### 8.1 Access and Portability
-You have the right to:
-- Access your personal information
-- Request a copy of your data in a portable format
-- Correct inaccurate information
-
-### 8.2 Deletion and Restriction
-You may request to:
-- Delete your account and personal information
-- Restrict processing of your information
-- Object to certain processing activities
-
-### 8.3 Marketing Communications
-You can opt out of marketing emails by:
-- Clicking the "unsubscribe" link in any marketing email
-- Adjusting your email preferences in account settings
-- Contacting us at support@craftculture.xyz
-
-Note: You cannot opt out of essential transactional emails (order confirmations, password resets, etc.)
-
-### 8.4 Cookies
-You can control cookies through:
-- Browser settings (block or delete cookies)
-- Platform settings (where available)
-- Third-party opt-out tools
-
-Note: Disabling essential cookies may affect Platform functionality.
-
-### 8.5 GDPR Rights (EEA Residents)
-If you are in the EEA, you have additional rights:
-- Right to erasure ("right to be forgotten")
-- Right to restriction of processing
-- Right to data portability
-- Right to object to processing
-- Right to withdraw consent
-- Right to lodge a complaint with a supervisory authority
-
-### 8.6 Exercising Your Rights
-To exercise any of these rights, contact us at support@craftculture.xyz. We will respond within 30 days.
-
-## 9. International Data Transfers
-
-Our Platform is hosted on servers located in [specify regions]. If you access the Platform from outside these regions, your information may be transferred internationally.
-
-**Data Transfer Safeguards:**
-- We ensure appropriate safeguards are in place for international transfers
-- Standard Contractual Clauses (SCCs) for EU data transfers
-- Compliance with applicable data protection laws
+Personal data collected under this Policy may be transferred to and stored in jurisdictions outside the UAE. We ensure that any such transfer is carried out in accordance with the PDPL's requirements:
+- Transfer is permitted to a country deemed to offer an adequate level of protection for personal data.
+- If no adequacy decision exists, transfers may occur if:
+  - Appropriate safeguards (such as contractual terms) are in place; or
+  - You have given your explicit consent; or
+  - The transfer is necessary for performance of a contract, or for judicial cooperation, or not contrary to UAE public interest.
 
 ## 10. Children's Privacy
 
@@ -235,68 +96,24 @@ Our Platform is not intended for individuals under 21 years of age (or the legal
 
 If we become aware that we have collected information from a minor, we will promptly delete such information. If you believe we have collected information from a minor, please contact us immediately.
 
-## 11. Third-Party Links and Services
+## 11. Changes to This Privacy Policy
 
-Our Platform may contain links to third-party websites or integrate with third-party services. We are not responsible for the privacy practices of these third parties.
+We may update this Privacy Policy from time to time to reflect changes in our practices, legal requirements or technology. We will publish the updated version on our Platform and update the "Last Updated" date. Continued use of the Platform after the changes constitutes acceptance of the revised Policy.
 
-We encourage you to review the privacy policies of any third-party sites or services you visit.
+## 12. Contact Us
 
-## 12. Changes to This Privacy Policy
-
-We may update this Privacy Policy from time to time to reflect changes in:
-- Our data practices
-- Legal or regulatory requirements
-- Platform features or functionality
-
-**Notification of Changes:**
-- We will post the updated Privacy Policy on this page
-- We will update the "Last Updated" date
-- For material changes, we will notify you via email or Platform notification
-- Your continued use of the Platform after changes constitutes acceptance
-
-## 13. California Privacy Rights (CCPA)
-
-If you are a California resident, you have specific rights under the California Consumer Privacy Act:
-
-### 13.1 Right to Know
-You have the right to request information about:
-- Categories of personal information we collect
-- Categories of sources from which information is collected
-- Business purposes for collecting information
-- Categories of third parties with whom we share information
-- Specific pieces of personal information we hold about you
-
-### 13.2 Right to Delete
-You have the right to request deletion of your personal information, subject to certain exceptions.
-
-### 13.3 Right to Opt-Out
-You have the right to opt-out of the sale of your personal information. **Note: We do not sell personal information.**
-
-### 13.4 Non-Discrimination
-We will not discriminate against you for exercising your CCPA rights.
-
-### 13.5 Exercising CCPA Rights
-To exercise these rights, contact us at support@craftculture.xyz. We will verify your identity before processing your request.
-
-## 14. Contact Information
-
-For questions, concerns, or to exercise your privacy rights, please contact us:
+If you have any questions, requests or concerns regarding this Privacy Policy or our data-protection practices, please contact us:
 
 **Craft & Culture Index**
-Email: support@craftculture.xyz
-Privacy Contact: support@craftculture.xyz
-Address: Craft * Culture FZE, PO BOX 50365, Fujairah Free Zone, Fujairah, UAE
+Email: support@craftandculture.com
+Attn: Data Protection Officer (DPO)
+
+**Business Address:**
+Craft & Culture FZE
+PO BOX 50365
+Fujairah Free Zone
+Fujairah, UAE
 Phone: +971 9 228 1170
-
-**Response Time:** We aim to respond to all inquiries within 30 days.
-
-## 15. Data Protection Officer (if applicable)
-
-If required by law, we will appoint a Data Protection Officer (DPO). Contact information for our DPO will be provided here once appointed.
-
-## 16. Supervisory Authority
-
-If you are located in the EEA and believe we have not addressed your concerns, you have the right to lodge a complaint with your local data protection authority.
 
 ---
 
@@ -306,5 +123,5 @@ BY USING OUR PLATFORM, YOU ACKNOWLEDGE THAT YOU HAVE READ AND UNDERSTOOD THIS PR
 
 ---
 
-**Version 1.0**
-**Effective Date: January 29, 2025**
+**Version 2.0**
+**Effective Date: October 31, 2025**
