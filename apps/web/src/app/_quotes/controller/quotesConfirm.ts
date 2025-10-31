@@ -67,30 +67,40 @@ const quotesConfirm = adminProcedure
         const existingData = (existingQuote.quoteData as { lineItems?: unknown[] }) || {};
         const lineItems = (existingQuote.lineItems as Array<{ productId: string; quantity: number }>) || [];
 
+        // Type for adjustments from schema
+        type LineItemAdjustment = {
+          adjustedPricePerCase?: number;
+          confirmedQuantity?: number;
+          available: boolean;
+          notes?: string;
+        };
+
         // Update line item pricing with adjustments
-        const updatedLineItemPricing = lineItems.map((item) => {
-          const adjustment = lineItemAdjustments[item.productId];
-          if (!adjustment || !adjustment.available) {
-            return null; // Item marked as unavailable
-          }
+        const updatedLineItemPricing = lineItems
+          .map((item) => {
+            const adjustment = lineItemAdjustments[item.productId] as LineItemAdjustment | undefined;
+            if (!adjustment || !adjustment.available) {
+              return null; // Item marked as unavailable
+            }
 
-          const pricePerCase = adjustment.adjustedPricePerCase || 0;
-          const quantity = adjustment.confirmedQuantity || item.quantity;
-          const lineItemTotalUsd = pricePerCase * quantity;
+            const pricePerCase = adjustment.adjustedPricePerCase || 0;
+            const quantity = adjustment.confirmedQuantity || item.quantity;
+            const lineItemTotalUsd = pricePerCase * quantity;
 
-          return {
-            productId: item.productId,
-            lineItemTotalUsd,
-            basePriceUsd: pricePerCase,
-            confirmedQuantity: quantity,
-            originalQuantity: item.quantity,
-            adminNotes: adjustment.notes,
-          };
-        }).filter(Boolean); // Remove unavailable items
+            return {
+              productId: item.productId,
+              lineItemTotalUsd,
+              basePriceUsd: pricePerCase,
+              confirmedQuantity: quantity,
+              originalQuantity: item.quantity,
+              adminNotes: adjustment.notes,
+            };
+          })
+          .filter((item): item is NonNullable<typeof item> => item !== null); // Remove unavailable items
 
         // Calculate new total
         const newTotalUsd = updatedLineItemPricing.reduce(
-          (sum, item) => sum + (item?.lineItemTotalUsd || 0),
+          (sum, item) => sum + item.lineItemTotalUsd,
           0,
         );
 
