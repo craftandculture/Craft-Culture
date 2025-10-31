@@ -6,6 +6,8 @@ const getQuoteRequestSchema = z.object({
       productId: z.uuid(),
       offerId: z.uuid(),
       quantity: z.number().int().min(1),
+      vintage: z.string().optional(),
+      alternativeVintages: z.array(z.string()).optional(),
     }),
   ),
 });
