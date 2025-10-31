@@ -59,6 +59,9 @@ const QuoteApprovalDialog = ({
   // State for currency display
   const [displayCurrency, setDisplayCurrency] = useState<'USD' | 'AED'>('USD');
 
+  // State for showing workflow section
+  const [showWorkflow, setShowWorkflow] = useState(false);
+
   // Calculate display amount based on selected currency
   const displayTotal = useMemo(() => {
     if (!quote) return 0;
@@ -67,6 +70,34 @@ const QuoteApprovalDialog = ({
     }
     return quote.totalAed ?? convertUsdToAed(quote.totalUsd);
   }, [quote, displayCurrency]);
+
+  // Extract pricing data from quoteData
+  const quotePricingData = useMemo(() => {
+    if (!quote?.quoteData) return null;
+    const data = quote.quoteData as {
+      lineItems?: Array<{
+        productId: string;
+        lineItemTotalUsd: number;
+        basePriceUsd?: number;
+      }>;
+    };
+    return data;
+  }, [quote]);
+
+  // Create pricing map for quick lookup
+  const pricingMap = useMemo(() => {
+    if (!quotePricingData?.lineItems) return {};
+    return quotePricingData.lineItems.reduce(
+      (acc, item) => {
+        acc[item.productId] = {
+          lineItemTotalUsd: item.lineItemTotalUsd,
+          basePriceUsd: item.basePriceUsd,
+        };
+        return acc;
+      },
+      {} as Record<string, { lineItemTotalUsd: number; basePriceUsd?: number }>,
+    );
+  }, [quotePricingData]);
 
   // Parse line items
   const lineItems = useMemo(
@@ -224,7 +255,7 @@ const QuoteApprovalDialog = ({
           <div className="space-y-6">
             {/* Quote Summary */}
             <div className="rounded-lg bg-fill-muted p-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-3 gap-4">
                 <div>
                   <Typography variant="bodyXs" colorRole="muted">
                     Client
@@ -233,28 +264,10 @@ const QuoteApprovalDialog = ({
                     {quote.clientName || 'N/A'}
                   </Typography>
                   {quote.clientCompany && (
-                    <Typography variant="bodySm" colorRole="muted">
+                    <Typography variant="bodyXs" colorRole="muted">
                       {quote.clientCompany}
                     </Typography>
                   )}
-                </div>
-                <div>
-                  <div className="flex items-center gap-2 mb-1">
-                    <Typography variant="bodyXs" colorRole="muted">
-                      Quote Total
-                    </Typography>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setDisplayCurrency(displayCurrency === 'USD' ? 'AED' : 'USD')}
-                      className="h-5 px-2 text-xs"
-                    >
-                      <ButtonContent>{displayCurrency === 'USD' ? 'Show AED' : 'Show USD'}</ButtonContent>
-                    </Button>
-                  </div>
-                  <Typography variant="bodySm" className="font-medium">
-                    {formatPrice(displayTotal, displayCurrency)}
-                  </Typography>
                 </div>
                 <div>
                   <Typography variant="bodyXs" colorRole="muted">
@@ -268,78 +281,93 @@ const QuoteApprovalDialog = ({
                 </div>
                 <div>
                   <Typography variant="bodyXs" colorRole="muted">
-                    Submissions
+                    Status
                   </Typography>
-                  <Typography variant="bodySm" className="font-medium">
-                    {quote.buyRequestCount}
+                  <Typography variant="bodySm" className="font-medium capitalize">
+                    {quote.status.replace(/_/g, ' ')}
                   </Typography>
                 </div>
               </div>
             </div>
 
-            {/* Line Items Summary */}
+            {/* Line Items - Detailed Table View */}
             <div>
-              <Typography variant="bodySm" className="mb-3 font-semibold">
-                Line Items ({lineItems.length})
-              </Typography>
-              <div className="space-y-3">
+              <div className="mb-3 flex items-center justify-between">
+                <Typography variant="bodySm" className="font-semibold">
+                  Order Details ({lineItems.length} {lineItems.length === 1 ? 'item' : 'items'})
+                </Typography>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setDisplayCurrency(displayCurrency === 'USD' ? 'AED' : 'USD')}
+                  className="h-7 px-3 text-xs"
+                >
+                  <ButtonContent>View in {displayCurrency === 'USD' ? 'AED' : 'USD'}</ButtonContent>
+                </Button>
+              </div>
+
+              {/* Table Header */}
+              <div className="rounded-t-lg border border-border-muted bg-fill-muted/50 px-4 py-2">
+                <div className="grid grid-cols-12 gap-4 text-xs font-medium text-text-muted">
+                  <div className="col-span-5">Product</div>
+                  <div className="col-span-2 text-right">Quantity</div>
+                  <div className="col-span-2 text-right">Price/Case</div>
+                  <div className="col-span-3 text-right">Line Total</div>
+                </div>
+              </div>
+
+              {/* Table Rows */}
+              <div className="divide-y divide-border-muted rounded-b-lg border-x border-b border-border-muted">
                 {lineItems.map((item, idx) => {
                   const product = productMap[item.productId];
+                  const pricing = pricingMap[item.productId];
+                  const pricePerCase = pricing?.lineItemTotalUsd
+                    ? pricing.lineItemTotalUsd / item.quantity
+                    : 0;
+                  const lineTotal = pricing?.lineItemTotalUsd || 0;
+
+                  const displayPricePerCase =
+                    displayCurrency === 'USD' ? pricePerCase : convertUsdToAed(pricePerCase);
+                  const displayLineTotal =
+                    displayCurrency === 'USD' ? lineTotal : convertUsdToAed(lineTotal);
 
                   return (
                     <div
                       key={idx}
-                      className="rounded-lg border border-border-muted bg-background-primary p-4"
+                      className="grid grid-cols-12 gap-4 px-4 py-3 hover:bg-fill-muted/30"
                     >
                       {product ? (
                         <>
-                          <div className="flex items-start justify-between gap-4">
-                            <div className="flex-1">
-                              <Typography variant="bodySm" className="mb-1 font-semibold">
-                                {product.name}
-                              </Typography>
-                              <div className="flex flex-wrap gap-x-3 gap-y-1">
-                                {product.producer && (
-                                  <Typography variant="bodyXs" colorRole="muted">
-                                    {product.producer}
-                                  </Typography>
-                                )}
-                                {product.year && (
-                                  <Typography variant="bodyXs" colorRole="muted">
-                                    {product.year}
-                                  </Typography>
-                                )}
-                                {product.region && (
-                                  <Typography variant="bodyXs" colorRole="muted">
-                                    {product.region}
-                                  </Typography>
-                                )}
-                              </div>
-                              <div className="mt-2 flex items-center gap-4">
-                                <div>
-                                  <Typography variant="bodyXs" colorRole="muted">
-                                    LWIN18
-                                  </Typography>
-                                  <Typography variant="bodyXs" className="font-mono">
-                                    {product.lwin18}
-                                  </Typography>
-                                </div>
-                                {item.vintage && (
-                                  <div>
-                                    <Typography variant="bodyXs" colorRole="muted">
-                                      Vintage
-                                    </Typography>
-                                    <Typography variant="bodyXs" className="font-medium">
-                                      {item.vintage}
-                                    </Typography>
-                                  </div>
-                                )}
-                              </div>
+                          {/* Product Info */}
+                          <div className="col-span-5">
+                            <Typography variant="bodySm" className="mb-1 font-medium">
+                              {product.name}
+                            </Typography>
+                            <div className="flex flex-wrap gap-x-2 gap-y-1">
+                              {product.producer && (
+                                <Typography variant="bodyXs" colorRole="muted">
+                                  {product.producer}
+                                </Typography>
+                              )}
+                              {product.year && (
+                                <Typography variant="bodyXs" colorRole="muted">
+                                  • {product.year}
+                                </Typography>
+                              )}
+                              {item.vintage && (
+                                <Typography variant="bodyXs" colorRole="muted">
+                                  • Vintage: {item.vintage}
+                                </Typography>
+                              )}
                             </div>
-                            <div className="flex-shrink-0 rounded-lg bg-fill-brand/10 px-4 py-3 text-center">
-                              <Typography variant="bodyXs" colorRole="muted" className="mb-1">
-                                Quantity
-                              </Typography>
+                            <Typography variant="bodyXs" colorRole="muted" className="mt-1 font-mono">
+                              {product.lwin18}
+                            </Typography>
+                          </div>
+
+                          {/* Quantity */}
+                          <div className="col-span-2 text-right">
+                            <div className="inline-flex flex-col items-end">
                               <Typography variant="bodyLg" className="font-bold text-text-brand">
                                 {item.quantity}
                               </Typography>
@@ -348,21 +376,31 @@ const QuoteApprovalDialog = ({
                               </Typography>
                             </div>
                           </div>
+
+                          {/* Price per Case */}
+                          <div className="col-span-2 text-right">
+                            <Typography variant="bodySm" className="font-medium">
+                              {formatPrice(displayPricePerCase, displayCurrency)}
+                            </Typography>
+                            <Typography variant="bodyXs" colorRole="muted">
+                              per case
+                            </Typography>
+                          </div>
+
+                          {/* Line Total */}
+                          <div className="col-span-3 text-right">
+                            <Typography variant="bodySm" className="font-bold">
+                              {formatPrice(displayLineTotal, displayCurrency)}
+                            </Typography>
+                          </div>
                         </>
                       ) : (
-                        <div>
-                          <Typography variant="bodyXs" colorRole="muted" className="mb-1">
-                            Product ID
-                          </Typography>
-                          <Typography variant="bodySm" className="mb-2 font-mono">
+                        <div className="col-span-12">
+                          <Typography variant="bodySm" className="mb-1 font-mono">
                             {item.productId}
                           </Typography>
-                          <Typography variant="bodyXs" colorRole="muted">
-                            Quantity: {item.quantity}
-                            {item.vintage && ` • Vintage: ${item.vintage}`}
-                          </Typography>
-                          <Typography variant="bodyXs" colorRole="danger" className="mt-1">
-                            Product details unavailable
+                          <Typography variant="bodyXs" colorRole="danger">
+                            Product details unavailable • Quantity: {item.quantity}
                           </Typography>
                         </div>
                       )}
@@ -370,17 +408,53 @@ const QuoteApprovalDialog = ({
                   );
                 })}
               </div>
+
+              {/* Order Total */}
+              <div className="mt-3 flex justify-end">
+                <div className="rounded-lg bg-fill-brand/10 px-6 py-3">
+                  <Typography variant="bodyXs" colorRole="muted" className="mb-1 text-right">
+                    Order Total
+                  </Typography>
+                  <Typography variant="bodyLg" className="font-bold text-text-brand">
+                    {formatPrice(displayTotal, displayCurrency)}
+                  </Typography>
+                </div>
+              </div>
             </div>
 
-            <Divider />
+            {/* Workflow Actions - Collapsible Section */}
+            <div className="rounded-lg border border-border-muted">
+              <button
+                type="button"
+                onClick={() => setShowWorkflow(!showWorkflow)}
+                className="w-full px-4 py-3 flex items-center justify-between hover:bg-fill-muted/30 transition-colors"
+              >
+                <div className="flex items-center gap-2">
+                  <Typography variant="bodySm" className="font-semibold">
+                    Workflow & Actions
+                  </Typography>
+                  {(quote.status === 'buy_request_submitted' ||
+                    quote.status === 'under_cc_review' ||
+                    quote.status === 'po_submitted') && (
+                    <span className="rounded-full bg-fill-brand px-2 py-0.5 text-xs font-medium text-white">
+                      Action Required
+                    </span>
+                  )}
+                </div>
+                <Typography variant="bodyXs" colorRole="muted">
+                  {showWorkflow ? 'Hide' : 'Show'}
+                </Typography>
+              </button>
 
-            {/* Workflow Timeline */}
-            <QuoteWorkflowTimeline quote={quote} />
+              {showWorkflow && (
+                <div className="border-t border-border-muted p-4 space-y-6">
+                  {/* Workflow Timeline */}
+                  <QuoteWorkflowTimeline quote={quote} />
 
-            <Divider />
+                  <Divider />
 
-            {/* Action Forms */}
-            {quote.status === 'buy_request_submitted' && (
+                  {/* Action Forms */}
+                  {quote.status === 'buy_request_submitted' && (
               <div className="space-y-4">
                 <Typography variant="bodySm" className="font-semibold">
                   Start Review
@@ -526,6 +600,9 @@ const QuoteApprovalDialog = ({
                 </div>
               </div>
             )}
+                </div>
+              )}
+            </div>
           </div>
         </DialogBody>
 
