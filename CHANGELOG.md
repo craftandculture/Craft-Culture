@@ -8,6 +8,16 @@
 
 * add legal pages layout and increase logo size ([f1100e8](https://github.com/craftandculture/Craft-Culture/commit/f1100e869d045269c11c08ebca076a8ef5794df0))
 
+## [1.71.0](https://github.com/craftandculture/Craft-Culture/compare/v1.70.0...v1.71.0) (2025-10-31)
+
+### Features
+
+* enable activity bell for user login notifications ([8aead53](https://github.com/craftandculture/Craft-Culture/commit/8aead53325d7eb9f0e54672d51fb0ac44d77ae47))
+
+### Bug Fixes
+
+* add legal pages layout and increase logo size ([f1100e8](https://github.com/craftandculture/Craft-Culture/commit/f1100e869d045269c11c08ebca076a8ef5794df0))
+
 ## [1.71.0](https://github.com/craftandculture/Craft-Culture/compare/v1.70.0...v1.71.0) (2025-10-30)
 
 ### Features
