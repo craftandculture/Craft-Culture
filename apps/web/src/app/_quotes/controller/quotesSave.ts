@@ -50,9 +50,24 @@ const quotesSave = protectedProcedure
       return quote;
     } catch (error) {
       console.error('Error saving quote:', error);
+
+      // Log detailed error information for debugging
+      if (error instanceof Error) {
+        console.error('Error name:', error.name);
+        console.error('Error message:', error.message);
+        console.error('Error stack:', error.stack);
+      }
+
+      // If it's already a TRPCError, re-throw it
+      if (error instanceof TRPCError) {
+        throw error;
+      }
+
+      // Otherwise throw a generic error with more context
       throw new TRPCError({
         code: 'INTERNAL_SERVER_ERROR',
-        message: 'Failed to save quote',
+        message: error instanceof Error ? error.message : 'Failed to save quote',
+        cause: error,
       });
     }
   });
