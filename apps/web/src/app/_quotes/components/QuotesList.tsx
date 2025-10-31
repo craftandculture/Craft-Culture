@@ -6,9 +6,10 @@ import {
   IconEdit,
   IconEye,
   IconSearch,
+  IconSend,
   IconTrash,
 } from '@tabler/icons-react';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ColumnDef } from '@tanstack/react-table';
 import { format } from 'date-fns';
 import { useRouter } from 'next/navigation';
@@ -36,6 +37,7 @@ import QuoteDetailsDialog from './QuoteDetailsDialog';
  */
 const QuotesList = () => {
   const trpcClient = useTRPCClient();
+  const queryClient = useQueryClient();
   const router = useRouter();
   const [search, setSearch] = useState('');
   const [cursor, setCursor] = useState(0);
@@ -50,6 +52,21 @@ const QuotesList = () => {
         cursor,
         search: search || undefined,
       }),
+  });
+
+  // Submit buy request mutation
+  const submitBuyRequestMutation = useMutation({
+    mutationFn: async (quoteId: string) => {
+      return trpcClient.quotes.submitBuyRequest.mutate({ quoteId });
+    },
+    onSuccess: () => {
+      toast.success('Quote submitted for C&C review!');
+      void queryClient.invalidateQueries({ queryKey: ['quotes.getMany'] });
+      void refetch();
+    },
+    onError: (error) => {
+      toast.error(`Failed to submit: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    },
   });
 
   const handleDelete = async (quoteId: string) => {
@@ -162,26 +179,33 @@ const QuotesList = () => {
       header: 'Status',
       cell: ({ row }) => {
         const status = row.original.status;
-        const statusColors = {
-          draft: 'text-text-muted',
-          sent: 'text-text-brand',
-          accepted: 'text-text-success',
-          rejected: 'text-text-danger',
-          expired: 'text-text-muted',
-          buy_request_submitted: 'text-text-warning',
-          under_cc_review: 'text-text-warning',
-          revision_requested: 'text-text-danger',
-          cc_confirmed: 'text-text-success',
-          po_submitted: 'text-text-brand',
-          po_confirmed: 'text-text-success',
+
+        // Status display configuration
+        const statusConfig = {
+          draft: { label: 'Draft', color: 'bg-fill-muted text-text-muted', needsAction: true },
+          sent: { label: 'Ready', color: 'bg-fill-brand/10 text-text-brand', needsAction: true },
+          accepted: { label: 'Accepted', color: 'bg-fill-success/10 text-text-success', needsAction: false },
+          rejected: { label: 'Rejected', color: 'bg-fill-danger/10 text-text-danger', needsAction: false },
+          expired: { label: 'Expired', color: 'bg-fill-muted text-text-muted', needsAction: false },
+          buy_request_submitted: { label: 'In Review', color: 'bg-fill-warning/10 text-text-warning', needsAction: false },
+          under_cc_review: { label: 'Under Review', color: 'bg-fill-warning/10 text-text-warning', needsAction: false },
+          revision_requested: { label: 'Action Required', color: 'bg-fill-danger/10 text-text-danger font-semibold', needsAction: true },
+          cc_confirmed: { label: 'Confirmed', color: 'bg-fill-success/10 text-text-success font-semibold', needsAction: true },
+          po_submitted: { label: 'PO Submitted', color: 'bg-fill-brand/10 text-text-brand', needsAction: false },
+          po_confirmed: { label: 'Complete', color: 'bg-fill-success/10 text-text-success', needsAction: false },
         };
+
+        const config = statusConfig[status];
+
         return (
-          <Typography
-            variant="bodySm"
-            className={`capitalize ${statusColors[status]}`}
-          >
-            {status}
-          </Typography>
+          <div className="flex items-center gap-2">
+            <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs ${config.color}`}>
+              {config.label}
+            </span>
+            {config.needsAction && (
+              <span className="h-2 w-2 rounded-full bg-red-500 animate-pulse" title="Action required" />
+            )}
+          </div>
         );
       },
     },
@@ -199,8 +223,73 @@ const QuotesList = () => {
       header: () => <span className="sr-only">Actions</span>,
       cell: ({ row }) => {
         const quote = row.original;
+
+        // Determine which action buttons to show based on status
+        const showSubmitButton = quote.status === 'draft' || quote.status === 'sent';
+        const showResubmitButton = quote.status === 'revision_requested';
+        const showSubmitPOButton = quote.status === 'cc_confirmed';
+        const showViewDetailsButton =
+          quote.status === 'buy_request_submitted' ||
+          quote.status === 'under_cc_review' ||
+          quote.status === 'po_submitted' ||
+          quote.status === 'po_confirmed';
+
         return (
-          <div className="flex justify-end">
+          <div className="flex justify-end gap-2">
+            {/* Primary Action Buttons */}
+            {showSubmitButton && (
+              <Button
+                variant="default"
+                colorRole="brand"
+                size="sm"
+                onClick={() => submitBuyRequestMutation.mutate(quote.id)}
+                isDisabled={submitBuyRequestMutation.isPending}
+              >
+                <ButtonContent iconLeft={IconSend}>
+                  Submit for Review
+                </ButtonContent>
+              </Button>
+            )}
+
+            {showResubmitButton && (
+              <Button
+                variant="default"
+                colorRole="danger"
+                size="sm"
+                onClick={() => handleViewDetails(quote)}
+              >
+                <ButtonContent iconLeft={IconSend}>
+                  Resubmit
+                </ButtonContent>
+              </Button>
+            )}
+
+            {showSubmitPOButton && (
+              <Button
+                variant="default"
+                colorRole="brand"
+                size="sm"
+                onClick={() => handleViewDetails(quote)}
+              >
+                <ButtonContent iconLeft={IconSend}>
+                  Submit PO
+                </ButtonContent>
+              </Button>
+            )}
+
+            {showViewDetailsButton && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleViewDetails(quote)}
+              >
+                <ButtonContent iconLeft={IconEye}>
+                  View Details
+                </ButtonContent>
+              </Button>
+            )}
+
+            {/* Dropdown Menu for Additional Actions */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="sm">
@@ -210,10 +299,12 @@ const QuotesList = () => {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => handleViewDetails(quote)}>
-                  <Icon icon={IconEye} size="sm" />
-                  <span>View Details</span>
-                </DropdownMenuItem>
+                {!showViewDetailsButton && (
+                  <DropdownMenuItem onClick={() => handleViewDetails(quote)}>
+                    <Icon icon={IconEye} size="sm" />
+                    <span>View Details</span>
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuItem onClick={() => handleEdit(quote)}>
                   <Icon icon={IconEdit} size="sm" />
                   <span>Edit</span>
