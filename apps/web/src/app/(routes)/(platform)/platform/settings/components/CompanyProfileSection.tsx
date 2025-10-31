@@ -1,7 +1,7 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
 import Button from '@/app/_ui/components/Button/Button';
@@ -53,6 +53,18 @@ const CompanyProfileSection = () => {
     },
   });
 
+  // Update local state when settings load
+  useEffect(() => {
+    if (settings) {
+      setCompanyName(settings.companyName || '');
+      setCompanyAddress(settings.companyAddress || '');
+      setCompanyPhone(settings.companyPhone || '');
+      setCompanyEmail(settings.companyEmail || '');
+      setCompanyWebsite(settings.companyWebsite || '');
+      setCompanyVatNumber(settings.companyVatNumber || '');
+    }
+  }, [settings]);
+
   const handleSave = () => {
     if (!companyName.trim()) {
       toast.error('Company name cannot be empty');
@@ -60,16 +72,6 @@ const CompanyProfileSection = () => {
     }
     updateMutation.mutate();
   };
-
-  // Update local state when settings load
-  if (settings && !companyName) {
-    setCompanyName(settings.companyName || '');
-    setCompanyAddress(settings.companyAddress || '');
-    setCompanyPhone(settings.companyPhone || '');
-    setCompanyEmail(settings.companyEmail || '');
-    setCompanyWebsite(settings.companyWebsite || '');
-    setCompanyVatNumber(settings.companyVatNumber || '');
-  }
 
   const hasChanges =
     companyName !== settings?.companyName ||
