@@ -5,6 +5,7 @@ import quotesConfirmPO from './controller/quotesConfirmPO';
 import quotesDelete from './controller/quotesDelete';
 import quotesGet from './controller/quotesGet';
 import quotesGetMany from './controller/quotesGetMany';
+import quotesGetManyAdmin from './controller/quotesGetManyAdmin';
 import quotesGetOne from './controller/quotesGetOne';
 import quotesRequestRevision from './controller/quotesRequestRevision';
 import quotesSave from './controller/quotesSave';
@@ -17,6 +18,7 @@ const quotesRouter = createTRPCRouter({
   get: quotesGet,
   save: quotesSave,
   getMany: quotesGetMany,
+  getManyAdmin: quotesGetManyAdmin,
   getOne: quotesGetOne,
   update: quotesUpdate,
   delete: quotesDelete,
