@@ -553,8 +553,8 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
         </DialogBody>
 
         <DialogFooter>
-          {/* Submit Buy Request button - only show for 'sent' or 'revision_requested' quotes */}
-          {quote.status === 'sent' || quote.status === 'revision_requested' ? (
+          {/* Submit Buy Request button - show for 'draft', 'sent' or 'revision_requested' quotes */}
+          {quote.status === 'draft' || quote.status === 'sent' || quote.status === 'revision_requested' ? (
             <Button
               variant="default"
               colorRole="brand"
