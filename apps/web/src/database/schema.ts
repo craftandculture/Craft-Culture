@@ -315,6 +315,11 @@ export const quotes = pgTable(
     totalUsd: doublePrecision('total_usd').notNull(),
     totalAed: doublePrecision('total_aed'),
     expiresAt: timestamp('expires_at', { mode: 'date' }),
+    acceptedAt: timestamp('accepted_at', { mode: 'date' }),
+    acceptanceNotes: text('acceptance_notes'),
+    acceptedBy: uuid('accepted_by').references(() => users.id, {
+      onDelete: 'set null',
+    }),
     ...timestamps,
   },
   (table) => [

@@ -19,10 +19,13 @@ import Typography from '@/app/_ui/components/Typography/Typography';
 import useDebounce from '@/app/_ui/hooks/useDebounce';
 import formatPrice from '@/utils/formatPrice';
 
+import AlternativeVintagesPicker from './AlternativeVintagesPicker';
+
 interface LineItemRowProps {
   vintage?: string;
   product?: Product;
   quantity?: number;
+  alternativeVintages?: string[];
   omitProductIds: string[];
   maxQuantity?: number;
   isQuoteLoading?: boolean;
@@ -33,6 +36,7 @@ interface LineItemRowProps {
   onVintageChange: (vintage: string) => void;
   onProductChange: (product: Product) => void;
   onQuantityChange: (quantity: number) => void;
+  onAlternativeVintagesChange: (vintages: string[]) => void;
   onRemove: () => void;
   dragHandleProps?: React.HTMLAttributes<HTMLDivElement>;
   isDragging?: boolean;
@@ -42,6 +46,7 @@ const LineItemRow = ({
   vintage,
   product,
   quantity,
+  alternativeVintages = [],
   omitProductIds,
   maxQuantity = Infinity,
   isQuoteLoading,
@@ -52,6 +57,7 @@ const LineItemRow = ({
   onVintageChange,
   onProductChange,
   onQuantityChange,
+  onAlternativeVintagesChange,
   onRemove,
   dragHandleProps,
   isDragging = false,
@@ -290,6 +296,29 @@ const LineItemRow = ({
           </Button>
         </div>
       </div>
+
+      {/* Alternative Vintages - Hidden for placeholder */}
+      {!isPlaceholder && product && (
+        <div className="flex items-center gap-2 pl-0 md:pl-8">
+          <AlternativeVintagesPicker
+            productId={product.id}
+            selectedVintages={alternativeVintages}
+            onChange={onAlternativeVintagesChange}
+          />
+          {alternativeVintages.length > 0 && (
+            <div className="flex flex-wrap gap-1">
+              {alternativeVintages.map((vintage) => (
+                <span
+                  key={vintage}
+                  className="bg-fill-secondary text-text-secondary rounded-md px-2 py-0.5 text-xs font-medium"
+                >
+                  {vintage}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };
