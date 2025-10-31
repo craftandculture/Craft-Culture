@@ -553,8 +553,8 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
         </DialogBody>
 
         <DialogFooter>
-          {/* Submit Buy Request button - show for 'draft', 'sent' or 'revision_requested' quotes */}
-          {quote.status === 'draft' || quote.status === 'sent' || quote.status === 'revision_requested' ? (
+          {/* Submit Buy Request button - show only for quotes that haven't been submitted yet */}
+          {(quote.status === 'draft' || quote.status === 'sent' || quote.status === 'revision_requested') && (
             <Button
               variant="default"
               colorRole="brand"
@@ -570,7 +570,20 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                     : 'Submit for Review'}
               </ButtonContent>
             </Button>
-          ) : null}
+          )}
+
+          {/* Show status message for quotes in approval workflow */}
+          {(quote.status === 'buy_request_submitted' ||
+            quote.status === 'under_cc_review' ||
+            quote.status === 'cc_confirmed') && (
+            <div className="flex-1 rounded-lg bg-fill-warning/10 p-3">
+              <Typography variant="bodySm" className="text-text-warning">
+                {quote.status === 'buy_request_submitted' && 'Quote submitted for C&C review'}
+                {quote.status === 'under_cc_review' && 'Quote is under C&C review'}
+                {quote.status === 'cc_confirmed' && 'Quote confirmed by C&C - ready to send to customer'}
+              </Typography>
+            </div>
+          )}
 
           <Button
             variant="default"
