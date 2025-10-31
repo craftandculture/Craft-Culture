@@ -168,6 +168,12 @@ const QuotesList = () => {
           accepted: 'text-text-success',
           rejected: 'text-text-danger',
           expired: 'text-text-muted',
+          buy_request_submitted: 'text-text-warning',
+          under_cc_review: 'text-text-warning',
+          revision_requested: 'text-text-danger',
+          cc_confirmed: 'text-text-success',
+          po_submitted: 'text-text-brand',
+          po_confirmed: 'text-text-success',
         };
         return (
           <Typography
