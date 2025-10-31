@@ -7,7 +7,7 @@ export interface LogoProps {
   height?: number;
 }
 
-const Logo = ({ className, height = 120 }: LogoProps) => {
+const Logo = ({ className, height = 144 }: LogoProps) => {
   return (
     <Image
       src={logo}

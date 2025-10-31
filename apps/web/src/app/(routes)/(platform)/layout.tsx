@@ -39,7 +39,7 @@ const PlatformLayout = async ({ children }: React.PropsWithChildren) => {
         <div className="container flex h-14 items-center justify-between gap-4">
           <div className="flex items-center gap-6">
             <Link href="/platform/quotes">
-              <Logo height={120} />
+              <Logo height={144} />
             </Link>
             <nav className="hidden items-center gap-1 md:flex">
               <Link
