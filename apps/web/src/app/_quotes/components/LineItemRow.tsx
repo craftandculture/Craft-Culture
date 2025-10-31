@@ -164,7 +164,7 @@ const LineItemRow = ({
               placeholder="Year"
               value={localVintage}
               onChange={handleVintageInputChange}
-              isDisabled={true}
+              isDisabled={false}
             />
           </div>
         )}
