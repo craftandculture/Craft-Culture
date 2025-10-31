@@ -5,6 +5,27 @@
 * add alternative vintage selection for quote line items ([f418ba5](https://github.com/craftandculture/Craft-Culture/commit/f418ba5b765858d2176f7e009300836baead3b3a))
 * enable activity bell for user login notifications ([8aead53](https://github.com/craftandculture/Craft-Culture/commit/8aead53325d7eb9f0e54672d51fb0ac44d77ae47))
 * enable manual text input for vintage and alternative vintages ([8365bcd](https://github.com/craftandculture/Craft-Culture/commit/8365bcdc93934793d1088a071f16110601ac4c20))
+* enhance alternative vintages UX and update privacy policy ([7271ca7](https://github.com/craftandculture/Craft-Culture/commit/7271ca7a95258a9bc138ee8d65c89c9d6b5f4782))
+
+### Bug Fixes
+
+* add alternativeVintages field to SaveQuoteDialog interface to fix quote saving ([35fb22d](https://github.com/craftandculture/Craft-Culture/commit/35fb22d5fbaa4f88277394712dbf4a7ed6338f64))
+* add legal pages layout and increase logo size ([f1100e8](https://github.com/craftandculture/Craft-Culture/commit/f1100e869d045269c11c08ebca076a8ef5794df0))
+* add validation check for undefined quoteData in SaveQuoteDialog ([04c9869](https://github.com/craftandculture/Craft-Culture/commit/04c98697c7d4f232323d088f3537f890de83f830))
+* add vintage fields to getQuoteRequestSchema to fix quote generation ([2a9889a](https://github.com/craftandculture/Craft-Culture/commit/2a9889ae81c9de7b15c16340ef3dac4ed0bc4ac4))
+* completely remove ActivityBell component file ([dee8b57](https://github.com/craftandculture/Craft-Culture/commit/dee8b576f528d9a8807d81c89f143e9728349b63))
+* filter incomplete line items before passing to SaveQuoteDialog ([45eb1c8](https://github.com/craftandculture/Craft-Culture/commit/45eb1c82f4c226454be7fcf063cde86f40d8d3b8))
+* improve error logging in quotesSave to expose actual error messages ([78d8ef7](https://github.com/craftandculture/Craft-Culture/commit/78d8ef75495c9f44d6445105dc95555900558977))
+* remove ActivityBell component causing deployment failures ([b03a6b1](https://github.com/craftandculture/Craft-Culture/commit/b03a6b1cf4f920b5c6cc1b3d54cb94f36f2a31bc))
+* remove drizzle-kit push from prebuild to fix deployment failures ([fcc7b6a](https://github.com/craftandculture/Craft-Culture/commit/fcc7b6ac3e52791ac7e9b6c689affeb3e22f4b57))
+
+## [1.71.0](https://github.com/craftandculture/Craft-Culture/compare/v1.70.0...v1.71.0) (2025-10-31)
+
+### Features
+
+* add alternative vintage selection for quote line items ([f418ba5](https://github.com/craftandculture/Craft-Culture/commit/f418ba5b765858d2176f7e009300836baead3b3a))
+* enable activity bell for user login notifications ([8aead53](https://github.com/craftandculture/Craft-Culture/commit/8aead53325d7eb9f0e54672d51fb0ac44d77ae47))
+* enable manual text input for vintage and alternative vintages ([8365bcd](https://github.com/craftandculture/Craft-Culture/commit/8365bcdc93934793d1088a071f16110601ac4c20))
 
 ### Bug Fixes
 
