@@ -300,8 +300,8 @@ const QuoteApprovalDialog = ({
           : 0;
 
         initialAdjustments[item.productId] = {
-          adjustedPricePerCase: pricePerCase,
-          confirmedQuantity: item.quantity,
+          adjustedPricePerCase: Number(pricePerCase.toFixed(2)),
+          confirmedQuantity: Math.floor(Number(item.quantity)),
           available: true,
           notes: '',
         };
@@ -314,89 +314,102 @@ const QuoteApprovalDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl">
+      <DialogContent className="max-w-7xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{quote.name}</DialogTitle>
-          <DialogDescription>
-            Review and approve this quote - Status: {quote.status}
+          <DialogTitle className="text-2xl">{quote.name}</DialogTitle>
+          <DialogDescription className="text-base">
+            Review and approve this quote
           </DialogDescription>
         </DialogHeader>
 
         <DialogBody>
           <div className="space-y-6">
             {/* Quote Summary */}
-            <div className="rounded-lg bg-fill-muted p-4">
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <Typography variant="bodyXs" colorRole="muted">
+            <div className="rounded-xl bg-gradient-to-br from-fill-muted/50 to-fill-muted border border-border-muted p-6">
+              <div className="grid grid-cols-3 gap-6">
+                <div className="space-y-1">
+                  <Typography variant="bodyXs" colorRole="muted" className="uppercase tracking-wide font-semibold">
                     Client
                   </Typography>
-                  <Typography variant="bodySm" className="font-medium">
+                  <Typography variant="bodyMd" className="font-semibold">
                     {quote.clientName || 'N/A'}
                   </Typography>
                   {quote.clientCompany && (
-                    <Typography variant="bodyXs" colorRole="muted">
+                    <Typography variant="bodySm" colorRole="muted" className="mt-0.5">
                       {quote.clientCompany}
                     </Typography>
                   )}
                 </div>
-                <div>
-                  <Typography variant="bodyXs" colorRole="muted">
+                <div className="space-y-1">
+                  <Typography variant="bodyXs" colorRole="muted" className="uppercase tracking-wide font-semibold">
                     Submitted
                   </Typography>
-                  <Typography variant="bodySm">
+                  <Typography variant="bodyMd" className="font-semibold">
                     {quote.buyRequestSubmittedAt
                       ? format(new Date(quote.buyRequestSubmittedAt), 'MMM d, yyyy')
                       : 'N/A'}
                   </Typography>
                 </div>
-                <div>
-                  <Typography variant="bodyXs" colorRole="muted">
+                <div className="space-y-1">
+                  <Typography variant="bodyXs" colorRole="muted" className="uppercase tracking-wide font-semibold">
                     Status
                   </Typography>
-                  <Typography variant="bodySm" className="font-medium capitalize">
-                    {quote.status.replace(/_/g, ' ')}
-                  </Typography>
+                  <div className="inline-flex items-center gap-2 rounded-full bg-fill-brand/10 px-3 py-1">
+                    <span className="h-2 w-2 rounded-full bg-fill-brand animate-pulse" />
+                    <Typography variant="bodySm" className="font-semibold capitalize text-text-brand">
+                      {quote.status.replace(/_/g, ' ')}
+                    </Typography>
+                  </div>
                 </div>
               </div>
             </div>
 
             {/* Line Items - Detailed Table View */}
             <div>
-              <div className="mb-3 flex items-center justify-between">
-                <Typography variant="bodySm" className="font-semibold">
-                  Order Details ({lineItems.length} {lineItems.length === 1 ? 'item' : 'items'})
-                </Typography>
+              <div className="mb-4 flex items-center justify-between">
+                <div>
+                  <Typography variant="bodyLg" className="font-bold">
+                    Order Details
+                  </Typography>
+                  <Typography variant="bodySm" colorRole="muted">
+                    {lineItems.length} {lineItems.length === 1 ? 'item' : 'items'}
+                  </Typography>
+                </div>
                 <Button
-                  variant="ghost"
+                  variant="outline"
                   size="sm"
                   onClick={() => setDisplayCurrency(displayCurrency === 'USD' ? 'AED' : 'USD')}
-                  className="h-7 px-3 text-xs"
+                  className="h-9 px-4 font-semibold hover:bg-fill-brand/10 hover:text-text-brand hover:border-border-brand transition-all"
                 >
-                  <ButtonContent>View in {displayCurrency === 'USD' ? 'AED' : 'USD'}</ButtonContent>
+                  <ButtonContent>{displayCurrency} → {displayCurrency === 'USD' ? 'AED' : 'USD'}</ButtonContent>
                 </Button>
               </div>
 
               {quote.status === 'under_cc_review' && (
-                <div className="mb-3 rounded-lg border border-border-brand bg-fill-brand/10 p-3">
-                  <Typography variant="bodySm" className="font-medium text-text-brand">
-                    📝 Review Mode: Adjust quantities and prices as needed
-                  </Typography>
-                  <Typography variant="bodyXs" colorRole="muted" className="mt-1">
-                    Confirm availability, adjust quantities, and set final prices (in USD). Uncheck &ldquo;Available&rdquo; to mark items as out of stock.
-                  </Typography>
+                <div className="mb-4 rounded-xl border-2 border-border-brand bg-gradient-to-r from-fill-brand/5 to-fill-brand/10 p-4 shadow-sm">
+                  <div className="flex items-start gap-3">
+                    <div className="flex-shrink-0 text-2xl">📝</div>
+                    <div className="flex-1">
+                      <Typography variant="bodyMd" className="font-bold text-text-brand mb-1">
+                        Review Mode Active
+                      </Typography>
+                      <Typography variant="bodySm" colorRole="muted">
+                        Adjust quantities and prices for each line item. Uncheck &ldquo;Available&rdquo; to mark items as out of stock. All prices must be entered in USD.
+                      </Typography>
+                    </div>
+                  </div>
                 </div>
               )}
 
               {/* Table Header */}
-              <div className="rounded-t-lg border border-border-muted bg-fill-muted/50 px-4 py-2">
-                <div className="grid grid-cols-12 gap-4 text-xs font-medium text-text-muted">
-                  <div className="col-span-4">Product</div>
-                  <div className="col-span-2 text-right">Requested Qty</div>
+              <div className="rounded-t-xl border border-border-muted bg-gradient-to-r from-fill-muted/80 to-fill-muted px-6 py-4 shadow-sm">
+                <div className="grid grid-cols-12 gap-6 text-xs font-bold text-text-muted uppercase tracking-wider">
+                  <div className="col-span-5">Product Details</div>
+                  <div className="col-span-2 text-center">Requested</div>
                   {quote.status === 'under_cc_review' && (
                     <>
-                      <div className="col-span-2 text-right">Confirmed Qty</div>
-                      <div className="col-span-2 text-right">Price/Case (USD)</div>
+                      <div className="col-span-2 text-center">Confirmed</div>
+                      <div className="col-span-2 text-right">Price/Case</div>
                     </>
                   )}
                   {quote.status !== 'under_cc_review' && (
@@ -404,12 +417,12 @@ const QuoteApprovalDialog = ({
                       <div className="col-span-2 text-right">Price/Case</div>
                     </>
                   )}
-                  <div className="col-span-2 text-right">Line Total</div>
+                  <div className="col-span-1 text-right">Total</div>
                 </div>
               </div>
 
               {/* Table Rows */}
-              <div className="divide-y divide-border-muted rounded-b-lg border-x border-b border-border-muted">
+              <div className="divide-y divide-border-muted rounded-b-xl border-x border-b border-border-muted bg-white shadow-sm">
                 {lineItems.map((item, idx) => {
                   const product = productMap[item.productId];
                   const pricing = pricingMap[item.productId];
@@ -432,49 +445,54 @@ const QuoteApprovalDialog = ({
                   return (
                     <div
                       key={idx}
-                      className="grid grid-cols-12 gap-4 px-4 py-3 hover:bg-fill-muted/30"
+                      className="grid grid-cols-12 gap-6 px-6 py-5 hover:bg-fill-muted/30 transition-all duration-200 group"
                     >
                       {product ? (
                         <>
                           {/* Product Info */}
-                          <div className="col-span-4">
-                            <Typography variant="bodySm" className="mb-1 font-medium">
+                          <div className="col-span-5 space-y-2">
+                            <Typography variant="bodyMd" className="font-bold group-hover:text-text-brand transition-colors">
                               {product.name}
                             </Typography>
-                            <div className="flex flex-wrap gap-x-2 gap-y-1">
+                            <div className="flex flex-wrap gap-x-3 gap-y-1">
                               {product.producer && (
-                                <Typography variant="bodyXs" colorRole="muted">
+                                <Typography variant="bodySm" colorRole="muted" className="font-medium">
                                   {product.producer}
                                 </Typography>
                               )}
                               {product.year && (
-                                <Typography variant="bodyXs" colorRole="muted">
+                                <Typography variant="bodySm" colorRole="muted">
                                   • {product.year}
                                 </Typography>
                               )}
                               {item.vintage && (
-                                <Typography variant="bodyXs" colorRole="muted">
-                                  • Vintage: {item.vintage}
+                                <Typography variant="bodySm" colorRole="muted">
+                                  • Vintage {item.vintage}
                                 </Typography>
                               )}
                             </div>
-                            <Typography variant="bodyXs" colorRole="muted" className="mt-1 font-mono">
-                              {product.lwin18}
-                            </Typography>
-                            {isReviewMode && adjustment && !adjustment.available && (
-                              <Typography variant="bodyXs" colorRole="danger" className="mt-1">
-                                ⚠️ Marked as unavailable
+                            <div className="inline-flex items-center gap-2 rounded-md bg-fill-muted/50 px-2 py-1">
+                              <Typography variant="bodyXs" colorRole="muted" className="font-mono font-semibold">
+                                {product.lwin18}
                               </Typography>
+                            </div>
+                            {isReviewMode && adjustment && !adjustment.available && (
+                              <div className="inline-flex items-center gap-1.5 rounded-lg bg-fill-danger/10 border border-border-danger px-3 py-1.5">
+                                <span className="text-base">⚠️</span>
+                                <Typography variant="bodySm" colorRole="danger" className="font-bold">
+                                  Out of Stock
+                                </Typography>
+                              </div>
                             )}
                           </div>
 
                           {/* Requested Quantity */}
-                          <div className="col-span-2 text-right">
-                            <div className="inline-flex flex-col items-end">
-                              <Typography variant="bodyLg" className="font-bold text-text-brand">
+                          <div className="col-span-2 flex items-center justify-center">
+                            <div className="inline-flex flex-col items-center gap-1">
+                              <Typography variant="h6" className="font-bold text-text-brand">
                                 {item.quantity}
                               </Typography>
-                              <Typography variant="bodyXs" colorRole="muted">
+                              <Typography variant="bodyXs" colorRole="muted" className="uppercase tracking-wide font-semibold">
                                 {item.quantity === 1 ? 'case' : 'cases'}
                               </Typography>
                             </div>
@@ -483,7 +501,7 @@ const QuoteApprovalDialog = ({
                           {isReviewMode ? (
                             <>
                               {/* Confirmed Quantity (Editable) */}
-                              <div className="col-span-2 flex flex-col items-end gap-1">
+                              <div className="col-span-2 flex flex-col items-center justify-center gap-3">
                                 <Input
                                   type="number"
                                   min="0"
@@ -500,9 +518,9 @@ const QuoteApprovalDialog = ({
                                       },
                                     });
                                   }}
-                                  className="w-20 text-right"
+                                  className="w-28 text-center font-bold text-lg border-2 focus:border-border-brand focus:ring-2 focus:ring-fill-brand/20 transition-all"
                                 />
-                                <label className="flex items-center gap-1 text-xs">
+                                <label className="flex items-center gap-2 cursor-pointer group/checkbox">
                                   <input
                                     type="checkbox"
                                     checked={adjustment?.available ?? true}
@@ -519,54 +537,64 @@ const QuoteApprovalDialog = ({
                                         },
                                       });
                                     }}
+                                    className="h-4 w-4 rounded border-2 cursor-pointer"
                                   />
-                                  <span className="text-text-muted">Available</span>
+                                  <span className="text-xs font-semibold uppercase tracking-wide text-text-muted group-hover/checkbox:text-text transition-colors">
+                                    In Stock
+                                  </span>
                                 </label>
                               </div>
 
                               {/* Price per Case (Editable USD) */}
-                              <div className="col-span-2 flex flex-col items-end">
-                                <Input
-                                  type="number"
-                                  min="0"
-                                  step="0.01"
-                                  value={adjustment?.adjustedPricePerCase ?? pricePerCase}
-                                  onChange={(e) => {
-                                    const value = parseFloat(e.target.value) || 0;
-                                    setLineItemAdjustments({
-                                      ...lineItemAdjustments,
-                                      [item.productId]: {
-                                        adjustedPricePerCase: value,
-                                        confirmedQuantity: adjustment?.confirmedQuantity ?? item.quantity,
-                                        available: adjustment?.available ?? true,
-                                        notes: adjustment?.notes,
-                                      },
-                                    });
-                                  }}
-                                  className="w-28 text-right"
-                                />
-                                <Typography variant="bodyXs" colorRole="muted" className="mt-1">
-                                  per case
-                                </Typography>
+                              <div className="col-span-2 flex items-center justify-end">
+                                <div className="flex flex-col items-end gap-2">
+                                  <div className="relative">
+                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted font-bold">$</span>
+                                    <Input
+                                      type="number"
+                                      min="0"
+                                      step="0.01"
+                                      value={adjustment?.adjustedPricePerCase ?? pricePerCase}
+                                      onChange={(e) => {
+                                        const value = parseFloat(e.target.value) || 0;
+                                        setLineItemAdjustments({
+                                          ...lineItemAdjustments,
+                                          [item.productId]: {
+                                            adjustedPricePerCase: value,
+                                            confirmedQuantity: adjustment?.confirmedQuantity ?? item.quantity,
+                                            available: adjustment?.available ?? true,
+                                            notes: adjustment?.notes,
+                                          },
+                                        });
+                                      }}
+                                      className="w-36 pl-7 text-right font-bold text-lg border-2 focus:border-border-brand focus:ring-2 focus:ring-fill-brand/20 transition-all"
+                                    />
+                                  </div>
+                                  <Typography variant="bodyXs" colorRole="muted" className="uppercase tracking-wide font-semibold">
+                                    per case
+                                  </Typography>
+                                </div>
                               </div>
                             </>
                           ) : (
                             <>
                               {/* Price per Case (Read-only) */}
-                              <div className="col-span-2 text-right">
-                                <Typography variant="bodySm" className="font-medium">
-                                  {formatPrice(displayPricePerCase, displayCurrency)}
-                                </Typography>
-                                <Typography variant="bodyXs" colorRole="muted">
-                                  per case
-                                </Typography>
+                              <div className="col-span-2 flex items-center justify-end">
+                                <div className="flex flex-col items-end gap-1">
+                                  <Typography variant="bodyLg" className="font-bold">
+                                    {formatPrice(displayPricePerCase, displayCurrency)}
+                                  </Typography>
+                                  <Typography variant="bodyXs" colorRole="muted" className="uppercase tracking-wide font-semibold">
+                                    per case
+                                  </Typography>
+                                </div>
                               </div>
                             </>
                           )}
 
                           {/* Line Total */}
-                          <div className="col-span-2 text-right">
-                            <Typography variant="bodySm" className="font-bold">
+                          <div className="col-span-1 flex items-center justify-end">
+                            <Typography variant="h6" className="font-bold text-text-brand">
                               {formatPrice(displayLineTotal, displayCurrency)}
                             </Typography>
                           </div>
@@ -587,58 +615,69 @@ const QuoteApprovalDialog = ({
               </div>
 
               {/* Order Total */}
-              <div className="mt-3 flex justify-end">
-                <div className="rounded-lg bg-fill-brand/10 px-6 py-3">
-                  <Typography variant="bodyXs" colorRole="muted" className="mb-1 text-right">
+              <div className="mt-8 flex justify-end">
+                <div className="rounded-xl bg-gradient-to-br from-fill-brand/10 to-fill-brand/20 border-2 border-border-brand/30 px-10 py-6 min-w-[280px] shadow-lg">
+                  <Typography variant="bodySm" colorRole="muted" className="mb-3 text-right uppercase tracking-wider font-bold">
                     Order Total
                   </Typography>
-                  <Typography variant="bodyLg" className="font-bold text-text-brand">
+                  <Typography variant="h4" className="font-black text-text-brand text-right">
                     {formatPrice(displayTotal, displayCurrency)}
+                  </Typography>
+                  <Typography variant="bodyXs" colorRole="muted" className="mt-2 text-right uppercase tracking-wide">
+                    {displayCurrency === 'USD' ? 'US Dollars' : 'UAE Dirham'}
                   </Typography>
                 </div>
               </div>
             </div>
 
             {/* Workflow Actions - Collapsible Section */}
-            <div className="rounded-lg border border-border-muted">
+            <div className="rounded-xl border-2 border-border-muted shadow-sm overflow-hidden">
               <button
                 type="button"
                 onClick={() => setShowWorkflow(!showWorkflow)}
-                className="w-full px-4 py-3 flex items-center justify-between hover:bg-fill-muted/30 transition-colors"
+                className="w-full px-6 py-4 flex items-center justify-between hover:bg-fill-muted/50 transition-all duration-200 group"
               >
-                <div className="flex items-center gap-2">
-                  <Typography variant="bodySm" className="font-semibold">
+                <div className="flex items-center gap-3">
+                  <Typography variant="bodyMd" className="font-bold group-hover:text-text-brand transition-colors">
                     Workflow & Actions
                   </Typography>
                   {(quote.status === 'buy_request_submitted' ||
                     quote.status === 'under_cc_review' ||
                     quote.status === 'po_submitted') && (
-                    <span className="rounded-full bg-fill-brand px-2 py-0.5 text-xs font-medium text-white">
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-fill-brand to-fill-brand/80 px-3 py-1 text-xs font-bold text-white shadow-sm animate-pulse">
+                      <span className="h-1.5 w-1.5 rounded-full bg-white" />
                       Action Required
                     </span>
                   )}
                 </div>
-                <Typography variant="bodyXs" colorRole="muted">
-                  {showWorkflow ? 'Hide' : 'Show'}
-                </Typography>
+                <div className="flex items-center gap-2">
+                  <Typography variant="bodySm" colorRole="muted" className="font-semibold uppercase tracking-wide">
+                    {showWorkflow ? 'Hide' : 'Show'}
+                  </Typography>
+                  <span className={`transform transition-transform duration-200 ${showWorkflow ? 'rotate-180' : ''}`}>
+                    ▼
+                  </span>
+                </div>
               </button>
 
               {showWorkflow && (
-                <div className="border-t border-border-muted p-4 space-y-6">
+                <div className="border-t-2 border-border-muted bg-fill-muted/20 p-6 space-y-6">
                   {/* Workflow Timeline */}
-                  <QuoteWorkflowTimeline quote={quote} />
+                  <div className="rounded-lg bg-white p-4 shadow-sm border border-border-muted">
+                    <QuoteWorkflowTimeline quote={quote} />
+                  </div>
 
                   <Divider />
 
                   {/* Action Forms */}
                   {quote.status === 'buy_request_submitted' && (
-              <div className="space-y-4">
-                <Typography variant="bodySm" className="font-semibold">
+              <div className="space-y-4 rounded-lg bg-white p-5 shadow-sm border border-border-muted">
+                <Typography variant="bodyMd" className="font-bold">
                   Start Review
                 </Typography>
                 <div>
-                  <Typography variant="bodySm" className="mb-2">
-                    Review Notes (optional)
+                  <Typography variant="bodySm" className="mb-2 font-semibold">
+                    Review Notes <span className="text-text-muted font-normal">(optional)</span>
                   </Typography>
                   <TextArea
                     id="ccNotes"
@@ -646,33 +685,35 @@ const QuoteApprovalDialog = ({
                     onChange={(e) => setCcNotes(e.target.value)}
                     placeholder="Add any notes about this review..."
                     rows={3}
+                    className="border-2 focus:border-border-brand focus:ring-2 focus:ring-fill-brand/20 transition-all"
                   />
                 </div>
               </div>
             )}
 
             {quote.status === 'under_cc_review' && !showRevisionForm && (
-              <div className="space-y-4">
-                <Typography variant="bodySm" className="font-semibold">
-                  Confirmation Notes (optional)
+              <div className="space-y-4 rounded-lg bg-white p-5 shadow-sm border border-border-muted">
+                <Typography variant="bodyMd" className="font-bold">
+                  Confirmation Notes
                 </Typography>
                 <TextArea
                   value={confirmationNotes}
                   onChange={(e) => setConfirmationNotes(e.target.value)}
                   placeholder="Add any notes about this confirmation..."
                   rows={3}
+                  className="border-2 focus:border-border-brand focus:ring-2 focus:ring-fill-brand/20 transition-all"
                 />
               </div>
             )}
 
             {showRevisionForm && (
-              <div className="space-y-4">
-                <Typography variant="bodySm" className="font-semibold">
+              <div className="space-y-4 rounded-lg bg-white p-5 shadow-sm border-2 border-border-danger">
+                <Typography variant="bodyMd" className="font-bold text-text-danger">
                   Request Revision
                 </Typography>
                 <div>
-                  <Typography variant="bodySm" className="mb-2">
-                    Revision Reason *
+                  <Typography variant="bodySm" className="mb-2 font-semibold">
+                    Revision Reason <span className="text-text-danger">*</span>
                   </Typography>
                   <TextArea
                     id="revisionReason"
@@ -680,46 +721,47 @@ const QuoteApprovalDialog = ({
                     onChange={(e) => setRevisionReason(e.target.value)}
                     placeholder="Explain what needs to be revised..."
                     rows={4}
+                    className="border-2 focus:border-border-danger focus:ring-2 focus:ring-fill-danger/20 transition-all"
                   />
                 </div>
               </div>
             )}
 
             {quote.status === 'po_submitted' && (
-              <div className="space-y-4">
-                <Typography variant="bodySm" className="font-semibold">
+              <div className="space-y-5 rounded-lg bg-white p-5 shadow-sm border border-border-muted">
+                <Typography variant="bodyMd" className="font-bold">
                   PO Information
                 </Typography>
-                <div className="rounded-lg bg-fill-muted p-4 space-y-3">
+                <div className="rounded-lg bg-gradient-to-br from-fill-muted/30 to-fill-muted/50 p-5 space-y-4 border border-border-muted">
                   <div>
-                    <Typography variant="bodyXs" colorRole="muted">
+                    <Typography variant="bodyXs" colorRole="muted" className="uppercase tracking-wide font-semibold mb-1">
                       PO Number
                     </Typography>
-                    <Typography variant="bodySm" className="font-medium">
+                    <Typography variant="bodyLg" className="font-bold">
                       {quote.poNumber}
                     </Typography>
                   </div>
                   {quote.deliveryLeadTime && (
                     <div>
-                      <Typography variant="bodyXs" colorRole="muted">
+                      <Typography variant="bodyXs" colorRole="muted" className="uppercase tracking-wide font-semibold mb-1">
                         Delivery Lead Time
                       </Typography>
-                      <Typography variant="bodySm" className="font-medium">
+                      <Typography variant="bodyLg" className="font-bold">
                         {quote.deliveryLeadTime}
                       </Typography>
                     </div>
                   )}
                   {quote.poAttachmentUrl && (
                     <div>
-                      <Typography variant="bodyXs" colorRole="muted" className="mb-2">
+                      <Typography variant="bodyXs" colorRole="muted" className="uppercase tracking-wide font-semibold mb-2">
                         Attachment
                       </Typography>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-3">
                         <a
                           href={quote.poAttachmentUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-text-brand hover:underline text-sm font-medium"
+                          className="text-text-brand hover:text-text-brand-hover hover:underline font-semibold transition-colors"
                         >
                           View Document
                         </a>
@@ -736,6 +778,7 @@ const QuoteApprovalDialog = ({
                             document.body.removeChild(link);
                             toast.success('Download started');
                           }}
+                          className="hover:bg-fill-brand/10 transition-all"
                         >
                           <ButtonContent iconLeft={IconDownload}>
                             Download
@@ -746,26 +789,27 @@ const QuoteApprovalDialog = ({
                   )}
                 </div>
                 <div>
-                  <Typography variant="bodySm" className="mb-2 font-medium">
-                    Delivery Lead Time *
+                  <Typography variant="bodySm" className="mb-2 font-semibold">
+                    Delivery Lead Time <span className="text-text-danger">*</span>
                   </Typography>
                   <Input
                     type="text"
                     placeholder="e.g., 2-3 weeks, 30 days, etc."
                     value={deliveryLeadTime}
                     onChange={(e) => setDeliveryLeadTime(e.target.value)}
+                    className="border-2 focus:border-border-brand focus:ring-2 focus:ring-fill-brand/20 transition-all"
                   />
                   <Typography
                     variant="bodyXs"
                     colorRole="muted"
-                    className="mt-1"
+                    className="mt-2"
                   >
                     Expected delivery timeframe for this order
                   </Typography>
                 </div>
                 <div>
-                  <Typography variant="bodySm" className="mb-2">
-                    Confirmation Notes (optional)
+                  <Typography variant="bodySm" className="mb-2 font-semibold">
+                    Confirmation Notes <span className="text-text-muted font-normal">(optional)</span>
                   </Typography>
                   <TextArea
                     id="poNotes"
@@ -773,6 +817,7 @@ const QuoteApprovalDialog = ({
                     onChange={(e) => setConfirmationNotes(e.target.value)}
                     placeholder="Add any notes about this PO confirmation..."
                     rows={3}
+                    className="border-2 focus:border-border-brand focus:ring-2 focus:ring-fill-brand/20 transition-all"
                   />
                 </div>
               </div>
@@ -783,14 +828,15 @@ const QuoteApprovalDialog = ({
           </div>
         </DialogBody>
 
-        <DialogFooter>
+        <DialogFooter className="bg-gradient-to-r from-fill-muted/30 to-fill-muted/50 border-t-2 border-border-muted">
           {quote.status === 'buy_request_submitted' && (
             <Button
               variant="default"
               colorRole="brand"
-              size="md"
+              size="lg"
               onClick={() => startReviewMutation.mutate()}
               isDisabled={startReviewMutation.isPending}
+              className="font-bold shadow-lg hover:shadow-xl transition-all duration-200 px-8"
             >
               <ButtonContent iconLeft={IconPlayerPlay}>
                 {startReviewMutation.isPending ? 'Starting...' : 'Start Review'}
@@ -803,17 +849,19 @@ const QuoteApprovalDialog = ({
               <Button
                 variant="outline"
                 colorRole="danger"
-                size="md"
+                size="lg"
                 onClick={() => setShowRevisionForm(true)}
+                className="font-semibold hover:bg-fill-danger/10 transition-all duration-200 px-6"
               >
                 <ButtonContent iconLeft={IconEdit}>Request Revision</ButtonContent>
               </Button>
               <Button
                 variant="default"
                 colorRole="brand"
-                size="md"
+                size="lg"
                 onClick={() => confirmMutation.mutate()}
                 isDisabled={confirmMutation.isPending}
+                className="font-bold shadow-lg hover:shadow-xl transition-all duration-200 px-8"
               >
                 <ButtonContent iconLeft={IconCheck}>
                   {confirmMutation.isPending ? 'Confirming...' : 'Confirm Quote'}
@@ -826,22 +874,24 @@ const QuoteApprovalDialog = ({
             <>
               <Button
                 variant="outline"
-                size="md"
+                size="lg"
                 onClick={() => {
                   setShowRevisionForm(false);
                   setRevisionReason('');
                 }}
+                className="font-semibold hover:bg-fill-muted/50 transition-all duration-200 px-6"
               >
                 <ButtonContent>Cancel</ButtonContent>
               </Button>
               <Button
                 variant="default"
                 colorRole="danger"
-                size="md"
+                size="lg"
                 onClick={() => requestRevisionMutation.mutate()}
                 isDisabled={
                   requestRevisionMutation.isPending || !revisionReason.trim()
                 }
+                className="font-bold shadow-lg hover:shadow-xl transition-all duration-200 px-8"
               >
                 <ButtonContent iconLeft={IconEdit}>
                   {requestRevisionMutation.isPending
@@ -856,9 +906,10 @@ const QuoteApprovalDialog = ({
             <Button
               variant="default"
               colorRole="brand"
-              size="md"
+              size="lg"
               onClick={() => confirmPOMutation.mutate()}
               isDisabled={confirmPOMutation.isPending || !deliveryLeadTime.trim()}
+              className="font-bold shadow-lg hover:shadow-xl transition-all duration-200 px-8"
             >
               <ButtonContent iconLeft={IconCheck}>
                 {confirmPOMutation.isPending ? 'Confirming...' : 'Confirm PO'}
