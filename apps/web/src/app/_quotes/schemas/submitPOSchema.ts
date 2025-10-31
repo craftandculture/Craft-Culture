@@ -6,8 +6,7 @@ import { z } from 'zod';
 const submitPOSchema = z.object({
   quoteId: z.string().uuid(),
   poNumber: z.string().min(1, 'PO number is required'),
-  poAttachmentUrl: z.string().url().optional(),
-  deliveryLeadTime: z.string().min(1, 'Delivery lead time is required'),
+  poAttachmentUrl: z.string().url('PO document is required'),
 });
 
 export default submitPOSchema;

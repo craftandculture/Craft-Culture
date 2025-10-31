@@ -44,9 +44,20 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
   const [poNumber, setPoNumber] = useState('');
   const [showPOForm, setShowPOForm] = useState(false);
   const [poDocumentUrl, setPoDocumentUrl] = useState('');
-  const [deliveryLeadTime, setDeliveryLeadTime] = useState('');
   const [isUploadingPO, setIsUploadingPO] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Currency display state
+  const [displayCurrency, setDisplayCurrency] = useState<'USD' | 'AED'>('USD');
+
+  // Calculate display amount based on selected currency
+  const displayTotal = useMemo(() => {
+    if (!quote) return 0;
+    if (displayCurrency === 'USD') {
+      return quote.totalUsd;
+    }
+    return quote.totalAed ?? convertUsdToAed(quote.totalUsd);
+  }, [quote, displayCurrency]);
 
   const lineItems = useMemo(
     () =>
@@ -219,15 +230,14 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
         toast.error('Please provide a PO number');
         return;
       }
-      if (!deliveryLeadTime.trim()) {
-        toast.error('Please provide delivery lead time');
+      if (!poDocumentUrl) {
+        toast.error('Please attach a PO document');
         return;
       }
       return trpcClient.quotes.submitPO.mutate({
         quoteId: quote.id,
         poNumber: poNumber.trim(),
-        poAttachmentUrl: poDocumentUrl || undefined,
-        deliveryLeadTime: deliveryLeadTime.trim(),
+        poAttachmentUrl: poDocumentUrl,
       });
     },
     onSuccess: () => {
@@ -235,7 +245,6 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
       void queryClient.invalidateQueries({ queryKey: ['quotes'] });
       setPoNumber('');
       setPoDocumentUrl('');
-      setDeliveryLeadTime('');
       setShowPOForm(false);
       if (onOpenChange) {
         onOpenChange(false);
@@ -424,14 +433,21 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
 
               {/* In-Bond Price */}
               <div className="mb-2 rounded-lg bg-fill-muted/30 p-3">
-                <Typography variant="bodyXs" colorRole="muted" className="mb-1">
-                  In-Bond UAE Price
-                </Typography>
+                <div className="flex items-center justify-between mb-1">
+                  <Typography variant="bodyXs" colorRole="muted">
+                    In-Bond UAE Price
+                  </Typography>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setDisplayCurrency(displayCurrency === 'USD' ? 'AED' : 'USD')}
+                    className="h-5 px-2 text-xs"
+                  >
+                    <ButtonContent>{displayCurrency === 'USD' ? 'Show AED' : 'Show USD'}</ButtonContent>
+                  </Button>
+                </div>
                 <Typography variant="bodyMd" className="font-semibold">
-                  {formatPrice(
-                    quote.currency === 'AED' ? quote.totalAed ?? quote.totalUsd : quote.totalUsd,
-                    quote.currency as 'USD' | 'AED',
-                  )}
+                  {formatPrice(displayTotal, displayCurrency)}
                 </Typography>
               </div>
 
@@ -681,22 +697,7 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                       </div>
                       <div>
                         <Typography variant="bodySm" className="mb-2 font-medium">
-                          Delivery Lead Time *
-                        </Typography>
-                        <Input
-                          type="text"
-                          placeholder="e.g., 2-3 weeks, 30 days, etc."
-                          value={deliveryLeadTime}
-                          onChange={(e) => setDeliveryLeadTime(e.target.value)}
-                          className="max-w-md"
-                        />
-                        <Typography variant="bodyXs" colorRole="muted" className="mt-1">
-                          Expected delivery timeframe for this order
-                        </Typography>
-                      </div>
-                      <div>
-                        <Typography variant="bodySm" className="mb-2 font-medium">
-                          PO Document (Optional)
+                          PO Document *
                         </Typography>
                         <div className="flex items-center gap-2">
                           <Button
@@ -723,7 +724,7 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                           className="hidden"
                         />
                         <Typography variant="bodyXs" colorRole="muted" className="mt-1">
-                          PDF or image, max 5MB
+                          PDF or image, max 5MB (required)
                         </Typography>
                       </div>
                       <div className="flex gap-2">
@@ -734,7 +735,6 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                             setShowPOForm(false);
                             setPoNumber('');
                             setPoDocumentUrl('');
-                            setDeliveryLeadTime('');
                           }}
                         >
                           <ButtonContent>Cancel</ButtonContent>
@@ -744,7 +744,7 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                           colorRole="brand"
                           size="sm"
                           onClick={() => submitPOMutation.mutate()}
-                          isDisabled={submitPOMutation.isPending || !poNumber.trim() || !deliveryLeadTime.trim()}
+                          isDisabled={submitPOMutation.isPending || !poNumber.trim() || !poDocumentUrl}
                         >
                           <ButtonContent>
                             {submitPOMutation.isPending ? 'Submitting...' : 'Submit PO'}

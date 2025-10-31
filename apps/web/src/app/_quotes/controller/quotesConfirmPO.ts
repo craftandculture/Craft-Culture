@@ -22,7 +22,7 @@ import confirmPOSchema from '../schemas/confirmPOSchema';
 const quotesConfirmPO = adminProcedure
   .input(confirmPOSchema)
   .mutation(async ({ input, ctx: { user } }) => {
-    const { quoteId, poConfirmationNotes } = input;
+    const { quoteId, deliveryLeadTime, poConfirmationNotes } = input;
 
     // Verify quote exists
     const [existingQuote] = await db
@@ -51,6 +51,7 @@ const quotesConfirmPO = adminProcedure
         .update(quotes)
         .set({
           status: 'po_confirmed',
+          deliveryLeadTime,
           poConfirmedAt: new Date(),
           poConfirmedBy: user.id,
           poConfirmationNotes,
