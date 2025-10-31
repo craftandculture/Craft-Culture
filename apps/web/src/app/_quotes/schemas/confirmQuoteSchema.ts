@@ -8,6 +8,7 @@ const confirmQuoteSchema = z.object({
   ccConfirmationNotes: z.string().optional(),
   lineItemAdjustments: z
     .record(
+      z.string(),
       z.object({
         adjustedPricePerCase: z.number().optional(),
         confirmedQuantity: z.number().optional(),
