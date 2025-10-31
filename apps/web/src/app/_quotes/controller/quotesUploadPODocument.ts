@@ -1,0 +1,59 @@
+import { TRPCError } from '@trpc/server';
+import { put } from '@vercel/blob';
+
+import { protectedProcedure } from '@/lib/trpc/procedures';
+
+import uploadPODocumentSchema from '../schemas/uploadPODocumentSchema';
+
+/**
+ * Upload a PO document to Vercel Blob storage
+ *
+ * @example
+ *   await trpcClient.quotes.uploadPODocument.mutate({
+ *     file: "data:application/pdf;base64,...",
+ *     filename: "PO-12345.pdf",
+ *     fileType: "application/pdf"
+ *   });
+ */
+const quotesUploadPODocument = protectedProcedure
+  .input(uploadPODocumentSchema)
+  .mutation(async ({ input, ctx: { user } }) => {
+    const { file, filename, fileType } = input;
+
+    try {
+      // Extract base64 data from data URL
+      const base64Data = file.split(',')[1];
+      if (!base64Data) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Invalid file format',
+        });
+      }
+
+      // Convert base64 to buffer
+      const buffer = Buffer.from(base64Data, 'base64');
+
+      // Generate unique filename
+      const timestamp = Date.now();
+      const sanitizedFilename = filename.replace(/[^a-zA-Z0-9.-]/g, '_');
+      const blobFilename = `po-documents/${user.id}/${timestamp}-${sanitizedFilename}`;
+
+      // Upload to Vercel Blob
+      const blob = await put(blobFilename, buffer, {
+        access: 'public',
+        contentType: fileType,
+      });
+
+      return {
+        url: blob.url,
+      };
+    } catch (error) {
+      console.error('Error uploading PO document:', { error, userId: user.id });
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Failed to upload PO document',
+      });
+    }
+  });
+
+export default quotesUploadPODocument;

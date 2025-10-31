@@ -537,13 +537,30 @@ const QuoteApprovalDialog = ({
                 <Typography variant="bodySm" className="font-semibold">
                   PO Information
                 </Typography>
-                <div className="rounded-lg bg-fill-muted p-4">
-                  <Typography variant="bodyXs" colorRole="muted">
-                    PO Number
-                  </Typography>
-                  <Typography variant="bodySm" className="font-medium">
-                    {quote.poNumber}
-                  </Typography>
+                <div className="rounded-lg bg-fill-muted p-4 space-y-3">
+                  <div>
+                    <Typography variant="bodyXs" colorRole="muted">
+                      PO Number
+                    </Typography>
+                    <Typography variant="bodySm" className="font-medium">
+                      {quote.poNumber}
+                    </Typography>
+                  </div>
+                  {quote.poAttachmentUrl && (
+                    <div>
+                      <Typography variant="bodyXs" colorRole="muted">
+                        Attachment
+                      </Typography>
+                      <a
+                        href={quote.poAttachmentUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-text-brand hover:underline text-sm font-medium"
+                      >
+                        View PO Document →
+                      </a>
+                    </div>
+                  )}
                 </div>
                 <div>
                   <Typography variant="bodySm" className="mb-2">
