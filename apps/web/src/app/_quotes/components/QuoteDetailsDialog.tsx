@@ -1,8 +1,8 @@
 'use client';
 
 import type { DialogProps } from '@radix-ui/react-dialog';
-import { IconCalendar, IconCurrencyDollar, IconDownload, IconFileText, IconUser } from '@tabler/icons-react';
-import { useQuery } from '@tanstack/react-query';
+import { IconCalendar, IconCurrencyDollar, IconDownload, IconFileText, IconSend, IconUser } from '@tabler/icons-react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
@@ -35,6 +35,7 @@ interface QuoteDetailsDialogProps extends DialogProps {
  */
 const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogProps) => {
   const api = useTRPC();
+  const queryClient = useQueryClient();
   const [isExporting, setIsExporting] = useState(false);
 
   const lineItems = useMemo(
@@ -111,6 +112,37 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
       {} as Record<string, { lineItemTotalUsd: number; basePriceUsd?: number }>,
     );
   }, [quotePricingData]);
+
+  // Mutation for submitting buy request
+  const submitBuyRequestMutation = useMutation({
+    mutationFn: async (quoteId: string) => {
+      const result = await api.quotes.submitBuyRequest.mutate({ quoteId });
+      return result;
+    },
+    onSuccess: () => {
+      toast.success('Buy request submitted successfully! C&C team will review shortly.');
+      void queryClient.invalidateQueries({ queryKey: ['quotes'] });
+      if (onOpenChange) {
+        onOpenChange(false);
+      }
+    },
+    onError: (error) => {
+      toast.error(`Failed to submit buy request: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    },
+  });
+
+  // Handle submit buy request
+  const handleSubmitBuyRequest = () => {
+    if (!quote) return;
+
+    const confirmMessage = quote.status === 'revision_requested'
+      ? 'Resubmit this quote for C&C review?'
+      : 'Submit this quote for C&C review?';
+
+    if (window.confirm(confirmMessage)) {
+      submitBuyRequestMutation.mutate(quote.id);
+    }
+  };
 
   // Handle PDF export
   const handleExportPDF = async () => {
@@ -520,6 +552,25 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
         </DialogBody>
 
         <DialogFooter>
+          {/* Submit Buy Request button - only show for 'sent' or 'revision_requested' quotes */}
+          {quote.status === 'sent' || quote.status === 'revision_requested' ? (
+            <Button
+              variant="default"
+              colorRole="brand"
+              size="md"
+              onClick={handleSubmitBuyRequest}
+              isDisabled={submitBuyRequestMutation.isPending}
+            >
+              <ButtonContent iconLeft={IconSend}>
+                {submitBuyRequestMutation.isPending
+                  ? 'Submitting...'
+                  : quote.status === 'revision_requested'
+                    ? 'Resubmit for Review'
+                    : 'Submit for Review'}
+              </ButtonContent>
+            </Button>
+          ) : null}
+
           <Button
             variant="default"
             colorRole="brand"
