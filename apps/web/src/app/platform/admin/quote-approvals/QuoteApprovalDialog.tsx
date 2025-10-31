@@ -106,7 +106,7 @@ const QuoteApprovalDialog = ({
         quoteId: quote.id,
         revisionReason,
         revisionSuggestions: {
-          lineItemSuggestions: [],
+          items: [],
         },
       });
     },
