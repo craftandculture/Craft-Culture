@@ -37,6 +37,7 @@ export interface SaveQuoteDialogProps extends DialogProps {
     offerId: string;
     quantity: number;
     vintage?: string;
+    alternativeVintages?: string[];
   }>;
   quoteData: unknown;
   currency: 'USD' | 'AED';
