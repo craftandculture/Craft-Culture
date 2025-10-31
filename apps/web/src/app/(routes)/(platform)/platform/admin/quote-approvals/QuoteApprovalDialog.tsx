@@ -26,6 +26,7 @@ import TextArea from '@/app/_ui/components/TextArea/TextArea';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import type { Quote } from '@/database/schema';
 import useTRPC, { useTRPCClient } from '@/lib/trpc/browser';
+import convertUsdToAed from '@/utils/convertUsdToAed';
 import formatPrice from '@/utils/formatPrice';
 
 interface QuoteApprovalDialogProps extends DialogProps {
@@ -89,6 +90,38 @@ const QuoteApprovalDialog = ({
       {} as Record<string, (typeof productsData.data)[number]>,
     );
   }, [productsData]);
+
+  // Extract pricing data from quoteData
+  const quotePricingData = useMemo(() => {
+    if (!quote?.quoteData) return null;
+    const data = quote.quoteData as {
+      lineItems?: Array<{
+        productId: string;
+        lineItemTotalUsd: number;
+        basePriceUsd?: number;
+      }>;
+      marginConfig?: {
+        type: 'percentage' | 'fixed';
+        value: number;
+        transferCost: number;
+        importTax: number;
+      };
+      customerQuotePrice?: number;
+    };
+    return data;
+  }, [quote?.quoteData]);
+
+  // Create pricing map by productId
+  const pricingMap = useMemo(() => {
+    if (!quotePricingData?.lineItems) return {};
+    return quotePricingData.lineItems.reduce(
+      (acc, item) => {
+        acc[item.productId] = item;
+        return acc;
+      },
+      {} as Record<string, { lineItemTotalUsd: number; basePriceUsd?: number }>,
+    );
+  }, [quotePricingData]);
 
   // Start C&C Review mutation
   const startReviewMutation = useMutation({
@@ -217,7 +250,7 @@ const QuoteApprovalDialog = ({
                 </div>
                 <div>
                   <Typography variant="bodyXs" colorRole="muted">
-                    Total Amount
+                    In-Bond UAE Price
                   </Typography>
                   <Typography variant="bodySm" className="font-medium">
                     {formatPrice(
@@ -245,6 +278,63 @@ const QuoteApprovalDialog = ({
                   </Typography>
                 </div>
               </div>
+
+              {/* Margin Configuration - B2B only */}
+              {quotePricingData?.marginConfig && (
+                <div className="mt-4 space-y-2 rounded-lg border border-border-muted bg-background-primary p-3">
+                  <Typography variant="bodyXs" className="font-semibold">
+                    Margin Configuration
+                  </Typography>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div>
+                      <Typography variant="bodyXs" colorRole="muted">
+                        Distributor Margin
+                      </Typography>
+                      <Typography variant="bodyXs" className="font-medium">
+                        {quotePricingData.marginConfig.type === 'percentage'
+                          ? `${quotePricingData.marginConfig.value}%`
+                          : formatPrice(
+                              quotePricingData.marginConfig.value,
+                              quote.currency as 'USD' | 'AED',
+                            )}
+                      </Typography>
+                    </div>
+                    <div>
+                      <Typography variant="bodyXs" colorRole="muted">
+                        Import Tax
+                      </Typography>
+                      <Typography variant="bodyXs" className="font-medium">
+                        {quotePricingData.marginConfig.importTax}%
+                      </Typography>
+                    </div>
+                    <div>
+                      <Typography variant="bodyXs" colorRole="muted">
+                        Transfer Cost
+                      </Typography>
+                      <Typography variant="bodyXs" className="font-medium">
+                        ${quotePricingData.marginConfig.transferCost}
+                      </Typography>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Customer Quote Price */}
+              {quotePricingData?.customerQuotePrice && (
+                <div className="mt-4 rounded-lg bg-fill-brand/10 p-3">
+                  <Typography variant="bodyXs" colorRole="muted" className="mb-1">
+                    Customer Quote Price (Inc. VAT)
+                  </Typography>
+                  <Typography variant="bodyLg" className="font-bold text-text-brand">
+                    {formatPrice(
+                      quote.currency === 'AED'
+                        ? convertUsdToAed(quotePricingData.customerQuotePrice)
+                        : quotePricingData.customerQuotePrice,
+                      quote.currency as 'USD' | 'AED',
+                    )}
+                  </Typography>
+                </div>
+              )}
             </div>
 
             {/* Line Items Summary */}
@@ -255,6 +345,12 @@ const QuoteApprovalDialog = ({
               <div className="space-y-3">
                 {lineItems.map((item, idx) => {
                   const product = productMap[item.productId];
+                  const pricing = pricingMap[item.productId];
+                  const pricePerCase = pricing?.lineItemTotalUsd
+                    ? pricing.lineItemTotalUsd / item.quantity
+                    : 0;
+                  const lineItemTotal = pricing?.lineItemTotalUsd || 0;
+
                   return (
                     <div
                       key={idx}
@@ -262,35 +358,81 @@ const QuoteApprovalDialog = ({
                     >
                       {product ? (
                         <>
-                          <div className="mb-2">
-                            <Typography variant="bodySm" className="mb-1 font-semibold">
-                              {product.name}
-                            </Typography>
-                            <div className="flex flex-wrap gap-x-3 gap-y-1">
-                              {product.producer && (
-                                <Typography variant="bodyXs" colorRole="muted">
-                                  {product.producer}
+                          <div className="mb-3">
+                            <div className="mb-2 flex items-start justify-between gap-4">
+                              <div className="flex-1">
+                                <Typography variant="bodySm" className="mb-1 font-semibold">
+                                  {product.name}
                                 </Typography>
-                              )}
-                              {product.year && (
-                                <Typography variant="bodyXs" colorRole="muted">
-                                  {product.year}
-                                </Typography>
-                              )}
-                              {product.region && (
-                                <Typography variant="bodyXs" colorRole="muted">
-                                  {product.region}
-                                </Typography>
-                              )}
+                                <div className="flex flex-wrap gap-x-3 gap-y-1">
+                                  {product.producer && (
+                                    <Typography variant="bodyXs" colorRole="muted">
+                                      {product.producer}
+                                    </Typography>
+                                  )}
+                                  {product.year && (
+                                    <Typography variant="bodyXs" colorRole="muted">
+                                      {product.year}
+                                    </Typography>
+                                  )}
+                                  {product.region && (
+                                    <Typography variant="bodyXs" colorRole="muted">
+                                      {product.region}
+                                    </Typography>
+                                  )}
+                                </div>
+                              </div>
                             </div>
+
+                            {/* Pricing Breakdown */}
+                            {pricing && (
+                              <div className="grid grid-cols-3 gap-2 rounded-lg bg-fill-muted p-3">
+                                <div>
+                                  <Typography variant="bodyXs" colorRole="muted" className="mb-0.5">
+                                    Quantity
+                                  </Typography>
+                                  <Typography variant="bodySm" className="font-semibold">
+                                    {item.quantity} {item.quantity === 1 ? 'case' : 'cases'}
+                                  </Typography>
+                                </div>
+                                <div>
+                                  <Typography variant="bodyXs" colorRole="muted" className="mb-0.5">
+                                    Price/Case
+                                  </Typography>
+                                  <Typography variant="bodySm" className="font-semibold">
+                                    {formatPrice(
+                                      quote.currency === 'AED'
+                                        ? convertUsdToAed(pricePerCase)
+                                        : pricePerCase,
+                                      quote.currency as 'USD' | 'AED',
+                                    )}
+                                  </Typography>
+                                </div>
+                                <div className="text-right">
+                                  <Typography variant="bodyXs" colorRole="muted" className="mb-0.5">
+                                    Line Total
+                                  </Typography>
+                                  <Typography variant="bodySm" className="font-bold text-text-brand">
+                                    {formatPrice(
+                                      quote.currency === 'AED'
+                                        ? convertUsdToAed(lineItemTotal)
+                                        : lineItemTotal,
+                                      quote.currency as 'USD' | 'AED',
+                                    )}
+                                  </Typography>
+                                </div>
+                              </div>
+                            )}
                           </div>
+
+                          {/* Additional Details */}
                           <div className="flex items-center gap-4 border-t border-border-muted pt-3">
                             <div>
                               <Typography variant="bodyXs" colorRole="muted">
-                                Quantity
+                                LWIN18
                               </Typography>
-                              <Typography variant="bodyXs" className="font-medium">
-                                {item.quantity} {item.quantity === 1 ? 'case' : 'cases'}
+                              <Typography variant="bodyXs" className="font-mono">
+                                {product.lwin18}
                               </Typography>
                             </div>
                             {item.vintage && (
@@ -303,14 +445,6 @@ const QuoteApprovalDialog = ({
                                 </Typography>
                               </div>
                             )}
-                            <div>
-                              <Typography variant="bodyXs" colorRole="muted">
-                                LWIN18
-                              </Typography>
-                              <Typography variant="bodyXs" className="font-mono">
-                                {product.lwin18}
-                              </Typography>
-                            </div>
                           </div>
                         </>
                       ) : (
