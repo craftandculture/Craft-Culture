@@ -6,9 +6,9 @@ import {
   IconEdit,
   IconPlayerPlay,
 } from '@tabler/icons-react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
 import QuoteWorkflowTimeline from '@/app/_quotes/components/QuoteWorkflowTimeline';
@@ -25,7 +25,7 @@ import Divider from '@/app/_ui/components/Divider/Divider';
 import TextArea from '@/app/_ui/components/TextArea/TextArea';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import type { Quote } from '@/database/schema';
-import { useTRPCClient } from '@/lib/trpc/browser';
+import useTRPC, { useTRPCClient } from '@/lib/trpc/browser';
 import formatPrice from '@/utils/formatPrice';
 
 interface QuoteApprovalDialogProps extends DialogProps {
@@ -40,6 +40,7 @@ const QuoteApprovalDialog = ({
   open,
   onOpenChange,
 }: QuoteApprovalDialogProps) => {
+  const api = useTRPC();
   const trpcClient = useTRPCClient();
   const queryClient = useQueryClient();
 
@@ -50,6 +51,44 @@ const QuoteApprovalDialog = ({
   // State for confirmation notes
   const [ccNotes, setCcNotes] = useState('');
   const [confirmationNotes, setConfirmationNotes] = useState('');
+
+  // Parse line items
+  const lineItems = useMemo(
+    () =>
+      (quote?.lineItems || []) as Array<{
+        productId: string;
+        offerId: string;
+        quantity: number;
+        vintage?: string;
+      }>,
+    [quote?.lineItems],
+  );
+
+  // Extract unique product IDs
+  const productIds = useMemo(
+    () => [...new Set(lineItems.map((item) => item.productId))],
+    [lineItems],
+  );
+
+  // Fetch products for the line items
+  const { data: productsData } = useQuery({
+    ...api.products.getMany.queryOptions({
+      productIds,
+    }),
+    enabled: productIds.length > 0 && open && !!quote,
+  });
+
+  // Create a map of productId -> product for quick lookup
+  const productMap = useMemo(() => {
+    if (!productsData?.data) return {};
+    return productsData.data.reduce(
+      (acc, product) => {
+        acc[product.id] = product;
+        return acc;
+      },
+      {} as Record<string, (typeof productsData.data)[number]>,
+    );
+  }, [productsData]);
 
   // Start C&C Review mutation
   const startReviewMutation = useMutation({
@@ -148,13 +187,6 @@ const QuoteApprovalDialog = ({
 
   if (!quote) return null;
 
-  const lineItems = (quote.lineItems || []) as Array<{
-    productId: string;
-    offerId: string;
-    quantity: number;
-    vintage?: string;
-  }>;
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl">
@@ -217,26 +249,90 @@ const QuoteApprovalDialog = ({
 
             {/* Line Items Summary */}
             <div>
-              <Typography variant="bodySm" className="mb-2 font-semibold">
+              <Typography variant="bodySm" className="mb-3 font-semibold">
                 Line Items ({lineItems.length})
               </Typography>
-              <div className="space-y-2">
-                {lineItems.map((item, idx) => (
-                  <div
-                    key={idx}
-                    className="flex items-center justify-between rounded-lg bg-fill-muted/50 p-3"
-                  >
-                    <div>
-                      <Typography variant="bodySm" className="font-mono">
-                        {item.productId}
-                      </Typography>
-                      <Typography variant="bodyXs" colorRole="muted">
-                        Quantity: {item.quantity}
-                        {item.vintage && ` • Vintage: ${item.vintage}`}
-                      </Typography>
+              <div className="space-y-3">
+                {lineItems.map((item, idx) => {
+                  const product = productMap[item.productId];
+                  return (
+                    <div
+                      key={idx}
+                      className="rounded-lg border border-border-muted bg-background-primary p-4"
+                    >
+                      {product ? (
+                        <>
+                          <div className="mb-2">
+                            <Typography variant="bodySm" className="mb-1 font-semibold">
+                              {product.name}
+                            </Typography>
+                            <div className="flex flex-wrap gap-x-3 gap-y-1">
+                              {product.producer && (
+                                <Typography variant="bodyXs" colorRole="muted">
+                                  {product.producer}
+                                </Typography>
+                              )}
+                              {product.year && (
+                                <Typography variant="bodyXs" colorRole="muted">
+                                  {product.year}
+                                </Typography>
+                              )}
+                              {product.region && (
+                                <Typography variant="bodyXs" colorRole="muted">
+                                  {product.region}
+                                </Typography>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-4 border-t border-border-muted pt-3">
+                            <div>
+                              <Typography variant="bodyXs" colorRole="muted">
+                                Quantity
+                              </Typography>
+                              <Typography variant="bodyXs" className="font-medium">
+                                {item.quantity} {item.quantity === 1 ? 'case' : 'cases'}
+                              </Typography>
+                            </div>
+                            {item.vintage && (
+                              <div>
+                                <Typography variant="bodyXs" colorRole="muted">
+                                  Vintage
+                                </Typography>
+                                <Typography variant="bodyXs" className="font-medium">
+                                  {item.vintage}
+                                </Typography>
+                              </div>
+                            )}
+                            <div>
+                              <Typography variant="bodyXs" colorRole="muted">
+                                LWIN18
+                              </Typography>
+                              <Typography variant="bodyXs" className="font-mono">
+                                {product.lwin18}
+                              </Typography>
+                            </div>
+                          </div>
+                        </>
+                      ) : (
+                        <div>
+                          <Typography variant="bodyXs" colorRole="muted" className="mb-1">
+                            Product ID
+                          </Typography>
+                          <Typography variant="bodySm" className="mb-2 font-mono">
+                            {item.productId}
+                          </Typography>
+                          <Typography variant="bodyXs" colorRole="muted">
+                            Quantity: {item.quantity}
+                            {item.vintage && ` • Vintage: ${item.vintage}`}
+                          </Typography>
+                          <Typography variant="bodyXs" colorRole="danger" className="mt-1">
+                            Product details unavailable
+                          </Typography>
+                        </div>
+                      )}
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
 
