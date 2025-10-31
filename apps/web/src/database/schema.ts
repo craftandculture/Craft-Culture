@@ -363,6 +363,7 @@ export const quotes = pgTable(
       onDelete: 'set null',
     }),
     poAttachmentUrl: text('po_attachment_url'),
+    deliveryLeadTime: text('delivery_lead_time'),
     // PO confirmation
     poConfirmedAt: timestamp('po_confirmed_at', { mode: 'date' }),
     poConfirmedBy: uuid('po_confirmed_by').references(() => users.id, {

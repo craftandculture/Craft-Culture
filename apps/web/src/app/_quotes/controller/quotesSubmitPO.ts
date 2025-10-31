@@ -22,7 +22,7 @@ import submitPOSchema from '../schemas/submitPOSchema';
 const quotesSubmitPO = protectedProcedure
   .input(submitPOSchema)
   .mutation(async ({ input, ctx: { user } }) => {
-    const { quoteId, poNumber, poAttachmentUrl } = input;
+    const { quoteId, poNumber, poAttachmentUrl, deliveryLeadTime } = input;
 
     // Verify quote exists and belongs to user
     const [existingQuote] = await db
@@ -53,6 +53,7 @@ const quotesSubmitPO = protectedProcedure
           status: 'po_submitted',
           poNumber,
           poAttachmentUrl,
+          deliveryLeadTime,
           poSubmittedAt: new Date(),
           poSubmittedBy: user.id,
         })

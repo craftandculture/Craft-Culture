@@ -44,6 +44,7 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
   const [poNumber, setPoNumber] = useState('');
   const [showPOForm, setShowPOForm] = useState(false);
   const [poDocumentUrl, setPoDocumentUrl] = useState('');
+  const [deliveryLeadTime, setDeliveryLeadTime] = useState('');
   const [isUploadingPO, setIsUploadingPO] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -218,10 +219,15 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
         toast.error('Please provide a PO number');
         return;
       }
+      if (!deliveryLeadTime.trim()) {
+        toast.error('Please provide delivery lead time');
+        return;
+      }
       return trpcClient.quotes.submitPO.mutate({
         quoteId: quote.id,
         poNumber: poNumber.trim(),
         poAttachmentUrl: poDocumentUrl || undefined,
+        deliveryLeadTime: deliveryLeadTime.trim(),
       });
     },
     onSuccess: () => {
@@ -229,6 +235,7 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
       void queryClient.invalidateQueries({ queryKey: ['quotes'] });
       setPoNumber('');
       setPoDocumentUrl('');
+      setDeliveryLeadTime('');
       setShowPOForm(false);
       if (onOpenChange) {
         onOpenChange(false);
@@ -674,6 +681,21 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                       </div>
                       <div>
                         <Typography variant="bodySm" className="mb-2 font-medium">
+                          Delivery Lead Time *
+                        </Typography>
+                        <Input
+                          type="text"
+                          placeholder="e.g., 2-3 weeks, 30 days, etc."
+                          value={deliveryLeadTime}
+                          onChange={(e) => setDeliveryLeadTime(e.target.value)}
+                          className="max-w-md"
+                        />
+                        <Typography variant="bodyXs" colorRole="muted" className="mt-1">
+                          Expected delivery timeframe for this order
+                        </Typography>
+                      </div>
+                      <div>
+                        <Typography variant="bodySm" className="mb-2 font-medium">
                           PO Document (Optional)
                         </Typography>
                         <div className="flex items-center gap-2">
@@ -712,6 +734,7 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                             setShowPOForm(false);
                             setPoNumber('');
                             setPoDocumentUrl('');
+                            setDeliveryLeadTime('');
                           }}
                         >
                           <ButtonContent>Cancel</ButtonContent>
@@ -721,7 +744,7 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                           colorRole="brand"
                           size="sm"
                           onClick={() => submitPOMutation.mutate()}
-                          isDisabled={submitPOMutation.isPending || !poNumber.trim()}
+                          isDisabled={submitPOMutation.isPending || !poNumber.trim() || !deliveryLeadTime.trim()}
                         >
                           <ButtonContent>
                             {submitPOMutation.isPending ? 'Submitting...' : 'Submit PO'}
@@ -760,19 +783,49 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                         {quote.poNumber}
                       </Typography>
                     </div>
-                    {quote.poAttachmentUrl && (
+                    {quote.deliveryLeadTime && (
                       <div>
                         <Typography variant="bodyXs" colorRole="muted">
+                          Delivery Lead Time
+                        </Typography>
+                        <Typography variant="bodySm" className="font-medium">
+                          {quote.deliveryLeadTime}
+                        </Typography>
+                      </div>
+                    )}
+                    {quote.poAttachmentUrl && (
+                      <div>
+                        <Typography variant="bodyXs" colorRole="muted" className="mb-2">
                           Attachment
                         </Typography>
-                        <a
-                          href={quote.poAttachmentUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-text-brand hover:underline text-sm"
-                        >
-                          View PO Document
-                        </a>
+                        <div className="flex items-center gap-2">
+                          <a
+                            href={quote.poAttachmentUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-text-brand hover:underline text-sm"
+                          >
+                            View Document
+                          </a>
+                          <span className="text-text-muted">•</span>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              const link = document.createElement('a');
+                              link.href = quote.poAttachmentUrl!;
+                              link.download = `PO-${quote.poNumber}.pdf`;
+                              document.body.appendChild(link);
+                              link.click();
+                              document.body.removeChild(link);
+                              toast.success('Download started');
+                            }}
+                          >
+                            <ButtonContent iconLeft={IconDownload}>
+                              Download
+                            </ButtonContent>
+                          </Button>
+                        </div>
                       </div>
                     )}
                     {quote.poSubmittedAt && (
@@ -805,19 +858,49 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                         {quote.poNumber}
                       </Typography>
                     </div>
-                    {quote.poAttachmentUrl && (
+                    {quote.deliveryLeadTime && (
                       <div>
                         <Typography variant="bodyXs" colorRole="muted">
+                          Delivery Lead Time
+                        </Typography>
+                        <Typography variant="bodySm" className="font-medium">
+                          {quote.deliveryLeadTime}
+                        </Typography>
+                      </div>
+                    )}
+                    {quote.poAttachmentUrl && (
+                      <div>
+                        <Typography variant="bodyXs" colorRole="muted" className="mb-2">
                           Attachment
                         </Typography>
-                        <a
-                          href={quote.poAttachmentUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-text-brand hover:underline text-sm"
-                        >
-                          View PO Document
-                        </a>
+                        <div className="flex items-center gap-2">
+                          <a
+                            href={quote.poAttachmentUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-text-brand hover:underline text-sm"
+                          >
+                            View Document
+                          </a>
+                          <span className="text-text-muted">•</span>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              const link = document.createElement('a');
+                              link.href = quote.poAttachmentUrl!;
+                              link.download = `PO-${quote.poNumber}.pdf`;
+                              document.body.appendChild(link);
+                              link.click();
+                              document.body.removeChild(link);
+                              toast.success('Download started');
+                            }}
+                          >
+                            <ButtonContent iconLeft={IconDownload}>
+                              Download
+                            </ButtonContent>
+                          </Button>
+                        </div>
                       </div>
                     )}
                     {quote.poConfirmedAt && (

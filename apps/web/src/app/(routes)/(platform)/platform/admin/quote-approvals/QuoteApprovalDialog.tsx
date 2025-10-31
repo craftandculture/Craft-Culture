@@ -3,6 +3,7 @@
 import type { DialogProps } from '@radix-ui/react-dialog';
 import {
   IconCheck,
+  IconDownload,
   IconEdit,
   IconPlayerPlay,
 } from '@tabler/icons-react';
@@ -546,19 +547,49 @@ const QuoteApprovalDialog = ({
                       {quote.poNumber}
                     </Typography>
                   </div>
-                  {quote.poAttachmentUrl && (
+                  {quote.deliveryLeadTime && (
                     <div>
                       <Typography variant="bodyXs" colorRole="muted">
+                        Delivery Lead Time
+                      </Typography>
+                      <Typography variant="bodySm" className="font-medium">
+                        {quote.deliveryLeadTime}
+                      </Typography>
+                    </div>
+                  )}
+                  {quote.poAttachmentUrl && (
+                    <div>
+                      <Typography variant="bodyXs" colorRole="muted" className="mb-2">
                         Attachment
                       </Typography>
-                      <a
-                        href={quote.poAttachmentUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-text-brand hover:underline text-sm font-medium"
-                      >
-                        View PO Document →
-                      </a>
+                      <div className="flex items-center gap-2">
+                        <a
+                          href={quote.poAttachmentUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-text-brand hover:underline text-sm font-medium"
+                        >
+                          View Document
+                        </a>
+                        <span className="text-text-muted">•</span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            const link = document.createElement('a');
+                            link.href = quote.poAttachmentUrl!;
+                            link.download = `PO-${quote.poNumber}.pdf`;
+                            document.body.appendChild(link);
+                            link.click();
+                            document.body.removeChild(link);
+                            toast.success('Download started');
+                          }}
+                        >
+                          <ButtonContent iconLeft={IconDownload}>
+                            Download
+                          </ButtonContent>
+                        </Button>
+                      </div>
                     </div>
                   )}
                 </div>
