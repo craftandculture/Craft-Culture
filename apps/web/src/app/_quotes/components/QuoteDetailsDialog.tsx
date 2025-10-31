@@ -533,6 +533,26 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
               </div>
             </div>
 
+            {/* Revision Feedback - shown when C&C requests changes */}
+            {quote.status === 'revision_requested' && quote.revisionReason && (
+              <>
+                <Divider />
+                <div className="rounded-lg border-2 border-border-danger bg-fill-danger/10 p-4">
+                  <Typography variant="bodySm" className="mb-2 font-semibold text-text-danger">
+                    Revision Requested by C&C Team
+                  </Typography>
+                  <Typography variant="bodySm" className="whitespace-pre-wrap">
+                    {quote.revisionReason}
+                  </Typography>
+                  {quote.revisionRequestedAt && (
+                    <Typography variant="bodyXs" colorRole="muted" className="mt-2">
+                      Requested on {format(new Date(quote.revisionRequestedAt), 'MMM d, yyyy')}
+                    </Typography>
+                  )}
+                </div>
+              </>
+            )}
+
             {/* Notes */}
             {quote.notes && (
               <>
