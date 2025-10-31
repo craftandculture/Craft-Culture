@@ -9,7 +9,7 @@ import {
 } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
 import QuoteWorkflowTimeline from '@/app/_quotes/components/QuoteWorkflowTimeline';
@@ -62,14 +62,18 @@ const QuoteApprovalDialog = ({
   // State for showing workflow section
   const [showWorkflow, setShowWorkflow] = useState(false);
 
-  // Calculate display amount based on selected currency
-  const displayTotal = useMemo(() => {
-    if (!quote) return 0;
-    if (displayCurrency === 'USD') {
-      return quote.totalUsd;
-    }
-    return quote.totalAed ?? convertUsdToAed(quote.totalUsd);
-  }, [quote, displayCurrency]);
+  // State for line item adjustments (admin review)
+  const [lineItemAdjustments, setLineItemAdjustments] = useState<
+    Record<
+      string,
+      {
+        adjustedPricePerCase?: number;
+        confirmedQuantity?: number;
+        available: boolean;
+        notes?: string;
+      }
+    >
+  >({});
 
   // Extract pricing data from quoteData
   const quotePricingData = useMemo(() => {
@@ -137,6 +141,29 @@ const QuoteApprovalDialog = ({
     );
   }, [productsData]);
 
+  // Calculate display amount based on selected currency and adjustments
+  const displayTotal = useMemo(() => {
+    if (!quote) return 0;
+
+    // If under review and we have adjustments, calculate from adjustments
+    if (quote.status === 'under_cc_review' && Object.keys(lineItemAdjustments).length > 0) {
+      const adjustedTotalUsd = lineItems.reduce((sum, item) => {
+        const adjustment = lineItemAdjustments[item.productId];
+        if (!adjustment || !adjustment.available) return sum;
+        const pricePerCase = adjustment.adjustedPricePerCase || 0;
+        const quantity = adjustment.confirmedQuantity || 0;
+        return sum + pricePerCase * quantity;
+      }, 0);
+
+      return displayCurrency === 'USD' ? adjustedTotalUsd : convertUsdToAed(adjustedTotalUsd);
+    }
+
+    // Otherwise use the quote total
+    if (displayCurrency === 'USD') {
+      return quote.totalUsd;
+    }
+    return quote.totalAed ?? convertUsdToAed(quote.totalUsd);
+  }, [quote, displayCurrency, lineItemAdjustments, lineItems]);
 
   // Start C&C Review mutation
   const startReviewMutation = useMutation({
@@ -164,15 +191,38 @@ const QuoteApprovalDialog = ({
   const confirmMutation = useMutation({
     mutationFn: async () => {
       if (!quote) return;
+
+      // Validate that all available items have valid adjustments in review mode
+      if (quote.status === 'under_cc_review') {
+        const hasInvalidAdjustments = Object.entries(lineItemAdjustments).some(
+          ([_, adjustment]) =>
+            adjustment.available &&
+            (adjustment.confirmedQuantity === undefined ||
+              adjustment.confirmedQuantity <= 0 ||
+              adjustment.adjustedPricePerCase === undefined ||
+              adjustment.adjustedPricePerCase <= 0),
+        );
+
+        if (hasInvalidAdjustments) {
+          toast.error('Please confirm quantities and prices for all available items');
+          return;
+        }
+      }
+
       return trpcClient.quotes.confirm.mutate({
         quoteId: quote.id,
         ccConfirmationNotes: confirmationNotes || undefined,
+        lineItemAdjustments:
+          quote.status === 'under_cc_review' && Object.keys(lineItemAdjustments).length > 0
+            ? lineItemAdjustments
+            : undefined,
       });
     },
     onSuccess: () => {
       toast.success('Quote confirmed successfully');
       void queryClient.invalidateQueries({ queryKey: ['admin-quotes'] });
       setConfirmationNotes('');
+      setLineItemAdjustments({});
       if (onOpenChange) onOpenChange(false);
     },
     onError: (error) => {
@@ -238,6 +288,27 @@ const QuoteApprovalDialog = ({
       );
     },
   });
+
+  // Initialize adjustments when quote changes to under_cc_review status
+  useEffect(() => {
+    if (quote && quote.status === 'under_cc_review' && lineItems.length > 0 && Object.keys(lineItemAdjustments).length === 0) {
+      const initialAdjustments: typeof lineItemAdjustments = {};
+      lineItems.forEach((item) => {
+        const pricing = pricingMap[item.productId];
+        const pricePerCase = pricing?.lineItemTotalUsd
+          ? pricing.lineItemTotalUsd / item.quantity
+          : 0;
+
+        initialAdjustments[item.productId] = {
+          adjustedPricePerCase: pricePerCase,
+          confirmedQuantity: item.quantity,
+          available: true,
+          notes: '',
+        };
+      });
+      setLineItemAdjustments(initialAdjustments);
+    }
+  }, [quote, lineItems, pricingMap, lineItemAdjustments]);
 
   if (!quote) return null;
 
@@ -306,13 +377,34 @@ const QuoteApprovalDialog = ({
                 </Button>
               </div>
 
+              {quote.status === 'under_cc_review' && (
+                <div className="mb-3 rounded-lg border border-border-brand bg-fill-brand/10 p-3">
+                  <Typography variant="bodySm" className="font-medium text-text-brand">
+                    📝 Review Mode: Adjust quantities and prices as needed
+                  </Typography>
+                  <Typography variant="bodyXs" colorRole="muted" className="mt-1">
+                    Confirm availability, adjust quantities, and set final prices (in USD). Uncheck &ldquo;Available&rdquo; to mark items as out of stock.
+                  </Typography>
+                </div>
+              )}
+
               {/* Table Header */}
               <div className="rounded-t-lg border border-border-muted bg-fill-muted/50 px-4 py-2">
                 <div className="grid grid-cols-12 gap-4 text-xs font-medium text-text-muted">
-                  <div className="col-span-5">Product</div>
-                  <div className="col-span-2 text-right">Quantity</div>
-                  <div className="col-span-2 text-right">Price/Case</div>
-                  <div className="col-span-3 text-right">Line Total</div>
+                  <div className="col-span-4">Product</div>
+                  <div className="col-span-2 text-right">Requested Qty</div>
+                  {quote.status === 'under_cc_review' && (
+                    <>
+                      <div className="col-span-2 text-right">Confirmed Qty</div>
+                      <div className="col-span-2 text-right">Price/Case (USD)</div>
+                    </>
+                  )}
+                  {quote.status !== 'under_cc_review' && (
+                    <>
+                      <div className="col-span-2 text-right">Price/Case</div>
+                    </>
+                  )}
+                  <div className="col-span-2 text-right">Line Total</div>
                 </div>
               </div>
 
@@ -324,12 +416,18 @@ const QuoteApprovalDialog = ({
                   const pricePerCase = pricing?.lineItemTotalUsd
                     ? pricing.lineItemTotalUsd / item.quantity
                     : 0;
-                  const lineTotal = pricing?.lineItemTotalUsd || 0;
+
+                  const adjustment = lineItemAdjustments[item.productId];
+                  const finalPricePerCase = adjustment?.adjustedPricePerCase ?? pricePerCase;
+                  const finalQuantity = adjustment?.confirmedQuantity ?? item.quantity;
+                  const lineTotal = finalPricePerCase * finalQuantity;
 
                   const displayPricePerCase =
                     displayCurrency === 'USD' ? pricePerCase : convertUsdToAed(pricePerCase);
                   const displayLineTotal =
                     displayCurrency === 'USD' ? lineTotal : convertUsdToAed(lineTotal);
+
+                  const isReviewMode = quote.status === 'under_cc_review';
 
                   return (
                     <div
@@ -339,7 +437,7 @@ const QuoteApprovalDialog = ({
                       {product ? (
                         <>
                           {/* Product Info */}
-                          <div className="col-span-5">
+                          <div className="col-span-4">
                             <Typography variant="bodySm" className="mb-1 font-medium">
                               {product.name}
                             </Typography>
@@ -363,9 +461,14 @@ const QuoteApprovalDialog = ({
                             <Typography variant="bodyXs" colorRole="muted" className="mt-1 font-mono">
                               {product.lwin18}
                             </Typography>
+                            {isReviewMode && adjustment && !adjustment.available && (
+                              <Typography variant="bodyXs" colorRole="danger" className="mt-1">
+                                ⚠️ Marked as unavailable
+                              </Typography>
+                            )}
                           </div>
 
-                          {/* Quantity */}
+                          {/* Requested Quantity */}
                           <div className="col-span-2 text-right">
                             <div className="inline-flex flex-col items-end">
                               <Typography variant="bodyLg" className="font-bold text-text-brand">
@@ -377,18 +480,88 @@ const QuoteApprovalDialog = ({
                             </div>
                           </div>
 
-                          {/* Price per Case */}
-                          <div className="col-span-2 text-right">
-                            <Typography variant="bodySm" className="font-medium">
-                              {formatPrice(displayPricePerCase, displayCurrency)}
-                            </Typography>
-                            <Typography variant="bodyXs" colorRole="muted">
-                              per case
-                            </Typography>
-                          </div>
+                          {isReviewMode ? (
+                            <>
+                              {/* Confirmed Quantity (Editable) */}
+                              <div className="col-span-2 flex flex-col items-end gap-1">
+                                <Input
+                                  type="number"
+                                  min="0"
+                                  value={adjustment?.confirmedQuantity ?? item.quantity}
+                                  onChange={(e) => {
+                                    const value = parseInt(e.target.value) || 0;
+                                    setLineItemAdjustments({
+                                      ...lineItemAdjustments,
+                                      [item.productId]: {
+                                        ...adjustment,
+                                        confirmedQuantity: value,
+                                        available: value > 0,
+                                      },
+                                    });
+                                  }}
+                                  className="w-20 text-right"
+                                />
+                                <label className="flex items-center gap-1 text-xs">
+                                  <input
+                                    type="checkbox"
+                                    checked={adjustment?.available ?? true}
+                                    onChange={(e) => {
+                                      setLineItemAdjustments({
+                                        ...lineItemAdjustments,
+                                        [item.productId]: {
+                                          ...adjustment,
+                                          available: e.target.checked,
+                                          confirmedQuantity: e.target.checked
+                                            ? adjustment?.confirmedQuantity ?? item.quantity
+                                            : 0,
+                                        },
+                                      });
+                                    }}
+                                  />
+                                  <span className="text-text-muted">Available</span>
+                                </label>
+                              </div>
+
+                              {/* Price per Case (Editable USD) */}
+                              <div className="col-span-2 flex flex-col items-end">
+                                <Input
+                                  type="number"
+                                  min="0"
+                                  step="0.01"
+                                  value={adjustment?.adjustedPricePerCase ?? pricePerCase}
+                                  onChange={(e) => {
+                                    const value = parseFloat(e.target.value) || 0;
+                                    setLineItemAdjustments({
+                                      ...lineItemAdjustments,
+                                      [item.productId]: {
+                                        ...adjustment,
+                                        adjustedPricePerCase: value,
+                                      },
+                                    });
+                                  }}
+                                  className="w-28 text-right"
+                                />
+                                <Typography variant="bodyXs" colorRole="muted" className="mt-1">
+                                  per case
+                                </Typography>
+                              </div>
+                            </>
+                          ) : (
+                            <>
+                              {/* Price per Case (Read-only) */}
+                              <div className="col-span-2 text-right">
+                                <Typography variant="bodySm" className="font-medium">
+                                  {formatPrice(displayPricePerCase, displayCurrency)}
+                                </Typography>
+                                <Typography variant="bodyXs" colorRole="muted">
+                                  per case
+                                </Typography>
+                              </div>
+                            </>
+                          )}
 
                           {/* Line Total */}
-                          <div className="col-span-3 text-right">
+                          <div className="col-span-2 text-right">
                             <Typography variant="bodySm" className="font-bold">
                               {formatPrice(displayLineTotal, displayCurrency)}
                             </Typography>

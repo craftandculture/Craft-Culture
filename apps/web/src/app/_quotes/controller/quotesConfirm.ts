@@ -21,7 +21,7 @@ import confirmQuoteSchema from '../schemas/confirmQuoteSchema';
 const quotesConfirm = adminProcedure
   .input(confirmQuoteSchema)
   .mutation(async ({ input, ctx: { user } }) => {
-    const { quoteId, ccConfirmationNotes } = input;
+    const { quoteId, ccConfirmationNotes, lineItemAdjustments } = input;
 
     // Verify quote exists
     const [existingQuote] = await db
@@ -46,14 +46,66 @@ const quotesConfirm = adminProcedure
     }
 
     try {
+      // Prepare update data
+      const updateData: {
+        status: 'cc_confirmed';
+        ccConfirmedAt: Date;
+        ccConfirmedBy: string;
+        ccConfirmationNotes?: string;
+        quoteData?: unknown;
+        totalUsd?: number;
+        totalAed?: number;
+      } = {
+        status: 'cc_confirmed',
+        ccConfirmedAt: new Date(),
+        ccConfirmedBy: user.id,
+        ccConfirmationNotes,
+      };
+
+      // If we have adjustments, update the quote data and recalculate totals
+      if (lineItemAdjustments && Object.keys(lineItemAdjustments).length > 0) {
+        const existingData = (existingQuote.quoteData as { lineItems?: unknown[] }) || {};
+        const lineItems = (existingQuote.lineItems as Array<{ productId: string; quantity: number }>) || [];
+
+        // Update line item pricing with adjustments
+        const updatedLineItemPricing = lineItems.map((item) => {
+          const adjustment = lineItemAdjustments[item.productId];
+          if (!adjustment || !adjustment.available) {
+            return null; // Item marked as unavailable
+          }
+
+          const pricePerCase = adjustment.adjustedPricePerCase || 0;
+          const quantity = adjustment.confirmedQuantity || item.quantity;
+          const lineItemTotalUsd = pricePerCase * quantity;
+
+          return {
+            productId: item.productId,
+            lineItemTotalUsd,
+            basePriceUsd: pricePerCase,
+            confirmedQuantity: quantity,
+            originalQuantity: item.quantity,
+            adminNotes: adjustment.notes,
+          };
+        }).filter(Boolean); // Remove unavailable items
+
+        // Calculate new total
+        const newTotalUsd = updatedLineItemPricing.reduce(
+          (sum, item) => sum + (item?.lineItemTotalUsd || 0),
+          0,
+        );
+
+        updateData.quoteData = {
+          ...existingData,
+          lineItems: updatedLineItemPricing,
+          adminAdjustments: lineItemAdjustments,
+        };
+        updateData.totalUsd = newTotalUsd;
+        updateData.totalAed = newTotalUsd * 3.67; // AED exchange rate
+      }
+
       const [updatedQuote] = await db
         .update(quotes)
-        .set({
-          status: 'cc_confirmed',
-          ccConfirmedAt: new Date(),
-          ccConfirmedBy: user.id,
-          ccConfirmationNotes,
-        })
+        .set(updateData)
         .where(eq(quotes.id, quoteId))
         .returning();
 
