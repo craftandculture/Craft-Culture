@@ -60,7 +60,7 @@ const QuotesList = () => {
       return trpcClient.quotes.submitBuyRequest.mutate({ quoteId });
     },
     onSuccess: () => {
-      toast.success('Quote submitted for C&C review!');
+      toast.success('Order request submitted successfully!');
       void queryClient.invalidateQueries({ queryKey: ['quotes.getMany'] });
       void refetch();
     },
@@ -246,7 +246,7 @@ const QuotesList = () => {
                 isDisabled={submitBuyRequestMutation.isPending}
               >
                 <ButtonContent iconLeft={IconSend}>
-                  Submit for Review
+                  Place Order Request
                 </ButtonContent>
               </Button>
             )}

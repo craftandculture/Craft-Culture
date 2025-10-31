@@ -141,7 +141,7 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
       return result;
     },
     onSuccess: () => {
-      toast.success('Buy request submitted successfully! C&C team will review shortly.');
+      toast.success('Order request submitted successfully! C&C team will review shortly.');
       void queryClient.invalidateQueries({ queryKey: ['quotes'] });
       if (onOpenChange) {
         onOpenChange(false);
@@ -157,8 +157,8 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
     if (!quote) return;
 
     const confirmMessage = quote.status === 'revision_requested'
-      ? 'Resubmit this quote for C&C review?'
-      : 'Submit this quote for C&C review?';
+      ? 'Resubmit this order request?'
+      : 'Place this order request?';
 
     if (window.confirm(confirmMessage)) {
       submitBuyRequestMutation.mutate(quote.id);
@@ -946,8 +946,8 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                 {submitBuyRequestMutation.isPending
                   ? 'Submitting...'
                   : quote.status === 'revision_requested'
-                    ? 'Resubmit for Review'
-                    : 'Submit for Review'}
+                    ? 'Resubmit Order Request'
+                    : 'Place Order Request'}
               </ButtonContent>
             </Button>
           )}
@@ -958,8 +958,8 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
             quote.status === 'cc_confirmed') && (
             <div className="flex-1 rounded-lg bg-fill-warning/10 p-3">
               <Typography variant="bodySm" className="text-text-warning">
-                {quote.status === 'buy_request_submitted' && 'Quote submitted for C&C review'}
-                {quote.status === 'under_cc_review' && 'Quote is under C&C review'}
+                {quote.status === 'buy_request_submitted' && 'Order request submitted for review'}
+                {quote.status === 'under_cc_review' && 'Order request is under review'}
                 {quote.status === 'cc_confirmed' && 'Quote confirmed by C&C - ready to send to customer'}
               </Typography>
             </div>
