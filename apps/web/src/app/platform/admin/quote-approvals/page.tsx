@@ -1,10 +1,5 @@
 import { Suspense } from 'react';
 
-import Card from '@/app/_ui/components/Card/Card';
-import CardContent from '@/app/_ui/components/Card/CardContent';
-import CardHeader from '@/app/_ui/components/Card/CardHeader';
-import PageContainer from '@/app/_ui/components/PageContainer/PageContainer';
-import PageHeader from '@/app/_ui/components/PageHeader/PageHeader';
 import Typography from '@/app/_ui/components/Typography/Typography';
 
 import QuoteApprovalsList from './QuoteApprovalsList';
@@ -14,31 +9,33 @@ import QuoteApprovalsList from './QuoteApprovalsList';
  */
 const QuoteApprovalsPage = () => {
   return (
-    <PageContainer>
-      <PageHeader
-        title="Quote Approvals"
-        description="Review and approve customer quotes"
-      />
+    <div className="container mx-auto max-w-7xl px-4 py-8">
+      <div className="mb-8">
+        <Typography variant="headingLg" className="mb-2">
+          Quote Approvals
+        </Typography>
+        <Typography variant="bodyMd" colorRole="muted">
+          Review and approve customer quotes
+        </Typography>
+      </div>
 
-      <Card>
-        <CardHeader>
-          <Typography variant="headingSm">Pending Approvals</Typography>
-        </CardHeader>
-        <CardContent>
-          <Suspense
-            fallback={
-              <div className="flex h-64 items-center justify-center">
-                <Typography variant="bodySm" colorRole="muted">
-                  Loading quotes...
-                </Typography>
-              </div>
-            }
-          >
-            <QuoteApprovalsList />
-          </Suspense>
-        </CardContent>
-      </Card>
-    </PageContainer>
+      <div className="rounded-lg border border-border-primary bg-fill-primary p-6">
+        <Typography variant="headingSm" className="mb-6">
+          Pending Approvals
+        </Typography>
+        <Suspense
+          fallback={
+            <div className="flex h-64 items-center justify-center">
+              <Typography variant="bodySm" colorRole="muted">
+                Loading quotes...
+              </Typography>
+            </div>
+          }
+        >
+          <QuoteApprovalsList />
+        </Suspense>
+      </div>
+    </div>
   );
 };
 
