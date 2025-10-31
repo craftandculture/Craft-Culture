@@ -20,7 +20,7 @@ import Divider from '@/app/_ui/components/Divider/Divider';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import type { Quote } from '@/database/schema';
-import useTRPC from '@/lib/trpc/browser';
+import useTRPC, { useTRPCClient } from '@/lib/trpc/browser';
 import convertUsdToAed from '@/utils/convertUsdToAed';
 import formatPrice from '@/utils/formatPrice';
 
@@ -35,6 +35,7 @@ interface QuoteDetailsDialogProps extends DialogProps {
  */
 const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogProps) => {
   const api = useTRPC();
+  const trpcClient = useTRPCClient();
   const queryClient = useQueryClient();
   const [isExporting, setIsExporting] = useState(false);
 
@@ -116,7 +117,7 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
   // Mutation for submitting buy request
   const submitBuyRequestMutation = useMutation({
     mutationFn: async (quoteId: string) => {
-      const result = await api.quotes.submitBuyRequest.mutate({ quoteId });
+      const result = await trpcClient.quotes.submitBuyRequest.mutate({ quoteId });
       return result;
     },
     onSuccess: () => {
