@@ -22,8 +22,7 @@ import DialogFooter from '@/app/_ui/components/Dialog/DialogFooter';
 import DialogHeader from '@/app/_ui/components/Dialog/DialogHeader';
 import DialogTitle from '@/app/_ui/components/Dialog/DialogTitle';
 import Divider from '@/app/_ui/components/Divider/Divider';
-import Label from '@/app/_ui/components/Label/Label';
-import Textarea from '@/app/_ui/components/Textarea/Textarea';
+import TextArea from '@/app/_ui/components/TextArea/TextArea';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import type { Quote } from '@/database/schema';
 import { useTRPCClient } from '@/lib/trpc/browser';
@@ -255,8 +254,10 @@ const QuoteApprovalDialog = ({
                   Start Review
                 </Typography>
                 <div>
-                  <Label htmlFor="ccNotes">Review Notes (optional)</Label>
-                  <Textarea
+                  <Typography variant="bodySm" className="mb-2">
+                    Review Notes (optional)
+                  </Typography>
+                  <TextArea
                     id="ccNotes"
                     value={ccNotes}
                     onChange={(e) => setCcNotes(e.target.value)}
@@ -272,7 +273,7 @@ const QuoteApprovalDialog = ({
                 <Typography variant="bodySm" className="font-semibold">
                   Confirmation Notes (optional)
                 </Typography>
-                <Textarea
+                <TextArea
                   value={confirmationNotes}
                   onChange={(e) => setConfirmationNotes(e.target.value)}
                   placeholder="Add any notes about this confirmation..."
@@ -287,8 +288,10 @@ const QuoteApprovalDialog = ({
                   Request Revision
                 </Typography>
                 <div>
-                  <Label htmlFor="revisionReason">Revision Reason *</Label>
-                  <Textarea
+                  <Typography variant="bodySm" className="mb-2">
+                    Revision Reason *
+                  </Typography>
+                  <TextArea
                     id="revisionReason"
                     value={revisionReason}
                     onChange={(e) => setRevisionReason(e.target.value)}
@@ -313,8 +316,10 @@ const QuoteApprovalDialog = ({
                   </Typography>
                 </div>
                 <div>
-                  <Label htmlFor="poNotes">Confirmation Notes (optional)</Label>
-                  <Textarea
+                  <Typography variant="bodySm" className="mb-2">
+                    Confirmation Notes (optional)
+                  </Typography>
+                  <TextArea
                     id="poNotes"
                     value={confirmationNotes}
                     onChange={(e) => setConfirmationNotes(e.target.value)}
