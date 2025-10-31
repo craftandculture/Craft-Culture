@@ -40,6 +40,12 @@ export const quoteStatus = pgEnum('quote_status', [
   'accepted',
   'rejected',
   'expired',
+  'buy_request_submitted',
+  'under_cc_review',
+  'revision_requested',
+  'cc_confirmed',
+  'po_submitted',
+  'po_confirmed',
 ]);
 
 export const sheets = pgTable('sheets', {
@@ -320,6 +326,49 @@ export const quotes = pgTable(
     acceptedBy: uuid('accepted_by').references(() => users.id, {
       onDelete: 'set null',
     }),
+    // Buy request tracking
+    buyRequestSubmittedAt: timestamp('buy_request_submitted_at', {
+      mode: 'date',
+    }),
+    buyRequestSubmittedBy: uuid('buy_request_submitted_by').references(
+      () => users.id,
+      { onDelete: 'set null' },
+    ),
+    buyRequestCount: integer('buy_request_count').notNull().default(0),
+    // C&C review tracking
+    ccReviewStartedAt: timestamp('cc_review_started_at', { mode: 'date' }),
+    ccReviewedBy: uuid('cc_reviewed_by').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+    ccNotes: text('cc_notes'),
+    // Revision tracking
+    revisionRequestedAt: timestamp('revision_requested_at', { mode: 'date' }),
+    revisionRequestedBy: uuid('revision_requested_by').references(
+      () => users.id,
+      { onDelete: 'set null' },
+    ),
+    revisionReason: text('revision_reason'),
+    revisionSuggestions: jsonb('revision_suggestions'),
+    revisionHistory: jsonb('revision_history'),
+    // C&C confirmation
+    ccConfirmedAt: timestamp('cc_confirmed_at', { mode: 'date' }),
+    ccConfirmedBy: uuid('cc_confirmed_by').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+    ccConfirmationNotes: text('cc_confirmation_notes'),
+    // PO tracking
+    poNumber: text('po_number'),
+    poSubmittedAt: timestamp('po_submitted_at', { mode: 'date' }),
+    poSubmittedBy: uuid('po_submitted_by').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+    poAttachmentUrl: text('po_attachment_url'),
+    // PO confirmation
+    poConfirmedAt: timestamp('po_confirmed_at', { mode: 'date' }),
+    poConfirmedBy: uuid('po_confirmed_by').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+    poConfirmationNotes: text('po_confirmation_notes'),
     ...timestamps,
   },
   (table) => [
