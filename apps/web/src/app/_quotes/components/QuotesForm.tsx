@@ -1091,7 +1091,12 @@ const QuotesForm = () => {
             setMarginConfig(undefined);
           }
         }}
-        lineItems={urlLineItems}
+        lineItems={urlLineItems.filter(
+          (item): item is Required<URLLineItem> =>
+            item.productId !== undefined &&
+            item.offerId !== undefined &&
+            item.quantity !== undefined,
+        )}
         quoteData={quoteData}
         currency={displayCurrency}
         totalUsd={quoteData?.totalUsd ?? 0}
