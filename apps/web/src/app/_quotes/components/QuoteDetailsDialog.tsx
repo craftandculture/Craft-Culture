@@ -18,6 +18,7 @@ import DialogHeader from '@/app/_ui/components/Dialog/DialogHeader';
 import DialogTitle from '@/app/_ui/components/Dialog/DialogTitle';
 import Divider from '@/app/_ui/components/Divider/Divider';
 import Icon from '@/app/_ui/components/Icon/Icon';
+import Input from '@/app/_ui/components/Input/Input';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import type { Quote } from '@/database/schema';
 import useTRPC, { useTRPCClient } from '@/lib/trpc/browser';
@@ -38,6 +39,10 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
   const trpcClient = useTRPCClient();
   const queryClient = useQueryClient();
   const [isExporting, setIsExporting] = useState(false);
+
+  // PO submission state
+  const [poNumber, setPoNumber] = useState('');
+  const [showPOForm, setShowPOForm] = useState(false);
 
   const lineItems = useMemo(
     () =>
@@ -144,6 +149,32 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
       submitBuyRequestMutation.mutate(quote.id);
     }
   };
+
+  // Submit PO mutation
+  const submitPOMutation = useMutation({
+    mutationFn: async () => {
+      if (!quote || !poNumber.trim()) {
+        toast.error('Please provide a PO number');
+        return;
+      }
+      return trpcClient.quotes.submitPO.mutate({
+        quoteId: quote.id,
+        poNumber: poNumber.trim(),
+      });
+    },
+    onSuccess: () => {
+      toast.success('PO submitted successfully!');
+      void queryClient.invalidateQueries({ queryKey: ['quotes'] });
+      setPoNumber('');
+      setShowPOForm(false);
+      if (onOpenChange) {
+        onOpenChange(false);
+      }
+    },
+    onError: (error) => {
+      toast.error(`Failed to submit PO: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    },
+  });
 
   // Handle PDF export
   const handleExportPDF = async () => {
@@ -549,6 +580,126 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                       Requested on {format(new Date(quote.revisionRequestedAt), 'MMM d, yyyy')}
                     </Typography>
                   )}
+                </div>
+              </>
+            )}
+
+            {/* PO Submission Form - shown when quote is confirmed by C&C */}
+            {quote.status === 'cc_confirmed' && (
+              <>
+                <Divider />
+                <div className="rounded-lg border-2 border-border-success bg-fill-success/10 p-4">
+                  <Typography variant="bodySm" className="mb-2 font-semibold text-text-success">
+                    Quote Confirmed by C&C Team
+                  </Typography>
+                  <Typography variant="bodySm" className="mb-4">
+                    Your quote has been confirmed. Please submit your Purchase Order to proceed.
+                  </Typography>
+                  {showPOForm ? (
+                    <div className="space-y-3">
+                      <div>
+                        <Typography variant="bodySm" className="mb-2 font-medium">
+                          PO Number *
+                        </Typography>
+                        <Input
+                          type="text"
+                          placeholder="Enter your PO number"
+                          value={poNumber}
+                          onChange={(e) => setPoNumber(e.target.value)}
+                          className="max-w-md"
+                        />
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setShowPOForm(false);
+                            setPoNumber('');
+                          }}
+                        >
+                          <ButtonContent>Cancel</ButtonContent>
+                        </Button>
+                        <Button
+                          variant="default"
+                          colorRole="brand"
+                          size="sm"
+                          onClick={() => submitPOMutation.mutate()}
+                          isDisabled={submitPOMutation.isPending || !poNumber.trim()}
+                        >
+                          <ButtonContent>
+                            {submitPOMutation.isPending ? 'Submitting...' : 'Submit PO'}
+                          </ButtonContent>
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <Button
+                      variant="default"
+                      colorRole="brand"
+                      size="md"
+                      onClick={() => setShowPOForm(true)}
+                    >
+                      <ButtonContent>Submit Purchase Order</ButtonContent>
+                    </Button>
+                  )}
+                </div>
+              </>
+            )}
+
+            {/* PO Submitted Status - shown when PO is awaiting confirmation */}
+            {quote.status === 'po_submitted' && (
+              <>
+                <Divider />
+                <div className="rounded-lg border border-border-brand bg-fill-brand/10 p-4">
+                  <Typography variant="bodySm" className="mb-2 font-semibold text-text-brand">
+                    Purchase Order Submitted
+                  </Typography>
+                  <div className="space-y-2">
+                    <div>
+                      <Typography variant="bodyXs" colorRole="muted">
+                        PO Number
+                      </Typography>
+                      <Typography variant="bodySm" className="font-medium">
+                        {quote.poNumber}
+                      </Typography>
+                    </div>
+                    {quote.poSubmittedAt && (
+                      <Typography variant="bodyXs" colorRole="muted">
+                        Submitted on {format(new Date(quote.poSubmittedAt), 'MMM d, yyyy')}
+                      </Typography>
+                    )}
+                  </div>
+                  <Typography variant="bodySm" className="mt-3">
+                    Your PO is awaiting C&C team confirmation.
+                  </Typography>
+                </div>
+              </>
+            )}
+
+            {/* PO Confirmed Status */}
+            {quote.status === 'po_confirmed' && (
+              <>
+                <Divider />
+                <div className="rounded-lg border-2 border-border-success bg-fill-success/10 p-4">
+                  <Typography variant="bodySm" className="mb-2 font-semibold text-text-success">
+                    Purchase Order Confirmed
+                  </Typography>
+                  <div className="space-y-2">
+                    <div>
+                      <Typography variant="bodyXs" colorRole="muted">
+                        PO Number
+                      </Typography>
+                      <Typography variant="bodySm" className="font-medium">
+                        {quote.poNumber}
+                      </Typography>
+                    </div>
+                    {quote.poConfirmedAt && (
+                      <Typography variant="bodyXs" colorRole="muted">
+                        Confirmed on {format(new Date(quote.poConfirmedAt), 'MMM d, yyyy')}
+                      </Typography>
+                    )}
+                  </div>
                 </div>
               </>
             )}
