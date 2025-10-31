@@ -20,6 +20,15 @@ const quotesUploadPODocument = protectedProcedure
   .mutation(async ({ input, ctx: { user } }) => {
     const { file, filename, fileType } = input;
 
+    // Check if Blob token is configured
+    if (!process.env.BLOB_READ_WRITE_TOKEN) {
+      console.error('BLOB_READ_WRITE_TOKEN environment variable is not set');
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'File storage is not configured. Please contact support.',
+      });
+    }
+
     try {
       // Extract base64 data from data URL
       const base64Data = file.split(',')[1];
@@ -48,10 +57,21 @@ const quotesUploadPODocument = protectedProcedure
         url: blob.url,
       };
     } catch (error) {
-      console.error('Error uploading PO document:', { error, userId: user.id });
+      console.error('Error uploading PO document:', {
+        error,
+        userId: user.id,
+        errorMessage: error instanceof Error ? error.message : 'Unknown error',
+        errorStack: error instanceof Error ? error.stack : undefined,
+      });
+
+      // If it's already a TRPCError, rethrow it
+      if (error instanceof TRPCError) {
+        throw error;
+      }
+
       throw new TRPCError({
         code: 'INTERNAL_SERVER_ERROR',
-        message: 'Failed to upload PO document',
+        message: `Failed to upload PO document: ${error instanceof Error ? error.message : 'Unknown error'}`,
       });
     }
   });
