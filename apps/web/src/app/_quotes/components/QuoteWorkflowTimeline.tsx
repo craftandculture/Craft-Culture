@@ -229,30 +229,30 @@ const QuoteWorkflowTimeline = ({ quote }: QuoteWorkflowTimelineProps) => {
 
       {/* Revision history */}
       {quote.revisionHistory &&
-        Array.isArray(quote.revisionHistory) &&
-        quote.revisionHistory.length > 0 && (
-          <div className='mt-6 pt-6 border-t border-border-primary'>
-            <h4 className='text-sm font-semibold text-text-primary mb-3'>
-              Revision History ({quote.buyRequestCount} submissions)
-            </h4>
-            <div className='space-y-2'>
-              {(quote.revisionHistory as Array<{
-                requestedAt: string;
-                reason: string;
-              }>).map((revision, idx) => (
-                <div
-                  key={idx}
-                  className='text-sm p-3 rounded-md bg-fill-muted/50'
-                >
-                  <div className='font-medium text-text-secondary'>
-                    {new Date(revision.requestedAt).toLocaleDateString()}
-                  </div>
-                  <div className='text-text-muted mt-1'>{revision.reason}</div>
+      Array.isArray(quote.revisionHistory) &&
+      quote.revisionHistory.length > 0 ? (
+        <div className='mt-6 pt-6 border-t border-border-primary'>
+          <h4 className='text-sm font-semibold text-text-primary mb-3'>
+            Revision History ({quote.buyRequestCount} submissions)
+          </h4>
+          <div className='space-y-2'>
+            {(quote.revisionHistory as Array<{
+              requestedAt: string;
+              reason: string;
+            }>).map((revision, idx) => (
+              <div
+                key={idx}
+                className='text-sm p-3 rounded-md bg-fill-muted/50'
+              >
+                <div className='font-medium text-text-secondary'>
+                  {new Date(revision.requestedAt).toLocaleDateString()}
                 </div>
-              ))}
-            </div>
+                <div className='text-text-muted mt-1'>{revision.reason}</div>
+              </div>
+            ))}
           </div>
-        )}
+        </div>
+      ) : null}
     </div>
   );
 };
