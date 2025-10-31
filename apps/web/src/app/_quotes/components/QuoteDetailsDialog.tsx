@@ -1,10 +1,10 @@
 'use client';
 
 import type { DialogProps } from '@radix-ui/react-dialog';
-import { IconCalendar, IconCurrencyDollar, IconDownload, IconFileText, IconSend, IconUser } from '@tabler/icons-react';
+import { IconCalendar, IconCurrencyDollar, IconDownload, IconFileText, IconPaperclip, IconSend, IconUser } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
 import Button from '@/app/_ui/components/Button/Button';
@@ -43,6 +43,9 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
   // PO submission state
   const [poNumber, setPoNumber] = useState('');
   const [showPOForm, setShowPOForm] = useState(false);
+  const [poDocumentUrl, setPoDocumentUrl] = useState('');
+  const [isUploadingPO, setIsUploadingPO] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const lineItems = useMemo(
     () =>
@@ -150,6 +153,64 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
     }
   };
 
+  // Upload PO document mutation
+  const uploadPODocumentMutation = useMutation({
+    mutationFn: async (file: File) => {
+      // Convert file to base64
+      const reader = new FileReader();
+      const base64Promise = new Promise<string>((resolve, reject) => {
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+
+      const base64 = await base64Promise;
+
+      return trpcClient.quotes.uploadPODocument.mutate({
+        file: base64,
+        filename: file.name,
+        fileType: file.type as 'application/pdf' | 'image/png' | 'image/jpeg' | 'image/jpg',
+      });
+    },
+    onSuccess: (data) => {
+      setPoDocumentUrl(data.url);
+      toast.success('Document uploaded successfully');
+    },
+    onError: (error) => {
+      toast.error(`Failed to upload document: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    },
+  });
+
+  // Handle file selection
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    const validTypes = ['application/pdf', 'image/png', 'image/jpeg', 'image/jpg'];
+    if (!validTypes.includes(file.type)) {
+      toast.error('Please upload a PDF or image file (PNG, JPG)');
+      return;
+    }
+
+    // Validate file size (5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('File size must be less than 5MB');
+      return;
+    }
+
+    setIsUploadingPO(true);
+    try {
+      await uploadPODocumentMutation.mutateAsync(file);
+    } finally {
+      setIsUploadingPO(false);
+      // Reset input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
   // Submit PO mutation
   const submitPOMutation = useMutation({
     mutationFn: async () => {
@@ -160,12 +221,14 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
       return trpcClient.quotes.submitPO.mutate({
         quoteId: quote.id,
         poNumber: poNumber.trim(),
+        poAttachmentUrl: poDocumentUrl || undefined,
       });
     },
     onSuccess: () => {
       toast.success('PO submitted successfully!');
       void queryClient.invalidateQueries({ queryKey: ['quotes'] });
       setPoNumber('');
+      setPoDocumentUrl('');
       setShowPOForm(false);
       if (onOpenChange) {
         onOpenChange(false);
@@ -596,7 +659,7 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                     Your quote has been confirmed. Please submit your Purchase Order to proceed.
                   </Typography>
                   {showPOForm ? (
-                    <div className="space-y-3">
+                    <div className="space-y-4">
                       <div>
                         <Typography variant="bodySm" className="mb-2 font-medium">
                           PO Number *
@@ -609,6 +672,38 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                           className="max-w-md"
                         />
                       </div>
+                      <div>
+                        <Typography variant="bodySm" className="mb-2 font-medium">
+                          PO Document (Optional)
+                        </Typography>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => fileInputRef.current?.click()}
+                            isDisabled={isUploadingPO}
+                          >
+                            <ButtonContent iconLeft={IconPaperclip}>
+                              {isUploadingPO ? 'Uploading...' : poDocumentUrl ? 'Change Document' : 'Attach Document'}
+                            </ButtonContent>
+                          </Button>
+                          {poDocumentUrl && (
+                            <Typography variant="bodyXs" className="text-text-success">
+                              ✓ Document attached
+                            </Typography>
+                          )}
+                        </div>
+                        <input
+                          ref={fileInputRef}
+                          type="file"
+                          accept="application/pdf,image/png,image/jpeg,image/jpg"
+                          onChange={handleFileChange}
+                          className="hidden"
+                        />
+                        <Typography variant="bodyXs" colorRole="muted" className="mt-1">
+                          PDF or image, max 5MB
+                        </Typography>
+                      </div>
                       <div className="flex gap-2">
                         <Button
                           variant="outline"
@@ -616,6 +711,7 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                           onClick={() => {
                             setShowPOForm(false);
                             setPoNumber('');
+                            setPoDocumentUrl('');
                           }}
                         >
                           <ButtonContent>Cancel</ButtonContent>
@@ -664,6 +760,21 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                         {quote.poNumber}
                       </Typography>
                     </div>
+                    {quote.poAttachmentUrl && (
+                      <div>
+                        <Typography variant="bodyXs" colorRole="muted">
+                          Attachment
+                        </Typography>
+                        <a
+                          href={quote.poAttachmentUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-text-brand hover:underline text-sm"
+                        >
+                          View PO Document
+                        </a>
+                      </div>
+                    )}
                     {quote.poSubmittedAt && (
                       <Typography variant="bodyXs" colorRole="muted">
                         Submitted on {format(new Date(quote.poSubmittedAt), 'MMM d, yyyy')}
@@ -694,6 +805,21 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                         {quote.poNumber}
                       </Typography>
                     </div>
+                    {quote.poAttachmentUrl && (
+                      <div>
+                        <Typography variant="bodyXs" colorRole="muted">
+                          Attachment
+                        </Typography>
+                        <a
+                          href={quote.poAttachmentUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-text-brand hover:underline text-sm"
+                        >
+                          View PO Document
+                        </a>
+                      </div>
+                    )}
                     {quote.poConfirmedAt && (
                       <Typography variant="bodyXs" colorRole="muted">
                         Confirmed on {format(new Date(quote.poConfirmedAt), 'MMM d, yyyy')}

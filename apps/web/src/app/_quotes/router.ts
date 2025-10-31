@@ -13,6 +13,7 @@ import quotesStartCCReview from './controller/quotesStartCCReview';
 import quotesSubmitBuyRequest from './controller/quotesSubmitBuyRequest';
 import quotesSubmitPO from './controller/quotesSubmitPO';
 import quotesUpdate from './controller/quotesUpdate';
+import quotesUploadPODocument from './controller/quotesUploadPODocument';
 
 const quotesRouter = createTRPCRouter({
   get: quotesGet,
@@ -29,6 +30,7 @@ const quotesRouter = createTRPCRouter({
   requestRevision: quotesRequestRevision,
   submitPO: quotesSubmitPO,
   confirmPO: quotesConfirmPO,
+  uploadPODocument: quotesUploadPODocument,
 });
 
 export default quotesRouter;
