@@ -493,9 +493,10 @@ const QuoteApprovalDialog = ({
                                     setLineItemAdjustments({
                                       ...lineItemAdjustments,
                                       [item.productId]: {
-                                        ...adjustment,
+                                        adjustedPricePerCase: adjustment?.adjustedPricePerCase ?? pricePerCase,
                                         confirmedQuantity: value,
                                         available: value > 0,
+                                        notes: adjustment?.notes,
                                       },
                                     });
                                   }}
@@ -509,11 +510,12 @@ const QuoteApprovalDialog = ({
                                       setLineItemAdjustments({
                                         ...lineItemAdjustments,
                                         [item.productId]: {
-                                          ...adjustment,
-                                          available: e.target.checked,
+                                          adjustedPricePerCase: adjustment?.adjustedPricePerCase ?? pricePerCase,
                                           confirmedQuantity: e.target.checked
                                             ? adjustment?.confirmedQuantity ?? item.quantity
                                             : 0,
+                                          available: e.target.checked,
+                                          notes: adjustment?.notes,
                                         },
                                       });
                                     }}
@@ -534,8 +536,10 @@ const QuoteApprovalDialog = ({
                                     setLineItemAdjustments({
                                       ...lineItemAdjustments,
                                       [item.productId]: {
-                                        ...adjustment,
                                         adjustedPricePerCase: value,
+                                        confirmedQuantity: adjustment?.confirmedQuantity ?? item.quantity,
+                                        available: adjustment?.available ?? true,
+                                        notes: adjustment?.notes,
                                       },
                                     });
                                   }}
