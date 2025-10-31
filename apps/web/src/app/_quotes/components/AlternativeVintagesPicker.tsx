@@ -1,11 +1,12 @@
 'use client';
 
-import { IconCalendar } from '@tabler/icons-react';
+import { IconCalendar, IconPlus } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 
 import Button from '@/app/_ui/components/Button/Button';
 import Checkbox from '@/app/_ui/components/Checkbox/Checkbox';
+import Input from '@/app/_ui/components/Input/Input';
 import Popover from '@/app/_ui/components/Popover/Popover';
 import PopoverContent from '@/app/_ui/components/Popover/PopoverContent';
 import PopoverTrigger from '@/app/_ui/components/Popover/PopoverTrigger';
@@ -31,6 +32,7 @@ const AlternativeVintagesPicker = ({
 }: AlternativeVintagesPickerProps) => {
   const api = useTRPC();
   const [open, setOpen] = useState(false);
+  const [customVintage, setCustomVintage] = useState('');
 
   const { data: vintages, isLoading } = useQuery({
     ...api.products.getVintagesByProduct.queryOptions({ productId }),
@@ -42,6 +44,21 @@ const AlternativeVintagesPicker = ({
       onChange(selectedVintages.filter((v) => v !== vintage));
     } else {
       onChange([...selectedVintages, vintage]);
+    }
+  };
+
+  const handleAddCustomVintage = () => {
+    const trimmedVintage = customVintage.trim();
+    if (trimmedVintage && !selectedVintages.includes(trimmedVintage)) {
+      onChange([...selectedVintages, trimmedVintage]);
+      setCustomVintage('');
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleAddCustomVintage();
     }
   };
 
@@ -62,7 +79,7 @@ const AlternativeVintagesPicker = ({
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-64" align="start">
-        <div className="space-y-2">
+        <div className="space-y-3">
           <Typography variant="labelMd" className="text-xs font-semibold">
             Alternative Vintages
           </Typography>
@@ -70,9 +87,32 @@ const AlternativeVintagesPicker = ({
             variant="bodyXs"
             className="text-text-muted text-xs leading-relaxed"
           >
-            Select vintages you&apos;d also accept for this product
+            Select or add vintages you&apos;d also accept for this product
           </Typography>
 
+          {/* Custom Vintage Input */}
+          <div className="flex gap-2">
+            <Input
+              type="text"
+              size="sm"
+              placeholder="e.g., 2018"
+              value={customVintage}
+              onChange={(e) => setCustomVintage(e.target.value)}
+              onKeyDown={handleKeyDown}
+            />
+            <Button
+              type="button"
+              variant="default"
+              size="sm"
+              onClick={handleAddCustomVintage}
+              isDisabled={!customVintage.trim()}
+              className="shrink-0"
+            >
+              <IconPlus className="h-4 w-4" />
+            </Button>
+          </div>
+
+          {/* Available Vintages List */}
           {isLoading && (
             <div className="text-text-muted py-4 text-center text-xs">
               Loading vintages...
@@ -86,19 +126,24 @@ const AlternativeVintagesPicker = ({
           )}
 
           {!isLoading && vintages && vintages.length > 0 && (
-            <div className="max-h-48 space-y-2 overflow-y-auto">
-              {vintages.map((vintage) => (
-                <label
-                  key={vintage}
-                  className="hover:bg-fill-secondary flex cursor-pointer items-center gap-2 rounded p-2 transition-colors"
-                >
-                  <Checkbox
-                    checked={selectedVintages.includes(vintage)}
-                    onCheckedChange={() => handleToggle(vintage)}
-                  />
-                  <span className="text-sm">{vintage}</span>
-                </label>
-              ))}
+            <div className="space-y-1">
+              <Typography variant="bodyXs" className="text-text-muted text-xs">
+                Quick select:
+              </Typography>
+              <div className="max-h-48 space-y-2 overflow-y-auto">
+                {vintages.map((vintage) => (
+                  <label
+                    key={vintage}
+                    className="hover:bg-fill-secondary flex cursor-pointer items-center gap-2 rounded p-2 transition-colors"
+                  >
+                    <Checkbox
+                      checked={selectedVintages.includes(vintage)}
+                      onCheckedChange={() => handleToggle(vintage)}
+                    />
+                    <span className="text-sm">{vintage}</span>
+                  </label>
+                ))}
+              </div>
             </div>
           )}
 
