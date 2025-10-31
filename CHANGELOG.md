@@ -8,6 +8,43 @@
 * add quote approval workflow with C&C review and PO submission ([ea3d035](https://github.com/craftandculture/Craft-Culture/commit/ea3d035ab1673e6f1f64b6ba30b0aea2f640a7f1))
 * add Quote Approvals navigation link for admin users ([5dca615](https://github.com/craftandculture/Craft-Culture/commit/5dca615c3567b2818034dd3a5c1887bbd00b3a0c))
 * add submit buy request button to quote details dialog ([c7d7ba5](https://github.com/craftandculture/Craft-Culture/commit/c7d7ba55f14dabcf33ac608ce99fa0bf49b883e3))
+* display product details in admin quote approval dialog instead of UUIDs ([f18d256](https://github.com/craftandculture/Craft-Culture/commit/f18d256043d6c5f13fa971c7c38767b032431f95))
+* enable activity bell for user login notifications ([8aead53](https://github.com/craftandculture/Craft-Culture/commit/8aead53325d7eb9f0e54672d51fb0ac44d77ae47))
+* enable manual text input for vintage and alternative vintages ([8365bcd](https://github.com/craftandculture/Craft-Culture/commit/8365bcdc93934793d1088a071f16110601ac4c20))
+* enhance alternative vintages UX and update privacy policy ([7271ca7](https://github.com/craftandculture/Craft-Culture/commit/7271ca7a95258a9bc138ee8d65c89c9d6b5f4782))
+
+### Bug Fixes
+
+* add alternativeVintages field to SaveQuoteDialog interface to fix quote saving ([35fb22d](https://github.com/craftandculture/Craft-Culture/commit/35fb22d5fbaa4f88277394712dbf4a7ed6338f64))
+* add legal pages layout and increase logo size ([f1100e8](https://github.com/craftandculture/Craft-Culture/commit/f1100e869d045269c11c08ebca076a8ef5794df0))
+* add missing status colors for new quote workflow states ([3c2dd14](https://github.com/craftandculture/Craft-Culture/commit/3c2dd14072df78eaf0791f22c18cfa3d7a3880f1))
+* add missing status colors in QuotesList component ([ae62991](https://github.com/craftandculture/Craft-Culture/commit/ae629910c28d3546e21586fc0a514c5fc96d052f))
+* add validation check for undefined quoteData in SaveQuoteDialog ([04c9869](https://github.com/craftandculture/Craft-Culture/commit/04c98697c7d4f232323d088f3537f890de83f830))
+* add vintage fields to getQuoteRequestSchema to fix quote generation ([2a9889a](https://github.com/craftandculture/Craft-Culture/commit/2a9889ae81c9de7b15c16340ef3dac4ed0bc4ac4))
+* allow quote submission for review from draft status ([99cc956](https://github.com/craftandculture/Craft-Culture/commit/99cc95627d7b7fa2600b8d7d0257787521ef1167))
+* change colorRole from success to brand for Button components ([669aa3f](https://github.com/craftandculture/Craft-Culture/commit/669aa3f8b2d1e2dae0150b18d07f20857e09acd6))
+* completely remove ActivityBell component file ([dee8b57](https://github.com/craftandculture/Craft-Culture/commit/dee8b576f528d9a8807d81c89f143e9728349b63))
+* correct revisionSuggestions schema property name ([8dd9e7e](https://github.com/craftandculture/Craft-Culture/commit/8dd9e7e45abfa72496aa1cdbd79cd02a7c5ca29a))
+* filter incomplete line items before passing to SaveQuoteDialog ([45eb1c8](https://github.com/craftandculture/Craft-Culture/commit/45eb1c82f4c226454be7fcf063cde86f40d8d3b8))
+* hide submit button after quote is submitted for review ([c14efbb](https://github.com/craftandculture/Craft-Culture/commit/c14efbbf6bff5300aadb3059c8637b2b7c87db19))
+* improve error logging in quotesSave to expose actual error messages ([78d8ef7](https://github.com/craftandculture/Craft-Culture/commit/78d8ef75495c9f44d6445105dc95555900558977))
+* move admin approval page to correct route location and fix settings page infinite render loop ([e97f318](https://github.com/craftandculture/Craft-Culture/commit/e97f3184baf7a0eb1232713adf0c378f7f604f71))
+* remove ActivityBell component causing deployment failures ([b03a6b1](https://github.com/craftandculture/Craft-Culture/commit/b03a6b1cf4f920b5c6cc1b3d54cb94f36f2a31bc))
+* remove drizzle-kit push from prebuild to fix deployment failures ([fcc7b6a](https://github.com/craftandculture/Craft-Culture/commit/fcc7b6ac3e52791ac7e9b6c689affeb3e22f4b57))
+* replace non-existent UI components with correct ones ([edab20b](https://github.com/craftandculture/Craft-Culture/commit/edab20b2c6f43cb086d6a8d44bf62756caf5973c))
+* resolve TypeScript error in QuoteWorkflowTimeline ([94ef2f7](https://github.com/craftandculture/Craft-Culture/commit/94ef2f707122d14928c9873902352176115f85ff))
+* use useTRPCClient for mutations in QuoteDetailsDialog ([9d88a39](https://github.com/craftandculture/Craft-Culture/commit/9d88a396359a1ca48da1f78030b906094a10edc3))
+
+## [1.71.0](https://github.com/craftandculture/Craft-Culture/compare/v1.70.0...v1.71.0) (2025-10-31)
+
+### Features
+
+* add admin endpoint to fetch all quotes for approval workflow ([b2204e5](https://github.com/craftandculture/Craft-Culture/commit/b2204e5c44aac53685e469bd024eb47e173bc7d4))
+* add admin UI for quote approval workflow ([a8080fd](https://github.com/craftandculture/Craft-Culture/commit/a8080fd647b4ce232fe8b194cecf6bca0aac6699))
+* add alternative vintage selection for quote line items ([f418ba5](https://github.com/craftandculture/Craft-Culture/commit/f418ba5b765858d2176f7e009300836baead3b3a))
+* add quote approval workflow with C&C review and PO submission ([ea3d035](https://github.com/craftandculture/Craft-Culture/commit/ea3d035ab1673e6f1f64b6ba30b0aea2f640a7f1))
+* add Quote Approvals navigation link for admin users ([5dca615](https://github.com/craftandculture/Craft-Culture/commit/5dca615c3567b2818034dd3a5c1887bbd00b3a0c))
+* add submit buy request button to quote details dialog ([c7d7ba5](https://github.com/craftandculture/Craft-Culture/commit/c7d7ba55f14dabcf33ac608ce99fa0bf49b883e3))
 * enable activity bell for user login notifications ([8aead53](https://github.com/craftandculture/Craft-Culture/commit/8aead53325d7eb9f0e54672d51fb0ac44d77ae47))
 * enable manual text input for vintage and alternative vintages ([8365bcd](https://github.com/craftandculture/Craft-Culture/commit/8365bcdc93934793d1088a071f16110601ac4c20))
 * enhance alternative vintages UX and update privacy policy ([7271ca7](https://github.com/craftandculture/Craft-Culture/commit/7271ca7a95258a9bc138ee8d65c89c9d6b5f4782))
