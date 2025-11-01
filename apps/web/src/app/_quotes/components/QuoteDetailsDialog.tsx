@@ -113,6 +113,7 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
         confirmedQuantity?: number;
         originalQuantity?: number;
         adminNotes?: string;
+        adminAlternatives?: string[];
       }>;
       marginConfig?: {
         type: 'percentage' | 'fixed';
@@ -141,6 +142,7 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
           confirmedQuantity?: number;
           originalQuantity?: number;
           adminNotes?: string;
+          adminAlternatives?: string[];
         }
       >,
     );
@@ -539,7 +541,8 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                     {quotePricingData.lineItems.some(
                       (item) =>
                         item.confirmedQuantity !== item.originalQuantity ||
-                        item.adminNotes
+                        item.adminNotes ||
+                        (item.adminAlternatives && item.adminAlternatives.length > 0)
                     ) && (
                       <div className="space-y-2">
                         <Typography variant="bodyXs" className="font-medium">
@@ -548,17 +551,18 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                         {quotePricingData.lineItems.map((pricingItem) => {
                           const hasQuantityChange = pricingItem.confirmedQuantity !== pricingItem.originalQuantity;
                           const hasNotes = !!pricingItem.adminNotes;
+                          const hasAlternatives = pricingItem.adminAlternatives && pricingItem.adminAlternatives.length > 0;
 
-                          if (!hasQuantityChange && !hasNotes) return null;
+                          if (!hasQuantityChange && !hasNotes && !hasAlternatives) return null;
 
                           const product = productMap[pricingItem.productId];
 
                           return (
                             <div
                               key={pricingItem.productId}
-                              className="rounded-lg border border-border-muted bg-background-primary p-3"
+                              className="rounded-lg border border-border-muted bg-background-primary p-3 space-y-2"
                             >
-                              <Typography variant="bodyXs" className="mb-1 font-medium">
+                              <Typography variant="bodyXs" className="font-medium">
                                 {product?.name || pricingItem.productId}
                               </Typography>
                               {hasQuantityChange && (
@@ -567,9 +571,21 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                                 </Typography>
                               )}
                               {hasNotes && (
-                                <Typography variant="bodyXs" className="mt-1 italic">
+                                <Typography variant="bodyXs" className="italic">
                                   &ldquo;{pricingItem.adminNotes}&rdquo;
                                 </Typography>
+                              )}
+                              {hasAlternatives && (
+                                <div className="mt-2 pt-2 border-t border-border-muted">
+                                  <Typography variant="bodyXs" className="font-semibold text-text-success mb-1">
+                                    💡 Alternative Options:
+                                  </Typography>
+                                  {pricingItem.adminAlternatives!.map((alt, altIdx) => (
+                                    <Typography key={altIdx} variant="bodyXs" colorRole="muted" className="ml-4">
+                                      • {alt}
+                                    </Typography>
+                                  ))}
+                                </div>
                               )}
                             </div>
                           );
@@ -710,6 +726,31 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                                     <Typography variant="bodyXs" className="whitespace-pre-wrap">
                                       {pricing.adminNotes}
                                     </Typography>
+                                  </div>
+                                )}
+
+                                {/* Admin Alternative Suggestions */}
+                                {pricing.adminAlternatives && pricing.adminAlternatives.length > 0 &&
+                                  (quote.status === 'cc_confirmed' ||
+                                   quote.status === 'po_submitted' ||
+                                   quote.status === 'po_confirmed') && (
+                                  <div className="mt-2 rounded-lg border border-border-success bg-fill-success/10 p-3">
+                                    <div className="flex items-center gap-1.5 mb-2">
+                                      <span className="text-sm">💡</span>
+                                      <Typography variant="bodyXs" className="font-semibold text-text-success">
+                                        Alternative Options Available:
+                                      </Typography>
+                                    </div>
+                                    <div className="space-y-1.5">
+                                      {pricing.adminAlternatives.map((alt, altIdx) => (
+                                        <div key={altIdx} className="flex items-start gap-2">
+                                          <span className="text-text-success font-bold text-xs mt-0.5">•</span>
+                                          <Typography variant="bodyXs" className="flex-1">
+                                            {alt}
+                                          </Typography>
+                                        </div>
+                                      ))}
+                                    </div>
                                   </div>
                                 )}
                               </>

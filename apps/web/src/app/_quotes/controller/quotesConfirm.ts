@@ -75,6 +75,7 @@ const quotesConfirm = adminProcedure
           confirmedQuantity?: number;
           available: boolean;
           notes?: string;
+          adminAlternatives?: string[];
         };
 
         // Update line item pricing with adjustments
@@ -96,6 +97,7 @@ const quotesConfirm = adminProcedure
               confirmedQuantity: quantity,
               originalQuantity: item.quantity,
               adminNotes: adjustment.notes,
+              adminAlternatives: adjustment.adminAlternatives,
             };
           })
           .filter((item): item is NonNullable<typeof item> => item !== null); // Remove unavailable items
