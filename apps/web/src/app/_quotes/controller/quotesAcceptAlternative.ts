@@ -103,6 +103,46 @@ const quotesAcceptAlternative = protectedProcedure
         });
       }
 
+      // Handle removing accepted alternative (alternativeIndex === -1)
+      if (alternativeIndex === -1) {
+        // Remove the accepted alternative and revert to original pricing
+        const updatedLineItem = {
+          ...lineItem,
+          acceptedAlternative: undefined,
+          // Revert to original pricing if available
+          basePriceUsd: lineItem.originalQuantity
+            ? lineItem.lineItemTotalUsd / lineItem.originalQuantity
+            : lineItem.basePriceUsd,
+        };
+
+        updatedLineItem.lineItemTotalUsd =
+          updatedLineItem.basePriceUsd * (lineItem.confirmedQuantity || lineItem.originalQuantity || 0);
+
+        const updatedLineItems = [...lineItems];
+        updatedLineItems[lineItemIndex] = updatedLineItem;
+
+        const newTotalUsd = updatedLineItems.reduce(
+          (sum, item) => sum + item.lineItemTotalUsd,
+          0,
+        );
+
+        const [updatedQuote] = await db
+          .update(quotes)
+          .set({
+            quoteData: {
+              ...quoteData,
+              lineItems: updatedLineItems,
+            },
+            totalUsd: newTotalUsd,
+            totalAed: newTotalUsd * 3.67,
+          })
+          .where(eq(quotes.id, quoteId))
+          .returning();
+
+        return updatedQuote;
+      }
+
+      // Validate alternative exists
       if (!lineItem.adminAlternatives || !lineItem.adminAlternatives[alternativeIndex]) {
         throw new TRPCError({
           code: 'NOT_FOUND',

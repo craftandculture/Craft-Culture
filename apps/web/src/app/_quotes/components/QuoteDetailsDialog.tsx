@@ -191,6 +191,27 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
     }
   };
 
+  // Accept alternative mutation
+  const acceptAlternativeMutation = useMutation({
+    mutationFn: async ({ productId, alternativeIndex }: { productId: string; alternativeIndex: number }) => {
+      if (!quote) return;
+      return trpcClient.quotes.acceptAlternative.mutate({
+        quoteId: quote.id,
+        productId,
+        alternativeIndex,
+      });
+    },
+    onSuccess: () => {
+      toast.success('Alternative product accepted');
+      void queryClient.invalidateQueries({ queryKey: ['quote', quote?.id] });
+    },
+    onError: (error) => {
+      toast.error(
+        `Failed to accept alternative: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      );
+    },
+  });
+
   // Upload PO document mutation
   const uploadPODocumentMutation = useMutation({
     mutationFn: async (file: File) => {
@@ -804,45 +825,103 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                                         Alternative Products Available: ({pricing.adminAlternatives.length})
                                       </Typography>
                                     </div>
-                                    <div className="space-y-2">
-                                      {pricing.adminAlternatives.map((alt, altIdx) => (
-                                        <div key={altIdx} className="rounded-md bg-white border border-border-success p-3">
-                                          <Typography variant="bodySm" className="font-bold mb-2">
-                                            {alt.productName || '[NO PRODUCT NAME]'}
-                                          </Typography>
-                                          <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                                    <div className="space-y-3">
+                                      {pricing.adminAlternatives.map((alt, altIdx) => {
+                                        const isAccepted = pricing.acceptedAlternative?.productName === alt.productName;
+
+                                        return (
+                                        <div
+                                          key={altIdx}
+                                          className={`rounded-lg border-2 p-4 transition-all ${
+                                            isAccepted
+                                              ? 'border-border-success bg-fill-success/20 shadow-md'
+                                              : 'border-border-muted bg-white hover:border-border-success'
+                                          }`}
+                                        >
+                                          <div className="flex items-start justify-between gap-3 mb-3">
+                                            <Typography variant="bodyMd" className="font-bold">
+                                              {alt.productName || '[NO PRODUCT NAME]'}
+                                            </Typography>
+                                            {isAccepted && (
+                                              <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-fill-success text-white text-xs font-bold">
+                                                ✓ Selected
+                                              </span>
+                                            )}
+                                          </div>
+
+                                          <div className="grid grid-cols-3 gap-3 mb-3">
                                             <div>
-                                              <Typography variant="bodyXs" colorRole="muted" className="uppercase tracking-wide">
-                                                Price
+                                              <Typography variant="bodyXs" colorRole="muted" className="uppercase tracking-wide mb-1">
+                                                Price /Case
                                               </Typography>
-                                              <Typography variant="bodyXs" className="font-semibold">
+                                              <Typography variant="bodySm" className="font-bold">
                                                 {alt.pricePerCase ? formatPrice(
                                                   displayCurrency === 'AED'
                                                     ? convertUsdToAed(alt.pricePerCase)
                                                     : alt.pricePerCase,
                                                   displayCurrency
-                                                ) : '[NO PRICE]'} /case
+                                                ) : '[NO PRICE]'}
                                               </Typography>
                                             </div>
                                             <div>
-                                              <Typography variant="bodyXs" colorRole="muted" className="uppercase tracking-wide">
+                                              <Typography variant="bodyXs" colorRole="muted" className="uppercase tracking-wide mb-1">
                                                 Available
                                               </Typography>
-                                              <Typography variant="bodyXs" className="font-semibold">
+                                              <Typography variant="bodySm" className="font-semibold">
                                                 {alt.quantityAvailable || '[NO QTY]'} cases
                                               </Typography>
                                             </div>
-                                            <div className="col-span-2">
-                                              <Typography variant="bodyXs" colorRole="muted" className="uppercase tracking-wide">
-                                                Case Configuration
+                                            <div>
+                                              <Typography variant="bodyXs" colorRole="muted" className="uppercase tracking-wide mb-1">
+                                                Case Config
                                               </Typography>
-                                              <Typography variant="bodyXs" className="font-semibold">
+                                              <Typography variant="bodySm" className="font-semibold">
                                                 {alt.bottlesPerCase || '[NO BOTTLES]'} × {alt.bottleSize || '[NO SIZE]'}
                                               </Typography>
                                             </div>
                                           </div>
+
+                                          {/* Action buttons - only show when quote is confirmed (before PO submission) */}
+                                          {quote.status === 'cc_confirmed' && (
+                                            <div className="flex gap-2 pt-3 border-t border-border-muted">
+                                              {isAccepted ? (
+                                                <Button
+                                                  variant="outline"
+                                                  colorRole="danger"
+                                                  size="sm"
+                                                  onClick={() => acceptAlternativeMutation.mutate({
+                                                    productId: item.productId,
+                                                    alternativeIndex: -1  // -1 means remove acceptance
+                                                  })}
+                                                  isDisabled={acceptAlternativeMutation.isPending}
+                                                  className="flex-1"
+                                                >
+                                                  <ButtonContent>
+                                                    {acceptAlternativeMutation.isPending ? 'Removing...' : 'Remove Selection'}
+                                                  </ButtonContent>
+                                                </Button>
+                                              ) : (
+                                                <Button
+                                                  variant="default"
+                                                  colorRole="success"
+                                                  size="sm"
+                                                  onClick={() => acceptAlternativeMutation.mutate({
+                                                    productId: item.productId,
+                                                    alternativeIndex: altIdx
+                                                  })}
+                                                  isDisabled={acceptAlternativeMutation.isPending}
+                                                  className="flex-1"
+                                                >
+                                                  <ButtonContent>
+                                                    {acceptAlternativeMutation.isPending ? 'Accepting...' : 'Accept This Alternative'}
+                                                  </ButtonContent>
+                                                </Button>
+                                              )}
+                                            </div>
+                                          )}
                                         </div>
-                                      ))}
+                                        );
+                                      })}
                                     </div>
                                   </div>
                                 )}
