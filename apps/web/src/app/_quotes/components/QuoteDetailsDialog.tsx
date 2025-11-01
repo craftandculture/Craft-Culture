@@ -769,7 +769,11 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                                       </Typography>
                                     </div>
                                     <div className="space-y-2">
-                                      {pricing.adminAlternatives.map((alt, altIdx) => (
+                                      {(() => {
+                                        console.log('DEBUG - pricing.adminAlternatives:', JSON.stringify(pricing.adminAlternatives, null, 2));
+                                        return pricing.adminAlternatives.map((alt, altIdx) => {
+                                          console.log(`DEBUG - alt ${altIdx}:`, JSON.stringify(alt, null, 2));
+                                          return (
                                         <div key={altIdx} className="rounded-md bg-white border border-border-success p-3">
                                           <Typography variant="bodySm" className="font-bold mb-2">
                                             {alt.productName}
@@ -806,7 +810,9 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                                             </div>
                                           </div>
                                         </div>
-                                      ))}
+                                          );
+                                        });
+                                      })()}
                                     </div>
                                   </div>
                                 )}
