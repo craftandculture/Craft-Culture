@@ -765,18 +765,17 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                                     <div className="flex items-center gap-1.5 mb-3">
                                       <span className="text-base">💡</span>
                                       <Typography variant="bodySm" className="font-bold text-text-success">
-                                        Alternative Products Available:
+                                        Alternative Products Available: ({pricing.adminAlternatives.length})
                                       </Typography>
                                     </div>
+                                    <div className="mb-3 p-2 bg-yellow-100 border border-yellow-400 rounded text-xs">
+                                      <strong>DEBUG:</strong> {JSON.stringify(pricing.adminAlternatives)}
+                                    </div>
                                     <div className="space-y-2">
-                                      {(() => {
-                                        console.log('DEBUG - pricing.adminAlternatives:', JSON.stringify(pricing.adminAlternatives, null, 2));
-                                        return pricing.adminAlternatives.map((alt, altIdx) => {
-                                          console.log(`DEBUG - alt ${altIdx}:`, JSON.stringify(alt, null, 2));
-                                          return (
+                                      {pricing.adminAlternatives.map((alt, altIdx) => (
                                         <div key={altIdx} className="rounded-md bg-white border border-border-success p-3">
                                           <Typography variant="bodySm" className="font-bold mb-2">
-                                            {alt.productName}
+                                            {alt.productName || '[NO PRODUCT NAME]'}
                                           </Typography>
                                           <div className="grid grid-cols-2 gap-x-4 gap-y-1">
                                             <div>
@@ -784,12 +783,12 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                                                 Price
                                               </Typography>
                                               <Typography variant="bodyXs" className="font-semibold">
-                                                {formatPrice(
+                                                {alt.pricePerCase ? formatPrice(
                                                   displayCurrency === 'AED'
                                                     ? convertUsdToAed(alt.pricePerCase)
                                                     : alt.pricePerCase,
                                                   displayCurrency
-                                                )} /case
+                                                ) : '[NO PRICE]'} /case
                                               </Typography>
                                             </div>
                                             <div>
@@ -797,7 +796,7 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                                                 Available
                                               </Typography>
                                               <Typography variant="bodyXs" className="font-semibold">
-                                                {alt.quantityAvailable} cases
+                                                {alt.quantityAvailable || '[NO QTY]'} cases
                                               </Typography>
                                             </div>
                                             <div className="col-span-2">
@@ -805,14 +804,12 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                                                 Case Configuration
                                               </Typography>
                                               <Typography variant="bodyXs" className="font-semibold">
-                                                {alt.bottlesPerCase} × {alt.bottleSize}
+                                                {alt.bottlesPerCase || '[NO BOTTLES]'} × {alt.bottleSize || '[NO SIZE]'}
                                               </Typography>
                                             </div>
                                           </div>
                                         </div>
-                                          );
-                                        });
-                                      })()}
+                                      ))}
                                     </div>
                                   </div>
                                 )}
