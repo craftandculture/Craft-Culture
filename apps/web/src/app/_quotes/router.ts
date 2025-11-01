@@ -1,5 +1,6 @@
 import { createTRPCRouter } from '@/lib/trpc/trpc';
 
+import quotesAcceptAlternative from './controller/quotesAcceptAlternative';
 import quotesConfirm from './controller/quotesConfirm';
 import quotesConfirmPO from './controller/quotesConfirmPO';
 import quotesDelete from './controller/quotesDelete';
@@ -31,6 +32,7 @@ const quotesRouter = createTRPCRouter({
   submitPO: quotesSubmitPO,
   confirmPO: quotesConfirmPO,
   uploadPODocument: quotesUploadPODocument,
+  acceptAlternative: quotesAcceptAlternative,
 });
 
 export default quotesRouter;
