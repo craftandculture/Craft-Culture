@@ -110,6 +110,9 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
         productId: string;
         lineItemTotalUsd: number;
         basePriceUsd?: number;
+        confirmedQuantity?: number;
+        originalQuantity?: number;
+        adminNotes?: string;
       }>;
       marginConfig?: {
         type: 'percentage' | 'fixed';
@@ -130,7 +133,16 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
         acc[item.productId] = item;
         return acc;
       },
-      {} as Record<string, { lineItemTotalUsd: number; basePriceUsd?: number }>,
+      {} as Record<
+        string,
+        {
+          lineItemTotalUsd: number;
+          basePriceUsd?: number;
+          confirmedQuantity?: number;
+          originalQuantity?: number;
+          adminNotes?: string;
+        }
+      >,
     );
   }, [quotePricingData]);
 
@@ -268,9 +280,11 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
       const pdfLineItems = lineItems.map((item) => {
         const product = productMap[item.productId];
         const pricing = pricingMap[item.productId];
-        const pricePerCase = pricing?.lineItemTotalUsd
-          ? pricing.lineItemTotalUsd / item.quantity
-          : 0;
+
+        // Use confirmed quantity and price if available (after admin approval)
+        const displayQuantity = pricing?.confirmedQuantity ?? item.quantity;
+        const pricePerCase = pricing?.basePriceUsd ??
+          (pricing?.lineItemTotalUsd ? pricing.lineItemTotalUsd / item.quantity : 0);
         const lineTotal = pricing?.lineItemTotalUsd || 0;
 
         // Convert to display currency if needed
@@ -291,7 +305,7 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
           producer: product?.producer || null,
           region: product?.region || null,
           year: product?.year ? String(product.year) : null,
-          quantity: item.quantity,
+          quantity: displayQuantity,
           bottlesPerCase,
           pricePerCase: displayPricePerCase,
           lineTotal: displayLineTotal,
@@ -519,9 +533,11 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                 {lineItems.map((item, index) => {
                   const product = productMap[item.productId];
                   const pricing = pricingMap[item.productId];
-                  const pricePerCase = pricing?.lineItemTotalUsd
-                    ? pricing.lineItemTotalUsd / item.quantity
-                    : 0;
+
+                  // Use confirmed quantity and price if available (after admin approval)
+                  const displayQuantity = pricing?.confirmedQuantity ?? item.quantity;
+                  const pricePerCase = pricing?.basePriceUsd ??
+                    (pricing?.lineItemTotalUsd ? pricing.lineItemTotalUsd / item.quantity : 0);
                   const lineItemTotal = pricing?.lineItemTotalUsd || 0;
 
                   return (
@@ -566,8 +582,13 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                                     Quantity
                                   </Typography>
                                   <Typography variant="bodySm" className="font-semibold">
-                                    {item.quantity} {item.quantity === 1 ? 'case' : 'cases'}
+                                    {displayQuantity} {displayQuantity === 1 ? 'case' : 'cases'}
                                   </Typography>
+                                  {pricing?.confirmedQuantity && pricing.confirmedQuantity !== pricing.originalQuantity && (
+                                    <Typography variant="bodyXs" colorRole="muted" className="line-through mt-0.5">
+                                      Was: {pricing.originalQuantity}
+                                    </Typography>
+                                  )}
                                 </div>
                                 <div>
                                   <Typography variant="bodyXs" colorRole="muted" className="mb-0.5">
@@ -639,7 +660,7 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                               Quantity
                             </Typography>
                             <Typography variant="bodySm" className="font-semibold">
-                              {item.quantity}
+                              {displayQuantity}
                             </Typography>
                           </div>
                         </div>
