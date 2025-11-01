@@ -52,7 +52,7 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
 
   // Fetch fresh quote data to ensure we have latest totals and pricing
   const { data: freshQuoteData } = useQuery({
-    ...api.quotes.getOne.queryOptions({ quoteId: quote?.id ?? '' }),
+    ...api.quotes.getOne.queryOptions({ id: quote?.id ?? '' }),
     enabled: !!quote?.id && open,
   });
 
@@ -230,7 +230,7 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
       toast.success(variables.alternativeIndex === -1 ? 'Alternative removed' : 'Alternative product accepted');
       // Invalidate the individual quote query to refresh totals
       void queryClient.invalidateQueries({
-        queryKey: [['quotes', 'getOne'], { input: { quoteId: quote?.id } }]
+        queryKey: [['quotes', 'getOne'], { input: { id: quote?.id } }]
       });
       // Also invalidate the quotes list
       void queryClient.invalidateQueries({ queryKey: [['quotes', 'getMany']] });
