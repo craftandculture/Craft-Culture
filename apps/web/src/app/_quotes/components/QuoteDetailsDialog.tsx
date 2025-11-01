@@ -120,6 +120,14 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
           bottleSize: string;
           quantityAvailable: number;
         }>;
+        acceptedAlternative?: {
+          productName: string;
+          pricePerCase: number;
+          bottlesPerCase: number;
+          bottleSize: string;
+          quantityAvailable: number;
+          acceptedAt: string;
+        };
       }>;
       marginConfig?: {
         type: 'percentage' | 'fixed';
@@ -155,6 +163,14 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
             bottleSize: string;
             quantityAvailable: number;
           }>;
+          acceptedAlternative?: {
+            productName: string;
+            pricePerCase: number;
+            bottlesPerCase: number;
+            bottleSize: string;
+            quantityAvailable: number;
+            acceptedAt: string;
+          };
         }
       >,
     );
