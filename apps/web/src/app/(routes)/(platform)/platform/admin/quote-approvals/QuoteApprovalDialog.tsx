@@ -758,6 +758,7 @@ const QuoteApprovalDialog = ({
                               onKeyDown={(e) => {
                                 if (e.key === 'Enter' && newAlternative[item.productId]?.trim()) {
                                   e.preventDefault();
+                                  const trimmedValue = newAlternative[item.productId]!.trim();
                                   const currentAlternatives = adjustment?.adminAlternatives || [];
                                   setLineItemAdjustments({
                                     ...lineItemAdjustments,
@@ -766,7 +767,7 @@ const QuoteApprovalDialog = ({
                                       confirmedQuantity: adjustment?.confirmedQuantity ?? item.quantity,
                                       available: adjustment?.available ?? true,
                                       notes: adjustment?.notes,
-                                      adminAlternatives: [...currentAlternatives, newAlternative[item.productId].trim()],
+                                      adminAlternatives: [...currentAlternatives, trimmedValue],
                                     },
                                   });
                                   setNewAlternative({
@@ -784,6 +785,7 @@ const QuoteApprovalDialog = ({
                               size="sm"
                               onClick={() => {
                                 if (newAlternative[item.productId]?.trim()) {
+                                  const trimmedValue = newAlternative[item.productId]!.trim();
                                   const currentAlternatives = adjustment?.adminAlternatives || [];
                                   setLineItemAdjustments({
                                     ...lineItemAdjustments,
@@ -792,7 +794,7 @@ const QuoteApprovalDialog = ({
                                       confirmedQuantity: adjustment?.confirmedQuantity ?? item.quantity,
                                       available: adjustment?.available ?? true,
                                       notes: adjustment?.notes,
-                                      adminAlternatives: [...currentAlternatives, newAlternative[item.productId].trim()],
+                                      adminAlternatives: [...currentAlternatives, trimmedValue],
                                     },
                                   });
                                   setNewAlternative({
