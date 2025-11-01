@@ -22,7 +22,6 @@ import DialogDescription from '@/app/_ui/components/Dialog/DialogDescription';
 import DialogFooter from '@/app/_ui/components/Dialog/DialogFooter';
 import DialogHeader from '@/app/_ui/components/Dialog/DialogHeader';
 import DialogTitle from '@/app/_ui/components/Dialog/DialogTitle';
-import Divider from '@/app/_ui/components/Divider/Divider';
 import Input from '@/app/_ui/components/Input/Input';
 import TextArea from '@/app/_ui/components/TextArea/TextArea';
 import Typography from '@/app/_ui/components/Typography/Typography';
@@ -366,7 +365,7 @@ const QuoteApprovalDialog = ({
 
             {/* Line Items - Detailed Table View */}
             <div>
-              <div className="mb-4 flex items-center justify-between">
+              <div className="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
                   <Typography variant="bodyLg" className="font-bold">
                     Order Details
@@ -375,14 +374,28 @@ const QuoteApprovalDialog = ({
                     {lineItems.length} {lineItems.length === 1 ? 'item' : 'items'}
                   </Typography>
                 </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setDisplayCurrency(displayCurrency === 'USD' ? 'AED' : 'USD')}
-                  className="h-9 px-4 font-semibold hover:bg-fill-brand/10 hover:text-text-brand hover:border-border-brand transition-all"
-                >
-                  <ButtonContent>{displayCurrency} → {displayCurrency === 'USD' ? 'AED' : 'USD'}</ButtonContent>
-                </Button>
+                <div className="inline-flex items-center rounded-lg bg-fill-muted/50 p-1 border border-border-muted">
+                  <button
+                    onClick={() => setDisplayCurrency('USD')}
+                    className={`px-4 py-2 rounded-md font-semibold text-sm transition-all duration-200 ${
+                      displayCurrency === 'USD'
+                        ? 'bg-white text-text-brand shadow-sm border border-border-muted'
+                        : 'text-text-muted hover:text-text'
+                    }`}
+                  >
+                    USD
+                  </button>
+                  <button
+                    onClick={() => setDisplayCurrency('AED')}
+                    className={`px-4 py-2 rounded-md font-semibold text-sm transition-all duration-200 ${
+                      displayCurrency === 'AED'
+                        ? 'bg-white text-text-brand shadow-sm border border-border-muted'
+                        : 'text-text-muted hover:text-text'
+                    }`}
+                  >
+                    AED
+                  </button>
+                </div>
               </div>
 
               {quote.status === 'under_cc_review' && (
@@ -450,34 +463,34 @@ const QuoteApprovalDialog = ({
                       {product ? (
                         <>
                           {/* Product Info */}
-                          <div className="col-span-5 space-y-2">
-                            <Typography variant="bodyMd" className="font-bold group-hover:text-text-brand transition-colors">
+                          <div className="col-span-5 space-y-2 pr-4">
+                            <Typography variant="bodyMd" className="font-bold group-hover:text-text-brand transition-colors line-clamp-2">
                               {product.name}
                             </Typography>
-                            <div className="flex flex-wrap gap-x-3 gap-y-1">
+                            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                               {product.producer && (
-                                <Typography variant="bodySm" colorRole="muted" className="font-medium">
+                                <Typography variant="bodySm" colorRole="muted" className="font-medium truncate max-w-[200px]">
                                   {product.producer}
                                 </Typography>
                               )}
                               {product.year && (
-                                <Typography variant="bodySm" colorRole="muted">
+                                <Typography variant="bodySm" colorRole="muted" className="flex-shrink-0">
                                   • {product.year}
                                 </Typography>
                               )}
                               {item.vintage && (
-                                <Typography variant="bodySm" colorRole="muted">
+                                <Typography variant="bodySm" colorRole="muted" className="flex-shrink-0">
                                   • Vintage {item.vintage}
                                 </Typography>
                               )}
                             </div>
-                            <div className="inline-flex items-center gap-2 rounded-md bg-fill-muted/50 px-2 py-1">
-                              <Typography variant="bodyXs" colorRole="muted" className="font-mono font-semibold">
+                            <div className="inline-flex items-center gap-2 rounded-md bg-fill-muted/50 px-2.5 py-1">
+                              <Typography variant="bodyXs" colorRole="muted" className="font-mono font-semibold text-[10px]">
                                 {product.lwin18}
                               </Typography>
                             </div>
                             {isReviewMode && adjustment && !adjustment.available && (
-                              <div className="inline-flex items-center gap-1.5 rounded-lg bg-fill-danger/10 border border-border-danger px-3 py-1.5">
+                              <div className="inline-flex items-center gap-1.5 rounded-lg bg-fill-danger/10 border border-border-danger px-3 py-1.5 mt-2">
                                 <span className="text-base">⚠️</span>
                                 <Typography variant="bodySm" colorRole="danger" className="font-bold">
                                   Out of Stock
@@ -631,197 +644,240 @@ const QuoteApprovalDialog = ({
             </div>
 
             {/* Workflow Actions - Collapsible Section */}
-            <div className="rounded-xl border-2 border-border-muted shadow-sm overflow-hidden">
+            <div className="rounded-xl border border-border-muted bg-white shadow-md overflow-hidden">
               <button
                 type="button"
                 onClick={() => setShowWorkflow(!showWorkflow)}
-                className="w-full px-6 py-4 flex items-center justify-between hover:bg-fill-muted/50 transition-all duration-200 group"
+                className="w-full px-6 py-5 flex items-center justify-between bg-gradient-to-r from-fill-muted/20 to-fill-muted/40 hover:from-fill-muted/30 hover:to-fill-muted/50 transition-all duration-300 group border-b border-border-muted"
               >
-                <div className="flex items-center gap-3">
-                  <Typography variant="bodyMd" className="font-bold group-hover:text-text-brand transition-colors">
-                    Workflow & Actions
-                  </Typography>
+                <div className="flex items-center gap-4">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-fill-brand/10 group-hover:bg-fill-brand/20 transition-colors">
+                    <span className="text-lg">📋</span>
+                  </div>
+                  <div className="text-left">
+                    <Typography variant="bodyLg" className="font-bold group-hover:text-text-brand transition-colors">
+                      Workflow & Actions
+                    </Typography>
+                    {(quote.status === 'buy_request_submitted' ||
+                      quote.status === 'under_cc_review' ||
+                      quote.status === 'po_submitted') && (
+                      <Typography variant="bodyXs" colorRole="muted" className="mt-0.5">
+                        Action required to proceed
+                      </Typography>
+                    )}
+                  </div>
                   {(quote.status === 'buy_request_submitted' ||
                     quote.status === 'under_cc_review' ||
                     quote.status === 'po_submitted') && (
-                    <span className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-fill-brand to-fill-brand/80 px-3 py-1 text-xs font-bold text-white shadow-sm animate-pulse">
-                      <span className="h-1.5 w-1.5 rounded-full bg-white" />
+                    <span className="ml-2 inline-flex h-2 w-2 rounded-full bg-fill-brand animate-pulse" />
+                  )}
+                </div>
+                <div className="flex items-center gap-3">
+                  {(quote.status === 'buy_request_submitted' ||
+                    quote.status === 'under_cc_review' ||
+                    quote.status === 'po_submitted') && (
+                    <span className="hidden sm:inline-flex items-center gap-2 rounded-full bg-fill-brand px-3 py-1.5 text-xs font-bold text-white">
                       Action Required
                     </span>
                   )}
-                </div>
-                <div className="flex items-center gap-2">
-                  <Typography variant="bodySm" colorRole="muted" className="font-semibold uppercase tracking-wide">
-                    {showWorkflow ? 'Hide' : 'Show'}
-                  </Typography>
-                  <span className={`transform transition-transform duration-200 ${showWorkflow ? 'rotate-180' : ''}`}>
-                    ▼
-                  </span>
+                  <div className={`flex h-8 w-8 items-center justify-center rounded-full bg-fill-muted/50 group-hover:bg-fill-brand/10 transition-all duration-300 ${showWorkflow ? 'rotate-180' : ''}`}>
+                    <span className="text-sm text-text-muted group-hover:text-text-brand">▼</span>
+                  </div>
                 </div>
               </button>
 
               {showWorkflow && (
-                <div className="border-t-2 border-border-muted bg-fill-muted/20 p-6 space-y-6">
+                <div className="bg-gradient-to-b from-fill-muted/10 to-transparent">
                   {/* Workflow Timeline */}
-                  <div className="rounded-lg bg-white p-4 shadow-sm border border-border-muted">
-                    <QuoteWorkflowTimeline quote={quote} />
+                  <div className="p-6 pb-4">
+                    <div className="rounded-xl bg-white p-5 shadow-sm border border-border-muted">
+                      <QuoteWorkflowTimeline quote={quote} />
+                    </div>
                   </div>
 
-                  <Divider />
+                  {/* Visual Separator */}
+                  <div className="px-6">
+                    <div className="border-t border-border-muted" />
+                  </div>
 
                   {/* Action Forms */}
-                  {quote.status === 'buy_request_submitted' && (
-              <div className="space-y-4 rounded-lg bg-white p-5 shadow-sm border border-border-muted">
-                <Typography variant="bodyMd" className="font-bold">
-                  Start Review
-                </Typography>
-                <div>
-                  <Typography variant="bodySm" className="mb-2 font-semibold">
-                    Review Notes <span className="text-text-muted font-normal">(optional)</span>
-                  </Typography>
-                  <TextArea
-                    id="ccNotes"
-                    value={ccNotes}
-                    onChange={(e) => setCcNotes(e.target.value)}
-                    placeholder="Add any notes about this review..."
-                    rows={3}
-                    className="border-2 focus:border-border-brand focus:ring-2 focus:ring-fill-brand/20 transition-all"
-                  />
-                </div>
-              </div>
-            )}
-
-            {quote.status === 'under_cc_review' && !showRevisionForm && (
-              <div className="space-y-4 rounded-lg bg-white p-5 shadow-sm border border-border-muted">
-                <Typography variant="bodyMd" className="font-bold">
-                  Confirmation Notes
-                </Typography>
-                <TextArea
-                  value={confirmationNotes}
-                  onChange={(e) => setConfirmationNotes(e.target.value)}
-                  placeholder="Add any notes about this confirmation..."
-                  rows={3}
-                  className="border-2 focus:border-border-brand focus:ring-2 focus:ring-fill-brand/20 transition-all"
-                />
-              </div>
-            )}
-
-            {showRevisionForm && (
-              <div className="space-y-4 rounded-lg bg-white p-5 shadow-sm border-2 border-border-danger">
-                <Typography variant="bodyMd" className="font-bold text-text-danger">
-                  Request Revision
-                </Typography>
-                <div>
-                  <Typography variant="bodySm" className="mb-2 font-semibold">
-                    Revision Reason <span className="text-text-danger">*</span>
-                  </Typography>
-                  <TextArea
-                    id="revisionReason"
-                    value={revisionReason}
-                    onChange={(e) => setRevisionReason(e.target.value)}
-                    placeholder="Explain what needs to be revised..."
-                    rows={4}
-                    className="border-2 focus:border-border-danger focus:ring-2 focus:ring-fill-danger/20 transition-all"
-                  />
-                </div>
-              </div>
-            )}
-
-            {quote.status === 'po_submitted' && (
-              <div className="space-y-5 rounded-lg bg-white p-5 shadow-sm border border-border-muted">
-                <Typography variant="bodyMd" className="font-bold">
-                  PO Information
-                </Typography>
-                <div className="rounded-lg bg-gradient-to-br from-fill-muted/30 to-fill-muted/50 p-5 space-y-4 border border-border-muted">
-                  <div>
-                    <Typography variant="bodyXs" colorRole="muted" className="uppercase tracking-wide font-semibold mb-1">
-                      PO Number
-                    </Typography>
-                    <Typography variant="bodyLg" className="font-bold">
-                      {quote.poNumber}
-                    </Typography>
-                  </div>
-                  {quote.deliveryLeadTime && (
-                    <div>
-                      <Typography variant="bodyXs" colorRole="muted" className="uppercase tracking-wide font-semibold mb-1">
-                        Delivery Lead Time
-                      </Typography>
-                      <Typography variant="bodyLg" className="font-bold">
-                        {quote.deliveryLeadTime}
-                      </Typography>
-                    </div>
-                  )}
-                  {quote.poAttachmentUrl && (
-                    <div>
-                      <Typography variant="bodyXs" colorRole="muted" className="uppercase tracking-wide font-semibold mb-2">
-                        Attachment
-                      </Typography>
-                      <div className="flex items-center gap-3">
-                        <a
-                          href={quote.poAttachmentUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-text-brand hover:text-text-brand-hover hover:underline font-semibold transition-colors"
-                        >
-                          View Document
-                        </a>
-                        <span className="text-text-muted">•</span>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            const link = document.createElement('a');
-                            link.href = quote.poAttachmentUrl!;
-                            link.download = `PO-${quote.poNumber}.pdf`;
-                            document.body.appendChild(link);
-                            link.click();
-                            document.body.removeChild(link);
-                            toast.success('Download started');
-                          }}
-                          className="hover:bg-fill-brand/10 transition-all"
-                        >
-                          <ButtonContent iconLeft={IconDownload}>
-                            Download
-                          </ButtonContent>
-                        </Button>
+                  <div className="p-6 pt-5">
+                    {quote.status === 'buy_request_submitted' && (
+                      <div className="rounded-xl bg-white p-6 shadow-sm border border-border-muted">
+                        <div className="flex items-center gap-3 mb-5">
+                          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-fill-brand/10">
+                            <span className="text-base">🚀</span>
+                          </div>
+                          <Typography variant="bodyLg" className="font-bold">
+                            Start Review
+                          </Typography>
+                        </div>
+                        <div>
+                          <Typography variant="bodySm" className="mb-3 font-semibold">
+                            Review Notes <span className="text-text-muted font-normal text-xs">(optional)</span>
+                          </Typography>
+                          <TextArea
+                            id="ccNotes"
+                            value={ccNotes}
+                            onChange={(e) => setCcNotes(e.target.value)}
+                            placeholder="Add any notes about this review..."
+                            rows={4}
+                            className="border-2 focus:border-border-brand focus:ring-2 focus:ring-fill-brand/20 transition-all"
+                          />
+                        </div>
                       </div>
-                    </div>
-                  )}
-                </div>
-                <div>
-                  <Typography variant="bodySm" className="mb-2 font-semibold">
-                    Delivery Lead Time <span className="text-text-danger">*</span>
-                  </Typography>
-                  <Input
-                    type="text"
-                    placeholder="e.g., 2-3 weeks, 30 days, etc."
-                    value={deliveryLeadTime}
-                    onChange={(e) => setDeliveryLeadTime(e.target.value)}
-                    className="border-2 focus:border-border-brand focus:ring-2 focus:ring-fill-brand/20 transition-all"
-                  />
-                  <Typography
-                    variant="bodyXs"
-                    colorRole="muted"
-                    className="mt-2"
-                  >
-                    Expected delivery timeframe for this order
-                  </Typography>
-                </div>
-                <div>
-                  <Typography variant="bodySm" className="mb-2 font-semibold">
-                    Confirmation Notes <span className="text-text-muted font-normal">(optional)</span>
-                  </Typography>
-                  <TextArea
-                    id="poNotes"
-                    value={confirmationNotes}
-                    onChange={(e) => setConfirmationNotes(e.target.value)}
-                    placeholder="Add any notes about this PO confirmation..."
-                    rows={3}
-                    className="border-2 focus:border-border-brand focus:ring-2 focus:ring-fill-brand/20 transition-all"
-                  />
-                </div>
-              </div>
-            )}
+                    )}
+
+                    {quote.status === 'under_cc_review' && !showRevisionForm && (
+                      <div className="rounded-xl bg-white p-6 shadow-sm border border-border-muted">
+                        <div className="flex items-center gap-3 mb-5">
+                          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-fill-brand/10">
+                            <span className="text-base">✍️</span>
+                          </div>
+                          <Typography variant="bodyLg" className="font-bold">
+                            Confirmation Notes
+                          </Typography>
+                        </div>
+                        <TextArea
+                          value={confirmationNotes}
+                          onChange={(e) => setConfirmationNotes(e.target.value)}
+                          placeholder="Add any notes about this confirmation..."
+                          rows={4}
+                          className="border-2 focus:border-border-brand focus:ring-2 focus:ring-fill-brand/20 transition-all"
+                        />
+                      </div>
+                    )}
+
+                    {showRevisionForm && (
+                      <div className="rounded-xl bg-gradient-to-br from-fill-danger/5 to-fill-danger/10 p-6 shadow-sm border-2 border-border-danger">
+                        <div className="flex items-center gap-3 mb-5">
+                          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-fill-danger/20">
+                            <span className="text-base">⚠️</span>
+                          </div>
+                          <Typography variant="bodyLg" className="font-bold text-text-danger">
+                            Request Revision
+                          </Typography>
+                        </div>
+                        <div>
+                          <Typography variant="bodySm" className="mb-3 font-semibold">
+                            Revision Reason <span className="text-text-danger">*</span>
+                          </Typography>
+                          <TextArea
+                            id="revisionReason"
+                            value={revisionReason}
+                            onChange={(e) => setRevisionReason(e.target.value)}
+                            placeholder="Explain what needs to be revised..."
+                            rows={4}
+                            className="border-2 border-border-danger focus:border-border-danger focus:ring-2 focus:ring-fill-danger/20 transition-all bg-white"
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {quote.status === 'po_submitted' && (
+                      <div className="rounded-xl bg-white p-6 shadow-sm border border-border-muted space-y-6">
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-fill-brand/10">
+                            <span className="text-base">📦</span>
+                          </div>
+                          <Typography variant="bodyLg" className="font-bold">
+                            PO Information
+                          </Typography>
+                        </div>
+
+                        <div className="rounded-xl bg-gradient-to-br from-fill-muted/30 to-fill-muted/50 p-6 space-y-5 border border-border-muted">
+                          <div>
+                            <Typography variant="bodyXs" colorRole="muted" className="uppercase tracking-wide font-semibold mb-2">
+                              PO Number
+                            </Typography>
+                            <Typography variant="bodyLg" className="font-bold">
+                              {quote.poNumber}
+                            </Typography>
+                          </div>
+                          {quote.deliveryLeadTime && (
+                            <div>
+                              <Typography variant="bodyXs" colorRole="muted" className="uppercase tracking-wide font-semibold mb-2">
+                                Delivery Lead Time
+                              </Typography>
+                              <Typography variant="bodyLg" className="font-bold">
+                                {quote.deliveryLeadTime}
+                              </Typography>
+                            </div>
+                          )}
+                          {quote.poAttachmentUrl && (
+                            <div>
+                              <Typography variant="bodyXs" colorRole="muted" className="uppercase tracking-wide font-semibold mb-3">
+                                Attachment
+                              </Typography>
+                              <div className="flex flex-wrap items-center gap-3">
+                                <a
+                                  href={quote.poAttachmentUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-text-brand hover:bg-fill-brand/10 font-semibold transition-all border border-border-muted"
+                                >
+                                  <span>📄</span>
+                                  View Document
+                                </a>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => {
+                                    const link = document.createElement('a');
+                                    link.href = quote.poAttachmentUrl!;
+                                    link.download = `PO-${quote.poNumber}.pdf`;
+                                    document.body.appendChild(link);
+                                    link.click();
+                                    document.body.removeChild(link);
+                                    toast.success('Download started');
+                                  }}
+                                  className="hover:bg-white transition-all"
+                                >
+                                  <ButtonContent iconLeft={IconDownload}>
+                                    Download
+                                  </ButtonContent>
+                                </Button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+
+                        <div>
+                          <Typography variant="bodySm" className="mb-3 font-semibold">
+                            Delivery Lead Time <span className="text-text-danger">*</span>
+                          </Typography>
+                          <Input
+                            type="text"
+                            placeholder="e.g., 2-3 weeks, 30 days, etc."
+                            value={deliveryLeadTime}
+                            onChange={(e) => setDeliveryLeadTime(e.target.value)}
+                            className="border-2 focus:border-border-brand focus:ring-2 focus:ring-fill-brand/20 transition-all"
+                          />
+                          <Typography
+                            variant="bodyXs"
+                            colorRole="muted"
+                            className="mt-2"
+                          >
+                            Expected delivery timeframe for this order
+                          </Typography>
+                        </div>
+
+                        <div>
+                          <Typography variant="bodySm" className="mb-3 font-semibold">
+                            Confirmation Notes <span className="text-text-muted font-normal text-xs">(optional)</span>
+                          </Typography>
+                          <TextArea
+                            id="poNotes"
+                            value={confirmationNotes}
+                            onChange={(e) => setConfirmationNotes(e.target.value)}
+                            placeholder="Add any notes about this PO confirmation..."
+                            rows={4}
+                            className="border-2 focus:border-border-brand focus:ring-2 focus:ring-fill-brand/20 transition-all"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
