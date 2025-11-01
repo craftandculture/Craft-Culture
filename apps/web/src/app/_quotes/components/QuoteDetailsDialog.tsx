@@ -577,6 +577,17 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                       </div>
                     )}
 
+                    {quote.deliveryLeadTime && (
+                      <div className="mt-3 rounded-lg bg-fill-brand/10 border border-border-brand p-3">
+                        <Typography variant="bodyXs" className="mb-1 font-medium text-text-brand">
+                          🚚 Delivery Lead Time:
+                        </Typography>
+                        <Typography variant="bodyXs" className="font-semibold">
+                          {quote.deliveryLeadTime}
+                        </Typography>
+                      </div>
+                    )}
+
                     {quote.ccConfirmationNotes && (
                       <div className="mt-3 rounded-lg bg-background-primary p-3">
                         <Typography variant="bodyXs" className="mb-1 font-medium">
@@ -784,9 +795,21 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                   <Typography variant="bodySm" className="mb-2 font-semibold text-text-success">
                     Quote Confirmed by C&C Team
                   </Typography>
-                  <Typography variant="bodySm" className="mb-4">
+                  <Typography variant="bodySm" className="mb-3">
                     Your quote has been confirmed. Please submit your Purchase Order to proceed.
                   </Typography>
+                  {quote.deliveryLeadTime && (
+                    <div className="rounded-lg bg-white border border-border-brand p-3 mb-4">
+                      <div className="flex items-center gap-2">
+                        <Typography variant="bodyXs" className="font-semibold text-text-brand">
+                          🚚 Delivery Lead Time:
+                        </Typography>
+                        <Typography variant="bodyXs" className="font-bold">
+                          {quote.deliveryLeadTime}
+                        </Typography>
+                      </div>
+                    </div>
+                  )}
                   {showPOForm ? (
                     <div className="space-y-4">
                       <div>

@@ -21,7 +21,7 @@ import confirmQuoteSchema from '../schemas/confirmQuoteSchema';
 const quotesConfirm = adminProcedure
   .input(confirmQuoteSchema)
   .mutation(async ({ input, ctx: { user } }) => {
-    const { quoteId, ccConfirmationNotes, lineItemAdjustments } = input;
+    const { quoteId, deliveryLeadTime, ccConfirmationNotes, lineItemAdjustments } = input;
 
     // Verify quote exists
     const [existingQuote] = await db
@@ -51,6 +51,7 @@ const quotesConfirm = adminProcedure
         status: 'cc_confirmed';
         ccConfirmedAt: Date;
         ccConfirmedBy: string;
+        deliveryLeadTime: string;
         ccConfirmationNotes?: string;
         quoteData?: unknown;
         totalUsd?: number;
@@ -59,6 +60,7 @@ const quotesConfirm = adminProcedure
         status: 'cc_confirmed',
         ccConfirmedAt: new Date(),
         ccConfirmedBy: user.id,
+        deliveryLeadTime,
         ccConfirmationNotes,
       };
 

@@ -5,6 +5,7 @@ import { z } from 'zod';
  */
 const confirmQuoteSchema = z.object({
   quoteId: z.string().uuid(),
+  deliveryLeadTime: z.string().min(1, 'Delivery lead time is required'),
   ccConfirmationNotes: z.string().optional(),
   lineItemAdjustments: z
     .record(

@@ -208,8 +208,15 @@ const QuoteApprovalDialog = ({
         }
       }
 
+      // Validate delivery lead time is provided
+      if (!deliveryLeadTime.trim()) {
+        toast.error('Delivery lead time is required');
+        throw new Error('Delivery lead time is required');
+      }
+
       return trpcClient.quotes.confirm.mutate({
         quoteId: quote.id,
+        deliveryLeadTime: deliveryLeadTime.trim(),
         ccConfirmationNotes: confirmationNotes || undefined,
         lineItemAdjustments:
           quote.status === 'under_cc_review' && Object.keys(lineItemAdjustments).length > 0
@@ -221,6 +228,7 @@ const QuoteApprovalDialog = ({
       toast.success('Quote confirmed successfully');
       void queryClient.invalidateQueries({ queryKey: ['admin-quotes'] });
       setConfirmationNotes('');
+      setDeliveryLeadTime('');
       setLineItemAdjustments({});
       if (onOpenChange) onOpenChange(false);
     },
@@ -264,13 +272,8 @@ const QuoteApprovalDialog = ({
   const confirmPOMutation = useMutation({
     mutationFn: async () => {
       if (!quote) return;
-      if (!deliveryLeadTime.trim()) {
-        toast.error('Please provide delivery lead time');
-        return;
-      }
       return trpcClient.quotes.confirmPO.mutate({
         quoteId: quote.id,
-        deliveryLeadTime: deliveryLeadTime.trim(),
         poConfirmationNotes: confirmationNotes || undefined,
       });
     },
@@ -278,7 +281,6 @@ const QuoteApprovalDialog = ({
       toast.success('PO confirmed successfully');
       void queryClient.invalidateQueries({ queryKey: ['admin-quotes'] });
       setConfirmationNotes('');
-      setDeliveryLeadTime('');
       if (onOpenChange) onOpenChange(false);
     },
     onError: (error) => {
@@ -734,22 +736,45 @@ const QuoteApprovalDialog = ({
                     )}
 
                     {quote.status === 'under_cc_review' && !showRevisionForm && (
-                      <div className="rounded-xl bg-white p-6 shadow-sm border border-border-muted">
-                        <div className="flex items-center gap-3 mb-5">
-                          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-fill-brand/10">
-                            <span className="text-base">✍️</span>
+                      <div className="rounded-xl bg-white p-6 shadow-sm border border-border-muted space-y-5">
+                        <div>
+                          <div className="flex items-center gap-3 mb-3">
+                            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-fill-brand/10">
+                              <span className="text-base">🚚</span>
+                            </div>
+                            <Typography variant="bodyLg" className="font-bold">
+                              Delivery Lead Time <span className="text-text-danger">*</span>
+                            </Typography>
                           </div>
-                          <Typography variant="bodyLg" className="font-bold">
-                            Confirmation Notes
+                          <Input
+                            type="text"
+                            value={deliveryLeadTime}
+                            onChange={(e) => setDeliveryLeadTime(e.target.value)}
+                            placeholder="e.g., 14-21 days, 3-4 weeks"
+                            className="border-2 focus:border-border-brand focus:ring-2 focus:ring-fill-brand/20 transition-all"
+                          />
+                          <Typography variant="bodyXs" colorRole="muted" className="mt-2">
+                            This will be shown to the customer before they submit their PO
                           </Typography>
                         </div>
-                        <TextArea
-                          value={confirmationNotes}
-                          onChange={(e) => setConfirmationNotes(e.target.value)}
-                          placeholder="Add any notes about this confirmation..."
-                          rows={4}
-                          className="border-2 focus:border-border-brand focus:ring-2 focus:ring-fill-brand/20 transition-all"
-                        />
+
+                        <div>
+                          <div className="flex items-center gap-3 mb-3">
+                            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-fill-brand/10">
+                              <span className="text-base">✍️</span>
+                            </div>
+                            <Typography variant="bodyLg" className="font-bold">
+                              Confirmation Notes
+                            </Typography>
+                          </div>
+                          <TextArea
+                            value={confirmationNotes}
+                            onChange={(e) => setConfirmationNotes(e.target.value)}
+                            placeholder="Add any notes about this confirmation..."
+                            rows={4}
+                            className="border-2 focus:border-border-brand focus:ring-2 focus:ring-fill-brand/20 transition-all"
+                          />
+                        </div>
                       </div>
                     )}
 
@@ -845,26 +870,6 @@ const QuoteApprovalDialog = ({
                               </div>
                             </div>
                           )}
-                        </div>
-
-                        <div>
-                          <Typography variant="bodySm" className="mb-3 font-semibold">
-                            Delivery Lead Time <span className="text-text-danger">*</span>
-                          </Typography>
-                          <Input
-                            type="text"
-                            placeholder="e.g., 2-3 weeks, 30 days, etc."
-                            value={deliveryLeadTime}
-                            onChange={(e) => setDeliveryLeadTime(e.target.value)}
-                            className="border-2 focus:border-border-brand focus:ring-2 focus:ring-fill-brand/20 transition-all"
-                          />
-                          <Typography
-                            variant="bodyXs"
-                            colorRole="muted"
-                            className="mt-2"
-                          >
-                            Expected delivery timeframe for this order
-                          </Typography>
                         </div>
 
                         <div>
@@ -969,7 +974,7 @@ const QuoteApprovalDialog = ({
               colorRole="brand"
               size="lg"
               onClick={() => confirmPOMutation.mutate()}
-              isDisabled={confirmPOMutation.isPending || !deliveryLeadTime.trim()}
+              isDisabled={confirmPOMutation.isPending}
               className="font-bold shadow-lg hover:shadow-xl transition-all duration-200 px-8"
             >
               <ButtonContent iconLeft={IconCheck}>
