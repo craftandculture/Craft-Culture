@@ -128,14 +128,6 @@ const QuoteApprovalDialog = ({
     enabled: productIds.length > 0 && open && !!quote,
   });
 
-  // Fetch user who created the quote
-  const { data: quoteUser } = useQuery({
-    ...api.users.getById.queryOptions({
-      userId: quote?.userId || '',
-    }),
-    enabled: !!quote?.userId && open,
-  });
-
   // Create a map of productId -> product for quick lookup
   const productMap = useMemo(() => {
     if (!productsData?.data) return {};
@@ -339,16 +331,16 @@ const QuoteApprovalDialog = ({
                     Client
                   </Typography>
                   <Typography variant="bodySm" className="font-bold">
-                    {quoteUser?.data?.name || quote.clientName || 'Unknown User'}
+                    {quote.clientName || 'Unknown'}
                   </Typography>
-                  {quoteUser?.data?.email && (
-                    <Typography variant="bodyXs" colorRole="muted" className="mt-0.5">
-                      {quoteUser.data.email}
+                  {quote.clientCompany && (
+                    <Typography variant="bodyXs" colorRole="muted" className="font-medium">
+                      {quote.clientCompany}
                     </Typography>
                   )}
-                  {quoteUser?.data?.company && (
-                    <Typography variant="bodyXs" colorRole="muted" className="font-medium">
-                      {quoteUser.data.company}
+                  {quote.clientEmail && (
+                    <Typography variant="bodyXs" colorRole="muted">
+                      {quote.clientEmail}
                     </Typography>
                   )}
                 </div>
