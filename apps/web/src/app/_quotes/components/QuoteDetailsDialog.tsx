@@ -696,22 +696,15 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                               </div>
                             </div>
 
-                            {/* DEBUG INFO */}
-                            <div className="mb-2 p-2 bg-blue-100 border border-blue-400 rounded text-xs">
-                              <strong>DEBUG:</strong> Quote Status: {quote.status} | Has Pricing: {pricing ? 'Yes' : 'No'} |
-                              Has Alternatives: {pricing?.adminAlternatives ? 'Yes' : 'No'} |
-                              Alternatives Count: {pricing?.adminAlternatives?.length || 0}
-                            </div>
-
                             {/* Pricing Breakdown */}
                             {pricing && (
                               <>
                                 <div className="rounded-lg border border-border-muted bg-white p-4 space-y-3">
                                   {/* Case Configuration */}
-                                  {product.bottlesPerCase && (
+                                  {product.productOffers?.[0]?.unitCount && (
                                     <div className="flex items-center gap-2 text-text-muted">
                                       <Typography variant="bodyXs">
-                                        📦 {product.bottlesPerCase} bottles × {product.bottleSize || '750ml'} per case
+                                        📦 {product.productOffers[0].unitCount} bottles × {product.productOffers[0].unitSize || '750ml'} per case
                                       </Typography>
                                     </div>
                                   )}
@@ -731,9 +724,9 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                                             Was: {pricing.originalQuantity}
                                           </Typography>
                                         )}
-                                        {product.bottlesPerCase && (
+                                        {product.productOffers?.[0]?.unitCount && (
                                           <Typography variant="bodyXs" colorRole="muted" className="mt-1">
-                                            = {displayQuantity * product.bottlesPerCase} bottles
+                                            = {displayQuantity * product.productOffers[0].unitCount} bottles
                                           </Typography>
                                         )}
                                       </div>
@@ -752,12 +745,12 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                                             displayCurrency,
                                           )}
                                         </Typography>
-                                        {product.bottlesPerCase && pricePerCase && (
+                                        {product.productOffers?.[0]?.unitCount && pricePerCase && (
                                           <Typography variant="bodyXs" colorRole="muted" className="mt-1">
                                             {formatPrice(
                                               displayCurrency === 'AED'
-                                                ? convertUsdToAed(pricePerCase / product.bottlesPerCase)
-                                                : pricePerCase / product.bottlesPerCase,
+                                                ? convertUsdToAed(pricePerCase / product.productOffers[0].unitCount)
+                                                : pricePerCase / product.productOffers[0].unitCount,
                                               displayCurrency,
                                             )} per bottle
                                           </Typography>
@@ -810,9 +803,6 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                                       <Typography variant="bodySm" className="font-bold text-text-success">
                                         Alternative Products Available: ({pricing.adminAlternatives.length})
                                       </Typography>
-                                    </div>
-                                    <div className="mb-3 p-2 bg-yellow-100 border border-yellow-400 rounded text-xs">
-                                      <strong>DEBUG:</strong> {JSON.stringify(pricing.adminAlternatives)}
                                     </div>
                                     <div className="space-y-2">
                                       {pricing.adminAlternatives.map((alt, altIdx) => (
