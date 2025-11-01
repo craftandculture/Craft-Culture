@@ -50,24 +50,33 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
   // Currency display state
   const [displayCurrency, setDisplayCurrency] = useState<'USD' | 'AED'>('USD');
 
+  // Fetch fresh quote data to ensure we have latest totals and pricing
+  const { data: freshQuoteData } = useQuery({
+    ...api.quotes.getOne.queryOptions({ quoteId: quote?.id ?? '' }),
+    enabled: !!quote?.id && open,
+  });
+
+  // Use fresh data if available, otherwise fall back to prop
+  const currentQuote = freshQuoteData ?? quote;
+
   // Calculate display amount based on selected currency
   const displayTotal = useMemo(() => {
-    if (!quote) return 0;
+    if (!currentQuote) return 0;
     if (displayCurrency === 'USD') {
-      return quote.totalUsd;
+      return currentQuote.totalUsd;
     }
-    return quote.totalAed ?? convertUsdToAed(quote.totalUsd);
-  }, [quote, displayCurrency]);
+    return currentQuote.totalAed ?? convertUsdToAed(currentQuote.totalUsd);
+  }, [currentQuote, displayCurrency]);
 
   const lineItems = useMemo(
     () =>
-      (quote?.lineItems || []) as Array<{
+      (currentQuote?.lineItems || []) as Array<{
         productId: string;
         offerId: string;
         quantity: number;
         vintage?: string;
       }>,
-    [quote?.lineItems],
+    [currentQuote?.lineItems],
   );
 
   // Fetch user settings for logo/company name
@@ -104,8 +113,8 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
 
   // Extract pricing data from quoteData
   const quotePricingData = useMemo(() => {
-    if (!quote?.quoteData) return null;
-    const data = quote.quoteData as {
+    if (!currentQuote?.quoteData) return null;
+    const data = currentQuote.quoteData as {
       lineItems?: Array<{
         productId: string;
         lineItemTotalUsd: number;
@@ -138,7 +147,7 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
       customerQuotePrice?: number;
     };
     return data;
-  }, [quote?.quoteData]);
+  }, [currentQuote?.quoteData]);
 
   // Create pricing map by productId
   const pricingMap = useMemo(() => {
@@ -217,9 +226,14 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
         alternativeIndex,
       });
     },
-    onSuccess: () => {
-      toast.success('Alternative product accepted');
-      void queryClient.invalidateQueries({ queryKey: ['quote', quote?.id] });
+    onSuccess: (_data, variables) => {
+      toast.success(variables.alternativeIndex === -1 ? 'Alternative removed' : 'Alternative product accepted');
+      // Invalidate the individual quote query to refresh totals
+      void queryClient.invalidateQueries({
+        queryKey: [['quotes', 'getOne'], { input: { quoteId: quote?.id } }]
+      });
+      // Also invalidate the quotes list
+      void queryClient.invalidateQueries({ queryKey: [['quotes', 'getMany']] });
     },
     onError: (error) => {
       toast.error(
