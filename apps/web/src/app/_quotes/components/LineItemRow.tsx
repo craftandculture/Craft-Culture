@@ -104,10 +104,8 @@ const LineItemRow = ({
 
   const handleQuantityInputChange = (e: ChangeEvent<HTMLInputElement>) => {
     const value = parseInt(e.target.value);
-    if (!isNaN(value)) {
-      const clampedValue =
-        maxQuantity !== Infinity ? Math.min(value, maxQuantity) : value;
-      setLocalQuantity(clampedValue);
+    if (!isNaN(value) && value > 0) {
+      setLocalQuantity(value);
     }
   };
 
@@ -171,13 +169,12 @@ const LineItemRow = ({
 
         {/* Quantity Input - Hidden for placeholder */}
         {!isPlaceholder && (
-          <div className="flex w-full flex-wrap items-center gap-2 md:w-auto md:min-w-[180px]">
+          <div className="flex w-full flex-col gap-1 md:w-auto md:min-w-[180px]">
           <Input
             className="min-w-0 flex-1 md:grow"
             type="number"
             size="md"
             min={1}
-            max={maxQuantity !== Infinity ? maxQuantity : undefined}
             placeholder="Qty"
             value={localQuantity}
             onChange={handleQuantityInputChange}
@@ -188,11 +185,19 @@ const LineItemRow = ({
                   variant="bodyXs"
                   className="text-text-muted hidden pr-2.5 font-medium md:inline"
                 >
-                  {offer?.unitCount} × {offer?.unitSize} (max: {maxQuantity})
+                  {offer?.unitCount} × {offer?.unitSize}
                 </Typography>
               ) : undefined
             }
           />
+          {maxQuantity !== Infinity && localQuantity > maxQuantity && (
+            <Typography
+              variant="bodyXs"
+              className="text-text-warning font-medium"
+            >
+              {localQuantity} requested, {maxQuantity} available
+            </Typography>
+          )}
           </div>
         )}
 
