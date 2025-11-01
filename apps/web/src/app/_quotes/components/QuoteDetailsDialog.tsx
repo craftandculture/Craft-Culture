@@ -706,45 +706,81 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                             {/* Pricing Breakdown */}
                             {pricing && (
                               <>
-                                <div className="grid grid-cols-3 gap-2 rounded-lg bg-fill-muted p-3">
-                                  <div>
-                                    <Typography variant="bodyXs" colorRole="muted" className="mb-0.5">
-                                      Quantity
-                                    </Typography>
-                                    <Typography variant="bodySm" className="font-semibold">
-                                      {displayQuantity} {displayQuantity === 1 ? 'case' : 'cases'}
-                                    </Typography>
-                                    {pricing?.confirmedQuantity && pricing.confirmedQuantity !== pricing.originalQuantity && (
-                                      <Typography variant="bodyXs" colorRole="muted" className="line-through mt-0.5">
-                                        Was: {pricing.originalQuantity}
+                                <div className="rounded-lg border border-border-muted bg-white p-4 space-y-3">
+                                  {/* Case Configuration */}
+                                  {product.bottlesPerCase && (
+                                    <div className="flex items-center gap-2 text-text-muted">
+                                      <Typography variant="bodyXs">
+                                        📦 {product.bottlesPerCase} bottles × {product.bottleSize || '750ml'} per case
                                       </Typography>
-                                    )}
+                                    </div>
+                                  )}
+
+                                  {/* Pricing Grid */}
+                                  <div className="grid grid-cols-2 gap-3">
+                                    <div className="space-y-3">
+                                      <div>
+                                        <Typography variant="bodyXs" colorRole="muted" className="mb-1">
+                                          Quantity
+                                        </Typography>
+                                        <Typography variant="bodyLg" className="font-bold">
+                                          {displayQuantity} {displayQuantity === 1 ? 'case' : 'cases'}
+                                        </Typography>
+                                        {pricing?.confirmedQuantity && pricing.confirmedQuantity !== pricing.originalQuantity && (
+                                          <Typography variant="bodyXs" colorRole="muted" className="line-through">
+                                            Was: {pricing.originalQuantity}
+                                          </Typography>
+                                        )}
+                                        {product.bottlesPerCase && (
+                                          <Typography variant="bodyXs" colorRole="muted" className="mt-1">
+                                            = {displayQuantity * product.bottlesPerCase} bottles
+                                          </Typography>
+                                        )}
+                                      </div>
+                                    </div>
+
+                                    <div className="space-y-3">
+                                      <div>
+                                        <Typography variant="bodyXs" colorRole="muted" className="mb-1">
+                                          Price Per Case
+                                        </Typography>
+                                        <Typography variant="bodyLg" className="font-bold text-text-brand">
+                                          {formatPrice(
+                                            displayCurrency === 'AED'
+                                              ? convertUsdToAed(pricePerCase)
+                                              : pricePerCase,
+                                            displayCurrency,
+                                          )}
+                                        </Typography>
+                                        {product.bottlesPerCase && pricePerCase && (
+                                          <Typography variant="bodyXs" colorRole="muted" className="mt-1">
+                                            {formatPrice(
+                                              displayCurrency === 'AED'
+                                                ? convertUsdToAed(pricePerCase / product.bottlesPerCase)
+                                                : pricePerCase / product.bottlesPerCase,
+                                              displayCurrency,
+                                            )} per bottle
+                                          </Typography>
+                                        )}
+                                      </div>
+                                    </div>
                                   </div>
-                                  <div>
-                                    <Typography variant="bodyXs" colorRole="muted" className="mb-0.5">
-                                      Price/Case
-                                    </Typography>
-                                    <Typography variant="bodySm" className="font-semibold">
-                                      {formatPrice(
-                                        displayCurrency === 'AED'
-                                          ? convertUsdToAed(pricePerCase)
-                                          : pricePerCase,
-                                        displayCurrency,
-                                      )}
-                                    </Typography>
-                                  </div>
-                                  <div className="text-right">
-                                    <Typography variant="bodyXs" colorRole="muted" className="mb-0.5">
-                                      Line Total
-                                    </Typography>
-                                    <Typography variant="bodySm" className="font-bold text-text-brand">
-                                      {formatPrice(
-                                        displayCurrency === 'AED'
-                                          ? convertUsdToAed(lineItemTotal)
-                                          : lineItemTotal,
-                                        displayCurrency,
-                                      )}
-                                    </Typography>
+
+                                  {/* Line Total */}
+                                  <div className="pt-3 border-t border-border-muted">
+                                    <div className="flex items-center justify-between">
+                                      <Typography variant="bodySm" colorRole="muted">
+                                        Line Total
+                                      </Typography>
+                                      <Typography variant="headingSm" className="font-bold text-text-brand">
+                                        {formatPrice(
+                                          displayCurrency === 'AED'
+                                            ? convertUsdToAed(lineItemTotal)
+                                            : lineItemTotal,
+                                          displayCurrency,
+                                        )}
+                                      </Typography>
+                                    </div>
                                   </div>
                                 </div>
 
