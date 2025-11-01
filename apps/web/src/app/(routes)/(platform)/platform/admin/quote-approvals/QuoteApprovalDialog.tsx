@@ -489,7 +489,7 @@ const QuoteApprovalDialog = ({
                           {/* Requested Quantity */}
                           <div className="col-span-2 flex items-center justify-center">
                             <div className="inline-flex flex-col items-center gap-1">
-                              <Typography variant="h6" className="font-bold text-text-brand">
+                              <Typography variant="headingXs" className="font-bold text-text-brand">
                                 {item.quantity}
                               </Typography>
                               <Typography variant="bodyXs" colorRole="muted" className="uppercase tracking-wide font-semibold">
@@ -594,7 +594,7 @@ const QuoteApprovalDialog = ({
 
                           {/* Line Total */}
                           <div className="col-span-1 flex items-center justify-end">
-                            <Typography variant="h6" className="font-bold text-text-brand">
+                            <Typography variant="headingXs" className="font-bold text-text-brand">
                               {formatPrice(displayLineTotal, displayCurrency)}
                             </Typography>
                           </div>
@@ -620,7 +620,7 @@ const QuoteApprovalDialog = ({
                   <Typography variant="bodySm" colorRole="muted" className="mb-3 text-right uppercase tracking-wider font-bold">
                     Order Total
                   </Typography>
-                  <Typography variant="h4" className="font-black text-text-brand text-right">
+                  <Typography variant="headingLg" className="font-black text-text-brand text-right">
                     {formatPrice(displayTotal, displayCurrency)}
                   </Typography>
                   <Typography variant="bodyXs" colorRole="muted" className="mt-2 text-right uppercase tracking-wide">
