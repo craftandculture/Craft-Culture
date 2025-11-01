@@ -1,7 +1,7 @@
 import { and, desc, eq, ilike, or, sql } from 'drizzle-orm';
 
 import db from '@/database/client';
-import { quotes } from '@/database/schema';
+import { quotes, users } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
 import getQuotesSchema from '../schemas/getQuotesSchema';
@@ -50,19 +50,33 @@ const quotesGetManyAdmin = adminProcedure
 
     const totalCount = Number(countResult?.count ?? 0);
 
-    // Get quotes with pagination
+    // Get quotes with pagination, including user information
     const quotesList = await db
-      .select()
+      .select({
+        quote: quotes,
+        user: {
+          id: users.id,
+          name: users.name,
+          email: users.email,
+        },
+      })
       .from(quotes)
+      .leftJoin(users, eq(quotes.userId, users.id))
       .where(conditions.length > 0 ? and(...conditions) : undefined)
       .orderBy(desc(quotes.createdAt))
       .limit(limit)
       .offset(cursor);
 
+    // Flatten the response to include user info at the top level
+    const quotesWithUser = quotesList.map((row) => ({
+      ...row.quote,
+      createdBy: row.user,
+    }));
+
     const nextCursor = cursor + limit < totalCount ? cursor + limit : null;
 
     return {
-      data: quotesList,
+      data: quotesWithUser,
       meta: {
         totalCount,
         nextCursor,

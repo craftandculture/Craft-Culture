@@ -52,7 +52,7 @@ const QuoteApprovalsList = () => {
     setIsDialogOpen(true);
   };
 
-  const columns: ColumnDef<Quote>[] = [
+  const columns: ColumnDef<Quote & { createdBy?: { id: string; name: string | null; email: string } | null }>[] = [
     {
       accessorKey: 'name',
       header: 'Quote Name',
@@ -61,6 +61,30 @@ const QuoteApprovalsList = () => {
           {row.original.name}
         </Typography>
       ),
+    },
+    {
+      accessorKey: 'createdBy',
+      header: 'Created By',
+      cell: ({ row }) => {
+        const createdBy = row.original.createdBy;
+        return (
+          <div className="flex flex-col gap-0.5">
+            {createdBy?.name && (
+              <Typography variant="bodySm">{createdBy.name}</Typography>
+            )}
+            {createdBy?.email && (
+              <Typography variant="bodyXs" colorRole="muted">
+                {createdBy.email}
+              </Typography>
+            )}
+            {!createdBy?.name && (
+              <Typography variant="bodySm" colorRole="muted">
+                -
+              </Typography>
+            )}
+          </div>
+        );
+      },
     },
     {
       accessorKey: 'clientName',
@@ -107,22 +131,13 @@ const QuoteApprovalsList = () => {
       cell: ({ row }) =>
         row.original.buyRequestSubmittedAt ? (
           <Typography variant="bodySm" colorRole="muted">
-            {format(new Date(row.original.buyRequestSubmittedAt), 'MMM d, yyyy')}
+            {format(new Date(row.original.buyRequestSubmittedAt), 'MMM d, yyyy h:mm a')}
           </Typography>
         ) : (
           <Typography variant="bodySm" colorRole="muted">
             -
           </Typography>
         ),
-    },
-    {
-      accessorKey: 'buyRequestCount',
-      header: 'Submissions',
-      cell: ({ row }) => (
-        <Typography variant="bodySm" className="font-medium">
-          {row.original.buyRequestCount}
-        </Typography>
-      ),
     },
     {
       id: 'actions',
