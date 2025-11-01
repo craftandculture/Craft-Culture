@@ -9,44 +9,48 @@ export interface QuoteStatusBadgeProps {
 }
 
 /**
- * Get the color role for a quote status
+ * Get the color role for a quote status using MINIMAL color palette
+ *
+ * Design Philosophy:
+ * - Gray (muted) = Inactive/informational states
+ * - Blue (brand) = Active workflow states
+ * - Amber (warning) = Needs attention (not alarming)
+ * - NO green/red traffic lights
  *
  * @param status - The quote status
  * @returns The color role for the badge
  */
 const getStatusColorRole = (
   status: Quote['status'],
-): 'primary' | 'muted' | 'info' | 'brand' | 'success' | 'danger' | 'warning' => {
+): 'primary' | 'muted' | 'brand' | 'warning' => {
   switch (status) {
+    // Inactive states - use muted gray
     case 'draft':
-      return 'muted';
     case 'sent':
-      return 'info';
-    case 'buy_request_submitted':
-      return 'warning';
-    case 'under_cc_review':
-      return 'warning';
-    case 'revision_requested':
-      return 'danger';
-    case 'cc_confirmed':
-      return 'success';
-    case 'po_submitted':
-      return 'brand';
-    case 'po_confirmed':
-      return 'success';
-    case 'accepted':
-      return 'success';
     case 'rejected':
-      return 'danger';
     case 'expired':
+    case 'po_confirmed':  // Complete, no action needed
       return 'muted';
+
+    // Active workflow - use brand blue
+    case 'buy_request_submitted':
+    case 'under_cc_review':
+    case 'cc_confirmed':
+    case 'po_submitted':
+    case 'accepted':
+      return 'brand';
+
+    // Needs attention - use warning amber (not alarming red)
+    case 'revision_requested':
+      return 'warning';
+
     default:
-      return 'primary';
+      return 'muted';
   }
 };
 
 /**
- * Get the display label for a quote status
+ * Get the display label for a quote status - simplified and clearer
  *
  * @param status - The quote status
  * @returns The human-readable label
@@ -58,17 +62,17 @@ const getStatusLabel = (status: Quote['status']) => {
     case 'sent':
       return 'Sent';
     case 'buy_request_submitted':
-      return 'Buy Request Submitted';
+      return 'Pending Review';
     case 'under_cc_review':
-      return 'Under C&C Review';
+      return 'In Review';
     case 'revision_requested':
-      return 'Revision Requested';
+      return 'Needs Attention';
     case 'cc_confirmed':
-      return 'Confirmed by C&C';
+      return 'Confirmed';
     case 'po_submitted':
       return 'PO Submitted';
     case 'po_confirmed':
-      return 'PO Confirmed';
+      return 'Complete';
     case 'accepted':
       return 'Accepted';
     case 'rejected':
@@ -81,7 +85,12 @@ const getStatusLabel = (status: Quote['status']) => {
 };
 
 /**
- * Display a badge showing the current status of a quote
+ * Display a badge showing the current status of a quote with minimal, consistent colors
+ *
+ * REDESIGNED to eliminate "traffic light" effect:
+ * - Reduced from 7 colors to just 3 (gray, blue, amber)
+ * - Clearer, shorter labels
+ * - Consistent visual language
  *
  * @example
  *   <QuoteStatusBadge status="under_cc_review" size="sm" />

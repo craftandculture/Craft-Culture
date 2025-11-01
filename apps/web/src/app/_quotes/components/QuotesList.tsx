@@ -46,9 +46,9 @@ interface StatusFilter {
 
 const statusFilters: StatusFilter[] = [
   { label: 'All Quotes', value: 'all', icon: IconFileText, color: 'text-text-primary' },
-  { label: 'Action Required', value: 'action_required', icon: IconAlertCircle, color: 'text-text-danger' },
-  { label: 'In Progress', value: 'under_cc_review', icon: IconClock, color: 'text-text-warning' },
-  { label: 'Completed', value: 'po_confirmed', icon: IconCheck, color: 'text-text-success' },
+  { label: 'Action Required', value: 'action_required', icon: IconAlertCircle, color: 'text-text-warning' },
+  { label: 'In Progress', value: 'under_cc_review', icon: IconClock, color: 'text-text-brand' },
+  { label: 'Completed', value: 'po_confirmed', icon: IconCheck, color: 'text-text-muted' },
 ];
 
 /**
@@ -225,19 +225,20 @@ const QuotesList = () => {
       cell: ({ row }) => {
         const status = row.original.status;
 
-        // Status display configuration
+        // Status display configuration - MINIMAL COLORS (no traffic lights)
+        // Gray = inactive, Blue = active workflow, Amber = needs attention
         const statusConfig = {
           draft: { label: 'Draft', color: 'bg-fill-muted text-text-muted', needsAction: true },
-          sent: { label: 'Ready', color: 'bg-fill-brand/10 text-text-brand', needsAction: true },
-          accepted: { label: 'Accepted', color: 'bg-fill-success/10 text-text-success', needsAction: false },
-          rejected: { label: 'Rejected', color: 'bg-fill-danger/10 text-text-danger', needsAction: false },
+          sent: { label: 'Sent', color: 'bg-fill-muted text-text-muted', needsAction: true },
+          accepted: { label: 'Accepted', color: 'bg-fill-brand/10 text-text-brand', needsAction: false },
+          rejected: { label: 'Rejected', color: 'bg-fill-muted text-text-muted', needsAction: false },
           expired: { label: 'Expired', color: 'bg-fill-muted text-text-muted', needsAction: false },
-          buy_request_submitted: { label: 'In Review', color: 'bg-fill-warning/10 text-text-warning', needsAction: false },
-          under_cc_review: { label: 'Under Review', color: 'bg-fill-warning/10 text-text-warning', needsAction: false },
-          revision_requested: { label: 'Action Required', color: 'bg-fill-danger/10 text-text-danger font-semibold', needsAction: true },
-          cc_confirmed: { label: 'Confirmed', color: 'bg-fill-success/10 text-text-success font-semibold', needsAction: true },
+          buy_request_submitted: { label: 'Pending Review', color: 'bg-fill-brand/10 text-text-brand', needsAction: false },
+          under_cc_review: { label: 'In Review', color: 'bg-fill-brand/10 text-text-brand', needsAction: false },
+          revision_requested: { label: 'Needs Attention', color: 'bg-fill-warning/10 text-text-warning font-semibold border border-border-warning', needsAction: true },
+          cc_confirmed: { label: 'Confirmed', color: 'bg-fill-brand/10 text-text-brand font-semibold', needsAction: true },
           po_submitted: { label: 'PO Submitted', color: 'bg-fill-brand/10 text-text-brand', needsAction: false },
-          po_confirmed: { label: 'Complete', color: 'bg-fill-success/10 text-text-success', needsAction: false },
+          po_confirmed: { label: 'Complete', color: 'bg-fill-muted text-text-muted', needsAction: false },
         };
 
         const config = statusConfig[status];
