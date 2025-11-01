@@ -169,7 +169,7 @@ const QuoteWorkflowStepper = ({ quote, variant = 'default' }: QuoteWorkflowStepp
                 </Typography>
                 <Typography
                   variant="bodyXs"
-                  colorRole={step.status === 'upcoming' ? 'muted' : 'secondary'}
+                  colorRole="muted"
                   className="mt-0.5"
                 >
                   {step.description}
@@ -243,7 +243,7 @@ const QuoteWorkflowStepper = ({ quote, variant = 'default' }: QuoteWorkflowStepp
                       Revision Requested
                     </Typography>
                     {quote.revisionReason && (
-                      <Typography variant="bodyXs" colorRole="secondary" className="mt-1">
+                      <Typography variant="bodyXs" colorRole="muted" className="mt-1">
                         {quote.revisionReason}
                       </Typography>
                     )}
