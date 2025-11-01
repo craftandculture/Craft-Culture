@@ -1,10 +1,14 @@
 'use client';
 
 import {
+  IconAlertCircle,
+  IconCheck,
+  IconClock,
   IconDots,
   IconDownload,
   IconEdit,
   IconEye,
+  IconFileText,
   IconSearch,
   IconSend,
   IconTrash,
@@ -31,6 +35,22 @@ import { useTRPCClient } from '@/lib/trpc/browser';
 
 import QuoteDetailsDialog from './QuoteDetailsDialog';
 
+type QuoteStatus = Quote['status'];
+
+interface StatusFilter {
+  label: string;
+  value: QuoteStatus | 'all' | 'action_required';
+  icon: typeof IconFileText;
+  color: string;
+}
+
+const statusFilters: StatusFilter[] = [
+  { label: 'All Quotes', value: 'all', icon: IconFileText, color: 'text-text-primary' },
+  { label: 'Action Required', value: 'action_required', icon: IconAlertCircle, color: 'text-text-danger' },
+  { label: 'In Progress', value: 'under_cc_review', icon: IconClock, color: 'text-text-warning' },
+  { label: 'Completed', value: 'po_confirmed', icon: IconCheck, color: 'text-text-success' },
+];
+
 /**
  * QuotesList component displays a table of saved quotes with search,
  * filter, and action capabilities
@@ -43,6 +63,7 @@ const QuotesList = () => {
   const [cursor, setCursor] = useState(0);
   const [selectedQuote, setSelectedQuote] = useState<Quote | null>(null);
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
+  const [activeFilter, setActiveFilter] = useState<QuoteStatus | 'all' | 'action_required'>('all');
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ['quotes.getMany', { limit: 20, cursor, search: search || undefined }],
@@ -127,7 +148,7 @@ const QuotesList = () => {
     }
   };
 
-  const columns: ColumnDef<Quote>[] = [
+  const columns: ColumnDef<Quote & { createdBy?: { name: string | null; email: string } }>[] = [
     {
       accessorKey: 'name',
       header: 'Quote Name',
@@ -136,6 +157,30 @@ const QuotesList = () => {
           {row.original.name}
         </Typography>
       ),
+    },
+    {
+      accessorKey: 'createdBy',
+      header: () => <span className="hidden lg:inline">Created By</span>,
+      cell: ({ row }) => {
+        const createdBy = row.original.createdBy;
+        return (
+          <div className="hidden flex-col gap-0.5 lg:flex">
+            {createdBy?.name && (
+              <Typography variant="bodySm">{createdBy.name}</Typography>
+            )}
+            {createdBy?.email && (
+              <Typography variant="bodyXs" colorRole="muted">
+                {createdBy.email}
+              </Typography>
+            )}
+            {!createdBy?.name && (
+              <Typography variant="bodySm" colorRole="muted">
+                -
+              </Typography>
+            )}
+          </div>
+        );
+      },
     },
     {
       accessorKey: 'clientName',
@@ -246,7 +291,8 @@ const QuotesList = () => {
                 isDisabled={submitBuyRequestMutation.isPending}
               >
                 <ButtonContent iconLeft={IconSend}>
-                  Place Order Request
+                  <span className="hidden lg:inline">Place Order Request</span>
+                  <span className="lg:hidden">Place Order</span>
                 </ButtonContent>
               </Button>
             )}
@@ -284,7 +330,8 @@ const QuotesList = () => {
                 onClick={() => handleViewDetails(quote)}
               >
                 <ButtonContent iconLeft={IconEye}>
-                  View Details
+                  <span className="hidden lg:inline">View Details</span>
+                  <span className="lg:hidden">View</span>
                 </ButtonContent>
               </Button>
             )}
@@ -340,40 +387,100 @@ const QuotesList = () => {
 
   const quotes = data?.data ?? [];
 
+  // Filter quotes based on active filter
+  const filteredQuotes = quotes.filter((quote) => {
+    if (activeFilter === 'all') return true;
+    if (activeFilter === 'action_required') {
+      return quote.status === 'draft' ||
+        quote.status === 'sent' ||
+        quote.status === 'revision_requested' ||
+        quote.status === 'cc_confirmed';
+    }
+    return quote.status === activeFilter;
+  });
+
+  // Calculate counts for filter badges
+  const actionRequiredCount = quotes.filter(
+    (q) => q.status === 'draft' || q.status === 'sent' || q.status === 'revision_requested' || q.status === 'cc_confirmed'
+  ).length;
+  const inProgressCount = quotes.filter(
+    (q) => q.status === 'buy_request_submitted' || q.status === 'under_cc_review' || q.status === 'po_submitted'
+  ).length;
+  const completedCount = quotes.filter((q) => q.status === 'po_confirmed').length;
+
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-6">
+      {/* Status Filter Tabs */}
+      <div className="flex flex-wrap gap-2">
+        {statusFilters.map((filter) => {
+          const isActive = activeFilter === filter.value;
+          let count = quotes.length;
+          if (filter.value === 'action_required') count = actionRequiredCount;
+          if (filter.value === 'under_cc_review') count = inProgressCount;
+          if (filter.value === 'po_confirmed') count = completedCount;
+
+          return (
+            <button
+              key={filter.value}
+              onClick={() => setActiveFilter(filter.value)}
+              className={`flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all ${
+                isActive
+                  ? 'bg-fill-brand text-text-brand-contrast shadow-md'
+                  : 'bg-fill-muted/50 text-text-muted hover:bg-fill-muted hover:text-text-primary dark:bg-background-secondary dark:hover:bg-background-tertiary'
+              }`}
+            >
+              <Icon icon={filter.icon} size="sm" className={isActive ? 'text-text-brand-contrast' : filter.color} />
+              <span>{filter.label}</span>
+              <span className={`rounded-full px-2 py-0.5 text-xs ${
+                isActive
+                  ? 'bg-white/20 text-text-brand-contrast'
+                  : 'bg-fill-primary/50 text-text-muted'
+              }`}>
+                {count}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
       {/* Search Input */}
       <div className="flex items-center gap-2">
         <Input
-          placeholder="Search quotes..."
+          placeholder="Search by quote name, client name, or company..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           iconLeft={IconSearch}
-          className="w-full md:max-w-md"
+          className="w-full"
         />
       </div>
 
       {/* Quotes Table */}
-      {quotes.length === 0 ? (
-        <div className="border-border-primary flex h-64 flex-col items-center justify-center rounded-lg border">
+      {filteredQuotes.length === 0 ? (
+        <div className="border-border-primary flex h-64 flex-col items-center justify-center rounded-lg border bg-fill-muted/20 dark:bg-background-secondary">
+          <Icon icon={IconFileText} size="xl" colorRole="muted" className="mb-4" />
           <Typography variant="bodyLg" className="mb-2 font-medium">
             No quotes found
           </Typography>
-          <Typography variant="bodySm" colorRole="muted">
+          <Typography variant="bodySm" colorRole="muted" className="text-center max-w-md">
             {search
-              ? 'Try adjusting your search'
-              : 'Create your first quote to get started'}
+              ? 'Try adjusting your search or filter'
+              : activeFilter !== 'all'
+                ? `No quotes with this status`
+                : 'Create your first quote to get started'}
           </Typography>
         </div>
       ) : (
-        <DataTable columns={columns} data={quotes} />
+        <div className="rounded-lg border border-border-muted bg-white dark:bg-background-secondary shadow-sm">
+          <DataTable columns={columns} data={filteredQuotes} />
+        </div>
       )}
 
       {/* Pagination Info */}
       {data?.meta && quotes.length > 0 && (
         <div className="flex items-center justify-between">
           <Typography variant="bodySm" colorRole="muted">
-            Showing {quotes.length} of {data.meta.totalCount} quotes
+            Showing {filteredQuotes.length} of {quotes.length} quotes
+            {quotes.length !== data.meta.totalCount && ` (${data.meta.totalCount} total)`}
           </Typography>
           {data.meta.hasMore && (
             <Button
