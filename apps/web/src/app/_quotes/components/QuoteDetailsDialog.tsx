@@ -51,9 +51,11 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
   const [displayCurrency, setDisplayCurrency] = useState<'USD' | 'AED'>('USD');
 
   // Fetch fresh quote data to ensure we have latest totals and pricing
-  const { data: freshQuoteData } = useQuery({
+  const { data: freshQuoteData, refetch: refetchQuote } = useQuery({
     ...api.quotes.getOne.queryOptions({ id: quote?.id ?? '' }),
     enabled: !!quote?.id && open,
+    refetchOnMount: 'always',
+    staleTime: 0,
   });
 
   // Use fresh data if available, otherwise fall back to prop
@@ -226,14 +228,12 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
         alternativeIndex,
       });
     },
-    onSuccess: (_data, variables) => {
+    onSuccess: async (_data, variables) => {
       toast.success(variables.alternativeIndex === -1 ? 'Alternative removed' : 'Alternative product accepted');
-      // Invalidate the individual quote query to refresh totals
-      void queryClient.invalidateQueries({
-        queryKey: [['quotes', 'getOne'], { input: { id: quote?.id } }]
-      });
-      // Also invalidate the quotes list
-      void queryClient.invalidateQueries({ queryKey: [['quotes', 'getMany']] });
+      // Invalidate all quotes queries to refresh totals
+      void queryClient.invalidateQueries({ queryKey: ['quotes'] });
+      // Explicitly refetch the current quote to update totals immediately
+      await refetchQuote();
     },
     onError: (error) => {
       toast.error(
