@@ -116,7 +116,7 @@ const quotesAcceptAlternative = protectedProcedure
         };
 
         updatedLineItem.lineItemTotalUsd =
-          updatedLineItem.basePriceUsd * (lineItem.confirmedQuantity || lineItem.originalQuantity || 0);
+          (updatedLineItem.basePriceUsd ?? 0) * (lineItem.confirmedQuantity || lineItem.originalQuantity || 0);
 
         const updatedLineItems = [...lineItems];
         updatedLineItems[lineItemIndex] = updatedLineItem;
