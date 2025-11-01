@@ -128,6 +128,14 @@ const QuoteApprovalDialog = ({
     enabled: productIds.length > 0 && open && !!quote,
   });
 
+  // Fetch user who created the quote
+  const { data: quoteUser } = useQuery({
+    ...api.users.getById.queryOptions({
+      userId: quote?.userId || '',
+    }),
+    enabled: !!quote?.userId && open,
+  });
+
   // Create a map of productId -> product for quick lookup
   const productMap = useMemo(() => {
     if (!productsData?.data) return {};
@@ -313,10 +321,10 @@ const QuoteApprovalDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-7xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="w-[95vw] max-w-[1400px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-2xl">{quote.name}</DialogTitle>
-          <DialogDescription className="text-base">
+          <DialogTitle className="text-xl">{quote.name}</DialogTitle>
+          <DialogDescription className="text-sm">
             Review and approve this quote
           </DialogDescription>
         </DialogHeader>
@@ -324,38 +332,43 @@ const QuoteApprovalDialog = ({
         <DialogBody>
           <div className="space-y-6">
             {/* Quote Summary */}
-            <div className="rounded-xl bg-gradient-to-br from-fill-muted/50 to-fill-muted border border-border-muted p-6">
+            <div className="rounded-xl bg-gradient-to-br from-fill-muted/50 to-fill-muted border border-border-muted p-5">
               <div className="grid grid-cols-3 gap-6">
                 <div className="space-y-1">
-                  <Typography variant="bodyXs" colorRole="muted" className="uppercase tracking-wide font-semibold">
+                  <Typography variant="bodyXs" colorRole="muted" className="uppercase tracking-wide font-bold">
                     Client
                   </Typography>
-                  <Typography variant="bodyMd" className="font-semibold">
-                    {quote.clientName || 'N/A'}
+                  <Typography variant="bodySm" className="font-bold">
+                    {quoteUser?.data?.name || quote.clientName || 'Unknown User'}
                   </Typography>
-                  {quote.clientCompany && (
-                    <Typography variant="bodySm" colorRole="muted" className="mt-0.5">
-                      {quote.clientCompany}
+                  {quoteUser?.data?.email && (
+                    <Typography variant="bodyXs" colorRole="muted" className="mt-0.5">
+                      {quoteUser.data.email}
+                    </Typography>
+                  )}
+                  {quoteUser?.data?.company && (
+                    <Typography variant="bodyXs" colorRole="muted" className="font-medium">
+                      {quoteUser.data.company}
                     </Typography>
                   )}
                 </div>
                 <div className="space-y-1">
-                  <Typography variant="bodyXs" colorRole="muted" className="uppercase tracking-wide font-semibold">
+                  <Typography variant="bodyXs" colorRole="muted" className="uppercase tracking-wide font-bold">
                     Submitted
                   </Typography>
-                  <Typography variant="bodyMd" className="font-semibold">
+                  <Typography variant="bodySm" className="font-bold">
                     {quote.buyRequestSubmittedAt
                       ? format(new Date(quote.buyRequestSubmittedAt), 'MMM d, yyyy')
                       : 'N/A'}
                   </Typography>
                 </div>
                 <div className="space-y-1">
-                  <Typography variant="bodyXs" colorRole="muted" className="uppercase tracking-wide font-semibold">
+                  <Typography variant="bodyXs" colorRole="muted" className="uppercase tracking-wide font-bold">
                     Status
                   </Typography>
-                  <div className="inline-flex items-center gap-2 rounded-full bg-fill-brand/10 px-3 py-1">
-                    <span className="h-2 w-2 rounded-full bg-fill-brand animate-pulse" />
-                    <Typography variant="bodySm" className="font-semibold capitalize text-text-brand">
+                  <div className="inline-flex items-center gap-1.5 rounded-full bg-fill-brand/10 px-2.5 py-1">
+                    <span className="h-1.5 w-1.5 rounded-full bg-fill-brand animate-pulse" />
+                    <Typography variant="bodyXs" className="font-bold capitalize text-text-brand">
                       {quote.status.replace(/_/g, ' ')}
                     </Typography>
                   </div>
@@ -416,22 +429,22 @@ const QuoteApprovalDialog = ({
 
               {/* Table Header */}
               <div className="rounded-t-xl border border-border-muted bg-gradient-to-r from-fill-muted/80 to-fill-muted px-6 py-4 shadow-sm">
-                <div className="grid grid-cols-12 gap-6 text-xs font-bold text-text-muted uppercase tracking-wider">
-                  <div className="col-span-5">Product Details</div>
-                  <div className="col-span-2 text-center">Requested</div>
-                  {quote.status === 'under_cc_review' && (
-                    <>
-                      <div className="col-span-2 text-center">Confirmed</div>
-                      <div className="col-span-2 text-right">Price/Case</div>
-                    </>
-                  )}
-                  {quote.status !== 'under_cc_review' && (
-                    <>
-                      <div className="col-span-2 text-right">Price/Case</div>
-                    </>
-                  )}
-                  <div className="col-span-1 text-right">Total</div>
-                </div>
+                {quote.status === 'under_cc_review' ? (
+                  <div className="grid grid-cols-12 gap-6 text-xs font-bold text-text-muted uppercase tracking-wider">
+                    <div className="col-span-5">Product Details</div>
+                    <div className="col-span-2 text-center">Requested</div>
+                    <div className="col-span-2 text-center">Confirmed</div>
+                    <div className="col-span-2 text-right">Price/Case</div>
+                    <div className="col-span-1 text-right">Total</div>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-12 gap-6 text-xs font-bold text-text-muted uppercase tracking-wider">
+                    <div className="col-span-6">Product Details</div>
+                    <div className="col-span-2 text-center">Requested</div>
+                    <div className="col-span-2 text-right">Price/Case</div>
+                    <div className="col-span-2 text-right">Total</div>
+                  </div>
+                )}
               </div>
 
               {/* Table Rows */}
@@ -458,41 +471,41 @@ const QuoteApprovalDialog = ({
                   return (
                     <div
                       key={idx}
-                      className="grid grid-cols-12 gap-6 px-6 py-5 hover:bg-fill-muted/30 transition-all duration-200 group"
+                      className="grid grid-cols-12 gap-6 px-6 py-4 hover:bg-fill-muted/30 transition-all duration-200 group"
                     >
                       {product ? (
                         <>
                           {/* Product Info */}
-                          <div className="col-span-5 space-y-2 pr-4">
-                            <Typography variant="bodyMd" className="font-bold group-hover:text-text-brand transition-colors line-clamp-2">
+                          <div className={`${isReviewMode ? 'col-span-5' : 'col-span-6'} space-y-1.5 pr-4`}>
+                            <Typography variant="bodySm" className="font-bold group-hover:text-text-brand transition-colors line-clamp-2 leading-tight">
                               {product.name}
                             </Typography>
-                            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                            <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
                               {product.producer && (
-                                <Typography variant="bodySm" colorRole="muted" className="font-medium truncate max-w-[200px]">
+                                <Typography variant="bodyXs" colorRole="muted" className="truncate max-w-[180px]">
                                   {product.producer}
                                 </Typography>
                               )}
                               {product.year && (
-                                <Typography variant="bodySm" colorRole="muted" className="flex-shrink-0">
+                                <Typography variant="bodyXs" colorRole="muted" className="flex-shrink-0">
                                   • {product.year}
                                 </Typography>
                               )}
                               {item.vintage && (
-                                <Typography variant="bodySm" colorRole="muted" className="flex-shrink-0">
+                                <Typography variant="bodyXs" colorRole="muted" className="flex-shrink-0">
                                   • Vintage {item.vintage}
                                 </Typography>
                               )}
                             </div>
-                            <div className="inline-flex items-center gap-2 rounded-md bg-fill-muted/50 px-2.5 py-1">
-                              <Typography variant="bodyXs" colorRole="muted" className="font-mono font-semibold text-[10px]">
+                            <div className="inline-flex items-center gap-2 rounded-md bg-fill-muted/50 px-2 py-0.5">
+                              <Typography variant="bodyXs" colorRole="muted" className="font-mono text-[9px]">
                                 {product.lwin18}
                               </Typography>
                             </div>
                             {isReviewMode && adjustment && !adjustment.available && (
-                              <div className="inline-flex items-center gap-1.5 rounded-lg bg-fill-danger/10 border border-border-danger px-3 py-1.5 mt-2">
-                                <span className="text-base">⚠️</span>
-                                <Typography variant="bodySm" colorRole="danger" className="font-bold">
+                              <div className="inline-flex items-center gap-1.5 rounded-lg bg-fill-danger/10 border border-border-danger px-2.5 py-1 mt-1">
+                                <span className="text-sm">⚠️</span>
+                                <Typography variant="bodyXs" colorRole="danger" className="font-bold">
                                   Out of Stock
                                 </Typography>
                               </div>
@@ -501,11 +514,11 @@ const QuoteApprovalDialog = ({
 
                           {/* Requested Quantity */}
                           <div className="col-span-2 flex items-center justify-center">
-                            <div className="inline-flex flex-col items-center gap-1">
-                              <Typography variant="headingXs" className="font-bold text-text-brand">
+                            <div className="inline-flex flex-col items-center gap-0.5">
+                              <Typography variant="bodyLg" className="font-bold text-text-brand">
                                 {item.quantity}
                               </Typography>
-                              <Typography variant="bodyXs" colorRole="muted" className="uppercase tracking-wide font-semibold">
+                              <Typography variant="bodyXs" colorRole="muted" className="uppercase tracking-wide text-[10px]">
                                 {item.quantity === 1 ? 'case' : 'cases'}
                               </Typography>
                             </div>
@@ -514,7 +527,7 @@ const QuoteApprovalDialog = ({
                           {isReviewMode ? (
                             <>
                               {/* Confirmed Quantity (Editable) */}
-                              <div className="col-span-2 flex flex-col items-center justify-center gap-3">
+                              <div className="col-span-2 flex flex-col items-center justify-center gap-2">
                                 <Input
                                   type="number"
                                   min="0"
@@ -531,9 +544,9 @@ const QuoteApprovalDialog = ({
                                       },
                                     });
                                   }}
-                                  className="w-28 text-center font-bold text-lg border-2 focus:border-border-brand focus:ring-2 focus:ring-fill-brand/20 transition-all"
+                                  className="w-24 text-center font-bold text-base border-2 focus:border-border-brand focus:ring-2 focus:ring-fill-brand/20 transition-all"
                                 />
-                                <label className="flex items-center gap-2 cursor-pointer group/checkbox">
+                                <label className="flex items-center gap-1.5 cursor-pointer group/checkbox">
                                   <input
                                     type="checkbox"
                                     checked={adjustment?.available ?? true}
@@ -550,9 +563,9 @@ const QuoteApprovalDialog = ({
                                         },
                                       });
                                     }}
-                                    className="h-4 w-4 rounded border-2 cursor-pointer"
+                                    className="h-3.5 w-3.5 rounded border-2 cursor-pointer"
                                   />
-                                  <span className="text-xs font-semibold uppercase tracking-wide text-text-muted group-hover/checkbox:text-text transition-colors">
+                                  <span className="text-[10px] font-semibold uppercase tracking-wide text-text-muted group-hover/checkbox:text-text transition-colors">
                                     In Stock
                                   </span>
                                 </label>
@@ -560,9 +573,9 @@ const QuoteApprovalDialog = ({
 
                               {/* Price per Case (Editable USD) */}
                               <div className="col-span-2 flex items-center justify-end">
-                                <div className="flex flex-col items-end gap-2">
+                                <div className="flex flex-col items-end gap-1">
                                   <div className="relative">
-                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted font-bold">$</span>
+                                    <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-text-muted font-semibold text-sm">$</span>
                                     <Input
                                       type="number"
                                       min="0"
@@ -580,10 +593,10 @@ const QuoteApprovalDialog = ({
                                           },
                                         });
                                       }}
-                                      className="w-36 pl-7 text-right font-bold text-lg border-2 focus:border-border-brand focus:ring-2 focus:ring-fill-brand/20 transition-all"
+                                      className="w-32 pl-6 text-right font-bold text-base border-2 focus:border-border-brand focus:ring-2 focus:ring-fill-brand/20 transition-all"
                                     />
                                   </div>
-                                  <Typography variant="bodyXs" colorRole="muted" className="uppercase tracking-wide font-semibold">
+                                  <Typography variant="bodyXs" colorRole="muted" className="uppercase tracking-wide text-[10px]">
                                     per case
                                   </Typography>
                                 </div>
@@ -593,11 +606,11 @@ const QuoteApprovalDialog = ({
                             <>
                               {/* Price per Case (Read-only) */}
                               <div className="col-span-2 flex items-center justify-end">
-                                <div className="flex flex-col items-end gap-1">
-                                  <Typography variant="bodyLg" className="font-bold">
+                                <div className="flex flex-col items-end gap-0.5">
+                                  <Typography variant="bodySm" className="font-bold">
                                     {formatPrice(displayPricePerCase, displayCurrency)}
                                   </Typography>
-                                  <Typography variant="bodyXs" colorRole="muted" className="uppercase tracking-wide font-semibold">
+                                  <Typography variant="bodyXs" colorRole="muted" className="uppercase tracking-wide text-[10px]">
                                     per case
                                   </Typography>
                                 </div>
@@ -606,8 +619,8 @@ const QuoteApprovalDialog = ({
                           )}
 
                           {/* Line Total */}
-                          <div className="col-span-1 flex items-center justify-end">
-                            <Typography variant="headingXs" className="font-bold text-text-brand">
+                          <div className={`${isReviewMode ? 'col-span-1' : 'col-span-2'} flex items-center justify-end`}>
+                            <Typography variant="bodyLg" className="font-bold text-text-brand">
                               {formatPrice(displayLineTotal, displayCurrency)}
                             </Typography>
                           </div>
