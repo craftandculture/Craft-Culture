@@ -64,6 +64,14 @@ const quotesStartCCReview = adminProcedure
         });
       }
 
+      // Send notification to quote owner (fire and forget)
+      const { default: notifyUserOfReviewStart } = await import(
+        '../utils/notifyUserOfReviewStart'
+      );
+      notifyUserOfReviewStart(updatedQuote).catch((error) =>
+        console.error('Failed to send review start notification:', error),
+      );
+
       // TODO: Log admin activity
 
       return updatedQuote;
