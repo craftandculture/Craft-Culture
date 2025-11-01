@@ -148,7 +148,7 @@ const QuotesList = () => {
     }
   };
 
-  const columns: ColumnDef<Quote & { createdBy?: { name: string | null; email: string } }>[] = [
+  const columns: ColumnDef<Quote & { createdBy?: { id: string; name: string | null; email: string } | null }>[] = [
     {
       accessorKey: 'name',
       header: 'Quote Name',
