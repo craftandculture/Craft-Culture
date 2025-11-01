@@ -113,7 +113,13 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
         confirmedQuantity?: number;
         originalQuantity?: number;
         adminNotes?: string;
-        adminAlternatives?: string[];
+        adminAlternatives?: Array<{
+          productName: string;
+          pricePerCase: number;
+          bottlesPerCase: number;
+          bottleSize: string;
+          quantityAvailable: number;
+        }>;
       }>;
       marginConfig?: {
         type: 'percentage' | 'fixed';
@@ -142,7 +148,13 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
           confirmedQuantity?: number;
           originalQuantity?: number;
           adminNotes?: string;
-          adminAlternatives?: string[];
+          adminAlternatives?: Array<{
+            productName: string;
+            pricePerCase: number;
+            bottlesPerCase: number;
+            bottleSize: string;
+            quantityAvailable: number;
+          }>;
         }
       >,
     );
@@ -577,14 +589,29 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                               )}
                               {hasAlternatives && (
                                 <div className="mt-2 pt-2 border-t border-border-muted">
-                                  <Typography variant="bodyXs" className="font-semibold text-text-success mb-1">
+                                  <Typography variant="bodyXs" className="font-semibold text-text-success mb-2">
                                     💡 Alternative Options:
                                   </Typography>
-                                  {pricingItem.adminAlternatives!.map((alt, altIdx) => (
-                                    <Typography key={altIdx} variant="bodyXs" colorRole="muted" className="ml-4">
-                                      • {alt}
-                                    </Typography>
-                                  ))}
+                                  <div className="space-y-2">
+                                    {pricingItem.adminAlternatives!.map((alt, altIdx) => (
+                                      <div key={altIdx} className="ml-4 rounded-md bg-fill-success/10 border border-border-success p-2">
+                                        <Typography variant="bodyXs" className="font-bold mb-1">
+                                          {alt.productName}
+                                        </Typography>
+                                        <div className="grid grid-cols-2 gap-x-3 gap-y-0.5">
+                                          <Typography variant="bodyXs" colorRole="muted">
+                                            ${alt.pricePerCase.toFixed(2)}/case
+                                          </Typography>
+                                          <Typography variant="bodyXs" colorRole="muted">
+                                            {alt.quantityAvailable} available
+                                          </Typography>
+                                          <Typography variant="bodyXs" colorRole="muted" className="col-span-2">
+                                            {alt.bottlesPerCase} × {alt.bottleSize}
+                                          </Typography>
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
                                 </div>
                               )}
                             </div>
@@ -734,20 +761,50 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                                   (quote.status === 'cc_confirmed' ||
                                    quote.status === 'po_submitted' ||
                                    quote.status === 'po_confirmed') && (
-                                  <div className="mt-2 rounded-lg border border-border-success bg-fill-success/10 p-3">
-                                    <div className="flex items-center gap-1.5 mb-2">
-                                      <span className="text-sm">💡</span>
-                                      <Typography variant="bodyXs" className="font-semibold text-text-success">
-                                        Alternative Options Available:
+                                  <div className="mt-2 rounded-lg border-2 border-border-success bg-fill-success/10 p-3">
+                                    <div className="flex items-center gap-1.5 mb-3">
+                                      <span className="text-base">💡</span>
+                                      <Typography variant="bodySm" className="font-bold text-text-success">
+                                        Alternative Products Available:
                                       </Typography>
                                     </div>
-                                    <div className="space-y-1.5">
+                                    <div className="space-y-2">
                                       {pricing.adminAlternatives.map((alt, altIdx) => (
-                                        <div key={altIdx} className="flex items-start gap-2">
-                                          <span className="text-text-success font-bold text-xs mt-0.5">•</span>
-                                          <Typography variant="bodyXs" className="flex-1">
-                                            {alt}
+                                        <div key={altIdx} className="rounded-md bg-white border border-border-success p-3">
+                                          <Typography variant="bodySm" className="font-bold mb-2">
+                                            {alt.productName}
                                           </Typography>
+                                          <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                                            <div>
+                                              <Typography variant="bodyXs" colorRole="muted" className="uppercase tracking-wide">
+                                                Price
+                                              </Typography>
+                                              <Typography variant="bodyXs" className="font-semibold">
+                                                {formatPrice(
+                                                  displayCurrency === 'AED'
+                                                    ? convertUsdToAed(alt.pricePerCase)
+                                                    : alt.pricePerCase,
+                                                  displayCurrency
+                                                )} /case
+                                              </Typography>
+                                            </div>
+                                            <div>
+                                              <Typography variant="bodyXs" colorRole="muted" className="uppercase tracking-wide">
+                                                Available
+                                              </Typography>
+                                              <Typography variant="bodyXs" className="font-semibold">
+                                                {alt.quantityAvailable} cases
+                                              </Typography>
+                                            </div>
+                                            <div className="col-span-2">
+                                              <Typography variant="bodyXs" colorRole="muted" className="uppercase tracking-wide">
+                                                Case Configuration
+                                              </Typography>
+                                              <Typography variant="bodyXs" className="font-semibold">
+                                                {alt.bottlesPerCase} × {alt.bottleSize}
+                                              </Typography>
+                                            </div>
+                                          </div>
                                         </div>
                                       ))}
                                     </div>

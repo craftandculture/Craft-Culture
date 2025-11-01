@@ -70,13 +70,25 @@ const QuoteApprovalDialog = ({
         confirmedQuantity?: number;
         available: boolean;
         notes?: string;
-        adminAlternatives?: string[];
+        adminAlternatives?: Array<{
+          productName: string;
+          pricePerCase: number;
+          bottlesPerCase: number;
+          bottleSize: string;
+          quantityAvailable: number;
+        }>;
       }
     >
   >({});
 
-  // State for adding new alternatives
-  const [newAlternative, setNewAlternative] = useState<Record<string, string>>({});
+  // State for adding new alternatives (structured)
+  const [newAlternative, setNewAlternative] = useState<Record<string, {
+    productName: string;
+    pricePerCase: string;
+    bottlesPerCase: string;
+    bottleSize: string;
+    quantityAvailable: string;
+  }>>({});
 
   // Extract pricing data from quoteData
   const quotePricingData = useMemo(() => {
@@ -736,56 +748,155 @@ const QuoteApprovalDialog = ({
                           <div className="flex items-center gap-2 mb-3">
                             <span className="text-base">💡</span>
                             <Typography variant="bodySm" className="font-semibold">
-                              Suggest Alternatives (not in database)
+                              Suggest Alternative Products
                             </Typography>
                           </div>
-                          <Typography variant="bodyXs" colorRole="muted" className="mb-3">
-                            Add alternative products, vintages, or options that aren&apos;t in your catalog
+                          <Typography variant="bodyXs" colorRole="muted" className="mb-4">
+                            Add alternative products with pricing that aren&apos;t in your catalog
                           </Typography>
 
-                          {/* Input for new alternative */}
-                          <div className="flex gap-2 mb-3">
-                            <Input
-                              type="text"
-                              placeholder="e.g., Chateau Margaux 2019 at $180/case"
-                              value={newAlternative[item.productId] || ''}
-                              onChange={(e) => {
-                                setNewAlternative({
-                                  ...newAlternative,
-                                  [item.productId]: e.target.value,
-                                });
-                              }}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter' && newAlternative[item.productId]?.trim()) {
-                                  e.preventDefault();
-                                  const trimmedValue = newAlternative[item.productId]!.trim();
-                                  const currentAlternatives = adjustment?.adminAlternatives || [];
-                                  setLineItemAdjustments({
-                                    ...lineItemAdjustments,
-                                    [item.productId]: {
-                                      adjustedPricePerCase: adjustment?.adjustedPricePerCase ?? pricePerCase,
-                                      confirmedQuantity: adjustment?.confirmedQuantity ?? item.quantity,
-                                      available: adjustment?.available ?? true,
-                                      notes: adjustment?.notes,
-                                      adminAlternatives: [...currentAlternatives, trimmedValue],
-                                    },
-                                  });
-                                  setNewAlternative({
-                                    ...newAlternative,
-                                    [item.productId]: '',
-                                  });
-                                }
-                              }}
-                              className="flex-1 text-sm border-2 focus:border-border-brand focus:ring-2 focus:ring-fill-brand/20 transition-all"
-                            />
+                          {/* Structured form for new alternative */}
+                          <div className="space-y-3 mb-4">
+                            <div className="grid grid-cols-2 gap-3">
+                              <div className="col-span-2">
+                                <Typography variant="bodyXs" className="mb-1 font-medium">
+                                  Product Name <span className="text-text-danger">*</span>
+                                </Typography>
+                                <Input
+                                  type="text"
+                                  size="sm"
+                                  placeholder="e.g., Chateau Margaux 2019"
+                                  value={newAlternative[item.productId]?.productName || ''}
+                                  onChange={(e) => {
+                                    setNewAlternative({
+                                      ...newAlternative,
+                                      [item.productId]: {
+                                        ...newAlternative[item.productId],
+                                        productName: e.target.value,
+                                        pricePerCase: newAlternative[item.productId]?.pricePerCase || '',
+                                        bottlesPerCase: newAlternative[item.productId]?.bottlesPerCase || '',
+                                        bottleSize: newAlternative[item.productId]?.bottleSize || '',
+                                        quantityAvailable: newAlternative[item.productId]?.quantityAvailable || '',
+                                      },
+                                    });
+                                  }}
+                                />
+                              </div>
+                              <div>
+                                <Typography variant="bodyXs" className="mb-1 font-medium">
+                                  Price/Case (USD) <span className="text-text-danger">*</span>
+                                </Typography>
+                                <Input
+                                  type="number"
+                                  size="sm"
+                                  placeholder="180"
+                                  min="0"
+                                  step="0.01"
+                                  value={newAlternative[item.productId]?.pricePerCase || ''}
+                                  onChange={(e) => {
+                                    setNewAlternative({
+                                      ...newAlternative,
+                                      [item.productId]: {
+                                        ...newAlternative[item.productId],
+                                        productName: newAlternative[item.productId]?.productName || '',
+                                        pricePerCase: e.target.value,
+                                        bottlesPerCase: newAlternative[item.productId]?.bottlesPerCase || '',
+                                        bottleSize: newAlternative[item.productId]?.bottleSize || '',
+                                        quantityAvailable: newAlternative[item.productId]?.quantityAvailable || '',
+                                      },
+                                    });
+                                  }}
+                                />
+                              </div>
+                              <div>
+                                <Typography variant="bodyXs" className="mb-1 font-medium">
+                                  Qty Available <span className="text-text-danger">*</span>
+                                </Typography>
+                                <Input
+                                  type="number"
+                                  size="sm"
+                                  placeholder="100"
+                                  min="0"
+                                  value={newAlternative[item.productId]?.quantityAvailable || ''}
+                                  onChange={(e) => {
+                                    setNewAlternative({
+                                      ...newAlternative,
+                                      [item.productId]: {
+                                        ...newAlternative[item.productId],
+                                        productName: newAlternative[item.productId]?.productName || '',
+                                        pricePerCase: newAlternative[item.productId]?.pricePerCase || '',
+                                        bottlesPerCase: newAlternative[item.productId]?.bottlesPerCase || '',
+                                        bottleSize: newAlternative[item.productId]?.bottleSize || '',
+                                        quantityAvailable: e.target.value,
+                                      },
+                                    });
+                                  }}
+                                />
+                              </div>
+                              <div>
+                                <Typography variant="bodyXs" className="mb-1 font-medium">
+                                  Bottles/Case <span className="text-text-danger">*</span>
+                                </Typography>
+                                <Input
+                                  type="number"
+                                  size="sm"
+                                  placeholder="12"
+                                  min="1"
+                                  value={newAlternative[item.productId]?.bottlesPerCase || ''}
+                                  onChange={(e) => {
+                                    setNewAlternative({
+                                      ...newAlternative,
+                                      [item.productId]: {
+                                        ...newAlternative[item.productId],
+                                        productName: newAlternative[item.productId]?.productName || '',
+                                        pricePerCase: newAlternative[item.productId]?.pricePerCase || '',
+                                        bottlesPerCase: e.target.value,
+                                        bottleSize: newAlternative[item.productId]?.bottleSize || '',
+                                        quantityAvailable: newAlternative[item.productId]?.quantityAvailable || '',
+                                      },
+                                    });
+                                  }}
+                                />
+                              </div>
+                              <div>
+                                <Typography variant="bodyXs" className="mb-1 font-medium">
+                                  Bottle Size <span className="text-text-danger">*</span>
+                                </Typography>
+                                <Input
+                                  type="text"
+                                  size="sm"
+                                  placeholder="750ml"
+                                  value={newAlternative[item.productId]?.bottleSize || ''}
+                                  onChange={(e) => {
+                                    setNewAlternative({
+                                      ...newAlternative,
+                                      [item.productId]: {
+                                        ...newAlternative[item.productId],
+                                        productName: newAlternative[item.productId]?.productName || '',
+                                        pricePerCase: newAlternative[item.productId]?.pricePerCase || '',
+                                        bottlesPerCase: newAlternative[item.productId]?.bottlesPerCase || '',
+                                        bottleSize: e.target.value,
+                                        quantityAvailable: newAlternative[item.productId]?.quantityAvailable || '',
+                                      },
+                                    });
+                                  }}
+                                />
+                              </div>
+                            </div>
                             <Button
                               type="button"
                               variant="default"
                               colorRole="brand"
                               size="sm"
                               onClick={() => {
-                                if (newAlternative[item.productId]?.trim()) {
-                                  const trimmedValue = newAlternative[item.productId]!.trim();
+                                const alt = newAlternative[item.productId];
+                                if (
+                                  alt?.productName?.trim() &&
+                                  alt?.pricePerCase &&
+                                  alt?.bottlesPerCase &&
+                                  alt?.bottleSize?.trim() &&
+                                  alt?.quantityAvailable
+                                ) {
                                   const currentAlternatives = adjustment?.adminAlternatives || [];
                                   setLineItemAdjustments({
                                     ...lineItemAdjustments,
@@ -794,18 +905,41 @@ const QuoteApprovalDialog = ({
                                       confirmedQuantity: adjustment?.confirmedQuantity ?? item.quantity,
                                       available: adjustment?.available ?? true,
                                       notes: adjustment?.notes,
-                                      adminAlternatives: [...currentAlternatives, trimmedValue],
+                                      adminAlternatives: [
+                                        ...currentAlternatives,
+                                        {
+                                          productName: alt.productName.trim(),
+                                          pricePerCase: parseFloat(alt.pricePerCase),
+                                          bottlesPerCase: parseInt(alt.bottlesPerCase),
+                                          bottleSize: alt.bottleSize.trim(),
+                                          quantityAvailable: parseInt(alt.quantityAvailable),
+                                        },
+                                      ],
                                     },
                                   });
+                                  // Clear form
                                   setNewAlternative({
                                     ...newAlternative,
-                                    [item.productId]: '',
+                                    [item.productId]: {
+                                      productName: '',
+                                      pricePerCase: '',
+                                      bottlesPerCase: '',
+                                      bottleSize: '',
+                                      quantityAvailable: '',
+                                    },
                                   });
                                 }
                               }}
-                              isDisabled={!newAlternative[item.productId]?.trim()}
+                              isDisabled={
+                                !newAlternative[item.productId]?.productName?.trim() ||
+                                !newAlternative[item.productId]?.pricePerCase ||
+                                !newAlternative[item.productId]?.bottlesPerCase ||
+                                !newAlternative[item.productId]?.bottleSize?.trim() ||
+                                !newAlternative[item.productId]?.quantityAvailable
+                              }
+                              className="w-full"
                             >
-                              <ButtonContent>Add</ButtonContent>
+                              <ButtonContent iconLeft={IconPlus}>Add Alternative</ButtonContent>
                             </Button>
                           </div>
 
@@ -813,35 +947,48 @@ const QuoteApprovalDialog = ({
                           {adjustment?.adminAlternatives && adjustment.adminAlternatives.length > 0 && (
                             <div className="space-y-2">
                               <Typography variant="bodyXs" className="font-semibold">
-                                Your Suggestions:
+                                Alternative Products ({adjustment.adminAlternatives.length}):
                               </Typography>
-                              <div className="flex flex-wrap gap-2">
+                              <div className="space-y-2">
                                 {adjustment.adminAlternatives.map((alt, altIdx) => (
                                   <div
                                     key={altIdx}
-                                    className="inline-flex items-center gap-2 rounded-md bg-fill-success/10 border border-border-success px-3 py-1.5"
+                                    className="rounded-md bg-fill-success/10 border border-border-success p-3"
                                   >
-                                    <Typography variant="bodyXs" className="font-medium text-text-success">
-                                      {alt}
-                                    </Typography>
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        const updatedAlternatives = adjustment.adminAlternatives!.filter(
-                                          (_, i) => i !== altIdx
-                                        );
-                                        setLineItemAdjustments({
-                                          ...lineItemAdjustments,
-                                          [item.productId]: {
-                                            ...adjustment,
-                                            adminAlternatives: updatedAlternatives,
-                                          },
-                                        });
-                                      }}
-                                      className="text-text-danger hover:text-text-danger/80 transition-colors"
-                                    >
-                                      ✕
-                                    </button>
+                                    <div className="flex items-start justify-between gap-2 mb-2">
+                                      <Typography variant="bodyXs" className="font-bold text-text-success flex-1">
+                                        {alt.productName}
+                                      </Typography>
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          const updatedAlternatives = adjustment.adminAlternatives!.filter(
+                                            (_, i) => i !== altIdx
+                                          );
+                                          setLineItemAdjustments({
+                                            ...lineItemAdjustments,
+                                            [item.productId]: {
+                                              ...adjustment,
+                                              adminAlternatives: updatedAlternatives.length > 0 ? updatedAlternatives : undefined,
+                                            },
+                                          });
+                                        }}
+                                        className="text-text-danger hover:text-text-danger/80 transition-colors text-sm font-bold"
+                                      >
+                                        ✕
+                                      </button>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                                      <Typography variant="bodyXs" colorRole="muted">
+                                        Price: ${alt.pricePerCase.toFixed(2)}/case
+                                      </Typography>
+                                      <Typography variant="bodyXs" colorRole="muted">
+                                        {alt.quantityAvailable} cases available
+                                      </Typography>
+                                      <Typography variant="bodyXs" colorRole="muted" className="col-span-2">
+                                        {alt.bottlesPerCase} × {alt.bottleSize}
+                                      </Typography>
+                                    </div>
                                   </div>
                                 ))}
                               </div>

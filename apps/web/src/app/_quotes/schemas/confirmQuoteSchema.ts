@@ -15,7 +15,17 @@ const confirmQuoteSchema = z.object({
         confirmedQuantity: z.number().optional(),
         available: z.boolean(),
         notes: z.string().optional(),
-        adminAlternatives: z.array(z.string()).optional(),
+        adminAlternatives: z
+          .array(
+            z.object({
+              productName: z.string(),
+              pricePerCase: z.number(),
+              bottlesPerCase: z.number(),
+              bottleSize: z.string(),
+              quantityAvailable: z.number(),
+            }),
+          )
+          .optional(),
       }),
     )
     .optional(),
