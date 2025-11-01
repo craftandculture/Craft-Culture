@@ -75,7 +75,13 @@ const quotesConfirm = adminProcedure
           confirmedQuantity?: number;
           available: boolean;
           notes?: string;
-          adminAlternatives?: string[];
+          adminAlternatives?: Array<{
+            productName: string;
+            pricePerCase: number;
+            bottlesPerCase: number;
+            bottleSize: string;
+            quantityAvailable: number;
+          }>;
         };
 
         // Update line item pricing with adjustments
