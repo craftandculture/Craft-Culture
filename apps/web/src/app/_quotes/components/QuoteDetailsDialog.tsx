@@ -353,7 +353,7 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="w-[95vw] max-w-[1400px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{quote.name}</DialogTitle>
           <DialogDescription>
@@ -523,6 +523,74 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
               )}
             </div>
 
+            {/* Admin Adjustments Summary - show when confirmed by C&C */}
+            {(quote.status === 'cc_confirmed' ||
+              quote.status === 'po_submitted' ||
+              quote.status === 'po_confirmed') &&
+              quotePricingData?.lineItems && (
+                <>
+                  <Divider />
+                  <div className="rounded-lg border-2 border-border-success bg-fill-success/10 p-4">
+                    <Typography variant="bodySm" className="mb-3 font-semibold text-text-success">
+                      ✓ Quote Confirmed by C&C Team
+                    </Typography>
+
+                    {/* Check if any adjustments were made */}
+                    {quotePricingData.lineItems.some(
+                      (item) =>
+                        item.confirmedQuantity !== item.originalQuantity ||
+                        item.adminNotes
+                    ) && (
+                      <div className="space-y-2">
+                        <Typography variant="bodyXs" className="font-medium">
+                          The following adjustments were made:
+                        </Typography>
+                        {quotePricingData.lineItems.map((pricingItem) => {
+                          const hasQuantityChange = pricingItem.confirmedQuantity !== pricingItem.originalQuantity;
+                          const hasNotes = !!pricingItem.adminNotes;
+
+                          if (!hasQuantityChange && !hasNotes) return null;
+
+                          const product = productMap[pricingItem.productId];
+
+                          return (
+                            <div
+                              key={pricingItem.productId}
+                              className="rounded-lg border border-border-muted bg-background-primary p-3"
+                            >
+                              <Typography variant="bodyXs" className="mb-1 font-medium">
+                                {product?.name || pricingItem.productId}
+                              </Typography>
+                              {hasQuantityChange && (
+                                <Typography variant="bodyXs" colorRole="muted">
+                                  Quantity adjusted: {pricingItem.originalQuantity} → {pricingItem.confirmedQuantity} cases
+                                </Typography>
+                              )}
+                              {hasNotes && (
+                                <Typography variant="bodyXs" className="mt-1 italic">
+                                  &ldquo;{pricingItem.adminNotes}&rdquo;
+                                </Typography>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {quote.ccConfirmationNotes && (
+                      <div className="mt-3 rounded-lg bg-background-primary p-3">
+                        <Typography variant="bodyXs" className="mb-1 font-medium">
+                          Additional Notes:
+                        </Typography>
+                        <Typography variant="bodyXs" className="whitespace-pre-wrap">
+                          {quote.ccConfirmationNotes}
+                        </Typography>
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+
             {/* Line Items */}
             <Divider />
             <div>
@@ -576,47 +644,64 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
 
                             {/* Pricing Breakdown */}
                             {pricing && (
-                              <div className="grid grid-cols-3 gap-2 rounded-lg bg-fill-muted p-3">
-                                <div>
-                                  <Typography variant="bodyXs" colorRole="muted" className="mb-0.5">
-                                    Quantity
-                                  </Typography>
-                                  <Typography variant="bodySm" className="font-semibold">
-                                    {displayQuantity} {displayQuantity === 1 ? 'case' : 'cases'}
-                                  </Typography>
-                                  {pricing?.confirmedQuantity && pricing.confirmedQuantity !== pricing.originalQuantity && (
-                                    <Typography variant="bodyXs" colorRole="muted" className="line-through mt-0.5">
-                                      Was: {pricing.originalQuantity}
+                              <>
+                                <div className="grid grid-cols-3 gap-2 rounded-lg bg-fill-muted p-3">
+                                  <div>
+                                    <Typography variant="bodyXs" colorRole="muted" className="mb-0.5">
+                                      Quantity
                                     </Typography>
-                                  )}
-                                </div>
-                                <div>
-                                  <Typography variant="bodyXs" colorRole="muted" className="mb-0.5">
-                                    Price/Case
-                                  </Typography>
-                                  <Typography variant="bodySm" className="font-semibold">
-                                    {formatPrice(
-                                      quote.currency === 'AED' && quote.totalAed
-                                        ? convertUsdToAed(pricePerCase)
-                                        : pricePerCase,
-                                      quote.currency as 'USD' | 'AED',
+                                    <Typography variant="bodySm" className="font-semibold">
+                                      {displayQuantity} {displayQuantity === 1 ? 'case' : 'cases'}
+                                    </Typography>
+                                    {pricing?.confirmedQuantity && pricing.confirmedQuantity !== pricing.originalQuantity && (
+                                      <Typography variant="bodyXs" colorRole="muted" className="line-through mt-0.5">
+                                        Was: {pricing.originalQuantity}
+                                      </Typography>
                                     )}
-                                  </Typography>
+                                  </div>
+                                  <div>
+                                    <Typography variant="bodyXs" colorRole="muted" className="mb-0.5">
+                                      Price/Case
+                                    </Typography>
+                                    <Typography variant="bodySm" className="font-semibold">
+                                      {formatPrice(
+                                        displayCurrency === 'AED'
+                                          ? convertUsdToAed(pricePerCase)
+                                          : pricePerCase,
+                                        displayCurrency,
+                                      )}
+                                    </Typography>
+                                  </div>
+                                  <div className="text-right">
+                                    <Typography variant="bodyXs" colorRole="muted" className="mb-0.5">
+                                      Line Total
+                                    </Typography>
+                                    <Typography variant="bodySm" className="font-bold text-text-brand">
+                                      {formatPrice(
+                                        displayCurrency === 'AED'
+                                          ? convertUsdToAed(lineItemTotal)
+                                          : lineItemTotal,
+                                        displayCurrency,
+                                      )}
+                                    </Typography>
+                                  </div>
                                 </div>
-                                <div className="text-right">
-                                  <Typography variant="bodyXs" colorRole="muted" className="mb-0.5">
-                                    Line Total
-                                  </Typography>
-                                  <Typography variant="bodySm" className="font-bold text-text-brand">
-                                    {formatPrice(
-                                      quote.currency === 'AED' && quote.totalAed
-                                        ? convertUsdToAed(lineItemTotal)
-                                        : lineItemTotal,
-                                      quote.currency as 'USD' | 'AED',
-                                    )}
-                                  </Typography>
-                                </div>
-                              </div>
+
+                                {/* Admin Notes - show when quote is confirmed or in later stages */}
+                                {pricing.adminNotes &&
+                                  (quote.status === 'cc_confirmed' ||
+                                   quote.status === 'po_submitted' ||
+                                   quote.status === 'po_confirmed') && (
+                                  <div className="mt-2 rounded-lg border border-border-brand bg-fill-brand/10 p-3">
+                                    <Typography variant="bodyXs" className="mb-1 font-semibold text-text-brand">
+                                      Admin Note:
+                                    </Typography>
+                                    <Typography variant="bodyXs" className="whitespace-pre-wrap">
+                                      {pricing.adminNotes}
+                                    </Typography>
+                                  </div>
+                                )}
+                              </>
                             )}
                           </div>
 
