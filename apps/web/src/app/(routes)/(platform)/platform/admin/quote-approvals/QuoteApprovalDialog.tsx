@@ -13,7 +13,7 @@ import { format } from 'date-fns';
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
-import QuoteWorkflowTimeline from '@/app/_quotes/components/QuoteWorkflowTimeline';
+import QuoteWorkflowStepper from '@/app/_quotes/components/QuoteWorkflowStepper';
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
 import Dialog from '@/app/_ui/components/Dialog/Dialog';
@@ -564,9 +564,9 @@ const QuoteApprovalDialog = ({
                               </Typography>
                             </div>
                             {isReviewMode && adjustment && !adjustment.available && (
-                              <div className="inline-flex items-center gap-1.5 rounded-lg bg-fill-danger/10 border border-border-danger px-2.5 py-1 mt-1">
+                              <div className="inline-flex items-center gap-1.5 rounded-lg bg-fill-warning/10 border border-border-warning px-2.5 py-1 mt-1">
                                 <span className="text-sm">⚠️</span>
-                                <Typography variant="bodyXs" colorRole="danger" className="font-bold">
+                                <Typography variant="bodyXs" colorRole="warning" className="font-bold">
                                   Out of Stock
                                 </Typography>
                               </div>
@@ -957,10 +957,10 @@ const QuoteApprovalDialog = ({
                                 {adjustment.adminAlternatives.map((alt, altIdx) => (
                                   <div
                                     key={altIdx}
-                                    className="rounded-md bg-fill-success/10 border border-border-success p-3"
+                                    className="rounded-md bg-fill-brand/10 border border-border-success p-3"
                                   >
                                     <div className="flex items-start justify-between gap-2 mb-2">
-                                      <Typography variant="bodyXs" className="font-bold text-text-success flex-1">
+                                      <Typography variant="bodyXs" className="font-bold text-text-brand flex-1">
                                         {alt.productName}
                                       </Typography>
                                       <button
@@ -1187,10 +1187,10 @@ const QuoteApprovalDialog = ({
 
               {showWorkflow && (
                 <div className="bg-gradient-to-b from-fill-muted/10 to-transparent">
-                  {/* Workflow Timeline */}
+                  {/* Workflow Progress */}
                   <div className="p-6 pb-4">
-                    <div className="rounded-xl bg-white p-5 shadow-sm border border-border-muted">
-                      <QuoteWorkflowTimeline quote={quote} />
+                    <div className="rounded-xl bg-white dark:bg-background-secondary p-5 shadow-sm border border-border-muted">
+                      <QuoteWorkflowStepper quote={quote} variant="default" />
                     </div>
                   </div>
 
@@ -1229,12 +1229,12 @@ const QuoteApprovalDialog = ({
 
 
                     {showRevisionForm && (
-                      <div className="rounded-xl bg-gradient-to-br from-fill-danger/5 to-fill-danger/10 p-6 shadow-sm border-2 border-border-danger">
+                      <div className="rounded-xl bg-gradient-to-br from-fill-warning/5 to-fill-warning/10 p-6 shadow-sm border-2 border-border-warning">
                         <div className="flex items-center gap-3 mb-5">
-                          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-fill-danger/20">
+                          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-fill-warning/20">
                             <span className="text-base">⚠️</span>
                           </div>
-                          <Typography variant="bodyLg" className="font-bold text-text-danger">
+                          <Typography variant="bodyLg" className="font-bold text-text-warning">
                             Request Revision
                           </Typography>
                         </div>
