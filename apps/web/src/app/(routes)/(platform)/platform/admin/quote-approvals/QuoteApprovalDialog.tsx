@@ -110,6 +110,7 @@ const QuoteApprovalDialog = ({
         offerId: string;
         quantity: number;
         vintage?: string;
+        alternativeVintages?: string[];
       }>,
     [quote?.lineItems],
   );
@@ -462,9 +463,11 @@ const QuoteApprovalDialog = ({
 
                   const isReviewMode = quote.status === 'under_cc_review';
 
+                  const hasAlternatives = item.alternativeVintages && item.alternativeVintages.length > 0;
+
                   return (
+                    <div key={idx} className="border-b border-border-muted last:border-b-0">
                     <div
-                      key={idx}
                       className="grid grid-cols-12 gap-6 px-6 py-4 hover:bg-fill-muted/30 transition-all duration-200 group"
                     >
                       {product ? (
@@ -630,6 +633,55 @@ const QuoteApprovalDialog = ({
                         </div>
                       )}
                     </div>
+
+                    {/* Alternative Vintages Section */}
+                    {product && hasAlternatives && (
+                      <div className="px-6 py-3 bg-fill-muted/20">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="text-sm">📅</span>
+                          <Typography variant="bodySm" className="font-semibold">
+                            Customer Requested Alternatives:
+                          </Typography>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          {item.alternativeVintages?.map((vintage, vIdx) => (
+                            <span
+                              key={vIdx}
+                              className="inline-flex items-center gap-1 rounded-md bg-fill-brand/10 border border-border-brand/30 px-3 py-1 text-xs font-semibold text-text-brand"
+                            >
+                              {vintage}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Admin Notes for Line Item */}
+                    {isReviewMode && product && (
+                      <div className="px-6 py-3 bg-white border-t border-border-muted">
+                        <Typography variant="bodySm" className="mb-2 font-semibold">
+                          Notes for this item <span className="text-text-muted font-normal text-xs">(optional)</span>
+                        </Typography>
+                        <TextArea
+                          value={adjustment?.notes || ''}
+                          onChange={(e) => {
+                            setLineItemAdjustments({
+                              ...lineItemAdjustments,
+                              [item.productId]: {
+                                adjustedPricePerCase: adjustment?.adjustedPricePerCase ?? pricePerCase,
+                                confirmedQuantity: adjustment?.confirmedQuantity ?? item.quantity,
+                                available: adjustment?.available ?? true,
+                                notes: e.target.value,
+                              },
+                            });
+                          }}
+                          placeholder="e.g., Substituted with 2019 vintage, Price adjusted due to supplier discount"
+                          rows={2}
+                          className="text-sm border-2 focus:border-border-brand focus:ring-2 focus:ring-fill-brand/20 transition-all"
+                        />
+                      </div>
+                    )}
+                    </div>
                   );
                 })}
               </div>
@@ -649,6 +701,51 @@ const QuoteApprovalDialog = ({
                 </div>
               </div>
             </div>
+
+            {/* Delivery Lead Time & Confirmation - Under Review */}
+            {quote.status === 'under_cc_review' && !showRevisionForm && (
+              <div className="rounded-xl bg-gradient-to-br from-fill-brand/5 to-fill-brand/10 p-6 shadow-md border-2 border-border-brand/30 space-y-5">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-fill-brand/20">
+                    <span className="text-lg">🚚</span>
+                  </div>
+                  <Typography variant="headingMd" className="font-bold text-text-brand">
+                    Delivery & Confirmation Details
+                  </Typography>
+                </div>
+
+                <div className="rounded-lg bg-white p-5 border border-border-muted">
+                  <div className="mb-4">
+                    <Typography variant="bodySm" className="mb-2 font-semibold">
+                      Delivery Lead Time <span className="text-text-danger text-base">*</span>
+                    </Typography>
+                    <Input
+                      type="text"
+                      value={deliveryLeadTime}
+                      onChange={(e) => setDeliveryLeadTime(e.target.value)}
+                      placeholder="e.g., 14-21 days, 3-4 weeks"
+                      className="border-2 focus:border-border-brand focus:ring-2 focus:ring-fill-brand/20 transition-all"
+                    />
+                    <Typography variant="bodyXs" colorRole="muted" className="mt-2">
+                      <strong>Required:</strong> This will be shown to the customer before they submit their PO
+                    </Typography>
+                  </div>
+
+                  <div>
+                    <Typography variant="bodySm" className="mb-2 font-semibold">
+                      Confirmation Notes <span className="text-text-muted font-normal text-xs">(optional)</span>
+                    </Typography>
+                    <TextArea
+                      value={confirmationNotes}
+                      onChange={(e) => setConfirmationNotes(e.target.value)}
+                      placeholder="Add any notes about this confirmation..."
+                      rows={3}
+                      className="border-2 focus:border-border-brand focus:ring-2 focus:ring-fill-brand/20 transition-all"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Workflow Actions - Collapsible Section */}
             <div className="rounded-xl border border-border-muted bg-white shadow-md overflow-hidden">
@@ -735,48 +832,6 @@ const QuoteApprovalDialog = ({
                       </div>
                     )}
 
-                    {quote.status === 'under_cc_review' && !showRevisionForm && (
-                      <div className="rounded-xl bg-white p-6 shadow-sm border border-border-muted space-y-5">
-                        <div>
-                          <div className="flex items-center gap-3 mb-3">
-                            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-fill-brand/10">
-                              <span className="text-base">🚚</span>
-                            </div>
-                            <Typography variant="bodyLg" className="font-bold">
-                              Delivery Lead Time <span className="text-text-danger">*</span>
-                            </Typography>
-                          </div>
-                          <Input
-                            type="text"
-                            value={deliveryLeadTime}
-                            onChange={(e) => setDeliveryLeadTime(e.target.value)}
-                            placeholder="e.g., 14-21 days, 3-4 weeks"
-                            className="border-2 focus:border-border-brand focus:ring-2 focus:ring-fill-brand/20 transition-all"
-                          />
-                          <Typography variant="bodyXs" colorRole="muted" className="mt-2">
-                            This will be shown to the customer before they submit their PO
-                          </Typography>
-                        </div>
-
-                        <div>
-                          <div className="flex items-center gap-3 mb-3">
-                            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-fill-brand/10">
-                              <span className="text-base">✍️</span>
-                            </div>
-                            <Typography variant="bodyLg" className="font-bold">
-                              Confirmation Notes
-                            </Typography>
-                          </div>
-                          <TextArea
-                            value={confirmationNotes}
-                            onChange={(e) => setConfirmationNotes(e.target.value)}
-                            placeholder="Add any notes about this confirmation..."
-                            rows={4}
-                            className="border-2 focus:border-border-brand focus:ring-2 focus:ring-fill-brand/20 transition-all"
-                          />
-                        </div>
-                      </div>
-                    )}
 
                     {showRevisionForm && (
                       <div className="rounded-xl bg-gradient-to-br from-fill-danger/5 to-fill-danger/10 p-6 shadow-sm border-2 border-border-danger">
