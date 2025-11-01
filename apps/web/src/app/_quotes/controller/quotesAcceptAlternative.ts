@@ -96,6 +96,13 @@ const quotesAcceptAlternative = protectedProcedure
 
       const lineItem = lineItems[lineItemIndex];
 
+      if (!lineItem) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Line item not found',
+        });
+      }
+
       if (!lineItem.adminAlternatives || !lineItem.adminAlternatives[alternativeIndex]) {
         throw new TRPCError({
           code: 'NOT_FOUND',
