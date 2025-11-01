@@ -70,9 +70,13 @@ const QuoteApprovalDialog = ({
         confirmedQuantity?: number;
         available: boolean;
         notes?: string;
+        adminAlternatives?: string[];
       }
     >
   >({});
+
+  // State for adding new alternatives
+  const [newAlternative, setNewAlternative] = useState<Record<string, string>>({});
 
   // Extract pricing data from quoteData
   const quotePricingData = useMemo(() => {
@@ -702,27 +706,146 @@ const QuoteApprovalDialog = ({
 
                     {/* Admin Notes for Line Item */}
                     {isReviewMode && product && (
-                      <div className="px-6 py-3 bg-white border-t border-border-muted">
-                        <Typography variant="bodySm" className="mb-2 font-semibold">
-                          Notes for this item <span className="text-text-muted font-normal text-xs">(optional)</span>
-                        </Typography>
-                        <TextArea
-                          value={adjustment?.notes || ''}
-                          onChange={(e) => {
-                            setLineItemAdjustments({
-                              ...lineItemAdjustments,
-                              [item.productId]: {
-                                adjustedPricePerCase: adjustment?.adjustedPricePerCase ?? pricePerCase,
-                                confirmedQuantity: adjustment?.confirmedQuantity ?? item.quantity,
-                                available: adjustment?.available ?? true,
-                                notes: e.target.value,
-                              },
-                            });
-                          }}
-                          placeholder="e.g., Substituted with 2019 vintage, Price adjusted due to supplier discount"
-                          rows={2}
-                          className="text-sm border-2 focus:border-border-brand focus:ring-2 focus:ring-fill-brand/20 transition-all"
-                        />
+                      <div className="px-6 py-3 bg-white border-t border-border-muted space-y-4">
+                        <div>
+                          <Typography variant="bodySm" className="mb-2 font-semibold">
+                            Notes for this item <span className="text-text-muted font-normal text-xs">(optional)</span>
+                          </Typography>
+                          <TextArea
+                            value={adjustment?.notes || ''}
+                            onChange={(e) => {
+                              setLineItemAdjustments({
+                                ...lineItemAdjustments,
+                                [item.productId]: {
+                                  adjustedPricePerCase: adjustment?.adjustedPricePerCase ?? pricePerCase,
+                                  confirmedQuantity: adjustment?.confirmedQuantity ?? item.quantity,
+                                  available: adjustment?.available ?? true,
+                                  notes: e.target.value,
+                                  adminAlternatives: adjustment?.adminAlternatives,
+                                },
+                              });
+                            }}
+                            placeholder="e.g., Substituted with 2019 vintage, Price adjusted due to supplier discount"
+                            rows={2}
+                            className="text-sm border-2 focus:border-border-brand focus:ring-2 focus:ring-fill-brand/20 transition-all"
+                          />
+                        </div>
+
+                        {/* Admin Alternative Suggestions */}
+                        <div className="rounded-lg bg-gradient-to-br from-fill-warning/10 to-fill-warning/5 border border-border-warning p-4">
+                          <div className="flex items-center gap-2 mb-3">
+                            <span className="text-base">💡</span>
+                            <Typography variant="bodySm" className="font-semibold">
+                              Suggest Alternatives (not in database)
+                            </Typography>
+                          </div>
+                          <Typography variant="bodyXs" colorRole="muted" className="mb-3">
+                            Add alternative products, vintages, or options that aren&apos;t in your catalog
+                          </Typography>
+
+                          {/* Input for new alternative */}
+                          <div className="flex gap-2 mb-3">
+                            <Input
+                              type="text"
+                              placeholder="e.g., Chateau Margaux 2019 at $180/case"
+                              value={newAlternative[item.productId] || ''}
+                              onChange={(e) => {
+                                setNewAlternative({
+                                  ...newAlternative,
+                                  [item.productId]: e.target.value,
+                                });
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter' && newAlternative[item.productId]?.trim()) {
+                                  e.preventDefault();
+                                  const currentAlternatives = adjustment?.adminAlternatives || [];
+                                  setLineItemAdjustments({
+                                    ...lineItemAdjustments,
+                                    [item.productId]: {
+                                      adjustedPricePerCase: adjustment?.adjustedPricePerCase ?? pricePerCase,
+                                      confirmedQuantity: adjustment?.confirmedQuantity ?? item.quantity,
+                                      available: adjustment?.available ?? true,
+                                      notes: adjustment?.notes,
+                                      adminAlternatives: [...currentAlternatives, newAlternative[item.productId].trim()],
+                                    },
+                                  });
+                                  setNewAlternative({
+                                    ...newAlternative,
+                                    [item.productId]: '',
+                                  });
+                                }
+                              }}
+                              className="flex-1 text-sm border-2 focus:border-border-brand focus:ring-2 focus:ring-fill-brand/20 transition-all"
+                            />
+                            <Button
+                              type="button"
+                              variant="default"
+                              colorRole="brand"
+                              size="sm"
+                              onClick={() => {
+                                if (newAlternative[item.productId]?.trim()) {
+                                  const currentAlternatives = adjustment?.adminAlternatives || [];
+                                  setLineItemAdjustments({
+                                    ...lineItemAdjustments,
+                                    [item.productId]: {
+                                      adjustedPricePerCase: adjustment?.adjustedPricePerCase ?? pricePerCase,
+                                      confirmedQuantity: adjustment?.confirmedQuantity ?? item.quantity,
+                                      available: adjustment?.available ?? true,
+                                      notes: adjustment?.notes,
+                                      adminAlternatives: [...currentAlternatives, newAlternative[item.productId].trim()],
+                                    },
+                                  });
+                                  setNewAlternative({
+                                    ...newAlternative,
+                                    [item.productId]: '',
+                                  });
+                                }
+                              }}
+                              isDisabled={!newAlternative[item.productId]?.trim()}
+                            >
+                              <ButtonContent>Add</ButtonContent>
+                            </Button>
+                          </div>
+
+                          {/* Display added alternatives */}
+                          {adjustment?.adminAlternatives && adjustment.adminAlternatives.length > 0 && (
+                            <div className="space-y-2">
+                              <Typography variant="bodyXs" className="font-semibold">
+                                Your Suggestions:
+                              </Typography>
+                              <div className="flex flex-wrap gap-2">
+                                {adjustment.adminAlternatives.map((alt, altIdx) => (
+                                  <div
+                                    key={altIdx}
+                                    className="inline-flex items-center gap-2 rounded-md bg-fill-success/10 border border-border-success px-3 py-1.5"
+                                  >
+                                    <Typography variant="bodyXs" className="font-medium text-text-success">
+                                      {alt}
+                                    </Typography>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        const updatedAlternatives = adjustment.adminAlternatives!.filter(
+                                          (_, i) => i !== altIdx
+                                        );
+                                        setLineItemAdjustments({
+                                          ...lineItemAdjustments,
+                                          [item.productId]: {
+                                            ...adjustment,
+                                            adminAlternatives: updatedAlternatives,
+                                          },
+                                        });
+                                      }}
+                                      className="text-text-danger hover:text-text-danger/80 transition-colors"
+                                    >
+                                      ✕
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     )}
                     </div>
@@ -923,16 +1046,6 @@ const QuoteApprovalDialog = ({
                               {quote.poNumber}
                             </Typography>
                           </div>
-                          {quote.deliveryLeadTime && (
-                            <div>
-                              <Typography variant="bodyXs" colorRole="muted" className="uppercase tracking-wide font-semibold mb-2">
-                                Delivery Lead Time
-                              </Typography>
-                              <Typography variant="bodyLg" className="font-bold">
-                                {quote.deliveryLeadTime}
-                              </Typography>
-                            </div>
-                          )}
                           {quote.poAttachmentUrl && (
                             <div>
                               <Typography variant="bodyXs" colorRole="muted" className="uppercase tracking-wide font-semibold mb-3">
