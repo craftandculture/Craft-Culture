@@ -326,27 +326,71 @@ const QuoteApprovalDialog = ({
 
         <DialogBody>
           <div className="space-y-6">
-            {/* Quote Summary */}
-            <div className="rounded-xl bg-gradient-to-br from-fill-muted/50 to-fill-muted border border-border-muted p-5">
-              <div className="grid grid-cols-3 gap-6">
-                <div className="space-y-1">
-                  <Typography variant="bodyXs" colorRole="muted" className="uppercase tracking-wide font-bold">
-                    Client
+            {/* Customer Information Card */}
+            <div className="rounded-xl bg-gradient-to-br from-fill-brand/10 via-fill-brand/5 to-transparent border-2 border-border-brand/30 p-6 shadow-lg">
+              <div className="flex items-start gap-4 mb-4">
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-fill-brand/20 shadow-sm flex-shrink-0">
+                  <span className="text-2xl">👤</span>
+                </div>
+                <div className="flex-1">
+                  <Typography variant="headingMd" className="font-bold text-text-brand mb-1">
+                    Customer Information
                   </Typography>
-                  <Typography variant="bodySm" className="font-bold">
+                  <Typography variant="bodyXs" colorRole="muted">
+                    Quote request from the following customer
+                  </Typography>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 rounded-lg bg-white border border-border-muted">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm">👤</span>
+                    <Typography variant="bodyXs" colorRole="muted" className="uppercase tracking-wide font-bold">
+                      Name
+                    </Typography>
+                  </div>
+                  <Typography variant="bodyMd" className="font-bold">
                     {quote.clientName || 'Unknown'}
                   </Typography>
-                  {quote.clientCompany && (
-                    <Typography variant="bodyXs" colorRole="muted" className="font-medium">
+                </div>
+
+                {quote.clientCompany && (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm">🏢</span>
+                      <Typography variant="bodyXs" colorRole="muted" className="uppercase tracking-wide font-bold">
+                        Company
+                      </Typography>
+                    </div>
+                    <Typography variant="bodyMd" className="font-bold">
                       {quote.clientCompany}
                     </Typography>
-                  )}
-                  {quote.clientEmail && (
-                    <Typography variant="bodyXs" colorRole="muted">
+                  </div>
+                )}
+
+                {quote.clientEmail && (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm">📧</span>
+                      <Typography variant="bodyXs" colorRole="muted" className="uppercase tracking-wide font-bold">
+                        Email
+                      </Typography>
+                    </div>
+                    <a
+                      href={`mailto:${quote.clientEmail}`}
+                      className="text-sm font-semibold text-text-brand hover:underline"
+                    >
                       {quote.clientEmail}
-                    </Typography>
-                  )}
-                </div>
+                    </a>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Quote Summary */}
+            <div className="rounded-xl bg-gradient-to-br from-fill-muted/50 to-fill-muted border border-border-muted p-5">
+              <div className="grid grid-cols-2 gap-6">
                 <div className="space-y-1">
                   <Typography variant="bodyXs" colorRole="muted" className="uppercase tracking-wide font-bold">
                     Submitted
