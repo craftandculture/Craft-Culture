@@ -696,6 +696,13 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                               </div>
                             </div>
 
+                            {/* DEBUG INFO */}
+                            <div className="mb-2 p-2 bg-blue-100 border border-blue-400 rounded text-xs">
+                              <strong>DEBUG:</strong> Quote Status: {quote.status} | Has Pricing: {pricing ? 'Yes' : 'No'} |
+                              Has Alternatives: {pricing?.adminAlternatives ? 'Yes' : 'No'} |
+                              Alternatives Count: {pricing?.adminAlternatives?.length || 0}
+                            </div>
+
                             {/* Pricing Breakdown */}
                             {pricing && (
                               <>
