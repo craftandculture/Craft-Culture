@@ -6,6 +6,7 @@ import {
   IconDownload,
   IconEdit,
   IconPlayerPlay,
+  IconPlus,
 } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
@@ -1063,6 +1064,81 @@ const QuoteApprovalDialog = ({
               </div>
             )}
 
+            {/* PO Information - Always Visible */}
+            {quote.status === 'po_submitted' && (
+              <div className="rounded-xl bg-white p-6 shadow-sm border border-border-muted space-y-6">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-fill-brand/10">
+                    <span className="text-base">📦</span>
+                  </div>
+                  <Typography variant="bodyLg" className="font-bold">
+                    PO Information
+                  </Typography>
+                </div>
+
+                <div className="rounded-xl bg-gradient-to-br from-fill-muted/30 to-fill-muted/50 p-6 space-y-5 border border-border-muted">
+                  <div>
+                    <Typography variant="bodyXs" colorRole="muted" className="uppercase tracking-wide font-semibold mb-2">
+                      PO Number
+                    </Typography>
+                    <Typography variant="bodyLg" className="font-bold">
+                      {quote.poNumber}
+                    </Typography>
+                  </div>
+                  {quote.poAttachmentUrl && (
+                    <div>
+                      <Typography variant="bodyXs" colorRole="muted" className="uppercase tracking-wide font-semibold mb-3">
+                        Attachment
+                      </Typography>
+                      <div className="flex flex-wrap items-center gap-3">
+                        <a
+                          href={quote.poAttachmentUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-text-brand hover:bg-fill-brand/10 font-semibold transition-all border border-border-muted"
+                        >
+                          <span>📄</span>
+                          View Document
+                        </a>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            const link = document.createElement('a');
+                            link.href = quote.poAttachmentUrl!;
+                            link.download = `PO-${quote.poNumber}.pdf`;
+                            document.body.appendChild(link);
+                            link.click();
+                            document.body.removeChild(link);
+                            toast.success('Download started');
+                          }}
+                          className="hover:bg-white transition-all"
+                        >
+                          <ButtonContent iconLeft={IconDownload}>
+                            Download
+                          </ButtonContent>
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <Typography variant="bodySm" className="mb-3 font-semibold">
+                    Confirmation Notes <span className="text-text-muted font-normal text-xs">(optional)</span>
+                  </Typography>
+                  <TextArea
+                    id="poNotes"
+                    value={confirmationNotes}
+                    onChange={(e) => setConfirmationNotes(e.target.value)}
+                    placeholder="Add any notes about this PO confirmation..."
+                    rows={4}
+                    className="border-2 focus:border-border-brand focus:ring-2 focus:ring-fill-brand/20 transition-all"
+                  />
+                </div>
+              </div>
+            )}
+
             {/* Workflow Actions - Collapsible Section */}
             <div className="rounded-xl border border-border-muted bg-white shadow-md overflow-hidden">
               <button
@@ -1170,80 +1246,6 @@ const QuoteApprovalDialog = ({
                             placeholder="Explain what needs to be revised..."
                             rows={4}
                             className="border-2 border-border-danger focus:border-border-danger focus:ring-2 focus:ring-fill-danger/20 transition-all bg-white"
-                          />
-                        </div>
-                      </div>
-                    )}
-
-                    {quote.status === 'po_submitted' && (
-                      <div className="rounded-xl bg-white p-6 shadow-sm border border-border-muted space-y-6">
-                        <div className="flex items-center gap-3">
-                          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-fill-brand/10">
-                            <span className="text-base">📦</span>
-                          </div>
-                          <Typography variant="bodyLg" className="font-bold">
-                            PO Information
-                          </Typography>
-                        </div>
-
-                        <div className="rounded-xl bg-gradient-to-br from-fill-muted/30 to-fill-muted/50 p-6 space-y-5 border border-border-muted">
-                          <div>
-                            <Typography variant="bodyXs" colorRole="muted" className="uppercase tracking-wide font-semibold mb-2">
-                              PO Number
-                            </Typography>
-                            <Typography variant="bodyLg" className="font-bold">
-                              {quote.poNumber}
-                            </Typography>
-                          </div>
-                          {quote.poAttachmentUrl && (
-                            <div>
-                              <Typography variant="bodyXs" colorRole="muted" className="uppercase tracking-wide font-semibold mb-3">
-                                Attachment
-                              </Typography>
-                              <div className="flex flex-wrap items-center gap-3">
-                                <a
-                                  href={quote.poAttachmentUrl}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="inline-flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-text-brand hover:bg-fill-brand/10 font-semibold transition-all border border-border-muted"
-                                >
-                                  <span>📄</span>
-                                  View Document
-                                </a>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => {
-                                    const link = document.createElement('a');
-                                    link.href = quote.poAttachmentUrl!;
-                                    link.download = `PO-${quote.poNumber}.pdf`;
-                                    document.body.appendChild(link);
-                                    link.click();
-                                    document.body.removeChild(link);
-                                    toast.success('Download started');
-                                  }}
-                                  className="hover:bg-white transition-all"
-                                >
-                                  <ButtonContent iconLeft={IconDownload}>
-                                    Download
-                                  </ButtonContent>
-                                </Button>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-
-                        <div>
-                          <Typography variant="bodySm" className="mb-3 font-semibold">
-                            Confirmation Notes <span className="text-text-muted font-normal text-xs">(optional)</span>
-                          </Typography>
-                          <TextArea
-                            id="poNotes"
-                            value={confirmationNotes}
-                            onChange={(e) => setConfirmationNotes(e.target.value)}
-                            placeholder="Add any notes about this PO confirmation..."
-                            rows={4}
-                            className="border-2 focus:border-border-brand focus:ring-2 focus:ring-fill-brand/20 transition-all"
                           />
                         </div>
                       </div>
