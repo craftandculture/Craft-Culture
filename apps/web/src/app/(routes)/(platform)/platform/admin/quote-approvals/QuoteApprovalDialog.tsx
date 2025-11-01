@@ -503,8 +503,8 @@ const QuoteApprovalDialog = ({
                 )}
               </div>
 
-              {/* Table Rows */}
-              <div className="divide-y divide-border-muted rounded-b-xl border-x border-b border-border-muted bg-white shadow-sm">
+              {/* Line Items */}
+              <div className="space-y-3 mt-4">
                 {lineItems.map((item, idx) => {
                   const product = productMap[item.productId];
                   const pricing = pricingMap[item.productId];
@@ -527,9 +527,12 @@ const QuoteApprovalDialog = ({
                   const hasAlternatives = item.alternativeVintages && item.alternativeVintages.length > 0;
 
                   return (
-                    <div key={idx} className="border-b border-border-muted last:border-b-0">
                     <div
-                      className="grid grid-cols-12 gap-6 px-6 py-4 hover:bg-fill-muted/30 transition-all duration-200 group"
+                      key={idx}
+                      className="rounded-xl border-2 border-border-muted dark:border-border-muted bg-white dark:bg-background-secondary shadow-sm hover:shadow-md hover:border-border-brand transition-all duration-200"
+                    >
+                    <div
+                      className="grid grid-cols-12 gap-4 sm:gap-6 px-4 sm:px-6 py-5 group"
                     >
                       {product ? (
                         <>
