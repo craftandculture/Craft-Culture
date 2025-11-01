@@ -919,7 +919,7 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                                               ) : (
                                                 <Button
                                                   variant="default"
-                                                  colorRole="success"
+                                                  colorRole="brand"
                                                   size="sm"
                                                   onClick={() => acceptAlternativeMutation.mutate({
                                                     productId: item.productId,
