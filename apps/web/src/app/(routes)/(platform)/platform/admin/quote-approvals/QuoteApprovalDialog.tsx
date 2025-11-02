@@ -1265,7 +1265,7 @@ const QuoteApprovalDialog = ({
                       </Button>
                       <Button
                         variant="default"
-                        colorRole="warning"
+                        colorRole="brand"
                         size="lg"
                         onClick={() => requestRevisionMutation.mutate()}
                         isDisabled={requestRevisionMutation.isPending || !revisionReason.trim()}
