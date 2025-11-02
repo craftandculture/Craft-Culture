@@ -1,6 +1,14 @@
 'use client';
 
-import { IconDownload, IconEye } from '@tabler/icons-react';
+import {
+  IconCheck,
+  IconClock,
+  IconDownload,
+  IconEye,
+  IconFileText,
+  IconSearch,
+  IconSend,
+} from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import type { ColumnDef } from '@tanstack/react-table';
 import { format } from 'date-fns';
@@ -9,15 +17,31 @@ import { useState } from 'react';
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
 import DataTable from '@/app/_ui/components/DataTable/DataTable';
-import Tabs from '@/app/_ui/components/Tabs/Tabs';
-import TabsContent from '@/app/_ui/components/Tabs/TabsContent';
-import TabsList from '@/app/_ui/components/Tabs/TabsList';
-import TabsTrigger from '@/app/_ui/components/Tabs/TabsTrigger';
+import Icon from '@/app/_ui/components/Icon/Icon';
+import Input from '@/app/_ui/components/Input/Input';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import type { Quote } from '@/database/schema';
 import { useTRPCClient } from '@/lib/trpc/browser';
 
 import QuoteApprovalDialog from './QuoteApprovalDialog';
+
+type QuoteStatus = Quote['status'];
+
+interface StatusFilter {
+  label: string;
+  value: QuoteStatus | 'all';
+  icon: typeof IconFileText;
+  color: string;
+}
+
+const statusFilters: StatusFilter[] = [
+  { label: 'All Quotes', value: 'all', icon: IconFileText, color: 'text-text-primary' },
+  { label: 'Pending', value: 'buy_request_submitted', icon: IconSend, color: 'text-text-brand' },
+  { label: 'Under Review', value: 'under_cc_review', icon: IconClock, color: 'text-text-brand' },
+  { label: 'Confirmed', value: 'cc_confirmed', icon: IconCheck, color: 'text-text-brand' },
+  { label: 'PO Submitted', value: 'po_submitted', icon: IconFileText, color: 'text-text-brand' },
+  { label: 'Confirmed Orders', value: 'po_confirmed', icon: IconCheck, color: 'text-text-muted' },
+];
 
 /**
  * Component to display and manage quote approvals for admin users
@@ -26,31 +50,37 @@ const QuoteApprovalsList = () => {
   const trpcClient = useTRPCClient();
   const [selectedQuote, setSelectedQuote] = useState<Quote | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const [activeFilter, setActiveFilter] = useState<QuoteStatus | 'all'>('all');
 
   // Fetch all quotes that need admin attention (using admin endpoint to see all users' quotes)
   const { data: quotesData, isLoading } = useQuery({
-    queryKey: ['admin-quotes'],
+    queryKey: ['admin-quotes', { search: search || undefined }],
     queryFn: () =>
       trpcClient.quotes.getManyAdmin.query({
         limit: 100,
         cursor: 0,
+        search: search || undefined,
       }),
   });
 
   const quotes = quotesData?.data ?? [];
 
-  // Filter quotes by status
-  const pendingBuyRequests = quotes.filter(
-    (q) => q.status === 'buy_request_submitted',
-  );
-  const underReview = quotes.filter((q) => q.status === 'under_cc_review');
-  const confirmed = quotes.filter((q) => q.status === 'cc_confirmed');
-  const poSubmitted = quotes.filter((q) => q.status === 'po_submitted');
-  const confirmedOrders = quotes.filter((q) => q.status === 'po_confirmed');
+  // Filter quotes based on active filter
+  const filteredQuotes = quotes.filter((quote) => {
+    if (activeFilter === 'all') return true;
+    return quote.status === activeFilter;
+  });
 
   const handleViewQuote = (quote: Quote) => {
     setSelectedQuote(quote);
     setIsDialogOpen(true);
+  };
+
+  // Calculate counts for filter badges
+  const getStatusCount = (status: QuoteStatus | 'all') => {
+    if (status === 'all') return quotes.length;
+    return quotes.filter((q) => q.status === status).length;
   };
 
   const columns: ColumnDef<Quote & { createdBy?: { id: string; name: string | null; email: string } | null }>[] = [
@@ -65,11 +95,11 @@ const QuoteApprovalsList = () => {
     },
     {
       accessorKey: 'createdBy',
-      header: 'Created By',
+      header: () => <span className="hidden lg:inline">Created By</span>,
       cell: ({ row }) => {
         const createdBy = row.original.createdBy;
         return (
-          <div className="flex flex-col gap-0.5">
+          <div className="hidden flex-col gap-0.5 lg:flex">
             {createdBy?.name && (
               <Typography variant="bodySm">{createdBy.name}</Typography>
             )}
@@ -89,11 +119,11 @@ const QuoteApprovalsList = () => {
     },
     {
       accessorKey: 'clientName',
-      header: 'Client',
+      header: () => <span className="hidden md:inline">Client</span>,
       cell: ({ row }) => {
         const { clientName, clientCompany } = row.original;
         return (
-          <div className="flex flex-col gap-0.5">
+          <div className="hidden flex-col gap-0.5 md:flex">
             {clientName && <Typography variant="bodySm">{clientName}</Typography>}
             {clientCompany && (
               <Typography variant="bodySm" colorRole="muted">
@@ -128,14 +158,14 @@ const QuoteApprovalsList = () => {
     },
     {
       accessorKey: 'buyRequestSubmittedAt',
-      header: 'Submitted',
+      header: () => <span className="hidden sm:inline">Submitted</span>,
       cell: ({ row }) =>
         row.original.buyRequestSubmittedAt ? (
-          <Typography variant="bodySm" colorRole="muted">
-            {format(new Date(row.original.buyRequestSubmittedAt), 'MMM d, yyyy h:mm a')}
+          <Typography variant="bodySm" colorRole="muted" className="hidden sm:block">
+            {format(new Date(row.original.buyRequestSubmittedAt), 'MMM d, yyyy')}
           </Typography>
         ) : (
-          <Typography variant="bodySm" colorRole="muted">
+          <Typography variant="bodySm" colorRole="muted" className="hidden sm:block">
             -
           </Typography>
         ),
@@ -160,136 +190,85 @@ const QuoteApprovalsList = () => {
     },
   ];
 
-  // Columns for confirmed orders with PO information
-  const confirmedOrdersColumns: ColumnDef<Quote & { createdBy?: { id: string; name: string | null; email: string } | null }>[] = [
-    {
-      accessorKey: 'name',
-      header: 'Order Name',
-      cell: ({ row }) => (
-        <Typography variant="bodySm" className="font-medium">
-          {row.original.name}
+  // Additional columns for confirmed orders (used when filter is po_confirmed)
+  const poNumberColumn: ColumnDef<Quote & { createdBy?: { id: string; name: string | null; email: string } | null }> = {
+    accessorKey: 'poNumber',
+    header: () => <span className="hidden lg:inline">PO Number</span>,
+    cell: ({ row }) =>
+      row.original.poNumber ? (
+        <Typography variant="bodySm" className="hidden font-mono font-semibold lg:block">
+          {row.original.poNumber}
+        </Typography>
+      ) : (
+        <Typography variant="bodySm" colorRole="muted" className="hidden lg:block">
+          -
         </Typography>
       ),
-    },
-    {
-      accessorKey: 'createdBy',
-      header: 'Created By',
-      cell: ({ row }) => {
-        const createdBy = row.original.createdBy;
-        return (
-          <div className="flex flex-col gap-0.5">
-            {createdBy?.name && (
-              <Typography variant="bodySm">{createdBy.name}</Typography>
-            )}
-            {createdBy?.email && (
-              <Typography variant="bodyXs" colorRole="muted">
-                {createdBy.email}
-              </Typography>
-            )}
-            {!createdBy?.name && (
-              <Typography variant="bodySm" colorRole="muted">
-                -
-              </Typography>
-            )}
-          </div>
-        );
-      },
-    },
-    {
-      accessorKey: 'clientName',
-      header: 'Client',
-      cell: ({ row }) => {
-        const { clientName, clientCompany } = row.original;
-        return (
-          <div className="flex flex-col gap-0.5">
-            {clientName && <Typography variant="bodySm">{clientName}</Typography>}
-            {clientCompany && (
-              <Typography variant="bodySm" colorRole="muted">
-                {clientCompany}
-              </Typography>
-            )}
-            {!clientName && !clientCompany && (
-              <Typography variant="bodySm" colorRole="muted">
-                -
-              </Typography>
-            )}
-          </div>
-        );
-      },
-    },
-    {
-      accessorKey: 'totalUsd',
-      header: 'Total',
-      cell: ({ row }) => {
-        const { currency, totalUsd, totalAed } = row.original;
-        const total = currency === 'AED' ? totalAed : totalUsd;
-        return (
-          <Typography variant="bodySm" className="font-medium">
-            {currency}{' '}
-            {total?.toLocaleString('en-US', {
-              minimumFractionDigits: 2,
-              maximumFractionDigits: 2,
-            })}
-          </Typography>
-        );
-      },
-    },
-    {
-      accessorKey: 'poNumber',
-      header: 'PO Number',
-      cell: ({ row }) =>
-        row.original.poNumber ? (
-          <Typography variant="bodySm" className="font-mono font-semibold">
-            {row.original.poNumber}
-          </Typography>
-        ) : (
-          <Typography variant="bodySm" colorRole="muted">
-            -
-          </Typography>
-        ),
-    },
-    {
-      accessorKey: 'poConfirmedAt',
-      header: 'Confirmed',
-      cell: ({ row }) =>
-        row.original.poConfirmedAt ? (
-          <Typography variant="bodySm" colorRole="muted">
-            {format(new Date(row.original.poConfirmedAt), 'MMM d, yyyy h:mm a')}
-          </Typography>
-        ) : (
-          <Typography variant="bodySm" colorRole="muted">
-            -
-          </Typography>
-        ),
-    },
-    {
-      id: 'actions',
-      header: () => <span className="sr-only">Actions</span>,
-      cell: ({ row }) => {
-        const quote = row.original;
-        return (
-          <div className="flex justify-end gap-2">
-            {quote.poAttachmentUrl && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => window.open(quote.poAttachmentUrl!, '_blank')}
-              >
-                <ButtonContent iconLeft={IconDownload}>Download PO</ButtonContent>
-              </Button>
-            )}
+  };
+
+  const poConfirmedColumn: ColumnDef<Quote & { createdBy?: { id: string; name: string | null; email: string } | null }> = {
+    accessorKey: 'poConfirmedAt',
+    header: () => <span className="hidden sm:inline">Confirmed</span>,
+    cell: ({ row }) =>
+      row.original.poConfirmedAt ? (
+        <Typography variant="bodySm" colorRole="muted" className="hidden sm:block">
+          {format(new Date(row.original.poConfirmedAt), 'MMM d, yyyy')}
+        </Typography>
+      ) : (
+        <Typography variant="bodySm" colorRole="muted" className="hidden sm:block">
+          -
+        </Typography>
+      ),
+  };
+
+  // Actions column with conditional PO download button
+  const actionsColumn: ColumnDef<Quote & { createdBy?: { id: string; name: string | null; email: string } | null }> = {
+    id: 'actions',
+    header: () => <span className="sr-only">Actions</span>,
+    cell: ({ row }) => {
+      const quote = row.original;
+      const isConfirmedOrder = quote.status === 'po_confirmed';
+      return (
+        <div className="flex justify-end gap-2">
+          {isConfirmedOrder && quote.poAttachmentUrl && (
             <Button
-              variant="ghost"
+              variant="outline"
               size="sm"
-              onClick={() => handleViewQuote(quote)}
+              onClick={() => window.open(quote.poAttachmentUrl!, '_blank')}
             >
-              <ButtonContent iconLeft={IconEye}>View</ButtonContent>
+              <ButtonContent iconLeft={IconDownload}>
+                <span className="hidden lg:inline">Download PO</span>
+                <span className="lg:hidden">PO</span>
+              </ButtonContent>
             </Button>
-          </div>
-        );
-      },
+          )}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => handleViewQuote(quote)}
+          >
+            <ButtonContent iconLeft={IconEye}>
+              <span className="hidden sm:inline">{isConfirmedOrder ? 'View' : 'Review'}</span>
+              <Icon icon={IconEye} size="sm" className="sm:hidden" />
+            </ButtonContent>
+          </Button>
+        </div>
+      );
     },
-  ];
+  };
+
+  // Build columns based on active filter
+  const getColumns = () => {
+    const baseColumns = columns.slice(0, -1); // All columns except the old actions
+
+    if (activeFilter === 'po_confirmed') {
+      // For confirmed orders, show PO-specific columns
+      return [...baseColumns.slice(0, 4), poNumberColumn, poConfirmedColumn, actionsColumn];
+    }
+
+    // For other statuses, show standard columns
+    return [...baseColumns, actionsColumn];
+  };
 
   if (isLoading) {
     return (
@@ -302,92 +281,77 @@ const QuoteApprovalsList = () => {
   }
 
   return (
-    <>
-      <Tabs defaultValue="pending">
-        <TabsList>
-          <TabsTrigger value="pending">
-            Pending ({pendingBuyRequests.length})
-          </TabsTrigger>
-          <TabsTrigger value="review">
-            Under Review ({underReview.length})
-          </TabsTrigger>
-          <TabsTrigger value="confirmed">
-            Confirmed ({confirmed.length})
-          </TabsTrigger>
-          <TabsTrigger value="po">
-            PO Submitted ({poSubmitted.length})
-          </TabsTrigger>
-          <TabsTrigger value="orders">
-            Confirmed Orders ({confirmedOrders.length})
-          </TabsTrigger>
-        </TabsList>
+    <div className="flex flex-col gap-6">
+      {/* Status Filter Buttons */}
+      <div className="flex flex-wrap gap-2">
+        {statusFilters.map((filter) => {
+          const isActive = activeFilter === filter.value;
+          const count = getStatusCount(filter.value);
 
-        <TabsContent value="pending">
-          {pendingBuyRequests.length === 0 ? (
-            <div className="border-border-primary flex h-64 flex-col items-center justify-center rounded-lg border">
-              <Typography variant="bodyLg" className="mb-2 font-medium">
-                No pending buy requests
-              </Typography>
-              <Typography variant="bodySm" colorRole="muted">
-                All caught up!
-              </Typography>
-            </div>
-          ) : (
-            <DataTable columns={columns} data={pendingBuyRequests} />
-          )}
-        </TabsContent>
+          return (
+            <button
+              key={filter.value}
+              onClick={() => setActiveFilter(filter.value)}
+              className={`flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all ${
+                isActive
+                  ? 'bg-fill-brand text-text-brand-contrast shadow-md'
+                  : 'bg-fill-muted/50 text-text-muted hover:bg-fill-muted hover:text-text-primary dark:bg-background-secondary dark:hover:bg-background-tertiary'
+              }`}
+            >
+              <Icon icon={filter.icon} size="sm" className={isActive ? 'text-text-brand-contrast' : filter.color} />
+              <span>{filter.label}</span>
+              <span className={`rounded-full px-2 py-0.5 text-xs ${
+                isActive
+                  ? 'bg-white/20 text-text-brand-contrast'
+                  : 'bg-fill-primary/50 text-text-muted'
+              }`}>
+                {count}
+              </span>
+            </button>
+          );
+        })}
+      </div>
 
-        <TabsContent value="review">
-          {underReview.length === 0 ? (
-            <div className="border-border-primary flex h-64 flex-col items-center justify-center rounded-lg border">
-              <Typography variant="bodyLg" className="mb-2 font-medium">
-                No quotes under review
-              </Typography>
-            </div>
-          ) : (
-            <DataTable columns={columns} data={underReview} />
-          )}
-        </TabsContent>
+      {/* Search Input */}
+      <div className="flex items-center gap-2">
+        <Input
+          placeholder="Search by quote name, client name, or company..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          iconLeft={IconSearch}
+          className="w-full"
+        />
+      </div>
 
-        <TabsContent value="confirmed">
-          {confirmed.length === 0 ? (
-            <div className="border-border-primary flex h-64 flex-col items-center justify-center rounded-lg border">
-              <Typography variant="bodyLg" className="mb-2 font-medium">
-                No confirmed quotes
-              </Typography>
-            </div>
-          ) : (
-            <DataTable columns={columns} data={confirmed} />
-          )}
-        </TabsContent>
+      {/* Quotes Table */}
+      {filteredQuotes.length === 0 ? (
+        <div className="border-border-primary flex h-64 flex-col items-center justify-center rounded-lg border bg-fill-muted/20 dark:bg-background-secondary">
+          <Icon icon={IconFileText} size="xl" colorRole="muted" className="mb-4" />
+          <Typography variant="bodyLg" className="mb-2 font-medium">
+            {search ? 'No quotes found' : activeFilter === 'all' ? 'No quotes yet' : 'No quotes in this category'}
+          </Typography>
+          <Typography variant="bodySm" colorRole="muted" className="text-center max-w-md">
+            {search
+              ? 'Try adjusting your search or filter'
+              : activeFilter === 'all'
+                ? 'Quotes will appear here once customers submit orders'
+                : 'All caught up!'}
+          </Typography>
+        </div>
+      ) : (
+        <div className="rounded-lg border border-border-muted bg-white dark:bg-background-secondary shadow-sm">
+          <DataTable columns={getColumns()} data={filteredQuotes} />
+        </div>
+      )}
 
-        <TabsContent value="po">
-          {poSubmitted.length === 0 ? (
-            <div className="border-border-primary flex h-64 flex-col items-center justify-center rounded-lg border">
-              <Typography variant="bodyLg" className="mb-2 font-medium">
-                No POs submitted
-              </Typography>
-            </div>
-          ) : (
-            <DataTable columns={columns} data={poSubmitted} />
-          )}
-        </TabsContent>
-
-        <TabsContent value="orders">
-          {confirmedOrders.length === 0 ? (
-            <div className="border-border-primary flex h-64 flex-col items-center justify-center rounded-lg border">
-              <Typography variant="bodyLg" className="mb-2 font-medium">
-                No confirmed orders
-              </Typography>
-              <Typography variant="bodySm" colorRole="muted">
-                Orders will appear here once POs are confirmed
-              </Typography>
-            </div>
-          ) : (
-            <DataTable columns={confirmedOrdersColumns} data={confirmedOrders} />
-          )}
-        </TabsContent>
-      </Tabs>
+      {/* Results Info */}
+      {quotes.length > 0 && (
+        <div className="flex items-center justify-between">
+          <Typography variant="bodySm" colorRole="muted">
+            Showing {filteredQuotes.length} of {quotes.length} quotes
+          </Typography>
+        </div>
+      )}
 
       {/* Quote Approval Dialog */}
       <QuoteApprovalDialog
@@ -395,7 +359,7 @@ const QuoteApprovalsList = () => {
         open={isDialogOpen}
         onOpenChange={setIsDialogOpen}
       />
-    </>
+    </div>
   );
 };
 
