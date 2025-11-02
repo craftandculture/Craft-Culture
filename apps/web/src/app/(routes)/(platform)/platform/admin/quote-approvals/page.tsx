@@ -1,5 +1,6 @@
 import { Suspense } from 'react';
 
+import AdminPageHeader from '@/app/_admin/components/AdminPageHeader';
 import Typography from '@/app/_ui/components/Typography/Typography';
 
 import QuoteApprovalsList from './QuoteApprovalsList';
@@ -10,14 +11,10 @@ import QuoteApprovalsList from './QuoteApprovalsList';
 const QuoteApprovalsPage = () => {
   return (
     <div className="container mx-auto max-w-7xl px-4 sm:px-6 py-6 sm:py-8">
-      <div className="mb-6 sm:mb-8">
-        <Typography variant="headingLg" className="mb-2">
-          Quote Approvals
-        </Typography>
-        <Typography variant="bodyMd" colorRole="muted">
-          Review and approve customer quote requests
-        </Typography>
-      </div>
+      <AdminPageHeader
+        title="Quote Approvals"
+        description="Review and approve customer quote requests"
+      />
 
       <Suspense
         fallback={

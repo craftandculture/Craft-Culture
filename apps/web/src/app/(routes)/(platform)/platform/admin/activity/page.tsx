@@ -7,9 +7,6 @@ import { useEffect, useState } from 'react';
 import markActivitiesAsViewed from '@/app/_admin/actions/markActivitiesAsViewed';
 import Card from '@/app/_ui/components/Card/Card';
 import CardContent from '@/app/_ui/components/Card/CardContent';
-import CardDescription from '@/app/_ui/components/Card/CardDescription';
-import CardProse from '@/app/_ui/components/Card/CardProse';
-import CardTitle from '@/app/_ui/components/Card/CardTitle';
 import Input from '@/app/_ui/components/Input/Input';
 import Select from '@/app/_ui/components/Select/Select';
 import SelectContent from '@/app/_ui/components/Select/SelectContent';
@@ -46,10 +43,10 @@ const ActivityFeedPage = () => {
   });
 
   const getActivityIcon = (action: string) => {
-    if (action.includes('signin')) return <IconLogin className="h-5 w-5 text-blue-600" />;
-    if (action.includes('signup')) return <IconUserPlus className="h-5 w-5 text-green-600" />;
-    if (action.includes('download')) return <IconDownload className="h-5 w-5 text-purple-600" />;
-    return <IconUser className="h-5 w-5 text-gray-600" />;
+    if (action.includes('signin')) return <IconLogin className="h-5 w-5 text-text-brand" />;
+    if (action.includes('signup')) return <IconUserPlus className="h-5 w-5 text-text-brand" />;
+    if (action.includes('download')) return <IconDownload className="h-5 w-5 text-text-brand" />;
+    return <IconUser className="h-5 w-5 text-text-muted" />;
   };
 
   const getActionLabel = (action: string) => {
@@ -74,18 +71,20 @@ const ActivityFeedPage = () => {
   });
 
   return (
-    <main className="container py-8 md:py-16">
-      <Card className="mx-auto w-full max-w-7xl">
-        <CardContent>
-          <CardProse>
-            <CardTitle>User Activity Feed</CardTitle>
-            <CardDescription colorRole="muted">
-              Real-time monitoring of all user activities across the platform
-            </CardDescription>
-          </CardProse>
+    <div className="container mx-auto max-w-7xl px-4 sm:px-6 py-6 sm:py-8">
+      <div className="mb-6 sm:mb-8">
+        <Typography variant="headingLg" className="mb-2">
+          Activity Feed
+        </Typography>
+        <Typography variant="bodyMd" colorRole="muted">
+          Real-time monitoring of all user activities across the platform
+        </Typography>
+      </div>
 
+      <Card>
+        <CardContent className="p-6">
           {/* Filters */}
-          <div className="mt-6 flex flex-col gap-4 sm:flex-row">
+          <div className="flex flex-col gap-4 sm:flex-row">
             <div className="flex-1">
               <Input
                 type="search"
@@ -197,7 +196,7 @@ const ActivityFeedPage = () => {
           )}
         </CardContent>
       </Card>
-    </main>
+    </div>
   );
 };
 
