@@ -80,19 +80,19 @@ const UserManagementPage = () => {
     switch (status) {
       case 'pending':
         return (
-          <span className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400 inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium">
+          <span className="bg-fill-warning/10 text-text-warning border border-border-warning inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium">
             Pending
           </span>
         );
       case 'approved':
         return (
-          <span className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium">
+          <span className="bg-fill-brand/10 text-text-brand border border-border-brand inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium">
             Approved
           </span>
         );
       case 'rejected':
         return (
-          <span className="bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400 inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium">
+          <span className="bg-fill-muted text-text-muted border border-border-muted inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium">
             Rejected
           </span>
         );
@@ -106,14 +106,14 @@ const UserManagementPage = () => {
   };
 
   return (
-    <div className="container py-8">
+    <div className="container mx-auto max-w-7xl px-4 sm:px-6 py-6 sm:py-8">
       <div className="space-y-6">
         {/* Header */}
-        <div>
-          <Typography variant="displaySm" className="font-bold">
+        <div className="mb-6 sm:mb-8">
+          <Typography variant="headingLg" className="mb-2">
             User Management
           </Typography>
-          <Typography variant="bodyMd" className="text-text-secondary mt-1">
+          <Typography variant="bodyMd" colorRole="muted">
             Review and approve user applications
           </Typography>
         </div>
@@ -229,10 +229,10 @@ const UserManagementPage = () => {
                               <>
                                 <Button
                                   size="sm"
-                                  variant="outline"
+                                  variant="default"
+                                  colorRole="brand"
                                   onClick={() => approveUser({ userId: user.id })}
                                   isDisabled={isApproving}
-                                  className="border-green-500 text-green-600 hover:bg-green-50 dark:border-green-600 dark:text-green-400 dark:hover:bg-green-900/20"
                                 >
                                   <ButtonContent iconLeft={IconCheck}>Approve</ButtonContent>
                                 </Button>
@@ -241,7 +241,6 @@ const UserManagementPage = () => {
                                   variant="outline"
                                   onClick={() => rejectUser({ userId: user.id })}
                                   isDisabled={isRejecting}
-                                  className="border-red-500 text-red-600 hover:bg-red-50 dark:border-red-600 dark:text-red-400 dark:hover:bg-red-900/20"
                                 >
                                   <ButtonContent iconLeft={IconX}>Reject</ButtonContent>
                                 </Button>
@@ -250,10 +249,10 @@ const UserManagementPage = () => {
                             {user.approvalStatus === 'rejected' && (
                               <Button
                                 size="sm"
-                                variant="outline"
+                                variant="default"
+                                colorRole="brand"
                                 onClick={() => approveUser({ userId: user.id })}
                                 isDisabled={isApproving}
-                                className="border-green-500 text-green-600 hover:bg-green-50 dark:border-green-600 dark:text-green-400 dark:hover:bg-green-900/20"
                               >
                                 <ButtonContent iconLeft={IconCheck}>Approve</ButtonContent>
                               </Button>
@@ -263,8 +262,8 @@ const UserManagementPage = () => {
                                 <Button
                                   size="sm"
                                   variant="outline"
+                                  colorRole="danger"
                                   isDisabled={isDeleting}
-                                  className="border-red-500 text-red-600 hover:bg-red-50 dark:border-red-600 dark:text-red-400 dark:hover:bg-red-900/20"
                                 >
                                   <ButtonContent iconLeft={IconTrash}>Delete</ButtonContent>
                                 </Button>
@@ -327,10 +326,11 @@ const UserManagementPage = () => {
                         <div className="flex gap-2">
                           <Button
                             size="sm"
-                            variant="outline"
+                            variant="default"
+                            colorRole="brand"
                             onClick={() => approveUser({ userId: user.id })}
                             isDisabled={isApproving}
-                            className="border-green-500 text-green-600 hover:bg-green-50 dark:border-green-600 dark:text-green-400 dark:hover:bg-green-900/20 flex-1"
+                            className="flex-1"
                           >
                             <ButtonContent iconLeft={IconCheck}>Approve</ButtonContent>
                           </Button>
@@ -339,7 +339,7 @@ const UserManagementPage = () => {
                             variant="outline"
                             onClick={() => rejectUser({ userId: user.id })}
                             isDisabled={isRejecting}
-                            className="border-red-500 text-red-600 hover:bg-red-50 dark:border-red-600 dark:text-red-400 dark:hover:bg-red-900/20 flex-1"
+                            className="flex-1"
                           >
                             <ButtonContent iconLeft={IconX}>Reject</ButtonContent>
                           </Button>
@@ -348,10 +348,11 @@ const UserManagementPage = () => {
                       {user.approvalStatus === 'rejected' && (
                         <Button
                           size="sm"
-                          variant="outline"
+                          variant="default"
+                          colorRole="brand"
                           onClick={() => approveUser({ userId: user.id })}
                           isDisabled={isApproving}
-                          className="border-green-500 text-green-600 hover:bg-green-50 dark:border-green-600 dark:text-green-400 dark:hover:bg-green-900/20 w-full"
+                          className="w-full"
                         >
                           <ButtonContent iconLeft={IconCheck}>Approve</ButtonContent>
                         </Button>
@@ -361,8 +362,9 @@ const UserManagementPage = () => {
                           <Button
                             size="sm"
                             variant="outline"
+                            colorRole="danger"
                             isDisabled={isDeleting}
-                            className="border-red-500 text-red-600 hover:bg-red-50 dark:border-red-600 dark:text-red-400 dark:hover:bg-red-900/20 w-full"
+                            className="w-full"
                           >
                             <ButtonContent iconLeft={IconTrash}>Delete User</ButtonContent>
                           </Button>

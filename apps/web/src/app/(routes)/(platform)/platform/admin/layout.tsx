@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 
+import AdminNav from '@/app/_admin/components/AdminNav';
 import getQueryClient from '@/lib/react-query';
 import api from '@/lib/trpc/server';
 import tryCatch from '@/utils/tryCatch';
@@ -17,7 +18,12 @@ const AdminLayout = async ({ children }: React.PropsWithChildren) => {
     redirect('/platform');
   }
 
-  return children;
+  return (
+    <div className="min-h-screen bg-fill-muted/20 dark:bg-background-primary">
+      <AdminNav />
+      {children}
+    </div>
+  );
 };
 
 export default AdminLayout;
