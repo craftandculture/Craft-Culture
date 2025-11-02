@@ -59,9 +59,6 @@ const QuoteApprovalDialog = ({
   // State for currency display
   const [displayCurrency, setDisplayCurrency] = useState<'USD' | 'AED'>('USD');
 
-  // State for showing workflow section
-  const [showWorkflow, setShowWorkflow] = useState(false);
-
   // State for line item adjustments (admin review)
   const [lineItemAdjustments, setLineItemAdjustments] = useState<
     Record<
@@ -1142,212 +1139,176 @@ const QuoteApprovalDialog = ({
               </div>
             )}
 
-            {/* Workflow Actions - Collapsible Section */}
-            <div className="rounded-xl border border-border-muted bg-white shadow-md overflow-hidden">
-              <button
-                type="button"
-                onClick={() => setShowWorkflow(!showWorkflow)}
-                className="w-full px-6 py-5 flex items-center justify-between bg-gradient-to-r from-fill-muted/20 to-fill-muted/40 hover:from-fill-muted/30 hover:to-fill-muted/50 transition-all duration-300 group border-b border-border-muted"
-              >
-                <div className="flex items-center gap-4">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-fill-brand/10 group-hover:bg-fill-brand/20 transition-colors">
-                    <span className="text-lg">📋</span>
-                  </div>
-                  <div className="text-left">
-                    <Typography variant="bodyLg" className="font-bold group-hover:text-text-brand transition-colors">
-                      Workflow & Actions
-                    </Typography>
-                    {(quote.status === 'buy_request_submitted' ||
-                      quote.status === 'under_cc_review' ||
-                      quote.status === 'po_submitted') && (
-                      <Typography variant="bodyXs" colorRole="muted" className="mt-0.5">
-                        Action required to proceed
-                      </Typography>
-                    )}
-                  </div>
-                  {(quote.status === 'buy_request_submitted' ||
-                    quote.status === 'under_cc_review' ||
-                    quote.status === 'po_submitted') && (
-                    <span className="ml-2 inline-flex h-2 w-2 rounded-full bg-fill-brand animate-pulse" />
-                  )}
-                </div>
-                <div className="flex items-center gap-3">
-                  {(quote.status === 'buy_request_submitted' ||
-                    quote.status === 'under_cc_review' ||
-                    quote.status === 'po_submitted') && (
-                    <span className="hidden sm:inline-flex items-center gap-2 rounded-full bg-fill-brand px-3 py-1.5 text-xs font-bold text-white">
-                      Action Required
-                    </span>
-                  )}
-                  <div className={`flex h-8 w-8 items-center justify-center rounded-full bg-fill-muted/50 group-hover:bg-fill-brand/10 transition-all duration-300 ${showWorkflow ? 'rotate-180' : ''}`}>
-                    <span className="text-sm text-text-muted group-hover:text-text-brand">▼</span>
-                  </div>
-                </div>
-              </button>
+            {/* Workflow Progress - Always Visible */}
+            <div className="rounded-lg border border-border-muted bg-white dark:bg-background-secondary p-6 shadow-sm">
+              <div className="mb-6">
+                <Typography variant="bodyLg" className="font-semibold mb-2">
+                  Order Progress
+                </Typography>
+                <Typography variant="bodySm" colorRole="muted">
+                  Track the current stage and review status
+                </Typography>
+              </div>
+              <QuoteWorkflowStepper quote={quote} variant="default" />
+            </div>
 
-              {showWorkflow && (
-                <div className="bg-gradient-to-b from-fill-muted/10 to-transparent">
-                  {/* Workflow Progress */}
-                  <div className="p-6 pb-4">
-                    <div className="rounded-xl bg-white dark:bg-background-secondary p-5 shadow-sm border border-border-muted">
-                      <QuoteWorkflowStepper quote={quote} variant="default" />
+            {/* Action Required Section */}
+            {(quote.status === 'buy_request_submitted' ||
+              quote.status === 'under_cc_review' ||
+              quote.status === 'po_submitted') && (
+              <div className="rounded-lg border-2 border-border-brand bg-fill-brand/5 p-6">
+                <div className="flex items-start gap-3 mb-5">
+                  <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-fill-brand text-text-brand-contrast">
+                    <span className="text-lg">✓</span>
+                  </div>
+                  <div className="flex-1">
+                    <Typography variant="bodyLg" className="font-semibold mb-1 text-text-brand">
+                      {quote.status === 'buy_request_submitted' && 'Ready to Review'}
+                      {quote.status === 'under_cc_review' && !showRevisionForm && 'Complete Review'}
+                      {quote.status === 'under_cc_review' && showRevisionForm && 'Request Changes'}
+                      {quote.status === 'po_submitted' && 'Confirm Purchase Order'}
+                    </Typography>
+                    <Typography variant="bodySm" colorRole="muted">
+                      {quote.status === 'buy_request_submitted' && 'Start reviewing this order request and verify product availability'}
+                      {quote.status === 'under_cc_review' && !showRevisionForm && 'Confirm pricing and availability, then approve the quote'}
+                      {quote.status === 'under_cc_review' && showRevisionForm && 'Explain what needs to be changed for the customer'}
+                      {quote.status === 'po_submitted' && 'Review the purchase order and confirm to proceed'}
+                    </Typography>
+                  </div>
+                </div>
+
+                {/* Action Forms */}
+                {quote.status === 'buy_request_submitted' && (
+                  <div className="space-y-3">
+                    <div>
+                      <Typography variant="bodySm" className="mb-2 font-medium">
+                        Review Notes <span className="text-text-muted font-normal text-xs">(optional)</span>
+                      </Typography>
+                      <TextArea
+                        value={ccNotes}
+                        onChange={(e) => setCcNotes(e.target.value)}
+                        placeholder="Add notes about your review process..."
+                        rows={3}
+                        className="text-sm"
+                      />
+                    </div>
+                    <Button
+                      variant="default"
+                      colorRole="brand"
+                      size="lg"
+                      onClick={() => startReviewMutation.mutate()}
+                      isDisabled={startReviewMutation.isPending}
+                      className="w-full sm:w-auto font-semibold"
+                    >
+                      <ButtonContent iconLeft={IconPlayerPlay}>
+                        {startReviewMutation.isPending ? 'Starting Review...' : 'Begin Review'}
+                      </ButtonContent>
+                    </Button>
+                  </div>
+                )}
+
+                {quote.status === 'under_cc_review' && !showRevisionForm && (
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <Button
+                      variant="outline"
+                      size="lg"
+                      onClick={() => setShowRevisionForm(true)}
+                      className="flex-1 font-medium"
+                    >
+                      <ButtonContent iconLeft={IconEdit}>Request Changes</ButtonContent>
+                    </Button>
+                    <Button
+                      variant="default"
+                      colorRole="brand"
+                      size="lg"
+                      onClick={() => confirmMutation.mutate()}
+                      isDisabled={confirmMutation.isPending}
+                      className="flex-1 font-semibold"
+                    >
+                      <ButtonContent iconLeft={IconCheck}>
+                        {confirmMutation.isPending ? 'Confirming...' : 'Approve Quote'}
+                      </ButtonContent>
+                    </Button>
+                  </div>
+                )}
+
+                {showRevisionForm && (
+                  <div className="space-y-4">
+                    <div className="rounded-lg bg-fill-warning/10 border border-border-warning p-4">
+                      <Typography variant="bodySm" className="text-text-warning font-medium">
+                        The customer will be notified and can resubmit with requested changes
+                      </Typography>
+                    </div>
+                    <div>
+                      <Typography variant="bodySm" className="mb-2 font-medium">
+                        What needs to be changed? <span className="text-text-danger">*</span>
+                      </Typography>
+                      <TextArea
+                        value={revisionReason}
+                        onChange={(e) => setRevisionReason(e.target.value)}
+                        placeholder="Example: Please adjust quantities for Chateau Margaux to 50 cases maximum"
+                        rows={4}
+                        className="text-sm"
+                      />
+                    </div>
+                    <div className="flex flex-col sm:flex-row gap-3">
+                      <Button
+                        variant="outline"
+                        size="lg"
+                        onClick={() => {
+                          setShowRevisionForm(false);
+                          setRevisionReason('');
+                        }}
+                        className="flex-1 font-medium"
+                      >
+                        <ButtonContent>Cancel</ButtonContent>
+                      </Button>
+                      <Button
+                        variant="default"
+                        colorRole="warning"
+                        size="lg"
+                        onClick={() => requestRevisionMutation.mutate()}
+                        isDisabled={requestRevisionMutation.isPending || !revisionReason.trim()}
+                        className="flex-1 font-semibold"
+                      >
+                        <ButtonContent iconLeft={IconEdit}>
+                          {requestRevisionMutation.isPending ? 'Sending...' : 'Send to Customer'}
+                        </ButtonContent>
+                      </Button>
                     </div>
                   </div>
+                )}
 
-                  {/* Visual Separator */}
-                  <div className="px-6">
-                    <div className="border-t border-border-muted" />
-                  </div>
-
-                  {/* Action Forms */}
-                  <div className="p-6 pt-5">
-                    {quote.status === 'buy_request_submitted' && (
-                      <div className="rounded-xl bg-white p-6 shadow-sm border border-border-muted">
-                        <div className="flex items-center gap-3 mb-5">
-                          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-fill-brand/10">
-                            <span className="text-base">🚀</span>
-                          </div>
-                          <Typography variant="bodyLg" className="font-bold">
-                            Start Review
-                          </Typography>
-                        </div>
-                        <div>
-                          <Typography variant="bodySm" className="mb-3 font-semibold">
-                            Review Notes <span className="text-text-muted font-normal text-xs">(optional)</span>
-                          </Typography>
-                          <TextArea
-                            id="ccNotes"
-                            value={ccNotes}
-                            onChange={(e) => setCcNotes(e.target.value)}
-                            placeholder="Add any notes about this review..."
-                            rows={4}
-                            className="border-2 focus:border-border-brand focus:ring-2 focus:ring-fill-brand/20 transition-all"
-                          />
-                        </div>
-                      </div>
-                    )}
-
-
-                    {showRevisionForm && (
-                      <div className="rounded-xl bg-gradient-to-br from-fill-warning/5 to-fill-warning/10 p-6 shadow-sm border-2 border-border-warning">
-                        <div className="flex items-center gap-3 mb-5">
-                          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-fill-warning/20">
-                            <span className="text-base">⚠️</span>
-                          </div>
-                          <Typography variant="bodyLg" className="font-bold text-text-warning">
-                            Request Revision
-                          </Typography>
-                        </div>
-                        <div>
-                          <Typography variant="bodySm" className="mb-3 font-semibold">
-                            Revision Reason <span className="text-text-danger">*</span>
-                          </Typography>
-                          <TextArea
-                            id="revisionReason"
-                            value={revisionReason}
-                            onChange={(e) => setRevisionReason(e.target.value)}
-                            placeholder="Explain what needs to be revised..."
-                            rows={4}
-                            className="border-2 border-border-danger focus:border-border-danger focus:ring-2 focus:ring-fill-danger/20 transition-all bg-white"
-                          />
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
+                {quote.status === 'po_submitted' && (
+                  <Button
+                    variant="default"
+                    colorRole="brand"
+                    size="lg"
+                    onClick={() => confirmPOMutation.mutate()}
+                    isDisabled={confirmPOMutation.isPending}
+                    className="w-full sm:w-auto font-semibold"
+                  >
+                    <ButtonContent iconLeft={IconCheck}>
+                      {confirmPOMutation.isPending ? 'Confirming...' : 'Confirm Purchase Order'}
+                    </ButtonContent>
+                  </Button>
+                )}
+              </div>
+            )}
           </div>
         </DialogBody>
 
-        <DialogFooter className="bg-gradient-to-r from-fill-muted/30 to-fill-muted/50 border-t-2 border-border-muted">
-          {quote.status === 'buy_request_submitted' && (
-            <Button
-              variant="default"
-              colorRole="brand"
-              size="lg"
-              onClick={() => startReviewMutation.mutate()}
-              isDisabled={startReviewMutation.isPending}
-              className="font-bold shadow-lg hover:shadow-xl transition-all duration-200 px-8"
-            >
-              <ButtonContent iconLeft={IconPlayerPlay}>
-                {startReviewMutation.isPending ? 'Starting...' : 'Start Review'}
-              </ButtonContent>
-            </Button>
-          )}
-
-          {quote.status === 'under_cc_review' && !showRevisionForm && (
-            <>
-              <Button
-                variant="outline"
-                colorRole="danger"
-                size="lg"
-                onClick={() => setShowRevisionForm(true)}
-                className="font-semibold hover:bg-fill-danger/10 transition-all duration-200 px-6"
-              >
-                <ButtonContent iconLeft={IconEdit}>Request Revision</ButtonContent>
-              </Button>
-              <Button
-                variant="default"
-                colorRole="brand"
-                size="lg"
-                onClick={() => confirmMutation.mutate()}
-                isDisabled={confirmMutation.isPending}
-                className="font-bold shadow-lg hover:shadow-xl transition-all duration-200 px-8"
-              >
-                <ButtonContent iconLeft={IconCheck}>
-                  {confirmMutation.isPending ? 'Confirming...' : 'Confirm Quote'}
-                </ButtonContent>
-              </Button>
-            </>
-          )}
-
-          {showRevisionForm && (
-            <>
-              <Button
-                variant="outline"
-                size="lg"
-                onClick={() => {
-                  setShowRevisionForm(false);
-                  setRevisionReason('');
-                }}
-                className="font-semibold hover:bg-fill-muted/50 transition-all duration-200 px-6"
-              >
-                <ButtonContent>Cancel</ButtonContent>
-              </Button>
-              <Button
-                variant="default"
-                colorRole="danger"
-                size="lg"
-                onClick={() => requestRevisionMutation.mutate()}
-                isDisabled={
-                  requestRevisionMutation.isPending || !revisionReason.trim()
-                }
-                className="font-bold shadow-lg hover:shadow-xl transition-all duration-200 px-8"
-              >
-                <ButtonContent iconLeft={IconEdit}>
-                  {requestRevisionMutation.isPending
-                    ? 'Submitting...'
-                    : 'Submit Revision Request'}
-                </ButtonContent>
-              </Button>
-            </>
-          )}
-
-          {quote.status === 'po_submitted' && (
-            <Button
-              variant="default"
-              colorRole="brand"
-              size="lg"
-              onClick={() => confirmPOMutation.mutate()}
-              isDisabled={confirmPOMutation.isPending}
-              className="font-bold shadow-lg hover:shadow-xl transition-all duration-200 px-8"
-            >
-              <ButtonContent iconLeft={IconCheck}>
-                {confirmPOMutation.isPending ? 'Confirming...' : 'Confirm PO'}
-              </ButtonContent>
-            </Button>
-          )}
+        <DialogFooter className="bg-fill-muted/30 border-t border-border-muted">
+          <Button
+            variant="ghost"
+            size="lg"
+            onClick={() => {
+              if (onOpenChange) onOpenChange(false);
+            }}
+            className="font-medium"
+          >
+            <ButtonContent>Close</ButtonContent>
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

@@ -9,32 +9,27 @@ import QuoteApprovalsList from './QuoteApprovalsList';
  */
 const QuoteApprovalsPage = () => {
   return (
-    <div className="container mx-auto max-w-7xl px-4 py-8">
-      <div className="mb-8">
+    <div className="container mx-auto max-w-7xl px-4 sm:px-6 py-6 sm:py-8">
+      <div className="mb-6 sm:mb-8">
         <Typography variant="headingLg" className="mb-2">
           Quote Approvals
         </Typography>
         <Typography variant="bodyMd" colorRole="muted">
-          Review and approve customer quotes
+          Review and approve customer quote requests
         </Typography>
       </div>
 
-      <div className="rounded-lg border border-border-primary bg-fill-primary p-6">
-        <Typography variant="headingSm" className="mb-6">
-          Pending Approvals
-        </Typography>
-        <Suspense
-          fallback={
-            <div className="flex h-64 items-center justify-center">
-              <Typography variant="bodySm" colorRole="muted">
-                Loading quotes...
-              </Typography>
-            </div>
-          }
-        >
-          <QuoteApprovalsList />
-        </Suspense>
-      </div>
+      <Suspense
+        fallback={
+          <div className="flex h-64 items-center justify-center">
+            <Typography variant="bodySm" colorRole="muted">
+              Loading quotes...
+            </Typography>
+          </div>
+        }
+      >
+        <QuoteApprovalsList />
+      </Suspense>
     </div>
   );
 };
