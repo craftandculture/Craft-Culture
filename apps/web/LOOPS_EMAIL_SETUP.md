@@ -116,9 +116,9 @@ Craft & Culture Team
 
 ---
 
-### 4. Quote Review Started ⚠️ (Needs Creation)
+### 4. Quote Review Started ✅ (Created)
 
-**Transactional ID**: `quote-review-started`
+**Transactional ID**: `cmhexu2adkscr1y0ia83rd76j`
 **Purpose**: Notify customer when C&C starts reviewing their quote
 **Trigger**: When admin clicks "Start Review" on a quote
 
@@ -452,7 +452,7 @@ Use this checklist to track which templates you've created:
 - [x] `cmglxdfzwzzscz00inq1dm56c` - Magic Link Email
 - [x] `cmhagixdf7c3z160h3aaga4xp` - New User Signup (Admin)
 - [ ] `user-approved` - User Account Approved
-- [ ] `quote-review-started` - Quote Review Started
+- [x] `cmhexu2adkscr1y0ia83rd76j` - Quote Review Started
 - [ ] `quote-confirmed-by-cc` - Quote Confirmed
 - [ ] `quote-revision-requested` - Revision Requested
 - [ ] `quote-buy-request-submitted` - Buy Request Submitted (Admin)

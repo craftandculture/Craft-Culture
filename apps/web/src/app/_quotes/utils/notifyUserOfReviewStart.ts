@@ -32,8 +32,9 @@ const notifyUserOfReviewStart = async (quote: Quote) => {
     const quoteUrl = `${serverConfig.appUrl}/platform/quotes/${quote.id}`;
 
     try {
+      // Loops template: Quote Review Started
       await loops.sendTransactionalEmail({
-        transactionalId: 'quote-review-started',
+        transactionalId: 'cmhexu2adkscr1y0ia83rd76j',
         email: quoteOwner.email,
         dataVariables: {
           userName: quoteOwner.name,
