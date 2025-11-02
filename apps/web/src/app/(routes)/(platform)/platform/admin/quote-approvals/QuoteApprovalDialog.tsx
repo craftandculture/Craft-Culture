@@ -88,6 +88,9 @@ const QuoteApprovalDialog = ({
     quantityAvailable: string;
   }>>({});
 
+  // State for tracking which line items have alternatives section expanded
+  const [expandedAlternatives, setExpandedAlternatives] = useState<Record<string, boolean>>({});
+
   // Extract pricing data from quoteData
   const quotePricingData = useMemo(() => {
     if (!quote?.quoteData) return null;
@@ -744,21 +747,43 @@ const QuoteApprovalDialog = ({
                           />
                         </div>
 
-                        {/* Admin Alternative Suggestions */}
-                        <div className="rounded-lg bg-gradient-to-br from-fill-warning/10 to-fill-warning/5 border border-border-warning p-4">
-                          <div className="flex items-center gap-2 mb-3">
-                            <span className="text-base">💡</span>
-                            <Typography variant="bodySm" className="font-semibold">
-                              Suggest Alternative Products
-                            </Typography>
-                          </div>
-                          <Typography variant="bodyXs" colorRole="muted" className="mb-4">
-                            Add alternative products with pricing that aren&apos;t in your catalog
-                          </Typography>
+                        {/* Admin Alternative Suggestions - Collapsible */}
+                        <div className="rounded-lg border border-border-muted overflow-hidden">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setExpandedAlternatives({
+                                ...expandedAlternatives,
+                                [item.productId]: !expandedAlternatives[item.productId],
+                              });
+                            }}
+                            className="w-full flex items-center justify-between p-3 hover:bg-fill-muted/30 transition-colors"
+                          >
+                            <div className="flex items-center gap-2">
+                              <span className="text-base">💡</span>
+                              <Typography variant="bodySm" className="font-semibold">
+                                Suggest Alternative Products
+                                {adjustment?.adminAlternatives && adjustment.adminAlternatives.length > 0 && (
+                                  <span className="ml-2 text-text-brand">
+                                    ({adjustment.adminAlternatives.length})
+                                  </span>
+                                )}
+                              </Typography>
+                            </div>
+                            <div className={`transition-transform duration-200 ${expandedAlternatives[item.productId] ? 'rotate-180' : ''}`}>
+                              <span className="text-sm text-text-muted">▼</span>
+                            </div>
+                          </button>
 
-                          {/* Structured form for new alternative */}
-                          <div className="space-y-3 mb-4">
-                            <div className="grid grid-cols-2 gap-3">
+                          {expandedAlternatives[item.productId] && (
+                            <div className="p-4 bg-gradient-to-br from-fill-warning/10 to-fill-warning/5 border-t border-border-warning">
+                              <Typography variant="bodyXs" colorRole="muted" className="mb-4">
+                                Add alternative products with pricing that aren&apos;t in your catalog
+                              </Typography>
+
+                              {/* Structured form for new alternative */}
+                              <div className="space-y-3 mb-4">
+                                <div className="grid grid-cols-2 gap-3">
                               <div className="col-span-2">
                                 <Typography variant="bodyXs" className="mb-1 font-medium">
                                   Product Name <span className="text-text-danger">*</span>
@@ -993,6 +1018,8 @@ const QuoteApprovalDialog = ({
                                   </div>
                                 ))}
                               </div>
+                            </div>
+                          )}
                             </div>
                           )}
                         </div>
