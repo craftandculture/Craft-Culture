@@ -64,6 +64,7 @@ const QuotesList = () => {
   const [selectedQuote, setSelectedQuote] = useState<Quote | null>(null);
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
   const [activeFilter, setActiveFilter] = useState<QuoteStatus | 'all' | 'action_required'>('all');
+  const [submittingQuoteId, setSubmittingQuoteId] = useState<string | null>(null);
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ['quotes.getMany', { limit: 20, cursor, search: search || undefined }],
@@ -78,15 +79,18 @@ const QuotesList = () => {
   // Submit buy request mutation
   const submitBuyRequestMutation = useMutation({
     mutationFn: async (quoteId: string) => {
+      setSubmittingQuoteId(quoteId);
       return trpcClient.quotes.submitBuyRequest.mutate({ quoteId });
     },
     onSuccess: () => {
       toast.success('Order request submitted successfully!');
       void queryClient.invalidateQueries({ queryKey: ['quotes.getMany'] });
       void refetch();
+      setSubmittingQuoteId(null);
     },
     onError: (error) => {
       toast.error(`Failed to submit: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      setSubmittingQuoteId(null);
     },
   });
 
@@ -289,11 +293,15 @@ const QuotesList = () => {
                 colorRole="brand"
                 size="sm"
                 onClick={() => submitBuyRequestMutation.mutate(quote.id)}
-                isDisabled={submitBuyRequestMutation.isPending}
+                isDisabled={submittingQuoteId === quote.id}
               >
                 <ButtonContent iconLeft={IconSend}>
-                  <span className="hidden lg:inline">Place Order Request</span>
-                  <span className="lg:hidden">Place Order</span>
+                  <span className="hidden lg:inline">
+                    {submittingQuoteId === quote.id ? 'Submitting...' : 'Place Order Request'}
+                  </span>
+                  <span className="lg:hidden">
+                    {submittingQuoteId === quote.id ? 'Submitting...' : 'Place Order'}
+                  </span>
                 </ButtonContent>
               </Button>
             )}
