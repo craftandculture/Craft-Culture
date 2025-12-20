@@ -3,6 +3,7 @@ import { createTRPCRouter } from '@/lib/trpc/trpc';
 
 import activityLogCreate from './controllers/activityLogCreate';
 import activityLogsGetManyController from './controllers/activityLogsGetMany';
+import localInventorySheetUpdate from './controllers/localInventorySheetUpdate';
 import settingsGetController from './controllers/settingsGetController';
 import settingsUpdateController from './controllers/settingsUpdateController';
 import userActivityLogsGetManyController from './controllers/userActivityLogsGetMany';
@@ -11,6 +12,7 @@ import activityLogCreateInputSchema from './schemas/activityLogCreateInputSchema
 import activityLogsGetManyInputSchema from './schemas/activityLogsGetManyInputSchema';
 import settingsGetInputSchema from './schemas/settingsGetInputSchema';
 import settingsUpdateInputSchema from './schemas/settingsUpdateInputSchema';
+import updateLocalInventorySheetSchema from './schemas/updateLocalInventorySheetSchema';
 import userActivityLogsGetManyInputSchema from './schemas/userActivityLogsGetManyInputSchema';
 
 const activityLogsRouter = createTRPCRouter({
@@ -50,10 +52,35 @@ const settingsRouter = createTRPCRouter({
     }),
 });
 
+const localInventorySheetRouter = createTRPCRouter({
+  update: adminProcedure
+    .input(updateLocalInventorySheetSchema)
+    .mutation(async ({ input }) => {
+      return await localInventorySheetUpdate(input);
+    }),
+  get: adminProcedure.query(async () => {
+    const sheetId = await settingsGetController({
+      key: 'localInventorySheetId',
+    });
+    const sheetName = await settingsGetController({
+      key: 'localInventorySheetName',
+    });
+    const lastSync = await settingsGetController({
+      key: 'localInventoryLastSync',
+    });
+    return {
+      googleSheetId: sheetId,
+      sheetName,
+      lastSync,
+    };
+  }),
+});
+
 const adminRouter = createTRPCRouter({
   activityLogs: activityLogsRouter,
   userActivityLogs: userActivityLogsRouter,
   settings: settingsRouter,
+  localInventorySheet: localInventorySheetRouter,
 });
 
 export default adminRouter;
