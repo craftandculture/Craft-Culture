@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
+import { toast } from 'sonner';
 
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
@@ -14,8 +15,9 @@ import useTRPC from '@/lib/trpc/browser';
  * Form for managing platform settings
  *
  * Allows admin users to configure:
- * - Lead time minimum (days)
- * - Lead time maximum (days)
+ * - Lead time minimum and maximum (days)
+ * - Local inventory Google Sheet integration
+ * - Manual inventory sync
  *
  * @example
  *   <SettingsForm />
@@ -32,6 +34,11 @@ const SettingsForm = () => {
     api.admin.settings.get.queryOptions({ key: 'leadTimeMax' }),
   );
 
+  // Fetch local inventory sheet settings
+  const { data: sheetData, refetch: refetchSheetData } = useQuery(
+    api.admin.localInventorySheet.get.queryOptions(),
+  );
+
   // Local state for form inputs
   const [leadTimeMin, setLeadTimeMin] = useState<number>(
     leadTimeMinData ? Number(leadTimeMinData) : 14,
@@ -39,6 +46,7 @@ const SettingsForm = () => {
   const [leadTimeMax, setLeadTimeMax] = useState<number>(
     leadTimeMaxData ? Number(leadTimeMaxData) : 21,
   );
+  const [googleSheetUrl, setGoogleSheetUrl] = useState<string>('');
 
   // Update state when data loads
   if (leadTimeMinData && leadTimeMin !== Number(leadTimeMinData)) {
@@ -54,6 +62,13 @@ const SettingsForm = () => {
   const { mutateAsync: updateLeadTimeMaxAsync, isPending: isUpdatingMax } =
     useMutation(api.admin.settings.update.mutationOptions());
 
+  // Mutations for local inventory
+  const { mutateAsync: updateSheetAsync, isPending: isUpdatingSheet } =
+    useMutation(api.admin.localInventorySheet.update.mutationOptions());
+  const { mutateAsync: syncInventoryAsync, isPending: isSyncing } = useMutation(
+    api.products.localInventorySyncManual.mutationOptions(),
+  );
+
   const handleSave = async () => {
     await Promise.all([
       updateLeadTimeMinAsync({
@@ -68,6 +83,34 @@ const SettingsForm = () => {
 
     // Invalidate all queries to refetch updated settings
     void queryClient.invalidateQueries();
+  };
+
+  const handleUpdateSheet = async () => {
+    try {
+      await updateSheetAsync({ googleSheetUrl });
+      await refetchSheetData();
+      setGoogleSheetUrl('');
+      toast.success('Google Sheet URL updated successfully');
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to update Google Sheet URL',
+      );
+    }
+  };
+
+  const handleSyncInventory = async () => {
+    try {
+      const result = await syncInventoryAsync();
+      await refetchSheetData();
+      void queryClient.invalidateQueries();
+      toast.success(
+        `Sync completed! ${result.created} created, ${result.updated} updated, ${result.deleted} deleted`,
+      );
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to sync inventory',
+      );
+    }
   };
 
   const isSaving = isUpdatingMin || isUpdatingMax;
@@ -125,6 +168,87 @@ const SettingsForm = () => {
         <Typography variant="bodyXs" colorRole="muted" className="italic">
           Customers will see: &quot;{leadTimeMin}-{leadTimeMax} days via air freight, EX-Works UAE(In-Bond)&quot;
         </Typography>
+      </div>
+
+      {/* Local Inventory Section */}
+      <div className="space-y-4">
+        <div>
+          <Typography variant="bodySm" className="font-semibold">
+            Local Inventory Sheet
+          </Typography>
+          <Typography variant="bodyXs" colorRole="muted">
+            Configure Google Sheets integration for local inventory management
+          </Typography>
+        </div>
+
+        {sheetData?.sheetName && (
+          <div className="rounded-md border border-border-muted bg-background-secondary p-3">
+            <div className="space-y-1">
+              <Typography variant="bodyXs" colorRole="muted">
+                Current Sheet
+              </Typography>
+              <Typography variant="bodySm">{sheetData.sheetName}</Typography>
+              {sheetData.lastSync && (
+                <Typography variant="bodyXs" colorRole="muted">
+                  Last synced:{' '}
+                  {new Date(sheetData.lastSync).toLocaleString('en-US', {
+                    dateStyle: 'medium',
+                    timeStyle: 'short',
+                  })}
+                </Typography>
+              )}
+            </div>
+          </div>
+        )}
+
+        <div className="space-y-2">
+          <label htmlFor="googleSheetUrl">
+            <Typography variant="bodyXs" colorRole="muted">
+              Google Sheet URL
+            </Typography>
+          </label>
+          <div className="flex gap-2">
+            <Input
+              id="googleSheetUrl"
+              type="text"
+              value={googleSheetUrl}
+              onChange={(e) => setGoogleSheetUrl(e.target.value)}
+              placeholder="https://docs.google.com/spreadsheets/d/..."
+              className="flex-1"
+            />
+            <Button
+              variant="default"
+              onClick={handleUpdateSheet}
+              isDisabled={isUpdatingSheet || !googleSheetUrl.trim()}
+            >
+              <ButtonContent>
+                {isUpdatingSheet ? 'Updating...' : 'Update Sheet'}
+              </ButtonContent>
+            </Button>
+          </div>
+          <Typography variant="bodyXs" colorRole="muted" className="italic">
+            Paste the full Google Sheets URL to sync local inventory products
+          </Typography>
+        </div>
+
+        <div className="flex items-center justify-between rounded-md border border-border-muted bg-background-secondary p-3">
+          <div>
+            <Typography variant="bodySm" className="font-medium">
+              Sync Inventory
+            </Typography>
+            <Typography variant="bodyXs" colorRole="muted">
+              Manually sync products from the Google Sheet
+            </Typography>
+          </div>
+          <Button
+            variant="default"
+            colorRole="brand"
+            onClick={handleSyncInventory}
+            isDisabled={isSyncing || !sheetData?.googleSheetId}
+          >
+            <ButtonContent>{isSyncing ? 'Syncing...' : 'Sync Now'}</ButtonContent>
+          </Button>
+        </div>
       </div>
 
       <Divider />
