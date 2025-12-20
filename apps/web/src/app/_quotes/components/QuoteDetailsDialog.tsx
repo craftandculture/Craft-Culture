@@ -755,7 +755,7 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                                   {product.productOffers?.[0]?.unitCount && (
                                     <div className="flex items-center gap-2 text-text-muted">
                                       <Typography variant="bodyXs">
-                                        📦 {product.productOffers[0].unitCount} bottles × {product.productOffers[0].unitSize || '750ml'} per case
+                                        📦 {product.productOffers?.[0]?.unitCount} bottles × {product.productOffers?.[0]?.unitSize || '750ml'} per case
                                       </Typography>
                                     </div>
                                   )}
@@ -777,7 +777,7 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                                         )}
                                         {product.productOffers?.[0]?.unitCount && (
                                           <Typography variant="bodyXs" colorRole="muted" className="mt-1">
-                                            = {displayQuantity * product.productOffers[0].unitCount} bottles
+                                            = {displayQuantity * product.productOffers?.[0]?.unitCount} bottles
                                           </Typography>
                                         )}
                                       </div>
@@ -800,8 +800,8 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                                           <Typography variant="bodyXs" colorRole="muted" className="mt-1">
                                             {formatPrice(
                                               displayCurrency === 'AED'
-                                                ? convertUsdToAed(pricePerCase / product.productOffers[0].unitCount)
-                                                : pricePerCase / product.productOffers[0].unitCount,
+                                                ? convertUsdToAed(pricePerCase / product.productOffers?.[0]?.unitCount)
+                                                : pricePerCase / product.productOffers?.[0]?.unitCount,
                                               displayCurrency,
                                             )} per bottle
                                           </Typography>
