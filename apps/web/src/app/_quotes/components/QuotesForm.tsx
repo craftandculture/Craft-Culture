@@ -980,7 +980,7 @@ const QuotesForm = () => {
                         quantity: item.quantity ?? 1,
                         basePriceUsd: quotedLineItem?.basePriceUsd ?? 0,
                         lineItemTotalUsd: quotedLineItem?.lineItemTotalUsd ?? 0,
-                        unitCount: item.product?.productOffers[0]?.unitCount ?? 12,
+                        unitCount: item.product?.productOffers?.[0]?.unitCount ?? 12,
                       };
                     })}
                   onSaveWithMargins={(config) => {
