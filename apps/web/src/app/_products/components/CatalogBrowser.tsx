@@ -215,7 +215,7 @@ const CatalogBrowser = ({
           >
             <option value="">All Products</option>
             <option value="local_inventory">Local Inventory</option>
-            <option value="cultx">CultX (14-21 days)</option>
+            <option value="cultx">Pre Order</option>
           </select>
         </div>
 
