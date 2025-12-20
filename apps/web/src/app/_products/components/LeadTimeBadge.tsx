@@ -3,7 +3,7 @@
 import { IconCheck, IconClock } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 
-import { useTRPCClient } from '@/lib/trpc/client';
+import { useTRPCClient } from '@/lib/trpc/browser';
 
 interface LeadTimeBadgeProps {
   source: 'cultx' | 'local_inventory';
