@@ -1,4 +1,4 @@
-import { sql } from 'drizzle-orm';
+import { type SQL, sql } from 'drizzle-orm';
 import z from 'zod';
 
 import db from '@/database/client';
@@ -186,7 +186,7 @@ const productsGetMany = protectedProcedure
           : undefined;
 
       // Build RAW conditions (combine source filter and search filter)
-      const buildRawConditions = (table: typeof products) => {
+      const buildRawConditions = (table: typeof products): SQL<unknown> => {
         const conditions: ReturnType<typeof sql>[] = [];
 
         if (source) {
@@ -202,7 +202,7 @@ const productsGetMany = protectedProcedure
           conditions.push(createSearchExpressions(table, preparedSearch).filter);
         }
 
-        if (conditions.length === 1) return conditions[0];
+        if (conditions.length === 1) return conditions[0]!;
         return sql`${sql.join(conditions, sql` AND `)}`;
       };
 
