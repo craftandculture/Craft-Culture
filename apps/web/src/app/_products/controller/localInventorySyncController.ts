@@ -160,7 +160,9 @@ const localInventorySyncController = async () => {
 
     // Get all existing local_inventory offers
     const existingOffers = await db.query.productOffers.findMany({
-      where: (productOffers, { eq }) => eq(productOffers.source, 'local_inventory'),
+      where: {
+        source: 'local_inventory',
+      },
     });
 
     // Find offers to delete (exist in DB but not in current sync)
