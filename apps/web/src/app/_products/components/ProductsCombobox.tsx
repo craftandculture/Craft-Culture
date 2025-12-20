@@ -124,7 +124,7 @@ const ProductsCombobox = ({
     enabled: open && !isDebouncing,
   });
 
-  const products = data?.pages.flatMap((page) => page.data) ?? [];
+  const products = (data?.pages.flatMap((page) => page.data) ?? []) as Product[];
 
   // Only show loading state on initial load (no previous data)
   const isInitialLoading = isLoading && products.length === 0;
