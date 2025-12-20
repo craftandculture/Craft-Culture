@@ -114,7 +114,7 @@ const ProductDetailsTooltip = ({
                 <Typography variant="bodySm" className="text-text-primary font-medium">
                   {offer.unitCount} × {offer.unitSize}
                 </Typography>
-                {offer.availableQuantity > 0 && (
+                {offer.availableQuantity !== null && offer.availableQuantity > 0 && (
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
