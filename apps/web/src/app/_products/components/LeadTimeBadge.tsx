@@ -3,7 +3,7 @@
 import { IconCheck, IconClock } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 
-import { useTRPCClient } from '@/lib/trpc/browser';
+import useTRPC from '@/lib/trpc/browser';
 
 interface LeadTimeBadgeProps {
   source: 'cultx' | 'local_inventory';
@@ -17,14 +17,14 @@ interface LeadTimeBadgeProps {
  *   <LeadTimeBadge source="cultx" /> // Shows "14-21 days lead time"
  */
 const LeadTimeBadge = ({ source }: LeadTimeBadgeProps) => {
-  const api = useTRPCClient();
+  const api = useTRPC();
 
-  const { data: leadTimeMin } = useQuery(
-    api.admin.settings.get.queryOptions({ key: 'leadTimeMin' }),
-  );
-  const { data: leadTimeMax } = useQuery(
-    api.admin.settings.get.queryOptions({ key: 'leadTimeMax' }),
-  );
+  const { data: leadTimeMin } = useQuery({
+    ...api.admin.settings.get.queryOptions({ key: 'leadTimeMin' }),
+  });
+  const { data: leadTimeMax } = useQuery({
+    ...api.admin.settings.get.queryOptions({ key: 'leadTimeMax' }),
+  });
 
   if (source === 'local_inventory') {
     return (
