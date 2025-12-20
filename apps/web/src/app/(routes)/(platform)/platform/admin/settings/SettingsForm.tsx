@@ -103,9 +103,18 @@ const SettingsForm = () => {
       const result = await syncInventoryAsync();
       await refetchSheetData();
       void queryClient.invalidateQueries();
-      toast.success(
-        `Sync completed! ${result.totalItems} items processed, ${result.offersDeleted} offers removed`,
-      );
+
+      // Show errors if any exist
+      if (result.errors.length > 0) {
+        toast.error(
+          `Sync completed with errors: ${result.errors.join(', ')}`,
+          { duration: 10000 }
+        );
+      } else {
+        toast.success(
+          `Sync completed! ${result.totalItems} items processed, ${result.offersDeleted} offers removed`,
+        );
+      }
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : 'Failed to sync inventory',
