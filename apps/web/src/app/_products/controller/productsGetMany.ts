@@ -202,7 +202,6 @@ const productsGetMany = protectedProcedure
           conditions.push(createSearchExpressions(table, preparedSearch).filter);
         }
 
-        if (conditions.length === 0) return undefined;
         if (conditions.length === 1) return conditions[0];
         return sql`${sql.join(conditions, sql` AND `)}`;
       };
