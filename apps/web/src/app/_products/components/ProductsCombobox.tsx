@@ -244,8 +244,8 @@ const ProductsCombobox = ({
                           >
                             {product.productOffers?.[0] && (
                               <>
-                                {product.productOffers[0].unitCount} ×{' '}
-                                {product.productOffers[0].unitSize}
+                                {product.productOffers?.[0]?.unitCount} ×{' '}
+                                {product.productOffers?.[0]?.unitSize}
                               </>
                             )}
                             {product.producer && ' · '}
