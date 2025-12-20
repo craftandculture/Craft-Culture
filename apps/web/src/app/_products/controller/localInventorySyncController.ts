@@ -1,3 +1,5 @@
+import { eq, inArray } from 'drizzle-orm';
+
 import settingsGetController from '@/app/_admin/controllers/settingsGetController';
 import downloadGoogleSheet from '@/app/_pricingModels/utils/downloadGoogleSheet';
 import db from '@/database/client';
@@ -158,8 +160,7 @@ const localInventorySyncController = async () => {
 
     // Get all existing local_inventory offers
     const existingOffers = await db.query.productOffers.findMany({
-      where: (productOffers, { eq }) =>
-        eq(productOffers.source, 'local_inventory'),
+      where: eq(productOffers.source, 'local_inventory'),
     });
 
     // Find offers to delete (exist in DB but not in current sync)
@@ -168,10 +169,9 @@ const localInventorySyncController = async () => {
       .map((offer) => offer.id);
 
     if (offersToDelete.length > 0) {
-      await db.delete(productOffers).where(
-        (productOffers, { inArray }) =>
-          inArray(productOffers.id, offersToDelete),
-      );
+      await db
+        .delete(productOffers)
+        .where(inArray(productOffers.id, offersToDelete));
       stats.offersDeleted = offersToDelete.length;
     }
 

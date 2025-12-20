@@ -140,9 +140,9 @@ const QuoteApprovalDialog = ({
 
   // Fetch products for the line items
   const { data: productsData } = useQuery({
-    ...(api.products.getMany?.queryOptions({
+    ...api.products.getMany.queryOptions({
       productIds,
-    }) ?? {}),
+    }),
     enabled: productIds.length > 0 && open && !!quote,
   });
 
