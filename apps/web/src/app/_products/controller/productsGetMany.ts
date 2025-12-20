@@ -302,8 +302,24 @@ const productsGetMany = protectedProcedure
     },
   );
 
-export type ProductsGetManyOutput = Awaited<ReturnType<typeof productsGetMany>>;
+export type ProductsGetManyOutput = Awaited<
+  ReturnType<typeof productsGetMany>
+>;
 
-export type Product = ProductsGetManyOutput['data'][number];
+export type Product = ProductsGetManyOutput['data'][number] & {
+  productOffers: Array<{
+    id: string;
+    productId: string;
+    externalId: string;
+    source: 'cultx' | 'local_inventory';
+    price: number;
+    currency: string;
+    unitCount: number;
+    unitSize: string;
+    availableQuantity: number | null;
+    createdAt: Date;
+    updatedAt: Date;
+  }>;
+};
 
 export default productsGetMany;
