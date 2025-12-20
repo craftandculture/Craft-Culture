@@ -22,7 +22,7 @@ export const timestamps = {
     .$onUpdate(() => new Date()),
 };
 
-export const productSource = pgEnum('product_source', ['cultx']);
+export const productSource = pgEnum('product_source', ['cultx', 'local_inventory']);
 
 export const customerType = pgEnum('user_type', ['b2b', 'b2c']);
 
