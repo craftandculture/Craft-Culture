@@ -112,7 +112,7 @@ const ProductDetailsPopover = ({
             </div>
 
             {/* Stock Availability */}
-            {offer.availableQuantity > 0 && (
+            {(offer.availableQuantity === null || offer.availableQuantity > 0) && (
               <div className="flex items-center gap-2">
                 <span
                   className={`h-2 w-2 rounded-full ${
