@@ -104,7 +104,7 @@ const SettingsForm = () => {
       await refetchSheetData();
       void queryClient.invalidateQueries();
       toast.success(
-        `Sync completed! ${result.created} created, ${result.updated} updated, ${result.deleted} deleted`,
+        `Sync completed! ${result.totalItems} items processed, ${result.offersDeleted} offers removed`,
       );
     } catch (error) {
       toast.error(
