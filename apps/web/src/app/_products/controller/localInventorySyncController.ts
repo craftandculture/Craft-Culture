@@ -80,29 +80,21 @@ const localInventorySyncController = async () => {
       console.log(`Processing batch ${index + 1} of ${batches.length}`);
 
       try {
-        // Deduplicate products within this batch by LWIN18
-        // (same wine can appear multiple times with different offers)
-        const uniqueProducts = Array.from(
-          new Map(
-            batch.map((item) => [
-              item.lwin18,
-              {
-                lwin18: item.lwin18,
-                name: item.productName,
-                region: item.region,
-                producer: null,
-                country: item.country,
-                year: item.year,
-                imageUrl: null,
-              },
-            ])
-          ).values()
-        );
-
-        // Upsert products
+        // Create unique products for each row (use LWIN18 + rowNumber)
+        // This treats each row as a separate product, not as multiple offers
         const upsertedProducts = await db
           .insert(products)
-          .values(uniqueProducts)
+          .values(
+            batch.map((item) => ({
+              lwin18: `${item.lwin18}:row${item.rowNumber}`,
+              name: item.productName,
+              region: item.region,
+              producer: null,
+              country: item.country,
+              year: item.year,
+              imageUrl: null,
+            }))
+          )
           .onConflictDoUpdate({
             target: products.lwin18,
             set: conflictUpdateSet(products, [
@@ -119,19 +111,19 @@ const localInventorySyncController = async () => {
           ...batch.map((item) => `local:${item.lwin18}:row${item.rowNumber}`)
         );
 
-        // Map LWIN18 to product ID
+        // Map row-specific LWIN18 to product ID
         const lwin18Map = new Map(
           upsertedProducts.map((product) => [product.lwin18, product.id]),
         );
 
-        // Upsert product offers
+        // Create one offer per product
         await db
           .insert(productOffers)
           .values(
             batch.map(
               (item) =>
                 ({
-                  productId: lwin18Map.get(item.lwin18)!,
+                  productId: lwin18Map.get(`${item.lwin18}:row${item.rowNumber}`)!,
                   externalId: `local:${item.lwin18}:row${item.rowNumber}`,
                   source: 'local_inventory',
                   price: item.price,
