@@ -11,7 +11,6 @@ import Icon from '@/app/_ui/components/Icon/Icon';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import formatPrice from '@/utils/formatPrice';
 
-import LeadTimeBadge from './LeadTimeBadge';
 import ProductDetailsPopover from './ProductDetailsPopover';
 import type { Product } from '../controller/productsGetMany';
 
@@ -119,13 +118,6 @@ const ProductCard = ({
           <Typography variant="bodyXs" className="text-text-muted">
             {offer.unitCount} × {offer.unitSize}
           </Typography>
-        )}
-
-        {/* Lead Time Badge */}
-        {offer && (
-          <div className="mt-1">
-            <LeadTimeBadge source={offer.source} />
-          </div>
         )}
 
         {/* Price */}
