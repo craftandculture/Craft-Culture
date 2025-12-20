@@ -151,6 +151,7 @@ const productsGetMany = protectedProcedure
       regions: z.array(z.string()).optional(),
       producers: z.array(z.string()).optional(),
       vintages: z.array(z.number()).optional(),
+      source: z.enum(['cultx', 'local_inventory']).optional(),
       sortBy: z
         .enum([
           'name-asc',
@@ -175,6 +176,7 @@ const productsGetMany = protectedProcedure
         regions,
         producers,
         vintages,
+        source,
         sortBy,
       },
     }) => {
@@ -182,6 +184,28 @@ const productsGetMany = protectedProcedure
         search && search.trim().length > 0
           ? prepareSearch(search)
           : undefined;
+
+      // Build RAW conditions (combine source filter and search filter)
+      const buildRawConditions = (table: typeof products) => {
+        const conditions: ReturnType<typeof sql>[] = [];
+
+        if (source) {
+          conditions.push(sql`EXISTS (
+            SELECT 1
+            FROM ${productOffers}
+            WHERE ${productOffers.productId} = ${table.id}
+            AND ${productOffers.source} = ${source}
+          )`);
+        }
+
+        if (preparedSearch) {
+          conditions.push(createSearchExpressions(table, preparedSearch).filter);
+        }
+
+        if (conditions.length === 0) return undefined;
+        if (conditions.length === 1) return conditions[0];
+        return sql`${sql.join(conditions, sql` AND `)}`;
+      };
 
       const whereConditions = {
         ...(productIds ? { id: { in: productIds } } : {}),
@@ -196,10 +220,9 @@ const productsGetMany = protectedProcedure
           ? { producer: { in: producers } }
           : {}),
         ...(vintages && vintages.length > 0 ? { year: { in: vintages } } : {}),
-        ...(preparedSearch
+        ...(source || preparedSearch
           ? {
-              RAW: (table: typeof products) =>
-                createSearchExpressions(table, preparedSearch).filter,
+              RAW: buildRawConditions,
             }
           : {}),
       };

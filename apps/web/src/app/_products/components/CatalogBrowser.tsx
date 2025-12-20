@@ -50,7 +50,7 @@ const CatalogBrowser = ({
   const gridRef = useRef<HTMLDivElement>(null);
 
   // Get active filters from URL
-  const [filters] = useQueryStates(quotesSearchParams);
+  const [filters, setFilters] = useQueryStates(quotesSearchParams);
 
   // Debounce search
   useEffect(() => {
@@ -81,6 +81,10 @@ const CatalogBrowser = ({
       regions: filters.regions.length > 0 ? filters.regions : undefined,
       producers: filters.producers.length > 0 ? filters.producers : undefined,
       vintages: filters.vintages.length > 0 ? filters.vintages : undefined,
+      source:
+        filters.source && filters.source !== ''
+          ? (filters.source as 'cultx' | 'local_inventory')
+          : undefined,
       sortBy,
     }),
     getNextPageParam: (lastPage) => lastPage.meta.nextCursor,
@@ -197,6 +201,22 @@ const CatalogBrowser = ({
             placeholder="Search catalogue..."
             className="h-10 w-full rounded-md border border-border-muted bg-background-primary pl-9 pr-3 text-sm transition-colors placeholder:text-text-muted focus:border-border-brand focus:outline-none focus:ring-2 focus:ring-fill-accent focus:ring-offset-2"
           />
+        </div>
+
+        {/* Source Filter */}
+        <div className="flex items-center gap-2">
+          <Typography variant="bodyXs" className="text-text-muted shrink-0">
+            Show:
+          </Typography>
+          <select
+            value={filters.source}
+            onChange={(e) => void setFilters({ source: e.target.value })}
+            className="h-10 rounded-md border border-border-muted bg-background-primary px-3 text-sm transition-colors focus:border-border-brand focus:outline-none focus:ring-2 focus:ring-fill-accent focus:ring-offset-2"
+          >
+            <option value="">All Products</option>
+            <option value="local_inventory">Local Inventory</option>
+            <option value="cultx">CultX (14-21 days)</option>
+          </select>
         </div>
 
         {/* Sort Dropdown */}
