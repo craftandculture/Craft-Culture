@@ -74,7 +74,7 @@ const localInventorySyncController = async () => {
     // 4. Batch process items (100 per batch like CultX sync)
     const batches = splitArrayBatches(items, 100);
 
-    const processedLwin18s: string[] = [];
+    const processedExternalIds: string[] = [];
 
     for (const [index, batch] of batches.entries()) {
       console.log(`Processing batch ${index + 1} of ${batches.length}`);
@@ -105,8 +105,10 @@ const localInventorySyncController = async () => {
           })
           .returning();
 
-        // Track LWIN18s for orphan cleanup
-        processedLwin18s.push(...batch.map((item) => item.lwin18));
+        // Track externalIds for orphan cleanup
+        processedExternalIds.push(
+          ...batch.map((item) => `local:${item.lwin18}:row${item.rowNumber}`)
+        );
 
         // Map LWIN18 to product ID
         const lwin18Map = new Map(
@@ -121,7 +123,7 @@ const localInventorySyncController = async () => {
               (item) =>
                 ({
                   productId: lwin18Map.get(item.lwin18)!,
-                  externalId: `local:${item.lwin18}`,
+                  externalId: `local:${item.lwin18}:row${item.rowNumber}`,
                   source: 'local_inventory',
                   price: item.price,
                   currency: item.currency,
@@ -154,9 +156,6 @@ const localInventorySyncController = async () => {
 
     // 5. Delete orphaned local_inventory offers
     // (offers that exist in DB but not in current sheet)
-    const currentExternalIds = processedLwin18s.map(
-      (lwin18) => `local:${lwin18}`,
-    );
 
     // Get all existing local_inventory offers
     const existingOffers = await db.query.productOffers.findMany({
@@ -167,7 +166,7 @@ const localInventorySyncController = async () => {
 
     // Find offers to delete (exist in DB but not in current sync)
     const offersToDelete = existingOffers
-      .filter((offer) => !currentExternalIds.includes(offer.externalId))
+      .filter((offer) => !processedExternalIds.includes(offer.externalId))
       .map((offer) => offer.id);
 
     if (offersToDelete.length > 0) {
