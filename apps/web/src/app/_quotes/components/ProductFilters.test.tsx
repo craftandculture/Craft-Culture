@@ -1,12 +1,17 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import ProductFilters from './ProductFilters';
 
 // Mock useQueryStates
 const mockSetFilters = vi.fn();
-const mockFilters = {
+const mockFilters: {
+  countries: string[];
+  regions: string[];
+  producers: string[];
+  vintages: number[];
+} = {
   countries: [],
   regions: [],
   producers: [],
