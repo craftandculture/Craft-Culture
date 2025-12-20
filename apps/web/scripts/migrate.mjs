@@ -1,6 +1,4 @@
 #!/usr/bin/env node
-import { drizzle } from 'drizzle-orm/postgres-js';
-import { migrate } from 'drizzle-orm/postgres-js/migrator';
 import postgres from 'postgres';
 
 const runMigrations = async () => {
@@ -11,14 +9,30 @@ const runMigrations = async () => {
     process.exit(1);
   }
 
-  console.log('🔄 Running database migrations...');
+  console.log('🔄 Adding local_inventory to product_source enum...');
 
   const client = postgres(dbUrl, { max: 1 });
-  const db = drizzle(client);
 
   try {
-    await migrate(db, { migrationsFolder: './src/database' });
-    console.log('✅ Migrations completed successfully');
+    // Check if the enum value already exists
+    const result = await client`
+      SELECT EXISTS (
+        SELECT 1 FROM pg_enum
+        WHERE enumlabel = 'local_inventory'
+        AND enumtypid = (
+          SELECT oid FROM pg_type WHERE typname = 'product_source'
+        )
+      ) as exists
+    `;
+
+    if (result[0].exists) {
+      console.log('✅ local_inventory enum value already exists, skipping');
+    } else {
+      // Add the new enum value
+      await client.unsafe(`ALTER TYPE "public"."product_source" ADD VALUE 'local_inventory'`);
+      console.log('✅ Successfully added local_inventory enum value');
+    }
+
     await client.end();
     process.exit(0);
   } catch (error) {
