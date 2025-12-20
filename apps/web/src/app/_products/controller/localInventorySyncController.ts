@@ -80,20 +80,29 @@ const localInventorySyncController = async () => {
       console.log(`Processing batch ${index + 1} of ${batches.length}`);
 
       try {
+        // Deduplicate products within this batch by LWIN18
+        // (same wine can appear multiple times with different offers)
+        const uniqueProducts = Array.from(
+          new Map(
+            batch.map((item) => [
+              item.lwin18,
+              {
+                lwin18: item.lwin18,
+                name: item.productName,
+                region: item.region,
+                producer: null,
+                country: item.country,
+                year: item.year,
+                imageUrl: null,
+              },
+            ])
+          ).values()
+        );
+
         // Upsert products
         const upsertedProducts = await db
           .insert(products)
-          .values(
-            batch.map((item) => ({
-              lwin18: item.lwin18,
-              name: item.productName,
-              region: item.region,
-              producer: null, // Not in local inventory sheet
-              country: item.country,
-              year: item.year,
-              imageUrl: null, // No images in local inventory
-            })),
-          )
+          .values(uniqueProducts)
           .onConflictDoUpdate({
             target: products.lwin18,
             set: conflictUpdateSet(products, [
