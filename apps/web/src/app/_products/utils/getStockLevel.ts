@@ -9,10 +9,18 @@ export interface StockInfo {
 /**
  * Determine stock level and formatting based on available quantity
  *
- * @param availableQuantity - Number of cases available
+ * @param availableQuantity - Number of cases available (null means unknown quantity)
  * @returns Stock level information with label and color
  */
-const getStockLevel = (availableQuantity: number): StockInfo => {
+const getStockLevel = (availableQuantity: number | null): StockInfo => {
+  if (availableQuantity === null) {
+    return {
+      level: 'high',
+      label: 'In Stock',
+      colorClass: 'text-green-600',
+    };
+  }
+
   if (availableQuantity > 50) {
     return {
       level: 'high',
