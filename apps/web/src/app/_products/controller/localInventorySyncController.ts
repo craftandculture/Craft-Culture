@@ -1,4 +1,4 @@
-import { eq, inArray } from 'drizzle-orm';
+import { inArray } from 'drizzle-orm';
 
 import settingsGetController from '@/app/_admin/controllers/settingsGetController';
 import downloadGoogleSheet from '@/app/_pricingModels/utils/downloadGoogleSheet';
@@ -160,7 +160,7 @@ const localInventorySyncController = async () => {
 
     // Get all existing local_inventory offers
     const existingOffers = await db.query.productOffers.findMany({
-      where: eq(productOffers.source, 'local_inventory'),
+      where: (productOffers, { eq }) => eq(productOffers.source, 'local_inventory'),
     });
 
     // Find offers to delete (exist in DB but not in current sync)
