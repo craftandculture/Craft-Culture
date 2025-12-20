@@ -1,4 +1,5 @@
 import settingsUpdateController from '@/app/_admin/controllers/settingsUpdateController';
+import { adminProcedure } from '@/lib/trpc/procedures';
 
 import localInventorySyncController from './localInventorySyncController';
 
@@ -9,11 +10,11 @@ import localInventorySyncController from './localInventorySyncController';
  * After sync completes, it updates the lastSync timestamp in settings.
  *
  * @example
- *   await localInventorySyncManual();
+ *   await trpc.products.localInventorySyncManual.mutate();
  *
  * @returns Sync result with statistics
  */
-const localInventorySyncManual = async () => {
+const localInventorySyncManual = adminProcedure.mutation(async () => {
   // Run the sync
   const result = await localInventorySyncController();
 
@@ -24,6 +25,6 @@ const localInventorySyncManual = async () => {
   });
 
   return result;
-};
+});
 
 export default localInventorySyncManual;
