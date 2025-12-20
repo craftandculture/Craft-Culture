@@ -135,18 +135,23 @@ const parseLocalInventorySheet = async (buffer: ArrayBuffer) => {
     const lwin18 = convertLwin18(lwin18Raw);
     const productName = String(row.getCell(columnIndexes['Description:']!).value || '');
     const yearRaw = row.getCell(columnIndexes['Year']!).value;
-    const year = yearRaw ? Number(yearRaw) : 0;
+    const yearNum = Number(yearRaw);
+    const year = !isNaN(yearNum) ? yearNum : 0;
     const region = String(row.getCell(columnIndexes['Region']!).value || '');
     const country = String(row.getCell(columnIndexes['Country of Origin']!).value || '');
-    const bottlesPerCase = Number(row.getCell(columnIndexes['Bottles / Case']!).value || 0);
+    const bottlesPerCaseRaw = row.getCell(columnIndexes['Bottles / Case']!).value;
+    const bottlesPerCaseNum = Number(bottlesPerCaseRaw);
+    const bottlesPerCase = !isNaN(bottlesPerCaseNum) ? bottlesPerCaseNum : 6;
     const bottleSizeRaw = row.getCell(columnIndexes['Bottle Size']!).value;
     const bottleSize = formatBottleSize(bottleSizeRaw);
     const priceRaw = row.getCell(columnIndexes['UAE IB Price EXW']!).value;
     const price = parsePrice(priceRaw);
-    const availableQuantity = Number(row.getCell(columnIndexes['Quantity Cases']!).value || 0);
+    const availableQuantityRaw = row.getCell(columnIndexes['Quantity Cases']!).value;
+    const availableQuantityNum = Number(availableQuantityRaw);
+    const availableQuantity = !isNaN(availableQuantityNum) ? availableQuantityNum : 0;
 
     // Skip rows with invalid data
-    if (!productName || !lwin18 || price <= 0 || availableQuantity <= 0) {
+    if (!productName || !lwin18 || isNaN(price) || price <= 0 || availableQuantity <= 0) {
       return;
     }
 
@@ -164,7 +169,12 @@ const parseLocalInventorySheet = async (buffer: ArrayBuffer) => {
     });
   });
 
-  return items;
+  // Deduplicate by LWIN18 - keep the first occurrence of each
+  const uniqueItems = Array.from(
+    new Map(items.map((item) => [item.lwin18, item])).values()
+  );
+
+  return uniqueItems;
 };
 
 export default parseLocalInventorySheet;
