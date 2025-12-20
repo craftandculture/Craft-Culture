@@ -209,10 +209,14 @@ const productsGetMany = protectedProcedure
           where: whereConditions,
           with: {
             productOffers: {
-              orderBy: {
-                price: 'asc',
-              },
-              limit: 1,
+              orderBy: (productOffers, { asc, desc }) => [
+                // Prioritize local_inventory (immediate dispatch) first
+                desc(
+                  sql`CASE WHEN ${productOffers.source} = 'local_inventory' THEN 1 ELSE 0 END`,
+                ),
+                // Then sort by price ascending
+                asc(productOffers.price),
+              ],
             },
           },
           limit: limit + 1,

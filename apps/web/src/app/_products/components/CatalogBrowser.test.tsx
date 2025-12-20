@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import CatalogBrowser from './CatalogBrowser';
 import type { Product } from '../controller/productsGetMany';
@@ -75,7 +75,7 @@ describe('CatalogBrowser', () => {
         id: 'offer-1',
         productId: 'product-1',
         externalId: 'ext-1',
-        source: 'CultX',
+        source: 'cultx',
         price: 100,
         currency: 'USD',
         unitCount: 12,

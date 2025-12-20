@@ -120,7 +120,7 @@ describe('B2BCalculator', () => {
 
       await user.click(screen.getByRole('button', { name: /your margin calculator/i }));
 
-      const transferInput = screen.getAllByRole('spinbutton')[0];
+      const transferInput = screen.getAllByRole('spinbutton')[0]!;
 
       // Change transfer cost from 200 to 300
       await user.clear(transferInput);
@@ -140,7 +140,7 @@ describe('B2BCalculator', () => {
 
       await user.click(screen.getByRole('button', { name: /your margin calculator/i }));
 
-      const importTaxInput = screen.getAllByRole('spinbutton')[1];
+      const importTaxInput = screen.getAllByRole('spinbutton')[1]!;
 
       // Change import tax from 20% to 25%
       await user.clear(importTaxInput);
@@ -161,7 +161,7 @@ describe('B2BCalculator', () => {
 
       await user.click(screen.getByRole('button', { name: /your margin calculator/i }));
 
-      const marginInput = screen.getAllByRole('spinbutton')[2];
+      const marginInput = screen.getAllByRole('spinbutton')[2]!;
 
       // Change margin from 15% to 20%
       await user.clear(marginInput);
@@ -220,7 +220,7 @@ describe('B2BCalculator', () => {
       await user.click(toggleSwitch);
 
       // Change fixed margin to $1000
-      const marginInput = screen.getAllByRole('spinbutton')[2];
+      const marginInput = screen.getAllByRole('spinbutton')[2]!;
       await user.clear(marginInput);
       await user.type(marginInput, '1000');
 
@@ -285,12 +285,12 @@ describe('B2BCalculator', () => {
 
       // Change all values
       const inputs = screen.getAllByRole('spinbutton');
-      await user.clear(inputs[0]);
-      await user.type(inputs[0], '300'); // Transfer cost
-      await user.clear(inputs[1]);
-      await user.type(inputs[1], '25'); // Import duty
-      await user.clear(inputs[2]);
-      await user.type(inputs[2], '20'); // Margin
+      await user.clear(inputs[0]!);
+      await user.type(inputs[0]!, '300'); // Transfer cost
+      await user.clear(inputs[1]!);
+      await user.type(inputs[1]!, '25'); // Import duty
+      await user.clear(inputs[2]!);
+      await user.type(inputs[2]!, '20'); // Margin
 
       // Click reset button
       const resetButton = screen.getByRole('button', { name: /reset to defaults/i });
