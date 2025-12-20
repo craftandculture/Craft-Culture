@@ -12,6 +12,7 @@ interface LocalInventoryItem {
   price: number;
   currency: string;
   availableQuantity: number;
+  rowNumber: number;
 }
 
 /**
@@ -166,15 +167,11 @@ const parseLocalInventorySheet = async (buffer: ArrayBuffer) => {
       price,
       currency: 'USD',
       availableQuantity,
+      rowNumber, // Include row number to make each item unique
     });
   });
 
-  // Deduplicate by LWIN18 - keep the first occurrence of each
-  const uniqueItems = Array.from(
-    new Map(items.map((item) => [item.lwin18, item])).values()
-  );
-
-  return uniqueItems;
+  return items;
 };
 
 export default parseLocalInventorySheet;
