@@ -19,6 +19,7 @@ const quotesSearchParams = {
   regions: parseAsArrayOf(parseAsString).withDefault([]),
   producers: parseAsArrayOf(parseAsString).withDefault([]),
   vintages: parseAsArrayOf(parseAsInteger).withDefault([]),
+  source: parseAsString.withDefault(''),
 };
 
 export default quotesSearchParams;
