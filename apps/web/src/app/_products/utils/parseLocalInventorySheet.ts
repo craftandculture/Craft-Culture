@@ -87,7 +87,7 @@ const formatBottleSize = (value: unknown) => {
  * @param buffer - XLSX file buffer from Google Sheets
  * @returns Array of parsed inventory items
  */
-const parseLocalInventorySheet = async (buffer: Buffer) => {
+const parseLocalInventorySheet = async (buffer: ArrayBuffer) => {
   const workbook: Workbook = new ExcelJS.Workbook();
   await workbook.xlsx.load(buffer);
 
