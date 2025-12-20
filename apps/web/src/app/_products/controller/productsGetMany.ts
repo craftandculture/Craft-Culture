@@ -317,7 +317,7 @@ export type Product = {
   imageUrl: string | null;
   createdAt: Date;
   updatedAt: Date;
-  productOffers: {
+  productOffers?: {
     id: string;
     productId: string;
     externalId: string;
