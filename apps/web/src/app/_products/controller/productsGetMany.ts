@@ -306,6 +306,30 @@ export type ProductsGetManyOutput = Awaited<
   ReturnType<typeof productsGetMany>
 >;
 
-export type Product = ProductsGetManyOutput['data'][number];
+export type Product = {
+  id: string;
+  lwin18: string;
+  name: string;
+  region: string | null;
+  producer: string | null;
+  country: string | null;
+  year: number | null;
+  imageUrl: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  productOffers: {
+    id: string;
+    productId: string;
+    externalId: string;
+    source: 'cultx' | 'local_inventory';
+    price: number;
+    currency: string;
+    unitCount: number;
+    unitSize: string;
+    availableQuantity: number | null;
+    createdAt: Date;
+    updatedAt: Date;
+  }[];
+};
 
 export default productsGetMany;
