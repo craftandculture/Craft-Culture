@@ -1,6 +1,6 @@
 'use client';
 
-import { IconCheck, IconDownload, IconSearch } from '@tabler/icons-react';
+import { IconCheck, IconDownload, IconLayoutGrid, IconLayoutList, IconPlus, IconSearch } from '@tabler/icons-react';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { useQueryStates } from 'nuqs';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -14,7 +14,9 @@ import Icon from '@/app/_ui/components/Icon/Icon';
 import Skeleton from '@/app/_ui/components/Skeleton/Skeleton';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import useTRPC from '@/lib/trpc/browser';
+import formatPrice from '@/utils/formatPrice';
 
+import LeadTimeBadge from './LeadTimeBadge';
 import ProductCard from './ProductCard';
 import type { Product } from '../controller/productsGetMany';
 
@@ -47,6 +49,7 @@ const CatalogBrowser = ({
   const [sortBy, setSortBy] = useState<SortOption>('name-asc');
   const [addingProductId, setAddingProductId] = useState<string | null>(null);
   const [successProductId, setSuccessProductId] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const gridRef = useRef<HTMLDivElement>(null);
 
   // Get active filters from URL
@@ -237,6 +240,34 @@ const CatalogBrowser = ({
             <option value="vintage-desc">Vintage (Newest)</option>
           </select>
         </div>
+
+        {/* View Toggle */}
+        <div className="flex items-center gap-1 rounded-md border border-border-muted bg-background-primary p-1">
+          <button
+            type="button"
+            onClick={() => setViewMode('grid')}
+            className={`flex h-8 w-8 items-center justify-center rounded transition-colors ${
+              viewMode === 'grid'
+                ? 'bg-fill-accent text-text-onaccent'
+                : 'text-text-muted hover:bg-surface-muted hover:text-text-primary'
+            }`}
+            title="Grid view"
+          >
+            <IconLayoutGrid size={18} />
+          </button>
+          <button
+            type="button"
+            onClick={() => setViewMode('list')}
+            className={`flex h-8 w-8 items-center justify-center rounded transition-colors ${
+              viewMode === 'list'
+                ? 'bg-fill-accent text-text-onaccent'
+                : 'text-text-muted hover:bg-surface-muted hover:text-text-primary'
+            }`}
+            title="List view"
+          >
+            <IconLayoutList size={18} />
+          </button>
+        </div>
       </div>
 
       {/* Product Grid */}
@@ -265,18 +296,87 @@ const CatalogBrowser = ({
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 md:gap-4 lg:grid-cols-5 xl:grid-cols-6">
-              {products.map((product) => (
-                <ProductCard
-                  key={product.id}
-                  product={product}
-                  onAdd={handleAddProduct}
-                  displayCurrency={displayCurrency}
-                  isAdding={addingProductId === product.id}
-                  showSuccess={successProductId === product.id}
-                />
-              ))}
-            </div>
+            {viewMode === 'grid' ? (
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 md:gap-4 lg:grid-cols-5 xl:grid-cols-6">
+                {products.map((product) => (
+                  <ProductCard
+                    key={product.id}
+                    product={product}
+                    onAdd={handleAddProduct}
+                    displayCurrency={displayCurrency}
+                    isAdding={addingProductId === product.id}
+                    showSuccess={successProductId === product.id}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {products.map((product) => {
+                  const offer = product.productOffers?.[0];
+                  const price = offer?.price ?? 0;
+                  const displayPrice = displayCurrency === 'AED' ? price * 3.67 : price;
+
+                  return (
+                    <div
+                      key={product.id}
+                      className="flex items-center gap-3 rounded-md border border-border-muted bg-background-primary p-3 hover:bg-surface-muted transition-colors"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <Typography variant="bodySm" className="font-semibold truncate">
+                          {product.name}
+                        </Typography>
+                        <div className="flex items-center gap-2 mt-1">
+                          {product.region && (
+                            <Typography variant="bodyXs" className="text-text-muted">
+                              {product.region}
+                            </Typography>
+                          )}
+                          {product.region && product.year !== null && <span className="text-text-muted">·</span>}
+                          {product.year !== null && (
+                            <Typography variant="bodyXs" className="text-text-muted">
+                              {product.year === 0 ? 'NV' : product.year}
+                            </Typography>
+                          )}
+                          {offer && (
+                            <>
+                              <span className="text-text-muted">·</span>
+                              <Typography variant="bodyXs" className="text-text-muted">
+                                {offer.unitCount} × {offer.unitSize}
+                              </Typography>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                      {offer && (
+                        <div className="shrink-0">
+                          <LeadTimeBadge source={offer.source} />
+                        </div>
+                      )}
+                      <div className="shrink-0 text-right">
+                        <Typography variant="bodyMd" className="font-semibold whitespace-nowrap">
+                          {formatPrice(displayPrice, displayCurrency)}
+                        </Typography>
+                        <Typography variant="bodyXs" className="text-text-muted">
+                          per case
+                        </Typography>
+                      </div>
+                      <Button
+                        type="button"
+                        size="sm"
+                        onClick={() => handleAddProduct(product)}
+                        isDisabled={addingProductId === product.id || successProductId === product.id}
+                        colorRole="primary"
+                        className="shrink-0"
+                      >
+                        <ButtonContent iconLeft={successProductId === product.id ? IconCheck : IconPlus}>
+                          {successProductId === product.id ? 'Added!' : 'Add'}
+                        </ButtonContent>
+                      </Button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
 
             {/* Loading More Indicator */}
             {isFetchingNextPage && (
