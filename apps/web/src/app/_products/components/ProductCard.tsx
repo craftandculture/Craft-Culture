@@ -62,7 +62,7 @@ const ProductCard = ({
 
   return (
     <ProductDetailsPopover product={product}>
-      <Card className={`group relative flex h-full flex-col overflow-hidden shadow-sm transition-shadow hover:shadow-lg ${
+      <Card className={`group relative flex h-full flex-col overflow-hidden shadow-sm transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] hover:shadow-lg hover:-translate-y-0.5 ${
         offer?.source === 'local_inventory' ? 'min-h-[240px]' : 'min-h-[320px] sm:min-h-[360px]'
       }`}>
         {/* Product Image - hide for local inventory */}
@@ -73,7 +73,7 @@ const ProductCard = ({
                 src={product.imageUrl}
                 alt={product.name}
                 fill
-                className="object-contain p-3 transition-transform group-hover:scale-105 sm:p-4 md:p-5"
+                className="object-contain p-3 transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-105 sm:p-4 md:p-5"
                 sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, 20vw"
               />
             ) : (

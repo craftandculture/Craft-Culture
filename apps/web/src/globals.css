@@ -5,6 +5,26 @@
 
 @custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
 
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Reduce motion for accessibility */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
 @theme {
   --font-sans: var(--font-inter), var(--default-font-family);
   --font-heading: var(--font-inter), var(--font-sans), var(--default-font-family);
@@ -187,11 +207,22 @@
   --color-surface-danger-active: color-mix(in oklch, var(--color-red-100) 95%, black);
   --color-surface-danger-selected: color-mix(in oklch, var(--color-red-100) 95%, black);
 
+  /* Custom easing for silky feel */
+  --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out-expo: cubic-bezier(0.87, 0, 0.13, 1);
+
   --animate-marquee: marquee 60s linear infinite;
   --animate-marquee-reverse: marquee-reverse 60s linear infinite;
   --animate-marquee-reverse-2: marquee-reverse-2 60s linear infinite;
-  --animate-accordion-down: accordion-down 0.2s ease-out;
-  --animate-accordion-up: accordion-up 0.2s ease-out;
+  --animate-accordion-down: accordion-down 0.2s var(--ease-out-expo);
+  --animate-accordion-up: accordion-up 0.2s var(--ease-out-expo);
+  --animate-fade-in: fade-in 0.2s var(--ease-out-expo);
+  --animate-fade-out: fade-out 0.15s var(--ease-smooth);
+  --animate-slide-up: slide-up 0.3s var(--ease-out-expo);
+  --animate-slide-down: slide-down 0.3s var(--ease-out-expo);
+  --animate-scale-in: scale-in 0.2s var(--ease-out-expo);
+  --animate-scale-out: scale-out 0.15s var(--ease-smooth);
 
   @keyframes marquee {
     0% {
@@ -235,6 +266,68 @@
     }
     to {
       height: 0;
+    }
+  }
+
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes fade-out {
+    from {
+      opacity: 1;
+    }
+    to {
+      opacity: 0;
+    }
+  }
+
+  @keyframes slide-up {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes slide-down {
+    from {
+      opacity: 0;
+      transform: translateY(-8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes scale-in {
+    from {
+      opacity: 0;
+      transform: scale(0.95);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  @keyframes scale-out {
+    from {
+      opacity: 1;
+      transform: scale(1);
+    }
+    to {
+      opacity: 0;
+      transform: scale(0.95);
     }
   }
 }

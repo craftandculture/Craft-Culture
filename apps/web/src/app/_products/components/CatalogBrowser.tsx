@@ -194,7 +194,7 @@ const CatalogBrowser = ({
           <Icon
             icon={IconSearch}
             size="sm"
-            className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2"
+            className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 transition-colors duration-200"
             colorRole="muted"
           />
           <input
@@ -202,7 +202,7 @@ const CatalogBrowser = ({
             value={catalogSearch}
             onChange={(e) => setCatalogSearch(e.target.value)}
             placeholder="Search catalogue..."
-            className="h-10 w-full rounded-md border border-border-muted bg-background-primary pl-9 pr-3 text-sm transition-colors placeholder:text-text-muted focus:border-border-brand focus:outline-none focus:ring-2 focus:ring-fill-accent focus:ring-offset-2"
+            className="h-10 w-full rounded-lg border border-border-muted bg-background-primary pl-9 pr-3 text-sm transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] placeholder:text-text-muted/60 hover:border-border-primary focus:border-border-brand focus:shadow-sm focus:outline-none focus:ring-2 focus:ring-border-brand/20"
           />
         </div>
 
@@ -231,7 +231,7 @@ const CatalogBrowser = ({
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value as SortOption)}
-            className="h-10 rounded-md border border-border-muted bg-background-primary px-3 text-sm transition-colors focus:border-border-brand focus:outline-none focus:ring-2 focus:ring-fill-accent focus:ring-offset-2"
+            className="h-10 rounded-lg border border-border-muted bg-background-primary px-3 text-sm transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] hover:border-border-primary focus:border-border-brand focus:shadow-sm focus:outline-none focus:ring-2 focus:ring-border-brand/20"
           >
             <option value="name-asc">Name (A-Z)</option>
             <option value="name-desc">Name (Z-A)</option>
@@ -243,14 +243,14 @@ const CatalogBrowser = ({
         </div>
 
         {/* View Toggle */}
-        <div className="flex items-center gap-1 rounded-md border border-border-muted bg-background-primary p-1">
+        <div className="flex items-center gap-0.5 rounded-lg border border-border-muted bg-fill-muted p-1">
           <button
             type="button"
             onClick={() => setViewMode('grid')}
-            className={`flex h-8 w-8 items-center justify-center rounded transition-colors ${
+            className={`flex h-8 w-8 items-center justify-center rounded-md transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] ${
               viewMode === 'grid'
-                ? 'bg-fill-accent text-text-onaccent'
-                : 'text-text-muted hover:bg-surface-muted hover:text-text-primary'
+                ? 'bg-fill-primary text-text-primary shadow-sm'
+                : 'text-text-muted hover:text-text-primary'
             }`}
             title="Grid view"
           >
@@ -259,10 +259,10 @@ const CatalogBrowser = ({
           <button
             type="button"
             onClick={() => setViewMode('list')}
-            className={`flex h-8 w-8 items-center justify-center rounded transition-colors ${
+            className={`flex h-8 w-8 items-center justify-center rounded-md transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] ${
               viewMode === 'list'
-                ? 'bg-fill-accent text-text-onaccent'
-                : 'text-text-muted hover:bg-surface-muted hover:text-text-primary'
+                ? 'bg-fill-primary text-text-primary shadow-sm'
+                : 'text-text-muted hover:text-text-primary'
             }`}
             title="List view"
           >
@@ -274,7 +274,7 @@ const CatalogBrowser = ({
       {/* Product Grid/List */}
       <div
         ref={gridRef}
-        className="max-h-[70vh] overflow-y-auto rounded-lg border border-border-muted bg-background-primary p-3 shadow-sm md:max-h-[700px] md:p-4 lg:max-h-[900px]"
+        className="max-h-[70vh] overflow-y-auto rounded-xl border border-border-muted bg-surface-primary p-3 shadow-sm transition-shadow duration-300 hover:shadow-md md:max-h-[700px] md:p-4 lg:max-h-[900px]"
       >
         {isLoading ? (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 md:gap-4 lg:grid-cols-5 xl:grid-cols-6">
@@ -320,7 +320,7 @@ const CatalogBrowser = ({
                   return (
                     <div
                       key={product.id}
-                      className="bg-background-primary px-3 py-3 hover:bg-surface-muted transition-colors md:px-4"
+                      className="bg-surface-primary px-3 py-3 transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] hover:bg-surface-muted md:px-4"
                     >
                       {/* Mobile: Stack vertically */}
                       <div className="flex flex-col gap-2 md:hidden">

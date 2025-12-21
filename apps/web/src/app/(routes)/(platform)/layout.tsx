@@ -34,29 +34,32 @@ const PlatformLayout = async ({ children }: React.PropsWithChildren) => {
 
   return (
     <div className="bg-background-primary flex min-h-dvh flex-col">
-      <header className="border-border-primary border-b">
+      <header className="border-border-primary sticky top-0 z-50 border-b bg-background-primary/80 backdrop-blur-xl">
         <div className="container flex h-14 items-center justify-between gap-4">
           <div className="flex items-center gap-6">
-            <Link href="/platform/quotes">
+            <Link
+              href="/platform/quotes"
+              className="transition-opacity duration-200 hover:opacity-80"
+            >
               <Logo height={144} />
             </Link>
             <nav className="hidden items-center gap-1 md:flex">
               <Link
                 href="/platform/quotes"
-                className="text-text-primary hover:bg-fill-secondary rounded-md px-3 py-1.5 text-sm font-medium transition-colors"
+                className="text-text-primary hover:bg-fill-muted rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] hover:shadow-sm active:scale-[0.98]"
               >
                 Create Quote
               </Link>
               <Link
                 href="/platform/my-quotes"
-                className="text-text-primary hover:bg-fill-secondary rounded-md px-3 py-1.5 text-sm font-medium transition-colors"
+                className="text-text-primary hover:bg-fill-muted rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] hover:shadow-sm active:scale-[0.98]"
               >
                 My Quotes
               </Link>
               {user.role === 'admin' && (
                 <Link
                   href="/platform/admin/quote-approvals"
-                  className="text-text-primary hover:bg-fill-secondary rounded-md px-3 py-1.5 text-sm font-medium transition-colors"
+                  className="text-text-primary hover:bg-fill-muted rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] hover:shadow-sm active:scale-[0.98]"
                 >
                   Quote Approvals
                 </Link>
