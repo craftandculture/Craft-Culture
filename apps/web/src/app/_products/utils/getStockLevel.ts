@@ -21,7 +21,15 @@ const getStockLevel = (availableQuantity: number | null): StockInfo => {
     };
   }
 
-  if (availableQuantity > 50) {
+  if (availableQuantity === 0) {
+    return {
+      level: 'low',
+      label: 'Out of Stock',
+      colorClass: 'text-red-600',
+    };
+  }
+
+  if (availableQuantity >= 5) {
     return {
       level: 'high',
       label: `In Stock (${availableQuantity} cases)`,
@@ -29,7 +37,7 @@ const getStockLevel = (availableQuantity: number | null): StockInfo => {
     };
   }
 
-  if (availableQuantity >= 10) {
+  if (availableQuantity >= 2) {
     return {
       level: 'medium',
       label: `Low Stock (${availableQuantity} cases)`,
@@ -39,7 +47,7 @@ const getStockLevel = (availableQuantity: number | null): StockInfo => {
 
   return {
     level: 'low',
-    label: `Limited (${availableQuantity} cases)`,
+    label: `Limited (1 case)`,
     colorClass: 'text-red-600',
   };
 };
