@@ -205,7 +205,21 @@ const LineItemRow = ({
               )}
             </Tooltip>
           </TooltipProvider>
-          {maxQuantity !== Infinity && localQuantity > maxQuantity && (
+          {offer?.availableQuantity !== null && offer?.availableQuantity !== undefined && (
+            <Typography
+              variant="bodyXs"
+              className={
+                localQuantity > offer.availableQuantity
+                  ? 'text-text-warning font-medium'
+                  : 'text-text-muted'
+              }
+            >
+              {offer.availableQuantity === 0
+                ? 'Out of stock'
+                : `${offer.availableQuantity} ${offer.availableQuantity === 1 ? 'case' : 'cases'} available`}
+            </Typography>
+          )}
+          {maxQuantity !== Infinity && localQuantity > maxQuantity && offer?.availableQuantity === null && (
             <Typography
               variant="bodyXs"
               className="text-text-warning font-medium"
