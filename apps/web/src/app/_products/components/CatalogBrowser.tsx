@@ -310,7 +310,7 @@ const CatalogBrowser = ({
                 ))}
               </div>
             ) : (
-              <div className="space-y-1">
+              <div className="divide-y divide-border-muted">
                 {products.map((product) => {
                   const offer = product.productOffers?.[0];
                   const price = offer?.price ?? 0;
@@ -319,54 +319,57 @@ const CatalogBrowser = ({
                   return (
                     <div
                       key={product.id}
-                      className="flex items-center gap-2 rounded border border-border-muted bg-background-primary px-3 py-2 hover:bg-surface-muted transition-colors"
+                      className="flex items-start gap-4 bg-background-primary px-4 py-3 hover:bg-surface-muted transition-colors"
                     >
+                      {/* Product Info - Takes most space */}
                       <div className="flex-1 min-w-0">
-                        <Typography variant="bodySm" className="font-medium truncate leading-tight">
-                          {product.name}
-                        </Typography>
-                        <div className="flex items-center gap-1.5 mt-0.5">
-                          {product.region && (
-                            <Typography variant="bodyXs" className="text-text-muted text-xs">
-                              {product.region}
+                        <div className="flex items-start gap-3">
+                          <div className="flex-1 min-w-0">
+                            <Typography variant="bodySm" className="font-medium leading-snug">
+                              {product.name}
                             </Typography>
-                          )}
-                          {product.region && product.year !== null && <span className="text-text-muted text-xs">·</span>}
-                          {product.year !== null && (
-                            <Typography variant="bodyXs" className="text-text-muted text-xs">
-                              {product.year === 0 ? 'NV' : product.year}
-                            </Typography>
-                          )}
-                          {offer && (
-                            <>
-                              <span className="text-text-muted text-xs">·</span>
-                              <Typography variant="bodyXs" className="text-text-muted text-xs">
-                                {offer.unitCount} × {offer.unitSize}
-                              </Typography>
-                            </>
-                          )}
+                            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-1">
+                              {product.region && (
+                                <span className="text-xs text-text-muted">{product.region}</span>
+                              )}
+                              {product.year !== null && (
+                                <span className="text-xs text-text-muted">
+                                  {product.year === 0 ? 'NV' : product.year}
+                                </span>
+                              )}
+                              {offer && (
+                                <span className="text-xs text-text-muted">
+                                  {offer.unitCount} × {offer.unitSize}
+                                </span>
+                              )}
+                            </div>
+                          </div>
                         </div>
                       </div>
+
+                      {/* Stock Badge */}
                       {offer && (
                         <div className="shrink-0">
                           <LeadTimeBadge source={offer.source} />
                         </div>
                       )}
-                      <div className="shrink-0 text-right">
-                        <Typography variant="bodySm" className="font-semibold whitespace-nowrap leading-tight">
+
+                      {/* Price */}
+                      <div className="shrink-0 text-right min-w-[100px]">
+                        <div className="font-semibold text-sm leading-tight">
                           {formatPrice(displayPrice, displayCurrency)}
-                        </Typography>
-                        <Typography variant="bodyXs" className="text-text-muted text-xs">
-                          per case
-                        </Typography>
+                        </div>
+                        <div className="text-xs text-text-muted">per case</div>
                       </div>
+
+                      {/* Add Button */}
                       <Button
                         type="button"
                         size="sm"
                         onClick={() => handleAddProduct(product)}
                         isDisabled={addingProductId === product.id || successProductId === product.id}
                         colorRole="primary"
-                        className="shrink-0 h-8 px-3"
+                        className="shrink-0 h-8 min-w-[70px]"
                       >
                         <ButtonContent iconLeft={successProductId === product.id ? IconCheck : IconPlus}>
                           <span className="text-xs">{successProductId === product.id ? 'Added!' : 'Add'}</span>
