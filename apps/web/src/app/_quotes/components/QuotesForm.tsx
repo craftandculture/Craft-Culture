@@ -145,7 +145,7 @@ const QuotesForm = () => {
   const leadTimeMax = leadTimeMaxData ? Number(leadTimeMaxData) : 21;
 
   // Currency display toggle
-  const [displayCurrency, setDisplayCurrency] = useState<'USD' | 'AED'>('AED');
+  const [displayCurrency, setDisplayCurrency] = useState<'USD' | 'AED'>('USD');
 
   // Save quote dialog state
   const [isSaveDialogOpen, setIsSaveDialogOpen] = useState(false);
