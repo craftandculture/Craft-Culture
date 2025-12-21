@@ -208,11 +208,11 @@ const LineItemRow = ({
           {offer?.availableQuantity !== null && offer?.availableQuantity !== undefined && (
             <Typography
               variant="bodyXs"
-              className={
+              className={`md:hidden ${
                 localQuantity > offer.availableQuantity
                   ? 'text-text-warning font-medium'
                   : 'text-text-muted'
-              }
+              }`}
             >
               {offer.availableQuantity === 0
                 ? 'Out of stock'

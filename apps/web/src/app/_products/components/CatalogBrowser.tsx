@@ -348,6 +348,13 @@ const CatalogBrowser = ({
                               {offer.unitCount} × {offer.unitSize}
                             </span>
                           )}
+                          {offer?.availableQuantity !== null && offer?.availableQuantity !== undefined && (
+                            <span className="font-medium">
+                              • {offer.availableQuantity === 0
+                                ? 'Out of stock'
+                                : `${offer.availableQuantity} available`}
+                            </span>
+                          )}
                         </div>
 
                         {/* Bottom row: Price and Button */}
@@ -388,6 +395,13 @@ const CatalogBrowser = ({
                             {offer && (
                               <span>
                                 {offer.unitCount} × {offer.unitSize}
+                              </span>
+                            )}
+                            {offer?.availableQuantity !== null && offer?.availableQuantity !== undefined && (
+                              <span className="font-medium">
+                                • {offer.availableQuantity === 0
+                                  ? 'Out of stock'
+                                  : `${offer.availableQuantity} available`}
                               </span>
                             )}
                           </div>

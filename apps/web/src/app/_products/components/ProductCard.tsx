@@ -62,7 +62,9 @@ const ProductCard = ({
 
   return (
     <ProductDetailsPopover product={product}>
-      <Card className="group relative flex h-full min-h-[320px] flex-col overflow-hidden shadow-sm transition-shadow hover:shadow-lg sm:min-h-[360px]">
+      <Card className={`group relative flex h-full flex-col overflow-hidden shadow-sm transition-shadow hover:shadow-lg ${
+        offer?.source === 'local_inventory' ? 'min-h-[240px]' : 'min-h-[320px] sm:min-h-[360px]'
+      }`}>
         {/* Product Image - hide for local inventory */}
         {offer?.source !== 'local_inventory' && (
           <div className="bg-surface-muted relative aspect-square w-full overflow-hidden">
@@ -128,6 +130,15 @@ const ProductCard = ({
           <div className="mt-1">
             <LeadTimeBadge source={offer.source} />
           </div>
+        )}
+
+        {/* Available Stock */}
+        {offer?.availableQuantity !== null && offer?.availableQuantity !== undefined && (
+          <Typography variant="bodyXs" className="text-text-muted mt-1">
+            {offer.availableQuantity === 0
+              ? 'Out of stock'
+              : `${offer.availableQuantity} ${offer.availableQuantity === 1 ? 'case' : 'cases'} available`}
+          </Typography>
         )}
 
         {/* Price */}
