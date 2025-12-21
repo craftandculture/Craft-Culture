@@ -314,7 +314,8 @@ const CatalogBrowser = ({
               <div className="divide-y divide-border-muted">
                 {products.map((product) => {
                   const offer = product.productOffers?.[0];
-                  const price = offer?.price ?? 0;
+                  // Use In-Bond UAE price from pricing model
+                  const price = offer?.inBondPriceUsd ?? offer?.price ?? 0;
                   const displayPrice = displayCurrency === 'AED' ? price * 3.67 : price;
 
                   return (

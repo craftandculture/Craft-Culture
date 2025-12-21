@@ -81,6 +81,7 @@ describe('CatalogBrowser', () => {
         unitCount: 12,
         unitSize: '750ml',
         availableQuantity: 100,
+        inBondPriceUsd: 100,
         createdAt: new Date(),
         updatedAt: new Date(),
       },

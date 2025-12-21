@@ -38,7 +38,8 @@ const ProductCard = ({
 }: ProductCardProps) => {
   const [showSuccess, setShowSuccess] = useState(false);
   const offer = product.productOffers?.[0];
-  const price = offer?.price ?? 0;
+  // Use In-Bond UAE price from pricing model (falls back to raw price if not available)
+  const price = offer?.inBondPriceUsd ?? offer?.price ?? 0;
   const displayPrice =
     displayCurrency === 'AED' ? price * 3.67 : price;
 
