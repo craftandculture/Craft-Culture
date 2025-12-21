@@ -319,62 +319,109 @@ const CatalogBrowser = ({
                   return (
                     <div
                       key={product.id}
-                      className="flex items-start gap-4 bg-background-primary px-4 py-3 hover:bg-surface-muted transition-colors"
+                      className="bg-background-primary px-3 py-3 hover:bg-surface-muted transition-colors md:px-4"
                     >
-                      {/* Product Info - Takes most space */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-start gap-3">
-                          <div className="flex-1 min-w-0">
-                            <Typography variant="bodySm" className="font-medium leading-snug">
+                      {/* Mobile: Stack vertically */}
+                      <div className="flex flex-col gap-2 md:hidden">
+                        {/* Top row: Name and Badge */}
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1">
+                            <Typography variant="bodySm" className="font-medium leading-tight break-words">
                               {product.name}
                             </Typography>
-                            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-1">
-                              {product.region && (
-                                <span className="text-xs text-text-muted">{product.region}</span>
-                              )}
-                              {product.year !== null && (
-                                <span className="text-xs text-text-muted">
-                                  {product.year === 0 ? 'NV' : product.year}
-                                </span>
-                              )}
-                              {offer && (
-                                <span className="text-xs text-text-muted">
-                                  {offer.unitCount} × {offer.unitSize}
-                                </span>
-                              )}
+                          </div>
+                          {offer && (
+                            <div className="shrink-0">
+                              <LeadTimeBadge source={offer.source} />
                             </div>
+                          )}
+                        </div>
+
+                        {/* Metadata */}
+                        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-text-muted">
+                          {product.region && <span>{product.region}</span>}
+                          {product.year !== null && (
+                            <span>{product.year === 0 ? 'NV' : product.year}</span>
+                          )}
+                          {offer && (
+                            <span>
+                              {offer.unitCount} × {offer.unitSize}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Bottom row: Price and Button */}
+                        <div className="flex items-center justify-between gap-3">
+                          <div>
+                            <div className="font-semibold text-sm">
+                              {formatPrice(displayPrice, displayCurrency)}
+                            </div>
+                            <div className="text-xs text-text-muted">per case</div>
+                          </div>
+                          <Button
+                            type="button"
+                            size="sm"
+                            onClick={() => handleAddProduct(product)}
+                            isDisabled={addingProductId === product.id || successProductId === product.id}
+                            colorRole="primary"
+                            className="shrink-0 h-8 min-w-[70px]"
+                          >
+                            <ButtonContent iconLeft={successProductId === product.id ? IconCheck : IconPlus}>
+                              <span className="text-xs">{successProductId === product.id ? 'Added!' : 'Add'}</span>
+                            </ButtonContent>
+                          </Button>
+                        </div>
+                      </div>
+
+                      {/* Desktop/Tablet: Horizontal layout */}
+                      <div className="hidden md:flex md:items-start md:gap-4">
+                        {/* Product Info */}
+                        <div className="flex-1">
+                          <Typography variant="bodySm" className="font-medium leading-tight break-words">
+                            {product.name}
+                          </Typography>
+                          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-1 text-xs text-text-muted">
+                            {product.region && <span>{product.region}</span>}
+                            {product.year !== null && (
+                              <span>{product.year === 0 ? 'NV' : product.year}</span>
+                            )}
+                            {offer && (
+                              <span>
+                                {offer.unitCount} × {offer.unitSize}
+                              </span>
+                            )}
                           </div>
                         </div>
-                      </div>
 
-                      {/* Stock Badge */}
-                      {offer && (
-                        <div className="shrink-0">
-                          <LeadTimeBadge source={offer.source} />
+                        {/* Stock Badge */}
+                        {offer && (
+                          <div className="shrink-0">
+                            <LeadTimeBadge source={offer.source} />
+                          </div>
+                        )}
+
+                        {/* Price */}
+                        <div className="shrink-0 text-right min-w-[100px]">
+                          <div className="font-semibold text-sm leading-tight">
+                            {formatPrice(displayPrice, displayCurrency)}
+                          </div>
+                          <div className="text-xs text-text-muted">per case</div>
                         </div>
-                      )}
 
-                      {/* Price */}
-                      <div className="shrink-0 text-right min-w-[100px]">
-                        <div className="font-semibold text-sm leading-tight">
-                          {formatPrice(displayPrice, displayCurrency)}
-                        </div>
-                        <div className="text-xs text-text-muted">per case</div>
+                        {/* Add Button */}
+                        <Button
+                          type="button"
+                          size="sm"
+                          onClick={() => handleAddProduct(product)}
+                          isDisabled={addingProductId === product.id || successProductId === product.id}
+                          colorRole="primary"
+                          className="shrink-0 h-8 min-w-[70px]"
+                        >
+                          <ButtonContent iconLeft={successProductId === product.id ? IconCheck : IconPlus}>
+                            <span className="text-xs">{successProductId === product.id ? 'Added!' : 'Add'}</span>
+                          </ButtonContent>
+                        </Button>
                       </div>
-
-                      {/* Add Button */}
-                      <Button
-                        type="button"
-                        size="sm"
-                        onClick={() => handleAddProduct(product)}
-                        isDisabled={addingProductId === product.id || successProductId === product.id}
-                        colorRole="primary"
-                        className="shrink-0 h-8 min-w-[70px]"
-                      >
-                        <ButtonContent iconLeft={successProductId === product.id ? IconCheck : IconPlus}>
-                          <span className="text-xs">{successProductId === product.id ? 'Added!' : 'Add'}</span>
-                        </ButtonContent>
-                      </Button>
                     </div>
                   );
                 })}
