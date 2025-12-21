@@ -63,22 +63,24 @@ const ProductCard = ({
   return (
     <ProductDetailsPopover product={product}>
       <Card className="group relative flex h-full min-h-[320px] flex-col overflow-hidden shadow-sm transition-shadow hover:shadow-lg sm:min-h-[360px]">
-        {/* Product Image */}
-        <div className="bg-surface-muted relative aspect-square w-full overflow-hidden">
-        {product.imageUrl ? (
-          <Image
-            src={product.imageUrl}
-            alt={product.name}
-            fill
-            className="object-contain p-3 transition-transform group-hover:scale-105 sm:p-4 md:p-5"
-            sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, 20vw"
-          />
-        ) : (
-          <div className="flex h-full items-center justify-center">
-            <Icon icon={IconCameraOff} size="lg" colorRole="muted" />
+        {/* Product Image - hide for local inventory */}
+        {offer?.source !== 'local_inventory' && (
+          <div className="bg-surface-muted relative aspect-square w-full overflow-hidden">
+            {product.imageUrl ? (
+              <Image
+                src={product.imageUrl}
+                alt={product.name}
+                fill
+                className="object-contain p-3 transition-transform group-hover:scale-105 sm:p-4 md:p-5"
+                sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, 20vw"
+              />
+            ) : (
+              <div className="flex h-full items-center justify-center">
+                <Icon icon={IconCameraOff} size="lg" colorRole="muted" />
+              </div>
+            )}
           </div>
         )}
-      </div>
 
       {/* Product Details */}
       <div className="flex flex-1 flex-col gap-2 p-4">
