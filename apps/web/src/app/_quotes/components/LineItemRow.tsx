@@ -121,17 +121,17 @@ const LineItemRow = ({
     <div
       className={`space-y-2 md:space-y-2 ${isDragging ? 'opacity-50' : ''}`}
     >
-      <div className="flex flex-wrap items-start gap-2 md:grid md:grid-cols-12 md:gap-3">
-        {/* Drag Handle - Hidden on mobile */}
+      <div className="flex flex-wrap items-start gap-2 lg:grid lg:grid-cols-12 lg:gap-3">
+        {/* Drag Handle - Hidden on mobile and tablet */}
         <div
           {...dragHandleProps}
-          className="hidden cursor-grab items-center justify-center active:cursor-grabbing md:col-span-1 md:flex"
+          className="hidden cursor-grab items-center justify-center active:cursor-grabbing lg:col-span-1 lg:flex"
         >
           <Icon icon={IconGripVertical} size="sm" colorRole="muted" />
         </div>
 
         {/* Product Selector */}
-        <div className="min-w-0 w-full md:col-span-5 md:w-auto">
+        <div className="min-w-0 w-full lg:col-span-5 lg:w-auto">
           {product ? (
             <ProductDetailsTooltip product={product}>
               <div>
@@ -155,7 +155,7 @@ const LineItemRow = ({
 
         {/* Vintage Input - Hidden for placeholder */}
         {!isPlaceholder && (
-          <div className="w-24 shrink-0 md:col-span-1 md:w-auto">
+          <div className="w-24 shrink-0 lg:col-span-1 lg:w-auto">
             <Input
               type="text"
               size="md"
@@ -169,13 +169,13 @@ const LineItemRow = ({
 
         {/* Quantity Input - Hidden for placeholder */}
         {!isPlaceholder && (
-          <div className="flex w-full flex-col gap-1 md:col-span-2 md:w-auto">
+          <div className="flex w-full flex-col gap-1 lg:col-span-2 lg:w-auto">
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
                 <div>
                   <Input
-                    className="min-w-0 flex-1 md:grow"
+                    className="min-w-0 flex-1"
                     type="number"
                     size="md"
                     min={1}
@@ -184,14 +184,14 @@ const LineItemRow = ({
                     onChange={handleQuantityInputChange}
                     isDisabled={!product}
                     contentRight={
-                      maxQuantity !== Infinity ? (
+                      offer && (
                         <Typography
                           variant="bodyXs"
-                          className="text-text-muted hidden pr-2.5 font-medium md:inline"
+                          className="text-text-muted pr-2.5 font-medium"
                         >
-                          {offer?.unitCount} × {offer?.unitSize}
+                          {offer.unitCount} × {offer.unitSize}
                         </Typography>
-                      ) : undefined
+                      )
                     }
                   />
                 </div>
@@ -208,7 +208,7 @@ const LineItemRow = ({
           {offer?.availableQuantity !== null && offer?.availableQuantity !== undefined && (
             <Typography
               variant="bodyXs"
-              className={`md:hidden ${
+              className={`lg:hidden ${
                 localQuantity > offer.availableQuantity
                   ? 'text-text-warning font-medium'
                   : 'text-text-muted'
@@ -232,8 +232,8 @@ const LineItemRow = ({
 
         {/* Line Price - Hidden for placeholder */}
         {!isPlaceholder && (
-          <div className="flex w-full shrink-0 flex-col gap-1 md:col-span-1 md:w-auto md:flex-row md:items-center md:justify-end md:gap-0">
-          <div className="flex items-center gap-1 md:hidden">
+          <div className="flex w-full shrink-0 flex-col gap-1 lg:col-span-1 lg:w-auto lg:flex-row lg:items-center lg:justify-end lg:gap-0">
+          <div className="flex items-center gap-1 lg:hidden">
             <Typography
               variant="bodyXs"
               className="text-text-muted font-medium uppercase leading-none"
@@ -262,7 +262,7 @@ const LineItemRow = ({
           ) : (
             <Typography
               variant="bodySm"
-              className="text-base font-semibold leading-none md:text-xs md:font-medium"
+              className="text-base font-semibold leading-none lg:text-xs lg:font-medium"
             >
               {quotePrice !== undefined
                 ? formatPrice(quotePrice, quoteCurrency)
@@ -274,8 +274,8 @@ const LineItemRow = ({
 
         {/* Per Bottle Price - Hidden for placeholder */}
         {!isPlaceholder && (
-          <div className="flex w-full shrink-0 flex-col gap-1 md:col-span-1 md:w-auto md:flex-row md:items-center md:justify-end md:gap-0">
-          <div className="flex items-center gap-1 md:hidden">
+          <div className="flex w-full shrink-0 flex-col gap-1 lg:col-span-1 lg:w-auto lg:flex-row lg:items-center lg:justify-end lg:gap-0">
+          <div className="flex items-center gap-1 lg:hidden">
             <Typography
               variant="bodyXs"
               className="text-text-muted font-medium uppercase leading-none"
@@ -304,7 +304,7 @@ const LineItemRow = ({
           ) : (
             <Typography
               variant="bodySm"
-              className="text-base font-semibold leading-none md:text-xs md:font-medium"
+              className="text-base font-semibold leading-none lg:text-xs lg:font-medium"
             >
               {perBottlePrice !== undefined
                 ? formatPrice(perBottlePrice, quoteCurrency)
@@ -315,17 +315,17 @@ const LineItemRow = ({
         )}
 
         {/* Remove Button */}
-        <div className="flex h-9 w-10 shrink-0 items-center justify-end md:col-span-1 md:w-auto md:justify-center">
+        <div className="flex h-9 w-10 shrink-0 items-center justify-end lg:col-span-1 lg:w-auto lg:justify-center">
           <Button
             type="button"
             size="sm"
             shape="circle"
             variant="ghost"
             onClick={onRemove}
-            className="h-11 w-11 md:h-auto md:w-auto"
+            className="h-11 w-11 lg:h-auto lg:w-auto"
           >
             <ButtonContent>
-              <Icon icon={IconTrash} colorRole="muted" size="md" className="md:h-4 md:w-4" />
+              <Icon icon={IconTrash} colorRole="muted" size="md" className="lg:h-4 lg:w-4" />
             </ButtonContent>
           </Button>
         </div>

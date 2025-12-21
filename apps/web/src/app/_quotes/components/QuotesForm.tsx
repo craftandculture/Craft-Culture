@@ -684,9 +684,9 @@ const QuotesForm = () => {
 
         {/* Line Items Table */}
       <div className="space-y-3">
-        {/* Header Row - Hidden on mobile */}
+        {/* Header Row - Hidden on mobile and tablet */}
         {lineItems.length > 0 && (
-          <div className="hidden grid-cols-12 gap-3 px-2 md:grid">
+          <div className="hidden grid-cols-12 gap-3 px-2 lg:grid">
             {/* Drag handle column */}
             <div className="col-span-1" />
             <div className="col-span-5 flex justify-start">
