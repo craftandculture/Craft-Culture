@@ -170,26 +170,41 @@ const LineItemRow = ({
         {/* Quantity Input - Hidden for placeholder */}
         {!isPlaceholder && (
           <div className="flex w-full flex-col gap-1 md:w-auto md:min-w-[180px]">
-          <Input
-            className="min-w-0 flex-1 md:grow"
-            type="number"
-            size="md"
-            min={1}
-            placeholder="Qty"
-            value={localQuantity}
-            onChange={handleQuantityInputChange}
-            isDisabled={!product}
-            contentRight={
-              maxQuantity !== Infinity ? (
-                <Typography
-                  variant="bodyXs"
-                  className="text-text-muted hidden pr-2.5 font-medium md:inline"
-                >
-                  {offer?.unitCount} × {offer?.unitSize}
-                </Typography>
-              ) : undefined
-            }
-          />
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div>
+                  <Input
+                    className="min-w-0 flex-1 md:grow"
+                    type="number"
+                    size="md"
+                    min={1}
+                    placeholder="Qty"
+                    value={localQuantity}
+                    onChange={handleQuantityInputChange}
+                    isDisabled={!product}
+                    contentRight={
+                      maxQuantity !== Infinity ? (
+                        <Typography
+                          variant="bodyXs"
+                          className="text-text-muted hidden pr-2.5 font-medium md:inline"
+                        >
+                          {offer?.unitCount} × {offer?.unitSize}
+                        </Typography>
+                      ) : undefined
+                    }
+                  />
+                </div>
+              </TooltipTrigger>
+              {offer?.availableQuantity !== null && offer?.availableQuantity !== undefined && (
+                <TooltipContent>
+                  {offer.availableQuantity === 0
+                    ? 'Out of stock'
+                    : `${offer.availableQuantity} ${offer.availableQuantity === 1 ? 'case' : 'cases'} in stock`}
+                </TooltipContent>
+              )}
+            </Tooltip>
+          </TooltipProvider>
           {maxQuantity !== Infinity && localQuantity > maxQuantity && (
             <Typography
               variant="bodyXs"
