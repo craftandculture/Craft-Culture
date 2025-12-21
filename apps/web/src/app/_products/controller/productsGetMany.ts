@@ -1,8 +1,12 @@
 import { type SQL, sql } from 'drizzle-orm';
 import z from 'zod';
 
+import calculateInBondPrices from '@/app/_pricingModels/utils/calculateInBondPrices';
 import db from '@/database/client';
 import { productOffers, products } from '@/database/schema';
+import exchangeRateService, {
+  type SupportedCurrency,
+} from '@/lib/currency/exchangeRateService';
 import { protectedProcedure } from '@/lib/trpc/procedures';
 
 interface PreparedSearch {
@@ -179,6 +183,7 @@ const productsGetMany = protectedProcedure
         source,
         sortBy,
       },
+      ctx: { user },
     }) => {
       const preparedSearch =
         search && search.trim().length > 0
@@ -291,8 +296,87 @@ const productsGetMany = protectedProcedure
       const nextCursor =
         productsResult.length > limit ? cursor + limit : undefined;
 
+      // Get paginated products
+      const paginatedProducts = productsResult.slice(0, limit);
+
+      // Collect all offers from paginated products for In-Bond price calculation
+      const allOffers = paginatedProducts.flatMap((product) =>
+        (product.productOffers ?? []).map((offer) => ({
+          ...offer,
+          availableQuantity: offer.availableQuantity ?? 0,
+          product: {
+            id: product.id,
+            lwin18: product.lwin18,
+            name: product.name,
+            region: product.region,
+            producer: product.producer,
+            year: product.year,
+          },
+        })),
+      );
+
+      // Calculate In-Bond prices if we have offers
+      let inBondPriceMap = new Map<string, number>();
+
+      if (allOffers.length > 0) {
+        // Fetch pricing model for user
+        const pricingModel = await db.query.pricingModels.findFirst({
+          where: user.pricingModelId
+            ? { id: user.pricingModelId }
+            : user.customerType === 'b2c'
+              ? { isDefaultB2C: true }
+              : { isDefaultB2B: true },
+          with: {
+            sheet: true,
+          },
+        });
+
+        if (pricingModel) {
+          // Get unique currencies and fetch exchange rates
+          const uniqueCurrencies = [
+            ...new Set(allOffers.map((offer) => offer.currency)),
+          ] as SupportedCurrency[];
+
+          const yesterday = new Date();
+          yesterday.setDate(yesterday.getDate() - 1);
+
+          const exchangeRatePromises = uniqueCurrencies.map((currency) =>
+            exchangeRateService
+              .getExchangeRate(currency, 'USD', yesterday)
+              .catch(() => 1),
+          );
+
+          const exchangeRates = await Promise.all(exchangeRatePromises);
+
+          const exchangeRateMap = new Map(
+            uniqueCurrencies.map((currency, index) => [
+              currency,
+              exchangeRates[index] ?? 1,
+            ]),
+          );
+
+          // Calculate In-Bond prices
+          inBondPriceMap = calculateInBondPrices(
+            allOffers,
+            pricingModel.cellMappings,
+            pricingModel.sheet.formulaData as Record<string, unknown>,
+            user.customerType,
+            exchangeRateMap,
+          );
+        }
+      }
+
+      // Map In-Bond prices to products
+      const productsWithInBondPrices = paginatedProducts.map((product) => ({
+        ...product,
+        productOffers: product.productOffers?.map((offer) => ({
+          ...offer,
+          inBondPriceUsd: inBondPriceMap.get(offer.id) ?? 0,
+        })),
+      }));
+
       return {
-        data: productsResult.slice(0, limit),
+        data: productsWithInBondPrices,
         meta: {
           nextCursor,
           totalCount: countResult.length,
@@ -326,6 +410,7 @@ export type Product = {
     unitCount: number;
     unitSize: string;
     availableQuantity: number | null;
+    inBondPriceUsd: number;
     createdAt: Date;
     updatedAt: Date;
   }[];

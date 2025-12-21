@@ -44,7 +44,9 @@ const ProductDetailsPopover = ({
     return <>{children}</>;
   }
 
-  const pricePerBottle = calculatePricePerBottle(offer.price, offer.unitCount);
+  // Use In-Bond UAE price from pricing model
+  const inBondPrice = offer.inBondPriceUsd ?? offer.price;
+  const pricePerBottle = calculatePricePerBottle(inBondPrice, offer.unitCount);
   const stockInfo = getStockLevel(offer.availableQuantity);
   const vintageDisplay = formatVintage(product.year);
 
@@ -143,7 +145,7 @@ const ProductDetailsPopover = ({
                 variant="bodyLg"
                 className="text-text-primary font-semibold"
               >
-                {formatPrice(offer.price)}
+                {formatPrice(inBondPrice)}
               </Typography>
             </div>
             <div className="flex items-baseline justify-between">
