@@ -270,10 +270,10 @@ const CatalogBrowser = ({
         </div>
       </div>
 
-      {/* Product Grid */}
+      {/* Product Grid/List */}
       <div
         ref={gridRef}
-        className="max-h-[60vh] overflow-y-auto rounded-lg border border-border-muted bg-background-primary p-3 shadow-sm md:max-h-[600px] md:p-4 lg:max-h-[800px]"
+        className="max-h-[70vh] overflow-y-auto rounded-lg border border-border-muted bg-background-primary p-3 shadow-sm md:max-h-[700px] md:p-4 lg:max-h-[900px]"
       >
         {isLoading ? (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 md:gap-4 lg:grid-cols-5 xl:grid-cols-6">
@@ -310,7 +310,7 @@ const CatalogBrowser = ({
                 ))}
               </div>
             ) : (
-              <div className="space-y-2">
+              <div className="space-y-1">
                 {products.map((product) => {
                   const offer = product.productOffers?.[0];
                   const price = offer?.price ?? 0;
@@ -319,28 +319,28 @@ const CatalogBrowser = ({
                   return (
                     <div
                       key={product.id}
-                      className="flex items-center gap-3 rounded-md border border-border-muted bg-background-primary p-3 hover:bg-surface-muted transition-colors"
+                      className="flex items-center gap-2 rounded border border-border-muted bg-background-primary px-3 py-2 hover:bg-surface-muted transition-colors"
                     >
                       <div className="flex-1 min-w-0">
-                        <Typography variant="bodySm" className="font-semibold truncate">
+                        <Typography variant="bodySm" className="font-medium truncate leading-tight">
                           {product.name}
                         </Typography>
-                        <div className="flex items-center gap-2 mt-1">
+                        <div className="flex items-center gap-1.5 mt-0.5">
                           {product.region && (
-                            <Typography variant="bodyXs" className="text-text-muted">
+                            <Typography variant="bodyXs" className="text-text-muted text-xs">
                               {product.region}
                             </Typography>
                           )}
-                          {product.region && product.year !== null && <span className="text-text-muted">·</span>}
+                          {product.region && product.year !== null && <span className="text-text-muted text-xs">·</span>}
                           {product.year !== null && (
-                            <Typography variant="bodyXs" className="text-text-muted">
+                            <Typography variant="bodyXs" className="text-text-muted text-xs">
                               {product.year === 0 ? 'NV' : product.year}
                             </Typography>
                           )}
                           {offer && (
                             <>
-                              <span className="text-text-muted">·</span>
-                              <Typography variant="bodyXs" className="text-text-muted">
+                              <span className="text-text-muted text-xs">·</span>
+                              <Typography variant="bodyXs" className="text-text-muted text-xs">
                                 {offer.unitCount} × {offer.unitSize}
                               </Typography>
                             </>
@@ -353,10 +353,10 @@ const CatalogBrowser = ({
                         </div>
                       )}
                       <div className="shrink-0 text-right">
-                        <Typography variant="bodyMd" className="font-semibold whitespace-nowrap">
+                        <Typography variant="bodySm" className="font-semibold whitespace-nowrap leading-tight">
                           {formatPrice(displayPrice, displayCurrency)}
                         </Typography>
-                        <Typography variant="bodyXs" className="text-text-muted">
+                        <Typography variant="bodyXs" className="text-text-muted text-xs">
                           per case
                         </Typography>
                       </div>
@@ -366,10 +366,10 @@ const CatalogBrowser = ({
                         onClick={() => handleAddProduct(product)}
                         isDisabled={addingProductId === product.id || successProductId === product.id}
                         colorRole="primary"
-                        className="shrink-0"
+                        className="shrink-0 h-8 px-3"
                       >
                         <ButtonContent iconLeft={successProductId === product.id ? IconCheck : IconPlus}>
-                          {successProductId === product.id ? 'Added!' : 'Add'}
+                          <span className="text-xs">{successProductId === product.id ? 'Added!' : 'Add'}</span>
                         </ButtonContent>
                       </Button>
                     </div>
