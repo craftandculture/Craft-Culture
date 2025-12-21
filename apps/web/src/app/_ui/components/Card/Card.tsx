@@ -2,7 +2,7 @@ import { Slot } from '@radix-ui/react-slot';
 import { VariantProps, tv } from 'tailwind-variants';
 
 export const cardStyles = tv({
-  base: 'relative overflow-hidden rounded-lg',
+  base: 'relative overflow-hidden rounded-xl transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)]',
   variants: {
     colorRole: {
       primary: 'border-border-primary bg-surface-primary',
@@ -16,7 +16,12 @@ export const cardStyles = tv({
     },
     shadow: {
       none: null,
-      sm: null,
+      sm: 'shadow-sm',
+      md: 'shadow-md',
+    },
+    hover: {
+      true: 'hover:shadow-md hover:border-border-primary-hover',
+      false: null,
     },
   },
   defaultVariants: {
@@ -36,6 +41,7 @@ const Card = ({
   colorRole,
   variant,
   shadow,
+  hover,
   className,
   children,
   asChild,
@@ -45,7 +51,7 @@ const Card = ({
 
   return (
     <Component
-      className={cardStyles({ colorRole, variant, className, shadow })}
+      className={cardStyles({ colorRole, variant, className, shadow, hover })}
       {...props}
     >
       {children}

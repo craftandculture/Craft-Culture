@@ -620,7 +620,7 @@ const QuotesForm = () => {
   return (
     <div className="space-y-6 md:space-y-8">
       {/* Pricing Tool Section */}
-      <section className="space-y-4 rounded-lg border border-border-muted bg-fill-secondary/30 p-4 shadow-sm md:space-y-5 md:p-6">
+      <section className="space-y-4 rounded-xl border border-border-muted bg-surface-primary p-4 shadow-sm transition-shadow duration-300 hover:shadow-md md:space-y-5 md:p-6">
         {/* Section Header */}
         <div className="space-y-2">
           <div className="flex items-center justify-between">
@@ -652,18 +652,18 @@ const QuotesForm = () => {
         </div>
 
         {/* Currency Toggle */}
-        <div className="flex items-center justify-between sm:justify-end sm:gap-2">
+        <div className="flex items-center justify-between sm:justify-end sm:gap-3">
           <Typography variant="bodySm" className="text-text-muted font-medium">
             Currency:
           </Typography>
-            <div className="flex gap-0.5 rounded-md border border-border-muted bg-fill-muted p-0.5">
+            <div className="flex gap-0.5 rounded-lg border border-border-muted bg-fill-muted p-1">
               <button
                 type="button"
                 onClick={() => setDisplayCurrency('USD')}
-                className={`rounded px-3 py-2 text-sm font-medium transition-colors ${
+                className={`rounded-md px-3 py-1.5 text-sm font-medium transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] ${
                   displayCurrency === 'USD'
-                    ? 'bg-fill-primary text-text-primary'
-                    : 'text-text-muted hover:text-text-primary'
+                    ? 'bg-fill-primary text-text-primary shadow-sm'
+                    : 'text-text-muted hover:text-text-primary hover:bg-fill-primary/50'
                 }`}
               >
                 USD
@@ -671,10 +671,10 @@ const QuotesForm = () => {
               <button
                 type="button"
                 onClick={() => setDisplayCurrency('AED')}
-                className={`rounded px-3 py-2 text-sm font-medium transition-colors ${
+                className={`rounded-md px-3 py-1.5 text-sm font-medium transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] ${
                   displayCurrency === 'AED'
-                    ? 'bg-fill-primary text-text-primary'
-                    : 'text-text-muted hover:text-text-primary'
+                    ? 'bg-fill-primary text-text-primary shadow-sm'
+                    : 'text-text-muted hover:text-text-primary hover:bg-fill-primary/50'
                 }`}
               >
                 AED
@@ -1004,15 +1004,15 @@ const QuotesForm = () => {
       </section>
 
       {/* Enhanced Section Divider */}
-      <div className="relative my-6 md:my-12 lg:my-16">
+      <div className="relative my-8 md:my-12 lg:my-16">
         <div className="absolute inset-0 flex items-center" aria-hidden="true">
-          <div className="w-full border-t-2 border-border-primary md:border-t-[3px]" />
+          <div className="w-full border-t border-border-muted" />
         </div>
         <div className="relative flex justify-center">
-          <span className="bg-fill-primary px-4 py-2 md:px-6 md:py-3">
+          <span className="bg-background-primary px-6 py-2">
             <Typography
               variant="bodySm"
-              className="text-sm font-bold uppercase tracking-wider text-text-primary md:text-base"
+              className="text-xs font-semibold uppercase tracking-widest text-text-muted md:text-sm"
             >
               Product Catalogue
             </Typography>
@@ -1021,7 +1021,7 @@ const QuotesForm = () => {
       </div>
 
       {/* Product Catalogue Section */}
-      <section className="space-y-4 rounded-lg border border-border-muted bg-fill-secondary/30 p-4 shadow-sm md:p-6">
+      <section className="space-y-4 rounded-xl border border-border-muted bg-surface-primary p-4 shadow-sm transition-shadow duration-300 hover:shadow-md md:p-6">
         {/* Section Header */}
         <div className="space-y-2">
           <Typography variant="headingLg" className="font-semibold">

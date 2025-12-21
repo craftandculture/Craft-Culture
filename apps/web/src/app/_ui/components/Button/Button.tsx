@@ -2,7 +2,7 @@ import { Slot } from '@radix-ui/react-slot';
 import { type VariantProps, tv } from 'tailwind-variants';
 
 export const buttonStyles = tv({
-  base: 'focus:outline-hidden data-[state=open]:shadow-xs box-border flex shrink-0 cursor-pointer items-center text-sm font-medium tracking-tight transition-all duration-150 focus-visible:ring-2',
+  base: 'focus:outline-hidden data-[state=open]:shadow-xs box-border flex shrink-0 cursor-pointer items-center text-sm font-medium tracking-tight transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] hover:scale-[1.01] active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-offset-1',
   variants: {
     colorRole: {
       primary:
