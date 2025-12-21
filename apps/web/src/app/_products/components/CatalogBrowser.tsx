@@ -1,6 +1,6 @@
 'use client';
 
-import { IconCheck, IconDownload, IconLayoutGrid, IconLayoutList, IconPlus, IconSearch } from '@tabler/icons-react';
+import { IconCheck, IconDownload, IconFilter, IconLayoutGrid, IconLayoutList, IconPlus, IconSearch } from '@tabler/icons-react';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { useQueryStates } from 'nuqs';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -206,15 +206,16 @@ const CatalogBrowser = ({
           />
         </div>
 
-        {/* Source Filter */}
-        <div className="flex items-center gap-2">
-          <Typography variant="bodyXs" className="text-text-muted shrink-0">
+        {/* Source Filter - Prominent styling to stand out */}
+        <div className="flex items-center gap-2 rounded-lg bg-fill-accent/10 px-3 py-1.5">
+          <Icon icon={IconFilter} size="sm" className="text-text-brand" />
+          <Typography variant="bodyXs" className="text-text-brand font-semibold shrink-0 uppercase tracking-wide">
             Show:
           </Typography>
           <select
             value={filters.source}
             onChange={(e) => void setFilters({ source: e.target.value })}
-            className="h-10 rounded-md border border-border-muted bg-background-primary px-3 text-sm transition-colors focus:border-border-brand focus:outline-none focus:ring-2 focus:ring-fill-accent focus:ring-offset-2"
+            className="h-8 rounded-md border-2 border-border-brand bg-background-primary px-3 text-sm font-medium transition-colors focus:border-border-brand focus:outline-none focus:ring-2 focus:ring-fill-accent focus:ring-offset-2"
           >
             <option value="">All Products</option>
             <option value="local_inventory">Local Inventory</option>
