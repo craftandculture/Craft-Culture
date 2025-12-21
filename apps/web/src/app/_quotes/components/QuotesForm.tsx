@@ -705,12 +705,20 @@ const QuotesForm = () => {
                 Vintage
               </Typography>
             </div>
-            <div className="col-span-2 flex justify-start">
+            <div className="col-span-1 flex justify-start">
               <Typography
                 variant="bodyXs"
                 className="text-text-muted font-medium uppercase"
               >
                 Quantity
+              </Typography>
+            </div>
+            <div className="col-span-1 flex justify-start">
+              <Typography
+                variant="bodyXs"
+                className="text-text-muted font-medium uppercase"
+              >
+                Pack
               </Typography>
             </div>
             <div className="col-span-1 flex items-center justify-end gap-1">

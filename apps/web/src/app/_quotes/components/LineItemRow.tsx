@@ -169,7 +169,7 @@ const LineItemRow = ({
 
         {/* Quantity Input - Hidden for placeholder */}
         {!isPlaceholder && (
-          <div className="flex w-full flex-col gap-1 lg:col-span-2 lg:w-auto">
+          <div className="flex w-full flex-col gap-1 lg:col-span-1 lg:w-auto">
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -183,16 +183,6 @@ const LineItemRow = ({
                     value={localQuantity}
                     onChange={handleQuantityInputChange}
                     isDisabled={!product}
-                    contentRight={
-                      offer && (
-                        <Typography
-                          variant="bodyXs"
-                          className="text-text-muted pr-2.5 font-medium"
-                        >
-                          {offer.unitCount} × {offer.unitSize}
-                        </Typography>
-                      )
-                    }
                   />
                 </div>
               </TooltipTrigger>
@@ -227,6 +217,20 @@ const LineItemRow = ({
               {localQuantity} requested, {maxQuantity} available
             </Typography>
           )}
+          </div>
+        )}
+
+        {/* Pack Size - Hidden for placeholder */}
+        {!isPlaceholder && (
+          <div className="hidden lg:col-span-1 lg:flex lg:items-center">
+            {offer && (
+              <Typography
+                variant="bodyXs"
+                className="text-text-muted font-medium"
+              >
+                {offer.unitCount} × {offer.unitSize}
+              </Typography>
+            )}
           </div>
         )}
 
