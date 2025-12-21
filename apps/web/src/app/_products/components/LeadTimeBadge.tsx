@@ -28,9 +28,10 @@ const LeadTimeBadge = ({ source }: LeadTimeBadgeProps) => {
 
   if (source === 'local_inventory') {
     return (
-      <div className="flex items-center gap-1.5 rounded-full bg-green-50 px-2.5 py-1 text-xs font-medium text-green-700">
-        <IconCheck size={14} stroke={2} />
-        <span>In stock - immediate dispatch</span>
+      <div className="inline-flex items-center gap-1 rounded-md bg-green-50 px-2 py-0.5 text-[10px] font-medium text-green-700">
+        <IconCheck size={12} stroke={2.5} />
+        <span className="hidden sm:inline">In Stock</span>
+        <span className="sm:hidden">Stock</span>
       </div>
     );
   }
@@ -39,11 +40,12 @@ const LeadTimeBadge = ({ source }: LeadTimeBadgeProps) => {
   const maxDays = leadTimeMax ?? '21';
 
   return (
-    <div className="flex items-center gap-1.5 rounded-full bg-fill-secondary px-2.5 py-1 text-xs text-text-muted">
-      <IconClock size={14} />
-      <span>
-        {minDays}-{maxDays} days lead time
+    <div className="inline-flex items-center gap-1 rounded-md bg-fill-secondary px-2 py-0.5 text-[10px] text-text-muted">
+      <IconClock size={12} stroke={2} />
+      <span className="hidden sm:inline">
+        {minDays}-{maxDays} days
       </span>
+      <span className="sm:hidden">{minDays}d</span>
     </div>
   );
 };
