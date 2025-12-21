@@ -137,6 +137,7 @@ const localInventorySyncController = async () => {
           .onConflictDoUpdate({
             target: productOffers.externalId,
             set: conflictUpdateSet(productOffers, [
+              'productId',
               'price',
               'currency',
               'unitCount',
