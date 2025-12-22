@@ -1008,10 +1008,10 @@ const QuotesForm = () => {
           <div className="w-full border-t border-border-muted" />
         </div>
         <div className="relative flex justify-center">
-          <span className="bg-background-primary px-4 py-1">
+          <span className="bg-background-primary px-6 py-1">
             <Typography
-              variant="bodyXs"
-              className="font-medium uppercase tracking-wide text-text-muted"
+              variant="bodySm"
+              className="text-sm font-semibold uppercase tracking-widest text-text-muted md:text-base"
             >
               Product Catalogue
             </Typography>
