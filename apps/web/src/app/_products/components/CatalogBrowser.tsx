@@ -310,7 +310,7 @@ const CatalogBrowser = ({
             {(catalogSearch.trim() || filters.countries.length > 0 || filters.regions.length > 0) && (
               <Button
                 type="button"
-                variant="secondary"
+                variant="outline"
                 size="sm"
                 onClick={() => {
                   setCatalogSearch('');
