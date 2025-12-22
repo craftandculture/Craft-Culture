@@ -642,21 +642,12 @@ const QuotesForm = () => {
           </Typography>
         </div>
 
-        {/* Lead Time Banner */}
-        <div className="relative overflow-hidden rounded-lg border border-border-muted bg-gradient-to-r from-fill-brand/5 via-fill-brand/10 to-fill-brand/5 px-4 py-4 shadow-sm sm:py-3">
-          <div className="flex flex-col items-center justify-center gap-3 sm:flex-row">
-            <div className="rounded-full bg-fill-brand/10 p-2.5">
-              <IconPlaneInflight className="h-5 w-5 text-text-brand" />
-            </div>
-            <div className="flex flex-col gap-1 text-center sm:flex-row sm:items-baseline sm:gap-2 sm:text-left">
-              <Typography variant="bodySm" className="font-medium">
-                Estimated Lead Time:
-              </Typography>
-              <Typography variant="bodySm" className="text-text-brand font-semibold">
-                {leadTimeMin}-{leadTimeMax} days via air freight, EX-Works UAE(In-Bond)
-              </Typography>
-            </div>
-          </div>
+        {/* Lead Time Banner - Subtle */}
+        <div className="flex items-center justify-center gap-2 rounded-md border border-border-muted/50 bg-surface-muted/30 px-3 py-2">
+          <IconPlaneInflight className="h-4 w-4 text-text-muted" />
+          <Typography variant="bodyXs" className="text-text-muted">
+            Est. {leadTimeMin}-{leadTimeMax} days air freight · In-Bond UAE
+          </Typography>
         </div>
 
         {/* Currency Toggle */}
@@ -1011,16 +1002,16 @@ const QuotesForm = () => {
       )}
       </section>
 
-      {/* Enhanced Section Divider */}
-      <div className="relative my-8 md:my-12 lg:my-16">
+      {/* Section Divider */}
+      <div className="relative my-4 md:my-6">
         <div className="absolute inset-0 flex items-center" aria-hidden="true">
           <div className="w-full border-t border-border-muted" />
         </div>
         <div className="relative flex justify-center">
-          <span className="bg-background-primary px-6 py-2">
+          <span className="bg-background-primary px-4 py-1">
             <Typography
-              variant="bodySm"
-              className="text-xs font-semibold uppercase tracking-widest text-text-muted md:text-sm"
+              variant="bodyXs"
+              className="font-medium uppercase tracking-wide text-text-muted"
             >
               Product Catalogue
             </Typography>
