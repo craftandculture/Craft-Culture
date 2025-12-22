@@ -37,11 +37,36 @@ const ProductCard = ({
   showSuccess: externalShowSuccess = false,
 }: ProductCardProps) => {
   const [showSuccess, setShowSuccess] = useState(false);
-  const offer = product.productOffers?.[0];
+
+  // Find offers by source, filtering out $0 prices
+  const localOffer = product.productOffers?.find(
+    (o) =>
+      o.source === 'local_inventory' &&
+      (o.inBondPriceUsd ?? o.price ?? 0) > 0,
+  );
+  const cultxOffer = product.productOffers?.find(
+    (o) =>
+      o.source === 'cultx' && (o.inBondPriceUsd ?? o.price ?? 0) > 0,
+  );
+
+  // Primary offer: prefer local inventory, fall back to cultx
+  const offer = localOffer ?? cultxOffer ?? product.productOffers?.[0];
+
+  // Calculate prices for both sources (only if > 0)
+  const localPrice = localOffer
+    ? (localOffer.inBondPriceUsd ?? localOffer.price ?? 0)
+    : 0;
+  const cultxPrice = cultxOffer
+    ? (cultxOffer.inBondPriceUsd ?? cultxOffer.price ?? 0)
+    : 0;
+
   // Use In-Bond UAE price from pricing model (falls back to raw price if not available)
   const price = offer?.inBondPriceUsd ?? offer?.price ?? 0;
-  const displayPrice =
-    displayCurrency === 'AED' ? price * 3.67 : price;
+  const displayPrice = displayCurrency === 'AED' ? price * 3.67 : price;
+  const displayLocalPrice =
+    displayCurrency === 'AED' ? localPrice * 3.67 : localPrice;
+  const displayCultxPrice =
+    displayCurrency === 'AED' ? cultxPrice * 3.67 : cultxPrice;
 
   // Handle external success state
   useEffect(() => {
@@ -144,13 +169,43 @@ const ProductCard = ({
 
         {/* Price */}
         <div className="mt-auto pt-2">
-          <Typography variant="bodyMd" className="font-semibold">
-            {formatPrice(displayPrice, displayCurrency)}
-          </Typography>
-          {offer && (
-            <Typography variant="bodyXs" className="text-text-muted">
-              per case
-            </Typography>
+          {/* Show both prices if available */}
+          {displayLocalPrice > 0 && displayCultxPrice > 0 ? (
+            <div className="flex flex-col gap-1">
+              {/* Local Stock Price - Primary */}
+              <div className="flex items-baseline gap-1.5">
+                <Typography variant="bodyMd" className="font-semibold text-green-700">
+                  {formatPrice(displayLocalPrice, displayCurrency)}
+                </Typography>
+                <span className="inline-flex items-center gap-0.5 rounded bg-green-100 px-1 py-0.5 text-[10px] font-medium text-green-700">
+                  <span className="h-1 w-1 rounded-full bg-green-500" />
+                  Local
+                </span>
+              </div>
+              {/* Pre-Order Price - Secondary */}
+              <div className="flex items-baseline gap-1.5">
+                <Typography variant="bodySm" className="text-text-muted">
+                  {formatPrice(displayCultxPrice, displayCurrency)}
+                </Typography>
+                <span className="text-[10px] text-text-muted">Pre-Order</span>
+              </div>
+              <Typography variant="bodyXs" className="text-text-muted">
+                per case
+              </Typography>
+            </div>
+          ) : (
+            <>
+              <Typography variant="bodyMd" className="font-semibold">
+                {displayPrice > 0
+                  ? formatPrice(displayPrice, displayCurrency)
+                  : 'Price on request'}
+              </Typography>
+              {offer && displayPrice > 0 && (
+                <Typography variant="bodyXs" className="text-text-muted">
+                  per case
+                </Typography>
+              )}
+            </>
           )}
         </div>
 
