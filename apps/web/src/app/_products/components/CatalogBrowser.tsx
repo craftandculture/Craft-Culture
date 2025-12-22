@@ -1,6 +1,6 @@
 'use client';
 
-import { IconCheck, IconDownload, IconFilter, IconLayoutGrid, IconLayoutList, IconPlus, IconSearch, IconWine, IconX } from '@tabler/icons-react';
+import { IconBottle, IconCheck, IconDownload, IconFilter, IconLayoutGrid, IconLayoutList, IconPlus, IconSearch, IconX } from '@tabler/icons-react';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { useQueryStates } from 'nuqs';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -288,7 +288,7 @@ const CatalogBrowser = ({
               {catalogSearch.trim() || filters.countries.length > 0 || filters.regions.length > 0 ? (
                 <IconSearch className="h-8 w-8 text-text-muted" />
               ) : (
-                <IconWine className="h-8 w-8 text-text-muted" />
+                <IconBottle className="h-8 w-8 text-text-muted" />
               )}
             </div>
             <div className="space-y-2">
