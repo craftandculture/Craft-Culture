@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 
 import PendingUsersBell from '@/app/_admin/components/PendingUsersBell';
 import UserDropdown from '@/app/_auth/components/UserDropdown';
+import CommandBar from '@/app/_ui/components/CommandBar/CommandBar';
 import Footer from '@/app/_ui/components/Footer/Footer';
 import Logo from '@/app/_ui/components/Logo/Logo';
 import ThemeToggle from '@/app/_ui/components/ThemeToggle/ThemeToggle';
@@ -34,6 +35,7 @@ const PlatformLayout = async ({ children }: React.PropsWithChildren) => {
 
   return (
     <div className="bg-background-primary flex min-h-dvh flex-col">
+      <CommandBar />
       <header className="border-border-primary sticky top-0 z-50 border-b bg-background-primary/80 backdrop-blur-xl">
         <div className="container flex h-14 items-center justify-between gap-4">
           <div className="flex items-center gap-6">

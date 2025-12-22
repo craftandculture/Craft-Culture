@@ -1,6 +1,6 @@
 'use client';
 
-import { IconCheck, IconDownload, IconFilter, IconLayoutGrid, IconLayoutList, IconPlus, IconSearch } from '@tabler/icons-react';
+import { IconCheck, IconDownload, IconFilter, IconLayoutGrid, IconLayoutList, IconPlus, IconSearch, IconWine, IconX } from '@tabler/icons-react';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { useQueryStates } from 'nuqs';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -11,13 +11,13 @@ import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
 import Divider from '@/app/_ui/components/Divider/Divider';
 import Icon from '@/app/_ui/components/Icon/Icon';
-import Skeleton from '@/app/_ui/components/Skeleton/Skeleton';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import useTRPC from '@/lib/trpc/browser';
 import formatPrice from '@/utils/formatPrice';
 
 import LeadTimeBadge from './LeadTimeBadge';
 import ProductCard from './ProductCard';
+import ProductCardSkeleton from './ProductCardSkeleton';
 import type { Product } from '../controller/productsGetMany';
 
 interface CatalogBrowserProps {
@@ -187,8 +187,8 @@ const CatalogBrowser = ({
         )}
       </div>
 
-      {/* Search and Sort Toolbar */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+      {/* Search and Sort Toolbar - Sticky on scroll */}
+      <div className="sticky top-0 z-10 -mx-4 flex flex-col gap-3 bg-surface-primary/95 px-4 py-2 backdrop-blur-sm sm:flex-row sm:items-center md:-mx-6 md:px-6">
         {/* Search Input */}
         <div className="relative flex-1">
           <Icon
@@ -279,21 +279,55 @@ const CatalogBrowser = ({
         {isLoading ? (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 md:gap-4 lg:grid-cols-5 xl:grid-cols-6">
             {Array.from({ length: 12 }).map((_, i) => (
-              <div key={i} className="space-y-3">
-                <Skeleton className="aspect-square w-full" />
-                <Skeleton className="h-4 w-3/4" />
-                <Skeleton className="h-3 w-1/2" />
-                <Skeleton className="h-8 w-full" />
-              </div>
+              <ProductCardSkeleton key={i} />
             ))}
           </div>
         ) : products.length === 0 ? (
-          <div className="flex h-64 items-center justify-center">
-            <Typography variant="bodySm" className="text-text-muted">
-              {catalogSearch.trim()
-                ? 'No products found matching your search'
-                : 'No products available'}
-            </Typography>
+          <div className="flex h-64 flex-col items-center justify-center gap-4 text-center">
+            <div className="rounded-full bg-fill-muted p-4">
+              {catalogSearch.trim() || filters.countries.length > 0 || filters.regions.length > 0 ? (
+                <IconSearch className="h-8 w-8 text-text-muted" />
+              ) : (
+                <IconWine className="h-8 w-8 text-text-muted" />
+              )}
+            </div>
+            <div className="space-y-2">
+              <Typography variant="bodyMd" className="font-medium">
+                {catalogSearch.trim()
+                  ? 'No products found'
+                  : filters.countries.length > 0 || filters.regions.length > 0
+                    ? 'No products match your filters'
+                    : 'No products available'}
+              </Typography>
+              <Typography variant="bodySm" className="text-text-muted max-w-sm">
+                {catalogSearch.trim()
+                  ? 'Try adjusting your search terms or clearing some filters'
+                  : filters.countries.length > 0 || filters.regions.length > 0
+                    ? 'Try removing some filters to see more products'
+                    : 'Check back soon for new arrivals'}
+              </Typography>
+            </div>
+            {(catalogSearch.trim() || filters.countries.length > 0 || filters.regions.length > 0) && (
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={() => {
+                  setCatalogSearch('');
+                  void setFilters({
+                    countries: [],
+                    regions: [],
+                    producers: [],
+                    vintages: [],
+                    source: '',
+                  });
+                }}
+              >
+                <ButtonContent iconLeft={IconX}>
+                  Clear all filters
+                </ButtonContent>
+              </Button>
+            )}
           </div>
         ) : (
           <>
@@ -448,12 +482,7 @@ const CatalogBrowser = ({
             {isFetchingNextPage && (
               <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 md:mt-4 md:gap-4 lg:grid-cols-5 xl:grid-cols-6">
                 {Array.from({ length: 6 }).map((_, i) => (
-                  <div key={i} className="space-y-3">
-                    <Skeleton className="aspect-square w-full" />
-                    <Skeleton className="h-4 w-3/4" />
-                    <Skeleton className="h-3 w-1/2" />
-                    <Skeleton className="h-8 w-full" />
-                  </div>
+                  <ProductCardSkeleton key={i} />
                 ))}
               </div>
             )}

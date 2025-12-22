@@ -16,10 +16,11 @@ import {
 } from '@dnd-kit/sortable';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { IconDownload, IconInfoCircle, IconPlaneInflight, IconPlus } from '@tabler/icons-react';
+import { IconCheck, IconDownload, IconInfoCircle, IconPlaneInflight, IconPlus } from '@tabler/icons-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { parseAsJson, parseAsNativeArrayOf, useQueryState, useQueryStates } from 'nuqs';
 import React, { useEffect, useMemo, useState } from 'react';
+import { toast } from 'sonner';
 
 import CatalogBrowser from '@/app/_products/components/CatalogBrowser';
 import { Product } from '@/app/_products/controller/productsGetMany';
@@ -38,6 +39,7 @@ import formatPrice from '@/utils/formatPrice';
 
 import B2BCalculator from './B2BCalculator';
 import CommissionBreakdown from './CommissionBreakdown';
+import FloatingQuoteSummary from './FloatingQuoteSummary';
 import LineItemRow from './LineItemRow';
 import PriceInfoTooltip from './PriceInfoTooltip';
 import ProductFilters from './ProductFilters';
@@ -498,6 +500,12 @@ const QuotesForm = () => {
         : undefined;
 
     exportQuoteToExcel(exportLineItems, displayCurrency, total, commissionTotal);
+
+    toast('Quote exported to Excel', {
+      duration: 3000,
+      position: 'bottom-center',
+      icon: <IconCheck className="h-5 w-5 text-green-600" />,
+    });
   };
 
   const [isDownloading, setIsDownloading] = useState(false);
@@ -1118,6 +1126,17 @@ const QuotesForm = () => {
         onSaveSuccess={(quoteId) => {
           console.log('Quote saved successfully:', quoteId);
           void queryClient.invalidateQueries({ queryKey: ['quotes.getMany'] });
+        }}
+      />
+
+      {/* Floating Quote Summary - appears when scrolling through catalogue */}
+      <FloatingQuoteSummary
+        itemCount={urlLineItems.length}
+        totalUsd={quoteData?.totalUsd ?? 0}
+        displayCurrency={displayCurrency}
+        isLoading={isQuoteLoading}
+        onReviewClick={() => {
+          window.scrollTo({ top: 0, behavior: 'smooth' });
         }}
       />
     </div>
