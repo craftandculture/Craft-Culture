@@ -95,10 +95,16 @@ const CatalogBrowser = ({
     placeholderData: (previousData) => previousData,
   });
 
-  const products = useMemo(
-    () => data?.pages.flatMap((page) => page.data) ?? [],
-    [data?.pages],
-  );
+  const products = useMemo(() => {
+    const allProducts = data?.pages.flatMap((page) => page.data) ?? [];
+    // Filter out products with no valid pricing (all offers have $0 price)
+    return allProducts.filter((product) => {
+      const hasValidPrice = product.productOffers?.some(
+        (offer) => (offer.inBondPriceUsd ?? offer.price ?? 0) > 0,
+      );
+      return hasValidPrice;
+    });
+  }, [data?.pages]);
 
   const totalCount = data?.pages[0]?.meta.totalCount ?? 0;
 
@@ -482,13 +488,9 @@ const CatalogBrowser = ({
                             ) : (
                               <>
                                 <div className="font-semibold text-sm">
-                                  {displayPrice > 0
-                                    ? formatPrice(displayPrice, displayCurrency)
-                                    : 'Price on request'}
+                                  {formatPrice(displayPrice, displayCurrency)}
                                 </div>
-                                {displayPrice > 0 && (
-                                  <div className="text-xs text-text-muted">per case</div>
-                                )}
+                                <div className="text-xs text-text-muted">per case</div>
                               </>
                             )}
                           </div>
@@ -561,13 +563,9 @@ const CatalogBrowser = ({
                           ) : (
                             <>
                               <div className="font-semibold text-sm leading-tight">
-                                {displayPrice > 0
-                                  ? formatPrice(displayPrice, displayCurrency)
-                                  : 'Price on request'}
+                                {formatPrice(displayPrice, displayCurrency)}
                               </div>
-                              {displayPrice > 0 && (
-                                <div className="text-xs text-text-muted">per case</div>
-                              )}
+                              <div className="text-xs text-text-muted">per case</div>
                             </>
                           )}
                         </div>

@@ -196,11 +196,9 @@ const ProductCard = ({
           ) : (
             <>
               <Typography variant="bodyMd" className="font-semibold">
-                {displayPrice > 0
-                  ? formatPrice(displayPrice, displayCurrency)
-                  : 'Price on request'}
+                {formatPrice(displayPrice, displayCurrency)}
               </Typography>
-              {offer && displayPrice > 0 && (
+              {offer && (
                 <Typography variant="bodyXs" className="text-text-muted">
                   per case
                 </Typography>
