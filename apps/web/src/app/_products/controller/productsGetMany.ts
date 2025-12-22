@@ -260,14 +260,16 @@ const productsGetMany = protectedProcedure
               ];
             }
 
-            // Subquery for minimum price from product_offers
+            // Subquery for minimum price from product_offers (with valid price > 0)
             const minPrice = sql<number>`(
               SELECT MIN(${productOffers.price})
               FROM ${productOffers}
               WHERE ${productOffers.productId} = ${table.id}
+              AND ${productOffers.price} > 0
             )`;
 
             // Handle sorting based on sortBy parameter
+            // Use COALESCE to handle NULLs - put products without valid prices at the end
             switch (sortBy) {
               case 'name-desc':
                 return [desc(table.name), desc(table.year), desc(table.id)];
@@ -276,9 +278,19 @@ const productsGetMany = protectedProcedure
               case 'vintage-desc':
                 return [desc(table.year), asc(table.name), desc(table.id)];
               case 'price-asc':
-                return [asc(minPrice), asc(table.name), desc(table.id)];
+                // For ASC, put NULLs at the end (use high value)
+                return [
+                  asc(sql`COALESCE(${minPrice}, 999999999)`),
+                  asc(table.name),
+                  desc(table.id),
+                ];
               case 'price-desc':
-                return [desc(minPrice), asc(table.name), desc(table.id)];
+                // For DESC, put NULLs at the end (use 0)
+                return [
+                  desc(sql`COALESCE(${minPrice}, 0)`),
+                  asc(table.name),
+                  desc(table.id),
+                ];
               case 'name-asc':
               default:
                 return [asc(table.name), desc(table.year), desc(table.id)];
