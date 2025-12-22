@@ -16,7 +16,7 @@ import {
 } from '@dnd-kit/sortable';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { IconCheck, IconDownload, IconInfoCircle, IconPlaneInflight, IconPlus } from '@tabler/icons-react';
+import { IconCheck, IconCircleCheck, IconDownload, IconInfoCircle, IconPlaneInflight, IconPlus } from '@tabler/icons-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { parseAsJson, parseAsNativeArrayOf, useQueryState, useQueryStates } from 'nuqs';
 import React, { useEffect, useMemo, useState } from 'react';
@@ -642,12 +642,31 @@ const QuotesForm = () => {
           </Typography>
         </div>
 
-        {/* Lead Time Banner - Subtle */}
-        <div className="flex items-center justify-center gap-2 rounded-md border border-border-muted/50 bg-surface-muted/30 px-3 py-2">
-          <IconPlaneInflight className="h-4 w-4 text-text-muted" />
-          <Typography variant="bodyXs" className="text-text-muted">
-            Est. {leadTimeMin}-{leadTimeMax} days air freight · In-Bond UAE
-          </Typography>
+        {/* Inventory Status Banner */}
+        <div className="flex flex-col gap-2 rounded-lg border border-border-muted bg-surface-muted/30 p-3 sm:flex-row sm:items-center sm:justify-center sm:gap-6">
+          {/* Local Stock - Primary */}
+          <div className="flex items-center gap-2">
+            <div className="flex h-6 w-6 items-center justify-center rounded-full bg-green-500/10">
+              <IconCircleCheck className="h-4 w-4 text-green-600" />
+            </div>
+            <div className="flex flex-col sm:flex-row sm:items-baseline sm:gap-1.5">
+              <Typography variant="bodySm" className="font-semibold text-green-700">
+                Local Stock
+              </Typography>
+              <Typography variant="bodyXs" className="text-text-muted">
+                Ships 24-48 hrs
+              </Typography>
+            </div>
+          </div>
+          {/* Divider */}
+          <div className="hidden h-4 w-px bg-border-muted sm:block" />
+          {/* Air Freight - Secondary */}
+          <div className="flex items-center gap-2 opacity-60">
+            <IconPlaneInflight className="h-4 w-4 text-text-muted" />
+            <Typography variant="bodyXs" className="text-text-muted">
+              Additional items via air freight · {leadTimeMin}-{leadTimeMax} days
+            </Typography>
+          </div>
         </div>
 
         {/* Currency Toggle */}
