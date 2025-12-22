@@ -158,15 +158,33 @@ const CatalogBrowser = ({
       {/* Header */}
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
         <div>
-          <Typography variant="bodyLg" className="font-semibold">
-            Browse Full Inventory
-          </Typography>
+          <div className="flex items-center gap-2">
+            <Typography variant="bodyLg" className="font-semibold">
+              Browse Inventory
+            </Typography>
+            {filters.source === 'local_inventory' && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
+                <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
+                Local Stock
+              </span>
+            )}
+            {filters.source === 'cultx' && (
+              <span className="inline-flex items-center rounded-full bg-fill-muted px-2 py-0.5 text-xs font-medium text-text-muted">
+                Pre-Order
+              </span>
+            )}
+          </div>
           <Typography variant="bodyXs" className="text-text-muted">
             {isLoading ? (
               'Loading...'
             ) : (
               <>
-                {totalCount} product{totalCount !== 1 ? 's' : ''} available
+                {totalCount} product{totalCount !== 1 ? 's' : ''}{' '}
+                {filters.source === 'local_inventory'
+                  ? 'in stock · Ships 24-48 hrs'
+                  : filters.source === 'cultx'
+                    ? 'available for pre-order'
+                    : 'available'}
               </>
             )}
           </Typography>
