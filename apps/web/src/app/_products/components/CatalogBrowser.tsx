@@ -386,10 +386,39 @@ const CatalogBrowser = ({
             ) : (
               <div className="divide-y divide-border-muted">
                 {products.map((product) => {
-                  const offer = product.productOffers?.[0];
-                  // Use In-Bond UAE price from pricing model
+                  // Find offers by source, filtering out $0 prices
+                  const localOffer = product.productOffers?.find(
+                    (o) =>
+                      o.source === 'local_inventory' &&
+                      (o.inBondPriceUsd ?? o.price ?? 0) > 0,
+                  );
+                  const cultxOffer = product.productOffers?.find(
+                    (o) =>
+                      o.source === 'cultx' &&
+                      (o.inBondPriceUsd ?? o.price ?? 0) > 0,
+                  );
+
+                  // Primary offer: prefer local inventory, fall back to cultx
+                  const offer =
+                    localOffer ?? cultxOffer ?? product.productOffers?.[0];
+
+                  // Calculate prices for both sources
+                  const localPrice = localOffer
+                    ? (localOffer.inBondPriceUsd ?? localOffer.price ?? 0)
+                    : 0;
+                  const cultxPrice = cultxOffer
+                    ? (cultxOffer.inBondPriceUsd ?? cultxOffer.price ?? 0)
+                    : 0;
+
                   const price = offer?.inBondPriceUsd ?? offer?.price ?? 0;
-                  const displayPrice = displayCurrency === 'AED' ? price * 3.67 : price;
+                  const displayPrice =
+                    displayCurrency === 'AED' ? price * 3.67 : price;
+                  const displayLocalPrice =
+                    displayCurrency === 'AED' ? localPrice * 3.67 : localPrice;
+                  const displayCultxPrice =
+                    displayCurrency === 'AED' ? cultxPrice * 3.67 : cultxPrice;
+                  const hasBothPrices =
+                    displayLocalPrice > 0 && displayCultxPrice > 0;
 
                   return (
                     <div
@@ -435,10 +464,33 @@ const CatalogBrowser = ({
                         {/* Bottom row: Price and Button */}
                         <div className="flex items-center justify-between gap-3">
                           <div>
-                            <div className="font-semibold text-sm">
-                              {formatPrice(displayPrice, displayCurrency)}
-                            </div>
-                            <div className="text-xs text-text-muted">per case</div>
+                            {hasBothPrices ? (
+                              <div className="flex flex-col gap-0.5">
+                                <div className="flex items-baseline gap-1">
+                                  <span className="font-semibold text-sm text-green-700">
+                                    {formatPrice(displayLocalPrice, displayCurrency)}
+                                  </span>
+                                  <span className="text-[9px] font-medium text-green-700">Local</span>
+                                </div>
+                                <div className="flex items-baseline gap-1">
+                                  <span className="text-xs text-text-muted">
+                                    {formatPrice(displayCultxPrice, displayCurrency)}
+                                  </span>
+                                  <span className="text-[9px] text-text-muted">Pre-Order</span>
+                                </div>
+                              </div>
+                            ) : (
+                              <>
+                                <div className="font-semibold text-sm">
+                                  {displayPrice > 0
+                                    ? formatPrice(displayPrice, displayCurrency)
+                                    : 'Price on request'}
+                                </div>
+                                {displayPrice > 0 && (
+                                  <div className="text-xs text-text-muted">per case</div>
+                                )}
+                              </>
+                            )}
                           </div>
                           <Button
                             type="button"
@@ -490,11 +542,34 @@ const CatalogBrowser = ({
                         )}
 
                         {/* Price */}
-                        <div className="shrink-0 text-right min-w-[100px]">
-                          <div className="font-semibold text-sm leading-tight">
-                            {formatPrice(displayPrice, displayCurrency)}
-                          </div>
-                          <div className="text-xs text-text-muted">per case</div>
+                        <div className="shrink-0 text-right min-w-[120px]">
+                          {hasBothPrices ? (
+                            <div className="flex flex-col gap-0.5">
+                              <div className="flex items-baseline justify-end gap-1">
+                                <span className="font-semibold text-sm text-green-700">
+                                  {formatPrice(displayLocalPrice, displayCurrency)}
+                                </span>
+                                <span className="text-[9px] font-medium text-green-700">Local</span>
+                              </div>
+                              <div className="flex items-baseline justify-end gap-1">
+                                <span className="text-xs text-text-muted">
+                                  {formatPrice(displayCultxPrice, displayCurrency)}
+                                </span>
+                                <span className="text-[9px] text-text-muted">Pre-Order</span>
+                              </div>
+                            </div>
+                          ) : (
+                            <>
+                              <div className="font-semibold text-sm leading-tight">
+                                {displayPrice > 0
+                                  ? formatPrice(displayPrice, displayCurrency)
+                                  : 'Price on request'}
+                              </div>
+                              {displayPrice > 0 && (
+                                <div className="text-xs text-text-muted">per case</div>
+                              )}
+                            </>
+                          )}
                         </div>
 
                         {/* Add Button */}
