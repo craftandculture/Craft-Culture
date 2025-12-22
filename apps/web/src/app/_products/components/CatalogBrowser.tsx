@@ -1,6 +1,6 @@
 'use client';
 
-import { IconBottle, IconCheck, IconDownload, IconFilter, IconLayoutGrid, IconLayoutList, IconPlus, IconSearch, IconX } from '@tabler/icons-react';
+import { IconBottle, IconCheck, IconDownload, IconLayoutGrid, IconLayoutList, IconPlus, IconSearch, IconX } from '@tabler/icons-react';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { useQueryStates } from 'nuqs';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -206,21 +206,42 @@ const CatalogBrowser = ({
           />
         </div>
 
-        {/* Source Filter - Prominent styling to stand out */}
-        <div className="flex items-center gap-2 rounded-lg bg-fill-accent/10 px-3 py-1.5">
-          <Icon icon={IconFilter} size="sm" className="text-text-brand" />
-          <Typography variant="bodyXs" className="text-text-brand font-semibold shrink-0 uppercase tracking-wide">
-            Show:
-          </Typography>
-          <select
-            value={filters.source}
-            onChange={(e) => void setFilters({ source: e.target.value })}
-            className="h-8 rounded-md border-2 border-border-brand bg-background-primary px-3 text-sm font-medium transition-colors focus:border-border-brand focus:outline-none focus:ring-2 focus:ring-fill-accent focus:ring-offset-2"
+        {/* Source Filter Toggle - Prominent button style */}
+        <div className="flex items-center gap-1 rounded-lg border border-border-muted bg-fill-muted p-1">
+          <button
+            type="button"
+            onClick={() => void setFilters({ source: 'local_inventory' })}
+            className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-all duration-200 ${
+              filters.source === 'local_inventory'
+                ? 'bg-green-600 text-white shadow-sm'
+                : 'text-text-muted hover:bg-fill-primary/50 hover:text-text-primary'
+            }`}
           >
-            <option value="">All Products</option>
-            <option value="local_inventory">Local Inventory</option>
-            <option value="cultx">Pre Order</option>
-          </select>
+            <span className={`h-2 w-2 rounded-full ${filters.source === 'local_inventory' ? 'bg-green-300' : 'bg-green-500'}`} />
+            Local Stock
+          </button>
+          <button
+            type="button"
+            onClick={() => void setFilters({ source: '' })}
+            className={`rounded-md px-3 py-1.5 text-sm font-medium transition-all duration-200 ${
+              filters.source === '' || !filters.source
+                ? 'bg-fill-primary text-text-primary shadow-sm'
+                : 'text-text-muted hover:bg-fill-primary/50 hover:text-text-primary'
+            }`}
+          >
+            All Products
+          </button>
+          <button
+            type="button"
+            onClick={() => void setFilters({ source: 'cultx' })}
+            className={`rounded-md px-3 py-1.5 text-sm font-medium transition-all duration-200 ${
+              filters.source === 'cultx'
+                ? 'bg-fill-primary text-text-primary shadow-sm'
+                : 'text-text-muted hover:bg-fill-primary/50 hover:text-text-primary'
+            }`}
+          >
+            Pre-Order
+          </button>
         </div>
 
         {/* Sort Dropdown */}
