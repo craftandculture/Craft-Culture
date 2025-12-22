@@ -40,13 +40,13 @@ const LeadTimeBadge = ({ source }: LeadTimeBadgeProps) => {
   const maxDays = leadTimeMax ?? '21';
 
   return (
-    <div className="inline-flex items-center gap-1 rounded-md bg-fill-secondary px-2 py-0.5 text-[10px] text-text-muted">
-      <IconClock size={12} stroke={2} />
+    <span className="inline-flex items-center gap-1 text-[10px] text-text-tertiary">
+      <IconClock size={10} stroke={1.5} className="opacity-60" />
       <span className="hidden sm:inline">
         {minDays}-{maxDays} days
       </span>
       <span className="sm:hidden">{minDays}d</span>
-    </div>
+    </span>
   );
 };
 
