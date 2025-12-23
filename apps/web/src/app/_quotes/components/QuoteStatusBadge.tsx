@@ -31,6 +31,7 @@ const getStatusColorRole = (
     case 'rejected':
     case 'expired':
     case 'po_confirmed':
+    case 'delivered':
       return 'muted';
 
     // Active workflow - use brand blue
@@ -79,7 +80,9 @@ const getStatusLabel = (status: Quote['status']) => {
     case 'po_submitted':
       return 'PO Submitted';
     case 'po_confirmed':
-      return 'Complete';
+      return 'Order Confirmed';
+    case 'delivered':
+      return 'Delivered';
     case 'accepted':
       return 'Accepted';
     case 'rejected':
