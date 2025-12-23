@@ -58,7 +58,7 @@ const ApiDocsPage = () => {
       <div className="max-w-4xl mx-auto px-4 py-12 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="mb-12">
-          <Typography variant="h1" className="mb-4">
+          <Typography variant="headingXl" className="mb-4">
             Partner API Documentation
           </Typography>
           <Typography variant="bodyLg" colorRole="muted">
@@ -68,11 +68,11 @@ const ApiDocsPage = () => {
 
         {/* Quick Start */}
         <section className="mb-12">
-          <Typography variant="h2" className="mb-4">
+          <Typography variant="headingLg" className="mb-4">
             Quick Start
           </Typography>
           <div className="space-y-4">
-            <Typography variant="body">
+            <Typography variant="bodyMd">
               The Craft & Culture Partner API provides real-time access to our wine inventory.
               Use it to sync product availability, pricing, and stock levels with your POS system.
             </Typography>
@@ -80,7 +80,7 @@ const ApiDocsPage = () => {
               <Typography variant="bodySm" className="font-medium text-text-brand">
                 Base URL
               </Typography>
-              <Typography variant="body" className="font-mono mt-1">
+              <Typography variant="bodyMd" className="font-mono mt-1">
                 https://wine.craftculture.xyz/api/v1
               </Typography>
             </div>
@@ -89,11 +89,11 @@ const ApiDocsPage = () => {
 
         {/* Authentication */}
         <section className="mb-12">
-          <Typography variant="h2" className="mb-4">
+          <Typography variant="headingLg" className="mb-4">
             Authentication
           </Typography>
           <div className="space-y-4">
-            <Typography variant="body">
+            <Typography variant="bodyMd">
               All API requests require a Bearer token in the Authorization header.
               Contact your account manager to obtain an API key.
             </Typography>
@@ -114,11 +114,11 @@ const ApiDocsPage = () => {
 
         {/* Rate Limits */}
         <section className="mb-12">
-          <Typography variant="h2" className="mb-4">
+          <Typography variant="headingLg" className="mb-4">
             Rate Limits
           </Typography>
           <div className="space-y-4">
-            <Typography variant="body">
+            <Typography variant="bodyMd">
               API requests are rate limited to ensure fair usage and system stability.
             </Typography>
             <div className="overflow-hidden rounded-lg border border-border-muted">
@@ -158,7 +158,7 @@ X-RateLimit-Reset: 2025-01-15T10:30:00.000Z`}
 
         {/* Endpoints */}
         <section className="mb-12">
-          <Typography variant="h2" className="mb-4">
+          <Typography variant="headingLg" className="mb-4">
             Endpoints
           </Typography>
           <div className="space-y-4">
@@ -177,7 +177,7 @@ X-RateLimit-Reset: 2025-01-15T10:30:00.000Z`}
 
         {/* List Inventory */}
         <section className="mb-12">
-          <Typography variant="h3" className="mb-4">
+          <Typography variant="headingMd" className="mb-4">
             List Inventory
           </Typography>
           <CodeBlock title="GET /api/v1/inventory">{`curl -X GET "https://wine.craftculture.xyz/api/v1/inventory?limit=50&inStock=true" \\
@@ -261,7 +261,7 @@ X-RateLimit-Reset: 2025-01-15T10:30:00.000Z`}
 
         {/* Get Single Product */}
         <section className="mb-12">
-          <Typography variant="h3" className="mb-4">
+          <Typography variant="headingMd" className="mb-4">
             Get Product by LWIN18
           </Typography>
           <CodeBlock title="GET /api/v1/inventory/:lwin18">{`curl -X GET "https://wine.craftculture.xyz/api/v1/inventory/100209520092019750" \\
@@ -299,7 +299,7 @@ X-RateLimit-Reset: 2025-01-15T10:30:00.000Z`}
 
         {/* Error Responses */}
         <section className="mb-12">
-          <Typography variant="h2" className="mb-4">
+          <Typography variant="headingLg" className="mb-4">
             Error Responses
           </Typography>
           <div className="space-y-4">
@@ -350,10 +350,10 @@ X-RateLimit-Reset: 2025-01-15T10:30:00.000Z`}
 
         {/* Support */}
         <section className="mb-12">
-          <Typography variant="h2" className="mb-4">
+          <Typography variant="headingLg" className="mb-4">
             Support
           </Typography>
-          <Typography variant="body">
+          <Typography variant="bodyMd">
             For API support, technical questions, or to request additional features,
             contact your account manager or email{' '}
             <a
