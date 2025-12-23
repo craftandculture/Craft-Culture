@@ -437,6 +437,7 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
     paid: 'text-text-success',
     po_submitted: 'text-text-brand',
     po_confirmed: 'text-text-success',
+    delivered: 'text-text-muted',
   };
 
   return (
