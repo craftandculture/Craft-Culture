@@ -1,7 +1,24 @@
 'use client';
 
 import type { DialogProps } from '@radix-ui/react-dialog';
-import { IconCalendar, IconCurrencyDollar, IconDownload, IconFileText, IconPaperclip, IconSend, IconUser } from '@tabler/icons-react';
+import {
+  IconArrowRight,
+  IconBox,
+  IconBulb,
+  IconCalendar,
+  IconCheck,
+  IconCreditCard,
+  IconCurrencyDollar,
+  IconDownload,
+  IconFileText,
+  IconMail,
+  IconMapPin,
+  IconPaperclip,
+  IconPhone,
+  IconSend,
+  IconTruck,
+  IconUser,
+} from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { useMemo, useRef, useState } from 'react';
@@ -546,7 +563,7 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                   <Typography variant="bodyXs" className="font-semibold">
                     Margin Configuration
                   </Typography>
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
                     <div>
                       <Typography variant="bodyXs" colorRole="muted">
                         Distributor Margin
@@ -606,9 +623,12 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                 <>
                   <Divider />
                   <div className="rounded-lg border-2 border-border-success bg-fill-success/10 p-4">
-                    <Typography variant="bodySm" className="mb-3 font-semibold text-text-success">
-                      ✓ Quote Confirmed by C&C Team
-                    </Typography>
+                    <div className="mb-3 flex items-center gap-2">
+                      <Icon icon={IconCheck} size="sm" className="text-text-success" />
+                      <Typography variant="bodySm" className="font-semibold text-text-success">
+                        Quote Confirmed by C&C Team
+                      </Typography>
+                    </div>
 
                     {/* Check if any adjustments were made */}
                     {quotePricingData.lineItems.some(
@@ -650,9 +670,12 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                               )}
                               {hasAlternatives && (
                                 <div className="mt-2 pt-2 border-t border-border-muted">
-                                  <Typography variant="bodyXs" className="font-semibold text-text-success mb-2">
-                                    💡 Alternative Options:
-                                  </Typography>
+                                  <div className="mb-2 flex items-center gap-1.5">
+                                    <Icon icon={IconBulb} size="xs" className="text-text-success" />
+                                    <Typography variant="bodyXs" className="font-semibold text-text-success">
+                                      Alternative Options:
+                                    </Typography>
+                                  </div>
                                   <div className="space-y-2">
                                     {pricingItem.adminAlternatives!.map((alt, altIdx) => (
                                       <div key={altIdx} className="ml-4 rounded-md bg-fill-success/10 border border-border-success p-2">
@@ -683,9 +706,12 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
 
                     {quote.deliveryLeadTime && (
                       <div className="mt-3 rounded-lg bg-fill-brand/10 border border-border-brand p-3">
-                        <Typography variant="bodyXs" className="mb-1 font-medium text-text-brand">
-                          🚚 Delivery Lead Time:
-                        </Typography>
+                        <div className="mb-1 flex items-center gap-1.5">
+                          <Icon icon={IconTruck} size="xs" className="text-text-brand" />
+                          <Typography variant="bodyXs" className="font-medium text-text-brand">
+                            Delivery Lead Time:
+                          </Typography>
+                        </div>
                         <Typography variant="bodyXs" className="font-semibold">
                           {quote.deliveryLeadTime}
                         </Typography>
@@ -764,14 +790,15 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                                   {/* Case Configuration */}
                                   {product.productOffers?.[0]?.unitCount && (
                                     <div className="flex items-center gap-2 text-text-muted">
+                                      <Icon icon={IconBox} size="xs" colorRole="muted" />
                                       <Typography variant="bodyXs">
-                                        📦 {product.productOffers?.[0]?.unitCount} bottles × {product.productOffers?.[0]?.unitSize || '750ml'} per case
+                                        {product.productOffers?.[0]?.unitCount} bottles × {product.productOffers?.[0]?.unitSize || '750ml'} per case
                                       </Typography>
                                     </div>
                                   )}
 
                                   {/* Pricing Grid */}
-                                  <div className="grid grid-cols-2 gap-3">
+                                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                                     <div className="space-y-3">
                                       <div>
                                         <Typography variant="bodyXs" colorRole="muted" className="mb-1">
@@ -860,7 +887,7 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                                    quote.status === 'po_confirmed') && (
                                   <div className="mt-2 rounded-lg border-2 border-border-success bg-fill-success/10 p-3">
                                     <div className="flex items-center gap-1.5 mb-3">
-                                      <span className="text-base">💡</span>
+                                      <Icon icon={IconBulb} size="sm" className="text-text-success" />
                                       <Typography variant="bodySm" className="font-bold text-text-success">
                                         Alternative Products Available: ({pricing.adminAlternatives.length})
                                       </Typography>
@@ -883,13 +910,14 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                                               {alt.productName || '[NO PRODUCT NAME]'}
                                             </Typography>
                                             {isAccepted && (
-                                              <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-fill-success text-white text-xs font-bold">
-                                                ✓ Selected
+                                              <span className="inline-flex items-center gap-1 rounded-full bg-fill-success px-2 py-1 text-xs font-bold text-white">
+                                                <IconCheck className="h-3 w-3" />
+                                                Selected
                                               </span>
                                             )}
                                           </div>
 
-                                          <div className="grid grid-cols-3 gap-3 mb-3">
+                                          <div className="grid grid-cols-2 gap-3 mb-3 sm:grid-cols-3">
                                             <div>
                                               <Typography variant="bodyXs" colorRole="muted" className="uppercase tracking-wide mb-1">
                                                 Price /Case
@@ -911,7 +939,7 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                                                 {alt.quantityAvailable || '[NO QTY]'} cases
                                               </Typography>
                                             </div>
-                                            <div>
+                                            <div className="col-span-2 sm:col-span-1">
                                               <Typography variant="bodyXs" colorRole="muted" className="uppercase tracking-wide mb-1">
                                                 Case Config
                                               </Typography>
@@ -1052,10 +1080,11 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                     Your quote has been confirmed. Please submit your Purchase Order to proceed.
                   </Typography>
                   {quote.deliveryLeadTime && (
-                    <div className="rounded-lg bg-white border border-border-brand p-3 mb-4">
+                    <div className="mb-4 rounded-lg border border-border-brand bg-white p-3">
                       <div className="flex items-center gap-2">
+                        <Icon icon={IconTruck} size="xs" className="text-text-brand" />
                         <Typography variant="bodyXs" className="font-semibold text-text-brand">
-                          🚚 Delivery Lead Time:
+                          Delivery Lead Time:
                         </Typography>
                         <Typography variant="bodyXs" className="font-bold">
                           {quote.deliveryLeadTime}
@@ -1093,9 +1122,12 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                             </ButtonContent>
                           </Button>
                           {poDocumentUrl && (
-                            <Typography variant="bodyXs" className="text-text-success">
-                              ✓ Document attached
-                            </Typography>
+                            <span className="inline-flex items-center gap-1 text-text-success">
+                              <Icon icon={IconCheck} size="xs" className="text-text-success" />
+                              <Typography variant="bodyXs" className="text-text-success">
+                                Document attached
+                              </Typography>
+                            </span>
                           )}
                         </div>
                         <input
@@ -1182,13 +1214,13 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
                         {partnerInfo.businessAddress && (
                           <div className="flex items-start gap-1.5">
-                            <span className="flex-shrink-0">📍</span>
+                            <Icon icon={IconMapPin} size="xs" colorRole="muted" className="flex-shrink-0 mt-0.5" />
                             <span className="text-text-muted">{partnerInfo.businessAddress}</span>
                           </div>
                         )}
                         {partnerInfo.businessEmail && (
                           <div className="flex items-center gap-1.5">
-                            <span className="flex-shrink-0">📧</span>
+                            <Icon icon={IconMail} size="xs" colorRole="muted" className="flex-shrink-0" />
                             <a href={`mailto:${partnerInfo.businessEmail}`} className="text-text-brand hover:underline">
                               {partnerInfo.businessEmail}
                             </a>
@@ -1196,7 +1228,7 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                         )}
                         {partnerInfo.businessPhone && (
                           <div className="flex items-center gap-1.5">
-                            <span className="flex-shrink-0">📞</span>
+                            <Icon icon={IconPhone} size="xs" colorRole="muted" className="flex-shrink-0" />
                             <a href={`tel:${partnerInfo.businessPhone}`} className="text-text-brand hover:underline">
                               {partnerInfo.businessPhone}
                             </a>
@@ -1206,15 +1238,19 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                     </div>
                   )}
 
-                  <Typography variant="bodySm" className="mb-3 font-semibold text-text-warning">
-                    💳 Payment Required
-                  </Typography>
+                  <div className="mb-3 flex items-center gap-2">
+                    <Icon icon={IconCreditCard} size="sm" className="text-text-warning" />
+                    <Typography variant="bodySm" className="font-semibold text-text-warning">
+                      Payment Required
+                    </Typography>
+                  </div>
 
                   {quote.deliveryLeadTime && (
                     <div className="mb-4 rounded-lg bg-white border border-border-brand p-3">
                       <div className="flex items-center gap-2">
+                        <Icon icon={IconTruck} size="xs" className="text-text-brand" />
                         <Typography variant="bodyXs" className="font-semibold text-text-brand">
-                          🚚 Delivery Lead Time:
+                          Delivery Lead Time:
                         </Typography>
                         <Typography variant="bodyXs" className="font-bold">
                           {quote.deliveryLeadTime}
@@ -1234,9 +1270,9 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                         rel="noopener noreferrer"
                         className="inline-flex items-center gap-2 rounded-lg bg-fill-brand px-4 py-3 text-white font-semibold hover:bg-fill-brand/90 transition-colors"
                       >
-                        <span>💳</span>
+                        <IconCreditCard className="h-4 w-4" />
                         Pay Now
-                        <span>→</span>
+                        <IconArrowRight className="h-4 w-4" />
                       </a>
                     </div>
                   )}
@@ -1313,9 +1349,12 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
               <>
                 <Divider />
                 <div className="rounded-lg border-2 border-border-success bg-fill-success/10 p-4">
-                  <Typography variant="bodySm" className="mb-2 font-semibold text-text-success">
-                    ✓ Payment Confirmed
-                  </Typography>
+                  <div className="mb-2 flex items-center gap-2">
+                    <Icon icon={IconCheck} size="sm" className="text-text-success" />
+                    <Typography variant="bodySm" className="font-semibold text-text-success">
+                      Payment Confirmed
+                    </Typography>
+                  </div>
                   <Typography variant="bodySm">
                     Your payment has been received. Your order is being processed.
                   </Typography>
@@ -1327,8 +1366,9 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                   {quote.deliveryLeadTime && (
                     <div className="mt-3 rounded-lg bg-white border border-border-brand p-3">
                       <div className="flex items-center gap-2">
+                        <Icon icon={IconTruck} size="xs" className="text-text-brand" />
                         <Typography variant="bodyXs" className="font-semibold text-text-brand">
-                          🚚 Expected Delivery:
+                          Expected Delivery:
                         </Typography>
                         <Typography variant="bodyXs" className="font-bold">
                           {quote.deliveryLeadTime}

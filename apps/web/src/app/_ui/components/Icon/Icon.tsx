@@ -8,6 +8,7 @@ export const iconStyles = tv({
   base: 'shrink-0',
   variants: {
     size: {
+      xs: 'size-2.5',
       sm: 'size-3',
       md: 'size-4',
       lg: 'size-5',

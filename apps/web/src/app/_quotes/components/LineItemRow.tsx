@@ -119,19 +119,19 @@ const LineItemRow = ({
 
   return (
     <div
-      className={`space-y-2 md:space-y-2 ${isDragging ? 'opacity-50' : ''}`}
+      className={`space-y-2 ${isDragging ? 'opacity-50' : ''}`}
     >
-      <div className="flex flex-wrap items-start gap-2 lg:grid lg:grid-cols-12 lg:gap-3">
-        {/* Drag Handle - Hidden on mobile and tablet */}
+      <div className="flex flex-wrap items-start gap-2 md:grid md:grid-cols-12 md:gap-3">
+        {/* Drag Handle - Hidden on mobile */}
         <div
           {...dragHandleProps}
-          className="hidden cursor-grab items-center justify-center active:cursor-grabbing lg:col-span-1 lg:flex"
+          className="hidden cursor-grab items-center justify-center active:cursor-grabbing md:col-span-1 md:flex"
         >
           <Icon icon={IconGripVertical} size="sm" colorRole="muted" />
         </div>
 
         {/* Product Selector */}
-        <div className="min-w-0 w-full lg:col-span-5 lg:w-auto">
+        <div className="min-w-0 w-full md:col-span-5 md:w-auto">
           {product ? (
             <ProductDetailsTooltip product={product}>
               <div>
@@ -155,7 +155,7 @@ const LineItemRow = ({
 
         {/* Vintage Input - Hidden for placeholder */}
         {!isPlaceholder && (
-          <div className="w-24 shrink-0 lg:col-span-1 lg:w-auto">
+          <div className="w-20 shrink-0 md:col-span-1 md:w-auto">
             <Input
               type="text"
               size="md"
@@ -169,60 +169,60 @@ const LineItemRow = ({
 
         {/* Quantity Input - Hidden for placeholder */}
         {!isPlaceholder && (
-          <div className="flex w-full flex-col gap-1 lg:col-span-1 lg:w-auto">
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div>
-                  <Input
-                    className="min-w-0 flex-1"
-                    type="number"
-                    size="md"
-                    min={1}
-                    placeholder="Qty"
-                    value={localQuantity}
-                    onChange={handleQuantityInputChange}
-                    isDisabled={!product}
-                  />
-                </div>
-              </TooltipTrigger>
-              {offer?.availableQuantity !== null && offer?.availableQuantity !== undefined && (
-                <TooltipContent>
-                  {offer.availableQuantity === 0
-                    ? 'Out of stock'
-                    : `${offer.availableQuantity} ${offer.availableQuantity === 1 ? 'case' : 'cases'} in stock`}
-                </TooltipContent>
-              )}
-            </Tooltip>
-          </TooltipProvider>
-          {offer?.availableQuantity !== null && offer?.availableQuantity !== undefined && (
-            <Typography
-              variant="bodyXs"
-              className={`lg:hidden ${
-                localQuantity > offer.availableQuantity
-                  ? 'text-text-warning font-medium'
-                  : 'text-text-muted'
-              }`}
-            >
-              {offer.availableQuantity === 0
-                ? 'Out of stock'
-                : `${offer.availableQuantity} ${offer.availableQuantity === 1 ? 'case' : 'cases'} available`}
-            </Typography>
-          )}
-          {maxQuantity !== Infinity && localQuantity > maxQuantity && offer?.availableQuantity === null && (
-            <Typography
-              variant="bodyXs"
-              className="text-text-warning font-medium"
-            >
-              {localQuantity} requested, {maxQuantity} available
-            </Typography>
-          )}
+          <div className="flex w-20 shrink-0 flex-col gap-1 md:col-span-1 md:w-auto">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div>
+                    <Input
+                      className="min-w-0 flex-1"
+                      type="number"
+                      size="md"
+                      min={1}
+                      placeholder="Qty"
+                      value={localQuantity}
+                      onChange={handleQuantityInputChange}
+                      isDisabled={!product}
+                    />
+                  </div>
+                </TooltipTrigger>
+                {offer?.availableQuantity !== null && offer?.availableQuantity !== undefined && (
+                  <TooltipContent>
+                    {offer.availableQuantity === 0
+                      ? 'Out of stock'
+                      : `${offer.availableQuantity} ${offer.availableQuantity === 1 ? 'case' : 'cases'} in stock`}
+                  </TooltipContent>
+                )}
+              </Tooltip>
+            </TooltipProvider>
+            {offer?.availableQuantity !== null && offer?.availableQuantity !== undefined && (
+              <Typography
+                variant="bodyXs"
+                className={`md:hidden ${
+                  localQuantity > offer.availableQuantity
+                    ? 'text-text-warning font-medium'
+                    : 'text-text-muted'
+                }`}
+              >
+                {offer.availableQuantity === 0
+                  ? 'Out of stock'
+                  : `${offer.availableQuantity} available`}
+              </Typography>
+            )}
+            {maxQuantity !== Infinity && localQuantity > maxQuantity && offer?.availableQuantity === null && (
+              <Typography
+                variant="bodyXs"
+                className="text-text-warning font-medium md:hidden"
+              >
+                {localQuantity} requested, {maxQuantity} available
+              </Typography>
+            )}
           </div>
         )}
 
-        {/* Pack Size - Hidden for placeholder */}
+        {/* Pack Size - Hidden for placeholder and on mobile */}
         {!isPlaceholder && (
-          <div className="hidden lg:col-span-1 lg:flex lg:items-center">
+          <div className="hidden md:col-span-1 md:flex md:items-center">
             {offer && (
               <Typography
                 variant="bodyXs"
@@ -236,100 +236,81 @@ const LineItemRow = ({
 
         {/* Line Price - Hidden for placeholder */}
         {!isPlaceholder && (
-          <div className="flex w-full shrink-0 flex-col gap-1 lg:col-span-1 lg:w-auto lg:flex-row lg:items-center lg:justify-end lg:gap-0">
-          <div className="flex items-center gap-1 lg:hidden">
-            <Typography
-              variant="bodyXs"
-              className="text-text-muted font-medium uppercase leading-none"
-            >
-              Price
-            </Typography>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <span className="inline-flex">
-                    <Icon
-                      icon={IconInfoCircle}
-                      size="sm"
-                      colorRole="muted"
-                    />
-                  </span>
-                </TooltipTrigger>
-                <TooltipContent>
-                  {customerType === 'b2b' ? 'In-Bond UAE' : 'Client Price'}
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </div>
-          {isQuoteLoading ? (
-            <Skeleton className="h-5 w-16" />
-          ) : (
-            <Typography
-              variant="bodySm"
-              className="text-base font-semibold leading-none lg:text-xs lg:font-medium"
-            >
-              {quotePrice !== undefined
-                ? formatPrice(quotePrice, quoteCurrency)
-                : '—'}
-            </Typography>
-          )}
+          <div className="flex shrink-0 flex-col gap-0.5 md:col-span-1 md:w-auto md:flex-row md:items-center md:justify-end md:gap-0">
+            <div className="flex items-center gap-1 md:hidden">
+              <Typography
+                variant="bodyXs"
+                className="text-text-muted font-medium uppercase leading-none"
+              >
+                Price
+              </Typography>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className="inline-flex">
+                      <Icon icon={IconInfoCircle} size="xs" colorRole="muted" />
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {customerType === 'b2b' ? 'In-Bond UAE' : 'Client Price'}
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+            {isQuoteLoading ? (
+              <Skeleton className="h-4 w-16" />
+            ) : (
+              <Typography variant="bodySm" className="font-medium leading-none">
+                {quotePrice !== undefined ? formatPrice(quotePrice, quoteCurrency) : '—'}
+              </Typography>
+            )}
           </div>
         )}
 
         {/* Per Bottle Price - Hidden for placeholder */}
         {!isPlaceholder && (
-          <div className="flex w-full shrink-0 flex-col gap-1 lg:col-span-1 lg:w-auto lg:flex-row lg:items-center lg:justify-end lg:gap-0">
-          <div className="flex items-center gap-1 lg:hidden">
-            <Typography
-              variant="bodyXs"
-              className="text-text-muted font-medium uppercase leading-none"
-            >
-              Per Bottle
-            </Typography>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <span className="inline-flex">
-                    <Icon
-                      icon={IconInfoCircle}
-                      size="sm"
-                      colorRole="muted"
-                    />
-                  </span>
-                </TooltipTrigger>
-                <TooltipContent>
-                  {customerType === 'b2b' ? 'In-Bond UAE' : 'Client Price'}
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </div>
-          {isQuoteLoading ? (
-            <Skeleton className="h-5 w-16" />
-          ) : (
-            <Typography
-              variant="bodySm"
-              className="text-base font-semibold leading-none lg:text-xs lg:font-medium"
-            >
-              {perBottlePrice !== undefined
-                ? formatPrice(perBottlePrice, quoteCurrency)
-                : '—'}
-            </Typography>
-          )}
+          <div className="flex shrink-0 flex-col gap-0.5 md:col-span-1 md:w-auto md:flex-row md:items-center md:justify-end md:gap-0">
+            <div className="flex items-center gap-1 md:hidden">
+              <Typography
+                variant="bodyXs"
+                className="text-text-muted font-medium uppercase leading-none"
+              >
+                Per Bottle
+              </Typography>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className="inline-flex">
+                      <Icon icon={IconInfoCircle} size="xs" colorRole="muted" />
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {customerType === 'b2b' ? 'In-Bond UAE' : 'Client Price'}
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+            {isQuoteLoading ? (
+              <Skeleton className="h-4 w-16" />
+            ) : (
+              <Typography variant="bodySm" className="font-medium leading-none">
+                {perBottlePrice !== undefined ? formatPrice(perBottlePrice, quoteCurrency) : '—'}
+              </Typography>
+            )}
           </div>
         )}
 
         {/* Remove Button */}
-        <div className="flex h-9 w-10 shrink-0 items-center justify-end lg:col-span-1 lg:w-auto lg:justify-center">
+        <div className="flex h-9 shrink-0 items-center justify-end md:col-span-1 md:w-auto md:justify-center">
           <Button
             type="button"
             size="sm"
             shape="circle"
             variant="ghost"
             onClick={onRemove}
-            className="h-11 w-11 lg:h-auto lg:w-auto"
           >
             <ButtonContent>
-              <Icon icon={IconTrash} colorRole="muted" size="md" className="lg:h-4 lg:w-4" />
+              <Icon icon={IconTrash} colorRole="muted" size="sm" />
             </ButtonContent>
           </Button>
         </div>

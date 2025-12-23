@@ -34,6 +34,7 @@ import type { Quote } from '@/database/schema';
 import { useTRPCClient } from '@/lib/trpc/browser';
 
 import QuoteDetailsDialog from './QuoteDetailsDialog';
+import QuoteStatusBadge, { statusNeedsAction } from './QuoteStatusBadge';
 
 type QuoteStatus = Quote['status'];
 
@@ -226,40 +227,13 @@ const QuotesList = () => {
     {
       accessorKey: 'status',
       header: 'Status',
-      cell: ({ row }) => {
-        const status = row.original.status;
-
-        // Status display configuration - MINIMAL COLORS (no traffic lights)
-        // Gray = inactive, Blue = active workflow, Amber = needs attention
-        const statusConfig = {
-          draft: { label: 'Draft', color: 'bg-fill-muted text-text-muted', needsAction: true },
-          sent: { label: 'Sent', color: 'bg-fill-muted text-text-muted', needsAction: true },
-          accepted: { label: 'Accepted', color: 'bg-fill-brand/10 text-text-brand', needsAction: false },
-          rejected: { label: 'Rejected', color: 'bg-fill-muted text-text-muted', needsAction: false },
-          expired: { label: 'Expired', color: 'bg-fill-muted text-text-muted', needsAction: false },
-          buy_request_submitted: { label: 'Pending Review', color: 'bg-fill-brand/10 text-text-brand', needsAction: false },
-          under_cc_review: { label: 'In Review', color: 'bg-fill-brand/10 text-text-brand', needsAction: false },
-          revision_requested: { label: 'Needs Attention', color: 'bg-fill-warning/10 text-text-warning font-semibold border border-border-warning', needsAction: true },
-          cc_confirmed: { label: 'Confirmed', color: 'bg-fill-brand/10 text-text-brand font-semibold', needsAction: true },
-          awaiting_payment: { label: 'Awaiting Payment', color: 'bg-fill-warning/10 text-text-warning font-semibold border border-border-warning', needsAction: true },
-          paid: { label: 'Paid', color: 'bg-fill-brand/10 text-text-brand font-semibold', needsAction: false },
-          po_submitted: { label: 'PO Submitted', color: 'bg-fill-brand/10 text-text-brand', needsAction: false },
-          po_confirmed: { label: 'Complete', color: 'bg-fill-muted text-text-muted', needsAction: false },
-        };
-
-        const config = statusConfig[status];
-
-        return (
-          <div className="flex items-center gap-2">
-            <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs ${config.color}`}>
-              {config.label}
-            </span>
-            {config.needsAction && (
-              <span className="h-2 w-2 rounded-full bg-red-500 animate-pulse" title="Action required" />
-            )}
-          </div>
-        );
-      },
+      cell: ({ row }) => (
+        <QuoteStatusBadge
+          status={row.original.status}
+          size="sm"
+          showActionIndicator
+        />
+      ),
     },
     {
       accessorKey: 'createdAt',
@@ -404,19 +378,13 @@ const QuotesList = () => {
   const filteredQuotes = quotes.filter((quote) => {
     if (activeFilter === 'all') return true;
     if (activeFilter === 'action_required') {
-      return quote.status === 'draft' ||
-        quote.status === 'sent' ||
-        quote.status === 'revision_requested' ||
-        quote.status === 'cc_confirmed' ||
-        quote.status === 'awaiting_payment';
+      return statusNeedsAction(quote.status);
     }
     return quote.status === activeFilter;
   });
 
   // Calculate counts for filter badges
-  const actionRequiredCount = quotes.filter(
-    (q) => q.status === 'draft' || q.status === 'sent' || q.status === 'revision_requested' || q.status === 'cc_confirmed' || q.status === 'awaiting_payment'
-  ).length;
+  const actionRequiredCount = quotes.filter((q) => statusNeedsAction(q.status)).length;
   const inProgressCount = quotes.filter(
     (q) => q.status === 'buy_request_submitted' || q.status === 'under_cc_review' || q.status === 'paid' || q.status === 'po_submitted'
   ).length;
