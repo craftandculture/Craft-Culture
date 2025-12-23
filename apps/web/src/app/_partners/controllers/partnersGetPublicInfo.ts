@@ -19,6 +19,10 @@ const partnersGetPublicInfo = protectedProcedure
       .select({
         id: partners.id,
         businessName: partners.businessName,
+        businessAddress: partners.businessAddress,
+        businessEmail: partners.businessEmail,
+        businessPhone: partners.businessPhone,
+        taxId: partners.taxId,
         logoUrl: partners.logoUrl,
       })
       .from(partners)

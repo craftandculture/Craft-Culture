@@ -58,6 +58,7 @@ const quotesGetManyAdmin = adminProcedure
           id: users.id,
           name: users.name,
           email: users.email,
+          customerType: users.customerType,
         },
       })
       .from(quotes)
