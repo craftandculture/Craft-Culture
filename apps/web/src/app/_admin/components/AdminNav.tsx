@@ -2,6 +2,7 @@
 
 import {
   IconActivity,
+  IconBuildingStore,
   IconFileText,
   IconSettings,
   IconTable,
@@ -32,6 +33,12 @@ const navItems: NavItem[] = [
     href: '/platform/admin/users',
     icon: IconUsers,
     description: 'Approve and manage user accounts',
+  },
+  {
+    label: 'Partners',
+    href: '/platform/admin/partners',
+    icon: IconBuildingStore,
+    description: 'Manage retail partner API access',
   },
   {
     label: 'Activity Feed',
