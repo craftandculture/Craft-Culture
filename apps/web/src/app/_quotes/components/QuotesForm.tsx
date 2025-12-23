@@ -986,6 +986,23 @@ const QuotesForm = () => {
               </Popover>
             </div>
 
+            {/* Save Quote Button - B2C Only */}
+            {customerType === 'b2c' && quoteData && (
+              <>
+                <Divider />
+                <Button
+                  type="button"
+                  variant="default"
+                  colorRole="brand"
+                  size="lg"
+                  onClick={() => setIsSaveDialogOpen(true)}
+                  className="w-full"
+                >
+                  <ButtonContent>Save Quote</ButtonContent>
+                </Button>
+              </>
+            )}
+
             {/* B2B Calculator - B2B Only */}
             {customerType === 'b2b' && quoteData && (
               <>
