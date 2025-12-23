@@ -1,5 +1,18 @@
 import z from 'zod';
 
+const paymentDetailsSchema = z.object({
+  // Bank transfer details
+  bankName: z.string().optional(),
+  accountName: z.string().optional(),
+  accountNumber: z.string().optional(),
+  sortCode: z.string().optional(),
+  iban: z.string().optional(),
+  swiftBic: z.string().optional(),
+  reference: z.string().optional(),
+  // Payment link
+  paymentUrl: z.string().url().optional().or(z.literal('')),
+});
+
 const updatePartnerSchema = z.object({
   partnerId: z.string().uuid(),
   type: z.enum(['retailer', 'sommelier', 'distributor']).optional(),
@@ -11,6 +24,11 @@ const updatePartnerSchema = z.object({
   taxId: z.string().optional(),
   commissionRate: z.number().min(0).max(100).optional(),
   notes: z.string().optional(),
+  // Branding
+  logoUrl: z.string().url().optional().or(z.literal('')),
+  // Payment configuration
+  paymentMethod: z.enum(['bank_transfer', 'link']).optional(),
+  paymentDetails: paymentDetailsSchema.optional(),
 });
 
 export type UpdatePartnerInput = z.infer<typeof updatePartnerSchema>;

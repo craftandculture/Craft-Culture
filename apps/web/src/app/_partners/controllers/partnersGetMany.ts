@@ -58,6 +58,9 @@ const partnersGetMany = adminProcedure
         businessEmail: partners.businessEmail,
         businessPhone: partners.businessPhone,
         commissionRate: partners.commissionRate,
+        logoUrl: partners.logoUrl,
+        paymentMethod: partners.paymentMethod,
+        paymentDetails: partners.paymentDetails,
         createdAt: partners.createdAt,
         userName: users.name,
         userEmail: users.email,
@@ -114,6 +117,18 @@ const partnersGetMany = adminProcedure
       businessEmail: p.businessEmail,
       businessPhone: p.businessPhone,
       commissionRate: p.commissionRate,
+      logoUrl: p.logoUrl,
+      paymentMethod: p.paymentMethod,
+      paymentDetails: p.paymentDetails as {
+        bankName?: string;
+        accountName?: string;
+        accountNumber?: string;
+        sortCode?: string;
+        iban?: string;
+        swiftBic?: string;
+        reference?: string;
+        paymentUrl?: string;
+      } | null,
       createdAt: p.createdAt,
       user: {
         name: p.userName ?? 'Unknown',

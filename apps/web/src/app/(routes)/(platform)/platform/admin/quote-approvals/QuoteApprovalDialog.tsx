@@ -261,15 +261,22 @@ const QuoteApprovalDialog = ({
         throw new Error('Licensed partner is required');
       }
 
-      // Validate payment details based on method
-      if (paymentMethod === 'bank_transfer') {
-        if (!paymentDetails.accountName || !paymentDetails.iban) {
-          toast.error('Please provide bank account details (at minimum account name and IBAN)');
+      // Check that partner has payment configuration
+      const partner = partnersData?.find((p) => p.id === selectedPartnerId);
+      if (!partner?.paymentMethod || !partner?.paymentDetails) {
+        toast.error('Selected partner has no payment configuration. Please configure payment in Partner Management first.');
+        throw new Error('Partner payment config required');
+      }
+
+      // Validate payment details based on method (from partner config)
+      if (partner.paymentMethod === 'bank_transfer') {
+        if (!partner.paymentDetails.accountName || !partner.paymentDetails.iban) {
+          toast.error('Partner bank details incomplete. Please update in Partner Management.');
           throw new Error('Bank details required');
         }
-      } else if (paymentMethod === 'link') {
-        if (!paymentDetails.paymentUrl) {
-          toast.error('Please provide a payment link URL');
+      } else if (partner.paymentMethod === 'link') {
+        if (!partner.paymentDetails.paymentUrl) {
+          toast.error('Partner payment link not configured. Please update in Partner Management.');
           throw new Error('Payment URL required');
         }
       }
@@ -376,6 +383,23 @@ const QuoteApprovalDialog = ({
       setLineItemAdjustments(initialAdjustments);
     }
   }, [quote, lineItems, pricingMap, lineItemAdjustments]);
+
+  // Auto-populate payment details when partner is selected
+  useEffect(() => {
+    if (selectedPartnerId && partnersData) {
+      const selectedPartner = partnersData.find((p) => p.id === selectedPartnerId);
+      if (selectedPartner?.paymentMethod && selectedPartner?.paymentDetails) {
+        setPaymentMethod(selectedPartner.paymentMethod);
+        setPaymentDetails(selectedPartner.paymentDetails);
+      }
+    }
+  }, [selectedPartnerId, partnersData]);
+
+  // Get selected partner details for display
+  const selectedPartner = useMemo(() => {
+    if (!selectedPartnerId || !partnersData) return null;
+    return partnersData.find((p) => p.id === selectedPartnerId);
+  }, [selectedPartnerId, partnersData]);
 
   if (!quote) return null;
 
@@ -1119,7 +1143,7 @@ const QuoteApprovalDialog = ({
                     <option value="">Select a partner...</option>
                     {partnersData?.map((partner) => (
                       <option key={partner.id} value={partner.id}>
-                        {partner.businessName}
+                        {partner.businessName} {partner.paymentMethod ? `(${partner.paymentMethod === 'bank_transfer' ? '🏦 Bank' : '🔗 Link'})` : '⚠️ No payment config'}
                       </option>
                     ))}
                   </select>
@@ -1128,157 +1152,99 @@ const QuoteApprovalDialog = ({
                   </Typography>
                 </div>
 
-                {/* Payment Method Selection */}
-                <div className="rounded-lg bg-white p-5 border border-border-muted">
-                  <Typography variant="bodySm" className="mb-3 font-semibold">
-                    Payment Method <span className="text-text-danger text-base">*</span>
-                  </Typography>
-                  <div className="flex gap-4">
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="radio"
-                        name="paymentMethod"
-                        value="bank_transfer"
-                        checked={paymentMethod === 'bank_transfer'}
-                        onChange={() => setPaymentMethod('bank_transfer')}
-                        className="h-4 w-4 text-fill-brand"
-                      />
-                      <span className="text-sm font-medium">Bank Transfer</span>
-                    </label>
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="radio"
-                        name="paymentMethod"
-                        value="link"
-                        checked={paymentMethod === 'link'}
-                        onChange={() => setPaymentMethod('link')}
-                        className="h-4 w-4 text-fill-brand"
-                      />
-                      <span className="text-sm font-medium">Payment Link</span>
-                    </label>
-                  </div>
-                </div>
-
-                {/* Payment Details Form */}
-                <div className="rounded-lg bg-white p-5 border border-border-muted">
-                  <Typography variant="bodySm" className="mb-3 font-semibold">
-                    Payment Details <span className="text-text-danger text-base">*</span>
-                  </Typography>
-
-                  {paymentMethod === 'bank_transfer' ? (
-                    <div className="space-y-4">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <Typography variant="bodyXs" className="mb-1 font-medium">
-                            Bank Name
-                          </Typography>
-                          <Input
-                            type="text"
-                            value={paymentDetails.bankName || ''}
-                            onChange={(e) => setPaymentDetails({ ...paymentDetails, bankName: e.target.value })}
-                            placeholder="e.g., First National Bank"
-                            className="border-2"
-                          />
-                        </div>
-                        <div>
-                          <Typography variant="bodyXs" className="mb-1 font-medium">
-                            Account Name <span className="text-text-danger">*</span>
-                          </Typography>
-                          <Input
-                            type="text"
-                            value={paymentDetails.accountName || ''}
-                            onChange={(e) => setPaymentDetails({ ...paymentDetails, accountName: e.target.value })}
-                            placeholder="e.g., Partner Wine Ltd"
-                            className="border-2"
-                          />
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <Typography variant="bodyXs" className="mb-1 font-medium">
-                            IBAN <span className="text-text-danger">*</span>
-                          </Typography>
-                          <Input
-                            type="text"
-                            value={paymentDetails.iban || ''}
-                            onChange={(e) => setPaymentDetails({ ...paymentDetails, iban: e.target.value })}
-                            placeholder="e.g., GB82 WEST 1234 5678 90"
-                            className="border-2"
-                          />
-                        </div>
-                        <div>
-                          <Typography variant="bodyXs" className="mb-1 font-medium">
-                            SWIFT/BIC
-                          </Typography>
-                          <Input
-                            type="text"
-                            value={paymentDetails.swiftBic || ''}
-                            onChange={(e) => setPaymentDetails({ ...paymentDetails, swiftBic: e.target.value })}
-                            placeholder="e.g., WESTGB2L"
-                            className="border-2"
-                          />
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <Typography variant="bodyXs" className="mb-1 font-medium">
-                            Account Number
-                          </Typography>
-                          <Input
-                            type="text"
-                            value={paymentDetails.accountNumber || ''}
-                            onChange={(e) => setPaymentDetails({ ...paymentDetails, accountNumber: e.target.value })}
-                            placeholder="e.g., 12345678"
-                            className="border-2"
-                          />
-                        </div>
-                        <div>
-                          <Typography variant="bodyXs" className="mb-1 font-medium">
-                            Sort Code
-                          </Typography>
-                          <Input
-                            type="text"
-                            value={paymentDetails.sortCode || ''}
-                            onChange={(e) => setPaymentDetails({ ...paymentDetails, sortCode: e.target.value })}
-                            placeholder="e.g., 12-34-56"
-                            className="border-2"
-                          />
-                        </div>
-                      </div>
-                      <div>
-                        <Typography variant="bodyXs" className="mb-1 font-medium">
-                          Payment Reference
-                        </Typography>
-                        <Input
-                          type="text"
-                          value={paymentDetails.reference || quote.name}
-                          onChange={(e) => setPaymentDetails({ ...paymentDetails, reference: e.target.value })}
-                          placeholder="Payment reference for customer"
-                          className="border-2"
+                {/* Show selected partner's payment configuration */}
+                {selectedPartner && selectedPartner.paymentMethod && selectedPartner.paymentDetails && (
+                  <div className="rounded-lg bg-gradient-to-br from-fill-brand/5 to-fill-brand/10 p-5 border-2 border-border-brand/30">
+                    <div className="flex items-center gap-3 mb-4">
+                      {selectedPartner.logoUrl && (
+                        <img
+                          src={selectedPartner.logoUrl}
+                          alt={selectedPartner.businessName}
+                          className="h-12 w-12 object-contain rounded-lg bg-white border border-border-muted p-1"
                         />
-                        <Typography variant="bodyXs" colorRole="muted" className="mt-1">
-                          Customer will use this reference when making payment
+                      )}
+                      <div>
+                        <Typography variant="bodySm" className="font-bold text-text-brand">
+                          {selectedPartner.businessName}
+                        </Typography>
+                        <Typography variant="bodyXs" colorRole="muted">
+                          {selectedPartner.paymentMethod === 'bank_transfer' ? '🏦 Bank Transfer' : '🔗 Payment Link'}
                         </Typography>
                       </div>
                     </div>
-                  ) : (
-                    <div>
-                      <Typography variant="bodyXs" className="mb-1 font-medium">
-                        Payment Link URL <span className="text-text-danger">*</span>
-                      </Typography>
-                      <Input
-                        type="url"
-                        value={paymentDetails.paymentUrl || ''}
-                        onChange={(e) => setPaymentDetails({ ...paymentDetails, paymentUrl: e.target.value })}
-                        placeholder="https://partner.com/pay/..."
-                        className="border-2"
-                      />
-                      <Typography variant="bodyXs" colorRole="muted" className="mt-1">
-                        Customer will be redirected to this URL to complete payment
-                      </Typography>
+
+                    {selectedPartner.paymentMethod === 'bank_transfer' && (
+                      <div className="rounded-lg bg-white p-4 border border-border-muted space-y-2">
+                        <Typography variant="bodyXs" className="font-semibold text-text-muted uppercase tracking-wide">
+                          Bank Account Details
+                        </Typography>
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+                          {selectedPartner.paymentDetails.bankName && (
+                            <>
+                              <span className="text-text-muted">Bank:</span>
+                              <span className="font-medium">{selectedPartner.paymentDetails.bankName}</span>
+                            </>
+                          )}
+                          {selectedPartner.paymentDetails.accountName && (
+                            <>
+                              <span className="text-text-muted">Account:</span>
+                              <span className="font-medium">{selectedPartner.paymentDetails.accountName}</span>
+                            </>
+                          )}
+                          {selectedPartner.paymentDetails.iban && (
+                            <>
+                              <span className="text-text-muted">IBAN:</span>
+                              <span className="font-mono font-medium">{selectedPartner.paymentDetails.iban}</span>
+                            </>
+                          )}
+                          {selectedPartner.paymentDetails.swiftBic && (
+                            <>
+                              <span className="text-text-muted">SWIFT:</span>
+                              <span className="font-mono font-medium">{selectedPartner.paymentDetails.swiftBic}</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {selectedPartner.paymentMethod === 'link' && selectedPartner.paymentDetails.paymentUrl && (
+                      <div className="rounded-lg bg-white p-4 border border-border-muted">
+                        <Typography variant="bodyXs" className="font-semibold text-text-muted uppercase tracking-wide mb-2">
+                          Payment Link
+                        </Typography>
+                        <a
+                          href={selectedPartner.paymentDetails.paymentUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm text-text-brand hover:underline break-all"
+                        >
+                          {selectedPartner.paymentDetails.paymentUrl}
+                        </a>
+                      </div>
+                    )}
+
+                    <Typography variant="bodyXs" colorRole="muted" className="mt-3">
+                      ✓ Payment details will be sent to customer automatically
+                    </Typography>
+                  </div>
+                )}
+
+                {/* Warning if partner has no payment config */}
+                {selectedPartner && !selectedPartner.paymentMethod && (
+                  <div className="rounded-lg bg-fill-warning/10 p-4 border border-border-warning">
+                    <div className="flex items-start gap-3">
+                      <span className="text-xl">⚠️</span>
+                      <div>
+                        <Typography variant="bodySm" className="font-semibold text-text-warning">
+                          Partner has no payment configuration
+                        </Typography>
+                        <Typography variant="bodyXs" colorRole="muted" className="mt-1">
+                          Please configure payment details for this partner in the Partners management page before approving quotes.
+                        </Typography>
+                      </div>
                     </div>
-                  )}
-                </div>
+                  </div>
+                )}
 
                 {/* Delivery Lead Time */}
                 <div className="rounded-lg bg-white p-5 border border-border-muted">

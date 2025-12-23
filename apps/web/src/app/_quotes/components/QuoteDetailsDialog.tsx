@@ -87,6 +87,14 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
     enabled: !!quote,
   });
 
+  // Fetch partner info for payment display
+  const { data: partnerInfo } = useQuery({
+    ...api.partners.getPublicInfo.queryOptions({
+      partnerId: currentQuote?.licensedPartnerId ?? '',
+    }),
+    enabled: !!currentQuote?.licensedPartnerId && open,
+  });
+
   // Extract unique product IDs from line items
   const productIds = useMemo(
     () => [...new Set(lineItems.map((item) => item.productId))],
@@ -1145,6 +1153,29 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
               <>
                 <Divider />
                 <div className="rounded-lg border-2 border-border-warning bg-fill-warning/10 p-4">
+                  {/* Partner Branding */}
+                  {partnerInfo && (
+                    <div className="mb-4 pb-4 border-b border-border-muted">
+                      <div className="flex items-center gap-3">
+                        {partnerInfo.logoUrl && (
+                          <img
+                            src={partnerInfo.logoUrl}
+                            alt={partnerInfo.businessName}
+                            className="h-12 w-12 object-contain rounded-lg border border-border-muted bg-white"
+                          />
+                        )}
+                        <div>
+                          <Typography variant="bodyXs" colorRole="muted">
+                            Licensed Partner
+                          </Typography>
+                          <Typography variant="bodySm" className="font-semibold">
+                            {partnerInfo.businessName}
+                          </Typography>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   <Typography variant="bodySm" className="mb-3 font-semibold text-text-warning">
                     💳 Payment Required
                   </Typography>
