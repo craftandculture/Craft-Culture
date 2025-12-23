@@ -18,8 +18,7 @@ const createPartnerSchema = z.object({
   taxId: z.string().min(1, 'TRN/Tax ID is required'),
   // Branding
   logoUrl: z.string().url().optional().or(z.literal('')),
-  // Payment configuration
-  paymentMethod: z.enum(['bank_transfer', 'link']).optional(),
+  // Payment configuration (partner can have both bank transfer AND payment link)
   paymentDetails: z
     .object({
       bankName: z.string().optional(),
