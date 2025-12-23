@@ -1,8 +1,8 @@
-import { desc, eq, ilike, or, sql } from 'drizzle-orm';
+import { and, desc, eq, ilike, or, sql } from 'drizzle-orm';
 import z from 'zod';
 
 import db from '@/database/client';
-import { partners, users } from '@/database/schema';
+import { partnerApiKeys, partners, users } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
 /**
@@ -69,21 +69,61 @@ const partnersGetMany = adminProcedure
       .limit(limit + 1)
       .offset(cursor);
 
-    const [countResult] = await db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(partners)
-      .where(whereClause);
+    // Fetch API keys for all partners
+    const partnerIds = partnersResult.map((p) => p.id);
+    const apiKeys =
+      partnerIds.length > 0
+        ? await db
+            .select({
+              id: partnerApiKeys.id,
+              partnerId: partnerApiKeys.partnerId,
+              name: partnerApiKeys.name,
+              keyPrefix: partnerApiKeys.keyPrefix,
+              isRevoked: partnerApiKeys.isRevoked,
+              createdAt: partnerApiKeys.createdAt,
+            })
+            .from(partnerApiKeys)
+            .where(
+              and(
+                sql`${partnerApiKeys.partnerId} IN ${partnerIds}`,
+                eq(partnerApiKeys.isRevoked, false),
+              ),
+            )
+            .orderBy(desc(partnerApiKeys.createdAt))
+        : [];
 
-    const nextCursor =
-      partnersResult.length > limit ? cursor + limit : undefined;
-
-    return {
-      data: partnersResult.slice(0, limit),
-      meta: {
-        nextCursor,
-        totalCount: countResult?.count ?? 0,
+    // Group API keys by partner
+    const apiKeysByPartner = apiKeys.reduce(
+      (acc, key) => {
+        if (!acc[key.partnerId]) {
+          acc[key.partnerId] = [];
+        }
+        acc[key.partnerId]!.push(key);
+        return acc;
       },
-    };
+      {} as Record<string, typeof apiKeys>,
+    );
+
+    // Transform results to include user object and API keys
+    const transformedData = partnersResult.slice(0, limit).map((p) => ({
+      id: p.id,
+      userId: p.userId,
+      type: p.type,
+      status: p.status,
+      businessName: p.businessName,
+      businessEmail: p.businessEmail,
+      businessPhone: p.businessPhone,
+      commissionRate: p.commissionRate,
+      createdAt: p.createdAt,
+      user: {
+        name: p.userName ?? 'Unknown',
+        email: p.userEmail ?? '',
+      },
+      apiKeys: apiKeysByPartner[p.id] ?? [],
+      apiKeyCount: (apiKeysByPartner[p.id] ?? []).length,
+    }));
+
+    return transformedData;
   });
 
 export type PartnersGetManyOutput = Awaited<ReturnType<typeof partnersGetMany>>;
