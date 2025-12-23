@@ -8,6 +8,7 @@ import {
   IconFileText,
   IconSearch,
   IconSend,
+  IconTruck,
 } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import type { ColumnDef } from '@tanstack/react-table';
@@ -42,7 +43,8 @@ const statusFilters: StatusFilter[] = [
   { label: 'Awaiting Payment', value: 'awaiting_payment', icon: IconClock, color: 'text-text-warning' },
   { label: 'Paid', value: 'paid', icon: IconCheck, color: 'text-text-success' },
   { label: 'PO Submitted', value: 'po_submitted', icon: IconFileText, color: 'text-text-brand' },
-  { label: 'Confirmed Orders', value: 'po_confirmed', icon: IconCheck, color: 'text-text-muted' },
+  { label: 'Confirmed Orders', value: 'po_confirmed', icon: IconCheck, color: 'text-text-brand' },
+  { label: 'Delivered', value: 'delivered', icon: IconTruck, color: 'text-text-muted' },
 ];
 
 /**

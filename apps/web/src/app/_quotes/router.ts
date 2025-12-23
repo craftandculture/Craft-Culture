@@ -9,6 +9,7 @@ import quotesGet from './controller/quotesGet';
 import quotesGetMany from './controller/quotesGetMany';
 import quotesGetManyAdmin from './controller/quotesGetManyAdmin';
 import quotesGetOne from './controller/quotesGetOne';
+import quotesMarkAsDelivered from './controller/quotesMarkAsDelivered';
 import quotesMarkAsPaid from './controller/quotesMarkAsPaid';
 import quotesRequestRevision from './controller/quotesRequestRevision';
 import quotesSave from './controller/quotesSave';
@@ -37,6 +38,7 @@ const quotesRouter = createTRPCRouter({
   uploadPODocument: quotesUploadPODocument,
   acceptAlternative: quotesAcceptAlternative,
   markAsPaid: quotesMarkAsPaid,
+  markAsDelivered: quotesMarkAsDelivered,
 });
 
 export default quotesRouter;

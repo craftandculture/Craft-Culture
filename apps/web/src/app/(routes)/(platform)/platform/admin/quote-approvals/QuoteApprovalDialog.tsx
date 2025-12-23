@@ -9,6 +9,7 @@ import {
   IconPlayerPlay,
   IconPlus,
   IconTrash,
+  IconTruck,
 } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
@@ -422,6 +423,26 @@ const QuoteApprovalDialog = ({
     onError: (error) => {
       toast.error(
         `Failed to delete quote: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      );
+    },
+  });
+
+  // Mark as Delivered mutation
+  const markAsDeliveredMutation = useMutation({
+    mutationFn: async () => {
+      if (!quote) return;
+      return trpcClient.quotes.markAsDelivered.mutate({
+        quoteId: quote.id,
+      });
+    },
+    onSuccess: () => {
+      toast.success('Order marked as delivered');
+      void queryClient.invalidateQueries({ queryKey: ['admin-quotes'] });
+      if (onOpenChange) onOpenChange(false);
+    },
+    onError: (error) => {
+      toast.error(
+        `Failed to mark as delivered: ${error instanceof Error ? error.message : 'Unknown error'}`,
       );
     },
   });
@@ -1730,6 +1751,91 @@ const QuoteApprovalDialog = ({
                     {markAsPaidMutation.isPending ? 'Updating...' : 'Confirm Payment Received'}
                   </ButtonContent>
                 </Button>
+              </div>
+            )}
+
+            {/* Ready for Delivery Action - Shows for paid (B2C) or po_confirmed (B2B) */}
+            {(quote.status === 'paid' || quote.status === 'po_confirmed') && (
+              <div className="rounded-lg border-2 border-border-brand bg-fill-brand/5 p-6">
+                <div className="flex items-start gap-3 mb-5">
+                  <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-fill-brand text-text-brand-contrast">
+                    <IconTruck size={20} />
+                  </div>
+                  <div className="flex-1">
+                    <Typography variant="bodyLg" className="font-semibold mb-1 text-text-brand">
+                      {quote.status === 'paid' ? 'Payment Confirmed' : 'Purchase Order Confirmed'}
+                    </Typography>
+                    <Typography variant="bodySm" colorRole="muted">
+                      {quote.status === 'paid'
+                        ? 'Customer has paid. Mark as delivered once the order has been fulfilled.'
+                        : 'PO has been confirmed. Mark as delivered once the order has been fulfilled.'}
+                    </Typography>
+                  </div>
+                </div>
+
+                {/* Order Summary */}
+                <div className="mb-5 rounded-lg bg-white p-4 border border-border-muted">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Typography variant="bodyXs" className="font-semibold text-text-muted uppercase tracking-wide mb-1">
+                        Order Total
+                      </Typography>
+                      <Typography variant="bodyLg" className="font-bold text-text-brand">
+                        {quote.currency} {(quote.currency === 'AED' ? quote.totalAed : quote.totalUsd)?.toLocaleString('en-US', {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}
+                      </Typography>
+                    </div>
+                    {quote.deliveryLeadTime && (
+                      <div>
+                        <Typography variant="bodyXs" className="font-semibold text-text-muted uppercase tracking-wide mb-1">
+                          Delivery Lead Time
+                        </Typography>
+                        <Typography variant="bodySm" className="font-medium">
+                          {quote.deliveryLeadTime}
+                        </Typography>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <Button
+                  variant="default"
+                  colorRole="brand"
+                  size="lg"
+                  onClick={() => markAsDeliveredMutation.mutate()}
+                  isDisabled={markAsDeliveredMutation.isPending}
+                  className="w-full sm:w-auto font-semibold"
+                >
+                  <ButtonContent iconLeft={IconTruck}>
+                    {markAsDeliveredMutation.isPending ? 'Updating...' : 'Mark as Delivered'}
+                  </ButtonContent>
+                </Button>
+              </div>
+            )}
+
+            {/* Delivered State - Display only */}
+            {quote.status === 'delivered' && (
+              <div className="rounded-lg border-2 border-border-muted bg-fill-muted/30 p-6">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-fill-muted">
+                    <IconTruck size={20} className="text-text-muted" />
+                  </div>
+                  <div className="flex-1">
+                    <Typography variant="bodyLg" className="font-semibold mb-1">
+                      Order Delivered
+                    </Typography>
+                    <Typography variant="bodySm" colorRole="muted">
+                      This order has been completed and delivered to the customer.
+                    </Typography>
+                    {quote.deliveredAt && (
+                      <Typography variant="bodySm" colorRole="muted" className="mt-2">
+                        Delivered on {format(new Date(quote.deliveredAt), 'MMM d, yyyy')}
+                      </Typography>
+                    )}
+                  </div>
+                </div>
               </div>
             )}
           </div>

@@ -48,6 +48,7 @@ export const quoteStatus = pgEnum('quote_status', [
   'paid',
   'po_submitted',
   'po_confirmed',
+  'delivered',
 ]);
 
 export const paymentMethod = pgEnum('payment_method', ['bank_transfer', 'link']);
@@ -451,6 +452,10 @@ export const quotes = pgTable(
     }>(),
     paidAt: timestamp('paid_at', { mode: 'date' }),
     paidConfirmedBy: uuid('paid_confirmed_by').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+    deliveredAt: timestamp('delivered_at', { mode: 'date' }),
+    deliveredConfirmedBy: uuid('delivered_confirmed_by').references(() => users.id, {
       onDelete: 'set null',
     }),
     ...timestamps,
