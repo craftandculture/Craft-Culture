@@ -6,6 +6,7 @@ import type { Quote } from '@/database/schema';
 export interface QuoteStatusBadgeProps {
   status: Quote['status'];
   size?: 'xs' | 'sm' | 'md';
+  showActionIndicator?: boolean;
 }
 
 /**
@@ -29,7 +30,7 @@ const getStatusColorRole = (
     case 'sent':
     case 'rejected':
     case 'expired':
-    case 'po_confirmed':  // Complete, no action needed
+    case 'po_confirmed':
       return 'muted';
 
     // Active workflow - use brand blue
@@ -38,10 +39,12 @@ const getStatusColorRole = (
     case 'cc_confirmed':
     case 'po_submitted':
     case 'accepted':
+    case 'paid':
       return 'brand';
 
-    // Needs attention - use warning amber (not alarming red)
+    // Needs attention - use warning amber
     case 'revision_requested':
+    case 'awaiting_payment':
       return 'warning';
 
     default:
@@ -50,7 +53,7 @@ const getStatusColorRole = (
 };
 
 /**
- * Get the display label for a quote status - simplified and clearer
+ * Get the display label for a quote status
  *
  * @param status - The quote status
  * @returns The human-readable label
@@ -69,6 +72,10 @@ const getStatusLabel = (status: Quote['status']) => {
       return 'Needs Attention';
     case 'cc_confirmed':
       return 'Confirmed';
+    case 'awaiting_payment':
+      return 'Awaiting Payment';
+    case 'paid':
+      return 'Paid';
     case 'po_submitted':
       return 'PO Submitted';
     case 'po_confirmed':
@@ -85,21 +92,51 @@ const getStatusLabel = (status: Quote['status']) => {
 };
 
 /**
- * Display a badge showing the current status of a quote with minimal, consistent colors
+ * Check if a status requires user action
  *
- * REDESIGNED to eliminate "traffic light" effect:
- * - Reduced from 7 colors to just 3 (gray, blue, amber)
- * - Clearer, shorter labels
- * - Consistent visual language
+ * @param status - The quote status
+ * @returns Whether the status needs action
+ */
+export const statusNeedsAction = (status: Quote['status']): boolean => {
+  return (
+    status === 'draft' ||
+    status === 'sent' ||
+    status === 'revision_requested' ||
+    status === 'cc_confirmed' ||
+    status === 'awaiting_payment'
+  );
+};
+
+/**
+ * Display a badge showing the current status of a quote
+ *
+ * Design: Minimal color palette (gray, blue, amber)
+ * - Gray = inactive/complete
+ * - Blue = active workflow
+ * - Amber = needs attention
  *
  * @example
- *   <QuoteStatusBadge status="under_cc_review" size="sm" />
+ *   <QuoteStatusBadge status="under_cc_review" size="sm" showActionIndicator />
  */
-const QuoteStatusBadge = ({ status, size = 'md' }: QuoteStatusBadgeProps) => {
+const QuoteStatusBadge = ({
+  status,
+  size = 'md',
+  showActionIndicator = false,
+}: QuoteStatusBadgeProps) => {
+  const needsAction = statusNeedsAction(status);
+
   return (
-    <Badge colorRole={getStatusColorRole(status)} size={size}>
-      {getStatusLabel(status)}
-    </Badge>
+    <div className="flex items-center gap-2">
+      <Badge colorRole={getStatusColorRole(status)} size={size}>
+        {getStatusLabel(status)}
+      </Badge>
+      {showActionIndicator && needsAction && (
+        <span
+          className="h-2 w-2 shrink-0 animate-pulse rounded-full bg-red-500"
+          title="Action required"
+        />
+      )}
+    </div>
   );
 };
 

@@ -283,8 +283,8 @@ const SaveQuoteDialog = ({
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 disabled={isSaving}
-                rows={4}
-                className="w-full min-h-[100px] rounded-md border border-border-muted bg-background-primary px-3 py-2 text-sm transition-colors placeholder:text-text-muted focus:border-border-brand focus:outline-none focus:ring-2 focus:ring-fill-accent focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                rows={3}
+                className="min-h-[80px] w-full resize-none rounded-lg border border-b-2 border-border-primary bg-fill-primary px-2.5 py-2 text-sm font-medium tracking-tight text-text-primary transition-all duration-200 placeholder:text-text-muted/60 hover:border-border-primary-hover focus:shadow-sm focus:outline-none focus:ring-2 focus:ring-border-primary disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50"
               />
             </div>
 
