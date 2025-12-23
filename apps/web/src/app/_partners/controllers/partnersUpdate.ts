@@ -49,8 +49,6 @@ const partnersUpdate = adminProcedure
     if (updateData.notes !== undefined) updates.notes = updateData.notes;
     if (updateData.logoUrl !== undefined)
       updates.logoUrl = updateData.logoUrl || null;
-    if (updateData.paymentMethod !== undefined)
-      updates.paymentMethod = updateData.paymentMethod;
     if (updateData.paymentDetails !== undefined)
       updates.paymentDetails = updateData.paymentDetails;
 

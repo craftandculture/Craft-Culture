@@ -6,6 +6,7 @@ import {
   IconCreditCard,
   IconExternalLink,
   IconKey,
+  IconLock,
   IconMapPin,
   IconPhone,
   IconPhoto,
@@ -42,7 +43,6 @@ import useTRPC from '@/lib/trpc/browser';
 
 type PartnerType = 'retailer' | 'sommelier' | 'distributor';
 type PartnerStatus = 'active' | 'inactive' | 'suspended';
-type PaymentMethod = 'bank_transfer' | 'link';
 
 interface PaymentDetails {
   bankName?: string;
@@ -81,7 +81,8 @@ const PartnersPage = () => {
     businessEmail: '',
     taxId: '',
     logoUrl: '',
-    paymentMethod: null as PaymentMethod | null,
+    enableBankTransfer: false,
+    enablePaymentLink: false,
     paymentDetails: {} as PaymentDetails,
     commissionRate: 0,
   });
@@ -102,7 +103,8 @@ const PartnersPage = () => {
     businessEmail: string;
     taxId: string;
     logoUrl: string;
-    paymentMethod: PaymentMethod | null;
+    enableBankTransfer: boolean;
+    enablePaymentLink: boolean;
     paymentDetails: PaymentDetails | null;
     commissionRate: number;
   } | null>(null);
@@ -129,7 +131,8 @@ const PartnersPage = () => {
           businessEmail: '',
           taxId: '',
           logoUrl: '',
-          paymentMethod: null,
+          enableBankTransfer: false,
+          enablePaymentLink: false,
           paymentDetails: {},
           commissionRate: 0,
         });
@@ -161,6 +164,15 @@ const PartnersPage = () => {
   // Revoke API key mutation
   const { mutate: revokeApiKey, isPending: isRevoking } = useMutation(
     api.partners.apiKeys.revoke.mutationOptions({
+      onSuccess: () => {
+        void refetch();
+      },
+    }),
+  );
+
+  // Delete API key mutation
+  const { mutate: deleteApiKey, isPending: isDeleting } = useMutation(
+    api.partners.apiKeys.delete.mutationOptions({
       onSuccess: () => {
         void refetch();
       },
@@ -221,6 +233,14 @@ const PartnersPage = () => {
   };
 
   const handleEditPartner = (partner: (typeof partners)[0]) => {
+    // Infer enabled payment methods from paymentDetails
+    const hasBankDetails = !!(
+      partner.paymentDetails?.bankName ||
+      partner.paymentDetails?.iban ||
+      partner.paymentDetails?.accountNumber
+    );
+    const hasPaymentLink = !!partner.paymentDetails?.paymentUrl;
+
     setEditingPartner({
       id: partner.id,
       businessName: partner.businessName,
@@ -229,7 +249,8 @@ const PartnersPage = () => {
       businessEmail: partner.businessEmail || '',
       taxId: partner.taxId || '',
       logoUrl: partner.logoUrl || '',
-      paymentMethod: partner.paymentMethod,
+      enableBankTransfer: hasBankDetails,
+      enablePaymentLink: hasPaymentLink,
       paymentDetails: partner.paymentDetails,
       commissionRate: partner.commissionRate,
     });
@@ -238,6 +259,20 @@ const PartnersPage = () => {
 
   const handleSavePartner = () => {
     if (!editingPartner) return;
+
+    // Build payment details based on enabled methods
+    const paymentDetails: PaymentDetails = {};
+    if (editingPartner.enableBankTransfer && editingPartner.paymentDetails) {
+      paymentDetails.bankName = editingPartner.paymentDetails.bankName;
+      paymentDetails.accountName = editingPartner.paymentDetails.accountName;
+      paymentDetails.accountNumber = editingPartner.paymentDetails.accountNumber;
+      paymentDetails.iban = editingPartner.paymentDetails.iban;
+      paymentDetails.swiftBic = editingPartner.paymentDetails.swiftBic;
+    }
+    if (editingPartner.enablePaymentLink && editingPartner.paymentDetails) {
+      paymentDetails.paymentUrl = editingPartner.paymentDetails.paymentUrl;
+    }
+
     updatePartner({
       partnerId: editingPartner.id,
       businessName: editingPartner.businessName,
@@ -246,13 +281,25 @@ const PartnersPage = () => {
       businessEmail: editingPartner.businessEmail || undefined,
       taxId: editingPartner.taxId || undefined,
       logoUrl: editingPartner.logoUrl || undefined,
-      paymentMethod: editingPartner.paymentMethod || undefined,
-      paymentDetails: editingPartner.paymentDetails || undefined,
+      paymentDetails: Object.keys(paymentDetails).length > 0 ? paymentDetails : undefined,
       commissionRate: editingPartner.commissionRate,
     });
   };
 
   const handleCreatePartner = () => {
+    // Build payment details based on enabled methods
+    const paymentDetails: PaymentDetails = {};
+    if (newPartner.enableBankTransfer) {
+      paymentDetails.bankName = newPartner.paymentDetails.bankName;
+      paymentDetails.accountName = newPartner.paymentDetails.accountName;
+      paymentDetails.accountNumber = newPartner.paymentDetails.accountNumber;
+      paymentDetails.iban = newPartner.paymentDetails.iban;
+      paymentDetails.swiftBic = newPartner.paymentDetails.swiftBic;
+    }
+    if (newPartner.enablePaymentLink) {
+      paymentDetails.paymentUrl = newPartner.paymentDetails.paymentUrl;
+    }
+
     createPartner({
       type: newPartner.type,
       businessName: newPartner.businessName,
@@ -261,11 +308,7 @@ const PartnersPage = () => {
       businessEmail: newPartner.businessEmail || undefined,
       taxId: newPartner.taxId,
       logoUrl: newPartner.logoUrl || undefined,
-      paymentMethod: newPartner.paymentMethod || undefined,
-      paymentDetails:
-        Object.keys(newPartner.paymentDetails).length > 0
-          ? newPartner.paymentDetails
-          : undefined,
+      paymentDetails: Object.keys(paymentDetails).length > 0 ? paymentDetails : undefined,
       commissionRate: newPartner.commissionRate,
     });
   };
@@ -452,38 +495,45 @@ const PartnersPage = () => {
                       Payment Configuration
                     </Typography>
 
-                    <div className="flex gap-2">
-                      <Button
-                        type="button"
-                        variant={newPartner.paymentMethod === 'bank_transfer' ? 'default' : 'outline'}
-                        colorRole={newPartner.paymentMethod === 'bank_transfer' ? 'brand' : 'primary'}
-                        size="sm"
-                        onClick={() =>
-                          setNewPartner({
-                            ...newPartner,
-                            paymentMethod: 'bank_transfer',
-                          })
-                        }
-                      >
-                        <ButtonContent>Bank Transfer</ButtonContent>
-                      </Button>
-                      <Button
-                        type="button"
-                        variant={newPartner.paymentMethod === 'link' ? 'default' : 'outline'}
-                        colorRole={newPartner.paymentMethod === 'link' ? 'brand' : 'primary'}
-                        size="sm"
-                        onClick={() =>
-                          setNewPartner({
-                            ...newPartner,
-                            paymentMethod: 'link',
-                          })
-                        }
-                      >
-                        <ButtonContent>Payment Link</ButtonContent>
-                      </Button>
+                    <Typography variant="bodyXs" colorRole="muted">
+                      Select payment methods available for this partner (can enable both)
+                    </Typography>
+
+                    <div className="flex flex-col gap-4">
+                      {/* Bank Transfer Checkbox */}
+                      <label className="flex items-center gap-3 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={newPartner.enableBankTransfer}
+                          onChange={(e) =>
+                            setNewPartner({
+                              ...newPartner,
+                              enableBankTransfer: e.target.checked,
+                            })
+                          }
+                          className="h-4 w-4 rounded border-border-primary text-fill-brand focus:ring-fill-brand"
+                        />
+                        <span className="text-sm font-medium">Bank Transfer</span>
+                      </label>
+
+                      {/* Payment Link Checkbox */}
+                      <label className="flex items-center gap-3 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={newPartner.enablePaymentLink}
+                          onChange={(e) =>
+                            setNewPartner({
+                              ...newPartner,
+                              enablePaymentLink: e.target.checked,
+                            })
+                          }
+                          className="h-4 w-4 rounded border-border-primary text-fill-brand focus:ring-fill-brand"
+                        />
+                        <span className="text-sm font-medium">Payment Link</span>
+                      </label>
                     </div>
 
-                    {newPartner.paymentMethod === 'bank_transfer' && (
+                    {newPartner.enableBankTransfer && (
                       <div className="grid grid-cols-2 gap-3 p-4 bg-fill-muted/50 rounded-lg">
                         <div>
                           <label className="block text-xs text-text-muted mb-1">Bank Name</label>
@@ -573,7 +623,7 @@ const PartnersPage = () => {
                       </div>
                     )}
 
-                    {newPartner.paymentMethod === 'link' && (
+                    {newPartner.enablePaymentLink && (
                       <div className="p-4 bg-fill-muted/50 rounded-lg">
                         <label className="block text-xs text-text-muted mb-1">Payment URL</label>
                         <input
@@ -725,11 +775,18 @@ const PartnersPage = () => {
                       </div>
 
                       {/* Payment Config Status */}
-                      {partner.paymentMethod && (
-                        <div className="flex items-center gap-2">
-                          <span className="bg-fill-brand/10 text-text-brand border border-border-brand inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium">
-                            {partner.paymentMethod === 'bank_transfer' ? 'Bank Transfer' : 'Payment Link'}
-                          </span>
+                      {partner.paymentDetails && (
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {(partner.paymentDetails.bankName || partner.paymentDetails.iban || partner.paymentDetails.accountNumber) && (
+                            <span className="bg-fill-brand/10 text-text-brand border border-border-brand inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium">
+                              Bank Transfer
+                            </span>
+                          )}
+                          {partner.paymentDetails.paymentUrl && (
+                            <span className="bg-fill-success/10 text-text-success border border-border-success inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium">
+                              Payment Link
+                            </span>
+                          )}
                         </div>
                       )}
                     </div>
@@ -766,42 +823,89 @@ const PartnersPage = () => {
                             {partner.apiKeys.map((key) => (
                               <div
                                 key={key.id}
-                                className="flex items-center justify-between gap-4 rounded-lg bg-fill-muted/50 px-3 py-2 text-sm"
+                                className={`flex items-center justify-between gap-4 rounded-lg px-3 py-2 text-sm ${
+                                  key.isRevoked
+                                    ? 'bg-fill-muted/30 opacity-60'
+                                    : 'bg-fill-muted/50'
+                                }`}
                               >
-                                <div>
+                                <div className="flex items-center gap-2">
                                   <span className="font-mono text-xs">{key.keyPrefix}...</span>
-                                  <span className="text-text-muted ml-2">{key.name}</span>
+                                  <span className="text-text-muted">{key.name}</span>
+                                  {key.isRevoked && (
+                                    <span className="bg-fill-danger/10 text-text-danger border border-border-danger inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium">
+                                      Revoked
+                                    </span>
+                                  )}
                                 </div>
-                                <AlertDialog>
-                                  <AlertDialogTrigger asChild>
-                                    <Button
-                                      size="sm"
-                                      variant="ghost"
-                                      colorRole="danger"
-                                      isDisabled={isRevoking}
-                                    >
-                                      <ButtonContent iconLeft={IconTrash} />
-                                    </Button>
-                                  </AlertDialogTrigger>
-                                  <AlertDialogContent>
-                                    <AlertDialogHeader>
-                                      <AlertDialogTitle>Revoke API Key</AlertDialogTitle>
-                                      <AlertDialogDescription>
-                                        Are you sure you want to revoke this API key? Any integrations
-                                        using this key will immediately stop working.
-                                      </AlertDialogDescription>
-                                    </AlertDialogHeader>
-                                    <AlertDialogFooter>
-                                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                      <AlertDialogAction
-                                        onClick={() => revokeApiKey({ apiKeyId: key.id })}
-                                        className="bg-red-600 hover:bg-red-700"
+                                <div className="flex items-center gap-1">
+                                  {/* Revoke button - only show for active keys */}
+                                  {!key.isRevoked && (
+                                    <AlertDialog>
+                                      <AlertDialogTrigger asChild>
+                                        <Button
+                                          size="sm"
+                                          variant="ghost"
+                                          colorRole="danger"
+                                          isDisabled={isRevoking}
+                                          title="Revoke API Key"
+                                        >
+                                          <ButtonContent iconLeft={IconLock} />
+                                        </Button>
+                                      </AlertDialogTrigger>
+                                      <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                          <AlertDialogTitle>Revoke API Key</AlertDialogTitle>
+                                          <AlertDialogDescription>
+                                            Are you sure you want to revoke this API key? Any integrations
+                                            using this key will immediately stop working.
+                                          </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                          <AlertDialogAction
+                                            onClick={() => revokeApiKey({ apiKeyId: key.id })}
+                                            className="bg-red-600 hover:bg-red-700"
+                                          >
+                                            Revoke Key
+                                          </AlertDialogAction>
+                                        </AlertDialogFooter>
+                                      </AlertDialogContent>
+                                    </AlertDialog>
+                                  )}
+                                  {/* Delete button - show for all keys */}
+                                  <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        colorRole="danger"
+                                        isDisabled={isDeleting}
+                                        title="Delete API Key"
                                       >
-                                        Revoke Key
-                                      </AlertDialogAction>
-                                    </AlertDialogFooter>
-                                  </AlertDialogContent>
-                                </AlertDialog>
+                                        <ButtonContent iconLeft={IconTrash} />
+                                      </Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                      <AlertDialogHeader>
+                                        <AlertDialogTitle>Delete API Key</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                          Are you sure you want to permanently delete this API key?
+                                          This action cannot be undone.
+                                        </AlertDialogDescription>
+                                      </AlertDialogHeader>
+                                      <AlertDialogFooter>
+                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                        <AlertDialogAction
+                                          onClick={() => deleteApiKey({ apiKeyId: key.id })}
+                                          className="bg-red-600 hover:bg-red-700"
+                                        >
+                                          Delete Key
+                                        </AlertDialogAction>
+                                      </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                  </AlertDialog>
+                                </div>
                               </div>
                             ))}
                           </div>
@@ -967,40 +1071,47 @@ const PartnersPage = () => {
                     Payment Configuration
                   </Typography>
 
-                  <div className="flex gap-2">
-                    <Button
-                      type="button"
-                      variant={editingPartner.paymentMethod === 'bank_transfer' ? 'default' : 'outline'}
-                      colorRole={editingPartner.paymentMethod === 'bank_transfer' ? 'brand' : 'primary'}
-                      size="sm"
-                      onClick={() =>
-                        setEditingPartner({
-                          ...editingPartner,
-                          paymentMethod: 'bank_transfer',
-                          paymentDetails: editingPartner.paymentDetails || {},
-                        })
-                      }
-                    >
-                      <ButtonContent>Bank Transfer</ButtonContent>
-                    </Button>
-                    <Button
-                      type="button"
-                      variant={editingPartner.paymentMethod === 'link' ? 'default' : 'outline'}
-                      colorRole={editingPartner.paymentMethod === 'link' ? 'brand' : 'primary'}
-                      size="sm"
-                      onClick={() =>
-                        setEditingPartner({
-                          ...editingPartner,
-                          paymentMethod: 'link',
-                          paymentDetails: editingPartner.paymentDetails || {},
-                        })
-                      }
-                    >
-                      <ButtonContent>Payment Link</ButtonContent>
-                    </Button>
+                  <Typography variant="bodyXs" colorRole="muted">
+                    Select payment methods available for this partner (can enable both)
+                  </Typography>
+
+                  <div className="flex flex-col gap-4">
+                    {/* Bank Transfer Checkbox */}
+                    <label className="flex items-center gap-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={editingPartner.enableBankTransfer}
+                        onChange={(e) =>
+                          setEditingPartner({
+                            ...editingPartner,
+                            enableBankTransfer: e.target.checked,
+                            paymentDetails: editingPartner.paymentDetails || {},
+                          })
+                        }
+                        className="h-4 w-4 rounded border-border-primary text-fill-brand focus:ring-fill-brand"
+                      />
+                      <span className="text-sm font-medium">Bank Transfer</span>
+                    </label>
+
+                    {/* Payment Link Checkbox */}
+                    <label className="flex items-center gap-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={editingPartner.enablePaymentLink}
+                        onChange={(e) =>
+                          setEditingPartner({
+                            ...editingPartner,
+                            enablePaymentLink: e.target.checked,
+                            paymentDetails: editingPartner.paymentDetails || {},
+                          })
+                        }
+                        className="h-4 w-4 rounded border-border-primary text-fill-brand focus:ring-fill-brand"
+                      />
+                      <span className="text-sm font-medium">Payment Link</span>
+                    </label>
                   </div>
 
-                  {editingPartner.paymentMethod === 'bank_transfer' && (
+                  {editingPartner.enableBankTransfer && (
                     <div className="grid grid-cols-2 gap-3 p-4 bg-fill-muted/50 rounded-lg">
                       <div>
                         <label className="block text-xs text-text-muted mb-1">Bank Name</label>
@@ -1090,7 +1201,7 @@ const PartnersPage = () => {
                     </div>
                   )}
 
-                  {editingPartner.paymentMethod === 'link' && (
+                  {editingPartner.enablePaymentLink && (
                     <div className="p-4 bg-fill-muted/50 rounded-lg">
                       <label className="block text-xs text-text-muted mb-1">Payment URL</label>
                       <input

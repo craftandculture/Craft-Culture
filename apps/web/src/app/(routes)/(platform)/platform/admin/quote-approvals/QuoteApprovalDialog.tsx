@@ -267,20 +267,31 @@ const QuoteApprovalDialog = ({
 
         // Check that partner has payment configuration
         const partner = partnersData?.find((p) => p.id === selectedPartnerId);
-        if (!partner?.paymentMethod || !partner?.paymentDetails) {
+        const hasBankTransfer = !!(
+          partner?.paymentDetails?.bankName ||
+          partner?.paymentDetails?.iban ||
+          partner?.paymentDetails?.accountNumber
+        );
+        const hasPaymentLink = !!partner?.paymentDetails?.paymentUrl;
+
+        if (!hasBankTransfer && !hasPaymentLink) {
           toast.error('Selected partner has no payment configuration. Please configure payment in Partner Management first.');
           throw new Error('Partner payment config required');
         }
 
-        // Validate payment details based on method (from partner config)
-        if (partner.paymentMethod === 'bank_transfer') {
-          if (!partner.paymentDetails.accountName || !partner.paymentDetails.iban) {
-            toast.error('Partner bank details incomplete. Please update in Partner Management.');
+        // Validate payment details based on selected method
+        if (paymentMethod === 'bank_transfer') {
+          if (!hasBankTransfer) {
+            toast.error('Partner bank details not configured. Please select payment link or update partner config.');
             throw new Error('Bank details required');
           }
-        } else if (partner.paymentMethod === 'link') {
-          if (!partner.paymentDetails.paymentUrl) {
-            toast.error('Partner payment link not configured. Please update in Partner Management.');
+          if (!partner?.paymentDetails?.accountName || !partner?.paymentDetails?.iban) {
+            toast.error('Partner bank details incomplete (missing account name or IBAN). Please update in Partner Management.');
+            throw new Error('Bank details incomplete');
+          }
+        } else if (paymentMethod === 'link') {
+          if (!hasPaymentLink) {
+            toast.error('Partner payment link not configured. Please select bank transfer or update partner config.');
             throw new Error('Payment URL required');
           }
         }
@@ -394,8 +405,21 @@ const QuoteApprovalDialog = ({
   useEffect(() => {
     if (selectedPartnerId && partnersData) {
       const selectedPartner = partnersData.find((p) => p.id === selectedPartnerId);
-      if (selectedPartner?.paymentMethod && selectedPartner?.paymentDetails) {
-        setPaymentMethod(selectedPartner.paymentMethod);
+      if (selectedPartner?.paymentDetails) {
+        // Check which payment methods are available
+        const hasBankTransfer = !!(
+          selectedPartner.paymentDetails.bankName ||
+          selectedPartner.paymentDetails.iban ||
+          selectedPartner.paymentDetails.accountNumber
+        );
+        const hasPaymentLink = !!selectedPartner.paymentDetails.paymentUrl;
+
+        // Auto-select payment method: prefer bank transfer if available, otherwise link
+        if (hasBankTransfer) {
+          setPaymentMethod('bank_transfer');
+        } else if (hasPaymentLink) {
+          setPaymentMethod('link');
+        }
         setPaymentDetails(selectedPartner.paymentDetails);
       }
     }
@@ -1154,11 +1178,24 @@ const QuoteApprovalDialog = ({
                         className="w-full rounded-lg border-2 border-border-muted bg-white px-4 py-2.5 text-sm font-medium focus:border-border-brand focus:ring-2 focus:ring-fill-brand/20 transition-all"
                       >
                         <option value="">Select a partner...</option>
-                        {partnersData?.map((partner) => (
-                          <option key={partner.id} value={partner.id}>
-                            {partner.businessName} {partner.paymentMethod ? `(${partner.paymentMethod === 'bank_transfer' ? '🏦 Bank' : '🔗 Link'})` : '⚠️ No payment config'}
-                          </option>
-                        ))}
+                        {partnersData?.map((partner) => {
+                          const hasBankTransfer = !!(
+                            partner.paymentDetails?.bankName ||
+                            partner.paymentDetails?.iban ||
+                            partner.paymentDetails?.accountNumber
+                          );
+                          const hasPaymentLink = !!partner.paymentDetails?.paymentUrl;
+                          const paymentIcons = [
+                            hasBankTransfer ? '🏦' : null,
+                            hasPaymentLink ? '🔗' : null,
+                          ].filter(Boolean).join(' ');
+
+                          return (
+                            <option key={partner.id} value={partner.id}>
+                              {partner.businessName} {paymentIcons ? `(${paymentIcons})` : '⚠️ No payment config'}
+                            </option>
+                          );
+                        })}
                       </select>
                       <Typography variant="bodyXs" colorRole="muted" className="mt-2">
                         Customer will pay this partner directly
@@ -1166,84 +1203,163 @@ const QuoteApprovalDialog = ({
                     </div>
 
                     {/* Show selected partner's payment configuration */}
-                    {selectedPartner && selectedPartner.paymentMethod && selectedPartner.paymentDetails && (
-                      <div className="rounded-lg bg-gradient-to-br from-fill-brand/5 to-fill-brand/10 p-5 border-2 border-border-brand/30">
-                        <div className="flex items-center gap-3 mb-4">
-                          {selectedPartner.logoUrl && (
-                            <img
-                              src={selectedPartner.logoUrl}
-                              alt={selectedPartner.businessName}
-                              className="h-12 w-12 object-contain rounded-lg bg-white border border-border-muted p-1"
-                            />
-                          )}
-                          <div>
-                            <Typography variant="bodySm" className="font-bold text-text-brand">
-                              {selectedPartner.businessName}
-                            </Typography>
-                            <Typography variant="bodyXs" colorRole="muted">
-                              {selectedPartner.paymentMethod === 'bank_transfer' ? '🏦 Bank Transfer' : '🔗 Payment Link'}
-                            </Typography>
-                          </div>
-                        </div>
+                    {selectedPartner && selectedPartner.paymentDetails && (() => {
+                      const hasBankTransfer = !!(
+                        selectedPartner.paymentDetails.bankName ||
+                        selectedPartner.paymentDetails.iban ||
+                        selectedPartner.paymentDetails.accountNumber
+                      );
+                      const hasPaymentLink = !!selectedPartner.paymentDetails.paymentUrl;
+                      const hasBothMethods = hasBankTransfer && hasPaymentLink;
 
-                        {selectedPartner.paymentMethod === 'bank_transfer' && (
-                          <div className="rounded-lg bg-white p-4 border border-border-muted space-y-2">
-                            <Typography variant="bodyXs" className="font-semibold text-text-muted uppercase tracking-wide">
-                              Bank Account Details
-                            </Typography>
-                            <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
-                              {selectedPartner.paymentDetails.bankName && (
-                                <>
-                                  <span className="text-text-muted">Bank:</span>
-                                  <span className="font-medium">{selectedPartner.paymentDetails.bankName}</span>
-                                </>
-                              )}
-                              {selectedPartner.paymentDetails.accountName && (
-                                <>
-                                  <span className="text-text-muted">Account:</span>
-                                  <span className="font-medium">{selectedPartner.paymentDetails.accountName}</span>
-                                </>
-                              )}
-                              {selectedPartner.paymentDetails.iban && (
-                                <>
-                                  <span className="text-text-muted">IBAN:</span>
-                                  <span className="font-mono font-medium">{selectedPartner.paymentDetails.iban}</span>
-                                </>
-                              )}
-                              {selectedPartner.paymentDetails.swiftBic && (
-                                <>
-                                  <span className="text-text-muted">SWIFT:</span>
-                                  <span className="font-mono font-medium">{selectedPartner.paymentDetails.swiftBic}</span>
-                                </>
-                              )}
+                      if (!hasBankTransfer && !hasPaymentLink) return null;
+
+                      return (
+                        <div className="rounded-lg bg-gradient-to-br from-fill-brand/5 to-fill-brand/10 p-5 border-2 border-border-brand/30">
+                          <div className="flex items-center gap-3 mb-4">
+                            {selectedPartner.logoUrl && (
+                              <img
+                                src={selectedPartner.logoUrl}
+                                alt={selectedPartner.businessName}
+                                className="h-12 w-12 object-contain rounded-lg bg-white border border-border-muted p-1"
+                              />
+                            )}
+                            <div className="flex-1">
+                              <Typography variant="bodySm" className="font-bold text-text-brand">
+                                {selectedPartner.businessName}
+                              </Typography>
+                              <div className="flex items-center gap-2 mt-1">
+                                {hasBankTransfer && (
+                                  <span className="inline-flex items-center gap-1 text-xs text-text-muted">
+                                    🏦 Bank
+                                  </span>
+                                )}
+                                {hasPaymentLink && (
+                                  <span className="inline-flex items-center gap-1 text-xs text-text-muted">
+                                    🔗 Link
+                                  </span>
+                                )}
+                              </div>
                             </div>
                           </div>
-                        )}
 
-                        {selectedPartner.paymentMethod === 'link' && selectedPartner.paymentDetails.paymentUrl && (
-                          <div className="rounded-lg bg-white p-4 border border-border-muted">
-                            <Typography variant="bodyXs" className="font-semibold text-text-muted uppercase tracking-wide mb-2">
-                              Payment Link
-                            </Typography>
-                            <a
-                              href={selectedPartner.paymentDetails.paymentUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-sm text-text-brand hover:underline break-all"
-                            >
-                              {selectedPartner.paymentDetails.paymentUrl}
-                            </a>
-                          </div>
-                        )}
+                          {/* Payment Method Selection - Only show if both methods available */}
+                          {hasBothMethods && (
+                            <div className="mb-4 p-4 rounded-lg bg-white border border-border-muted">
+                              <Typography variant="bodyXs" className="font-semibold text-text-muted uppercase tracking-wide mb-3">
+                                Select Payment Method for this Quote
+                              </Typography>
+                              <div className="flex gap-3">
+                                <label className="flex-1 cursor-pointer">
+                                  <input
+                                    type="radio"
+                                    name="paymentMethod"
+                                    value="bank_transfer"
+                                    checked={paymentMethod === 'bank_transfer'}
+                                    onChange={() => setPaymentMethod('bank_transfer')}
+                                    className="sr-only"
+                                  />
+                                  <div className={`flex items-center justify-center gap-2 p-3 rounded-lg border-2 transition-all ${
+                                    paymentMethod === 'bank_transfer'
+                                      ? 'border-border-brand bg-fill-brand/10 text-text-brand'
+                                      : 'border-border-muted hover:border-border-brand/50'
+                                  }`}>
+                                    <span className="text-lg">🏦</span>
+                                    <span className="text-sm font-semibold">Bank Transfer</span>
+                                  </div>
+                                </label>
+                                <label className="flex-1 cursor-pointer">
+                                  <input
+                                    type="radio"
+                                    name="paymentMethod"
+                                    value="link"
+                                    checked={paymentMethod === 'link'}
+                                    onChange={() => setPaymentMethod('link')}
+                                    className="sr-only"
+                                  />
+                                  <div className={`flex items-center justify-center gap-2 p-3 rounded-lg border-2 transition-all ${
+                                    paymentMethod === 'link'
+                                      ? 'border-border-brand bg-fill-brand/10 text-text-brand'
+                                      : 'border-border-muted hover:border-border-brand/50'
+                                  }`}>
+                                    <span className="text-lg">🔗</span>
+                                    <span className="text-sm font-semibold">Payment Link</span>
+                                  </div>
+                                </label>
+                              </div>
+                            </div>
+                          )}
 
-                        <Typography variant="bodyXs" colorRole="muted" className="mt-3">
-                          ✓ Payment details will be sent to customer automatically
-                        </Typography>
-                      </div>
-                    )}
+                          {/* Bank Transfer Details */}
+                          {paymentMethod === 'bank_transfer' && hasBankTransfer && (
+                            <div className="rounded-lg bg-white p-4 border border-border-muted space-y-2">
+                              <Typography variant="bodyXs" className="font-semibold text-text-muted uppercase tracking-wide">
+                                Bank Account Details
+                              </Typography>
+                              <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+                                {selectedPartner.paymentDetails.bankName && (
+                                  <>
+                                    <span className="text-text-muted">Bank:</span>
+                                    <span className="font-medium">{selectedPartner.paymentDetails.bankName}</span>
+                                  </>
+                                )}
+                                {selectedPartner.paymentDetails.accountName && (
+                                  <>
+                                    <span className="text-text-muted">Account:</span>
+                                    <span className="font-medium">{selectedPartner.paymentDetails.accountName}</span>
+                                  </>
+                                )}
+                                {selectedPartner.paymentDetails.iban && (
+                                  <>
+                                    <span className="text-text-muted">IBAN:</span>
+                                    <span className="font-mono font-medium">{selectedPartner.paymentDetails.iban}</span>
+                                  </>
+                                )}
+                                {selectedPartner.paymentDetails.swiftBic && (
+                                  <>
+                                    <span className="text-text-muted">SWIFT:</span>
+                                    <span className="font-mono font-medium">{selectedPartner.paymentDetails.swiftBic}</span>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Payment Link Details */}
+                          {paymentMethod === 'link' && hasPaymentLink && (
+                            <div className="rounded-lg bg-white p-4 border border-border-muted">
+                              <Typography variant="bodyXs" className="font-semibold text-text-muted uppercase tracking-wide mb-2">
+                                Payment Link
+                              </Typography>
+                              <a
+                                href={selectedPartner.paymentDetails.paymentUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-sm text-text-brand hover:underline break-all"
+                              >
+                                {selectedPartner.paymentDetails.paymentUrl}
+                              </a>
+                            </div>
+                          )}
+
+                          <Typography variant="bodyXs" colorRole="muted" className="mt-3">
+                            ✓ Payment details will be sent to customer automatically
+                          </Typography>
+                        </div>
+                      );
+                    })()}
 
                     {/* Warning if partner has no payment config */}
-                    {selectedPartner && !selectedPartner.paymentMethod && (
+                    {selectedPartner && (() => {
+                      const hasBankTransfer = !!(
+                        selectedPartner.paymentDetails?.bankName ||
+                        selectedPartner.paymentDetails?.iban ||
+                        selectedPartner.paymentDetails?.accountNumber
+                      );
+                      const hasPaymentLink = !!selectedPartner.paymentDetails?.paymentUrl;
+                      if (hasBankTransfer || hasPaymentLink) return null;
+                      return true;
+                    })() && (
                       <div className="rounded-lg bg-fill-warning/10 p-4 border border-border-warning">
                         <div className="flex items-start gap-3">
                           <span className="text-xl">⚠️</span>

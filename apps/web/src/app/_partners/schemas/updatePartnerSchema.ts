@@ -26,8 +26,7 @@ const updatePartnerSchema = z.object({
   notes: z.string().optional(),
   // Branding
   logoUrl: z.string().url().optional().or(z.literal('')),
-  // Payment configuration
-  paymentMethod: z.enum(['bank_transfer', 'link']).optional(),
+  // Payment configuration (partner can have both bank transfer AND payment link)
   paymentDetails: paymentDetailsSchema.optional(),
 });
 
