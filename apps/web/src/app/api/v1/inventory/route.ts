@@ -80,10 +80,10 @@ export const GET = async (request: NextRequest) => {
     // Parse query parameters
     const searchParams = request.nextUrl.searchParams;
     const queryResult = inventoryQuerySchema.safeParse({
-      cursor: searchParams.get('cursor'),
-      limit: searchParams.get('limit'),
-      source: searchParams.get('source'),
-      inStock: searchParams.get('inStock'),
+      cursor: searchParams.get('cursor') ?? undefined,
+      limit: searchParams.get('limit') ?? undefined,
+      source: searchParams.get('source') ?? undefined,
+      inStock: searchParams.get('inStock') ?? undefined,
     });
 
     if (!queryResult.success) {
