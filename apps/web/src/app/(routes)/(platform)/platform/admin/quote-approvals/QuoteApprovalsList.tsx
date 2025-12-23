@@ -39,6 +39,8 @@ const statusFilters: StatusFilter[] = [
   { label: 'Pending', value: 'buy_request_submitted', icon: IconSend, color: 'text-text-brand' },
   { label: 'Under Review', value: 'under_cc_review', icon: IconClock, color: 'text-text-brand' },
   { label: 'Confirmed', value: 'cc_confirmed', icon: IconCheck, color: 'text-text-brand' },
+  { label: 'Awaiting Payment', value: 'awaiting_payment', icon: IconClock, color: 'text-text-warning' },
+  { label: 'Paid', value: 'paid', icon: IconCheck, color: 'text-text-success' },
   { label: 'PO Submitted', value: 'po_submitted', icon: IconFileText, color: 'text-text-brand' },
   { label: 'Confirmed Orders', value: 'po_confirmed', icon: IconCheck, color: 'text-text-muted' },
 ];
