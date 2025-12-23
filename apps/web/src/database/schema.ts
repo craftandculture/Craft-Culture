@@ -480,5 +480,10 @@ export const partnerApiRequestLogs = pgTable(
     index('partner_api_request_logs_partner_id_idx').on(table.partnerId),
     index('partner_api_request_logs_created_at_idx').on(table.createdAt),
     index('partner_api_request_logs_endpoint_idx').on(table.endpoint),
+    // Composite index for rate limiting queries
+    index('partner_api_request_logs_rate_limit_idx').on(
+      table.apiKeyId,
+      table.createdAt,
+    ),
   ],
 ).enableRLS();

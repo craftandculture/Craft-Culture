@@ -2,12 +2,14 @@
 
 import {
   IconCopy,
+  IconExternalLink,
   IconKey,
   IconPlus,
   IconSearch,
   IconTrash,
 } from '@tabler/icons-react';
 import { useMutation, useQuery } from '@tanstack/react-query';
+import Link from 'next/link';
 import { useState } from 'react';
 
 import AlertDialog from '@/app/_ui/components/AlertDialog/AlertDialog';
@@ -191,12 +193,18 @@ const PartnersPage = () => {
               Manage retail partners and their API access
             </Typography>
           </div>
-          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-            <DialogTrigger asChild>
-              <Button variant="default" colorRole="brand">
-                <ButtonContent iconLeft={IconPlus}>Add Partner</ButtonContent>
+          <div className="flex items-center gap-3">
+            <Link href="/docs/api" target="_blank">
+              <Button variant="outline">
+                <ButtonContent iconRight={IconExternalLink}>API Docs</ButtonContent>
               </Button>
-            </DialogTrigger>
+            </Link>
+            <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+              <DialogTrigger asChild>
+                <Button variant="default" colorRole="brand">
+                  <ButtonContent iconLeft={IconPlus}>Add Partner</ButtonContent>
+                </Button>
+              </DialogTrigger>
             <DialogContent className="sm:max-w-lg">
               <DialogHeader>
                 <DialogTitle>Create New Partner</DialogTitle>
@@ -321,6 +329,7 @@ const PartnersPage = () => {
               </form>
             </DialogContent>
           </Dialog>
+          </div>
         </div>
 
         {/* Filters */}
