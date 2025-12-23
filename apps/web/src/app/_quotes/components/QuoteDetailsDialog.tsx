@@ -3,7 +3,6 @@
 import type { DialogProps } from '@radix-ui/react-dialog';
 import {
   IconArrowRight,
-  IconBox,
   IconBulb,
   IconCalendar,
   IconCheck,
@@ -11,10 +10,7 @@ import {
   IconCurrencyDollar,
   IconDownload,
   IconFileText,
-  IconMail,
-  IconMapPin,
   IconPaperclip,
-  IconPhone,
   IconSend,
   IconTruck,
   IconUser,
@@ -445,7 +441,7 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[95vw] max-w-[1400px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="w-[95vw] max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{quote.name}</DialogTitle>
           <DialogDescription>
@@ -738,7 +734,7 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
               <Typography variant="bodySm" className="mb-3 font-semibold">
                 Line Items ({lineItems.length})
               </Typography>
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {lineItems.map((item, index) => {
                   const product = productMap[item.productId];
                   const pricing = pricingMap[item.productId];
@@ -752,272 +748,150 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                   return (
                     <div
                       key={index}
-                      className="rounded-lg border border-border-muted bg-background-primary p-4"
+                      className="rounded-lg border border-border-muted bg-background-primary p-3"
                     >
                       {product ? (
                         <>
-                          {/* Product Info and Pricing */}
-                          <div className="mb-3">
-                            <div className="mb-2 flex items-start justify-between gap-4">
-                              <div className="flex-1">
-                                <Typography variant="bodySm" className="mb-1 font-semibold">
-                                  {product.name}
-                                </Typography>
-                                <div className="flex flex-wrap gap-x-3 gap-y-1">
-                                  {product.producer && (
-                                    <Typography variant="bodyXs" colorRole="muted">
-                                      {product.producer}
-                                    </Typography>
-                                  )}
-                                  {product.year && (
-                                    <Typography variant="bodyXs" colorRole="muted">
-                                      {product.year}
-                                    </Typography>
-                                  )}
-                                  {product.region && (
-                                    <Typography variant="bodyXs" colorRole="muted">
-                                      {product.region}
-                                    </Typography>
-                                  )}
-                                </div>
+                          {/* Compact Product Row */}
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex-1 min-w-0">
+                              <Typography variant="bodySm" className="font-semibold truncate">
+                                {product.name}
+                              </Typography>
+                              <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-0.5">
+                                {product.producer && (
+                                  <Typography variant="bodyXs" colorRole="muted">
+                                    {product.producer}
+                                  </Typography>
+                                )}
+                                {product.year && (
+                                  <Typography variant="bodyXs" colorRole="muted">
+                                    · {product.year}
+                                  </Typography>
+                                )}
+                                {product.productOffers?.[0]?.unitCount && (
+                                  <Typography variant="bodyXs" colorRole="muted">
+                                    · {product.productOffers?.[0]?.unitCount}×{product.productOffers?.[0]?.unitSize || '750ml'}
+                                  </Typography>
+                                )}
                               </div>
                             </div>
-
-                            {/* Pricing Breakdown */}
                             {pricing && (
-                              <>
-                                <div className="rounded-lg border border-border-muted bg-white p-4 space-y-3">
-                                  {/* Case Configuration */}
-                                  {product.productOffers?.[0]?.unitCount && (
-                                    <div className="flex items-center gap-2 text-text-muted">
-                                      <Icon icon={IconBox} size="xs" colorRole="muted" />
-                                      <Typography variant="bodyXs">
-                                        {product.productOffers?.[0]?.unitCount} bottles × {product.productOffers?.[0]?.unitSize || '750ml'} per case
-                                      </Typography>
-                                    </div>
+                              <div className="text-right shrink-0">
+                                <Typography variant="bodySm" className="font-bold text-text-brand">
+                                  {formatPrice(
+                                    displayCurrency === 'AED'
+                                      ? convertUsdToAed(lineItemTotal)
+                                      : lineItemTotal,
+                                    displayCurrency,
                                   )}
-
-                                  {/* Pricing Grid */}
-                                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                                    <div className="space-y-3">
-                                      <div>
-                                        <Typography variant="bodyXs" colorRole="muted" className="mb-1">
-                                          Quantity
-                                        </Typography>
-                                        <Typography variant="bodyLg" className="font-bold">
-                                          {displayQuantity} {displayQuantity === 1 ? 'case' : 'cases'}
-                                        </Typography>
-                                        {pricing?.confirmedQuantity && pricing.confirmedQuantity !== pricing.originalQuantity && (
-                                          <Typography variant="bodyXs" colorRole="muted" className="line-through">
-                                            Was: {pricing.originalQuantity}
-                                          </Typography>
-                                        )}
-                                        {product.productOffers?.[0]?.unitCount && (
-                                          <Typography variant="bodyXs" colorRole="muted" className="mt-1">
-                                            = {displayQuantity * product.productOffers?.[0]?.unitCount} bottles
-                                          </Typography>
-                                        )}
-                                      </div>
-                                    </div>
-
-                                    <div className="space-y-3">
-                                      <div>
-                                        <Typography variant="bodyXs" colorRole="muted" className="mb-1">
-                                          Price Per Case
-                                        </Typography>
-                                        <Typography variant="bodyLg" className="font-bold text-text-brand">
-                                          {formatPrice(
-                                            displayCurrency === 'AED'
-                                              ? convertUsdToAed(pricePerCase)
-                                              : pricePerCase,
-                                            displayCurrency,
-                                          )}
-                                        </Typography>
-                                        {product.productOffers?.[0]?.unitCount && pricePerCase && (
-                                          <Typography variant="bodyXs" colorRole="muted" className="mt-1">
-                                            {formatPrice(
-                                              displayCurrency === 'AED'
-                                                ? convertUsdToAed(pricePerCase / product.productOffers?.[0]?.unitCount)
-                                                : pricePerCase / product.productOffers?.[0]?.unitCount,
-                                              displayCurrency,
-                                            )} per bottle
-                                          </Typography>
-                                        )}
-                                      </div>
-                                    </div>
-                                  </div>
-
-                                  {/* Line Total */}
-                                  <div className="pt-3 border-t border-border-muted">
-                                    <div className="flex items-center justify-between">
-                                      <Typography variant="bodySm" colorRole="muted">
-                                        Line Total
-                                      </Typography>
-                                      <Typography variant="headingSm" className="font-bold text-text-brand">
-                                        {formatPrice(
-                                          displayCurrency === 'AED'
-                                            ? convertUsdToAed(lineItemTotal)
-                                            : lineItemTotal,
-                                          displayCurrency,
-                                        )}
-                                      </Typography>
-                                    </div>
-                                  </div>
-                                </div>
-
-                                {/* Admin Notes - show when quote is confirmed or in later stages */}
-                                {pricing.adminNotes &&
-                                  (quote.status === 'cc_confirmed' ||
-                                   quote.status === 'po_submitted' ||
-                                   quote.status === 'po_confirmed') && (
-                                  <div className="mt-2 rounded-lg border border-border-brand bg-fill-brand/10 p-3">
-                                    <Typography variant="bodyXs" className="mb-1 font-semibold text-text-brand">
-                                      Admin Note:
-                                    </Typography>
-                                    <Typography variant="bodyXs" className="whitespace-pre-wrap">
-                                      {pricing.adminNotes}
-                                    </Typography>
-                                  </div>
-                                )}
-
-                                {/* Admin Alternative Suggestions */}
-                                {pricing.adminAlternatives && pricing.adminAlternatives.length > 0 &&
-                                  (quote.status === 'cc_confirmed' ||
-                                   quote.status === 'po_submitted' ||
-                                   quote.status === 'po_confirmed') && (
-                                  <div className="mt-2 rounded-lg border-2 border-border-success bg-fill-success/10 p-3">
-                                    <div className="flex items-center gap-1.5 mb-3">
-                                      <Icon icon={IconBulb} size="sm" className="text-text-success" />
-                                      <Typography variant="bodySm" className="font-bold text-text-success">
-                                        Alternative Products Available: ({pricing.adminAlternatives.length})
-                                      </Typography>
-                                    </div>
-                                    <div className="space-y-3">
-                                      {pricing.adminAlternatives.map((alt, altIdx) => {
-                                        const isAccepted = pricing.acceptedAlternative?.productName === alt.productName;
-
-                                        return (
-                                        <div
-                                          key={altIdx}
-                                          className={`rounded-lg border-2 p-4 transition-all ${
-                                            isAccepted
-                                              ? 'border-border-success bg-fill-success/20 shadow-md'
-                                              : 'border-border-muted bg-white hover:border-border-success'
-                                          }`}
-                                        >
-                                          <div className="flex items-start justify-between gap-3 mb-3">
-                                            <Typography variant="bodyMd" className="font-bold">
-                                              {alt.productName || '[NO PRODUCT NAME]'}
-                                            </Typography>
-                                            {isAccepted && (
-                                              <span className="inline-flex items-center gap-1 rounded-full bg-fill-success px-2 py-1 text-xs font-bold text-white">
-                                                <IconCheck className="h-3 w-3" />
-                                                Selected
-                                              </span>
-                                            )}
-                                          </div>
-
-                                          <div className="grid grid-cols-2 gap-3 mb-3 sm:grid-cols-3">
-                                            <div>
-                                              <Typography variant="bodyXs" colorRole="muted" className="uppercase tracking-wide mb-1">
-                                                Price /Case
-                                              </Typography>
-                                              <Typography variant="bodySm" className="font-bold">
-                                                {alt.pricePerCase ? formatPrice(
-                                                  displayCurrency === 'AED'
-                                                    ? convertUsdToAed(alt.pricePerCase)
-                                                    : alt.pricePerCase,
-                                                  displayCurrency
-                                                ) : '[NO PRICE]'}
-                                              </Typography>
-                                            </div>
-                                            <div>
-                                              <Typography variant="bodyXs" colorRole="muted" className="uppercase tracking-wide mb-1">
-                                                Available
-                                              </Typography>
-                                              <Typography variant="bodySm" className="font-semibold">
-                                                {alt.quantityAvailable || '[NO QTY]'} cases
-                                              </Typography>
-                                            </div>
-                                            <div className="col-span-2 sm:col-span-1">
-                                              <Typography variant="bodyXs" colorRole="muted" className="uppercase tracking-wide mb-1">
-                                                Case Config
-                                              </Typography>
-                                              <Typography variant="bodySm" className="font-semibold">
-                                                {alt.bottlesPerCase || '[NO BOTTLES]'} × {alt.bottleSize || '[NO SIZE]'}
-                                              </Typography>
-                                            </div>
-                                          </div>
-
-                                          {/* Action buttons - only show when quote is confirmed (before PO submission) */}
-                                          {quote.status === 'cc_confirmed' && (
-                                            <div className="flex gap-2 pt-3 border-t border-border-muted">
-                                              {isAccepted ? (
-                                                <Button
-                                                  variant="outline"
-                                                  colorRole="danger"
-                                                  size="sm"
-                                                  onClick={() => acceptAlternativeMutation.mutate({
-                                                    productId: item.productId,
-                                                    alternativeIndex: -1  // -1 means remove acceptance
-                                                  })}
-                                                  isDisabled={acceptAlternativeMutation.isPending}
-                                                  className="flex-1"
-                                                >
-                                                  <ButtonContent>
-                                                    {acceptAlternativeMutation.isPending ? 'Removing...' : 'Remove Selection'}
-                                                  </ButtonContent>
-                                                </Button>
-                                              ) : (
-                                                <Button
-                                                  variant="default"
-                                                  colorRole="brand"
-                                                  size="sm"
-                                                  onClick={() => acceptAlternativeMutation.mutate({
-                                                    productId: item.productId,
-                                                    alternativeIndex: altIdx
-                                                  })}
-                                                  isDisabled={acceptAlternativeMutation.isPending}
-                                                  className="flex-1"
-                                                >
-                                                  <ButtonContent>
-                                                    {acceptAlternativeMutation.isPending ? 'Accepting...' : 'Accept This Alternative'}
-                                                  </ButtonContent>
-                                                </Button>
-                                              )}
-                                            </div>
-                                          )}
-                                        </div>
-                                        );
-                                      })}
-                                    </div>
-                                  </div>
-                                )}
-                              </>
-                            )}
-                          </div>
-
-                          {/* Additional Details */}
-                          <div className="flex items-center gap-4 border-t border-border-muted pt-3">
-                            <div>
-                              <Typography variant="bodyXs" colorRole="muted">
-                                Bottle Reference
-                              </Typography>
-                              <Typography variant="bodyXs" className="font-mono">
-                                {product.lwin18}
-                              </Typography>
-                            </div>
-                            {item.vintage && (
-                              <div>
-                                <Typography variant="bodyXs" colorRole="muted">
-                                  Vintage
-                                </Typography>
-                                <Typography variant="bodyXs" className="font-medium">
-                                  {item.vintage}
                                 </Typography>
                               </div>
                             )}
                           </div>
+
+                          {/* Pricing Details - Compact Row */}
+                          {pricing && (
+                            <div className="mt-2 pt-2 border-t border-border-muted flex items-center justify-between gap-4 text-sm">
+                              <div className="flex items-center gap-4">
+                                <div>
+                                  <span className="text-text-muted">Qty: </span>
+                                  <span className="font-semibold">{displayQuantity}</span>
+                                  {pricing?.confirmedQuantity && pricing.confirmedQuantity !== pricing.originalQuantity && (
+                                    <span className="text-text-muted line-through ml-1 text-xs">
+                                      {pricing.originalQuantity}
+                                    </span>
+                                  )}
+                                </div>
+                                <div>
+                                  <span className="text-text-muted">@ </span>
+                                  <span className="font-medium">
+                                    {formatPrice(
+                                      displayCurrency === 'AED'
+                                        ? convertUsdToAed(pricePerCase)
+                                        : pricePerCase,
+                                      displayCurrency,
+                                    )}
+                                  </span>
+                                  <span className="text-text-muted">/case</span>
+                                </div>
+                              </div>
+                              {product.productOffers?.[0]?.unitCount && (
+                                <Typography variant="bodyXs" colorRole="muted">
+                                  {displayQuantity * product.productOffers?.[0]?.unitCount} bottles
+                                </Typography>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Admin Notes - compact */}
+                          {pricing?.adminNotes &&
+                            (quote.status === 'cc_confirmed' ||
+                             quote.status === 'po_submitted' ||
+                             quote.status === 'po_confirmed') && (
+                            <div className="mt-2 rounded-md bg-fill-brand/10 px-3 py-2 text-xs">
+                              <span className="font-semibold text-text-brand">Note: </span>
+                              <span className="text-text-primary">{pricing.adminNotes}</span>
+                            </div>
+                          )}
+
+                          {/* Admin Alternatives - compact */}
+                          {pricing?.adminAlternatives && pricing.adminAlternatives.length > 0 &&
+                            (quote.status === 'cc_confirmed' ||
+                             quote.status === 'po_submitted' ||
+                             quote.status === 'po_confirmed') && (
+                            <div className="mt-2 rounded-md border border-border-success bg-fill-success/10 p-2">
+                              <div className="flex items-center gap-1.5 mb-2">
+                                <Icon icon={IconBulb} size="xs" className="text-text-success" />
+                                <Typography variant="bodyXs" className="font-semibold text-text-success">
+                                  Alternatives ({pricing.adminAlternatives.length})
+                                </Typography>
+                              </div>
+                              <div className="space-y-1.5">
+                                {pricing.adminAlternatives.map((alt, altIdx) => {
+                                  const isAccepted = pricing.acceptedAlternative?.productName === alt.productName;
+                                  return (
+                                    <div
+                                      key={altIdx}
+                                      className={`flex items-center justify-between gap-2 rounded px-2 py-1.5 text-xs ${
+                                        isAccepted ? 'bg-fill-success/20 font-medium' : 'bg-white'
+                                      }`}
+                                    >
+                                      <div className="flex items-center gap-2 min-w-0">
+                                        {isAccepted && <IconCheck className="h-3 w-3 text-text-success shrink-0" />}
+                                        <span className="truncate">{alt.productName}</span>
+                                      </div>
+                                      <div className="flex items-center gap-3 shrink-0">
+                                        <span className="font-medium">
+                                          {formatPrice(
+                                            displayCurrency === 'AED' ? convertUsdToAed(alt.pricePerCase) : alt.pricePerCase,
+                                            displayCurrency
+                                          )}
+                                        </span>
+                                        {quote.status === 'cc_confirmed' && (
+                                          <Button
+                                            variant={isAccepted ? 'outline' : 'default'}
+                                            colorRole={isAccepted ? 'danger' : 'brand'}
+                                            size="sm"
+                                            onClick={() => acceptAlternativeMutation.mutate({
+                                              productId: item.productId,
+                                              alternativeIndex: isAccepted ? -1 : altIdx
+                                            })}
+                                            isDisabled={acceptAlternativeMutation.isPending}
+                                            className="h-6 px-2 text-xs"
+                                          >
+                                            <ButtonContent>
+                                              {isAccepted ? 'Remove' : 'Accept'}
+                                            </ButtonContent>
+                                          </Button>
+                                        )}
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
                         </>
                       ) : (
                         <div className="flex items-center justify-between">
@@ -1184,162 +1058,144 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
             {quote.status === 'awaiting_payment' && quote.paymentMethod && (
               <>
                 <Divider />
-                <div className="rounded-lg border-2 border-border-warning bg-fill-warning/10 p-4">
-                  {/* Partner Branding & Contact Details */}
-                  {partnerInfo && (
-                    <div className="mb-4 pb-4 border-b border-border-muted">
-                      <div className="flex items-start gap-3 mb-3">
-                        {partnerInfo.logoUrl && (
-                          <img
-                            src={partnerInfo.logoUrl}
-                            alt={partnerInfo.businessName}
-                            className="h-16 w-16 object-contain rounded-lg border border-border-muted bg-white flex-shrink-0"
-                          />
-                        )}
-                        <div className="flex-1">
-                          <Typography variant="bodyXs" colorRole="muted">
-                            Licensed Partner
-                          </Typography>
-                          <Typography variant="bodyMd" className="font-bold">
-                            {partnerInfo.businessName}
-                          </Typography>
-                          {partnerInfo.taxId && (
-                            <Typography variant="bodyXs" colorRole="muted">
-                              TRN: {partnerInfo.taxId}
-                            </Typography>
-                          )}
-                        </div>
-                      </div>
-                      {/* Contact Details */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-                        {partnerInfo.businessAddress && (
-                          <div className="flex items-start gap-1.5">
-                            <Icon icon={IconMapPin} size="xs" colorRole="muted" className="flex-shrink-0 mt-0.5" />
-                            <span className="text-text-muted">{partnerInfo.businessAddress}</span>
-                          </div>
-                        )}
-                        {partnerInfo.businessEmail && (
-                          <div className="flex items-center gap-1.5">
-                            <Icon icon={IconMail} size="xs" colorRole="muted" className="flex-shrink-0" />
-                            <a href={`mailto:${partnerInfo.businessEmail}`} className="text-text-brand hover:underline">
-                              {partnerInfo.businessEmail}
-                            </a>
-                          </div>
-                        )}
-                        {partnerInfo.businessPhone && (
-                          <div className="flex items-center gap-1.5">
-                            <Icon icon={IconPhone} size="xs" colorRole="muted" className="flex-shrink-0" />
-                            <a href={`tel:${partnerInfo.businessPhone}`} className="text-text-brand hover:underline">
-                              {partnerInfo.businessPhone}
-                            </a>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="mb-3 flex items-center gap-2">
-                    <Icon icon={IconCreditCard} size="sm" className="text-text-warning" />
-                    <Typography variant="bodySm" className="font-semibold text-text-warning">
-                      Payment Required
-                    </Typography>
-                  </div>
-
-                  {quote.deliveryLeadTime && (
-                    <div className="mb-4 rounded-lg bg-white border border-border-brand p-3">
+                <div className="rounded-xl border-2 border-border-warning bg-gradient-to-b from-fill-warning/5 to-fill-warning/15 overflow-hidden">
+                  {/* Header with Amount */}
+                  <div className="bg-fill-warning/20 px-5 py-4 border-b border-border-warning/30">
+                    <div className="flex items-center justify-between gap-4">
                       <div className="flex items-center gap-2">
-                        <Icon icon={IconTruck} size="xs" className="text-text-brand" />
-                        <Typography variant="bodyXs" className="font-semibold text-text-brand">
-                          Delivery Lead Time:
-                        </Typography>
-                        <Typography variant="bodyXs" className="font-bold">
-                          {quote.deliveryLeadTime}
+                        <Icon icon={IconCreditCard} size="md" className="text-text-warning" />
+                        <Typography variant="bodyMd" className="font-bold text-text-warning">
+                          Payment Required
                         </Typography>
                       </div>
-                    </div>
-                  )}
-
-                  {quote.paymentMethod === 'link' && quote.paymentDetails?.paymentUrl && (
-                    <div className="space-y-3">
-                      <Typography variant="bodySm">
-                        Please complete your payment using the secure payment link below:
-                      </Typography>
-                      <a
-                        href={quote.paymentDetails.paymentUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-2 rounded-lg bg-fill-brand px-4 py-3 text-white font-semibold hover:bg-fill-brand/90 transition-colors"
-                      >
-                        <IconCreditCard className="h-4 w-4" />
-                        Pay Now
-                        <IconArrowRight className="h-4 w-4" />
-                      </a>
-                    </div>
-                  )}
-
-                  {quote.paymentMethod === 'bank_transfer' && quote.paymentDetails && (
-                    <div className="space-y-3">
-                      <Typography variant="bodySm">
-                        Please transfer the total amount to the following bank account:
-                      </Typography>
-                      <div className="rounded-lg bg-white border border-border-muted p-4 space-y-2">
-                        {quote.paymentDetails.bankName && (
-                          <div className="flex justify-between">
-                            <Typography variant="bodyXs" colorRole="muted">Bank Name</Typography>
-                            <Typography variant="bodyXs" className="font-medium">{quote.paymentDetails.bankName}</Typography>
-                          </div>
-                        )}
-                        {quote.paymentDetails.accountName && (
-                          <div className="flex justify-between">
-                            <Typography variant="bodyXs" colorRole="muted">Account Name</Typography>
-                            <Typography variant="bodyXs" className="font-medium">{quote.paymentDetails.accountName}</Typography>
-                          </div>
-                        )}
-                        {quote.paymentDetails.accountNumber && (
-                          <div className="flex justify-between">
-                            <Typography variant="bodyXs" colorRole="muted">Account Number</Typography>
-                            <Typography variant="bodyXs" className="font-mono font-medium">{quote.paymentDetails.accountNumber}</Typography>
-                          </div>
-                        )}
-                        {quote.paymentDetails.sortCode && (
-                          <div className="flex justify-between">
-                            <Typography variant="bodyXs" colorRole="muted">Sort Code</Typography>
-                            <Typography variant="bodyXs" className="font-mono font-medium">{quote.paymentDetails.sortCode}</Typography>
-                          </div>
-                        )}
-                        {quote.paymentDetails.iban && (
-                          <div className="flex justify-between">
-                            <Typography variant="bodyXs" colorRole="muted">IBAN</Typography>
-                            <Typography variant="bodyXs" className="font-mono font-medium">{quote.paymentDetails.iban}</Typography>
-                          </div>
-                        )}
-                        {quote.paymentDetails.swiftBic && (
-                          <div className="flex justify-between">
-                            <Typography variant="bodyXs" colorRole="muted">SWIFT/BIC</Typography>
-                            <Typography variant="bodyXs" className="font-mono font-medium">{quote.paymentDetails.swiftBic}</Typography>
-                          </div>
-                        )}
-                        {quote.paymentDetails.reference && (
-                          <div className="flex justify-between pt-2 border-t border-border-muted">
-                            <Typography variant="bodyXs" colorRole="muted">Payment Reference</Typography>
-                            <Typography variant="bodyXs" className="font-mono font-bold text-text-brand">{quote.paymentDetails.reference}</Typography>
-                          </div>
-                        )}
-                      </div>
-                      <div className="rounded-lg bg-fill-brand/10 border border-border-brand p-3">
-                        <Typography variant="bodyXs" className="font-semibold text-text-brand mb-1">
-                          Amount to Transfer:
+                      <div className="text-right">
+                        <Typography variant="bodyXs" colorRole="muted">
+                          Amount Due
                         </Typography>
-                        <Typography variant="headingMd" className="font-bold text-text-brand">
+                        <Typography variant="headingMd" className="font-bold">
                           {formatPrice(displayTotal, displayCurrency)}
                         </Typography>
                       </div>
                     </div>
-                  )}
+                  </div>
 
-                  <Typography variant="bodyXs" colorRole="muted" className="mt-4">
-                    Once payment is received, your order will be confirmed by our team.
-                  </Typography>
+                  <div className="p-5 space-y-5">
+                    {/* Partner Info - Compact */}
+                    {partnerInfo && (
+                      <div className="flex items-center gap-3 p-3 rounded-lg bg-white border border-border-muted">
+                        {partnerInfo.logoUrl && (
+                          <img
+                            src={partnerInfo.logoUrl}
+                            alt={partnerInfo.businessName}
+                            className="h-10 w-10 object-contain rounded-md border border-border-muted flex-shrink-0"
+                          />
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <Typography variant="bodySm" className="font-semibold truncate">
+                            {partnerInfo.businessName}
+                          </Typography>
+                          <div className="flex items-center gap-3 text-xs text-text-muted">
+                            {partnerInfo.taxId && <span>TRN: {partnerInfo.taxId}</span>}
+                            {partnerInfo.businessPhone && (
+                              <a href={`tel:${partnerInfo.businessPhone}`} className="text-text-brand hover:underline">
+                                {partnerInfo.businessPhone}
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Delivery Lead Time */}
+                    {quote.deliveryLeadTime && (
+                      <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-fill-brand/10 border border-border-brand">
+                        <Icon icon={IconTruck} size="sm" className="text-text-brand" />
+                        <Typography variant="bodySm" className="text-text-brand">
+                          <span className="font-medium">Delivery:</span> {quote.deliveryLeadTime}
+                        </Typography>
+                      </div>
+                    )}
+
+                    {/* Payment Link */}
+                    {quote.paymentMethod === 'link' && quote.paymentDetails?.paymentUrl && (
+                      <div className="text-center space-y-3">
+                        <Typography variant="bodySm" colorRole="muted">
+                          Complete your payment securely:
+                        </Typography>
+                        <a
+                          href={quote.paymentDetails.paymentUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-2 rounded-lg bg-fill-brand px-6 py-3 text-white font-semibold hover:bg-fill-brand/90 transition-colors shadow-md"
+                        >
+                          <IconCreditCard className="h-5 w-5" />
+                          Pay {formatPrice(displayTotal, displayCurrency)}
+                          <IconArrowRight className="h-4 w-4" />
+                        </a>
+                      </div>
+                    )}
+
+                    {/* Bank Transfer Details */}
+                    {quote.paymentMethod === 'bank_transfer' && quote.paymentDetails && (
+                      <div className="space-y-3">
+                        <Typography variant="bodySm" className="font-medium">
+                          Transfer to:
+                        </Typography>
+                        <div className="rounded-lg bg-white border border-border-muted overflow-hidden">
+                          <table className="w-full text-sm">
+                            <tbody className="divide-y divide-border-muted">
+                              {quote.paymentDetails.bankName && (
+                                <tr>
+                                  <td className="px-4 py-2.5 text-text-muted w-32">Bank</td>
+                                  <td className="px-4 py-2.5 font-medium">{quote.paymentDetails.bankName}</td>
+                                </tr>
+                              )}
+                              {quote.paymentDetails.accountName && (
+                                <tr>
+                                  <td className="px-4 py-2.5 text-text-muted">Account</td>
+                                  <td className="px-4 py-2.5 font-medium">{quote.paymentDetails.accountName}</td>
+                                </tr>
+                              )}
+                              {quote.paymentDetails.iban && (
+                                <tr>
+                                  <td className="px-4 py-2.5 text-text-muted">IBAN</td>
+                                  <td className="px-4 py-2.5 font-mono font-medium tracking-wide">{quote.paymentDetails.iban}</td>
+                                </tr>
+                              )}
+                              {quote.paymentDetails.accountNumber && !quote.paymentDetails.iban && (
+                                <tr>
+                                  <td className="px-4 py-2.5 text-text-muted">Account #</td>
+                                  <td className="px-4 py-2.5 font-mono font-medium">{quote.paymentDetails.accountNumber}</td>
+                                </tr>
+                              )}
+                              {quote.paymentDetails.sortCode && (
+                                <tr>
+                                  <td className="px-4 py-2.5 text-text-muted">Sort Code</td>
+                                  <td className="px-4 py-2.5 font-mono font-medium">{quote.paymentDetails.sortCode}</td>
+                                </tr>
+                              )}
+                              {quote.paymentDetails.swiftBic && (
+                                <tr>
+                                  <td className="px-4 py-2.5 text-text-muted">SWIFT</td>
+                                  <td className="px-4 py-2.5 font-mono font-medium">{quote.paymentDetails.swiftBic}</td>
+                                </tr>
+                              )}
+                              {quote.paymentDetails.reference && (
+                                <tr className="bg-fill-brand/5">
+                                  <td className="px-4 py-2.5 text-text-brand font-medium">Reference</td>
+                                  <td className="px-4 py-2.5 font-mono font-bold text-text-brand">{quote.paymentDetails.reference}</td>
+                                </tr>
+                              )}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    )}
+
+                    <Typography variant="bodyXs" colorRole="muted" className="text-center">
+                      Your order will be confirmed once payment is received.
+                    </Typography>
+                  </div>
                 </div>
               </>
             )}

@@ -3,10 +3,12 @@
 import type { DialogProps } from '@radix-ui/react-dialog';
 import {
   IconCheck,
+  IconCreditCard,
   IconDownload,
   IconEdit,
   IconPlayerPlay,
   IconPlus,
+  IconTrash,
 } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
@@ -104,6 +106,9 @@ const QuoteApprovalDialog = ({
 
   // State for tracking which line items have alternatives section expanded
   const [expandedAlternatives, setExpandedAlternatives] = useState<Record<string, boolean>>({});
+
+  // State for delete confirmation
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   // Extract pricing data from quoteData
   const quotePricingData = useMemo(() => {
@@ -376,6 +381,47 @@ const QuoteApprovalDialog = ({
     onError: (error) => {
       toast.error(
         `Failed to confirm PO: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      );
+    },
+  });
+
+  // Mark as Paid mutation (B2C only)
+  const markAsPaidMutation = useMutation({
+    mutationFn: async () => {
+      if (!quote) return;
+      return trpcClient.quotes.markAsPaid.mutate({
+        quoteId: quote.id,
+      });
+    },
+    onSuccess: () => {
+      toast.success('Quote marked as paid');
+      void queryClient.invalidateQueries({ queryKey: ['admin-quotes'] });
+      if (onOpenChange) onOpenChange(false);
+    },
+    onError: (error) => {
+      toast.error(
+        `Failed to mark as paid: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      );
+    },
+  });
+
+  // Delete quote mutation
+  const deleteQuoteMutation = useMutation({
+    mutationFn: async () => {
+      if (!quote) return;
+      return trpcClient.quotes.deleteAdmin.mutate({
+        id: quote.id,
+      });
+    },
+    onSuccess: () => {
+      toast.success('Quote deleted');
+      void queryClient.invalidateQueries({ queryKey: ['admin-quotes'] });
+      setShowDeleteConfirm(false);
+      if (onOpenChange) onOpenChange(false);
+    },
+    onError: (error) => {
+      toast.error(
+        `Failed to delete quote: ${error instanceof Error ? error.message : 'Unknown error'}`,
       );
     },
   });
@@ -1642,20 +1688,106 @@ const QuoteApprovalDialog = ({
                 )}
               </div>
             )}
+
+            {/* Awaiting Payment Action - B2C only */}
+            {quote.status === 'awaiting_payment' && (
+              <div className="rounded-lg border-2 border-border-warning bg-fill-warning/5 p-6">
+                <div className="flex items-start gap-3 mb-5">
+                  <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-fill-warning text-text-warning-contrast">
+                    <IconCreditCard size={20} />
+                  </div>
+                  <div className="flex-1">
+                    <Typography variant="bodyLg" className="font-semibold mb-1 text-text-warning">
+                      Awaiting Customer Payment
+                    </Typography>
+                    <Typography variant="bodySm" colorRole="muted">
+                      Quote has been approved and sent to customer. Confirm payment once received.
+                    </Typography>
+                  </div>
+                </div>
+
+                {/* Payment Details Summary */}
+                {quote.paymentMethod && (
+                  <div className="mb-5 rounded-lg bg-white p-4 border border-border-muted">
+                    <Typography variant="bodyXs" className="font-semibold text-text-muted uppercase tracking-wide mb-2">
+                      Payment Method
+                    </Typography>
+                    <Typography variant="bodySm" className="font-medium">
+                      {quote.paymentMethod === 'bank_transfer' ? '🏦 Bank Transfer' : '🔗 Payment Link'}
+                    </Typography>
+                  </div>
+                )}
+
+                <Button
+                  variant="default"
+                  colorRole="brand"
+                  size="lg"
+                  onClick={() => markAsPaidMutation.mutate()}
+                  isDisabled={markAsPaidMutation.isPending}
+                  className="w-full sm:w-auto font-semibold"
+                >
+                  <ButtonContent iconLeft={IconCheck}>
+                    {markAsPaidMutation.isPending ? 'Updating...' : 'Confirm Payment Received'}
+                  </ButtonContent>
+                </Button>
+              </div>
+            )}
           </div>
         </DialogBody>
 
         <DialogFooter className="bg-fill-muted/30 border-t border-border-muted">
-          <Button
-            variant="ghost"
-            size="lg"
-            onClick={() => {
-              if (onOpenChange) onOpenChange(false);
-            }}
-            className="font-medium"
-          >
-            <ButtonContent>Close</ButtonContent>
-          </Button>
+          <div className="flex w-full items-center justify-between gap-4">
+            {/* Delete Button with Confirmation */}
+            <div className="flex items-center gap-2">
+              {!showDeleteConfirm ? (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  colorRole="danger"
+                  onClick={() => setShowDeleteConfirm(true)}
+                  className="font-medium"
+                >
+                  <ButtonContent iconLeft={IconTrash}>Delete</ButtonContent>
+                </Button>
+              ) : (
+                <div className="flex items-center gap-2 rounded-lg bg-fill-danger/10 border border-border-danger px-3 py-2">
+                  <Typography variant="bodyXs" className="text-text-danger font-medium">
+                    Delete this quote?
+                  </Typography>
+                  <Button
+                    variant="default"
+                    colorRole="danger"
+                    size="sm"
+                    onClick={() => deleteQuoteMutation.mutate()}
+                    isDisabled={deleteQuoteMutation.isPending}
+                  >
+                    <ButtonContent>
+                      {deleteQuoteMutation.isPending ? 'Deleting...' : 'Yes, Delete'}
+                    </ButtonContent>
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowDeleteConfirm(false)}
+                  >
+                    <ButtonContent>Cancel</ButtonContent>
+                  </Button>
+                </div>
+              )}
+            </div>
+
+            <Button
+              variant="ghost"
+              size="lg"
+              onClick={() => {
+                setShowDeleteConfirm(false);
+                if (onOpenChange) onOpenChange(false);
+              }}
+              className="font-medium"
+            >
+              <ButtonContent>Close</ButtonContent>
+            </Button>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>

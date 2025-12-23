@@ -4,10 +4,12 @@ import quotesAcceptAlternative from './controller/quotesAcceptAlternative';
 import quotesConfirm from './controller/quotesConfirm';
 import quotesConfirmPO from './controller/quotesConfirmPO';
 import quotesDelete from './controller/quotesDelete';
+import quotesDeleteAdmin from './controller/quotesDeleteAdmin';
 import quotesGet from './controller/quotesGet';
 import quotesGetMany from './controller/quotesGetMany';
 import quotesGetManyAdmin from './controller/quotesGetManyAdmin';
 import quotesGetOne from './controller/quotesGetOne';
+import quotesMarkAsPaid from './controller/quotesMarkAsPaid';
 import quotesRequestRevision from './controller/quotesRequestRevision';
 import quotesSave from './controller/quotesSave';
 import quotesStartCCReview from './controller/quotesStartCCReview';
@@ -24,6 +26,7 @@ const quotesRouter = createTRPCRouter({
   getOne: quotesGetOne,
   update: quotesUpdate,
   delete: quotesDelete,
+  deleteAdmin: quotesDeleteAdmin,
   // Workflow endpoints
   submitBuyRequest: quotesSubmitBuyRequest,
   startCCReview: quotesStartCCReview,
@@ -33,6 +36,7 @@ const quotesRouter = createTRPCRouter({
   confirmPO: quotesConfirmPO,
   uploadPODocument: quotesUploadPODocument,
   acceptAlternative: quotesAcceptAlternative,
+  markAsPaid: quotesMarkAsPaid,
 });
 
 export default quotesRouter;
