@@ -25,6 +25,11 @@ const relations = defineRelations(schema, (r) => ({
       to: r.pricingModels.id,
       optional: true,
     }),
+    partner: r.one.partners({
+      from: r.users.id,
+      to: r.partners.userId,
+      optional: true,
+    }),
   },
   sheets: {
     pricingModels: r.many.pricingModels({
@@ -82,6 +87,49 @@ const relations = defineRelations(schema, (r) => ({
       from: r.quotes.userId,
       to: r.users.id,
       optional: false,
+    }),
+  },
+  partners: {
+    user: r.one.users({
+      from: r.partners.userId,
+      to: r.users.id,
+      optional: false,
+    }),
+    apiKeys: r.many.partnerApiKeys({
+      from: r.partners.id,
+      to: r.partnerApiKeys.partnerId,
+    }),
+    apiRequestLogs: r.many.partnerApiRequestLogs({
+      from: r.partners.id,
+      to: r.partnerApiRequestLogs.partnerId,
+    }),
+  },
+  partnerApiKeys: {
+    partner: r.one.partners({
+      from: r.partnerApiKeys.partnerId,
+      to: r.partners.id,
+      optional: false,
+    }),
+    revokedByUser: r.one.users({
+      from: r.partnerApiKeys.revokedBy,
+      to: r.users.id,
+      optional: true,
+    }),
+    apiRequestLogs: r.many.partnerApiRequestLogs({
+      from: r.partnerApiKeys.id,
+      to: r.partnerApiRequestLogs.apiKeyId,
+    }),
+  },
+  partnerApiRequestLogs: {
+    apiKey: r.one.partnerApiKeys({
+      from: r.partnerApiRequestLogs.apiKeyId,
+      to: r.partnerApiKeys.id,
+      optional: true,
+    }),
+    partner: r.one.partners({
+      from: r.partnerApiRequestLogs.partnerId,
+      to: r.partners.id,
+      optional: true,
     }),
   },
 }));
