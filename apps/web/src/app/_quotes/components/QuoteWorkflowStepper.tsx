@@ -3,9 +3,10 @@
 import {
   IconCheck,
   IconClock,
+  IconCreditCard,
   IconFileText,
-  IconPlayerPlay,
   IconSend,
+  IconTruck,
 } from '@tabler/icons-react';
 import { useMemo } from 'react';
 
@@ -22,20 +23,34 @@ interface WorkflowStep {
 }
 
 interface QuoteWorkflowStepperProps {
-  quote: Quote;
+  quote: Quote & { createdBy?: { customerType?: 'b2b' | 'b2c' } | null };
   variant?: 'default' | 'compact';
 }
 
 /**
  * Clean, minimal workflow stepper for quote approval process
- * Replaces scattered status indicators with unified progress display
+ * Supports both B2B (PO) and B2C (payment) workflows
  */
 const QuoteWorkflowStepper = ({ quote, variant = 'default' }: QuoteWorkflowStepperProps) => {
+  // Determine if this is a B2C flow based on customer type or status indicators
+  const isB2C = useMemo(() => {
+    // If createdBy has customerType, use that
+    if (quote.createdBy?.customerType) {
+      return quote.createdBy.customerType === 'b2c';
+    }
+    // Otherwise infer from status - if it has payment-related status, it's B2C
+    return (
+      quote.status === 'awaiting_payment' ||
+      quote.status === 'paid' ||
+      quote.paymentMethod !== null
+    );
+  }, [quote.createdBy?.customerType, quote.status, quote.paymentMethod]);
+
   const steps: WorkflowStep[] = useMemo(() => {
     const quoteStatus = quote.status;
 
-    // Define workflow steps based on current status
-    const allSteps = [
+    // Define workflow steps based on flow type (B2C vs B2B)
+    const b2cSteps = [
       {
         id: 'submitted',
         label: 'Submitted',
@@ -55,26 +70,85 @@ const QuoteWorkflowStepper = ({ quote, variant = 'default' }: QuoteWorkflowStepp
         icon: IconCheck,
       },
       {
-        id: 'po',
+        id: 'awaiting_payment',
+        label: 'Awaiting Payment',
+        description: 'Payment pending',
+        icon: IconCreditCard,
+      },
+      {
+        id: 'paid',
+        label: 'Paid',
+        description: 'Payment received',
+        icon: IconCheck,
+      },
+      {
+        id: 'delivered',
+        label: 'Delivered',
+        description: 'Order complete',
+        icon: IconTruck,
+      },
+    ];
+
+    const b2bSteps = [
+      {
+        id: 'submitted',
+        label: 'Submitted',
+        description: 'Order request received',
+        icon: IconSend,
+      },
+      {
+        id: 'review',
+        label: 'Under Review',
+        description: 'C&C team reviewing',
+        icon: IconClock,
+      },
+      {
+        id: 'confirmed',
+        label: 'Confirmed',
+        description: 'Quote approved',
+        icon: IconCheck,
+      },
+      {
+        id: 'po_submitted',
         label: 'PO Submitted',
         description: 'Purchase order received',
         icon: IconFileText,
       },
       {
-        id: 'complete',
-        label: 'Complete',
+        id: 'po_confirmed',
+        label: 'PO Confirmed',
         description: 'Order confirmed',
-        icon: IconPlayerPlay,
+        icon: IconCheck,
+      },
+      {
+        id: 'delivered',
+        label: 'Delivered',
+        description: 'Order complete',
+        icon: IconTruck,
       },
     ];
 
+    const allSteps = isB2C ? b2cSteps : b2bSteps;
+
     // Determine current step index based on status
     let currentStepIndex = 0;
-    if (quoteStatus === 'buy_request_submitted') currentStepIndex = 0;
-    else if (quoteStatus === 'under_cc_review' || quoteStatus === 'revision_requested') currentStepIndex = 1;
-    else if (quoteStatus === 'cc_confirmed') currentStepIndex = 2;
-    else if (quoteStatus === 'po_submitted') currentStepIndex = 3;
-    else if (quoteStatus === 'po_confirmed') currentStepIndex = 4;
+    if (quoteStatus === 'buy_request_submitted') {
+      currentStepIndex = 0;
+    } else if (quoteStatus === 'under_cc_review' || quoteStatus === 'revision_requested') {
+      currentStepIndex = 1;
+    } else if (quoteStatus === 'cc_confirmed') {
+      currentStepIndex = 2;
+    } else if (isB2C) {
+      // B2C flow
+      if (quoteStatus === 'awaiting_payment') currentStepIndex = 3;
+      else if (quoteStatus === 'paid') currentStepIndex = 4;
+      else if (quoteStatus === 'delivered') currentStepIndex = 5;
+    } else {
+      // B2B flow
+      if (quoteStatus === 'po_submitted') currentStepIndex = 3;
+      else if (quoteStatus === 'po_confirmed') currentStepIndex = 4;
+      else if (quoteStatus === 'delivered') currentStepIndex = 5;
+    }
 
     return allSteps.map((step, index) => ({
       ...step,
@@ -85,7 +159,7 @@ const QuoteWorkflowStepper = ({ quote, variant = 'default' }: QuoteWorkflowStepp
             ? ('current' as const)
             : ('upcoming' as const),
     }));
-  }, [quote.status]);
+  }, [quote.status, isB2C]);
 
   if (variant === 'compact') {
     return (
@@ -211,7 +285,29 @@ const QuoteWorkflowStepper = ({ quote, variant = 'default' }: QuoteWorkflowStepp
                         })}
                       </Typography>
                     )}
-                    {step.id === 'po' && quote.poSubmittedAt && (
+                    {step.id === 'awaiting_payment' && quote.ccConfirmedAt && (
+                      <Typography variant="bodyXs" colorRole="muted">
+                        {new Date(quote.ccConfirmedAt).toLocaleDateString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                      </Typography>
+                    )}
+                    {step.id === 'paid' && quote.paidAt && (
+                      <Typography variant="bodyXs" colorRole="muted">
+                        {new Date(quote.paidAt).toLocaleDateString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                      </Typography>
+                    )}
+                    {step.id === 'po_submitted' && quote.poSubmittedAt && (
                       <Typography variant="bodyXs" colorRole="muted">
                         {new Date(quote.poSubmittedAt).toLocaleDateString('en-US', {
                           month: 'short',
@@ -222,9 +318,20 @@ const QuoteWorkflowStepper = ({ quote, variant = 'default' }: QuoteWorkflowStepp
                         })}
                       </Typography>
                     )}
-                    {step.id === 'complete' && quote.poConfirmedAt && (
+                    {step.id === 'po_confirmed' && quote.poConfirmedAt && (
                       <Typography variant="bodyXs" colorRole="muted">
                         {new Date(quote.poConfirmedAt).toLocaleDateString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                      </Typography>
+                    )}
+                    {step.id === 'delivered' && quote.deliveredAt && (
+                      <Typography variant="bodyXs" colorRole="muted">
+                        {new Date(quote.deliveredAt).toLocaleDateString('en-US', {
                           month: 'short',
                           day: 'numeric',
                           year: 'numeric',
