@@ -325,10 +325,8 @@ export const partners = pgTable(
   'partners',
   {
     id: uuid('id').primaryKey().defaultRandom(),
-    userId: uuid('user_id')
-      .references(() => users.id, { onDelete: 'cascade' })
-      .notNull()
-      .unique(),
+    // Optional: only used if partner has a platform account (e.g., for API access)
+    userId: uuid('user_id').references(() => users.id, { onDelete: 'set null' }),
     type: partnerType('type').notNull(),
     status: partnerStatus('status').notNull().default('active'),
     businessName: text('business_name').notNull(),

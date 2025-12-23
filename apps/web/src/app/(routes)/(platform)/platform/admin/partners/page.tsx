@@ -1,12 +1,16 @@
 'use client';
 
 import {
+  IconBuilding,
   IconCopy,
   IconCreditCard,
   IconExternalLink,
   IconKey,
+  IconMapPin,
+  IconPhone,
   IconPhoto,
   IconPlus,
+  IconReceipt,
   IconSearch,
   IconTrash,
 } from '@tabler/icons-react';
@@ -38,9 +42,25 @@ import useTRPC from '@/lib/trpc/browser';
 
 type PartnerType = 'retailer' | 'sommelier' | 'distributor';
 type PartnerStatus = 'active' | 'inactive' | 'suspended';
+type PaymentMethod = 'bank_transfer' | 'link';
+
+interface PaymentDetails {
+  bankName?: string;
+  accountName?: string;
+  accountNumber?: string;
+  sortCode?: string;
+  iban?: string;
+  swiftBic?: string;
+  reference?: string;
+  paymentUrl?: string;
+}
 
 /**
- * Admin page for managing retail partners and API keys
+ * Admin page for managing licensed partners
+ *
+ * Partners are external business entities (retailers, distributors) that
+ * fulfill B2C orders. They're licensed mainland entities that receive
+ * payment from customers and purchase inventory from C&C.
  */
 const PartnersPage = () => {
   const api = useTRPC();
@@ -54,12 +74,15 @@ const PartnersPage = () => {
 
   // Form state for creating partner
   const [newPartner, setNewPartner] = useState({
-    userId: '',
     type: 'retailer' as PartnerType,
     businessName: '',
-    businessEmail: '',
-    businessPhone: '',
     businessAddress: '',
+    businessPhone: '',
+    businessEmail: '',
+    taxId: '',
+    logoUrl: '',
+    paymentMethod: null as PaymentMethod | null,
+    paymentDetails: {} as PaymentDetails,
     commissionRate: 0,
   });
 
@@ -69,23 +92,19 @@ const PartnersPage = () => {
     permissions: ['read:inventory'] as string[],
   });
 
-  // Payment config dialog state
-  const [isPaymentConfigOpen, setIsPaymentConfigOpen] = useState(false);
+  // Edit partner dialog state
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingPartner, setEditingPartner] = useState<{
     id: string;
     businessName: string;
+    businessAddress: string;
+    businessPhone: string;
+    businessEmail: string;
+    taxId: string;
     logoUrl: string;
-    paymentMethod: 'bank_transfer' | 'link' | null;
-    paymentDetails: {
-      bankName?: string;
-      accountName?: string;
-      accountNumber?: string;
-      sortCode?: string;
-      iban?: string;
-      swiftBic?: string;
-      reference?: string;
-      paymentUrl?: string;
-    } | null;
+    paymentMethod: PaymentMethod | null;
+    paymentDetails: PaymentDetails | null;
+    commissionRate: number;
   } | null>(null);
 
   // Fetch partners
@@ -96,14 +115,6 @@ const PartnersPage = () => {
     }),
   });
 
-  // Fetch users for dropdown (only approved users without partner accounts)
-  const { data: usersData } = useQuery({
-    ...api.users.getPaginated.queryOptions({
-      status: 'approved',
-      limit: 100,
-    }),
-  });
-
   // Create partner mutation
   const { mutate: createPartner, isPending: isCreating } = useMutation(
     api.partners.create.mutationOptions({
@@ -111,14 +122,28 @@ const PartnersPage = () => {
         void refetch();
         setIsCreateDialogOpen(false);
         setNewPartner({
-          userId: '',
           type: 'retailer',
           businessName: '',
-          businessEmail: '',
-          businessPhone: '',
           businessAddress: '',
+          businessPhone: '',
+          businessEmail: '',
+          taxId: '',
+          logoUrl: '',
+          paymentMethod: null,
+          paymentDetails: {},
           commissionRate: 0,
         });
+      },
+    }),
+  );
+
+  // Update partner mutation
+  const { mutate: updatePartner, isPending: isUpdating } = useMutation(
+    api.partners.update.mutationOptions({
+      onSuccess: () => {
+        void refetch();
+        setIsEditDialogOpen(false);
+        setEditingPartner(null);
       },
     }),
   );
@@ -142,24 +167,7 @@ const PartnersPage = () => {
     }),
   );
 
-  // Update partner mutation
-  const { mutate: updatePartner, isPending: isUpdating } = useMutation(
-    api.partners.update.mutationOptions({
-      onSuccess: () => {
-        void refetch();
-        setIsPaymentConfigOpen(false);
-        setEditingPartner(null);
-      },
-    }),
-  );
-
   const partners = data ?? [];
-  const users = usersData?.data ?? [];
-
-  // Filter out users who already have partner accounts
-  const availableUsers = users.filter(
-    (user) => !partners.some((p) => p.userId === user.id),
-  );
 
   const getStatusBadge = (status: PartnerStatus) => {
     switch (status) {
@@ -212,24 +220,53 @@ const PartnersPage = () => {
     setIsApiKeyDialogOpen(true);
   };
 
-  const handleOpenPaymentConfig = (partner: typeof partners[0]) => {
+  const handleEditPartner = (partner: (typeof partners)[0]) => {
     setEditingPartner({
       id: partner.id,
       businessName: partner.businessName,
+      businessAddress: partner.businessAddress || '',
+      businessPhone: partner.businessPhone || '',
+      businessEmail: partner.businessEmail || '',
+      taxId: partner.taxId || '',
       logoUrl: partner.logoUrl || '',
       paymentMethod: partner.paymentMethod,
       paymentDetails: partner.paymentDetails,
+      commissionRate: partner.commissionRate,
     });
-    setIsPaymentConfigOpen(true);
+    setIsEditDialogOpen(true);
   };
 
-  const handleSavePaymentConfig = () => {
+  const handleSavePartner = () => {
     if (!editingPartner) return;
     updatePartner({
       partnerId: editingPartner.id,
+      businessName: editingPartner.businessName,
+      businessAddress: editingPartner.businessAddress || undefined,
+      businessPhone: editingPartner.businessPhone || undefined,
+      businessEmail: editingPartner.businessEmail || undefined,
+      taxId: editingPartner.taxId || undefined,
       logoUrl: editingPartner.logoUrl || undefined,
       paymentMethod: editingPartner.paymentMethod || undefined,
       paymentDetails: editingPartner.paymentDetails || undefined,
+      commissionRate: editingPartner.commissionRate,
+    });
+  };
+
+  const handleCreatePartner = () => {
+    createPartner({
+      type: newPartner.type,
+      businessName: newPartner.businessName,
+      businessAddress: newPartner.businessAddress,
+      businessPhone: newPartner.businessPhone || undefined,
+      businessEmail: newPartner.businessEmail || undefined,
+      taxId: newPartner.taxId,
+      logoUrl: newPartner.logoUrl || undefined,
+      paymentMethod: newPartner.paymentMethod || undefined,
+      paymentDetails:
+        Object.keys(newPartner.paymentDetails).length > 0
+          ? newPartner.paymentDetails
+          : undefined,
+      commissionRate: newPartner.commissionRate,
     });
   };
 
@@ -240,10 +277,10 @@ const PartnersPage = () => {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 sm:mb-8">
           <div>
             <Typography variant="headingLg" className="mb-2">
-              Partner Management
+              Licensed Partners
             </Typography>
             <Typography variant="bodyMd" colorRole="muted">
-              Manage retail partners and their API access
+              Manage licensed entities that fulfill B2C orders
             </Typography>
           </div>
           <div className="flex items-center gap-3">
@@ -258,130 +295,328 @@ const PartnersPage = () => {
                   <ButtonContent iconLeft={IconPlus}>Add Partner</ButtonContent>
                 </Button>
               </DialogTrigger>
-            <DialogContent className="sm:max-w-lg">
-              <DialogHeader>
-                <DialogTitle>Create New Partner</DialogTitle>
-                <DialogDescription>
-                  Link a user account to a partner profile for API access
-                </DialogDescription>
-              </DialogHeader>
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  createPartner(newPartner);
-                }}
-                className="space-y-4 mt-4"
-              >
-                <div>
-                  <label className="block text-sm font-medium text-text-primary mb-1">
-                    User Account
-                  </label>
-                  <select
-                    value={newPartner.userId}
-                    onChange={(e) =>
-                      setNewPartner({ ...newPartner, userId: e.target.value })
-                    }
-                    className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm"
-                    required
-                  >
-                    <option value="">Select a user...</option>
-                    {availableUsers.map((user) => (
-                      <option key={user.id} value={user.id}>
-                        {user.name} ({user.email})
-                      </option>
-                    ))}
-                  </select>
-                </div>
+              <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Add Licensed Partner</DialogTitle>
+                  <DialogDescription>
+                    Add a licensed entity that will fulfill B2C orders
+                  </DialogDescription>
+                </DialogHeader>
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    handleCreatePartner();
+                  }}
+                  className="space-y-6 mt-4"
+                >
+                  {/* Business Details Section */}
+                  <div className="space-y-4">
+                    <Typography variant="bodySm" className="font-semibold flex items-center gap-2">
+                      <IconBuilding className="h-4 w-4" />
+                      Business Details
+                    </Typography>
 
-                <div>
-                  <label className="block text-sm font-medium text-text-primary mb-1">
-                    Partner Type
-                  </label>
-                  <select
-                    value={newPartner.type}
-                    onChange={(e) =>
-                      setNewPartner({
-                        ...newPartner,
-                        type: e.target.value as PartnerType,
-                      })
-                    }
-                    className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm"
-                  >
-                    <option value="retailer">Retailer</option>
-                    <option value="sommelier">Sommelier</option>
-                    <option value="distributor">Distributor</option>
-                  </select>
-                </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="col-span-2">
+                        <label className="block text-sm font-medium text-text-primary mb-1">
+                          Business Name *
+                        </label>
+                        <input
+                          type="text"
+                          value={newPartner.businessName}
+                          onChange={(e) =>
+                            setNewPartner({ ...newPartner, businessName: e.target.value })
+                          }
+                          className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm"
+                          required
+                        />
+                      </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-text-primary mb-1">
-                    Business Name
-                  </label>
-                  <input
-                    type="text"
-                    value={newPartner.businessName}
-                    onChange={(e) =>
-                      setNewPartner({ ...newPartner, businessName: e.target.value })
-                    }
-                    className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm"
-                    required
-                  />
-                </div>
+                      <div>
+                        <label className="block text-sm font-medium text-text-primary mb-1">
+                          Partner Type
+                        </label>
+                        <select
+                          value={newPartner.type}
+                          onChange={(e) =>
+                            setNewPartner({
+                              ...newPartner,
+                              type: e.target.value as PartnerType,
+                            })
+                          }
+                          className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm"
+                        >
+                          <option value="retailer">Retailer</option>
+                          <option value="distributor">Distributor</option>
+                        </select>
+                      </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-text-primary mb-1">
-                    Business Email
-                  </label>
-                  <input
-                    type="email"
-                    value={newPartner.businessEmail}
-                    onChange={(e) =>
-                      setNewPartner({ ...newPartner, businessEmail: e.target.value })
-                    }
-                    className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm"
-                  />
-                </div>
+                      <div>
+                        <label className="block text-sm font-medium text-text-primary mb-1">
+                          TRN / Tax ID *
+                        </label>
+                        <input
+                          type="text"
+                          value={newPartner.taxId}
+                          onChange={(e) =>
+                            setNewPartner({ ...newPartner, taxId: e.target.value })
+                          }
+                          placeholder="e.g., 100123456789003"
+                          className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm"
+                          required
+                        />
+                      </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-text-primary mb-1">
-                    Commission Rate (%)
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    max="100"
-                    step="0.1"
-                    value={newPartner.commissionRate}
-                    onChange={(e) =>
-                      setNewPartner({
-                        ...newPartner,
-                        commissionRate: parseFloat(e.target.value) || 0,
-                      })
-                    }
-                    className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm"
-                  />
-                </div>
+                      <div className="col-span-2">
+                        <label className="block text-sm font-medium text-text-primary mb-1">
+                          Business Address *
+                        </label>
+                        <textarea
+                          value={newPartner.businessAddress}
+                          onChange={(e) =>
+                            setNewPartner({ ...newPartner, businessAddress: e.target.value })
+                          }
+                          rows={2}
+                          className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm"
+                          required
+                        />
+                      </div>
 
-                <div className="flex justify-end gap-2 pt-4">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setIsCreateDialogOpen(false)}
-                  >
-                    <ButtonContent>Cancel</ButtonContent>
-                  </Button>
-                  <Button
-                    type="submit"
-                    variant="default"
-                    colorRole="brand"
-                    isDisabled={isCreating}
-                  >
-                    <ButtonContent>{isCreating ? 'Creating...' : 'Create Partner'}</ButtonContent>
-                  </Button>
-                </div>
-              </form>
-            </DialogContent>
-          </Dialog>
+                      <div>
+                        <label className="block text-sm font-medium text-text-primary mb-1">
+                          Email
+                        </label>
+                        <input
+                          type="email"
+                          value={newPartner.businessEmail}
+                          onChange={(e) =>
+                            setNewPartner({ ...newPartner, businessEmail: e.target.value })
+                          }
+                          className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-text-primary mb-1">
+                          Phone
+                        </label>
+                        <input
+                          type="tel"
+                          value={newPartner.businessPhone}
+                          onChange={(e) =>
+                            setNewPartner({ ...newPartner, businessPhone: e.target.value })
+                          }
+                          className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Branding Section */}
+                  <div className="space-y-4 border-t border-border-muted pt-4">
+                    <Typography variant="bodySm" className="font-semibold flex items-center gap-2">
+                      <IconPhoto className="h-4 w-4" />
+                      Branding
+                    </Typography>
+
+                    <div>
+                      <label className="block text-sm font-medium text-text-primary mb-1">
+                        Logo URL
+                      </label>
+                      <input
+                        type="url"
+                        value={newPartner.logoUrl}
+                        onChange={(e) =>
+                          setNewPartner({ ...newPartner, logoUrl: e.target.value })
+                        }
+                        placeholder="https://example.com/logo.png"
+                        className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm"
+                      />
+                      {newPartner.logoUrl && (
+                        <div className="mt-2 p-2 bg-fill-muted rounded-lg inline-block">
+                          <img
+                            src={newPartner.logoUrl}
+                            alt="Logo preview"
+                            className="max-h-12 object-contain"
+                            onError={(e) => (e.currentTarget.style.display = 'none')}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Payment Configuration Section */}
+                  <div className="space-y-4 border-t border-border-muted pt-4">
+                    <Typography variant="bodySm" className="font-semibold flex items-center gap-2">
+                      <IconCreditCard className="h-4 w-4" />
+                      Payment Configuration
+                    </Typography>
+
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        variant={newPartner.paymentMethod === 'bank_transfer' ? 'default' : 'outline'}
+                        colorRole={newPartner.paymentMethod === 'bank_transfer' ? 'brand' : 'primary'}
+                        size="sm"
+                        onClick={() =>
+                          setNewPartner({
+                            ...newPartner,
+                            paymentMethod: 'bank_transfer',
+                          })
+                        }
+                      >
+                        <ButtonContent>Bank Transfer</ButtonContent>
+                      </Button>
+                      <Button
+                        type="button"
+                        variant={newPartner.paymentMethod === 'link' ? 'default' : 'outline'}
+                        colorRole={newPartner.paymentMethod === 'link' ? 'brand' : 'primary'}
+                        size="sm"
+                        onClick={() =>
+                          setNewPartner({
+                            ...newPartner,
+                            paymentMethod: 'link',
+                          })
+                        }
+                      >
+                        <ButtonContent>Payment Link</ButtonContent>
+                      </Button>
+                    </div>
+
+                    {newPartner.paymentMethod === 'bank_transfer' && (
+                      <div className="grid grid-cols-2 gap-3 p-4 bg-fill-muted/50 rounded-lg">
+                        <div>
+                          <label className="block text-xs text-text-muted mb-1">Bank Name</label>
+                          <input
+                            type="text"
+                            value={newPartner.paymentDetails.bankName || ''}
+                            onChange={(e) =>
+                              setNewPartner({
+                                ...newPartner,
+                                paymentDetails: {
+                                  ...newPartner.paymentDetails,
+                                  bankName: e.target.value,
+                                },
+                              })
+                            }
+                            className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs text-text-muted mb-1">Account Name</label>
+                          <input
+                            type="text"
+                            value={newPartner.paymentDetails.accountName || ''}
+                            onChange={(e) =>
+                              setNewPartner({
+                                ...newPartner,
+                                paymentDetails: {
+                                  ...newPartner.paymentDetails,
+                                  accountName: e.target.value,
+                                },
+                              })
+                            }
+                            className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs text-text-muted mb-1">Account Number</label>
+                          <input
+                            type="text"
+                            value={newPartner.paymentDetails.accountNumber || ''}
+                            onChange={(e) =>
+                              setNewPartner({
+                                ...newPartner,
+                                paymentDetails: {
+                                  ...newPartner.paymentDetails,
+                                  accountNumber: e.target.value,
+                                },
+                              })
+                            }
+                            className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs text-text-muted mb-1">IBAN</label>
+                          <input
+                            type="text"
+                            value={newPartner.paymentDetails.iban || ''}
+                            onChange={(e) =>
+                              setNewPartner({
+                                ...newPartner,
+                                paymentDetails: {
+                                  ...newPartner.paymentDetails,
+                                  iban: e.target.value,
+                                },
+                              })
+                            }
+                            className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs text-text-muted mb-1">SWIFT/BIC</label>
+                          <input
+                            type="text"
+                            value={newPartner.paymentDetails.swiftBic || ''}
+                            onChange={(e) =>
+                              setNewPartner({
+                                ...newPartner,
+                                paymentDetails: {
+                                  ...newPartner.paymentDetails,
+                                  swiftBic: e.target.value,
+                                },
+                              })
+                            }
+                            className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm"
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {newPartner.paymentMethod === 'link' && (
+                      <div className="p-4 bg-fill-muted/50 rounded-lg">
+                        <label className="block text-xs text-text-muted mb-1">Payment URL</label>
+                        <input
+                          type="url"
+                          value={newPartner.paymentDetails.paymentUrl || ''}
+                          onChange={(e) =>
+                            setNewPartner({
+                              ...newPartner,
+                              paymentDetails: {
+                                ...newPartner.paymentDetails,
+                                paymentUrl: e.target.value,
+                              },
+                            })
+                          }
+                          placeholder="https://pay.partner.com/..."
+                          className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm"
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex justify-end gap-2 pt-4 border-t border-border-muted">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setIsCreateDialogOpen(false)}
+                    >
+                      <ButtonContent>Cancel</ButtonContent>
+                    </Button>
+                    <Button
+                      type="submit"
+                      variant="default"
+                      colorRole="brand"
+                      isDisabled={isCreating}
+                    >
+                      <ButtonContent>
+                        {isCreating ? 'Creating...' : 'Add Partner'}
+                      </ButtonContent>
+                    </Button>
+                  </div>
+                </form>
+              </DialogContent>
+            </Dialog>
           </div>
         </div>
 
@@ -445,28 +680,55 @@ const PartnersPage = () => {
                 <CardContent className="p-6">
                   <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
                     {/* Partner Info */}
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2">
-                        <Typography variant="headingSm">{partner.businessName}</Typography>
-                        {getTypeBadge(partner.type)}
-                        {getStatusBadge(partner.status)}
+                    <div className="flex-1 space-y-3">
+                      <div className="flex items-center gap-3">
+                        {partner.logoUrl && (
+                          <img
+                            src={partner.logoUrl}
+                            alt={partner.businessName}
+                            className="h-10 w-10 object-contain rounded"
+                          />
+                        )}
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <Typography variant="headingSm">{partner.businessName}</Typography>
+                            {getTypeBadge(partner.type)}
+                            {getStatusBadge(partner.status)}
+                          </div>
+                          {partner.taxId && (
+                            <Typography variant="bodyXs" colorRole="muted" className="flex items-center gap-1">
+                              <IconReceipt className="h-3 w-3" />
+                              TRN: {partner.taxId}
+                            </Typography>
+                          )}
+                        </div>
                       </div>
-                      <Typography variant="bodySm" colorRole="muted">
-                        {partner.user.name} &middot; {partner.user.email}
-                      </Typography>
-                      {partner.businessEmail && (
-                        <Typography variant="bodyXs" colorRole="muted">
-                          Business: {partner.businessEmail}
-                        </Typography>
-                      )}
-                      <Typography variant="bodyXs" colorRole="muted">
-                        Commission: {partner.commissionRate}%
-                      </Typography>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-sm">
+                        {partner.businessAddress && (
+                          <div className="flex items-start gap-1.5 text-text-muted">
+                            <IconMapPin className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
+                            <span className="text-xs">{partner.businessAddress}</span>
+                          </div>
+                        )}
+                        {partner.businessEmail && (
+                          <div className="flex items-center gap-1.5 text-text-muted">
+                            <span className="text-xs">{partner.businessEmail}</span>
+                          </div>
+                        )}
+                        {partner.businessPhone && (
+                          <div className="flex items-center gap-1.5 text-text-muted">
+                            <IconPhone className="h-3.5 w-3.5" />
+                            <span className="text-xs">{partner.businessPhone}</span>
+                          </div>
+                        )}
+                      </div>
+
                       {/* Payment Config Status */}
                       {partner.paymentMethod && (
-                        <div className="flex items-center gap-2 mt-2">
+                        <div className="flex items-center gap-2">
                           <span className="bg-fill-brand/10 text-text-brand border border-border-brand inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium">
-                            {partner.paymentMethod === 'bank_transfer' ? '🏦 Bank Transfer' : '🔗 Payment Link'}
+                            {partner.paymentMethod === 'bank_transfer' ? 'Bank Transfer' : 'Payment Link'}
                           </span>
                         </div>
                       )}
@@ -474,80 +736,77 @@ const PartnersPage = () => {
 
                     {/* Actions Section */}
                     <div className="flex-shrink-0 space-y-3">
-                      {/* Payment Config Button */}
+                      {/* Edit Partner Button */}
                       <Button
                         size="sm"
-                        variant={partner.paymentMethod ? 'outline' : 'default'}
-                        colorRole={partner.paymentMethod ? 'primary' : 'brand'}
-                        onClick={() => handleOpenPaymentConfig(partner)}
+                        variant="outline"
+                        onClick={() => handleEditPartner(partner)}
                         className="w-full"
                       >
-                        <ButtonContent iconLeft={IconCreditCard}>
-                          {partner.paymentMethod ? 'Edit Payment Config' : 'Configure Payment'}
-                        </ButtonContent>
+                        <ButtonContent iconLeft={IconCreditCard}>Edit Details</ButtonContent>
                       </Button>
 
-                    {/* API Keys Section */}
-                    <div className="flex-shrink-0 space-y-2">
-                      <div className="flex items-center gap-2">
-                        <Typography variant="bodySm" className="font-medium">
-                          API Keys ({partner.apiKeyCount})
-                        </Typography>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleCreateApiKey(partner.id)}
-                        >
-                          <ButtonContent iconLeft={IconKey}>Generate Key</ButtonContent>
-                        </Button>
-                      </div>
-
-                      {partner.apiKeys && partner.apiKeys.length > 0 && (
-                        <div className="space-y-1">
-                          {partner.apiKeys.map((key) => (
-                            <div
-                              key={key.id}
-                              className="flex items-center justify-between gap-4 rounded-lg bg-fill-muted/50 px-3 py-2 text-sm"
-                            >
-                              <div>
-                                <span className="font-mono text-xs">{key.keyPrefix}...</span>
-                                <span className="text-text-muted ml-2">{key.name}</span>
-                              </div>
-                              <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    colorRole="danger"
-                                    isDisabled={isRevoking}
-                                  >
-                                    <ButtonContent iconLeft={IconTrash} />
-                                  </Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                  <AlertDialogHeader>
-                                    <AlertDialogTitle>Revoke API Key</AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                      Are you sure you want to revoke this API key? Any integrations
-                                      using this key will immediately stop working.
-                                    </AlertDialogDescription>
-                                  </AlertDialogHeader>
-                                  <AlertDialogFooter>
-                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                    <AlertDialogAction
-                                      onClick={() => revokeApiKey({ apiKeyId: key.id })}
-                                      className="bg-red-600 hover:bg-red-700"
-                                    >
-                                      Revoke Key
-                                    </AlertDialogAction>
-                                  </AlertDialogFooter>
-                                </AlertDialogContent>
-                              </AlertDialog>
-                            </div>
-                          ))}
+                      {/* API Keys Section */}
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <Typography variant="bodySm" className="font-medium">
+                            API Keys ({partner.apiKeyCount})
+                          </Typography>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleCreateApiKey(partner.id)}
+                          >
+                            <ButtonContent iconLeft={IconKey}>Generate Key</ButtonContent>
+                          </Button>
                         </div>
-                      )}
-                    </div>
+
+                        {partner.apiKeys && partner.apiKeys.length > 0 && (
+                          <div className="space-y-1">
+                            {partner.apiKeys.map((key) => (
+                              <div
+                                key={key.id}
+                                className="flex items-center justify-between gap-4 rounded-lg bg-fill-muted/50 px-3 py-2 text-sm"
+                              >
+                                <div>
+                                  <span className="font-mono text-xs">{key.keyPrefix}...</span>
+                                  <span className="text-text-muted ml-2">{key.name}</span>
+                                </div>
+                                <AlertDialog>
+                                  <AlertDialogTrigger asChild>
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      colorRole="danger"
+                                      isDisabled={isRevoking}
+                                    >
+                                      <ButtonContent iconLeft={IconTrash} />
+                                    </Button>
+                                  </AlertDialogTrigger>
+                                  <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                      <AlertDialogTitle>Revoke API Key</AlertDialogTitle>
+                                      <AlertDialogDescription>
+                                        Are you sure you want to revoke this API key? Any integrations
+                                        using this key will immediately stop working.
+                                      </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                      <AlertDialogAction
+                                        onClick={() => revokeApiKey({ apiKeyId: key.id })}
+                                        className="bg-red-600 hover:bg-red-700"
+                                      >
+                                        Revoke Key
+                                      </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                  </AlertDialogContent>
+                                </AlertDialog>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </CardContent>
@@ -556,57 +815,164 @@ const PartnersPage = () => {
           </div>
         )}
 
-        {/* Payment Config Dialog */}
-        <Dialog open={isPaymentConfigOpen} onOpenChange={setIsPaymentConfigOpen}>
-          <DialogContent className="sm:max-w-xl">
+        {/* Edit Partner Dialog */}
+        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+          <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Payment Configuration</DialogTitle>
+              <DialogTitle>Edit Partner</DialogTitle>
               <DialogDescription>
-                Configure payment details for {editingPartner?.businessName}
+                Update partner details and payment configuration
               </DialogDescription>
             </DialogHeader>
 
             {editingPartner && (
               <div className="space-y-6 mt-4">
-                {/* Logo URL */}
-                <div>
-                  <label className="block text-sm font-medium text-text-primary mb-1">
-                    <div className="flex items-center gap-2">
-                      <IconPhoto className="h-4 w-4" />
-                      Partner Logo URL
-                    </div>
-                  </label>
-                  <input
-                    type="url"
-                    value={editingPartner.logoUrl}
-                    onChange={(e) =>
-                      setEditingPartner({ ...editingPartner, logoUrl: e.target.value })
-                    }
-                    placeholder="https://example.com/logo.png"
-                    className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm"
-                  />
-                  {editingPartner.logoUrl && (
-                    <div className="mt-2 p-2 bg-fill-muted rounded-lg">
-                      <img
-                        src={editingPartner.logoUrl}
-                        alt="Partner logo preview"
-                        className="max-h-16 object-contain"
-                        onError={(e) => (e.currentTarget.style.display = 'none')}
+                {/* Business Details */}
+                <div className="space-y-4">
+                  <Typography variant="bodySm" className="font-semibold flex items-center gap-2">
+                    <IconBuilding className="h-4 w-4" />
+                    Business Details
+                  </Typography>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="col-span-2">
+                      <label className="block text-sm font-medium text-text-primary mb-1">
+                        Business Name
+                      </label>
+                      <input
+                        type="text"
+                        value={editingPartner.businessName}
+                        onChange={(e) =>
+                          setEditingPartner({ ...editingPartner, businessName: e.target.value })
+                        }
+                        className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm"
                       />
                     </div>
-                  )}
+
+                    <div>
+                      <label className="block text-sm font-medium text-text-primary mb-1">
+                        TRN / Tax ID
+                      </label>
+                      <input
+                        type="text"
+                        value={editingPartner.taxId}
+                        onChange={(e) =>
+                          setEditingPartner({ ...editingPartner, taxId: e.target.value })
+                        }
+                        className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-text-primary mb-1">
+                        Commission Rate (%)
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="0.1"
+                        value={editingPartner.commissionRate}
+                        onChange={(e) =>
+                          setEditingPartner({
+                            ...editingPartner,
+                            commissionRate: parseFloat(e.target.value) || 0,
+                          })
+                        }
+                        className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm"
+                      />
+                    </div>
+
+                    <div className="col-span-2">
+                      <label className="block text-sm font-medium text-text-primary mb-1">
+                        Business Address
+                      </label>
+                      <textarea
+                        value={editingPartner.businessAddress}
+                        onChange={(e) =>
+                          setEditingPartner({ ...editingPartner, businessAddress: e.target.value })
+                        }
+                        rows={2}
+                        className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-text-primary mb-1">
+                        Email
+                      </label>
+                      <input
+                        type="email"
+                        value={editingPartner.businessEmail}
+                        onChange={(e) =>
+                          setEditingPartner({ ...editingPartner, businessEmail: e.target.value })
+                        }
+                        className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-text-primary mb-1">
+                        Phone
+                      </label>
+                      <input
+                        type="tel"
+                        value={editingPartner.businessPhone}
+                        onChange={(e) =>
+                          setEditingPartner({ ...editingPartner, businessPhone: e.target.value })
+                        }
+                        className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm"
+                      />
+                    </div>
+                  </div>
                 </div>
 
-                {/* Payment Method */}
-                <div>
-                  <label className="block text-sm font-medium text-text-primary mb-2">
-                    Payment Method
-                  </label>
+                {/* Branding */}
+                <div className="space-y-4 border-t border-border-muted pt-4">
+                  <Typography variant="bodySm" className="font-semibold flex items-center gap-2">
+                    <IconPhoto className="h-4 w-4" />
+                    Branding
+                  </Typography>
+
+                  <div>
+                    <label className="block text-sm font-medium text-text-primary mb-1">
+                      Logo URL
+                    </label>
+                    <input
+                      type="url"
+                      value={editingPartner.logoUrl}
+                      onChange={(e) =>
+                        setEditingPartner({ ...editingPartner, logoUrl: e.target.value })
+                      }
+                      placeholder="https://example.com/logo.png"
+                      className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm"
+                    />
+                    {editingPartner.logoUrl && (
+                      <div className="mt-2 p-2 bg-fill-muted rounded-lg inline-block">
+                        <img
+                          src={editingPartner.logoUrl}
+                          alt="Logo preview"
+                          className="max-h-12 object-contain"
+                          onError={(e) => (e.currentTarget.style.display = 'none')}
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Payment Configuration */}
+                <div className="space-y-4 border-t border-border-muted pt-4">
+                  <Typography variant="bodySm" className="font-semibold flex items-center gap-2">
+                    <IconCreditCard className="h-4 w-4" />
+                    Payment Configuration
+                  </Typography>
+
                   <div className="flex gap-2">
                     <Button
                       type="button"
                       variant={editingPartner.paymentMethod === 'bank_transfer' ? 'default' : 'outline'}
                       colorRole={editingPartner.paymentMethod === 'bank_transfer' ? 'brand' : 'primary'}
+                      size="sm"
                       onClick={() =>
                         setEditingPartner({
                           ...editingPartner,
@@ -615,12 +981,13 @@ const PartnersPage = () => {
                         })
                       }
                     >
-                      <ButtonContent>🏦 Bank Transfer</ButtonContent>
+                      <ButtonContent>Bank Transfer</ButtonContent>
                     </Button>
                     <Button
                       type="button"
                       variant={editingPartner.paymentMethod === 'link' ? 'default' : 'outline'}
                       colorRole={editingPartner.paymentMethod === 'link' ? 'brand' : 'primary'}
+                      size="sm"
                       onClick={() =>
                         setEditingPartner({
                           ...editingPartner,
@@ -629,16 +996,12 @@ const PartnersPage = () => {
                         })
                       }
                     >
-                      <ButtonContent>🔗 Payment Link</ButtonContent>
+                      <ButtonContent>Payment Link</ButtonContent>
                     </Button>
                   </div>
-                </div>
 
-                {/* Bank Transfer Details */}
-                {editingPartner.paymentMethod === 'bank_transfer' && (
-                  <div className="space-y-3 p-4 bg-fill-muted/50 rounded-lg">
-                    <Typography variant="bodySm" className="font-semibold">Bank Account Details</Typography>
-                    <div className="grid grid-cols-2 gap-3">
+                  {editingPartner.paymentMethod === 'bank_transfer' && (
+                    <div className="grid grid-cols-2 gap-3 p-4 bg-fill-muted/50 rounded-lg">
                       <div>
                         <label className="block text-xs text-text-muted mb-1">Bank Name</label>
                         <input
@@ -647,7 +1010,10 @@ const PartnersPage = () => {
                           onChange={(e) =>
                             setEditingPartner({
                               ...editingPartner,
-                              paymentDetails: { ...editingPartner.paymentDetails, bankName: e.target.value },
+                              paymentDetails: {
+                                ...editingPartner.paymentDetails,
+                                bankName: e.target.value,
+                              },
                             })
                           }
                           className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm"
@@ -661,7 +1027,10 @@ const PartnersPage = () => {
                           onChange={(e) =>
                             setEditingPartner({
                               ...editingPartner,
-                              paymentDetails: { ...editingPartner.paymentDetails, accountName: e.target.value },
+                              paymentDetails: {
+                                ...editingPartner.paymentDetails,
+                                accountName: e.target.value,
+                              },
                             })
                           }
                           className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm"
@@ -675,21 +1044,10 @@ const PartnersPage = () => {
                           onChange={(e) =>
                             setEditingPartner({
                               ...editingPartner,
-                              paymentDetails: { ...editingPartner.paymentDetails, accountNumber: e.target.value },
-                            })
-                          }
-                          className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs text-text-muted mb-1">Sort Code</label>
-                        <input
-                          type="text"
-                          value={editingPartner.paymentDetails?.sortCode || ''}
-                          onChange={(e) =>
-                            setEditingPartner({
-                              ...editingPartner,
-                              paymentDetails: { ...editingPartner.paymentDetails, sortCode: e.target.value },
+                              paymentDetails: {
+                                ...editingPartner.paymentDetails,
+                                accountNumber: e.target.value,
+                              },
                             })
                           }
                           className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm"
@@ -703,7 +1061,10 @@ const PartnersPage = () => {
                           onChange={(e) =>
                             setEditingPartner({
                               ...editingPartner,
-                              paymentDetails: { ...editingPartner.paymentDetails, iban: e.target.value },
+                              paymentDetails: {
+                                ...editingPartner.paymentDetails,
+                                iban: e.target.value,
+                              },
                             })
                           }
                           className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm"
@@ -717,36 +1078,20 @@ const PartnersPage = () => {
                           onChange={(e) =>
                             setEditingPartner({
                               ...editingPartner,
-                              paymentDetails: { ...editingPartner.paymentDetails, swiftBic: e.target.value },
+                              paymentDetails: {
+                                ...editingPartner.paymentDetails,
+                                swiftBic: e.target.value,
+                              },
                             })
                           }
                           className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm"
                         />
                       </div>
                     </div>
-                    <div>
-                      <label className="block text-xs text-text-muted mb-1">Reference (optional template)</label>
-                      <input
-                        type="text"
-                        value={editingPartner.paymentDetails?.reference || ''}
-                        onChange={(e) =>
-                          setEditingPartner({
-                            ...editingPartner,
-                            paymentDetails: { ...editingPartner.paymentDetails, reference: e.target.value },
-                          })
-                        }
-                        placeholder="e.g., CC-{QUOTE_ID}"
-                        className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm"
-                      />
-                    </div>
-                  </div>
-                )}
+                  )}
 
-                {/* Payment Link */}
-                {editingPartner.paymentMethod === 'link' && (
-                  <div className="space-y-3 p-4 bg-fill-muted/50 rounded-lg">
-                    <Typography variant="bodySm" className="font-semibold">Payment Link</Typography>
-                    <div>
+                  {editingPartner.paymentMethod === 'link' && (
+                    <div className="p-4 bg-fill-muted/50 rounded-lg">
                       <label className="block text-xs text-text-muted mb-1">Payment URL</label>
                       <input
                         type="url"
@@ -754,21 +1099,24 @@ const PartnersPage = () => {
                         onChange={(e) =>
                           setEditingPartner({
                             ...editingPartner,
-                            paymentDetails: { ...editingPartner.paymentDetails, paymentUrl: e.target.value },
+                            paymentDetails: {
+                              ...editingPartner.paymentDetails,
+                              paymentUrl: e.target.value,
+                            },
                           })
                         }
                         placeholder="https://pay.partner.com/..."
                         className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm"
                       />
                     </div>
-                  </div>
-                )}
+                  )}
+                </div>
 
                 <div className="flex justify-end gap-2 pt-4 border-t border-border-muted">
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => setIsPaymentConfigOpen(false)}
+                    onClick={() => setIsEditDialogOpen(false)}
                   >
                     <ButtonContent>Cancel</ButtonContent>
                   </Button>
@@ -776,10 +1124,10 @@ const PartnersPage = () => {
                     type="button"
                     variant="default"
                     colorRole="brand"
-                    onClick={handleSavePaymentConfig}
-                    isDisabled={isUpdating || !editingPartner.paymentMethod}
+                    onClick={handleSavePartner}
+                    isDisabled={isUpdating}
                   >
-                    <ButtonContent>{isUpdating ? 'Saving...' : 'Save Configuration'}</ButtonContent>
+                    <ButtonContent>{isUpdating ? 'Saving...' : 'Save Changes'}</ButtonContent>
                   </Button>
                 </div>
               </div>
@@ -796,7 +1144,7 @@ const PartnersPage = () => {
               </DialogTitle>
               <DialogDescription>
                 {generatedApiKey
-                  ? 'Copy this key now. You won\'t be able to see it again!'
+                  ? "Copy this key now. You won't be able to see it again!"
                   : 'Create a new API key for this partner'}
               </DialogDescription>
             </DialogHeader>
