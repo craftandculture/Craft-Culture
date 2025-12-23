@@ -21,7 +21,15 @@ import confirmQuoteSchema from '../schemas/confirmQuoteSchema';
 const quotesConfirm = adminProcedure
   .input(confirmQuoteSchema)
   .mutation(async ({ input, ctx: { user } }) => {
-    const { quoteId, deliveryLeadTime, ccConfirmationNotes, lineItemAdjustments } = input;
+    const {
+      quoteId,
+      deliveryLeadTime,
+      ccConfirmationNotes,
+      licensedPartnerId,
+      paymentMethod,
+      paymentDetails,
+      lineItemAdjustments,
+    } = input;
 
     // Verify quote exists
     const [existingQuote] = await db
@@ -48,20 +56,26 @@ const quotesConfirm = adminProcedure
     try {
       // Prepare update data
       const updateData: {
-        status: 'cc_confirmed';
+        status: 'awaiting_payment';
         ccConfirmedAt: Date;
         ccConfirmedBy: string;
         deliveryLeadTime: string;
         ccConfirmationNotes?: string;
+        licensedPartnerId: string;
+        paymentMethod: 'bank_transfer' | 'link';
+        paymentDetails: typeof paymentDetails;
         quoteData?: unknown;
         totalUsd?: number;
         totalAed?: number;
       } = {
-        status: 'cc_confirmed',
+        status: 'awaiting_payment',
         ccConfirmedAt: new Date(),
         ccConfirmedBy: user.id,
         deliveryLeadTime,
         ccConfirmationNotes,
+        licensedPartnerId,
+        paymentMethod,
+        paymentDetails,
       };
 
       // If we have adjustments, update the quote data and recalculate totals

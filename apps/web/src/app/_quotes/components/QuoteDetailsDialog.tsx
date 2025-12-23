@@ -412,6 +412,8 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
     under_cc_review: 'text-text-warning',
     revision_requested: 'text-text-danger',
     cc_confirmed: 'text-text-success',
+    awaiting_payment: 'text-text-warning',
+    paid: 'text-text-success',
     po_submitted: 'text-text-brand',
     po_confirmed: 'text-text-success',
   };
@@ -1138,6 +1140,145 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
               </>
             )}
 
+            {/* Payment Instructions - shown when quote is awaiting payment */}
+            {quote.status === 'awaiting_payment' && quote.paymentMethod && (
+              <>
+                <Divider />
+                <div className="rounded-lg border-2 border-border-warning bg-fill-warning/10 p-4">
+                  <Typography variant="bodySm" className="mb-3 font-semibold text-text-warning">
+                    💳 Payment Required
+                  </Typography>
+
+                  {quote.deliveryLeadTime && (
+                    <div className="mb-4 rounded-lg bg-white border border-border-brand p-3">
+                      <div className="flex items-center gap-2">
+                        <Typography variant="bodyXs" className="font-semibold text-text-brand">
+                          🚚 Delivery Lead Time:
+                        </Typography>
+                        <Typography variant="bodyXs" className="font-bold">
+                          {quote.deliveryLeadTime}
+                        </Typography>
+                      </div>
+                    </div>
+                  )}
+
+                  {quote.paymentMethod === 'link' && quote.paymentDetails?.paymentUrl && (
+                    <div className="space-y-3">
+                      <Typography variant="bodySm">
+                        Please complete your payment using the secure payment link below:
+                      </Typography>
+                      <a
+                        href={quote.paymentDetails.paymentUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 rounded-lg bg-fill-brand px-4 py-3 text-white font-semibold hover:bg-fill-brand/90 transition-colors"
+                      >
+                        <span>💳</span>
+                        Pay Now
+                        <span>→</span>
+                      </a>
+                    </div>
+                  )}
+
+                  {quote.paymentMethod === 'bank_transfer' && quote.paymentDetails && (
+                    <div className="space-y-3">
+                      <Typography variant="bodySm">
+                        Please transfer the total amount to the following bank account:
+                      </Typography>
+                      <div className="rounded-lg bg-white border border-border-muted p-4 space-y-2">
+                        {quote.paymentDetails.bankName && (
+                          <div className="flex justify-between">
+                            <Typography variant="bodyXs" colorRole="muted">Bank Name</Typography>
+                            <Typography variant="bodyXs" className="font-medium">{quote.paymentDetails.bankName}</Typography>
+                          </div>
+                        )}
+                        {quote.paymentDetails.accountName && (
+                          <div className="flex justify-between">
+                            <Typography variant="bodyXs" colorRole="muted">Account Name</Typography>
+                            <Typography variant="bodyXs" className="font-medium">{quote.paymentDetails.accountName}</Typography>
+                          </div>
+                        )}
+                        {quote.paymentDetails.accountNumber && (
+                          <div className="flex justify-between">
+                            <Typography variant="bodyXs" colorRole="muted">Account Number</Typography>
+                            <Typography variant="bodyXs" className="font-mono font-medium">{quote.paymentDetails.accountNumber}</Typography>
+                          </div>
+                        )}
+                        {quote.paymentDetails.sortCode && (
+                          <div className="flex justify-between">
+                            <Typography variant="bodyXs" colorRole="muted">Sort Code</Typography>
+                            <Typography variant="bodyXs" className="font-mono font-medium">{quote.paymentDetails.sortCode}</Typography>
+                          </div>
+                        )}
+                        {quote.paymentDetails.iban && (
+                          <div className="flex justify-between">
+                            <Typography variant="bodyXs" colorRole="muted">IBAN</Typography>
+                            <Typography variant="bodyXs" className="font-mono font-medium">{quote.paymentDetails.iban}</Typography>
+                          </div>
+                        )}
+                        {quote.paymentDetails.swiftBic && (
+                          <div className="flex justify-between">
+                            <Typography variant="bodyXs" colorRole="muted">SWIFT/BIC</Typography>
+                            <Typography variant="bodyXs" className="font-mono font-medium">{quote.paymentDetails.swiftBic}</Typography>
+                          </div>
+                        )}
+                        {quote.paymentDetails.reference && (
+                          <div className="flex justify-between pt-2 border-t border-border-muted">
+                            <Typography variant="bodyXs" colorRole="muted">Payment Reference</Typography>
+                            <Typography variant="bodyXs" className="font-mono font-bold text-text-brand">{quote.paymentDetails.reference}</Typography>
+                          </div>
+                        )}
+                      </div>
+                      <div className="rounded-lg bg-fill-brand/10 border border-border-brand p-3">
+                        <Typography variant="bodyXs" className="font-semibold text-text-brand mb-1">
+                          Amount to Transfer:
+                        </Typography>
+                        <Typography variant="headingMd" className="font-bold text-text-brand">
+                          {formatPrice(displayTotal, displayCurrency)}
+                        </Typography>
+                      </div>
+                    </div>
+                  )}
+
+                  <Typography variant="bodyXs" colorRole="muted" className="mt-4">
+                    Once payment is received, your order will be confirmed by our team.
+                  </Typography>
+                </div>
+              </>
+            )}
+
+            {/* Paid Status - shown when payment has been confirmed */}
+            {quote.status === 'paid' && (
+              <>
+                <Divider />
+                <div className="rounded-lg border-2 border-border-success bg-fill-success/10 p-4">
+                  <Typography variant="bodySm" className="mb-2 font-semibold text-text-success">
+                    ✓ Payment Confirmed
+                  </Typography>
+                  <Typography variant="bodySm">
+                    Your payment has been received. Your order is being processed.
+                  </Typography>
+                  {quote.paidAt && (
+                    <Typography variant="bodyXs" colorRole="muted" className="mt-2">
+                      Paid on {format(new Date(quote.paidAt), 'MMM d, yyyy')}
+                    </Typography>
+                  )}
+                  {quote.deliveryLeadTime && (
+                    <div className="mt-3 rounded-lg bg-white border border-border-brand p-3">
+                      <div className="flex items-center gap-2">
+                        <Typography variant="bodyXs" className="font-semibold text-text-brand">
+                          🚚 Expected Delivery:
+                        </Typography>
+                        <Typography variant="bodyXs" className="font-bold">
+                          {quote.deliveryLeadTime}
+                        </Typography>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+
             {/* PO Submitted Status - shown when PO is awaiting confirmation */}
             {quote.status === 'po_submitted' && (
               <>
@@ -1327,12 +1468,24 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
           {/* Show status message for quotes in approval workflow */}
           {(quote.status === 'buy_request_submitted' ||
             quote.status === 'under_cc_review' ||
-            quote.status === 'cc_confirmed') && (
-            <div className="flex-1 rounded-lg bg-fill-warning/10 p-3">
-              <Typography variant="bodySm" className="text-text-warning">
+            quote.status === 'cc_confirmed' ||
+            quote.status === 'awaiting_payment' ||
+            quote.status === 'paid') && (
+            <div className={`flex-1 rounded-lg p-3 ${
+              quote.status === 'paid'
+                ? 'bg-fill-success/10'
+                : quote.status === 'awaiting_payment'
+                  ? 'bg-fill-warning/10'
+                  : 'bg-fill-warning/10'
+            }`}>
+              <Typography variant="bodySm" className={
+                quote.status === 'paid' ? 'text-text-success' : 'text-text-warning'
+              }>
                 {quote.status === 'buy_request_submitted' && 'Order request submitted for review'}
                 {quote.status === 'under_cc_review' && 'Order request is under review'}
                 {quote.status === 'cc_confirmed' && 'Quote confirmed by C&C - ready to send to customer'}
+                {quote.status === 'awaiting_payment' && 'Payment required - see payment details above'}
+                {quote.status === 'paid' && 'Payment confirmed - order is being processed'}
               </Typography>
             </div>
           )}

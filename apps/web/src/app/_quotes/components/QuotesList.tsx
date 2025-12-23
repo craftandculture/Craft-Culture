@@ -241,6 +241,8 @@ const QuotesList = () => {
           under_cc_review: { label: 'In Review', color: 'bg-fill-brand/10 text-text-brand', needsAction: false },
           revision_requested: { label: 'Needs Attention', color: 'bg-fill-warning/10 text-text-warning font-semibold border border-border-warning', needsAction: true },
           cc_confirmed: { label: 'Confirmed', color: 'bg-fill-brand/10 text-text-brand font-semibold', needsAction: true },
+          awaiting_payment: { label: 'Awaiting Payment', color: 'bg-fill-warning/10 text-text-warning font-semibold border border-border-warning', needsAction: true },
+          paid: { label: 'Paid', color: 'bg-fill-brand/10 text-text-brand font-semibold', needsAction: false },
           po_submitted: { label: 'PO Submitted', color: 'bg-fill-brand/10 text-text-brand', needsAction: false },
           po_confirmed: { label: 'Complete', color: 'bg-fill-muted text-text-muted', needsAction: false },
         };
@@ -281,6 +283,8 @@ const QuotesList = () => {
         const showViewDetailsButton =
           quote.status === 'buy_request_submitted' ||
           quote.status === 'under_cc_review' ||
+          quote.status === 'awaiting_payment' ||
+          quote.status === 'paid' ||
           quote.status === 'po_submitted' ||
           quote.status === 'po_confirmed';
 
@@ -403,17 +407,18 @@ const QuotesList = () => {
       return quote.status === 'draft' ||
         quote.status === 'sent' ||
         quote.status === 'revision_requested' ||
-        quote.status === 'cc_confirmed';
+        quote.status === 'cc_confirmed' ||
+        quote.status === 'awaiting_payment';
     }
     return quote.status === activeFilter;
   });
 
   // Calculate counts for filter badges
   const actionRequiredCount = quotes.filter(
-    (q) => q.status === 'draft' || q.status === 'sent' || q.status === 'revision_requested' || q.status === 'cc_confirmed'
+    (q) => q.status === 'draft' || q.status === 'sent' || q.status === 'revision_requested' || q.status === 'cc_confirmed' || q.status === 'awaiting_payment'
   ).length;
   const inProgressCount = quotes.filter(
-    (q) => q.status === 'buy_request_submitted' || q.status === 'under_cc_review' || q.status === 'po_submitted'
+    (q) => q.status === 'buy_request_submitted' || q.status === 'under_cc_review' || q.status === 'paid' || q.status === 'po_submitted'
   ).length;
   const completedCount = quotes.filter((q) => q.status === 'po_confirmed').length;
 
