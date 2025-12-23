@@ -339,6 +339,22 @@ export const partners = pgTable(
     commissionRate: doublePrecision('commission_rate').notNull().default(0),
     notes: text('notes'),
     metadata: jsonb('metadata'),
+    // Partner branding
+    logoUrl: text('logo_url'),
+    // Payment configuration for licensed partners
+    paymentMethod: paymentMethod('payment_method'),
+    paymentDetails: jsonb('payment_details').$type<{
+      // Bank transfer details
+      bankName?: string;
+      accountName?: string;
+      accountNumber?: string;
+      sortCode?: string;
+      iban?: string;
+      swiftBic?: string;
+      reference?: string;
+      // Payment link
+      paymentUrl?: string;
+    }>(),
     ...timestamps,
   },
   (table) => [

@@ -2,8 +2,10 @@
 
 import {
   IconCopy,
+  IconCreditCard,
   IconExternalLink,
   IconKey,
+  IconPhoto,
   IconPlus,
   IconSearch,
   IconTrash,
@@ -67,6 +69,25 @@ const PartnersPage = () => {
     permissions: ['read:inventory'] as string[],
   });
 
+  // Payment config dialog state
+  const [isPaymentConfigOpen, setIsPaymentConfigOpen] = useState(false);
+  const [editingPartner, setEditingPartner] = useState<{
+    id: string;
+    businessName: string;
+    logoUrl: string;
+    paymentMethod: 'bank_transfer' | 'link' | null;
+    paymentDetails: {
+      bankName?: string;
+      accountName?: string;
+      accountNumber?: string;
+      sortCode?: string;
+      iban?: string;
+      swiftBic?: string;
+      reference?: string;
+      paymentUrl?: string;
+    } | null;
+  } | null>(null);
+
   // Fetch partners
   const { data, isLoading, refetch } = useQuery({
     ...api.partners.getMany.queryOptions({
@@ -117,6 +138,17 @@ const PartnersPage = () => {
     api.partners.apiKeys.revoke.mutationOptions({
       onSuccess: () => {
         void refetch();
+      },
+    }),
+  );
+
+  // Update partner mutation
+  const { mutate: updatePartner, isPending: isUpdating } = useMutation(
+    api.partners.update.mutationOptions({
+      onSuccess: () => {
+        void refetch();
+        setIsPaymentConfigOpen(false);
+        setEditingPartner(null);
       },
     }),
   );
@@ -178,6 +210,27 @@ const PartnersPage = () => {
     setGeneratedApiKey(null);
     setNewApiKey({ name: '', permissions: ['read:inventory'] });
     setIsApiKeyDialogOpen(true);
+  };
+
+  const handleOpenPaymentConfig = (partner: typeof partners[0]) => {
+    setEditingPartner({
+      id: partner.id,
+      businessName: partner.businessName,
+      logoUrl: partner.logoUrl || '',
+      paymentMethod: partner.paymentMethod,
+      paymentDetails: partner.paymentDetails,
+    });
+    setIsPaymentConfigOpen(true);
+  };
+
+  const handleSavePaymentConfig = () => {
+    if (!editingPartner) return;
+    updatePartner({
+      partnerId: editingPartner.id,
+      logoUrl: editingPartner.logoUrl || undefined,
+      paymentMethod: editingPartner.paymentMethod || undefined,
+      paymentDetails: editingPartner.paymentDetails || undefined,
+    });
   };
 
   return (
@@ -409,7 +462,30 @@ const PartnersPage = () => {
                       <Typography variant="bodyXs" colorRole="muted">
                         Commission: {partner.commissionRate}%
                       </Typography>
+                      {/* Payment Config Status */}
+                      {partner.paymentMethod && (
+                        <div className="flex items-center gap-2 mt-2">
+                          <span className="bg-fill-brand/10 text-text-brand border border-border-brand inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium">
+                            {partner.paymentMethod === 'bank_transfer' ? '🏦 Bank Transfer' : '🔗 Payment Link'}
+                          </span>
+                        </div>
+                      )}
                     </div>
+
+                    {/* Actions Section */}
+                    <div className="flex-shrink-0 space-y-3">
+                      {/* Payment Config Button */}
+                      <Button
+                        size="sm"
+                        variant={partner.paymentMethod ? 'outline' : 'default'}
+                        colorRole={partner.paymentMethod ? 'primary' : 'brand'}
+                        onClick={() => handleOpenPaymentConfig(partner)}
+                        className="w-full"
+                      >
+                        <ButtonContent iconLeft={IconCreditCard}>
+                          {partner.paymentMethod ? 'Edit Payment Config' : 'Configure Payment'}
+                        </ButtonContent>
+                      </Button>
 
                     {/* API Keys Section */}
                     <div className="flex-shrink-0 space-y-2">
@@ -472,12 +548,244 @@ const PartnersPage = () => {
                         </div>
                       )}
                     </div>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
             ))}
           </div>
         )}
+
+        {/* Payment Config Dialog */}
+        <Dialog open={isPaymentConfigOpen} onOpenChange={setIsPaymentConfigOpen}>
+          <DialogContent className="sm:max-w-xl">
+            <DialogHeader>
+              <DialogTitle>Payment Configuration</DialogTitle>
+              <DialogDescription>
+                Configure payment details for {editingPartner?.businessName}
+              </DialogDescription>
+            </DialogHeader>
+
+            {editingPartner && (
+              <div className="space-y-6 mt-4">
+                {/* Logo URL */}
+                <div>
+                  <label className="block text-sm font-medium text-text-primary mb-1">
+                    <div className="flex items-center gap-2">
+                      <IconPhoto className="h-4 w-4" />
+                      Partner Logo URL
+                    </div>
+                  </label>
+                  <input
+                    type="url"
+                    value={editingPartner.logoUrl}
+                    onChange={(e) =>
+                      setEditingPartner({ ...editingPartner, logoUrl: e.target.value })
+                    }
+                    placeholder="https://example.com/logo.png"
+                    className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm"
+                  />
+                  {editingPartner.logoUrl && (
+                    <div className="mt-2 p-2 bg-fill-muted rounded-lg">
+                      <img
+                        src={editingPartner.logoUrl}
+                        alt="Partner logo preview"
+                        className="max-h-16 object-contain"
+                        onError={(e) => (e.currentTarget.style.display = 'none')}
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {/* Payment Method */}
+                <div>
+                  <label className="block text-sm font-medium text-text-primary mb-2">
+                    Payment Method
+                  </label>
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      variant={editingPartner.paymentMethod === 'bank_transfer' ? 'default' : 'outline'}
+                      colorRole={editingPartner.paymentMethod === 'bank_transfer' ? 'brand' : 'primary'}
+                      onClick={() =>
+                        setEditingPartner({
+                          ...editingPartner,
+                          paymentMethod: 'bank_transfer',
+                          paymentDetails: editingPartner.paymentDetails || {},
+                        })
+                      }
+                    >
+                      <ButtonContent>🏦 Bank Transfer</ButtonContent>
+                    </Button>
+                    <Button
+                      type="button"
+                      variant={editingPartner.paymentMethod === 'link' ? 'default' : 'outline'}
+                      colorRole={editingPartner.paymentMethod === 'link' ? 'brand' : 'primary'}
+                      onClick={() =>
+                        setEditingPartner({
+                          ...editingPartner,
+                          paymentMethod: 'link',
+                          paymentDetails: editingPartner.paymentDetails || {},
+                        })
+                      }
+                    >
+                      <ButtonContent>🔗 Payment Link</ButtonContent>
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Bank Transfer Details */}
+                {editingPartner.paymentMethod === 'bank_transfer' && (
+                  <div className="space-y-3 p-4 bg-fill-muted/50 rounded-lg">
+                    <Typography variant="bodySm" className="font-semibold">Bank Account Details</Typography>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs text-text-muted mb-1">Bank Name</label>
+                        <input
+                          type="text"
+                          value={editingPartner.paymentDetails?.bankName || ''}
+                          onChange={(e) =>
+                            setEditingPartner({
+                              ...editingPartner,
+                              paymentDetails: { ...editingPartner.paymentDetails, bankName: e.target.value },
+                            })
+                          }
+                          className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-text-muted mb-1">Account Name</label>
+                        <input
+                          type="text"
+                          value={editingPartner.paymentDetails?.accountName || ''}
+                          onChange={(e) =>
+                            setEditingPartner({
+                              ...editingPartner,
+                              paymentDetails: { ...editingPartner.paymentDetails, accountName: e.target.value },
+                            })
+                          }
+                          className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-text-muted mb-1">Account Number</label>
+                        <input
+                          type="text"
+                          value={editingPartner.paymentDetails?.accountNumber || ''}
+                          onChange={(e) =>
+                            setEditingPartner({
+                              ...editingPartner,
+                              paymentDetails: { ...editingPartner.paymentDetails, accountNumber: e.target.value },
+                            })
+                          }
+                          className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-text-muted mb-1">Sort Code</label>
+                        <input
+                          type="text"
+                          value={editingPartner.paymentDetails?.sortCode || ''}
+                          onChange={(e) =>
+                            setEditingPartner({
+                              ...editingPartner,
+                              paymentDetails: { ...editingPartner.paymentDetails, sortCode: e.target.value },
+                            })
+                          }
+                          className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-text-muted mb-1">IBAN</label>
+                        <input
+                          type="text"
+                          value={editingPartner.paymentDetails?.iban || ''}
+                          onChange={(e) =>
+                            setEditingPartner({
+                              ...editingPartner,
+                              paymentDetails: { ...editingPartner.paymentDetails, iban: e.target.value },
+                            })
+                          }
+                          className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-text-muted mb-1">SWIFT/BIC</label>
+                        <input
+                          type="text"
+                          value={editingPartner.paymentDetails?.swiftBic || ''}
+                          onChange={(e) =>
+                            setEditingPartner({
+                              ...editingPartner,
+                              paymentDetails: { ...editingPartner.paymentDetails, swiftBic: e.target.value },
+                            })
+                          }
+                          className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-xs text-text-muted mb-1">Reference (optional template)</label>
+                      <input
+                        type="text"
+                        value={editingPartner.paymentDetails?.reference || ''}
+                        onChange={(e) =>
+                          setEditingPartner({
+                            ...editingPartner,
+                            paymentDetails: { ...editingPartner.paymentDetails, reference: e.target.value },
+                          })
+                        }
+                        placeholder="e.g., CC-{QUOTE_ID}"
+                        className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Payment Link */}
+                {editingPartner.paymentMethod === 'link' && (
+                  <div className="space-y-3 p-4 bg-fill-muted/50 rounded-lg">
+                    <Typography variant="bodySm" className="font-semibold">Payment Link</Typography>
+                    <div>
+                      <label className="block text-xs text-text-muted mb-1">Payment URL</label>
+                      <input
+                        type="url"
+                        value={editingPartner.paymentDetails?.paymentUrl || ''}
+                        onChange={(e) =>
+                          setEditingPartner({
+                            ...editingPartner,
+                            paymentDetails: { ...editingPartner.paymentDetails, paymentUrl: e.target.value },
+                          })
+                        }
+                        placeholder="https://pay.partner.com/..."
+                        className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex justify-end gap-2 pt-4 border-t border-border-muted">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setIsPaymentConfigOpen(false)}
+                  >
+                    <ButtonContent>Cancel</ButtonContent>
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="default"
+                    colorRole="brand"
+                    onClick={handleSavePaymentConfig}
+                    isDisabled={isUpdating || !editingPartner.paymentMethod}
+                  >
+                    <ButtonContent>{isUpdating ? 'Saving...' : 'Save Configuration'}</ButtonContent>
+                  </Button>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
 
         {/* Generate API Key Dialog */}
         <Dialog open={isApiKeyDialogOpen} onOpenChange={setIsApiKeyDialogOpen}>

@@ -6,6 +6,7 @@ import apiKeysRevoke from './controllers/apiKeysRevoke';
 import partnersCreate from './controllers/partnersCreate';
 import partnersGetMany from './controllers/partnersGetMany';
 import partnersGetOne from './controllers/partnersGetOne';
+import partnersGetPublicInfo from './controllers/partnersGetPublicInfo';
 import partnersUpdate from './controllers/partnersUpdate';
 
 const apiKeysRouter = createTRPCRouter({
@@ -18,6 +19,7 @@ const partnersRouter = createTRPCRouter({
   create: partnersCreate,
   getMany: partnersGetMany,
   getOne: partnersGetOne,
+  getPublicInfo: partnersGetPublicInfo,
   update: partnersUpdate,
   apiKeys: apiKeysRouter,
 });
