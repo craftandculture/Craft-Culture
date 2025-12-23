@@ -109,7 +109,8 @@ const partnersGetMany = adminProcedure
       {} as Record<string, typeof apiKeys>,
     );
 
-    // Transform results to include user object and API keys
+    // Transform results to include API keys
+    // Note: user is optional - partners are standalone entities
     const transformedData = partnersResult.slice(0, limit).map((p) => ({
       id: p.id,
       userId: p.userId,
@@ -134,10 +135,13 @@ const partnersGetMany = adminProcedure
         paymentUrl?: string;
       } | null,
       createdAt: p.createdAt,
-      user: {
-        name: p.userName ?? 'Unknown',
-        email: p.userEmail ?? '',
-      },
+      // Optional linked user (for API access if applicable)
+      linkedUser: p.userId
+        ? {
+            name: p.userName ?? 'Unknown',
+            email: p.userEmail ?? '',
+          }
+        : null,
       apiKeys: apiKeysByPartner[p.id] ?? [],
       apiKeyCount: (apiKeysByPartner[p.id] ?? []).length,
     }));
