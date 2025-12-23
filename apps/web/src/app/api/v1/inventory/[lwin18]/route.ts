@@ -5,6 +5,7 @@ import type { NextRequest } from 'next/server';
 import db from '@/database/client';
 import { productOffers, products } from '@/database/schema';
 
+import checkRateLimit from '../../_middleware/checkRateLimit';
 import validateApiKey from '../../_middleware/validateApiKey';
 import logApiRequest from '../../_utils/logApiRequest';
 import type { InventoryItem } from '../schema';
@@ -60,6 +61,22 @@ export const GET = async (request: NextRequest, { params }: RouteParams) => {
       { error: 'Insufficient permissions' },
       { status: 403 },
     );
+  }
+
+  // Check rate limit (60 requests per minute)
+  const rateLimitResult = await checkRateLimit(apiKeyId);
+  if (!rateLimitResult.allowed) {
+    const responseTimeMs = Date.now() - startTime;
+    void logApiRequest({
+      request,
+      endpoint,
+      statusCode: 429,
+      responseTimeMs,
+      apiKeyId,
+      partnerId,
+      errorMessage: 'Rate limit exceeded',
+    });
+    return rateLimitResult.error;
   }
 
   try {

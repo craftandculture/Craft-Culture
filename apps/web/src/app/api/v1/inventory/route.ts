@@ -7,6 +7,7 @@ import { productOffers, products } from '@/database/schema';
 
 import type { InventoryItem, InventoryListResponse } from './schema';
 import { inventoryQuerySchema } from './schema';
+import checkRateLimit from '../_middleware/checkRateLimit';
 import validateApiKey from '../_middleware/validateApiKey';
 import logApiRequest from '../_utils/logApiRequest';
 
@@ -57,6 +58,22 @@ export const GET = async (request: NextRequest) => {
       { error: 'Insufficient permissions' },
       { status: 403 },
     );
+  }
+
+  // Check rate limit (60 requests per minute)
+  const rateLimitResult = await checkRateLimit(apiKeyId);
+  if (!rateLimitResult.allowed) {
+    const responseTimeMs = Date.now() - startTime;
+    void logApiRequest({
+      request,
+      endpoint,
+      statusCode: 429,
+      responseTimeMs,
+      apiKeyId,
+      partnerId,
+      errorMessage: 'Rate limit exceeded',
+    });
+    return rateLimitResult.error;
   }
 
   try {
