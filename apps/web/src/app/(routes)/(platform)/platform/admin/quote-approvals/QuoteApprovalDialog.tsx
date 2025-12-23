@@ -163,10 +163,9 @@ const QuoteApprovalDialog = ({
   // Check if this is a B2C quote (payment flow) or B2B quote (PO flow)
   const isB2C = quote?.createdBy?.customerType === 'b2c';
 
-  // Fetch licensed partners (retailers) for payment assignment - only for B2C
+  // Fetch licensed partners for payment assignment - only for B2C
   const { data: partnersData } = useQuery({
     ...api.partners.getMany.queryOptions({
-      type: 'retailer',
       status: 'active',
     }),
     enabled: open && !!quote && quote.status === 'under_cc_review' && isB2C,
