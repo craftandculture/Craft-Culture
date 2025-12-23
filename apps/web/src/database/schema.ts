@@ -381,3 +381,104 @@ export const quotes = pgTable(
 ).enableRLS();
 
 export type Quote = typeof quotes.$inferSelect;
+
+// Partner management enums
+export const partnerType = pgEnum('partner_type', [
+  'retailer',
+  'sommelier',
+  'distributor',
+]);
+
+export const partnerStatus = pgEnum('partner_status', [
+  'active',
+  'inactive',
+  'suspended',
+]);
+
+// Partner profiles for retail partners, sommeliers, distributors
+export const partners = pgTable(
+  'partners',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .references(() => users.id, { onDelete: 'cascade' })
+      .notNull()
+      .unique(),
+    type: partnerType('type').notNull(),
+    status: partnerStatus('status').notNull().default('active'),
+    businessName: text('business_name').notNull(),
+    businessAddress: text('business_address'),
+    businessPhone: text('business_phone'),
+    businessEmail: text('business_email'),
+    taxId: text('tax_id'),
+    commissionRate: doublePrecision('commission_rate').notNull().default(0),
+    notes: text('notes'),
+    metadata: jsonb('metadata'),
+    ...timestamps,
+  },
+  (table) => [
+    index('partners_user_id_idx').on(table.userId),
+    index('partners_type_idx').on(table.type),
+    index('partners_status_idx').on(table.status),
+  ],
+).enableRLS();
+
+export type Partner = typeof partners.$inferSelect;
+
+// API keys for partner integrations (POS systems, etc.)
+export const partnerApiKeys = pgTable(
+  'partner_api_keys',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    partnerId: uuid('partner_id')
+      .references(() => partners.id, { onDelete: 'cascade' })
+      .notNull(),
+    name: text('name').notNull(),
+    keyPrefix: text('key_prefix').notNull(),
+    keyHash: text('key_hash').notNull(),
+    lastUsedAt: timestamp('last_used_at', { mode: 'date' }),
+    expiresAt: timestamp('expires_at', { mode: 'date' }),
+    isRevoked: boolean('is_revoked').notNull().default(false),
+    revokedAt: timestamp('revoked_at', { mode: 'date' }),
+    revokedBy: uuid('revoked_by').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+    permissions: jsonb('permissions').$type<string[]>().notNull().default([]),
+    ...timestamps,
+  },
+  (table) => [
+    index('partner_api_keys_partner_id_idx').on(table.partnerId),
+    index('partner_api_keys_key_prefix_idx').on(table.keyPrefix),
+    index('partner_api_keys_is_revoked_idx').on(table.isRevoked),
+  ],
+).enableRLS();
+
+export type PartnerApiKey = typeof partnerApiKeys.$inferSelect;
+
+// API request logs for audit and analytics
+export const partnerApiRequestLogs = pgTable(
+  'partner_api_request_logs',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    apiKeyId: uuid('api_key_id').references(() => partnerApiKeys.id, {
+      onDelete: 'set null',
+    }),
+    partnerId: uuid('partner_id').references(() => partners.id, {
+      onDelete: 'set null',
+    }),
+    endpoint: text('endpoint').notNull(),
+    method: text('method').notNull(),
+    statusCode: integer('status_code').notNull(),
+    responseTimeMs: integer('response_time_ms'),
+    ipAddress: text('ip_address'),
+    userAgent: text('user_agent'),
+    errorMessage: text('error_message'),
+    ...timestamps,
+  },
+  (table) => [
+    index('partner_api_request_logs_api_key_id_idx').on(table.apiKeyId),
+    index('partner_api_request_logs_partner_id_idx').on(table.partnerId),
+    index('partner_api_request_logs_created_at_idx').on(table.createdAt),
+    index('partner_api_request_logs_endpoint_idx').on(table.endpoint),
+  ],
+).enableRLS();
