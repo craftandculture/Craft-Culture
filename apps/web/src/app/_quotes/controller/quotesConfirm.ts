@@ -2,7 +2,7 @@ import { TRPCError } from '@trpc/server';
 import { eq } from 'drizzle-orm';
 
 import db from '@/database/client';
-import { quotes } from '@/database/schema';
+import { quotes, users } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
 import confirmQuoteSchema from '../schemas/confirmQuoteSchema';
@@ -10,11 +10,13 @@ import confirmQuoteSchema from '../schemas/confirmQuoteSchema';
 /**
  * Confirm a quote after C&C review (admin only)
  *
- * Transitions status from 'under_cc_review' to 'cc_confirmed'
+ * For B2C users: Transitions status from 'under_cc_review' to 'awaiting_payment'
+ * For B2B users: Transitions status from 'under_cc_review' to 'cc_confirmed'
  *
  * @example
  *   await trpcClient.quotes.confirm.mutate({
  *     quoteId: "uuid-here",
+ *     deliveryLeadTime: "14-21 days",
  *     ccConfirmationNotes: "All items confirmed with suppliers"
  *   });
  */
@@ -31,19 +33,26 @@ const quotesConfirm = adminProcedure
       lineItemAdjustments,
     } = input;
 
-    // Verify quote exists
-    const [existingQuote] = await db
-      .select()
+    // Verify quote exists and get quote owner's customer type
+    const [quoteWithUser] = await db
+      .select({
+        quote: quotes,
+        customerType: users.customerType,
+      })
       .from(quotes)
+      .leftJoin(users, eq(quotes.userId, users.id))
       .where(eq(quotes.id, quoteId))
       .limit(1);
 
-    if (!existingQuote) {
+    if (!quoteWithUser) {
       throw new TRPCError({
         code: 'NOT_FOUND',
         message: 'Quote not found',
       });
     }
+
+    const existingQuote = quoteWithUser.quote;
+    const isB2C = quoteWithUser.customerType === 'b2c';
 
     // Verify quote is in correct status
     if (existingQuote.status !== 'under_cc_review') {
@@ -53,29 +62,42 @@ const quotesConfirm = adminProcedure
       });
     }
 
+    // B2C requires payment configuration
+    if (isB2C && (!licensedPartnerId || !paymentMethod)) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'B2C quotes require licensed partner and payment configuration',
+      });
+    }
+
     try {
       // Prepare update data
+      // B2C: awaiting_payment (customer pays licensed partner)
+      // B2B: cc_confirmed (customer submits PO)
       const updateData: {
-        status: 'awaiting_payment';
+        status: 'awaiting_payment' | 'cc_confirmed';
         ccConfirmedAt: Date;
         ccConfirmedBy: string;
         deliveryLeadTime: string;
         ccConfirmationNotes?: string;
-        licensedPartnerId: string;
-        paymentMethod: 'bank_transfer' | 'link';
-        paymentDetails: typeof paymentDetails;
+        licensedPartnerId?: string;
+        paymentMethod?: 'bank_transfer' | 'link';
+        paymentDetails?: typeof paymentDetails;
         quoteData?: unknown;
         totalUsd?: number;
         totalAed?: number;
       } = {
-        status: 'awaiting_payment',
+        status: isB2C ? 'awaiting_payment' : 'cc_confirmed',
         ccConfirmedAt: new Date(),
         ccConfirmedBy: user.id,
         deliveryLeadTime,
         ccConfirmationNotes,
-        licensedPartnerId,
-        paymentMethod,
-        paymentDetails,
+        // Only set payment fields for B2C
+        ...(isB2C && licensedPartnerId && {
+          licensedPartnerId,
+          paymentMethod,
+          paymentDetails,
+        }),
       };
 
       // If we have adjustments, update the quote data and recalculate totals

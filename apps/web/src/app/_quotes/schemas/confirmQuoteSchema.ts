@@ -18,15 +18,18 @@ const paymentDetailsSchema = z.object({
 
 /**
  * Schema for C&C confirming a quote
+ *
+ * Payment fields (licensedPartnerId, paymentMethod, paymentDetails) are
+ * required for B2C users but optional for B2B users who use the PO flow.
  */
 const confirmQuoteSchema = z.object({
   quoteId: z.string().uuid(),
   deliveryLeadTime: z.string().min(1, 'Delivery lead time is required'),
   ccConfirmationNotes: z.string().optional(),
-  // Licensed partner and payment
-  licensedPartnerId: z.string().uuid(),
-  paymentMethod: z.enum(['bank_transfer', 'link']),
-  paymentDetails: paymentDetailsSchema,
+  // Licensed partner and payment - required for B2C, optional for B2B
+  licensedPartnerId: z.string().uuid().optional(),
+  paymentMethod: z.enum(['bank_transfer', 'link']).optional(),
+  paymentDetails: paymentDetailsSchema.optional(),
   lineItemAdjustments: z
     .record(
       z.string(),

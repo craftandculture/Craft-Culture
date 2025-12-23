@@ -1153,25 +1153,55 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
               <>
                 <Divider />
                 <div className="rounded-lg border-2 border-border-warning bg-fill-warning/10 p-4">
-                  {/* Partner Branding */}
+                  {/* Partner Branding & Contact Details */}
                   {partnerInfo && (
                     <div className="mb-4 pb-4 border-b border-border-muted">
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-start gap-3 mb-3">
                         {partnerInfo.logoUrl && (
                           <img
                             src={partnerInfo.logoUrl}
                             alt={partnerInfo.businessName}
-                            className="h-12 w-12 object-contain rounded-lg border border-border-muted bg-white"
+                            className="h-16 w-16 object-contain rounded-lg border border-border-muted bg-white flex-shrink-0"
                           />
                         )}
-                        <div>
+                        <div className="flex-1">
                           <Typography variant="bodyXs" colorRole="muted">
                             Licensed Partner
                           </Typography>
-                          <Typography variant="bodySm" className="font-semibold">
+                          <Typography variant="bodyMd" className="font-bold">
                             {partnerInfo.businessName}
                           </Typography>
+                          {partnerInfo.taxId && (
+                            <Typography variant="bodyXs" colorRole="muted">
+                              TRN: {partnerInfo.taxId}
+                            </Typography>
+                          )}
                         </div>
+                      </div>
+                      {/* Contact Details */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                        {partnerInfo.businessAddress && (
+                          <div className="flex items-start gap-1.5">
+                            <span className="flex-shrink-0">📍</span>
+                            <span className="text-text-muted">{partnerInfo.businessAddress}</span>
+                          </div>
+                        )}
+                        {partnerInfo.businessEmail && (
+                          <div className="flex items-center gap-1.5">
+                            <span className="flex-shrink-0">📧</span>
+                            <a href={`mailto:${partnerInfo.businessEmail}`} className="text-text-brand hover:underline">
+                              {partnerInfo.businessEmail}
+                            </a>
+                          </div>
+                        )}
+                        {partnerInfo.businessPhone && (
+                          <div className="flex items-center gap-1.5">
+                            <span className="flex-shrink-0">📞</span>
+                            <a href={`tel:${partnerInfo.businessPhone}`} className="text-text-brand hover:underline">
+                              {partnerInfo.businessPhone}
+                            </a>
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}
