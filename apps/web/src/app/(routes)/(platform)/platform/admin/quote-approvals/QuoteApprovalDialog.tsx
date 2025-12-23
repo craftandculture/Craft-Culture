@@ -56,6 +56,20 @@ const QuoteApprovalDialog = ({
   const [confirmationNotes, setConfirmationNotes] = useState('');
   const [deliveryLeadTime, setDeliveryLeadTime] = useState('');
 
+  // State for licensed partner and payment
+  const [selectedPartnerId, setSelectedPartnerId] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState<'bank_transfer' | 'link'>('bank_transfer');
+  const [paymentDetails, setPaymentDetails] = useState<{
+    bankName?: string;
+    accountName?: string;
+    accountNumber?: string;
+    sortCode?: string;
+    iban?: string;
+    swiftBic?: string;
+    reference?: string;
+    paymentUrl?: string;
+  }>({});
+
   // State for currency display
   const [displayCurrency, setDisplayCurrency] = useState<'USD' | 'AED'>('USD');
 
@@ -146,6 +160,15 @@ const QuoteApprovalDialog = ({
     enabled: productIds.length > 0 && open && !!quote,
   });
 
+  // Fetch licensed partners (retailers) for payment assignment
+  const { data: partnersData } = useQuery({
+    ...api.partners.getMany.queryOptions({
+      type: 'retailer',
+      status: 'active',
+    }),
+    enabled: open && !!quote && quote.status === 'under_cc_review',
+  });
+
   // Create a map of productId -> product for quick lookup
   const productMap = useMemo(() => {
     if (!productsData?.data) return {};
@@ -232,10 +255,32 @@ const QuoteApprovalDialog = ({
         throw new Error('Delivery lead time is required');
       }
 
+      // Validate licensed partner is selected
+      if (!selectedPartnerId) {
+        toast.error('Please select a licensed partner for payment');
+        throw new Error('Licensed partner is required');
+      }
+
+      // Validate payment details based on method
+      if (paymentMethod === 'bank_transfer') {
+        if (!paymentDetails.accountName || !paymentDetails.iban) {
+          toast.error('Please provide bank account details (at minimum account name and IBAN)');
+          throw new Error('Bank details required');
+        }
+      } else if (paymentMethod === 'link') {
+        if (!paymentDetails.paymentUrl) {
+          toast.error('Please provide a payment link URL');
+          throw new Error('Payment URL required');
+        }
+      }
+
       return trpcClient.quotes.confirm.mutate({
         quoteId: quote.id,
         deliveryLeadTime: deliveryLeadTime.trim(),
         ccConfirmationNotes: confirmationNotes || undefined,
+        licensedPartnerId: selectedPartnerId,
+        paymentMethod,
+        paymentDetails,
         lineItemAdjustments:
           quote.status === 'under_cc_review' && Object.keys(lineItemAdjustments).length > 0
             ? lineItemAdjustments
@@ -243,10 +288,13 @@ const QuoteApprovalDialog = ({
       });
     },
     onSuccess: () => {
-      toast.success('Quote confirmed successfully');
+      toast.success('Quote approved - awaiting customer payment');
       void queryClient.invalidateQueries({ queryKey: ['admin-quotes'] });
       setConfirmationNotes('');
       setDeliveryLeadTime('');
+      setSelectedPartnerId('');
+      setPaymentMethod('bank_transfer');
+      setPaymentDetails({});
       setLineItemAdjustments({});
       if (onOpenChange) onOpenChange(false);
     },
@@ -1046,18 +1094,193 @@ const QuoteApprovalDialog = ({
               </div>
             </div>
 
-            {/* Delivery Lead Time & Confirmation - Under Review */}
+            {/* Delivery, Partner & Payment - Under Review */}
             {quote.status === 'under_cc_review' && !showRevisionForm && (
               <div className="rounded-xl bg-gradient-to-br from-fill-brand/5 to-fill-brand/10 p-6 shadow-md border-2 border-border-brand/30 space-y-5">
                 <div className="flex items-center gap-3 mb-2">
                   <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-fill-brand/20">
-                    <span className="text-lg">🚚</span>
+                    <span className="text-lg">💳</span>
                   </div>
                   <Typography variant="headingMd" className="font-bold text-text-brand">
-                    Delivery & Confirmation Details
+                    Payment & Delivery Details
                   </Typography>
                 </div>
 
+                {/* Licensed Partner Selection */}
+                <div className="rounded-lg bg-white p-5 border border-border-muted">
+                  <Typography variant="bodySm" className="mb-2 font-semibold">
+                    Licensed Partner <span className="text-text-danger text-base">*</span>
+                  </Typography>
+                  <select
+                    value={selectedPartnerId}
+                    onChange={(e) => setSelectedPartnerId(e.target.value)}
+                    className="w-full rounded-lg border-2 border-border-muted bg-white px-4 py-2.5 text-sm font-medium focus:border-border-brand focus:ring-2 focus:ring-fill-brand/20 transition-all"
+                  >
+                    <option value="">Select a partner...</option>
+                    {partnersData?.map((partner) => (
+                      <option key={partner.id} value={partner.id}>
+                        {partner.businessName}
+                      </option>
+                    ))}
+                  </select>
+                  <Typography variant="bodyXs" colorRole="muted" className="mt-2">
+                    Customer will pay this partner directly
+                  </Typography>
+                </div>
+
+                {/* Payment Method Selection */}
+                <div className="rounded-lg bg-white p-5 border border-border-muted">
+                  <Typography variant="bodySm" className="mb-3 font-semibold">
+                    Payment Method <span className="text-text-danger text-base">*</span>
+                  </Typography>
+                  <div className="flex gap-4">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="paymentMethod"
+                        value="bank_transfer"
+                        checked={paymentMethod === 'bank_transfer'}
+                        onChange={() => setPaymentMethod('bank_transfer')}
+                        className="h-4 w-4 text-fill-brand"
+                      />
+                      <span className="text-sm font-medium">Bank Transfer</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="paymentMethod"
+                        value="link"
+                        checked={paymentMethod === 'link'}
+                        onChange={() => setPaymentMethod('link')}
+                        className="h-4 w-4 text-fill-brand"
+                      />
+                      <span className="text-sm font-medium">Payment Link</span>
+                    </label>
+                  </div>
+                </div>
+
+                {/* Payment Details Form */}
+                <div className="rounded-lg bg-white p-5 border border-border-muted">
+                  <Typography variant="bodySm" className="mb-3 font-semibold">
+                    Payment Details <span className="text-text-danger text-base">*</span>
+                  </Typography>
+
+                  {paymentMethod === 'bank_transfer' ? (
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Typography variant="bodyXs" className="mb-1 font-medium">
+                            Bank Name
+                          </Typography>
+                          <Input
+                            type="text"
+                            value={paymentDetails.bankName || ''}
+                            onChange={(e) => setPaymentDetails({ ...paymentDetails, bankName: e.target.value })}
+                            placeholder="e.g., First National Bank"
+                            className="border-2"
+                          />
+                        </div>
+                        <div>
+                          <Typography variant="bodyXs" className="mb-1 font-medium">
+                            Account Name <span className="text-text-danger">*</span>
+                          </Typography>
+                          <Input
+                            type="text"
+                            value={paymentDetails.accountName || ''}
+                            onChange={(e) => setPaymentDetails({ ...paymentDetails, accountName: e.target.value })}
+                            placeholder="e.g., Partner Wine Ltd"
+                            className="border-2"
+                          />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Typography variant="bodyXs" className="mb-1 font-medium">
+                            IBAN <span className="text-text-danger">*</span>
+                          </Typography>
+                          <Input
+                            type="text"
+                            value={paymentDetails.iban || ''}
+                            onChange={(e) => setPaymentDetails({ ...paymentDetails, iban: e.target.value })}
+                            placeholder="e.g., GB82 WEST 1234 5678 90"
+                            className="border-2"
+                          />
+                        </div>
+                        <div>
+                          <Typography variant="bodyXs" className="mb-1 font-medium">
+                            SWIFT/BIC
+                          </Typography>
+                          <Input
+                            type="text"
+                            value={paymentDetails.swiftBic || ''}
+                            onChange={(e) => setPaymentDetails({ ...paymentDetails, swiftBic: e.target.value })}
+                            placeholder="e.g., WESTGB2L"
+                            className="border-2"
+                          />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Typography variant="bodyXs" className="mb-1 font-medium">
+                            Account Number
+                          </Typography>
+                          <Input
+                            type="text"
+                            value={paymentDetails.accountNumber || ''}
+                            onChange={(e) => setPaymentDetails({ ...paymentDetails, accountNumber: e.target.value })}
+                            placeholder="e.g., 12345678"
+                            className="border-2"
+                          />
+                        </div>
+                        <div>
+                          <Typography variant="bodyXs" className="mb-1 font-medium">
+                            Sort Code
+                          </Typography>
+                          <Input
+                            type="text"
+                            value={paymentDetails.sortCode || ''}
+                            onChange={(e) => setPaymentDetails({ ...paymentDetails, sortCode: e.target.value })}
+                            placeholder="e.g., 12-34-56"
+                            className="border-2"
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <Typography variant="bodyXs" className="mb-1 font-medium">
+                          Payment Reference
+                        </Typography>
+                        <Input
+                          type="text"
+                          value={paymentDetails.reference || quote.name}
+                          onChange={(e) => setPaymentDetails({ ...paymentDetails, reference: e.target.value })}
+                          placeholder="Payment reference for customer"
+                          className="border-2"
+                        />
+                        <Typography variant="bodyXs" colorRole="muted" className="mt-1">
+                          Customer will use this reference when making payment
+                        </Typography>
+                      </div>
+                    </div>
+                  ) : (
+                    <div>
+                      <Typography variant="bodyXs" className="mb-1 font-medium">
+                        Payment Link URL <span className="text-text-danger">*</span>
+                      </Typography>
+                      <Input
+                        type="url"
+                        value={paymentDetails.paymentUrl || ''}
+                        onChange={(e) => setPaymentDetails({ ...paymentDetails, paymentUrl: e.target.value })}
+                        placeholder="https://partner.com/pay/..."
+                        className="border-2"
+                      />
+                      <Typography variant="bodyXs" colorRole="muted" className="mt-1">
+                        Customer will be redirected to this URL to complete payment
+                      </Typography>
+                    </div>
+                  )}
+                </div>
+
+                {/* Delivery Lead Time */}
                 <div className="rounded-lg bg-white p-5 border border-border-muted">
                   <div className="mb-4">
                     <Typography variant="bodySm" className="mb-2 font-semibold">
@@ -1071,7 +1294,7 @@ const QuoteApprovalDialog = ({
                       className="border-2 focus:border-border-brand focus:ring-2 focus:ring-fill-brand/20 transition-all"
                     />
                     <Typography variant="bodyXs" colorRole="muted" className="mt-2">
-                      <strong>Required:</strong> This will be shown to the customer before they submit their PO
+                      <strong>Required:</strong> This will be shown to the customer
                     </Typography>
                   </div>
 

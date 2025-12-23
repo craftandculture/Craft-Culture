@@ -44,9 +44,13 @@ export const quoteStatus = pgEnum('quote_status', [
   'under_cc_review',
   'revision_requested',
   'cc_confirmed',
+  'awaiting_payment',
+  'paid',
   'po_submitted',
   'po_confirmed',
 ]);
+
+export const paymentMethod = pgEnum('payment_method', ['bank_transfer', 'link']);
 
 export const sheets = pgTable('sheets', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -303,6 +307,49 @@ export const settings = pgTable('settings', {
 
 export type Settings = typeof settings.$inferSelect;
 
+// Partner management enums
+export const partnerType = pgEnum('partner_type', [
+  'retailer',
+  'sommelier',
+  'distributor',
+]);
+
+export const partnerStatus = pgEnum('partner_status', [
+  'active',
+  'inactive',
+  'suspended',
+]);
+
+// Partner profiles for retail partners, sommeliers, distributors
+export const partners = pgTable(
+  'partners',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .references(() => users.id, { onDelete: 'cascade' })
+      .notNull()
+      .unique(),
+    type: partnerType('type').notNull(),
+    status: partnerStatus('status').notNull().default('active'),
+    businessName: text('business_name').notNull(),
+    businessAddress: text('business_address'),
+    businessPhone: text('business_phone'),
+    businessEmail: text('business_email'),
+    taxId: text('tax_id'),
+    commissionRate: doublePrecision('commission_rate').notNull().default(0),
+    notes: text('notes'),
+    metadata: jsonb('metadata'),
+    ...timestamps,
+  },
+  (table) => [
+    index('partners_user_id_idx').on(table.userId),
+    index('partners_type_idx').on(table.type),
+    index('partners_status_idx').on(table.status),
+  ],
+).enableRLS();
+
+export type Partner = typeof partners.$inferSelect;
+
 export const quotes = pgTable(
   'quotes',
   {
@@ -371,6 +418,27 @@ export const quotes = pgTable(
       onDelete: 'set null',
     }),
     poConfirmationNotes: text('po_confirmation_notes'),
+    // Licensed partner payment
+    licensedPartnerId: uuid('licensed_partner_id').references(() => partners.id, {
+      onDelete: 'set null',
+    }),
+    paymentMethod: paymentMethod('payment_method'),
+    paymentDetails: jsonb('payment_details').$type<{
+      // Bank transfer details
+      bankName?: string;
+      accountName?: string;
+      accountNumber?: string;
+      sortCode?: string;
+      iban?: string;
+      swiftBic?: string;
+      reference?: string;
+      // Payment link
+      paymentUrl?: string;
+    }>(),
+    paidAt: timestamp('paid_at', { mode: 'date' }),
+    paidConfirmedBy: uuid('paid_confirmed_by').references(() => users.id, {
+      onDelete: 'set null',
+    }),
     ...timestamps,
   },
   (table) => [
@@ -381,49 +449,6 @@ export const quotes = pgTable(
 ).enableRLS();
 
 export type Quote = typeof quotes.$inferSelect;
-
-// Partner management enums
-export const partnerType = pgEnum('partner_type', [
-  'retailer',
-  'sommelier',
-  'distributor',
-]);
-
-export const partnerStatus = pgEnum('partner_status', [
-  'active',
-  'inactive',
-  'suspended',
-]);
-
-// Partner profiles for retail partners, sommeliers, distributors
-export const partners = pgTable(
-  'partners',
-  {
-    id: uuid('id').primaryKey().defaultRandom(),
-    userId: uuid('user_id')
-      .references(() => users.id, { onDelete: 'cascade' })
-      .notNull()
-      .unique(),
-    type: partnerType('type').notNull(),
-    status: partnerStatus('status').notNull().default('active'),
-    businessName: text('business_name').notNull(),
-    businessAddress: text('business_address'),
-    businessPhone: text('business_phone'),
-    businessEmail: text('business_email'),
-    taxId: text('tax_id'),
-    commissionRate: doublePrecision('commission_rate').notNull().default(0),
-    notes: text('notes'),
-    metadata: jsonb('metadata'),
-    ...timestamps,
-  },
-  (table) => [
-    index('partners_user_id_idx').on(table.userId),
-    index('partners_type_idx').on(table.type),
-    index('partners_status_idx').on(table.status),
-  ],
-).enableRLS();
-
-export type Partner = typeof partners.$inferSelect;
 
 // API keys for partner integrations (POS systems, etc.)
 export const partnerApiKeys = pgTable(

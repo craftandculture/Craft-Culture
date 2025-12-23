@@ -1,12 +1,32 @@
 import { z } from 'zod';
 
 /**
+ * Schema for payment details (bank transfer or payment link)
+ */
+const paymentDetailsSchema = z.object({
+  // Bank transfer details
+  bankName: z.string().optional(),
+  accountName: z.string().optional(),
+  accountNumber: z.string().optional(),
+  sortCode: z.string().optional(),
+  iban: z.string().optional(),
+  swiftBic: z.string().optional(),
+  reference: z.string().optional(),
+  // Payment link
+  paymentUrl: z.string().url().optional(),
+});
+
+/**
  * Schema for C&C confirming a quote
  */
 const confirmQuoteSchema = z.object({
   quoteId: z.string().uuid(),
   deliveryLeadTime: z.string().min(1, 'Delivery lead time is required'),
   ccConfirmationNotes: z.string().optional(),
+  // Licensed partner and payment
+  licensedPartnerId: z.string().uuid(),
+  paymentMethod: z.enum(['bank_transfer', 'link']),
+  paymentDetails: paymentDetailsSchema,
   lineItemAdjustments: z
     .record(
       z.string(),
