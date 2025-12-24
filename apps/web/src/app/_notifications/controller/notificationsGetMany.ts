@@ -1,4 +1,4 @@
-import { and, desc, eq } from 'drizzle-orm';
+import { desc } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { notifications } from '@/database/schema';
@@ -15,12 +15,11 @@ const notificationsGetMany = protectedProcedure
     const { limit, cursor, unreadOnly } = input;
     const userId = ctx.user.id;
 
-    const whereConditions = unreadOnly
-      ? and(eq(notifications.userId, userId), eq(notifications.isRead, false))
-      : eq(notifications.userId, userId);
-
     const data = await db.query.notifications.findMany({
-      where: whereConditions,
+      where: (table, { eq, and }) =>
+        unreadOnly
+          ? and(eq(table.userId, userId), eq(table.isRead, false))
+          : eq(table.userId, userId),
       orderBy: [desc(notifications.createdAt)],
       limit: limit + 1,
       offset: cursor,
