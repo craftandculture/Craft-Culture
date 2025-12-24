@@ -1,5 +1,5 @@
 import { TRPCError } from '@trpc/server';
-import { and, eq } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { notifications } from '@/database/schema';
@@ -18,7 +18,8 @@ const notificationsMarkAsRead = protectedProcedure
 
     // Verify notification belongs to user
     const notification = await db.query.notifications.findFirst({
-      where: and(eq(notifications.id, notificationId), eq(notifications.userId, userId)),
+      where: (table, { eq, and }) =>
+        and(eq(table.id, notificationId), eq(table.userId, userId)),
     });
 
     if (!notification) {
