@@ -531,3 +531,48 @@ export const partnerApiRequestLogs = pgTable(
     ),
   ],
 ).enableRLS();
+
+// ============================================================================
+// Notifications
+// ============================================================================
+
+export const notificationType = pgEnum('notification_type', [
+  'buy_request_submitted',
+  'cc_review_started',
+  'quote_confirmed',
+  'revision_requested',
+  'po_submitted',
+  'po_confirmed',
+  'payment_received',
+  'order_delivered',
+]);
+
+/**
+ * In-app notifications for users
+ */
+export const notifications = pgTable(
+  'notifications',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .references(() => users.id, { onDelete: 'cascade' })
+      .notNull(),
+    type: notificationType('type').notNull(),
+    title: text('title').notNull(),
+    message: text('message').notNull(),
+    entityType: text('entity_type'), // e.g., 'quote'
+    entityId: uuid('entity_id'), // e.g., quote ID
+    actionUrl: text('action_url'), // URL to navigate to when clicked
+    isRead: boolean('is_read').notNull().default(false),
+    readAt: timestamp('read_at', { mode: 'date' }),
+    metadata: jsonb('metadata'), // Additional data as needed
+    ...timestamps,
+  },
+  (table) => [
+    index('notifications_user_id_idx').on(table.userId),
+    index('notifications_user_id_is_read_idx').on(table.userId, table.isRead),
+    index('notifications_created_at_idx').on(table.createdAt),
+  ],
+).enableRLS();
+
+export type Notification = typeof notifications.$inferSelect;

@@ -1,12 +1,12 @@
 import { eq } from 'drizzle-orm';
 
+import createNotification from '@/app/_notifications/utils/createNotification';
 import db from '@/database/client';
 import { users } from '@/database/schema';
 import type { Quote } from '@/database/schema';
 import loops from '@/lib/loops/client';
 import serverConfig from '@/server.config';
 import logger from '@/utils/logger';
-
 
 /**
  * Notify the quote owner when C&C confirms their PO
@@ -31,6 +31,22 @@ const notifyUserOfPOConfirmation = async (quote: Quote) => {
     }
 
     const quoteUrl = `${serverConfig.appUrl}/platform/quotes/${quote.id}`;
+
+    // Create in-app notification
+    await createNotification({
+      userId: quote.userId,
+      type: 'po_confirmed',
+      title: 'PO Confirmed',
+      message: `Your purchase order for "${quote.name}" has been confirmed`,
+      entityType: 'quote',
+      entityId: quote.id,
+      actionUrl: quoteUrl,
+      metadata: {
+        quoteName: quote.name,
+        poNumber: quote.poNumber,
+        totalUsd: quote.totalUsd,
+      },
+    });
 
     try {
       // TODO: Create template in Loops with ID 'quote-po-confirmed'

@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 
 import PendingUsersBell from '@/app/_admin/components/PendingUsersBell';
 import UserDropdown from '@/app/_auth/components/UserDropdown';
+import NotificationBell from '@/app/_notifications/components/NotificationBell';
 import CommandBar from '@/app/_ui/components/CommandBar/CommandBar';
 import Footer from '@/app/_ui/components/Footer/Footer';
 import Logo from '@/app/_ui/components/Logo/Logo';
@@ -70,6 +71,7 @@ const PlatformLayout = async ({ children }: React.PropsWithChildren) => {
           </div>
           <div className="flex items-center gap-2 sm:gap-3">
             {user.role === 'admin' && <PendingUsersBell />}
+            <NotificationBell />
             <ThemeToggle />
             <UserDropdown user={user} />
           </div>

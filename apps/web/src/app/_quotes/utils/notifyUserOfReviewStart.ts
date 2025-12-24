@@ -1,5 +1,6 @@
 import { eq } from 'drizzle-orm';
 
+import createNotification from '@/app/_notifications/utils/createNotification';
 import db from '@/database/client';
 import { users } from '@/database/schema';
 import type { Quote } from '@/database/schema';
@@ -30,6 +31,20 @@ const notifyUserOfReviewStart = async (quote: Quote) => {
     }
 
     const quoteUrl = `${serverConfig.appUrl}/platform/quotes/${quote.id}`;
+
+    // Create in-app notification
+    await createNotification({
+      userId: quote.userId,
+      type: 'cc_review_started',
+      title: 'Quote Under Review',
+      message: `Your quote "${quote.name}" is now being reviewed by the C&C team`,
+      entityType: 'quote',
+      entityId: quote.id,
+      actionUrl: quoteUrl,
+      metadata: {
+        quoteName: quote.name,
+      },
+    });
 
     try {
       // Loops template: Quote Review Started

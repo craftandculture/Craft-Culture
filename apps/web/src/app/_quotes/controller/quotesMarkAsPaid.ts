@@ -6,6 +6,7 @@ import { quotes } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
 import markAsPaidSchema from '../schemas/markAsPaidSchema';
+import notifyUserOfPayment from '../utils/notifyUserOfPayment';
 
 /**
  * Mark a B2C quote as paid after payment is received (admin only)
@@ -64,7 +65,8 @@ const quotesMarkAsPaid = adminProcedure
         });
       }
 
-      // TODO: Send notification to customer that payment was received
+      // Send notification to customer that payment was received (fire-and-forget)
+      void notifyUserOfPayment(updatedQuote);
 
       return updatedQuote;
     } catch (error) {
