@@ -10,6 +10,7 @@ interface CreateAdminNotificationsParams {
     | 'po_submitted'
     | 'po_confirmed'
     | 'payment_received'
+    | 'payment_proof_submitted'
     | 'order_delivered';
   title: string;
   message: string;

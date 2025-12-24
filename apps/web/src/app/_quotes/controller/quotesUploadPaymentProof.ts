@@ -42,6 +42,15 @@ const quotesUploadPaymentProof = protectedProcedure
       // Convert base64 to buffer
       const buffer = Buffer.from(base64Data, 'base64');
 
+      // Validate file size (max 5MB)
+      const maxSizeBytes = 5 * 1024 * 1024;
+      if (buffer.length > maxSizeBytes) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'File size must be less than 5MB',
+        });
+      }
+
       // Generate unique filename
       const timestamp = Date.now();
       const sanitizedFilename = filename.replace(/[^a-zA-Z0-9.-]/g, '_');

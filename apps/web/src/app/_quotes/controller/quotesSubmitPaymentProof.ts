@@ -69,7 +69,13 @@ const quotesSubmitPaymentProof = protectedProcedure
         });
       }
 
-      // TODO: Send notification to admin that payment proof was submitted
+      // Send notification to admins (fire and forget)
+      const { default: notifyAdminsOfPaymentProof } = await import(
+        '../utils/notifyAdminsOfPaymentProof'
+      );
+      notifyAdminsOfPaymentProof(updatedQuote).catch((error) =>
+        console.error('Failed to send payment proof notification:', error),
+      );
 
       return updatedQuote;
     } catch (error) {
