@@ -15,8 +15,10 @@ import quotesRequestRevision from './controller/quotesRequestRevision';
 import quotesSave from './controller/quotesSave';
 import quotesStartCCReview from './controller/quotesStartCCReview';
 import quotesSubmitBuyRequest from './controller/quotesSubmitBuyRequest';
+import quotesSubmitPaymentProof from './controller/quotesSubmitPaymentProof';
 import quotesSubmitPO from './controller/quotesSubmitPO';
 import quotesUpdate from './controller/quotesUpdate';
+import quotesUploadPaymentProof from './controller/quotesUploadPaymentProof';
 import quotesUploadPODocument from './controller/quotesUploadPODocument';
 
 const quotesRouter = createTRPCRouter({
@@ -36,6 +38,8 @@ const quotesRouter = createTRPCRouter({
   submitPO: quotesSubmitPO,
   confirmPO: quotesConfirmPO,
   uploadPODocument: quotesUploadPODocument,
+  uploadPaymentProof: quotesUploadPaymentProof,
+  submitPaymentProof: quotesSubmitPaymentProof,
   acceptAlternative: quotesAcceptAlternative,
   markAsPaid: quotesMarkAsPaid,
   markAsDelivered: quotesMarkAsDelivered,
