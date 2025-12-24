@@ -7,7 +7,6 @@ import {
   IconDownload,
   IconEdit,
   IconPlayerPlay,
-  IconPlus,
   IconTrash,
   IconTruck,
 } from '@tabler/icons-react';
@@ -33,6 +32,8 @@ import type { Quote } from '@/database/schema';
 import useTRPC, { useTRPCClient } from '@/lib/trpc/browser';
 import convertUsdToAed from '@/utils/convertUsdToAed';
 import formatPrice from '@/utils/formatPrice';
+
+import ReviewLineItemRow from './ReviewLineItemRow';
 
 interface QuoteApprovalDialogProps extends DialogProps {
   quote: (Quote & { createdBy?: { id: string; name: string | null; email: string; customerType: 'b2b' | 'b2c' } | null }) | null;
@@ -96,17 +97,8 @@ const QuoteApprovalDialog = ({
     >
   >({});
 
-  // State for adding new alternatives (structured)
-  const [newAlternative, setNewAlternative] = useState<Record<string, {
-    productName: string;
-    pricePerCase: string;
-    bottlesPerCase: string;
-    bottleSize: string;
-    quantityAvailable: string;
-  }>>({});
-
-  // State for tracking which line items have alternatives section expanded
-  const [expandedAlternatives, setExpandedAlternatives] = useState<Record<string, boolean>>({});
+  // State for tracking which line item is expanded in review mode
+  const [expandedItemId, setExpandedItemId] = useState<string | null>(null);
 
   // State for delete confirmation
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -512,91 +504,46 @@ const QuoteApprovalDialog = ({
 
         <DialogBody>
           <div className="space-y-6">
-            {/* Customer Information Card */}
-            <div className="rounded-xl bg-gradient-to-br from-fill-brand/10 via-fill-brand/5 to-transparent border-2 border-border-brand/30 p-6 shadow-lg">
-              <div className="flex items-start gap-4 mb-4">
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-fill-brand/20 shadow-sm flex-shrink-0">
-                  <span className="text-2xl">👤</span>
-                </div>
-                <div className="flex-1">
-                  <Typography variant="headingMd" className="font-bold text-text-brand mb-1">
-                    Customer Information
-                  </Typography>
-                  <Typography variant="bodyXs" colorRole="muted">
-                    Quote request from the following customer
-                  </Typography>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 rounded-lg bg-white border border-border-muted">
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm">👤</span>
-                    <Typography variant="bodyXs" colorRole="muted" className="uppercase tracking-wide font-bold">
-                      Name
-                    </Typography>
-                  </div>
-                  <Typography variant="bodyMd" className="font-bold">
-                    {quote.clientName || 'Unknown'}
-                  </Typography>
+            {/* Compact Customer & Quote Info Bar */}
+            <div className="rounded-lg border border-border-muted bg-fill-muted/30 px-4 py-3">
+              <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+                {/* Customer */}
+                <div className="flex items-center gap-2">
+                  <span className="text-sm">👤</span>
+                  <span className="text-sm font-semibold">{quote.clientName || 'Unknown'}</span>
+                  {quote.clientCompany && (
+                    <span className="text-sm text-text-muted">({quote.clientCompany})</span>
+                  )}
                 </div>
 
-                {quote.clientCompany && (
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm">🏢</span>
-                      <Typography variant="bodyXs" colorRole="muted" className="uppercase tracking-wide font-bold">
-                        Company
-                      </Typography>
-                    </div>
-                    <Typography variant="bodyMd" className="font-bold">
-                      {quote.clientCompany}
-                    </Typography>
-                  </div>
-                )}
-
+                {/* Email */}
                 {quote.clientEmail && (
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm">📧</span>
-                      <Typography variant="bodyXs" colorRole="muted" className="uppercase tracking-wide font-bold">
-                        Email
-                      </Typography>
-                    </div>
-                    <a
-                      href={`mailto:${quote.clientEmail}`}
-                      className="text-sm font-semibold text-text-brand hover:underline"
-                    >
-                      {quote.clientEmail}
-                    </a>
-                  </div>
+                  <a
+                    href={`mailto:${quote.clientEmail}`}
+                    className="flex items-center gap-1.5 text-sm text-text-brand hover:underline"
+                  >
+                    <span>📧</span>
+                    {quote.clientEmail}
+                  </a>
                 )}
-              </div>
-            </div>
 
-            {/* Quote Summary */}
-            <div className="rounded-xl bg-gradient-to-br from-fill-muted/50 to-fill-muted border border-border-muted p-5">
-              <div className="grid grid-cols-2 gap-6">
-                <div className="space-y-1">
-                  <Typography variant="bodyXs" colorRole="muted" className="uppercase tracking-wide font-bold">
-                    Submitted
-                  </Typography>
-                  <Typography variant="bodySm" className="font-bold">
-                    {quote.buyRequestSubmittedAt
-                      ? format(new Date(quote.buyRequestSubmittedAt), 'MMM d, yyyy')
-                      : 'N/A'}
-                  </Typography>
+                {/* Divider */}
+                <div className="hidden sm:block h-4 w-px bg-border-muted" />
+
+                {/* Submitted Date */}
+                <div className="flex items-center gap-1.5 text-sm text-text-muted">
+                  <span>📅</span>
+                  {quote.buyRequestSubmittedAt
+                    ? format(new Date(quote.buyRequestSubmittedAt), 'MMM d, yyyy')
+                    : 'N/A'}
                 </div>
-                <div className="space-y-1">
-                  <Typography variant="bodyXs" colorRole="muted" className="uppercase tracking-wide font-bold">
-                    Status
-                  </Typography>
-                  <div className="inline-flex items-center gap-1.5 rounded-full bg-fill-brand/10 px-2.5 py-1">
-                    <span className="h-1.5 w-1.5 rounded-full bg-fill-brand animate-pulse" />
-                    <Typography variant="bodyXs" className="font-bold capitalize text-text-brand">
-                      {quote.status.replace(/_/g, ' ')}
-                    </Typography>
-                  </div>
+
+                {/* Status Badge */}
+                <div className="inline-flex items-center gap-1.5 rounded-full bg-fill-brand/10 px-2.5 py-1">
+                  <span className="h-1.5 w-1.5 rounded-full bg-fill-brand animate-pulse" />
+                  <span className="text-xs font-bold capitalize text-text-brand">
+                    {quote.status.replace(/_/g, ' ')}
+                  </span>
                 </div>
               </div>
             </div>
@@ -652,29 +599,23 @@ const QuoteApprovalDialog = ({
                 </div>
               )}
 
-              {/* Table Header */}
-              <div className="rounded-t-xl border border-border-muted bg-gradient-to-r from-fill-muted/80 to-fill-muted px-6 py-4 shadow-sm">
-                {quote.status === 'under_cc_review' ? (
-                  <div className="grid grid-cols-12 gap-6 text-xs font-bold text-text-muted uppercase tracking-wider">
-                    <div className="col-span-5">Product Details</div>
-                    <div className="col-span-2 text-center">Requested</div>
+              {/* Table Header - Compact Grid */}
+              {quote.status === 'under_cc_review' && (
+                <div className="rounded-t-lg border border-b-0 border-border-muted bg-fill-muted/50 px-4 py-2">
+                  <div className="grid grid-cols-12 gap-2 text-xs font-bold text-text-muted uppercase tracking-wider">
+                    <div className="col-span-5">Product</div>
+                    <div className="col-span-1 text-center">Req</div>
                     <div className="col-span-2 text-center">Confirmed</div>
-                    <div className="col-span-2 text-right">Price/Case</div>
+                    <div className="col-span-2 text-right">$/Case</div>
                     <div className="col-span-1 text-right">Total</div>
+                    <div className="col-span-1 text-center">Status</div>
                   </div>
-                ) : (
-                  <div className="grid grid-cols-12 gap-6 text-xs font-bold text-text-muted uppercase tracking-wider">
-                    <div className="col-span-6">Product Details</div>
-                    <div className="col-span-2 text-center">Requested</div>
-                    <div className="col-span-2 text-right">Price/Case</div>
-                    <div className="col-span-2 text-right">Total</div>
-                  </div>
-                )}
-              </div>
+                </div>
+              )}
 
-              {/* Line Items */}
-              <div className="space-y-3 mt-4">
-                {lineItems.map((item, idx) => {
+              {/* Line Items - Compact Rows */}
+              <div className="space-y-2">
+                {lineItems.map((item) => {
                   const product = productMap[item.productId];
                   const pricing = pricingMap[item.productId];
                   const pricePerCase = pricing?.lineItemTotalUsd
@@ -682,534 +623,80 @@ const QuoteApprovalDialog = ({
                     : 0;
 
                   const adjustment = lineItemAdjustments[item.productId];
-                  const finalPricePerCase = adjustment?.adjustedPricePerCase ?? pricePerCase;
-                  const finalQuantity = adjustment?.confirmedQuantity ?? item.quantity;
-                  const lineTotal = finalPricePerCase * finalQuantity;
+                  const isExpanded = expandedItemId === item.productId;
 
-                  const displayPricePerCase =
-                    displayCurrency === 'USD' ? pricePerCase : convertUsdToAed(pricePerCase);
-                  const displayLineTotal =
-                    displayCurrency === 'USD' ? lineTotal : convertUsdToAed(lineTotal);
+                  // For non-review mode, show simple read-only cards
+                  if (quote.status !== 'under_cc_review') {
+                    const displayPricePerCase =
+                      displayCurrency === 'USD' ? pricePerCase : convertUsdToAed(pricePerCase);
+                    const lineTotal = pricePerCase * item.quantity;
+                    const displayLineTotal =
+                      displayCurrency === 'USD' ? lineTotal : convertUsdToAed(lineTotal);
 
-                  const isReviewMode = quote.status === 'under_cc_review';
+                    return (
+                      <div
+                        key={item.productId}
+                        className="rounded-lg border border-border-muted bg-white px-4 py-3"
+                      >
+                        <div className="flex items-center justify-between gap-4">
+                          <div className="flex-1 min-w-0">
+                            <Typography variant="bodySm" className="font-semibold truncate">
+                              {product?.name || item.productId}
+                            </Typography>
+                            <div className="flex items-center gap-2 text-xs text-text-muted">
+                              {product?.producer && <span className="truncate">{product.producer}</span>}
+                              {product?.year && <span>• {product.year}</span>}
+                              {item.vintage && <span>• V{item.vintage}</span>}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-6 text-sm">
+                            <div className="text-center">
+                              <span className="font-semibold">{item.quantity}</span>
+                              <span className="text-text-muted ml-1">cases</span>
+                            </div>
+                            <div className="text-right">
+                              <div className="font-semibold">{formatPrice(displayPricePerCase, displayCurrency)}</div>
+                              <div className="text-xs text-text-muted">per case</div>
+                            </div>
+                            <div className="text-right min-w-[100px]">
+                              <Typography variant="bodyMd" className="font-bold text-text-brand">
+                                {formatPrice(displayLineTotal, displayCurrency)}
+                              </Typography>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  }
 
-                  const hasAlternatives = item.alternativeVintages && item.alternativeVintages.length > 0;
-
+                  // Review mode - use the compact ReviewLineItemRow component
                   return (
-                    <div
-                      key={idx}
-                      className="rounded-xl border-2 border-border-muted dark:border-border-muted bg-white dark:bg-background-secondary shadow-sm hover:shadow-md hover:border-border-brand transition-all duration-200"
-                    >
-                    <div
-                      className="grid grid-cols-12 gap-4 sm:gap-6 px-4 sm:px-6 py-5 group"
-                    >
-                      {product ? (
-                        <>
-                          {/* Product Info */}
-                          <div className={`${isReviewMode ? 'col-span-5' : 'col-span-6'} space-y-1.5 pr-4`}>
-                            <Typography variant="bodySm" className="font-bold group-hover:text-text-brand transition-colors line-clamp-2 leading-tight">
-                              {product.name}
-                            </Typography>
-                            <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-                              {product.producer && (
-                                <Typography variant="bodyXs" colorRole="muted" className="truncate max-w-[180px]">
-                                  {product.producer}
-                                </Typography>
-                              )}
-                              {product.year && (
-                                <Typography variant="bodyXs" colorRole="muted" className="flex-shrink-0">
-                                  • {product.year}
-                                </Typography>
-                              )}
-                              {item.vintage && (
-                                <Typography variant="bodyXs" colorRole="muted" className="flex-shrink-0">
-                                  • Vintage {item.vintage}
-                                </Typography>
-                              )}
-                            </div>
-                            <div className="inline-flex items-center gap-2 rounded-md bg-fill-muted/50 px-2 py-0.5">
-                              <Typography variant="bodyXs" colorRole="muted" className="font-mono text-[9px]">
-                                {product.lwin18}
-                              </Typography>
-                            </div>
-                            {isReviewMode && adjustment && !adjustment.available && (
-                              <div className="inline-flex items-center gap-1.5 rounded-lg bg-fill-warning/10 border border-border-warning px-2.5 py-1 mt-1">
-                                <span className="text-sm">⚠️</span>
-                                <Typography variant="bodyXs" colorRole="warning" className="font-bold">
-                                  Out of Stock
-                                </Typography>
-                              </div>
-                            )}
-                          </div>
-
-                          {/* Requested Quantity */}
-                          <div className="col-span-2 flex items-center justify-center">
-                            <div className="inline-flex flex-col items-center gap-0.5">
-                              <Typography variant="bodyLg" className="font-bold text-text-brand">
-                                {item.quantity}
-                              </Typography>
-                              <Typography variant="bodyXs" colorRole="muted" className="uppercase tracking-wide text-[10px]">
-                                {item.quantity === 1 ? 'case' : 'cases'}
-                              </Typography>
-                            </div>
-                          </div>
-
-                          {isReviewMode ? (
-                            <>
-                              {/* Confirmed Quantity (Editable) */}
-                              <div className="col-span-2 flex flex-col items-center justify-center gap-2">
-                                <Input
-                                  type="number"
-                                  min="0"
-                                  value={adjustment?.confirmedQuantity ?? item.quantity}
-                                  onChange={(e) => {
-                                    const value = parseInt(e.target.value) || 0;
-                                    setLineItemAdjustments({
-                                      ...lineItemAdjustments,
-                                      [item.productId]: {
-                                        adjustedPricePerCase: adjustment?.adjustedPricePerCase ?? pricePerCase,
-                                        confirmedQuantity: value,
-                                        available: value > 0,
-                                        notes: adjustment?.notes,
-                                      },
-                                    });
-                                  }}
-                                  className="w-24 text-center font-bold text-base border-2 focus:border-border-brand focus:ring-2 focus:ring-fill-brand/20 transition-all"
-                                />
-                                <label className="flex items-center gap-1.5 cursor-pointer group/checkbox">
-                                  <input
-                                    type="checkbox"
-                                    checked={adjustment?.available ?? true}
-                                    onChange={(e) => {
-                                      setLineItemAdjustments({
-                                        ...lineItemAdjustments,
-                                        [item.productId]: {
-                                          adjustedPricePerCase: adjustment?.adjustedPricePerCase ?? pricePerCase,
-                                          confirmedQuantity: e.target.checked
-                                            ? adjustment?.confirmedQuantity ?? item.quantity
-                                            : 0,
-                                          available: e.target.checked,
-                                          notes: adjustment?.notes,
-                                        },
-                                      });
-                                    }}
-                                    className="h-3.5 w-3.5 rounded border-2 cursor-pointer"
-                                  />
-                                  <span className="text-[10px] font-semibold uppercase tracking-wide text-text-muted group-hover/checkbox:text-text transition-colors">
-                                    In Stock
-                                  </span>
-                                </label>
-                              </div>
-
-                              {/* Price per Case (Editable USD) */}
-                              <div className="col-span-2 flex items-center justify-end">
-                                <div className="flex flex-col items-end gap-1">
-                                  <div className="relative">
-                                    <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-text-muted font-semibold text-sm">$</span>
-                                    <Input
-                                      type="number"
-                                      min="0"
-                                      step="0.01"
-                                      value={adjustment?.adjustedPricePerCase ?? pricePerCase}
-                                      onChange={(e) => {
-                                        const value = parseFloat(e.target.value) || 0;
-                                        setLineItemAdjustments({
-                                          ...lineItemAdjustments,
-                                          [item.productId]: {
-                                            adjustedPricePerCase: value,
-                                            confirmedQuantity: adjustment?.confirmedQuantity ?? item.quantity,
-                                            available: adjustment?.available ?? true,
-                                            notes: adjustment?.notes,
-                                          },
-                                        });
-                                      }}
-                                      className="w-32 pl-6 text-right font-bold text-base border-2 focus:border-border-brand focus:ring-2 focus:ring-fill-brand/20 transition-all"
-                                    />
-                                  </div>
-                                  <Typography variant="bodyXs" colorRole="muted" className="uppercase tracking-wide text-[10px]">
-                                    per case
-                                  </Typography>
-                                </div>
-                              </div>
-                            </>
-                          ) : (
-                            <>
-                              {/* Price per Case (Read-only) */}
-                              <div className="col-span-2 flex items-center justify-end">
-                                <div className="flex flex-col items-end gap-0.5">
-                                  <Typography variant="bodySm" className="font-bold">
-                                    {formatPrice(displayPricePerCase, displayCurrency)}
-                                  </Typography>
-                                  <Typography variant="bodyXs" colorRole="muted" className="uppercase tracking-wide text-[10px]">
-                                    per case
-                                  </Typography>
-                                </div>
-                              </div>
-                            </>
-                          )}
-
-                          {/* Line Total */}
-                          <div className={`${isReviewMode ? 'col-span-1' : 'col-span-2'} flex items-center justify-end`}>
-                            <Typography variant="bodyLg" className="font-bold text-text-brand">
-                              {formatPrice(displayLineTotal, displayCurrency)}
-                            </Typography>
-                          </div>
-                        </>
-                      ) : (
-                        <div className="col-span-12">
-                          <Typography variant="bodySm" className="mb-1 font-mono">
-                            {item.productId}
-                          </Typography>
-                          <Typography variant="bodyXs" colorRole="danger">
-                            Product details unavailable • Quantity: {item.quantity}
-                          </Typography>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Alternative Vintages Section */}
-                    {product && hasAlternatives && (
-                      <div className="px-6 py-3 bg-fill-muted/20">
-                        <div className="flex items-center gap-2 mb-2">
-                          <span className="text-sm">📅</span>
-                          <Typography variant="bodySm" className="font-semibold">
-                            Customer Requested Alternatives:
-                          </Typography>
-                        </div>
-                        <div className="flex flex-wrap gap-2">
-                          {item.alternativeVintages?.map((vintage, vIdx) => (
-                            <span
-                              key={vIdx}
-                              className="inline-flex items-center gap-1 rounded-md bg-fill-brand/10 border border-border-brand/30 px-3 py-1 text-xs font-semibold text-text-brand"
-                            >
-                              {vintage}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Admin Notes for Line Item */}
-                    {isReviewMode && product && (
-                      <div className="px-6 py-3 bg-white border-t border-border-muted space-y-4">
-                        <div>
-                          <Typography variant="bodySm" className="mb-2 font-semibold">
-                            Notes for this item <span className="text-text-muted font-normal text-xs">(optional)</span>
-                          </Typography>
-                          <TextArea
-                            value={adjustment?.notes || ''}
-                            onChange={(e) => {
-                              setLineItemAdjustments({
-                                ...lineItemAdjustments,
-                                [item.productId]: {
-                                  adjustedPricePerCase: adjustment?.adjustedPricePerCase ?? pricePerCase,
-                                  confirmedQuantity: adjustment?.confirmedQuantity ?? item.quantity,
-                                  available: adjustment?.available ?? true,
-                                  notes: e.target.value,
-                                  adminAlternatives: adjustment?.adminAlternatives,
-                                },
-                              });
-                            }}
-                            placeholder="e.g., Substituted with 2019 vintage, Price adjusted due to supplier discount"
-                            rows={2}
-                            className="text-sm border-2 focus:border-border-brand focus:ring-2 focus:ring-fill-brand/20 transition-all"
-                          />
-                        </div>
-
-                        {/* Admin Alternative Suggestions - Collapsible */}
-                        <div className="rounded-lg border border-border-muted overflow-hidden">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setExpandedAlternatives({
-                                ...expandedAlternatives,
-                                [item.productId]: !expandedAlternatives[item.productId],
-                              });
-                            }}
-                            className="w-full flex items-center justify-between p-3 hover:bg-fill-muted/30 transition-colors"
-                          >
-                            <div className="flex items-center gap-2">
-                              <span className="text-base">💡</span>
-                              <Typography variant="bodySm" className="font-semibold">
-                                Suggest Alternative Products
-                                {adjustment?.adminAlternatives && adjustment.adminAlternatives.length > 0 && (
-                                  <span className="ml-2 text-text-brand">
-                                    ({adjustment.adminAlternatives.length})
-                                  </span>
-                                )}
-                              </Typography>
-                            </div>
-                            <div className={`transition-transform duration-200 ${expandedAlternatives[item.productId] ? 'rotate-180' : ''}`}>
-                              <span className="text-sm text-text-muted">▼</span>
-                            </div>
-                          </button>
-
-                          {expandedAlternatives[item.productId] && (
-                            <div className="p-4 bg-gradient-to-br from-fill-warning/10 to-fill-warning/5 border-t border-border-warning">
-                              <Typography variant="bodyXs" colorRole="muted" className="mb-4">
-                                Add alternative products with pricing that aren&apos;t in your catalog
-                              </Typography>
-
-                              {/* Structured form for new alternative */}
-                              <div className="space-y-3 mb-4">
-                                <div className="grid grid-cols-2 gap-3">
-                              <div className="col-span-2">
-                                <Typography variant="bodyXs" className="mb-1 font-medium">
-                                  Product Name <span className="text-text-danger">*</span>
-                                </Typography>
-                                <Input
-                                  type="text"
-                                  size="sm"
-                                  placeholder="e.g., Chateau Margaux 2019"
-                                  value={newAlternative[item.productId]?.productName || ''}
-                                  onChange={(e) => {
-                                    setNewAlternative({
-                                      ...newAlternative,
-                                      [item.productId]: {
-                                        ...newAlternative[item.productId],
-                                        productName: e.target.value,
-                                        pricePerCase: newAlternative[item.productId]?.pricePerCase || '',
-                                        bottlesPerCase: newAlternative[item.productId]?.bottlesPerCase || '',
-                                        bottleSize: newAlternative[item.productId]?.bottleSize || '',
-                                        quantityAvailable: newAlternative[item.productId]?.quantityAvailable || '',
-                                      },
-                                    });
-                                  }}
-                                />
-                              </div>
-                              <div>
-                                <Typography variant="bodyXs" className="mb-1 font-medium">
-                                  Price/Case (USD) <span className="text-text-danger">*</span>
-                                </Typography>
-                                <Input
-                                  type="number"
-                                  size="sm"
-                                  placeholder="180"
-                                  min="0"
-                                  step="0.01"
-                                  value={newAlternative[item.productId]?.pricePerCase || ''}
-                                  onChange={(e) => {
-                                    setNewAlternative({
-                                      ...newAlternative,
-                                      [item.productId]: {
-                                        ...newAlternative[item.productId],
-                                        productName: newAlternative[item.productId]?.productName || '',
-                                        pricePerCase: e.target.value,
-                                        bottlesPerCase: newAlternative[item.productId]?.bottlesPerCase || '',
-                                        bottleSize: newAlternative[item.productId]?.bottleSize || '',
-                                        quantityAvailable: newAlternative[item.productId]?.quantityAvailable || '',
-                                      },
-                                    });
-                                  }}
-                                />
-                              </div>
-                              <div>
-                                <Typography variant="bodyXs" className="mb-1 font-medium">
-                                  Qty Available <span className="text-text-danger">*</span>
-                                </Typography>
-                                <Input
-                                  type="number"
-                                  size="sm"
-                                  placeholder="100"
-                                  min="0"
-                                  value={newAlternative[item.productId]?.quantityAvailable || ''}
-                                  onChange={(e) => {
-                                    setNewAlternative({
-                                      ...newAlternative,
-                                      [item.productId]: {
-                                        ...newAlternative[item.productId],
-                                        productName: newAlternative[item.productId]?.productName || '',
-                                        pricePerCase: newAlternative[item.productId]?.pricePerCase || '',
-                                        bottlesPerCase: newAlternative[item.productId]?.bottlesPerCase || '',
-                                        bottleSize: newAlternative[item.productId]?.bottleSize || '',
-                                        quantityAvailable: e.target.value,
-                                      },
-                                    });
-                                  }}
-                                />
-                              </div>
-                              <div>
-                                <Typography variant="bodyXs" className="mb-1 font-medium">
-                                  Bottles/Case <span className="text-text-danger">*</span>
-                                </Typography>
-                                <Input
-                                  type="number"
-                                  size="sm"
-                                  placeholder="12"
-                                  min="1"
-                                  value={newAlternative[item.productId]?.bottlesPerCase || ''}
-                                  onChange={(e) => {
-                                    setNewAlternative({
-                                      ...newAlternative,
-                                      [item.productId]: {
-                                        ...newAlternative[item.productId],
-                                        productName: newAlternative[item.productId]?.productName || '',
-                                        pricePerCase: newAlternative[item.productId]?.pricePerCase || '',
-                                        bottlesPerCase: e.target.value,
-                                        bottleSize: newAlternative[item.productId]?.bottleSize || '',
-                                        quantityAvailable: newAlternative[item.productId]?.quantityAvailable || '',
-                                      },
-                                    });
-                                  }}
-                                />
-                              </div>
-                              <div>
-                                <Typography variant="bodyXs" className="mb-1 font-medium">
-                                  Bottle Size <span className="text-text-danger">*</span>
-                                </Typography>
-                                <Input
-                                  type="text"
-                                  size="sm"
-                                  placeholder="750ml"
-                                  value={newAlternative[item.productId]?.bottleSize || ''}
-                                  onChange={(e) => {
-                                    setNewAlternative({
-                                      ...newAlternative,
-                                      [item.productId]: {
-                                        ...newAlternative[item.productId],
-                                        productName: newAlternative[item.productId]?.productName || '',
-                                        pricePerCase: newAlternative[item.productId]?.pricePerCase || '',
-                                        bottlesPerCase: newAlternative[item.productId]?.bottlesPerCase || '',
-                                        bottleSize: e.target.value,
-                                        quantityAvailable: newAlternative[item.productId]?.quantityAvailable || '',
-                                      },
-                                    });
-                                  }}
-                                />
-                              </div>
-                            </div>
-                            <Button
-                              type="button"
-                              variant="default"
-                              colorRole="brand"
-                              size="sm"
-                              onClick={() => {
-                                const alt = newAlternative[item.productId];
-                                if (
-                                  alt?.productName?.trim() &&
-                                  alt?.pricePerCase &&
-                                  alt?.bottlesPerCase &&
-                                  alt?.bottleSize?.trim() &&
-                                  alt?.quantityAvailable
-                                ) {
-                                  const currentAlternatives = adjustment?.adminAlternatives || [];
-                                  setLineItemAdjustments({
-                                    ...lineItemAdjustments,
-                                    [item.productId]: {
-                                      adjustedPricePerCase: adjustment?.adjustedPricePerCase ?? pricePerCase,
-                                      confirmedQuantity: adjustment?.confirmedQuantity ?? item.quantity,
-                                      available: adjustment?.available ?? true,
-                                      notes: adjustment?.notes,
-                                      adminAlternatives: [
-                                        ...currentAlternatives,
-                                        {
-                                          productName: alt.productName.trim(),
-                                          pricePerCase: parseFloat(alt.pricePerCase),
-                                          bottlesPerCase: parseInt(alt.bottlesPerCase),
-                                          bottleSize: alt.bottleSize.trim(),
-                                          quantityAvailable: parseInt(alt.quantityAvailable),
-                                        },
-                                      ],
-                                    },
-                                  });
-                                  // Clear form
-                                  setNewAlternative({
-                                    ...newAlternative,
-                                    [item.productId]: {
-                                      productName: '',
-                                      pricePerCase: '',
-                                      bottlesPerCase: '',
-                                      bottleSize: '',
-                                      quantityAvailable: '',
-                                    },
-                                  });
-                                }
-                              }}
-                              isDisabled={
-                                !newAlternative[item.productId]?.productName?.trim() ||
-                                !newAlternative[item.productId]?.pricePerCase ||
-                                !newAlternative[item.productId]?.bottlesPerCase ||
-                                !newAlternative[item.productId]?.bottleSize?.trim() ||
-                                !newAlternative[item.productId]?.quantityAvailable
-                              }
-                              className="w-full"
-                            >
-                              <ButtonContent iconLeft={IconPlus}>Add Alternative</ButtonContent>
-                            </Button>
-                          </div>
-
-                          {/* Display added alternatives */}
-                          {adjustment?.adminAlternatives && adjustment.adminAlternatives.length > 0 && (
-                            <div className="space-y-2">
-                              <Typography variant="bodyXs" className="font-semibold">
-                                Alternative Products ({adjustment.adminAlternatives.length}):
-                              </Typography>
-                              <div className="space-y-2">
-                                {adjustment.adminAlternatives.map((alt, altIdx) => (
-                                  <div
-                                    key={altIdx}
-                                    className="rounded-md bg-fill-brand/10 border border-border-success p-3"
-                                  >
-                                    <div className="flex items-start justify-between gap-2 mb-2">
-                                      <Typography variant="bodyXs" className="font-bold text-text-brand flex-1">
-                                        {alt.productName}
-                                      </Typography>
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          const updatedAlternatives = adjustment.adminAlternatives!.filter(
-                                            (_, i) => i !== altIdx
-                                          );
-                                          setLineItemAdjustments({
-                                            ...lineItemAdjustments,
-                                            [item.productId]: {
-                                              ...adjustment,
-                                              adminAlternatives: updatedAlternatives.length > 0 ? updatedAlternatives : undefined,
-                                            },
-                                          });
-                                        }}
-                                        className="text-text-danger hover:text-text-danger/80 transition-colors text-sm font-bold"
-                                      >
-                                        ✕
-                                      </button>
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-                                      <Typography variant="bodyXs" colorRole="muted">
-                                        Price: ${alt.pricePerCase.toFixed(2)}/case
-                                      </Typography>
-                                      <Typography variant="bodyXs" colorRole="muted">
-                                        {alt.quantityAvailable} cases available
-                                      </Typography>
-                                      <Typography variant="bodyXs" colorRole="muted" className="col-span-2">
-                                        {alt.bottlesPerCase} × {alt.bottleSize}
-                                      </Typography>
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                    </div>
+                    <ReviewLineItemRow
+                      key={item.productId}
+                      lineItem={item}
+                      product={product}
+                      pricePerCase={pricePerCase}
+                      adjustment={adjustment}
+                      isExpanded={isExpanded}
+                      displayCurrency={displayCurrency}
+                      onToggle={() => setExpandedItemId(isExpanded ? null : item.productId)}
+                      onAdjustmentChange={(newAdjustment) => {
+                        setLineItemAdjustments({
+                          ...lineItemAdjustments,
+                          [item.productId]: newAdjustment,
+                        });
+                      }}
+                    />
                   );
                 })}
               </div>
 
-              {/* Order Total */}
-              <div className="mt-8 flex justify-end">
-                <div className="rounded-xl bg-gradient-to-br from-fill-brand/10 to-fill-brand/20 border-2 border-border-brand/30 px-10 py-6 min-w-[280px] shadow-lg">
-                  <Typography variant="bodySm" colorRole="muted" className="mb-3 text-right uppercase tracking-wider font-bold">
-                    Order Total
-                  </Typography>
-                  <Typography variant="headingLg" className="font-black text-text-brand text-right">
+              {/* Order Total - Compact */}
+              <div className="mt-4 flex justify-end">
+                <div className="rounded-lg bg-fill-brand/10 border border-border-brand/30 px-6 py-3 flex items-center gap-4">
+                  <span className="text-sm font-semibold text-text-muted uppercase">Total:</span>
+                  <Typography variant="headingMd" className="font-bold text-text-brand">
                     {formatPrice(displayTotal, displayCurrency)}
-                  </Typography>
-                  <Typography variant="bodyXs" colorRole="muted" className="mt-2 text-right uppercase tracking-wide">
-                    {displayCurrency === 'USD' ? 'US Dollars' : 'UAE Dirham'}
                   </Typography>
                 </div>
               </div>
