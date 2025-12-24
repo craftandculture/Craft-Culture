@@ -603,12 +603,12 @@ const QuoteApprovalDialog = ({
               {quote.status === 'under_cc_review' && (
                 <div className="rounded-t-lg border border-b-0 border-border-muted bg-fill-muted/50 px-4 py-2">
                   <div className="grid grid-cols-12 gap-2 text-xs font-bold text-text-muted uppercase tracking-wider">
-                    <div className="col-span-5">Product</div>
+                    <div className="col-span-4">Product</div>
                     <div className="col-span-1 text-center">Req</div>
                     <div className="col-span-2 text-center">Confirmed</div>
                     <div className="col-span-2 text-right">$/Case</div>
                     <div className="col-span-1 text-right">Total</div>
-                    <div className="col-span-1 text-center">Status</div>
+                    <div className="col-span-2 text-center">Status</div>
                   </div>
                 </div>
               )}

@@ -249,7 +249,7 @@ const ReviewLineItemRow = ({
         onClick={onToggle}
       >
         {/* Expand Icon + Product Name */}
-        <div className="col-span-5 flex items-center gap-2 min-w-0">
+        <div className="col-span-4 flex items-center gap-2 min-w-0">
           <div className="flex-shrink-0 text-text-muted">
             {isExpanded ? <IconChevronDown size={16} /> : <IconChevronRight size={16} />}
           </div>
@@ -360,12 +360,11 @@ const ReviewLineItemRow = ({
         </div>
 
         {/* Status */}
-        <div className="col-span-1 flex justify-center">
+        <div className="col-span-2 flex justify-center">
           <span
-            className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-sm ${status.bg} ${status.color}`}
-            title={status.label}
+            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap ${status.bg} ${status.color}`}
           >
-            {status.icon}
+            {status.icon} {status.label}
           </span>
         </div>
       </div>
