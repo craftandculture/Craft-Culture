@@ -1,7 +1,5 @@
-import { eq } from 'drizzle-orm';
-
 import db from '@/database/client';
-import { notifications, users } from '@/database/schema';
+import { notifications } from '@/database/schema';
 
 interface CreateNotificationParams {
   userId: string;
@@ -33,7 +31,7 @@ const createNotification = async (params: CreateNotificationParams) => {
 
   // Verify user exists
   const user = await db.query.users.findFirst({
-    where: eq(users.id, userId),
+    where: { id: userId },
   });
 
   if (!user) {
