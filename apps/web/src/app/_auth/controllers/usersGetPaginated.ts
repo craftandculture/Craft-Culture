@@ -2,7 +2,7 @@ import { desc, eq, ilike, or, sql } from 'drizzle-orm';
 import z from 'zod';
 
 import db from '@/database/client';
-import { users } from '@/database/schema';
+import { sessions, users } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
 /**
@@ -42,7 +42,17 @@ const usersGetPaginated = adminProcedure
         ? sql`${sql.join(whereConditions, sql` AND `)}`
         : undefined;
 
-    // Get users with pagination
+    // Subquery to get the most recent session (last login) for each user
+    const lastLoginSubquery = db
+      .select({
+        userId: sessions.userId,
+        lastLogin: sql<Date>`MAX(${sessions.createdAt})`.as('last_login'),
+      })
+      .from(sessions)
+      .groupBy(sessions.userId)
+      .as('last_login_sq');
+
+    // Get users with pagination and last login
     const usersResult = await db
       .select({
         id: users.id,
@@ -55,8 +65,10 @@ const usersGetPaginated = adminProcedure
         approvedBy: users.approvedBy,
         createdAt: users.createdAt,
         onboardingCompletedAt: users.onboardingCompletedAt,
+        lastLogin: lastLoginSubquery.lastLogin,
       })
       .from(users)
+      .leftJoin(lastLoginSubquery, eq(users.id, lastLoginSubquery.userId))
       .where(whereClause)
       .orderBy(desc(users.createdAt))
       .limit(limit + 1)
