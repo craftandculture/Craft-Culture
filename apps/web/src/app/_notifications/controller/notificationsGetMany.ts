@@ -1,7 +1,4 @@
-import { desc } from 'drizzle-orm';
-
 import db from '@/database/client';
-import { notifications } from '@/database/schema';
 import { protectedProcedure } from '@/lib/trpc/procedures';
 
 import getNotificationsSchema from '../schemas/getNotificationsSchema';
@@ -15,12 +12,14 @@ const notificationsGetMany = protectedProcedure
     const { limit, cursor, unreadOnly } = input;
     const userId = ctx.user.id;
 
+    const whereConditions = {
+      userId,
+      ...(unreadOnly ? { isRead: false } : {}),
+    };
+
     const data = await db.query.notifications.findMany({
-      where: (table, { eq, and }) =>
-        unreadOnly
-          ? and(eq(table.userId, userId), eq(table.isRead, false))
-          : eq(table.userId, userId),
-      orderBy: [desc(notifications.createdAt)],
+      where: whereConditions,
+      orderBy: (table, { desc }) => [desc(table.createdAt)],
       limit: limit + 1,
       offset: cursor,
     });
