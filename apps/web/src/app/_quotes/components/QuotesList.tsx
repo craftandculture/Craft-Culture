@@ -16,8 +16,8 @@ import {
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ColumnDef } from '@tanstack/react-table';
 import { format } from 'date-fns';
-import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
 import Button from '@/app/_ui/components/Button/Button';
@@ -60,12 +60,16 @@ const QuotesList = () => {
   const trpcClient = useTRPCClient();
   const queryClient = useQueryClient();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [search, setSearch] = useState('');
   const [cursor, setCursor] = useState(0);
   const [selectedQuote, setSelectedQuote] = useState<Quote | null>(null);
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
   const [activeFilter, setActiveFilter] = useState<QuoteStatus | 'all' | 'action_required'>('all');
   const [submittingQuoteId, setSubmittingQuoteId] = useState<string | null>(null);
+
+  // Check for quoteId in URL to auto-open dialog
+  const quoteIdFromUrl = searchParams.get('quoteId');
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ['quotes.getMany', { limit: 20, cursor, search: search || undefined }],
@@ -76,6 +80,19 @@ const QuotesList = () => {
         search: search || undefined,
       }),
   });
+
+  // Auto-open quote dialog if quoteId is in URL
+  useEffect(() => {
+    if (quoteIdFromUrl && data?.data) {
+      const quote = data.data.find((q) => q.id === quoteIdFromUrl);
+      if (quote) {
+        setSelectedQuote(quote);
+        setIsDetailsDialogOpen(true);
+        // Clear the URL param to prevent re-opening on refresh
+        router.replace('/platform/my-quotes', { scroll: false });
+      }
+    }
+  }, [quoteIdFromUrl, data?.data, router]);
 
   // Submit buy request mutation
   const submitBuyRequestMutation = useMutation({

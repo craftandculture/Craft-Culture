@@ -30,7 +30,7 @@ const notifyUserOfReviewStart = async (quote: Quote) => {
       return;
     }
 
-    const quoteUrl = `${serverConfig.appUrl}/platform/quotes/${quote.id}`;
+    const quoteUrl = `${serverConfig.appUrl}/platform/my-quotes?quoteId=${quote.id}`;
 
     // Create in-app notification
     await createNotification({

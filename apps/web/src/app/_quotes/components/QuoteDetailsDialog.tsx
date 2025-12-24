@@ -614,6 +614,8 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
 
             {/* Admin Adjustments Summary - show when confirmed by C&C */}
             {(quote.status === 'cc_confirmed' ||
+              quote.status === 'awaiting_payment' ||
+              quote.status === 'paid' ||
               quote.status === 'po_submitted' ||
               quote.status === 'po_confirmed') &&
               quotePricingData?.lineItems && (
@@ -828,6 +830,8 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                           {/* Admin Notes - compact */}
                           {pricing?.adminNotes &&
                             (quote.status === 'cc_confirmed' ||
+                             quote.status === 'awaiting_payment' ||
+                             quote.status === 'paid' ||
                              quote.status === 'po_submitted' ||
                              quote.status === 'po_confirmed') && (
                             <div className="mt-2 rounded-md bg-fill-brand/10 px-3 py-2 text-xs">
@@ -839,6 +843,8 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                           {/* Admin Alternatives - compact */}
                           {pricing?.adminAlternatives && pricing.adminAlternatives.length > 0 &&
                             (quote.status === 'cc_confirmed' ||
+                             quote.status === 'awaiting_payment' ||
+                             quote.status === 'paid' ||
                              quote.status === 'po_submitted' ||
                              quote.status === 'po_confirmed') && (
                             <div className="mt-2 rounded-md border border-border-success bg-fill-success/10 p-2">
@@ -869,7 +875,7 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                                             displayCurrency
                                           )}
                                         </span>
-                                        {quote.status === 'cc_confirmed' && (
+                                        {(quote.status === 'cc_confirmed' || quote.status === 'awaiting_payment') && (
                                           <Button
                                             variant={isAccepted ? 'outline' : 'default'}
                                             colorRole={isAccepted ? 'danger' : 'brand'}
