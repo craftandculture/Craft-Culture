@@ -2,7 +2,7 @@ import { and, eq } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { notifications } from '@/database/schema';
-import { protectedProcedure } from '@/lib/trpc/trpc';
+import { protectedProcedure } from '@/lib/trpc/procedures';
 
 /**
  * Mark all notifications as read for the current user

@@ -39,7 +39,7 @@ const NotificationBell = () => {
   });
 
   const unreadCount = unreadData?.count ?? 0;
-  const notifications = notificationsData?.data ?? [];
+  const notifications: Notification[] = notificationsData?.data ?? [];
 
   const handleNotificationClick = async (notification: Notification) => {
     // Mark as read if not already

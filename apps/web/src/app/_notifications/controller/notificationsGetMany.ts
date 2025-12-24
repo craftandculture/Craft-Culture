@@ -2,7 +2,7 @@ import { and, desc, eq } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { notifications } from '@/database/schema';
-import { protectedProcedure } from '@/lib/trpc/trpc';
+import { protectedProcedure } from '@/lib/trpc/procedures';
 
 import getNotificationsSchema from '../schemas/getNotificationsSchema';
 
