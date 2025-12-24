@@ -1,7 +1,6 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 
-import PendingUsersBell from '@/app/_admin/components/PendingUsersBell';
 import UserDropdown from '@/app/_auth/components/UserDropdown';
 import NotificationBell from '@/app/_notifications/components/NotificationBell';
 import CommandBar from '@/app/_ui/components/CommandBar/CommandBar';
@@ -70,7 +69,6 @@ const PlatformLayout = async ({ children }: React.PropsWithChildren) => {
             </nav>
           </div>
           <div className="flex items-center gap-2 sm:gap-3">
-            {user.role === 'admin' && <PendingUsersBell />}
             <NotificationBell />
             <ThemeToggle />
             <UserDropdown user={user} />
