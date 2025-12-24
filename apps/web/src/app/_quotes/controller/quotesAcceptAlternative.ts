@@ -105,14 +105,17 @@ const quotesAcceptAlternative = protectedProcedure
 
       // Handle removing accepted alternative (alternativeIndex === -1)
       if (alternativeIndex === -1) {
+        // Type assertion to access originalBasePriceUsd
+        const lineItemWithOriginal = lineItem as typeof lineItem & { originalBasePriceUsd?: number };
+
         // Remove the accepted alternative and revert to original pricing
         const updatedLineItem = {
           ...lineItem,
           acceptedAlternative: undefined,
-          // Revert to original pricing if available
-          basePriceUsd: lineItem.originalQuantity
-            ? lineItem.lineItemTotalUsd / lineItem.originalQuantity
-            : lineItem.basePriceUsd,
+          // Revert to original pricing stored when alternative was accepted
+          basePriceUsd: lineItemWithOriginal.originalBasePriceUsd ?? lineItem.basePriceUsd,
+          // Clean up the stored original price
+          originalBasePriceUsd: undefined,
         };
 
         updatedLineItem.lineItemTotalUsd =
@@ -153,6 +156,9 @@ const quotesAcceptAlternative = protectedProcedure
       // Get the selected alternative
       const selectedAlternative = lineItem.adminAlternatives[alternativeIndex];
 
+      // Type assertion to check if we already have an original price stored
+      const lineItemWithOriginal = lineItem as typeof lineItem & { originalBasePriceUsd?: number };
+
       // Update the line item with the accepted alternative
       const updatedLineItem = {
         ...lineItem,
@@ -160,6 +166,8 @@ const quotesAcceptAlternative = protectedProcedure
           ...selectedAlternative,
           acceptedAt: new Date().toISOString(),
         },
+        // Store original price before replacing (only if not already stored)
+        originalBasePriceUsd: lineItemWithOriginal.originalBasePriceUsd ?? lineItem.basePriceUsd,
         // Update pricing to use alternative price
         basePriceUsd: selectedAlternative.pricePerCase,
         // Ensure quantity doesn't exceed available quantity

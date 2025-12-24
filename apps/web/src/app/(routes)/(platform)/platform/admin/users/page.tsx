@@ -194,6 +194,9 @@ const UserManagementPage = () => {
                       <th className="text-text-secondary px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">
                         Signup Date
                       </th>
+                      <th className="text-text-secondary px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">
+                        Last Login
+                      </th>
                       <th className="text-text-secondary px-6 py-3 text-right text-xs font-medium uppercase tracking-wider">
                         Actions
                       </th>
@@ -221,6 +224,13 @@ const UserManagementPage = () => {
                         <td className="px-6 py-4">
                           <Typography variant="bodySm" className="text-text-secondary">
                             {new Date(user.createdAt).toLocaleDateString()}
+                          </Typography>
+                        </td>
+                        <td className="px-6 py-4">
+                          <Typography variant="bodySm" className="text-text-secondary">
+                            {user.lastLogin
+                              ? new Date(user.lastLogin).toLocaleDateString()
+                              : 'Never'}
                           </Typography>
                         </td>
                         <td className="px-6 py-4">
@@ -318,6 +328,12 @@ const UserManagementPage = () => {
                       </Typography>
                       <Typography variant="bodyXs" className="text-text-muted">
                         Signed up {new Date(user.createdAt).toLocaleDateString()}
+                      </Typography>
+                      <Typography variant="bodyXs" className="text-text-muted">
+                        Last login:{' '}
+                        {user.lastLogin
+                          ? new Date(user.lastLogin).toLocaleDateString()
+                          : 'Never'}
                       </Typography>
                     </div>
 
