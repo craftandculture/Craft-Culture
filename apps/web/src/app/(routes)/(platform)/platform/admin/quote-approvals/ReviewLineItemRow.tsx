@@ -204,16 +204,25 @@ const ReviewLineItemRow = ({
   const displayLineTotal =
     displayCurrency === 'USD' ? lineTotal : convertUsdToAed(lineTotal);
 
+  // Check if admin has made any actual changes from original values
+  const hasBeenReviewed = adjustment !== undefined && (
+    adjustment.confirmedQuantity !== lineItem.quantity ||
+    adjustment.adjustedPricePerCase !== pricePerCase ||
+    adjustment.available === false ||
+    (adjustment.notes && adjustment.notes.trim().length > 0) ||
+    (adjustment.adminAlternatives && adjustment.adminAlternatives.length > 0)
+  );
+
   // Determine status icon
   const getStatusIcon = () => {
-    if (!isAvailable) return { icon: '✗', color: 'text-text-danger', bg: 'bg-fill-danger/10' };
+    if (!isAvailable) return { icon: '✗', color: 'text-text-danger', bg: 'bg-fill-danger/10', label: 'Out of Stock' };
     if (adjustment?.notes || (adjustment?.adminAlternatives && adjustment.adminAlternatives.length > 0)) {
-      return { icon: '⚠', color: 'text-text-warning', bg: 'bg-fill-warning/10' };
+      return { icon: '⚠', color: 'text-text-warning', bg: 'bg-fill-warning/10', label: 'Has Notes' };
     }
-    if (adjustment?.confirmedQuantity !== undefined) {
-      return { icon: '✓', color: 'text-text-success', bg: 'bg-fill-success/10' };
+    if (hasBeenReviewed) {
+      return { icon: '✓', color: 'text-text-success', bg: 'bg-fill-success/10', label: 'Reviewed' };
     }
-    return { icon: '○', color: 'text-text-muted', bg: 'bg-fill-muted/50' };
+    return { icon: '○', color: 'text-text-muted', bg: 'bg-fill-muted/50', label: 'Pending' };
   };
 
   const status = getStatusIcon();
@@ -264,39 +273,59 @@ const ReviewLineItemRow = ({
         </div>
 
         {/* Confirmed Quantity + Stock */}
-        <div className="col-span-2 flex items-center justify-center gap-1" onClick={(e) => e.stopPropagation()}>
-          <Input
-            type="number"
-            min="0"
-            value={adjustment?.confirmedQuantity ?? lineItem.quantity}
-            onChange={(e) => {
-              const value = parseInt(e.target.value) || 0;
-              onAdjustmentChange({
-                adjustedPricePerCase: adjustment?.adjustedPricePerCase ?? pricePerCase,
-                confirmedQuantity: value,
-                available: value > 0,
-                notes: adjustment?.notes,
-                adminAlternatives: adjustment?.adminAlternatives,
-              });
-            }}
-            className="w-16 text-center text-sm py-1 h-8"
-          />
-          <label className="flex items-center cursor-pointer" title="In Stock">
-            <input
-              type="checkbox"
-              checked={isAvailable}
-              onChange={(e) => {
+        <div className="col-span-2 flex items-center justify-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+          {isAvailable ? (
+            <>
+              <Input
+                type="number"
+                min="0"
+                value={adjustment?.confirmedQuantity ?? lineItem.quantity}
+                onChange={(e) => {
+                  const value = parseInt(e.target.value) || 0;
+                  onAdjustmentChange({
+                    adjustedPricePerCase: adjustment?.adjustedPricePerCase ?? pricePerCase,
+                    confirmedQuantity: value,
+                    available: value > 0,
+                    notes: adjustment?.notes,
+                    adminAlternatives: adjustment?.adminAlternatives,
+                  });
+                }}
+                className="w-16 text-center text-sm py-1 h-8"
+              />
+              <label className="flex items-center cursor-pointer" title="Mark as out of stock">
+                <input
+                  type="checkbox"
+                  checked={isAvailable}
+                  onChange={(e) => {
+                    onAdjustmentChange({
+                      adjustedPricePerCase: adjustment?.adjustedPricePerCase ?? pricePerCase,
+                      confirmedQuantity: e.target.checked ? (adjustment?.confirmedQuantity ?? lineItem.quantity) : 0,
+                      available: e.target.checked,
+                      notes: adjustment?.notes,
+                      adminAlternatives: adjustment?.adminAlternatives,
+                    });
+                  }}
+                  className="h-4 w-4 rounded border-2 cursor-pointer"
+                />
+              </label>
+            </>
+          ) : (
+            <button
+              type="button"
+              onClick={() => {
                 onAdjustmentChange({
                   adjustedPricePerCase: adjustment?.adjustedPricePerCase ?? pricePerCase,
-                  confirmedQuantity: e.target.checked ? (adjustment?.confirmedQuantity ?? lineItem.quantity) : 0,
-                  available: e.target.checked,
+                  confirmedQuantity: lineItem.quantity,
+                  available: true,
                   notes: adjustment?.notes,
                   adminAlternatives: adjustment?.adminAlternatives,
                 });
               }}
-              className="h-4 w-4 rounded border-2 cursor-pointer"
-            />
-          </label>
+              className="px-2 py-1 text-xs font-semibold text-text-danger bg-fill-danger/10 border border-border-danger rounded hover:bg-fill-danger/20 transition-colors"
+            >
+              Out of Stock
+            </button>
+          )}
         </div>
 
         {/* Price per Case */}
@@ -332,7 +361,10 @@ const ReviewLineItemRow = ({
 
         {/* Status */}
         <div className="col-span-1 flex justify-center">
-          <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-sm ${status.bg} ${status.color}`}>
+          <span
+            className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-sm ${status.bg} ${status.color}`}
+            title={status.label}
+          >
             {status.icon}
           </span>
         </div>
