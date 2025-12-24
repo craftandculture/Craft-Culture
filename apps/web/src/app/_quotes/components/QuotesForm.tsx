@@ -680,7 +680,7 @@ const QuotesForm = () => {
                 All-Inclusive Pricing
               </Typography>
               <Typography variant="bodyXs" colorRole="muted">
-                Prices include international freight, UAE import duties, and delivery to your door. No hidden fees.
+                Prices include international freight, UAE import duties, and delivery to your door via our licensed mainland partner. No hidden fees.
               </Typography>
             </div>
           </div>
