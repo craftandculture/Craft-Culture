@@ -1289,110 +1289,93 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                     </Typography>
 
                     {/* Payment Proof Upload Section */}
-                    <div className="mt-4 pt-4 border-t border-border-warning/30">
-                      <div className="space-y-3">
-                        <div className="flex items-center gap-2">
-                          <Icon icon={IconPaperclip} size="sm" className="text-text-warning" />
-                          <Typography variant="bodySm" className="font-semibold">
-                            Upload Payment Proof
-                          </Typography>
-                        </div>
-                        <Typography variant="bodyXs" colorRole="muted">
-                          Upload a screenshot of your bank transfer or SWIFT payment confirmation.
-                        </Typography>
+                    <div className="mt-4 pt-4 border-t border-border-warning/30 space-y-2">
+                      <Typography variant="bodyXs" className="font-medium text-text-muted uppercase tracking-wide">
+                        Payment Proof
+                      </Typography>
 
-                        {/* Show existing payment proof if already submitted */}
-                        {currentQuote?.paymentProofUrl && (
-                          <div className="flex items-center gap-2 p-3 rounded-lg bg-fill-success/10 border border-border-success">
-                            <Icon icon={IconCheck} size="sm" className="text-text-success" />
-                            <div className="flex-1">
-                              <Typography variant="bodySm" className="font-medium text-text-success">
-                                Payment proof submitted
-                              </Typography>
+                      {/* Show existing payment proof if already submitted */}
+                      {currentQuote?.paymentProofUrl ? (
+                        <div className="flex items-center gap-3 p-3 rounded-lg bg-fill-success/10">
+                          <Icon icon={IconCheck} size="sm" className="text-text-success shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <Typography variant="bodySm" className="font-medium text-text-success">
+                              Proof submitted
+                            </Typography>
+                            {currentQuote.paymentProofSubmittedAt && (
                               <Typography variant="bodyXs" colorRole="muted">
-                                {currentQuote.paymentProofSubmittedAt &&
-                                  `Submitted on ${format(new Date(currentQuote.paymentProofSubmittedAt), 'PPp')}`
-                                }
+                                {format(new Date(currentQuote.paymentProofSubmittedAt), 'PPp')}
                               </Typography>
-                            </div>
-                            <a
-                              href={currentQuote.paymentProofUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-text-brand hover:underline text-sm"
-                            >
-                              View
-                            </a>
+                            )}
                           </div>
-                        )}
+                          <a
+                            href={currentQuote.paymentProofUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-text-brand hover:underline text-xs font-medium shrink-0"
+                          >
+                            View
+                          </a>
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          {/* Hidden file input */}
+                          <input
+                            type="file"
+                            ref={paymentProofInputRef}
+                            onChange={handlePaymentProofChange}
+                            accept="image/png,image/jpeg,image/jpg,application/pdf"
+                            className="hidden"
+                          />
 
-                        {/* Upload form - only show if no proof submitted yet */}
-                        {!currentQuote?.paymentProofUrl && (
-                          <div className="space-y-3">
-                            {/* Hidden file input */}
-                            <input
-                              type="file"
-                              ref={paymentProofInputRef}
-                              onChange={handlePaymentProofChange}
-                              accept="image/png,image/jpeg,image/jpg,application/pdf"
-                              className="hidden"
-                            />
-
-                            {/* Show uploaded file preview */}
-                            {paymentProofUrl && (
-                              <div className="flex items-center gap-2 p-3 rounded-lg bg-fill-brand/10 border border-border-brand">
-                                <Icon icon={IconFileText} size="sm" className="text-text-brand" />
-                                <Typography variant="bodySm" className="flex-1 truncate">
-                                  Payment proof ready to submit
+                          {paymentProofUrl ? (
+                            // File selected - show submit UI
+                            <div className="flex flex-col sm:flex-row gap-2">
+                              <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-fill-muted flex-1 min-w-0">
+                                <Icon icon={IconFileText} size="xs" className="text-text-muted shrink-0" />
+                                <Typography variant="bodyXs" className="truncate flex-1">
+                                  File ready
                                 </Typography>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  colorRole="danger"
+                                <button
+                                  type="button"
                                   onClick={() => setPaymentProofUrl('')}
+                                  className="text-text-muted hover:text-text-danger text-xs shrink-0"
                                 >
                                   Remove
-                                </Button>
+                                </button>
                               </div>
-                            )}
-
-                            <div className="flex gap-2">
                               <Button
-                                variant="outline"
+                                variant="default"
+                                colorRole="brand"
                                 size="sm"
-                                onClick={() => paymentProofInputRef.current?.click()}
-                                isDisabled={isUploadingPaymentProof}
-                                className="flex-1"
+                                onClick={() => submitPaymentProofMutation.mutate()}
+                                isDisabled={submitPaymentProofMutation.isPending}
+                                className="shrink-0"
                               >
                                 <ButtonContent>
-                                  <Icon icon={IconPaperclip} size="sm" />
-                                  {isUploadingPaymentProof ? 'Uploading...' : paymentProofUrl ? 'Change File' : 'Select File'}
+                                  <Icon icon={IconSend} size="xs" />
+                                  {submitPaymentProofMutation.isPending ? 'Submitting...' : 'Submit'}
                                 </ButtonContent>
                               </Button>
-
-                              {paymentProofUrl && (
-                                <Button
-                                  variant="default"
-                                  colorRole="brand"
-                                  size="sm"
-                                  onClick={() => submitPaymentProofMutation.mutate()}
-                                  isDisabled={submitPaymentProofMutation.isPending}
-                                  className="flex-1"
-                                >
-                                  <ButtonContent>
-                                    <Icon icon={IconSend} size="sm" />
-                                    {submitPaymentProofMutation.isPending ? 'Submitting...' : 'Submit Proof'}
-                                  </ButtonContent>
-                                </Button>
-                              )}
                             </div>
+                          ) : (
+                            // No file - show upload button
+                            <button
+                              type="button"
+                              onClick={() => paymentProofInputRef.current?.click()}
+                              disabled={isUploadingPaymentProof}
+                              className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 border-dashed border-border-muted hover:border-border-brand hover:bg-fill-muted/50 transition-colors text-sm text-text-muted hover:text-text-primary disabled:opacity-50"
+                            >
+                              <Icon icon={IconPaperclip} size="sm" />
+                              {isUploadingPaymentProof ? 'Uploading...' : 'Upload bank transfer screenshot'}
+                            </button>
+                          )}
 
-                            <Typography variant="bodyXs" colorRole="muted">
-                              Accepted formats: PNG, JPG, PDF (max 5MB)
-                            </Typography>
-                          </div>
-                        )}
-                      </div>
+                          <Typography variant="bodyXs" colorRole="muted" className="text-center">
+                            PNG, JPG, or PDF (max 5MB)
+                          </Typography>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
