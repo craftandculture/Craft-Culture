@@ -46,8 +46,8 @@ const quotesAcceptAlternative = protectedProcedure
       });
     }
 
-    // Can only accept alternatives when quote is confirmed
-    if (existingQuote.status !== 'cc_confirmed') {
+    // Can only accept alternatives when quote is confirmed (B2B) or awaiting payment (B2C)
+    if (existingQuote.status !== 'cc_confirmed' && existingQuote.status !== 'awaiting_payment') {
       throw new TRPCError({
         code: 'BAD_REQUEST',
         message: `Cannot accept alternatives for quote with status '${existingQuote.status}'`,
