@@ -70,6 +70,13 @@ const quotesConfirm = adminProcedure
       });
     }
 
+    // Generate unique payment reference for B2C quotes
+    const generatePaymentReference = () => {
+      const timestamp = Date.now().toString(36).toUpperCase();
+      const random = Math.random().toString(36).substring(2, 6).toUpperCase();
+      return `CC-${timestamp.slice(-4)}${random}`;
+    };
+
     try {
       // Prepare update data
       // B2C: awaiting_payment (customer pays licensed partner)
@@ -96,7 +103,11 @@ const quotesConfirm = adminProcedure
         ...(isB2C && licensedPartnerId && {
           licensedPartnerId,
           paymentMethod,
-          paymentDetails,
+          paymentDetails: {
+            ...paymentDetails,
+            // Auto-generate unique payment reference
+            reference: generatePaymentReference(),
+          },
         }),
       };
 

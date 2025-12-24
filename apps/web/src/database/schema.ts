@@ -450,6 +450,8 @@ export const quotes = pgTable(
       // Payment link
       paymentUrl?: string;
     }>(),
+    paymentProofUrl: text('payment_proof_url'),
+    paymentProofSubmittedAt: timestamp('payment_proof_submitted_at', { mode: 'date' }),
     paidAt: timestamp('paid_at', { mode: 'date' }),
     paidConfirmedBy: uuid('paid_confirmed_by').references(() => users.id, {
       onDelete: 'set null',

@@ -60,6 +60,11 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
   const [isUploadingPO, setIsUploadingPO] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Payment proof state
+  const [paymentProofUrl, setPaymentProofUrl] = useState('');
+  const [isUploadingPaymentProof, setIsUploadingPaymentProof] = useState(false);
+  const paymentProofInputRef = useRef<HTMLInputElement>(null);
+
   // Currency display state
   const [displayCurrency, setDisplayCurrency] = useState<'USD' | 'AED'>('USD');
 
@@ -352,6 +357,86 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
       toast.error(`Failed to submit PO: ${error instanceof Error ? error.message : 'Unknown error'}`);
     },
   });
+
+  // Upload payment proof mutation
+  const uploadPaymentProofMutation = useMutation({
+    mutationFn: async (file: File) => {
+      // Convert file to base64
+      const reader = new FileReader();
+      const base64Promise = new Promise<string>((resolve, reject) => {
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+
+      const base64 = await base64Promise;
+
+      return trpcClient.quotes.uploadPaymentProof.mutate({
+        file: base64,
+        filename: file.name,
+        fileType: file.type as 'image/png' | 'image/jpeg' | 'image/jpg' | 'application/pdf',
+      });
+    },
+    onSuccess: (data) => {
+      setPaymentProofUrl(data.url);
+      toast.success('Payment proof uploaded successfully');
+    },
+    onError: (error) => {
+      toast.error(`Failed to upload payment proof: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    },
+  });
+
+  // Submit payment proof mutation
+  const submitPaymentProofMutation = useMutation({
+    mutationFn: async () => {
+      if (!quote || !paymentProofUrl) {
+        toast.error('Please upload a payment screenshot first');
+        return;
+      }
+      return trpcClient.quotes.submitPaymentProof.mutate({
+        quoteId: quote.id,
+        paymentProofUrl,
+      });
+    },
+    onSuccess: () => {
+      toast.success('Payment proof submitted! We will verify and confirm your order shortly.');
+      void queryClient.invalidateQueries({ queryKey: ['quotes'] });
+      setPaymentProofUrl('');
+    },
+    onError: (error) => {
+      toast.error(`Failed to submit payment proof: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    },
+  });
+
+  // Handle payment proof file selection
+  const handlePaymentProofChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    const validTypes = ['application/pdf', 'image/png', 'image/jpeg', 'image/jpg'];
+    if (!validTypes.includes(file.type)) {
+      toast.error('Please upload a PDF or image file (PNG, JPG)');
+      return;
+    }
+
+    // Validate file size (5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('File size must be less than 5MB');
+      return;
+    }
+
+    setIsUploadingPaymentProof(true);
+    try {
+      await uploadPaymentProofMutation.mutateAsync(file);
+    } finally {
+      setIsUploadingPaymentProof(false);
+      // Reset input
+      if (paymentProofInputRef.current) {
+        paymentProofInputRef.current.value = '';
+      }
+    }
+  };
 
   // Handle PDF export
   const handleExportPDF = async () => {
@@ -1202,6 +1287,113 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                     <Typography variant="bodyXs" colorRole="muted" className="text-center">
                       Your order will be confirmed once payment is received.
                     </Typography>
+
+                    {/* Payment Proof Upload Section */}
+                    <div className="mt-4 pt-4 border-t border-border-warning/30">
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2">
+                          <Icon icon={IconPaperclip} size="sm" className="text-text-warning" />
+                          <Typography variant="bodySm" className="font-semibold">
+                            Upload Payment Proof
+                          </Typography>
+                        </div>
+                        <Typography variant="bodyXs" colorRole="muted">
+                          Upload a screenshot of your bank transfer or SWIFT payment confirmation.
+                        </Typography>
+
+                        {/* Show existing payment proof if already submitted */}
+                        {currentQuote?.paymentProofUrl && (
+                          <div className="flex items-center gap-2 p-3 rounded-lg bg-fill-success/10 border border-border-success">
+                            <Icon icon={IconCheck} size="sm" className="text-text-success" />
+                            <div className="flex-1">
+                              <Typography variant="bodySm" className="font-medium text-text-success">
+                                Payment proof submitted
+                              </Typography>
+                              <Typography variant="bodyXs" colorRole="muted">
+                                {currentQuote.paymentProofSubmittedAt &&
+                                  `Submitted on ${format(new Date(currentQuote.paymentProofSubmittedAt), 'PPp')}`
+                                }
+                              </Typography>
+                            </div>
+                            <a
+                              href={currentQuote.paymentProofUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-text-brand hover:underline text-sm"
+                            >
+                              View
+                            </a>
+                          </div>
+                        )}
+
+                        {/* Upload form - only show if no proof submitted yet */}
+                        {!currentQuote?.paymentProofUrl && (
+                          <div className="space-y-3">
+                            {/* Hidden file input */}
+                            <input
+                              type="file"
+                              ref={paymentProofInputRef}
+                              onChange={handlePaymentProofChange}
+                              accept="image/png,image/jpeg,image/jpg,application/pdf"
+                              className="hidden"
+                            />
+
+                            {/* Show uploaded file preview */}
+                            {paymentProofUrl && (
+                              <div className="flex items-center gap-2 p-3 rounded-lg bg-fill-brand/10 border border-border-brand">
+                                <Icon icon={IconFileText} size="sm" className="text-text-brand" />
+                                <Typography variant="bodySm" className="flex-1 truncate">
+                                  Payment proof ready to submit
+                                </Typography>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  colorRole="danger"
+                                  onClick={() => setPaymentProofUrl('')}
+                                >
+                                  Remove
+                                </Button>
+                              </div>
+                            )}
+
+                            <div className="flex gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => paymentProofInputRef.current?.click()}
+                                isDisabled={isUploadingPaymentProof}
+                                className="flex-1"
+                              >
+                                <ButtonContent>
+                                  <Icon icon={IconPaperclip} size="sm" />
+                                  {isUploadingPaymentProof ? 'Uploading...' : paymentProofUrl ? 'Change File' : 'Select File'}
+                                </ButtonContent>
+                              </Button>
+
+                              {paymentProofUrl && (
+                                <Button
+                                  variant="default"
+                                  colorRole="brand"
+                                  size="sm"
+                                  onClick={() => submitPaymentProofMutation.mutate()}
+                                  isDisabled={submitPaymentProofMutation.isPending}
+                                  className="flex-1"
+                                >
+                                  <ButtonContent>
+                                    <Icon icon={IconSend} size="sm" />
+                                    {submitPaymentProofMutation.isPending ? 'Submitting...' : 'Submit Proof'}
+                                  </ButtonContent>
+                                </Button>
+                              )}
+                            </div>
+
+                            <Typography variant="bodyXs" colorRole="muted">
+                              Accepted formats: PNG, JPG, PDF (max 5MB)
+                            </Typography>
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </div>
               </>
