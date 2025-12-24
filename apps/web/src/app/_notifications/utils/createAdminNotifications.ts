@@ -1,7 +1,5 @@
-import { eq } from 'drizzle-orm';
-
 import db from '@/database/client';
-import { notifications, users } from '@/database/schema';
+import { notifications } from '@/database/schema';
 
 interface CreateAdminNotificationsParams {
   type:
@@ -32,7 +30,9 @@ const createAdminNotifications = async (params: CreateAdminNotificationsParams) 
 
   // Get all admin users
   const adminUsers = await db.query.users.findMany({
-    where: eq(users.role, 'admin'),
+    where: {
+      role: 'admin',
+    },
   });
 
   if (adminUsers.length === 0) {
