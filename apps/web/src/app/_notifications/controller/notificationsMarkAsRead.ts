@@ -18,8 +18,10 @@ const notificationsMarkAsRead = protectedProcedure
 
     // Verify notification belongs to user
     const notification = await db.query.notifications.findFirst({
-      where: (table, { eq, and }) =>
-        and(eq(table.id, notificationId), eq(table.userId, userId)),
+      where: {
+        id: notificationId,
+        userId,
+      },
     });
 
     if (!notification) {
