@@ -1,12 +1,12 @@
 import { eq } from 'drizzle-orm';
 
+import createAdminNotifications from '@/app/_notifications/utils/createAdminNotifications';
 import db from '@/database/client';
 import { users } from '@/database/schema';
 import type { Quote } from '@/database/schema';
 import loops from '@/lib/loops/client';
 import serverConfig from '@/server.config';
 import logger from '@/utils/logger';
-
 
 /**
  * Notify all admin users when a user submits a PO
@@ -44,7 +44,24 @@ const notifyAdminsOfPOSubmission = async (quote: Quote) => {
       return;
     }
 
-    const reviewUrl = `${serverConfig.appUrl}/platform/admin/quotes/${quote.id}`;
+    const reviewUrl = `${serverConfig.appUrl}/platform/admin/quote-approvals`;
+
+    // Create in-app notifications for all admins
+    await createAdminNotifications({
+      type: 'po_submitted',
+      title: 'PO Submitted',
+      message: `${quoteOwner.name || quoteOwner.email} submitted a PO for "${quote.name}"`,
+      entityType: 'quote',
+      entityId: quote.id,
+      actionUrl: reviewUrl,
+      metadata: {
+        quoteName: quote.name,
+        poNumber: quote.poNumber,
+        customerName: quoteOwner.name,
+        customerEmail: quoteOwner.email,
+        totalUsd: quote.totalUsd,
+      },
+    });
 
     // Send email to each admin
     const emailPromises = adminUsers.map(async (admin) => {

@@ -1,12 +1,12 @@
 import { eq } from 'drizzle-orm';
 
+import createNotification from '@/app/_notifications/utils/createNotification';
 import db from '@/database/client';
 import { users } from '@/database/schema';
 import type { Quote } from '@/database/schema';
 import loops from '@/lib/loops/client';
 import serverConfig from '@/server.config';
 import logger from '@/utils/logger';
-
 
 /**
  * Notify the quote owner when C&C requests revisions
@@ -31,6 +31,21 @@ const notifyUserOfRevisionRequest = async (quote: Quote) => {
     }
 
     const quoteUrl = `${serverConfig.appUrl}/platform/quotes/${quote.id}`;
+
+    // Create in-app notification
+    await createNotification({
+      userId: quote.userId,
+      type: 'revision_requested',
+      title: 'Revision Requested',
+      message: `The C&C team has requested revisions on your quote "${quote.name}"`,
+      entityType: 'quote',
+      entityId: quote.id,
+      actionUrl: quoteUrl,
+      metadata: {
+        quoteName: quote.name,
+        revisionReason: quote.revisionReason,
+      },
+    });
 
     try {
       // TODO: Create template in Loops with ID 'quote-revision-requested'

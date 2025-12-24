@@ -6,6 +6,7 @@ import { quotes } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
 import markAsDeliveredSchema from '../schemas/markAsDeliveredSchema';
+import notifyUserOfDelivery from '../utils/notifyUserOfDelivery';
 
 /**
  * Mark a quote as delivered (admin only)
@@ -64,7 +65,8 @@ const quotesMarkAsDelivered = adminProcedure
         });
       }
 
-      // TODO: Send notification to customer that order was delivered
+      // Send notification to customer that order was delivered (fire-and-forget)
+      void notifyUserOfDelivery(updatedQuote);
 
       return updatedQuote;
     } catch (error) {

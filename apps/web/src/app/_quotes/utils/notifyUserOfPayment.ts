@@ -9,11 +9,11 @@ import serverConfig from '@/server.config';
 import logger from '@/utils/logger';
 
 /**
- * Notify the quote owner when C&C confirms their quote
+ * Notify the quote owner when their payment has been received
  *
- * @param quote - The confirmed quote
+ * @param quote - The quote with payment received
  */
-const notifyUserOfQuoteConfirmation = async (quote: Quote) => {
+const notifyUserOfPayment = async (quote: Quote) => {
   try {
     // Get quote owner details
     const [quoteOwner] = await db
@@ -35,41 +35,41 @@ const notifyUserOfQuoteConfirmation = async (quote: Quote) => {
     // Create in-app notification
     await createNotification({
       userId: quote.userId,
-      type: 'quote_confirmed',
-      title: 'Quote Confirmed',
-      message: `Your quote "${quote.name}" has been confirmed by the C&C team`,
+      type: 'payment_received',
+      title: 'Payment Received',
+      message: `Your payment for "${quote.name}" has been received`,
       entityType: 'quote',
       entityId: quote.id,
       actionUrl: quoteUrl,
       metadata: {
         quoteName: quote.name,
         totalUsd: quote.totalUsd,
+        paymentMethod: quote.paymentMethod,
       },
     });
 
     try {
-      // TODO: Create template in Loops with ID 'quote-confirmed-by-cc'
+      // TODO: Create template in Loops with ID 'quote-payment-received'
       await loops.sendTransactionalEmail({
-        transactionalId: 'quote-confirmed-by-cc',
+        transactionalId: 'quote-payment-received',
         email: quoteOwner.email,
         dataVariables: {
           userName: quoteOwner.name,
           quoteName: quote.name,
           quoteId: quote.id,
           totalUsd: quote.totalUsd.toFixed(2),
-          ccConfirmationNotes: quote.ccConfirmationNotes || 'No additional notes',
-          confirmedDate: new Date().toLocaleDateString(),
+          paidDate: new Date().toLocaleDateString(),
           quoteUrl,
         },
       });
 
-      logger.dev(`Sent quote confirmation notification to user: ${quoteOwner.email}`);
+      logger.dev(`Sent payment confirmation notification to user: ${quoteOwner.email}`);
     } catch (error) {
-      logger.error(`Failed to send confirmation notification to user ${quoteOwner.email}:`, error);
+      logger.error(`Failed to send payment notification to user ${quoteOwner.email}:`, error);
     }
   } catch (error) {
-    logger.error('Failed to notify user of quote confirmation:', error);
+    logger.error('Failed to notify user of payment:', error);
   }
 };
 
-export default notifyUserOfQuoteConfirmation;
+export default notifyUserOfPayment;

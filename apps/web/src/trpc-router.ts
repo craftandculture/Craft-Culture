@@ -1,5 +1,6 @@
 import adminRouter from '@/app/_admin/router';
 import usersRouter from '@/app/_auth/router';
+import notificationsRouter from '@/app/_notifications/router';
 import partnersRouter from '@/app/_partners/router';
 import pricingModelsRouter from '@/app/_pricingModels/router';
 import quotesRouter from '@/app/_quotes/router';
@@ -13,6 +14,7 @@ import { createTRPCRouter } from './lib/trpc/trpc';
 export const appRouter = createTRPCRouter({
   admin: adminRouter,
   users: usersRouter,
+  notifications: notificationsRouter,
   partners: partnersRouter,
   products: productsRouter,
   quotes: quotesRouter,

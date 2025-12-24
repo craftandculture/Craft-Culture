@@ -1,12 +1,12 @@
 import { eq } from 'drizzle-orm';
 
+import createAdminNotifications from '@/app/_notifications/utils/createAdminNotifications';
 import db from '@/database/client';
 import { users } from '@/database/schema';
 import type { Quote } from '@/database/schema';
 import loops from '@/lib/loops/client';
 import serverConfig from '@/server.config';
 import logger from '@/utils/logger';
-
 
 /**
  * Notify all admin users when a user submits a buy request
@@ -44,7 +44,23 @@ const notifyAdminsOfBuyRequest = async (quote: Quote) => {
       return;
     }
 
-    const reviewUrl = `${serverConfig.appUrl}/platform/admin/quotes/${quote.id}`;
+    const reviewUrl = `${serverConfig.appUrl}/platform/admin/quote-approvals`;
+
+    // Create in-app notifications for all admins
+    await createAdminNotifications({
+      type: 'buy_request_submitted',
+      title: 'New Buy Request',
+      message: `${quoteOwner.name || quoteOwner.email} submitted a buy request for "${quote.name}"`,
+      entityType: 'quote',
+      entityId: quote.id,
+      actionUrl: reviewUrl,
+      metadata: {
+        quoteName: quote.name,
+        customerName: quoteOwner.name,
+        customerEmail: quoteOwner.email,
+        totalUsd: quote.totalUsd,
+      },
+    });
 
     // Send email to each admin
     const emailPromises = adminUsers.map(async (admin) => {

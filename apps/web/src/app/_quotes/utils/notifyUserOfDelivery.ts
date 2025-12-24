@@ -9,11 +9,11 @@ import serverConfig from '@/server.config';
 import logger from '@/utils/logger';
 
 /**
- * Notify the quote owner when C&C confirms their quote
+ * Notify the quote owner when their order has been delivered
  *
- * @param quote - The confirmed quote
+ * @param quote - The delivered quote
  */
-const notifyUserOfQuoteConfirmation = async (quote: Quote) => {
+const notifyUserOfDelivery = async (quote: Quote) => {
   try {
     // Get quote owner details
     const [quoteOwner] = await db
@@ -35,41 +35,38 @@ const notifyUserOfQuoteConfirmation = async (quote: Quote) => {
     // Create in-app notification
     await createNotification({
       userId: quote.userId,
-      type: 'quote_confirmed',
-      title: 'Quote Confirmed',
-      message: `Your quote "${quote.name}" has been confirmed by the C&C team`,
+      type: 'order_delivered',
+      title: 'Order Delivered',
+      message: `Your order "${quote.name}" has been delivered`,
       entityType: 'quote',
       entityId: quote.id,
       actionUrl: quoteUrl,
       metadata: {
         quoteName: quote.name,
-        totalUsd: quote.totalUsd,
       },
     });
 
     try {
-      // TODO: Create template in Loops with ID 'quote-confirmed-by-cc'
+      // TODO: Create template in Loops with ID 'quote-order-delivered'
       await loops.sendTransactionalEmail({
-        transactionalId: 'quote-confirmed-by-cc',
+        transactionalId: 'quote-order-delivered',
         email: quoteOwner.email,
         dataVariables: {
           userName: quoteOwner.name,
           quoteName: quote.name,
           quoteId: quote.id,
-          totalUsd: quote.totalUsd.toFixed(2),
-          ccConfirmationNotes: quote.ccConfirmationNotes || 'No additional notes',
-          confirmedDate: new Date().toLocaleDateString(),
+          deliveredDate: new Date().toLocaleDateString(),
           quoteUrl,
         },
       });
 
-      logger.dev(`Sent quote confirmation notification to user: ${quoteOwner.email}`);
+      logger.dev(`Sent delivery notification to user: ${quoteOwner.email}`);
     } catch (error) {
-      logger.error(`Failed to send confirmation notification to user ${quoteOwner.email}:`, error);
+      logger.error(`Failed to send delivery notification to user ${quoteOwner.email}:`, error);
     }
   } catch (error) {
-    logger.error('Failed to notify user of quote confirmation:', error);
+    logger.error('Failed to notify user of delivery:', error);
   }
 };
 
-export default notifyUserOfQuoteConfirmation;
+export default notifyUserOfDelivery;
