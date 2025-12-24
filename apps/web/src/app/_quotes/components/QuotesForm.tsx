@@ -16,7 +16,7 @@ import {
 } from '@dnd-kit/sortable';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { IconCheck, IconCircleCheck, IconDownload, IconInfoCircle, IconPlaneInflight, IconPlus } from '@tabler/icons-react';
+import { IconCheck, IconCircleCheck, IconDownload, IconInfoCircle, IconPackage, IconPlaneInflight, IconPlus } from '@tabler/icons-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { parseAsJson, parseAsNativeArrayOf, useQueryState, useQueryStates } from 'nuqs';
 import React, { useEffect, useMemo, useState } from 'react';
@@ -668,6 +668,23 @@ const QuotesForm = () => {
             </Typography>
           </div>
         </div>
+
+        {/* B2C All-Inclusive Pricing Banner */}
+        {customerType === 'b2c' && (
+          <div className="flex items-start gap-3 rounded-lg border border-border-brand/30 bg-fill-brand/5 p-3">
+            <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-fill-brand/10">
+              <IconPackage className="h-4 w-4 text-text-brand" />
+            </div>
+            <div className="flex-1 space-y-1">
+              <Typography variant="bodySm" className="font-semibold text-text-brand">
+                All-Inclusive Pricing
+              </Typography>
+              <Typography variant="bodyXs" colorRole="muted">
+                Prices include international freight, UAE import duties, and delivery to your door. No hidden fees.
+              </Typography>
+            </div>
+          </div>
+        )}
 
         {/* Currency Toggle */}
         <div className="flex items-center justify-between sm:justify-end sm:gap-3">
