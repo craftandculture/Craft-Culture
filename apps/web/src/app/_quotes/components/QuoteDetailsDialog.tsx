@@ -12,6 +12,7 @@ import {
   IconFileText,
   IconPaperclip,
   IconSend,
+  IconTrash,
   IconTruck,
   IconUser,
 } from '@tabler/icons-react';
@@ -268,6 +269,29 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
     },
   });
 
+  // Remove line item mutation
+  const removeLineItemMutation = useMutation({
+    mutationFn: async ({ productId }: { productId: string }) => {
+      if (!quote) return;
+      return trpcClient.quotes.removeLineItem.mutate({
+        quoteId: quote.id,
+        productId,
+      });
+    },
+    onSuccess: async () => {
+      toast.success('Line item removed');
+      // Invalidate all quotes queries to refresh totals
+      void queryClient.invalidateQueries({ queryKey: ['quotes'] });
+      // Explicitly refetch the current quote to update totals immediately
+      await refetchQuote();
+    },
+    onError: (error) => {
+      toast.error(
+        `Failed to remove line item: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      );
+    },
+  });
+
   // Upload PO document mutation
   const uploadPODocumentMutation = useMutation({
     mutationFn: async (file: File) => {
@@ -468,14 +492,20 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
             ? convertUsdToAed(lineTotal)
             : lineTotal;
 
-        // Get bottles per case from product offer
-        const bottlesPerCase = product?.productOffers?.[0]?.unitCount || 12;
+        // Use accepted alternative details if available, otherwise use original product
+        const acceptedAlt = pricing?.acceptedAlternative;
+        const bottlesPerCase = acceptedAlt
+          ? acceptedAlt.bottlesPerCase
+          : (product?.productOffers?.[0]?.unitCount || 12);
+        const productName = acceptedAlt
+          ? `${acceptedAlt.productName} (Alternative)`
+          : (product?.name || item.productId);
 
         return {
-          productName: product?.name || item.productId,
-          producer: product?.producer || null,
-          region: product?.region || null,
-          year: product?.year ? String(product.year) : null,
+          productName,
+          producer: acceptedAlt ? null : (product?.producer || null),
+          region: acceptedAlt ? null : (product?.region || null),
+          year: acceptedAlt ? null : (product?.year ? String(product.year) : null),
           quantity: displayQuantity,
           bottlesPerCase,
           pricePerCase: displayPricePerCase,
@@ -843,26 +873,51 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                           {/* Compact Product Row */}
                           <div className="flex items-start justify-between gap-3">
                             <div className="flex-1 min-w-0">
-                              <Typography variant="bodySm" className="font-semibold truncate">
-                                {product.name}
-                              </Typography>
-                              <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-0.5">
-                                {product.producer && (
-                                  <Typography variant="bodyXs" colorRole="muted">
-                                    {product.producer}
+                              {/* Show accepted alternative name if exists, otherwise original product */}
+                              {pricing?.acceptedAlternative ? (
+                                <>
+                                  <div className="flex items-center gap-2">
+                                    <Typography variant="bodySm" className="font-semibold truncate text-text-success">
+                                      {pricing.acceptedAlternative.productName}
+                                    </Typography>
+                                    <span className="inline-flex items-center gap-1 rounded-full bg-fill-success/20 px-2 py-0.5 text-xs font-medium text-text-success">
+                                      <IconCheck className="h-3 w-3" />
+                                      Alternative
+                                    </span>
+                                  </div>
+                                  <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-0.5">
+                                    <Typography variant="bodyXs" colorRole="muted">
+                                      {pricing.acceptedAlternative.bottlesPerCase}×{pricing.acceptedAlternative.bottleSize}
+                                    </Typography>
+                                    <Typography variant="bodyXs" colorRole="muted" className="line-through">
+                                      · was: {product.name}
+                                    </Typography>
+                                  </div>
+                                </>
+                              ) : (
+                                <>
+                                  <Typography variant="bodySm" className="font-semibold truncate">
+                                    {product.name}
                                   </Typography>
-                                )}
-                                {product.year && (
-                                  <Typography variant="bodyXs" colorRole="muted">
-                                    · {product.year}
-                                  </Typography>
-                                )}
-                                {product.productOffers?.[0]?.unitCount && (
-                                  <Typography variant="bodyXs" colorRole="muted">
-                                    · {product.productOffers?.[0]?.unitCount}×{product.productOffers?.[0]?.unitSize || '750ml'}
-                                  </Typography>
-                                )}
-                              </div>
+                                  <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-0.5">
+                                    {product.producer && (
+                                      <Typography variant="bodyXs" colorRole="muted">
+                                        {product.producer}
+                                      </Typography>
+                                    )}
+                                    {product.year && (
+                                      <Typography variant="bodyXs" colorRole="muted">
+                                        · {product.year}
+                                      </Typography>
+                                    )}
+                                    {product.productOffers?.[0]?.unitCount && (
+                                      <Typography variant="bodyXs" colorRole="muted">
+                                        · {product.productOffers?.[0]?.unitCount}×{product.productOffers?.[0]?.unitSize || '750ml'}
+                                      </Typography>
+                                    )}
+                                  </div>
+                                </>
+                              )}
                             </div>
                             {pricing && (
                               <div className="text-right shrink-0">
@@ -982,6 +1037,29 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                                   );
                                 })}
                               </div>
+                            </div>
+                          )}
+
+                          {/* Remove Line Item Button - only shown before payment and if more than 1 item */}
+                          {(quote.status === 'cc_confirmed' || quote.status === 'awaiting_payment') &&
+                            lineItems.length > 1 && (
+                            <div className="mt-3 pt-3 border-t border-border-muted">
+                              <Button
+                                variant="ghost"
+                                colorRole="danger"
+                                size="sm"
+                                onClick={() => {
+                                  if (window.confirm(`Remove "${product.name}" from this quote?`)) {
+                                    removeLineItemMutation.mutate({ productId: item.productId });
+                                  }
+                                }}
+                                isDisabled={removeLineItemMutation.isPending}
+                                className="w-full"
+                              >
+                                <ButtonContent iconLeft={IconTrash}>
+                                  {removeLineItemMutation.isPending ? 'Removing...' : 'Remove from Quote'}
+                                </ButtonContent>
+                              </Button>
                             </div>
                           )}
                         </>

@@ -1226,6 +1226,39 @@ const QuoteApprovalDialog = ({
                   </div>
                 )}
 
+                {/* Payment Proof - shown when customer has uploaded */}
+                {quote.paymentProofUrl ? (
+                  <div className="mb-5 rounded-lg bg-fill-success/10 p-4 border-2 border-border-success">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <Typography variant="bodyXs" className="font-semibold text-text-success uppercase tracking-wide mb-1">
+                          Payment Proof Uploaded
+                        </Typography>
+                        {quote.paymentProofSubmittedAt && (
+                          <Typography variant="bodyXs" colorRole="muted">
+                            Submitted {format(new Date(quote.paymentProofSubmittedAt), 'MMM d, yyyy h:mm a')}
+                          </Typography>
+                        )}
+                      </div>
+                      <a
+                        href={quote.paymentProofUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 rounded-lg bg-fill-success px-4 py-2 text-sm font-medium text-white hover:bg-fill-success/90 transition-colors"
+                      >
+                        <IconDownload size={16} />
+                        View Proof
+                      </a>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="mb-5 rounded-lg bg-fill-muted/50 p-4 border border-border-muted">
+                    <Typography variant="bodySm" colorRole="muted" className="text-center">
+                      Customer has not yet uploaded payment proof
+                    </Typography>
+                  </div>
+                )}
+
                 <Button
                   variant="default"
                   colorRole="brand"

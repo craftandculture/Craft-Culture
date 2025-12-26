@@ -11,6 +11,7 @@ import quotesGetManyAdmin from './controller/quotesGetManyAdmin';
 import quotesGetOne from './controller/quotesGetOne';
 import quotesMarkAsDelivered from './controller/quotesMarkAsDelivered';
 import quotesMarkAsPaid from './controller/quotesMarkAsPaid';
+import quotesRemoveLineItem from './controller/quotesRemoveLineItem';
 import quotesRequestRevision from './controller/quotesRequestRevision';
 import quotesSave from './controller/quotesSave';
 import quotesStartCCReview from './controller/quotesStartCCReview';
@@ -41,6 +42,7 @@ const quotesRouter = createTRPCRouter({
   uploadPaymentProof: quotesUploadPaymentProof,
   submitPaymentProof: quotesSubmitPaymentProof,
   acceptAlternative: quotesAcceptAlternative,
+  removeLineItem: quotesRemoveLineItem,
   markAsPaid: quotesMarkAsPaid,
   markAsDelivered: quotesMarkAsDelivered,
 });
