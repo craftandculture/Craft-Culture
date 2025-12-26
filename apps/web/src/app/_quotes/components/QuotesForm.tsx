@@ -631,20 +631,25 @@ const QuotesForm = () => {
       <section className="space-y-3 rounded-xl border border-border-muted bg-surface-primary p-3 shadow-sm transition-shadow duration-300 hover:shadow-md md:space-y-4 md:p-4">
         {/* Compact Header Row */}
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex items-center gap-3">
-            <Typography variant="headingMd" className="font-semibold">
-              Quotation Builder
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center gap-3">
+              <Typography variant="headingMd" className="font-semibold">
+                Quotation Builder
+              </Typography>
+              <LiveStatus />
+            </div>
+            <Typography variant="bodyXs" colorRole="muted">
+              Select products and quantities to generate your custom quote
             </Typography>
-            <LiveStatus />
           </div>
           {/* Inventory Status - Inline */}
-          <div className="flex items-center gap-3 text-xs">
+          <div className="flex items-center gap-3 rounded-md border border-border-muted bg-surface-muted/30 px-3 py-1.5 text-xs">
             <div className="flex items-center gap-1.5">
               <IconCircleCheck className="h-3.5 w-3.5 text-green-600" />
               <span className="font-medium text-green-700">Local Stock</span>
               <span className="text-text-muted">24-48hrs</span>
             </div>
-            <span className="text-text-muted">·</span>
+            <div className="h-3 w-px bg-border-muted" />
             <div className="flex items-center gap-1.5 text-text-muted">
               <IconPlaneInflight className="h-3.5 w-3.5" />
               <span>Air freight {leadTimeMin}-{leadTimeMax}d</span>
@@ -652,51 +657,51 @@ const QuotesForm = () => {
           </div>
         </div>
 
-        {/* B2C Pricing Banner + Currency Toggle Row */}
-        <div className="flex items-center justify-between gap-3">
-          {/* B2C All-Inclusive Pricing - Compact */}
-          {customerType === 'b2c' && (
-            <div className="flex items-center gap-1.5 rounded border border-border-brand/30 bg-fill-brand/5 px-2 py-1">
-              <IconPackage className="h-3 w-3 shrink-0 text-text-brand" />
-              <Typography variant="bodyXs" className="text-text-brand text-[11px]">
-                <span className="font-semibold">All-Inclusive</span>{' '}
-                <span className="text-text-muted hidden sm:inline">· Freight, duties & delivery</span>
+        {/* B2C All-Inclusive Pricing Banner */}
+        {customerType === 'b2c' && (
+          <div className="flex items-start gap-3 rounded-lg border border-border-brand/30 bg-fill-brand/5 p-3">
+            <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-fill-brand/10">
+              <IconPackage className="h-4 w-4 text-text-brand" />
+            </div>
+            <div className="flex-1 space-y-1">
+              <Typography variant="bodySm" className="font-semibold text-text-brand">
+                All-Inclusive Pricing
+              </Typography>
+              <Typography variant="bodyXs" colorRole="muted">
+                One clear price covering international freight, UAE import duties, and compliant delivery via our licensed mainland partners — all handled through the C&C cold chain to ensure perfect bottle condition, every time. No hidden fees. No surprises.
               </Typography>
             </div>
-          )}
+          </div>
+        )}
 
-          {/* Spacer for B2B */}
-          {customerType !== 'b2c' && <div />}
-
-          {/* Currency Toggle */}
-          <div className="flex shrink-0 items-center gap-1.5">
-            <Typography variant="bodyXs" className="text-text-muted text-[11px]">
-              Currency:
-            </Typography>
-            <div className="flex rounded border border-border-muted bg-fill-muted p-px">
-              <button
-                type="button"
-                onClick={() => setDisplayCurrency('USD')}
-                className={`rounded-sm px-1.5 py-px text-[11px] font-medium transition-colors ${
-                  displayCurrency === 'USD'
-                    ? 'bg-fill-primary text-text-primary'
-                    : 'text-text-muted hover:text-text-primary'
-                }`}
-              >
-                USD
-              </button>
-              <button
-                type="button"
-                onClick={() => setDisplayCurrency('AED')}
-                className={`rounded-sm px-1.5 py-px text-[11px] font-medium transition-colors ${
-                  displayCurrency === 'AED'
-                    ? 'bg-fill-primary text-text-primary'
-                    : 'text-text-muted hover:text-text-primary'
-                }`}
-              >
-                AED
-              </button>
-            </div>
+        {/* Currency Toggle */}
+        <div className="flex items-center justify-end gap-2">
+          <Typography variant="bodySm" className="text-text-muted font-medium">
+            Currency:
+          </Typography>
+          <div className="flex rounded-md border border-border-muted bg-fill-muted p-0.5">
+            <button
+              type="button"
+              onClick={() => setDisplayCurrency('USD')}
+              className={`rounded px-3 py-1 text-sm font-medium transition-colors ${
+                displayCurrency === 'USD'
+                  ? 'bg-fill-primary text-text-primary shadow-sm'
+                  : 'text-text-muted hover:text-text-primary'
+              }`}
+            >
+              USD
+            </button>
+            <button
+              type="button"
+              onClick={() => setDisplayCurrency('AED')}
+              className={`rounded px-3 py-1 text-sm font-medium transition-colors ${
+                displayCurrency === 'AED'
+                  ? 'bg-fill-primary text-text-primary shadow-sm'
+                  : 'text-text-muted hover:text-text-primary'
+              }`}
+            >
+              AED
+            </button>
           </div>
         </div>
 
