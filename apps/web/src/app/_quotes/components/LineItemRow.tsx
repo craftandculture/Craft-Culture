@@ -115,8 +115,8 @@ const LineItemRow = ({
 
   return (
     <div className={`${isDragging ? 'opacity-50' : ''}`}>
-      {/* Mobile/Tablet Layout */}
-      <div className="flex flex-wrap items-start gap-2 lg:hidden">
+      {/* Mobile Layout */}
+      <div className="flex flex-wrap items-start gap-2 md:hidden">
         {/* Product Selector - Full width */}
         <div className="min-w-0 w-full">
           {product ? (
@@ -221,8 +221,8 @@ const LineItemRow = ({
         )}
       </div>
 
-      {/* Desktop Layout - Flex row matching header */}
-      <div className="hidden gap-2 lg:flex lg:items-center">
+      {/* Desktop/Tablet Layout - Flex row matching header */}
+      <div className="hidden gap-2 md:flex md:items-center">
         {/* Drag Handle */}
         <div
           {...dragHandleProps}
