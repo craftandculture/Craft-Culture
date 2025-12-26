@@ -239,6 +239,16 @@ const SupportPage = () => {
               Your quote moves through several stages. Here is what each status means:
             </Typography>
 
+            {/* Process Flow Diagram */}
+            <div className="my-4 overflow-hidden rounded-lg border border-border-primary">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/images/order-flow-diagram.svg"
+                alt="Order process flow diagram showing the 8 stages from Draft to Delivered"
+                className="w-full"
+              />
+            </div>
+
             <div className="space-y-2">
               <div className="flex items-start gap-3 rounded-lg bg-fill-secondary/50 p-3">
                 <div className="mt-0.5 h-3 w-3 shrink-0 rounded-full bg-gray-400" />
