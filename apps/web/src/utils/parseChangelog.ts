@@ -14,6 +14,7 @@ export interface ChangelogVersion {
 
 /**
  * Parse the CHANGELOG.md file and extract version history
+ * Supports semantic-release format: ## [1.0.0](url) (2025-10-25)
  *
  * @example
  *   const versions = parseChangelog();
@@ -37,8 +38,10 @@ const parseChangelog = (): ChangelogVersion[] => {
   let currentSection: 'feature' | 'fix' | 'other' = 'other';
 
   for (const line of lines) {
-    // Match version header: # 1.0.0 (2025-10-25)
-    const versionMatch = line.match(/^#\s+([\d.]+)\s+\((\d{4}-\d{2}-\d{2})\)/);
+    // Match semantic-release version header: ## [1.0.0](url) (2025-10-25)
+    const versionMatch = line.match(
+      /^##\s+\[([\d.]+)\].*\((\d{4}-\d{2}-\d{2})\)/,
+    );
     if (versionMatch) {
       if (currentVersion) {
         versions.push(currentVersion);
@@ -48,6 +51,7 @@ const parseChangelog = (): ChangelogVersion[] => {
         date: versionMatch[2] ?? '',
         entries: [],
       };
+      currentSection = 'other';
       continue;
     }
 
@@ -58,6 +62,10 @@ const parseChangelog = (): ChangelogVersion[] => {
     }
     if (line.startsWith('### Bug Fixes')) {
       currentSection = 'fix';
+      continue;
+    }
+    if (line.startsWith('### ')) {
+      currentSection = 'other';
       continue;
     }
 
