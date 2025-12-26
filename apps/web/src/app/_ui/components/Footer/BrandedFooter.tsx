@@ -1,7 +1,7 @@
 import Link from 'next/link';
 
 import WarehouseDataFeed from '@/app/_warehouse/components/WarehouseDataFeed';
-import fetchGitHubReleases from '@/utils/fetchGitHubReleases';
+import parseChangelog from '@/utils/parseChangelog';
 
 export interface BrandedFooterProps {
   customerType: 'b2b' | 'b2c';
@@ -16,10 +16,10 @@ export interface BrandedFooterProps {
  * @param props - The footer props including customerType
  * @returns The branded footer
  */
-const BrandedFooter = async ({ customerType }: BrandedFooterProps) => {
+const BrandedFooter = ({ customerType }: BrandedFooterProps) => {
   const currentYear = new Date().getFullYear();
-  const releases = await fetchGitHubReleases();
-  const latestVersion = releases[0]?.version ?? '1.0.0';
+  const versions = parseChangelog();
+  const latestVersion = versions[0]?.version ?? '1.0.0';
 
   const isB2C = customerType === 'b2c';
 
