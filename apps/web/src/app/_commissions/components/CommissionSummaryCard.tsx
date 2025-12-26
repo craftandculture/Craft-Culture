@@ -4,16 +4,19 @@ import { IconChevronRight, IconCoin } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 
-import Banner from '@/app/_ui/components/Banner/Banner';
-import BannerContent from '@/app/_ui/components/Banner/BannerContent';
 import Button from '@/app/_ui/components/Button/Button';
+import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
+import Card from '@/app/_ui/components/Card/Card';
+import CardContent from '@/app/_ui/components/Card/CardContent';
+import Icon from '@/app/_ui/components/Icon/Icon';
+import Typography from '@/app/_ui/components/Typography/Typography';
 import useTRPC from '@/lib/trpc/browser';
 import formatPrice from '@/utils/formatPrice';
 
 import CommissionDetailsDialog from './CommissionDetailsDialog';
 
 /**
- * Commission summary banner for B2C users
+ * Commission summary card for B2C users
  *
  * Displays pending payout amount with link to view details.
  * Uses platform design system for consistent UI.
@@ -41,49 +44,52 @@ const CommissionSummaryCard = () => {
 
   return (
     <>
-      <div className="mb-4">
-        <Banner colorRole="success" size="sm" className="inline-flex">
-          <BannerContent className="flex-wrap gap-x-4 gap-y-2">
-            <div className="flex items-center gap-2">
-              <IconCoin size={16} className="shrink-0" />
-              <span className="text-sm font-medium">Commission Earned</span>
+      <Card className="mb-4 bg-surface-success">
+        <CardContent className="py-3">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            {/* Left side - Icon and label */}
+            <div className="flex items-center gap-3">
+              <Icon icon={IconCoin} size="md" colorRole="success" />
+              <div className="flex flex-col gap-0.5 sm:flex-row sm:items-center sm:gap-4">
+                <Typography variant="bodySm" className="font-medium text-text-success">
+                  Commission Earned
+                </Typography>
+                <div className="flex items-center gap-3 text-sm">
+                  {paidOut > 0 ? (
+                    <>
+                      <span className="text-text-success">
+                        <span className="font-semibold">{formatPrice(pendingPayout, 'USD')}</span>
+                        <span className="ml-1 opacity-75">pending</span>
+                      </span>
+                      <span className="text-text-success opacity-50">•</span>
+                      <span className="text-text-success">
+                        <span className="font-semibold">{formatPrice(paidOut, 'USD')}</span>
+                        <span className="ml-1 opacity-75">paid</span>
+                      </span>
+                    </>
+                  ) : (
+                    <span className="text-text-success">
+                      <span className="font-semibold">{formatPrice(pendingPayout, 'USD')}</span>
+                      <span className="ml-1 opacity-75">pending</span>
+                    </span>
+                  )}
+                </div>
+              </div>
             </div>
 
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
-              {paidOut > 0 ? (
-                <>
-                  <span>
-                    <span className="font-semibold">{formatPrice(pendingPayout, 'USD')}</span>
-                    <span className="ml-1 opacity-75">pending</span>
-                  </span>
-                  <span className="hidden sm:inline opacity-50">•</span>
-                  <span>
-                    <span className="font-semibold">{formatPrice(paidOut, 'USD')}</span>
-                    <span className="ml-1 opacity-75">paid</span>
-                  </span>
-                </>
-              ) : (
-                <span>
-                  <span className="font-semibold">{formatPrice(pendingPayout, 'USD')}</span>
-                  <span className="ml-1 opacity-75">pending payout</span>
-                </span>
-              )}
-            </div>
-
+            {/* Right side - Button */}
             <Button
               type="button"
               colorRole="primary"
               variant="outline"
-              size="xs"
+              size="sm"
               onClick={() => setIsDetailsOpen(true)}
-              className="ml-auto"
             >
-              View Details
-              <IconChevronRight size={14} className="ml-1" />
+              <ButtonContent iconRight={IconChevronRight}>View Details</ButtonContent>
             </Button>
-          </BannerContent>
-        </Banner>
-      </div>
+          </div>
+        </CardContent>
+      </Card>
 
       <CommissionDetailsDialog isOpen={isDetailsOpen} onClose={() => setIsDetailsOpen(false)} />
     </>
