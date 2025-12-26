@@ -233,25 +233,37 @@ const LineItemRow = ({
 
         {/* Product Selector - Takes all available space */}
         <div className="min-w-0 flex-1">
-          {product ? (
-            <ProductDetailsTooltip product={product}>
-              <div>
+          <div className="flex items-center gap-1">
+            {product ? (
+              <ProductDetailsTooltip product={product}>
+                <div className="min-w-0 flex-1">
+                  <ProductsCombobox
+                    value={product}
+                    onSelect={onProductChange}
+                    placeholder="Select product..."
+                    omitProductIds={omitProductIds}
+                  />
+                </div>
+              </ProductDetailsTooltip>
+            ) : (
+              <div className="min-w-0 flex-1">
                 <ProductsCombobox
-                  value={product}
+                  value={null}
                   onSelect={onProductChange}
                   placeholder="Select product..."
                   omitProductIds={omitProductIds}
                 />
               </div>
-            </ProductDetailsTooltip>
-          ) : (
-            <ProductsCombobox
-              value={null}
-              onSelect={onProductChange}
-              placeholder="Select product..."
-              omitProductIds={omitProductIds}
-            />
-          )}
+            )}
+            {/* Alternatives Icon - Next to reference */}
+            {product && (
+              <AlternativeVintagesPicker
+                productId={product.id}
+                selectedVintages={alternativeVintages}
+                onChange={onAlternativeVintagesChange}
+              />
+            )}
+          </div>
         </div>
 
         {/* Vintage Input */}
@@ -335,17 +347,6 @@ const LineItemRow = ({
                 {perBottlePrice !== undefined ? formatPrice(perBottlePrice, quoteCurrency) : '—'}
               </Typography>
             )}
-          </div>
-        )}
-
-        {/* Alternatives Icon - Compact */}
-        {!isPlaceholder && product && (
-          <div className="shrink-0">
-            <AlternativeVintagesPicker
-              productId={product.id}
-              selectedVintages={alternativeVintages}
-              onChange={onAlternativeVintagesChange}
-            />
           </div>
         )}
 
