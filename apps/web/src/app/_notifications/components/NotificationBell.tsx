@@ -17,32 +17,53 @@ import { useTRPCClient } from '@/lib/trpc/browser';
 
 /**
  * Play notification sound using Web Audio API
- * Creates a gentle chime sound without needing an audio file
+ * Creates a gentle two-tone chime sound without needing an audio file
  */
 const playNotificationSound = () => {
   try {
-    const audioContext = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+    // Try to resume AudioContext if it's suspended (common on mobile)
+    const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+    const audioContext = new AudioContextClass();
 
-    // Create oscillator for a gentle chime
-    const oscillator = audioContext.createOscillator();
-    const gainNode = audioContext.createGain();
+    // Resume if suspended (required for some browsers after user interaction)
+    if (audioContext.state === 'suspended') {
+      void audioContext.resume();
+    }
 
-    oscillator.connect(gainNode);
-    gainNode.connect(audioContext.destination);
+    const now = audioContext.currentTime;
 
-    // Chime sound: start high, drop slightly
-    oscillator.frequency.setValueAtTime(880, audioContext.currentTime); // A5
-    oscillator.frequency.setValueAtTime(660, audioContext.currentTime + 0.1); // E5
+    // First tone - higher pitch
+    const osc1 = audioContext.createOscillator();
+    const gain1 = audioContext.createGain();
+    osc1.connect(gain1);
+    gain1.connect(audioContext.destination);
+    osc1.frequency.setValueAtTime(880, now); // A5
+    osc1.type = 'sine';
+    gain1.gain.setValueAtTime(0, now);
+    gain1.gain.linearRampToValueAtTime(0.4, now + 0.02);
+    gain1.gain.linearRampToValueAtTime(0, now + 0.15);
+    osc1.start(now);
+    osc1.stop(now + 0.15);
 
-    // Quick fade in and out for a gentle sound
-    gainNode.gain.setValueAtTime(0, audioContext.currentTime);
-    gainNode.gain.linearRampToValueAtTime(0.3, audioContext.currentTime + 0.02);
-    gainNode.gain.linearRampToValueAtTime(0, audioContext.currentTime + 0.3);
+    // Second tone - lower pitch (delayed)
+    const osc2 = audioContext.createOscillator();
+    const gain2 = audioContext.createGain();
+    osc2.connect(gain2);
+    gain2.connect(audioContext.destination);
+    osc2.frequency.setValueAtTime(660, now + 0.1); // E5
+    osc2.type = 'sine';
+    gain2.gain.setValueAtTime(0, now + 0.1);
+    gain2.gain.linearRampToValueAtTime(0.4, now + 0.12);
+    gain2.gain.linearRampToValueAtTime(0, now + 0.35);
+    osc2.start(now + 0.1);
+    osc2.stop(now + 0.35);
 
-    oscillator.start(audioContext.currentTime);
-    oscillator.stop(audioContext.currentTime + 0.3);
-  } catch {
-    // Audio not supported or blocked, fail silently
+    // Clean up after sound completes
+    setTimeout(() => {
+      void audioContext.close();
+    }, 500);
+  } catch (error) {
+    console.warn('Notification sound failed:', error);
   }
 };
 
