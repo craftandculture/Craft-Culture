@@ -1,6 +1,7 @@
 'use client';
 
 import { IconChevronRight, IconCoin, IconLoader2 } from '@tabler/icons-react';
+import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 
 import Button from '@/app/_ui/components/Button/Button';
@@ -9,7 +10,7 @@ import Card from '@/app/_ui/components/Card/Card';
 import CardContent from '@/app/_ui/components/Card/CardContent';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Typography from '@/app/_ui/components/Typography/Typography';
-import api from '@/lib/trpc/client';
+import useTRPC from '@/lib/trpc/browser';
 import formatPrice from '@/utils/formatPrice';
 
 import CommissionDetailsDialog from './CommissionDetailsDialog';
@@ -22,8 +23,10 @@ import CommissionDetailsDialog from './CommissionDetailsDialog';
  */
 const CommissionSummaryCard = () => {
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  const api = useTRPC();
 
-  const { data, isLoading, error } = api.commissions.getSummary.useQuery(undefined, {
+  const { data, isLoading, error } = useQuery({
+    ...api.commissions.getSummary.queryOptions(),
     staleTime: 30000, // 30 seconds
   });
 
