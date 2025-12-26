@@ -1,4 +1,6 @@
-import { IconGlassFull } from '@tabler/icons-react';
+import Image from 'next/image';
+
+import logo from './pocket-cellar-logo.png';
 
 export interface PocketCellarLogoProps {
   className?: string;
@@ -9,30 +11,17 @@ export interface PocketCellarLogoProps {
  * Logo component for B2C Pocket Cellar branding
  *
  * @param props - The logo props
- * @returns The Pocket Cellar logo
+ * @returns The Pocket Cellar logo image
  */
 const PocketCellarLogo = ({ className, height = 144 }: PocketCellarLogoProps) => {
-  // Scale text size based on height (144 is default, maps to text-xl)
-  const scale = height / 144;
-  const iconSize = Math.round(20 * scale);
-
   return (
-    <div
-      className={`flex items-center gap-1.5 ${className}`}
-      style={{ height: height * 0.25 }}
-    >
-      <IconGlassFull
-        size={iconSize}
-        className="text-fill-brand shrink-0"
-        stroke={1.5}
-      />
-      <span
-        className="text-text-primary whitespace-nowrap font-semibold tracking-tight"
-        style={{ fontSize: `${0.875 * scale}rem` }}
-      >
-        Pocket Cellar
-      </span>
-    </div>
+    <Image
+      src={logo}
+      alt="Pocket Cellar"
+      height={height}
+      className={`${className} dark:invert`}
+      priority
+    />
   );
 };
 
