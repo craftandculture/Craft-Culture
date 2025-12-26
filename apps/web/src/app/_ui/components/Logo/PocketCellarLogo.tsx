@@ -13,7 +13,7 @@ export interface PocketCellarLogoProps {
  * @param props - The logo props
  * @returns The Pocket Cellar logo image
  */
-const PocketCellarLogo = ({ className, height = 40 }: PocketCellarLogoProps) => {
+const PocketCellarLogo = ({ className, height = 48 }: PocketCellarLogoProps) => {
   return (
     <div className="py-1">
       <Image
