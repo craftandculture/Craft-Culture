@@ -182,6 +182,14 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
         priceExpectation?: string;
         notes?: string;
       }>;
+      fulfilledOocItems?: Array<{
+        requestId: string;
+        productName: string;
+        vintage?: string;
+        quantity: number;
+        pricePerCase: number;
+        lineItemTotalUsd: number;
+      }>;
     };
     return data;
   }, [currentQuote?.quoteData]);
@@ -189,6 +197,11 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
   // Extract out-of-catalogue requests
   const outOfCatalogueRequests = useMemo(() => {
     return quotePricingData?.outOfCatalogueRequests || [];
+  }, [quotePricingData]);
+
+  // Extract fulfilled out-of-catalogue items (added by admin with pricing)
+  const fulfilledOocItems = useMemo(() => {
+    return quotePricingData?.fulfilledOocItems || [];
   }, [quotePricingData]);
 
   // Create pricing map by productId
@@ -526,6 +539,30 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
         };
       });
 
+      // Build fulfilled OOC items for PDF
+      const pdfFulfilledOocItems = fulfilledOocItems.map((item) => {
+        const pricePerCase = item.pricePerCase;
+        const lineTotal = item.lineItemTotalUsd;
+
+        // Convert to display currency if needed
+        const displayPricePerCase =
+          quote.currency === 'AED' && quote.totalAed
+            ? convertUsdToAed(pricePerCase)
+            : pricePerCase;
+        const displayLineTotal =
+          quote.currency === 'AED' && quote.totalAed
+            ? convertUsdToAed(lineTotal)
+            : lineTotal;
+
+        return {
+          productName: item.productName,
+          vintage: item.vintage,
+          quantity: item.quantity,
+          pricePerCase: displayPricePerCase,
+          lineTotal: displayLineTotal,
+        };
+      });
+
       await exportQuoteToPDF(
         quote,
         pdfLineItems,
@@ -538,6 +575,14 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
           companyWebsite: settings?.companyWebsite || null,
           companyVatNumber: settings?.companyVatNumber || null,
         },
+        pdfFulfilledOocItems.length > 0 ? pdfFulfilledOocItems : undefined,
+        partnerInfo ? {
+          businessName: partnerInfo.businessName,
+          businessAddress: partnerInfo.businessAddress,
+          businessPhone: partnerInfo.businessPhone,
+          businessEmail: partnerInfo.businessEmail,
+          logoUrl: partnerInfo.logoUrl,
+        } : undefined,
       );
 
       toast.success('PDF exported successfully');
@@ -739,11 +784,47 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                 </div>
               )}
 
-              {/* Out-of-Catalogue Requests */}
+              {/* Fulfilled Out-of-Catalogue Items - items admin added with pricing */}
+              {fulfilledOocItems.length > 0 && (
+                <div className="rounded-lg border-2 border-green-200 bg-green-50 p-4">
+                  <Typography variant="bodyXs" className="font-semibold text-green-800 mb-2">
+                    Special Order Items ({fulfilledOocItems.length})
+                  </Typography>
+                  <Typography variant="bodyXs" className="text-green-700 mb-3">
+                    These items have been sourced for you and are included in the quote total
+                  </Typography>
+                  <div className="space-y-2">
+                    {fulfilledOocItems.map((item, index) => (
+                      <div
+                        key={item.requestId || index}
+                        className="rounded-md bg-white border border-green-200 p-3"
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1">
+                            <Typography variant="bodySm" className="font-medium text-green-900">
+                              {item.productName}
+                            </Typography>
+                            <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-1 text-xs text-green-700">
+                              {item.vintage && <span>Vintage: {item.vintage}</span>}
+                              <span>Qty: {item.quantity} cases</span>
+                              <span>${item.pricePerCase.toFixed(2)}/case</span>
+                            </div>
+                          </div>
+                          <Typography variant="bodySm" className="font-bold text-green-800 whitespace-nowrap">
+                            ${item.lineItemTotalUsd.toFixed(2)}
+                          </Typography>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Pending Out-of-Catalogue Requests */}
               {outOfCatalogueRequests.length > 0 && (
                 <div className="rounded-lg border-2 border-amber-200 bg-amber-50 p-4">
                   <Typography variant="bodyXs" className="font-semibold text-amber-800 mb-2">
-                    Out-of-Catalogue Requests ({outOfCatalogueRequests.length})
+                    Pending Requests ({outOfCatalogueRequests.length})
                   </Typography>
                   <Typography variant="bodyXs" className="text-amber-700 mb-3">
                     These items are being reviewed by our team - not included in quote total
