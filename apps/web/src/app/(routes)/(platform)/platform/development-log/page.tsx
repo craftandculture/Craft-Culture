@@ -1,126 +1,62 @@
-import Card from '@/app/_ui/components/Card/Card';
-import CardContent from '@/app/_ui/components/Card/CardContent';
-import CardDescription from '@/app/_ui/components/Card/CardDescription';
-import CardProse from '@/app/_ui/components/Card/CardProse';
-import CardTitle from '@/app/_ui/components/Card/CardTitle';
+import { IconHistory } from '@tabler/icons-react';
+
+import Icon from '@/app/_ui/components/Icon/Icon';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import parseChangelog from '@/utils/parseChangelog';
 
-/**
- * Format a date string to a more readable format
- *
- * @example
- *   formatDate('2025-10-25'); // returns 'October 25, 2025'
- *
- * @param dateString - ISO date string (YYYY-MM-DD)
- * @returns Formatted date string
- */
-const formatDate = (dateString: string) => {
-  const date = new Date(dateString);
-  return date.toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
-};
+import VersionEntry from './VersionEntry';
 
 const DevelopmentLogPage = () => {
   const versions = parseChangelog();
 
   return (
-    <main className="container py-8 md:py-16">
-      <Card className="mx-auto w-full max-w-4xl">
-        <CardContent>
-          <CardProse>
-            <CardTitle>Development Log</CardTitle>
-            <CardDescription colorRole="muted">
-              Version history and feature updates
-            </CardDescription>
-          </CardProse>
+    <main className="container py-6 md:py-10">
+      <div className="mx-auto w-full max-w-2xl">
+        {/* Header */}
+        <div className="mb-6 flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-fill-secondary">
+            <Icon icon={IconHistory} size="md" colorRole="muted" />
+          </div>
+          <div>
+            <Typography variant="headingMd">Development Log</Typography>
+            <Typography variant="bodyXs" colorRole="muted">
+              {versions.length} releases
+            </Typography>
+          </div>
+        </div>
 
-          <div className="mt-8 max-h-[600px] space-y-8 overflow-y-auto pr-2">
-            {versions.length === 0 ? (
+        {/* Version List */}
+        <div className="rounded-xl border border-border-primary bg-fill-primary">
+          {versions.length === 0 ? (
+            <div className="px-4 py-8 text-center">
               <Typography variant="bodySm" colorRole="muted">
                 No version history available.
               </Typography>
-            ) : (
-              versions.map((version) => {
-                const features = version.entries.filter(
-                  (e) => e.type === 'feature',
-                );
-                const fixes = version.entries.filter((e) => e.type === 'fix');
-                const other = version.entries.filter((e) => e.type === 'other');
+            </div>
+          ) : (
+            <div className="divide-y divide-border-primary">
+              {versions.slice(0, 20).map((version, index) => (
+                <VersionEntry
+                  key={version.version}
+                  version={version}
+                  isLatest={index === 0}
+                />
+              ))}
+            </div>
+          )}
+        </div>
 
-                return (
-                  <div
-                    key={version.version}
-                    className="border-border-primary border-l-2 pl-4"
-                  >
-                    <div className="mb-2 flex items-baseline gap-3">
-                      <Typography variant="headingMd" className="font-mono">
-                        v{version.version}
-                      </Typography>
-                      <Typography variant="bodySm" colorRole="muted">
-                        {formatDate(version.date)}
-                      </Typography>
-                    </div>
-
-                    <div className="space-y-2">
-                      {features.length > 0 && (
-                        <div>
-                          <Typography
-                            variant="bodySm"
-                            className="mb-1 font-semibold text-green-600 dark:text-green-400"
-                          >
-                            Features
-                          </Typography>
-                          <ul className="text-text-secondary ml-4 list-disc space-y-1 text-sm">
-                            {features.map((entry, index) => (
-                              <li key={index}>{entry.description}</li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-
-                      {fixes.length > 0 && (
-                        <div>
-                          <Typography
-                            variant="bodySm"
-                            className="mb-1 font-semibold text-orange-600 dark:text-orange-400"
-                          >
-                            Bug Fixes
-                          </Typography>
-                          <ul className="text-text-secondary ml-4 list-disc space-y-1 text-sm">
-                            {fixes.map((entry, index) => (
-                              <li key={index}>{entry.description}</li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-
-                      {other.length > 0 && (
-                        <div>
-                          <Typography
-                            variant="bodySm"
-                            className="mb-1 font-semibold text-blue-600 dark:text-blue-400"
-                          >
-                            Other Changes
-                          </Typography>
-                          <ul className="text-text-secondary ml-4 list-disc space-y-1 text-sm">
-                            {other.map((entry, index) => (
-                              <li key={index}>{entry.description}</li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                );
-              })
-            )}
-          </div>
-        </CardContent>
-      </Card>
+        {/* Footer note */}
+        {versions.length > 20 && (
+          <Typography
+            variant="bodyXs"
+            colorRole="muted"
+            className="mt-3 text-center"
+          >
+            Showing latest 20 releases
+          </Typography>
+        )}
+      </div>
     </main>
   );
 };
