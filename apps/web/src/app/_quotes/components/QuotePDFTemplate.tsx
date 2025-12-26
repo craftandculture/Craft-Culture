@@ -15,7 +15,9 @@ Font.register({
 // PDF Styles - Matching Craft & Culture Index brand colors
 const styles = StyleSheet.create({
   page: {
-    padding: 40,
+    paddingTop: 40,
+    paddingHorizontal: 40,
+    paddingBottom: 80, // Reserve space for footer
     fontFamily: 'Roboto',
     fontSize: 10,
     color: '#0a0a0a',
@@ -236,18 +238,49 @@ const styles = StyleSheet.create({
   },
   footer: {
     position: 'absolute',
-    bottom: 30,
+    bottom: 20,
     left: 40,
     right: 40,
-    textAlign: 'center',
-    fontSize: 8,
-    color: '#a3a3a3',
     borderTop: '1px solid #e5e5e5',
-    paddingTop: 12,
+    paddingTop: 10,
   },
-  footerText: {
-    marginBottom: 3,
-    lineHeight: 1.4,
+  footerContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+  },
+  footerLeft: {
+    flex: 1,
+  },
+  footerRight: {
+    alignItems: 'flex-end',
+  },
+  footerPartnerName: {
+    fontSize: 10,
+    fontWeight: 'bold',
+    color: '#0a0a0a',
+    marginBottom: 2,
+  },
+  footerPartnerContact: {
+    fontSize: 7,
+    color: '#737373',
+    lineHeight: 1.3,
+  },
+  footerBranding: {
+    fontSize: 7,
+    color: '#a3a3a3',
+    textAlign: 'right',
+  },
+  footerBrandingBold: {
+    fontSize: 7,
+    fontWeight: 'bold',
+    color: '#6BBFBF',
+  },
+  footerDisclaimer: {
+    fontSize: 6,
+    color: '#a3a3a3',
+    marginTop: 6,
+    textAlign: 'center',
   },
 });
 
@@ -406,14 +439,14 @@ const QuotePDFTemplate = ({
 
             {/* Table Rows */}
             {lineItems.map((item, index) => {
-              const pricePerBottle = item.bottlesPerCase > 0
-                ? item.pricePerCase / item.bottlesPerCase
-                : 0;
+              const pricePerBottle =
+                item.bottlesPerCase > 0 ? item.pricePerCase / item.bottlesPerCase : 0;
 
               return (
                 <View
                   key={index}
                   style={index % 2 === 1 ? [styles.tableRow, styles.tableRowAlt] : styles.tableRow}
+                  wrap={false}
                 >
                   <View style={styles.colProduct}>
                     <Text style={styles.productName}>{item.productName}</Text>
@@ -445,6 +478,7 @@ const QuotePDFTemplate = ({
                   <View
                     key={`ooc-${index}`}
                     style={index % 2 === 1 ? [styles.tableRow, styles.tableRowAlt] : styles.tableRow}
+                    wrap={false}
                   >
                     <View style={styles.colProduct}>
                       <Text style={styles.productName}>{item.productName}</Text>
@@ -485,40 +519,62 @@ const QuotePDFTemplate = ({
           </View>
         )}
 
-        {/* Licensed Partner / Supplier Information */}
-        {licensedPartner && (
-          <View style={styles.supplierSection}>
+        {/* Licensed Partner / Supplier Information - Only show if logo or address provided */}
+        {licensedPartner && (licensedPartner.logoUrl || licensedPartner.businessAddress) && (
+          <View style={styles.supplierSection} wrap={false}>
             <Text style={styles.supplierHeader}>SUPPLIED BY</Text>
             {licensedPartner.logoUrl && (
               // eslint-disable-next-line jsx-a11y/alt-text -- @react-pdf/renderer Image doesn't support alt prop
               <Image src={licensedPartner.logoUrl} style={styles.supplierLogo} />
             )}
             <Text style={styles.supplierName}>{licensedPartner.businessName}</Text>
-            <View style={styles.supplierDetails}>
-              {licensedPartner.businessAddress && (
+            {licensedPartner.businessAddress && (
+              <View style={styles.supplierDetails}>
                 <Text>{licensedPartner.businessAddress}</Text>
-              )}
-              {licensedPartner.businessPhone && (
-                <Text>Tel: {licensedPartner.businessPhone}</Text>
-              )}
-              {licensedPartner.businessEmail && (
-                <Text>Email: {licensedPartner.businessEmail}</Text>
-              )}
-            </View>
+              </View>
+            )}
           </View>
         )}
 
         {/* Footer */}
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>
-            Craft & Culture Index — Transparent pricing and trade intelligence for fine wine &
-            spirits across the Middle East.
-          </Text>
-          <Text style={styles.footerText}>
-            All prices are subject to final confirmation and availability at the time of order.
-          </Text>
-          <Text style={styles.footerText}>
-            © Craft & Culture FZE. All rights reserved. www.craftculture.xyz
+        <View style={styles.footer} fixed>
+          <View style={styles.footerContent}>
+            {/* Left: Licensed Partner Info (if available) */}
+            <View style={styles.footerLeft}>
+              {licensedPartner ? (
+                <>
+                  <Text style={styles.footerPartnerName}>{licensedPartner.businessName}</Text>
+                  <View style={styles.footerPartnerContact}>
+                    {licensedPartner.businessPhone && (
+                      <Text>{licensedPartner.businessPhone}</Text>
+                    )}
+                    {licensedPartner.businessEmail && (
+                      <Text>{licensedPartner.businessEmail}</Text>
+                    )}
+                  </View>
+                </>
+              ) : user.companyName ? (
+                <>
+                  <Text style={styles.footerPartnerName}>{user.companyName}</Text>
+                  <View style={styles.footerPartnerContact}>
+                    {user.companyPhone && <Text>{user.companyPhone}</Text>}
+                    {user.companyEmail && <Text>{user.companyEmail}</Text>}
+                  </View>
+                </>
+              ) : null}
+            </View>
+
+            {/* Right: C&C Branding */}
+            <View style={styles.footerRight}>
+              <Text style={styles.footerBranding}>
+                Powered by <Text style={styles.footerBrandingBold}>C&C Index</Text>
+              </Text>
+              <Text style={styles.footerBranding}>craftculture.xyz</Text>
+            </View>
+          </View>
+
+          <Text style={styles.footerDisclaimer}>
+            All prices subject to confirmation and availability. © Craft & Culture FZE
           </Text>
         </View>
       </Page>

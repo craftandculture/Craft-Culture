@@ -102,6 +102,24 @@ export const users = pgTable('users', {
   companyEmail: text('company_email'),
   companyWebsite: text('company_website'),
   companyVatNumber: text('company_vat_number'),
+  // Personal address fields (for B2C users)
+  addressLine1: text('address_line_1'),
+  addressLine2: text('address_line_2'),
+  city: text('city'),
+  stateProvince: text('state_province'),
+  postalCode: text('postal_code'),
+  country: text('country'),
+  phone: text('phone'),
+  // Bank details for commission payouts (B2C users)
+  bankDetails: jsonb('bank_details').$type<{
+    bankName?: string;
+    accountName?: string;
+    accountNumber?: string;
+    sortCode?: string;
+    iban?: string;
+    swiftBic?: string;
+    branchAddress?: string;
+  }>(),
   onboardingCompletedAt: timestamp('onboarding_completed_at', {
     mode: 'date',
   }),

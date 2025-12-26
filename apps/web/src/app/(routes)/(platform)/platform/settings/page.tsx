@@ -4,10 +4,12 @@ import Card from '@/app/_ui/components/Card/Card';
 import CardContent from '@/app/_ui/components/Card/CardContent';
 import CardDescription from '@/app/_ui/components/Card/CardDescription';
 import CardTitle from '@/app/_ui/components/Card/CardTitle';
+import Divider from '@/app/_ui/components/Divider/Divider';
 import getQueryClient from '@/lib/react-query';
 import api from '@/lib/trpc/server';
 
 import CompanyProfileSection from './components/CompanyProfileSection';
+import PersonalDetailsSection from './components/PersonalDetailsSection';
 
 /**
  * Settings page for managing user profile and company information
@@ -32,6 +34,11 @@ const SettingsPage = async () => {
 
             {/* Company Profile Section */}
             <CompanyProfileSection />
+
+            <Divider />
+
+            {/* Personal Details Section (B2C users only) */}
+            <PersonalDetailsSection />
           </CardContent>
         </Card>
       </main>

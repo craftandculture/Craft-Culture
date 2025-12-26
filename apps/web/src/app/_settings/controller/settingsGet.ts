@@ -2,7 +2,7 @@ import db from '@/database/client';
 import { protectedProcedure } from '@/lib/trpc/procedures';
 
 /**
- * Get user settings (company information)
+ * Get user settings (company and personal information)
  */
 const settingsGet = protectedProcedure.query(async ({ ctx: { user } }) => {
   const userSettings = await db.query.users.findFirst({
@@ -19,6 +19,15 @@ const settingsGet = protectedProcedure.query(async ({ ctx: { user } }) => {
       companyWebsite: true,
       companyVatNumber: true,
       customerType: true,
+      // Personal details
+      addressLine1: true,
+      addressLine2: true,
+      city: true,
+      stateProvince: true,
+      postalCode: true,
+      country: true,
+      phone: true,
+      bankDetails: true,
     },
   });
 
