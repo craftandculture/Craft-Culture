@@ -22,6 +22,16 @@ export const mockUser: User = {
   companyEmail: null,
   companyWebsite: null,
   companyVatNumber: null,
+  // Personal address fields
+  addressLine1: null,
+  addressLine2: null,
+  city: null,
+  stateProvince: null,
+  postalCode: null,
+  country: null,
+  phone: null,
+  // Bank details for commission payouts
+  bankDetails: null,
   role: 'user',
   onboardingCompletedAt: null,
   pricingModelId: null,
