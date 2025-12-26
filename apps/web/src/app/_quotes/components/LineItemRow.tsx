@@ -121,17 +121,17 @@ const LineItemRow = ({
     <div
       className={`space-y-2 ${isDragging ? 'opacity-50' : ''}`}
     >
-      <div className="flex flex-wrap items-start gap-2 md:grid md:grid-cols-12 md:gap-3">
-        {/* Drag Handle - Hidden on mobile */}
+      <div className="flex flex-wrap items-start gap-2 lg:grid lg:grid-cols-12 lg:gap-2">
+        {/* Drag Handle - Hidden on mobile/tablet */}
         <div
           {...dragHandleProps}
-          className="hidden cursor-grab items-center justify-center active:cursor-grabbing md:col-span-1 md:flex"
+          className="hidden cursor-grab items-center justify-center active:cursor-grabbing lg:col-span-1 lg:flex"
         >
           <Icon icon={IconGripVertical} size="sm" colorRole="muted" />
         </div>
 
         {/* Product Selector */}
-        <div className="min-w-0 w-full md:col-span-5 md:w-auto">
+        <div className="min-w-0 w-full lg:col-span-4 lg:w-auto">
           {product ? (
             <ProductDetailsTooltip product={product}>
               <div>
@@ -155,7 +155,7 @@ const LineItemRow = ({
 
         {/* Vintage Input - Hidden for placeholder */}
         {!isPlaceholder && (
-          <div className="w-20 shrink-0 md:col-span-1 md:w-auto">
+          <div className="w-20 shrink-0 lg:col-span-1 lg:w-auto">
             <Input
               type="text"
               size="md"
@@ -169,7 +169,7 @@ const LineItemRow = ({
 
         {/* Quantity Input - Hidden for placeholder */}
         {!isPlaceholder && (
-          <div className="flex w-20 shrink-0 flex-col gap-1 md:col-span-1 md:w-auto">
+          <div className="flex w-20 shrink-0 flex-col gap-1 lg:col-span-1 lg:w-auto">
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -198,7 +198,7 @@ const LineItemRow = ({
             {offer?.availableQuantity !== null && offer?.availableQuantity !== undefined && (
               <Typography
                 variant="bodyXs"
-                className={`md:hidden ${
+                className={`lg:hidden ${
                   localQuantity > offer.availableQuantity
                     ? 'text-text-warning font-medium'
                     : 'text-text-muted'
@@ -212,7 +212,7 @@ const LineItemRow = ({
             {maxQuantity !== Infinity && localQuantity > maxQuantity && offer?.availableQuantity === null && (
               <Typography
                 variant="bodyXs"
-                className="text-text-warning font-medium md:hidden"
+                className="text-text-warning font-medium lg:hidden"
               >
                 {localQuantity} requested, {maxQuantity} available
               </Typography>
@@ -220,15 +220,15 @@ const LineItemRow = ({
           </div>
         )}
 
-        {/* Pack Size - Hidden for placeholder and on mobile */}
+        {/* Pack Size - Hidden for placeholder and on mobile/tablet */}
         {!isPlaceholder && (
-          <div className="hidden md:col-span-1 md:flex md:items-center">
+          <div className="hidden lg:col-span-1 lg:flex lg:items-center lg:justify-center">
             {offer && (
               <Typography
                 variant="bodyXs"
-                className="text-text-muted font-medium"
+                className="text-text-muted font-medium whitespace-nowrap"
               >
-                {offer.unitCount} × {offer.unitSize}
+                {offer.unitCount}×{offer.unitSize}
               </Typography>
             )}
           </div>
@@ -236,8 +236,8 @@ const LineItemRow = ({
 
         {/* Line Price - Hidden for placeholder */}
         {!isPlaceholder && (
-          <div className="flex shrink-0 flex-col gap-0.5 md:col-span-1 md:w-auto md:flex-row md:items-center md:justify-end md:gap-0">
-            <div className="flex items-center gap-1 md:hidden">
+          <div className="flex shrink-0 flex-col gap-0.5 lg:col-span-2 lg:w-auto lg:flex-row lg:items-center lg:justify-end lg:gap-0">
+            <div className="flex items-center gap-1 lg:hidden">
               <Typography
                 variant="bodyXs"
                 className="text-text-muted font-medium uppercase leading-none"
@@ -269,13 +269,13 @@ const LineItemRow = ({
 
         {/* Per Bottle Price - Hidden for placeholder */}
         {!isPlaceholder && (
-          <div className="flex shrink-0 flex-col gap-0.5 md:col-span-1 md:w-auto md:flex-row md:items-center md:justify-end md:gap-0">
-            <div className="flex items-center gap-1 md:hidden">
+          <div className="flex shrink-0 flex-col gap-0.5 lg:col-span-1 lg:w-auto lg:flex-row lg:items-center lg:justify-end lg:gap-0">
+            <div className="flex items-center gap-1 lg:hidden">
               <Typography
                 variant="bodyXs"
                 className="text-text-muted font-medium uppercase leading-none"
               >
-                Per Bottle
+                /Bottle
               </Typography>
               <TooltipProvider>
                 <Tooltip>
@@ -301,7 +301,7 @@ const LineItemRow = ({
         )}
 
         {/* Remove Button */}
-        <div className="flex h-9 shrink-0 items-center justify-end md:col-span-1 md:w-auto md:justify-center">
+        <div className="flex h-9 shrink-0 items-center justify-end lg:col-span-1 lg:w-auto lg:justify-center">
           <Button
             type="button"
             size="sm"
@@ -318,7 +318,7 @@ const LineItemRow = ({
 
       {/* Alternative Vintages - Hidden for placeholder */}
       {!isPlaceholder && product && (
-        <div className="flex items-center gap-2 pl-0 md:pl-8">
+        <div className="flex items-center gap-2 pl-0 lg:pl-8">
           <AlternativeVintagesPicker
             productId={product.id}
             selectedVintages={alternativeVintages}

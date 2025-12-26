@@ -721,34 +721,34 @@ const QuotesForm = () => {
       <div className="space-y-3">
         {/* Header Row - Hidden on mobile */}
         {lineItems.length > 0 && (
-          <div className="hidden grid-cols-12 gap-3 px-2 md:grid">
+          <div className="hidden grid-cols-12 gap-2 px-2 lg:grid">
             {/* Drag handle column */}
             <div className="col-span-1" />
-            <div className="col-span-5 flex justify-start">
+            <div className="col-span-4 flex justify-start">
               <Typography
                 variant="bodyXs"
-                className="text-text-muted font-medium uppercase"
+                className="text-text-muted font-medium uppercase truncate"
               >
                 Reference
               </Typography>
             </div>
-            <div className="col-span-1 flex justify-start">
+            <div className="col-span-1 flex justify-center">
               <Typography
                 variant="bodyXs"
                 className="text-text-muted font-medium uppercase"
               >
-                Vintage
+                Year
               </Typography>
             </div>
-            <div className="col-span-1 flex justify-start">
+            <div className="col-span-1 flex justify-center">
               <Typography
                 variant="bodyXs"
                 className="text-text-muted font-medium uppercase"
               >
-                Quantity
+                Qty
               </Typography>
             </div>
-            <div className="col-span-1 flex justify-start">
+            <div className="col-span-1 flex justify-center">
               <Typography
                 variant="bodyXs"
                 className="text-text-muted font-medium uppercase"
@@ -756,10 +756,10 @@ const QuotesForm = () => {
                 Pack
               </Typography>
             </div>
-            <div className="col-span-1 flex items-center justify-end gap-1">
+            <div className="col-span-2 flex items-center justify-end gap-1">
               <Typography
                 variant="bodyXs"
-                className="text-text-muted font-medium uppercase"
+                className="text-text-muted font-medium uppercase whitespace-nowrap"
               >
                 Price
               </Typography>
@@ -768,9 +768,9 @@ const QuotesForm = () => {
             <div className="col-span-1 flex items-center justify-end gap-1">
               <Typography
                 variant="bodyXs"
-                className="text-text-muted font-medium uppercase"
+                className="text-text-muted font-medium uppercase whitespace-nowrap"
               >
-                Per Bottle
+                /Bottle
               </Typography>
               <PriceInfoTooltip customerType={customerType} />
             </div>
