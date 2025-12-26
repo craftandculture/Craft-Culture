@@ -46,27 +46,34 @@ const CommissionSummaryCard = () => {
           </div>
 
           <div className="flex items-center gap-4 text-xs">
-            <div className="flex items-center gap-1.5">
-              <span className="text-text-muted">Earned:</span>
-              <span className="font-semibold text-fill-brand">
-                {formatPrice(totalEarned, 'USD')}
-              </span>
-            </div>
-
-            {pendingPayout > 0 && (
+            {paidOut > 0 ? (
+              <>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-text-muted">Total Earned:</span>
+                  <span className="font-semibold text-fill-brand">
+                    {formatPrice(totalEarned, 'USD')}
+                  </span>
+                </div>
+                {pendingPayout > 0 && (
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-text-muted">Pending:</span>
+                    <span className="font-semibold text-amber-600">
+                      {formatPrice(pendingPayout, 'USD')}
+                    </span>
+                  </div>
+                )}
+                <div className="flex items-center gap-1.5">
+                  <span className="text-text-muted">Paid:</span>
+                  <span className="font-semibold text-green-600">
+                    {formatPrice(paidOut, 'USD')}
+                  </span>
+                </div>
+              </>
+            ) : (
               <div className="flex items-center gap-1.5">
-                <span className="text-text-muted">Pending:</span>
+                <span className="text-text-muted">Pending Payout:</span>
                 <span className="font-semibold text-amber-600">
                   {formatPrice(pendingPayout, 'USD')}
-                </span>
-              </div>
-            )}
-
-            {paidOut > 0 && (
-              <div className="flex items-center gap-1.5">
-                <span className="text-text-muted">Paid:</span>
-                <span className="font-semibold text-green-600">
-                  {formatPrice(paidOut, 'USD')}
                 </span>
               </div>
             )}
