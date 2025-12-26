@@ -86,32 +86,31 @@ const CommissionBreakdown = ({
 
       {/* Accordion Content - Per-line breakdown */}
       {isExpanded && (
-        <div className="border-t border-emerald-200/50 bg-white/50 px-4 py-4 dark:border-emerald-800/30 dark:bg-black/10 sm:px-5 sm:py-5">
-          {/* Product breakdown */}
-          <div className="space-y-3">
+        <div className="border-t border-emerald-200/50 bg-white/50 px-3 py-3 dark:border-emerald-800/30 dark:bg-black/10 sm:px-4 sm:py-3">
+          {/* Product breakdown - scrollable for many items */}
+          <div className="max-h-[280px] space-y-1 overflow-y-auto pr-1">
             {lineItems.map((item, index) => (
               <div
                 key={index}
-                className="flex items-start justify-between gap-3 rounded-lg bg-emerald-50/50 px-3 py-2.5 dark:bg-emerald-900/10"
+                className="flex items-center justify-between gap-2 py-1 border-b border-emerald-100/50 last:border-b-0 dark:border-emerald-800/20"
               >
-                <div className="min-w-0 flex-1">
+                <div className="min-w-0 flex-1 flex items-baseline gap-2">
                   <Typography
                     variant="bodyXs"
-                    className="truncate text-xs font-medium text-emerald-900 dark:text-emerald-100 sm:text-sm"
+                    className="truncate text-[11px] text-emerald-900 dark:text-emerald-100"
                   >
                     {item.productName}
                   </Typography>
                   <Typography
                     variant="bodyXs"
-                    className="mt-0.5 text-[11px] text-emerald-600/70 dark:text-emerald-400/60 sm:text-xs"
+                    className="shrink-0 text-[10px] text-emerald-600/60 dark:text-emerald-400/50"
                   >
-                    {item.quantity} {item.quantity === 1 ? 'case' : 'cases'} ×{' '}
-                    {formatPrice(item.commissionPerCase, currency)}
+                    {item.quantity}× {formatPrice(item.commissionPerCase, currency)}
                   </Typography>
                 </div>
                 <Typography
                   variant="bodyXs"
-                  className="shrink-0 tabular-nums text-sm font-semibold text-emerald-700 dark:text-emerald-300 sm:text-base"
+                  className="shrink-0 tabular-nums text-[11px] font-semibold text-emerald-700 dark:text-emerald-300"
                 >
                   {formatPrice(item.lineCommission, currency)}
                 </Typography>
@@ -120,16 +119,16 @@ const CommissionBreakdown = ({
           </div>
 
           {/* Total */}
-          <div className="mt-4 flex items-center justify-between border-t border-emerald-200/50 pt-4 dark:border-emerald-800/30">
+          <div className="mt-2 flex items-center justify-between border-t border-emerald-200/50 pt-2 dark:border-emerald-800/30">
             <Typography
-              variant="bodySm"
+              variant="bodyXs"
               className="font-medium text-emerald-800 dark:text-emerald-200"
             >
               Total Earnings
             </Typography>
             <Typography
               variant="bodySm"
-              className="tabular-nums text-lg font-bold text-emerald-700 dark:text-emerald-300 sm:text-xl"
+              className="tabular-nums font-bold text-emerald-700 dark:text-emerald-300"
             >
               {formatPrice(totalCommission, currency)}
             </Typography>
