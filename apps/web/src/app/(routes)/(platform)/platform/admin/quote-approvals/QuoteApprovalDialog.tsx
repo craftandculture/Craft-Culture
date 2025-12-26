@@ -159,11 +159,24 @@ const QuoteApprovalDialog = ({
   });
 
   // Check if this is a B2C quote (payment flow) or B2B quote (PO flow)
-  const isB2C = quote?.createdBy?.customerType === 'b2c';
+  // Use multiple indicators: customerType, payment-related status, or payment method
+  const isB2C = useMemo(() => {
+    // Explicit customerType check
+    if (quote?.createdBy?.customerType) {
+      return quote.createdBy.customerType === 'b2c';
+    }
+    // Infer from payment-related status or fields
+    return (
+      quote?.status === 'awaiting_payment' ||
+      quote?.status === 'paid' ||
+      quote?.paymentMethod !== null
+    );
+  }, [quote?.createdBy?.customerType, quote?.status, quote?.paymentMethod]);
 
-  // Extract out-of-catalogue requests from quoteData (B2C only)
+  // Extract out-of-catalogue requests from quoteData
+  // Show for B2C quotes OR if requests exist in the data
   const outOfCatalogueRequests = useMemo(() => {
-    if (!quote?.quoteData || !isB2C) return [];
+    if (!quote?.quoteData) return [];
     const data = quote.quoteData as {
       outOfCatalogueRequests?: Array<{
         id: string;
@@ -174,8 +187,10 @@ const QuoteApprovalDialog = ({
         notes?: string;
       }>;
     };
+    // Return requests if they exist - don't require isB2C check here
+    // since the data itself indicates this was from a B2C quote
     return data.outOfCatalogueRequests || [];
-  }, [quote, isB2C]);
+  }, [quote]);
 
   // Fetch licensed partners for payment assignment - only for B2C
   const { data: partnersData } = useQuery({
@@ -718,8 +733,8 @@ const QuoteApprovalDialog = ({
               </div>
             </div>
 
-            {/* Out-of-Catalogue Requests - B2C only */}
-            {isB2C && outOfCatalogueRequests.length > 0 && (
+            {/* Out-of-Catalogue Requests - shown if any requests exist */}
+            {outOfCatalogueRequests.length > 0 && (
               <div className="rounded-xl border-2 border-amber-300 bg-amber-50 p-5">
                 <div className="flex items-center gap-3 mb-4">
                   <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-200">

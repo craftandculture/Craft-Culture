@@ -868,6 +868,14 @@ const QuotesForm = () => {
         <ButtonContent iconLeft={IconPlus}>Add Product</ButtonContent>
       </Button>
 
+      {/* Out-of-Catalogue Requests - B2C Only - Right after Add Product */}
+      {customerType === 'b2c' && (
+        <OutOfCatalogueRequests
+          items={outOfCatalogueItems}
+          onItemsChange={setOutOfCatalogueItems}
+        />
+      )}
+
       {/* Total Section with Commission Breakdown */}
       {lineItems.length > 0 && (
         <>
@@ -998,17 +1006,6 @@ const QuotesForm = () => {
                 </PopoverContent>
               </Popover>
             </div>
-
-            {/* Out-of-Catalogue Requests - B2C Only */}
-            {customerType === 'b2c' && (
-              <>
-                <Divider />
-                <OutOfCatalogueRequests
-                  items={outOfCatalogueItems}
-                  onItemsChange={setOutOfCatalogueItems}
-                />
-              </>
-            )}
 
             {/* Save Quote Button - B2C Only */}
             {customerType === 'b2c' && quoteData && (
