@@ -63,7 +63,7 @@ const CommissionSummaryCard = () => {
                 <Icon icon={IconCoin} className="text-fill-brand" size="md" />
               </div>
               <div>
-                <Typography variant="h4" className="font-semibold">
+                <Typography variant="headingSm" className="font-semibold">
                   Commission Summary
                 </Typography>
                 <Typography variant="bodySm" className="text-text-muted">
@@ -79,7 +79,7 @@ const CommissionSummaryCard = () => {
               <Typography variant="bodyXs" className="text-text-muted uppercase tracking-wide">
                 Total Earned
               </Typography>
-              <Typography variant="h3" className="mt-1 font-bold text-fill-brand">
+              <Typography variant="headingMd" className="mt-1 font-bold text-fill-brand">
                 {formatPrice(totalEarned, 'USD')}
               </Typography>
             </div>
@@ -89,7 +89,7 @@ const CommissionSummaryCard = () => {
               <Typography variant="bodyXs" className="text-text-muted uppercase tracking-wide">
                 Pending Payout
               </Typography>
-              <Typography variant="h3" className="mt-1 font-bold text-amber-600">
+              <Typography variant="headingMd" className="mt-1 font-bold text-amber-600">
                 {formatPrice(pendingPayout, 'USD')}
               </Typography>
             </div>
@@ -99,7 +99,7 @@ const CommissionSummaryCard = () => {
               <Typography variant="bodyXs" className="text-text-muted uppercase tracking-wide">
                 Paid Out
               </Typography>
-              <Typography variant="h3" className="mt-1 font-bold text-green-600">
+              <Typography variant="headingMd" className="mt-1 font-bold text-green-600">
                 {formatPrice(paidOut, 'USD')}
               </Typography>
             </div>
