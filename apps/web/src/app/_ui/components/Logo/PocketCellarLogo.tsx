@@ -15,13 +15,15 @@ export interface PocketCellarLogoProps {
  */
 const PocketCellarLogo = ({ className, height = 40 }: PocketCellarLogoProps) => {
   return (
-    <Image
-      src={logo}
-      alt="Pocket Cellar"
-      height={height}
-      className={`${className} dark:invert`}
-      priority
-    />
+    <div className="py-1">
+      <Image
+        src={logo}
+        alt="Pocket Cellar"
+        height={height}
+        className={`${className} dark:invert`}
+        priority
+      />
+    </div>
   );
 };
 
