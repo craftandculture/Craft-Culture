@@ -41,7 +41,7 @@ import DialogTrigger from '@/app/_ui/components/Dialog/DialogTrigger';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import useTRPC from '@/lib/trpc/browser';
 
-type PartnerType = 'retailer' | 'sommelier' | 'distributor';
+type PartnerType = 'distributor';
 type PartnerStatus = 'active' | 'inactive' | 'suspended';
 
 interface PaymentDetails {
@@ -56,11 +56,10 @@ interface PaymentDetails {
 }
 
 /**
- * Admin page for managing licensed partners
+ * Admin page for managing distributors
  *
- * Partners are external business entities (retailers, distributors) that
- * fulfill B2C orders. They're licensed mainland entities that receive
- * payment from customers and purchase inventory from C&C.
+ * Distributors are licensed mainland entities that fulfill B2C orders.
+ * They receive payment from customers and purchase inventory from C&C.
  */
 const PartnersPage = () => {
   const api = useTRPC();
@@ -74,7 +73,7 @@ const PartnersPage = () => {
 
   // Form state for creating partner
   const [newPartner, setNewPartner] = useState({
-    type: 'retailer' as PartnerType,
+    type: 'distributor' as PartnerType,
     businessName: '',
     businessAddress: '',
     businessPhone: '',
@@ -124,7 +123,7 @@ const PartnersPage = () => {
         void refetch();
         setIsCreateDialogOpen(false);
         setNewPartner({
-          type: 'retailer',
+          type: 'distributor',
           businessName: '',
           businessAddress: '',
           businessPhone: '',
@@ -211,19 +210,6 @@ const PartnersPage = () => {
           </span>
         );
     }
-  };
-
-  const getTypeBadge = (type: PartnerType) => {
-    const labels = {
-      retailer: 'Retailer',
-      sommelier: 'Sommelier',
-      distributor: 'Distributor',
-    };
-    return (
-      <span className="bg-fill-muted text-text-secondary inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium">
-        {labels[type]}
-      </span>
-    );
   };
 
   const handleCopyApiKey = () => {
@@ -329,10 +315,10 @@ const PartnersPage = () => {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 sm:mb-8">
           <div>
             <Typography variant="headingLg" className="mb-2">
-              Licensed Partners
+              Distributors
             </Typography>
             <Typography variant="bodyMd" colorRole="muted">
-              Manage licensed entities that fulfill B2C orders
+              Manage licensed distributors that fulfill B2C orders
             </Typography>
           </div>
           <div className="flex items-center gap-3">
@@ -344,14 +330,14 @@ const PartnersPage = () => {
             <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
               <DialogTrigger asChild>
                 <Button variant="default" colorRole="brand">
-                  <ButtonContent iconLeft={IconPlus}>Add Partner</ButtonContent>
+                  <ButtonContent iconLeft={IconPlus}>Add Distributor</ButtonContent>
                 </Button>
               </DialogTrigger>
               <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
-                  <DialogTitle>Add Licensed Partner</DialogTitle>
+                  <DialogTitle>Add Distributor</DialogTitle>
                   <DialogDescription>
-                    Add a licensed entity that will fulfill B2C orders
+                    Add a licensed distributor that will fulfill B2C orders
                   </DialogDescription>
                 </DialogHeader>
                 <form
@@ -382,25 +368,6 @@ const PartnersPage = () => {
                           className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm"
                           required
                         />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-text-primary mb-1">
-                          Partner Type
-                        </label>
-                        <select
-                          value={newPartner.type}
-                          onChange={(e) =>
-                            setNewPartner({
-                              ...newPartner,
-                              type: e.target.value as PartnerType,
-                            })
-                          }
-                          className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm"
-                        >
-                          <option value="retailer">Retailer</option>
-                          <option value="distributor">Distributor</option>
-                        </select>
                       </div>
 
                       <div>
@@ -669,7 +636,7 @@ const PartnersPage = () => {
                       isDisabled={isCreating}
                     >
                       <ButtonContent>
-                        {isCreating ? 'Creating...' : 'Add Partner'}
+                        {isCreating ? 'Creating...' : 'Add Distributor'}
                       </ButtonContent>
                     </Button>
                   </div>
@@ -710,7 +677,7 @@ const PartnersPage = () => {
             </div>
 
             <Typography variant="bodySm" className="text-text-muted">
-              {isLoading ? 'Loading...' : `${partners.length} partners found`}
+              {isLoading ? 'Loading...' : `${partners.length} distributors found`}
             </Typography>
           </CardContent>
         </Card>
@@ -728,7 +695,7 @@ const PartnersPage = () => {
           <Card>
             <CardContent className="p-6">
               <Typography variant="bodyMd" className="text-text-muted text-center">
-                No partners found. Click &quot;Add Partner&quot; to create one.
+                No distributors found. Click &quot;Add Distributor&quot; to create one.
               </Typography>
             </CardContent>
           </Card>
@@ -751,7 +718,6 @@ const PartnersPage = () => {
                         <div>
                           <div className="flex items-center gap-2">
                             <Typography variant="headingSm">{partner.businessName}</Typography>
-                            {getTypeBadge(partner.type)}
                             {getStatusBadge(partner.status)}
                           </div>
                           {partner.taxId && (
@@ -802,7 +768,7 @@ const PartnersPage = () => {
 
                     {/* Actions Section */}
                     <div className="flex-shrink-0 space-y-3">
-                      {/* Edit & Delete Partner Buttons */}
+                      {/* Edit & Delete Distributor Buttons */}
                       <div className="flex gap-2">
                         <Button
                           size="sm"
@@ -819,19 +785,19 @@ const PartnersPage = () => {
                               variant="outline"
                               colorRole="danger"
                               isDisabled={isDeletingPartner}
-                              title="Delete Partner"
+                              title="Delete Distributor"
                             >
                               <ButtonContent iconLeft={IconTrash} />
                             </Button>
                           </AlertDialogTrigger>
                           <AlertDialogContent>
                             <AlertDialogHeader>
-                              <AlertDialogTitle>Delete Partner</AlertDialogTitle>
+                              <AlertDialogTitle>Delete Distributor</AlertDialogTitle>
                               <AlertDialogDescription>
                                 Are you sure you want to permanently delete{' '}
                                 <strong>{partner.businessName}</strong>? This will also delete all
-                                associated API keys. Any quotes linked to this partner will have
-                                their partner reference removed.
+                                associated API keys. Any quotes linked to this distributor will have
+                                their distributor reference removed.
                               </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
@@ -840,7 +806,7 @@ const PartnersPage = () => {
                                 onClick={() => deletePartner({ partnerId: partner.id })}
                                 className="bg-red-600 hover:bg-red-700"
                               >
-                                Delete Partner
+                                Delete Distributor
                               </AlertDialogAction>
                             </AlertDialogFooter>
                           </AlertDialogContent>
@@ -963,13 +929,13 @@ const PartnersPage = () => {
           </div>
         )}
 
-        {/* Edit Partner Dialog */}
+        {/* Edit Distributor Dialog */}
         <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
           <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Edit Partner</DialogTitle>
+              <DialogTitle>Edit Distributor</DialogTitle>
               <DialogDescription>
-                Update partner details and payment configuration
+                Update distributor details and payment configuration
               </DialogDescription>
             </DialogHeader>
 
