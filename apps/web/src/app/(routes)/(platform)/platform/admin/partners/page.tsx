@@ -171,8 +171,17 @@ const PartnersPage = () => {
   );
 
   // Delete API key mutation
-  const { mutate: deleteApiKey, isPending: isDeleting } = useMutation(
+  const { mutate: deleteApiKey, isPending: isDeletingKey } = useMutation(
     api.partners.apiKeys.delete.mutationOptions({
+      onSuccess: () => {
+        void refetch();
+      },
+    }),
+  );
+
+  // Delete partner mutation
+  const { mutate: deletePartner, isPending: isDeletingPartner } = useMutation(
+    api.partners.delete.mutationOptions({
       onSuccess: () => {
         void refetch();
       },
@@ -793,15 +802,50 @@ const PartnersPage = () => {
 
                     {/* Actions Section */}
                     <div className="flex-shrink-0 space-y-3">
-                      {/* Edit Partner Button */}
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleEditPartner(partner)}
-                        className="w-full"
-                      >
-                        <ButtonContent iconLeft={IconCreditCard}>Edit Details</ButtonContent>
-                      </Button>
+                      {/* Edit & Delete Partner Buttons */}
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleEditPartner(partner)}
+                          className="flex-1"
+                        >
+                          <ButtonContent iconLeft={IconCreditCard}>Edit Details</ButtonContent>
+                        </Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              colorRole="danger"
+                              isDisabled={isDeletingPartner}
+                              title="Delete Partner"
+                            >
+                              <ButtonContent iconLeft={IconTrash} />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Delete Partner</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Are you sure you want to permanently delete{' '}
+                                <strong>{partner.businessName}</strong>? This will also delete all
+                                associated API keys. Any quotes linked to this partner will have
+                                their partner reference removed.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => deletePartner({ partnerId: partner.id })}
+                                className="bg-red-600 hover:bg-red-700"
+                              >
+                                Delete Partner
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
 
                       {/* API Keys Section */}
                       <div className="space-y-2">
@@ -880,7 +924,7 @@ const PartnersPage = () => {
                                         size="sm"
                                         variant="ghost"
                                         colorRole="danger"
-                                        isDisabled={isDeleting}
+                                        isDisabled={isDeletingKey}
                                         title="Delete API Key"
                                       >
                                         <ButtonContent iconLeft={IconTrash} />
