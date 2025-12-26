@@ -68,7 +68,7 @@ const getStatusLabel = (status: Quote['status']) => {
     case 'buy_request_submitted':
       return 'Pending Review';
     case 'under_cc_review':
-      return 'In Review';
+      return 'Under Review';
     case 'revision_requested':
       return 'Needs Attention';
     case 'cc_confirmed':
@@ -76,11 +76,11 @@ const getStatusLabel = (status: Quote['status']) => {
     case 'awaiting_payment':
       return 'Awaiting Payment';
     case 'paid':
-      return 'Paid';
+      return 'Payment Received';
     case 'po_submitted':
-      return 'PO Submitted';
+      return 'Processing Order';
     case 'po_confirmed':
-      return 'Order Confirmed';
+      return 'Shipping';
     case 'delivered':
       return 'Delivered';
     case 'accepted':
@@ -91,6 +91,38 @@ const getStatusLabel = (status: Quote['status']) => {
       return 'Expired';
     default:
       return status;
+  }
+};
+
+/**
+ * Get a descriptive subtitle for the status
+ */
+export const getStatusDescription = (status: Quote['status']): string => {
+  switch (status) {
+    case 'draft':
+      return 'Not yet submitted';
+    case 'sent':
+      return 'Ready to submit';
+    case 'buy_request_submitted':
+      return 'C&C is reviewing your order';
+    case 'under_cc_review':
+      return 'Being processed by our team';
+    case 'revision_requested':
+      return 'Please review and resubmit';
+    case 'cc_confirmed':
+      return 'Submit your PO to proceed';
+    case 'awaiting_payment':
+      return 'Complete payment to proceed';
+    case 'paid':
+      return 'Preparing your order';
+    case 'po_submitted':
+      return 'Confirming with supplier';
+    case 'po_confirmed':
+      return 'On its way to you';
+    case 'delivered':
+      return 'Order complete';
+    default:
+      return '';
   }
 };
 

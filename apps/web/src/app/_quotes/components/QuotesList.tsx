@@ -12,6 +12,7 @@ import {
   IconSearch,
   IconSend,
   IconTrash,
+  IconTruck,
 } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ColumnDef } from '@tanstack/react-table';
@@ -34,7 +35,7 @@ import type { Quote } from '@/database/schema';
 import { useTRPCClient } from '@/lib/trpc/browser';
 
 import QuoteDetailsDialog from './QuoteDetailsDialog';
-import QuoteStatusBadge, { statusNeedsAction } from './QuoteStatusBadge';
+import QuoteStatusBadge, { getStatusDescription, statusNeedsAction } from './QuoteStatusBadge';
 
 type QuoteStatus = Quote['status'];
 
@@ -48,8 +49,9 @@ interface StatusFilter {
 const statusFilters: StatusFilter[] = [
   { label: 'All Quotes', value: 'all', icon: IconFileText, color: 'text-text-primary' },
   { label: 'Action Required', value: 'action_required', icon: IconAlertCircle, color: 'text-text-warning' },
-  { label: 'In Progress', value: 'under_cc_review', icon: IconClock, color: 'text-text-brand' },
-  { label: 'Completed', value: 'po_confirmed', icon: IconCheck, color: 'text-text-muted' },
+  { label: 'Processing', value: 'under_cc_review', icon: IconClock, color: 'text-text-brand' },
+  { label: 'Shipping', value: 'po_confirmed', icon: IconTruck, color: 'text-emerald-600 dark:text-emerald-400' },
+  { label: 'Delivered', value: 'delivered', icon: IconCheck, color: 'text-text-muted' },
 ];
 
 /**
@@ -244,13 +246,24 @@ const QuotesList = () => {
     {
       accessorKey: 'status',
       header: 'Status',
-      cell: ({ row }) => (
-        <QuoteStatusBadge
-          status={row.original.status}
-          size="sm"
-          showActionIndicator
-        />
-      ),
+      cell: ({ row }) => {
+        const status = row.original.status;
+        const description = getStatusDescription(status);
+        return (
+          <div className="flex flex-col gap-0.5">
+            <QuoteStatusBadge
+              status={status}
+              size="sm"
+              showActionIndicator
+            />
+            {description && (
+              <Typography variant="bodyXs" colorRole="muted" className="max-w-[140px]">
+                {description}
+              </Typography>
+            )}
+          </div>
+        );
+      },
     },
     {
       accessorKey: 'createdAt',
@@ -402,10 +415,11 @@ const QuotesList = () => {
 
   // Calculate counts for filter badges
   const actionRequiredCount = quotes.filter((q) => statusNeedsAction(q.status)).length;
-  const inProgressCount = quotes.filter(
+  const processingCount = quotes.filter(
     (q) => q.status === 'buy_request_submitted' || q.status === 'under_cc_review' || q.status === 'paid' || q.status === 'po_submitted'
   ).length;
-  const completedCount = quotes.filter((q) => q.status === 'po_confirmed').length;
+  const shippingCount = quotes.filter((q) => q.status === 'po_confirmed').length;
+  const deliveredCount = quotes.filter((q) => q.status === 'delivered').length;
 
   return (
     <div className="flex flex-col gap-6">
@@ -415,8 +429,9 @@ const QuotesList = () => {
           const isActive = activeFilter === filter.value;
           let count = quotes.length;
           if (filter.value === 'action_required') count = actionRequiredCount;
-          if (filter.value === 'under_cc_review') count = inProgressCount;
-          if (filter.value === 'po_confirmed') count = completedCount;
+          if (filter.value === 'under_cc_review') count = processingCount;
+          if (filter.value === 'po_confirmed') count = shippingCount;
+          if (filter.value === 'delivered') count = deliveredCount;
 
           return (
             <button
