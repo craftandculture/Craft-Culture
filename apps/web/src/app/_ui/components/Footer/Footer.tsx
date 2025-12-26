@@ -1,12 +1,12 @@
 import Link from 'next/link';
 
 import WarehouseDataFeed from '@/app/_warehouse/components/WarehouseDataFeed';
-import fetchGitHubReleases from '@/utils/fetchGitHubReleases';
+import parseChangelog from '@/utils/parseChangelog';
 
-const Footer = async () => {
+const Footer = () => {
   const currentYear = new Date().getFullYear();
-  const releases = await fetchGitHubReleases();
-  const latestVersion = releases[0]?.version ?? '1.0.0';
+  const versions = parseChangelog();
+  const latestVersion = versions[0]?.version ?? '1.0.0';
 
   return (
     <footer className="border-border-primary mt-auto border-t bg-fill-secondary/30">
