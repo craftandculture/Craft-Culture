@@ -725,7 +725,7 @@ const QuotesForm = () => {
             <div className="w-14 shrink-0 text-center">
               <Typography
                 variant="bodyXs"
-                className="text-text-muted font-medium uppercase"
+                className="text-text-muted/70 uppercase"
               >
                 Year
               </Typography>
@@ -734,7 +734,7 @@ const QuotesForm = () => {
             <div className="w-14 shrink-0 text-center">
               <Typography
                 variant="bodyXs"
-                className="text-text-muted font-medium uppercase"
+                className="text-text-muted/70 uppercase"
               >
                 Qty
               </Typography>
@@ -743,7 +743,7 @@ const QuotesForm = () => {
             <div className="w-14 shrink-0 text-center">
               <Typography
                 variant="bodyXs"
-                className="text-text-muted font-medium uppercase"
+                className="text-text-muted/70 uppercase"
               >
                 Pack
               </Typography>
@@ -762,7 +762,7 @@ const QuotesForm = () => {
             <div className="flex w-16 shrink-0 items-center justify-end gap-1">
               <Typography
                 variant="bodyXs"
-                className="text-text-muted font-medium uppercase"
+                className="text-text-muted/70 uppercase"
               >
                 /Btl
               </Typography>
