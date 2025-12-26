@@ -31,6 +31,7 @@ const quotesConfirm = adminProcedure
       paymentMethod,
       paymentDetails,
       lineItemAdjustments,
+      oocFulfillments,
     } = input;
 
     // Verify quote exists and get quote owner's customer type
@@ -111,9 +112,12 @@ const quotesConfirm = adminProcedure
         }),
       };
 
-      // If we have adjustments, update the quote data and recalculate totals
-      if (lineItemAdjustments && Object.keys(lineItemAdjustments).length > 0) {
-        const existingData = (existingQuote.quoteData as { lineItems?: unknown[] }) || {};
+      // If we have adjustments or OOC fulfillments, update the quote data and recalculate totals
+      if (
+        (lineItemAdjustments && Object.keys(lineItemAdjustments).length > 0) ||
+        (oocFulfillments && oocFulfillments.length > 0)
+      ) {
+        const existingData = (existingQuote.quoteData as { lineItems?: unknown[]; outOfCatalogueRequests?: unknown[] }) || {};
         const lineItems = (existingQuote.lineItems as Array<{ productId: string; quantity: number }>) || [];
 
         // Type for adjustments from schema
@@ -134,13 +138,13 @@ const quotesConfirm = adminProcedure
         // Update line item pricing with adjustments
         const updatedLineItemPricing = lineItems
           .map((item) => {
-            const adjustment = lineItemAdjustments[item.productId] as LineItemAdjustment | undefined;
-            if (!adjustment || !adjustment.available) {
+            const adjustment = lineItemAdjustments?.[item.productId] as LineItemAdjustment | undefined;
+            if (lineItemAdjustments && (!adjustment || !adjustment.available)) {
               return null; // Item marked as unavailable
             }
 
-            const pricePerCase = adjustment.adjustedPricePerCase || 0;
-            const quantity = adjustment.confirmedQuantity || item.quantity;
+            const pricePerCase = adjustment?.adjustedPricePerCase || 0;
+            const quantity = adjustment?.confirmedQuantity || item.quantity;
             const lineItemTotalUsd = pricePerCase * quantity;
 
             return {
@@ -149,22 +153,36 @@ const quotesConfirm = adminProcedure
               basePriceUsd: pricePerCase,
               confirmedQuantity: quantity,
               originalQuantity: item.quantity,
-              adminNotes: adjustment.notes,
-              adminAlternatives: adjustment.adminAlternatives,
+              adminNotes: adjustment?.notes,
+              adminAlternatives: adjustment?.adminAlternatives,
             };
           })
           .filter((item): item is NonNullable<typeof item> => item !== null); // Remove unavailable items
 
-        // Calculate new total
-        const newTotalUsd = updatedLineItemPricing.reduce(
+        // Calculate regular line items total
+        const lineItemsTotalUsd = updatedLineItemPricing.reduce(
           (sum, item) => sum + item.lineItemTotalUsd,
           0,
         );
+
+        // Calculate OOC fulfillments total
+        const oocTotalUsd = oocFulfillments?.reduce(
+          (sum, item) => sum + item.pricePerCase * item.quantity,
+          0,
+        ) || 0;
+
+        // Combined total
+        const newTotalUsd = lineItemsTotalUsd + oocTotalUsd;
 
         updateData.quoteData = {
           ...existingData,
           lineItems: updatedLineItemPricing,
           adminAdjustments: lineItemAdjustments,
+          // Store fulfilled OOC items with pricing
+          fulfilledOocItems: oocFulfillments?.map((item) => ({
+            ...item,
+            lineItemTotalUsd: item.pricePerCase * item.quantity,
+          })),
         };
         updateData.totalUsd = newTotalUsd;
         updateData.totalAed = newTotalUsd * 3.67; // AED exchange rate

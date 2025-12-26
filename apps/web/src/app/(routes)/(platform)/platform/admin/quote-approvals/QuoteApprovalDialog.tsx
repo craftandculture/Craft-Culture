@@ -100,6 +100,18 @@ const QuoteApprovalDialog = ({
   // State for tracking which line item is expanded in review mode
   const [expandedItemId, setExpandedItemId] = useState<string | null>(null);
 
+  // State for out-of-catalogue item fulfillments (admin can add these to quote)
+  const [oocFulfillments, setOocFulfillments] = useState<
+    Record<
+      string,
+      {
+        include: boolean;
+        pricePerCase: number;
+        quantity: number;
+      }
+    >
+  >({});
+
   // State for delete confirmation
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
@@ -218,6 +230,7 @@ const QuoteApprovalDialog = ({
 
     // If under review and we have adjustments, calculate from adjustments
     if (quote.status === 'under_cc_review' && Object.keys(lineItemAdjustments).length > 0) {
+      // Sum of regular line items
       const adjustedTotalUsd = lineItems.reduce((sum, item) => {
         const adjustment = lineItemAdjustments[item.productId];
         if (!adjustment || !adjustment.available) return sum;
@@ -226,7 +239,14 @@ const QuoteApprovalDialog = ({
         return sum + pricePerCase * quantity;
       }, 0);
 
-      return displayCurrency === 'USD' ? adjustedTotalUsd : convertUsdToAed(adjustedTotalUsd);
+      // Add out-of-catalogue fulfillments
+      const oocTotalUsd = Object.values(oocFulfillments).reduce((sum, fulfillment) => {
+        if (!fulfillment.include) return sum;
+        return sum + (fulfillment.pricePerCase || 0) * (fulfillment.quantity || 0);
+      }, 0);
+
+      const totalUsd = adjustedTotalUsd + oocTotalUsd;
+      return displayCurrency === 'USD' ? totalUsd : convertUsdToAed(totalUsd);
     }
 
     // Otherwise use the quote total
@@ -234,7 +254,7 @@ const QuoteApprovalDialog = ({
       return quote.totalUsd;
     }
     return quote.totalAed ?? convertUsdToAed(quote.totalUsd);
-  }, [quote, displayCurrency, lineItemAdjustments, lineItems]);
+  }, [quote, displayCurrency, lineItemAdjustments, lineItems, oocFulfillments]);
 
   // Start C&C Review mutation
   const startReviewMutation = useMutation({
@@ -276,6 +296,18 @@ const QuoteApprovalDialog = ({
 
         if (hasInvalidAdjustments) {
           toast.error('Please confirm quantities and prices for all available items');
+          return;
+        }
+
+        // Validate OOC fulfillments - if included, must have valid price and quantity
+        const hasInvalidOocItems = Object.entries(oocFulfillments).some(
+          ([_, fulfillment]) =>
+            fulfillment.include &&
+            (fulfillment.quantity <= 0 || fulfillment.pricePerCase <= 0),
+        );
+
+        if (hasInvalidOocItems) {
+          toast.error('Please enter valid quantity and price for all included out-of-catalogue items');
           return;
         }
       }
@@ -326,6 +358,20 @@ const QuoteApprovalDialog = ({
         }
       }
 
+      // Build OOC fulfillments to send (only included items with request details)
+      const oocItemsToInclude = Object.entries(oocFulfillments)
+        .filter(([_, f]) => f.include && f.pricePerCase > 0 && f.quantity > 0)
+        .map(([requestId, f]) => {
+          const request = outOfCatalogueRequests.find((r) => (r.id || `ooc-${outOfCatalogueRequests.indexOf(r)}`) === requestId);
+          return {
+            requestId,
+            productName: request?.productName || 'Unknown Product',
+            vintage: request?.vintage,
+            quantity: f.quantity,
+            pricePerCase: f.pricePerCase,
+          };
+        });
+
       return trpcClient.quotes.confirm.mutate({
         quoteId: quote.id,
         deliveryLeadTime: deliveryLeadTime.trim(),
@@ -338,6 +384,7 @@ const QuoteApprovalDialog = ({
           quote.status === 'under_cc_review' && Object.keys(lineItemAdjustments).length > 0
             ? lineItemAdjustments
             : undefined,
+        oocFulfillments: oocItemsToInclude.length > 0 ? oocItemsToInclude : undefined,
       });
     },
     onSuccess: () => {
@@ -349,6 +396,7 @@ const QuoteApprovalDialog = ({
       setPaymentMethod('bank_transfer');
       setPaymentDetails({});
       setLineItemAdjustments({});
+      setOocFulfillments({});
       if (onOpenChange) onOpenChange(false);
     },
     onError: (error) => {
@@ -750,42 +798,152 @@ const QuoteApprovalDialog = ({
                   </div>
                 </div>
                 <div className="space-y-3">
-                  {outOfCatalogueRequests.map((request, index) => (
-                    <div
-                      key={request.id || index}
-                      className="rounded-lg bg-white border border-amber-200 p-4"
-                    >
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex-1 min-w-0">
-                          <Typography variant="bodySm" className="font-semibold text-amber-900">
-                            {request.productName}
-                          </Typography>
-                          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-xs text-amber-700">
-                            {request.vintage && (
-                              <span>Vintage: {request.vintage}</span>
-                            )}
-                            {request.quantity && (
-                              <span>Qty: {request.quantity} cases</span>
-                            )}
-                            {request.priceExpectation && (
-                              <span>Price expectation: {request.priceExpectation}</span>
+                  {outOfCatalogueRequests.map((request, index) => {
+                    const requestId = request.id || `ooc-${index}`;
+                    const fulfillment = oocFulfillments[requestId];
+                    const isIncluded = fulfillment?.include ?? false;
+                    const lineTotal = isIncluded ? (fulfillment?.pricePerCase || 0) * (fulfillment?.quantity || 0) : 0;
+
+                    return (
+                      <div
+                        key={requestId}
+                        className={`rounded-lg border p-4 transition-all ${
+                          isIncluded
+                            ? 'bg-fill-success/5 border-border-success'
+                            : 'bg-white border-amber-200'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex-1 min-w-0">
+                            <Typography variant="bodySm" className={`font-semibold ${isIncluded ? 'text-text-success' : 'text-amber-900'}`}>
+                              {request.productName}
+                            </Typography>
+                            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-xs text-amber-700">
+                              {request.vintage && (
+                                <span>Vintage: {request.vintage}</span>
+                              )}
+                              {request.quantity && (
+                                <span>Requested: {request.quantity} cases</span>
+                              )}
+                              {request.priceExpectation && (
+                                <span>Price expectation: {request.priceExpectation}</span>
+                              )}
+                            </div>
+                            {request.notes && (
+                              <Typography variant="bodyXs" className="mt-2 text-amber-600 italic">
+                                &ldquo;{request.notes}&rdquo;
+                              </Typography>
                             )}
                           </div>
-                          {request.notes && (
-                            <Typography variant="bodyXs" className="mt-2 text-amber-600 italic">
-                              &ldquo;{request.notes}&rdquo;
-                            </Typography>
-                          )}
                         </div>
+
+                        {/* Admin fulfillment controls - only show in review mode */}
+                        {quote.status === 'under_cc_review' && (
+                          <div className="mt-4 pt-4 border-t border-amber-200">
+                            <div className="flex items-center gap-4 flex-wrap">
+                              {/* Include toggle */}
+                              <label className="flex items-center gap-2 cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={isIncluded}
+                                  onChange={(e) => {
+                                    setOocFulfillments({
+                                      ...oocFulfillments,
+                                      [requestId]: {
+                                        include: e.target.checked,
+                                        pricePerCase: fulfillment?.pricePerCase || 0,
+                                        quantity: fulfillment?.quantity || request.quantity || 1,
+                                      },
+                                    });
+                                  }}
+                                  className="h-4 w-4 rounded border-border-muted text-fill-success focus:ring-fill-success"
+                                />
+                                <Typography variant="bodyXs" className="font-semibold">
+                                  Add to Quote
+                                </Typography>
+                              </label>
+
+                              {isIncluded && (
+                                <>
+                                  {/* Quantity */}
+                                  <div className="flex items-center gap-1.5">
+                                    <Typography variant="bodyXs" colorRole="muted">Qty:</Typography>
+                                    <input
+                                      type="number"
+                                      min={1}
+                                      value={fulfillment?.quantity || ''}
+                                      onChange={(e) => {
+                                        setOocFulfillments({
+                                          ...oocFulfillments,
+                                          [requestId]: {
+                                            ...fulfillment,
+                                            include: true,
+                                            quantity: parseInt(e.target.value, 10) || 0,
+                                          },
+                                        });
+                                      }}
+                                      className="w-16 rounded-md border border-border-muted px-2 py-1 text-sm text-center focus:border-border-brand focus:ring-1 focus:ring-fill-brand"
+                                    />
+                                  </div>
+
+                                  {/* Price per case */}
+                                  <div className="flex items-center gap-1.5">
+                                    <Typography variant="bodyXs" colorRole="muted">$/Case:</Typography>
+                                    <div className="relative">
+                                      <span className="absolute left-2 top-1/2 -translate-y-1/2 text-sm text-text-muted">$</span>
+                                      <input
+                                        type="number"
+                                        min={0}
+                                        step={0.01}
+                                        value={fulfillment?.pricePerCase || ''}
+                                        onChange={(e) => {
+                                          setOocFulfillments({
+                                            ...oocFulfillments,
+                                            [requestId]: {
+                                              ...fulfillment,
+                                              include: true,
+                                              pricePerCase: parseFloat(e.target.value) || 0,
+                                            },
+                                          });
+                                        }}
+                                        className="w-24 rounded-md border border-border-muted pl-5 pr-2 py-1 text-sm text-right focus:border-border-brand focus:ring-1 focus:ring-fill-brand"
+                                        placeholder="0.00"
+                                      />
+                                    </div>
+                                  </div>
+
+                                  {/* Line total */}
+                                  <div className="flex items-center gap-1.5 ml-auto">
+                                    <Typography variant="bodyXs" colorRole="muted">Total:</Typography>
+                                    <Typography variant="bodySm" className="font-bold text-text-success">
+                                      {formatPrice(
+                                        displayCurrency === 'AED' ? convertUsdToAed(lineTotal) : lineTotal,
+                                        displayCurrency
+                                      )}
+                                    </Typography>
+                                  </div>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        )}
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
-                <div className="mt-4 rounded-lg bg-amber-100 p-3">
-                  <Typography variant="bodyXs" className="text-amber-800">
-                    <strong>Note:</strong> These items are not included in the quote total. Follow up with the customer separately regarding availability and pricing.
-                  </Typography>
-                </div>
+                {quote.status === 'under_cc_review' ? (
+                  <div className="mt-4 rounded-lg bg-amber-100 p-3">
+                    <Typography variant="bodyXs" className="text-amber-800">
+                      <strong>Tip:</strong> Check &ldquo;Add to Quote&rdquo; and enter pricing to include these items in the quote total.
+                    </Typography>
+                  </div>
+                ) : (
+                  <div className="mt-4 rounded-lg bg-amber-100 p-3">
+                    <Typography variant="bodyXs" className="text-amber-800">
+                      <strong>Note:</strong> These items are not included in the quote total. Follow up with the customer separately regarding availability and pricing.
+                    </Typography>
+                  </div>
+                )}
               </div>
             )}
 

@@ -52,6 +52,18 @@ const confirmQuoteSchema = z.object({
       }),
     )
     .optional(),
+  // Out-of-catalogue items fulfilled by admin
+  oocFulfillments: z
+    .array(
+      z.object({
+        requestId: z.string(),
+        productName: z.string(),
+        vintage: z.string().optional(),
+        quantity: z.number().positive(),
+        pricePerCase: z.number().positive(),
+      }),
+    )
+    .optional(),
 });
 
 export default confirmQuoteSchema;
