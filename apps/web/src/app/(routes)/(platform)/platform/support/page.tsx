@@ -366,14 +366,25 @@ const SupportPage = () => {
               Once your quote is confirmed, here is how to complete your payment:
             </Typography>
 
+            <div className="mt-3 rounded-lg border border-border-brand bg-fill-brand/5 p-4">
+              <Typography variant="bodyXs" className="font-medium text-text-brand">
+                Important Note
+              </Typography>
+              <Typography variant="bodyXs" colorRole="muted" className="mt-1 leading-relaxed">
+                Craft & Culture does not directly handle transactions or process payments. All
+                payments are processed through our licensed distribution partners who hold the
+                appropriate licenses to sell alcoholic beverages.
+              </Typography>
+            </div>
+
             <div className="space-y-4">
               <div className="rounded-lg bg-fill-secondary/50 p-4">
                 <Typography variant="bodySm" className="mb-2 font-medium">
                   Bank Transfer
                 </Typography>
                 <Typography variant="bodyXs" colorRole="muted" className="leading-relaxed">
-                  Transfer the total amount to our UAE bank account. Bank details are provided in
-                  your confirmed quote email and in the quote details page.
+                  Transfer the total amount to our licensed partner&apos;s bank account. Bank
+                  details are provided in your confirmed quote email and in the quote details page.
                 </Typography>
               </div>
 
