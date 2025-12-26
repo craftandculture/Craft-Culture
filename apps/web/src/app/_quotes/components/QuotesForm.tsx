@@ -626,58 +626,41 @@ const QuotesForm = () => {
   };
 
   return (
-    <div className="space-y-6 md:space-y-8">
+    <div className="space-y-4 md:space-y-6">
       {/* Pricing Tool Section */}
-      <section className="space-y-4 rounded-xl border border-border-muted bg-surface-primary p-4 shadow-sm transition-shadow duration-300 hover:shadow-md md:space-y-5 md:p-6">
-        {/* Section Header */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <Typography variant="headingLg" className="font-semibold">
+      <section className="space-y-3 rounded-xl border border-border-muted bg-surface-primary p-3 shadow-sm transition-shadow duration-300 hover:shadow-md md:space-y-4 md:p-4">
+        {/* Compact Header Row */}
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-3">
+            <Typography variant="headingMd" className="font-semibold">
               Quotation Builder
             </Typography>
             <LiveStatus />
           </div>
-          <Typography variant="bodySm" colorRole="muted">
-            Select products and quantities to generate your custom quote
-          </Typography>
-        </div>
-
-        {/* Inventory Status Banner */}
-        <div className="flex flex-col gap-2 rounded-lg border border-border-muted bg-surface-muted/30 p-3 sm:flex-row sm:items-center sm:justify-center sm:gap-6">
-          {/* Local Stock - Primary */}
-          <div className="flex items-center gap-2">
-            <div className="flex h-6 w-6 items-center justify-center rounded-full bg-green-500/10">
-              <IconCircleCheck className="h-4 w-4 text-green-600" />
+          {/* Inventory Status - Inline */}
+          <div className="flex items-center gap-3 text-xs">
+            <div className="flex items-center gap-1.5">
+              <IconCircleCheck className="h-3.5 w-3.5 text-green-600" />
+              <span className="font-medium text-green-700">Local Stock</span>
+              <span className="text-text-muted">24-48hrs</span>
             </div>
-            <div className="flex flex-col sm:flex-row sm:items-baseline sm:gap-1.5">
-              <Typography variant="bodySm" className="font-semibold text-green-700">
-                Local Stock
-              </Typography>
-              <Typography variant="bodyXs" className="text-text-muted">
-                Ships 24-48 hrs
-              </Typography>
+            <span className="text-text-muted">·</span>
+            <div className="flex items-center gap-1.5 text-text-muted">
+              <IconPlaneInflight className="h-3.5 w-3.5" />
+              <span>Air freight {leadTimeMin}-{leadTimeMax}d</span>
             </div>
-          </div>
-          {/* Divider */}
-          <div className="hidden h-4 w-px bg-border-muted sm:block" />
-          {/* Air Freight - Secondary */}
-          <div className="flex items-center gap-2 opacity-60">
-            <IconPlaneInflight className="h-4 w-4 text-text-muted" />
-            <Typography variant="bodyXs" className="text-text-muted">
-              Additional items via air freight · {leadTimeMin}-{leadTimeMax} days
-            </Typography>
           </div>
         </div>
 
         {/* B2C Pricing Banner + Currency Toggle Row */}
-        <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center justify-between gap-3">
           {/* B2C All-Inclusive Pricing - Compact */}
           {customerType === 'b2c' && (
-            <div className="flex items-center gap-2 rounded-md border border-border-brand/30 bg-fill-brand/5 px-2.5 py-1.5">
-              <IconPackage className="h-3.5 w-3.5 shrink-0 text-text-brand" />
-              <Typography variant="bodyXs" className="text-text-brand">
-                <span className="font-semibold">All-Inclusive:</span>{' '}
-                <span className="text-text-muted">Freight, duties & cold chain delivery included</span>
+            <div className="flex items-center gap-1.5 rounded border border-border-brand/30 bg-fill-brand/5 px-2 py-1">
+              <IconPackage className="h-3 w-3 shrink-0 text-text-brand" />
+              <Typography variant="bodyXs" className="text-text-brand text-[11px]">
+                <span className="font-semibold">All-Inclusive</span>{' '}
+                <span className="text-text-muted hidden sm:inline">· Freight, duties & delivery</span>
               </Typography>
             </div>
           )}
@@ -686,15 +669,15 @@ const QuotesForm = () => {
           {customerType !== 'b2c' && <div />}
 
           {/* Currency Toggle */}
-          <div className="flex shrink-0 items-center gap-2">
-            <Typography variant="bodyXs" className="text-text-muted font-medium">
+          <div className="flex shrink-0 items-center gap-1.5">
+            <Typography variant="bodyXs" className="text-text-muted text-[11px]">
               Currency:
             </Typography>
             <div className="flex rounded border border-border-muted bg-fill-muted p-px">
               <button
                 type="button"
                 onClick={() => setDisplayCurrency('USD')}
-                className={`rounded-sm px-2 py-0.5 text-xs font-medium transition-colors ${
+                className={`rounded-sm px-1.5 py-px text-[11px] font-medium transition-colors ${
                   displayCurrency === 'USD'
                     ? 'bg-fill-primary text-text-primary'
                     : 'text-text-muted hover:text-text-primary'
@@ -705,7 +688,7 @@ const QuotesForm = () => {
               <button
                 type="button"
                 onClick={() => setDisplayCurrency('AED')}
-                className={`rounded-sm px-2 py-0.5 text-xs font-medium transition-colors ${
+                className={`rounded-sm px-1.5 py-px text-[11px] font-medium transition-colors ${
                   displayCurrency === 'AED'
                     ? 'bg-fill-primary text-text-primary'
                     : 'text-text-muted hover:text-text-primary'
@@ -1057,32 +1040,15 @@ const QuotesForm = () => {
       )}
       </section>
 
-      {/* Section Divider */}
-      <div className="relative my-4 md:my-6">
-        <div className="absolute inset-0 flex items-center" aria-hidden="true">
-          <div className="w-full border-t border-border-muted" />
-        </div>
-        <div className="relative flex justify-center">
-          <span className="bg-background-primary px-6 py-1">
-            <Typography
-              variant="bodySm"
-              className="text-sm font-semibold uppercase tracking-widest text-text-muted md:text-base"
-            >
-              Product Catalogue
-            </Typography>
-          </span>
-        </div>
-      </div>
-
       {/* Product Catalogue Section */}
-      <section className="space-y-4 rounded-xl border border-border-muted bg-surface-primary p-4 shadow-sm transition-shadow duration-300 hover:shadow-md md:p-6">
-        {/* Section Header */}
-        <div className="space-y-2">
-          <Typography variant="headingLg" className="font-semibold">
-            Product Inventory
+      <section className="space-y-3 rounded-xl border border-border-muted bg-surface-primary p-3 shadow-sm transition-shadow duration-300 hover:shadow-md md:space-y-4 md:p-4">
+        {/* Section Header - Compact */}
+        <div className="flex items-center justify-between">
+          <Typography variant="headingMd" className="font-semibold">
+            Product Catalogue
           </Typography>
-          <Typography variant="bodySm" colorRole="muted">
-            View and select from our complete wine & spirits collection
+          <Typography variant="bodyXs" colorRole="muted">
+            Select products to add to your quote
           </Typography>
         </div>
 
