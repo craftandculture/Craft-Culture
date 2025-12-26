@@ -154,9 +154,15 @@ const TermsOfUsePage = () => {
                 6. Payment Terms
               </Typography>
               <Typography variant="bodySm" colorRole="muted" className="mb-3 leading-relaxed">
-                Payment is required before order processing begins. We accept bank transfers to our
-                UAE-licensed entity. Payment must be made in full within the timeframe specified in
-                your confirmed quote.
+                <strong>Important:</strong> Craft & Culture does not directly handle transactions or
+                process payments. All payment processing and financial transactions are conducted
+                through our licensed distribution partners who hold the appropriate licenses to sell
+                alcoholic beverages in their respective jurisdictions.
+              </Typography>
+              <Typography variant="bodySm" colorRole="muted" className="mb-3 leading-relaxed">
+                Payment is required before order processing begins. Payment details, including bank
+                transfer information for our licensed partners, will be provided in your confirmed
+                quote. Payment must be made in full within the timeframe specified.
               </Typography>
               <Typography variant="bodySm" colorRole="muted" className="mb-3 leading-relaxed">
                 You are responsible for all applicable taxes, customs duties, and fees associated
