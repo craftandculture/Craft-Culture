@@ -691,14 +691,14 @@ const QuotesForm = () => {
           <Typography variant="bodyXs" className="text-text-muted font-medium">
             Currency:
           </Typography>
-            <div className="flex gap-0.5 rounded-md border border-border-muted bg-fill-muted p-0.5">
+            <div className="flex rounded border border-border-muted bg-fill-muted p-px">
               <button
                 type="button"
                 onClick={() => setDisplayCurrency('USD')}
-                className={`rounded px-2 py-1 text-xs font-medium transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+                className={`rounded-sm px-2 py-0.5 text-xs font-medium transition-colors ${
                   displayCurrency === 'USD'
-                    ? 'bg-fill-primary text-text-primary shadow-sm'
-                    : 'text-text-muted hover:text-text-primary hover:bg-fill-primary/50'
+                    ? 'bg-fill-primary text-text-primary'
+                    : 'text-text-muted hover:text-text-primary'
                 }`}
               >
                 USD
@@ -706,10 +706,10 @@ const QuotesForm = () => {
               <button
                 type="button"
                 onClick={() => setDisplayCurrency('AED')}
-                className={`rounded px-2 py-1 text-xs font-medium transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+                className={`rounded-sm px-2 py-0.5 text-xs font-medium transition-colors ${
                   displayCurrency === 'AED'
-                    ? 'bg-fill-primary text-text-primary shadow-sm'
-                    : 'text-text-muted hover:text-text-primary hover:bg-fill-primary/50'
+                    ? 'bg-fill-primary text-text-primary'
+                    : 'text-text-muted hover:text-text-primary'
                 }`}
               >
                 AED
