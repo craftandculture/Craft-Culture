@@ -1,6 +1,6 @@
 'use client';
 
-import { IconCalendar, IconInfoCircle, IconPlus } from '@tabler/icons-react';
+import { IconArrowsExchange, IconInfoCircle, IconPlus } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 
@@ -81,7 +81,7 @@ const AlternativeVintagesPicker = ({
           }`}
           title={hasSelections ? `${selectedVintages.length} alternative vintage${selectedVintages.length === 1 ? '' : 's'}` : 'Add alternative vintages'}
         >
-          <IconCalendar className="h-4 w-4" />
+          <IconArrowsExchange className="h-4 w-4" />
           {hasSelections && (
             <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-fill-brand px-1 text-[10px] font-bold text-white">
               {selectedVintages.length}
