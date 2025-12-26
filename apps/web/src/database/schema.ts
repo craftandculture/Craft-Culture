@@ -460,6 +460,13 @@ export const quotes = pgTable(
     deliveredConfirmedBy: uuid('delivered_confirmed_by').references(() => users.id, {
       onDelete: 'set null',
     }),
+    // Commission payout tracking (for B2C users)
+    commissionPaidOutAt: timestamp('commission_paid_out_at', { mode: 'date' }),
+    commissionPaidOutBy: uuid('commission_paid_out_by').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+    commissionPayoutReference: text('commission_payout_reference'),
+    commissionPayoutNotes: text('commission_payout_notes'),
     ...timestamps,
   },
   (table) => [
