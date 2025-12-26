@@ -56,17 +56,17 @@ const OutOfCatalogueRequests = ({
   };
 
   return (
-    <div className="rounded-xl border border-border-muted bg-surface-muted/30 p-4">
-      <div className="flex items-center justify-between">
+    <div className="rounded-lg border border-border-muted bg-surface-muted/30 p-3">
+      <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-fill-brand/10">
-            <IconBottle className="h-4 w-4 text-text-brand" />
+          <div className="flex h-7 w-7 items-center justify-center rounded-full bg-fill-brand/10">
+            <IconBottle className="h-3.5 w-3.5 text-text-brand" />
           </div>
           <div>
-            <Typography variant="bodySm" className="font-semibold">
+            <Typography variant="bodyXs" className="font-semibold">
               Can&apos;t find what you&apos;re looking for?
             </Typography>
-            <Typography variant="bodyXs" colorRole="muted">
+            <Typography variant="bodyXs" colorRole="muted" className="text-[11px]">
               Request products not in our catalogue
             </Typography>
           </div>
@@ -74,7 +74,7 @@ const OutOfCatalogueRequests = ({
         <Button
           type="button"
           variant="outline"
-          size="sm"
+          size="xs"
           onClick={handleAddItem}
         >
           <ButtonContent iconLeft={IconPlus}>Add Request</ButtonContent>
@@ -83,9 +83,9 @@ const OutOfCatalogueRequests = ({
 
       {/* Collapsible content */}
       {isExpanded && items.length > 0 && (
-        <div className="mt-4 space-y-3">
-          <div className="rounded-lg border border-border-brand/20 bg-fill-brand/5 p-3">
-            <Typography variant="bodyXs" colorRole="muted">
+        <div className="mt-3 space-y-2">
+          <div className="rounded-md border border-border-brand/20 bg-fill-brand/5 px-2.5 py-2">
+            <Typography variant="bodyXs" colorRole="muted" className="text-[11px]">
               These requests will be reviewed by our team. They don&apos;t affect your
               quote total - we&apos;ll follow up with availability and pricing.
             </Typography>
@@ -94,25 +94,25 @@ const OutOfCatalogueRequests = ({
           {items.map((item, index) => (
             <div
               key={item.id}
-              className="rounded-lg border border-border-muted bg-surface-primary p-4 shadow-sm"
+              className="rounded-md border border-border-muted bg-surface-primary p-3 shadow-sm"
             >
-              <div className="mb-3 flex items-center justify-between">
-                <Typography variant="bodyXs" colorRole="muted" className="font-medium">
+              <div className="mb-2 flex items-center justify-between">
+                <Typography variant="bodyXs" colorRole="muted" className="font-medium text-[11px]">
                   Request #{index + 1}
                 </Typography>
                 <button
                   type="button"
                   onClick={() => handleRemoveItem(item.id)}
-                  className="rounded-md p-1 text-text-muted hover:bg-fill-muted hover:text-text-danger transition-colors"
+                  className="rounded p-0.5 text-text-muted hover:bg-fill-muted hover:text-text-danger transition-colors"
                 >
-                  <IconTrash className="h-4 w-4" />
+                  <IconTrash className="h-3.5 w-3.5" />
                 </button>
               </div>
 
-              <div className="grid gap-3 sm:grid-cols-2">
+              <div className="grid gap-2 sm:grid-cols-2">
                 {/* Product Name */}
                 <div className="sm:col-span-2">
-                  <Typography variant="bodyXs" colorRole="muted" className="mb-1">
+                  <Typography variant="bodyXs" colorRole="muted" className="mb-0.5 text-[11px]">
                     Product Name <span className="text-red-500">*</span>
                   </Typography>
                   <Input
@@ -128,7 +128,7 @@ const OutOfCatalogueRequests = ({
 
                 {/* Vintage */}
                 <div>
-                  <Typography variant="bodyXs" colorRole="muted" className="mb-1">
+                  <Typography variant="bodyXs" colorRole="muted" className="mb-0.5 text-[11px]">
                     Vintage (Year)
                   </Typography>
                   <Input
@@ -144,7 +144,7 @@ const OutOfCatalogueRequests = ({
 
                 {/* Quantity */}
                 <div>
-                  <Typography variant="bodyXs" colorRole="muted" className="mb-1">
+                  <Typography variant="bodyXs" colorRole="muted" className="mb-0.5 text-[11px]">
                     Quantity (Cases)
                   </Typography>
                   <Input
@@ -163,7 +163,7 @@ const OutOfCatalogueRequests = ({
 
                 {/* Price Expectation */}
                 <div className="sm:col-span-2">
-                  <Typography variant="bodyXs" colorRole="muted" className="mb-1">
+                  <Typography variant="bodyXs" colorRole="muted" className="mb-0.5 text-[11px]">
                     Price Expectation (Optional)
                   </Typography>
                   <Input
@@ -179,7 +179,7 @@ const OutOfCatalogueRequests = ({
 
                 {/* Notes */}
                 <div className="sm:col-span-2">
-                  <Typography variant="bodyXs" colorRole="muted" className="mb-1">
+                  <Typography variant="bodyXs" colorRole="muted" className="mb-0.5 text-[11px]">
                     Additional Notes
                   </Typography>
                   <textarea
@@ -189,7 +189,7 @@ const OutOfCatalogueRequests = ({
                       handleUpdateItem(item.id, { notes: e.target.value })
                     }
                     rows={2}
-                    className="min-h-[60px] w-full resize-none rounded-lg border border-b-2 border-border-primary bg-fill-primary px-2.5 py-2 text-sm font-medium tracking-tight text-text-primary transition-all duration-200 placeholder:text-text-muted/60 hover:border-border-primary-hover focus:shadow-sm focus:outline-none focus:ring-2 focus:ring-border-primary"
+                    className="min-h-[50px] w-full resize-none rounded-md border border-b-2 border-border-primary bg-fill-primary px-2 py-1.5 text-xs font-medium tracking-tight text-text-primary transition-all duration-200 placeholder:text-text-muted/60 hover:border-border-primary-hover focus:shadow-sm focus:outline-none focus:ring-2 focus:ring-border-primary"
                   />
                 </div>
               </div>
@@ -200,7 +200,7 @@ const OutOfCatalogueRequests = ({
           <Button
             type="button"
             variant="ghost"
-            size="sm"
+            size="xs"
             onClick={handleAddItem}
             className="w-full"
           >
