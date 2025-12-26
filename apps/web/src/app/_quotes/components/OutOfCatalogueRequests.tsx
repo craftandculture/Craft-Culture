@@ -1,6 +1,6 @@
 'use client';
 
-import { IconPlus, IconTrash, IconWine } from '@tabler/icons-react';
+import { IconBottle, IconPlus, IconTrash } from '@tabler/icons-react';
 import { useState } from 'react';
 
 import Button from '@/app/_ui/components/Button/Button';
@@ -60,7 +60,7 @@ const OutOfCatalogueRequests = ({
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-fill-brand/10">
-            <IconWine className="h-4 w-4 text-text-brand" />
+            <IconBottle className="h-4 w-4 text-text-brand" />
           </div>
           <div>
             <Typography variant="bodySm" className="font-semibold">
