@@ -1,525 +1,465 @@
+'use client';
+
 import {
-  IconBuildingWarehouse,
-  IconChartLine,
+  IconCreditCard,
+  IconHelp,
   IconMail,
-  IconPackage,
-  IconTruck,
+  IconRocket,
+  IconShoppingCart,
+  IconTimeline,
 } from '@tabler/icons-react';
-import Image from 'next/image';
 import Link from 'next/link';
 
-import Card from '@/app/_ui/components/Card/Card';
-import CardContent from '@/app/_ui/components/Card/CardContent';
-import CardDescription from '@/app/_ui/components/Card/CardDescription';
-import CardProse from '@/app/_ui/components/Card/CardProse';
-import CardTitle from '@/app/_ui/components/Card/CardTitle';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Typography from '@/app/_ui/components/Typography/Typography';
 
+import FAQAccordion from './FAQAccordion';
+import HelpNavigation from './HelpNavigation';
+import HelpSection from './HelpSection';
+
+const faqItems = [
+  {
+    question: 'How long does account approval take?',
+    answer:
+      'Account approval typically takes 1-2 hours during business hours. You will receive an email notification once your account has been approved and you can access the full platform.',
+  },
+  {
+    question: 'Can I modify a quote after submitting it?',
+    answer:
+      'Once a quote is submitted for review, you cannot modify it directly. If changes are needed, our team may request a revision, which will allow you to update the quote. For urgent changes, contact our support team.',
+  },
+  {
+    question: 'What currencies are supported?',
+    answer:
+      'All prices are displayed in both USD (US Dollars) and AED (UAE Dirhams). You can toggle between currencies using the currency switch in the quote builder. Payments are typically processed in AED.',
+  },
+  {
+    question: 'How do I track my order?',
+    answer:
+      'You can track your order status in the "My Quotes" section. Each quote shows its current status, from submission through delivery. You will also receive email notifications at key stages of your order.',
+  },
+  {
+    question: 'What if a product is out of stock?',
+    answer:
+      'If a product becomes unavailable, our team will contact you with alternatives during the review process. We source from a global network, so we can often find similar products or alternative vintages.',
+  },
+  {
+    question: 'What payment methods are accepted?',
+    answer:
+      'We accept bank transfers to our licensed UAE entity. Payment details are provided once your quote is confirmed. A payment link option may also be available for certain orders.',
+  },
+  {
+    question: 'How long does delivery take?',
+    answer:
+      'Delivery times depend on your location within the GCC region. Most orders within the UAE are delivered within 3-5 business days after payment confirmation. Cross-border deliveries may take longer.',
+  },
+  {
+    question: 'Is there a minimum order quantity?',
+    answer:
+      'There is no strict minimum order quantity for individual buyers. However, some products may have minimum case requirements. These will be shown in the product details.',
+  },
+];
+
 const SupportPage = () => {
   return (
-    <main className="container py-6 sm:py-8 md:py-12 lg:py-16">
-      <Card className="mx-auto w-full max-w-5xl">
-        <CardContent className="p-4 sm:p-6 md:p-8">
-          <CardProse>
-            <CardTitle>Support & Information</CardTitle>
-            <CardDescription colorRole="muted">
-              Comprehensive information about our products, infrastructure, and operational
-              capabilities
-            </CardDescription>
-          </CardProse>
+    <main className="container py-6 md:py-10">
+      <div className="mx-auto w-full max-w-3xl">
+        {/* Header */}
+        <div className="mb-6 text-center">
+          <Typography variant="headingLg" className="mb-2">
+            Help Center
+          </Typography>
+          <Typography variant="bodySm" colorRole="muted">
+            Everything you need to know about using Pocket Cellar
+          </Typography>
+        </div>
 
-          <div className="mt-6 space-y-6 sm:mt-8 sm:space-y-8">
-            {/* Product Sourcing */}
-            <section className="rounded-lg border border-border-muted bg-fill-secondary/30 p-4 sm:p-6">
-              <div className="mb-4 flex items-start gap-3 sm:items-center">
-                <div className="flex-shrink-0 rounded-lg bg-fill-accent/10 p-2">
-                  <Icon icon={IconPackage} size="md" colorRole="brand" />
-                </div>
-                <Typography variant="headingSm" className="font-semibold">
-                  Product Sourcing
-                </Typography>
-              </div>
-              <div className="space-y-3">
-                <Typography variant="bodySm" colorRole="muted" className="leading-relaxed">
-                  All products in our catalogue are sourced through Craft & Culture&apos;s extensive
-                  global network of trusted partners across the wine and spirits industry.
-                </Typography>
-                <Typography variant="bodySm" colorRole="muted" className="leading-relaxed">
-                  We work directly with brands and producers to secure authentic, high-quality
-                  products tailored for the GCC region. Every item we handle undergoes a rigorous
-                  sourcing and verification process — including provenance checks, quality
-                  assurance, and full compliance with regional import and distribution regulations.
-                </Typography>
-                <Typography variant="bodySm" colorRole="muted" className="leading-relaxed">
-                  This approach ensures not only the integrity and traceability of every bottle but
-                  also delivers the consistency and confidence our partners expect when operating in
-                  tightly regulated markets such as the UAE and wider Gulf region.
-                </Typography>
-              </div>
-            </section>
+        {/* Navigation */}
+        <HelpNavigation />
 
-            {/* Warehouse & Storage */}
-            <section className="rounded-lg border border-border-muted bg-fill-secondary/30 p-4 sm:p-6">
-              <div className="mb-4 flex items-start gap-3 sm:items-center">
-                <div className="flex-shrink-0 rounded-lg bg-fill-accent/10 p-2">
-                  <Icon icon={IconBuildingWarehouse} size="md" colorRole="brand" />
-                </div>
-                <Typography variant="headingSm" className="font-semibold">
-                  Warehouse & Storage Facilities
-                </Typography>
-              </div>
+        {/* Sections */}
+        <div className="space-y-6">
+          {/* Getting Started */}
+          <HelpSection id="getting-started" icon={IconRocket} title="Getting Started">
+            <Typography variant="bodySm" colorRole="muted" className="leading-relaxed">
+              Welcome to Pocket Cellar, your personal wine concierge for the GCC region. Here is how
+              to get started:
+            </Typography>
 
-              <Typography variant="bodySm" colorRole="muted" className="mb-5 leading-relaxed">
-                All products are stored within Craft & Culture&apos;s state-of-the-art bonded
-                warehouse facility in the United Arab Emirates, purpose-built for the optimal
-                storage and handling of fine wines and premium spirits.
-              </Typography>
-
-              {/* Facility Overview */}
-              <div className="mb-5 rounded-md bg-background-primary/50 p-4">
-                <Typography variant="bodyXs" className="mb-2 font-semibold">
-                  Bonded Warehouse Facility
+            <div className="space-y-3">
+              <div className="rounded-lg bg-fill-secondary/50 p-4">
+                <Typography variant="bodySm" className="mb-2 font-medium">
+                  1. Account Approval
                 </Typography>
                 <Typography variant="bodyXs" colorRole="muted" className="leading-relaxed">
-                  Our bonded warehouse facility enables duty-free product storage until
-                  distribution or sale, optimizing cash flow and minimizing upfront costs for our
-                  partners across the GCC region.
+                  After signing up, your account will be reviewed by our team. This typically takes
+                  1-2 hours during business hours. You will receive an email once approved.
                 </Typography>
               </div>
 
-              {/* Infrastructure & Design */}
-              <div className="mb-5">
-                <Typography variant="bodyXs" className="mb-3 font-semibold">
-                  Infrastructure & Design
-                </Typography>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="rounded-md border border-border-muted bg-background-primary/50 p-3">
-                    <Typography variant="bodyXs" className="mb-2 font-medium">
-                      Modular Architecture
-                    </Typography>
-                    <ul className="ml-4 space-y-1">
-                      <Typography
-                        variant="bodyXs"
-                        colorRole="muted"
-                        className="list-item list-disc"
-                      >
-                        110mm insulated sandwich panels with interlocking joints
-                      </Typography>
-                      <Typography
-                        variant="bodyXs"
-                        colorRole="muted"
-                        className="list-item list-disc"
-                      >
-                        150 square meter modules
-                      </Typography>
-                      <Typography
-                        variant="bodyXs"
-                        colorRole="muted"
-                        className="list-item list-disc"
-                      >
-                        Scalable design for seamless expansion
-                      </Typography>
-                    </ul>
-                  </div>
-                  <div className="rounded-md border border-border-muted bg-background-primary/50 p-3">
-                    <Typography variant="bodyXs" className="mb-2 font-medium">
-                      Climate Control
-                    </Typography>
-                    <ul className="ml-4 space-y-1">
-                      <Typography
-                        variant="bodyXs"
-                        colorRole="muted"
-                        className="list-item list-disc"
-                      >
-                        Target temperature: 13-14°C
-                      </Typography>
-                      <Typography
-                        variant="bodyXs"
-                        colorRole="muted"
-                        className="list-item list-disc"
-                      >
-                        Redundant chiller architecture
-                      </Typography>
-                      <Typography
-                        variant="bodyXs"
-                        colorRole="muted"
-                        className="list-item list-disc"
-                      >
-                        Optimal for fine wines and premium spirits
-                      </Typography>
-                    </ul>
-                  </div>
-                </div>
-              </div>
-
-              {/* Monitoring Systems */}
-              <div className="mb-5">
-                <Typography variant="bodyXs" className="mb-3 font-semibold">
-                  Advanced Monitoring Systems
-                </Typography>
-                <div className="space-y-3">
-                  <div className="rounded-md border border-border-muted bg-background-primary/50 p-3">
-                    <Typography variant="bodyXs" className="mb-2 font-medium">
-                      Temperature & Humidity Monitoring
-                    </Typography>
-                    <ul className="ml-4 space-y-1">
-                      <Typography
-                        variant="bodyXs"
-                        colorRole="muted"
-                        className="list-item list-disc"
-                      >
-                        Real-time multi-position sensors
-                      </Typography>
-                      <Typography
-                        variant="bodyXs"
-                        colorRole="muted"
-                        className="list-item list-disc"
-                      >
-                        Automated alerts for parameter deviations
-                      </Typography>
-                      <Typography
-                        variant="bodyXs"
-                        colorRole="muted"
-                        className="list-item list-disc"
-                      >
-                        Humidity control for label and cork preservation
-                      </Typography>
-                    </ul>
-                  </div>
-                  <div className="rounded-md border border-border-muted bg-background-primary/50 p-3">
-                    <Typography variant="bodyXs" className="mb-2 font-medium">
-                      Proprietary Liquid Monitoring
-                    </Typography>
-                    <Typography variant="bodyXs" colorRole="muted" className="mb-3 leading-relaxed">
-                      In-house designed system tracking liquid temperature directly, ensuring
-                      product authenticity and integrity for investment-grade wines.
-                    </Typography>
-                    <div className="overflow-hidden rounded-md border border-border-muted">
-                      <Image
-                        src="https://craft-and-culture.gitbook.io/accessmiddleeast/~gitbook/image?url=https%3A%2F%2F1032101154-files.gitbook.io%2F%7E%2Ffiles%2Fv0%2Fb%2Fgitbook-x-prod.appspot.com%2Fo%2Fspaces%252FzevGLhW4lSYr4ZX17ksK%252Fuploads%252F3R8NkKzhCBHMX9TP4D6Z%252FIMG_4210%25202.JPG%3Falt%3Dmedia%26token%3D00f96b1b-970b-4303-bbfb-8ec3f9ed5bf4&width=400&dpr=2&quality=85&sign=d4759cc7&sv=2"
-                        alt="Proprietary liquid temperature monitoring system for wine storage"
-                        width={400}
-                        height={300}
-                        className="h-auto w-full"
-                        unoptimized
-                      />
-                    </div>
-                  </div>
-                  <div className="rounded-md border border-border-muted bg-background-primary/50 p-3">
-                    <Typography variant="bodyXs" className="mb-2 font-medium">
-                      Air Quality Control
-                    </Typography>
-                    <ul className="ml-4 space-y-1">
-                      <Typography
-                        variant="bodyXs"
-                        colorRole="muted"
-                        className="list-item list-disc"
-                      >
-                        Particle size counting at multiple levels
-                      </Typography>
-                      <Typography
-                        variant="bodyXs"
-                        colorRole="muted"
-                        className="list-item list-disc"
-                      >
-                        CO₂ monitoring systems
-                      </Typography>
-                      <Typography
-                        variant="bodyXs"
-                        colorRole="muted"
-                        className="list-item list-disc"
-                      >
-                        Comprehensive environmental tracking dashboard
-                      </Typography>
-                    </ul>
-                  </div>
-                </div>
-              </div>
-
-              {/* Security & Additional Features Grid */}
-              <div className="mb-5 grid gap-4 sm:grid-cols-2">
-                <div>
-                  <Typography variant="bodyXs" className="mb-3 font-semibold">
-                    Security & Access Control
-                  </Typography>
-                  <ul className="ml-4 space-y-1">
-                    <Typography variant="bodyXs" colorRole="muted" className="list-item list-disc">
-                      24/7 CCTV with HD cameras and PTZ tracking
-                    </Typography>
-                    <Typography variant="bodyXs" colorRole="muted" className="list-item list-disc">
-                      Restricted personnel access protocols
-                    </Typography>
-                    <Typography variant="bodyXs" colorRole="muted" className="list-item list-disc">
-                      Door sensors with audible alarms
-                    </Typography>
-                    <Typography variant="bodyXs" colorRole="muted" className="list-item list-disc">
-                      Environmental deviation alerts
-                    </Typography>
-                    <Typography variant="bodyXs" colorRole="muted" className="list-item list-disc">
-                      Full asset protection monitoring
-                    </Typography>
-                  </ul>
-                </div>
-                <div>
-                  <Typography variant="bodyXs" className="mb-3 font-semibold">
-                    Additional Features
-                  </Typography>
-                  <ul className="ml-4 space-y-1">
-                    <Typography variant="bodyXs" colorRole="muted" className="list-item list-disc">
-                      Motion-activated LED lighting
-                    </Typography>
-                    <Typography variant="bodyXs" colorRole="muted" className="list-item list-disc">
-                      Daily sanitation with food-safe products
-                    </Typography>
-                    <Typography variant="bodyXs" colorRole="muted" className="list-item list-disc">
-                      Recorded cleaning logs
-                    </Typography>
-                    <Typography variant="bodyXs" colorRole="muted" className="list-item list-disc">
-                      Configurable racking systems
-                    </Typography>
-                    <Typography variant="bodyXs" colorRole="muted" className="list-item list-disc">
-                      Real-time inventory tracking
-                    </Typography>
-                  </ul>
-                </div>
-              </div>
-
-              {/* Monitoring Dashboard */}
-              <div>
-                <Typography variant="bodyXs" className="mb-3 font-semibold">
-                  Real-Time Monitoring Dashboard
-                </Typography>
-                <Typography variant="bodyXs" colorRole="muted" className="mb-3 leading-relaxed">
-                  Our comprehensive monitoring dashboard provides real-time visibility into all
-                  environmental parameters across multiple zones, including air temperature, liquid
-                  temperature, humidity levels, air quality metrics, and motion detection — ensuring
-                  complete oversight and rapid response to any deviations.
-                </Typography>
-                <div className="overflow-hidden rounded-lg border border-border-muted shadow-sm">
-                  <Image
-                    src="https://craft-and-culture.gitbook.io/accessmiddleeast/~gitbook/image?url=https%3A%2F%2F1032101154-files.gitbook.io%2F%7E%2Ffiles%2Fv0%2Fb%2Fgitbook-x-prod.appspot.com%2Fo%2Fspaces%252FzevGLhW4lSYr4ZX17ksK%252Fuploads%252Fc0fflvuLeHTye4jxs7zm%252FScreenshot%25202025-08-07%2520at%252010.44.45.png%3Falt%3Dmedia%26token%3D6ffe9e93-57b6-40b0-8479-24f0e322f325&width=600&dpr=2&quality=85&sign=9ce3d136&sv=2"
-                    alt="Warehouse monitoring system dashboard showing real-time temperature, humidity, and environmental controls"
-                    width={600}
-                    height={400}
-                    className="h-auto w-full"
-                    unoptimized
-                  />
-                </div>
-              </div>
-            </section>
-
-            {/* Logistics Data Logging */}
-            <section className="rounded-lg border border-border-muted bg-fill-secondary/30 p-4 sm:p-6">
-              <div className="mb-4 flex items-start gap-3 sm:items-center">
-                <div className="flex-shrink-0 rounded-lg bg-fill-accent/10 p-2">
-                  <Icon icon={IconChartLine} size="md" colorRole="brand" />
-                </div>
-                <Typography variant="headingSm" className="font-semibold">
-                  Logistics Data Logging
-                </Typography>
-              </div>
-              <div className="space-y-3">
-                <Typography variant="bodySm" colorRole="muted" className="leading-relaxed">
-                  We log temperature data end-to-end to ensure full cold chain integrity throughout
-                  the entire supply journey.
-                </Typography>
-                <Typography variant="bodySm" colorRole="muted" className="leading-relaxed">
-                  From the moment products leave our bonded warehouse facility until delivery to
-                  our partners, comprehensive temperature monitoring is maintained to protect the
-                  quality and condition of fine wines and premium spirits.
-                </Typography>
-                <Typography variant="bodySm" colorRole="muted" className="leading-relaxed">
-                  This continuous data logging provides complete traceability and accountability,
-                  ensuring that every shipment maintains optimal storage conditions and arrives in
-                  perfect condition — a critical requirement for premium wine logistics in the GCC
-                  climate.
-                </Typography>
-              </div>
-            </section>
-
-            {/* B2B & B2C Sales Models */}
-            <section className="rounded-lg border border-border-muted bg-fill-secondary/30 p-4 sm:p-6">
-              <div className="mb-4 flex items-start gap-3 sm:items-center">
-                <div className="flex-shrink-0 rounded-lg bg-fill-accent/10 p-2">
-                  <Icon icon={IconTruck} size="md" colorRole="brand" />
-                </div>
-                <Typography variant="headingSm" className="font-semibold">
-                  B2B & B2C Sales Models
-                </Typography>
-              </div>
-              <Typography variant="bodySm" colorRole="muted" className="mb-4 leading-relaxed">
-                All products are sourced and sold through our fully licensed entity in the UAE,
-                ensuring complete regulatory compliance and authenticity. We operate dual sales
-                models to serve different market segments:
-              </Typography>
-
-              <div className="grid gap-4 sm:grid-cols-2">
-                {/* B2B Section */}
-                <div className="rounded-md border border-border-muted bg-background-primary p-4">
-                  <Typography variant="bodyXs" className="mb-2 font-semibold">
-                    B2B (Business-to-Business)
-                  </Typography>
-                  <Typography variant="bodyXs" colorRole="muted" className="mb-3 leading-relaxed">
-                    Serving licensed retailers, hotels, restaurants, bars, and hospitality venues
-                    across the GCC region.
-                  </Typography>
-                  <ul className="ml-4 space-y-1">
-                    <Typography variant="bodyXs" colorRole="muted" className="list-item list-disc">
-                      Bulk ordering and wholesale pricing
-                    </Typography>
-                    <Typography variant="bodyXs" colorRole="muted" className="list-item list-disc">
-                      Dedicated account management
-                    </Typography>
-                    <Typography variant="bodyXs" colorRole="muted" className="list-item list-disc">
-                      Flexible payment terms
-                    </Typography>
-                    <Typography variant="bodyXs" colorRole="muted" className="list-item list-disc">
-                      Custom product sourcing
-                    </Typography>
-                    <Typography variant="bodyXs" colorRole="muted" className="list-item list-disc">
-                      Inventory replenishment programs
-                    </Typography>
-                  </ul>
-                </div>
-
-                {/* B2C Section */}
-                <div className="rounded-md border border-border-muted bg-background-primary p-4">
-                  <Typography variant="bodyXs" className="mb-2 font-semibold">
-                    B2C (Business-to-Consumer)
-                  </Typography>
-                  <Typography variant="bodyXs" colorRole="muted" className="mb-3 leading-relaxed">
-                    Direct sales to individual consumers through licensed retail channels in
-                    compliance with local regulations.
-                  </Typography>
-                  <ul className="ml-4 space-y-1">
-                    <Typography variant="bodyXs" colorRole="muted" className="list-item list-disc">
-                      Retail pricing for individual purchases
-                    </Typography>
-                    <Typography variant="bodyXs" colorRole="muted" className="list-item list-disc">
-                      Home delivery in permitted jurisdictions
-                    </Typography>
-                    <Typography variant="bodyXs" colorRole="muted" className="list-item list-disc">
-                      Age verification and compliance
-                    </Typography>
-                    <Typography variant="bodyXs" colorRole="muted" className="list-item list-disc">
-                      Personal wine recommendations
-                    </Typography>
-                    <Typography variant="bodyXs" colorRole="muted" className="list-item list-disc">
-                      Special orders and rare bottle sourcing
-                    </Typography>
-                  </ul>
-                </div>
-              </div>
-
-              <div className="mt-4 rounded-md bg-fill-accent/10 p-3">
-                <Typography variant="bodyXs" className="mb-1 font-semibold text-text-brand">
-                  Licensed Entity Operations
+              <div className="rounded-lg bg-fill-secondary/50 p-4">
+                <Typography variant="bodySm" className="mb-2 font-medium">
+                  2. Browse Products
                 </Typography>
                 <Typography variant="bodyXs" colorRole="muted" className="leading-relaxed">
-                  All sales are conducted through our licensed trading entity with full compliance
-                  to UAE and GCC alcohol trading regulations, including proper permits, customs
-                  clearance, and age-restricted sales protocols.
+                  Once approved, you can browse our curated selection of wines and spirits. Use
+                  filters to search by region, producer, country, or vintage.
                 </Typography>
               </div>
-            </section>
 
-            {/* Logistics & Distribution */}
-            <section className="rounded-lg border border-border-muted bg-fill-secondary/30 p-4 sm:p-6">
-              <div className="mb-4 flex items-start gap-3 sm:items-center">
-                <div className="flex-shrink-0 rounded-lg bg-fill-accent/10 p-2">
-                  <Icon icon={IconTruck} size="md" colorRole="brand" />
-                </div>
-                <Typography variant="headingSm" className="font-semibold">
-                  Logistics & Distribution
+              <div className="rounded-lg bg-fill-secondary/50 p-4">
+                <Typography variant="bodySm" className="mb-2 font-medium">
+                  3. Create Quotes
+                </Typography>
+                <Typography variant="bodyXs" colorRole="muted" className="leading-relaxed">
+                  Add products to your quote, adjust quantities, and submit for review. Our team
+                  will confirm availability and pricing.
                 </Typography>
               </div>
-              <Typography variant="bodySm" colorRole="muted" className="mb-3 leading-relaxed">
-                We provide comprehensive logistics solutions for wine and spirits distribution
-                across the GCC region, including:
-              </Typography>
-              <ul className="ml-4 space-y-1 sm:columns-2 sm:gap-4">
-                <Typography variant="bodyXs" colorRole="muted" className="list-item list-disc">
-                  Temperature-controlled transport
-                </Typography>
-                <Typography variant="bodyXs" colorRole="muted" className="list-item list-disc">
-                  Customs clearance and compliance
-                </Typography>
-                <Typography variant="bodyXs" colorRole="muted" className="list-item list-disc">
-                  Last-mile delivery services
-                </Typography>
-                <Typography variant="bodyXs" colorRole="muted" className="list-item list-disc">
-                  Real-time shipment tracking
-                </Typography>
-                <Typography variant="bodyXs" colorRole="muted" className="list-item list-disc">
-                  Specialized premium wine handling
-                </Typography>
-              </ul>
-            </section>
 
-            {/* Contact Support */}
-            <section className="rounded-lg border border-border-brand bg-fill-accent/5 p-4 sm:p-6">
-              <div className="mb-4 flex items-start gap-3 sm:items-center">
-                <div className="flex-shrink-0 rounded-lg bg-fill-accent/10 p-2">
-                  <Icon icon={IconMail} size="md" colorRole="brand" />
-                </div>
-                <Typography variant="headingSm" className="font-semibold">
-                  Contact Support
+              <div className="rounded-lg bg-fill-secondary/50 p-4">
+                <Typography variant="bodySm" className="mb-2 font-medium">
+                  4. Complete Your Order
+                </Typography>
+                <Typography variant="bodyXs" colorRole="muted" className="leading-relaxed">
+                  Once confirmed, make your payment and we will handle the rest. Track your order
+                  status in real-time.
                 </Typography>
               </div>
-              <Typography variant="bodySm" colorRole="muted" className="mb-4 leading-relaxed">
-                Have questions about our products, sourcing, logistics, or need technical support
-                with the platform? Our team is here to help.
+            </div>
+          </HelpSection>
+
+          {/* Creating a Quote */}
+          <HelpSection id="creating-quote" icon={IconShoppingCart} title="Creating a Quote">
+            <Typography variant="bodySm" colorRole="muted" className="leading-relaxed">
+              Building a quote is simple. Follow these steps:
+            </Typography>
+
+            <ol className="space-y-3">
+              <li className="flex gap-3">
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-fill-brand text-xs font-medium text-white">
+                  1
+                </span>
+                <div>
+                  <Typography variant="bodySm" className="font-medium">
+                    Click &quot;Create Quote&quot;
+                  </Typography>
+                  <Typography variant="bodyXs" colorRole="muted">
+                    Start a new quote from the main navigation
+                  </Typography>
+                </div>
+              </li>
+
+              <li className="flex gap-3">
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-fill-brand text-xs font-medium text-white">
+                  2
+                </span>
+                <div>
+                  <Typography variant="bodySm" className="font-medium">
+                    Search for Products
+                  </Typography>
+                  <Typography variant="bodyXs" colorRole="muted">
+                    Use the search bar or browse by category. Filter by region, producer, vintage,
+                    or country.
+                  </Typography>
+                </div>
+              </li>
+
+              <li className="flex gap-3">
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-fill-brand text-xs font-medium text-white">
+                  3
+                </span>
+                <div>
+                  <Typography variant="bodySm" className="font-medium">
+                    Add to Quote
+                  </Typography>
+                  <Typography variant="bodyXs" colorRole="muted">
+                    Click the add button on any product to include it in your quote
+                  </Typography>
+                </div>
+              </li>
+
+              <li className="flex gap-3">
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-fill-brand text-xs font-medium text-white">
+                  4
+                </span>
+                <div>
+                  <Typography variant="bodySm" className="font-medium">
+                    Adjust Quantities
+                  </Typography>
+                  <Typography variant="bodyXs" colorRole="muted">
+                    Set the quantity for each product. Prices update automatically.
+                  </Typography>
+                </div>
+              </li>
+
+              <li className="flex gap-3">
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-fill-brand text-xs font-medium text-white">
+                  5
+                </span>
+                <div>
+                  <Typography variant="bodySm" className="font-medium">
+                    Review Totals
+                  </Typography>
+                  <Typography variant="bodyXs" colorRole="muted">
+                    Check your quote total in USD or AED using the currency toggle
+                  </Typography>
+                </div>
+              </li>
+
+              <li className="flex gap-3">
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-fill-brand text-xs font-medium text-white">
+                  6
+                </span>
+                <div>
+                  <Typography variant="bodySm" className="font-medium">
+                    Submit for Review
+                  </Typography>
+                  <Typography variant="bodyXs" colorRole="muted">
+                    When ready, submit your quote. Our team will review and confirm availability.
+                  </Typography>
+                </div>
+              </li>
+            </ol>
+
+            <div className="mt-4 rounded-lg border border-border-brand bg-fill-brand/5 p-4">
+              <Typography variant="bodyXs" className="font-medium text-text-brand">
+                Tip: Save Your Quotes
               </Typography>
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+              <Typography variant="bodyXs" colorRole="muted" className="mt-1">
+                You can save quotes as drafts and return to them later. Find your saved quotes in
+                the &quot;My Quotes&quot; section.
+              </Typography>
+            </div>
+          </HelpSection>
+
+          {/* Order Process */}
+          <HelpSection id="order-process" icon={IconTimeline} title="Order Process">
+            <Typography variant="bodySm" colorRole="muted" className="leading-relaxed">
+              Your quote moves through several stages. Here is what each status means:
+            </Typography>
+
+            <div className="space-y-2">
+              <div className="flex items-start gap-3 rounded-lg bg-fill-secondary/50 p-3">
+                <div className="mt-0.5 h-3 w-3 shrink-0 rounded-full bg-gray-400" />
+                <div>
+                  <Typography variant="bodySm" className="font-medium">
+                    Draft
+                  </Typography>
+                  <Typography variant="bodyXs" colorRole="muted">
+                    Your quote is saved but not yet submitted
+                  </Typography>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3 rounded-lg bg-fill-secondary/50 p-3">
+                <div className="mt-0.5 h-3 w-3 shrink-0 rounded-full bg-blue-500" />
+                <div>
+                  <Typography variant="bodySm" className="font-medium">
+                    Pending Review
+                  </Typography>
+                  <Typography variant="bodyXs" colorRole="muted">
+                    Quote submitted and waiting for our team to review
+                  </Typography>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3 rounded-lg bg-fill-secondary/50 p-3">
+                <div className="mt-0.5 h-3 w-3 shrink-0 rounded-full bg-blue-500" />
+                <div>
+                  <Typography variant="bodySm" className="font-medium">
+                    Under Review
+                  </Typography>
+                  <Typography variant="bodyXs" colorRole="muted">
+                    Our team is checking availability and confirming pricing
+                  </Typography>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3 rounded-lg bg-fill-secondary/50 p-3">
+                <div className="mt-0.5 h-3 w-3 shrink-0 rounded-full bg-amber-500" />
+                <div>
+                  <Typography variant="bodySm" className="font-medium">
+                    Needs Attention
+                  </Typography>
+                  <Typography variant="bodyXs" colorRole="muted">
+                    Changes requested - please review and resubmit
+                  </Typography>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3 rounded-lg bg-fill-secondary/50 p-3">
+                <div className="mt-0.5 h-3 w-3 shrink-0 rounded-full bg-blue-500" />
+                <div>
+                  <Typography variant="bodySm" className="font-medium">
+                    Confirmed
+                  </Typography>
+                  <Typography variant="bodyXs" colorRole="muted">
+                    Quote approved - proceed to payment
+                  </Typography>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3 rounded-lg bg-fill-secondary/50 p-3">
+                <div className="mt-0.5 h-3 w-3 shrink-0 rounded-full bg-amber-500" />
+                <div>
+                  <Typography variant="bodySm" className="font-medium">
+                    Awaiting Payment
+                  </Typography>
+                  <Typography variant="bodyXs" colorRole="muted">
+                    Payment details sent - complete your payment
+                  </Typography>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3 rounded-lg bg-fill-secondary/50 p-3">
+                <div className="mt-0.5 h-3 w-3 shrink-0 rounded-full bg-blue-500" />
+                <div>
+                  <Typography variant="bodySm" className="font-medium">
+                    Payment Received
+                  </Typography>
+                  <Typography variant="bodyXs" colorRole="muted">
+                    Payment confirmed - order being prepared
+                  </Typography>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3 rounded-lg bg-fill-secondary/50 p-3">
+                <div className="mt-0.5 h-3 w-3 shrink-0 rounded-full bg-gray-400" />
+                <div>
+                  <Typography variant="bodySm" className="font-medium">
+                    Shipping
+                  </Typography>
+                  <Typography variant="bodyXs" colorRole="muted">
+                    Your order is on its way
+                  </Typography>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3 rounded-lg bg-fill-secondary/50 p-3">
+                <div className="mt-0.5 h-3 w-3 shrink-0 rounded-full bg-gray-400" />
+                <div>
+                  <Typography variant="bodySm" className="font-medium">
+                    Delivered
+                  </Typography>
+                  <Typography variant="bodyXs" colorRole="muted">
+                    Order complete - thank you!
+                  </Typography>
+                </div>
+              </div>
+            </div>
+          </HelpSection>
+
+          {/* Payments */}
+          <HelpSection id="payments" icon={IconCreditCard} title="Payments">
+            <Typography variant="bodySm" colorRole="muted" className="leading-relaxed">
+              Once your quote is confirmed, here is how to complete your payment:
+            </Typography>
+
+            <div className="space-y-4">
+              <div className="rounded-lg bg-fill-secondary/50 p-4">
+                <Typography variant="bodySm" className="mb-2 font-medium">
+                  Bank Transfer
+                </Typography>
+                <Typography variant="bodyXs" colorRole="muted" className="leading-relaxed">
+                  Transfer the total amount to our UAE bank account. Bank details are provided in
+                  your confirmed quote email and in the quote details page.
+                </Typography>
+              </div>
+
+              <div className="rounded-lg bg-fill-secondary/50 p-4">
+                <Typography variant="bodySm" className="mb-2 font-medium">
+                  Upload Payment Proof
+                </Typography>
+                <Typography variant="bodyXs" colorRole="muted" className="leading-relaxed">
+                  After making your transfer, upload a screenshot or PDF of your payment
+                  confirmation in the quote details page. This helps us verify your payment quickly.
+                </Typography>
+              </div>
+
+              <div className="rounded-lg bg-fill-secondary/50 p-4">
+                <Typography variant="bodySm" className="mb-2 font-medium">
+                  Verification
+                </Typography>
+                <Typography variant="bodyXs" colorRole="muted" className="leading-relaxed">
+                  Our team will verify your payment within 1 business day. Once confirmed, your
+                  order will be prepared for shipping.
+                </Typography>
+              </div>
+            </div>
+
+            <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-4 dark:border-amber-900 dark:bg-amber-950/30">
+              <Typography variant="bodyXs" className="font-medium text-amber-800 dark:text-amber-200">
+                Important
+              </Typography>
+              <Typography variant="bodyXs" className="mt-1 text-amber-700 dark:text-amber-300">
+                Please use your quote reference number in the payment description to help us match
+                your payment to your order.
+              </Typography>
+            </div>
+          </HelpSection>
+
+          {/* FAQ */}
+          <HelpSection id="faq" icon={IconHelp} title="Frequently Asked Questions">
+            <FAQAccordion items={faqItems} />
+          </HelpSection>
+
+          {/* Contact */}
+          <HelpSection id="contact" icon={IconMail} title="Contact & Support">
+            <Typography variant="bodySm" colorRole="muted" className="leading-relaxed">
+              Need help? Our support team is here to assist you.
+            </Typography>
+
+            <div className="mt-4 rounded-lg border border-border-brand bg-fill-brand/5 p-5">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <Typography variant="bodySm" className="font-medium">
+                    Email Support
+                  </Typography>
+                  <Typography variant="bodyXs" colorRole="muted" className="mt-1">
+                    We typically respond within 4-8 business hours
+                  </Typography>
+                </div>
                 <Link
                   href="mailto:support@craftculture.xyz"
-                  className="inline-flex items-center justify-center gap-2 rounded-md bg-fill-brand px-4 py-2.5 text-sm font-medium text-text-on-brand transition-colors hover:bg-fill-brand-hover"
+                  className="inline-flex items-center justify-center gap-2 rounded-lg bg-fill-brand px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-fill-brand-hover"
                 >
                   <Icon icon={IconMail} size="sm" />
-                  Email Support
-                </Link>
-                <Typography variant="bodyXs" colorRole="muted">
                   support@craftculture.xyz
-                </Typography>
+                </Link>
               </div>
-            </section>
+            </div>
 
-            {/* Additional Resources */}
-            <section className="border-t border-border-muted pt-6">
-              <Typography variant="bodyXs" className="mb-4 font-semibold">
-                Additional Resources
-              </Typography>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <Link
-                  href="https://craftculture.xyz"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="rounded-lg border border-border-muted bg-surface-primary p-4 transition-all hover:border-border-brand hover:bg-fill-muted hover:shadow-sm"
-                >
-                  <Typography variant="bodyXs" className="mb-1 font-medium">
-                    About Craft & Culture
-                  </Typography>
-                  <Typography variant="bodyXs" colorRole="muted">
-                    Learn more about our company and mission
-                  </Typography>
-                </Link>
-                <Link
-                  href="/platform/terms-of-use"
-                  className="rounded-lg border border-border-muted bg-surface-primary p-4 transition-all hover:border-border-brand hover:bg-fill-muted hover:shadow-sm"
-                >
-                  <Typography variant="bodyXs" className="mb-1 font-medium">
-                    Terms of Use
-                  </Typography>
-                  <Typography variant="bodyXs" colorRole="muted">
-                    Platform terms and conditions
-                  </Typography>
-                </Link>
-              </div>
-            </section>
-          </div>
-        </CardContent>
-      </Card>
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <Link
+                href="https://craftculture.xyz"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="rounded-lg border border-border-primary bg-fill-secondary/30 p-4 transition-colors hover:bg-fill-secondary"
+              >
+                <Typography variant="bodySm" className="font-medium">
+                  About Us
+                </Typography>
+                <Typography variant="bodyXs" colorRole="muted" className="mt-1">
+                  Learn more about Craft & Culture
+                </Typography>
+              </Link>
+
+              <Link
+                href="/platform/terms-of-use"
+                className="rounded-lg border border-border-primary bg-fill-secondary/30 p-4 transition-colors hover:bg-fill-secondary"
+              >
+                <Typography variant="bodySm" className="font-medium">
+                  Terms of Use
+                </Typography>
+                <Typography variant="bodyXs" colorRole="muted" className="mt-1">
+                  Platform terms and conditions
+                </Typography>
+              </Link>
+            </div>
+          </HelpSection>
+        </div>
+      </div>
     </main>
   );
 };
