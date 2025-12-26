@@ -81,7 +81,8 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
   const currentQuote = freshQuoteData ?? quote;
 
   // Calculate display amount based on selected currency
-  const displayTotal = useMemo(() => {
+  // Note: This will be recalculated after pricingMap is available to exclude unavailable items
+  const baseDisplayTotal = useMemo(() => {
     if (!currentQuote) return 0;
     if (displayCurrency === 'USD') {
       return currentQuote.totalUsd;
@@ -239,6 +240,38 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
       >,
     );
   }, [quotePricingData]);
+
+  // Calculate the actual display total, excluding items with alternatives but no accepted one
+  const displayTotal = useMemo(() => {
+    // If no pricing data, use base total
+    if (!quotePricingData?.lineItems || Object.keys(pricingMap).length === 0) {
+      return baseDisplayTotal;
+    }
+
+    // Calculate total from line items, excluding unavailable ones (has alternatives but none accepted)
+    let adjustedTotalUsd = 0;
+
+    quotePricingData.lineItems.forEach((item) => {
+      const hasAlternatives = item.adminAlternatives && item.adminAlternatives.length > 0;
+      const hasAcceptedAlternative = !!item.acceptedAlternative;
+
+      // Only include if no alternatives OR has accepted alternative
+      if (!hasAlternatives || hasAcceptedAlternative) {
+        adjustedTotalUsd += item.lineItemTotalUsd;
+      }
+    });
+
+    // Add fulfilled OOC items
+    fulfilledOocItems.forEach((item) => {
+      adjustedTotalUsd += item.lineItemTotalUsd;
+    });
+
+    // Convert to display currency if needed
+    if (displayCurrency === 'AED') {
+      return convertUsdToAed(adjustedTotalUsd);
+    }
+    return adjustedTotalUsd;
+  }, [quotePricingData, pricingMap, fulfilledOocItems, displayCurrency, baseDisplayTotal]);
 
   // Mutation for submitting buy request
   const submitBuyRequestMutation = useMutation({
@@ -985,16 +1018,26 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                   const product = productMap[item.productId];
                   const pricing = pricingMap[item.productId];
 
+                  // Check if alternatives exist but none accepted - item is unavailable
+                  const hasAlternatives = pricing?.adminAlternatives && pricing.adminAlternatives.length > 0;
+                  const hasAcceptedAlternative = !!pricing?.acceptedAlternative;
+                  const isUnavailable = hasAlternatives && !hasAcceptedAlternative;
+
                   // Use confirmed quantity and price if available (after admin approval)
+                  // If item is unavailable (has alternatives but none accepted), show $0
                   const displayQuantity = pricing?.confirmedQuantity ?? item.quantity;
-                  const pricePerCase = pricing?.basePriceUsd ??
-                    (pricing?.lineItemTotalUsd ? pricing.lineItemTotalUsd / item.quantity : 0);
-                  const lineItemTotal = pricing?.lineItemTotalUsd || 0;
+                  const pricePerCase = isUnavailable ? 0 : (pricing?.basePriceUsd ??
+                    (pricing?.lineItemTotalUsd ? pricing.lineItemTotalUsd / item.quantity : 0));
+                  const lineItemTotal = isUnavailable ? 0 : (pricing?.lineItemTotalUsd || 0);
 
                   return (
                     <div
                       key={index}
-                      className="rounded-lg border border-border-muted bg-background-primary p-3"
+                      className={`rounded-lg border p-3 ${
+                        isUnavailable
+                          ? 'border-border-warning bg-fill-warning/5'
+                          : 'border-border-muted bg-background-primary'
+                      }`}
                     >
                       {product ? (
                         <>
@@ -1024,9 +1067,16 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                                 </>
                               ) : (
                                 <>
-                                  <Typography variant="bodySm" className="font-semibold truncate">
-                                    {product.name}
-                                  </Typography>
+                                  <div className="flex items-center gap-2">
+                                    <Typography variant="bodySm" className={`font-semibold truncate ${isUnavailable ? 'text-text-muted line-through' : ''}`}>
+                                      {product.name}
+                                    </Typography>
+                                    {isUnavailable && (
+                                      <span className="inline-flex items-center rounded-full bg-fill-warning px-2 py-0.5 text-xs font-medium text-white">
+                                        Unavailable
+                                      </span>
+                                    )}
+                                  </div>
                                   <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-0.5">
                                     {product.producer && (
                                       <Typography variant="bodyXs" colorRole="muted">
@@ -1049,7 +1099,7 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                             </div>
                             {pricing && (
                               <div className="text-right shrink-0">
-                                <Typography variant="bodySm" className="font-bold text-text-brand">
+                                <Typography variant="bodySm" className={`font-bold ${isUnavailable ? 'text-text-muted' : 'text-text-brand'}`}>
                                   {formatPrice(
                                     displayCurrency === 'AED'
                                       ? convertUsdToAed(lineItemTotal)
