@@ -669,28 +669,27 @@ const QuotesForm = () => {
           </div>
         </div>
 
-        {/* B2C All-Inclusive Pricing Banner */}
-        {customerType === 'b2c' && (
-          <div className="flex items-start gap-3 rounded-lg border border-border-brand/30 bg-fill-brand/5 p-3">
-            <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-fill-brand/10">
-              <IconPackage className="h-4 w-4 text-text-brand" />
-            </div>
-            <div className="flex-1 space-y-1">
-              <Typography variant="bodySm" className="font-semibold text-text-brand">
-                All-Inclusive Pricing
-              </Typography>
-              <Typography variant="bodyXs" colorRole="muted">
-                One clear price covering international freight, UAE import duties, and compliant delivery via our licensed mainland partners — all handled through the C&C cold chain to ensure perfect bottle condition, every time. No hidden fees. No surprises.
+        {/* B2C Pricing Banner + Currency Toggle Row */}
+        <div className="flex items-center justify-between gap-4">
+          {/* B2C All-Inclusive Pricing - Compact */}
+          {customerType === 'b2c' && (
+            <div className="flex items-center gap-2 rounded-md border border-border-brand/30 bg-fill-brand/5 px-2.5 py-1.5">
+              <IconPackage className="h-3.5 w-3.5 shrink-0 text-text-brand" />
+              <Typography variant="bodyXs" className="text-text-brand">
+                <span className="font-semibold">All-Inclusive:</span>{' '}
+                <span className="text-text-muted">Freight, duties & cold chain delivery included</span>
               </Typography>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* Currency Toggle */}
-        <div className="flex items-center justify-between sm:justify-end sm:gap-2">
-          <Typography variant="bodyXs" className="text-text-muted font-medium">
-            Currency:
-          </Typography>
+          {/* Spacer for B2B */}
+          {customerType !== 'b2c' && <div />}
+
+          {/* Currency Toggle */}
+          <div className="flex shrink-0 items-center gap-2">
+            <Typography variant="bodyXs" className="text-text-muted font-medium">
+              Currency:
+            </Typography>
             <div className="flex rounded border border-border-muted bg-fill-muted p-px">
               <button
                 type="button"
@@ -715,6 +714,7 @@ const QuotesForm = () => {
                 AED
               </button>
             </div>
+          </div>
         </div>
 
         {/* Line Items Table */}
