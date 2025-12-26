@@ -156,8 +156,17 @@ const WelcomeForm = () => {
               />
               <FormFieldLabel asChild className="cursor-pointer">
                 <label htmlFor="termsAccepted" className="text-sm">
-                  I have read and agree to the Terms and Conditions. I acknowledge that this
-                  Platform is a pricing calculator tool only and not a sales fulfillment system.
+                  I have read and agree to the{' '}
+                  <a
+                    href="/platform/terms-of-use"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-text-brand underline"
+                  >
+                    Terms of Use
+                  </a>
+                  . I understand that all payments are processed through licensed distribution
+                  partners, not Craft & Culture directly.
                 </label>
               </FormFieldLabel>
             </div>
