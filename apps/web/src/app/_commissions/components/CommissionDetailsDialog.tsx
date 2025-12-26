@@ -1,6 +1,7 @@
 'use client';
 
 import { IconCheck, IconClock, IconLoader2 } from '@tabler/icons-react';
+import { useQuery } from '@tanstack/react-query';
 
 import Badge from '@/app/_ui/components/Badge/Badge';
 import BadgeContent from '@/app/_ui/components/Badge/BadgeContent';
@@ -12,7 +13,7 @@ import DialogHeader from '@/app/_ui/components/Dialog/DialogHeader';
 import DialogTitle from '@/app/_ui/components/Dialog/DialogTitle';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Typography from '@/app/_ui/components/Typography/Typography';
-import api from '@/lib/trpc/client';
+import useTRPC from '@/lib/trpc/browser';
 import formatPrice from '@/utils/formatPrice';
 
 export interface CommissionDetailsDialogProps {
@@ -24,13 +25,13 @@ export interface CommissionDetailsDialogProps {
  * Dialog showing detailed commission history for B2C users
  */
 const CommissionDetailsDialog = ({ isOpen, onClose }: CommissionDetailsDialogProps) => {
-  const { data, isLoading } = api.commissions.getDetails.useQuery(
-    { limit: 50 },
-    {
-      enabled: isOpen,
-      staleTime: 30000,
-    },
-  );
+  const api = useTRPC();
+
+  const { data, isLoading } = useQuery({
+    ...api.commissions.getDetails.queryOptions({ limit: 50 }),
+    enabled: isOpen,
+    staleTime: 30000,
+  });
 
   const formatDate = (date: Date | null | undefined) => {
     if (!date) return '-';
