@@ -1,6 +1,6 @@
 'use client';
 
-import { IconGripVertical, IconInfoCircle, IconTrash } from '@tabler/icons-react';
+import { IconGripVertical, IconTrash } from '@tabler/icons-react';
 import React, { ChangeEvent, useEffect, useState } from 'react';
 
 import ProductDetailsTooltip from '@/app/_products/components/ProductDetailsTooltip';
@@ -27,12 +27,10 @@ interface LineItemRowProps {
   quantity?: number;
   alternativeVintages?: string[];
   omitProductIds: string[];
-  maxQuantity?: number;
   isQuoteLoading?: boolean;
   quotePrice?: number;
   perBottlePrice?: number;
   quoteCurrency?: string;
-  customerType?: 'b2b' | 'b2c';
   onVintageChange: (vintage: string) => void;
   onProductChange: (product: Product) => void;
   onQuantityChange: (quantity: number) => void;
@@ -48,12 +46,10 @@ const LineItemRow = ({
   quantity,
   alternativeVintages = [],
   omitProductIds,
-  maxQuantity = Infinity,
   isQuoteLoading,
   quotePrice,
   perBottlePrice,
   quoteCurrency,
-  customerType,
   onVintageChange,
   onProductChange,
   onQuantityChange,
@@ -118,20 +114,11 @@ const LineItemRow = ({
   const isPlaceholder = !product;
 
   return (
-    <div
-      className={`space-y-2 ${isDragging ? 'opacity-50' : ''}`}
-    >
-      <div className="flex flex-wrap items-start gap-2 lg:grid lg:grid-cols-12 lg:gap-2">
-        {/* Drag Handle - Hidden on mobile/tablet */}
-        <div
-          {...dragHandleProps}
-          className="hidden cursor-grab items-center justify-center active:cursor-grabbing lg:col-span-1 lg:flex"
-        >
-          <Icon icon={IconGripVertical} size="sm" colorRole="muted" />
-        </div>
-
-        {/* Product Selector */}
-        <div className="min-w-0 w-full lg:col-span-4 lg:w-auto">
+    <div className={`${isDragging ? 'opacity-50' : ''}`}>
+      {/* Mobile/Tablet Layout */}
+      <div className="flex flex-wrap items-start gap-2 lg:hidden">
+        {/* Product Selector - Full width */}
+        <div className="min-w-0 w-full">
           {product ? (
             <ProductDetailsTooltip product={product}>
               <div>
@@ -153,9 +140,131 @@ const LineItemRow = ({
           )}
         </div>
 
-        {/* Vintage Input - Hidden for placeholder */}
+        {/* Row 2: Year, Qty, Prices, Delete */}
         {!isPlaceholder && (
-          <div className="w-20 shrink-0 lg:col-span-1 lg:w-auto">
+          <div className="flex w-full items-center gap-2">
+            {/* Year */}
+            <div className="w-16 shrink-0">
+              <Input
+                type="text"
+                size="md"
+                placeholder="Year"
+                value={localVintage}
+                onChange={handleVintageInputChange}
+                isDisabled={false}
+              />
+            </div>
+            {/* Qty */}
+            <div className="w-16 shrink-0">
+              <Input
+                type="number"
+                size="md"
+                min={1}
+                placeholder="Qty"
+                value={localQuantity}
+                onChange={handleQuantityInputChange}
+                isDisabled={!product}
+              />
+            </div>
+            {/* Price */}
+            <div className="flex flex-col items-end">
+              <Typography variant="bodyXs" className="text-text-muted uppercase">
+                Price
+              </Typography>
+              {isQuoteLoading ? (
+                <Skeleton className="h-4 w-14" />
+              ) : (
+                <Typography variant="bodySm" className="font-medium">
+                  {quotePrice !== undefined ? formatPrice(quotePrice, quoteCurrency) : '—'}
+                </Typography>
+              )}
+            </div>
+            {/* Spacer */}
+            <div className="flex-1" />
+            {/* Alternatives + Delete */}
+            {product && (
+              <AlternativeVintagesPicker
+                productId={product.id}
+                selectedVintages={alternativeVintages}
+                onChange={onAlternativeVintagesChange}
+              />
+            )}
+            <Button
+              type="button"
+              size="sm"
+              shape="circle"
+              variant="ghost"
+              onClick={onRemove}
+            >
+              <ButtonContent>
+                <Icon icon={IconTrash} colorRole="muted" size="sm" />
+              </ButtonContent>
+            </Button>
+          </div>
+        )}
+
+        {/* Delete for placeholder */}
+        {isPlaceholder && (
+          <div className="flex w-full justify-end">
+            <Button
+              type="button"
+              size="sm"
+              shape="circle"
+              variant="ghost"
+              onClick={onRemove}
+            >
+              <ButtonContent>
+                <Icon icon={IconTrash} colorRole="muted" size="sm" />
+              </ButtonContent>
+            </Button>
+          </div>
+        )}
+      </div>
+
+      {/* Desktop Layout - Flex row matching header */}
+      <div className="hidden gap-2 lg:flex lg:items-center">
+        {/* Drag Handle */}
+        <div
+          {...dragHandleProps}
+          className="flex w-6 shrink-0 cursor-grab items-center justify-center active:cursor-grabbing"
+        >
+          <Icon icon={IconGripVertical} size="sm" colorRole="muted" />
+        </div>
+
+        {/* Product Selector */}
+        <div className="min-w-0 flex-1">
+          {product ? (
+            <div className="flex items-center gap-2">
+              <ProductDetailsTooltip product={product}>
+                <div className="min-w-0 flex-1">
+                  <ProductsCombobox
+                    value={product}
+                    onSelect={onProductChange}
+                    placeholder="Select product..."
+                    omitProductIds={omitProductIds}
+                  />
+                </div>
+              </ProductDetailsTooltip>
+              {/* Alternatives inline */}
+              <AlternativeVintagesPicker
+                productId={product.id}
+                selectedVintages={alternativeVintages}
+                onChange={onAlternativeVintagesChange}
+              />
+            </div>
+          ) : (
+            <ProductsCombobox
+              value={null}
+              onSelect={onProductChange}
+              placeholder="Select product..."
+              omitProductIds={omitProductIds}
+            />
+          )}
+        </div>
+
+        {/* Vintage Input */}
+        {!isPlaceholder && (
+          <div className="w-16 shrink-0">
             <Input
               type="text"
               size="md"
@@ -167,15 +276,14 @@ const LineItemRow = ({
           </div>
         )}
 
-        {/* Quantity Input - Hidden for placeholder */}
+        {/* Quantity Input */}
         {!isPlaceholder && (
-          <div className="flex w-20 shrink-0 flex-col gap-1 lg:col-span-1 lg:w-auto">
+          <div className="w-16 shrink-0">
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <div>
                     <Input
-                      className="min-w-0 flex-1"
                       type="number"
                       size="md"
                       min={1}
@@ -195,34 +303,12 @@ const LineItemRow = ({
                 )}
               </Tooltip>
             </TooltipProvider>
-            {offer?.availableQuantity !== null && offer?.availableQuantity !== undefined && (
-              <Typography
-                variant="bodyXs"
-                className={`lg:hidden ${
-                  localQuantity > offer.availableQuantity
-                    ? 'text-text-warning font-medium'
-                    : 'text-text-muted'
-                }`}
-              >
-                {offer.availableQuantity === 0
-                  ? 'Out of stock'
-                  : `${offer.availableQuantity} available`}
-              </Typography>
-            )}
-            {maxQuantity !== Infinity && localQuantity > maxQuantity && offer?.availableQuantity === null && (
-              <Typography
-                variant="bodyXs"
-                className="text-text-warning font-medium lg:hidden"
-              >
-                {localQuantity} requested, {maxQuantity} available
-              </Typography>
-            )}
           </div>
         )}
 
-        {/* Pack Size - Hidden for placeholder and on mobile/tablet */}
+        {/* Pack Size */}
         {!isPlaceholder && (
-          <div className="hidden lg:col-span-1 lg:flex lg:items-center lg:justify-center">
+          <div className="flex w-14 shrink-0 items-center justify-center">
             {offer && (
               <Typography
                 variant="bodyXs"
@@ -234,66 +320,26 @@ const LineItemRow = ({
           </div>
         )}
 
-        {/* Line Price - Hidden for placeholder */}
+        {/* Line Price */}
         {!isPlaceholder && (
-          <div className="flex shrink-0 flex-col gap-0.5 lg:col-span-2 lg:w-auto lg:flex-row lg:items-center lg:justify-end lg:gap-0">
-            <div className="flex items-center gap-1 lg:hidden">
-              <Typography
-                variant="bodyXs"
-                className="text-text-muted font-medium uppercase leading-none"
-              >
-                Price
-              </Typography>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <span className="inline-flex">
-                      <Icon icon={IconInfoCircle} size="xs" colorRole="muted" />
-                    </span>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    {customerType === 'b2b' ? 'In-Bond UAE' : 'Client Price'}
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </div>
+          <div className="flex w-24 shrink-0 items-center justify-end">
             {isQuoteLoading ? (
               <Skeleton className="h-4 w-16" />
             ) : (
-              <Typography variant="bodySm" className="font-medium leading-none">
+              <Typography variant="bodySm" className="font-medium">
                 {quotePrice !== undefined ? formatPrice(quotePrice, quoteCurrency) : '—'}
               </Typography>
             )}
           </div>
         )}
 
-        {/* Per Bottle Price - Hidden for placeholder */}
+        {/* Per Bottle Price */}
         {!isPlaceholder && (
-          <div className="flex shrink-0 flex-col gap-0.5 lg:col-span-1 lg:w-auto lg:flex-row lg:items-center lg:justify-end lg:gap-0">
-            <div className="flex items-center gap-1 lg:hidden">
-              <Typography
-                variant="bodyXs"
-                className="text-text-muted font-medium uppercase leading-none"
-              >
-                /Bottle
-              </Typography>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <span className="inline-flex">
-                      <Icon icon={IconInfoCircle} size="xs" colorRole="muted" />
-                    </span>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    {customerType === 'b2b' ? 'In-Bond UAE' : 'Client Price'}
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </div>
+          <div className="flex w-20 shrink-0 items-center justify-end">
             {isQuoteLoading ? (
-              <Skeleton className="h-4 w-16" />
+              <Skeleton className="h-4 w-14" />
             ) : (
-              <Typography variant="bodySm" className="font-medium leading-none">
+              <Typography variant="bodySm" className="font-medium">
                 {perBottlePrice !== undefined ? formatPrice(perBottlePrice, quoteCurrency) : '—'}
               </Typography>
             )}
@@ -301,7 +347,7 @@ const LineItemRow = ({
         )}
 
         {/* Remove Button */}
-        <div className="flex h-9 shrink-0 items-center justify-end lg:col-span-1 lg:w-auto lg:justify-center">
+        <div className="flex w-8 shrink-0 items-center justify-center">
           <Button
             type="button"
             size="sm"
@@ -315,29 +361,6 @@ const LineItemRow = ({
           </Button>
         </div>
       </div>
-
-      {/* Alternative Vintages - Hidden for placeholder */}
-      {!isPlaceholder && product && (
-        <div className="flex items-center gap-2 pl-0 lg:pl-8">
-          <AlternativeVintagesPicker
-            productId={product.id}
-            selectedVintages={alternativeVintages}
-            onChange={onAlternativeVintagesChange}
-          />
-          {alternativeVintages.length > 0 && (
-            <div className="flex flex-wrap gap-1">
-              {alternativeVintages.map((vintage) => (
-                <span
-                  key={vintage}
-                  className="bg-fill-secondary text-text-secondary rounded-md px-2 py-0.5 text-xs font-medium"
-                >
-                  {vintage}
-                </span>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
     </div>
   );
 };

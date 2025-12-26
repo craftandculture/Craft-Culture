@@ -11,9 +11,9 @@ import Icon from '../Icon/Icon';
 export const dialogHeaderStyles = tv({
   slots: {
     wrapper:
-      'border-border-muted flex h-12 shrink-0 items-center justify-between border-b px-4',
-    content: 'flex grow items-center justify-between truncate',
-    close: 'shrink-0',
+      'border-border-muted flex min-h-12 shrink-0 items-center justify-between border-b px-4 py-3',
+    content: 'flex min-w-0 grow flex-col gap-0.5',
+    close: 'shrink-0 self-start',
   },
 });
 

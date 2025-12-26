@@ -718,21 +718,23 @@ const QuotesForm = () => {
         </div>
 
         {/* Line Items Table */}
-      <div className="space-y-3">
-        {/* Header Row - Hidden on mobile */}
+      <div className="space-y-2">
+        {/* Header Row - Sticky on desktop */}
         {lineItems.length > 0 && (
-          <div className="hidden grid-cols-12 gap-2 px-2 lg:grid">
-            {/* Drag handle column */}
-            <div className="col-span-1" />
-            <div className="col-span-4 flex justify-start">
+          <div className="sticky top-0 z-10 hidden gap-2 border-b border-border-muted bg-surface-primary px-2 py-2 lg:flex lg:items-center">
+            {/* Drag handle */}
+            <div className="w-6 shrink-0" />
+            {/* Reference */}
+            <div className="min-w-0 flex-1">
               <Typography
                 variant="bodyXs"
-                className="text-text-muted font-medium uppercase truncate"
+                className="text-text-muted font-medium uppercase"
               >
                 Reference
               </Typography>
             </div>
-            <div className="col-span-1 flex justify-center">
+            {/* Year */}
+            <div className="w-16 shrink-0 text-center">
               <Typography
                 variant="bodyXs"
                 className="text-text-muted font-medium uppercase"
@@ -740,7 +742,8 @@ const QuotesForm = () => {
                 Year
               </Typography>
             </div>
-            <div className="col-span-1 flex justify-center">
+            {/* Qty */}
+            <div className="w-16 shrink-0 text-center">
               <Typography
                 variant="bodyXs"
                 className="text-text-muted font-medium uppercase"
@@ -748,7 +751,8 @@ const QuotesForm = () => {
                 Qty
               </Typography>
             </div>
-            <div className="col-span-1 flex justify-center">
+            {/* Pack */}
+            <div className="w-14 shrink-0 text-center">
               <Typography
                 variant="bodyXs"
                 className="text-text-muted font-medium uppercase"
@@ -756,25 +760,28 @@ const QuotesForm = () => {
                 Pack
               </Typography>
             </div>
-            <div className="col-span-2 flex items-center justify-end gap-1">
+            {/* Price */}
+            <div className="flex w-24 shrink-0 items-center justify-end gap-1">
               <Typography
                 variant="bodyXs"
-                className="text-text-muted font-medium uppercase whitespace-nowrap"
+                className="text-text-muted font-medium uppercase"
               >
                 Price
               </Typography>
               <PriceInfoTooltip customerType={customerType} />
             </div>
-            <div className="col-span-1 flex items-center justify-end gap-1">
+            {/* /Bottle */}
+            <div className="flex w-20 shrink-0 items-center justify-end gap-1">
               <Typography
                 variant="bodyXs"
-                className="text-text-muted font-medium uppercase whitespace-nowrap"
+                className="text-text-muted font-medium uppercase"
               >
                 /Bottle
               </Typography>
               <PriceInfoTooltip customerType={customerType} />
             </div>
-            <div className="col-span-1" />
+            {/* Delete button */}
+            <div className="w-8 shrink-0" />
           </div>
         )}
 
@@ -789,9 +796,6 @@ const QuotesForm = () => {
             strategy={verticalListSortingStrategy}
           >
             {lineItems.map((item) => {
-              const maxQuantity =
-                item.product?.productOffers?.[0]?.availableQuantity ?? Infinity;
-
               // Get all selected product IDs except the current one
               const omitProductIds = lineItems
                 .map((li) => li.product?.id)
@@ -848,9 +852,7 @@ const QuotesForm = () => {
                   : undefined
               }
               quoteCurrency={displayCurrency}
-              customerType={customerType}
               omitProductIds={omitProductIds}
-              maxQuantity={maxQuantity}
               dragHandleProps={dragHandleProps}
               isDragging={isDragging}
                     />
