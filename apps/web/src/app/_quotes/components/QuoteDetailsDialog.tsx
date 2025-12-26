@@ -174,9 +174,22 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
         importTax: number;
       };
       customerQuotePrice?: number;
+      outOfCatalogueRequests?: Array<{
+        id: string;
+        productName: string;
+        vintage?: string;
+        quantity?: number;
+        priceExpectation?: string;
+        notes?: string;
+      }>;
     };
     return data;
   }, [currentQuote?.quoteData]);
+
+  // Extract out-of-catalogue requests
+  const outOfCatalogueRequests = useMemo(() => {
+    return quotePricingData?.outOfCatalogueRequests || [];
+  }, [quotePricingData]);
 
   // Create pricing map by productId
   const pricingMap = useMemo(() => {
@@ -723,6 +736,40 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                       quote.currency as 'USD' | 'AED',
                     )}
                   </Typography>
+                </div>
+              )}
+
+              {/* Out-of-Catalogue Requests */}
+              {outOfCatalogueRequests.length > 0 && (
+                <div className="rounded-lg border-2 border-amber-200 bg-amber-50 p-4">
+                  <Typography variant="bodyXs" className="font-semibold text-amber-800 mb-2">
+                    Out-of-Catalogue Requests ({outOfCatalogueRequests.length})
+                  </Typography>
+                  <Typography variant="bodyXs" className="text-amber-700 mb-3">
+                    These items are being reviewed by our team - not included in quote total
+                  </Typography>
+                  <div className="space-y-2">
+                    {outOfCatalogueRequests.map((request, index) => (
+                      <div
+                        key={request.id || index}
+                        className="rounded-md bg-white border border-amber-200 p-3"
+                      >
+                        <Typography variant="bodySm" className="font-medium text-amber-900">
+                          {request.productName}
+                        </Typography>
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-1 text-xs text-amber-700">
+                          {request.vintage && <span>Vintage: {request.vintage}</span>}
+                          {request.quantity && <span>Qty: {request.quantity} cases</span>}
+                          {request.priceExpectation && <span>Budget: {request.priceExpectation}</span>}
+                        </div>
+                        {request.notes && (
+                          <Typography variant="bodyXs" className="mt-1.5 text-amber-600 italic">
+                            {request.notes}
+                          </Typography>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>

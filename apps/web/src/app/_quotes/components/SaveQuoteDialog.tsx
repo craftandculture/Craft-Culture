@@ -31,6 +31,15 @@ export interface MarginConfig {
   displayCurrency: 'USD' | 'AED';
 }
 
+export interface OutOfCatalogueItem {
+  id: string;
+  productName: string;
+  vintage?: string;
+  quantity?: number;
+  priceExpectation?: string;
+  notes?: string;
+}
+
 export interface SaveQuoteDialogProps extends DialogProps {
   lineItems: Array<{
     productId: string;
@@ -45,6 +54,7 @@ export interface SaveQuoteDialogProps extends DialogProps {
   totalAed?: number;
   customerType?: 'b2b' | 'b2c';
   marginConfig?: MarginConfig;
+  outOfCatalogueItems?: OutOfCatalogueItem[];
   onSaveSuccess?: (quoteId: string) => void;
 }
 
@@ -58,6 +68,7 @@ const SaveQuoteDialog = ({
   totalAed,
   customerType = 'b2b',
   marginConfig,
+  outOfCatalogueItems,
   onSaveSuccess,
 }: SaveQuoteDialogProps) => {
   const trpcClient = useTRPCClient();
@@ -91,19 +102,35 @@ const SaveQuoteDialog = ({
 
     try {
       // Enhance quoteData with margin configuration for B2B if provided
-      const enhancedQuoteData =
-        customerType === 'b2b' && marginConfig
-          ? {
-              ...(quoteData as object),
-              marginConfig: {
-                type: marginConfig.marginType,
-                value: marginConfig.marginValue,
-                transferCost: marginConfig.transferCost,
-                importTax: marginConfig.importTax,
-              },
-              customerQuotePrice: marginConfig.customerQuotePrice,
-            }
-          : quoteData;
+      // and out-of-catalogue items for B2C if provided
+      let enhancedQuoteData = quoteData;
+
+      if (customerType === 'b2b' && marginConfig) {
+        enhancedQuoteData = {
+          ...(enhancedQuoteData as object),
+          marginConfig: {
+            type: marginConfig.marginType,
+            value: marginConfig.marginValue,
+            transferCost: marginConfig.transferCost,
+            importTax: marginConfig.importTax,
+          },
+          customerQuotePrice: marginConfig.customerQuotePrice,
+        };
+      }
+
+      // Add out-of-catalogue items if any (B2C only)
+      if (outOfCatalogueItems && outOfCatalogueItems.length > 0) {
+        // Filter out items without a product name
+        const validItems = outOfCatalogueItems.filter(
+          (item) => item.productName.trim() !== '',
+        );
+        if (validItems.length > 0) {
+          enhancedQuoteData = {
+            ...(enhancedQuoteData as object),
+            outOfCatalogueRequests: validItems,
+          };
+        }
+      }
 
       const savedQuote = await trpcClient.quotes.save.mutate({
         name: quoteName.trim(),
@@ -229,6 +256,18 @@ const SaveQuoteDialog = ({
                 </div>
                 <Divider />
               </>
+            )}
+
+            {/* Show out-of-catalogue requests summary if any */}
+            {outOfCatalogueItems && outOfCatalogueItems.filter((i) => i.productName.trim()).length > 0 && (
+              <div className="rounded-lg border border-amber-200 bg-amber-50 p-3">
+                <Typography variant="bodyXs" colorRole="muted" className="mb-1">
+                  Out-of-Catalogue Requests
+                </Typography>
+                <Typography variant="bodySm" className="font-medium text-amber-800">
+                  {outOfCatalogueItems.filter((i) => i.productName.trim()).length} item(s) will be reviewed by our team
+                </Typography>
+              </div>
             )}
 
             {/* Client Name */}
