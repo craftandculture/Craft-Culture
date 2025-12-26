@@ -54,6 +54,16 @@ const commissionsGetPending = adminProcedure
           name: users.name,
           email: users.email,
           customerType: users.customerType,
+          // Bank details for payout
+          bankDetails: users.bankDetails,
+          // Address for reference
+          addressLine1: users.addressLine1,
+          addressLine2: users.addressLine2,
+          city: users.city,
+          stateProvince: users.stateProvince,
+          postalCode: users.postalCode,
+          country: users.country,
+          phone: users.phone,
         },
       })
       .from(quotes)
@@ -84,6 +94,16 @@ const commissionsGetPending = adminProcedure
                 id: row.user.id,
                 name: row.user.name,
                 email: row.user.email,
+                // Bank details for payout
+                bankDetails: row.user.bankDetails,
+                // Address for reference
+                addressLine1: row.user.addressLine1,
+                addressLine2: row.user.addressLine2,
+                city: row.user.city,
+                stateProvince: row.user.stateProvince,
+                postalCode: row.user.postalCode,
+                country: row.user.country,
+                phone: row.user.phone,
               }
             : null,
         };
