@@ -780,8 +780,6 @@ const QuotesForm = () => {
               </Typography>
               <PriceInfoTooltip customerType={customerType} />
             </div>
-            {/* Alt */}
-            <div className="w-7 shrink-0" />
             {/* Delete button */}
             <div className="w-7 shrink-0" />
           </div>
