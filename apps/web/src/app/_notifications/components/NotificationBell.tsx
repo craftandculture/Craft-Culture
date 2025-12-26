@@ -4,7 +4,7 @@ import { IconBell, IconCheck, IconChecks } from '@tabler/icons-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { formatDistanceToNow } from 'date-fns';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import Button from '@/app/_ui/components/Button/Button';
 import Icon from '@/app/_ui/components/Icon/Icon';
@@ -16,6 +16,37 @@ import type { Notification } from '@/database/schema';
 import { useTRPCClient } from '@/lib/trpc/browser';
 
 /**
+ * Play notification sound using Web Audio API
+ * Creates a gentle chime sound without needing an audio file
+ */
+const playNotificationSound = () => {
+  try {
+    const audioContext = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+
+    // Create oscillator for a gentle chime
+    const oscillator = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
+
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+
+    // Chime sound: start high, drop slightly
+    oscillator.frequency.setValueAtTime(880, audioContext.currentTime); // A5
+    oscillator.frequency.setValueAtTime(660, audioContext.currentTime + 0.1); // E5
+
+    // Quick fade in and out for a gentle sound
+    gainNode.gain.setValueAtTime(0, audioContext.currentTime);
+    gainNode.gain.linearRampToValueAtTime(0.3, audioContext.currentTime + 0.02);
+    gainNode.gain.linearRampToValueAtTime(0, audioContext.currentTime + 0.3);
+
+    oscillator.start(audioContext.currentTime);
+    oscillator.stop(audioContext.currentTime + 0.3);
+  } catch {
+    // Audio not supported or blocked, fail silently
+  }
+};
+
+/**
  * Notification bell with dropdown showing recent notifications
  */
 const NotificationBell = () => {
@@ -23,6 +54,35 @@ const NotificationBell = () => {
   const trpcClient = useTRPCClient();
   const queryClient = useQueryClient();
   const [isOpen, setIsOpen] = useState(false);
+  const previousCountRef = useRef<number | null>(null);
+  const hasInteractedRef = useRef(false);
+
+  // Track user interaction to enable sound (browser autoplay policy)
+  useEffect(() => {
+    const handleInteraction = () => {
+      hasInteractedRef.current = true;
+    };
+
+    window.addEventListener('click', handleInteraction, { once: true });
+    window.addEventListener('keydown', handleInteraction, { once: true });
+
+    return () => {
+      window.removeEventListener('click', handleInteraction);
+      window.removeEventListener('keydown', handleInteraction);
+    };
+  }, []);
+
+  // Play sound when new notifications arrive
+  const handleNewNotifications = useCallback((newCount: number) => {
+    const prevCount = previousCountRef.current;
+
+    // Only play sound if count increased and user has interacted
+    if (prevCount !== null && newCount > prevCount && hasInteractedRef.current) {
+      playNotificationSound();
+    }
+
+    previousCountRef.current = newCount;
+  }, []);
 
   // Fetch unread count
   const { data: unreadData } = useQuery({
@@ -30,6 +90,13 @@ const NotificationBell = () => {
     queryFn: () => trpcClient.notifications.getUnreadCount.query(),
     refetchInterval: 30000, // Poll every 30 seconds
   });
+
+  // Play sound when unread count changes
+  useEffect(() => {
+    if (unreadData?.count !== undefined) {
+      handleNewNotifications(unreadData.count);
+    }
+  }, [unreadData?.count, handleNewNotifications]);
 
   // Fetch recent notifications when popover is open
   const { data: notificationsData, isLoading } = useQuery({
