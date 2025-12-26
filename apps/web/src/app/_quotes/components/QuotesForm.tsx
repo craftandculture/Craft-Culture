@@ -687,15 +687,15 @@ const QuotesForm = () => {
         )}
 
         {/* Currency Toggle */}
-        <div className="flex items-center justify-between sm:justify-end sm:gap-3">
-          <Typography variant="bodySm" className="text-text-muted font-medium">
+        <div className="flex items-center justify-between sm:justify-end sm:gap-2">
+          <Typography variant="bodyXs" className="text-text-muted font-medium">
             Currency:
           </Typography>
-            <div className="flex gap-0.5 rounded-lg border border-border-muted bg-fill-muted p-1">
+            <div className="flex gap-0.5 rounded-md border border-border-muted bg-fill-muted p-0.5">
               <button
                 type="button"
                 onClick={() => setDisplayCurrency('USD')}
-                className={`rounded-md px-3 py-1.5 text-sm font-medium transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+                className={`rounded px-2 py-1 text-xs font-medium transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] ${
                   displayCurrency === 'USD'
                     ? 'bg-fill-primary text-text-primary shadow-sm'
                     : 'text-text-muted hover:text-text-primary hover:bg-fill-primary/50'
@@ -706,7 +706,7 @@ const QuotesForm = () => {
               <button
                 type="button"
                 onClick={() => setDisplayCurrency('AED')}
-                className={`rounded-md px-3 py-1.5 text-sm font-medium transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+                className={`rounded px-2 py-1 text-xs font-medium transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] ${
                   displayCurrency === 'AED'
                     ? 'bg-fill-primary text-text-primary shadow-sm'
                     : 'text-text-muted hover:text-text-primary hover:bg-fill-primary/50'
