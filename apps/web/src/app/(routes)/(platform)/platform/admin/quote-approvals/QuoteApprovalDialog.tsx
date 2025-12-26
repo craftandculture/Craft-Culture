@@ -876,8 +876,8 @@ const QuoteApprovalDialog = ({
                                         setOocFulfillments({
                                           ...oocFulfillments,
                                           [requestId]: {
-                                            ...fulfillment,
                                             include: true,
+                                            pricePerCase: fulfillment?.pricePerCase || 0,
                                             quantity: parseInt(e.target.value, 10) || 0,
                                           },
                                         });
@@ -900,8 +900,8 @@ const QuoteApprovalDialog = ({
                                           setOocFulfillments({
                                             ...oocFulfillments,
                                             [requestId]: {
-                                              ...fulfillment,
                                               include: true,
+                                              quantity: fulfillment?.quantity || 0,
                                               pricePerCase: parseFloat(e.target.value) || 0,
                                             },
                                           });
