@@ -1,6 +1,7 @@
 import { HydrationBoundary, dehydrate } from '@tanstack/react-query';
 import { SearchParams, createLoader } from 'nuqs/server';
 
+import CommissionSummaryCard from '@/app/_commissions/components/CommissionSummaryCard';
 import QuotesForm from '@/app/_quotes/components/QuotesForm';
 import quotesSearchParams from '@/app/_quotes/search-params/filtersSearchParams';
 import Card from '@/app/_ui/components/Card/Card';
@@ -40,6 +41,9 @@ const QuotesPage = async ({
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
       <main className="container py-4 landscape:py-2 md:py-16">
+        {/* Commission Summary - Only shows for B2C users with commission history */}
+        <CommissionSummaryCard />
+
         <Card className="w-full">
           <CardContent>
             <QuotesForm />
