@@ -734,7 +734,7 @@ const QuotesForm = () => {
               </Typography>
             </div>
             {/* Year */}
-            <div className="w-16 shrink-0 text-center">
+            <div className="w-14 shrink-0 text-center">
               <Typography
                 variant="bodyXs"
                 className="text-text-muted font-medium uppercase"
@@ -743,7 +743,7 @@ const QuotesForm = () => {
               </Typography>
             </div>
             {/* Qty */}
-            <div className="w-16 shrink-0 text-center">
+            <div className="w-14 shrink-0 text-center">
               <Typography
                 variant="bodyXs"
                 className="text-text-muted font-medium uppercase"
@@ -761,7 +761,7 @@ const QuotesForm = () => {
               </Typography>
             </div>
             {/* Price */}
-            <div className="flex w-24 shrink-0 items-center justify-end gap-1">
+            <div className="flex w-20 shrink-0 items-center justify-end gap-1">
               <Typography
                 variant="bodyXs"
                 className="text-text-muted font-medium uppercase"
@@ -771,17 +771,19 @@ const QuotesForm = () => {
               <PriceInfoTooltip customerType={customerType} />
             </div>
             {/* /Bottle */}
-            <div className="flex w-20 shrink-0 items-center justify-end gap-1">
+            <div className="flex w-16 shrink-0 items-center justify-end gap-1">
               <Typography
                 variant="bodyXs"
                 className="text-text-muted font-medium uppercase"
               >
-                /Bottle
+                /Btl
               </Typography>
               <PriceInfoTooltip customerType={customerType} />
             </div>
+            {/* Alt */}
+            <div className="w-7 shrink-0" />
             {/* Delete button */}
-            <div className="w-8 shrink-0" />
+            <div className="w-7 shrink-0" />
           </div>
         )}
 

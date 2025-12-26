@@ -231,27 +231,19 @@ const LineItemRow = ({
           <Icon icon={IconGripVertical} size="sm" colorRole="muted" />
         </div>
 
-        {/* Product Selector */}
+        {/* Product Selector - Takes all available space */}
         <div className="min-w-0 flex-1">
           {product ? (
-            <div className="flex items-center gap-2">
-              <ProductDetailsTooltip product={product}>
-                <div className="min-w-0 flex-1">
-                  <ProductsCombobox
-                    value={product}
-                    onSelect={onProductChange}
-                    placeholder="Select product..."
-                    omitProductIds={omitProductIds}
-                  />
-                </div>
-              </ProductDetailsTooltip>
-              {/* Alternatives inline */}
-              <AlternativeVintagesPicker
-                productId={product.id}
-                selectedVintages={alternativeVintages}
-                onChange={onAlternativeVintagesChange}
-              />
-            </div>
+            <ProductDetailsTooltip product={product}>
+              <div>
+                <ProductsCombobox
+                  value={product}
+                  onSelect={onProductChange}
+                  placeholder="Select product..."
+                  omitProductIds={omitProductIds}
+                />
+              </div>
+            </ProductDetailsTooltip>
           ) : (
             <ProductsCombobox
               value={null}
@@ -264,7 +256,7 @@ const LineItemRow = ({
 
         {/* Vintage Input */}
         {!isPlaceholder && (
-          <div className="w-16 shrink-0">
+          <div className="w-14 shrink-0">
             <Input
               type="text"
               size="md"
@@ -278,7 +270,7 @@ const LineItemRow = ({
 
         {/* Quantity Input */}
         {!isPlaceholder && (
-          <div className="w-16 shrink-0">
+          <div className="w-14 shrink-0">
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -322,9 +314,9 @@ const LineItemRow = ({
 
         {/* Line Price */}
         {!isPlaceholder && (
-          <div className="flex w-24 shrink-0 items-center justify-end">
+          <div className="flex w-20 shrink-0 items-center justify-end">
             {isQuoteLoading ? (
-              <Skeleton className="h-4 w-16" />
+              <Skeleton className="h-4 w-14" />
             ) : (
               <Typography variant="bodySm" className="font-medium">
                 {quotePrice !== undefined ? formatPrice(quotePrice, quoteCurrency) : '—'}
@@ -335,9 +327,9 @@ const LineItemRow = ({
 
         {/* Per Bottle Price */}
         {!isPlaceholder && (
-          <div className="flex w-20 shrink-0 items-center justify-end">
+          <div className="flex w-16 shrink-0 items-center justify-end">
             {isQuoteLoading ? (
-              <Skeleton className="h-4 w-14" />
+              <Skeleton className="h-4 w-12" />
             ) : (
               <Typography variant="bodySm" className="font-medium">
                 {perBottlePrice !== undefined ? formatPrice(perBottlePrice, quoteCurrency) : '—'}
@@ -346,8 +338,19 @@ const LineItemRow = ({
           </div>
         )}
 
+        {/* Alternatives Icon - Compact */}
+        {!isPlaceholder && product && (
+          <div className="shrink-0">
+            <AlternativeVintagesPicker
+              productId={product.id}
+              selectedVintages={alternativeVintages}
+              onChange={onAlternativeVintagesChange}
+            />
+          </div>
+        )}
+
         {/* Remove Button */}
-        <div className="flex w-8 shrink-0 items-center justify-center">
+        <div className="flex w-7 shrink-0 items-center justify-center">
           <Button
             type="button"
             size="sm"
