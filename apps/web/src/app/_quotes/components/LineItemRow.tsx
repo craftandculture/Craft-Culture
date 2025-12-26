@@ -316,7 +316,7 @@ const LineItemRow = ({
             {offer && (
               <Typography
                 variant="bodyXs"
-                className="text-text-muted font-medium whitespace-nowrap"
+                className="text-text-muted/70 whitespace-nowrap"
               >
                 {offer.unitCount}×{offer.unitSize}
               </Typography>
@@ -330,7 +330,7 @@ const LineItemRow = ({
             {isQuoteLoading ? (
               <Skeleton className="h-4 w-14" />
             ) : (
-              <Typography variant="bodySm" className="font-medium">
+              <Typography variant="bodySm" className="font-semibold tabular-nums">
                 {quotePrice !== undefined ? formatPrice(quotePrice, quoteCurrency) : '—'}
               </Typography>
             )}
@@ -343,7 +343,7 @@ const LineItemRow = ({
             {isQuoteLoading ? (
               <Skeleton className="h-4 w-12" />
             ) : (
-              <Typography variant="bodySm" className="font-medium">
+              <Typography variant="bodyXs" className="text-text-muted tabular-nums">
                 {perBottlePrice !== undefined ? formatPrice(perBottlePrice, quoteCurrency) : '—'}
               </Typography>
             )}
