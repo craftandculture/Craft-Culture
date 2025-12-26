@@ -3,6 +3,7 @@
 import {
   IconActivity,
   IconBuildingStore,
+  IconCoin,
   IconFileText,
   IconSettings,
   IconTable,
@@ -27,6 +28,12 @@ const navItems: NavItem[] = [
     href: '/platform/admin/quote-approvals',
     icon: IconFileText,
     description: 'Review and approve customer quotes',
+  },
+  {
+    label: 'Commissions',
+    href: '/platform/admin/commissions',
+    icon: IconCoin,
+    description: 'Manage B2C commission payouts',
   },
   {
     label: 'User Management',
