@@ -200,7 +200,22 @@ const TermsViewer = ({ onScrollToBottom }: TermsViewerProps) => {
 
           <section className='mb-6'>
             <Typography variant='bodyMd' className='mb-2 font-semibold'>
-              5. Limitation of Liability
+              5. Payment Processing
+            </Typography>
+            <Typography variant='bodySm' className='mb-2 font-semibold'>
+              IMPORTANT: Craft & Culture does not directly handle transactions or process payments.
+            </Typography>
+            <Typography variant='bodySm' className='mb-3'>
+              All payment processing and financial transactions are conducted through our licensed
+              distribution partners who hold the appropriate licenses to sell alcoholic beverages
+              in their respective jurisdictions. Payment details, including bank transfer
+              information for our licensed partners, will be provided in your confirmed quote.
+            </Typography>
+          </section>
+
+          <section className='mb-6'>
+            <Typography variant='bodyMd' className='mb-2 font-semibold'>
+              6. Limitation of Liability
             </Typography>
             <Typography variant='bodySm' className='mb-3'>
               THE PLATFORM IS PROVIDED ON AN &quot;AS IS&quot; AND &quot;AS AVAILABLE&quot; BASIS
@@ -211,7 +226,7 @@ const TermsViewer = ({ onScrollToBottom }: TermsViewerProps) => {
 
           <section className='mb-6'>
             <Typography variant='bodyMd' className='mb-2 font-semibold'>
-              6. Governing Law
+              7. Governing Law
             </Typography>
             <Typography variant='bodySm' className='mb-3'>
               These Terms shall be governed by and construed in accordance with the laws of the
@@ -222,7 +237,7 @@ const TermsViewer = ({ onScrollToBottom }: TermsViewerProps) => {
 
           <section className='mb-6'>
             <Typography variant='bodyMd' className='mb-2 font-semibold'>
-              7. Contact Information
+              8. Contact Information
             </Typography>
             <Typography variant='bodySm'>
               For questions about these Terms, please contact us at{' '}
@@ -234,14 +249,14 @@ const TermsViewer = ({ onScrollToBottom }: TermsViewerProps) => {
 
           <section className='mb-6'>
             <Typography variant='bodySm' className='italic'>
-              For the complete Terms and Conditions, please{' '}
+              For the complete Terms of Use, please{' '}
               <a
-                href='/TERMS_AND_CONDITIONS.md'
+                href='/platform/terms-of-use'
                 target='_blank'
                 rel='noopener noreferrer'
                 className='text-text-brand'
               >
-                download the full document
+                view the full document
               </a>
               .
             </Typography>
