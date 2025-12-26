@@ -36,7 +36,7 @@ const BrandedFooter = async ({ customerType }: BrandedFooterProps) => {
             </h3>
             <p className="text-text-muted text-xs leading-relaxed">
               {isB2C
-                ? 'The region\'s first professional wine application built specifically for sommeliers. It combines bottle integrity, fair market pricing, and tools that allow professional expertise to be applied consistently — creating value for clients and recognition for the sommelier behind the advice.'
+                ? 'The region\'s first professional wine pricing tool. Built around bottle integrity, fair market pricing, and trusted expertise.'
                 : 'Building the bridge for wine & spirits brands to access, activate, and scale across the GCC.'}
             </p>
           </div>
