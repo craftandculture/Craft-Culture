@@ -1,4 +1,4 @@
-import { IconWine } from '@tabler/icons-react';
+import { IconGlassFull } from '@tabler/icons-react';
 
 export interface PocketCellarLogoProps {
   className?: string;
@@ -21,7 +21,7 @@ const PocketCellarLogo = ({ className, height = 144 }: PocketCellarLogoProps) =>
       className={`flex items-center gap-1.5 ${className}`}
       style={{ height: height * 0.25 }}
     >
-      <IconWine
+      <IconGlassFull
         size={iconSize}
         className="text-fill-brand shrink-0"
         stroke={1.5}
