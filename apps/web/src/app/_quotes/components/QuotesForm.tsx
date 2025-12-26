@@ -680,7 +680,7 @@ const QuotesForm = () => {
                 All-Inclusive Pricing
               </Typography>
               <Typography variant="bodyXs" colorRole="muted">
-                Prices include international freight, UAE import duties, and delivery to your door via our licensed mainland partner. No hidden fees.
+                One clear price covering international freight, UAE import duties, and compliant delivery via our licensed mainland partner — all handled through the C&C cold chain to ensure perfect bottle condition, every time. No hidden fees. No surprises.
               </Typography>
             </div>
           </div>
