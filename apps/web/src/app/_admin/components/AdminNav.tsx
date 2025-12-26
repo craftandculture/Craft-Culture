@@ -106,7 +106,7 @@ const AdminNav = () => {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex flex-col border-b-2 py-4 transition-colors ${
+                className={`relative block border-b-2 py-4 transition-colors ${
                   isActive
                     ? 'border-border-brand'
                     : 'border-transparent hover:border-border-muted'
