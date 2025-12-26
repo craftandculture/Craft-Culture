@@ -10,6 +10,8 @@ import QuotePDFTemplate, { type QuotePDFTemplateProps } from '../components/Quot
  * @param quote - The quote to export
  * @param lineItems - Product line items with pricing
  * @param user - User/company information for branding
+ * @param fulfilledOocItems - Fulfilled out-of-catalogue items with pricing
+ * @param licensedPartner - Licensed partner/distributor info for B2C quotes
  */
 const exportQuoteToPDF = async (
   quote: Quote,
@@ -32,6 +34,20 @@ const exportQuoteToPDF = async (
     companyWebsite?: string | null;
     companyVatNumber?: string | null;
   },
+  fulfilledOocItems?: Array<{
+    productName: string;
+    vintage?: string;
+    quantity: number;
+    pricePerCase: number;
+    lineTotal: number;
+  }>,
+  licensedPartner?: {
+    businessName: string;
+    businessAddress?: string | null;
+    businessPhone?: string | null;
+    businessEmail?: string | null;
+    logoUrl?: string | null;
+  } | null,
 ) => {
   const props: QuotePDFTemplateProps = {
     quote: {
@@ -49,6 +65,8 @@ const exportQuoteToPDF = async (
     },
     lineItems,
     user,
+    fulfilledOocItems,
+    licensedPartner: licensedPartner ?? undefined,
   };
 
   // Generate PDF blob

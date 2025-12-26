@@ -189,6 +189,51 @@ const styles = StyleSheet.create({
     lineHeight: 1.6,
     color: '#0a0a0a',
   },
+  supplierSection: {
+    marginTop: 24,
+    padding: 16,
+    backgroundColor: '#f0fdf4',
+    borderRadius: 4,
+    borderLeft: '3px solid #22c55e',
+  },
+  supplierHeader: {
+    fontSize: 8,
+    fontWeight: 'bold',
+    color: '#166534',
+    marginBottom: 8,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  supplierLogo: {
+    width: 100,
+    height: 50,
+    objectFit: 'contain',
+    marginBottom: 8,
+  },
+  supplierName: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#166534',
+    marginBottom: 4,
+  },
+  supplierDetails: {
+    fontSize: 8,
+    color: '#4b5563',
+    lineHeight: 1.4,
+  },
+  specialOrderSection: {
+    marginTop: 16,
+    paddingTop: 16,
+    borderTop: '1px dashed #e5e5e5',
+  },
+  specialOrderTitle: {
+    fontSize: 9,
+    fontWeight: 'bold',
+    marginBottom: 8,
+    color: '#166534',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
   footer: {
     position: 'absolute',
     bottom: 30,
@@ -239,6 +284,22 @@ export interface QuotePDFTemplateProps {
     companyWebsite?: string | null;
     companyVatNumber?: string | null;
   };
+  /** Fulfilled out-of-catalogue items with pricing */
+  fulfilledOocItems?: Array<{
+    productName: string;
+    vintage?: string;
+    quantity: number;
+    pricePerCase: number;
+    lineTotal: number;
+  }>;
+  /** Licensed partner/distributor info for B2C quotes */
+  licensedPartner?: {
+    businessName: string;
+    businessAddress?: string | null;
+    businessPhone?: string | null;
+    businessEmail?: string | null;
+    logoUrl?: string | null;
+  } | null;
 }
 
 /**
@@ -248,6 +309,8 @@ const QuotePDFTemplate = ({
   quote,
   lineItems,
   user,
+  fulfilledOocItems,
+  licensedPartner,
 }: QuotePDFTemplateProps) => {
   const formatPrice = (amount: number, currency: string) => {
     return `${currency} ${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -373,6 +436,36 @@ const QuotePDFTemplate = ({
                 </View>
               );
             })}
+
+            {/* Special Order Items (fulfilled OOC items) */}
+            {fulfilledOocItems && fulfilledOocItems.length > 0 && (
+              <View style={styles.specialOrderSection}>
+                <Text style={styles.specialOrderTitle}>Special Order Items</Text>
+                {fulfilledOocItems.map((item, index) => (
+                  <View
+                    key={`ooc-${index}`}
+                    style={index % 2 === 1 ? [styles.tableRow, styles.tableRowAlt] : styles.tableRow}
+                  >
+                    <View style={styles.colProduct}>
+                      <Text style={styles.productName}>{item.productName}</Text>
+                      {item.vintage && (
+                        <Text style={styles.productMeta}>Vintage: {item.vintage}</Text>
+                      )}
+                    </View>
+                    <Text style={styles.colQuantity}>
+                      {item.quantity} {item.quantity === 1 ? 'case' : 'cases'}
+                    </Text>
+                    <Text style={styles.colBottlePrice}>-</Text>
+                    <Text style={styles.colPrice}>
+                      {formatPrice(item.pricePerCase, quote.currency)}
+                    </Text>
+                    <Text style={styles.colTotal}>
+                      {formatPrice(item.lineTotal, quote.currency)}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            )}
           </View>
         </View>
 
@@ -389,6 +482,29 @@ const QuotePDFTemplate = ({
           <View style={styles.notesBox}>
             <Text style={styles.sectionTitle}>Notes</Text>
             <Text style={styles.notesText}>{quote.notes}</Text>
+          </View>
+        )}
+
+        {/* Licensed Partner / Supplier Information */}
+        {licensedPartner && (
+          <View style={styles.supplierSection}>
+            <Text style={styles.supplierHeader}>SUPPLIED BY</Text>
+            {licensedPartner.logoUrl && (
+              // eslint-disable-next-line jsx-a11y/alt-text -- @react-pdf/renderer Image doesn't support alt prop
+              <Image src={licensedPartner.logoUrl} style={styles.supplierLogo} />
+            )}
+            <Text style={styles.supplierName}>{licensedPartner.businessName}</Text>
+            <View style={styles.supplierDetails}>
+              {licensedPartner.businessAddress && (
+                <Text>{licensedPartner.businessAddress}</Text>
+              )}
+              {licensedPartner.businessPhone && (
+                <Text>Tel: {licensedPartner.businessPhone}</Text>
+              )}
+              {licensedPartner.businessEmail && (
+                <Text>Email: {licensedPartner.businessEmail}</Text>
+              )}
+            </View>
           </View>
         )}
 
