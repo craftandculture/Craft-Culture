@@ -3,9 +3,10 @@ import { redirect } from 'next/navigation';
 
 import UserDropdown from '@/app/_auth/components/UserDropdown';
 import NotificationBell from '@/app/_notifications/components/NotificationBell';
+import BrandedTitleProvider from '@/app/_ui/components/BrandedTitleProvider/BrandedTitleProvider';
 import CommandBar from '@/app/_ui/components/CommandBar/CommandBar';
-import Footer from '@/app/_ui/components/Footer/Footer';
-import Logo from '@/app/_ui/components/Logo/Logo';
+import BrandedFooter from '@/app/_ui/components/Footer/BrandedFooter';
+import BrandedLogo from '@/app/_ui/components/Logo/BrandedLogo';
 import ThemeToggle from '@/app/_ui/components/ThemeToggle/ThemeToggle';
 import getQueryClient from '@/lib/react-query';
 import api from '@/lib/trpc/server';
@@ -35,6 +36,7 @@ const PlatformLayout = async ({ children }: React.PropsWithChildren) => {
 
   return (
     <div className="bg-background-primary flex min-h-dvh flex-col">
+      <BrandedTitleProvider customerType={user.customerType} />
       <CommandBar />
       <header className="border-border-primary sticky top-0 z-50 border-b bg-background-primary/80 backdrop-blur-xl">
         <div className="container flex h-14 items-center justify-between gap-4">
@@ -43,7 +45,7 @@ const PlatformLayout = async ({ children }: React.PropsWithChildren) => {
               href="/platform/quotes"
               className="transition-opacity duration-200 hover:opacity-80"
             >
-              <Logo height={144} />
+              <BrandedLogo customerType={user.customerType} height={144} />
             </Link>
             <nav className="hidden items-center gap-1 md:flex">
               <Link
@@ -76,7 +78,7 @@ const PlatformLayout = async ({ children }: React.PropsWithChildren) => {
         </div>
       </header>
       <div className="flex-1">{children}</div>
-      <Footer />
+      <BrandedFooter customerType={user.customerType} />
     </div>
   );
 };
