@@ -161,6 +161,22 @@ const QuoteApprovalDialog = ({
   // Check if this is a B2C quote (payment flow) or B2B quote (PO flow)
   const isB2C = quote?.createdBy?.customerType === 'b2c';
 
+  // Extract out-of-catalogue requests from quoteData (B2C only)
+  const outOfCatalogueRequests = useMemo(() => {
+    if (!quote?.quoteData || !isB2C) return [];
+    const data = quote.quoteData as {
+      outOfCatalogueRequests?: Array<{
+        id: string;
+        productName: string;
+        vintage?: string;
+        quantity?: number;
+        priceExpectation?: string;
+        notes?: string;
+      }>;
+    };
+    return data.outOfCatalogueRequests || [];
+  }, [quote, isB2C]);
+
   // Fetch licensed partners for payment assignment - only for B2C
   const { data: partnersData } = useQuery({
     ...api.partners.getMany.queryOptions({
@@ -701,6 +717,62 @@ const QuoteApprovalDialog = ({
                 </div>
               </div>
             </div>
+
+            {/* Out-of-Catalogue Requests - B2C only */}
+            {isB2C && outOfCatalogueRequests.length > 0 && (
+              <div className="rounded-xl border-2 border-amber-300 bg-amber-50 p-5">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-200">
+                    <span className="text-lg">🍷</span>
+                  </div>
+                  <div>
+                    <Typography variant="headingMd" className="font-bold text-amber-800">
+                      Out-of-Catalogue Requests
+                    </Typography>
+                    <Typography variant="bodyXs" className="text-amber-700">
+                      Customer requested {outOfCatalogueRequests.length} item(s) not in catalogue
+                    </Typography>
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  {outOfCatalogueRequests.map((request, index) => (
+                    <div
+                      key={request.id || index}
+                      className="rounded-lg bg-white border border-amber-200 p-4"
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1 min-w-0">
+                          <Typography variant="bodySm" className="font-semibold text-amber-900">
+                            {request.productName}
+                          </Typography>
+                          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-xs text-amber-700">
+                            {request.vintage && (
+                              <span>Vintage: {request.vintage}</span>
+                            )}
+                            {request.quantity && (
+                              <span>Qty: {request.quantity} cases</span>
+                            )}
+                            {request.priceExpectation && (
+                              <span>Price expectation: {request.priceExpectation}</span>
+                            )}
+                          </div>
+                          {request.notes && (
+                            <Typography variant="bodyXs" className="mt-2 text-amber-600 italic">
+                              &ldquo;{request.notes}&rdquo;
+                            </Typography>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-4 rounded-lg bg-amber-100 p-3">
+                  <Typography variant="bodyXs" className="text-amber-800">
+                    <strong>Note:</strong> These items are not included in the quote total. Follow up with the customer separately regarding availability and pricing.
+                  </Typography>
+                </div>
+              </div>
+            )}
 
             {/* Delivery, Partner & Payment - Under Review */}
             {quote.status === 'under_cc_review' && !showRevisionForm && (

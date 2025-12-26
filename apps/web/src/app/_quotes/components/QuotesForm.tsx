@@ -41,6 +41,9 @@ import B2BCalculator from './B2BCalculator';
 import CommissionBreakdown from './CommissionBreakdown';
 import FloatingQuoteSummary from './FloatingQuoteSummary';
 import LineItemRow from './LineItemRow';
+import OutOfCatalogueRequests, {
+  type OutOfCatalogueItem,
+} from './OutOfCatalogueRequests';
 import PriceInfoTooltip from './PriceInfoTooltip';
 import ProductFilters from './ProductFilters';
 import SaveQuoteDialog, { type MarginConfig } from './SaveQuoteDialog';
@@ -152,6 +155,9 @@ const QuotesForm = () => {
   // Save quote dialog state
   const [isSaveDialogOpen, setIsSaveDialogOpen] = useState(false);
   const [marginConfig, setMarginConfig] = useState<MarginConfig | undefined>(undefined);
+
+  // Out-of-catalogue requests (B2C only)
+  const [outOfCatalogueItems, setOutOfCatalogueItems] = useState<OutOfCatalogueItem[]>([]);
 
   // Drag and drop sensors
   const sensors = useSensors(
@@ -993,6 +999,17 @@ const QuotesForm = () => {
               </Popover>
             </div>
 
+            {/* Out-of-Catalogue Requests - B2C Only */}
+            {customerType === 'b2c' && (
+              <>
+                <Divider />
+                <OutOfCatalogueRequests
+                  items={outOfCatalogueItems}
+                  onItemsChange={setOutOfCatalogueItems}
+                />
+              </>
+            )}
+
             {/* Save Quote Button - B2C Only */}
             {customerType === 'b2c' && quoteData && (
               <>
@@ -1140,8 +1157,11 @@ const QuotesForm = () => {
         }
         customerType={customerType}
         marginConfig={marginConfig}
+        outOfCatalogueItems={customerType === 'b2c' ? outOfCatalogueItems : undefined}
         onSaveSuccess={(quoteId) => {
           console.log('Quote saved successfully:', quoteId);
+          // Clear out-of-catalogue items after successful save
+          setOutOfCatalogueItems([]);
           void queryClient.invalidateQueries({ queryKey: ['quotes.getMany'] });
         }}
       />
