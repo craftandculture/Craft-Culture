@@ -1,5 +1,6 @@
 import { eq } from 'drizzle-orm';
 
+import createAdminNotifications from '@/app/_notifications/utils/createAdminNotifications';
 import db from '@/database/client';
 import { users } from '@/database/schema';
 import loops from '@/lib/loops/client';
@@ -61,6 +62,21 @@ const notifyAdminsOfNewUser = async (user: NewUser) => {
     });
 
     await Promise.allSettled(emailPromises);
+
+    // Create in-app notifications for admins (triggers bell + sound)
+    try {
+      await createAdminNotifications({
+        type: 'new_user_pending',
+        title: 'New User Signup',
+        message: `${user.name} (${user.customerType === 'b2b' ? 'B2B' : 'B2C'}) is awaiting approval`,
+        entityType: 'user',
+        entityId: user.id,
+        actionUrl: adminUrl,
+      });
+      logger.dev('Created in-app notifications for new user signup');
+    } catch (error) {
+      logger.error('Failed to create in-app notifications:', error);
+    }
 
     // Send SMS notification if Twilio is configured
     if (twilioClient && serverConfig.adminPhoneNumber && serverConfig.twilioPhoneNumber) {

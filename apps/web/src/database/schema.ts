@@ -564,6 +564,7 @@ export const partnerApiRequestLogs = pgTable(
 // ============================================================================
 
 export const notificationType = pgEnum('notification_type', [
+  'new_user_pending',
   'buy_request_submitted',
   'cc_review_started',
   'quote_confirmed',

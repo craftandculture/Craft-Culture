@@ -3,6 +3,7 @@ import { notifications } from '@/database/schema';
 
 interface CreateAdminNotificationsParams {
   type:
+    | 'new_user_pending'
     | 'buy_request_submitted'
     | 'cc_review_started'
     | 'quote_confirmed'
