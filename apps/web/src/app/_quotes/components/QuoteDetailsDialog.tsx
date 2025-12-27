@@ -963,7 +963,7 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                             {/* Product Name */}
                             <span className={`flex-1 min-w-0 truncate ${isUnavailable ? 'text-text-muted line-through' : 'font-medium'}`}>
                               {pricing?.acceptedAlternative ? (
-                                <span className="text-text-success">{pricing.acceptedAlternative.productName}</span>
+                                <span>{pricing.acceptedAlternative.productName}</span>
                               ) : (
                                 product.name
                               )}
@@ -974,7 +974,7 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                               <span className="shrink-0 rounded bg-fill-warning px-1.5 py-0.5 text-[10px] font-medium text-white">N/A</span>
                             )}
                             {pricing?.acceptedAlternative && (
-                              <span className="shrink-0 rounded bg-fill-success/20 px-1.5 py-0.5 text-[10px] font-medium text-text-success">ALT</span>
+                              <span className="shrink-0 rounded bg-fill-muted px-1.5 py-0.5 text-[10px] font-medium text-text-muted">ALT</span>
                             )}
                             {/* Price */}
                             <span className={`shrink-0 font-semibold tabular-nums ${isUnavailable ? 'text-text-muted' : 'text-text-brand'}`}>
@@ -1015,11 +1015,11 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                                 return (
                                   <div key={altIdx} className="flex items-center gap-2 text-xs">
                                     {isAccepted ? (
-                                      <IconCheck className="h-3 w-3 text-text-success shrink-0" />
+                                      <IconCheck className="h-3 w-3 text-text-brand shrink-0" />
                                     ) : (
-                                      <IconBulb className="h-3 w-3 text-text-success shrink-0" />
+                                      <IconBulb className="h-3 w-3 text-text-muted shrink-0" />
                                     )}
-                                    <span className={`truncate ${isAccepted ? 'text-text-success font-medium' : 'text-text-muted'}`}>
+                                    <span className={`truncate ${isAccepted ? 'text-text-brand font-medium' : 'text-text-muted'}`}>
                                       {alt.productName}
                                     </span>
                                     <span className="text-text-muted">
@@ -1211,236 +1211,110 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
               </>
             )}
 
-            {/* Payment Instructions - shown when quote is awaiting payment */}
+            {/* Payment Instructions - Compact */}
             {quote.status === 'awaiting_payment' && quote.paymentMethod && (
               <>
                 <Divider />
-                <div className="rounded-xl border-2 border-border-warning bg-gradient-to-b from-fill-warning/5 to-fill-warning/15 overflow-hidden">
-                  {/* Header with Amount */}
-                  <div className="bg-fill-warning/20 px-5 py-4 border-b border-border-warning/30">
-                    <div className="flex items-center justify-between gap-4">
-                      <div className="flex items-center gap-2">
-                        <Icon icon={IconCreditCard} size="md" className="text-text-warning" />
-                        <Typography variant="bodyMd" className="font-bold text-text-warning">
-                          Payment Required
-                        </Typography>
-                      </div>
-                      <div className="text-right">
-                        <Typography variant="bodyXs" colorRole="muted">
-                          Amount Due
-                        </Typography>
-                        <Typography variant="headingMd" className="font-bold">
-                          {formatPrice(displayTotal, displayCurrency)}
-                        </Typography>
-                      </div>
+                <div className="rounded-lg border border-border-warning bg-fill-warning/5 px-3 py-2.5 space-y-2">
+                  {/* Header row */}
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-1.5 text-text-warning">
+                      <Icon icon={IconCreditCard} size="xs" />
+                      <span className="text-xs font-semibold uppercase">Pay</span>
                     </div>
+                    <span className="font-bold">{formatPrice(displayTotal, displayCurrency)}</span>
+                    {quote.deliveryLeadTime && (
+                      <span className="text-xs text-text-muted">· {quote.deliveryLeadTime} delivery</span>
+                    )}
                   </div>
 
-                  <div className="p-5 space-y-5">
-                    {/* Partner Info - Compact */}
-                    {partnerInfo && (
-                      <div className="flex items-center gap-3 p-3 rounded-lg bg-white border border-border-muted">
-                        {partnerInfo.logoUrl && (
-                          <img
-                            src={partnerInfo.logoUrl}
-                            alt={partnerInfo.businessName}
-                            className="h-10 w-10 object-contain rounded-md border border-border-muted flex-shrink-0"
-                          />
-                        )}
-                        <div className="flex-1 min-w-0">
-                          <Typography variant="bodySm" className="font-semibold truncate">
-                            {partnerInfo.businessName}
-                          </Typography>
-                          <div className="flex items-center gap-3 text-xs text-text-muted">
-                            {partnerInfo.taxId && <span>TRN: {partnerInfo.taxId}</span>}
-                            {partnerInfo.businessPhone && (
-                              <a href={`tel:${partnerInfo.businessPhone}`} className="text-text-brand hover:underline">
-                                {partnerInfo.businessPhone}
-                              </a>
-                            )}
-                          </div>
-                        </div>
+                  {/* Payment Link */}
+                  {quote.paymentMethod === 'link' && quote.paymentDetails?.paymentUrl && (
+                    <a
+                      href={quote.paymentDetails.paymentUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-center gap-2 rounded bg-fill-brand px-4 py-2 text-sm text-white font-medium hover:bg-fill-brand/90"
+                    >
+                      <IconCreditCard className="h-4 w-4" />
+                      Pay Now
+                      <IconArrowRight className="h-3 w-3" />
+                    </a>
+                  )}
+
+                  {/* Bank Transfer Details */}
+                  {quote.paymentMethod === 'bank_transfer' && quote.paymentDetails && (
+                    <div className="text-xs space-y-1 pt-1 border-t border-border-warning/30">
+                      <div className="text-text-muted">
+                        {quote.paymentDetails.bankName}{quote.paymentDetails.accountName && ` · ${quote.paymentDetails.accountName}`}
                       </div>
-                    )}
-
-                    {/* Delivery Lead Time */}
-                    {quote.deliveryLeadTime && (
-                      <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-fill-brand/10 border border-border-brand">
-                        <Icon icon={IconTruck} size="sm" className="text-text-brand" />
-                        <Typography variant="bodySm" className="text-text-brand">
-                          <span className="font-medium">Delivery:</span> {quote.deliveryLeadTime}
-                        </Typography>
+                      <div className="font-mono tracking-wide">
+                        {quote.paymentDetails.iban || quote.paymentDetails.accountNumber}
+                        {quote.paymentDetails.swiftBic && <span className="text-text-muted ml-2">({quote.paymentDetails.swiftBic})</span>}
                       </div>
-                    )}
-
-                    {/* Payment Link */}
-                    {quote.paymentMethod === 'link' && quote.paymentDetails?.paymentUrl && (
-                      <div className="text-center space-y-3">
-                        <Typography variant="bodySm" colorRole="muted">
-                          Complete your payment securely:
-                        </Typography>
-                        <a
-                          href={quote.paymentDetails.paymentUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-2 rounded-lg bg-fill-brand px-6 py-3 text-white font-semibold hover:bg-fill-brand/90 transition-colors shadow-md"
-                        >
-                          <IconCreditCard className="h-5 w-5" />
-                          Pay {formatPrice(displayTotal, displayCurrency)}
-                          <IconArrowRight className="h-4 w-4" />
-                        </a>
-                      </div>
-                    )}
-
-                    {/* Bank Transfer Details - Clean & Compact */}
-                    {quote.paymentMethod === 'bank_transfer' && quote.paymentDetails && (
-                      <div className="text-xs space-y-1.5">
-                        <div className="text-text-muted">
-                          {quote.paymentDetails.bankName}{quote.paymentDetails.accountName && ` · ${quote.paymentDetails.accountName}`}
-                        </div>
-                        <div className="font-mono text-sm tracking-wide">
-                          {quote.paymentDetails.iban || quote.paymentDetails.accountNumber}
-                          {quote.paymentDetails.swiftBic && <span className="text-text-muted ml-2">({quote.paymentDetails.swiftBic})</span>}
-                        </div>
-                        {quote.paymentDetails.reference && (
-                          <div className="inline-flex items-center gap-2 rounded bg-fill-brand/10 px-2 py-1">
-                            <span className="text-text-muted">Ref:</span>
-                            <span className="font-mono font-bold text-text-brand">{quote.paymentDetails.reference}</span>
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    <Typography variant="bodyXs" colorRole="muted" className="text-center">
-                      Your order will be confirmed once payment is received.
-                    </Typography>
-
-                    {/* Payment Proof Upload Section */}
-                    <div className="mt-4 pt-4 border-t border-border-warning/30 space-y-2">
-                      <Typography variant="bodyXs" className="font-medium text-text-muted uppercase tracking-wide">
-                        Payment Proof
-                      </Typography>
-
-                      {/* Show existing payment proof if already submitted */}
-                      {currentQuote?.paymentProofUrl ? (
-                        <div className="flex items-center gap-3 p-3 rounded-lg bg-fill-success/10">
-                          <Icon icon={IconCheck} size="sm" className="text-text-success shrink-0" />
-                          <div className="flex-1 min-w-0">
-                            <Typography variant="bodySm" className="font-medium text-text-success">
-                              Proof submitted
-                            </Typography>
-                            {currentQuote.paymentProofSubmittedAt && (
-                              <Typography variant="bodyXs" colorRole="muted">
-                                {format(new Date(currentQuote.paymentProofSubmittedAt), 'PPp')}
-                              </Typography>
-                            )}
-                          </div>
-                          <a
-                            href={currentQuote.paymentProofUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-text-brand hover:underline text-xs font-medium shrink-0"
-                          >
-                            View
-                          </a>
-                        </div>
-                      ) : (
-                        <div className="space-y-2">
-                          {/* Hidden file input */}
-                          <input
-                            type="file"
-                            ref={paymentProofInputRef}
-                            onChange={handlePaymentProofChange}
-                            accept="image/png,image/jpeg,image/jpg,application/pdf"
-                            className="hidden"
-                          />
-
-                          {paymentProofUrl ? (
-                            // File selected - show submit UI
-                            <div className="flex flex-col sm:flex-row gap-2">
-                              <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-fill-muted flex-1 min-w-0">
-                                <Icon icon={IconFileText} size="xs" className="text-text-muted shrink-0" />
-                                <Typography variant="bodyXs" className="truncate flex-1">
-                                  File ready
-                                </Typography>
-                                <button
-                                  type="button"
-                                  onClick={() => setPaymentProofUrl('')}
-                                  className="text-text-muted hover:text-text-danger text-xs shrink-0"
-                                >
-                                  Remove
-                                </button>
-                              </div>
-                              <Button
-                                variant="default"
-                                colorRole="brand"
-                                size="sm"
-                                onClick={() => submitPaymentProofMutation.mutate()}
-                                isDisabled={submitPaymentProofMutation.isPending}
-                                className="shrink-0"
-                              >
-                                <ButtonContent>
-                                  <Icon icon={IconSend} size="xs" />
-                                  {submitPaymentProofMutation.isPending ? 'Submitting...' : 'Submit'}
-                                </ButtonContent>
-                              </Button>
-                            </div>
-                          ) : (
-                            // No file - show upload button
-                            <button
-                              type="button"
-                              onClick={() => paymentProofInputRef.current?.click()}
-                              disabled={isUploadingPaymentProof}
-                              className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 border-dashed border-border-muted hover:border-border-brand hover:bg-fill-muted/50 transition-colors text-sm text-text-muted hover:text-text-primary disabled:opacity-50"
-                            >
-                              <Icon icon={IconPaperclip} size="sm" />
-                              {isUploadingPaymentProof ? 'Uploading...' : 'Upload bank transfer screenshot'}
-                            </button>
-                          )}
-
-                          <Typography variant="bodyXs" colorRole="muted" className="text-center">
-                            PNG, JPG, or PDF (max 5MB)
-                          </Typography>
+                      {quote.paymentDetails.reference && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-text-muted">Ref:</span>
+                          <span className="font-mono font-bold text-text-brand">{quote.paymentDetails.reference}</span>
                         </div>
                       )}
                     </div>
+                  )}
+
+                  {/* Payment Proof - Compact inline */}
+                  <div className="pt-1.5 border-t border-border-warning/30">
+                    <input
+                      type="file"
+                      ref={paymentProofInputRef}
+                      onChange={handlePaymentProofChange}
+                      accept="image/png,image/jpeg,image/jpg,application/pdf"
+                      className="hidden"
+                    />
+                    {currentQuote?.paymentProofUrl ? (
+                      <div className="flex items-center gap-2 text-xs text-text-success">
+                        <IconCheck className="h-3 w-3" />
+                        <span className="font-medium">Proof submitted</span>
+                        <a href={currentQuote.paymentProofUrl} target="_blank" rel="noopener noreferrer" className="text-text-brand hover:underline ml-auto">View</a>
+                      </div>
+                    ) : paymentProofUrl ? (
+                      <div className="flex items-center gap-2 text-xs">
+                        <Icon icon={IconFileText} size="xs" className="text-text-muted" />
+                        <span className="text-text-muted">Ready</span>
+                        <button type="button" onClick={() => setPaymentProofUrl('')} className="text-text-danger hover:underline">×</button>
+                        <button
+                          type="button"
+                          onClick={() => submitPaymentProofMutation.mutate()}
+                          disabled={submitPaymentProofMutation.isPending}
+                          className="ml-auto px-2 py-0.5 rounded bg-fill-brand text-white text-xs font-medium hover:bg-fill-brand/90 disabled:opacity-50"
+                        >
+                          {submitPaymentProofMutation.isPending ? '...' : 'Submit'}
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => paymentProofInputRef.current?.click()}
+                        disabled={isUploadingPaymentProof}
+                        className="flex items-center gap-1.5 text-xs text-text-muted hover:text-text-primary disabled:opacity-50"
+                      >
+                        <Icon icon={IconPaperclip} size="xs" />
+                        {isUploadingPaymentProof ? 'Uploading...' : 'Upload payment proof'}
+                      </button>
+                    )}
                   </div>
                 </div>
               </>
             )}
 
-            {/* Paid Status - shown when payment has been confirmed */}
+            {/* Paid Status - Compact */}
             {quote.status === 'paid' && (
               <>
                 <Divider />
-                <div className="rounded-lg border-2 border-border-success bg-fill-success/10 p-4">
-                  <div className="mb-2 flex items-center gap-2">
-                    <Icon icon={IconCheck} size="sm" className="text-text-success" />
-                    <Typography variant="bodySm" className="font-semibold text-text-success">
-                      Payment Confirmed
-                    </Typography>
-                  </div>
-                  <Typography variant="bodySm">
-                    Your payment has been received. Your order is being processed.
-                  </Typography>
-                  {quote.paidAt && (
-                    <Typography variant="bodyXs" colorRole="muted" className="mt-2">
-                      Paid on {format(new Date(quote.paidAt), 'MMM d, yyyy')}
-                    </Typography>
-                  )}
-                  {quote.deliveryLeadTime && (
-                    <div className="mt-3 rounded-lg bg-white border border-border-brand p-3">
-                      <div className="flex items-center gap-2">
-                        <Icon icon={IconTruck} size="xs" className="text-text-brand" />
-                        <Typography variant="bodyXs" className="font-semibold text-text-brand">
-                          Expected Delivery:
-                        </Typography>
-                        <Typography variant="bodyXs" className="font-bold">
-                          {quote.deliveryLeadTime}
-                        </Typography>
-                      </div>
-                    </div>
-                  )}
+                <div className="flex items-center gap-2 text-sm">
+                  <IconCheck className="h-4 w-4 text-text-brand" />
+                  <span className="font-medium">Paid</span>
+                  {quote.paidAt && <span className="text-text-muted">· {format(new Date(quote.paidAt), 'MMM d, yyyy')}</span>}
+                  {quote.deliveryLeadTime && <span className="text-text-muted">· Delivery: {quote.deliveryLeadTime}</span>}
                 </div>
               </>
             )}
