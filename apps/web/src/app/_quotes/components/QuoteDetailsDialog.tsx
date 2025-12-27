@@ -1211,21 +1211,24 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
               </>
             )}
 
-            {/* Payment Instructions - Compact */}
+            {/* Payment Instructions */}
             {quote.status === 'awaiting_payment' && quote.paymentMethod && (
               <>
                 <Divider />
-                <div className="rounded-lg border border-border-warning bg-fill-warning/5 px-3 py-2.5 space-y-2">
-                  {/* Header row */}
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-1.5 text-text-warning">
-                      <Icon icon={IconCreditCard} size="xs" />
-                      <span className="text-xs font-semibold uppercase">Pay</span>
+                <div className="rounded-lg border border-border-warning bg-fill-warning/5 px-4 py-3 space-y-3">
+                  {/* Header with amount and delivery */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="px-2 py-0.5 rounded bg-fill-warning text-white text-xs font-semibold uppercase">
+                        {quote.paymentMethod === 'bank_transfer' ? 'Bank Transfer' : 'Payment'} Required
+                      </span>
                     </div>
-                    <span className="font-bold">{formatPrice(displayTotal, displayCurrency)}</span>
-                    {quote.deliveryLeadTime && (
-                      <span className="text-xs text-text-muted">· {quote.deliveryLeadTime} delivery</span>
-                    )}
+                    <div className="text-right">
+                      <div className="text-lg font-bold">{formatPrice(displayTotal, displayCurrency)}</div>
+                      {quote.deliveryLeadTime && (
+                        <div className="text-xs text-text-muted">{quote.deliveryLeadTime} delivery</div>
+                      )}
+                    </div>
                   </div>
 
                   {/* Payment Link */}
@@ -1244,25 +1247,83 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
 
                   {/* Bank Transfer Details */}
                   {quote.paymentMethod === 'bank_transfer' && quote.paymentDetails && (
-                    <div className="text-xs space-y-1 pt-1 border-t border-border-warning/30">
-                      <div className="text-text-muted">
-                        {quote.paymentDetails.bankName}{quote.paymentDetails.accountName && ` · ${quote.paymentDetails.accountName}`}
+                    <div className="rounded-md border border-border-muted bg-surface-primary p-3 space-y-2">
+                      {/* Distributor info with logo */}
+                      {partnerInfo && (
+                        <div className="flex items-center gap-3 pb-2 border-b border-border-muted">
+                          {partnerInfo.logoUrl ? (
+                            <img
+                              src={partnerInfo.logoUrl}
+                              alt={partnerInfo.businessName || 'Distributor'}
+                              className="h-8 w-auto max-w-[100px] object-contain"
+                            />
+                          ) : (
+                            <div className="h-8 w-8 rounded bg-fill-muted flex items-center justify-center">
+                              <IconTruck className="h-4 w-4 text-text-muted" />
+                            </div>
+                          )}
+                          <div>
+                            <Typography variant="bodySm" className="font-medium">
+                              {partnerInfo.businessName || 'Licensed Distributor'}
+                            </Typography>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Bank details grid */}
+                      <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-sm">
+                        {quote.paymentDetails.bankName && (
+                          <>
+                            <span className="text-text-muted">Bank</span>
+                            <span className="font-medium">{quote.paymentDetails.bankName}</span>
+                          </>
+                        )}
+                        {quote.paymentDetails.accountName && (
+                          <>
+                            <span className="text-text-muted">Account Name</span>
+                            <span className="font-medium">{quote.paymentDetails.accountName}</span>
+                          </>
+                        )}
+                        {quote.paymentDetails.accountNumber && (
+                          <>
+                            <span className="text-text-muted">Account No.</span>
+                            <span className="font-mono font-medium">{quote.paymentDetails.accountNumber}</span>
+                          </>
+                        )}
+                        {quote.paymentDetails.sortCode && (
+                          <>
+                            <span className="text-text-muted">Sort Code</span>
+                            <span className="font-mono font-medium">{quote.paymentDetails.sortCode}</span>
+                          </>
+                        )}
+                        {quote.paymentDetails.iban && (
+                          <>
+                            <span className="text-text-muted">IBAN</span>
+                            <span className="font-mono font-medium text-xs break-all">{quote.paymentDetails.iban}</span>
+                          </>
+                        )}
+                        {quote.paymentDetails.swiftBic && (
+                          <>
+                            <span className="text-text-muted">SWIFT/BIC</span>
+                            <span className="font-mono font-medium">{quote.paymentDetails.swiftBic}</span>
+                          </>
+                        )}
                       </div>
-                      <div className="font-mono tracking-wide">
-                        {quote.paymentDetails.iban || quote.paymentDetails.accountNumber}
-                        {quote.paymentDetails.swiftBic && <span className="text-text-muted ml-2">({quote.paymentDetails.swiftBic})</span>}
-                      </div>
+
+                      {/* Reference - highlighted */}
                       {quote.paymentDetails.reference && (
-                        <div className="flex items-center gap-2">
-                          <span className="text-text-muted">Ref:</span>
-                          <span className="font-mono font-bold text-text-brand">{quote.paymentDetails.reference}</span>
+                        <div className="pt-2 border-t border-border-muted">
+                          <div className="flex items-center justify-between bg-fill-brand/10 rounded px-3 py-2">
+                            <span className="text-sm text-text-muted">Payment Reference</span>
+                            <span className="font-mono font-bold text-text-brand">{quote.paymentDetails.reference}</span>
+                          </div>
                         </div>
                       )}
                     </div>
                   )}
 
-                  {/* Payment Proof - Compact inline */}
-                  <div className="pt-1.5 border-t border-border-warning/30">
+                  {/* Payment Proof */}
+                  <div className="pt-2 border-t border-border-warning/30">
                     <input
                       type="file"
                       ref={paymentProofInputRef}
