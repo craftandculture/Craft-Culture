@@ -1840,25 +1840,19 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
           </div>
         </DialogBody>
 
-        <DialogFooter>
-          {/* Submit Buy Request button - show only for quotes that haven't been submitted yet */}
-          {(quote.status === 'draft' || quote.status === 'sent' || quote.status === 'revision_requested') && (
-            <Button
-              variant="default"
-              colorRole="brand"
-              size="md"
-              onClick={handleSubmitBuyRequest}
-              isDisabled={submitBuyRequestMutation.isPending}
-            >
-              <ButtonContent iconLeft={IconSend}>
-                {submitBuyRequestMutation.isPending
-                  ? 'Submitting...'
-                  : quote.status === 'revision_requested'
-                    ? 'Resubmit Order Request'
-                    : 'Place Order Request'}
-              </ButtonContent>
-            </Button>
-          )}
+        <DialogFooter className="flex-col-reverse gap-3 sm:flex-row sm:items-center">
+          {/* Export PDF button - secondary action */}
+          <Button
+            variant="outline"
+            size="md"
+            onClick={handleExportPDF}
+            isDisabled={isExporting || !productsData?.data}
+            className="w-full sm:w-auto"
+          >
+            <ButtonContent iconLeft={IconDownload}>
+              {isExporting ? 'Exporting...' : 'Export PDF'}
+            </ButtonContent>
+          </Button>
 
           {/* Show status message for quotes in approval workflow */}
           {(quote.status === 'buy_request_submitted' ||
@@ -1866,7 +1860,7 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
             quote.status === 'cc_confirmed' ||
             quote.status === 'awaiting_payment' ||
             quote.status === 'paid') && (
-            <div className={`flex-1 rounded-lg p-3 ${
+            <div className={`flex-1 rounded-lg p-3 text-center sm:text-left ${
               quote.status === 'paid'
                 ? 'bg-fill-success/10'
                 : quote.status === 'awaiting_payment'
@@ -1877,25 +1871,33 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                 quote.status === 'paid' ? 'text-text-success' : 'text-text-warning'
               }>
                 {quote.status === 'buy_request_submitted' && 'Order request submitted for review'}
-                {quote.status === 'under_cc_review' && 'Order request is under review'}
-                {quote.status === 'cc_confirmed' && 'Quote confirmed by C&C - ready to send to customer'}
-                {quote.status === 'awaiting_payment' && 'Payment required - see payment details above'}
-                {quote.status === 'paid' && 'Payment confirmed - order is being processed'}
+                {quote.status === 'under_cc_review' && 'Order is under review'}
+                {quote.status === 'cc_confirmed' && 'Confirmed - ready to send to customer'}
+                {quote.status === 'awaiting_payment' && 'Payment required - see details above'}
+                {quote.status === 'paid' && 'Payment confirmed - processing order'}
               </Typography>
             </div>
           )}
 
-          <Button
-            variant="default"
-            colorRole="brand"
-            size="md"
-            onClick={handleExportPDF}
-            isDisabled={isExporting || !productsData?.data}
-          >
-            <ButtonContent iconLeft={IconDownload}>
-              {isExporting ? 'Exporting...' : 'Export PDF'}
-            </ButtonContent>
-          </Button>
+          {/* Submit Buy Request button - show only for quotes that haven't been submitted yet */}
+          {(quote.status === 'draft' || quote.status === 'sent' || quote.status === 'revision_requested') && (
+            <Button
+              variant="default"
+              colorRole="brand"
+              size="md"
+              onClick={handleSubmitBuyRequest}
+              isDisabled={submitBuyRequestMutation.isPending}
+              className="w-full sm:w-auto"
+            >
+              <ButtonContent iconLeft={IconSend}>
+                {submitBuyRequestMutation.isPending
+                  ? 'Submitting...'
+                  : quote.status === 'revision_requested'
+                    ? 'Resubmit Order'
+                    : 'Place Order Request'}
+              </ButtonContent>
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>

@@ -424,8 +424,9 @@ const QuotesList = () => {
   return (
     <div className="flex flex-col gap-6">
       {/* Status Filter Tabs */}
-      <div className="flex flex-wrap gap-2">
-        {statusFilters.map((filter) => {
+      <div className="-mx-4 px-4 md:mx-0 md:px-0 overflow-x-auto scrollbar-hide">
+        <div className="flex gap-2 pb-2 md:pb-0 md:flex-wrap">
+          {statusFilters.map((filter) => {
           const isActive = activeFilter === filter.value;
           let count = quotes.length;
           if (filter.value === 'action_required') count = actionRequiredCount;
@@ -437,7 +438,7 @@ const QuotesList = () => {
             <button
               key={filter.value}
               onClick={() => setActiveFilter(filter.value)}
-              className={`flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all ${
+              className={`flex shrink-0 items-center gap-2 whitespace-nowrap rounded-lg px-4 py-2.5 text-sm font-medium transition-all ${
                 isActive
                   ? 'bg-fill-brand text-text-brand-contrast shadow-md'
                   : 'bg-fill-muted/50 text-text-muted hover:bg-fill-muted hover:text-text-primary dark:bg-background-secondary dark:hover:bg-background-tertiary'
@@ -455,6 +456,7 @@ const QuotesList = () => {
             </button>
           );
         })}
+        </div>
       </div>
 
       {/* Search Input */}

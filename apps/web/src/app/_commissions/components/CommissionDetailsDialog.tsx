@@ -65,7 +65,63 @@ const CommissionDetailsDialog = ({ isOpen, onClose }: CommissionDetailsDialogPro
             </div>
           ) : (
             <div className="max-h-[60vh] overflow-y-auto">
-              <table className="w-full">
+              {/* Mobile Card Layout */}
+              <div className="space-y-3 md:hidden">
+                {data.data.map((item) => (
+                  <div
+                    key={item.id}
+                    className="rounded-lg border border-border-muted bg-surface-muted/30 p-4"
+                  >
+                    <div className="mb-3 flex items-start justify-between gap-2">
+                      <Typography variant="bodySm" className="font-medium">
+                        {item.name}
+                      </Typography>
+                      {item.commissionPaidOutAt ? (
+                        <Badge size="sm" colorRole="success">
+                          <BadgeContent iconLeft={IconCheck}>Paid</BadgeContent>
+                        </Badge>
+                      ) : (
+                        <Badge size="sm" colorRole="warning">
+                          <BadgeContent iconLeft={IconClock}>Pending</BadgeContent>
+                        </Badge>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <Typography variant="bodyXs" className="text-text-muted mb-0.5">
+                          Order Total
+                        </Typography>
+                        <Typography variant="bodySm">
+                          {formatPrice(item.orderTotal, 'USD')}
+                        </Typography>
+                      </div>
+                      <div>
+                        <Typography variant="bodyXs" className="text-text-muted mb-0.5">
+                          Commission
+                        </Typography>
+                        <Typography variant="bodySm" className="font-semibold text-fill-brand">
+                          {formatPrice(item.commissionEarned, 'USD')}
+                        </Typography>
+                      </div>
+                    </div>
+                    <div className="mt-3 flex items-center justify-between border-t border-border-muted pt-3">
+                      <Typography variant="bodyXs" className="text-text-muted">
+                        {item.commissionPaidOutAt
+                          ? formatDate(item.commissionPaidOutAt)
+                          : formatDate(item.createdAt)}
+                      </Typography>
+                      {item.payoutReference && (
+                        <Typography variant="bodyXs" className="text-text-muted">
+                          Ref: {item.payoutReference}
+                        </Typography>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Desktop Table Layout */}
+              <table className="hidden w-full md:table">
                 <thead className="sticky top-0 bg-surface-primary">
                   <tr className="border-b border-border-primary text-left">
                     <th className="pb-3 pr-4">
