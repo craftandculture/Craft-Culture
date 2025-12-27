@@ -923,13 +923,13 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                 </>
               )}
 
-            {/* Line Items - Compact */}
+            {/* Line Items - Ultra Compact for Scalability */}
             <Divider />
             <div>
-              <Typography variant="bodyXs" className="mb-2 font-semibold text-text-muted uppercase tracking-wide">
+              <Typography variant="bodyXs" className="mb-1.5 font-semibold text-text-muted uppercase tracking-wide">
                 Line Items ({lineItems.length})
               </Typography>
-              <div className="space-y-1.5">
+              <div className="divide-y divide-border-muted rounded-lg border border-border-muted overflow-hidden">
                 {lineItems.map((item, index) => {
                   const product = productMap[item.productId];
                   const pricing = pricingMap[item.productId];
@@ -942,103 +942,52 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                   // Use confirmed quantity and price if available (after admin approval)
                   // If item is unavailable (has alternatives but none accepted), show $0
                   const displayQuantity = pricing?.confirmedQuantity ?? item.quantity;
-                  const pricePerCase = isUnavailable ? 0 : (pricing?.basePriceUsd ??
-                    (pricing?.lineItemTotalUsd ? pricing.lineItemTotalUsd / item.quantity : 0));
                   const lineItemTotal = isUnavailable ? 0 : (pricing?.lineItemTotalUsd || 0);
+
+                  // Determine if item needs expanded view (has alternatives, notes, or is accepted alternative)
+                  const hasExpandedContent = pricing?.adminAlternatives?.length || pricing?.adminNotes || pricing?.acceptedAlternative;
 
                   return (
                     <div
                       key={index}
-                      className={`rounded-lg border px-3 py-2 ${
-                        isUnavailable
-                          ? 'border-border-warning bg-fill-warning/5'
-                          : 'border-border-muted bg-background-primary'
-                      }`}
+                      className={`px-2.5 py-1.5 ${isUnavailable ? 'bg-fill-warning/5' : 'bg-background-primary'}`}
                     >
                       {product ? (
                         <>
-                          {/* Compact Product Row */}
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="flex-1 min-w-0">
-                              {/* Show accepted alternative name if exists, otherwise original product */}
+                          {/* Single-line item row */}
+                          <div className="flex items-center gap-2 text-sm">
+                            {/* Qty */}
+                            <span className="shrink-0 w-8 text-text-muted text-xs">
+                              {displayQuantity}×
+                            </span>
+                            {/* Product Name */}
+                            <span className={`flex-1 min-w-0 truncate ${isUnavailable ? 'text-text-muted line-through' : 'font-medium'}`}>
                               {pricing?.acceptedAlternative ? (
-                                <>
-                                  <div className="flex items-center gap-2">
-                                    <Typography variant="bodySm" className="font-semibold truncate text-text-success">
-                                      {pricing.acceptedAlternative.productName}
-                                    </Typography>
-                                    <span className="inline-flex items-center gap-1 rounded-full bg-fill-success/20 px-2 py-0.5 text-xs font-medium text-text-success">
-                                      <IconCheck className="h-3 w-3" />
-                                      Alternative
-                                    </span>
-                                  </div>
-                                  <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-0.5">
-                                    <Typography variant="bodyXs" colorRole="muted">
-                                      {pricing.acceptedAlternative.bottlesPerCase}×{pricing.acceptedAlternative.bottleSize}
-                                    </Typography>
-                                    <Typography variant="bodyXs" colorRole="muted" className="line-through">
-                                      · was: {product.name}
-                                    </Typography>
-                                  </div>
-                                </>
+                                <span className="text-text-success">{pricing.acceptedAlternative.productName}</span>
                               ) : (
-                                <>
-                                  <div className="flex items-center gap-2">
-                                    <Typography variant="bodySm" className={`font-semibold truncate ${isUnavailable ? 'text-text-muted line-through' : ''}`}>
-                                      {product.name}
-                                    </Typography>
-                                    {isUnavailable && (
-                                      <span className="inline-flex items-center rounded-full bg-fill-warning px-2 py-0.5 text-xs font-medium text-white">
-                                        Unavailable
-                                      </span>
-                                    )}
-                                  </div>
-                                  <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-0.5">
-                                    {product.producer && (
-                                      <Typography variant="bodyXs" colorRole="muted">
-                                        {product.producer}
-                                      </Typography>
-                                    )}
-                                    {product.year && (
-                                      <Typography variant="bodyXs" colorRole="muted">
-                                        · {product.year}
-                                      </Typography>
-                                    )}
-                                    {product.productOffers?.[0]?.unitCount && (
-                                      <Typography variant="bodyXs" colorRole="muted">
-                                        · {product.productOffers?.[0]?.unitCount}×{product.productOffers?.[0]?.unitSize || '750ml'}
-                                      </Typography>
-                                    )}
-                                  </div>
-                                </>
+                                product.name
                               )}
-                            </div>
-                            {pricing && (
-                              <div className="text-right shrink-0">
-                                <Typography variant="bodySm" className={`font-bold ${isUnavailable ? 'text-text-muted' : 'text-text-brand'}`}>
-                                  {formatPrice(
-                                    displayCurrency === 'AED'
-                                      ? convertUsdToAed(lineItemTotal)
-                                      : lineItemTotal,
-                                    displayCurrency,
-                                  )}
-                                </Typography>
-                              </div>
+                              {product.year && <span className="text-text-muted font-normal"> ({product.year})</span>}
+                            </span>
+                            {/* Tags */}
+                            {isUnavailable && (
+                              <span className="shrink-0 rounded bg-fill-warning px-1.5 py-0.5 text-[10px] font-medium text-white">N/A</span>
                             )}
+                            {pricing?.acceptedAlternative && (
+                              <span className="shrink-0 rounded bg-fill-success/20 px-1.5 py-0.5 text-[10px] font-medium text-text-success">ALT</span>
+                            )}
+                            {/* Price */}
+                            <span className={`shrink-0 font-semibold tabular-nums ${isUnavailable ? 'text-text-muted' : 'text-text-brand'}`}>
+                              {formatPrice(displayCurrency === 'AED' ? convertUsdToAed(lineItemTotal) : lineItemTotal, displayCurrency)}
+                            </span>
                           </div>
-
-                          {/* Pricing Details - Inline */}
-                          {pricing && (
-                            <div className="mt-1.5 flex items-center gap-3 text-xs text-text-muted">
-                              <span>
-                                <span className="font-semibold text-text-primary">{displayQuantity}</span>
-                                {pricing?.confirmedQuantity && pricing.confirmedQuantity !== pricing.originalQuantity && (
-                                  <span className="line-through ml-1">{pricing.originalQuantity}</span>
-                                )}
-                                {' '}× {formatPrice(displayCurrency === 'AED' ? convertUsdToAed(pricePerCase) : pricePerCase, displayCurrency)}
-                              </span>
-                              {product.productOffers?.[0]?.unitCount && (
-                                <span>· {displayQuantity * product.productOffers?.[0]?.unitCount} btls</span>
+                          {/* Expanded details only when needed */}
+                          {hasExpandedContent && (
+                            <div className="ml-8 mt-1 text-xs text-text-muted">
+                              {pricing?.acceptedAlternative && (
+                                <div className="text-text-success">
+                                  {pricing.acceptedAlternative.bottlesPerCase}×{pricing.acceptedAlternative.bottleSize} · was: {product.name}
+                                </div>
                               )}
                             </div>
                           )}
@@ -1050,72 +999,56 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                              quote.status === 'paid' ||
                              quote.status === 'po_submitted' ||
                              quote.status === 'po_confirmed') && (
-                            <div className="mt-1.5 text-xs text-text-brand italic">
-                              {pricing.adminNotes}
-                            </div>
+                            <div className="ml-8 text-xs text-text-brand italic">{pricing.adminNotes}</div>
                           )}
 
-                          {/* Admin Alternatives - compact */}
+                          {/* Admin Alternatives - compact inline */}
                           {pricing?.adminAlternatives && pricing.adminAlternatives.length > 0 &&
                             (quote.status === 'cc_confirmed' ||
                              quote.status === 'awaiting_payment' ||
                              quote.status === 'paid' ||
                              quote.status === 'po_submitted' ||
                              quote.status === 'po_confirmed') && (
-                            <div className="mt-2 rounded-md border border-border-success bg-fill-success/10 p-2">
-                              <div className="flex items-center gap-1.5 mb-2">
-                                <Icon icon={IconBulb} size="xs" className="text-text-success" />
-                                <Typography variant="bodyXs" className="font-semibold text-text-success">
-                                  Alternatives ({pricing.adminAlternatives.length})
-                                </Typography>
-                              </div>
-                              <div className="space-y-1.5">
-                                {pricing.adminAlternatives.map((alt, altIdx) => {
-                                  const isAccepted = pricing.acceptedAlternative?.productName === alt.productName;
-                                  return (
-                                    <div
-                                      key={altIdx}
-                                      className={`flex items-center justify-between gap-2 rounded px-2 py-1.5 text-xs ${
-                                        isAccepted ? 'bg-fill-success/20 font-medium' : 'bg-white'
-                                      }`}
-                                    >
-                                      <div className="flex items-center gap-2 min-w-0">
-                                        {isAccepted && <IconCheck className="h-3 w-3 text-text-success shrink-0" />}
-                                        <span className="truncate">{alt.productName}</span>
-                                      </div>
-                                      <div className="flex items-center gap-3 shrink-0">
-                                        <span className="font-medium">
-                                          {formatPrice(
-                                            displayCurrency === 'AED' ? convertUsdToAed(alt.pricePerCase) : alt.pricePerCase,
-                                            displayCurrency
-                                          )}
-                                        </span>
-                                        {(quote.status === 'cc_confirmed' || quote.status === 'awaiting_payment') && (
-                                          <Button
-                                            variant={isAccepted ? 'outline' : 'default'}
-                                            colorRole={isAccepted ? 'danger' : 'brand'}
-                                            size="sm"
-                                            onClick={() => acceptAlternativeMutation.mutate({
-                                              productId: item.productId,
-                                              alternativeIndex: isAccepted ? -1 : altIdx
-                                            })}
-                                            isDisabled={acceptAlternativeMutation.isPending}
-                                            className="h-6 px-2 text-xs"
-                                          >
-                                            <ButtonContent>
-                                              {isAccepted ? 'Remove' : 'Accept'}
-                                            </ButtonContent>
-                                          </Button>
-                                        )}
-                                      </div>
-                                    </div>
-                                  );
-                                })}
-                              </div>
+                            <div className="ml-8 mt-1 space-y-1">
+                              {pricing.adminAlternatives.map((alt, altIdx) => {
+                                const isAccepted = pricing.acceptedAlternative?.productName === alt.productName;
+                                return (
+                                  <div key={altIdx} className="flex items-center gap-2 text-xs">
+                                    {isAccepted ? (
+                                      <IconCheck className="h-3 w-3 text-text-success shrink-0" />
+                                    ) : (
+                                      <IconBulb className="h-3 w-3 text-text-success shrink-0" />
+                                    )}
+                                    <span className={`truncate ${isAccepted ? 'text-text-success font-medium' : 'text-text-muted'}`}>
+                                      {alt.productName}
+                                    </span>
+                                    <span className="text-text-muted">
+                                      {formatPrice(displayCurrency === 'AED' ? convertUsdToAed(alt.pricePerCase) : alt.pricePerCase, displayCurrency)}
+                                    </span>
+                                    {(quote.status === 'cc_confirmed' || quote.status === 'awaiting_payment') && (
+                                      <button
+                                        type="button"
+                                        onClick={() => acceptAlternativeMutation.mutate({
+                                          productId: item.productId,
+                                          alternativeIndex: isAccepted ? -1 : altIdx
+                                        })}
+                                        disabled={acceptAlternativeMutation.isPending}
+                                        className={`shrink-0 px-1.5 py-0.5 rounded text-[10px] font-medium ${
+                                          isAccepted
+                                            ? 'bg-fill-danger/10 text-text-danger hover:bg-fill-danger/20'
+                                            : 'bg-fill-brand/10 text-text-brand hover:bg-fill-brand/20'
+                                        }`}
+                                      >
+                                        {isAccepted ? '✕' : 'Accept'}
+                                      </button>
+                                    )}
+                                  </div>
+                                );
+                              })}
                             </div>
                           )}
 
-                          {/* Remove Line Item - compact link style */}
+                          {/* Remove Line Item - compact link */}
                           {(quote.status === 'cc_confirmed' || quote.status === 'awaiting_payment') &&
                             lineItems.length > 1 && (
                             <button
@@ -1126,34 +1059,18 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                                 }
                               }}
                               disabled={removeLineItemMutation.isPending}
-                              className="mt-1.5 flex items-center gap-1 text-xs text-text-danger hover:underline disabled:opacity-50"
+                              className="ml-8 mt-1 flex items-center gap-1 text-[10px] text-text-danger hover:underline disabled:opacity-50"
                             >
-                              <IconTrash className="h-3 w-3" />
-                              {removeLineItemMutation.isPending ? 'Removing...' : 'Remove'}
+                              <IconTrash className="h-2.5 w-2.5" />
+                              {removeLineItemMutation.isPending ? '...' : 'Remove'}
                             </button>
                           )}
                         </>
                       ) : (
-                        <div className="flex items-center justify-between">
-                          <div className="flex-1">
-                            <Typography variant="bodyXs" colorRole="muted" className="mb-1">
-                              Product ID
-                            </Typography>
-                            <Typography variant="bodySm" className="font-mono">
-                              {item.productId}
-                            </Typography>
-                            <Typography variant="bodyXs" colorRole="muted" className="mt-1">
-                              (Product details unavailable)
-                            </Typography>
-                          </div>
-                          <div className="text-right">
-                            <Typography variant="bodyXs" colorRole="muted" className="mb-1">
-                              Quantity
-                            </Typography>
-                            <Typography variant="bodySm" className="font-semibold">
-                              {displayQuantity}
-                            </Typography>
-                          </div>
+                        <div className="flex items-center gap-2 text-sm text-text-muted">
+                          <span className="shrink-0 w-8 text-xs">{displayQuantity}×</span>
+                          <span className="font-mono text-xs truncate">{item.productId}</span>
+                          <span className="text-xs">(unavailable)</span>
                         </div>
                       )}
                     </div>
@@ -1375,60 +1292,22 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                       </div>
                     )}
 
-                    {/* Bank Transfer Details */}
+                    {/* Bank Transfer Details - Clean & Compact */}
                     {quote.paymentMethod === 'bank_transfer' && quote.paymentDetails && (
-                      <div className="space-y-3">
-                        <Typography variant="bodySm" className="font-medium">
-                          Transfer to:
-                        </Typography>
-                        <div className="rounded-lg bg-white border border-border-muted overflow-hidden">
-                          <table className="w-full text-sm">
-                            <tbody className="divide-y divide-border-muted">
-                              {quote.paymentDetails.bankName && (
-                                <tr>
-                                  <td className="px-4 py-2.5 text-text-muted w-32">Bank</td>
-                                  <td className="px-4 py-2.5 font-medium">{quote.paymentDetails.bankName}</td>
-                                </tr>
-                              )}
-                              {quote.paymentDetails.accountName && (
-                                <tr>
-                                  <td className="px-4 py-2.5 text-text-muted">Account</td>
-                                  <td className="px-4 py-2.5 font-medium">{quote.paymentDetails.accountName}</td>
-                                </tr>
-                              )}
-                              {quote.paymentDetails.iban && (
-                                <tr>
-                                  <td className="px-4 py-2.5 text-text-muted">IBAN</td>
-                                  <td className="px-4 py-2.5 font-mono font-medium tracking-wide">{quote.paymentDetails.iban}</td>
-                                </tr>
-                              )}
-                              {quote.paymentDetails.accountNumber && !quote.paymentDetails.iban && (
-                                <tr>
-                                  <td className="px-4 py-2.5 text-text-muted">Account #</td>
-                                  <td className="px-4 py-2.5 font-mono font-medium">{quote.paymentDetails.accountNumber}</td>
-                                </tr>
-                              )}
-                              {quote.paymentDetails.sortCode && (
-                                <tr>
-                                  <td className="px-4 py-2.5 text-text-muted">Sort Code</td>
-                                  <td className="px-4 py-2.5 font-mono font-medium">{quote.paymentDetails.sortCode}</td>
-                                </tr>
-                              )}
-                              {quote.paymentDetails.swiftBic && (
-                                <tr>
-                                  <td className="px-4 py-2.5 text-text-muted">SWIFT</td>
-                                  <td className="px-4 py-2.5 font-mono font-medium">{quote.paymentDetails.swiftBic}</td>
-                                </tr>
-                              )}
-                              {quote.paymentDetails.reference && (
-                                <tr className="bg-fill-brand/5">
-                                  <td className="px-4 py-2.5 text-text-brand font-medium">Reference</td>
-                                  <td className="px-4 py-2.5 font-mono font-bold text-text-brand">{quote.paymentDetails.reference}</td>
-                                </tr>
-                              )}
-                            </tbody>
-                          </table>
+                      <div className="text-xs space-y-1.5">
+                        <div className="text-text-muted">
+                          {quote.paymentDetails.bankName}{quote.paymentDetails.accountName && ` · ${quote.paymentDetails.accountName}`}
                         </div>
+                        <div className="font-mono text-sm tracking-wide">
+                          {quote.paymentDetails.iban || quote.paymentDetails.accountNumber}
+                          {quote.paymentDetails.swiftBic && <span className="text-text-muted ml-2">({quote.paymentDetails.swiftBic})</span>}
+                        </div>
+                        {quote.paymentDetails.reference && (
+                          <div className="inline-flex items-center gap-2 rounded bg-fill-brand/10 px-2 py-1">
+                            <span className="text-text-muted">Ref:</span>
+                            <span className="font-mono font-bold text-text-brand">{quote.paymentDetails.reference}</span>
+                          </div>
+                        )}
                       </div>
                     )}
 
