@@ -714,6 +714,9 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                 </Button>
               </div>
             </div>
+            <Typography variant="bodyXs" colorRole="muted" className="mt-1 text-center">
+              Final quotation values include local taxes inc VAT @ 5%.
+            </Typography>
 
             {/* Margin Configuration (B2B only) - Compact */}
             {quotePricingData?.marginConfig && (
