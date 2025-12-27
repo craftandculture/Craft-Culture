@@ -17,7 +17,7 @@ const notifyUserApproved = async (user: ApprovedUser) => {
     const platformUrl = `${serverConfig.appUrl}/platform`;
 
     await loops.sendTransactionalEmail({
-      transactionalId: 'user-approved', // Update with actual Loops template ID
+      transactionalId: 'cmhagixdf7c3z160h3aaga4xp',
       email: user.email,
       dataVariables: {
         userName: user.name,
