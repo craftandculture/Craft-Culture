@@ -50,7 +50,7 @@ const notifyUserOfRevisionRequest = async (quote: Quote) => {
     try {
       // TODO: Create template in Loops with ID 'quote-revision-requested'
       await loops.sendTransactionalEmail({
-        transactionalId: 'quote-revision-requested',
+        transactionalId: 'cmjo9lc6213bd0i0vxkpw0mae',
         email: quoteOwner.email,
         dataVariables: {
           userName: quoteOwner.name,
