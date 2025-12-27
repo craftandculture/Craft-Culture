@@ -657,236 +657,152 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
         </DialogHeader>
 
         <DialogBody>
-          <div className="space-y-6">
-            {/* Status and Date Info */}
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div className="flex items-start gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-fill-muted">
-                  <Icon icon={IconFileText} size="sm" />
-                </div>
-                <div>
-                  <Typography variant="bodyXs" colorRole="muted" className="mb-1">
-                    Status
-                  </Typography>
-                  <Typography variant="bodySm" className={`capitalize font-medium ${statusColors[quote.status]}`}>
-                    {quote.status}
-                  </Typography>
-                </div>
+          <div className="space-y-4">
+            {/* Status and Date Info - Compact inline */}
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
+              <div className="flex items-center gap-2">
+                <Icon icon={IconFileText} size="xs" colorRole="muted" />
+                <span className="text-text-muted">Status:</span>
+                <span className={`font-medium capitalize ${statusColors[quote.status]}`}>
+                  {quote.status.replace(/_/g, ' ')}
+                </span>
               </div>
-
-              <div className="flex items-start gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-fill-muted">
-                  <Icon icon={IconCalendar} size="sm" />
-                </div>
-                <div>
-                  <Typography variant="bodyXs" colorRole="muted" className="mb-1">
-                    Created
-                  </Typography>
-                  <Typography variant="bodySm" className="font-medium">
-                    {format(new Date(quote.createdAt), 'MMM d, yyyy')}
-                  </Typography>
-                </div>
+              <div className="flex items-center gap-2">
+                <Icon icon={IconCalendar} size="xs" colorRole="muted" />
+                <span className="text-text-muted">Created:</span>
+                <span className="font-medium">
+                  {format(new Date(quote.createdAt), 'MMM d, yyyy')}
+                </span>
               </div>
             </div>
 
-            {/* Client Information */}
+            {/* Client Information - Compact inline */}
             {(quote.clientName || quote.clientEmail || quote.clientCompany) && (
-              <>
-                <Divider />
-                <div>
-                  <div className="mb-3 flex items-center gap-2">
-                    <Icon icon={IconUser} size="sm" colorRole="muted" />
-                    <Typography variant="bodySm" className="font-semibold">
-                      Client Information
-                    </Typography>
-                  </div>
-                  <div className="space-y-2 rounded-lg bg-fill-muted p-4">
-                    {quote.clientName && (
-                      <div>
-                        <Typography variant="bodyXs" colorRole="muted">
-                          Name
-                        </Typography>
-                        <Typography variant="bodySm">{quote.clientName}</Typography>
-                      </div>
-                    )}
-                    {quote.clientEmail && (
-                      <div>
-                        <Typography variant="bodyXs" colorRole="muted">
-                          Email
-                        </Typography>
-                        <Typography variant="bodySm">{quote.clientEmail}</Typography>
-                      </div>
-                    )}
-                    {quote.clientCompany && (
-                      <div>
-                        <Typography variant="bodyXs" colorRole="muted">
-                          Company
-                        </Typography>
-                        <Typography variant="bodySm">{quote.clientCompany}</Typography>
-                      </div>
-                    )}
-                  </div>
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg border border-border-muted bg-surface-muted/30 px-3 py-2 text-sm">
+                <div className="flex items-center gap-1.5">
+                  <Icon icon={IconUser} size="xs" colorRole="muted" />
+                  <span className="font-medium text-text-muted">Client:</span>
                 </div>
-              </>
+                {quote.clientName && <span>{quote.clientName}</span>}
+                {quote.clientCompany && (
+                  <span className="text-text-muted">({quote.clientCompany})</span>
+                )}
+                {quote.clientEmail && (
+                  <span className="text-text-muted">{quote.clientEmail}</span>
+                )}
+              </div>
             )}
 
-            {/* Total */}
+            {/* Total - Compact */}
             <Divider />
-            <div>
-              <div className="mb-3 flex items-center gap-2">
-                <Icon icon={IconCurrencyDollar} size="sm" colorRole="muted" />
-                <Typography variant="bodySm" className="font-semibold">
-                  Pricing
-                </Typography>
+            <div className="flex items-center justify-between gap-4 rounded-lg bg-fill-muted/30 px-3 py-2">
+              <div className="flex items-center gap-2">
+                <Icon icon={IconCurrencyDollar} size="xs" colorRole="muted" />
+                <Typography variant="bodyXs" colorRole="muted">In-Bond UAE</Typography>
               </div>
-
-              {/* In-Bond Price */}
-              <div className="mb-2 rounded-lg bg-fill-muted/30 p-3">
-                <div className="flex items-center justify-between mb-1">
-                  <Typography variant="bodyXs" colorRole="muted">
-                    In-Bond UAE Price
-                  </Typography>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setDisplayCurrency(displayCurrency === 'USD' ? 'AED' : 'USD')}
-                    className="h-5 px-2 text-xs"
-                  >
-                    <ButtonContent>{displayCurrency === 'USD' ? 'Show AED' : 'Show USD'}</ButtonContent>
-                  </Button>
-                </div>
-                <Typography variant="bodyMd" className="font-semibold">
+              <div className="flex items-center gap-3">
+                <Typography variant="bodyMd" className="font-bold">
                   {formatPrice(displayTotal, displayCurrency)}
                 </Typography>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setDisplayCurrency(displayCurrency === 'USD' ? 'AED' : 'USD')}
+                  className="h-5 px-2 text-xs"
+                >
+                  <ButtonContent>{displayCurrency === 'USD' ? 'AED' : 'USD'}</ButtonContent>
+                </Button>
               </div>
-
-              {/* Margin Configuration (B2B only) */}
-              {quotePricingData?.marginConfig && (
-                <div className="mb-2 space-y-2 rounded-lg border border-border-muted bg-fill-muted/30 p-3">
-                  <Typography variant="bodyXs" className="font-semibold">
-                    Margin Configuration
-                  </Typography>
-                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-                    <div>
-                      <Typography variant="bodyXs" colorRole="muted">
-                        Distributor Margin
-                      </Typography>
-                      <Typography variant="bodyXs" className="font-medium">
-                        {quotePricingData.marginConfig.type === 'percentage'
-                          ? `${quotePricingData.marginConfig.value}%`
-                          : formatPrice(
-                              quotePricingData.marginConfig.value,
-                              quote.currency as 'USD' | 'AED',
-                            )}
-                      </Typography>
-                    </div>
-                    <div>
-                      <Typography variant="bodyXs" colorRole="muted">
-                        Import Tax
-                      </Typography>
-                      <Typography variant="bodyXs" className="font-medium">
-                        {quotePricingData.marginConfig.importTax}%
-                      </Typography>
-                    </div>
-                    <div>
-                      <Typography variant="bodyXs" colorRole="muted">
-                        Transfer Cost
-                      </Typography>
-                      <Typography variant="bodyXs" className="font-medium">
-                        ${quotePricingData.marginConfig.transferCost}
-                      </Typography>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Customer Quote Price (if margins applied) */}
-              {quotePricingData?.customerQuotePrice && (
-                <div className="rounded-lg bg-fill-brand/10 p-4">
-                  <Typography variant="bodyXs" colorRole="muted" className="mb-1">
-                    Customer Quote Price (Inc. VAT)
-                  </Typography>
-                  <Typography variant="headingMd" className="font-bold text-text-brand">
-                    {formatPrice(
-                      quote.currency === 'AED'
-                        ? convertUsdToAed(quotePricingData.customerQuotePrice)
-                        : quotePricingData.customerQuotePrice,
-                      quote.currency as 'USD' | 'AED',
-                    )}
-                  </Typography>
-                </div>
-              )}
-
-              {/* Fulfilled Out-of-Catalogue Items - items admin added with pricing */}
-              {fulfilledOocItems.length > 0 && (
-                <div className="rounded-lg border-2 border-green-200 bg-green-50 p-4">
-                  <Typography variant="bodyXs" className="font-semibold text-green-800 mb-2">
-                    Special Order Items ({fulfilledOocItems.length})
-                  </Typography>
-                  <Typography variant="bodyXs" className="text-green-700 mb-3">
-                    These items have been sourced for you and are included in the quote total
-                  </Typography>
-                  <div className="space-y-2">
-                    {fulfilledOocItems.map((item, index) => (
-                      <div
-                        key={item.requestId || index}
-                        className="rounded-md bg-white border border-green-200 p-3"
-                      >
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="flex-1">
-                            <Typography variant="bodySm" className="font-medium text-green-900">
-                              {item.productName}
-                            </Typography>
-                            <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-1 text-xs text-green-700">
-                              {item.vintage && <span>Vintage: {item.vintage}</span>}
-                              <span>Qty: {item.quantity} cases</span>
-                              <span>${item.pricePerCase.toFixed(2)}/case</span>
-                            </div>
-                          </div>
-                          <Typography variant="bodySm" className="font-bold text-green-800 whitespace-nowrap">
-                            ${item.lineItemTotalUsd.toFixed(2)}
-                          </Typography>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Pending Out-of-Catalogue Requests */}
-              {outOfCatalogueRequests.length > 0 && (
-                <div className="rounded-lg border-2 border-amber-200 bg-amber-50 p-4">
-                  <Typography variant="bodyXs" className="font-semibold text-amber-800 mb-2">
-                    Pending Requests ({outOfCatalogueRequests.length})
-                  </Typography>
-                  <Typography variant="bodyXs" className="text-amber-700 mb-3">
-                    These items are being reviewed by our team - not included in quote total
-                  </Typography>
-                  <div className="space-y-2">
-                    {outOfCatalogueRequests.map((request, index) => (
-                      <div
-                        key={request.id || index}
-                        className="rounded-md bg-white border border-amber-200 p-3"
-                      >
-                        <Typography variant="bodySm" className="font-medium text-amber-900">
-                          {request.productName}
-                        </Typography>
-                        <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-1 text-xs text-amber-700">
-                          {request.vintage && <span>Vintage: {request.vintage}</span>}
-                          {request.quantity && <span>Qty: {request.quantity} cases</span>}
-                          {request.priceExpectation && <span>Budget: {request.priceExpectation}</span>}
-                        </div>
-                        {request.notes && (
-                          <Typography variant="bodyXs" className="mt-1.5 text-amber-600 italic">
-                            {request.notes}
-                          </Typography>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
             </div>
+
+            {/* Margin Configuration (B2B only) - Compact */}
+            {quotePricingData?.marginConfig && (
+              <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg border border-border-muted bg-fill-muted/30 px-3 py-2 text-xs">
+                <span className="font-medium text-text-muted">Margins:</span>
+                <span>
+                  {quotePricingData.marginConfig.type === 'percentage'
+                    ? `${quotePricingData.marginConfig.value}%`
+                    : formatPrice(quotePricingData.marginConfig.value, quote.currency as 'USD' | 'AED')}
+                </span>
+                <span className="text-text-muted">|</span>
+                <span>Tax {quotePricingData.marginConfig.importTax}%</span>
+                <span className="text-text-muted">|</span>
+                <span>Transfer ${quotePricingData.marginConfig.transferCost}</span>
+              </div>
+            )}
+
+            {/* Customer Quote Price (if margins applied) - Compact */}
+            {quotePricingData?.customerQuotePrice && (
+              <div className="mt-2 flex items-center justify-between rounded-lg bg-fill-brand/10 px-3 py-2">
+                <Typography variant="bodyXs" colorRole="muted">
+                  Customer Quote (Inc. VAT)
+                </Typography>
+                <Typography variant="bodyMd" className="font-bold text-text-brand">
+                  {formatPrice(
+                    quote.currency === 'AED'
+                      ? convertUsdToAed(quotePricingData.customerQuotePrice)
+                      : quotePricingData.customerQuotePrice,
+                    quote.currency as 'USD' | 'AED',
+                  )}
+                </Typography>
+              </div>
+            )}
+
+            {/* Fulfilled Out-of-Catalogue Items - Compact */}
+            {fulfilledOocItems.length > 0 && (
+              <div className="mt-2 rounded-lg border border-green-200 bg-green-50 px-3 py-2">
+                <Typography variant="bodyXs" className="font-semibold text-green-800 mb-1.5">
+                  Special Order Items ({fulfilledOocItems.length})
+                </Typography>
+                <div className="space-y-1.5">
+                  {fulfilledOocItems.map((item, index) => (
+                    <div
+                      key={item.requestId || index}
+                      className="flex items-center justify-between gap-2 rounded bg-white border border-green-200 px-2 py-1.5 text-xs"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <span className="font-medium text-green-900">{item.productName}</span>
+                        <span className="text-green-700 ml-2">
+                          {item.vintage && `${item.vintage} · `}{item.quantity}× ${item.pricePerCase.toFixed(0)}/cs
+                        </span>
+                      </div>
+                      <span className="font-bold text-green-800 shrink-0">
+                        ${item.lineItemTotalUsd.toFixed(0)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Pending Out-of-Catalogue Requests - Compact */}
+            {outOfCatalogueRequests.length > 0 && (
+              <div className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
+                <Typography variant="bodyXs" className="font-semibold text-amber-800 mb-1.5">
+                  Pending Requests ({outOfCatalogueRequests.length}) <span className="font-normal text-amber-600">· not in total</span>
+                </Typography>
+                <div className="space-y-1.5">
+                  {outOfCatalogueRequests.map((request, index) => (
+                    <div
+                      key={request.id || index}
+                      className="rounded bg-white border border-amber-200 px-2 py-1.5 text-xs"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-medium text-amber-900">{request.productName}</span>
+                        <span className="text-amber-700 shrink-0">
+                          {request.vintage && `${request.vintage} · `}
+                          {request.quantity && `${request.quantity}×`}
+                          {request.priceExpectation && ` · ${request.priceExpectation}`}
+                        </span>
+                      </div>
+                      {request.notes && (
+                        <div className="text-amber-600 italic mt-0.5 truncate">{request.notes}</div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Admin Adjustments Summary - show when confirmed by C&C */}
             {(quote.status === 'cc_confirmed' ||
@@ -1007,13 +923,13 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                 </>
               )}
 
-            {/* Line Items */}
+            {/* Line Items - Compact */}
             <Divider />
             <div>
-              <Typography variant="bodySm" className="mb-3 font-semibold">
+              <Typography variant="bodyXs" className="mb-2 font-semibold text-text-muted uppercase tracking-wide">
                 Line Items ({lineItems.length})
               </Typography>
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 {lineItems.map((item, index) => {
                   const product = productMap[item.productId];
                   const pricing = pricingMap[item.productId];
@@ -1033,7 +949,7 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                   return (
                     <div
                       key={index}
-                      className={`rounded-lg border p-3 ${
+                      className={`rounded-lg border px-3 py-2 ${
                         isUnavailable
                           ? 'border-border-warning bg-fill-warning/5'
                           : 'border-border-muted bg-background-primary'
@@ -1111,50 +1027,31 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                             )}
                           </div>
 
-                          {/* Pricing Details - Compact Row */}
+                          {/* Pricing Details - Inline */}
                           {pricing && (
-                            <div className="mt-2 pt-2 border-t border-border-muted flex items-center justify-between gap-4 text-sm">
-                              <div className="flex items-center gap-4">
-                                <div>
-                                  <span className="text-text-muted">Qty: </span>
-                                  <span className="font-semibold">{displayQuantity}</span>
-                                  {pricing?.confirmedQuantity && pricing.confirmedQuantity !== pricing.originalQuantity && (
-                                    <span className="text-text-muted line-through ml-1 text-xs">
-                                      {pricing.originalQuantity}
-                                    </span>
-                                  )}
-                                </div>
-                                <div>
-                                  <span className="text-text-muted">@ </span>
-                                  <span className="font-medium">
-                                    {formatPrice(
-                                      displayCurrency === 'AED'
-                                        ? convertUsdToAed(pricePerCase)
-                                        : pricePerCase,
-                                      displayCurrency,
-                                    )}
-                                  </span>
-                                  <span className="text-text-muted">/case</span>
-                                </div>
-                              </div>
+                            <div className="mt-1.5 flex items-center gap-3 text-xs text-text-muted">
+                              <span>
+                                <span className="font-semibold text-text-primary">{displayQuantity}</span>
+                                {pricing?.confirmedQuantity && pricing.confirmedQuantity !== pricing.originalQuantity && (
+                                  <span className="line-through ml-1">{pricing.originalQuantity}</span>
+                                )}
+                                {' '}× {formatPrice(displayCurrency === 'AED' ? convertUsdToAed(pricePerCase) : pricePerCase, displayCurrency)}
+                              </span>
                               {product.productOffers?.[0]?.unitCount && (
-                                <Typography variant="bodyXs" colorRole="muted">
-                                  {displayQuantity * product.productOffers?.[0]?.unitCount} bottles
-                                </Typography>
+                                <span>· {displayQuantity * product.productOffers?.[0]?.unitCount} btls</span>
                               )}
                             </div>
                           )}
 
-                          {/* Admin Notes - compact */}
+                          {/* Admin Notes - inline */}
                           {pricing?.adminNotes &&
                             (quote.status === 'cc_confirmed' ||
                              quote.status === 'awaiting_payment' ||
                              quote.status === 'paid' ||
                              quote.status === 'po_submitted' ||
                              quote.status === 'po_confirmed') && (
-                            <div className="mt-2 rounded-md bg-fill-brand/10 px-3 py-2 text-xs">
-                              <span className="font-semibold text-text-brand">Note: </span>
-                              <span className="text-text-primary">{pricing.adminNotes}</span>
+                            <div className="mt-1.5 text-xs text-text-brand italic">
+                              {pricing.adminNotes}
                             </div>
                           )}
 
@@ -1218,27 +1115,22 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                             </div>
                           )}
 
-                          {/* Remove Line Item Button - only shown before payment and if more than 1 item */}
+                          {/* Remove Line Item - compact link style */}
                           {(quote.status === 'cc_confirmed' || quote.status === 'awaiting_payment') &&
                             lineItems.length > 1 && (
-                            <div className="mt-3 pt-3 border-t border-border-muted">
-                              <Button
-                                variant="ghost"
-                                colorRole="danger"
-                                size="sm"
-                                onClick={() => {
-                                  if (window.confirm(`Remove "${product.name}" from this quote?`)) {
-                                    removeLineItemMutation.mutate({ productId: item.productId });
-                                  }
-                                }}
-                                isDisabled={removeLineItemMutation.isPending}
-                                className="w-full"
-                              >
-                                <ButtonContent iconLeft={IconTrash}>
-                                  {removeLineItemMutation.isPending ? 'Removing...' : 'Remove from Quote'}
-                                </ButtonContent>
-                              </Button>
-                            </div>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (window.confirm(`Remove "${product.name}" from this quote?`)) {
+                                  removeLineItemMutation.mutate({ productId: item.productId });
+                                }
+                              }}
+                              disabled={removeLineItemMutation.isPending}
+                              className="mt-1.5 flex items-center gap-1 text-xs text-text-danger hover:underline disabled:opacity-50"
+                            >
+                              <IconTrash className="h-3 w-3" />
+                              {removeLineItemMutation.isPending ? 'Removing...' : 'Remove'}
+                            </button>
                           )}
                         </>
                       ) : (
