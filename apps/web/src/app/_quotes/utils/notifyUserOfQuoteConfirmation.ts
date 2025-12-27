@@ -50,7 +50,7 @@ const notifyUserOfQuoteConfirmation = async (quote: Quote) => {
     try {
       // TODO: Create template in Loops with ID 'quote-confirmed-by-cc'
       await loops.sendTransactionalEmail({
-        transactionalId: 'quote-confirmed-by-cc',
+        transactionalId: 'cmhexwjuhlk94zx0ifvn0kebv',
         email: quoteOwner.email,
         dataVariables: {
           userName: quoteOwner.name,
