@@ -49,7 +49,7 @@ const notifyUserOfReviewStart = async (quote: Quote) => {
     try {
       // Loops template: Quote Review Started
       await loops.sendTransactionalEmail({
-        transactionalId: 'cmhexu2adkscr1y0ia83rd76j',
+        transactionalId: 'cmjo8k5o27jt80izpamnt25fp',
         email: quoteOwner.email,
         dataVariables: {
           userName: quoteOwner.name,
