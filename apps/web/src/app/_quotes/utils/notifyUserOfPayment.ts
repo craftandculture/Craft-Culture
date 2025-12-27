@@ -51,7 +51,7 @@ const notifyUserOfPayment = async (quote: Quote) => {
     try {
       // TODO: Create template in Loops with ID 'quote-payment-received'
       await loops.sendTransactionalEmail({
-        transactionalId: 'quote-payment-received',
+        transactionalId: 'cmjoadv7w7q0m0izpgnn0n8f2',
         email: quoteOwner.email,
         dataVariables: {
           userName: quoteOwner.name,
