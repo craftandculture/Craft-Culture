@@ -243,9 +243,108 @@ const ReviewLineItemRow = ({
         ? 'border-border-brand bg-white shadow-md'
         : 'border-border-muted bg-white hover:border-border-brand/50 hover:shadow-sm'
     }`}>
-      {/* Compact Row */}
+      {/* Mobile Card Layout */}
+      <div className="md:hidden px-3 py-3 space-y-3" onClick={onToggle}>
+        {/* Header: Product + Status */}
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-1.5">
+              <div className="flex-shrink-0 text-text-muted">
+                {isExpanded ? <IconChevronDown size={14} /> : <IconChevronRight size={14} />}
+              </div>
+              <Typography variant="bodySm" className="font-semibold truncate">
+                {product.name}
+              </Typography>
+            </div>
+            <div className="flex items-center gap-1.5 text-xs text-text-muted mt-0.5 ml-5">
+              {product.producer && <span className="truncate">{product.producer}</span>}
+              {product.year && <span>• {product.year}</span>}
+            </div>
+          </div>
+          <span
+            className={`shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap ${status.bg} ${status.color}`}
+          >
+            {status.icon} {status.label}
+          </span>
+        </div>
+
+        {/* Controls Row */}
+        <div className="flex flex-wrap items-center gap-3" onClick={(e) => e.stopPropagation()}>
+          {/* Qty */}
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs text-text-muted">Qty:</span>
+            <span className="text-xs text-text-muted">{lineItem.quantity} →</span>
+            {isAvailable ? (
+              <Input
+                type="number"
+                min="0"
+                value={adjustment?.confirmedQuantity ?? lineItem.quantity}
+                onChange={(e) => {
+                  const value = parseInt(e.target.value) || 0;
+                  onAdjustmentChange({
+                    adjustedPricePerCase: adjustment?.adjustedPricePerCase ?? pricePerCase,
+                    confirmedQuantity: value,
+                    available: value > 0,
+                    notes: adjustment?.notes,
+                    adminAlternatives: adjustment?.adminAlternatives,
+                  });
+                }}
+                className="w-14 text-center text-sm py-1 h-7"
+              />
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  onAdjustmentChange({
+                    adjustedPricePerCase: adjustment?.adjustedPricePerCase ?? pricePerCase,
+                    confirmedQuantity: lineItem.quantity,
+                    available: true,
+                    notes: adjustment?.notes,
+                    adminAlternatives: adjustment?.adminAlternatives,
+                  });
+                }}
+                className="px-2 py-0.5 text-xs font-medium text-text-danger bg-fill-danger/10 rounded"
+              >
+                OOS
+              </button>
+            )}
+          </div>
+          {/* Price */}
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs text-text-muted">$/case:</span>
+            <div className="relative">
+              <span className="absolute left-1.5 top-1/2 -translate-y-1/2 text-text-muted text-xs">$</span>
+              <Input
+                type="number"
+                min="0"
+                step="0.01"
+                value={adjustment?.adjustedPricePerCase ?? pricePerCase}
+                onChange={(e) => {
+                  const value = parseFloat(e.target.value) || 0;
+                  onAdjustmentChange({
+                    adjustedPricePerCase: value,
+                    confirmedQuantity: adjustment?.confirmedQuantity ?? lineItem.quantity,
+                    available: adjustment?.available ?? true,
+                    notes: adjustment?.notes,
+                    adminAlternatives: adjustment?.adminAlternatives,
+                  });
+                }}
+                className="w-20 pl-4 text-right text-sm py-1 h-7"
+              />
+            </div>
+          </div>
+          {/* Total */}
+          <div className="ml-auto">
+            <Typography variant="bodySm" className="font-semibold">
+              {formatPrice(displayLineTotal, displayCurrency)}
+            </Typography>
+          </div>
+        </div>
+      </div>
+
+      {/* Desktop Grid Layout */}
       <div
-        className="grid grid-cols-12 gap-2 px-4 py-3 cursor-pointer items-center"
+        className="hidden md:grid grid-cols-12 gap-2 px-4 py-3 cursor-pointer items-center"
         onClick={onToggle}
       >
         {/* Expand Icon + Product Name */}
