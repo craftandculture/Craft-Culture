@@ -49,7 +49,7 @@ const notifyUserOfDelivery = async (quote: Quote) => {
     try {
       // TODO: Create template in Loops with ID 'quote-order-delivered'
       await loops.sendTransactionalEmail({
-        transactionalId: 'quote-order-delivered',
+        transactionalId: 'cmjoaidzt4enk0i1lodg11200',
         email: quoteOwner.email,
         dataVariables: {
           userName: quoteOwner.name,
