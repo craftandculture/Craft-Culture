@@ -584,8 +584,8 @@ const QuoteApprovalDialog = ({
         <DialogBody>
           <div className="space-y-6">
             {/* Compact Customer & Quote Info Bar */}
-            <div className="rounded-lg border border-border-muted bg-fill-muted/30 px-4 py-3">
-              <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+            <div className="rounded-lg border border-border-muted bg-fill-muted/30 px-3 sm:px-4 py-3">
+              <div className="flex flex-wrap items-center gap-x-3 sm:gap-x-6 gap-y-2">
                 {/* Customer */}
                 <div className="flex items-center gap-2">
                   <span className="text-sm">👤</span>
@@ -638,10 +638,10 @@ const QuoteApprovalDialog = ({
                     {lineItems.length} {lineItems.length === 1 ? 'item' : 'items'}
                   </Typography>
                 </div>
-                <div className="inline-flex items-center rounded-lg bg-fill-muted/50 p-1 border border-border-muted">
+                <div className="inline-flex items-center rounded-lg bg-fill-muted/50 p-0.5 sm:p-1 border border-border-muted">
                   <button
                     onClick={() => setDisplayCurrency('USD')}
-                    className={`px-4 py-2 rounded-md font-semibold text-sm transition-all duration-200 ${
+                    className={`px-2.5 py-1.5 sm:px-4 sm:py-2 rounded-md font-semibold text-xs sm:text-sm transition-all duration-200 ${
                       displayCurrency === 'USD'
                         ? 'bg-white text-text-brand shadow-sm border border-border-muted'
                         : 'text-text-muted hover:text-text'
@@ -651,7 +651,7 @@ const QuoteApprovalDialog = ({
                   </button>
                   <button
                     onClick={() => setDisplayCurrency('AED')}
-                    className={`px-4 py-2 rounded-md font-semibold text-sm transition-all duration-200 ${
+                    className={`px-2.5 py-1.5 sm:px-4 sm:py-2 rounded-md font-semibold text-xs sm:text-sm transition-all duration-200 ${
                       displayCurrency === 'AED'
                         ? 'bg-white text-text-brand shadow-sm border border-border-muted'
                         : 'text-text-muted hover:text-text'
@@ -678,9 +678,9 @@ const QuoteApprovalDialog = ({
                 </div>
               )}
 
-              {/* Table Header - Compact Grid */}
+              {/* Table Header - Desktop Only */}
               {quote.status === 'under_cc_review' && (
-                <div className="rounded-t-lg border border-b-0 border-border-muted bg-fill-muted/50 px-4 py-2">
+                <div className="hidden md:block rounded-t-lg border border-b-0 border-border-muted bg-fill-muted/50 px-4 py-2">
                   <div className="grid grid-cols-12 gap-2 text-xs font-bold text-text-muted uppercase tracking-wider">
                     <div className="col-span-4">Product</div>
                     <div className="col-span-1 text-center">Req</div>
@@ -840,7 +840,7 @@ const QuoteApprovalDialog = ({
                         {/* Admin fulfillment controls - only show in review mode */}
                         {quote.status === 'under_cc_review' && (
                           <div className="mt-4 pt-4 border-t border-amber-200">
-                            <div className="flex items-center gap-4 flex-wrap">
+                            <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-4">
                               {/* Include toggle */}
                               <label className="flex items-center gap-2 cursor-pointer">
                                 <input
@@ -913,7 +913,7 @@ const QuoteApprovalDialog = ({
                                   </div>
 
                                   {/* Line total */}
-                                  <div className="flex items-center gap-1.5 ml-auto">
+                                  <div className="flex items-center gap-1.5 sm:ml-auto">
                                     <Typography variant="bodyXs" colorRole="muted">Total:</Typography>
                                     <Typography variant="bodySm" className="font-bold text-text-success">
                                       {formatPrice(
@@ -1095,7 +1095,7 @@ const QuoteApprovalDialog = ({
                               <Typography variant="bodyXs" className="font-semibold text-text-muted uppercase tracking-wide">
                                 Bank Account Details
                               </Typography>
-                              <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+                              <div className="grid grid-cols-1 gap-y-1 text-sm sm:grid-cols-2 sm:gap-x-4">
                                 {selectedPartner.paymentDetails.bankName && (
                                   <>
                                     <span className="text-text-muted">Bank:</span>
@@ -1341,7 +1341,7 @@ const QuoteApprovalDialog = ({
                     <Button
                       variant="default"
                       colorRole="brand"
-                      size="lg"
+                      size="sm"
                       onClick={() => startReviewMutation.mutate()}
                       isDisabled={startReviewMutation.isPending}
                       className="w-full sm:w-auto font-semibold"
@@ -1357,7 +1357,7 @@ const QuoteApprovalDialog = ({
                   <div className="flex flex-col sm:flex-row gap-3">
                     <Button
                       variant="outline"
-                      size="lg"
+                      size="sm"
                       onClick={() => setShowRevisionForm(true)}
                       className="flex-1 font-medium"
                     >
@@ -1366,7 +1366,7 @@ const QuoteApprovalDialog = ({
                     <Button
                       variant="default"
                       colorRole="brand"
-                      size="lg"
+                      size="sm"
                       onClick={() => confirmMutation.mutate()}
                       isDisabled={confirmMutation.isPending}
                       className="flex-1 font-semibold"
@@ -1400,7 +1400,7 @@ const QuoteApprovalDialog = ({
                     <div className="flex flex-col sm:flex-row gap-3">
                       <Button
                         variant="outline"
-                        size="lg"
+                        size="sm"
                         onClick={() => {
                           setShowRevisionForm(false);
                           setRevisionReason('');
@@ -1412,7 +1412,7 @@ const QuoteApprovalDialog = ({
                       <Button
                         variant="default"
                         colorRole="brand"
-                        size="lg"
+                        size="sm"
                         onClick={() => requestRevisionMutation.mutate()}
                         isDisabled={requestRevisionMutation.isPending || !revisionReason.trim()}
                         className="flex-1 font-semibold"
@@ -1429,7 +1429,7 @@ const QuoteApprovalDialog = ({
                   <Button
                     variant="default"
                     colorRole="brand"
-                    size="lg"
+                    size="sm"
                     onClick={() => confirmPOMutation.mutate()}
                     isDisabled={confirmPOMutation.isPending}
                     className="w-full sm:w-auto font-semibold"
@@ -1507,7 +1507,7 @@ const QuoteApprovalDialog = ({
                 <Button
                   variant="default"
                   colorRole="brand"
-                  size="lg"
+                  size="sm"
                   onClick={() => markAsPaidMutation.mutate()}
                   isDisabled={markAsPaidMutation.isPending}
                   className="w-full sm:w-auto font-semibold"
@@ -1540,7 +1540,7 @@ const QuoteApprovalDialog = ({
 
                 {/* Order Summary */}
                 <div className="mb-5 rounded-lg bg-white p-4 border border-border-muted">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div>
                       <Typography variant="bodyXs" className="font-semibold text-text-muted uppercase tracking-wide mb-1">
                         Order Total
@@ -1568,7 +1568,7 @@ const QuoteApprovalDialog = ({
                 <Button
                   variant="default"
                   colorRole="brand"
-                  size="lg"
+                  size="sm"
                   onClick={() => markAsDeliveredMutation.mutate()}
                   isDisabled={markAsDeliveredMutation.isPending}
                   className="w-full sm:w-auto font-semibold"
@@ -1649,7 +1649,7 @@ const QuoteApprovalDialog = ({
 
             <Button
               variant="ghost"
-              size="lg"
+              size="sm"
               onClick={() => {
                 setShowDeleteConfirm(false);
                 if (onOpenChange) onOpenChange(false);

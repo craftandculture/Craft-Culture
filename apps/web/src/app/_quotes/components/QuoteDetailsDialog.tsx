@@ -678,7 +678,7 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
 
             {/* Client Information - Compact inline */}
             {(quote.clientName || quote.clientEmail || quote.clientCompany) && (
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg border border-border-muted bg-surface-muted/30 px-3 py-2 text-sm">
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1 sm:gap-x-4 rounded-lg border border-border-muted bg-surface-muted/30 px-3 py-2 text-sm">
                 <div className="flex items-center gap-1.5">
                   <Icon icon={IconUser} size="xs" colorRole="muted" />
                   <span className="font-medium text-text-muted">Client:</span>
@@ -986,7 +986,7 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                           </div>
                           {/* Expanded details only when needed */}
                           {hasExpandedContent && (
-                            <div className="ml-8 mt-1 text-xs text-text-muted">
+                            <div className="ml-6 sm:ml-8 mt-1 text-xs text-text-muted">
                               {pricing?.acceptedAlternative && (
                                 <div className="text-text-success">
                                   {pricing.acceptedAlternative.bottlesPerCase}×{pricing.acceptedAlternative.bottleSize} · was: {product.name}
@@ -1002,7 +1002,7 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                              quote.status === 'paid' ||
                              quote.status === 'po_submitted' ||
                              quote.status === 'po_confirmed') && (
-                            <div className="ml-8 text-xs text-text-brand italic">{pricing.adminNotes}</div>
+                            <div className="ml-6 sm:ml-8 text-xs text-text-brand italic">{pricing.adminNotes}</div>
                           )}
 
                           {/* Admin Alternatives - compact inline */}
@@ -1012,7 +1012,7 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                              quote.status === 'paid' ||
                              quote.status === 'po_submitted' ||
                              quote.status === 'po_confirmed') && (
-                            <div className="ml-8 mt-1 space-y-1">
+                            <div className="ml-6 sm:ml-8 mt-1 space-y-1">
                               {pricing.adminAlternatives.map((alt, altIdx) => {
                                 const isAccepted = pricing.acceptedAlternative?.productName === alt.productName;
                                 return (
@@ -1062,7 +1062,7 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                                 }
                               }}
                               disabled={removeLineItemMutation.isPending}
-                              className="ml-8 mt-1 flex items-center gap-1 text-[10px] text-text-danger hover:underline disabled:opacity-50"
+                              className="ml-6 sm:ml-8 mt-1 flex items-center gap-1 text-[10px] text-text-danger hover:underline disabled:opacity-50"
                             >
                               <IconTrash className="h-2.5 w-2.5" />
                               {removeLineItemMutation.isPending ? '...' : 'Remove'}
@@ -1274,7 +1274,7 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                       )}
 
                       {/* Bank details grid */}
-                      <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-sm">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5 text-sm">
                         {quote.paymentDetails.bankName && (
                           <>
                             <span className="text-text-muted">Bank</span>
@@ -1316,7 +1316,7 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                       {/* Reference - highlighted */}
                       {quote.paymentDetails.reference && (
                         <div className="pt-2 border-t border-border-muted">
-                          <div className="flex items-center justify-between bg-fill-brand/10 rounded px-3 py-2">
+                          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 bg-fill-brand/10 rounded px-3 py-2">
                             <span className="text-sm text-text-muted">Payment Reference</span>
                             <span className="font-mono font-bold text-text-brand">{quote.paymentDetails.reference}</span>
                           </div>
@@ -1553,7 +1553,7 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
           {/* Export PDF button - secondary action */}
           <Button
             variant="outline"
-            size="md"
+            size="sm"
             onClick={handleExportPDF}
             isDisabled={isExporting || !productsData?.data}
             className="w-full sm:w-auto"
@@ -1593,7 +1593,7 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
             <Button
               variant="default"
               colorRole="brand"
-              size="md"
+              size="sm"
               onClick={handleSubmitBuyRequest}
               isDisabled={submitBuyRequestMutation.isPending}
               className="w-full sm:w-auto"
