@@ -65,9 +65,8 @@ const notifyAdminsOfBuyRequest = async (quote: Quote) => {
     // Send email to each admin
     const emailPromises = adminUsers.map(async (admin) => {
       try {
-        // TODO: Create template in Loops with ID 'quote-buy-request-submitted'
         await loops.sendTransactionalEmail({
-          transactionalId: 'quote-buy-request-submitted',
+          transactionalId: 'cmhexu2adkscr1y0ia83rd76j',
           email: admin.email,
           dataVariables: {
             adminName: admin.name,
