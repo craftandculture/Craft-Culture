@@ -1887,10 +1887,7 @@ const QuoteApprovalDialog = ({
                         Order Total
                       </Typography>
                       <Typography variant="bodyLg" className="font-bold text-text-brand">
-                        {quote.currency} {(quote.currency === 'AED' ? quote.totalAed : quote.totalUsd)?.toLocaleString('en-US', {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
-                        })}
+                        {formatPrice(displayTotal, displayCurrency)}
                       </Typography>
                     </div>
                     {quote.deliveryLeadTime && (
