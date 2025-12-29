@@ -257,7 +257,7 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
       const hasAlternatives = item.adminAlternatives && item.adminAlternatives.length > 0;
       const acceptedAlt = item.acceptedAlternative;
       // If no accepted alt but alternatives exist, use the first one
-      const effectiveAlt = acceptedAlt || (hasAlternatives ? item.adminAlternatives[0] : null);
+      const effectiveAlt = acceptedAlt || (hasAlternatives ? item.adminAlternatives?.[0] : null);
 
       // Item is truly unavailable only if marked unavailable AND has no alternatives
       const isTrulyUnavailable = item.available === false && !hasAlternatives;
@@ -572,7 +572,7 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
           const hasAlternatives = pricing?.adminAlternatives && pricing.adminAlternatives.length > 0;
           const acceptedAlt = pricing?.acceptedAlternative;
           // If no accepted alt but alternatives exist, use the first one
-          const effectiveAlt = acceptedAlt || (hasAlternatives ? pricing.adminAlternatives[0] : null);
+          const effectiveAlt = acceptedAlt || (hasAlternatives ? pricing.adminAlternatives?.[0] : null);
 
           // Item is truly unavailable only if marked unavailable AND has no alternatives
           const isTrulyUnavailable = pricing?.available === false && !hasAlternatives;
@@ -808,7 +808,7 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                   const hasAlternatives = pricing?.adminAlternatives && pricing.adminAlternatives.length > 0;
                   const acceptedAlt = pricing?.acceptedAlternative;
                   // If no accepted alt but alternatives exist, use the first one
-                  const effectiveAlt = acceptedAlt || (hasAlternatives ? pricing.adminAlternatives[0] : null);
+                  const effectiveAlt = acceptedAlt || (hasAlternatives ? pricing.adminAlternatives?.[0] : null);
 
                   // Item is truly unavailable only if marked unavailable AND has no alternatives
                   const isTrulyUnavailable = pricing?.available === false && !hasAlternatives;
