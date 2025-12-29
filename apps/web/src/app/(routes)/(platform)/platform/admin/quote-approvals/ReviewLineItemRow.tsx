@@ -30,6 +30,10 @@ interface Product {
   producer?: string | null;
   year?: number | null;
   lwin18?: string | null;
+  productOffers?: Array<{
+    unitCount: number;
+    unitSize: string;
+  }>;
 }
 
 interface LineItem {
@@ -259,6 +263,9 @@ const ReviewLineItemRow = ({
             <div className="flex items-center gap-1.5 text-xs text-text-muted mt-0.5 ml-5">
               {product.producer && <span className="truncate">{product.producer}</span>}
               {product.year && <span>• {product.year}</span>}
+              {product.productOffers?.[0] && (
+                <span className="font-medium">• {product.productOffers[0].unitCount}×{product.productOffers[0].unitSize || '750ml'}</span>
+              )}
             </div>
           </div>
           <span
@@ -360,6 +367,9 @@ const ReviewLineItemRow = ({
               {product.producer && <span className="truncate max-w-[120px]">{product.producer}</span>}
               {product.year && <span>• {product.year}</span>}
               {lineItem.vintage && <span>• V{lineItem.vintage}</span>}
+              {product.productOffers?.[0] && (
+                <span className="font-medium">• {product.productOffers[0].unitCount}×{product.productOffers[0].unitSize || '750ml'}</span>
+              )}
             </div>
           </div>
         </div>

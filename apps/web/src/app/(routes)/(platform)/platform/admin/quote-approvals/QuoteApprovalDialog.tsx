@@ -793,6 +793,15 @@ const QuoteApprovalDialog = ({
                               {product?.producer && <span className="truncate">{product.producer}</span>}
                               {product?.year && <span>• {product.year}</span>}
                               {item.vintage && <span>• V{item.vintage}</span>}
+                              {/* Pack size */}
+                              {(() => {
+                                const packSize = pricing?.acceptedAlternative
+                                  ? `${pricing.acceptedAlternative.bottlesPerCase}×${pricing.acceptedAlternative.bottleSize}`
+                                  : product?.productOffers?.[0]
+                                    ? `${product.productOffers[0].unitCount}×${product.productOffers[0].unitSize || '750ml'}`
+                                    : null;
+                                return packSize ? <span className="font-medium">• {packSize}</span> : null;
+                              })()}
                             </div>
                             {/* Show alternatives if item is unavailable */}
                             {isUnavailable && hasAlternatives && (
