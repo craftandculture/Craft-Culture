@@ -93,17 +93,24 @@ const NotificationBell = () => {
     };
   }, []);
 
-  // Play sound when new notifications arrive
+  // Play sound and refresh relevant data when new notifications arrive
   const handleNewNotifications = useCallback((newCount: number) => {
     const prevCount = previousCountRef.current;
 
-    // Only play sound if count increased and user has interacted
-    if (prevCount !== null && newCount > prevCount && hasInteractedRef.current) {
-      playNotificationSound();
+    // Only trigger if count increased
+    if (prevCount !== null && newCount > prevCount) {
+      // Play sound if user has interacted
+      if (hasInteractedRef.current) {
+        playNotificationSound();
+      }
+
+      // Invalidate admin queries to refresh data (e.g., quote approvals table)
+      void queryClient.invalidateQueries({ queryKey: ['admin-quotes'] });
+      void queryClient.invalidateQueries({ queryKey: ['admin-users'] });
     }
 
     previousCountRef.current = newCount;
-  }, []);
+  }, [queryClient]);
 
   // Fetch unread count
   const { data: unreadData } = useQuery({
