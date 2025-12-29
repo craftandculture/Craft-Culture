@@ -943,7 +943,7 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                   const packSize = pricing?.acceptedAlternative
                     ? `${pricing.acceptedAlternative.bottlesPerCase}×${pricing.acceptedAlternative.bottleSize}`
                     : product?.productOffers?.[0]
-                      ? `${product.productOffers[0].unitCount}×${product.productOffers[0].unit || '750ml'}`
+                      ? `${product.productOffers[0].unitCount}×${product.productOffers[0].unitSize || '750ml'}`
                       : null;
 
                   return (
