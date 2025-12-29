@@ -632,23 +632,6 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
 
   if (!quote) return null;
 
-  const statusColors = {
-    draft: 'text-text-muted',
-    sent: 'text-text-brand',
-    accepted: 'text-text-success',
-    rejected: 'text-text-danger',
-    expired: 'text-text-muted',
-    buy_request_submitted: 'text-text-warning',
-    under_cc_review: 'text-text-warning',
-    revision_requested: 'text-text-danger',
-    cc_confirmed: 'text-text-success',
-    awaiting_payment: 'text-text-warning',
-    paid: 'text-text-success',
-    po_submitted: 'text-text-brand',
-    po_confirmed: 'text-text-success',
-    delivered: 'text-text-muted',
-  };
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="w-[95vw] max-w-3xl max-h-[90vh] overflow-y-auto">
@@ -662,31 +645,36 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
         <DialogBody>
           <div className="space-y-4">
             {/* Status and Date Info - Compact inline */}
-            <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
-              <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
+              <div className="flex items-center gap-1.5">
                 <Icon icon={IconFileText} size="xs" colorRole="muted" />
                 <span className="text-text-muted">Status:</span>
-                <span className={`font-medium capitalize ${statusColors[quote.status]}`}>
+                <span className={`rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase ${
+                  quote.status === 'paid' || quote.status === 'cc_confirmed' || quote.status === 'po_confirmed'
+                    ? 'bg-fill-success/10 text-text-success'
+                    : quote.status === 'awaiting_payment' || quote.status === 'buy_request_submitted' || quote.status === 'under_cc_review'
+                      ? 'bg-fill-warning/10 text-text-warning'
+                      : quote.status === 'revision_requested' || quote.status === 'rejected'
+                        ? 'bg-fill-danger/10 text-text-danger'
+                        : 'bg-fill-muted text-text-muted'
+                }`}>
                   {quote.status.replace(/_/g, ' ')}
                 </span>
               </div>
-              <div className="flex items-center gap-2">
-                <Icon icon={IconCalendar} size="xs" colorRole="muted" />
-                <span className="text-text-muted">Created:</span>
-                <span className="font-medium">
-                  {format(new Date(quote.createdAt), 'MMM d, yyyy')}
-                </span>
+              <div className="flex items-center gap-1.5 text-text-muted">
+                <Icon icon={IconCalendar} size="xs" />
+                <span>{format(new Date(quote.createdAt), 'MMM d, yyyy')}</span>
               </div>
             </div>
 
             {/* Client Information - Compact inline */}
             {(quote.clientName || quote.clientEmail || quote.clientCompany) && (
-              <div className="flex flex-wrap items-center gap-x-2 gap-y-1 sm:gap-x-4 rounded-lg border border-border-muted bg-surface-muted/30 px-3 py-2 text-sm">
-                <div className="flex items-center gap-1.5">
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 sm:gap-x-3 rounded border border-border-muted bg-surface-muted/30 px-2 py-1.5 text-xs">
+                <div className="flex items-center gap-1">
                   <Icon icon={IconUser} size="xs" colorRole="muted" />
-                  <span className="font-medium text-text-muted">Client:</span>
+                  <span className="text-text-muted">Client:</span>
                 </div>
-                {quote.clientName && <span>{quote.clientName}</span>}
+                {quote.clientName && <span className="font-medium">{quote.clientName}</span>}
                 {quote.clientCompany && (
                   <span className="text-text-muted">({quote.clientCompany})</span>
                 )}
@@ -698,77 +686,74 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
 
             {/* Total - Compact */}
             <Divider />
-            <div className="flex items-center justify-between gap-4 rounded-lg bg-fill-muted/30 px-3 py-2">
-              <div className="flex items-center gap-2">
-                <Icon icon={IconCurrencyDollar} size="xs" colorRole="muted" />
-                <Typography variant="bodyXs" colorRole="muted">In-Bond UAE</Typography>
+            <div className="flex items-center justify-between gap-3 rounded bg-fill-muted/30 px-2 py-1.5">
+              <div className="flex items-center gap-1.5 text-xs text-text-muted">
+                <Icon icon={IconCurrencyDollar} size="xs" />
+                <span>In-Bond UAE</span>
               </div>
-              <div className="flex items-center gap-3">
-                <Typography variant="bodyMd" className="font-bold">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-bold">
                   {formatPrice(displayTotal, displayCurrency)}
-                </Typography>
-                <Button
-                  variant="ghost"
-                  size="sm"
+                </span>
+                <button
+                  type="button"
                   onClick={() => setDisplayCurrency(displayCurrency === 'USD' ? 'AED' : 'USD')}
-                  className="h-5 px-2 text-xs"
+                  className="rounded px-1.5 py-0.5 text-[10px] font-medium text-text-muted hover:bg-fill-muted"
                 >
-                  <ButtonContent>{displayCurrency === 'USD' ? 'AED' : 'USD'}</ButtonContent>
-                </Button>
+                  {displayCurrency === 'USD' ? 'AED' : 'USD'}
+                </button>
               </div>
             </div>
-            <Typography variant="bodyXs" colorRole="muted" className="mt-1 text-center">
+            <p className="mt-0.5 text-center text-[10px] text-text-muted">
               Final quotation values include local taxes inc VAT @ 5%.
-            </Typography>
+            </p>
 
             {/* Margin Configuration (B2B only) - Compact */}
             {quotePricingData?.marginConfig && (
-              <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg border border-border-muted bg-fill-muted/30 px-3 py-2 text-xs">
-                <span className="font-medium text-text-muted">Margins:</span>
+              <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 rounded border border-border-muted bg-fill-muted/30 px-2 py-1 text-[11px]">
+                <span className="text-text-muted">Margins:</span>
                 <span>
                   {quotePricingData.marginConfig.type === 'percentage'
                     ? `${quotePricingData.marginConfig.value}%`
                     : formatPrice(quotePricingData.marginConfig.value, quote.currency as 'USD' | 'AED')}
                 </span>
-                <span className="text-text-muted">|</span>
+                <span className="text-text-muted">·</span>
                 <span>Tax {quotePricingData.marginConfig.importTax}%</span>
-                <span className="text-text-muted">|</span>
+                <span className="text-text-muted">·</span>
                 <span>Transfer ${quotePricingData.marginConfig.transferCost}</span>
               </div>
             )}
 
             {/* Customer Quote Price (if margins applied) - Compact */}
             {quotePricingData?.customerQuotePrice && (
-              <div className="mt-2 flex items-center justify-between rounded-lg bg-fill-brand/10 px-3 py-2">
-                <Typography variant="bodyXs" colorRole="muted">
-                  Customer Quote (Inc. VAT)
-                </Typography>
-                <Typography variant="bodyMd" className="font-bold text-text-brand">
+              <div className="mt-1.5 flex items-center justify-between rounded bg-fill-brand/10 px-2 py-1.5">
+                <span className="text-xs text-text-muted">Customer Quote (Inc. VAT)</span>
+                <span className="text-sm font-bold text-text-brand">
                   {formatPrice(
                     quote.currency === 'AED'
                       ? convertUsdToAed(quotePricingData.customerQuotePrice)
                       : quotePricingData.customerQuotePrice,
                     quote.currency as 'USD' | 'AED',
                   )}
-                </Typography>
+                </span>
               </div>
             )}
 
             {/* Fulfilled Out-of-Catalogue Items - Compact */}
             {fulfilledOocItems.length > 0 && (
-              <div className="mt-2 rounded-lg border border-green-200 bg-green-50 px-3 py-2">
-                <Typography variant="bodyXs" className="font-semibold text-green-800 mb-1.5">
+              <div className="mt-1.5 rounded border border-green-200 bg-green-50 px-2 py-1.5">
+                <div className="mb-1 text-[11px] font-semibold text-green-800">
                   Special Order Items ({fulfilledOocItems.length})
-                </Typography>
-                <div className="space-y-1.5">
+                </div>
+                <div className="space-y-1">
                   {fulfilledOocItems.map((item, index) => (
                     <div
                       key={item.requestId || index}
-                      className="flex items-center justify-between gap-2 rounded bg-white border border-green-200 px-2 py-1.5 text-xs"
+                      className="flex items-center justify-between gap-2 rounded bg-white border border-green-200 px-1.5 py-1 text-[11px]"
                     >
                       <div className="flex-1 min-w-0">
                         <span className="font-medium text-green-900">{item.productName}</span>
-                        <span className="text-green-700 ml-2">
+                        <span className="text-green-700 ml-1.5">
                           {item.vintage && `${item.vintage} · `}{item.quantity}× ${item.pricePerCase.toFixed(0)}/cs
                         </span>
                       </div>
@@ -783,15 +768,15 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
 
             {/* Pending Out-of-Catalogue Requests - Compact */}
             {outOfCatalogueRequests.length > 0 && (
-              <div className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
-                <Typography variant="bodyXs" className="font-semibold text-amber-800 mb-1.5">
+              <div className="mt-1.5 rounded border border-amber-200 bg-amber-50 px-2 py-1.5">
+                <div className="mb-1 text-[11px] font-semibold text-amber-800">
                   Pending Requests ({outOfCatalogueRequests.length}) <span className="font-normal text-amber-600">· not in total</span>
-                </Typography>
-                <div className="space-y-1.5">
+                </div>
+                <div className="space-y-1">
                   {outOfCatalogueRequests.map((request, index) => (
                     <div
                       key={request.id || index}
-                      className="rounded bg-white border border-amber-200 px-2 py-1.5 text-xs"
+                      className="rounded bg-white border border-amber-200 px-1.5 py-1 text-[11px]"
                     >
                       <div className="flex items-center justify-between gap-2">
                         <span className="font-medium text-amber-900">{request.productName}</span>
