@@ -35,7 +35,7 @@ import type { Quote } from '@/database/schema';
 import { useTRPCClient } from '@/lib/trpc/browser';
 
 import QuoteDetailsDialog from './QuoteDetailsDialog';
-import QuoteStatusBadge, { getStatusDescription, statusNeedsAction } from './QuoteStatusBadge';
+import QuoteStatusBadge, { statusNeedsAction } from './QuoteStatusBadge';
 
 type QuoteStatus = Quote['status'];
 
@@ -248,20 +248,11 @@ const QuotesList = () => {
       header: 'Status',
       cell: ({ row }) => {
         const status = row.original.status;
-        const description = getStatusDescription(status);
         return (
-          <div className="flex flex-col gap-0.5">
-            <QuoteStatusBadge
-              status={status}
-              size="sm"
-              showActionIndicator
-            />
-            {description && (
-              <Typography variant="bodyXs" colorRole="muted" className="max-w-[140px]">
-                {description}
-              </Typography>
-            )}
-          </div>
+          <QuoteStatusBadge
+            status={status}
+            size="xs"
+          />
         );
       },
     },
