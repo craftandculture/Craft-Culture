@@ -776,7 +776,7 @@ const QuoteApprovalDialog = ({
                     const hasAlternatives = pricing?.adminAlternatives && pricing.adminAlternatives.length > 0;
                     const acceptedAlt = pricing?.acceptedAlternative;
                     // If no accepted alt but alternatives exist, use the first one
-                    const effectiveAlt = acceptedAlt || (hasAlternatives ? pricing.adminAlternatives[0] : null);
+                    const effectiveAlt = acceptedAlt || (hasAlternatives ? pricing?.adminAlternatives?.[0] : null);
 
                     // Item is truly unavailable only if marked unavailable AND has no alternatives
                     const isTrulyUnavailable = pricing?.available === false && !hasAlternatives;
