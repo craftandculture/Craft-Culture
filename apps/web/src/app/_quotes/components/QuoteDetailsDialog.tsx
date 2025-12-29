@@ -152,6 +152,7 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
         confirmedQuantity?: number;
         originalQuantity?: number;
         adminNotes?: string;
+        available?: boolean; // Track if item is available (false = unavailable with alternatives)
         adminAlternatives?: Array<{
           productName: string;
           pricePerCase: number;
@@ -221,6 +222,7 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
           confirmedQuantity?: number;
           originalQuantity?: number;
           adminNotes?: string;
+          available?: boolean;
           adminAlternatives?: Array<{
             productName: string;
             pricePerCase: number;
@@ -241,22 +243,23 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
     );
   }, [quotePricingData]);
 
-  // Calculate the actual display total, excluding items with alternatives but no accepted one
+  // Calculate the actual display total, excluding unavailable items without accepted alternatives
   const displayTotal = useMemo(() => {
     // If no pricing data, use base total
     if (!quotePricingData?.lineItems || Object.keys(pricingMap).length === 0) {
       return baseDisplayTotal;
     }
 
-    // Calculate total from line items, excluding unavailable ones (has alternatives but none accepted)
+    // Calculate total from line items, excluding unavailable ones without accepted alternatives
     let adjustedTotalUsd = 0;
 
     quotePricingData.lineItems.forEach((item) => {
       const hasAlternatives = item.adminAlternatives && item.adminAlternatives.length > 0;
       const hasAcceptedAlternative = !!item.acceptedAlternative;
+      const isUnavailable = item.available === false || (hasAlternatives && !hasAcceptedAlternative);
 
-      // Only include if no alternatives OR has accepted alternative
-      if (!hasAlternatives || hasAcceptedAlternative) {
+      // Only include if item is available OR has accepted alternative
+      if (!isUnavailable || hasAcceptedAlternative) {
         adjustedTotalUsd += item.lineItemTotalUsd;
       }
     });
@@ -937,10 +940,11 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                   const product = productMap[item.productId];
                   const pricing = pricingMap[item.productId];
 
-                  // Check if alternatives exist but none accepted - item is unavailable
+                  // Check if item is marked as unavailable (with potential alternatives)
                   const hasAlternatives = pricing?.adminAlternatives && pricing.adminAlternatives.length > 0;
                   const hasAcceptedAlternative = !!pricing?.acceptedAlternative;
-                  const isUnavailable = hasAlternatives && !hasAcceptedAlternative;
+                  // Item is unavailable if explicitly marked OR has alternatives without acceptance
+                  const isUnavailable = pricing?.available === false || (hasAlternatives && !hasAcceptedAlternative);
 
                   // Use confirmed quantity and price if available (after admin approval)
                   // If item is unavailable (has alternatives but none accepted), show $0

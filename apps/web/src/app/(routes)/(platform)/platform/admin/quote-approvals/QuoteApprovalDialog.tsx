@@ -123,6 +123,22 @@ const QuoteApprovalDialog = ({
         productId: string;
         lineItemTotalUsd: number;
         basePriceUsd?: number;
+        available?: boolean;
+        adminAlternatives?: Array<{
+          productName: string;
+          pricePerCase: number;
+          bottlesPerCase: number;
+          bottleSize: string;
+          quantityAvailable: number;
+        }>;
+        acceptedAlternative?: {
+          productName: string;
+          pricePerCase: number;
+          bottlesPerCase: number;
+          bottleSize: string;
+          quantityAvailable: number;
+          acceptedAt: string;
+        };
       }>;
     };
     return data;
@@ -133,13 +149,29 @@ const QuoteApprovalDialog = ({
     if (!quotePricingData?.lineItems) return {};
     return quotePricingData.lineItems.reduce(
       (acc, item) => {
-        acc[item.productId] = {
-          lineItemTotalUsd: item.lineItemTotalUsd,
-          basePriceUsd: item.basePriceUsd,
-        };
+        acc[item.productId] = item;
         return acc;
       },
-      {} as Record<string, { lineItemTotalUsd: number; basePriceUsd?: number }>,
+      {} as Record<string, {
+        lineItemTotalUsd: number;
+        basePriceUsd?: number;
+        available?: boolean;
+        adminAlternatives?: Array<{
+          productName: string;
+          pricePerCase: number;
+          bottlesPerCase: number;
+          bottleSize: string;
+          quantityAvailable: number;
+        }>;
+        acceptedAlternative?: {
+          productName: string;
+          pricePerCase: number;
+          bottlesPerCase: number;
+          bottleSize: string;
+          quantityAvailable: number;
+          acceptedAt: string;
+        };
+      }>,
     );
   }, [quotePricingData]);
 
@@ -706,39 +738,83 @@ const QuoteApprovalDialog = ({
 
                   // For non-review mode, show simple read-only cards
                   if (quote.status !== 'under_cc_review') {
+                    // Check if item is unavailable
+                    const hasAlternatives = pricing?.adminAlternatives && pricing.adminAlternatives.length > 0;
+                    const hasAcceptedAlternative = !!pricing?.acceptedAlternative;
+                    const isUnavailable = pricing?.available === false || (hasAlternatives && !hasAcceptedAlternative);
+
                     const displayPricePerCase =
                       displayCurrency === 'USD' ? pricePerCase : convertUsdToAed(pricePerCase);
-                    const lineTotal = pricePerCase * item.quantity;
+                    const lineTotal = isUnavailable ? 0 : pricePerCase * item.quantity;
                     const displayLineTotal =
                       displayCurrency === 'USD' ? lineTotal : convertUsdToAed(lineTotal);
 
                     return (
                       <div
                         key={item.productId}
-                        className="rounded-lg border border-border-muted bg-white px-4 py-3"
+                        className={`rounded-lg border px-4 py-3 ${
+                          isUnavailable
+                            ? 'border-border-warning bg-fill-warning/5'
+                            : 'border-border-muted bg-white'
+                        }`}
                       >
                         <div className="flex items-center justify-between gap-4">
                           <div className="flex-1 min-w-0">
-                            <Typography variant="bodySm" className="font-semibold truncate">
-                              {product?.name || item.productId}
-                            </Typography>
+                            <div className="flex items-center gap-2">
+                              <Typography
+                                variant="bodySm"
+                                className={`font-semibold truncate ${isUnavailable ? 'line-through text-text-muted' : ''}`}
+                              >
+                                {pricing?.acceptedAlternative
+                                  ? pricing.acceptedAlternative.productName
+                                  : product?.name || item.productId}
+                              </Typography>
+                              {isUnavailable && (
+                                <span className="shrink-0 rounded bg-fill-warning px-1.5 py-0.5 text-[10px] font-medium text-white">
+                                  N/A
+                                </span>
+                              )}
+                              {pricing?.acceptedAlternative && (
+                                <span className="shrink-0 rounded bg-fill-success px-1.5 py-0.5 text-[10px] font-medium text-white">
+                                  ALT
+                                </span>
+                              )}
+                            </div>
                             <div className="flex items-center gap-2 text-xs text-text-muted">
                               {product?.producer && <span className="truncate">{product.producer}</span>}
                               {product?.year && <span>• {product.year}</span>}
                               {item.vintage && <span>• V{item.vintage}</span>}
                             </div>
+                            {/* Show alternatives if item is unavailable */}
+                            {isUnavailable && hasAlternatives && (
+                              <div className="mt-2 pt-2 border-t border-border-muted">
+                                <Typography variant="bodyXs" className="font-semibold text-text-warning mb-1">
+                                  Alternatives suggested:
+                                </Typography>
+                                {pricing.adminAlternatives!.map((alt, altIdx) => (
+                                  <div key={altIdx} className="text-xs text-text-muted">
+                                    • {alt.productName} @ ${alt.pricePerCase.toFixed(2)}/case ({alt.quantityAvailable} available)
+                                  </div>
+                                ))}
+                              </div>
+                            )}
                           </div>
                           <div className="flex items-center gap-6 text-sm">
                             <div className="text-center">
-                              <span className="font-semibold">{item.quantity}</span>
+                              <span className={`font-semibold ${isUnavailable ? 'text-text-muted' : ''}`}>{item.quantity}</span>
                               <span className="text-text-muted ml-1">cases</span>
                             </div>
                             <div className="text-right">
-                              <div className="font-semibold">{formatPrice(displayPricePerCase, displayCurrency)}</div>
+                              <div className={`font-semibold ${isUnavailable ? 'text-text-muted line-through' : ''}`}>
+                                {formatPrice(displayPricePerCase, displayCurrency)}
+                              </div>
                               <div className="text-xs text-text-muted">per case</div>
                             </div>
                             <div className="text-right min-w-[100px]">
-                              <Typography variant="bodyMd" className="font-bold text-text-brand">
+                              <Typography
+                                variant="bodyMd"
+                                className={`font-bold ${isUnavailable ? 'text-text-muted' : 'text-text-brand'}`}
+                              >
                                 {formatPrice(displayLineTotal, displayCurrency)}
                               </Typography>
                             </div>
