@@ -745,7 +745,7 @@ const QuoteApprovalDialog = ({
 
                     // If accepted alternative exists, use its price; if just has alternatives, use first one
                     const alternativePrice = pricing?.acceptedAlternative?.pricePerCase
-                      || (hasAlternatives ? pricing.adminAlternatives![0].pricePerCase : 0);
+                      || pricing?.adminAlternatives?.[0]?.pricePerCase || 0;
                     const effectivePricePerCase = isUnavailable && (hasAlternatives || hasAcceptedAlternative)
                       ? alternativePrice
                       : pricePerCase;
