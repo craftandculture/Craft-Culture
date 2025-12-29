@@ -15,19 +15,39 @@ import Typography from '@/app/_ui/components/Typography/Typography';
 import type { Notification } from '@/database/schema';
 import { useTRPCClient } from '@/lib/trpc/browser';
 
+// Global flag to track if user has interacted with the page
+// Persists across component remounts
+let hasUserInteracted = false;
+
+// Set up global interaction tracking (runs once when module loads)
+if (typeof window !== 'undefined') {
+  const markInteracted = () => {
+    hasUserInteracted = true;
+  };
+  // Track any user interaction
+  window.addEventListener('click', markInteracted, { passive: true });
+  window.addEventListener('keydown', markInteracted, { passive: true });
+  window.addEventListener('touchstart', markInteracted, { passive: true });
+}
+
 /**
  * Play notification sound using Web Audio API
  * Creates a gentle two-tone chime sound without needing an audio file
  */
-const playNotificationSound = () => {
+const playNotificationSound = async () => {
   try {
-    // Try to resume AudioContext if it's suspended (common on mobile)
+    // Check if user has interacted (required by browser autoplay policy)
+    if (!hasUserInteracted) {
+      console.log('Notification sound skipped: no user interaction yet');
+      return;
+    }
+
     const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
     const audioContext = new AudioContextClass();
 
     // Resume if suspended (required for some browsers after user interaction)
     if (audioContext.state === 'suspended') {
-      void audioContext.resume();
+      await audioContext.resume();
     }
 
     const now = audioContext.currentTime;
@@ -76,22 +96,6 @@ const NotificationBell = () => {
   const queryClient = useQueryClient();
   const [isOpen, setIsOpen] = useState(false);
   const previousCountRef = useRef<number | null>(null);
-  const hasInteractedRef = useRef(false);
-
-  // Track user interaction to enable sound (browser autoplay policy)
-  useEffect(() => {
-    const handleInteraction = () => {
-      hasInteractedRef.current = true;
-    };
-
-    window.addEventListener('click', handleInteraction, { once: true });
-    window.addEventListener('keydown', handleInteraction, { once: true });
-
-    return () => {
-      window.removeEventListener('click', handleInteraction);
-      window.removeEventListener('keydown', handleInteraction);
-    };
-  }, []);
 
   // Play sound and refresh relevant data when new notifications arrive
   const handleNewNotifications = useCallback((newCount: number) => {
@@ -99,10 +103,8 @@ const NotificationBell = () => {
 
     // Only trigger if count increased
     if (prevCount !== null && newCount > prevCount) {
-      // Play sound if user has interacted
-      if (hasInteractedRef.current) {
-        playNotificationSound();
-      }
+      // Play sound (function checks for user interaction internally)
+      void playNotificationSound();
 
       // Invalidate queries to refresh data across both B2C and admin views
       // B2C: User's quotes list and individual quote details
