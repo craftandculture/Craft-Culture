@@ -35,16 +35,46 @@ interface StatusFilter {
   color: string;
 }
 
-const statusFilters: StatusFilter[] = [
-  { label: 'All Quotes', value: 'all', icon: IconFileText, color: 'text-text-primary' },
-  { label: 'Pending', value: 'buy_request_submitted', icon: IconSend, color: 'text-text-brand' },
-  { label: 'Under Review', value: 'under_cc_review', icon: IconClock, color: 'text-text-brand' },
-  { label: 'Confirmed', value: 'cc_confirmed', icon: IconCheck, color: 'text-text-brand' },
-  { label: 'Awaiting Payment', value: 'awaiting_payment', icon: IconClock, color: 'text-text-warning' },
-  { label: 'Paid', value: 'paid', icon: IconCheck, color: 'text-text-success' },
-  { label: 'PO Submitted', value: 'po_submitted', icon: IconFileText, color: 'text-text-brand' },
-  { label: 'Confirmed Orders', value: 'po_confirmed', icon: IconCheck, color: 'text-text-brand' },
-  { label: 'Delivered', value: 'delivered', icon: IconTruck, color: 'text-text-muted' },
+interface FilterGroup {
+  label: string;
+  filters: StatusFilter[];
+}
+
+const filterGroups: FilterGroup[] = [
+  {
+    label: 'Overview',
+    filters: [
+      { label: 'All', value: 'all', icon: IconFileText, color: 'text-text-primary' },
+    ],
+  },
+  {
+    label: 'Incoming',
+    filters: [
+      { label: 'Pending', value: 'buy_request_submitted', icon: IconSend, color: 'text-text-brand' },
+    ],
+  },
+  {
+    label: 'In Progress',
+    filters: [
+      { label: 'Under Review', value: 'under_cc_review', icon: IconClock, color: 'text-text-brand' },
+      { label: 'Confirmed', value: 'cc_confirmed', icon: IconCheck, color: 'text-text-brand' },
+      { label: 'Awaiting Payment', value: 'awaiting_payment', icon: IconClock, color: 'text-text-warning' },
+    ],
+  },
+  {
+    label: 'Complete',
+    filters: [
+      { label: 'Paid', value: 'paid', icon: IconCheck, color: 'text-text-success' },
+      { label: 'Delivered', value: 'delivered', icon: IconTruck, color: 'text-text-muted' },
+    ],
+  },
+  {
+    label: 'B2B',
+    filters: [
+      { label: 'PO Submitted', value: 'po_submitted', icon: IconFileText, color: 'text-text-brand' },
+      { label: 'PO Confirmed', value: 'po_confirmed', icon: IconCheck, color: 'text-text-brand' },
+    ],
+  },
 ];
 
 /**
@@ -286,34 +316,43 @@ const QuoteApprovalsList = () => {
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Status Filter Buttons */}
-      <div className="flex flex-wrap gap-2">
-        {statusFilters.map((filter) => {
-          const isActive = activeFilter === filter.value;
-          const count = getStatusCount(filter.value);
+      {/* Status Filter Buttons - Grouped by Workflow Stage */}
+      <div className="flex flex-wrap items-start gap-4">
+        {filterGroups.map((group) => (
+          <div key={group.label} className="flex flex-col gap-1.5">
+            <Typography variant="bodyXs" colorRole="muted" className="px-1 font-medium uppercase tracking-wide">
+              {group.label}
+            </Typography>
+            <div className="flex gap-1.5">
+              {group.filters.map((filter) => {
+                const isActive = activeFilter === filter.value;
+                const count = getStatusCount(filter.value);
 
-          return (
-            <button
-              key={filter.value}
-              onClick={() => setActiveFilter(filter.value)}
-              className={`flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all ${
-                isActive
-                  ? 'bg-fill-brand text-text-brand-contrast shadow-md'
-                  : 'bg-fill-muted/50 text-text-muted hover:bg-fill-muted hover:text-text-primary dark:bg-background-secondary dark:hover:bg-background-tertiary'
-              }`}
-            >
-              <Icon icon={filter.icon} size="sm" className={isActive ? 'text-text-brand-contrast' : filter.color} />
-              <span>{filter.label}</span>
-              <span className={`rounded-full px-2 py-0.5 text-xs ${
-                isActive
-                  ? 'bg-white/20 text-text-brand-contrast'
-                  : 'bg-fill-primary/50 text-text-muted'
-              }`}>
-                {count}
-              </span>
-            </button>
-          );
-        })}
+                return (
+                  <button
+                    key={filter.value}
+                    onClick={() => setActiveFilter(filter.value)}
+                    className={`flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-all ${
+                      isActive
+                        ? 'bg-fill-brand text-text-brand-contrast shadow-sm'
+                        : 'bg-fill-muted/50 text-text-muted hover:bg-fill-muted hover:text-text-primary dark:bg-background-secondary dark:hover:bg-background-tertiary'
+                    }`}
+                  >
+                    <Icon icon={filter.icon} size="xs" className={isActive ? 'text-text-brand-contrast' : filter.color} />
+                    <span>{filter.label}</span>
+                    <span className={`rounded-full px-1.5 py-0.5 text-[10px] ${
+                      isActive
+                        ? 'bg-white/20 text-text-brand-contrast'
+                        : 'bg-fill-primary/50 text-text-muted'
+                    }`}>
+                      {count}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </div>
 
       {/* Search Input */}
