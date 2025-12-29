@@ -136,15 +136,17 @@ const quotesConfirm = adminProcedure
         };
 
         // Update line item pricing with adjustments
+        // Keep all items (including unavailable ones) to preserve alternatives data
         const updatedLineItemPricing = lineItems
           .map((item) => {
             const adjustment = lineItemAdjustments?.[item.productId] as LineItemAdjustment | undefined;
-            if (lineItemAdjustments && (!adjustment || !adjustment.available)) {
-              return null; // Item marked as unavailable
-            }
 
-            const pricePerCase = adjustment?.adjustedPricePerCase || 0;
-            const quantity = adjustment?.confirmedQuantity || item.quantity;
+            // Check if item is marked as unavailable
+            const isAvailable = !lineItemAdjustments || (adjustment && adjustment.available);
+
+            // For unavailable items, set price/quantity to 0 but preserve alternatives
+            const pricePerCase = isAvailable ? (adjustment?.adjustedPricePerCase || 0) : 0;
+            const quantity = isAvailable ? (adjustment?.confirmedQuantity || item.quantity) : 0;
             const lineItemTotalUsd = pricePerCase * quantity;
 
             return {
@@ -155,9 +157,9 @@ const quotesConfirm = adminProcedure
               originalQuantity: item.quantity,
               adminNotes: adjustment?.notes,
               adminAlternatives: adjustment?.adminAlternatives,
+              available: isAvailable, // Track availability status
             };
           })
-          .filter((item): item is NonNullable<typeof item> => item !== null); // Remove unavailable items
 
         // Calculate regular line items total
         const lineItemsTotalUsd = updatedLineItemPricing.reduce(
