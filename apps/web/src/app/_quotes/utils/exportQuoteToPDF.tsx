@@ -4,6 +4,23 @@ import type { Quote } from '@/database/schema';
 
 import QuotePDFTemplate, { type QuotePDFTemplateProps } from '../components/QuotePDFTemplate';
 
+interface ExportOptions {
+  /** Calculated total including OOC items (overrides quote.totalUsd) */
+  calculatedTotalUsd?: number;
+  /** Calculated AED total including OOC items (overrides quote.totalAed) */
+  calculatedTotalAed?: number;
+  /** Payment details for bank transfer */
+  paymentDetails?: {
+    bankName?: string;
+    accountName?: string;
+    accountNumber?: string;
+    sortCode?: string;
+    iban?: string;
+    swiftBic?: string;
+    reference?: string;
+  } | null;
+}
+
 /**
  * Export a quote to PDF and trigger download
  *
@@ -12,6 +29,7 @@ import QuotePDFTemplate, { type QuotePDFTemplateProps } from '../components/Quot
  * @param user - User/company information for branding
  * @param fulfilledOocItems - Fulfilled out-of-catalogue items with pricing
  * @param licensedPartner - Licensed partner/distributor info for B2C quotes
+ * @param options - Additional export options
  */
 const exportQuoteToPDF = async (
   quote: Quote,
@@ -48,7 +66,12 @@ const exportQuoteToPDF = async (
     businessEmail?: string | null;
     logoUrl?: string | null;
   } | null,
+  options?: ExportOptions,
 ) => {
+  // Use calculated total if provided, otherwise fall back to quote total
+  const totalUsd = options?.calculatedTotalUsd ?? quote.totalUsd;
+  const totalAed = options?.calculatedTotalAed ?? quote.totalAed;
+
   const props: QuotePDFTemplateProps = {
     quote: {
       name: quote.name,
@@ -59,14 +82,15 @@ const exportQuoteToPDF = async (
       clientEmail: quote.clientEmail,
       clientCompany: quote.clientCompany,
       currency: quote.currency,
-      totalUsd: quote.totalUsd,
-      totalAed: quote.totalAed,
+      totalUsd,
+      totalAed,
       notes: quote.notes,
     },
     lineItems,
     user,
     fulfilledOocItems,
     licensedPartner: licensedPartner ?? undefined,
+    paymentDetails: options?.paymentDetails ?? undefined,
   };
 
   // Generate PDF blob

@@ -236,6 +236,67 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
+  bankDetailsSection: {
+    marginTop: 24,
+    padding: 16,
+    backgroundColor: '#f5f5f5',
+    borderRadius: 4,
+    borderLeft: '3px solid #6BBFBF',
+  },
+  bankDetailsHeader: {
+    fontSize: 9,
+    fontWeight: 'bold',
+    color: '#0a0a0a',
+    marginBottom: 10,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  bankDetailsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  bankDetailsRow: {
+    flexDirection: 'row',
+    width: '50%',
+    marginBottom: 6,
+  },
+  bankDetailsRowFull: {
+    flexDirection: 'row',
+    width: '100%',
+    marginBottom: 6,
+  },
+  bankDetailsLabel: {
+    fontSize: 8,
+    color: '#737373',
+    width: 70,
+  },
+  bankDetailsValue: {
+    fontSize: 9,
+    fontWeight: 'bold',
+    color: '#0a0a0a',
+    flex: 1,
+  },
+  bankDetailsReference: {
+    marginTop: 10,
+    paddingTop: 8,
+    borderTop: '1px solid #e5e5e5',
+    backgroundColor: '#e8f5f5',
+    padding: 10,
+    borderRadius: 4,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  bankDetailsRefLabel: {
+    fontSize: 8,
+    color: '#737373',
+  },
+  bankDetailsRefValue: {
+    fontSize: 11,
+    fontWeight: 'bold',
+    color: '#6BBFBF',
+    fontFamily: 'Courier',
+  },
   footer: {
     position: 'absolute',
     bottom: 20,
@@ -333,6 +394,16 @@ export interface QuotePDFTemplateProps {
     businessEmail?: string | null;
     logoUrl?: string | null;
   } | null;
+  /** Bank transfer payment details */
+  paymentDetails?: {
+    bankName?: string;
+    accountName?: string;
+    accountNumber?: string;
+    sortCode?: string;
+    iban?: string;
+    swiftBic?: string;
+    reference?: string;
+  };
 }
 
 /**
@@ -344,6 +415,7 @@ const QuotePDFTemplate = ({
   user,
   fulfilledOocItems,
   licensedPartner,
+  paymentDetails,
 }: QuotePDFTemplateProps) => {
   const formatPrice = (amount: number, currency: string) => {
     return `${currency} ${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -531,6 +603,57 @@ const QuotePDFTemplate = ({
             {licensedPartner.businessAddress && (
               <View style={styles.supplierDetails}>
                 <Text>{licensedPartner.businessAddress}</Text>
+              </View>
+            )}
+          </View>
+        )}
+
+        {/* Bank Transfer Payment Details */}
+        {paymentDetails && (paymentDetails.bankName || paymentDetails.iban || paymentDetails.accountNumber) && (
+          <View style={styles.bankDetailsSection} wrap={false}>
+            <Text style={styles.bankDetailsHeader}>Payment Details (Bank Transfer)</Text>
+            <View style={styles.bankDetailsGrid}>
+              {paymentDetails.bankName && (
+                <View style={styles.bankDetailsRow}>
+                  <Text style={styles.bankDetailsLabel}>Bank:</Text>
+                  <Text style={styles.bankDetailsValue}>{paymentDetails.bankName}</Text>
+                </View>
+              )}
+              {paymentDetails.accountName && (
+                <View style={styles.bankDetailsRow}>
+                  <Text style={styles.bankDetailsLabel}>Account:</Text>
+                  <Text style={styles.bankDetailsValue}>{paymentDetails.accountName}</Text>
+                </View>
+              )}
+              {paymentDetails.accountNumber && (
+                <View style={styles.bankDetailsRow}>
+                  <Text style={styles.bankDetailsLabel}>Account No:</Text>
+                  <Text style={styles.bankDetailsValue}>{paymentDetails.accountNumber}</Text>
+                </View>
+              )}
+              {paymentDetails.sortCode && (
+                <View style={styles.bankDetailsRow}>
+                  <Text style={styles.bankDetailsLabel}>Sort Code:</Text>
+                  <Text style={styles.bankDetailsValue}>{paymentDetails.sortCode}</Text>
+                </View>
+              )}
+              {paymentDetails.iban && (
+                <View style={styles.bankDetailsRowFull}>
+                  <Text style={styles.bankDetailsLabel}>IBAN:</Text>
+                  <Text style={styles.bankDetailsValue}>{paymentDetails.iban}</Text>
+                </View>
+              )}
+              {paymentDetails.swiftBic && (
+                <View style={styles.bankDetailsRow}>
+                  <Text style={styles.bankDetailsLabel}>SWIFT/BIC:</Text>
+                  <Text style={styles.bankDetailsValue}>{paymentDetails.swiftBic}</Text>
+                </View>
+              )}
+            </View>
+            {paymentDetails.reference && (
+              <View style={styles.bankDetailsReference}>
+                <Text style={styles.bankDetailsRefLabel}>Payment Reference:</Text>
+                <Text style={styles.bankDetailsRefValue}>{paymentDetails.reference}</Text>
               </View>
             )}
           </View>

@@ -647,6 +647,12 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
         };
       });
 
+      // Calculate total including OOC items
+      const lineItemsTotalUsd = pdfLineItems.reduce((sum, item) => sum + item.lineTotal, 0);
+      const oocItemsTotalUsd = pdfFulfilledOocItems.reduce((sum, item) => sum + item.lineTotal, 0);
+      const calculatedTotalUsd = lineItemsTotalUsd + oocItemsTotalUsd;
+      const calculatedTotalAed = convertUsdToAed(calculatedTotalUsd);
+
       await exportQuoteToPDF(
         quote,
         pdfLineItems,
@@ -667,6 +673,19 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
           businessEmail: partnerInfo.businessEmail,
           logoUrl: partnerInfo.logoUrl,
         } : undefined,
+        {
+          calculatedTotalUsd,
+          calculatedTotalAed,
+          paymentDetails: quote.paymentMethod === 'bank_transfer' && quote.paymentDetails ? {
+            bankName: quote.paymentDetails.bankName,
+            accountName: quote.paymentDetails.accountName,
+            accountNumber: quote.paymentDetails.accountNumber,
+            sortCode: quote.paymentDetails.sortCode,
+            iban: quote.paymentDetails.iban,
+            swiftBic: quote.paymentDetails.swiftBic,
+            reference: quote.paymentDetails.reference,
+          } : null,
+        },
       );
 
       toast.success('PDF exported successfully');
