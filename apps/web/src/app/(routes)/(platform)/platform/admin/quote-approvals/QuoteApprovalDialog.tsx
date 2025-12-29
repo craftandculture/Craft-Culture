@@ -772,17 +772,24 @@ const QuoteApprovalDialog = ({
 
                   // For non-review mode, show compact B2C-style rows
                   if (quote.status !== 'under_cc_review') {
-                    // Check if item is unavailable
+                    // Check if item has alternatives (use first one if not explicitly accepted)
                     const hasAlternatives = pricing?.adminAlternatives && pricing.adminAlternatives.length > 0;
-                    const hasAcceptedAlternative = !!pricing?.acceptedAlternative;
-                    const isUnavailable = pricing?.available === false || (hasAlternatives && !hasAcceptedAlternative);
+                    const acceptedAlt = pricing?.acceptedAlternative;
+                    // If no accepted alt but alternatives exist, use the first one
+                    const effectiveAlt = acceptedAlt || (hasAlternatives ? pricing.adminAlternatives[0] : null);
 
-                    const lineTotal = isUnavailable ? 0 : (pricing?.lineItemTotalUsd || 0);
+                    // Item is truly unavailable only if marked unavailable AND has no alternatives
+                    const isTrulyUnavailable = pricing?.available === false && !hasAlternatives;
+
+                    // Use alternative pricing if available
+                    const lineTotal = effectiveAlt
+                      ? effectiveAlt.pricePerCase * item.quantity
+                      : (pricing?.lineItemTotalUsd || 0);
                     const displayQuantity = item.quantity;
 
-                    // Get pack size
-                    const packSize = pricing?.acceptedAlternative
-                      ? `${pricing.acceptedAlternative.bottlesPerCase}×${normalizeBottleSize(pricing.acceptedAlternative.bottleSize)}`
+                    // Get pack size - use effective alternative if available
+                    const packSize = effectiveAlt
+                      ? `${effectiveAlt.bottlesPerCase}×${normalizeBottleSize(effectiveAlt.bottleSize)}`
                       : product?.productOffers?.[0]
                         ? `${product.productOffers[0].unitCount}×${normalizeBottleSize(product.productOffers[0].unitSize)}`
                         : null;
@@ -790,7 +797,7 @@ const QuoteApprovalDialog = ({
                     return (
                       <div
                         key={item.productId}
-                        className={`px-2.5 py-1.5 ${isUnavailable ? 'bg-fill-warning/5' : 'bg-background-primary'}`}
+                        className={`px-2.5 py-1.5 ${isTrulyUnavailable ? 'bg-fill-warning/5' : 'bg-background-primary'}`}
                       >
                         {/* Single-line item row */}
                         <div className="flex items-center gap-2 text-sm">
@@ -798,43 +805,32 @@ const QuoteApprovalDialog = ({
                           <span className="shrink-0 w-8 text-text-muted text-xs">
                             {displayQuantity}×
                           </span>
-                          {/* Product Name + Year */}
-                          <span className={`flex-1 min-w-0 truncate ${isUnavailable ? 'text-text-muted line-through' : 'font-medium'}`}>
-                            {pricing?.acceptedAlternative ? (
-                              <span>{pricing.acceptedAlternative.productName}</span>
+                          {/* Product Name + Year - show alternative name if available */}
+                          <span className={`flex-1 min-w-0 truncate ${isTrulyUnavailable ? 'text-text-muted line-through' : 'font-medium'}`}>
+                            {effectiveAlt ? (
+                              <span>{effectiveAlt.productName}</span>
                             ) : (
                               product?.name || item.productId
                             )}
-                            {product?.year && <span className="text-text-muted font-normal"> ({product.year})</span>}
+                            {!effectiveAlt && product?.year && <span className="text-text-muted font-normal"> ({product.year})</span>}
                           </span>
                           {/* Pack Size */}
                           {packSize && <span className="shrink-0 text-text-muted text-[11px]">{packSize}</span>}
                           {/* Tags */}
-                          {isUnavailable && (
+                          {isTrulyUnavailable && (
                             <span className="shrink-0 rounded bg-fill-warning px-1.5 py-0.5 text-[10px] font-medium text-white">N/A</span>
                           )}
-                          {pricing?.acceptedAlternative && (
+                          {effectiveAlt && (
                             <span className="shrink-0 rounded bg-fill-muted px-1.5 py-0.5 text-[10px] font-medium text-text-muted">ALT</span>
                           )}
                           {/* Price */}
-                          <span className={`shrink-0 font-semibold tabular-nums ${isUnavailable ? 'text-text-muted' : 'text-text-brand'}`}>
+                          <span className={`shrink-0 font-semibold tabular-nums ${isTrulyUnavailable ? 'text-text-muted' : 'text-text-brand'}`}>
                             {formatPrice(displayCurrency === 'AED' ? convertUsdToAed(lineTotal) : lineTotal, displayCurrency)}
                           </span>
                         </div>
-                        {/* Show alternatives if item is unavailable */}
-                        {isUnavailable && hasAlternatives && (
-                          <div className="ml-6 sm:ml-8 mt-1 text-xs text-text-warning">
-                            <span className="font-semibold">Alternatives suggested:</span>
-                            {pricing.adminAlternatives!.map((alt, altIdx) => (
-                              <div key={altIdx} className="text-text-muted">
-                                • {alt.productName} {alt.bottlesPerCase}×{normalizeBottleSize(alt.bottleSize)} @ ${alt.pricePerCase.toFixed(2)}/case ({alt.quantityAvailable} available)
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                        {/* Show original if accepted alternative */}
-                        {pricing?.acceptedAlternative && (
-                          <div className="ml-6 sm:ml-8 mt-1 text-xs text-text-success">
+                        {/* Show original product if using alternative */}
+                        {effectiveAlt && (
+                          <div className="ml-6 sm:ml-8 mt-1 text-xs text-text-muted">
                             was: {product?.name}
                           </div>
                         )}
