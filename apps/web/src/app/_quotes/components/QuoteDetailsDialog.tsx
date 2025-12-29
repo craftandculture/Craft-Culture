@@ -554,47 +554,63 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
 
     setIsExporting(true);
     try {
-      // Build line items for PDF
-      const pdfLineItems = lineItems.map((item) => {
-        const product = productMap[item.productId];
-        const pricing = pricingMap[item.productId];
+      // Build line items for PDF, filtering out unavailable items without alternatives
+      const pdfLineItems = lineItems
+        .map((item) => {
+          const product = productMap[item.productId];
+          const pricing = pricingMap[item.productId];
 
-        // Use confirmed quantity and price if available (after admin approval)
-        const displayQuantity = pricing?.confirmedQuantity ?? item.quantity;
-        const pricePerCase = pricing?.basePriceUsd ??
-          (pricing?.lineItemTotalUsd ? pricing.lineItemTotalUsd / item.quantity : 0);
-        const lineTotal = pricing?.lineItemTotalUsd || 0;
+          // Check if item is unavailable (no pricing or marked unavailable with no alternative)
+          const hasAlternatives = pricing?.adminAlternatives && pricing.adminAlternatives.length > 0;
+          const hasAcceptedAlternative = !!pricing?.acceptedAlternative;
+          const isUnavailable = pricing?.available === false || (hasAlternatives && !hasAcceptedAlternative);
 
-        // Convert to display currency if needed
-        const displayPricePerCase =
-          quote.currency === 'AED' && quote.totalAed
-            ? convertUsdToAed(pricePerCase)
-            : pricePerCase;
-        const displayLineTotal =
-          quote.currency === 'AED' && quote.totalAed
-            ? convertUsdToAed(lineTotal)
-            : lineTotal;
+          // Skip unavailable items that don't have an accepted alternative
+          if (isUnavailable && !hasAcceptedAlternative) {
+            return null;
+          }
 
-        // Use accepted alternative details if available, otherwise use original product
-        const acceptedAlt = pricing?.acceptedAlternative;
-        const bottlesPerCase = acceptedAlt
-          ? acceptedAlt.bottlesPerCase
-          : (product?.productOffers?.[0]?.unitCount || 12);
-        const productName = acceptedAlt
-          ? `${acceptedAlt.productName} (Alternative)`
-          : (product?.name || item.productId);
+          // Use accepted alternative pricing if available
+          const acceptedAlt = pricing?.acceptedAlternative;
+          const displayQuantity = acceptedAlt
+            ? item.quantity // Use original quantity for alternatives
+            : (pricing?.confirmedQuantity ?? item.quantity);
+          const pricePerCase = acceptedAlt
+            ? acceptedAlt.pricePerCase
+            : (pricing?.basePriceUsd ?? (pricing?.lineItemTotalUsd ? pricing.lineItemTotalUsd / item.quantity : 0));
+          const lineTotal = acceptedAlt
+            ? acceptedAlt.pricePerCase * displayQuantity
+            : (pricing?.lineItemTotalUsd || 0);
 
-        return {
-          productName,
-          producer: acceptedAlt ? null : (product?.producer || null),
-          region: acceptedAlt ? null : (product?.region || null),
-          year: acceptedAlt ? null : (product?.year ? String(product.year) : null),
-          quantity: displayQuantity,
-          bottlesPerCase,
-          pricePerCase: displayPricePerCase,
-          lineTotal: displayLineTotal,
-        };
-      });
+          // Convert to display currency if needed
+          const displayPricePerCase =
+            quote.currency === 'AED' && quote.totalAed
+              ? convertUsdToAed(pricePerCase)
+              : pricePerCase;
+          const displayLineTotal =
+            quote.currency === 'AED' && quote.totalAed
+              ? convertUsdToAed(lineTotal)
+              : lineTotal;
+
+          const bottlesPerCase = acceptedAlt
+            ? acceptedAlt.bottlesPerCase
+            : (product?.productOffers?.[0]?.unitCount || 12);
+          const productName = acceptedAlt
+            ? `${acceptedAlt.productName} (Alternative)`
+            : (product?.name || item.productId);
+
+          return {
+            productName,
+            producer: acceptedAlt ? null : (product?.producer || null),
+            region: acceptedAlt ? null : (product?.region || null),
+            year: acceptedAlt ? null : (product?.year ? String(product.year) : null),
+            quantity: displayQuantity,
+            bottlesPerCase,
+            pricePerCase: displayPricePerCase,
+            lineTotal: displayLineTotal,
+          };
+        })
+        .filter((item): item is NonNullable<typeof item> => item !== null);
 
       // Build fulfilled OOC items for PDF
       const pdfFulfilledOocItems = fulfilledOocItems.map((item) => {
