@@ -354,6 +354,27 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
     },
   });
 
+  // Remove fulfilled OOC item mutation
+  const removeFulfilledOocItemMutation = useMutation({
+    mutationFn: async ({ requestId }: { requestId: string }) => {
+      if (!quote) return;
+      return trpcClient.quotes.removeFulfilledOocItem.mutate({
+        quoteId: quote.id,
+        requestId,
+      });
+    },
+    onSuccess: async () => {
+      toast.success('Special order item removed');
+      void queryClient.invalidateQueries({ queryKey: ['quotes'] });
+      await refetchQuote();
+    },
+    onError: (error) => {
+      toast.error(
+        `Failed to remove item: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      );
+    },
+  });
+
   // Upload PO document mutation
   const uploadPODocumentMutation = useMutation({
     mutationFn: async (file: File) => {
@@ -739,188 +760,19 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
               </div>
             )}
 
-            {/* Fulfilled Out-of-Catalogue Items - Compact */}
-            {fulfilledOocItems.length > 0 && (
-              <div className="mt-1.5 rounded border border-green-200 bg-green-50 px-2 py-1.5">
-                <div className="mb-1 text-[11px] font-semibold text-green-800">
-                  Special Order Items ({fulfilledOocItems.length})
-                </div>
-                <div className="space-y-1">
-                  {fulfilledOocItems.map((item, index) => (
-                    <div
-                      key={item.requestId || index}
-                      className="flex items-center justify-between gap-2 rounded bg-white border border-green-200 px-1.5 py-1 text-[11px]"
-                    >
-                      <div className="flex-1 min-w-0">
-                        <span className="font-medium text-green-900">{item.productName}</span>
-                        <span className="text-green-700 ml-1.5">
-                          {item.vintage && `${item.vintage} · `}{item.quantity}× ${item.pricePerCase.toFixed(0)}/cs
-                        </span>
-                      </div>
-                      <span className="font-bold text-green-800 shrink-0">
-                        ${item.lineItemTotalUsd.toFixed(0)}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Pending Out-of-Catalogue Requests - Compact */}
-            {outOfCatalogueRequests.length > 0 && (
-              <div className="mt-1.5 rounded border border-amber-200 bg-amber-50 px-2 py-1.5">
-                <div className="mb-1 text-[11px] font-semibold text-amber-800">
-                  Pending Requests ({outOfCatalogueRequests.length}) <span className="font-normal text-amber-600">· not in total</span>
-                </div>
-                <div className="space-y-1">
-                  {outOfCatalogueRequests.map((request, index) => (
-                    <div
-                      key={request.id || index}
-                      className="rounded bg-white border border-amber-200 px-1.5 py-1 text-[11px]"
-                    >
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="font-medium text-amber-900">{request.productName}</span>
-                        <span className="text-amber-700 shrink-0">
-                          {request.vintage && `${request.vintage} · `}
-                          {request.quantity && `${request.quantity}×`}
-                          {request.priceExpectation && ` · $${request.priceExpectation.replace(/^\$/, '')}`}
-                        </span>
-                      </div>
-                      {request.notes && (
-                        <div className="text-amber-600 italic mt-0.5 truncate">{request.notes}</div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Admin Adjustments Summary - show when confirmed by C&C */}
-            {(quote.status === 'cc_confirmed' ||
-              quote.status === 'awaiting_payment' ||
-              quote.status === 'paid' ||
-              quote.status === 'po_submitted' ||
-              quote.status === 'po_confirmed') &&
-              quotePricingData?.lineItems && (
-                <>
-                  <Divider />
-                  <div className="rounded-lg border-2 border-border-success bg-fill-success/10 p-4">
-                    <div className="mb-3 flex items-center gap-2">
-                      <Icon icon={IconCheck} size="sm" className="text-text-success" />
-                      <Typography variant="bodySm" className="font-semibold text-text-success">
-                        Quote Confirmed by C&C Team
-                      </Typography>
-                    </div>
-
-                    {/* Check if any adjustments were made */}
-                    {quotePricingData.lineItems.some(
-                      (item) =>
-                        item.confirmedQuantity !== item.originalQuantity ||
-                        item.adminNotes ||
-                        (item.adminAlternatives && item.adminAlternatives.length > 0)
-                    ) && (
-                      <div className="space-y-2">
-                        <Typography variant="bodyXs" className="font-medium">
-                          The following adjustments were made:
-                        </Typography>
-                        {quotePricingData.lineItems.map((pricingItem) => {
-                          const hasQuantityChange = pricingItem.confirmedQuantity !== pricingItem.originalQuantity;
-                          const hasNotes = !!pricingItem.adminNotes;
-                          const hasAlternatives = pricingItem.adminAlternatives && pricingItem.adminAlternatives.length > 0;
-
-                          if (!hasQuantityChange && !hasNotes && !hasAlternatives) return null;
-
-                          const product = productMap[pricingItem.productId];
-
-                          return (
-                            <div
-                              key={pricingItem.productId}
-                              className="rounded-lg border border-border-muted bg-background-primary p-3 space-y-2"
-                            >
-                              <Typography variant="bodyXs" className="font-medium">
-                                {product?.name || pricingItem.productId}
-                              </Typography>
-                              {hasQuantityChange && (
-                                <Typography variant="bodyXs" colorRole="muted">
-                                  Quantity adjusted: {pricingItem.originalQuantity} → {pricingItem.confirmedQuantity} cases
-                                </Typography>
-                              )}
-                              {hasNotes && (
-                                <Typography variant="bodyXs" className="italic">
-                                  &ldquo;{pricingItem.adminNotes}&rdquo;
-                                </Typography>
-                              )}
-                              {hasAlternatives && (
-                                <div className="mt-2 pt-2 border-t border-border-muted">
-                                  <div className="mb-2 flex items-center gap-1.5">
-                                    <Icon icon={IconBulb} size="xs" className="text-text-success" />
-                                    <Typography variant="bodyXs" className="font-semibold text-text-success">
-                                      Alternative Options:
-                                    </Typography>
-                                  </div>
-                                  <div className="space-y-2">
-                                    {pricingItem.adminAlternatives!.map((alt, altIdx) => (
-                                      <div key={altIdx} className="ml-4 rounded-md bg-fill-success/10 border border-border-success p-2">
-                                        <Typography variant="bodyXs" className="font-bold mb-1">
-                                          {alt.productName}
-                                        </Typography>
-                                        <div className="grid grid-cols-2 gap-x-3 gap-y-0.5">
-                                          <Typography variant="bodyXs" colorRole="muted">
-                                            ${alt.pricePerCase.toFixed(2)}/case
-                                          </Typography>
-                                          <Typography variant="bodyXs" colorRole="muted">
-                                            {alt.quantityAvailable} available
-                                          </Typography>
-                                          <Typography variant="bodyXs" colorRole="muted" className="col-span-2">
-                                            {alt.bottlesPerCase} × {alt.bottleSize}
-                                          </Typography>
-                                        </div>
-                                      </div>
-                                    ))}
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-
-                    {quote.deliveryLeadTime && (
-                      <div className="mt-3 rounded-lg bg-fill-brand/10 border border-border-brand p-3">
-                        <div className="mb-1 flex items-center gap-1.5">
-                          <Icon icon={IconTruck} size="xs" className="text-text-brand" />
-                          <Typography variant="bodyXs" className="font-medium text-text-brand">
-                            Delivery Lead Time:
-                          </Typography>
-                        </div>
-                        <Typography variant="bodyXs" className="font-semibold">
-                          {quote.deliveryLeadTime}
-                        </Typography>
-                      </div>
-                    )}
-
-                    {quote.ccConfirmationNotes && (
-                      <div className="mt-3 rounded-lg bg-background-primary p-3">
-                        <Typography variant="bodyXs" className="mb-1 font-medium">
-                          Additional Notes:
-                        </Typography>
-                        <Typography variant="bodyXs" className="whitespace-pre-wrap">
-                          {quote.ccConfirmationNotes}
-                        </Typography>
-                      </div>
-                    )}
-                  </div>
-                </>
-              )}
-
-            {/* Line Items - Ultra Compact for Scalability */}
+            {/* Line Items - Right after header for quick review */}
             <Divider />
             <div>
               <Typography variant="bodyXs" className="mb-1.5 font-semibold text-text-muted uppercase tracking-wide">
-                Line Items ({lineItems.length})
+                Line Items ({lineItems.length + fulfilledOocItems.length})
+                {outOfCatalogueRequests.length > 0 && (
+                  <span className="ml-2 font-normal text-amber-600">
+                    + {outOfCatalogueRequests.length} pending
+                  </span>
+                )}
               </Typography>
               <div className="divide-y divide-border-muted rounded-lg border border-border-muted overflow-hidden">
+                {/* Regular Line Items */}
                 {lineItems.map((item, index) => {
                   const product = productMap[item.productId];
                   const pricing = pricingMap[item.productId];
@@ -1060,7 +912,7 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
 
                           {/* Remove Line Item - compact link */}
                           {(quote.status === 'cc_confirmed' || quote.status === 'awaiting_payment') &&
-                            lineItems.length > 1 && (
+                            (lineItems.length + fulfilledOocItems.length) > 1 && (
                             <button
                               type="button"
                               onClick={() => {
@@ -1086,8 +938,162 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                     </div>
                   );
                 })}
+
+                {/* Fulfilled Out-of-Catalogue Items (Special Orders) - integrated into line items */}
+                {fulfilledOocItems.map((item, index) => {
+                  // Find the original request this fulfillment is linked to
+                  const originalRequest = outOfCatalogueRequests.find(
+                    (req) => req.id === item.requestId
+                  );
+                  const lineItemTotal = item.lineItemTotalUsd;
+
+                  // Normalize bottle size helper
+                  const normalizeBottleSize = (size: string | null | undefined): string => {
+                    if (!size) return '750ml';
+                    const clMatch = size.match(/^(\d+)cl$/i);
+                    if (clMatch && clMatch[1]) {
+                      return `${parseInt(clMatch[1], 10) * 10}ml`;
+                    }
+                    return size;
+                  };
+
+                  return (
+                    <div
+                      key={`ooc-${item.requestId || index}`}
+                      className="px-2.5 py-1.5 bg-green-50/50"
+                    >
+                      {/* Single-line fulfilled item row */}
+                      <div className="flex items-center gap-2 text-sm">
+                        {/* Qty */}
+                        <span className="shrink-0 w-8 text-text-muted text-xs">
+                          {item.quantity}×
+                        </span>
+                        {/* Product Name + Vintage */}
+                        <span className="flex-1 min-w-0 truncate font-medium text-green-900">
+                          {item.productName}
+                          {item.vintage && <span className="text-green-700 font-normal"> ({item.vintage})</span>}
+                        </span>
+                        {/* Pack Size - if available from item metadata or default */}
+                        <span className="shrink-0 text-green-700 text-[11px]">
+                          {'bottlesPerCase' in item && item.bottlesPerCase
+                            ? `${item.bottlesPerCase}×${normalizeBottleSize('bottleSize' in item ? (item.bottleSize as string | undefined) : undefined)}`
+                            : '6×750ml'}
+                        </span>
+                        {/* Special Order Tag */}
+                        <span className="shrink-0 rounded bg-green-600 px-1.5 py-0.5 text-[10px] font-medium text-white">
+                          SPECIAL
+                        </span>
+                        {/* Price */}
+                        <span className="shrink-0 font-semibold tabular-nums text-green-800">
+                          {formatPrice(displayCurrency === 'AED' ? convertUsdToAed(lineItemTotal) : lineItemTotal, displayCurrency)}
+                        </span>
+                      </div>
+
+                      {/* Show original request if different from fulfilled item */}
+                      {originalRequest && originalRequest.productName !== item.productName && (
+                        <div className="ml-6 sm:ml-8 mt-1 text-xs text-green-700">
+                          <span className="text-green-600">Requested:</span> {originalRequest.productName}
+                          {originalRequest.vintage && ` (${originalRequest.vintage})`}
+                          {originalRequest.priceExpectation && ` · $${originalRequest.priceExpectation.replace(/^\$/, '')}`}
+                        </div>
+                      )}
+
+                      {/* Price per case info */}
+                      <div className="ml-6 sm:ml-8 text-[10px] text-green-600">
+                        ${item.pricePerCase.toFixed(0)}/case
+                      </div>
+
+                      {/* Remove Special Order Item - compact link */}
+                      {(quote.status === 'cc_confirmed' || quote.status === 'awaiting_payment') &&
+                        (lineItems.length + fulfilledOocItems.length) > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (window.confirm(`Remove "${item.productName}" from this quote?`)) {
+                              removeFulfilledOocItemMutation.mutate({ requestId: item.requestId });
+                            }
+                          }}
+                          disabled={removeFulfilledOocItemMutation.isPending}
+                          className="ml-6 sm:ml-8 mt-1 flex items-center gap-1 text-[10px] text-text-danger hover:underline disabled:opacity-50"
+                        >
+                          <IconTrash className="h-2.5 w-2.5" />
+                          {removeFulfilledOocItemMutation.isPending ? '...' : 'Remove'}
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+
+                {/* Pending Out-of-Catalogue Requests - shown at bottom of line items */}
+                {outOfCatalogueRequests
+                  .filter((request) => !fulfilledOocItems.some((f) => f.requestId === request.id))
+                  .map((request, index) => (
+                    <div
+                      key={`pending-${request.id || index}`}
+                      className="px-2.5 py-1.5 bg-amber-50/50"
+                    >
+                      <div className="flex items-center gap-2 text-sm">
+                        {/* Qty placeholder */}
+                        <span className="shrink-0 w-8 text-amber-600 text-xs">
+                          {request.quantity ? `${request.quantity}×` : '—'}
+                        </span>
+                        {/* Product Name + Vintage */}
+                        <span className="flex-1 min-w-0 truncate font-medium text-amber-900">
+                          {request.productName}
+                          {request.vintage && <span className="text-amber-700 font-normal"> ({request.vintage})</span>}
+                        </span>
+                        {/* Pending Tag */}
+                        <span className="shrink-0 rounded bg-amber-500 px-1.5 py-0.5 text-[10px] font-medium text-white">
+                          PENDING
+                        </span>
+                        {/* Price expectation or TBD */}
+                        <span className="shrink-0 text-amber-600 tabular-nums text-xs">
+                          {request.priceExpectation ? `~$${request.priceExpectation.replace(/^\$/, '')}` : 'TBD'}
+                        </span>
+                      </div>
+                      {request.notes && (
+                        <div className="ml-6 sm:ml-8 text-[10px] text-amber-600 italic truncate">
+                          {request.notes}
+                        </div>
+                      )}
+                      <div className="ml-6 sm:ml-8 text-[10px] text-amber-500">
+                        Not yet priced · not in total
+                      </div>
+                    </div>
+                  ))}
               </div>
             </div>
+
+            {/* Confirmation Status - Compact banner after line items */}
+            {(quote.status === 'cc_confirmed' ||
+              quote.status === 'awaiting_payment' ||
+              quote.status === 'paid' ||
+              quote.status === 'po_submitted' ||
+              quote.status === 'po_confirmed') && (
+              <div className="mt-2 flex flex-wrap items-center gap-2 rounded-lg bg-fill-success/10 border border-border-success px-3 py-2">
+                <div className="flex items-center gap-1.5">
+                  <IconCheck className="h-4 w-4 text-text-success" />
+                  <span className="text-xs font-semibold text-text-success">Confirmed</span>
+                </div>
+                {quote.deliveryLeadTime && (
+                  <>
+                    <span className="text-text-muted">·</span>
+                    <div className="flex items-center gap-1 text-xs text-text-muted">
+                      <IconTruck className="h-3 w-3" />
+                      <span>{quote.deliveryLeadTime}</span>
+                    </div>
+                  </>
+                )}
+                {quote.ccConfirmationNotes && (
+                  <>
+                    <span className="text-text-muted">·</span>
+                    <span className="text-xs text-text-muted italic truncate max-w-[200px]">
+                      {quote.ccConfirmationNotes}
+                    </span>
+                  </>
+                )}
+              </div>
+            )}
 
             {/* Revision Feedback - shown when C&C requests changes */}
             {quote.status === 'revision_requested' && quote.revisionReason && (
