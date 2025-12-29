@@ -275,6 +275,14 @@ const QuoteApprovalDialog = ({
     enabled: open && !!quote && quote.status === 'under_cc_review' && isB2C,
   });
 
+  // Fetch partner info for confirmed quotes (to display bank details)
+  const { data: confirmedPartnerInfo } = useQuery({
+    ...api.partners.getPublicInfo.queryOptions({
+      partnerId: quote?.licensedPartnerId ?? '',
+    }),
+    enabled: !!quote?.licensedPartnerId && open,
+  });
+
   // Create a map of productId -> product for quick lookup
   const productMap = useMemo(() => {
     if (!productsData?.data) return {};
@@ -1690,15 +1698,117 @@ const QuoteApprovalDialog = ({
                   </div>
                 </div>
 
-                {/* Payment Details Summary */}
+                {/* Payment Details Summary with Bank Details */}
                 {quote.paymentMethod && (
-                  <div className="mb-5 rounded-lg bg-white p-4 border border-border-muted">
-                    <Typography variant="bodyXs" className="font-semibold text-text-muted uppercase tracking-wide mb-2">
-                      Payment Method
-                    </Typography>
-                    <Typography variant="bodySm" className="font-medium">
-                      {quote.paymentMethod === 'bank_transfer' ? '🏦 Bank Transfer' : '🔗 Payment Link'}
-                    </Typography>
+                  <div className="mb-5 rounded-lg bg-white p-4 border border-border-muted space-y-3">
+                    {/* Partner info with logo */}
+                    {confirmedPartnerInfo && (
+                      <div className="flex items-center gap-3 pb-3 border-b border-border-muted">
+                        {confirmedPartnerInfo.logoUrl ? (
+                          <img
+                            src={confirmedPartnerInfo.logoUrl}
+                            alt={confirmedPartnerInfo.businessName || 'Distributor'}
+                            className="h-8 w-auto max-w-[100px] object-contain"
+                          />
+                        ) : (
+                          <div className="h-8 w-8 rounded bg-fill-muted flex items-center justify-center">
+                            <IconTruck className="h-4 w-4 text-text-muted" />
+                          </div>
+                        )}
+                        <div>
+                          <Typography variant="bodyXs" className="font-semibold text-text-muted uppercase tracking-wide">
+                            Supplied By
+                          </Typography>
+                          <Typography variant="bodySm" className="font-medium">
+                            {confirmedPartnerInfo.businessName || 'Licensed Distributor'}
+                          </Typography>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Payment Method */}
+                    <div>
+                      <Typography variant="bodyXs" className="font-semibold text-text-muted uppercase tracking-wide mb-1">
+                        Payment Method
+                      </Typography>
+                      <Typography variant="bodySm" className="font-medium">
+                        {quote.paymentMethod === 'bank_transfer' ? '🏦 Bank Transfer' : '🔗 Payment Link'}
+                      </Typography>
+                    </div>
+
+                    {/* Bank Details Grid - only for bank transfers */}
+                    {quote.paymentMethod === 'bank_transfer' && quote.paymentDetails && (
+                      <div className="pt-2 border-t border-border-muted">
+                        <Typography variant="bodyXs" className="font-semibold text-text-muted uppercase tracking-wide mb-2">
+                          Bank Details
+                        </Typography>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5 text-sm">
+                          {quote.paymentDetails.bankName && (
+                            <>
+                              <span className="text-text-muted">Bank</span>
+                              <span className="font-medium">{quote.paymentDetails.bankName}</span>
+                            </>
+                          )}
+                          {quote.paymentDetails.accountName && (
+                            <>
+                              <span className="text-text-muted">Account Name</span>
+                              <span className="font-medium">{quote.paymentDetails.accountName}</span>
+                            </>
+                          )}
+                          {quote.paymentDetails.accountNumber && (
+                            <>
+                              <span className="text-text-muted">Account No.</span>
+                              <span className="font-mono font-medium">{quote.paymentDetails.accountNumber}</span>
+                            </>
+                          )}
+                          {quote.paymentDetails.sortCode && (
+                            <>
+                              <span className="text-text-muted">Sort Code</span>
+                              <span className="font-mono font-medium">{quote.paymentDetails.sortCode}</span>
+                            </>
+                          )}
+                          {quote.paymentDetails.iban && (
+                            <>
+                              <span className="text-text-muted">IBAN</span>
+                              <span className="font-mono font-medium text-xs break-all">{quote.paymentDetails.iban}</span>
+                            </>
+                          )}
+                          {quote.paymentDetails.swiftBic && (
+                            <>
+                              <span className="text-text-muted">SWIFT/BIC</span>
+                              <span className="font-mono font-medium">{quote.paymentDetails.swiftBic}</span>
+                            </>
+                          )}
+                        </div>
+
+                        {/* Payment Reference - highlighted */}
+                        {quote.paymentDetails.reference && (
+                          <div className="mt-3 pt-2 border-t border-border-muted">
+                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 bg-fill-brand/10 rounded px-3 py-2">
+                              <span className="text-sm text-text-muted">Payment Reference</span>
+                              <span className="font-mono font-bold text-text-brand">{quote.paymentDetails.reference}</span>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Payment Link - for link payment method */}
+                    {quote.paymentMethod === 'link' && quote.paymentDetails?.paymentUrl && (
+                      <div className="pt-2 border-t border-border-muted">
+                        <Typography variant="bodyXs" className="font-semibold text-text-muted uppercase tracking-wide mb-2">
+                          Payment Link
+                        </Typography>
+                        <a
+                          href={quote.paymentDetails.paymentUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm text-text-brand hover:underline break-all"
+                        >
+                          {quote.paymentDetails.paymentUrl}
+                        </a>
+                      </div>
+                    )}
                   </div>
                 )}
 
