@@ -10,6 +10,19 @@ import Typography from '@/app/_ui/components/Typography/Typography';
 import convertUsdToAed from '@/utils/convertUsdToAed';
 import formatPrice from '@/utils/formatPrice';
 
+/**
+ * Normalize bottle size - convert cl to ml (e.g., 75cl -> 750ml)
+ */
+const normalizeBottleSize = (size: string | null | undefined): string => {
+  if (!size) return '750ml';
+  // Convert cl to ml (75cl -> 750ml)
+  const clMatch = size.match(/^(\d+)cl$/i);
+  if (clMatch && clMatch[1]) {
+    return `${parseInt(clMatch[1], 10) * 10}ml`;
+  }
+  return size;
+};
+
 interface LineItemAdjustment {
   adjustedPricePerCase?: number;
   confirmedQuantity?: number;
@@ -264,7 +277,7 @@ const ReviewLineItemRow = ({
               {product.producer && <span className="truncate">{product.producer}</span>}
               {product.year && <span>• {product.year}</span>}
               {product.productOffers?.[0] && (
-                <span className="font-medium">• {product.productOffers[0].unitCount}×{product.productOffers[0].unitSize || '750ml'}</span>
+                <span className="font-medium">• {product.productOffers[0].unitCount}×{normalizeBottleSize(product.productOffers[0].unitSize)}</span>
               )}
             </div>
           </div>
@@ -368,7 +381,7 @@ const ReviewLineItemRow = ({
               {product.year && <span>• {product.year}</span>}
               {lineItem.vintage && <span>• V{lineItem.vintage}</span>}
               {product.productOffers?.[0] && (
-                <span className="font-medium">• {product.productOffers[0].unitCount}×{product.productOffers[0].unitSize || '750ml'}</span>
+                <span className="font-medium">• {product.productOffers[0].unitCount}×{normalizeBottleSize(product.productOffers[0].unitSize)}</span>
               )}
             </div>
           </div>

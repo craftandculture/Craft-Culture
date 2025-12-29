@@ -35,6 +35,19 @@ import formatPrice from '@/utils/formatPrice';
 
 import ReviewLineItemRow from './ReviewLineItemRow';
 
+/**
+ * Normalize bottle size - convert cl to ml (e.g., 75cl -> 750ml)
+ */
+const normalizeBottleSize = (size: string | null | undefined): string => {
+  if (!size) return '750ml';
+  // Convert cl to ml (75cl -> 750ml)
+  const clMatch = size.match(/^(\d+)cl$/i);
+  if (clMatch && clMatch[1]) {
+    return `${parseInt(clMatch[1], 10) * 10}ml`;
+  }
+  return size;
+};
+
 interface QuoteApprovalDialogProps extends DialogProps {
   quote: (Quote & { createdBy?: { id: string; name: string | null; email: string; customerType: 'b2b' | 'b2c' } | null }) | null;
 }
@@ -796,9 +809,9 @@ const QuoteApprovalDialog = ({
                               {/* Pack size */}
                               {(() => {
                                 const packSize = pricing?.acceptedAlternative
-                                  ? `${pricing.acceptedAlternative.bottlesPerCase}×${pricing.acceptedAlternative.bottleSize}`
+                                  ? `${pricing.acceptedAlternative.bottlesPerCase}×${normalizeBottleSize(pricing.acceptedAlternative.bottleSize)}`
                                   : product?.productOffers?.[0]
-                                    ? `${product.productOffers[0].unitCount}×${product.productOffers[0].unitSize || '750ml'}`
+                                    ? `${product.productOffers[0].unitCount}×${normalizeBottleSize(product.productOffers[0].unitSize)}`
                                     : null;
                                 return packSize ? <span className="font-medium">• {packSize}</span> : null;
                               })()}

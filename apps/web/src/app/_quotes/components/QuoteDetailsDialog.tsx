@@ -783,7 +783,7 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                         <span className="text-amber-700 shrink-0">
                           {request.vintage && `${request.vintage} · `}
                           {request.quantity && `${request.quantity}×`}
-                          {request.priceExpectation && ` · ${request.priceExpectation}`}
+                          {request.priceExpectation && ` · $${request.priceExpectation.replace(/^\$/, '')}`}
                         </span>
                       </div>
                       {request.notes && (
@@ -939,11 +939,20 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                   // Determine if item needs expanded view (has alternatives, notes, or is accepted alternative)
                   const hasExpandedContent = pricing?.adminAlternatives?.length || pricing?.adminNotes || pricing?.acceptedAlternative;
 
-                  // Get pack size info
+                  // Get pack size info - normalize cl to ml (75cl -> 750ml)
+                  const normalizeBottleSize = (size: string | null | undefined): string => {
+                    if (!size) return '750ml';
+                    // Convert cl to ml (75cl -> 750ml)
+                    const clMatch = size.match(/^(\d+)cl$/i);
+                    if (clMatch && clMatch[1]) {
+                      return `${parseInt(clMatch[1], 10) * 10}ml`;
+                    }
+                    return size;
+                  };
                   const packSize = pricing?.acceptedAlternative
-                    ? `${pricing.acceptedAlternative.bottlesPerCase}×${pricing.acceptedAlternative.bottleSize}`
+                    ? `${pricing.acceptedAlternative.bottlesPerCase}×${normalizeBottleSize(pricing.acceptedAlternative.bottleSize)}`
                     : product?.productOffers?.[0]
-                      ? `${product.productOffers[0].unitCount}×${product.productOffers[0].unitSize || '750ml'}`
+                      ? `${product.productOffers[0].unitCount}×${normalizeBottleSize(product.productOffers[0].unitSize)}`
                       : null;
 
                   return (
@@ -959,7 +968,7 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                             <span className="shrink-0 w-8 text-text-muted text-xs">
                               {displayQuantity}×
                             </span>
-                            {/* Product Name + Pack Size */}
+                            {/* Product Name + Year */}
                             <span className={`flex-1 min-w-0 truncate ${isUnavailable ? 'text-text-muted line-through' : 'font-medium'}`}>
                               {pricing?.acceptedAlternative ? (
                                 <span>{pricing.acceptedAlternative.productName}</span>
@@ -967,8 +976,9 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                                 product.name
                               )}
                               {product.year && <span className="text-text-muted font-normal"> ({product.year})</span>}
-                              {packSize && <span className="text-text-muted font-normal text-[11px] ml-1">· {packSize}</span>}
                             </span>
+                            {/* Pack Size - outside strikethrough */}
+                            {packSize && <span className="shrink-0 text-text-muted text-[11px]">{packSize}</span>}
                             {/* Tags */}
                             {isUnavailable && (
                               <span className="shrink-0 rounded bg-fill-warning px-1.5 py-0.5 text-[10px] font-medium text-white">N/A</span>
