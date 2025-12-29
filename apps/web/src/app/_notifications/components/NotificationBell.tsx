@@ -104,7 +104,10 @@ const NotificationBell = () => {
         playNotificationSound();
       }
 
-      // Invalidate admin queries to refresh data (e.g., quote approvals table)
+      // Invalidate queries to refresh data across both B2C and admin views
+      // B2C: User's quotes list and individual quote details
+      void queryClient.invalidateQueries({ queryKey: ['quotes'] });
+      // Admin: Quote approvals table and user management
       void queryClient.invalidateQueries({ queryKey: ['admin-quotes'] });
       void queryClient.invalidateQueries({ queryKey: ['admin-users'] });
     }
@@ -142,9 +145,14 @@ const NotificationBell = () => {
       await trpcClient.notifications.markAsRead.mutate({
         notificationId: notification.id,
       });
-      // Invalidate queries
+      // Invalidate notification queries
       void queryClient.invalidateQueries({ queryKey: ['notifications-unread-count'] });
       void queryClient.invalidateQueries({ queryKey: ['notifications-list'] });
+    }
+
+    // If this is a quote-related notification, invalidate quotes to ensure fresh data
+    if (notification.entityType === 'quote') {
+      void queryClient.invalidateQueries({ queryKey: ['quotes'] });
     }
 
     // Navigate to action URL if present
