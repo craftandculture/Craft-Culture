@@ -312,12 +312,58 @@ const QuoteApprovalDialog = ({
       return displayCurrency === 'USD' ? totalUsd : convertUsdToAed(totalUsd);
     }
 
-    // Otherwise use the quote total
-    if (displayCurrency === 'USD') {
-      return quote.totalUsd;
+    // For non-review mode, use quote total plus fulfilled OOC items
+    // (quote.totalUsd includes regular line items, we need to add fulfilled OOC items)
+    const oocItemsTotal = fulfilledOocItems.reduce((sum, item) => {
+      return sum + (item.pricePerCase || 0) * (item.quantity || 1);
+    }, 0);
+
+    // Also include alternatives pricing in the calculation
+    const quotePricingData = quote.quoteData as {
+      lineItems?: Array<{
+        productId: string;
+        adminAlternatives?: Array<{
+          productId: string;
+          pricePerCase: number;
+        }>;
+        acceptedAlternative?: {
+          productId: string;
+          pricePerCase: number;
+        };
+        available?: boolean;
+        lineItemTotalUsd?: number;
+        originalQuantity?: number;
+      }>;
+    } | null;
+
+    // Calculate adjusted total from line items (including alternatives)
+    let lineItemsTotal = 0;
+    if (quotePricingData?.lineItems) {
+      quotePricingData.lineItems.forEach((item) => {
+        const hasAlternatives = item.adminAlternatives && item.adminAlternatives.length > 0;
+        const acceptedAlt = item.acceptedAlternative;
+        const effectiveAlt = acceptedAlt || (hasAlternatives ? item.adminAlternatives?.[0] : null);
+        const isTrulyUnavailable = item.available === false && !hasAlternatives;
+
+        if (!isTrulyUnavailable) {
+          const itemTotal = effectiveAlt
+            ? effectiveAlt.pricePerCase * (item.originalQuantity || 1)
+            : (item.lineItemTotalUsd || 0);
+          lineItemsTotal += itemTotal;
+        }
+      });
+    } else {
+      // Fallback to quote total if no line items data
+      lineItemsTotal = quote.totalUsd;
     }
-    return quote.totalAed ?? convertUsdToAed(quote.totalUsd);
-  }, [quote, displayCurrency, lineItemAdjustments, lineItems, oocFulfillments]);
+
+    const totalUsd = lineItemsTotal + oocItemsTotal;
+
+    if (displayCurrency === 'USD') {
+      return totalUsd;
+    }
+    return convertUsdToAed(totalUsd);
+  }, [quote, displayCurrency, lineItemAdjustments, lineItems, oocFulfillments, fulfilledOocItems]);
 
   // Start C&C Review mutation
   const startReviewMutation = useMutation({
