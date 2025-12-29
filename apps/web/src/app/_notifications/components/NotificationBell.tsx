@@ -107,8 +107,10 @@ const NotificationBell = () => {
       void playNotificationSound();
 
       // Invalidate queries to refresh data across both B2C and admin views
-      // B2C: User's quotes list and individual quote details
-      void queryClient.invalidateQueries({ queryKey: ['quotes'] });
+      // B2C: User's quotes list (uses 'quotes.getMany' key pattern)
+      void queryClient.invalidateQueries({ queryKey: ['quotes.getMany'] });
+      // B2C: Individual quote details
+      void queryClient.invalidateQueries({ queryKey: ['quotes.get'] });
       // Admin: Quote approvals table and user management
       void queryClient.invalidateQueries({ queryKey: ['admin-quotes'] });
       void queryClient.invalidateQueries({ queryKey: ['admin-users'] });
@@ -154,7 +156,8 @@ const NotificationBell = () => {
 
     // If this is a quote-related notification, invalidate quotes to ensure fresh data
     if (notification.entityType === 'quote') {
-      void queryClient.invalidateQueries({ queryKey: ['quotes'] });
+      void queryClient.invalidateQueries({ queryKey: ['quotes.getMany'] });
+      void queryClient.invalidateQueries({ queryKey: ['quotes.get'] });
     }
 
     // Navigate to action URL if present

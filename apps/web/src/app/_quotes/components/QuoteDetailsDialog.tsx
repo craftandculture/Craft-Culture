@@ -292,7 +292,7 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
     },
     onSuccess: () => {
       toast.success('Order request submitted successfully! C&C team will review shortly.');
-      void queryClient.invalidateQueries({ queryKey: ['quotes'] });
+      void queryClient.invalidateQueries({ queryKey: ['quotes.getMany'] });
       if (onOpenChange) {
         onOpenChange(false);
       }
@@ -328,7 +328,7 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
     onSuccess: async (_data, variables) => {
       toast.success(variables.alternativeIndex === -1 ? 'Alternative removed' : 'Alternative product accepted');
       // Invalidate all quotes queries to refresh totals
-      void queryClient.invalidateQueries({ queryKey: ['quotes'] });
+      void queryClient.invalidateQueries({ queryKey: ['quotes.getMany'] });
       // Explicitly refetch the current quote to update totals immediately
       await refetchQuote();
     },
@@ -351,7 +351,7 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
     onSuccess: async () => {
       toast.success('Line item removed');
       // Invalidate all quotes queries to refresh totals
-      void queryClient.invalidateQueries({ queryKey: ['quotes'] });
+      void queryClient.invalidateQueries({ queryKey: ['quotes.getMany'] });
       // Explicitly refetch the current quote to update totals immediately
       await refetchQuote();
     },
@@ -373,7 +373,7 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
     },
     onSuccess: async () => {
       toast.success('Special order item removed');
-      void queryClient.invalidateQueries({ queryKey: ['quotes'] });
+      void queryClient.invalidateQueries({ queryKey: ['quotes.getMany'] });
       await refetchQuote();
     },
     onError: (error) => {
@@ -460,7 +460,7 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
     },
     onSuccess: () => {
       toast.success('PO submitted successfully!');
-      void queryClient.invalidateQueries({ queryKey: ['quotes'] });
+      void queryClient.invalidateQueries({ queryKey: ['quotes.getMany'] });
       setPoNumber('');
       setPoDocumentUrl('');
       setShowPOForm(false);
@@ -515,7 +515,7 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
     },
     onSuccess: () => {
       toast.success('Payment proof submitted! We will verify and confirm your order shortly.');
-      void queryClient.invalidateQueries({ queryKey: ['quotes'] });
+      void queryClient.invalidateQueries({ queryKey: ['quotes.getMany'] });
       setPaymentProofUrl('');
     },
     onError: (error) => {
