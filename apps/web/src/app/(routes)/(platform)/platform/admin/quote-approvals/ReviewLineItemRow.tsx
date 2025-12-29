@@ -344,7 +344,7 @@ const ReviewLineItemRow = ({
 
       {/* Desktop Grid Layout */}
       <div
-        className="hidden md:grid grid-cols-12 gap-2 px-4 py-3 cursor-pointer items-center"
+        className="hidden md:grid grid-cols-12 gap-3 px-4 py-3 cursor-pointer items-center"
         onClick={onToggle}
       >
         {/* Expand Icon + Product Name */}
@@ -389,7 +389,7 @@ const ReviewLineItemRow = ({
                     adminAlternatives: adjustment?.adminAlternatives,
                   });
                 }}
-                className="w-16 text-center text-sm py-1 h-8"
+                className="w-14 text-center text-sm py-1 h-8"
               />
               <label className="flex items-center cursor-pointer" title="Mark as out of stock">
                 <input
@@ -422,13 +422,13 @@ const ReviewLineItemRow = ({
               }}
               className="px-2 py-1 text-xs font-semibold text-text-danger bg-fill-danger/10 border border-border-danger rounded hover:bg-fill-danger/20 transition-colors"
             >
-              Out of Stock
+              OOS
             </button>
           )}
         </div>
 
         {/* Price per Case */}
-        <div className="col-span-2 flex justify-end" onClick={(e) => e.stopPropagation()}>
+        <div className="col-span-2 flex justify-center" onClick={(e) => e.stopPropagation()}>
           <div className="relative">
             <span className="absolute left-2 top-1/2 -translate-y-1/2 text-text-muted text-xs">$</span>
             <Input
@@ -446,24 +446,24 @@ const ReviewLineItemRow = ({
                   adminAlternatives: adjustment?.adminAlternatives,
                 });
               }}
-              className="w-24 pl-5 text-right text-sm py-1 h-8"
+              className="w-28 pl-5 text-right text-sm py-1 h-8"
             />
           </div>
         </div>
 
         {/* Line Total */}
-        <div className="col-span-1 text-right">
+        <div className="col-span-2 text-right">
           <Typography variant="bodySm" className="font-semibold">
             {formatPrice(displayLineTotal, displayCurrency)}
           </Typography>
         </div>
 
         {/* Status */}
-        <div className="col-span-2 flex justify-center">
+        <div className="col-span-1 flex justify-end">
           <span
             className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap ${status.bg} ${status.color}`}
           >
-            {status.icon} {status.label}
+            {status.icon}
           </span>
         </div>
       </div>
