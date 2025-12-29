@@ -6,7 +6,6 @@ import type { Quote } from '@/database/schema';
 export interface QuoteStatusBadgeProps {
   status: Quote['status'];
   size?: 'xs' | 'sm' | 'md';
-  showActionIndicator?: boolean;
 }
 
 /**
@@ -54,7 +53,7 @@ const getStatusColorRole = (
 };
 
 /**
- * Get the display label for a quote status
+ * Get the display label for a quote status (compact version)
  *
  * @param status - The quote status
  * @returns The human-readable label
@@ -64,21 +63,21 @@ const getStatusLabel = (status: Quote['status']) => {
     case 'draft':
       return 'Draft';
     case 'sent':
-      return 'Sent';
+      return 'Ready';
     case 'buy_request_submitted':
-      return 'Pending Review';
+      return 'Pending';
     case 'under_cc_review':
-      return 'Under Review';
+      return 'Reviewing';
     case 'revision_requested':
-      return 'Needs Attention';
+      return 'Attention';
     case 'cc_confirmed':
       return 'Confirmed';
     case 'awaiting_payment':
-      return 'Awaiting Payment';
+      return 'Pay Now';
     case 'paid':
-      return 'Payment Received';
+      return 'Paid';
     case 'po_submitted':
-      return 'Processing Order';
+      return 'Processing';
     case 'po_confirmed':
       return 'Shipping';
     case 'delivered':
@@ -151,27 +150,16 @@ export const statusNeedsAction = (status: Quote['status']): boolean => {
  * - Amber = needs attention
  *
  * @example
- *   <QuoteStatusBadge status="under_cc_review" size="sm" showActionIndicator />
+ *   <QuoteStatusBadge status="under_cc_review" size="xs" />
  */
 const QuoteStatusBadge = ({
   status,
   size = 'md',
-  showActionIndicator = false,
 }: QuoteStatusBadgeProps) => {
-  const needsAction = statusNeedsAction(status);
-
   return (
-    <div className="flex items-center gap-2">
-      <Badge colorRole={getStatusColorRole(status)} size={size}>
-        {getStatusLabel(status)}
-      </Badge>
-      {showActionIndicator && needsAction && (
-        <span
-          className="h-2 w-2 shrink-0 animate-pulse rounded-full bg-red-500"
-          title="Action required"
-        />
-      )}
-    </div>
+    <Badge colorRole={getStatusColorRole(status)} size={size} className="whitespace-nowrap">
+      {getStatusLabel(status)}
+    </Badge>
   );
 };
 
