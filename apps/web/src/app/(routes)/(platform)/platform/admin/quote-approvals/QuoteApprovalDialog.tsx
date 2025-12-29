@@ -743,9 +743,18 @@ const QuoteApprovalDialog = ({
                     const hasAcceptedAlternative = !!pricing?.acceptedAlternative;
                     const isUnavailable = pricing?.available === false || (hasAlternatives && !hasAcceptedAlternative);
 
+                    // If accepted alternative exists, use its price; if just has alternatives, use first one
+                    const alternativePrice = pricing?.acceptedAlternative?.pricePerCase
+                      || (hasAlternatives ? pricing.adminAlternatives![0].pricePerCase : 0);
+                    const effectivePricePerCase = isUnavailable && (hasAlternatives || hasAcceptedAlternative)
+                      ? alternativePrice
+                      : pricePerCase;
+
                     const displayPricePerCase =
                       displayCurrency === 'USD' ? pricePerCase : convertUsdToAed(pricePerCase);
-                    const lineTotal = isUnavailable ? 0 : pricePerCase * item.quantity;
+                    const lineTotal = isUnavailable
+                      ? (hasAlternatives || hasAcceptedAlternative ? effectivePricePerCase * item.quantity : 0)
+                      : pricePerCase * item.quantity;
                     const displayLineTotal =
                       displayCurrency === 'USD' ? lineTotal : convertUsdToAed(lineTotal);
 
@@ -805,15 +814,26 @@ const QuoteApprovalDialog = ({
                               <span className="text-text-muted ml-1">cases</span>
                             </div>
                             <div className="text-right">
-                              <div className={`font-semibold ${isUnavailable ? 'text-text-muted line-through' : ''}`}>
-                                {formatPrice(displayPricePerCase, displayCurrency)}
-                              </div>
+                              {isUnavailable && hasAlternatives ? (
+                                <>
+                                  <div className="font-semibold text-text-muted line-through text-xs">
+                                    {formatPrice(displayPricePerCase, displayCurrency)}
+                                  </div>
+                                  <div className="font-semibold text-text-warning">
+                                    {formatPrice(displayCurrency === 'USD' ? alternativePrice : convertUsdToAed(alternativePrice), displayCurrency)}
+                                  </div>
+                                </>
+                              ) : (
+                                <div className={`font-semibold ${isUnavailable ? 'text-text-muted line-through' : ''}`}>
+                                  {formatPrice(displayPricePerCase, displayCurrency)}
+                                </div>
+                              )}
                               <div className="text-xs text-text-muted">per case</div>
                             </div>
                             <div className="text-right min-w-[100px]">
                               <Typography
                                 variant="bodyMd"
-                                className={`font-bold ${isUnavailable ? 'text-text-muted' : 'text-text-brand'}`}
+                                className={`font-bold ${isUnavailable && !hasAlternatives ? 'text-text-muted' : isUnavailable ? 'text-text-warning' : 'text-text-brand'}`}
                               >
                                 {formatPrice(displayLineTotal, displayCurrency)}
                               </Typography>
