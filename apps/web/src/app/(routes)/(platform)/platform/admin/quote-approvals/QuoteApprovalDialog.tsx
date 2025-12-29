@@ -249,6 +249,24 @@ const QuoteApprovalDialog = ({
     return data.outOfCatalogueRequests || [];
   }, [quote]);
 
+  // Extract fulfilled out-of-catalogue items from quoteData
+  const fulfilledOocItems = useMemo(() => {
+    if (!quote?.quoteData) return [];
+    const data = quote.quoteData as {
+      fulfilledOocItems?: Array<{
+        requestId: string;
+        productName: string;
+        vintage?: string;
+        quantity: number;
+        pricePerCase: number;
+        lineItemTotalUsd: number;
+        bottlesPerCase?: number;
+        bottleSize?: string;
+      }>;
+    };
+    return data.fulfilledOocItems || [];
+  }, [quote]);
+
   // Fetch licensed partners for payment assignment - only for B2C
   const { data: partnersData } = useQuery({
     ...api.partners.getMany.queryOptions({
@@ -672,15 +690,17 @@ const QuoteApprovalDialog = ({
               </div>
             </div>
 
-            {/* Line Items - Detailed Table View */}
+            {/* Line Items - Matching B2C style */}
             <div>
               <div className="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
-                  <Typography variant="bodyLg" className="font-bold">
-                    Order Details
-                  </Typography>
-                  <Typography variant="bodySm" colorRole="muted">
-                    {lineItems.length} {lineItems.length === 1 ? 'item' : 'items'}
+                  <Typography variant="bodyXs" className="font-semibold text-text-muted uppercase tracking-wide">
+                    Line Items ({lineItems.length + (fulfilledOocItems?.length || 0)})
+                    {outOfCatalogueRequests.filter((r) => !fulfilledOocItems?.some((f) => f.requestId === (r.id || `ooc-${outOfCatalogueRequests.indexOf(r)}`)))?.length > 0 && (
+                      <span className="ml-2 font-normal text-amber-600">
+                        + {outOfCatalogueRequests.filter((r) => !fulfilledOocItems?.some((f) => f.requestId === (r.id || `ooc-${outOfCatalogueRequests.indexOf(r)}`))).length} pending
+                      </span>
+                    )}
                   </Typography>
                 </div>
                 <div className="inline-flex items-center rounded-lg bg-fill-muted/50 p-0.5 sm:p-1 border border-border-muted">
@@ -737,8 +757,9 @@ const QuoteApprovalDialog = ({
                 </div>
               )}
 
-              {/* Line Items - Compact Rows */}
-              <div className="space-y-2">
+              {/* Line Items - Compact Rows matching B2C style */}
+              <div className="divide-y divide-border-muted rounded-lg border border-border-muted overflow-hidden">
+                {/* Regular Line Items */}
                 {lineItems.map((item) => {
                   const product = productMap[item.productId];
                   const pricing = pricingMap[item.productId];
@@ -749,119 +770,74 @@ const QuoteApprovalDialog = ({
                   const adjustment = lineItemAdjustments[item.productId];
                   const isExpanded = expandedItemId === item.productId;
 
-                  // For non-review mode, show simple read-only cards
+                  // For non-review mode, show compact B2C-style rows
                   if (quote.status !== 'under_cc_review') {
                     // Check if item is unavailable
                     const hasAlternatives = pricing?.adminAlternatives && pricing.adminAlternatives.length > 0;
                     const hasAcceptedAlternative = !!pricing?.acceptedAlternative;
                     const isUnavailable = pricing?.available === false || (hasAlternatives && !hasAcceptedAlternative);
 
-                    // If accepted alternative exists, use its price; if just has alternatives, use first one
-                    const alternativePrice = pricing?.acceptedAlternative?.pricePerCase
-                      || pricing?.adminAlternatives?.[0]?.pricePerCase || 0;
-                    const effectivePricePerCase = isUnavailable && (hasAlternatives || hasAcceptedAlternative)
-                      ? alternativePrice
-                      : pricePerCase;
+                    const lineTotal = isUnavailable ? 0 : (pricing?.lineItemTotalUsd || 0);
+                    const displayQuantity = item.quantity;
 
-                    const displayPricePerCase =
-                      displayCurrency === 'USD' ? pricePerCase : convertUsdToAed(pricePerCase);
-                    const lineTotal = isUnavailable
-                      ? (hasAlternatives || hasAcceptedAlternative ? effectivePricePerCase * item.quantity : 0)
-                      : pricePerCase * item.quantity;
-                    const displayLineTotal =
-                      displayCurrency === 'USD' ? lineTotal : convertUsdToAed(lineTotal);
+                    // Get pack size
+                    const packSize = pricing?.acceptedAlternative
+                      ? `${pricing.acceptedAlternative.bottlesPerCase}×${normalizeBottleSize(pricing.acceptedAlternative.bottleSize)}`
+                      : product?.productOffers?.[0]
+                        ? `${product.productOffers[0].unitCount}×${normalizeBottleSize(product.productOffers[0].unitSize)}`
+                        : null;
 
                     return (
                       <div
                         key={item.productId}
-                        className={`rounded-lg border px-4 py-3 ${
-                          isUnavailable
-                            ? 'border-border-warning bg-fill-warning/5'
-                            : 'border-border-muted bg-white'
-                        }`}
+                        className={`px-2.5 py-1.5 ${isUnavailable ? 'bg-fill-warning/5' : 'bg-background-primary'}`}
                       >
-                        <div className="flex items-center justify-between gap-4">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <Typography
-                                variant="bodySm"
-                                className={`font-semibold truncate ${isUnavailable ? 'line-through text-text-muted' : ''}`}
-                              >
-                                {pricing?.acceptedAlternative
-                                  ? pricing.acceptedAlternative.productName
-                                  : product?.name || item.productId}
-                              </Typography>
-                              {isUnavailable && (
-                                <span className="shrink-0 rounded bg-fill-warning px-1.5 py-0.5 text-[10px] font-medium text-white">
-                                  N/A
-                                </span>
-                              )}
-                              {pricing?.acceptedAlternative && (
-                                <span className="shrink-0 rounded bg-fill-success px-1.5 py-0.5 text-[10px] font-medium text-white">
-                                  ALT
-                                </span>
-                              )}
-                            </div>
-                            <div className="flex items-center gap-2 text-xs text-text-muted">
-                              {product?.producer && <span className="truncate">{product.producer}</span>}
-                              {product?.year && <span>• {product.year}</span>}
-                              {item.vintage && <span>• V{item.vintage}</span>}
-                              {/* Pack size */}
-                              {(() => {
-                                const packSize = pricing?.acceptedAlternative
-                                  ? `${pricing.acceptedAlternative.bottlesPerCase}×${normalizeBottleSize(pricing.acceptedAlternative.bottleSize)}`
-                                  : product?.productOffers?.[0]
-                                    ? `${product.productOffers[0].unitCount}×${normalizeBottleSize(product.productOffers[0].unitSize)}`
-                                    : null;
-                                return packSize ? <span className="font-medium">• {packSize}</span> : null;
-                              })()}
-                            </div>
-                            {/* Show alternatives if item is unavailable */}
-                            {isUnavailable && hasAlternatives && (
-                              <div className="mt-2 pt-2 border-t border-border-muted">
-                                <Typography variant="bodyXs" className="font-semibold text-text-warning mb-1">
-                                  Alternatives suggested:
-                                </Typography>
-                                {pricing.adminAlternatives!.map((alt, altIdx) => (
-                                  <div key={altIdx} className="text-xs text-text-muted">
-                                    • {alt.productName} @ ${alt.pricePerCase.toFixed(2)}/case ({alt.quantityAvailable} available)
-                                  </div>
-                                ))}
-                              </div>
+                        {/* Single-line item row */}
+                        <div className="flex items-center gap-2 text-sm">
+                          {/* Qty */}
+                          <span className="shrink-0 w-8 text-text-muted text-xs">
+                            {displayQuantity}×
+                          </span>
+                          {/* Product Name + Year */}
+                          <span className={`flex-1 min-w-0 truncate ${isUnavailable ? 'text-text-muted line-through' : 'font-medium'}`}>
+                            {pricing?.acceptedAlternative ? (
+                              <span>{pricing.acceptedAlternative.productName}</span>
+                            ) : (
+                              product?.name || item.productId
                             )}
-                          </div>
-                          <div className="flex items-center gap-6 text-sm">
-                            <div className="text-center">
-                              <span className={`font-semibold ${isUnavailable ? 'text-text-muted' : ''}`}>{item.quantity}</span>
-                              <span className="text-text-muted ml-1">cases</span>
-                            </div>
-                            <div className="text-right">
-                              {isUnavailable && hasAlternatives ? (
-                                <>
-                                  <div className="font-semibold text-text-muted line-through text-xs">
-                                    {formatPrice(displayPricePerCase, displayCurrency)}
-                                  </div>
-                                  <div className="font-semibold text-text-warning">
-                                    {formatPrice(displayCurrency === 'USD' ? alternativePrice : convertUsdToAed(alternativePrice), displayCurrency)}
-                                  </div>
-                                </>
-                              ) : (
-                                <div className={`font-semibold ${isUnavailable ? 'text-text-muted line-through' : ''}`}>
-                                  {formatPrice(displayPricePerCase, displayCurrency)}
-                                </div>
-                              )}
-                              <div className="text-xs text-text-muted">per case</div>
-                            </div>
-                            <div className="text-right min-w-[100px]">
-                              <Typography
-                                variant="bodyMd"
-                                className={`font-bold ${isUnavailable && !hasAlternatives ? 'text-text-muted' : isUnavailable ? 'text-text-warning' : 'text-text-brand'}`}
-                              >
-                                {formatPrice(displayLineTotal, displayCurrency)}
-                              </Typography>
-                            </div>
-                          </div>
+                            {product?.year && <span className="text-text-muted font-normal"> ({product.year})</span>}
+                          </span>
+                          {/* Pack Size */}
+                          {packSize && <span className="shrink-0 text-text-muted text-[11px]">{packSize}</span>}
+                          {/* Tags */}
+                          {isUnavailable && (
+                            <span className="shrink-0 rounded bg-fill-warning px-1.5 py-0.5 text-[10px] font-medium text-white">N/A</span>
+                          )}
+                          {pricing?.acceptedAlternative && (
+                            <span className="shrink-0 rounded bg-fill-muted px-1.5 py-0.5 text-[10px] font-medium text-text-muted">ALT</span>
+                          )}
+                          {/* Price */}
+                          <span className={`shrink-0 font-semibold tabular-nums ${isUnavailable ? 'text-text-muted' : 'text-text-brand'}`}>
+                            {formatPrice(displayCurrency === 'AED' ? convertUsdToAed(lineTotal) : lineTotal, displayCurrency)}
+                          </span>
                         </div>
+                        {/* Show alternatives if item is unavailable */}
+                        {isUnavailable && hasAlternatives && (
+                          <div className="ml-6 sm:ml-8 mt-1 text-xs text-text-warning">
+                            <span className="font-semibold">Alternatives suggested:</span>
+                            {pricing.adminAlternatives!.map((alt, altIdx) => (
+                              <div key={altIdx} className="text-text-muted">
+                                • {alt.productName} {alt.bottlesPerCase}×{normalizeBottleSize(alt.bottleSize)} @ ${alt.pricePerCase.toFixed(2)}/case ({alt.quantityAvailable} available)
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        {/* Show original if accepted alternative */}
+                        {pricing?.acceptedAlternative && (
+                          <div className="ml-6 sm:ml-8 mt-1 text-xs text-text-success">
+                            was: {product?.name}
+                          </div>
+                        )}
                       </div>
                     );
                   }
@@ -886,6 +862,101 @@ const QuoteApprovalDialog = ({
                     />
                   );
                 })}
+
+                {/* Fulfilled Out-of-Catalogue Items (Special Orders) - integrated into line items */}
+                {quote.status !== 'under_cc_review' && fulfilledOocItems.map((item, index) => {
+                  // Find the original request this fulfillment is linked to
+                  const originalRequest = outOfCatalogueRequests.find(
+                    (req) => req.id === item.requestId || `ooc-${outOfCatalogueRequests.indexOf(req)}` === item.requestId
+                  );
+                  const lineItemTotal = item.lineItemTotalUsd;
+
+                  return (
+                    <div
+                      key={`ooc-${item.requestId || index}`}
+                      className="px-2.5 py-1.5 bg-green-50/50"
+                    >
+                      {/* Single-line fulfilled item row */}
+                      <div className="flex items-center gap-2 text-sm">
+                        {/* Qty */}
+                        <span className="shrink-0 w-8 text-text-muted text-xs">
+                          {item.quantity}×
+                        </span>
+                        {/* Product Name + Vintage */}
+                        <span className="flex-1 min-w-0 truncate font-medium text-green-900">
+                          {item.productName}
+                          {item.vintage && <span className="text-green-700 font-normal"> ({item.vintage})</span>}
+                        </span>
+                        {/* Pack Size */}
+                        <span className="shrink-0 text-green-700 text-[11px]">
+                          {item.bottlesPerCase
+                            ? `${item.bottlesPerCase}×${normalizeBottleSize(item.bottleSize)}`
+                            : '6×750ml'}
+                        </span>
+                        {/* Special Order Tag */}
+                        <span className="shrink-0 rounded bg-green-600 px-1.5 py-0.5 text-[10px] font-medium text-white">
+                          SPECIAL
+                        </span>
+                        {/* Price */}
+                        <span className="shrink-0 font-semibold tabular-nums text-green-800">
+                          {formatPrice(displayCurrency === 'AED' ? convertUsdToAed(lineItemTotal) : lineItemTotal, displayCurrency)}
+                        </span>
+                      </div>
+
+                      {/* Show original request if different from fulfilled item */}
+                      {originalRequest && originalRequest.productName !== item.productName && (
+                        <div className="ml-6 sm:ml-8 mt-1 text-xs text-green-700">
+                          <span className="text-green-600">Requested:</span> {originalRequest.productName}
+                          {originalRequest.vintage && ` (${originalRequest.vintage})`}
+                          {originalRequest.priceExpectation && ` · $${originalRequest.priceExpectation.replace(/^\$/, '')}`}
+                        </div>
+                      )}
+
+                      {/* Price per case info */}
+                      <div className="ml-6 sm:ml-8 text-[10px] text-green-600">
+                        ${item.pricePerCase.toFixed(0)}/case
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {/* Pending Out-of-Catalogue Requests - shown at bottom of line items (non-review mode only) */}
+                {quote.status !== 'under_cc_review' && outOfCatalogueRequests
+                  .filter((request) => !fulfilledOocItems.some((f) => f.requestId === request.id || f.requestId === `ooc-${outOfCatalogueRequests.indexOf(request)}`))
+                  .map((request, index) => (
+                    <div
+                      key={`pending-${request.id || index}`}
+                      className="px-2.5 py-1.5 bg-amber-50/50"
+                    >
+                      <div className="flex items-center gap-2 text-sm">
+                        {/* Qty placeholder */}
+                        <span className="shrink-0 w-8 text-amber-600 text-xs">
+                          {request.quantity ? `${request.quantity}×` : '—'}
+                        </span>
+                        {/* Product Name + Vintage */}
+                        <span className="flex-1 min-w-0 truncate font-medium text-amber-900">
+                          {request.productName}
+                          {request.vintage && <span className="text-amber-700 font-normal"> ({request.vintage})</span>}
+                        </span>
+                        {/* Pending Tag */}
+                        <span className="shrink-0 rounded bg-amber-500 px-1.5 py-0.5 text-[10px] font-medium text-white">
+                          PENDING
+                        </span>
+                        {/* Price expectation or TBD */}
+                        <span className="shrink-0 text-amber-600 tabular-nums text-xs">
+                          {request.priceExpectation ? `~$${request.priceExpectation.replace(/^\$/, '')}` : 'TBD'}
+                        </span>
+                      </div>
+                      {request.notes && (
+                        <div className="ml-6 sm:ml-8 text-[10px] text-amber-600 italic truncate">
+                          {request.notes}
+                        </div>
+                      )}
+                      <div className="ml-6 sm:ml-8 text-[10px] text-amber-500">
+                        Not yet priced · not in total
+                      </div>
+                    </div>
+                  ))}
               </div>
 
               {/* Order Total - Compact */}
@@ -899,8 +970,8 @@ const QuoteApprovalDialog = ({
               </div>
             </div>
 
-            {/* Out-of-Catalogue Requests - shown if any requests exist */}
-            {outOfCatalogueRequests.length > 0 && (
+            {/* Out-of-Catalogue Requests - only shown in review mode for admin to fulfill */}
+            {quote.status === 'under_cc_review' && outOfCatalogueRequests.length > 0 && (
               <div className="rounded-xl border-2 border-amber-300 bg-amber-50 p-5">
                 <div className="flex items-center gap-3 mb-4">
                   <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-200">
