@@ -756,7 +756,7 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
             <div className="flex items-center justify-between gap-3 rounded bg-fill-muted/30 px-2 py-1.5">
               <div className="flex items-center gap-1.5 text-xs text-text-muted">
                 <Icon icon={IconCurrencyDollar} size="xs" />
-                <span>In-Bond UAE</span>
+                <span>Delivered UAE (DDP)</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-sm font-bold">
