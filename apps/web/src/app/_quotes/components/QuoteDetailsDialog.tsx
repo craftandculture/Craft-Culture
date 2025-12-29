@@ -939,6 +939,13 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                   // Determine if item needs expanded view (has alternatives, notes, or is accepted alternative)
                   const hasExpandedContent = pricing?.adminAlternatives?.length || pricing?.adminNotes || pricing?.acceptedAlternative;
 
+                  // Get pack size info
+                  const packSize = pricing?.acceptedAlternative
+                    ? `${pricing.acceptedAlternative.bottlesPerCase}×${pricing.acceptedAlternative.bottleSize}`
+                    : product?.productOffers?.[0]
+                      ? `${product.productOffers[0].unitCount}×${product.productOffers[0].unit || '750ml'}`
+                      : null;
+
                   return (
                     <div
                       key={index}
@@ -952,7 +959,7 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                             <span className="shrink-0 w-8 text-text-muted text-xs">
                               {displayQuantity}×
                             </span>
-                            {/* Product Name */}
+                            {/* Product Name + Pack Size */}
                             <span className={`flex-1 min-w-0 truncate ${isUnavailable ? 'text-text-muted line-through' : 'font-medium'}`}>
                               {pricing?.acceptedAlternative ? (
                                 <span>{pricing.acceptedAlternative.productName}</span>
@@ -960,6 +967,7 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                                 product.name
                               )}
                               {product.year && <span className="text-text-muted font-normal"> ({product.year})</span>}
+                              {packSize && <span className="text-text-muted font-normal text-[11px] ml-1">· {packSize}</span>}
                             </span>
                             {/* Tags */}
                             {isUnavailable && (
@@ -978,7 +986,7 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                             <div className="ml-6 sm:ml-8 mt-1 text-xs text-text-muted">
                               {pricing?.acceptedAlternative && (
                                 <div className="text-text-success">
-                                  {pricing.acceptedAlternative.bottlesPerCase}×{pricing.acceptedAlternative.bottleSize} · was: {product.name}
+                                  was: {product.name}
                                 </div>
                               )}
                             </div>
