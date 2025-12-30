@@ -6,8 +6,10 @@ import {
   IconDownload,
   IconEdit,
   IconFileText,
+  IconFilter,
   IconLogin,
   IconReceipt,
+  IconSearch,
   IconSend,
   IconUser,
   IconUserPlus,
@@ -16,6 +18,8 @@ import { useQuery } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 
 import markActivitiesAsViewed from '@/app/_admin/actions/markActivitiesAsViewed';
+import Badge from '@/app/_ui/components/Badge/Badge';
+import Button from '@/app/_ui/components/Button/Button';
 import Card from '@/app/_ui/components/Card/Card';
 import CardContent from '@/app/_ui/components/Card/CardContent';
 import Input from '@/app/_ui/components/Input/Input';
@@ -38,6 +42,7 @@ const ActivityFeedPage = () => {
 
   const [actionFilter, setActionFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const [showFilters, setShowFilters] = useState(false);
 
   // Mark activities as viewed when page opens
   useEffect(() => {
@@ -46,7 +51,7 @@ const ActivityFeedPage = () => {
 
   const { data: activityData, isLoading } = useQuery({
     ...api.admin.userActivityLogs.getMany.queryOptions({
-      limit: 50,
+      limit: 100,
       offset: 0,
       action: actionFilter !== 'all' ? actionFilter : undefined,
     }),
@@ -54,36 +59,62 @@ const ActivityFeedPage = () => {
   });
 
   const getActivityIcon = (action: string) => {
-    if (action.includes('signin')) return <IconLogin className="h-5 w-5 text-text-brand" />;
-    if (action.includes('signup')) return <IconUserPlus className="h-5 w-5 text-text-brand" />;
-    if (action.includes('download')) return <IconDownload className="h-5 w-5 text-text-brand" />;
-    if (action === 'quote.created') return <IconFileText className="h-5 w-5 text-text-brand" />;
-    if (action === 'quote.submitted') return <IconSend className="h-5 w-5 text-blue-500" />;
-    if (action === 'quote.approved') return <IconCheck className="h-5 w-5 text-green-500" />;
+    const iconClass = 'h-4 w-4';
+    if (action.includes('signin')) return <IconLogin className={`${iconClass} text-text-brand`} />;
+    if (action.includes('signup'))
+      return <IconUserPlus className={`${iconClass} text-text-brand`} />;
+    if (action.includes('download'))
+      return <IconDownload className={`${iconClass} text-text-brand`} />;
+    if (action === 'quote.created')
+      return <IconFileText className={`${iconClass} text-text-brand`} />;
+    if (action === 'quote.submitted') return <IconSend className={`${iconClass} text-blue-500`} />;
+    if (action === 'quote.approved') return <IconCheck className={`${iconClass} text-green-500`} />;
     if (action === 'quote.revision_requested')
-      return <IconEdit className="h-5 w-5 text-amber-500" />;
+      return <IconEdit className={`${iconClass} text-amber-500`} />;
     if (action === 'payment.proof_submitted')
-      return <IconReceipt className="h-5 w-5 text-blue-500" />;
+      return <IconReceipt className={`${iconClass} text-blue-500`} />;
     if (action === 'payment.confirmed')
-      return <IconCurrencyDollar className="h-5 w-5 text-green-500" />;
-    return <IconUser className="h-5 w-5 text-text-muted" />;
+      return <IconCurrencyDollar className={`${iconClass} text-green-500`} />;
+    return <IconUser className={`${iconClass} text-text-muted`} />;
   };
 
   const getActionLabel = (action: string) => {
     const labels: Record<string, string> = {
-      'user.signin': 'User Sign In',
-      'user.signup': 'New User Signup',
-      'quote.download': 'Quote Downloaded',
-      'b2b_quote.download': 'B2B Quote Downloaded',
-      'inventory.download': 'Inventory Downloaded',
-      'quote.created': 'Quote Created',
-      'quote.submitted': 'Quote Submitted',
-      'quote.approved': 'Quote Approved',
-      'quote.revision_requested': 'Revision Requested',
-      'payment.proof_submitted': 'Payment Proof Submitted',
-      'payment.confirmed': 'Payment Confirmed',
+      'user.signin': 'signed in',
+      'user.signup': 'signed up',
+      'quote.download': 'downloaded quote',
+      'b2b_quote.download': 'downloaded B2B quote',
+      'inventory.download': 'downloaded inventory',
+      'quote.created': 'created quote',
+      'quote.submitted': 'submitted quote',
+      'quote.approved': 'approved quote',
+      'quote.revision_requested': 'requested revision',
+      'payment.proof_submitted': 'submitted payment proof',
+      'payment.confirmed': 'confirmed payment',
     };
     return labels[action] || action;
+  };
+
+  const getActionBadgeVariant = (action: string) => {
+    if (action.includes('approved') || action.includes('confirmed')) return 'success';
+    if (action.includes('submitted') || action.includes('created')) return 'info';
+    if (action.includes('revision')) return 'warning';
+    if (action.includes('signin') || action.includes('signup')) return 'default';
+    return 'secondary';
+  };
+
+  const formatRelativeTime = (date: Date) => {
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return 'just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return date.toLocaleDateString();
   };
 
   const filteredActivities = activityData?.logs.filter((log) => {
@@ -96,138 +127,187 @@ const ActivityFeedPage = () => {
     );
   });
 
+  // Group activities by date
+  const groupedActivities = filteredActivities?.reduce(
+    (groups, log) => {
+      const date = new Date(log.createdAt).toDateString();
+      if (!groups[date]) {
+        groups[date] = [];
+      }
+      groups[date].push(log);
+      return groups;
+    },
+    {} as Record<string, typeof filteredActivities>,
+  );
+
+  const formatDateHeader = (dateString: string) => {
+    const date = new Date(dateString);
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    if (date.toDateString() === today.toDateString()) return 'Today';
+    if (date.toDateString() === yesterday.toDateString()) return 'Yesterday';
+    return date.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+  };
+
   return (
-    <div className="container mx-auto max-w-7xl px-4 sm:px-6 py-6 sm:py-8">
-      <div className="mb-6 sm:mb-8">
-        <Typography variant="headingLg" className="mb-2">
-          Activity Feed
-        </Typography>
-        <Typography variant="bodyMd" colorRole="muted">
-          Real-time monitoring of all user activities across the platform
-        </Typography>
+    <div className="container mx-auto max-w-5xl px-4 py-4 sm:px-6 sm:py-6">
+      {/* Header */}
+      <div className="mb-4 flex items-center justify-between">
+        <div>
+          <Typography variant="headingMd" className="mb-0.5">
+            Activity Feed
+          </Typography>
+          <Typography variant="bodyXs" colorRole="muted">
+            {activityData?.total || 0} total activities
+          </Typography>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setShowFilters(!showFilters)}
+          className="sm:hidden"
+        >
+          <IconFilter className="h-4 w-4" />
+        </Button>
       </div>
 
-      <Card>
-        <CardContent className="p-6">
-          {/* Filters */}
-          <div className="flex flex-col gap-4 sm:flex-row">
-            <div className="flex-1">
+      {/* Filters - Always visible on desktop, toggleable on mobile */}
+      <Card className={`mb-4 ${showFilters ? 'block' : 'hidden sm:block'}`}>
+        <CardContent className="p-3">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <div className="relative flex-1">
+              <IconSearch className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" />
               <Input
                 type="search"
-                placeholder="Search by user email or action..."
+                placeholder="Search users..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9"
               />
             </div>
-            <div className="w-full sm:w-48">
-              <Select value={actionFilter} onValueChange={setActionFilter}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Filter by action" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Activities</SelectItem>
-                  <SelectItem value="user.signin">Sign Ins</SelectItem>
-                  <SelectItem value="user.signup">Signups</SelectItem>
-                  <SelectItem value="quote.created">Quote Created</SelectItem>
-                  <SelectItem value="quote.submitted">Quote Submitted</SelectItem>
-                  <SelectItem value="quote.approved">Quote Approved</SelectItem>
-                  <SelectItem value="quote.revision_requested">Revision Requested</SelectItem>
-                  <SelectItem value="payment.proof_submitted">Payment Proof</SelectItem>
-                  <SelectItem value="payment.confirmed">Payment Confirmed</SelectItem>
-                  <SelectItem value="quote.download">Quote Downloads</SelectItem>
-                  <SelectItem value="b2b_quote.download">B2B Downloads</SelectItem>
-                  <SelectItem value="inventory.download">Inventory Downloads</SelectItem>
-                </SelectContent>
-              </Select>
+            <Select value={actionFilter} onValueChange={setActionFilter}>
+              <SelectTrigger className="w-full sm:w-44">
+                <SelectValue placeholder="All activities" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Activities</SelectItem>
+                <SelectItem value="user.signin">Sign Ins</SelectItem>
+                <SelectItem value="user.signup">Signups</SelectItem>
+                <SelectItem value="quote.created">Quote Created</SelectItem>
+                <SelectItem value="quote.submitted">Quote Submitted</SelectItem>
+                <SelectItem value="quote.approved">Quote Approved</SelectItem>
+                <SelectItem value="quote.revision_requested">Revision Requested</SelectItem>
+                <SelectItem value="payment.proof_submitted">Payment Proof</SelectItem>
+                <SelectItem value="payment.confirmed">Payment Confirmed</SelectItem>
+                <SelectItem value="quote.download">Downloads</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Activity Timeline */}
+      <Card>
+        <CardContent className="p-0">
+          {isLoading ? (
+            <div className="divide-y">
+              {Array.from({ length: 10 }).map((_, i) => (
+                <div key={i} className="flex items-center gap-3 px-4 py-3">
+                  <Skeleton className="h-7 w-7 shrink-0 rounded-full" />
+                  <div className="flex-1 space-y-1">
+                    <Skeleton className="h-3.5 w-48" />
+                    <Skeleton className="h-3 w-24" />
+                  </div>
+                  <Skeleton className="h-3 w-12" />
+                </div>
+              ))}
             </div>
-          </div>
-
-          {/* Activity List */}
-          <div className="mt-6 space-y-3">
-            {isLoading ? (
-              // Loading skeletons
-              Array.from({ length: 5 }).map((_, i) => (
-                <div key={i} className="bg-surface-secondary rounded-lg border p-4">
-                  <div className="flex items-start gap-4">
-                    <Skeleton className="h-10 w-10 rounded-full" />
-                    <div className="flex-1 space-y-2">
-                      <Skeleton className="h-4 w-3/4" />
-                      <Skeleton className="h-3 w-1/2" />
-                    </div>
+          ) : groupedActivities && Object.keys(groupedActivities).length > 0 ? (
+            <div>
+              {Object.entries(groupedActivities).map(([date, logs]) => (
+                <div key={date}>
+                  {/* Date Header */}
+                  <div className="sticky top-0 z-10 border-b bg-surface-secondary/80 px-4 py-2 backdrop-blur-sm">
+                    <Typography variant="bodyXs" className="font-medium text-text-muted">
+                      {formatDateHeader(date)}
+                    </Typography>
                   </div>
-                </div>
-              ))
-            ) : filteredActivities && filteredActivities.length > 0 ? (
-              filteredActivities.map((log) => (
-                <div
-                  key={log.id}
-                  className="bg-surface-secondary hover:bg-surface-tertiary rounded-lg border p-4 transition-colors"
-                >
-                  <div className="flex items-start gap-4">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white">
-                      {getActivityIcon(log.action)}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex-1 min-w-0">
-                          <Typography variant="bodySm" className="font-semibold">
-                            {log.user?.name || 'Unknown User'}
-                          </Typography>
-                          <Typography variant="bodyXs" className="text-text-muted">
-                            {log.user?.email}
-                          </Typography>
+
+                  {/* Activities for this date */}
+                  <div className="divide-y">
+                    {logs?.map((log) => (
+                      <div
+                        key={log.id}
+                        className="group flex items-center gap-3 px-4 py-2.5 transition-colors hover:bg-surface-secondary/50"
+                      >
+                        {/* Icon */}
+                        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-surface-secondary">
+                          {getActivityIcon(log.action)}
                         </div>
-                        <Typography variant="bodyXs" className="text-text-muted whitespace-nowrap">
-                          {new Date(log.createdAt).toLocaleString()}
-                        </Typography>
-                      </div>
-                      <div className="mt-2">
-                        <Typography variant="bodySm" className="text-text-secondary">
-                          {getActionLabel(log.action)}
-                        </Typography>
-                        {log.metadata ? (
-                          <div className="mt-1 flex flex-wrap gap-2">
-                            {Object.entries(log.metadata as Record<string, unknown>).map(
-                              ([key, value]) => (
-                                <span
-                                  key={key}
-                                  className="bg-surface-primary text-text-muted rounded px-2 py-0.5 text-xs"
-                                >
-                                  {key}: {String(value)}
-                                </span>
-                              ),
-                            )}
+
+                        {/* Content */}
+                        <div className="flex min-w-0 flex-1 items-center gap-2">
+                          <span className="truncate text-sm font-medium">
+                            {log.user?.name || log.user?.email?.split('@')[0] || 'Unknown'}
+                          </span>
+                          <span className="hidden text-sm text-text-muted sm:inline">
+                            {getActionLabel(log.action)}
+                          </span>
+                          <Badge
+                            variant={getActionBadgeVariant(log.action)}
+                            className="hidden text-[10px] sm:inline-flex"
+                          >
+                            {log.action.split('.')[0]}
+                          </Badge>
+
+                          {/* Mobile: Show action below name */}
+                          <span className="text-xs text-text-muted sm:hidden">
+                            {getActionLabel(log.action)}
+                          </span>
+                        </div>
+
+                        {/* Metadata preview - desktop only */}
+                        {log.metadata && (
+                          <div className="hidden max-w-[200px] truncate text-xs text-text-muted lg:block">
+                            {(log.metadata as { quoteName?: string; clientName?: string })
+                              .quoteName ||
+                              (log.metadata as { quoteName?: string; clientName?: string })
+                                .clientName ||
+                              ''}
                           </div>
-                        ) : null}
+                        )}
+
+                        {/* Timestamp */}
+                        <span className="shrink-0 text-xs text-text-muted">
+                          {formatRelativeTime(new Date(log.createdAt))}
+                        </span>
                       </div>
-                      {log.ipAddress && (
-                        <Typography variant="bodyXs" className="text-text-muted mt-1">
-                          IP: {log.ipAddress}
-                        </Typography>
-                      )}
-                    </div>
+                    ))}
                   </div>
                 </div>
-              ))
-            ) : (
-              <div className="bg-surface-secondary rounded-lg border p-8 text-center">
-                <Typography variant="bodySm" className="text-text-muted">
-                  No activities found matching your filters
-                </Typography>
-              </div>
-            )}
-          </div>
-
-          {/* Total count */}
-          {activityData && (
-            <div className="mt-4 text-center">
-              <Typography variant="bodyXs" className="text-text-muted">
-                Showing {filteredActivities?.length || 0} of {activityData.total} total activities
+              ))}
+            </div>
+          ) : (
+            <div className="px-4 py-12 text-center">
+              <IconUser className="mx-auto mb-2 h-8 w-8 text-text-muted" />
+              <Typography variant="bodySm" className="text-text-muted">
+                No activities found
               </Typography>
             </div>
           )}
         </CardContent>
       </Card>
+
+      {/* Load more hint */}
+      {activityData && filteredActivities && filteredActivities.length < activityData.total && (
+        <div className="mt-3 text-center">
+          <Typography variant="bodyXs" className="text-text-muted">
+            Showing {filteredActivities.length} of {activityData.total} activities
+          </Typography>
+        </div>
+      )}
     </div>
   );
 };
