@@ -4,6 +4,7 @@ import { and, eq } from 'drizzle-orm';
 import db from '@/database/client';
 import { quotes } from '@/database/schema';
 import { protectedProcedure } from '@/lib/trpc/procedures';
+import logUserActivity from '@/utils/logUserActivity';
 
 import submitBuyRequestSchema from '../schemas/submitBuyRequestSchema';
 
@@ -66,6 +67,18 @@ const quotesSubmitBuyRequest = protectedProcedure
           message: 'Failed to submit buy request',
         });
       }
+
+      // Log quote submission activity
+      void logUserActivity({
+        userId: user.id,
+        action: 'quote.submitted',
+        entityType: 'quote',
+        entityId: updatedQuote.id,
+        metadata: {
+          quoteName: updatedQuote.name,
+          clientName: updatedQuote.clientName,
+        },
+      });
 
       // Send notification to admins (fire and forget)
       const { default: notifyAdminsOfBuyRequest } = await import(

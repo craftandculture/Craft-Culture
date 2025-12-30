@@ -4,6 +4,7 @@ import { eq } from 'drizzle-orm';
 import db from '@/database/client';
 import { quotes } from '@/database/schema';
 import { protectedProcedure } from '@/lib/trpc/procedures';
+import logUserActivity from '@/utils/logUserActivity';
 
 import submitPaymentProofSchema from '../schemas/submitPaymentProofSchema';
 
@@ -76,6 +77,18 @@ const quotesSubmitPaymentProof = protectedProcedure
       notifyAdminsOfPaymentProof(updatedQuote).catch((error) =>
         console.error('Failed to send payment proof notification:', error),
       );
+
+      // Log user activity
+      void logUserActivity({
+        userId: user.id,
+        action: 'payment.proof_submitted',
+        entityType: 'quote',
+        entityId: updatedQuote.id,
+        metadata: {
+          quoteName: updatedQuote.name,
+          clientName: updatedQuote.clientName,
+        },
+      });
 
       return updatedQuote;
     } catch (error) {
