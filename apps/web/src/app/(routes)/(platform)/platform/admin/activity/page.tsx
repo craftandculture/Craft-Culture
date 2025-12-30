@@ -215,80 +215,73 @@ const ActivityFeedPage = () => {
       <Card>
         <CardContent className="p-0">
           {isLoading ? (
-            <div className="divide-y">
+            <div className="divide-y divide-border-primary">
               {Array.from({ length: 10 }).map((_, i) => (
-                <div key={i} className="flex items-center gap-3 px-4 py-3">
-                  <Skeleton className="h-7 w-7 shrink-0 rounded-full" />
-                  <div className="flex-1 space-y-1">
-                    <Skeleton className="h-3.5 w-48" />
-                    <Skeleton className="h-3 w-24" />
+                <div key={i} className="flex items-center gap-3 px-4 py-2">
+                  <Skeleton className="h-6 w-6 shrink-0 rounded-full" />
+                  <div className="flex-1">
+                    <Skeleton className="h-4 w-48" />
                   </div>
                   <Skeleton className="h-3 w-12" />
                 </div>
               ))}
             </div>
           ) : groupedActivities && groupedActivities.size > 0 ? (
-            <div>
-              {Array.from(groupedActivities.entries()).map(([date, logs]) => (
-                <div key={date}>
-                  <div className="sticky top-0 z-10 border-b bg-surface-secondary/80 px-4 py-2 backdrop-blur-sm">
-                    <Typography variant="bodyXs" className="font-medium text-text-muted">
-                      {formatDateHeader(date)}
-                    </Typography>
-                  </div>
+            <div className="divide-y divide-border-primary">
+              {Array.from(groupedActivities.entries()).map(([date, logs]) =>
+                logs.map((log, index) => (
+                  <div
+                    key={log.id}
+                    className="flex items-center gap-3 px-4 py-2 transition-colors hover:bg-surface-secondary/50"
+                  >
+                    {index === 0 ? (
+                      <span className="w-16 shrink-0 text-xs font-medium text-text-muted">
+                        {formatDateHeader(date)}
+                      </span>
+                    ) : (
+                      <span className="w-16 shrink-0" />
+                    )}
 
-                  <div className="divide-y">
-                    {logs.map((log) => (
-                      <div
-                        key={log.id}
-                        className="group flex items-center gap-3 px-4 py-2.5 transition-colors hover:bg-surface-secondary/50"
+                    <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-surface-secondary">
+                      {getActivityIcon(log.action)}
+                    </div>
+
+                    <div className="flex min-w-0 flex-1 items-center gap-2">
+                      <span className="truncate text-sm font-medium">
+                        {log.user?.name || log.user?.email?.split('@')[0] || 'Unknown'}
+                      </span>
+                      <span className="text-sm text-text-muted">
+                        {getActionLabel(log.action)}
+                      </span>
+                      <Badge
+                        colorRole={getActionBadgeColorRole(log.action)}
+                        size="xs"
+                        className="hidden sm:inline-flex"
                       >
-                        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-surface-secondary">
-                          {getActivityIcon(log.action)}
-                        </div>
+                        {log.action.split('.')[0]}
+                      </Badge>
+                    </div>
 
-                        <div className="flex min-w-0 flex-1 items-center gap-2">
-                          <span className="truncate text-sm font-medium">
-                            {log.user?.name || log.user?.email?.split('@')[0] || 'Unknown'}
-                          </span>
-                          <span className="hidden text-sm text-text-muted sm:inline">
-                            {getActionLabel(log.action)}
-                          </span>
-                          <Badge
-                            colorRole={getActionBadgeColorRole(log.action)}
-                            size="xs"
-                            className="hidden sm:inline-flex"
-                          >
-                            {log.action.split('.')[0]}
-                          </Badge>
+                    {log.metadata != null && (
+                      <span className="hidden max-w-[150px] truncate text-xs text-text-muted lg:inline">
+                        {(log.metadata as { quoteName?: string; clientName?: string })
+                          .quoteName ||
+                          (log.metadata as { quoteName?: string; clientName?: string })
+                            .clientName ||
+                          ''}
+                      </span>
+                    )}
 
-                          <span className="text-xs text-text-muted sm:hidden">
-                            {getActionLabel(log.action)}
-                          </span>
-                        </div>
-
-                        {log.metadata != null && (
-                          <div className="hidden max-w-[200px] truncate text-xs text-text-muted lg:block">
-                            {(log.metadata as { quoteName?: string; clientName?: string })
-                              .quoteName ||
-                              (log.metadata as { quoteName?: string; clientName?: string })
-                                .clientName ||
-                              ''}
-                          </div>
-                        )}
-
-                        <span className="shrink-0 text-xs text-text-muted">
-                          {formatRelativeTime(new Date(log.createdAt))}
-                        </span>
-                      </div>
-                    ))}
+                    <span className="shrink-0 text-xs text-text-muted">
+                      {formatRelativeTime(new Date(log.createdAt))}
+                    </span>
                   </div>
-                </div>
-              ))}
+                )),
+              )}
             </div>
           ) : (
-            <div className="px-4 py-12 text-center">
-              <IconUser className="mx-auto mb-2 h-8 w-8 text-text-muted" />
+            <div className="px-4 py-8 text-center">
+              <IconUser className="mx-auto mb-2 h-6 w-6 text-text-muted" />
               <Typography variant="bodySm" className="text-text-muted">
                 No activities found
               </Typography>
