@@ -3,6 +3,7 @@ import { TRPCError } from '@trpc/server';
 import db from '@/database/client';
 import { quotes } from '@/database/schema';
 import { protectedProcedure } from '@/lib/trpc/procedures';
+import logUserActivity from '@/utils/logUserActivity';
 
 import saveQuoteSchema from '../schemas/saveQuoteSchema';
 
@@ -46,6 +47,19 @@ const quotesSave = protectedProcedure
           message: 'Failed to save quote',
         });
       }
+
+      // Log quote creation activity
+      void logUserActivity({
+        userId: user.id,
+        action: 'quote.created',
+        entityType: 'quote',
+        entityId: quote.id,
+        metadata: {
+          quoteName: quote.name,
+          clientName: quote.clientName,
+          clientCompany: quote.clientCompany,
+        },
+      });
 
       return quote;
     } catch (error) {

@@ -1,6 +1,7 @@
 import { TRPCError } from '@trpc/server';
 import { eq } from 'drizzle-orm';
 
+import logAdminActivity from '@/app/_admin/utils/logAdminActivity';
 import db from '@/database/client';
 import { quotes } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
@@ -67,6 +68,18 @@ const quotesMarkAsPaid = adminProcedure
 
       // Send notification to customer that payment was received (fire-and-forget)
       void notifyUserOfPayment(updatedQuote);
+
+      // Log admin activity
+      void logAdminActivity({
+        adminId: user.id,
+        action: 'payment.confirmed',
+        entityType: 'quote',
+        entityId: updatedQuote.id,
+        metadata: {
+          quoteName: updatedQuote.name,
+          clientName: updatedQuote.clientName,
+        },
+      });
 
       return updatedQuote;
     } catch (error) {

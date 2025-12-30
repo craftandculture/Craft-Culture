@@ -1,6 +1,7 @@
 import { TRPCError } from '@trpc/server';
 import { eq } from 'drizzle-orm';
 
+import logAdminActivity from '@/app/_admin/utils/logAdminActivity';
 import db from '@/database/client';
 import { quotes } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
@@ -97,7 +98,18 @@ const quotesRequestRevision = adminProcedure
         console.error('Failed to send revision request notification:', error),
       );
 
-      // TODO: Log admin activity
+      // Log admin activity
+      void logAdminActivity({
+        adminId: user.id,
+        action: 'quote.revision_requested',
+        entityType: 'quote',
+        entityId: updatedQuote.id,
+        metadata: {
+          quoteName: updatedQuote.name,
+          clientName: updatedQuote.clientName,
+          revisionReason,
+        },
+      });
 
       return updatedQuote;
     } catch (error) {

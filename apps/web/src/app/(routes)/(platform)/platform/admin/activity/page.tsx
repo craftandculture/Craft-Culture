@@ -1,6 +1,17 @@
 'use client';
 
-import { IconDownload, IconLogin, IconUser, IconUserPlus } from '@tabler/icons-react';
+import {
+  IconCheck,
+  IconCurrencyDollar,
+  IconDownload,
+  IconEdit,
+  IconFileText,
+  IconLogin,
+  IconReceipt,
+  IconSend,
+  IconUser,
+  IconUserPlus,
+} from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 
@@ -46,6 +57,15 @@ const ActivityFeedPage = () => {
     if (action.includes('signin')) return <IconLogin className="h-5 w-5 text-text-brand" />;
     if (action.includes('signup')) return <IconUserPlus className="h-5 w-5 text-text-brand" />;
     if (action.includes('download')) return <IconDownload className="h-5 w-5 text-text-brand" />;
+    if (action === 'quote.created') return <IconFileText className="h-5 w-5 text-text-brand" />;
+    if (action === 'quote.submitted') return <IconSend className="h-5 w-5 text-blue-500" />;
+    if (action === 'quote.approved') return <IconCheck className="h-5 w-5 text-green-500" />;
+    if (action === 'quote.revision_requested')
+      return <IconEdit className="h-5 w-5 text-amber-500" />;
+    if (action === 'payment.proof_submitted')
+      return <IconReceipt className="h-5 w-5 text-blue-500" />;
+    if (action === 'payment.confirmed')
+      return <IconCurrencyDollar className="h-5 w-5 text-green-500" />;
     return <IconUser className="h-5 w-5 text-text-muted" />;
   };
 
@@ -56,6 +76,12 @@ const ActivityFeedPage = () => {
       'quote.download': 'Quote Downloaded',
       'b2b_quote.download': 'B2B Quote Downloaded',
       'inventory.download': 'Inventory Downloaded',
+      'quote.created': 'Quote Created',
+      'quote.submitted': 'Quote Submitted',
+      'quote.approved': 'Quote Approved',
+      'quote.revision_requested': 'Revision Requested',
+      'payment.proof_submitted': 'Payment Proof Submitted',
+      'payment.confirmed': 'Payment Confirmed',
     };
     return labels[action] || action;
   };
@@ -102,6 +128,12 @@ const ActivityFeedPage = () => {
                   <SelectItem value="all">All Activities</SelectItem>
                   <SelectItem value="user.signin">Sign Ins</SelectItem>
                   <SelectItem value="user.signup">Signups</SelectItem>
+                  <SelectItem value="quote.created">Quote Created</SelectItem>
+                  <SelectItem value="quote.submitted">Quote Submitted</SelectItem>
+                  <SelectItem value="quote.approved">Quote Approved</SelectItem>
+                  <SelectItem value="quote.revision_requested">Revision Requested</SelectItem>
+                  <SelectItem value="payment.proof_submitted">Payment Proof</SelectItem>
+                  <SelectItem value="payment.confirmed">Payment Confirmed</SelectItem>
                   <SelectItem value="quote.download">Quote Downloads</SelectItem>
                   <SelectItem value="b2b_quote.download">B2B Downloads</SelectItem>
                   <SelectItem value="inventory.download">Inventory Downloads</SelectItem>
