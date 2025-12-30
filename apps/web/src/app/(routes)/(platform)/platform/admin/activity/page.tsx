@@ -95,12 +95,12 @@ const ActivityFeedPage = () => {
     return labels[action] || action;
   };
 
-  const getActionBadgeVariant = (action: string) => {
-    if (action.includes('approved') || action.includes('confirmed')) return 'success';
-    if (action.includes('submitted') || action.includes('created')) return 'info';
-    if (action.includes('revision')) return 'warning';
-    if (action.includes('signin') || action.includes('signup')) return 'default';
-    return 'secondary';
+  const getActionBadgeColorRole = (action: string) => {
+    if (action.includes('approved') || action.includes('confirmed')) return 'success' as const;
+    if (action.includes('submitted') || action.includes('created')) return 'info' as const;
+    if (action.includes('revision')) return 'warning' as const;
+    if (action.includes('signin') || action.includes('signup')) return 'muted' as const;
+    return 'muted' as const;
   };
 
   const formatRelativeTime = (date: Date) => {
@@ -128,17 +128,20 @@ const ActivityFeedPage = () => {
   });
 
   // Group activities by date
-  const groupedActivities = filteredActivities?.reduce(
-    (groups, log) => {
+  const groupedActivities = (() => {
+    if (!filteredActivities) return null;
+    const groups = new Map<string, (typeof filteredActivities)[number][]>();
+    for (const log of filteredActivities) {
       const date = new Date(log.createdAt).toDateString();
-      if (!groups[date]) {
-        groups[date] = [];
+      const existing = groups.get(date);
+      if (existing) {
+        existing.push(log);
+      } else {
+        groups.set(date, [log]);
       }
-      groups[date].push(log);
-      return groups;
-    },
-    {} as Record<string, typeof filteredActivities>,
-  );
+    }
+    return groups;
+  })();
 
   const formatDateHeader = (dateString: string) => {
     const date = new Date(dateString);
@@ -224,30 +227,26 @@ const ActivityFeedPage = () => {
                 </div>
               ))}
             </div>
-          ) : groupedActivities && Object.keys(groupedActivities).length > 0 ? (
+          ) : groupedActivities && groupedActivities.size > 0 ? (
             <div>
-              {Object.entries(groupedActivities).map(([date, logs]) => (
+              {Array.from(groupedActivities.entries()).map(([date, logs]) => (
                 <div key={date}>
-                  {/* Date Header */}
                   <div className="sticky top-0 z-10 border-b bg-surface-secondary/80 px-4 py-2 backdrop-blur-sm">
                     <Typography variant="bodyXs" className="font-medium text-text-muted">
                       {formatDateHeader(date)}
                     </Typography>
                   </div>
 
-                  {/* Activities for this date */}
                   <div className="divide-y">
-                    {logs?.map((log) => (
+                    {logs.map((log) => (
                       <div
                         key={log.id}
                         className="group flex items-center gap-3 px-4 py-2.5 transition-colors hover:bg-surface-secondary/50"
                       >
-                        {/* Icon */}
                         <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-surface-secondary">
                           {getActivityIcon(log.action)}
                         </div>
 
-                        {/* Content */}
                         <div className="flex min-w-0 flex-1 items-center gap-2">
                           <span className="truncate text-sm font-medium">
                             {log.user?.name || log.user?.email?.split('@')[0] || 'Unknown'}
@@ -256,20 +255,19 @@ const ActivityFeedPage = () => {
                             {getActionLabel(log.action)}
                           </span>
                           <Badge
-                            variant={getActionBadgeVariant(log.action)}
-                            className="hidden text-[10px] sm:inline-flex"
+                            colorRole={getActionBadgeColorRole(log.action)}
+                            size="xs"
+                            className="hidden sm:inline-flex"
                           >
                             {log.action.split('.')[0]}
                           </Badge>
 
-                          {/* Mobile: Show action below name */}
                           <span className="text-xs text-text-muted sm:hidden">
                             {getActionLabel(log.action)}
                           </span>
                         </div>
 
-                        {/* Metadata preview - desktop only */}
-                        {log.metadata && (
+                        {log.metadata != null && (
                           <div className="hidden max-w-[200px] truncate text-xs text-text-muted lg:block">
                             {(log.metadata as { quoteName?: string; clientName?: string })
                               .quoteName ||
@@ -279,7 +277,6 @@ const ActivityFeedPage = () => {
                           </div>
                         )}
 
-                        {/* Timestamp */}
                         <span className="shrink-0 text-xs text-text-muted">
                           {formatRelativeTime(new Date(log.createdAt))}
                         </span>
