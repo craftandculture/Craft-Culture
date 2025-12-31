@@ -134,6 +134,9 @@ const WelcomeForm = () => {
                       <SelectItem value="b2b">
                         <SelectItemContent>Distributor</SelectItemContent>
                       </SelectItem>
+                      <SelectItem value="private_clients">
+                        <SelectItemContent>Wine Partner</SelectItemContent>
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                 )}
