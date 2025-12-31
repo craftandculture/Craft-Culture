@@ -14,29 +14,41 @@ import CardContent from '@/app/_ui/components/Card/CardContent';
 import Divider from '@/app/_ui/components/Divider/Divider';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Input from '@/app/_ui/components/Input/Input';
-import Select from '@/app/_ui/components/Select/Select';
-import SelectContent from '@/app/_ui/components/Select/SelectContent';
-import SelectItem from '@/app/_ui/components/Select/SelectItem';
-import SelectTrigger from '@/app/_ui/components/Select/SelectTrigger';
-import SelectValue from '@/app/_ui/components/Select/SelectValue';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/app/_ui/components/Select/Select';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import { useTRPCClient } from '@/lib/trpc/browser';
 
+import ProductPicker from './ProductPicker';
+
+type StockSource = 'partner_local' | 'partner_airfreight' | 'cc_inventory' | 'manual';
+
 interface LineItem {
   id: string;
+  productId?: string;
+  productOfferId?: string;
   productName: string;
   producer: string;
   vintage: string;
+  region: string;
   lwin: string;
+  bottleSize: string;
+  caseConfig: number;
   quantity: number;
   pricePerCaseUsd: number;
-  source: 'partner_local' | 'partner_airfreight' | 'cc_inventory' | 'manual';
+  source: StockSource;
 }
 
 /**
  * Admin Private Order Creation Form
  *
  * Allows admins to create private client orders on behalf of partners.
+ * Supports both product catalog search and manual entry.
  */
 const AdminPrivateOrderForm = () => {
   const router = useRouter();
@@ -90,13 +102,18 @@ const AdminPrivateOrderForm = () => {
   const addLineItem = useMutation({
     mutationFn: async (data: {
       orderId: string;
+      productId?: string;
+      productOfferId?: string;
       productName: string;
       producer?: string;
       vintage?: string;
+      region?: string;
       lwin?: string;
+      bottleSize?: string;
+      caseConfig?: number;
       quantity: number;
       pricePerCaseUsd: number;
-      source: 'partner_local' | 'partner_airfreight' | 'cc_inventory' | 'manual';
+      source: StockSource;
     }) => {
       return trpcClient.privateClientOrders.adminAddItem.mutate(data);
     },
@@ -108,7 +125,10 @@ const AdminPrivateOrderForm = () => {
       productName: '',
       producer: '',
       vintage: '',
+      region: '',
       lwin: '',
+      bottleSize: '750ml',
+      caseConfig: 12,
       quantity: 1,
       pricePerCaseUsd: 0,
       source: 'manual',
@@ -117,11 +137,7 @@ const AdminPrivateOrderForm = () => {
   };
 
   const handleUpdateLineItem = (id: string, updates: Partial<LineItem>) => {
-    setLineItems(
-      lineItems.map((item) =>
-        item.id === id ? { ...item, ...updates } : item,
-      ),
-    );
+    setLineItems(lineItems.map((item) => (item.id === id ? { ...item, ...updates } : item)));
   };
 
   const handleRemoveLineItem = (id: string) => {
@@ -129,10 +145,7 @@ const AdminPrivateOrderForm = () => {
   };
 
   const calculateSubtotal = () => {
-    return lineItems.reduce(
-      (sum, item) => sum + item.quantity * item.pricePerCaseUsd,
-      0,
-    );
+    return lineItems.reduce((sum, item) => sum + item.quantity * item.pricePerCaseUsd, 0);
   };
 
   const calculateTotalCases = () => {
@@ -149,6 +162,13 @@ const AdminPrivateOrderForm = () => {
 
     if (!clientName.trim()) {
       toast.error('Client name is required');
+      return;
+    }
+
+    // Validate line items
+    const validItems = lineItems.filter((item) => item.productName.trim());
+    if (validItems.length === 0) {
+      toast.error('Please add at least one product');
       return;
     }
 
@@ -169,19 +189,22 @@ const AdminPrivateOrderForm = () => {
     }
 
     // Then add all line items
-    for (const item of lineItems) {
-      if (item.productName.trim()) {
-        await addLineItem.mutateAsync({
-          orderId: order.id,
-          productName: item.productName,
-          producer: item.producer || undefined,
-          vintage: item.vintage || undefined,
-          lwin: item.lwin || undefined,
-          quantity: item.quantity,
-          pricePerCaseUsd: item.pricePerCaseUsd,
-          source: item.source,
-        });
-      }
+    for (const item of validItems) {
+      await addLineItem.mutateAsync({
+        orderId: order.id,
+        productId: item.productId || undefined,
+        productOfferId: item.productOfferId || undefined,
+        productName: item.productName,
+        producer: item.producer || undefined,
+        vintage: item.vintage || undefined,
+        region: item.region || undefined,
+        lwin: item.lwin || undefined,
+        bottleSize: item.bottleSize || undefined,
+        caseConfig: item.caseConfig || 12,
+        quantity: item.quantity,
+        pricePerCaseUsd: item.pricePerCaseUsd,
+        source: item.source,
+      });
     }
   };
 
@@ -193,6 +216,9 @@ const AdminPrivateOrderForm = () => {
       maximumFractionDigits: 0,
     }).format(amount);
   };
+
+  // Get product IDs already in the order to exclude from search
+  const usedProductIds = lineItems.filter((item) => item.productId).map((item) => item.productId!);
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-6">
@@ -306,12 +332,7 @@ const AdminPrivateOrderForm = () => {
         <CardContent className="flex flex-col gap-4">
           <div className="flex items-center justify-between">
             <Typography variant="headingSm">Products</Typography>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={handleAddLineItem}
-            >
+            <Button type="button" variant="outline" size="sm" onClick={handleAddLineItem}>
               <ButtonContent iconLeft={IconPlus}>Add Product</ButtonContent>
             </Button>
           </div>
@@ -321,187 +342,18 @@ const AdminPrivateOrderForm = () => {
               <Typography variant="bodySm" colorRole="muted">
                 No products added yet
               </Typography>
-              <Button
-                type="button"
-                variant="default"
-                colorRole="brand"
-                size="sm"
-                onClick={handleAddLineItem}
-              >
-                <ButtonContent iconLeft={IconPlus}>
-                  Add First Product
-                </ButtonContent>
+              <Button type="button" variant="default" colorRole="brand" size="sm" onClick={handleAddLineItem}>
+                <ButtonContent iconLeft={IconPlus}>Add First Product</ButtonContent>
               </Button>
             </div>
           ) : (
-            <div className="flex flex-col gap-3">
-              {/* Table Header */}
-              <div className="hidden gap-2 border-b border-border-muted pb-2 md:grid md:grid-cols-12">
-                <Typography
-                  variant="bodyXs"
-                  colorRole="muted"
-                  className="col-span-4 font-medium uppercase"
-                >
-                  Product
-                </Typography>
-                <Typography
-                  variant="bodyXs"
-                  colorRole="muted"
-                  className="col-span-2 font-medium uppercase"
-                >
-                  Producer
-                </Typography>
-                <Typography
-                  variant="bodyXs"
-                  colorRole="muted"
-                  className="col-span-1 font-medium uppercase"
-                >
-                  Vintage
-                </Typography>
-                <Typography
-                  variant="bodyXs"
-                  colorRole="muted"
-                  className="col-span-1 text-center font-medium uppercase"
-                >
-                  Qty
-                </Typography>
-                <Typography
-                  variant="bodyXs"
-                  colorRole="muted"
-                  className="col-span-2 text-right font-medium uppercase"
-                >
-                  Price/Case
-                </Typography>
-                <Typography
-                  variant="bodyXs"
-                  colorRole="muted"
-                  className="col-span-1 text-right font-medium uppercase"
-                >
-                  Total
-                </Typography>
-                <div className="col-span-1" />
-              </div>
-
-              {/* Line Items */}
-              {lineItems.map((item) => (
-                <div
-                  key={item.id}
-                  className="grid gap-2 rounded-lg border border-border-muted p-3 md:grid-cols-12 md:items-center md:border-0 md:p-0"
-                >
-                  <div className="col-span-4">
-                    <Typography
-                      variant="bodyXs"
-                      colorRole="muted"
-                      className="mb-1 md:hidden"
-                    >
-                      Product Name
+            <div className="flex flex-col gap-4">
+              {lineItems.map((item, index) => (
+                <div key={item.id} className="relative">
+                  <div className="mb-2 flex items-center justify-between">
+                    <Typography variant="labelSm" colorRole="muted">
+                      Item {index + 1}
                     </Typography>
-                    <Input
-                      placeholder="Wine name"
-                      value={item.productName}
-                      onChange={(e) =>
-                        handleUpdateLineItem(item.id, {
-                          productName: e.target.value,
-                        })
-                      }
-                      size="sm"
-                    />
-                  </div>
-
-                  <div className="col-span-2">
-                    <Typography
-                      variant="bodyXs"
-                      colorRole="muted"
-                      className="mb-1 md:hidden"
-                    >
-                      Producer
-                    </Typography>
-                    <Input
-                      placeholder="Producer"
-                      value={item.producer}
-                      onChange={(e) =>
-                        handleUpdateLineItem(item.id, {
-                          producer: e.target.value,
-                        })
-                      }
-                      size="sm"
-                    />
-                  </div>
-
-                  <div className="col-span-1">
-                    <Typography
-                      variant="bodyXs"
-                      colorRole="muted"
-                      className="mb-1 md:hidden"
-                    >
-                      Vintage
-                    </Typography>
-                    <Input
-                      placeholder="Year"
-                      value={item.vintage}
-                      onChange={(e) =>
-                        handleUpdateLineItem(item.id, {
-                          vintage: e.target.value,
-                        })
-                      }
-                      size="sm"
-                    />
-                  </div>
-
-                  <div className="col-span-1">
-                    <Typography
-                      variant="bodyXs"
-                      colorRole="muted"
-                      className="mb-1 md:hidden"
-                    >
-                      Quantity
-                    </Typography>
-                    <Input
-                      type="number"
-                      min={1}
-                      placeholder="1"
-                      value={item.quantity}
-                      onChange={(e) =>
-                        handleUpdateLineItem(item.id, {
-                          quantity: parseInt(e.target.value) || 1,
-                        })
-                      }
-                      size="sm"
-                      className="text-center"
-                    />
-                  </div>
-
-                  <div className="col-span-2">
-                    <Typography
-                      variant="bodyXs"
-                      colorRole="muted"
-                      className="mb-1 md:hidden"
-                    >
-                      Price per Case (USD)
-                    </Typography>
-                    <Input
-                      type="number"
-                      min={0}
-                      step={0.01}
-                      placeholder="0"
-                      value={item.pricePerCaseUsd || ''}
-                      onChange={(e) =>
-                        handleUpdateLineItem(item.id, {
-                          pricePerCaseUsd: parseFloat(e.target.value) || 0,
-                        })
-                      }
-                      size="sm"
-                      className="text-right"
-                    />
-                  </div>
-
-                  <div className="col-span-1 flex items-center justify-end">
-                    <Typography variant="bodySm" className="font-medium">
-                      {formatCurrency(item.quantity * item.pricePerCaseUsd)}
-                    </Typography>
-                  </div>
-
-                  <div className="col-span-1 flex justify-end">
                     <Button
                       type="button"
                       variant="ghost"
@@ -511,6 +363,11 @@ const AdminPrivateOrderForm = () => {
                       <Icon icon={IconTrash} size="sm" colorRole="danger" />
                     </Button>
                   </div>
+                  <ProductPicker
+                    value={item}
+                    onChange={(updates) => handleUpdateLineItem(item.id, updates)}
+                    omitProductIds={usedProductIds.filter((id) => id !== item.productId)}
+                  />
                 </div>
               ))}
             </div>
