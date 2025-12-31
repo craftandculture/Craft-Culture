@@ -69,16 +69,16 @@ const calculatePrices = (
       marginedPriceUsd = priceUsd + variables.marginAbsolute;
     }
 
-    // Step 3: Add freight
-    const freightPerCase =
+    // Step 3: Add freight (per bottle)
+    const freightPerBottle =
       variables.shippingMethod === 'air'
-        ? variables.airFreightPerCase
-        : variables.seaFreightPerCase;
+        ? variables.airFreightPerBottle
+        : variables.seaFreightPerBottle;
+
+    const caseConfig = product.caseConfig || 6;
+    const freightPerCase = freightPerBottle * caseConfig;
 
     const inBondCaseUsd = marginedPriceUsd + freightPerCase;
-
-    // Calculate per-bottle price
-    const caseConfig = product.caseConfig || 6;
     const inBondBottleUsd = inBondCaseUsd / caseConfig;
 
     // Convert to AED

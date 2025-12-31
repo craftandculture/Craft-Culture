@@ -109,16 +109,21 @@ const sessionCalculate = adminProcedure
         const producerCol = columnMapping.producer;
         const lwinCol = columnMapping.lwin;
 
-        // Parse case config - default to 6 if not found or invalid
+        // Parse case config - extract number before 'x' (e.g., "6x75cl" → 6)
         let caseConfig = 6;
         if (caseConfigCol && typedRow[caseConfigCol]) {
           const configValue = typedRow[caseConfigCol];
           if (typeof configValue === 'number') {
             caseConfig = configValue;
           } else {
-            const parsed = parseInt(String(configValue).replace(/[^0-9]/g, ''), 10);
-            if (!isNaN(parsed) && parsed > 0) {
-              caseConfig = parsed;
+            const configStr = String(configValue);
+            // Match number before 'x' or just the first number
+            const match = configStr.match(/^(\d+)/);
+            if (match?.[1]) {
+              const parsed = parseInt(match[1], 10);
+              if (!isNaN(parsed) && parsed > 0) {
+                caseConfig = parsed;
+              }
             }
           }
         }

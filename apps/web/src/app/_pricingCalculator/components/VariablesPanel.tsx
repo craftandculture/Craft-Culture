@@ -233,32 +233,32 @@ const VariablesPanel = ({ variables, onChange, isUpdating }: VariablesPanelProps
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label htmlFor="airFreightPerCase" className={labelClasses}>
-                Air ($/case)
+              <label htmlFor="airFreightPerBottle" className={labelClasses}>
+                Air ($/bottle)
               </label>
               <Input
-                id="airFreightPerCase"
+                id="airFreightPerBottle"
                 type="number"
-                step="1"
+                step="0.5"
                 min="0"
-                value={localVariables.airFreightPerCase}
-                onChange={(e) => handleChange('airFreightPerCase', parseFloat(e.target.value) || 0)}
+                value={localVariables.airFreightPerBottle}
+                onChange={(e) => handleChange('airFreightPerBottle', parseFloat(e.target.value) || 0)}
                 onBlur={handleBlur}
                 disabled={isUpdating}
                 className="h-8"
               />
             </div>
             <div>
-              <label htmlFor="seaFreightPerCase" className={labelClasses}>
-                Sea ($/case)
+              <label htmlFor="seaFreightPerBottle" className={labelClasses}>
+                Sea ($/bottle)
               </label>
               <Input
-                id="seaFreightPerCase"
+                id="seaFreightPerBottle"
                 type="number"
-                step="1"
+                step="0.5"
                 min="0"
-                value={localVariables.seaFreightPerCase}
-                onChange={(e) => handleChange('seaFreightPerCase', parseFloat(e.target.value) || 0)}
+                value={localVariables.seaFreightPerBottle}
+                onChange={(e) => handleChange('seaFreightPerBottle', parseFloat(e.target.value) || 0)}
                 onBlur={handleBlur}
                 disabled={isUpdating}
                 className="h-8"

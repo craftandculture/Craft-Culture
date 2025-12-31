@@ -175,37 +175,8 @@ const SessionDetailView = ({ session: initialSession }: SessionDetailViewProps) 
 
       {/* Main Content Grid */}
       <div className="grid gap-6 lg:grid-cols-3">
-        {/* Variables Panel - Left Side */}
-        <div className="lg:col-span-1">
-          <Card>
-            <CardContent className="p-4">
-              <Typography variant="headingSm" className="mb-4">
-                Pricing Variables
-              </Typography>
-              <VariablesPanel
-                variables={session.calculationVariables}
-                onChange={handleVariablesChange}
-                isUpdating={updateVariablesMutation.isPending}
-              />
-              <div className="mt-4 border-t border-border-muted pt-4">
-                <Button
-                  variant="default"
-                  colorRole="brand"
-                  className="w-full"
-                  onClick={handleCalculate}
-                  disabled={calculateMutation.isPending || !session.calculationVariables}
-                >
-                  <ButtonContent iconLeft={calculateMutation.isPending ? IconLoader2 : undefined}>
-                    {calculateMutation.isPending ? 'Calculating...' : 'Calculate Prices'}
-                  </ButtonContent>
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Preview Table - Right Side */}
-        <div className="lg:col-span-2">
+        {/* Preview Table - Main Content */}
+        <div className="order-2 lg:order-1 lg:col-span-2">
           <Card>
             <CardContent className="p-4">
               {/* Tab Headers */}
@@ -241,6 +212,35 @@ const SessionDetailView = ({ session: initialSession }: SessionDetailViewProps) 
                 columnMapping={session.columnMapping as Record<string, string> | null}
                 priceType={activeTab}
               />
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Variables Panel - Right Side (collapsible) */}
+        <div className="order-1 lg:order-2 lg:col-span-1">
+          <Card>
+            <CardContent className="p-4">
+              <Typography variant="headingSm" className="mb-4">
+                Pricing Variables
+              </Typography>
+              <VariablesPanel
+                variables={session.calculationVariables}
+                onChange={handleVariablesChange}
+                isUpdating={updateVariablesMutation.isPending}
+              />
+              <div className="mt-4 border-t border-border-muted pt-4">
+                <Button
+                  variant="default"
+                  colorRole="brand"
+                  className="w-full"
+                  onClick={handleCalculate}
+                  disabled={calculateMutation.isPending || !session.calculationVariables}
+                >
+                  <ButtonContent iconLeft={calculateMutation.isPending ? IconLoader2 : undefined}>
+                    {calculateMutation.isPending ? 'Calculating...' : 'Calculate Prices'}
+                  </ButtonContent>
+                </Button>
+              </div>
             </CardContent>
           </Card>
         </div>
