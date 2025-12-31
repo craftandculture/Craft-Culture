@@ -23,7 +23,7 @@ const NewClientPage = () => {
           <Icon icon={IconArrowLeft} size="sm" />
           Back to Clients
         </Link>
-        <Typography variant="h1">Add Client</Typography>
+        <Typography variant="headingLg">Add Client</Typography>
         <Typography variant="bodySm" colorRole="muted">
           Add a new private client to your CRM
         </Typography>

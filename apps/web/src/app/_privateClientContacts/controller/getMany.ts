@@ -1,4 +1,4 @@
-import { and, count, eq, ilike, or } from 'drizzle-orm';
+import { type SQL, and, count, desc, eq, ilike, or } from 'drizzle-orm';
 import { z } from 'zod';
 
 import db from '@/database/client';
@@ -18,34 +18,41 @@ const getMany = winePartnerProcedure.input(getContactsSchema).query(async ({ inp
   const { limit, cursor, search } = input;
   const { partnerId } = ctx;
 
-  // Build filter conditions
-  const conditions = [eq(privateClientContacts.partnerId, partnerId)];
+  // Build WHERE clause - use SQL builder for search functionality
+  const buildWhereClause = (): SQL | undefined => {
+    const baseCondition = eq(privateClientContacts.partnerId, partnerId);
 
-  if (search) {
-    conditions.push(
-      or(
-        ilike(privateClientContacts.name, `%${search}%`),
-        ilike(privateClientContacts.email, `%${search}%`),
-        ilike(privateClientContacts.phone, `%${search}%`),
-      ) ?? eq(privateClientContacts.partnerId, partnerId),
+    if (!search) {
+      return baseCondition;
+    }
+
+    const searchCondition = or(
+      ilike(privateClientContacts.name, `%${search}%`),
+      ilike(privateClientContacts.email, `%${search}%`),
+      ilike(privateClientContacts.phone, `%${search}%`),
     );
-  }
+
+    return searchCondition ? and(baseCondition, searchCondition) : baseCondition;
+  };
+
+  const whereClause = buildWhereClause();
 
   // Get total count
   const [countResult] = await db
     .select({ value: count() })
     .from(privateClientContacts)
-    .where(and(...conditions));
+    .where(whereClause);
 
   const totalCount = countResult?.value ?? 0;
 
-  // Get paginated contacts
-  const contacts = await db.query.privateClientContacts.findMany({
-    where: and(...conditions),
-    orderBy: (table, { desc }) => [desc(table.lastOrderAt), desc(table.createdAt)],
-    limit: limit + 1,
-    offset: cursor,
-  });
+  // Get paginated contacts using select for complex WHERE
+  const contacts = await db
+    .select()
+    .from(privateClientContacts)
+    .where(whereClause)
+    .orderBy(desc(privateClientContacts.lastOrderAt), desc(privateClientContacts.createdAt))
+    .limit(limit + 1)
+    .offset(cursor);
 
   const hasMore = contacts.length > limit;
   const data = hasMore ? contacts.slice(0, -1) : contacts;
