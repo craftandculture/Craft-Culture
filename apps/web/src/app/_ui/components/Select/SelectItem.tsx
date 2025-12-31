@@ -38,7 +38,7 @@ const SelectItem = ({
       disabled={isDisabled}
       {...props}
     >
-      {children}
+      <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>
     </SelectPrimitive.Item>
   </Typography>
 );
