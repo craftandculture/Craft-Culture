@@ -11,18 +11,17 @@ import { privateClientOrderStatusEnum } from '../schemas/getOrdersSchema';
 const updateStatusSchema = z.object({
   orderId: z.string().uuid(),
   status: privateClientOrderStatusEnum,
-  adminNotes: z.string().optional(),
 });
 
 /**
  * Update the status of a private client order
  *
- * Admins can update the status of any order and optionally add notes.
+ * Admins can update the status of any order.
  */
 const adminUpdateStatus = adminProcedure
   .input(updateStatusSchema)
   .mutation(async ({ input }) => {
-    const { orderId, status, adminNotes } = input;
+    const { orderId, status } = input;
 
     // Verify order exists
     const [existing] = await db
@@ -42,7 +41,6 @@ const adminUpdateStatus = adminProcedure
       .update(privateClientOrders)
       .set({
         status,
-        adminNotes: adminNotes ?? undefined,
         updatedAt: new Date(),
       })
       .where(eq(privateClientOrders.id, orderId))

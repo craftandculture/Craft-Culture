@@ -27,7 +27,7 @@ const adminGetOne = adminProcedure
         partner: {
           id: partners.id,
           businessName: partners.businessName,
-          contactEmail: partners.contactEmail,
+          contactEmail: partners.businessEmail,
         },
         client: {
           id: privateClientContacts.id,
