@@ -64,10 +64,10 @@ const VariablesPanel = ({ variables, onChange, isUpdating }: VariablesPanelProps
   const labelClasses = 'text-xs font-medium text-text-muted';
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Currency & Exchange Rates */}
-      <div>
-        <Typography variant="bodyXs" colorRole="muted" className="mb-2 uppercase tracking-wide">
+      <div className="rounded-lg border border-border-muted/50 p-3">
+        <Typography variant="bodyXs" colorRole="muted" className="mb-3 uppercase tracking-wide">
           Currency & Exchange Rates
         </Typography>
         <div className="space-y-3">
@@ -175,9 +175,9 @@ const VariablesPanel = ({ variables, onChange, isUpdating }: VariablesPanelProps
       </div>
 
       {/* Margin Settings */}
-      <div>
-        <Typography variant="bodyXs" colorRole="muted" className="mb-2 uppercase tracking-wide">
-          C&C Margin (Before Freight)
+      <div className="rounded-lg border border-border-muted/50 p-3">
+        <Typography variant="bodyXs" colorRole="muted" className="mb-3 uppercase tracking-wide">
+          C&C Margin
         </Typography>
         <div className="space-y-3">
           <div>
@@ -240,8 +240,8 @@ const VariablesPanel = ({ variables, onChange, isUpdating }: VariablesPanelProps
       </div>
 
       {/* Freight */}
-      <div>
-        <Typography variant="bodyXs" colorRole="muted" className="mb-2 uppercase tracking-wide">
+      <div className="rounded-lg border border-border-muted/50 p-3">
+        <Typography variant="bodyXs" colorRole="muted" className="mb-3 uppercase tracking-wide">
           Freight
         </Typography>
         <div>
@@ -266,8 +266,8 @@ const VariablesPanel = ({ variables, onChange, isUpdating }: VariablesPanelProps
       </div>
 
       {/* D2C Settings */}
-      <div>
-        <Typography variant="bodyXs" colorRole="muted" className="mb-2 uppercase tracking-wide">
+      <div className="rounded-lg border border-border-muted/50 bg-surface-secondary/30 p-3">
+        <Typography variant="bodyXs" colorRole="muted" className="mb-3 uppercase tracking-wide">
           D2C Settings
         </Typography>
         <div className="space-y-3">
