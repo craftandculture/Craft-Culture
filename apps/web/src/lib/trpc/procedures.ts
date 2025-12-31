@@ -1,4 +1,8 @@
 import { TRPCError } from '@trpc/server';
+import { eq } from 'drizzle-orm';
+
+import db from '@/database/client';
+import { partners } from '@/database/schema';
 
 import { t } from './trpc';
 
@@ -45,3 +49,91 @@ export const adminProcedure = protectedProcedure.use(async ({ ctx, next }) => {
 
   return await next({ ctx });
 });
+
+/**
+ * Wine Partner procedure
+ *
+ * Only accessible to users linked to a wine_partner type partner.
+ * Injects the partnerId into the context for data isolation.
+ */
+export const winePartnerProcedure = protectedProcedure.use(
+  async ({ ctx, next }) => {
+    // Find the partner linked to this user
+    const partner = await db.query.partners.findFirst({
+      where: eq(partners.userId, ctx.user.id),
+    });
+
+    if (!partner) {
+      throw new TRPCError({
+        code: 'FORBIDDEN',
+        message: 'You are not linked to a partner account',
+      });
+    }
+
+    if (partner.type !== 'wine_partner') {
+      throw new TRPCError({
+        code: 'FORBIDDEN',
+        message: 'This action requires a wine partner account',
+      });
+    }
+
+    if (partner.status !== 'active') {
+      throw new TRPCError({
+        code: 'FORBIDDEN',
+        message: 'Your partner account is not active',
+      });
+    }
+
+    return await next({
+      ctx: {
+        ...ctx,
+        partner,
+        partnerId: partner.id,
+      },
+    });
+  },
+);
+
+/**
+ * Distributor procedure
+ *
+ * Only accessible to users linked to a distributor type partner.
+ * Injects the partnerId into the context for data isolation.
+ */
+export const distributorProcedure = protectedProcedure.use(
+  async ({ ctx, next }) => {
+    // Find the partner linked to this user
+    const partner = await db.query.partners.findFirst({
+      where: eq(partners.userId, ctx.user.id),
+    });
+
+    if (!partner) {
+      throw new TRPCError({
+        code: 'FORBIDDEN',
+        message: 'You are not linked to a partner account',
+      });
+    }
+
+    if (partner.type !== 'distributor') {
+      throw new TRPCError({
+        code: 'FORBIDDEN',
+        message: 'This action requires a distributor account',
+      });
+    }
+
+    if (partner.status !== 'active') {
+      throw new TRPCError({
+        code: 'FORBIDDEN',
+        message: 'Your partner account is not active',
+      });
+    }
+
+    return await next({
+      ctx: {
+        ...ctx,
+        partner,
+        partnerId: partner.id,
+      },
+    });
+  },
+);
