@@ -1,5 +1,7 @@
 import { createTRPCRouter } from '@/lib/trpc/trpc';
 
+import adminAddItem from './controller/adminAddItem';
+import adminCreate from './controller/adminCreate';
 import adminGetMany from './controller/adminGetMany';
 import adminGetOne from './controller/adminGetOne';
 import adminUpdateStatus from './controller/adminUpdateStatus';
@@ -18,6 +20,8 @@ const privateClientOrdersRouter = createTRPCRouter({
   addItem: itemsAdd,
 
   // Admin procedures
+  adminCreate,
+  adminAddItem,
   adminGetMany,
   adminGetOne,
   adminUpdateStatus,
