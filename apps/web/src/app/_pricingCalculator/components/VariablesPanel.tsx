@@ -239,68 +239,29 @@ const VariablesPanel = ({ variables, onChange, isUpdating }: VariablesPanelProps
         </div>
       </div>
 
-      {/* Freight Settings */}
+      {/* Freight */}
       <div>
         <Typography variant="bodyXs" colorRole="muted" className="mb-2 uppercase tracking-wide">
           Freight
         </Typography>
-        <div className="space-y-3">
-          <div>
-            <label htmlFor="shippingMethod" className={labelClasses}>
-              Shipping Method
-            </label>
-            <Select
-              value={localVariables.shippingMethod}
-              onValueChange={(v) =>
-                handleSelectChange('shippingMethod', v as CalculationVariables['shippingMethod'])
-              }
-              disabled={isUpdating}
-            >
-              <SelectTrigger id="shippingMethod" className="h-8">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="air">Air</SelectItem>
-                <SelectItem value="sea">Sea</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          {/* Only show the relevant freight input based on selected method */}
-          {localVariables.shippingMethod === 'air' ? (
-            <div>
-              <label htmlFor="airFreightPerBottle" className={labelClasses}>
-                Air Freight ($/bottle)
-              </label>
-              <Input
-                id="airFreightPerBottle"
-                type="number"
-                step="0.5"
-                min="0"
-                value={localVariables.airFreightPerBottle}
-                onChange={(e) => handleChange('airFreightPerBottle', parseFloat(e.target.value) || 0)}
-                onBlur={handleBlur}
-                disabled={isUpdating}
-                className="h-8"
-              />
-            </div>
-          ) : (
-            <div>
-              <label htmlFor="seaFreightPerBottle" className={labelClasses}>
-                Sea Freight ($/bottle)
-              </label>
-              <Input
-                id="seaFreightPerBottle"
-                type="number"
-                step="0.5"
-                min="0"
-                value={localVariables.seaFreightPerBottle}
-                onChange={(e) => handleChange('seaFreightPerBottle', parseFloat(e.target.value) || 0)}
-                onBlur={handleBlur}
-                disabled={isUpdating}
-                className="h-8"
-              />
-            </div>
-          )}
+        <div>
+          <label htmlFor="freightPerBottle" className={labelClasses}>
+            Per Bottle ($)
+          </label>
+          <Input
+            id="freightPerBottle"
+            type="number"
+            step="0.5"
+            min="0"
+            value={localVariables.freightPerBottle ?? 2}
+            onChange={(e) => handleChange('freightPerBottle', parseFloat(e.target.value) || 0)}
+            onBlur={handleBlur}
+            disabled={isUpdating}
+            className="h-8"
+          />
+          <Typography variant="bodyXs" colorRole="muted" className="mt-1 italic">
+            Applied × case config per product
+          </Typography>
         </div>
       </div>
 
