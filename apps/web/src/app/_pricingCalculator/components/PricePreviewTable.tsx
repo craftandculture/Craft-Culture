@@ -1,5 +1,10 @@
 'use client';
 
+import Select from '@/app/_ui/components/Select/Select';
+import SelectContent from '@/app/_ui/components/Select/SelectContent';
+import SelectItem from '@/app/_ui/components/Select/SelectItem';
+import SelectTrigger from '@/app/_ui/components/Select/SelectTrigger';
+import SelectValue from '@/app/_ui/components/Select/SelectValue';
 import Typography from '@/app/_ui/components/Typography/Typography';
 
 interface PricePreviewTableProps {
@@ -9,6 +14,8 @@ interface PricePreviewTableProps {
   priceType: 'b2b' | 'd2c';
   searchQuery?: string;
   productColWidth?: number;
+  onUpdateCaseConfig?: (itemId: string, caseConfig: number) => void;
+  isUpdatingItem?: string | null;
 }
 
 /**
@@ -23,6 +30,8 @@ const PricePreviewTable = ({
   priceType,
   searchQuery = '',
   productColWidth = 200,
+  onUpdateCaseConfig,
+  isUpdatingItem,
 }: PricePreviewTableProps) => {
   const hasCalculatedItems = items && items.length > 0;
 
@@ -156,35 +165,58 @@ const PricePreviewTable = ({
             </tr>
           </thead>
           <tbody className="divide-y divide-border-muted">
-            {filteredItems.slice(0, 100).map((item, idx) => (
-              <tr key={idx} className="hover:bg-surface-secondary/50">
-                <td
-                  className="truncate px-2 py-1 text-text-primary"
-                  style={{ width: productColWidth, minWidth: productColWidth, maxWidth: productColWidth }}
-                >
-                  {String(item.productName ?? '—')}
-                </td>
-                <td className="px-2 py-1 text-text-muted">{String(item.vintage ?? '—')}</td>
-                <td className="px-2 py-1 text-center text-text-muted">
-                  {String(item.caseConfig ?? '—')}
-                </td>
-                <td className="px-2 py-1 text-right font-mono text-text-muted">
-                  {formatSourcePrice(item.ukInBondPrice, item.inputCurrency)}
-                </td>
-                <td className="px-2 py-1 text-right font-mono text-text-primary">
-                  {formatPrice(item.inBondCaseUsd)}
-                </td>
-                <td className="px-2 py-1 text-right font-mono text-text-muted">
-                  {formatPrice(item.inBondBottleUsd)}
-                </td>
-                <td className="px-2 py-1 text-right font-mono text-text-primary">
-                  {formatAedPrice(item.inBondCaseAed)}
-                </td>
-                <td className="px-2 py-1 text-right font-mono text-text-muted">
-                  {formatAedPrice(item.inBondBottleAed)}
-                </td>
-              </tr>
-            ))}
+            {filteredItems.slice(0, 100).map((item, idx) => {
+              const itemId = String(item.id ?? '');
+              const isUpdating = isUpdatingItem === itemId;
+              return (
+                <tr key={idx} className="hover:bg-surface-secondary/50">
+                  <td
+                    className="truncate px-2 py-1 text-text-primary"
+                    style={{ width: productColWidth, minWidth: productColWidth, maxWidth: productColWidth }}
+                  >
+                    {String(item.productName ?? '—')}
+                  </td>
+                  <td className="px-2 py-1 text-text-muted">{String(item.vintage ?? '—')}</td>
+                  <td className="px-1 py-0.5 text-center">
+                    {onUpdateCaseConfig && itemId ? (
+                      <Select
+                        value={String(item.caseConfig ?? 6)}
+                        onValueChange={(v) => onUpdateCaseConfig(itemId, parseInt(v, 10))}
+                        disabled={isUpdating}
+                      >
+                        <SelectTrigger className="h-6 min-w-[50px] px-1.5 text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="1">1</SelectItem>
+                          <SelectItem value="3">3</SelectItem>
+                          <SelectItem value="6">6</SelectItem>
+                          <SelectItem value="12">12</SelectItem>
+                          <SelectItem value="24">24</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <span className="text-text-muted">{String(item.caseConfig ?? '—')}</span>
+                    )}
+                  </td>
+                  <td className="px-2 py-1 text-right font-mono text-text-muted">
+                    {formatSourcePrice(item.ukInBondPrice, item.inputCurrency)}
+                  </td>
+                  <td className="px-2 py-1 text-right font-mono text-text-primary">
+                    {formatPrice(item.inBondCaseUsd)}
+                  </td>
+                  <td className="px-2 py-1 text-right font-mono text-text-muted">
+                    {formatPrice(item.inBondBottleUsd)}
+                  </td>
+                  <td className="px-2 py-1 text-right font-mono text-text-primary">
+                    {formatAedPrice(item.inBondCaseAed)}
+                  </td>
+                  <td className="px-2 py-1 text-right font-mono text-text-muted">
+                    {formatAedPrice(item.inBondBottleAed)}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
         {filteredItems.length > 100 && (
@@ -228,35 +260,58 @@ const PricePreviewTable = ({
           </tr>
         </thead>
         <tbody className="divide-y divide-border-muted">
-          {filteredItems.slice(0, 100).map((item, idx) => (
-            <tr key={idx} className="hover:bg-surface-secondary/50">
-              <td
-                className="truncate px-2 py-1 text-text-primary"
-                style={{ width: productColWidth, minWidth: productColWidth, maxWidth: productColWidth }}
-              >
-                {String(item.productName ?? '—')}
-              </td>
-              <td className="px-2 py-1 text-text-muted">{String(item.vintage ?? '—')}</td>
-              <td className="px-2 py-1 text-center text-text-muted">
-                {String(item.caseConfig ?? '—')}
-              </td>
-              <td className="px-2 py-1 text-right font-mono text-text-muted">
-                {formatSourcePrice(item.ukInBondPrice, item.inputCurrency)}
-              </td>
-              <td className="px-2 py-1 text-right font-mono text-text-primary">
-                {formatPrice(item.deliveredCaseUsd)}
-              </td>
-              <td className="px-2 py-1 text-right font-mono text-text-muted">
-                {formatPrice(item.deliveredBottleUsd)}
-              </td>
-              <td className="px-2 py-1 text-right font-mono text-text-primary">
-                {formatAedPrice(item.deliveredCaseAed)}
-              </td>
-              <td className="px-2 py-1 text-right font-mono text-text-muted">
-                {formatAedPrice(item.deliveredBottleAed)}
-              </td>
-            </tr>
-          ))}
+          {filteredItems.slice(0, 100).map((item, idx) => {
+            const itemId = String(item.id ?? '');
+            const isUpdating = isUpdatingItem === itemId;
+            return (
+              <tr key={idx} className="hover:bg-surface-secondary/50">
+                <td
+                  className="truncate px-2 py-1 text-text-primary"
+                  style={{ width: productColWidth, minWidth: productColWidth, maxWidth: productColWidth }}
+                >
+                  {String(item.productName ?? '—')}
+                </td>
+                <td className="px-2 py-1 text-text-muted">{String(item.vintage ?? '—')}</td>
+                <td className="px-1 py-0.5 text-center">
+                  {onUpdateCaseConfig && itemId ? (
+                    <Select
+                      value={String(item.caseConfig ?? 6)}
+                      onValueChange={(v) => onUpdateCaseConfig(itemId, parseInt(v, 10))}
+                      disabled={isUpdating}
+                    >
+                      <SelectTrigger className="h-6 min-w-[50px] px-1.5 text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="1">1</SelectItem>
+                        <SelectItem value="3">3</SelectItem>
+                        <SelectItem value="6">6</SelectItem>
+                        <SelectItem value="12">12</SelectItem>
+                        <SelectItem value="24">24</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <span className="text-text-muted">{String(item.caseConfig ?? '—')}</span>
+                  )}
+                </td>
+                <td className="px-2 py-1 text-right font-mono text-text-muted">
+                  {formatSourcePrice(item.ukInBondPrice, item.inputCurrency)}
+                </td>
+                <td className="px-2 py-1 text-right font-mono text-text-primary">
+                  {formatPrice(item.deliveredCaseUsd)}
+                </td>
+                <td className="px-2 py-1 text-right font-mono text-text-muted">
+                  {formatPrice(item.deliveredBottleUsd)}
+                </td>
+                <td className="px-2 py-1 text-right font-mono text-text-primary">
+                  {formatAedPrice(item.deliveredCaseAed)}
+                </td>
+                <td className="px-2 py-1 text-right font-mono text-text-muted">
+                  {formatAedPrice(item.deliveredBottleAed)}
+                </td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
       {filteredItems.length > 100 && (
