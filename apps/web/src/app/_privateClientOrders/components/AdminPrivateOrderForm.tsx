@@ -1,7 +1,7 @@
 'use client';
 
 import { IconArrowLeft, IconPlus, IconSend, IconTrash } from '@tabler/icons-react';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
@@ -14,6 +14,11 @@ import CardContent from '@/app/_ui/components/Card/CardContent';
 import Divider from '@/app/_ui/components/Divider/Divider';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Input from '@/app/_ui/components/Input/Input';
+import Select from '@/app/_ui/components/Select/Select';
+import SelectContent from '@/app/_ui/components/Select/SelectContent';
+import SelectItem from '@/app/_ui/components/Select/SelectItem';
+import SelectTrigger from '@/app/_ui/components/Select/SelectTrigger';
+import SelectValue from '@/app/_ui/components/Select/SelectValue';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import { useTRPCClient } from '@/lib/trpc/browser';
 
@@ -31,11 +36,14 @@ interface LineItem {
 /**
  * Admin Private Order Creation Form
  *
- * Allows admins to create private client orders.
+ * Allows admins to create private client orders on behalf of partners.
  */
 const AdminPrivateOrderForm = () => {
   const router = useRouter();
   const trpcClient = useTRPCClient();
+
+  // Partner selection state
+  const [partnerId, setPartnerId] = useState('');
 
   // Client info state
   const [clientName, setClientName] = useState('');
@@ -48,9 +56,16 @@ const AdminPrivateOrderForm = () => {
   // Line items state
   const [lineItems, setLineItems] = useState<LineItem[]>([]);
 
+  // Fetch partners list
+  const partnersQuery = useQuery({
+    queryKey: ['partners'],
+    queryFn: () => trpcClient.partners.getMany.query(),
+  });
+
   // Create order mutation (admin endpoint)
   const createOrder = useMutation({
     mutationFn: async (data: {
+      partnerId: string;
       clientName: string;
       clientEmail?: string;
       clientPhone?: string;
@@ -127,6 +142,11 @@ const AdminPrivateOrderForm = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (!partnerId) {
+      toast.error('Please select a partner');
+      return;
+    }
+
     if (!clientName.trim()) {
       toast.error('Client name is required');
       return;
@@ -134,6 +154,7 @@ const AdminPrivateOrderForm = () => {
 
     // Create the order first
     const order = await createOrder.mutateAsync({
+      partnerId,
       clientName,
       clientEmail: clientEmail || undefined,
       clientPhone: clientPhone || undefined,
@@ -184,6 +205,34 @@ const AdminPrivateOrderForm = () => {
         </Button>
         <Typography variant="headingLg">New Private Order (Admin)</Typography>
       </div>
+
+      {/* Partner Selection */}
+      <Card>
+        <CardContent className="flex flex-col gap-4">
+          <Typography variant="headingSm">Partner</Typography>
+
+          <div className="flex flex-col gap-1.5">
+            <Typography variant="bodySm" className="font-medium">
+              Select Partner *
+            </Typography>
+            <Select value={partnerId} onValueChange={setPartnerId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Choose a partner..." />
+              </SelectTrigger>
+              <SelectContent>
+                {partnersQuery.data?.map((partner) => (
+                  <SelectItem key={partner.id} value={partner.id}>
+                    {partner.companyName}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Typography variant="bodyXs" colorRole="muted">
+              This order will be created on behalf of the selected partner
+            </Typography>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Client Details Section */}
       <Card>
@@ -531,7 +580,7 @@ const AdminPrivateOrderForm = () => {
           type="submit"
           variant="default"
           colorRole="brand"
-          isDisabled={createOrder.isPending || !clientName.trim()}
+          isDisabled={createOrder.isPending || !clientName.trim() || !partnerId}
         >
           <ButtonContent iconLeft={IconSend}>
             {createOrder.isPending ? 'Creating...' : 'Create Order'}
