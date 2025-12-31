@@ -61,20 +61,23 @@ const PlatformLayout = async ({ children }: React.PropsWithChildren) => {
                 My Quotes
               </Link>
               {user.role === 'admin' && (
-                <>
-                  <Link
-                    href="/platform/admin/quote-approvals"
-                    className="text-text-primary hover:bg-fill-muted rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] hover:shadow-sm active:scale-[0.98]"
-                  >
-                    Quote Approvals
-                  </Link>
+                <Link
+                  href="/platform/admin/quote-approvals"
+                  className="text-text-primary hover:bg-fill-muted rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] hover:shadow-sm active:scale-[0.98]"
+                >
+                  Quote Approvals
+                </Link>
+              )}
+              {/* Tools section - visually separated */}
+              {user.role === 'admin' && (
+                <div className="ml-2 flex items-center gap-1 rounded-lg bg-surface-secondary/60 px-1 py-1">
                   <Link
                     href="/platform/admin/pricing-calculator"
-                    className="text-text-primary hover:bg-fill-muted rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] hover:shadow-sm active:scale-[0.98]"
+                    className="text-text-primary hover:bg-fill-muted rounded-md px-3 py-1.5 text-sm font-medium transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] hover:shadow-sm active:scale-[0.98]"
                   >
                     Pricing Calc
                   </Link>
-                </>
+                </div>
               )}
             </nav>
           </div>
