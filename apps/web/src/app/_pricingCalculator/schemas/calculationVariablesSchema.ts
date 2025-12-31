@@ -13,7 +13,7 @@ const calculationVariablesSchema = z.object({
   usdToAedRate: z.number().positive(),
 
   // Default case config (used when no column mapped)
-  defaultCaseConfig: z.number().int().min(1).max(24).default(6),
+  defaultCaseConfig: z.number().int().min(1).max(24).optional().default(6),
 
   // Margin (applied BEFORE freight)
   marginType: z.enum(['percentage', 'absolute']),
