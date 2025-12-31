@@ -1,6 +1,6 @@
 'use client';
 
-import { IconPackage, IconPlane, IconSearch, IconWarehouse } from '@tabler/icons-react';
+import { IconBuilding, IconPackage, IconPlane, IconSearch } from '@tabler/icons-react';
 import { useState } from 'react';
 
 import ProductsCombobox from '@/app/_products/components/ProductsCombobox';
@@ -8,13 +8,11 @@ import type { Product } from '@/app/_products/controller/productsGetMany';
 import Button from '@/app/_ui/components/Button/Button';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Input from '@/app/_ui/components/Input/Input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/app/_ui/components/Select/Select';
+import Select from '@/app/_ui/components/Select/Select';
+import SelectContent from '@/app/_ui/components/Select/SelectContent';
+import SelectItem from '@/app/_ui/components/Select/SelectItem';
+import SelectTrigger from '@/app/_ui/components/Select/SelectTrigger';
+import SelectValue from '@/app/_ui/components/Select/SelectValue';
 import Typography from '@/app/_ui/components/Typography/Typography';
 
 type StockSource = 'partner_local' | 'partner_airfreight' | 'cc_inventory' | 'manual';
@@ -53,7 +51,7 @@ const sourceConfig: Record<StockSource, { label: string; icon: typeof IconPackag
   },
   cc_inventory: {
     label: 'C&C Inventory',
-    icon: IconWarehouse,
+    icon: IconBuilding,
     description: 'From Craft & Culture warehouse',
   },
   manual: {
