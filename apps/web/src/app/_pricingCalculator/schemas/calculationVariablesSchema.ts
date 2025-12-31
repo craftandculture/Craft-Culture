@@ -17,10 +17,10 @@ const calculationVariablesSchema = z.object({
   marginPercent: z.number().min(0).max(100),
   marginAbsolute: z.number().min(0),
 
-  // Freight
+  // Freight (per bottle)
   shippingMethod: z.enum(['air', 'sea']),
-  airFreightPerCase: z.number().min(0),
-  seaFreightPerCase: z.number().min(0),
+  airFreightPerBottle: z.number().min(0),
+  seaFreightPerBottle: z.number().min(0),
 
   // D2C only
   salesAdvisorMarginPercent: z.number().min(0).max(100),
@@ -43,8 +43,8 @@ export const defaultCalculationVariables: CalculationVariables = {
   marginPercent: 5,
   marginAbsolute: 0,
   shippingMethod: 'sea',
-  airFreightPerCase: 25,
-  seaFreightPerCase: 8,
+  airFreightPerBottle: 4,
+  seaFreightPerBottle: 1.5,
   salesAdvisorMarginPercent: 10,
   importDutyPercent: 50,
   localCosts: 5,
