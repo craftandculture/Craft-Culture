@@ -59,6 +59,7 @@ const SessionDetailView = ({ session: initialSession }: SessionDetailViewProps) 
 
   const updateVariablesMutation = useMutation(api.pricingCalc.session.updateVariables.mutationOptions());
   const calculateMutation = useMutation(api.pricingCalc.session.calculate.mutationOptions());
+  const updateCaseConfigMutation = useMutation(api.pricingCalc.item.updateCaseConfig.mutationOptions());
 
   // Auto-save default variables on first load if they don't exist
   useEffect(() => {
@@ -79,6 +80,19 @@ const SessionDetailView = ({ session: initialSession }: SessionDetailViewProps) 
   const handleVariablesChange = (variables: CalculationVariables) => {
     updateVariablesMutation.mutate(
       { id: session.id, variables },
+      {
+        onSuccess: () => {
+          void queryClient.invalidateQueries({
+            queryKey: api.pricingCalc.session.getOne.queryKey({ id: session.id }),
+          });
+        },
+      },
+    );
+  };
+
+  const handleUpdateCaseConfig = (itemId: string, caseConfig: number) => {
+    updateCaseConfigMutation.mutate(
+      { itemId, caseConfig },
       {
         onSuccess: () => {
           void queryClient.invalidateQueries({
@@ -263,6 +277,8 @@ const SessionDetailView = ({ session: initialSession }: SessionDetailViewProps) 
                 priceType={activeTab}
                 searchQuery={searchQuery}
                 productColWidth={productColWidth}
+                onUpdateCaseConfig={handleUpdateCaseConfig}
+                isUpdatingItem={updateCaseConfigMutation.isPending ? String(updateCaseConfigMutation.variables?.itemId ?? '') : null}
               />
             </CardContent>
           </Card>

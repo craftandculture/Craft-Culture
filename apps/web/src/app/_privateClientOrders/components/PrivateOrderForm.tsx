@@ -62,7 +62,9 @@ const PrivateOrderForm = () => {
     },
     onSuccess: (order) => {
       toast.success('Order created successfully');
-      router.push(`/platform/private-orders/${order.id}`);
+      if (order) {
+        router.push(`/platform/private-orders/${order.id}`);
+      }
     },
     onError: (error) => {
       toast.error(error.message || 'Failed to create order');

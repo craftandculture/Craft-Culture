@@ -1,5 +1,6 @@
 import { createTRPCRouter } from '@/lib/trpc/trpc';
 
+import itemUpdateCaseConfig from './controller/itemUpdateCaseConfig';
 import sessionCalculate from './controller/sessionCalculate';
 import sessionCreate from './controller/sessionCreate';
 import sessionDelete from './controller/sessionDelete';
@@ -21,6 +22,9 @@ const pricingCalcRouter = createTRPCRouter({
     delete: sessionDelete,
     updateVariables: sessionUpdateVariables,
     calculate: sessionCalculate,
+  }),
+  item: createTRPCRouter({
+    updateCaseConfig: itemUpdateCaseConfig,
   }),
 });
 
