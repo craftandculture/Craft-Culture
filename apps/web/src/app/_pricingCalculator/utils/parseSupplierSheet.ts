@@ -32,14 +32,16 @@ const parseSupplierSheet = async (buffer: ArrayBuffer): Promise<ParsedSheetData>
   }
 
   // Convert to array of arrays (first row is headers)
-  const rawData = XLSX.utils.sheet_to_json<unknown[]>(worksheet, { header: 1 });
+  // Use defval to ensure dense arrays (xlsx can return sparse arrays for empty cells)
+  const rawData = XLSX.utils.sheet_to_json<unknown[]>(worksheet, { header: 1, defval: '' });
 
   if (rawData.length === 0) {
     throw new Error('No data found in the file');
   }
 
   // Extract headers from first row
-  const headerRow = rawData[0] as unknown[];
+  // Use Array.from to ensure dense array (handles any sparse arrays from xlsx)
+  const headerRow = Array.from(rawData[0] as unknown[]);
   const headers: string[] = headerRow.map((cell, index) =>
     cell !== null && cell !== undefined && cell !== ''
       ? String(cell).trim()
@@ -54,8 +56,10 @@ const parseSupplierSheet = async (buffer: ArrayBuffer): Promise<ParsedSheetData>
   const rows: Record<string, unknown>[] = [];
 
   for (let i = 1; i < rawData.length; i++) {
-    const row = rawData[i] as unknown[];
-    if (!row || row.length === 0) continue;
+    const rawRow = rawData[i] as unknown[];
+    if (!rawRow || rawRow.length === 0) continue;
+    // Convert sparse array to dense array
+    const row = Array.from(rawRow);
 
     const rowData: Record<string, unknown> = {};
     let hasData = false;
