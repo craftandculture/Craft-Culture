@@ -33,8 +33,15 @@ const documentsGetMany = protectedProcedure.input(getDocumentsSchema).query(asyn
 
   // Check access - must be admin, the partner who created it, or assigned distributor
   const isAdmin = user.role === 'admin';
-  const isPartner = order.partnerId === user.partnerId;
-  const isDistributor = order.distributorId === user.partnerId;
+
+  // Get user's partner (if any)
+  const userPartner = await db.query.partners.findFirst({
+    where: { userId: user.id },
+    columns: { id: true },
+  });
+
+  const isPartner = userPartner && order.partnerId === userPartner.id;
+  const isDistributor = userPartner && order.distributorId === userPartner.id;
 
   if (!isAdmin && !isPartner && !isDistributor) {
     throw new TRPCError({
