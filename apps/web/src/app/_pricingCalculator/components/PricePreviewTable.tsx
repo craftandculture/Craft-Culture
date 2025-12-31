@@ -156,7 +156,8 @@ const PricePreviewTable = ({
                 Product
               </th>
               <th className="px-2 py-1.5 text-left font-medium text-text-muted">Vintage</th>
-              <th className="px-2 py-1.5 text-center font-medium text-text-muted">Cfg</th>
+              <th className="px-2 py-1.5 text-center font-medium text-text-muted">Format</th>
+              <th className="px-2 py-1.5 text-center font-medium text-text-muted">Pack</th>
               <th className="px-2 py-1.5 text-right font-medium text-text-muted">Source</th>
               <th className="px-2 py-1.5 text-right font-medium text-text-muted">$/Case</th>
               <th className="px-2 py-1.5 text-right font-medium text-text-muted">$/Btl</th>
@@ -177,6 +178,7 @@ const PricePreviewTable = ({
                     {String(item.productName ?? '—')}
                   </td>
                   <td className="px-2 py-1 text-text-muted">{String(item.vintage ?? '—')}</td>
+                  <td className="px-2 py-1 text-center text-text-muted">{String(item.bottleSize ?? '—')}</td>
                   <td className="px-1 py-0.5 text-center">
                     {onUpdateCaseConfig && itemId ? (
                       <Select
@@ -251,7 +253,8 @@ const PricePreviewTable = ({
               Product
             </th>
             <th className="px-2 py-1.5 text-left font-medium text-text-muted">Vintage</th>
-            <th className="px-2 py-1.5 text-center font-medium text-text-muted">Cfg</th>
+            <th className="px-2 py-1.5 text-center font-medium text-text-muted">Format</th>
+            <th className="px-2 py-1.5 text-center font-medium text-text-muted">Pack</th>
             <th className="px-2 py-1.5 text-right font-medium text-text-muted">Source</th>
             <th className="px-2 py-1.5 text-right font-medium text-text-muted">$/Case</th>
             <th className="px-2 py-1.5 text-right font-medium text-text-muted">$/Btl</th>
@@ -272,6 +275,7 @@ const PricePreviewTable = ({
                   {String(item.productName ?? '—')}
                 </td>
                 <td className="px-2 py-1 text-text-muted">{String(item.vintage ?? '—')}</td>
+                <td className="px-2 py-1 text-center text-text-muted">{String(item.bottleSize ?? '—')}</td>
                 <td className="px-1 py-0.5 text-center">
                   {onUpdateCaseConfig && itemId ? (
                     <Select
