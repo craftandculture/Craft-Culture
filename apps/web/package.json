@@ -110,6 +110,7 @@
     "react-day-picker": "^9.7.0",
     "react-device-detect": "^2.2.3",
     "react-dom": "^19.1.0",
+    "react-dropzone": "^14.3.8",
     "react-email": "4.0.15",
     "react-hook-form": "^7.65.0",
     "react-resizable-panels": "^3.0.2",
