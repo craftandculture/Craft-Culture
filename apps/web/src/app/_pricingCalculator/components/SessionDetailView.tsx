@@ -49,6 +49,7 @@ const SessionDetailView = ({ session: initialSession }: SessionDetailViewProps) 
   const [activeTab, setActiveTab] = useState<'b2b' | 'd2c'>('b2b');
   const [searchQuery, setSearchQuery] = useState('');
   const [isVariablesPanelCollapsed, setIsVariablesPanelCollapsed] = useState(false);
+  const [productColWidth, setProductColWidth] = useState(200);
 
   // Fetch fresh session data
   const { data: session } = useQuery({
@@ -88,7 +89,18 @@ const SessionDetailView = ({ session: initialSession }: SessionDetailViewProps) 
     );
   };
 
-  const handleCalculate = () => {
+  const handleCalculate = async () => {
+    // If variables are still being saved, wait for completion
+    if (updateVariablesMutation.isPending) {
+      // Wait a bit for the save to complete, then recalculate
+      await new Promise((resolve) => setTimeout(resolve, 500));
+    }
+
+    // Invalidate and refetch session to ensure we have latest variables
+    await queryClient.invalidateQueries({
+      queryKey: api.pricingCalc.session.getOne.queryKey({ id: session.id }),
+    });
+
     calculateMutation.mutate(
       { id: session.id },
       {
@@ -189,7 +201,7 @@ const SessionDetailView = ({ session: initialSession }: SessionDetailViewProps) 
         <div className={`order-2 lg:order-1 ${isVariablesPanelCollapsed ? '' : 'lg:col-span-3'}`}>
           <Card>
             <CardContent className="p-3">
-              {/* Tab Headers and Search */}
+              {/* Tab Headers, Search, and Width Slider */}
               <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex gap-4 border-b border-border-muted">
                   <button
@@ -215,14 +227,31 @@ const SessionDetailView = ({ session: initialSession }: SessionDetailViewProps) 
                     D2C (Delivered)
                   </button>
                 </div>
-                <div className="relative w-full sm:w-64">
-                  <IconSearch className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" />
-                  <Input
-                    placeholder="Search products..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="h-7 pl-8 text-xs"
-                  />
+                <div className="flex items-center gap-4">
+                  {/* Column Width Slider */}
+                  <div className="hidden items-center gap-2 sm:flex">
+                    <Typography variant="bodyXs" colorRole="muted">
+                      Width
+                    </Typography>
+                    <input
+                      type="range"
+                      min={100}
+                      max={400}
+                      value={productColWidth}
+                      onChange={(e) => setProductColWidth(parseInt(e.target.value, 10))}
+                      className="h-1 w-20 cursor-pointer appearance-none rounded-full bg-border-muted accent-fill-brand"
+                    />
+                  </div>
+                  {/* Search */}
+                  <div className="relative w-full sm:w-48">
+                    <IconSearch className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" />
+                    <Input
+                      placeholder="Search..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="h-7 pl-8 text-xs"
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -233,6 +262,7 @@ const SessionDetailView = ({ session: initialSession }: SessionDetailViewProps) 
                 columnMapping={session.columnMapping as Record<string, string> | null}
                 priceType={activeTab}
                 searchQuery={searchQuery}
+                productColWidth={productColWidth}
               />
             </CardContent>
           </Card>
@@ -270,7 +300,7 @@ const SessionDetailView = ({ session: initialSession }: SessionDetailViewProps) 
                       size="sm"
                       className="w-full"
                       onClick={handleCalculate}
-                      disabled={calculateMutation.isPending || !session.calculationVariables}
+                      disabled={calculateMutation.isPending || updateVariablesMutation.isPending || !session.calculationVariables}
                     >
                       <ButtonContent iconLeft={calculateMutation.isPending ? IconLoader2 : undefined}>
                         {calculateMutation.isPending ? 'Calculating...' : 'Calculate Prices'}

@@ -8,6 +8,7 @@ interface PricePreviewTableProps {
   columnMapping: Record<string, string> | null;
   priceType: 'b2b' | 'd2c';
   searchQuery?: string;
+  productColWidth?: number;
 }
 
 /**
@@ -21,6 +22,7 @@ const PricePreviewTable = ({
   columnMapping,
   priceType,
   searchQuery = '',
+  productColWidth = 200,
 }: PricePreviewTableProps) => {
   const hasCalculatedItems = items && items.length > 0;
 
@@ -138,7 +140,12 @@ const PricePreviewTable = ({
         <table className="w-full text-xs">
           <thead className="bg-surface-secondary">
             <tr>
-              <th className="px-2 py-1.5 text-left font-medium text-text-muted">Product</th>
+              <th
+                className="px-2 py-1.5 text-left font-medium text-text-muted"
+                style={{ width: productColWidth, minWidth: productColWidth, maxWidth: productColWidth }}
+              >
+                Product
+              </th>
               <th className="px-2 py-1.5 text-left font-medium text-text-muted">Vintage</th>
               <th className="px-2 py-1.5 text-center font-medium text-text-muted">Cfg</th>
               <th className="px-2 py-1.5 text-right font-medium text-text-muted">Source</th>
@@ -151,7 +158,10 @@ const PricePreviewTable = ({
           <tbody className="divide-y divide-border-muted">
             {filteredItems.slice(0, 100).map((item, idx) => (
               <tr key={idx} className="hover:bg-surface-secondary/50">
-                <td className="max-w-48 truncate px-2 py-1 text-text-primary">
+                <td
+                  className="truncate px-2 py-1 text-text-primary"
+                  style={{ width: productColWidth, minWidth: productColWidth, maxWidth: productColWidth }}
+                >
                   {String(item.productName ?? '—')}
                 </td>
                 <td className="px-2 py-1 text-text-muted">{String(item.vintage ?? '—')}</td>
@@ -202,7 +212,12 @@ const PricePreviewTable = ({
       <table className="w-full text-xs">
         <thead className="bg-surface-secondary">
           <tr>
-            <th className="px-2 py-1.5 text-left font-medium text-text-muted">Product</th>
+            <th
+              className="px-2 py-1.5 text-left font-medium text-text-muted"
+              style={{ width: productColWidth, minWidth: productColWidth, maxWidth: productColWidth }}
+            >
+              Product
+            </th>
             <th className="px-2 py-1.5 text-left font-medium text-text-muted">Vintage</th>
             <th className="px-2 py-1.5 text-center font-medium text-text-muted">Cfg</th>
             <th className="px-2 py-1.5 text-right font-medium text-text-muted">Source</th>
@@ -215,7 +230,10 @@ const PricePreviewTable = ({
         <tbody className="divide-y divide-border-muted">
           {filteredItems.slice(0, 100).map((item, idx) => (
             <tr key={idx} className="hover:bg-surface-secondary/50">
-              <td className="max-w-48 truncate px-2 py-1 text-text-primary">
+              <td
+                className="truncate px-2 py-1 text-text-primary"
+                style={{ width: productColWidth, minWidth: productColWidth, maxWidth: productColWidth }}
+              >
                 {String(item.productName ?? '—')}
               </td>
               <td className="px-2 py-1 text-text-muted">{String(item.vintage ?? '—')}</td>
