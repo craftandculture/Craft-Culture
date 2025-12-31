@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react';
 
 import Input from '@/app/_ui/components/Input/Input';
-import Label from '@/app/_ui/components/Label/Label';
 import Select from '@/app/_ui/components/Select/Select';
 import SelectContent from '@/app/_ui/components/Select/SelectContent';
 import SelectItem from '@/app/_ui/components/Select/SelectItem';
@@ -60,6 +59,8 @@ const VariablesPanel = ({ variables, onChange, isUpdating }: VariablesPanelProps
     onChange(updated);
   };
 
+  const labelClasses = 'text-xs font-medium text-text-muted';
+
   return (
     <div className="space-y-6">
       {/* Currency & Exchange Rates */}
@@ -69,9 +70,9 @@ const VariablesPanel = ({ variables, onChange, isUpdating }: VariablesPanelProps
         </Typography>
         <div className="space-y-3">
           <div>
-            <Label htmlFor="inputCurrency" className="text-xs">
+            <label htmlFor="inputCurrency" className={labelClasses}>
               Input Currency
-            </Label>
+            </label>
             <Select
               value={localVariables.inputCurrency}
               onValueChange={(v) =>
@@ -91,9 +92,9 @@ const VariablesPanel = ({ variables, onChange, isUpdating }: VariablesPanelProps
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <Label htmlFor="gbpToUsdRate" className="text-xs">
+              <label htmlFor="gbpToUsdRate" className={labelClasses}>
                 GBP → USD
-              </Label>
+              </label>
               <Input
                 id="gbpToUsdRate"
                 type="number"
@@ -106,9 +107,9 @@ const VariablesPanel = ({ variables, onChange, isUpdating }: VariablesPanelProps
               />
             </div>
             <div>
-              <Label htmlFor="eurToUsdRate" className="text-xs">
+              <label htmlFor="eurToUsdRate" className={labelClasses}>
                 EUR → USD
-              </Label>
+              </label>
               <Input
                 id="eurToUsdRate"
                 type="number"
@@ -122,9 +123,9 @@ const VariablesPanel = ({ variables, onChange, isUpdating }: VariablesPanelProps
             </div>
           </div>
           <div>
-            <Label htmlFor="usdToAedRate" className="text-xs">
+            <label htmlFor="usdToAedRate" className={labelClasses}>
               USD → AED
-            </Label>
+            </label>
             <Input
               id="usdToAedRate"
               type="number"
@@ -146,9 +147,9 @@ const VariablesPanel = ({ variables, onChange, isUpdating }: VariablesPanelProps
         </Typography>
         <div className="space-y-3">
           <div>
-            <Label htmlFor="marginType" className="text-xs">
+            <label htmlFor="marginType" className={labelClasses}>
               Margin Type
-            </Label>
+            </label>
             <Select
               value={localVariables.marginType}
               onValueChange={(v) =>
@@ -167,9 +168,9 @@ const VariablesPanel = ({ variables, onChange, isUpdating }: VariablesPanelProps
           </div>
           {localVariables.marginType === 'percentage' ? (
             <div>
-              <Label htmlFor="marginPercent" className="text-xs">
+              <label htmlFor="marginPercent" className={labelClasses}>
                 Margin % (price &divide; {(1 - localVariables.marginPercent / 100).toFixed(2)})
-              </Label>
+              </label>
               <Input
                 id="marginPercent"
                 type="number"
@@ -185,9 +186,9 @@ const VariablesPanel = ({ variables, onChange, isUpdating }: VariablesPanelProps
             </div>
           ) : (
             <div>
-              <Label htmlFor="marginAbsolute" className="text-xs">
+              <label htmlFor="marginAbsolute" className={labelClasses}>
                 Margin ($ per case)
-              </Label>
+              </label>
               <Input
                 id="marginAbsolute"
                 type="number"
@@ -211,9 +212,9 @@ const VariablesPanel = ({ variables, onChange, isUpdating }: VariablesPanelProps
         </Typography>
         <div className="space-y-3">
           <div>
-            <Label htmlFor="shippingMethod" className="text-xs">
+            <label htmlFor="shippingMethod" className={labelClasses}>
               Shipping Method
-            </Label>
+            </label>
             <Select
               value={localVariables.shippingMethod}
               onValueChange={(v) =>
@@ -232,9 +233,9 @@ const VariablesPanel = ({ variables, onChange, isUpdating }: VariablesPanelProps
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <Label htmlFor="airFreightPerCase" className="text-xs">
+              <label htmlFor="airFreightPerCase" className={labelClasses}>
                 Air ($/case)
-              </Label>
+              </label>
               <Input
                 id="airFreightPerCase"
                 type="number"
@@ -248,9 +249,9 @@ const VariablesPanel = ({ variables, onChange, isUpdating }: VariablesPanelProps
               />
             </div>
             <div>
-              <Label htmlFor="seaFreightPerCase" className="text-xs">
+              <label htmlFor="seaFreightPerCase" className={labelClasses}>
                 Sea ($/case)
-              </Label>
+              </label>
               <Input
                 id="seaFreightPerCase"
                 type="number"
@@ -274,9 +275,9 @@ const VariablesPanel = ({ variables, onChange, isUpdating }: VariablesPanelProps
         </Typography>
         <div className="space-y-3">
           <div>
-            <Label htmlFor="salesAdvisorMarginPercent" className="text-xs">
+            <label htmlFor="salesAdvisorMarginPercent" className={labelClasses}>
               Sales Advisor Margin %
-            </Label>
+            </label>
             <Input
               id="salesAdvisorMarginPercent"
               type="number"
@@ -294,9 +295,9 @@ const VariablesPanel = ({ variables, onChange, isUpdating }: VariablesPanelProps
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <Label htmlFor="importDutyPercent" className="text-xs">
+              <label htmlFor="importDutyPercent" className={labelClasses}>
                 Import Duty %
-              </Label>
+              </label>
               <Input
                 id="importDutyPercent"
                 type="number"
@@ -311,9 +312,9 @@ const VariablesPanel = ({ variables, onChange, isUpdating }: VariablesPanelProps
               />
             </div>
             <div>
-              <Label htmlFor="localCosts" className="text-xs">
+              <label htmlFor="localCosts" className={labelClasses}>
                 Local Costs ($)
-              </Label>
+              </label>
               <Input
                 id="localCosts"
                 type="number"
@@ -328,9 +329,9 @@ const VariablesPanel = ({ variables, onChange, isUpdating }: VariablesPanelProps
             </div>
           </div>
           <div>
-            <Label htmlFor="vatPercent" className="text-xs">
+            <label htmlFor="vatPercent" className={labelClasses}>
               VAT %
-            </Label>
+            </label>
             <Input
               id="vatPercent"
               type="number"

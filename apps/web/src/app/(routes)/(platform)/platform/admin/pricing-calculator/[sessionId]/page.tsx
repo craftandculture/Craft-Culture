@@ -1,7 +1,5 @@
-import { redirect } from 'next/navigation';
-
 import SessionDetailView from '@/app/_pricingCalculator/components/SessionDetailView';
-import { serverClient } from '@/lib/trpc/server';
+import getSessionOrRedirect from '@/app/_pricingCalculator/data/getSessionOrRedirect';
 
 interface PageProps {
   params: Promise<{
@@ -17,11 +15,7 @@ interface PageProps {
 const PricingSessionPage = async ({ params }: PageProps) => {
   const { sessionId } = await params;
 
-  const session = await serverClient.pricingCalc.session.getOne({ id: sessionId }).catch(() => null);
-
-  if (!session) {
-    redirect('/platform/admin/pricing-calculator');
-  }
+  const session = await getSessionOrRedirect(sessionId);
 
   return (
     <main className="container mx-auto max-w-6xl px-4 py-8 sm:px-6">
