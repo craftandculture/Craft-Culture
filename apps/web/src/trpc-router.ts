@@ -3,6 +3,7 @@ import usersRouter from '@/app/_auth/router';
 import commissionsRouter from '@/app/_commissions/router';
 import notificationsRouter from '@/app/_notifications/router';
 import partnersRouter from '@/app/_partners/router';
+import pricingCalcRouter from '@/app/_pricingCalculator/router';
 import pricingModelsRouter from '@/app/_pricingModels/router';
 import quotesRouter from '@/app/_quotes/router';
 import settingsRouter from '@/app/_settings/router';
@@ -18,6 +19,7 @@ export const appRouter = createTRPCRouter({
   users: usersRouter,
   notifications: notificationsRouter,
   partners: partnersRouter,
+  pricingCalc: pricingCalcRouter,
   products: productsRouter,
   quotes: quotesRouter,
   pricingModels: pricingModelsRouter,
