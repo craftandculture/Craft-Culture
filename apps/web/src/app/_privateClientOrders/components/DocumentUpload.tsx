@@ -59,7 +59,7 @@ const DocumentUpload = ({
   const trpcClient = useTRPCClient();
   const queryClient = useQueryClient();
 
-  const [selectedType, setSelectedType] = useState<DocumentType>(allowedTypes[0]);
+  const [selectedType, setSelectedType] = useState<DocumentType>(allowedTypes[0] ?? 'partner_invoice');
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
 
