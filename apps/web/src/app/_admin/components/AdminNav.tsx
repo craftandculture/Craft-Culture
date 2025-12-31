@@ -4,6 +4,7 @@ import {
   IconActivity,
   IconBuildingStore,
   IconCoin,
+  IconPackage,
   IconSettings,
   IconTable,
   IconUsers,
@@ -33,6 +34,12 @@ const navItems: NavItem[] = [
     href: '/platform/admin/partners',
     icon: IconBuildingStore,
     description: 'API access',
+  },
+  {
+    label: 'Private Orders',
+    href: '/platform/admin/private-orders',
+    icon: IconPackage,
+    description: 'Partner orders',
   },
   {
     label: 'Commissions',
