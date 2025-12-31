@@ -2,7 +2,7 @@ import Logo from './Logo';
 import PocketCellarLogo from './PocketCellarLogo';
 
 export interface BrandedLogoProps {
-  customerType: 'b2b' | 'b2c';
+  customerType: 'b2b' | 'b2c' | 'private_clients';
   className?: string;
   height?: number;
 }

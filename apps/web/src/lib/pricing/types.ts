@@ -50,4 +50,4 @@ export interface PricingBreakdown {
   priceToClientAed: number;
 }
 
-export type UserType = 'b2b' | 'b2c';
+export type UserType = 'b2b' | 'b2c' | 'private_clients';
