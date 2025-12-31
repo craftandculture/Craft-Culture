@@ -39,8 +39,8 @@ const documentTypeLabels: Record<DocumentType, string> = {
   payment_proof: 'Payment Proof',
 };
 
-const extractionStatusConfig: Record<string, { label: string; colorRole: 'default' | 'warning' | 'success' | 'danger' }> = {
-  pending: { label: 'Pending', colorRole: 'default' },
+const extractionStatusConfig: Record<string, { label: string; colorRole: 'muted' | 'warning' | 'success' | 'danger' }> = {
+  pending: { label: 'Pending', colorRole: 'muted' },
   processing: { label: 'Processing', colorRole: 'warning' },
   completed: { label: 'Extracted', colorRole: 'success' },
   failed: { label: 'Failed', colorRole: 'danger' },
@@ -259,7 +259,7 @@ const DocumentUpload = ({
                     <Typography variant="bodySm" className="truncate font-medium">
                       {doc.fileName}
                     </Typography>
-                    <Badge variant="muted" size="sm">
+                    <Badge colorRole="muted" size="sm">
                       {documentTypeLabels[doc.documentType as DocumentType]}
                     </Badge>
                   </div>
@@ -269,9 +269,8 @@ const DocumentUpload = ({
                     </Typography>
                     {doc.extractionStatus && (
                       <Badge
-                        variant="outline"
                         size="sm"
-                        colorRole={extractionStatusConfig[doc.extractionStatus]?.colorRole || 'default'}
+                        colorRole={extractionStatusConfig[doc.extractionStatus]?.colorRole || 'muted'}
                       >
                         {extractionStatusConfig[doc.extractionStatus]?.label || doc.extractionStatus}
                       </Badge>
