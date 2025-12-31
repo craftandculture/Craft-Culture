@@ -165,7 +165,7 @@ const ColumnMappingStep = ({
               Source Price Type <span className="text-red-500">*</span>
             </Typography>
             <Select value={sourcePriceType} onValueChange={(v) => setSourcePriceType(v as 'bottle' | 'case')}>
-              <SelectTrigger className="flex h-9 w-full items-center justify-between rounded-lg border border-b-2 border-border-primary bg-fill-primary px-2.5 text-sm font-medium text-text-primary hover:border-border-primary-hover focus:outline-none focus:ring-2 focus:ring-border-primary">
+              <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -187,7 +187,7 @@ const ColumnMappingStep = ({
               onValueChange={(v) => setSourceCurrency(v as 'GBP' | 'EUR' | 'USD')}
               disabled={hasCurrencyColumn}
             >
-              <SelectTrigger className="flex h-9 w-full items-center justify-between rounded-lg border border-b-2 border-border-primary bg-fill-primary px-2.5 text-sm font-medium text-text-primary hover:border-border-primary-hover focus:outline-none focus:ring-2 focus:ring-border-primary disabled:cursor-not-allowed disabled:opacity-50">
+              <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
