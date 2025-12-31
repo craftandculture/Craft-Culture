@@ -64,13 +64,13 @@ const VariablesPanel = ({ variables, onChange, isUpdating }: VariablesPanelProps
   const labelClasses = 'text-xs font-medium text-text-muted';
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-2">
       {/* Currency & Exchange Rates */}
-      <div className="rounded-lg border border-border-muted/50 p-3">
-        <Typography variant="bodyXs" colorRole="muted" className="mb-3 uppercase tracking-wide">
+      <div className="rounded-lg border border-border-muted/50 p-2">
+        <Typography variant="bodyXs" colorRole="muted" className="mb-2 uppercase tracking-wide">
           Currency & Exchange Rates
         </Typography>
-        <div className="space-y-3">
+        <div className="space-y-2">
           <div>
             <label htmlFor="inputCurrency" className={labelClasses}>
               Input Currency
@@ -175,11 +175,11 @@ const VariablesPanel = ({ variables, onChange, isUpdating }: VariablesPanelProps
       </div>
 
       {/* Margin Settings */}
-      <div className="rounded-lg border border-border-muted/50 p-3">
-        <Typography variant="bodyXs" colorRole="muted" className="mb-3 uppercase tracking-wide">
+      <div className="rounded-lg border border-border-muted/50 p-2">
+        <Typography variant="bodyXs" colorRole="muted" className="mb-2 uppercase tracking-wide">
           C&C Margin
         </Typography>
-        <div className="space-y-3">
+        <div className="space-y-2">
           <div>
             <label htmlFor="marginType" className={labelClasses}>
               Margin Type
@@ -240,8 +240,8 @@ const VariablesPanel = ({ variables, onChange, isUpdating }: VariablesPanelProps
       </div>
 
       {/* Freight */}
-      <div className="rounded-lg border border-border-muted/50 p-3">
-        <Typography variant="bodyXs" colorRole="muted" className="mb-3 uppercase tracking-wide">
+      <div className="rounded-lg border border-border-muted/50 p-2">
+        <Typography variant="bodyXs" colorRole="muted" className="mb-2 uppercase tracking-wide">
           Freight
         </Typography>
         <div>
@@ -266,11 +266,11 @@ const VariablesPanel = ({ variables, onChange, isUpdating }: VariablesPanelProps
       </div>
 
       {/* D2C Settings */}
-      <div className="rounded-lg border border-border-muted/50 bg-surface-secondary/30 p-3">
-        <Typography variant="bodyXs" colorRole="muted" className="mb-3 uppercase tracking-wide">
+      <div className="rounded-lg border border-border-muted/50 bg-surface-secondary/30 p-2">
+        <Typography variant="bodyXs" colorRole="muted" className="mb-2 uppercase tracking-wide">
           D2C Settings
         </Typography>
-        <div className="space-y-3">
+        <div className="space-y-2">
           <div>
             <label htmlFor="salesAdvisorMarginPercent" className={labelClasses}>
               Sales Advisor Margin %
