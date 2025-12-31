@@ -48,34 +48,43 @@ const PlatformLayout = async ({ children }: React.PropsWithChildren) => {
               <BrandedLogo customerType={user.customerType} height={144} />
             </Link>
             <nav className="hidden items-center gap-1 md:flex">
-              <Link
-                href="/platform/quotes"
-                className="text-text-primary hover:bg-fill-muted rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] hover:shadow-sm active:scale-[0.98]"
-              >
-                Create Quote
-              </Link>
-              <Link
-                href="/platform/my-quotes"
-                className="text-text-primary hover:bg-fill-muted rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] hover:shadow-sm active:scale-[0.98]"
-              >
-                My Quotes
-              </Link>
-              {user.role === 'admin' && (
+              {/* Quotes section */}
+              <div className="flex items-center gap-1 rounded-lg border border-border-muted/50 px-1 py-1">
+                <span className="px-2 text-[10px] font-medium uppercase tracking-wider text-text-muted">
+                  Quotes
+                </span>
                 <Link
-                  href="/platform/admin/quote-approvals"
-                  className="text-text-primary hover:bg-fill-muted rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] hover:shadow-sm active:scale-[0.98]"
+                  href="/platform/quotes"
+                  className="text-text-primary hover:bg-fill-muted rounded-md px-3 py-1.5 text-sm font-medium transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] hover:shadow-sm active:scale-[0.98]"
                 >
-                  Quote Approvals
+                  Create
                 </Link>
-              )}
-              {/* Tools section - visually separated */}
+                <Link
+                  href="/platform/my-quotes"
+                  className="text-text-primary hover:bg-fill-muted rounded-md px-3 py-1.5 text-sm font-medium transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] hover:shadow-sm active:scale-[0.98]"
+                >
+                  My Quotes
+                </Link>
+                {user.role === 'admin' && (
+                  <Link
+                    href="/platform/admin/quote-approvals"
+                    className="text-text-primary hover:bg-fill-muted rounded-md px-3 py-1.5 text-sm font-medium transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] hover:shadow-sm active:scale-[0.98]"
+                  >
+                    Approvals
+                  </Link>
+                )}
+              </div>
+              {/* Pricing section - admin only */}
               {user.role === 'admin' && (
-                <div className="ml-2 flex items-center gap-1 rounded-lg bg-surface-secondary/60 px-1 py-1">
+                <div className="ml-2 flex items-center gap-1 rounded-lg border border-border-muted/50 bg-surface-secondary/40 px-1 py-1">
+                  <span className="px-2 text-[10px] font-medium uppercase tracking-wider text-text-muted">
+                    Pricing
+                  </span>
                   <Link
                     href="/platform/admin/pricing-calculator"
                     className="text-text-primary hover:bg-fill-muted rounded-md px-3 py-1.5 text-sm font-medium transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] hover:shadow-sm active:scale-[0.98]"
                   >
-                    Pricing Calc
+                    Calculator
                   </Link>
                 </div>
               )}
