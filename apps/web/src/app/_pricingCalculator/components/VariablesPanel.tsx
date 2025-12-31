@@ -16,7 +16,7 @@ import {
 } from '../schemas/calculationVariablesSchema';
 
 interface VariablesPanelProps {
-  variables: CalculationVariables | null;
+  variables: Partial<CalculationVariables> | null;
   onChange: (variables: CalculationVariables) => void;
   isUpdating?: boolean;
 }
@@ -27,14 +27,16 @@ interface VariablesPanelProps {
  * Includes currency rates, margin settings, freight costs, and D2C parameters
  */
 const VariablesPanel = ({ variables, onChange, isUpdating }: VariablesPanelProps) => {
-  const [localVariables, setLocalVariables] = useState<CalculationVariables>(
-    variables ?? defaultCalculationVariables,
-  );
+  // Merge with defaults to ensure all fields have values
+  const [localVariables, setLocalVariables] = useState<CalculationVariables>({
+    ...defaultCalculationVariables,
+    ...variables,
+  });
 
   // Sync with external changes
   useEffect(() => {
     if (variables) {
-      setLocalVariables(variables);
+      setLocalVariables({ ...defaultCalculationVariables, ...variables });
     }
   }, [variables]);
 
@@ -135,7 +137,7 @@ const VariablesPanel = ({ variables, onChange, isUpdating }: VariablesPanelProps
               Default Case Config
             </label>
             <Select
-              value={String(localVariables.defaultCaseConfig)}
+              value={String(localVariables.defaultCaseConfig ?? 6)}
               onValueChange={(v) => handleSelectChange('defaultCaseConfig', parseInt(v, 10))}
               disabled={isUpdating}
             >
