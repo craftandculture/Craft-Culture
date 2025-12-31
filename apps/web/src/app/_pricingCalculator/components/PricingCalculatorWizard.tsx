@@ -68,8 +68,7 @@ const PricingCalculatorWizard = () => {
 
   const handleMappingComplete = (mapping: Record<string, string>) => {
     setColumnMapping(mapping);
-    // For now, create the session and redirect
-    // Later phases will add variables and preview steps
+    // Create the session with column mapping and redirect to detail view
     createSessionMutation.mutate(
       {
         name: sessionName || 'Untitled Session',
@@ -77,6 +76,7 @@ const PricingCalculatorWizard = () => {
         sourceFileName: uploadData?.fileName,
         rawData: uploadData?.rows,
         detectedColumns: uploadData?.headers,
+        columnMapping: mapping,
       },
       {
         onSuccess: (session) => {

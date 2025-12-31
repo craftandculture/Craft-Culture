@@ -28,6 +28,8 @@ const sessionCreate = adminProcedure
         googleSheetId: input.googleSheetId,
         rawData: input.rawData,
         detectedColumns: input.detectedColumns,
+        columnMapping: input.columnMapping,
+        status: input.columnMapping ? 'mapped' : 'draft',
         createdBy: user.id,
       })
       .returning();

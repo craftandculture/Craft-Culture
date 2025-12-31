@@ -10,6 +10,7 @@ const createSessionSchema = z.object({
   googleSheetId: z.string().optional(),
   rawData: z.array(z.record(z.string(), z.unknown())).optional(),
   detectedColumns: z.array(z.string()).optional(),
+  columnMapping: z.record(z.string(), z.string()).optional(),
 });
 
 export default createSessionSchema;
