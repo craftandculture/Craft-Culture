@@ -605,3 +605,181 @@ export const notifications = pgTable(
 ).enableRLS();
 
 export type Notification = typeof notifications.$inferSelect;
+
+// ============================================================================
+// Pricing Calculator
+// ============================================================================
+
+export const pricingSessionStatus = pgEnum('pricing_session_status', [
+  'draft',
+  'mapped',
+  'calculated',
+  'exported',
+]);
+
+/**
+ * LWIN reference database for wine identification
+ * Used for optional product lookup and enrichment in pricing calculator
+ */
+export const lwinReference = pgTable(
+  'lwin_reference',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    lwin: text('lwin').notNull().unique(),
+    displayName: text('display_name'),
+    producerTitle: text('producer_title'),
+    producerName: text('producer_name'),
+    wine: text('wine'),
+    country: text('country'),
+    region: text('region'),
+    subRegion: text('sub_region'),
+    colour: text('colour'),
+    type: text('type'),
+    subType: text('sub_type'),
+    vintageConfig: text('vintage_config'),
+    ...timestamps,
+  },
+  (table) => [
+    index('lwin_reference_lwin_idx').on(table.lwin),
+    index('lwin_reference_display_name_trigram_idx').using(
+      'gin',
+      sql`${table.displayName} gin_trgm_ops`,
+    ),
+    index('lwin_reference_wine_trigram_idx').using(
+      'gin',
+      sql`${table.wine} gin_trgm_ops`,
+    ),
+    index('lwin_reference_producer_trigram_idx').using(
+      'gin',
+      sql`${table.producerName} gin_trgm_ops`,
+    ),
+  ],
+).enableRLS();
+
+export type LwinReference = typeof lwinReference.$inferSelect;
+
+/**
+ * Pricing calculator sessions
+ * Each session represents a supplier sheet being processed
+ */
+export const pricingSessions = pgTable(
+  'pricing_sessions',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    name: text('name').notNull(),
+    status: pricingSessionStatus('status').notNull().default('draft'),
+
+    // Source
+    sourceType: text('source_type').notNull(), // 'upload' | 'google_sheet'
+    sourceFileName: text('source_file_name'),
+    googleSheetId: text('google_sheet_id'),
+    rawData: jsonb('raw_data'), // Original parsed rows
+    detectedColumns: jsonb('detected_columns'), // Column headers found
+
+    // Column mapping
+    columnMapping: jsonb('column_mapping'),
+
+    // Configuration
+    calculationVariables: jsonb('calculation_variables').$type<{
+      // Currency
+      inputCurrency: 'GBP' | 'EUR' | 'USD';
+      gbpToUsdRate: number;
+      eurToUsdRate: number;
+      usdToAedRate: number;
+
+      // Margin (applied BEFORE freight)
+      marginType: 'percentage' | 'absolute';
+      marginPercent: number;
+      marginAbsolute: number;
+
+      // Freight
+      shippingMethod: 'air' | 'sea';
+      airFreightPerCase: number;
+      seaFreightPerCase: number;
+
+      // D2C only
+      salesAdvisorMarginPercent: number;
+      importDutyPercent: number;
+      localCosts: number;
+      vatPercent: number;
+    }>(),
+
+    // Results
+    itemCount: integer('item_count').default(0),
+    errors: jsonb('errors'),
+    warnings: jsonb('warnings'),
+
+    // Audit
+    createdBy: uuid('created_by')
+      .references(() => users.id, { onDelete: 'cascade' })
+      .notNull(),
+    ...timestamps,
+  },
+  (table) => [
+    index('pricing_sessions_created_by_idx').on(table.createdBy),
+    index('pricing_sessions_status_idx').on(table.status),
+    index('pricing_sessions_created_at_idx').on(table.createdAt),
+  ],
+).enableRLS();
+
+export type PricingSession = typeof pricingSessions.$inferSelect;
+
+/**
+ * Individual pricing items within a session
+ * Each row represents a wine product being priced
+ */
+export const pricingItems = pgTable(
+  'pricing_items',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    sessionId: uuid('session_id')
+      .references(() => pricingSessions.id, { onDelete: 'cascade' })
+      .notNull(),
+
+    // Product identification (LWIN optional)
+    lwin: text('lwin'),
+    productName: text('product_name').notNull(),
+    vintage: text('vintage'),
+    region: text('region'),
+    producer: text('producer'),
+    bottleSize: text('bottle_size'),
+    caseConfig: integer('case_config'),
+
+    // Input pricing
+    ukInBondPrice: doublePrecision('uk_in_bond_price').notNull(),
+    inputCurrency: text('input_currency').notNull(), // GBP, EUR, USD
+
+    // B2B Calculated pricing (In-Bond UAE)
+    inBondCaseUsd: doublePrecision('in_bond_case_usd'),
+    inBondBottleUsd: doublePrecision('in_bond_bottle_usd'),
+    inBondCaseAed: doublePrecision('in_bond_case_aed'),
+    inBondBottleAed: doublePrecision('in_bond_bottle_aed'),
+
+    // D2C Calculated pricing (Delivered)
+    deliveredCaseUsd: doublePrecision('delivered_case_usd'),
+    deliveredBottleUsd: doublePrecision('delivered_bottle_usd'),
+    deliveredCaseAed: doublePrecision('delivered_case_aed'),
+    deliveredBottleAed: doublePrecision('delivered_bottle_aed'),
+
+    // Wine-Searcher market data (optional)
+    wsAvgPrice: doublePrecision('ws_avg_price'),
+    wsMinPrice: doublePrecision('ws_min_price'),
+    wsMaxPrice: doublePrecision('ws_max_price'),
+    wsMerchantCount: integer('ws_merchant_count'),
+    wsCriticScore: integer('ws_critic_score'),
+    wsLink: text('ws_link'),
+    wsFetchedAt: timestamp('ws_fetched_at', { mode: 'date' }),
+
+    // Status
+    hasWarning: boolean('has_warning').default(false),
+    warningMessage: text('warning_message'),
+
+    ...timestamps,
+  },
+  (table) => [
+    index('pricing_items_session_id_idx').on(table.sessionId),
+    index('pricing_items_lwin_idx').on(table.lwin),
+  ],
+).enableRLS();
+
+export type PricingItem = typeof pricingItems.$inferSelect;

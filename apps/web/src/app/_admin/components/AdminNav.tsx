@@ -3,6 +3,7 @@
 import {
   IconActivity,
   IconBuildingStore,
+  IconCalculator,
   IconCoin,
   IconFileText,
   IconSettings,
@@ -58,6 +59,12 @@ const navItems: NavItem[] = [
     href: '/platform/admin/pricing-models',
     icon: IconTable,
     description: 'Manage pricing formulas',
+  },
+  {
+    label: 'Pricing Calc',
+    href: '/platform/admin/pricing-calculator',
+    icon: IconCalculator,
+    description: 'Calculate supplier prices',
   },
   {
     label: 'Settings',
