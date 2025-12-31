@@ -386,18 +386,6 @@ const AdminPrivateOrderDetailPage = () => {
               </Card>
             )}
 
-            {order.adminNotes && (
-              <Card>
-                <CardContent className="p-6">
-                  <Typography variant="headingSm" className="mb-4">
-                    Admin Notes
-                  </Typography>
-                  <Typography variant="bodySm" colorRole="muted">
-                    {order.adminNotes}
-                  </Typography>
-                </CardContent>
-              </Card>
-            )}
           </div>
         </div>
       </div>
