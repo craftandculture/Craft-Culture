@@ -853,10 +853,10 @@ export const privateClientOrders = pgTable(
     id: uuid('id').primaryKey().defaultRandom(),
     orderNumber: text('order_number').notNull().unique(),
 
-    // Partner who created the order (wine partner)
-    partnerId: uuid('partner_id')
-      .references(() => partners.id, { onDelete: 'restrict' })
-      .notNull(),
+    // Partner who created the order (wine partner) - nullable for admin-created orders
+    partnerId: uuid('partner_id').references(() => partners.id, {
+      onDelete: 'restrict',
+    }),
 
     // Assigned distributor (mainland partner like City Drinks)
     distributorId: uuid('distributor_id').references(() => partners.id, {

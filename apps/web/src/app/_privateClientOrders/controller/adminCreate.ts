@@ -15,7 +15,7 @@ import generateOrderNumber from '../utils/generateOrderNumber';
 const adminCreate = adminProcedure
   .input(
     z.object({
-      partnerId: z.string().uuid().optional(),
+      partnerId: z.string().uuid({ message: 'Partner is required' }),
       clientId: z.string().uuid().optional(),
       clientName: z.string().min(1, 'Client name is required'),
       clientEmail: z.string().email().optional().or(z.literal('')),
@@ -50,7 +50,7 @@ const adminCreate = adminProcedure
       .insert(privateClientOrders)
       .values({
         orderNumber,
-        partnerId: input.partnerId || null,
+        partnerId: input.partnerId,
         clientId: input.clientId,
         clientName: input.clientName,
         clientEmail: input.clientEmail || null,
