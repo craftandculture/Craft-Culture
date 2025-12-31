@@ -26,7 +26,7 @@ const ordersGetOne = winePartnerProcedure
         order: privateClientOrders,
         distributor: {
           id: partners.id,
-          name: partners.name,
+          businessName: partners.businessName,
         },
         client: {
           id: privateClientContacts.id,
