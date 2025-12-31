@@ -29,9 +29,9 @@ interface FieldMapping {
 const FIELD_MAPPINGS: FieldMapping[] = [
   { id: 'productName', label: 'Product Name', required: true, description: 'Wine name or description' },
   { id: 'vintage', label: 'Vintage', required: false, description: 'Year of production' },
-  { id: 'ukInBondPrice', label: 'UK In-Bond Price', required: true, description: 'Price per case (UK in-bond)' },
-  { id: 'currency', label: 'Currency', required: false, description: 'GBP, EUR, or USD' },
-  { id: 'caseConfig', label: 'Case Size', required: false, description: 'Bottles per case (e.g., 6, 12)' },
+  { id: 'ukInBondPrice', label: 'Source Price', required: true, description: 'Price per case (in source currency)' },
+  { id: 'currency', label: 'Currency', required: false, description: 'If sheet has currency column' },
+  { id: 'caseConfig', label: 'Case Config', required: false, description: 'Bottles per case (e.g., 6, 12, 6x75cl)' },
   { id: 'bottleSize', label: 'Bottle Size', required: false, description: 'ml or cl (e.g., 750ml)' },
   { id: 'lwin', label: 'LWIN', required: false, description: 'Liv-ex Wine ID (optional)' },
   { id: 'producer', label: 'Producer', required: false, description: 'Winery or producer name' },
@@ -71,7 +71,16 @@ const ColumnMappingStep = ({
       if (lower.includes('currency') || lower === 'ccy') {
         if (!autoMapping.currency) autoMapping.currency = header;
       }
-      if (lower.includes('case') && (lower.includes('size') || lower.includes('qty') || lower.includes('config'))) {
+      // Case config - match many common patterns
+      if (
+        (lower.includes('case') && (lower.includes('size') || lower.includes('qty') || lower.includes('config'))) ||
+        lower.includes('pack') ||
+        lower.includes('format') ||
+        lower === 'qty' ||
+        lower === 'quantity' ||
+        lower.includes('btl') ||
+        lower.includes('bottles')
+      ) {
         if (!autoMapping.caseConfig) autoMapping.caseConfig = header;
       }
       if (lower.includes('bottle') && lower.includes('size')) {
