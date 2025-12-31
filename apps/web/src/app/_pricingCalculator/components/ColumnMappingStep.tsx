@@ -177,9 +177,9 @@ const ColumnMappingStep = ({
           <table className="w-full text-sm">
             <thead className="bg-surface-secondary">
               <tr>
-                {headers.slice(0, 6).map((header) => (
-                  <th key={header} className="px-3 py-2 text-left font-medium text-text-muted">
-                    {header}
+                {headers.slice(0, 6).map((header, colIdx) => (
+                  <th key={colIdx} className="px-3 py-2 text-left font-medium text-text-muted">
+                    {header || `Column ${colIdx + 1}`}
                   </th>
                 ))}
                 {headers.length > 6 && (
@@ -190,10 +190,10 @@ const ColumnMappingStep = ({
               </tr>
             </thead>
             <tbody className="divide-y divide-border-muted">
-              {sampleRows.slice(0, 5).map((row, idx) => (
-                <tr key={idx}>
-                  {headers.slice(0, 6).map((header) => (
-                    <td key={header} className="px-3 py-2 text-text-primary">
+              {sampleRows.slice(0, 5).map((row, rowIdx) => (
+                <tr key={rowIdx}>
+                  {headers.slice(0, 6).map((header, colIdx) => (
+                    <td key={colIdx} className="px-3 py-2 text-text-primary">
                       {String(row[header] ?? '—').slice(0, 30)}
                     </td>
                   ))}
