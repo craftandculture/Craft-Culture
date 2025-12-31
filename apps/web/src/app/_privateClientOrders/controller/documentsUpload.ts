@@ -1,9 +1,8 @@
 import { TRPCError } from '@trpc/server';
 import { put } from '@vercel/blob';
-import { eq } from 'drizzle-orm';
 
 import db from '@/database/client';
-import { privateClientOrderDocuments, privateClientOrders } from '@/database/schema';
+import { privateClientOrderDocuments } from '@/database/schema';
 import { protectedProcedure } from '@/lib/trpc/procedures';
 
 import uploadDocumentSchema from '../schemas/uploadDocumentSchema';
@@ -29,7 +28,7 @@ const documentsUpload = protectedProcedure.input(uploadDocumentSchema).mutation(
 
   // Verify order exists and user has access
   const order = await db.query.privateClientOrders.findFirst({
-    where: eq(privateClientOrders.id, orderId),
+    where: { id: orderId },
   });
 
   if (!order) {
