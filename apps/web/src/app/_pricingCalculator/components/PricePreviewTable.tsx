@@ -94,6 +94,18 @@ const PricePreviewTable = ({ items, rawData, columnMapping, priceType }: PricePr
     );
   }
 
+  // Format source price with currency
+  const formatSourcePrice = (price: unknown, currency: unknown) => {
+    if (typeof price !== 'number' || isNaN(price)) return '—';
+    const currencyCode = String(currency || 'GBP');
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: currencyCode === 'GBP' ? 'GBP' : currencyCode === 'EUR' ? 'EUR' : 'USD',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(price);
+  };
+
   // Show calculated prices
   if (priceType === 'b2b') {
     return (
@@ -103,6 +115,8 @@ const PricePreviewTable = ({ items, rawData, columnMapping, priceType }: PricePr
             <tr>
               <th className="px-3 py-2 text-left font-medium text-text-muted">Product</th>
               <th className="px-3 py-2 text-left font-medium text-text-muted">Vintage</th>
+              <th className="px-3 py-2 text-center font-medium text-text-muted">Cfg</th>
+              <th className="px-3 py-2 text-right font-medium text-text-muted">Source</th>
               <th className="px-3 py-2 text-right font-medium text-text-muted">$/Case</th>
               <th className="px-3 py-2 text-right font-medium text-text-muted">$/Btl</th>
               <th className="px-3 py-2 text-right font-medium text-text-muted">AED/Case</th>
@@ -116,6 +130,12 @@ const PricePreviewTable = ({ items, rawData, columnMapping, priceType }: PricePr
                   {String(item.productName ?? '—')}
                 </td>
                 <td className="px-3 py-2 text-text-muted">{String(item.vintage ?? '—')}</td>
+                <td className="px-3 py-2 text-center text-text-muted">
+                  {String(item.caseConfig ?? '—')}
+                </td>
+                <td className="px-3 py-2 text-right font-mono text-text-muted">
+                  {formatSourcePrice(item.ukInBondPrice, item.inputCurrency)}
+                </td>
                 <td className="px-3 py-2 text-right font-mono text-text-primary">
                   {formatPrice(item.inBondCaseUsd)}
                 </td>
@@ -151,6 +171,8 @@ const PricePreviewTable = ({ items, rawData, columnMapping, priceType }: PricePr
           <tr>
             <th className="px-3 py-2 text-left font-medium text-text-muted">Product</th>
             <th className="px-3 py-2 text-left font-medium text-text-muted">Vintage</th>
+            <th className="px-3 py-2 text-center font-medium text-text-muted">Cfg</th>
+            <th className="px-3 py-2 text-right font-medium text-text-muted">Source</th>
             <th className="px-3 py-2 text-right font-medium text-text-muted">$/Case</th>
             <th className="px-3 py-2 text-right font-medium text-text-muted">$/Btl</th>
             <th className="px-3 py-2 text-right font-medium text-text-muted">AED/Case</th>
@@ -162,6 +184,12 @@ const PricePreviewTable = ({ items, rawData, columnMapping, priceType }: PricePr
             <tr key={idx} className="hover:bg-surface-secondary/50">
               <td className="px-3 py-2 text-text-primary">{String(item.productName ?? '—')}</td>
               <td className="px-3 py-2 text-text-muted">{String(item.vintage ?? '—')}</td>
+              <td className="px-3 py-2 text-center text-text-muted">
+                {String(item.caseConfig ?? '—')}
+              </td>
+              <td className="px-3 py-2 text-right font-mono text-text-muted">
+                {formatSourcePrice(item.ukInBondPrice, item.inputCurrency)}
+              </td>
               <td className="px-3 py-2 text-right font-mono text-text-primary">
                 {formatPrice(item.deliveredCaseUsd)}
               </td>
