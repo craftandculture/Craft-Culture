@@ -14,13 +14,11 @@ import CardContent from '@/app/_ui/components/Card/CardContent';
 import Divider from '@/app/_ui/components/Divider/Divider';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Input from '@/app/_ui/components/Input/Input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/app/_ui/components/Select/Select';
+import Select from '@/app/_ui/components/Select/Select';
+import SelectContent from '@/app/_ui/components/Select/SelectContent';
+import SelectItem from '@/app/_ui/components/Select/SelectItem';
+import SelectTrigger from '@/app/_ui/components/Select/SelectTrigger';
+import SelectValue from '@/app/_ui/components/Select/SelectValue';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import { useTRPCClient } from '@/lib/trpc/browser';
 

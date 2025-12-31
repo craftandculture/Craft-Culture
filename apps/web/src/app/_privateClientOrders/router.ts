@@ -8,6 +8,9 @@ import adminUpdateStatus from './controller/adminUpdateStatus';
 import distributorGetMany from './controller/distributorGetMany';
 import distributorGetOne from './controller/distributorGetOne';
 import distributorUpdateStatus from './controller/distributorUpdateStatus';
+import documentsDelete from './controller/documentsDelete';
+import documentsGetMany from './controller/documentsGetMany';
+import documentsUpload from './controller/documentsUpload';
 import itemsAdd from './controller/itemsAdd';
 import ordersCreate from './controller/ordersCreate';
 import ordersGetMany from './controller/ordersGetMany';
@@ -21,6 +24,11 @@ const privateClientOrdersRouter = createTRPCRouter({
 
   // Line item management (wine partner)
   addItem: itemsAdd,
+
+  // Document management
+  uploadDocument: documentsUpload,
+  getDocuments: documentsGetMany,
+  deleteDocument: documentsDelete,
 
   // Admin procedures
   adminCreate,
