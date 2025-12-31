@@ -56,10 +56,10 @@ const AdminPrivateOrderForm = () => {
   // Line items state
   const [lineItems, setLineItems] = useState<LineItem[]>([]);
 
-  // Fetch partners list
+  // Fetch partners list (wine partners for creating orders)
   const partnersQuery = useQuery({
     queryKey: ['partners'],
-    queryFn: () => trpcClient.partners.getMany.query(),
+    queryFn: () => trpcClient.partners.getMany.query({}),
   });
 
   // Create order mutation (admin endpoint)
@@ -222,7 +222,7 @@ const AdminPrivateOrderForm = () => {
               <SelectContent>
                 {partnersQuery.data?.map((partner) => (
                   <SelectItem key={partner.id} value={partner.id}>
-                    {partner.companyName}
+                    {partner.businessName}
                   </SelectItem>
                 ))}
               </SelectContent>
