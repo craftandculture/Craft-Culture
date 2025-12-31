@@ -93,7 +93,7 @@ const relations = defineRelations(schema, (r) => ({
     user: r.one.users({
       from: r.partners.userId,
       to: r.users.id,
-      optional: false,
+      optional: true,
     }),
     apiKeys: r.many.partnerApiKeys({
       from: r.partners.id,
@@ -102,6 +102,21 @@ const relations = defineRelations(schema, (r) => ({
     apiRequestLogs: r.many.partnerApiRequestLogs({
       from: r.partners.id,
       to: r.partnerApiRequestLogs.partnerId,
+    }),
+    // Private client orders where this partner is the creator
+    privateClientOrdersAsPartner: r.many.privateClientOrders({
+      from: r.partners.id,
+      to: r.privateClientOrders.partnerId,
+    }),
+    // Private client orders where this partner is the distributor
+    privateClientOrdersAsDistributor: r.many.privateClientOrders({
+      from: r.partners.id,
+      to: r.privateClientOrders.distributorId,
+    }),
+    // Private client contacts owned by this partner
+    privateClientContacts: r.many.privateClientContacts({
+      from: r.partners.id,
+      to: r.privateClientContacts.partnerId,
     }),
   },
   partnerApiKeys: {
@@ -130,6 +145,93 @@ const relations = defineRelations(schema, (r) => ({
       from: r.partnerApiRequestLogs.partnerId,
       to: r.partners.id,
       optional: true,
+    }),
+  },
+  // Private Client Orders relations
+  privateClientOrders: {
+    partner: r.one.partners({
+      from: r.privateClientOrders.partnerId,
+      to: r.partners.id,
+      optional: false,
+    }),
+    distributor: r.one.partners({
+      from: r.privateClientOrders.distributorId,
+      to: r.partners.id,
+      optional: true,
+    }),
+    client: r.one.privateClientContacts({
+      from: r.privateClientOrders.clientId,
+      to: r.privateClientContacts.id,
+      optional: true,
+    }),
+    items: r.many.privateClientOrderItems({
+      from: r.privateClientOrders.id,
+      to: r.privateClientOrderItems.orderId,
+    }),
+    documents: r.many.privateClientOrderDocuments({
+      from: r.privateClientOrders.id,
+      to: r.privateClientOrderDocuments.orderId,
+    }),
+    activityLogs: r.many.privateClientOrderActivityLogs({
+      from: r.privateClientOrders.id,
+      to: r.privateClientOrderActivityLogs.orderId,
+    }),
+  },
+  privateClientOrderItems: {
+    order: r.one.privateClientOrders({
+      from: r.privateClientOrderItems.orderId,
+      to: r.privateClientOrders.id,
+      optional: false,
+    }),
+    product: r.one.products({
+      from: r.privateClientOrderItems.productId,
+      to: r.products.id,
+      optional: true,
+    }),
+    productOffer: r.one.productOffers({
+      from: r.privateClientOrderItems.productOfferId,
+      to: r.productOffers.id,
+      optional: true,
+    }),
+  },
+  privateClientOrderDocuments: {
+    order: r.one.privateClientOrders({
+      from: r.privateClientOrderDocuments.orderId,
+      to: r.privateClientOrders.id,
+      optional: false,
+    }),
+    uploadedByUser: r.one.users({
+      from: r.privateClientOrderDocuments.uploadedBy,
+      to: r.users.id,
+      optional: true,
+    }),
+  },
+  privateClientOrderActivityLogs: {
+    order: r.one.privateClientOrders({
+      from: r.privateClientOrderActivityLogs.orderId,
+      to: r.privateClientOrders.id,
+      optional: false,
+    }),
+    user: r.one.users({
+      from: r.privateClientOrderActivityLogs.userId,
+      to: r.users.id,
+      optional: true,
+    }),
+    partner: r.one.partners({
+      from: r.privateClientOrderActivityLogs.partnerId,
+      to: r.partners.id,
+      optional: true,
+    }),
+  },
+  privateClientContacts: {
+    partner: r.one.partners({
+      from: r.privateClientContacts.partnerId,
+      to: r.partners.id,
+      optional: false,
+    }),
+    orders: r.many.privateClientOrders({
+      from: r.privateClientContacts.id,
+      to: r.privateClientOrders.clientId,
     }),
   },
 }));

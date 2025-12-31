@@ -24,7 +24,7 @@ export const timestamps = {
 
 export const productSource = pgEnum('product_source', ['cultx', 'local_inventory']);
 
-export const customerType = pgEnum('user_type', ['b2b', 'b2c']);
+export const customerType = pgEnum('user_type', ['b2b', 'b2c', 'private_clients']);
 
 export const userRole = pgEnum('user_role', ['user', 'admin']);
 
@@ -331,6 +331,7 @@ export const partnerType = pgEnum('partner_type', [
   'retailer',
   'sommelier',
   'distributor',
+  'wine_partner',
 ]);
 
 export const partnerStatus = pgEnum('partner_status', [
@@ -358,6 +359,11 @@ export const partners = pgTable(
     metadata: jsonb('metadata'),
     // Partner branding
     logoUrl: text('logo_url'),
+    brandColor: text('brand_color'),
+    // Private client pricing configuration
+    marginPercentage: doublePrecision('margin_percentage').default(40.6),
+    logisticsCostPerCase: doublePrecision('logistics_cost_per_case'),
+    currencyPreference: text('currency_preference').default('USD'),
     // Payment configuration for licensed partners
     paymentMethod: paymentMethod('payment_method'),
     paymentDetails: jsonb('payment_details').$type<{
@@ -784,3 +790,421 @@ export const pricingItems = pgTable(
 ).enableRLS();
 
 export type PricingItem = typeof pricingItems.$inferSelect;
+
+// ============================================================================
+// Private Client Orders
+// ============================================================================
+
+export const privateClientOrderStatus = pgEnum('private_client_order_status', [
+  'draft',
+  'submitted',
+  'under_cc_review',
+  'revision_requested',
+  'cc_approved',
+  'awaiting_client_payment',
+  'client_paid',
+  'awaiting_distributor_payment',
+  'distributor_paid',
+  'awaiting_partner_payment',
+  'partner_paid',
+  'stock_in_transit',
+  'with_distributor',
+  'out_for_delivery',
+  'delivered',
+  'cancelled',
+]);
+
+export const orderItemSource = pgEnum('order_item_source', [
+  'partner_local',
+  'partner_airfreight',
+  'cc_inventory',
+  'manual',
+]);
+
+export const orderItemStockStatus = pgEnum('order_item_stock_status', [
+  'pending',
+  'confirmed',
+  'at_cc_bonded',
+  'in_transit_to_cc',
+  'at_distributor',
+  'delivered',
+]);
+
+export const privateClientDocumentType = pgEnum('private_client_document_type', [
+  'partner_invoice',
+  'cc_invoice',
+  'distributor_invoice',
+  'payment_proof',
+]);
+
+export const documentExtractionStatus = pgEnum('document_extraction_status', [
+  'pending',
+  'processing',
+  'completed',
+  'failed',
+]);
+
+/**
+ * Private client orders - main order record
+ */
+export const privateClientOrders = pgTable(
+  'private_client_orders',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    orderNumber: text('order_number').notNull().unique(),
+
+    // Partner who created the order (wine partner)
+    partnerId: uuid('partner_id')
+      .references(() => partners.id, { onDelete: 'restrict' })
+      .notNull(),
+
+    // Assigned distributor (mainland partner like City Drinks)
+    distributorId: uuid('distributor_id').references(() => partners.id, {
+      onDelete: 'set null',
+    }),
+
+    // Client reference (from privateClientContacts)
+    clientId: uuid('client_id'),
+
+    // Client info (denormalized for quick access)
+    clientName: text('client_name').notNull(),
+    clientEmail: text('client_email'),
+    clientPhone: text('client_phone'),
+    clientAddress: text('client_address'),
+    deliveryNotes: text('delivery_notes'),
+
+    // Order status
+    status: privateClientOrderStatus('status').notNull().default('draft'),
+
+    // Pricing (all in USD, with AED conversion)
+    subtotalUsd: doublePrecision('subtotal_usd').notNull().default(0),
+    dutyUsd: doublePrecision('duty_usd').notNull().default(0),
+    vatUsd: doublePrecision('vat_usd').notNull().default(0),
+    logisticsUsd: doublePrecision('logistics_usd').notNull().default(0),
+    totalUsd: doublePrecision('total_usd').notNull().default(0),
+    totalAed: doublePrecision('total_aed'),
+    usdToAedRate: doublePrecision('usd_to_aed_rate'),
+
+    // Item counts
+    itemCount: integer('item_count').notNull().default(0),
+    caseCount: integer('case_count').notNull().default(0),
+
+    // Notes from each party
+    partnerNotes: text('partner_notes'),
+    ccNotes: text('cc_notes'),
+    distributorNotes: text('distributor_notes'),
+
+    // Workflow timestamps
+    submittedAt: timestamp('submitted_at', { mode: 'date' }),
+    submittedBy: uuid('submitted_by').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+
+    ccReviewStartedAt: timestamp('cc_review_started_at', { mode: 'date' }),
+    ccReviewedBy: uuid('cc_reviewed_by').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+
+    revisionRequestedAt: timestamp('revision_requested_at', { mode: 'date' }),
+    revisionRequestedBy: uuid('revision_requested_by').references(
+      () => users.id,
+      { onDelete: 'set null' },
+    ),
+    revisionReason: text('revision_reason'),
+
+    ccApprovedAt: timestamp('cc_approved_at', { mode: 'date' }),
+    ccApprovedBy: uuid('cc_approved_by').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+
+    distributorAssignedAt: timestamp('distributor_assigned_at', { mode: 'date' }),
+    distributorAssignedBy: uuid('distributor_assigned_by').references(
+      () => users.id,
+      { onDelete: 'set null' },
+    ),
+
+    // Payment timestamps
+    clientPaidAt: timestamp('client_paid_at', { mode: 'date' }),
+    clientPaymentConfirmedBy: uuid('client_payment_confirmed_by').references(
+      () => users.id,
+      { onDelete: 'set null' },
+    ),
+    clientPaymentReference: text('client_payment_reference'),
+
+    distributorPaidAt: timestamp('distributor_paid_at', { mode: 'date' }),
+    distributorPaymentConfirmedBy: uuid(
+      'distributor_payment_confirmed_by',
+    ).references(() => users.id, { onDelete: 'set null' }),
+    distributorPaymentReference: text('distributor_payment_reference'),
+
+    partnerPaidAt: timestamp('partner_paid_at', { mode: 'date' }),
+    partnerPaymentConfirmedBy: uuid('partner_payment_confirmed_by').references(
+      () => users.id,
+      { onDelete: 'set null' },
+    ),
+    partnerPaymentReference: text('partner_payment_reference'),
+
+    // Stock movement timestamps
+    stockReleasedAt: timestamp('stock_released_at', { mode: 'date' }),
+    stockReleasedBy: uuid('stock_released_by').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+
+    stockReceivedAt: timestamp('stock_received_at', { mode: 'date' }),
+    stockReceivedBy: uuid('stock_received_by').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+
+    // Delivery timestamps
+    outForDeliveryAt: timestamp('out_for_delivery_at', { mode: 'date' }),
+    outForDeliveryBy: uuid('out_for_delivery_by').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+
+    deliveredAt: timestamp('delivered_at', { mode: 'date' }),
+    deliveredConfirmedBy: uuid('delivered_confirmed_by').references(
+      () => users.id,
+      { onDelete: 'set null' },
+    ),
+
+    cancelledAt: timestamp('cancelled_at', { mode: 'date' }),
+    cancelledBy: uuid('cancelled_by').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+    cancellationReason: text('cancellation_reason'),
+
+    ...timestamps,
+  },
+  (table) => [
+    index('private_client_orders_partner_id_idx').on(table.partnerId),
+    index('private_client_orders_distributor_id_idx').on(table.distributorId),
+    index('private_client_orders_client_id_idx').on(table.clientId),
+    index('private_client_orders_status_idx').on(table.status),
+    index('private_client_orders_created_at_idx').on(table.createdAt),
+    index('private_client_orders_order_number_idx').on(table.orderNumber),
+  ],
+).enableRLS();
+
+export type PrivateClientOrder = typeof privateClientOrders.$inferSelect;
+
+/**
+ * Private client order line items
+ */
+export const privateClientOrderItems = pgTable(
+  'private_client_order_items',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    orderId: uuid('order_id')
+      .references(() => privateClientOrders.id, { onDelete: 'cascade' })
+      .notNull(),
+
+    // Product references (optional - for inventory items)
+    productId: uuid('product_id').references(() => products.id, {
+      onDelete: 'set null',
+    }),
+    productOfferId: uuid('product_offer_id').references(() => productOffers.id, {
+      onDelete: 'set null',
+    }),
+
+    // Product details (always stored for manual entries and historical record)
+    productName: text('product_name').notNull(),
+    producer: text('producer'),
+    vintage: text('vintage'),
+    region: text('region'),
+    lwin: text('lwin'),
+    bottleSize: text('bottle_size'),
+    caseConfig: integer('case_config').default(12),
+
+    // Stock source and status
+    source: orderItemSource('source').notNull().default('manual'),
+    stockStatus: orderItemStockStatus('stock_status').notNull().default('pending'),
+    stockConfirmedAt: timestamp('stock_confirmed_at', { mode: 'date' }),
+    stockNotes: text('stock_notes'),
+
+    // Quantity and pricing
+    quantity: integer('quantity').notNull().default(1),
+    pricePerCaseUsd: doublePrecision('price_per_case_usd').notNull(),
+    totalUsd: doublePrecision('total_usd').notNull(),
+
+    // Line item notes
+    notes: text('notes'),
+
+    ...timestamps,
+  },
+  (table) => [
+    index('private_client_order_items_order_id_idx').on(table.orderId),
+    index('private_client_order_items_product_id_idx').on(table.productId),
+    index('private_client_order_items_source_idx').on(table.source),
+    index('private_client_order_items_stock_status_idx').on(table.stockStatus),
+  ],
+).enableRLS();
+
+export type PrivateClientOrderItem = typeof privateClientOrderItems.$inferSelect;
+
+/**
+ * Private client order documents (invoices, payment proofs)
+ */
+export const privateClientOrderDocuments = pgTable(
+  'private_client_order_documents',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    orderId: uuid('order_id')
+      .references(() => privateClientOrders.id, { onDelete: 'cascade' })
+      .notNull(),
+
+    // Document type
+    documentType: privateClientDocumentType('document_type').notNull(),
+
+    // File storage
+    fileUrl: text('file_url').notNull(),
+    fileName: text('file_name').notNull(),
+    fileSize: integer('file_size'),
+    mimeType: text('mime_type'),
+
+    // Upload info
+    uploadedBy: uuid('uploaded_by')
+      .references(() => users.id, { onDelete: 'set null' })
+      .notNull(),
+    uploadedAt: timestamp('uploaded_at', { mode: 'date' }).notNull().defaultNow(),
+
+    // AI extraction
+    extractionStatus: documentExtractionStatus('extraction_status')
+      .notNull()
+      .default('pending'),
+    extractedData: jsonb('extracted_data').$type<{
+      invoiceNumber?: string;
+      invoiceDate?: string;
+      totalAmount?: number;
+      currency?: string;
+      lineItems?: Array<{
+        productName?: string;
+        quantity?: number;
+        unitPrice?: number;
+        total?: number;
+      }>;
+      paymentReference?: string;
+      rawText?: string;
+    }>(),
+    extractionError: text('extraction_error'),
+    extractedAt: timestamp('extracted_at', { mode: 'date' }),
+
+    // Matching
+    isMatched: boolean('is_matched').notNull().default(false),
+    matchedAt: timestamp('matched_at', { mode: 'date' }),
+    matchNotes: text('match_notes'),
+
+    ...timestamps,
+  },
+  (table) => [
+    index('private_client_order_documents_order_id_idx').on(table.orderId),
+    index('private_client_order_documents_document_type_idx').on(
+      table.documentType,
+    ),
+    index('private_client_order_documents_extraction_status_idx').on(
+      table.extractionStatus,
+    ),
+  ],
+).enableRLS();
+
+export type PrivateClientOrderDocument =
+  typeof privateClientOrderDocuments.$inferSelect;
+
+/**
+ * Private client order activity logs (audit trail)
+ */
+export const privateClientOrderActivityLogs = pgTable(
+  'private_client_order_activity_logs',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    orderId: uuid('order_id')
+      .references(() => privateClientOrders.id, { onDelete: 'cascade' })
+      .notNull(),
+
+    // Who performed the action
+    userId: uuid('user_id').references(() => users.id, { onDelete: 'set null' }),
+    partnerId: uuid('partner_id').references(() => partners.id, {
+      onDelete: 'set null',
+    }),
+
+    // Action details
+    action: text('action').notNull(),
+    previousStatus: privateClientOrderStatus('previous_status'),
+    newStatus: privateClientOrderStatus('new_status'),
+
+    // Additional context
+    metadata: jsonb('metadata'),
+    notes: text('notes'),
+
+    // Client data access logging (HNWI protection)
+    accessedClientData: boolean('accessed_client_data').notNull().default(false),
+    clientDataFields: jsonb('client_data_fields').$type<string[]>(),
+
+    // Request info
+    ipAddress: text('ip_address'),
+    userAgent: text('user_agent'),
+
+    ...timestamps,
+  },
+  (table) => [
+    index('private_client_order_activity_logs_order_id_idx').on(table.orderId),
+    index('private_client_order_activity_logs_user_id_idx').on(table.userId),
+    index('private_client_order_activity_logs_created_at_idx').on(
+      table.createdAt,
+    ),
+    index('private_client_order_activity_logs_action_idx').on(table.action),
+  ],
+).enableRLS();
+
+export type PrivateClientOrderActivityLog =
+  typeof privateClientOrderActivityLogs.$inferSelect;
+
+/**
+ * Private client contacts (CRM for HNWI)
+ */
+export const privateClientContacts = pgTable(
+  'private_client_contacts',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+
+    // Partner who owns this client relationship
+    partnerId: uuid('partner_id')
+      .references(() => partners.id, { onDelete: 'cascade' })
+      .notNull(),
+
+    // Contact details
+    name: text('name').notNull(),
+    email: text('email'),
+    phone: text('phone'),
+    addressLine1: text('address_line_1'),
+    addressLine2: text('address_line_2'),
+    city: text('city'),
+    stateProvince: text('state_province'),
+    postalCode: text('postal_code'),
+    country: text('country'),
+
+    // Preferences
+    winePreferences: text('wine_preferences'),
+    deliveryInstructions: text('delivery_instructions'),
+    paymentNotes: text('payment_notes'),
+
+    // Communication
+    notes: text('notes'),
+
+    // Stats (denormalized for quick access)
+    totalOrders: integer('total_orders').notNull().default(0),
+    totalSpendUsd: doublePrecision('total_spend_usd').notNull().default(0),
+    lastOrderAt: timestamp('last_order_at', { mode: 'date' }),
+
+    ...timestamps,
+  },
+  (table) => [
+    index('private_client_contacts_partner_id_idx').on(table.partnerId),
+    index('private_client_contacts_email_idx').on(table.email),
+    index('private_client_contacts_name_trigram_idx').using(
+      'gin',
+      sql`${table.name} gin_trgm_ops`,
+    ),
+  ],
+).enableRLS();
+
+export type PrivateClientContact = typeof privateClientContacts.$inferSelect;
