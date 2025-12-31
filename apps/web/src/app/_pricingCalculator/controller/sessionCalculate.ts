@@ -8,6 +8,7 @@ import { adminProcedure } from '@/lib/trpc/procedures';
 
 import type { CalculationVariables } from '../schemas/calculationVariablesSchema';
 import calculatePrices from '../utils/calculatePrices';
+import extractVintageFromName from '../utils/extractVintageFromName';
 
 /**
  * Calculate prices for all items in a session
@@ -110,7 +111,8 @@ const sessionCalculate = adminProcedure
         const lwinCol = columnMapping.lwin;
 
         // Parse case config - extract number before 'x' (e.g., "6x75cl" → 6)
-        let caseConfig = 6;
+        // Use defaultCaseConfig from variables if no column is mapped
+        let caseConfig = variables.defaultCaseConfig ?? 6;
         if (caseConfigCol && typedRow[caseConfigCol]) {
           const configValue = typedRow[caseConfigCol];
           if (typeof configValue === 'number') {
@@ -128,9 +130,25 @@ const sessionCalculate = adminProcedure
           }
         }
 
+        // Get vintage from mapped column or extract from product name
+        let vintage: string | undefined;
+        let cleanedProductName = String(productName);
+
+        if (vintageCol && typedRow[vintageCol]) {
+          // Use mapped vintage column
+          vintage = String(typedRow[vintageCol]);
+        } else {
+          // Try to extract vintage from product name
+          const extracted = extractVintageFromName(String(productName));
+          if (extracted.vintage) {
+            vintage = extracted.vintage;
+            cleanedProductName = extracted.cleanedName;
+          }
+        }
+
         return {
-          productName: String(productName),
-          vintage: vintageCol ? String(typedRow[vintageCol] ?? '') || undefined : undefined,
+          productName: cleanedProductName,
+          vintage,
           ukInBondPrice,
           inputCurrency: currencyCol ? String(typedRow[currencyCol] ?? '') || variables.inputCurrency : variables.inputCurrency,
           caseConfig,

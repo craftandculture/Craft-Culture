@@ -131,6 +131,30 @@ const VariablesPanel = ({ variables, onChange, isUpdating }: VariablesPanelProps
             </Typography>
           )}
           <div>
+            <label htmlFor="defaultCaseConfig" className={labelClasses}>
+              Default Case Config
+            </label>
+            <Select
+              value={String(localVariables.defaultCaseConfig)}
+              onValueChange={(v) => handleSelectChange('defaultCaseConfig', parseInt(v, 10))}
+              disabled={isUpdating}
+            >
+              <SelectTrigger id="defaultCaseConfig" className="h-8">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="1">1</SelectItem>
+                <SelectItem value="3">3</SelectItem>
+                <SelectItem value="6">6</SelectItem>
+                <SelectItem value="12">12</SelectItem>
+                <SelectItem value="24">24</SelectItem>
+              </SelectContent>
+            </Select>
+            <Typography variant="bodyXs" colorRole="muted" className="mt-1 italic">
+              Used when no case column mapped
+            </Typography>
+          </div>
+          <div>
             <label htmlFor="usdToAedRate" className={labelClasses}>
               USD → AED
             </label>
@@ -239,10 +263,11 @@ const VariablesPanel = ({ variables, onChange, isUpdating }: VariablesPanelProps
               </SelectContent>
             </Select>
           </div>
-          <div className="grid grid-cols-2 gap-2">
+          {/* Only show the relevant freight input based on selected method */}
+          {localVariables.shippingMethod === 'air' ? (
             <div>
               <label htmlFor="airFreightPerBottle" className={labelClasses}>
-                Air ($/bottle)
+                Air Freight ($/bottle)
               </label>
               <Input
                 id="airFreightPerBottle"
@@ -256,9 +281,10 @@ const VariablesPanel = ({ variables, onChange, isUpdating }: VariablesPanelProps
                 className="h-8"
               />
             </div>
+          ) : (
             <div>
               <label htmlFor="seaFreightPerBottle" className={labelClasses}>
-                Sea ($/bottle)
+                Sea Freight ($/bottle)
               </label>
               <Input
                 id="seaFreightPerBottle"
@@ -272,7 +298,7 @@ const VariablesPanel = ({ variables, onChange, isUpdating }: VariablesPanelProps
                 className="h-8"
               />
             </div>
-          </div>
+          )}
         </div>
       </div>
 
