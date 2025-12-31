@@ -12,6 +12,9 @@ const calculationVariablesSchema = z.object({
   eurToUsdRate: z.number().positive(),
   usdToAedRate: z.number().positive(),
 
+  // Default case config (used when no column mapped)
+  defaultCaseConfig: z.number().int().min(1).max(24).default(6),
+
   // Margin (applied BEFORE freight)
   marginType: z.enum(['percentage', 'absolute']),
   marginPercent: z.number().min(0).max(100),
@@ -39,6 +42,7 @@ export const defaultCalculationVariables: CalculationVariables = {
   gbpToUsdRate: 1.27,
   eurToUsdRate: 1.08,
   usdToAedRate: 3.67,
+  defaultCaseConfig: 6,
   marginType: 'percentage',
   marginPercent: 5,
   marginAbsolute: 0,
