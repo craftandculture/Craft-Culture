@@ -3,7 +3,7 @@ import { desc, eq } from 'drizzle-orm';
 import { z } from 'zod';
 
 import db from '@/database/client';
-import { privateClientOrderDocuments, privateClientOrders, users } from '@/database/schema';
+import { privateClientOrderDocuments, users } from '@/database/schema';
 import { protectedProcedure } from '@/lib/trpc/procedures';
 
 const getDocumentsSchema = z.object({
@@ -21,7 +21,7 @@ const documentsGetMany = protectedProcedure.input(getDocumentsSchema).query(asyn
 
   // Verify order exists and user has access
   const order = await db.query.privateClientOrders.findFirst({
-    where: eq(privateClientOrders.id, orderId),
+    where: { id: orderId },
   });
 
   if (!order) {

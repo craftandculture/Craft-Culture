@@ -4,7 +4,7 @@ import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 
 import db from '@/database/client';
-import { privateClientOrderDocuments, privateClientOrders } from '@/database/schema';
+import { privateClientOrderDocuments } from '@/database/schema';
 import { protectedProcedure } from '@/lib/trpc/procedures';
 
 const deleteDocumentSchema = z.object({
@@ -23,7 +23,7 @@ const documentsDelete = protectedProcedure.input(deleteDocumentSchema).mutation(
 
   // Get the document with order info
   const document = await db.query.privateClientOrderDocuments.findFirst({
-    where: eq(privateClientOrderDocuments.id, documentId),
+    where: { id: documentId },
   });
 
   if (!document) {
@@ -35,7 +35,7 @@ const documentsDelete = protectedProcedure.input(deleteDocumentSchema).mutation(
 
   // Get the order to check access
   const order = await db.query.privateClientOrders.findFirst({
-    where: eq(privateClientOrders.id, document.orderId),
+    where: { id: document.orderId },
   });
 
   if (!order) {
