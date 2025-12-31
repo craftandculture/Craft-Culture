@@ -73,6 +73,10 @@ const sessionCalculate = adminProcedure
 
     const variables = session.calculationVariables as CalculationVariables;
 
+    // Extract source data settings from column mapping (stored with __ prefix)
+    const sourcePriceType = (columnMapping.__sourcePriceType as 'bottle' | 'case') || 'case';
+    const sourceCurrency = (columnMapping.__sourceCurrency as 'GBP' | 'EUR' | 'USD') || variables.inputCurrency;
+
     // Extract raw products from data using column mapping
     const rawProducts = session.rawData
       .map((row) => {
@@ -146,16 +150,26 @@ const sessionCalculate = adminProcedure
           }
         }
 
+        // Determine currency: use column value if mapped, otherwise use sourceCurrency from settings
+        let inputCurrency = sourceCurrency;
+        if (currencyCol && typedRow[currencyCol]) {
+          const colCurrency = String(typedRow[currencyCol]).toUpperCase().trim();
+          if (colCurrency === 'GBP' || colCurrency === 'EUR' || colCurrency === 'USD') {
+            inputCurrency = colCurrency;
+          }
+        }
+
         return {
           productName: cleanedProductName,
           vintage,
           ukInBondPrice,
-          inputCurrency: currencyCol ? String(typedRow[currencyCol] ?? '') || variables.inputCurrency : variables.inputCurrency,
+          inputCurrency,
           caseConfig,
           bottleSize: bottleSizeCol ? String(typedRow[bottleSizeCol] ?? '') || undefined : undefined,
           region: regionCol ? String(typedRow[regionCol] ?? '') || undefined : undefined,
           producer: producerCol ? String(typedRow[producerCol] ?? '') || undefined : undefined,
           lwin: lwinCol ? String(typedRow[lwinCol] ?? '') || undefined : undefined,
+          sourcePriceType,
         };
       })
       .filter((p): p is NonNullable<typeof p> => p !== null);
