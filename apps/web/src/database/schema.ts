@@ -692,10 +692,10 @@ export const pricingSessions = pgTable(
       marginPercent: number;
       marginAbsolute: number;
 
-      // Freight
+      // Freight (per bottle)
       shippingMethod: 'air' | 'sea';
-      airFreightPerCase: number;
-      seaFreightPerCase: number;
+      airFreightPerBottle: number;
+      seaFreightPerBottle: number;
 
       // D2C only
       salesAdvisorMarginPercent: number;
