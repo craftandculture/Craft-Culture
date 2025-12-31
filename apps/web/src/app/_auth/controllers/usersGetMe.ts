@@ -2,7 +2,7 @@ import db from '@/database/client';
 import type { Partner, User } from '@/database/schema';
 import { protectedProcedure } from '@/lib/trpc/procedures';
 
-type PartnerInfo = Pick<Partner, 'id' | 'type' | 'businessName' | 'brandLogo' | 'brandColor'>;
+type PartnerInfo = Pick<Partner, 'id' | 'type' | 'businessName' | 'logoUrl' | 'brandColor'>;
 
 interface UserWithPartner extends User {
   firstName: string | null;
@@ -21,7 +21,7 @@ const usersGetMe = protectedProcedure.query(async ({ ctx }): Promise<UserWithPar
         id: true,
         type: true,
         businessName: true,
-        brandLogo: true,
+        logoUrl: true,
         brandColor: true,
       },
     });

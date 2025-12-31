@@ -187,7 +187,7 @@ const DistributorOrdersList = () => {
       header: 'Total (AED)',
       cell: ({ row }) => (
         <Typography variant="bodySm" className="font-medium">
-          {formatCurrency(row.original.totalAed)} AED
+          {formatCurrency(row.original.totalAed ?? 0)} AED
         </Typography>
       ),
     },
