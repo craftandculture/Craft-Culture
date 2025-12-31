@@ -69,13 +69,10 @@ const calculatePrices = (
       marginedPriceUsd = priceUsd + variables.marginAbsolute;
     }
 
-    // Step 3: Add freight (per bottle)
-    const freightPerBottle =
-      variables.shippingMethod === 'air'
-        ? variables.airFreightPerBottle
-        : variables.seaFreightPerBottle;
-
+    // Step 3: Add freight (per bottle × case config)
     const caseConfig = product.caseConfig || 6;
+    // Support old sessions with shippingMethod/airFreight/seaFreight
+    const freightPerBottle = variables.freightPerBottle ?? 2;
     const freightPerCase = freightPerBottle * caseConfig;
 
     const inBondCaseUsd = marginedPriceUsd + freightPerCase;

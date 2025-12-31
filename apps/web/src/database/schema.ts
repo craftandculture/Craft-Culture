@@ -687,15 +687,16 @@ export const pricingSessions = pgTable(
       eurToUsdRate: number;
       usdToAedRate: number;
 
+      // Default case config
+      defaultCaseConfig?: number;
+
       // Margin (applied BEFORE freight)
       marginType: 'percentage' | 'absolute';
       marginPercent: number;
       marginAbsolute: number;
 
-      // Freight (per bottle)
-      shippingMethod: 'air' | 'sea';
-      airFreightPerBottle: number;
-      seaFreightPerBottle: number;
+      // Freight (per bottle - multiplied by case config)
+      freightPerBottle?: number;
 
       // D2C only
       salesAdvisorMarginPercent: number;
