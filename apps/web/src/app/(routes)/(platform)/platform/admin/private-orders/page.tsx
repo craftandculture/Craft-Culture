@@ -6,6 +6,7 @@ import {
   IconEye,
   IconLoader2,
   IconPackage,
+  IconPlus,
   IconSearch,
 } from '@tabler/icons-react';
 import { useMutation, useQuery } from '@tanstack/react-query';
@@ -118,13 +119,20 @@ const AdminPrivateOrdersPage = () => {
     <div className="container mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8">
       <div className="space-y-6">
         {/* Header */}
-        <div className="mb-6 sm:mb-8">
-          <Typography variant="headingLg" className="mb-2">
-            Private Client Orders
-          </Typography>
-          <Typography variant="bodyMd" colorRole="muted">
-            Manage orders from wine partners for their private clients
-          </Typography>
+        <div className="mb-6 flex flex-col gap-4 sm:mb-8 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <Typography variant="headingLg" className="mb-2">
+              Private Client Orders
+            </Typography>
+            <Typography variant="bodyMd" colorRole="muted">
+              Manage orders from wine partners for their private clients
+            </Typography>
+          </div>
+          <Button asChild>
+            <Link href="/platform/admin/private-orders/new">
+              <ButtonContent iconLeft={IconPlus}>New Order</ButtonContent>
+            </Link>
+          </Button>
         </div>
 
         {/* Summary Card */}
