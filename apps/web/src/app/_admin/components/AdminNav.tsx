@@ -3,9 +3,7 @@
 import {
   IconActivity,
   IconBuildingStore,
-  IconCalculator,
   IconCoin,
-  IconFileText,
   IconSettings,
   IconTable,
   IconUsers,
@@ -21,62 +19,44 @@ interface NavItem {
   href: string;
   icon: typeof IconUsers;
   description: string;
-  isTool?: boolean;
 }
 
 const navItems: NavItem[] = [
   {
-    label: 'Quote Approvals',
-    href: '/platform/admin/quote-approvals',
-    icon: IconFileText,
-    description: 'Review and approve customer quotes',
-  },
-  {
-    label: 'Commissions',
-    href: '/platform/admin/commissions',
-    icon: IconCoin,
-    description: 'Manage B2C commission payouts',
-  },
-  {
-    label: 'User Management',
+    label: 'Users',
     href: '/platform/admin/users',
     icon: IconUsers,
-    description: 'Approve and manage user accounts',
+    description: 'Manage accounts',
   },
   {
     label: 'Partners',
     href: '/platform/admin/partners',
     icon: IconBuildingStore,
-    description: 'Manage retail partner API access',
+    description: 'API access',
   },
   {
-    label: 'Activity Feed',
+    label: 'Commissions',
+    href: '/platform/admin/commissions',
+    icon: IconCoin,
+    description: 'B2C payouts',
+  },
+  {
+    label: 'Activity',
     href: '/platform/admin/activity',
     icon: IconActivity,
-    description: 'Monitor platform activity',
+    description: 'Platform logs',
+  },
+  {
+    label: 'Pricing Models',
+    href: '/platform/admin/pricing-models',
+    icon: IconTable,
+    description: 'Formulas',
   },
   {
     label: 'Settings',
     href: '/platform/admin/settings',
     icon: IconSettings,
-    description: 'System configuration',
-  },
-];
-
-const toolItems: NavItem[] = [
-  {
-    label: 'Pricing Models',
-    href: '/platform/admin/pricing-models',
-    icon: IconTable,
-    description: 'Manage pricing formulas',
-    isTool: true,
-  },
-  {
-    label: 'Pricing Calc',
-    href: '/platform/admin/pricing-calculator',
-    icon: IconCalculator,
-    description: 'Calculate supplier prices',
-    isTool: true,
+    description: 'Configuration',
   },
 ];
 
@@ -99,7 +79,7 @@ const AdminNav = () => {
             isActive
               ? 'border-border-brand text-text-brand'
               : 'border-transparent text-text-muted hover:border-border-muted hover:text-text-primary'
-          } ${item.isTool ? 'bg-surface-secondary/50' : ''}`}
+          }`}
         >
           <Icon icon={item.icon} size="sm" />
           <span className="whitespace-nowrap">{item.label}</span>
@@ -111,7 +91,7 @@ const AdminNav = () => {
       <Link
         key={item.href}
         href={item.href}
-        className={`relative block border-b-2 py-4 transition-colors ${
+        className={`relative block border-b-2 py-3 transition-colors ${
           isActive ? 'border-border-brand' : 'border-transparent hover:border-border-muted'
         }`}
       >
@@ -141,25 +121,11 @@ const AdminNav = () => {
         {/* Mobile: Horizontal scrolling tabs */}
         <div className="flex gap-1 overflow-x-auto px-4 sm:px-6 lg:hidden">
           {navItems.map((item) => renderNavLink(item, true))}
-          {/* Separator */}
-          <div className="mx-2 flex-shrink-0 border-l border-border-muted" />
-          {toolItems.map((item) => renderNavLink(item, true))}
         </div>
 
-        {/* Desktop: Full width tabs with descriptions */}
-        <div className="hidden px-4 sm:px-6 lg:flex lg:items-center lg:justify-between">
-          <div className="flex gap-6">
-            {navItems.map((item) => renderNavLink(item, false))}
-          </div>
-          {/* Tools section with subtle highlight */}
-          <div className="flex items-center gap-4 rounded-lg bg-surface-secondary/50 px-3">
-            <Typography variant="bodyXs" colorRole="muted" className="py-4 uppercase tracking-wide">
-              Tools
-            </Typography>
-            <div className="flex gap-4">
-              {toolItems.map((item) => renderNavLink(item, false))}
-            </div>
-          </div>
+        {/* Desktop: Evenly spaced tabs */}
+        <div className="hidden px-4 sm:px-6 lg:flex lg:justify-center lg:gap-8">
+          {navItems.map((item) => renderNavLink(item, false))}
         </div>
       </div>
     </nav>
