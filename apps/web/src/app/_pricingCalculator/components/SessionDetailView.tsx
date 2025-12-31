@@ -1,6 +1,13 @@
 'use client';
 
-import { IconArrowLeft, IconDownload, IconLoader2 } from '@tabler/icons-react';
+import {
+  IconArrowLeft,
+  IconChevronDown,
+  IconChevronUp,
+  IconDownload,
+  IconLoader2,
+  IconSearch,
+} from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -9,6 +16,7 @@ import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
 import Card from '@/app/_ui/components/Card/Card';
 import CardContent from '@/app/_ui/components/Card/CardContent';
+import Input from '@/app/_ui/components/Input/Input';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import useTRPC from '@/lib/trpc/browser';
 
@@ -39,6 +47,8 @@ const SessionDetailView = ({ session: initialSession }: SessionDetailViewProps) 
   const queryClient = useQueryClient();
 
   const [activeTab, setActiveTab] = useState<'b2b' | 'd2c'>('b2b');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isVariablesPanelCollapsed, setIsVariablesPanelCollapsed] = useState(false);
 
   // Fetch fresh session data
   const { data: session } = useQuery({
@@ -174,35 +184,46 @@ const SessionDetailView = ({ session: initialSession }: SessionDetailViewProps) 
       </div>
 
       {/* Main Content Grid */}
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className={`grid gap-4 ${isVariablesPanelCollapsed ? '' : 'lg:grid-cols-4'}`}>
         {/* Preview Table - Main Content */}
-        <div className="order-2 lg:order-1 lg:col-span-2">
+        <div className={`order-2 lg:order-1 ${isVariablesPanelCollapsed ? '' : 'lg:col-span-3'}`}>
           <Card>
-            <CardContent className="p-4">
-              {/* Tab Headers */}
-              <div className="mb-4 flex gap-4 border-b border-border-muted">
-                <button
-                  type="button"
-                  className={`pb-2 text-sm font-medium transition-colors ${
-                    activeTab === 'b2b'
-                      ? 'border-b-2 border-fill-brand text-text-primary'
-                      : 'text-text-muted hover:text-text-primary'
-                  }`}
-                  onClick={() => setActiveTab('b2b')}
-                >
-                  B2B (In-Bond UAE)
-                </button>
-                <button
-                  type="button"
-                  className={`pb-2 text-sm font-medium transition-colors ${
-                    activeTab === 'd2c'
-                      ? 'border-b-2 border-fill-brand text-text-primary'
-                      : 'text-text-muted hover:text-text-primary'
-                  }`}
-                  onClick={() => setActiveTab('d2c')}
-                >
-                  D2C (Delivered)
-                </button>
+            <CardContent className="p-3">
+              {/* Tab Headers and Search */}
+              <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex gap-4 border-b border-border-muted">
+                  <button
+                    type="button"
+                    className={`pb-2 text-xs font-medium transition-colors ${
+                      activeTab === 'b2b'
+                        ? 'border-b-2 border-fill-brand text-text-primary'
+                        : 'text-text-muted hover:text-text-primary'
+                    }`}
+                    onClick={() => setActiveTab('b2b')}
+                  >
+                    B2B (In-Bond UAE)
+                  </button>
+                  <button
+                    type="button"
+                    className={`pb-2 text-xs font-medium transition-colors ${
+                      activeTab === 'd2c'
+                        ? 'border-b-2 border-fill-brand text-text-primary'
+                        : 'text-text-muted hover:text-text-primary'
+                    }`}
+                    onClick={() => setActiveTab('d2c')}
+                  >
+                    D2C (Delivered)
+                  </button>
+                </div>
+                <div className="relative w-full sm:w-64">
+                  <IconSearch className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" />
+                  <Input
+                    placeholder="Search products..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="h-7 pl-8 text-xs"
+                  />
+                </div>
               </div>
 
               {/* Preview Table */}
@@ -211,6 +232,7 @@ const SessionDetailView = ({ session: initialSession }: SessionDetailViewProps) 
                 rawData={rawDataRows as Record<string, unknown>[]}
                 columnMapping={session.columnMapping as Record<string, string> | null}
                 priceType={activeTab}
+                searchQuery={searchQuery}
               />
             </CardContent>
           </Card>
@@ -219,28 +241,44 @@ const SessionDetailView = ({ session: initialSession }: SessionDetailViewProps) 
         {/* Variables Panel - Right Side (collapsible) */}
         <div className="order-1 lg:order-2 lg:col-span-1">
           <Card>
-            <CardContent className="p-4">
-              <Typography variant="headingSm" className="mb-4">
-                Pricing Variables
-              </Typography>
-              <VariablesPanel
-                variables={session.calculationVariables}
-                onChange={handleVariablesChange}
-                isUpdating={updateVariablesMutation.isPending}
-              />
-              <div className="mt-4 border-t border-border-muted pt-4">
-                <Button
-                  variant="default"
-                  colorRole="brand"
-                  className="w-full"
-                  onClick={handleCalculate}
-                  disabled={calculateMutation.isPending || !session.calculationVariables}
-                >
-                  <ButtonContent iconLeft={calculateMutation.isPending ? IconLoader2 : undefined}>
-                    {calculateMutation.isPending ? 'Calculating...' : 'Calculate Prices'}
-                  </ButtonContent>
-                </Button>
-              </div>
+            <CardContent className="p-3">
+              <button
+                type="button"
+                className="flex w-full items-center justify-between"
+                onClick={() => setIsVariablesPanelCollapsed(!isVariablesPanelCollapsed)}
+              >
+                <Typography variant="headingXs">Pricing Variables</Typography>
+                {isVariablesPanelCollapsed ? (
+                  <IconChevronDown className="h-4 w-4 text-text-muted" />
+                ) : (
+                  <IconChevronUp className="h-4 w-4 text-text-muted" />
+                )}
+              </button>
+              {!isVariablesPanelCollapsed && (
+                <>
+                  <div className="mt-3">
+                    <VariablesPanel
+                      variables={session.calculationVariables}
+                      onChange={handleVariablesChange}
+                      isUpdating={updateVariablesMutation.isPending}
+                    />
+                  </div>
+                  <div className="mt-3 border-t border-border-muted pt-3">
+                    <Button
+                      variant="default"
+                      colorRole="brand"
+                      size="sm"
+                      className="w-full"
+                      onClick={handleCalculate}
+                      disabled={calculateMutation.isPending || !session.calculationVariables}
+                    >
+                      <ButtonContent iconLeft={calculateMutation.isPending ? IconLoader2 : undefined}>
+                        {calculateMutation.isPending ? 'Calculating...' : 'Calculate Prices'}
+                      </ButtonContent>
+                    </Button>
+                  </div>
+                </>
+              )}
             </CardContent>
           </Card>
         </div>

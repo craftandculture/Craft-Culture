@@ -7,6 +7,7 @@ interface PricePreviewTableProps {
   rawData: Record<string, unknown>[];
   columnMapping: Record<string, string> | null;
   priceType: 'b2b' | 'd2c';
+  searchQuery?: string;
 }
 
 /**
@@ -14,8 +15,32 @@ interface PricePreviewTableProps {
  *
  * Shows raw data when no calculations exist, or calculated prices when available
  */
-const PricePreviewTable = ({ items, rawData, columnMapping, priceType }: PricePreviewTableProps) => {
+const PricePreviewTable = ({
+  items,
+  rawData,
+  columnMapping,
+  priceType,
+  searchQuery = '',
+}: PricePreviewTableProps) => {
   const hasCalculatedItems = items && items.length > 0;
+
+  // Filter items based on search query
+  const filterBySearch = (item: Record<string, unknown>) => {
+    if (!searchQuery.trim()) return true;
+    const query = searchQuery.toLowerCase();
+    const productName = String(item.productName ?? '').toLowerCase();
+    const vintage = String(item.vintage ?? '').toLowerCase();
+    const producer = String(item.producer ?? '').toLowerCase();
+    const region = String(item.region ?? '').toLowerCase();
+    return (
+      productName.includes(query) ||
+      vintage.includes(query) ||
+      producer.includes(query) ||
+      region.includes(query)
+    );
+  };
+
+  const filteredItems = hasCalculatedItems ? items.filter(filterBySearch) : [];
 
   // Format price for display
   const formatPrice = (value: unknown) => {
@@ -52,40 +77,40 @@ const PricePreviewTable = ({ items, rawData, columnMapping, priceType }: PricePr
     // Show raw data preview when no calculations exist
     return (
       <div>
-        <Typography variant="bodySm" colorRole="muted" className="mb-4">
+        <Typography variant="bodyXs" colorRole="muted" className="mb-2">
           Configure variables and click &quot;Calculate Prices&quot; to see results.
         </Typography>
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full text-xs">
             <thead className="bg-surface-secondary">
               <tr>
-                <th className="px-3 py-2 text-left font-medium text-text-muted">Product</th>
-                <th className="px-3 py-2 text-left font-medium text-text-muted">Vintage</th>
-                <th className="px-3 py-2 text-right font-medium text-text-muted">UK In-Bond</th>
-                <th className="px-3 py-2 text-center font-medium text-text-muted">Case</th>
+                <th className="px-2 py-1.5 text-left font-medium text-text-muted">Product</th>
+                <th className="px-2 py-1.5 text-left font-medium text-text-muted">Vintage</th>
+                <th className="px-2 py-1.5 text-right font-medium text-text-muted">UK In-Bond</th>
+                <th className="px-2 py-1.5 text-center font-medium text-text-muted">Case</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border-muted">
-              {rawData.slice(0, 20).map((row, idx) => (
+              {rawData.slice(0, 50).map((row, idx) => (
                 <tr key={idx} className="hover:bg-surface-secondary/50">
-                  <td className="px-3 py-2 text-text-primary">
+                  <td className="px-2 py-1 text-text-primary">
                     {getRawValue(row, 'productName')}
                   </td>
-                  <td className="px-3 py-2 text-text-muted">{getRawValue(row, 'vintage')}</td>
-                  <td className="px-3 py-2 text-right text-text-primary">
+                  <td className="px-2 py-1 text-text-muted">{getRawValue(row, 'vintage')}</td>
+                  <td className="px-2 py-1 text-right text-text-primary">
                     {getRawValue(row, 'ukInBondPrice')}
                   </td>
-                  <td className="px-3 py-2 text-center text-text-muted">
+                  <td className="px-2 py-1 text-center text-text-muted">
                     {getRawValue(row, 'caseConfig')}
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
-          {rawData.length > 20 && (
+          {rawData.length > 50 && (
             <div className="mt-2 text-center">
               <Typography variant="bodyXs" colorRole="muted">
-                Showing 20 of {rawData.length} products
+                Showing 50 of {rawData.length} products
               </Typography>
             </div>
           )}
@@ -110,52 +135,60 @@ const PricePreviewTable = ({ items, rawData, columnMapping, priceType }: PricePr
   if (priceType === 'b2b') {
     return (
       <div className="overflow-x-auto">
-        <table className="w-full text-sm">
+        <table className="w-full text-xs">
           <thead className="bg-surface-secondary">
             <tr>
-              <th className="px-3 py-2 text-left font-medium text-text-muted">Product</th>
-              <th className="px-3 py-2 text-left font-medium text-text-muted">Vintage</th>
-              <th className="px-3 py-2 text-center font-medium text-text-muted">Cfg</th>
-              <th className="px-3 py-2 text-right font-medium text-text-muted">Source</th>
-              <th className="px-3 py-2 text-right font-medium text-text-muted">$/Case</th>
-              <th className="px-3 py-2 text-right font-medium text-text-muted">$/Btl</th>
-              <th className="px-3 py-2 text-right font-medium text-text-muted">AED/Case</th>
-              <th className="px-3 py-2 text-right font-medium text-text-muted">AED/Btl</th>
+              <th className="px-2 py-1.5 text-left font-medium text-text-muted">Product</th>
+              <th className="px-2 py-1.5 text-left font-medium text-text-muted">Vintage</th>
+              <th className="px-2 py-1.5 text-center font-medium text-text-muted">Cfg</th>
+              <th className="px-2 py-1.5 text-right font-medium text-text-muted">Source</th>
+              <th className="px-2 py-1.5 text-right font-medium text-text-muted">$/Case</th>
+              <th className="px-2 py-1.5 text-right font-medium text-text-muted">$/Btl</th>
+              <th className="px-2 py-1.5 text-right font-medium text-text-muted">AED/Case</th>
+              <th className="px-2 py-1.5 text-right font-medium text-text-muted">AED/Btl</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border-muted">
-            {items.slice(0, 50).map((item, idx) => (
+            {filteredItems.slice(0, 100).map((item, idx) => (
               <tr key={idx} className="hover:bg-surface-secondary/50">
-                <td className="px-3 py-2 text-text-primary">
+                <td className="max-w-48 truncate px-2 py-1 text-text-primary">
                   {String(item.productName ?? '—')}
                 </td>
-                <td className="px-3 py-2 text-text-muted">{String(item.vintage ?? '—')}</td>
-                <td className="px-3 py-2 text-center text-text-muted">
+                <td className="px-2 py-1 text-text-muted">{String(item.vintage ?? '—')}</td>
+                <td className="px-2 py-1 text-center text-text-muted">
                   {String(item.caseConfig ?? '—')}
                 </td>
-                <td className="px-3 py-2 text-right font-mono text-text-muted">
+                <td className="px-2 py-1 text-right font-mono text-text-muted">
                   {formatSourcePrice(item.ukInBondPrice, item.inputCurrency)}
                 </td>
-                <td className="px-3 py-2 text-right font-mono text-text-primary">
+                <td className="px-2 py-1 text-right font-mono text-text-primary">
                   {formatPrice(item.inBondCaseUsd)}
                 </td>
-                <td className="px-3 py-2 text-right font-mono text-text-muted">
+                <td className="px-2 py-1 text-right font-mono text-text-muted">
                   {formatPrice(item.inBondBottleUsd)}
                 </td>
-                <td className="px-3 py-2 text-right font-mono text-text-primary">
+                <td className="px-2 py-1 text-right font-mono text-text-primary">
                   {formatAedPrice(item.inBondCaseAed)}
                 </td>
-                <td className="px-3 py-2 text-right font-mono text-text-muted">
+                <td className="px-2 py-1 text-right font-mono text-text-muted">
                   {formatAedPrice(item.inBondBottleAed)}
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
-        {items.length > 50 && (
+        {filteredItems.length > 100 && (
           <div className="mt-2 text-center">
             <Typography variant="bodyXs" colorRole="muted">
-              Showing 50 of {items.length} products
+              Showing 100 of {filteredItems.length} products
+              {searchQuery && ` (filtered from ${items.length})`}
+            </Typography>
+          </div>
+        )}
+        {filteredItems.length === 0 && searchQuery && (
+          <div className="py-8 text-center">
+            <Typography variant="bodyXs" colorRole="muted">
+              No products match &quot;{searchQuery}&quot;
             </Typography>
           </div>
         )}
@@ -166,50 +199,60 @@ const PricePreviewTable = ({ items, rawData, columnMapping, priceType }: PricePr
   // D2C prices
   return (
     <div className="overflow-x-auto">
-      <table className="w-full text-sm">
+      <table className="w-full text-xs">
         <thead className="bg-surface-secondary">
           <tr>
-            <th className="px-3 py-2 text-left font-medium text-text-muted">Product</th>
-            <th className="px-3 py-2 text-left font-medium text-text-muted">Vintage</th>
-            <th className="px-3 py-2 text-center font-medium text-text-muted">Cfg</th>
-            <th className="px-3 py-2 text-right font-medium text-text-muted">Source</th>
-            <th className="px-3 py-2 text-right font-medium text-text-muted">$/Case</th>
-            <th className="px-3 py-2 text-right font-medium text-text-muted">$/Btl</th>
-            <th className="px-3 py-2 text-right font-medium text-text-muted">AED/Case</th>
-            <th className="px-3 py-2 text-right font-medium text-text-muted">AED/Btl</th>
+            <th className="px-2 py-1.5 text-left font-medium text-text-muted">Product</th>
+            <th className="px-2 py-1.5 text-left font-medium text-text-muted">Vintage</th>
+            <th className="px-2 py-1.5 text-center font-medium text-text-muted">Cfg</th>
+            <th className="px-2 py-1.5 text-right font-medium text-text-muted">Source</th>
+            <th className="px-2 py-1.5 text-right font-medium text-text-muted">$/Case</th>
+            <th className="px-2 py-1.5 text-right font-medium text-text-muted">$/Btl</th>
+            <th className="px-2 py-1.5 text-right font-medium text-text-muted">AED/Case</th>
+            <th className="px-2 py-1.5 text-right font-medium text-text-muted">AED/Btl</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-border-muted">
-          {items.slice(0, 50).map((item, idx) => (
+          {filteredItems.slice(0, 100).map((item, idx) => (
             <tr key={idx} className="hover:bg-surface-secondary/50">
-              <td className="px-3 py-2 text-text-primary">{String(item.productName ?? '—')}</td>
-              <td className="px-3 py-2 text-text-muted">{String(item.vintage ?? '—')}</td>
-              <td className="px-3 py-2 text-center text-text-muted">
+              <td className="max-w-48 truncate px-2 py-1 text-text-primary">
+                {String(item.productName ?? '—')}
+              </td>
+              <td className="px-2 py-1 text-text-muted">{String(item.vintage ?? '—')}</td>
+              <td className="px-2 py-1 text-center text-text-muted">
                 {String(item.caseConfig ?? '—')}
               </td>
-              <td className="px-3 py-2 text-right font-mono text-text-muted">
+              <td className="px-2 py-1 text-right font-mono text-text-muted">
                 {formatSourcePrice(item.ukInBondPrice, item.inputCurrency)}
               </td>
-              <td className="px-3 py-2 text-right font-mono text-text-primary">
+              <td className="px-2 py-1 text-right font-mono text-text-primary">
                 {formatPrice(item.deliveredCaseUsd)}
               </td>
-              <td className="px-3 py-2 text-right font-mono text-text-muted">
+              <td className="px-2 py-1 text-right font-mono text-text-muted">
                 {formatPrice(item.deliveredBottleUsd)}
               </td>
-              <td className="px-3 py-2 text-right font-mono text-text-primary">
+              <td className="px-2 py-1 text-right font-mono text-text-primary">
                 {formatAedPrice(item.deliveredCaseAed)}
               </td>
-              <td className="px-3 py-2 text-right font-mono text-text-muted">
+              <td className="px-2 py-1 text-right font-mono text-text-muted">
                 {formatAedPrice(item.deliveredBottleAed)}
               </td>
             </tr>
           ))}
         </tbody>
       </table>
-      {items.length > 50 && (
+      {filteredItems.length > 100 && (
         <div className="mt-2 text-center">
           <Typography variant="bodyXs" colorRole="muted">
-            Showing 50 of {items.length} products
+            Showing 100 of {filteredItems.length} products
+            {searchQuery && ` (filtered from ${items.length})`}
+          </Typography>
+        </div>
+      )}
+      {filteredItems.length === 0 && searchQuery && (
+        <div className="py-8 text-center">
+          <Typography variant="bodyXs" colorRole="muted">
+            No products match &quot;{searchQuery}&quot;
           </Typography>
         </div>
       )}
