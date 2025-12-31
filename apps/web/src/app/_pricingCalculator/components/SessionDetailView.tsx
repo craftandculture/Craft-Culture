@@ -16,6 +16,8 @@ import PricePreviewTable from './PricePreviewTable';
 import VariablesPanel from './VariablesPanel';
 import type getSessionOrRedirect from '../data/getSessionOrRedirect';
 import type { CalculationVariables } from '../schemas/calculationVariablesSchema';
+import exportB2BToExcel from '../utils/exportB2BToExcel';
+import exportD2CToExcel from '../utils/exportD2CToExcel';
 
 type Session = Awaited<ReturnType<typeof getSessionOrRedirect>>;
 
@@ -73,6 +75,46 @@ const SessionDetailView = ({ session: initialSession }: SessionDetailViewProps) 
   const rawDataRows = Array.isArray(session.rawData) ? session.rawData : [];
   const hasCalculatedItems = session.items && session.items.length > 0;
 
+  const handleExportB2B = () => {
+    if (!session.items || session.items.length === 0) return;
+
+    const items = session.items.map((item) => ({
+      lwin: item.lwin,
+      productName: item.productName,
+      vintage: item.vintage,
+      region: item.region,
+      producer: item.producer,
+      bottleSize: item.bottleSize,
+      caseConfig: item.caseConfig,
+      inBondCaseUsd: item.inBondCaseUsd,
+      inBondBottleUsd: item.inBondBottleUsd,
+      inBondCaseAed: item.inBondCaseAed,
+      inBondBottleAed: item.inBondBottleAed,
+    }));
+
+    exportB2BToExcel(items, session.name);
+  };
+
+  const handleExportD2C = () => {
+    if (!session.items || session.items.length === 0) return;
+
+    const items = session.items.map((item) => ({
+      lwin: item.lwin,
+      productName: item.productName,
+      vintage: item.vintage,
+      region: item.region,
+      producer: item.producer,
+      bottleSize: item.bottleSize,
+      caseConfig: item.caseConfig,
+      deliveredCaseUsd: item.deliveredCaseUsd,
+      deliveredBottleUsd: item.deliveredBottleUsd,
+      deliveredCaseAed: item.deliveredCaseAed,
+      deliveredBottleAed: item.deliveredBottleAed,
+    }));
+
+    exportD2CToExcel(items, session.name);
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -93,10 +135,20 @@ const SessionDetailView = ({ session: initialSession }: SessionDetailViewProps) 
           </div>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" disabled={!hasCalculatedItems}>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={!hasCalculatedItems}
+            onClick={handleExportB2B}
+          >
             <ButtonContent iconLeft={IconDownload}>Export B2B</ButtonContent>
           </Button>
-          <Button variant="outline" size="sm" disabled={!hasCalculatedItems}>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={!hasCalculatedItems}
+            onClick={handleExportD2C}
+          >
             <ButtonContent iconLeft={IconDownload}>Export D2C</ButtonContent>
           </Button>
         </div>
