@@ -142,6 +142,11 @@ const PrivateOrderForm = () => {
       partnerNotes: partnerNotes || undefined,
     });
 
+    if (!order) {
+      toast.error('Failed to create order');
+      return;
+    }
+
     // Then add all line items
     for (const item of lineItems) {
       if (item.productName.trim()) {
