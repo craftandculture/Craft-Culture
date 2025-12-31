@@ -1,8 +1,6 @@
 import { TRPCError } from '@trpc/server';
-import { eq } from 'drizzle-orm';
 
 import db from '@/database/client';
-import { partners } from '@/database/schema';
 
 import { t } from './trpc';
 
@@ -60,7 +58,7 @@ export const winePartnerProcedure = protectedProcedure.use(
   async ({ ctx, next }) => {
     // Find the partner linked to this user
     const partner = await db.query.partners.findFirst({
-      where: eq(partners.userId, ctx.user.id),
+      where: { userId: ctx.user.id },
     });
 
     if (!partner) {
@@ -104,7 +102,7 @@ export const distributorProcedure = protectedProcedure.use(
   async ({ ctx, next }) => {
     // Find the partner linked to this user
     const partner = await db.query.partners.findFirst({
-      where: eq(partners.userId, ctx.user.id),
+      where: { userId: ctx.user.id },
     });
 
     if (!partner) {
