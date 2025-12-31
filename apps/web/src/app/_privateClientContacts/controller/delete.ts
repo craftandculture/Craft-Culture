@@ -3,7 +3,7 @@ import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
 
 import db from '@/database/client';
-import { privateClientContacts, privateClientOrders } from '@/database/schema';
+import { privateClientContacts } from '@/database/schema';
 import { winePartnerProcedure } from '@/lib/trpc/procedures';
 
 const deleteSchema = z.object({
@@ -19,7 +19,7 @@ const deleteContact = winePartnerProcedure.input(deleteSchema).mutation(async ({
 
   // Verify ownership
   const existing = await db.query.privateClientContacts.findFirst({
-    where: and(eq(privateClientContacts.id, id), eq(privateClientContacts.partnerId, partnerId)),
+    where: { id, partnerId },
   });
 
   if (!existing) {
@@ -31,10 +31,7 @@ const deleteContact = winePartnerProcedure.input(deleteSchema).mutation(async ({
 
   // Check if there are any orders linked to this contact
   const linkedOrders = await db.query.privateClientOrders.findFirst({
-    where: and(
-      eq(privateClientOrders.partnerId, partnerId),
-      eq(privateClientOrders.clientId, id),
-    ),
+    where: { partnerId, clientId: id },
   });
 
   if (linkedOrders) {

@@ -3,7 +3,7 @@ import { and, desc, eq } from 'drizzle-orm';
 import { z } from 'zod';
 
 import db from '@/database/client';
-import { privateClientContacts, privateClientOrders } from '@/database/schema';
+import { privateClientOrders } from '@/database/schema';
 import { winePartnerProcedure } from '@/lib/trpc/procedures';
 
 const getOneSchema = z.object({
@@ -19,7 +19,7 @@ const getOne = winePartnerProcedure.input(getOneSchema).query(async ({ input, ct
 
   // Get the contact with data isolation
   const contact = await db.query.privateClientContacts.findFirst({
-    where: and(eq(privateClientContacts.id, id), eq(privateClientContacts.partnerId, partnerId)),
+    where: { id, partnerId },
   });
 
   if (!contact) {

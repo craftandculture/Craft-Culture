@@ -56,7 +56,7 @@ const EditClientPage = ({ params }: EditClientPageProps) => {
           <Icon icon={IconArrowLeft} size="sm" />
           Back to Client
         </Link>
-        <Typography variant="h1">Edit Client</Typography>
+        <Typography variant="headingLg">Edit Client</Typography>
         <Typography variant="bodySm" colorRole="muted">
           Update {contact.name}&apos;s information
         </Typography>

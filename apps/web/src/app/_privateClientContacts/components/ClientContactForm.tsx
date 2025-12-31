@@ -7,8 +7,7 @@ import { toast } from 'sonner';
 
 import Button from '@/app/_ui/components/Button/Button';
 import Input from '@/app/_ui/components/Input/Input';
-import Label from '@/app/_ui/components/Label/Label';
-import Textarea from '@/app/_ui/components/Textarea/Textarea';
+import TextArea from '@/app/_ui/components/TextArea/TextArea';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import type { PrivateClientContact } from '@/database/schema';
 import { useTRPCClient } from '@/lib/trpc/browser';
@@ -47,7 +46,9 @@ const ClientContactForm = ({ contact, mode }: ClientContactFormProps) => {
     onSuccess: (newContact) => {
       void queryClient.invalidateQueries({ queryKey: ['privateClientContacts.getMany'] });
       toast.success('Client created');
-      router.push(`/platform/clients/${newContact.id}`);
+      if (newContact) {
+        router.push(`/platform/clients/${newContact.id}`);
+      }
     },
     onError: (error) => {
       toast.error(error.message || 'Failed to create client');
@@ -82,10 +83,12 @@ const ClientContactForm = ({ contact, mode }: ClientContactFormProps) => {
     <form onSubmit={handleSubmit} className="space-y-8">
       {/* Basic Info */}
       <div className="space-y-4">
-        <Typography variant="h4">Basic Information</Typography>
+        <Typography variant="headingXs">Basic Information</Typography>
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
-            <Label htmlFor="name">Name *</Label>
+            <Typography variant="labelSm" asChild>
+              <label htmlFor="name">Name *</label>
+            </Typography>
             <Input
               id="name"
               value={formData.name}
@@ -95,7 +98,9 @@ const ClientContactForm = ({ contact, mode }: ClientContactFormProps) => {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
+            <Typography variant="labelSm" asChild>
+              <label htmlFor="email">Email</label>
+            </Typography>
             <Input
               id="email"
               type="email"
@@ -105,7 +110,9 @@ const ClientContactForm = ({ contact, mode }: ClientContactFormProps) => {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="phone">Phone</Label>
+            <Typography variant="labelSm" asChild>
+              <label htmlFor="phone">Phone</label>
+            </Typography>
             <Input
               id="phone"
               value={formData.phone}
@@ -118,10 +125,12 @@ const ClientContactForm = ({ contact, mode }: ClientContactFormProps) => {
 
       {/* Address */}
       <div className="space-y-4">
-        <Typography variant="h4">Address</Typography>
+        <Typography variant="headingXs">Address</Typography>
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2 sm:col-span-2">
-            <Label htmlFor="addressLine1">Address Line 1</Label>
+            <Typography variant="labelSm" asChild>
+              <label htmlFor="addressLine1">Address Line 1</label>
+            </Typography>
             <Input
               id="addressLine1"
               value={formData.addressLine1}
@@ -130,7 +139,9 @@ const ClientContactForm = ({ contact, mode }: ClientContactFormProps) => {
             />
           </div>
           <div className="space-y-2 sm:col-span-2">
-            <Label htmlFor="addressLine2">Address Line 2</Label>
+            <Typography variant="labelSm" asChild>
+              <label htmlFor="addressLine2">Address Line 2</label>
+            </Typography>
             <Input
               id="addressLine2"
               value={formData.addressLine2}
@@ -139,7 +150,9 @@ const ClientContactForm = ({ contact, mode }: ClientContactFormProps) => {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="city">City</Label>
+            <Typography variant="labelSm" asChild>
+              <label htmlFor="city">City</label>
+            </Typography>
             <Input
               id="city"
               value={formData.city}
@@ -148,7 +161,9 @@ const ClientContactForm = ({ contact, mode }: ClientContactFormProps) => {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="stateProvince">State/Province</Label>
+            <Typography variant="labelSm" asChild>
+              <label htmlFor="stateProvince">State/Province</label>
+            </Typography>
             <Input
               id="stateProvince"
               value={formData.stateProvince}
@@ -157,7 +172,9 @@ const ClientContactForm = ({ contact, mode }: ClientContactFormProps) => {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="postalCode">Postal Code</Label>
+            <Typography variant="labelSm" asChild>
+              <label htmlFor="postalCode">Postal Code</label>
+            </Typography>
             <Input
               id="postalCode"
               value={formData.postalCode}
@@ -166,7 +183,9 @@ const ClientContactForm = ({ contact, mode }: ClientContactFormProps) => {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="country">Country</Label>
+            <Typography variant="labelSm" asChild>
+              <label htmlFor="country">Country</label>
+            </Typography>
             <Input
               id="country"
               value={formData.country}
@@ -179,11 +198,13 @@ const ClientContactForm = ({ contact, mode }: ClientContactFormProps) => {
 
       {/* Preferences */}
       <div className="space-y-4">
-        <Typography variant="h4">Preferences</Typography>
+        <Typography variant="headingXs">Preferences</Typography>
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="winePreferences">Wine Preferences</Label>
-            <Textarea
+            <Typography variant="labelSm" asChild>
+              <label htmlFor="winePreferences">Wine Preferences</label>
+            </Typography>
+            <TextArea
               id="winePreferences"
               value={formData.winePreferences}
               onChange={(e) => setFormData({ ...formData, winePreferences: e.target.value })}
@@ -192,8 +213,10 @@ const ClientContactForm = ({ contact, mode }: ClientContactFormProps) => {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="deliveryInstructions">Delivery Instructions</Label>
-            <Textarea
+            <Typography variant="labelSm" asChild>
+              <label htmlFor="deliveryInstructions">Delivery Instructions</label>
+            </Typography>
+            <TextArea
               id="deliveryInstructions"
               value={formData.deliveryInstructions}
               onChange={(e) => setFormData({ ...formData, deliveryInstructions: e.target.value })}
@@ -202,8 +225,10 @@ const ClientContactForm = ({ contact, mode }: ClientContactFormProps) => {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="paymentNotes">Payment Notes</Label>
-            <Textarea
+            <Typography variant="labelSm" asChild>
+              <label htmlFor="paymentNotes">Payment Notes</label>
+            </Typography>
+            <TextArea
               id="paymentNotes"
               value={formData.paymentNotes}
               onChange={(e) => setFormData({ ...formData, paymentNotes: e.target.value })}
@@ -216,10 +241,12 @@ const ClientContactForm = ({ contact, mode }: ClientContactFormProps) => {
 
       {/* Notes */}
       <div className="space-y-4">
-        <Typography variant="h4">Notes</Typography>
+        <Typography variant="headingXs">Notes</Typography>
         <div className="space-y-2">
-          <Label htmlFor="notes">Internal Notes</Label>
-          <Textarea
+          <Typography variant="labelSm" asChild>
+            <label htmlFor="notes">Internal Notes</label>
+          </Typography>
+          <TextArea
             id="notes"
             value={formData.notes}
             onChange={(e) => setFormData({ ...formData, notes: e.target.value })}

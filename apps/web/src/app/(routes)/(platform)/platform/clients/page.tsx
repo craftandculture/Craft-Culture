@@ -12,7 +12,7 @@ const ClientsPage = () => {
   return (
     <div className="container mx-auto max-w-6xl space-y-6 px-4 py-8">
       <div>
-        <Typography variant="h1">Clients</Typography>
+        <Typography variant="headingLg">Clients</Typography>
         <Typography variant="bodySm" colorRole="muted">
           Manage your private client relationships
         </Typography>

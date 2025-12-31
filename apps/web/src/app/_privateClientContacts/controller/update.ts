@@ -32,7 +32,7 @@ const update = winePartnerProcedure.input(updateSchema).mutation(async ({ input,
 
   // Verify ownership
   const existing = await db.query.privateClientContacts.findFirst({
-    where: and(eq(privateClientContacts.id, id), eq(privateClientContacts.partnerId, partnerId)),
+    where: { id, partnerId },
   });
 
   if (!existing) {

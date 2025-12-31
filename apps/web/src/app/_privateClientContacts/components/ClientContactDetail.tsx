@@ -2,12 +2,12 @@
 
 import {
   IconArrowLeft,
+  IconBottle,
   IconMail,
   IconMapPin,
   IconPencil,
   IconPhone,
   IconPlus,
-  IconWine,
 } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
@@ -92,7 +92,7 @@ const ClientContactDetail = ({ clientId }: ClientContactDetailProps) => {
             <Icon icon={IconArrowLeft} size="sm" />
             Back to Clients
           </Link>
-          <Typography variant="h2">{contact.name}</Typography>
+          <Typography variant="headingLg">{contact.name}</Typography>
           <Typography variant="bodySm" colorRole="muted">
             Client since {format(new Date(contact.createdAt), 'MMMM yyyy')}
           </Typography>
@@ -118,7 +118,7 @@ const ClientContactDetail = ({ clientId }: ClientContactDetailProps) => {
         <div className="space-y-6 lg:col-span-2">
           {/* Contact Details Card */}
           <div className="rounded-lg border border-border-muted bg-surface-secondary/30 p-6">
-            <Typography variant="h4" className="mb-4">
+            <Typography variant="headingXs" className="mb-4">
               Contact Details
             </Typography>
             <div className="space-y-3">
@@ -146,7 +146,7 @@ const ClientContactDetail = ({ clientId }: ClientContactDetailProps) => {
           {/* Preferences Card */}
           {(contact.winePreferences || contact.deliveryInstructions || contact.paymentNotes) && (
             <div className="rounded-lg border border-border-muted bg-surface-secondary/30 p-6">
-              <Typography variant="h4" className="mb-4">
+              <Typography variant="headingXs" className="mb-4">
                 Preferences
               </Typography>
               <div className="space-y-4">
@@ -181,7 +181,7 @@ const ClientContactDetail = ({ clientId }: ClientContactDetailProps) => {
           {/* Notes Card */}
           {contact.notes && (
             <div className="rounded-lg border border-border-muted bg-surface-secondary/30 p-6">
-              <Typography variant="h4" className="mb-4">
+              <Typography variant="headingXs" className="mb-4">
                 Internal Notes
               </Typography>
               <Typography variant="bodySm">{contact.notes}</Typography>
@@ -191,7 +191,7 @@ const ClientContactDetail = ({ clientId }: ClientContactDetailProps) => {
           {/* Order History */}
           <div className="rounded-lg border border-border-muted bg-surface-secondary/30 p-6">
             <div className="mb-4 flex items-center justify-between">
-              <Typography variant="h4">Order History</Typography>
+              <Typography variant="headingXs">Order History</Typography>
               <Button asChild size="sm" variant="outline">
                 <Link href={`/platform/private-orders/new?clientId=${contact.id}`}>
                   <Icon icon={IconPlus} size="sm" className="mr-1" />
@@ -202,7 +202,7 @@ const ClientContactDetail = ({ clientId }: ClientContactDetailProps) => {
 
             {contact.recentOrders.length === 0 ? (
               <div className="flex flex-col items-center justify-center gap-2 py-8">
-                <Icon icon={IconWine} size="lg" className="text-text-muted" />
+                <Icon icon={IconBottle} size="lg" className="text-text-muted" />
                 <Typography variant="bodySm" colorRole="muted">
                   No orders yet
                 </Typography>
@@ -246,7 +246,7 @@ const ClientContactDetail = ({ clientId }: ClientContactDetailProps) => {
         {/* Stats Sidebar */}
         <div className="space-y-4">
           <div className="rounded-lg border border-border-muted bg-surface-secondary/30 p-6">
-            <Typography variant="h4" className="mb-4">
+            <Typography variant="headingXs" className="mb-4">
               Summary
             </Typography>
             <div className="space-y-4">
@@ -254,13 +254,13 @@ const ClientContactDetail = ({ clientId }: ClientContactDetailProps) => {
                 <Typography variant="bodyXs" colorRole="muted">
                   Total Orders
                 </Typography>
-                <Typography variant="h3">{contact.totalOrders}</Typography>
+                <Typography variant="headingSm">{contact.totalOrders}</Typography>
               </div>
               <div>
                 <Typography variant="bodyXs" colorRole="muted">
                   Total Spend
                 </Typography>
-                <Typography variant="h3">{formatCurrency(contact.totalSpendUsd)}</Typography>
+                <Typography variant="headingSm">{formatCurrency(contact.totalSpendUsd)}</Typography>
               </div>
               <div>
                 <Typography variant="bodyXs" colorRole="muted">
