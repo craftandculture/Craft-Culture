@@ -175,9 +175,9 @@ const AdminPrivateOrderDetailPage = () => {
                               <Typography variant="bodySm" className="font-medium">
                                 {item.productName}
                               </Typography>
-                              {item.lwin18 && (
+                              {item.lwin && (
                                 <Typography variant="bodyXs" colorRole="muted">
-                                  LWIN: {item.lwin18}
+                                  LWIN: {item.lwin}
                                 </Typography>
                               )}
                             </td>
