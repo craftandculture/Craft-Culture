@@ -39,9 +39,24 @@ const parseSupplierSheet = async (buffer: ArrayBuffer): Promise<ParsedSheetData>
     throw new Error('No data found in the file');
   }
 
-  // Extract headers from first row
+  // Find the header row - skip title/empty rows at the top
+  // Look for the first row with at least 3 non-empty cells (likely the actual headers)
+  let headerRowIndex = 0;
+  for (let i = 0; i < Math.min(rawData.length, 20); i++) {
+    const row = Array.from(rawData[i] as unknown[]);
+    const nonEmptyCells = row.filter(
+      (cell) => cell !== null && cell !== undefined && cell !== '',
+    ).length;
+    // Header row typically has multiple columns filled
+    if (nonEmptyCells >= 3) {
+      headerRowIndex = i;
+      break;
+    }
+  }
+
+  // Extract headers from detected header row
   // Use Array.from to ensure dense array (handles any sparse arrays from xlsx)
-  const headerRow = Array.from(rawData[0] as unknown[]);
+  const headerRow = Array.from(rawData[headerRowIndex] as unknown[]);
   const headers: string[] = headerRow.map((cell, index) =>
     cell !== null && cell !== undefined && cell !== ''
       ? String(cell).trim()
@@ -52,10 +67,10 @@ const parseSupplierSheet = async (buffer: ArrayBuffer): Promise<ParsedSheetData>
     throw new Error('No headers found in the file');
   }
 
-  // Parse remaining rows into objects
+  // Parse remaining rows into objects (starting after header row)
   const rows: Record<string, unknown>[] = [];
 
-  for (let i = 1; i < rawData.length; i++) {
+  for (let i = headerRowIndex + 1; i < rawData.length; i++) {
     const rawRow = rawData[i] as unknown[];
     if (!rawRow || rawRow.length === 0) continue;
     // Convert sparse array to dense array
