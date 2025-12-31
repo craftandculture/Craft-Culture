@@ -6,11 +6,11 @@ import { useEffect } from 'react';
  * Updates the document title based on customer type
  *
  * - B2C users see "Pocket Cellar"
- * - B2B users see "C&C Index"
+ * - B2B and private_clients users see "C&C Index"
  *
  * @param customerType - The user's customer type
  */
-const useBrandedTitle = (customerType: 'b2b' | 'b2c') => {
+const useBrandedTitle = (customerType: 'b2b' | 'b2c' | 'private_clients') => {
   useEffect(() => {
     document.title = customerType === 'b2c' ? 'Pocket Cellar' : 'C&C Index';
   }, [customerType]);

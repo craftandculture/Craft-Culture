@@ -23,7 +23,7 @@ interface WorkflowStep {
 }
 
 interface QuoteWorkflowStepperProps {
-  quote: Quote & { createdBy?: { customerType?: 'b2b' | 'b2c' } | null };
+  quote: Quote & { createdBy?: { customerType?: 'b2b' | 'b2c' | 'private_clients' } | null };
   variant?: 'default' | 'compact';
 }
 

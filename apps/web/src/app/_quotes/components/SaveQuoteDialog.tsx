@@ -52,7 +52,7 @@ export interface SaveQuoteDialogProps extends DialogProps {
   currency: 'USD' | 'AED';
   totalUsd: number;
   totalAed?: number;
-  customerType?: 'b2b' | 'b2c';
+  customerType?: 'b2b' | 'b2c' | 'private_clients';
   marginConfig?: MarginConfig;
   outOfCatalogueItems?: OutOfCatalogueItem[];
   onSaveSuccess?: (quoteId: string) => void;

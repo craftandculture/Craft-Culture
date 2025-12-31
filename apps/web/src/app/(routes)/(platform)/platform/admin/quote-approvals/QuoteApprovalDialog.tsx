@@ -49,7 +49,7 @@ const normalizeBottleSize = (size: string | null | undefined): string => {
 };
 
 interface QuoteApprovalDialogProps extends DialogProps {
-  quote: (Quote & { createdBy?: { id: string; name: string | null; email: string; customerType: 'b2b' | 'b2c' } | null }) | null;
+  quote: (Quote & { createdBy?: { id: string; name: string | null; email: string; customerType: 'b2b' | 'b2c' | 'private_clients' } | null }) | null;
 }
 
 /**

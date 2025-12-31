@@ -60,7 +60,7 @@ export function calculateQuote(
   offers: ProductOffer[],
   cellMappings: CellMappingSchema,
   formulaData: Record<string, unknown>,
-  customerType: 'b2b' | 'b2c',
+  customerType: 'b2b' | 'b2c' | 'private_clients',
   exchangeRateMap: Map<string, number>,
 ): QuoteData {
   // Convert stored formula data to HyperFormula format

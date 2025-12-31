@@ -47,7 +47,7 @@ const calculateInBondPrices = (
   offers: ProductOffer[],
   cellMappings: CellMappingSchema,
   formulaData: Record<string, unknown>,
-  customerType: 'b2b' | 'b2c',
+  customerType: 'b2b' | 'b2c' | 'private_clients',
   exchangeRateMap: Map<string, number>,
 ): Map<string, number> => {
   const result = new Map<string, number>();

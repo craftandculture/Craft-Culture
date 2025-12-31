@@ -4,7 +4,7 @@ import WarehouseDataFeed from '@/app/_warehouse/components/WarehouseDataFeed';
 import parseChangelog from '@/utils/parseChangelog';
 
 export interface BrandedFooterProps {
-  customerType: 'b2b' | 'b2c';
+  customerType: 'b2b' | 'b2c' | 'private_clients';
 }
 
 /**

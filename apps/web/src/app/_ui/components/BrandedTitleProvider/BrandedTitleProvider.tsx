@@ -3,7 +3,7 @@
 import useBrandedTitle from '@/app/_ui/hooks/useBrandedTitle';
 
 export interface BrandedTitleProviderProps {
-  customerType: 'b2b' | 'b2c';
+  customerType: 'b2b' | 'b2c' | 'private_clients';
 }
 
 /**

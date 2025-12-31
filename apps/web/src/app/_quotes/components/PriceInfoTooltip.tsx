@@ -8,7 +8,7 @@ import TooltipTrigger from '@/app/_ui/components/Tooltip/TooltipTrigger';
 import Typography from '@/app/_ui/components/Typography/Typography';
 
 export interface PriceInfoTooltipProps {
-  customerType?: 'b2b' | 'b2c';
+  customerType?: 'b2b' | 'b2c' | 'private_clients';
 }
 
 /**
