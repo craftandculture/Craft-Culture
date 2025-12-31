@@ -165,7 +165,7 @@ const ColumnMappingStep = ({
               Source Price Type <span className="text-red-500">*</span>
             </Typography>
             <Select value={sourcePriceType} onValueChange={(v) => setSourcePriceType(v as 'bottle' | 'case')}>
-              <SelectTrigger>
+              <SelectTrigger className="w-full">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -187,7 +187,7 @@ const ColumnMappingStep = ({
               onValueChange={(v) => setSourceCurrency(v as 'GBP' | 'EUR' | 'USD')}
               disabled={hasCurrencyColumn}
             >
-              <SelectTrigger>
+              <SelectTrigger className="w-full">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
