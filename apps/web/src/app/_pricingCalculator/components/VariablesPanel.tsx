@@ -90,7 +90,8 @@ const VariablesPanel = ({ variables, onChange, isUpdating }: VariablesPanelProps
               </SelectContent>
             </Select>
           </div>
-          <div className="grid grid-cols-2 gap-2">
+          {/* Only show relevant conversion rate based on input currency */}
+          {localVariables.inputCurrency === 'GBP' && (
             <div>
               <label htmlFor="gbpToUsdRate" className={labelClasses}>
                 GBP → USD
@@ -106,6 +107,8 @@ const VariablesPanel = ({ variables, onChange, isUpdating }: VariablesPanelProps
                 className="h-8"
               />
             </div>
+          )}
+          {localVariables.inputCurrency === 'EUR' && (
             <div>
               <label htmlFor="eurToUsdRate" className={labelClasses}>
                 EUR → USD
@@ -121,7 +124,12 @@ const VariablesPanel = ({ variables, onChange, isUpdating }: VariablesPanelProps
                 className="h-8"
               />
             </div>
-          </div>
+          )}
+          {localVariables.inputCurrency === 'USD' && (
+            <Typography variant="bodyXs" colorRole="muted" className="italic">
+              No conversion needed (input is USD)
+            </Typography>
+          )}
           <div>
             <label htmlFor="usdToAedRate" className={labelClasses}>
               USD → AED

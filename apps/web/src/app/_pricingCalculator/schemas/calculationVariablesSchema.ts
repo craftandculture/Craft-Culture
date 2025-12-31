@@ -35,7 +35,7 @@ export type CalculationVariables = z.infer<typeof calculationVariablesSchema>;
  * Default values for calculation variables
  */
 export const defaultCalculationVariables: CalculationVariables = {
-  inputCurrency: 'GBP',
+  inputCurrency: 'USD',
   gbpToUsdRate: 1.27,
   eurToUsdRate: 1.08,
   usdToAedRate: 3.67,

@@ -88,7 +88,7 @@ const PricePreviewTable = ({
               <tr>
                 <th className="px-2 py-1.5 text-left font-medium text-text-muted">Product</th>
                 <th className="px-2 py-1.5 text-left font-medium text-text-muted">Vintage</th>
-                <th className="px-2 py-1.5 text-right font-medium text-text-muted">UK In-Bond</th>
+                <th className="px-2 py-1.5 text-right font-medium text-text-muted">Source Price</th>
                 <th className="px-2 py-1.5 text-center font-medium text-text-muted">Case</th>
               </tr>
             </thead>
