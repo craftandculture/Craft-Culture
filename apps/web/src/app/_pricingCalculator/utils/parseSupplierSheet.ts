@@ -1,5 +1,4 @@
-import type { Workbook } from 'exceljs';
-import ExcelJS from 'exceljs';
+import * as XLSX from 'xlsx';
 
 interface ParsedSheetData {
   headers: string[];
@@ -10,64 +9,72 @@ interface ParsedSheetData {
 /**
  * Parse an Excel file into raw data with detected headers
  *
- * Does not attempt to map columns - just extracts raw data for column mapping step
+ * Uses xlsx (SheetJS) library which works in browser environments
  *
  * @example
  *   const { headers, rows } = await parseSupplierSheet(buffer);
  *
- * @param buffer - File buffer (xlsx or xls)
+ * @param buffer - File buffer (xlsx, xls, or csv)
  * @returns Parsed headers and rows
  */
 const parseSupplierSheet = async (buffer: ArrayBuffer): Promise<ParsedSheetData> => {
-  const workbook: Workbook = new ExcelJS.Workbook();
-  await workbook.xlsx.load(buffer);
+  const data = new Uint8Array(buffer);
+  const workbook = XLSX.read(data, { type: 'array' });
 
-  const worksheet = workbook.worksheets[0];
+  const sheetName = workbook.SheetNames[0];
+  if (!sheetName) {
+    throw new Error('No worksheet found in the file');
+  }
+
+  const worksheet = workbook.Sheets[sheetName];
   if (!worksheet) {
     throw new Error('No worksheet found in the file');
   }
 
-  // Extract headers from first row
-  const headerRow = worksheet.getRow(1);
-  const headers: string[] = [];
-  const columnIndexMap: Record<number, string> = {};
+  // Convert to array of arrays (first row is headers)
+  const rawData = XLSX.utils.sheet_to_json<unknown[]>(worksheet, { header: 1 });
 
-  headerRow.eachCell((cell, colNumber) => {
-    const header = String(cell.value || `Column ${colNumber}`).trim();
-    headers.push(header);
-    columnIndexMap[colNumber] = header;
-  });
+  if (rawData.length === 0) {
+    throw new Error('No data found in the file');
+  }
+
+  // Extract headers from first row
+  const headerRow = rawData[0] as unknown[];
+  const headers: string[] = headerRow.map((cell, index) =>
+    cell !== null && cell !== undefined && cell !== ''
+      ? String(cell).trim()
+      : `Column ${index + 1}`,
+  );
 
   if (headers.length === 0) {
     throw new Error('No headers found in the file');
   }
 
-  // Parse each row into objects
+  // Parse remaining rows into objects
   const rows: Record<string, unknown>[] = [];
 
-  worksheet.eachRow((row, rowNumber) => {
-    if (rowNumber === 1) return; // Skip header
+  for (let i = 1; i < rawData.length; i++) {
+    const row = rawData[i] as unknown[];
+    if (!row || row.length === 0) continue;
 
     const rowData: Record<string, unknown> = {};
     let hasData = false;
 
-    row.eachCell((cell, colNumber) => {
-      const header = columnIndexMap[colNumber];
-      if (header) {
-        const value = cell.value;
-        // Handle different cell types
-        if (value !== null && value !== undefined && value !== '') {
-          rowData[header] = value;
-          hasData = true;
-        }
+    for (let j = 0; j < headers.length; j++) {
+      const header = headers[j];
+      const value = row[j];
+
+      if (header && value !== null && value !== undefined && value !== '') {
+        rowData[header] = value;
+        hasData = true;
       }
-    });
+    }
 
     // Only add rows that have some data
     if (hasData) {
       rows.push(rowData);
     }
-  });
+  }
 
   return {
     headers,
