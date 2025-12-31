@@ -66,7 +66,10 @@ const PricingCalculatorWizard = () => {
     setCurrentStep(1);
   };
 
-  const handleMappingComplete = (mapping: Record<string, string>) => {
+  const handleMappingComplete = (
+    mapping: Record<string, string>,
+    settings: { sourcePriceType: 'bottle' | 'case'; sourceCurrency: 'GBP' | 'EUR' | 'USD' },
+  ) => {
     setColumnMapping(mapping);
     // Create the session with column mapping and redirect to detail view
     createSessionMutation.mutate(
@@ -76,7 +79,11 @@ const PricingCalculatorWizard = () => {
         sourceFileName: uploadData?.fileName,
         rawData: uploadData?.rows,
         detectedColumns: uploadData?.headers,
-        columnMapping: mapping,
+        columnMapping: {
+          ...mapping,
+          __sourcePriceType: settings.sourcePriceType,
+          __sourceCurrency: settings.sourceCurrency,
+        },
       },
       {
         onSuccess: (session) => {

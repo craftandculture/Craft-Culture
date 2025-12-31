@@ -10,6 +10,7 @@ interface RawProduct {
   region?: string;
   producer?: string;
   lwin?: string;
+  sourcePriceType?: 'bottle' | 'case';
 }
 
 interface CalculatedProduct {
@@ -47,14 +48,22 @@ const calculatePrices = (
   variables: CalculationVariables,
 ): CalculatedProduct[] => {
   return products.map((product) => {
+    const caseConfig = product.caseConfig || 6;
+
+    // Step 0: Normalize to case price if source is per bottle
+    let baseCasePrice = product.ukInBondPrice;
+    if (product.sourcePriceType === 'bottle') {
+      baseCasePrice = product.ukInBondPrice * caseConfig;
+    }
+
     // Step 1: Convert to USD
-    let priceUsd = product.ukInBondPrice;
+    let priceUsd = baseCasePrice;
 
     const currency = product.inputCurrency || variables.inputCurrency;
     if (currency === 'GBP') {
-      priceUsd = product.ukInBondPrice * variables.gbpToUsdRate;
+      priceUsd = baseCasePrice * variables.gbpToUsdRate;
     } else if (currency === 'EUR') {
-      priceUsd = product.ukInBondPrice * variables.eurToUsdRate;
+      priceUsd = baseCasePrice * variables.eurToUsdRate;
     }
     // USD stays as-is
 
@@ -70,7 +79,6 @@ const calculatePrices = (
     }
 
     // Step 3: Add freight (per bottle × case config)
-    const caseConfig = product.caseConfig || 6;
     // Support old sessions with shippingMethod/airFreight/seaFreight
     const freightPerBottle = variables.freightPerBottle ?? 2;
     const freightPerCase = freightPerBottle * caseConfig;

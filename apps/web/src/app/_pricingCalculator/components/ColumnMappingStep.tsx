@@ -15,8 +15,13 @@ import Typography from '@/app/_ui/components/Typography/Typography';
 interface ColumnMappingStepProps {
   headers: string[];
   sampleRows: Record<string, unknown>[];
-  onMappingComplete: (mapping: Record<string, string>) => void;
+  onMappingComplete: (mapping: Record<string, string>, settings: SourceDataSettings) => void;
   isSubmitting?: boolean;
+}
+
+interface SourceDataSettings {
+  sourcePriceType: 'bottle' | 'case';
+  sourceCurrency: 'GBP' | 'EUR' | 'USD';
 }
 
 interface FieldMapping {
@@ -49,6 +54,10 @@ const ColumnMappingStep = ({
   onMappingComplete,
   isSubmitting,
 }: ColumnMappingStepProps) => {
+  // Source data settings
+  const [sourcePriceType, setSourcePriceType] = useState<'bottle' | 'case'>('case');
+  const [sourceCurrency, setSourceCurrency] = useState<'GBP' | 'EUR' | 'USD'>('USD');
+
   const [mapping, setMapping] = useState<Record<string, string>>(() => {
     // Auto-detect some common column names
     const autoMapping: Record<string, string> = {};
@@ -117,8 +126,11 @@ const ColumnMappingStep = ({
       return;
     }
 
-    onMappingComplete(mapping);
+    onMappingComplete(mapping, { sourcePriceType, sourceCurrency });
   };
+
+  // Check if currency column is mapped
+  const hasCurrencyColumn = !!mapping.currency;
 
   const getSampleValue = (columnName: string) => {
     for (const row of sampleRows) {
@@ -139,6 +151,56 @@ const ColumnMappingStep = ({
         <Typography variant="bodySm" colorRole="muted">
           Match your spreadsheet columns to the pricing fields. Auto-detected where possible.
         </Typography>
+      </div>
+
+      {/* Source Data Settings */}
+      <div className="rounded-lg border border-border-muted bg-surface-secondary/30 p-4">
+        <Typography variant="bodySm" className="mb-3 font-medium">
+          Source Data Settings
+        </Typography>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          {/* Price Type */}
+          <div>
+            <Typography variant="bodyXs" colorRole="muted" className="mb-1">
+              Source Price Type <span className="text-red-500">*</span>
+            </Typography>
+            <Select value={sourcePriceType} onValueChange={(v) => setSourcePriceType(v as 'bottle' | 'case')}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="case">Per Case</SelectItem>
+                <SelectItem value="bottle">Per Bottle</SelectItem>
+              </SelectContent>
+            </Select>
+            <Typography variant="bodyXs" colorRole="muted" className="mt-1 italic">
+              Is the source price per bottle or per case?
+            </Typography>
+          </div>
+          {/* Currency */}
+          <div>
+            <Typography variant="bodyXs" colorRole="muted" className="mb-1">
+              Source Currency <span className="text-red-500">*</span>
+            </Typography>
+            <Select
+              value={sourceCurrency}
+              onValueChange={(v) => setSourceCurrency(v as 'GBP' | 'EUR' | 'USD')}
+              disabled={hasCurrencyColumn}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="USD">USD</SelectItem>
+                <SelectItem value="GBP">GBP</SelectItem>
+                <SelectItem value="EUR">EUR</SelectItem>
+              </SelectContent>
+            </Select>
+            <Typography variant="bodyXs" colorRole="muted" className="mt-1 italic">
+              {hasCurrencyColumn ? 'Using currency column from sheet' : 'Currency of source prices'}
+            </Typography>
+          </div>
+        </div>
       </div>
 
       {/* Mapping Form */}
