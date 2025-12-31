@@ -3,7 +3,7 @@
 import { IconArrowLeft, IconDownload, IconLoader2 } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
@@ -15,7 +15,10 @@ import useTRPC from '@/lib/trpc/browser';
 import PricePreviewTable from './PricePreviewTable';
 import VariablesPanel from './VariablesPanel';
 import type getSessionOrRedirect from '../data/getSessionOrRedirect';
-import type { CalculationVariables } from '../schemas/calculationVariablesSchema';
+import {
+  type CalculationVariables,
+  defaultCalculationVariables,
+} from '../schemas/calculationVariablesSchema';
 import exportB2BToExcel from '../utils/exportB2BToExcel';
 import exportD2CToExcel from '../utils/exportD2CToExcel';
 
@@ -45,6 +48,22 @@ const SessionDetailView = ({ session: initialSession }: SessionDetailViewProps) 
 
   const updateVariablesMutation = useMutation(api.pricingCalc.session.updateVariables.mutationOptions());
   const calculateMutation = useMutation(api.pricingCalc.session.calculate.mutationOptions());
+
+  // Auto-save default variables on first load if they don't exist
+  useEffect(() => {
+    if (!session.calculationVariables && !updateVariablesMutation.isPending) {
+      updateVariablesMutation.mutate(
+        { id: session.id, variables: defaultCalculationVariables },
+        {
+          onSuccess: () => {
+            void queryClient.invalidateQueries({
+              queryKey: api.pricingCalc.session.getOne.queryKey({ id: session.id }),
+            });
+          },
+        },
+      );
+    }
+  }, [session.id, session.calculationVariables]);
 
   const handleVariablesChange = (variables: CalculationVariables) => {
     updateVariablesMutation.mutate(
