@@ -14,23 +14,13 @@ import useTRPC from '@/lib/trpc/browser';
 
 import PricePreviewTable from './PricePreviewTable';
 import VariablesPanel from './VariablesPanel';
+import type getSessionOrRedirect from '../data/getSessionOrRedirect';
 import type { CalculationVariables } from '../schemas/calculationVariablesSchema';
 
+type Session = Awaited<ReturnType<typeof getSessionOrRedirect>>;
+
 interface SessionDetailViewProps {
-  session: {
-    id: string;
-    name: string;
-    status: string | null;
-    sourceType: string;
-    sourceFileName: string | null;
-    rawData: unknown;
-    detectedColumns: unknown;
-    columnMapping: unknown;
-    calculationVariables: CalculationVariables | null;
-    itemCount: number | null;
-    createdAt: Date | null;
-    items: unknown[];
-  };
+  session: Session;
 }
 
 /**
