@@ -1,12 +1,24 @@
 'use client';
 
-import { IconArrowLeft, IconPlus, IconSend, IconTrash } from '@tabler/icons-react';
+import {
+  IconArrowLeft,
+  IconCheck,
+  IconCloudUpload,
+  IconLoader2,
+  IconPlus,
+  IconSend,
+  IconSparkles,
+  IconTrash,
+  IconX,
+} from '@tabler/icons-react';
 import { useMutation } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
+import { useDropzone } from 'react-dropzone';
 import { toast } from 'sonner';
 
+import Badge from '@/app/_ui/components/Badge/Badge';
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
 import Card from '@/app/_ui/components/Card/Card';
@@ -37,6 +49,24 @@ interface LineItem {
   source: StockSource;
 }
 
+interface ExtractedLineItem {
+  productName: string;
+  producer?: string;
+  vintage?: string;
+  region?: string;
+  quantity: number;
+  unitPrice?: number;
+  total?: number;
+}
+
+interface ExtractedData {
+  invoiceNumber?: string;
+  invoiceDate?: string;
+  currency?: string;
+  lineItems: ExtractedLineItem[];
+  totalAmount?: number;
+}
+
 /**
  * Private Order Creation Form
  *
@@ -57,6 +87,12 @@ const PrivateOrderForm = () => {
 
   // Line items state
   const [lineItems, setLineItems] = useState<LineItem[]>([]);
+
+  // Document extraction state
+  const [isExtracting, setIsExtracting] = useState(false);
+  const [extractedData, setExtractedData] = useState<ExtractedData | null>(null);
+  const [extractionError, setExtractionError] = useState<string | null>(null);
+  const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
 
   // Create order mutation
   const createOrder = useMutation({
@@ -101,6 +137,89 @@ const PrivateOrderForm = () => {
       return trpcClient.privateClientOrders.addItem.mutate(data);
     },
   });
+
+  // Handle file drop for document extraction
+  const onDrop = useCallback(
+    async (acceptedFiles: File[]) => {
+      const file = acceptedFiles[0];
+      if (!file) return;
+
+      setIsExtracting(true);
+      setExtractionError(null);
+      setExtractedData(null);
+      setUploadedFileName(file.name);
+
+      try {
+        // Convert file to base64 data URL
+        const reader = new FileReader();
+        const base64Promise = new Promise<string>((resolve, reject) => {
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = reject;
+        });
+        reader.readAsDataURL(file);
+        const base64Data = await base64Promise;
+
+        // Call extraction API
+        const result = await trpcClient.privateClientOrders.extractDocumentInline.mutate({
+          file: base64Data,
+          fileType: file.type as 'application/pdf' | 'image/png' | 'image/jpeg' | 'image/jpg',
+        });
+
+        if (result.success && result.data) {
+          setExtractedData(result.data);
+          toast.success(`Extracted ${result.data.lineItems.length} items from document`);
+        }
+      } catch (error) {
+        console.error('Extraction failed:', error);
+        setExtractionError(error instanceof Error ? error.message : 'Failed to extract document');
+        toast.error('Failed to extract document');
+      } finally {
+        setIsExtracting(false);
+      }
+    },
+    [trpcClient],
+  );
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop,
+    accept: {
+      'application/pdf': ['.pdf'],
+      'image/png': ['.png'],
+      'image/jpeg': ['.jpg', '.jpeg'],
+    },
+    maxFiles: 1,
+    disabled: isExtracting,
+  });
+
+  // Add extracted items to line items
+  const handleAddExtractedItems = () => {
+    if (!extractedData?.lineItems) return;
+
+    const newItems: LineItem[] = extractedData.lineItems.map((item) => ({
+      id: crypto.randomUUID(),
+      productName: item.productName,
+      producer: item.producer || '',
+      vintage: item.vintage || '',
+      region: item.region || '',
+      lwin: '',
+      bottleSize: '750ml',
+      caseConfig: 12,
+      quantity: item.quantity,
+      pricePerCaseUsd: item.unitPrice || 0,
+      source: 'manual' as StockSource,
+    }));
+
+    setLineItems([...lineItems, ...newItems]);
+    setExtractedData(null);
+    setUploadedFileName(null);
+    toast.success(`Added ${newItems.length} items to order`);
+  };
+
+  const handleClearExtraction = () => {
+    setExtractedData(null);
+    setExtractionError(null);
+    setUploadedFileName(null);
+  };
 
   const handleAddLineItem = () => {
     const newItem: LineItem = {
@@ -273,6 +392,132 @@ const PrivateOrderForm = () => {
               onChange={(e) => setDeliveryNotes(e.target.value)}
             />
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Document Upload Section */}
+      <Card>
+        <CardContent className="flex flex-col gap-4">
+          <div className="flex items-center gap-2">
+            <Icon icon={IconSparkles} size="sm" colorRole="brand" />
+            <Typography variant="headingSm">Import from Invoice</Typography>
+            <Badge colorRole="brand" size="sm">
+              AI-Powered
+            </Badge>
+          </div>
+
+          <Typography variant="bodySm" colorRole="muted">
+            Upload a partner invoice or price list to automatically extract wine products using AI.
+          </Typography>
+
+          {!extractedData && !isExtracting && (
+            <div
+              {...getRootProps()}
+              className={`flex cursor-pointer flex-col items-center justify-center gap-3 rounded-lg border-2 border-dashed p-6 transition-colors ${
+                isDragActive
+                  ? 'border-border-brand bg-fill-brand-muted'
+                  : 'border-border-muted hover:border-border-brand hover:bg-fill-muted'
+              }`}
+            >
+              <input {...getInputProps()} />
+              <Icon icon={IconCloudUpload} size="lg" colorRole={isDragActive ? 'brand' : 'muted'} />
+              <div className="text-center">
+                <Typography variant="bodySm" className="font-medium">
+                  {isDragActive ? 'Drop the file here' : 'Drag & drop a file here'}
+                </Typography>
+                <Typography variant="bodyXs" colorRole="muted">
+                  or click to select (PDF, PNG, JPG)
+                </Typography>
+              </div>
+            </div>
+          )}
+
+          {isExtracting && (
+            <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-border-muted bg-fill-muted p-6">
+              <Icon icon={IconLoader2} size="lg" colorRole="brand" className="animate-spin" />
+              <div className="text-center">
+                <Typography variant="bodySm" className="font-medium">
+                  Extracting products from {uploadedFileName}...
+                </Typography>
+                <Typography variant="bodyXs" colorRole="muted">
+                  This may take a few seconds
+                </Typography>
+              </div>
+            </div>
+          )}
+
+          {extractionError && (
+            <div className="flex items-center justify-between rounded-lg border border-border-danger bg-fill-danger-muted p-4">
+              <div className="flex items-center gap-2">
+                <Icon icon={IconX} size="sm" colorRole="danger" />
+                <Typography variant="bodySm" colorRole="danger">
+                  {extractionError}
+                </Typography>
+              </div>
+              <Button type="button" variant="ghost" size="sm" onClick={handleClearExtraction}>
+                Try Again
+              </Button>
+            </div>
+          )}
+
+          {extractedData && extractedData.lineItems.length > 0 && (
+            <div className="flex flex-col gap-4 rounded-lg border border-border-brand bg-fill-brand-muted p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Icon icon={IconCheck} size="sm" colorRole="success" />
+                  <Typography variant="bodySm" className="font-medium">
+                    Extracted {extractedData.lineItems.length} items from {uploadedFileName}
+                  </Typography>
+                </div>
+                <Button type="button" variant="ghost" size="sm" onClick={handleClearExtraction}>
+                  <Icon icon={IconX} size="sm" />
+                </Button>
+              </div>
+
+              {extractedData.invoiceNumber && (
+                <Typography variant="bodyXs" colorRole="muted">
+                  Invoice: {extractedData.invoiceNumber}
+                  {extractedData.invoiceDate && ` • ${extractedData.invoiceDate}`}
+                  {extractedData.currency && ` • ${extractedData.currency}`}
+                </Typography>
+              )}
+
+              <div className="max-h-48 overflow-y-auto">
+                <div className="flex flex-col gap-2">
+                  {extractedData.lineItems.map((item, index) => (
+                    <div
+                      key={index}
+                      className="flex items-center justify-between rounded border border-border-muted bg-fill-primary p-2"
+                    >
+                      <div className="flex flex-col">
+                        <Typography variant="bodySm" className="font-medium">
+                          {item.productName}
+                        </Typography>
+                        <Typography variant="bodyXs" colorRole="muted">
+                          {[item.producer, item.vintage, item.region].filter(Boolean).join(' • ')}
+                        </Typography>
+                      </div>
+                      <div className="text-right">
+                        <Typography variant="bodySm" className="font-medium">
+                          {item.quantity} cases
+                        </Typography>
+                        {item.unitPrice && (
+                          <Typography variant="bodyXs" colorRole="muted">
+                            {extractedData.currency || '$'}
+                            {item.unitPrice.toFixed(2)}/case
+                          </Typography>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <Button type="button" variant="default" colorRole="brand" onClick={handleAddExtractedItems}>
+                <ButtonContent iconLeft={IconPlus}>Add {extractedData.lineItems.length} Items to Order</ButtonContent>
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
 
