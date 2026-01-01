@@ -1,11 +1,4 @@
-import { sentryEsbuildPlugin } from '@sentry/esbuild-plugin';
-import { esbuildPlugin } from '@trigger.dev/build/extensions';
-import { syncVercelEnvVars } from '@trigger.dev/build/extensions/core';
 import { defineConfig } from '@trigger.dev/sdk';
-
-if (!process.env.SENTRY_AUTH_TOKEN) {
-  console.warn('SENTRY_AUTH_TOKEN not set, no source maps will be uploaded');
-}
 
 export const machineConfig = {
   default: 'small-1x',
@@ -13,19 +6,8 @@ export const machineConfig = {
 } as const;
 
 export default defineConfig({
-  project: 'proj_injcpayjlfvojhpmbgbf',
+  project: 'proj_hzlxlpyayhheoggbmmvs',
   build: {
-    extensions: [
-      syncVercelEnvVars(),
-      esbuildPlugin(
-        sentryEsbuildPlugin({
-          org: 'byont-ventures',
-          project: 'craft-and-culture',
-          authToken: process.env.SENTRY_AUTH_TOKEN,
-        }),
-        { placement: 'last', target: 'deploy' },
-      ),
-    ],
     external: ['sharp'],
   },
   logLevel: 'log',

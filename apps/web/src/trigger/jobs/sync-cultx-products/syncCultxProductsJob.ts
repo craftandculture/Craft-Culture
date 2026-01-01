@@ -1,7 +1,7 @@
 import { AbortTaskRunError, logger, schedules } from '@trigger.dev/sdk';
 
-import db from '@/database/client';
 import { productOffers, products } from '@/database/schema';
+import triggerDb from '@/trigger/triggerDb';
 import conflictUpdateSet from '@/database/utils/conflictUpdateSet';
 import createClient from '@/lib/cultx/client';
 import getCountryFromRegion from '@/utils/getCountryFromRegion';
@@ -46,7 +46,7 @@ export const syncCultxProductsJob = schedules.task({
         `Processing batch ${index + 1} out of ${productBatches.length}`,
       );
 
-      const result = await db
+      const result = await triggerDb
         .insert(products)
         .values(
           batch.map((product) => ({
@@ -78,7 +78,7 @@ export const syncCultxProductsJob = schedules.task({
         result.map((product) => [product.lwin18, product.id]),
       );
 
-      await db
+      await triggerDb
         .insert(productOffers)
         .values(
           batch.map(
