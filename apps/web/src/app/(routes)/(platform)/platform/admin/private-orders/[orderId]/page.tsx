@@ -265,10 +265,7 @@ const AdminPrivateOrderDetailPage = () => {
                 <Typography variant="headingSm" className="mb-4">
                   Documents
                 </Typography>
-                <DocumentUpload
-                  orderId={orderId}
-                  onUploadComplete={() => void refetch()}
-                />
+                <DocumentUpload orderId={orderId} />
               </CardContent>
             </Card>
           </div>
