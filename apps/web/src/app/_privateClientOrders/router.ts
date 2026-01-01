@@ -4,6 +4,8 @@ import adminAddItem from './controller/adminAddItem';
 import adminCreate from './controller/adminCreate';
 import adminGetMany from './controller/adminGetMany';
 import adminGetOne from './controller/adminGetOne';
+import adminRemoveItem from './controller/adminRemoveItem';
+import adminUpdateItem from './controller/adminUpdateItem';
 import adminUpdateStatus from './controller/adminUpdateStatus';
 import distributorDashboard from './controller/distributorDashboard';
 import distributorGetMany from './controller/distributorGetMany';
@@ -53,6 +55,8 @@ const privateClientOrdersRouter = createTRPCRouter({
   // Admin procedures
   adminCreate,
   adminAddItem,
+  adminUpdateItem,
+  adminRemoveItem,
   adminGetMany,
   adminGetOne,
   adminUpdateStatus,
