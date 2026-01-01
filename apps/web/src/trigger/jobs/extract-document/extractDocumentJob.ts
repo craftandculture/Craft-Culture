@@ -4,8 +4,8 @@ import { generateObject } from 'ai';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 
-import db from '@/database/client';
 import { privateClientOrderDocuments } from '@/database/schema';
+import triggerDb from '@/trigger/triggerDb';
 
 /**
  * Schema for extracted invoice data
@@ -52,7 +52,7 @@ export const extractDocumentJob = task({
     logger.info('Starting document extraction', { documentId });
 
     // Get document from database
-    const document = await db.query.privateClientOrderDocuments.findFirst({
+    const document = await triggerDb.query.privateClientOrderDocuments.findFirst({
       where: { id: documentId },
     });
 
@@ -61,7 +61,7 @@ export const extractDocumentJob = task({
     }
 
     // Update status to processing
-    await db
+    await triggerDb
       .update(privateClientOrderDocuments)
       .set({ extractionStatus: 'processing' })
       .where(eq(privateClientOrderDocuments.id, documentId));
@@ -160,7 +160,7 @@ Be precise with numbers and amounts.`,
       });
 
       // Update document with extracted data
-      await db
+      await triggerDb
         .update(privateClientOrderDocuments)
         .set({
           extractionStatus: 'completed',
@@ -184,7 +184,7 @@ Be precise with numbers and amounts.`,
       });
 
       // Update document with error
-      await db
+      await triggerDb
         .update(privateClientOrderDocuments)
         .set({
           extractionStatus: 'failed',
