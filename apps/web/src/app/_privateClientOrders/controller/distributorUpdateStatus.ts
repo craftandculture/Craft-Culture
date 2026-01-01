@@ -23,9 +23,8 @@ const distributorTransitions: Record<string, PrivateClientOrderStatus[]> = {
   // When client has paid, distributor can pay C&C
   client_paid: ['awaiting_distributor_payment'],
   awaiting_distributor_payment: ['distributor_paid'],
-  // When stock is ready, can start transit
-  distributor_paid: ['stock_in_transit'],
-  // When stock arrives at distributor
+  // Distributor waits for C&C to mark stock_in_transit
+  // When stock arrives at distributor (after C&C ships)
   stock_in_transit: ['with_distributor'],
   // When ready to deliver
   with_distributor: ['out_for_delivery'],
