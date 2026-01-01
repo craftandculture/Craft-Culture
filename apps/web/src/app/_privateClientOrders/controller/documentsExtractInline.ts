@@ -36,7 +36,8 @@ const extractedDataSchema = z.object({
 /**
  * Extract structured data from a document inline (without saving)
  *
- * Used by the new order form to extract line items from partner invoices.
+ * Uses GPT-4o to extract wine products from invoices and price lists.
+ * Supports both image files (PNG, JPG) and PDF documents.
  * Returns extracted data immediately for form population.
  */
 const documentsExtractInline = winePartnerProcedure.input(extractInlineSchema).mutation(async ({ input }) => {
