@@ -1,9 +1,9 @@
 import { AbortTaskRunError, logger, schedules } from '@trigger.dev/sdk';
 
 import { productOffers, products } from '@/database/schema';
-import triggerDb from '@/trigger/triggerDb';
 import conflictUpdateSet from '@/database/utils/conflictUpdateSet';
 import createClient from '@/lib/cultx/client';
+import triggerDb from '@/trigger/triggerDb';
 import getCountryFromRegion from '@/utils/getCountryFromRegion';
 import splitArrayBatches from '@/utils/splitArrayBatches';
 
