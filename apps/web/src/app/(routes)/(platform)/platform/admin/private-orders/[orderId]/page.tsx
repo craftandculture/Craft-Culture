@@ -520,7 +520,7 @@ const AdminPrivateOrderDetailPage = () => {
             </CardContent>
           </Card>
 
-          {/* Distributor - Compact */}
+          {/* Distributor - Compact with reassign dropdown */}
           <Card>
             <CardContent className="p-4">
               <div className="mb-2 flex items-center gap-1.5">
@@ -529,32 +529,14 @@ const AdminPrivateOrderDetailPage = () => {
                   Distributor
                 </Typography>
               </div>
-              {order.distributor ? (
-                <div className="flex items-center gap-2">
-                  {assignedDistributor?.logoUrl ? (
-                    <Image
-                      src={assignedDistributor.logoUrl}
-                      alt={order.distributor.businessName}
-                      width={28}
-                      height={28}
-                      className="rounded object-contain"
-                    />
-                  ) : (
-                    <div className="flex h-7 w-7 items-center justify-center rounded bg-fill-muted">
-                      <Icon icon={IconBuilding} size="xs" colorRole="muted" />
-                    </div>
-                  )}
-                  <Typography variant="bodySm" className="font-medium">
-                    {order.distributor.businessName}
-                  </Typography>
-                </div>
-              ) : canAssignDistributor ? (
+              {canAssignDistributor ? (
                 <Select
+                  value={order.distributor?.id}
                   onValueChange={handleDistributorAssign}
                   disabled={isAssigningDistributor}
                 >
                   <SelectTrigger className="h-8 text-xs">
-                    <SelectValue placeholder="Assign..." />
+                    <SelectValue placeholder="Select distributor..." />
                   </SelectTrigger>
                   <SelectContent>
                     {distributors.map((d) => (
@@ -579,6 +561,25 @@ const AdminPrivateOrderDetailPage = () => {
                     ))}
                   </SelectContent>
                 </Select>
+              ) : order.distributor ? (
+                <div className="flex items-center gap-2">
+                  {assignedDistributor?.logoUrl ? (
+                    <Image
+                      src={assignedDistributor.logoUrl}
+                      alt={order.distributor.businessName}
+                      width={28}
+                      height={28}
+                      className="rounded object-contain"
+                    />
+                  ) : (
+                    <div className="flex h-7 w-7 items-center justify-center rounded bg-fill-muted">
+                      <Icon icon={IconBuilding} size="xs" colorRole="muted" />
+                    </div>
+                  )}
+                  <Typography variant="bodySm" className="font-medium">
+                    {order.distributor.businessName}
+                  </Typography>
+                </div>
               ) : (
                 <Typography variant="bodyXs" colorRole="muted">
                   Assign after approval
