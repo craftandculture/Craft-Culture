@@ -90,8 +90,7 @@ const DistributorOrderDetailPage = () => {
         return { label: 'Awaiting Distributor Payment', status: 'awaiting_distributor_payment', icon: IconCheck };
       case 'awaiting_distributor_payment':
         return { label: 'Confirm Payment to C&C', status: 'distributor_paid', icon: IconCheck };
-      case 'distributor_paid':
-        return { label: 'Stock In Transit', status: 'stock_in_transit', icon: IconTruck };
+      // distributor_paid: Wait for C&C to mark stock_in_transit - no action button
       case 'stock_in_transit':
         return { label: 'Stock Received', status: 'with_distributor', icon: IconPackage };
       case 'with_distributor':
