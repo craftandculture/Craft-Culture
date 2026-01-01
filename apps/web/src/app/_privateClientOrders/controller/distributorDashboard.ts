@@ -84,6 +84,7 @@ const distributorDashboard = distributorProcedure.query(
         partner: {
           id: partners.id,
           businessName: partners.businessName,
+          logoUrl: partners.logoUrl,
         },
       })
       .from(privateClientOrders)
@@ -102,6 +103,7 @@ const distributorDashboard = distributorProcedure.query(
       .select({
         partnerId: partners.id,
         partnerName: partners.businessName,
+        partnerLogoUrl: partners.logoUrl,
         orderCount: sql<number>`count(*)`,
         totalCases: sql<number>`coalesce(sum(${privateClientOrders.caseCount}), 0)`,
         totalValueAed: sql<number>`coalesce(sum(${privateClientOrders.totalAed}), 0)`,
@@ -114,7 +116,7 @@ const distributorDashboard = distributorProcedure.query(
           inArray(privateClientOrders.status, visibleStatuses),
         ),
       )
-      .groupBy(partners.id, partners.businessName);
+      .groupBy(partners.id, partners.businessName, partners.logoUrl);
 
     // Build status breakdown with proper categorization
     const pendingPaymentStatuses = [
@@ -160,6 +162,7 @@ const distributorDashboard = distributorProcedure.query(
       ordersByPartner: ordersByPartner.map((p) => ({
         partnerId: p.partnerId,
         partnerName: p.partnerName ?? 'Unknown Partner',
+        partnerLogoUrl: p.partnerLogoUrl,
         orderCount: Number(p.orderCount),
         totalCases: Number(p.totalCases),
         totalValueAed: Number(p.totalValueAed),

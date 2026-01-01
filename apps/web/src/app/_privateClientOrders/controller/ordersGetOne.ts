@@ -6,8 +6,10 @@ import db from '@/database/client';
 import {
   partners,
   privateClientContacts,
+  privateClientOrderActivityLogs,
   privateClientOrderItems,
   privateClientOrders,
+  users,
 } from '@/database/schema';
 import { winePartnerProcedure } from '@/lib/trpc/procedures';
 
@@ -27,6 +29,7 @@ const ordersGetOne = winePartnerProcedure
         distributor: {
           id: partners.id,
           businessName: partners.businessName,
+          logoUrl: partners.logoUrl,
         },
         client: {
           id: privateClientContacts.id,
@@ -59,11 +62,36 @@ const ordersGetOne = winePartnerProcedure
       .where(eq(privateClientOrderItems.orderId, input.id))
       .orderBy(privateClientOrderItems.createdAt);
 
+    // Get activity logs with user info
+    const activityLogs = await db
+      .select({
+        log: privateClientOrderActivityLogs,
+        user: {
+          id: users.id,
+          name: users.name,
+          email: users.email,
+        },
+        partner: {
+          id: partners.id,
+          businessName: partners.businessName,
+        },
+      })
+      .from(privateClientOrderActivityLogs)
+      .leftJoin(users, eq(privateClientOrderActivityLogs.userId, users.id))
+      .leftJoin(partners, eq(privateClientOrderActivityLogs.partnerId, partners.id))
+      .where(eq(privateClientOrderActivityLogs.orderId, input.id))
+      .orderBy(privateClientOrderActivityLogs.createdAt);
+
     return {
       ...orderResult.order,
       distributor: orderResult.distributor,
       client: orderResult.client,
       items,
+      activityLogs: activityLogs.map((row) => ({
+        ...row.log,
+        user: row.user,
+        partner: row.partner,
+      })),
     };
   });
 
