@@ -1,6 +1,6 @@
 'use client';
 
-import { IconArrowLeft, IconLoader2 } from '@tabler/icons-react';
+import { IconArrowLeft, IconLoader2, IconTruck } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
@@ -26,6 +26,13 @@ import useTRPC from '@/lib/trpc/browser';
 import formatPrice from '@/utils/formatPrice';
 
 type OrderStatus = PrivateClientOrder['status'];
+
+// Statuses that allow distributor assignment
+const DISTRIBUTOR_ASSIGNABLE_STATUSES: OrderStatus[] = [
+  'cc_approved',
+  'awaiting_client_payment',
+  'client_paid',
+];
 
 const statusOptions: { value: OrderStatus; label: string }[] = [
   { value: 'draft', label: 'Draft' },
@@ -57,11 +64,17 @@ const AdminPrivateOrderDetailPage = () => {
   const api = useTRPC();
   const queryClient = useQueryClient();
   const [isUpdating, setIsUpdating] = useState(false);
+  const [isAssigningDistributor, setIsAssigningDistributor] = useState(false);
 
   // Fetch order details
   const { data: order, isLoading, refetch } = useQuery({
     ...api.privateClientOrders.adminGetOne.queryOptions({ id: orderId }),
     enabled: !!orderId,
+  });
+
+  // Fetch available distributors
+  const { data: distributors = [] } = useQuery({
+    ...api.partners.getMany.queryOptions({ type: 'distributor', status: 'active' }),
   });
 
   // Update status mutation
@@ -79,10 +92,32 @@ const AdminPrivateOrderDetailPage = () => {
     }),
   );
 
+  // Assign distributor mutation
+  const { mutate: assignDistributor } = useMutation(
+    api.privateClientOrders.adminAssignDistributor.mutationOptions({
+      onSuccess: () => {
+        toast.success('Distributor assigned successfully');
+        setIsAssigningDistributor(false);
+        void refetch();
+      },
+      onError: (error) => {
+        toast.error(error.message || 'Failed to assign distributor');
+        setIsAssigningDistributor(false);
+      },
+    }),
+  );
+
   const handleStatusChange = (newStatus: OrderStatus) => {
     setIsUpdating(true);
     updateStatus({ orderId, status: newStatus });
   };
+
+  const handleDistributorAssign = (distributorId: string) => {
+    setIsAssigningDistributor(true);
+    assignDistributor({ orderId, distributorId });
+  };
+
+  const canAssignDistributor = order && DISTRIBUTOR_ASSIGNABLE_STATUSES.includes(order.status);
 
   const formatDate = (date: Date | null | undefined) => {
     if (!date) return '-';
@@ -294,6 +329,87 @@ const AdminPrivateOrderDetailPage = () => {
                     ))}
                   </SelectContent>
                 </Select>
+              </CardContent>
+            </Card>
+
+            {/* Distributor Assignment */}
+            <Card>
+              <CardContent className="p-6">
+                <div className="mb-4 flex items-center gap-2">
+                  <Icon icon={IconTruck} size="sm" colorRole="muted" />
+                  <Typography variant="headingSm">Distributor</Typography>
+                </div>
+
+                {order.distributor ? (
+                  <div className="space-y-3">
+                    <div className="rounded-lg border border-border-muted bg-surface-secondary/50 p-3">
+                      <Typography variant="bodySm" className="font-medium">
+                        {order.distributor.businessName}
+                      </Typography>
+                      {order.distributorAssignedAt && (
+                        <Typography variant="bodyXs" colorRole="muted">
+                          Assigned {formatDate(order.distributorAssignedAt)}
+                        </Typography>
+                      )}
+                    </div>
+                    {canAssignDistributor && (
+                      <>
+                        <Divider />
+                        <div>
+                          <Typography variant="bodyXs" colorRole="muted" className="mb-2">
+                            Reassign to different distributor:
+                          </Typography>
+                          <Select
+                            value=""
+                            onValueChange={handleDistributorAssign}
+                            disabled={isAssigningDistributor}
+                          >
+                            <SelectTrigger className="w-full">
+                              <SelectValue placeholder="Select distributor..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {distributors
+                                .filter((d) => d.id !== order.distributor?.id)
+                                .map((d) => (
+                                  <SelectItem key={d.id} value={d.id}>
+                                    {d.businessName}
+                                  </SelectItem>
+                                ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                ) : canAssignDistributor ? (
+                  <div className="space-y-2">
+                    <Typography variant="bodyXs" colorRole="muted">
+                      Assign a distributor to handle delivery:
+                    </Typography>
+                    <Select
+                      value=""
+                      onValueChange={handleDistributorAssign}
+                      disabled={isAssigningDistributor}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select distributor..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {distributors.map((d) => (
+                          <SelectItem key={d.id} value={d.id}>
+                            {d.businessName}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                ) : (
+                  <div className="rounded-lg border border-border-muted bg-surface-secondary/30 p-3">
+                    <Typography variant="bodyXs" colorRole="muted" className="text-center">
+                      Distributor can be assigned after order is approved
+                    </Typography>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
