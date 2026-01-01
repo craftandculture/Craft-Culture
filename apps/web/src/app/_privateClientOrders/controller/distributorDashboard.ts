@@ -29,7 +29,7 @@ const distributorDashboard = distributorProcedure.query(
       'with_distributor',
       'out_for_delivery',
       'delivered',
-    ];
+    ] as const;
 
     // Get counts by status
     const statusCounts = await db
