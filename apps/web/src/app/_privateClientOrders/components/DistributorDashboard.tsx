@@ -3,6 +3,7 @@
 import {
   IconArrowRight,
   IconBox,
+  IconBuilding,
   IconBuildingStore,
   IconCalendar,
   IconCash,
@@ -14,6 +15,7 @@ import {
 } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
+import Image from 'next/image';
 import Link from 'next/link';
 
 import Badge from '@/app/_ui/components/Badge/Badge';
@@ -371,9 +373,20 @@ const DistributorDashboard = () => {
                       <div className="mt-1 flex flex-wrap items-center gap-2 text-text-muted">
                         <Typography variant="bodyXs">{order.clientName}</Typography>
                         <span className="hidden sm:inline">·</span>
-                        <Typography variant="bodyXs" className="hidden sm:block">
-                          {order.partner?.businessName ?? 'Unknown'}
-                        </Typography>
+                        <div className="hidden items-center gap-1 sm:flex">
+                          {order.partner?.logoUrl ? (
+                            <Image
+                              src={order.partner.logoUrl}
+                              alt={order.partner?.businessName ?? 'Partner'}
+                              width={16}
+                              height={16}
+                              className="h-4 w-4 rounded object-contain"
+                            />
+                          ) : null}
+                          <Typography variant="bodyXs">
+                            {order.partner?.businessName ?? 'Unknown'}
+                          </Typography>
+                        </div>
                         <span className="hidden sm:inline">·</span>
                         <Typography variant="bodyXs">
                           {order.caseCount} cases
@@ -443,13 +456,23 @@ const DistributorDashboard = () => {
                     <div key={partner.partnerId} className="py-3">
                       <div className="mb-2 flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-surface-secondary">
-                            <Icon
-                              icon={IconBuildingStore}
-                              size="sm"
-                              className="text-text-muted"
+                          {partner.partnerLogoUrl ? (
+                            <Image
+                              src={partner.partnerLogoUrl}
+                              alt={partner.partnerName}
+                              width={32}
+                              height={32}
+                              className="h-8 w-8 rounded-lg object-contain"
                             />
-                          </div>
+                          ) : (
+                            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-surface-secondary">
+                              <Icon
+                                icon={IconBuilding}
+                                size="sm"
+                                className="text-text-muted"
+                              />
+                            </div>
+                          )}
                           <div>
                             <Typography variant="bodySm" className="font-medium">
                               {partner.partnerName}

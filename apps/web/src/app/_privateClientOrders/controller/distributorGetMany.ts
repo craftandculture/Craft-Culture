@@ -66,6 +66,7 @@ const distributorGetMany = distributorProcedure
         partner: {
           id: partners.id,
           businessName: partners.businessName,
+          logoUrl: partners.logoUrl,
         },
       })
       .from(privateClientOrders)

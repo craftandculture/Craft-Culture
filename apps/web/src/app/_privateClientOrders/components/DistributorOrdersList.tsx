@@ -1,6 +1,7 @@
 'use client';
 
 import {
+  IconBuilding,
   IconCheck,
   IconDots,
   IconEye,
@@ -11,6 +12,7 @@ import {
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ColumnDef } from '@tanstack/react-table';
 import { format } from 'date-fns';
+import Image from 'next/image';
 import Link from 'next/link';
 import { useState } from 'react';
 import { toast } from 'sonner';
@@ -31,7 +33,7 @@ import { useTRPCClient } from '@/lib/trpc/browser';
 import PrivateOrderStatusBadge from './PrivateOrderStatusBadge';
 
 type OrderWithPartner = PrivateClientOrder & {
-  partner: { id: string; businessName: string } | null;
+  partner: { id: string; businessName: string; logoUrl: string | null } | null;
 };
 
 /**
@@ -92,12 +94,16 @@ const DistributorOrdersList = () => {
     }).format(amount);
   };
 
+  /**
+   * Get available actions matching backend distributorTransitions exactly
+   */
   const getAvailableActions = (status: string) => {
     const actions: { label: string; status: string; icon: typeof IconCheck }[] = [];
 
     switch (status) {
       case 'cc_approved':
       case 'awaiting_client_payment':
+        // Distributor can confirm client payment received
         actions.push({
           label: 'Confirm Client Payment',
           status: 'client_paid',
@@ -105,20 +111,24 @@ const DistributorOrdersList = () => {
         });
         break;
       case 'client_paid':
+        // After client pays, transition to awaiting distributor payment
+        actions.push({
+          label: 'Awaiting Distributor Payment',
+          status: 'awaiting_distributor_payment',
+          icon: IconCheck,
+        });
+        break;
+      case 'awaiting_distributor_payment':
+        // Distributor confirms payment to C&C
         actions.push({
           label: 'Confirm Payment to C&C',
           status: 'distributor_paid',
           icon: IconCheck,
         });
         break;
-      case 'distributor_paid':
-        actions.push({
-          label: 'Stock In Transit',
-          status: 'stock_in_transit',
-          icon: IconTruck,
-        });
-        break;
+      // distributor_paid: Wait for C&C admin to mark stock_in_transit - no action here
       case 'stock_in_transit':
+        // Stock has arrived at distributor
         actions.push({
           label: 'Stock Received',
           status: 'with_distributor',
@@ -126,6 +136,7 @@ const DistributorOrdersList = () => {
         });
         break;
       case 'with_distributor':
+        // Ready for delivery
         actions.push({
           label: 'Start Delivery',
           status: 'out_for_delivery',
@@ -133,6 +144,7 @@ const DistributorOrdersList = () => {
         });
         break;
       case 'out_for_delivery':
+        // Mark as delivered
         actions.push({
           label: 'Mark Delivered',
           status: 'delivered',
@@ -158,7 +170,22 @@ const DistributorOrdersList = () => {
       accessorKey: 'partner.businessName',
       header: 'Partner',
       cell: ({ row }) => (
-        <Typography variant="bodySm">{row.original.partner?.businessName ?? '-'}</Typography>
+        <div className="flex items-center gap-2">
+          {row.original.partner?.logoUrl ? (
+            <Image
+              src={row.original.partner.logoUrl}
+              alt={row.original.partner?.businessName ?? 'Partner'}
+              width={20}
+              height={20}
+              className="h-5 w-5 rounded object-contain"
+            />
+          ) : (
+            <div className="flex h-5 w-5 items-center justify-center rounded bg-fill-muted">
+              <Icon icon={IconBuilding} size="xs" colorRole="muted" />
+            </div>
+          )}
+          <Typography variant="bodySm">{row.original.partner?.businessName ?? '-'}</Typography>
+        </div>
       ),
     },
     {
