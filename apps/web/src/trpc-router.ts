@@ -5,7 +5,6 @@ import notificationsRouter from '@/app/_notifications/router';
 import partnersRouter from '@/app/_partners/router';
 import pricingCalcRouter from '@/app/_pricingCalculator/router';
 import pricingModelsRouter from '@/app/_pricingModels/router';
-import privateClientContactsRouter from '@/app/_privateClientContacts/router';
 import privateClientOrdersRouter from '@/app/_privateClientOrders/router';
 import quotesRouter from '@/app/_quotes/router';
 import settingsRouter from '@/app/_settings/router';
@@ -22,7 +21,6 @@ export const appRouter = createTRPCRouter({
   notifications: notificationsRouter,
   partners: partnersRouter,
   pricingCalc: pricingCalcRouter,
-  privateClientContacts: privateClientContactsRouter,
   privateClientOrders: privateClientOrdersRouter,
   products: productsRouter,
   quotes: quotesRouter,
