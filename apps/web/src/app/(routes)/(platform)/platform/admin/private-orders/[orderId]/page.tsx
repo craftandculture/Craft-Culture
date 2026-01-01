@@ -1,6 +1,6 @@
 'use client';
 
-import { IconArrowLeft, IconBuilding, IconLoader2, IconMail, IconPhone, IconTruck } from '@tabler/icons-react';
+import { IconArrowLeft, IconBuilding, IconLoader2, IconTruck } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -347,44 +347,23 @@ const AdminPrivateOrderDetailPage = () => {
                     {(() => {
                       const assignedDistributor = distributors.find((d) => d.id === order.distributor?.id);
                       return (
-                        <div className="rounded-lg border border-border-muted bg-surface-secondary/50 p-3">
-                          <div className="flex items-start gap-3">
-                            {assignedDistributor?.logoUrl ? (
-                              <Image
-                                src={assignedDistributor.logoUrl}
-                                alt={order.distributor.businessName}
-                                width={48}
-                                height={48}
-                                className="rounded-lg object-contain"
-                              />
-                            ) : (
-                              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-fill-muted">
-                                <Icon icon={IconBuilding} size="md" colorRole="muted" />
-                              </div>
-                            )}
-                            <div className="flex-1 space-y-1">
-                              <Typography variant="bodySm" className="font-semibold">
-                                {order.distributor.businessName}
-                              </Typography>
-                              {assignedDistributor?.businessEmail && (
-                                <div className="flex items-center gap-1.5 text-xs text-text-muted">
-                                  <Icon icon={IconMail} size="xs" />
-                                  <span>{assignedDistributor.businessEmail}</span>
-                                </div>
-                              )}
-                              {assignedDistributor?.businessPhone && (
-                                <div className="flex items-center gap-1.5 text-xs text-text-muted">
-                                  <Icon icon={IconPhone} size="xs" />
-                                  <span>{assignedDistributor.businessPhone}</span>
-                                </div>
-                              )}
-                              {order.distributorAssignedAt && (
-                                <Typography variant="bodyXs" colorRole="muted" className="pt-1">
-                                  Assigned {formatDate(order.distributorAssignedAt)}
-                                </Typography>
-                              )}
+                        <div className="flex items-center gap-3 rounded-lg border border-border-muted bg-surface-secondary/50 p-3">
+                          {assignedDistributor?.logoUrl ? (
+                            <Image
+                              src={assignedDistributor.logoUrl}
+                              alt={order.distributor.businessName}
+                              width={40}
+                              height={40}
+                              className="rounded-lg object-contain"
+                            />
+                          ) : (
+                            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-fill-muted">
+                              <Icon icon={IconBuilding} size="md" colorRole="muted" />
                             </div>
-                          </div>
+                          )}
+                          <Typography variant="bodySm" className="font-medium">
+                            {order.distributor.businessName}
+                          </Typography>
                         </div>
                       );
                     })()}
@@ -419,16 +398,9 @@ const AdminPrivateOrderDetailPage = () => {
                                       <Icon icon={IconBuilding} size="sm" colorRole="muted" />
                                     </div>
                                   )}
-                                  <div className="flex-1 min-w-0">
-                                    <Typography variant="bodyXs" className="font-medium truncate">
-                                      {d.businessName}
-                                    </Typography>
-                                    {d.businessEmail && (
-                                      <Typography variant="bodyXs" colorRole="muted" className="truncate">
-                                        {d.businessEmail}
-                                      </Typography>
-                                    )}
-                                  </div>
+                                  <Typography variant="bodyXs" className="font-medium">
+                                    {d.businessName}
+                                  </Typography>
                                 </button>
                               ))}
                           </div>
@@ -463,25 +435,9 @@ const AdminPrivateOrderDetailPage = () => {
                               <Icon icon={IconBuilding} size="md" colorRole="muted" />
                             </div>
                           )}
-                          <div className="flex-1 min-w-0">
-                            <Typography variant="bodySm" className="font-medium truncate">
-                              {d.businessName}
-                            </Typography>
-                            <div className="flex flex-col gap-0.5">
-                              {d.businessEmail && (
-                                <div className="flex items-center gap-1.5 text-xs text-text-muted">
-                                  <Icon icon={IconMail} size="xs" />
-                                  <span className="truncate">{d.businessEmail}</span>
-                                </div>
-                              )}
-                              {d.businessPhone && (
-                                <div className="flex items-center gap-1.5 text-xs text-text-muted">
-                                  <Icon icon={IconPhone} size="xs" />
-                                  <span>{d.businessPhone}</span>
-                                </div>
-                              )}
-                            </div>
-                          </div>
+                          <Typography variant="bodySm" className="font-medium">
+                            {d.businessName}
+                          </Typography>
                         </button>
                       ))}
                     </div>
