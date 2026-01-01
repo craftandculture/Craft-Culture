@@ -9,6 +9,7 @@ import distributorGetMany from './controller/distributorGetMany';
 import distributorGetOne from './controller/distributorGetOne';
 import distributorUpdateStatus from './controller/distributorUpdateStatus';
 import documentsDelete from './controller/documentsDelete';
+import documentsExtract from './controller/documentsExtract';
 import documentsGetMany from './controller/documentsGetMany';
 import documentsUpload from './controller/documentsUpload';
 import itemsAdd from './controller/itemsAdd';
@@ -29,6 +30,7 @@ const privateClientOrdersRouter = createTRPCRouter({
   uploadDocument: documentsUpload,
   getDocuments: documentsGetMany,
   deleteDocument: documentsDelete,
+  extractDocument: documentsExtract,
 
   // Admin procedures
   adminCreate,

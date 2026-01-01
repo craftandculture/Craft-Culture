@@ -1,9 +1,11 @@
+import { tasks } from '@trigger.dev/sdk/v3';
 import { TRPCError } from '@trpc/server';
 import { put } from '@vercel/blob';
 
 import db from '@/database/client';
 import { privateClientOrderDocuments } from '@/database/schema';
 import { protectedProcedure } from '@/lib/trpc/procedures';
+import { extractDocumentJob } from '@/trigger/jobs/extract-document/extractDocumentJob';
 
 import uploadDocumentSchema from '../schemas/uploadDocumentSchema';
 
@@ -91,7 +93,7 @@ const documentsUpload = protectedProcedure.input(uploadDocumentSchema).mutation(
     });
 
     // Create database record
-    const [document] = await db
+    const documents = await db
       .insert(privateClientOrderDocuments)
       .values({
         orderId,
@@ -104,6 +106,27 @@ const documentsUpload = protectedProcedure.input(uploadDocumentSchema).mutation(
         extractionStatus: 'pending',
       })
       .returning();
+
+    const document = documents[0];
+    if (!document) {
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Failed to create document record',
+      });
+    }
+
+    // Trigger AI extraction in background
+    try {
+      await tasks.trigger<typeof extractDocumentJob>('extract-document', {
+        documentId: document.id,
+      });
+    } catch (extractionError) {
+      // Log but don't fail the upload if extraction trigger fails
+      console.error('Failed to trigger document extraction:', {
+        documentId: document.id,
+        error: extractionError instanceof Error ? extractionError.message : 'Unknown error',
+      });
+    }
 
     return document;
   } catch (error) {
