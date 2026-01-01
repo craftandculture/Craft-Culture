@@ -126,19 +126,34 @@ const PlatformLayout = async ({ children }: React.PropsWithChildren) => {
                   </Link>
                 </div>
               )}
-              {/* Pricing section - admin only */}
+              {/* Admin sections */}
               {user.role === 'admin' && (
-                <div className="flex items-center rounded-lg border border-border-muted/50 bg-surface-secondary/40 px-1.5 py-1">
-                  <span className="border-r border-border-muted/50 pr-2 text-[10px] font-medium uppercase tracking-wider text-text-muted">
-                    Pricing
-                  </span>
-                  <Link
-                    href="/platform/admin/pricing-calculator"
-                    className="text-text-primary hover:bg-fill-muted ml-1 rounded-md px-2.5 py-1 text-sm font-medium transition-all duration-200 hover:shadow-sm active:scale-[0.98]"
-                  >
-                    Calculator
-                  </Link>
-                </div>
+                <>
+                  {/* Private Orders - admin management */}
+                  <div className="flex items-center rounded-lg border border-border-muted/50 bg-surface-secondary/40 px-1.5 py-1">
+                    <span className="border-r border-border-muted/50 pr-2 text-[10px] font-medium uppercase tracking-wider text-text-muted">
+                      Private Orders
+                    </span>
+                    <Link
+                      href="/platform/admin/private-orders"
+                      className="text-text-primary hover:bg-fill-muted ml-1 rounded-md px-2.5 py-1 text-sm font-medium transition-all duration-200 hover:shadow-sm active:scale-[0.98]"
+                    >
+                      Manage
+                    </Link>
+                  </div>
+                  {/* Pricing section */}
+                  <div className="flex items-center rounded-lg border border-border-muted/50 bg-surface-secondary/40 px-1.5 py-1">
+                    <span className="border-r border-border-muted/50 pr-2 text-[10px] font-medium uppercase tracking-wider text-text-muted">
+                      Pricing
+                    </span>
+                    <Link
+                      href="/platform/admin/pricing-calculator"
+                      className="text-text-primary hover:bg-fill-muted ml-1 rounded-md px-2.5 py-1 text-sm font-medium transition-all duration-200 hover:shadow-sm active:scale-[0.98]"
+                    >
+                      Calculator
+                    </Link>
+                  </div>
+                </>
               )}
             </nav>
           </div>
