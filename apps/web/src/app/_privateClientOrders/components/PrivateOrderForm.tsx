@@ -8,7 +8,6 @@ import {
   IconPlus,
   IconSend,
   IconSparkles,
-  IconTrash,
   IconX,
 } from '@tabler/icons-react';
 import { useMutation } from '@tanstack/react-query';
@@ -18,6 +17,7 @@ import { useCallback, useState } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { toast } from 'sonner';
 
+import ClientsCombobox from '@/app/_privateClientContacts/components/ClientsCombobox';
 import Badge from '@/app/_ui/components/Badge/Badge';
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
@@ -27,6 +27,7 @@ import Divider from '@/app/_ui/components/Divider/Divider';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Input from '@/app/_ui/components/Input/Input';
 import Typography from '@/app/_ui/components/Typography/Typography';
+import type { PrivateClientContact } from '@/database/schema';
 import { useTRPCClient } from '@/lib/trpc/browser';
 
 import ProductPicker from './ProductPicker';
@@ -70,14 +71,18 @@ interface ExtractedData {
 /**
  * Private Order Creation Form
  *
- * Multi-section form for creating new private client orders.
- * Supports both product catalog search and manual entry.
+ * Streamlined form for creating new private client orders.
+ * Supports client selection, manual entry, and AI extraction.
  */
 const PrivateOrderForm = () => {
   const router = useRouter();
   const trpcClient = useTRPCClient();
 
-  // Client info state
+  // Client selection state
+  const [selectedClient, setSelectedClient] = useState<PrivateClientContact | null>(null);
+  const [isManualClient, setIsManualClient] = useState(false);
+
+  // Client info state (for manual entry)
   const [clientName, setClientName] = useState('');
   const [clientEmail, setClientEmail] = useState('');
   const [clientPhone, setClientPhone] = useState('');
@@ -94,6 +99,29 @@ const PrivateOrderForm = () => {
   const [extractionError, setExtractionError] = useState<string | null>(null);
   const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
 
+  // Submission state
+  const [submitAfterCreate, setSubmitAfterCreate] = useState(false);
+
+  // Get effective client data
+  const effectiveClientName = isManualClient ? clientName : selectedClient?.name ?? '';
+  const effectiveClientEmail = isManualClient ? clientEmail : selectedClient?.email ?? '';
+  const effectiveClientPhone = isManualClient ? clientPhone : selectedClient?.phone ?? '';
+  const effectiveClientAddress = isManualClient ? clientAddress : selectedClient?.address ?? '';
+
+  // Handle client selection from dropdown
+  const handleClientSelect = (client: PrivateClientContact) => {
+    setSelectedClient(client);
+    setIsManualClient(false);
+    // Pre-fill any additional fields
+    setClientAddress(client.address ?? '');
+  };
+
+  // Switch to manual client entry
+  const handleManualClientEntry = () => {
+    setSelectedClient(null);
+    setIsManualClient(true);
+  };
+
   // Create order mutation
   const createOrder = useMutation({
     mutationFn: async (data: {
@@ -105,15 +133,6 @@ const PrivateOrderForm = () => {
       partnerNotes?: string;
     }) => {
       return trpcClient.privateClientOrders.create.mutate(data);
-    },
-    onSuccess: (order) => {
-      toast.success('Order created successfully');
-      if (order) {
-        router.push(`/platform/private-orders/${order.id}`);
-      }
-    },
-    onError: (error) => {
-      toast.error(error.message || 'Failed to create order');
     },
   });
 
@@ -135,6 +154,13 @@ const PrivateOrderForm = () => {
       source: StockSource;
     }) => {
       return trpcClient.privateClientOrders.addItem.mutate(data);
+    },
+  });
+
+  // Submit order mutation
+  const submitOrder = useMutation({
+    mutationFn: async (orderId: string) => {
+      return trpcClient.privateClientOrders.submit.mutate({ orderId });
     },
   });
 
@@ -205,7 +231,7 @@ const PrivateOrderForm = () => {
       bottleSize: '750ml',
       caseConfig: 12,
       quantity: item.quantity,
-      pricePerCaseUsd: item.unitPrice || 0,
+      pricePerCaseUsd: item.unitPrice ? Math.round(item.unitPrice * 100) / 100 : 0,
       source: 'manual' as StockSource,
     }));
 
@@ -254,10 +280,10 @@ const PrivateOrderForm = () => {
     return lineItems.reduce((sum, item) => sum + item.quantity, 0);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent, shouldSubmit: boolean = false) => {
     e.preventDefault();
 
-    if (!clientName.trim()) {
+    if (!effectiveClientName.trim()) {
       toast.error('Client name is required');
       return;
     }
@@ -269,38 +295,55 @@ const PrivateOrderForm = () => {
       return;
     }
 
-    // Create the order first
-    const order = await createOrder.mutateAsync({
-      clientName,
-      clientEmail: clientEmail || undefined,
-      clientPhone: clientPhone || undefined,
-      clientAddress: clientAddress || undefined,
-      deliveryNotes: deliveryNotes || undefined,
-      partnerNotes: partnerNotes || undefined,
-    });
+    setSubmitAfterCreate(shouldSubmit);
 
-    if (!order) {
-      toast.error('Failed to create order');
-      return;
-    }
-
-    // Then add all line items
-    for (const item of validItems) {
-      await addLineItem.mutateAsync({
-        orderId: order.id,
-        productId: item.productId || undefined,
-        productOfferId: item.productOfferId || undefined,
-        productName: item.productName,
-        producer: item.producer || undefined,
-        vintage: item.vintage || undefined,
-        region: item.region || undefined,
-        lwin: item.lwin || undefined,
-        bottleSize: item.bottleSize || undefined,
-        caseConfig: item.caseConfig || 12,
-        quantity: item.quantity,
-        pricePerCaseUsd: item.pricePerCaseUsd,
-        source: item.source,
+    try {
+      // Create the order first
+      const order = await createOrder.mutateAsync({
+        clientName: effectiveClientName,
+        clientEmail: effectiveClientEmail || undefined,
+        clientPhone: effectiveClientPhone || undefined,
+        clientAddress: effectiveClientAddress || undefined,
+        deliveryNotes: deliveryNotes || undefined,
+        partnerNotes: partnerNotes || undefined,
       });
+
+      if (!order) {
+        toast.error('Failed to create order');
+        return;
+      }
+
+      // Then add all line items
+      for (const item of validItems) {
+        await addLineItem.mutateAsync({
+          orderId: order.id,
+          productId: item.productId || undefined,
+          productOfferId: item.productOfferId || undefined,
+          productName: item.productName,
+          producer: item.producer || undefined,
+          vintage: item.vintage || undefined,
+          region: item.region || undefined,
+          lwin: item.lwin || undefined,
+          bottleSize: item.bottleSize || undefined,
+          caseConfig: item.caseConfig || 12,
+          quantity: item.quantity,
+          pricePerCaseUsd: Math.round(item.pricePerCaseUsd * 100) / 100,
+          source: item.source,
+        });
+      }
+
+      // Submit if requested
+      if (shouldSubmit) {
+        await submitOrder.mutateAsync(order.id);
+        toast.success('Order created and submitted for approval');
+      } else {
+        toast.success('Order saved as draft');
+      }
+
+      router.push(`/platform/private-orders/${order.id}`);
+    } catch (error) {
+      console.error('Order creation failed:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to create order');
     }
   };
 
@@ -308,16 +351,18 @@ const PrivateOrderForm = () => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
     }).format(amount);
   };
 
   // Get product IDs already in the order to exclude from search
   const usedProductIds = lineItems.filter((item) => item.productId).map((item) => item.productId!);
 
+  const isSubmitting = createOrder.isPending || addLineItem.isPending || submitOrder.isPending;
+
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+    <form onSubmit={(e) => handleSubmit(e, false)} className="flex flex-col gap-4">
       {/* Header */}
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="sm" asChild>
@@ -330,130 +375,144 @@ const PrivateOrderForm = () => {
 
       {/* Client Details Section */}
       <Card>
-        <CardContent className="flex flex-col gap-4">
-          <Typography variant="headingSm">Client Details</Typography>
-
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="flex flex-col gap-1.5">
-              <Typography variant="bodySm" className="font-medium">
-                Client Name *
-              </Typography>
-              <Input
-                placeholder="Enter client name"
-                value={clientName}
-                onChange={(e) => setClientName(e.target.value)}
-                required
-              />
-            </div>
-
-            <div className="flex flex-col gap-1.5">
-              <Typography variant="bodySm" className="font-medium">
-                Email
-              </Typography>
-              <Input
-                type="email"
-                placeholder="client@example.com"
-                value={clientEmail}
-                onChange={(e) => setClientEmail(e.target.value)}
-              />
-            </div>
-
-            <div className="flex flex-col gap-1.5">
-              <Typography variant="bodySm" className="font-medium">
-                Phone
-              </Typography>
-              <Input
-                type="tel"
-                placeholder="+971 50 123 4567"
-                value={clientPhone}
-                onChange={(e) => setClientPhone(e.target.value)}
-              />
-            </div>
-
-            <div className="flex flex-col gap-1.5">
-              <Typography variant="bodySm" className="font-medium">
-                Delivery Address
-              </Typography>
-              <Input
-                placeholder="Dubai Marina, Tower 5, Apt 2301"
-                value={clientAddress}
-                onChange={(e) => setClientAddress(e.target.value)}
-              />
-            </div>
+        <CardContent className="flex flex-col gap-3 p-4">
+          <div className="flex items-center justify-between">
+            <Typography variant="headingSm">Client</Typography>
+            {!isManualClient ? (
+              <Button type="button" variant="ghost" size="sm" onClick={handleManualClientEntry}>
+                Enter manually
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsManualClient(false)}
+              >
+                Select existing
+              </Button>
+            )}
           </div>
 
-          <div className="flex flex-col gap-1.5">
-            <Typography variant="bodySm" className="font-medium">
-              Delivery Notes
-            </Typography>
-            <Input
-              placeholder="Special delivery instructions..."
-              value={deliveryNotes}
-              onChange={(e) => setDeliveryNotes(e.target.value)}
+          {!isManualClient ? (
+            <ClientsCombobox
+              value={selectedClient}
+              onSelect={handleClientSelect}
+              placeholder="Select a client..."
             />
-          </div>
+          ) : (
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div>
+                <Typography variant="bodyXs" colorRole="muted" className="mb-1">
+                  Client Name *
+                </Typography>
+                <Input
+                  placeholder="Enter client name"
+                  value={clientName}
+                  onChange={(e) => setClientName(e.target.value)}
+                  size="sm"
+                  required
+                />
+              </div>
+              <div>
+                <Typography variant="bodyXs" colorRole="muted" className="mb-1">
+                  Email
+                </Typography>
+                <Input
+                  type="email"
+                  placeholder="client@example.com"
+                  value={clientEmail}
+                  onChange={(e) => setClientEmail(e.target.value)}
+                  size="sm"
+                />
+              </div>
+              <div>
+                <Typography variant="bodyXs" colorRole="muted" className="mb-1">
+                  Phone
+                </Typography>
+                <Input
+                  type="tel"
+                  placeholder="+971 50 123 4567"
+                  value={clientPhone}
+                  onChange={(e) => setClientPhone(e.target.value)}
+                  size="sm"
+                />
+              </div>
+              <div>
+                <Typography variant="bodyXs" colorRole="muted" className="mb-1">
+                  Address
+                </Typography>
+                <Input
+                  placeholder="Dubai Marina, Tower 5"
+                  value={clientAddress}
+                  onChange={(e) => setClientAddress(e.target.value)}
+                  size="sm"
+                />
+              </div>
+            </div>
+          )}
+
+          {(selectedClient || isManualClient) && (
+            <div>
+              <Typography variant="bodyXs" colorRole="muted" className="mb-1">
+                Delivery Notes
+              </Typography>
+              <Input
+                placeholder="Special delivery instructions..."
+                value={deliveryNotes}
+                onChange={(e) => setDeliveryNotes(e.target.value)}
+                size="sm"
+              />
+            </div>
+          )}
         </CardContent>
       </Card>
 
       {/* Document Upload Section */}
       <Card>
-        <CardContent className="flex flex-col gap-4">
+        <CardContent className="flex flex-col gap-3 p-4">
           <div className="flex items-center gap-2">
             <Icon icon={IconSparkles} size="sm" colorRole="brand" />
             <Typography variant="headingSm">Import from Invoice</Typography>
             <Badge colorRole="brand" size="sm">
-              AI-Powered
+              AI
             </Badge>
           </div>
-
-          <Typography variant="bodySm" colorRole="muted">
-            Upload a partner invoice or price list to automatically extract wine products using AI.
-          </Typography>
 
           {!extractedData && !isExtracting && (
             <div
               {...getRootProps()}
-              className={`flex cursor-pointer flex-col items-center justify-center gap-3 rounded-lg border-2 border-dashed p-6 transition-colors ${
+              className={`flex cursor-pointer items-center justify-center gap-3 rounded-lg border-2 border-dashed p-4 transition-colors ${
                 isDragActive
                   ? 'border-border-brand bg-fill-brand-muted'
                   : 'border-border-muted hover:border-border-brand hover:bg-fill-muted'
               }`}
             >
               <input {...getInputProps()} />
-              <Icon icon={IconCloudUpload} size="lg" colorRole={isDragActive ? 'brand' : 'muted'} />
-              <div className="text-center">
-                <Typography variant="bodySm" className="font-medium">
-                  {isDragActive ? 'Drop the file here' : 'Drag & drop a file here'}
+              <Icon icon={IconCloudUpload} size="md" colorRole={isDragActive ? 'brand' : 'muted'} />
+              <div>
+                <Typography variant="bodySm">
+                  {isDragActive ? 'Drop here' : 'Drop invoice or click to upload'}
                 </Typography>
                 <Typography variant="bodyXs" colorRole="muted">
-                  or click to select (PDF, PNG, JPG)
+                  PDF, PNG, JPG
                 </Typography>
               </div>
             </div>
           )}
 
           {isExtracting && (
-            <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-border-muted bg-fill-muted p-6">
-              <Icon icon={IconLoader2} size="lg" colorRole="brand" className="animate-spin" />
-              <div className="text-center">
-                <Typography variant="bodySm" className="font-medium">
-                  Extracting products from {uploadedFileName}...
-                </Typography>
-                <Typography variant="bodyXs" colorRole="muted">
-                  This may take a few seconds
-                </Typography>
-              </div>
+            <div className="flex items-center justify-center gap-3 rounded-lg border border-border-muted bg-fill-muted p-4">
+              <Icon icon={IconLoader2} size="md" colorRole="brand" className="animate-spin" />
+              <Typography variant="bodySm">Extracting from {uploadedFileName}...</Typography>
             </div>
           )}
 
           {extractionError && (
-            <div className="flex items-center justify-between rounded-lg border border-border-danger bg-fill-danger-muted p-4">
-              <div className="flex items-center gap-2">
-                <Icon icon={IconX} size="sm" colorRole="danger" />
-                <Typography variant="bodySm" colorRole="danger">
-                  {extractionError}
-                </Typography>
-              </div>
+            <div className="flex items-center justify-between rounded-lg border border-border-danger bg-fill-danger-muted p-3">
+              <Typography variant="bodySm" colorRole="danger">
+                {extractionError}
+              </Typography>
               <Button type="button" variant="ghost" size="sm" onClick={handleClearExtraction}>
                 Try Again
               </Button>
@@ -461,12 +520,12 @@ const PrivateOrderForm = () => {
           )}
 
           {extractedData && extractedData.lineItems.length > 0 && (
-            <div className="flex flex-col gap-4 rounded-lg border border-border-brand bg-fill-brand-muted p-4">
+            <div className="flex flex-col gap-3 rounded-lg border border-border-brand bg-fill-brand-muted p-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Icon icon={IconCheck} size="sm" colorRole="success" />
                   <Typography variant="bodySm" className="font-medium">
-                    Extracted {extractedData.lineItems.length} items from {uploadedFileName}
+                    {extractedData.lineItems.length} items extracted
                   </Typography>
                 </div>
                 <Button type="button" variant="ghost" size="sm" onClick={handleClearExtraction}>
@@ -474,47 +533,17 @@ const PrivateOrderForm = () => {
                 </Button>
               </div>
 
-              {extractedData.invoiceNumber && (
-                <Typography variant="bodyXs" colorRole="muted">
-                  Invoice: {extractedData.invoiceNumber}
-                  {extractedData.invoiceDate && ` • ${extractedData.invoiceDate}`}
-                  {extractedData.currency && ` • ${extractedData.currency}`}
-                </Typography>
-              )}
-
-              <div className="max-h-48 overflow-y-auto">
-                <div className="flex flex-col gap-2">
-                  {extractedData.lineItems.map((item, index) => (
-                    <div
-                      key={index}
-                      className="flex items-center justify-between rounded border border-border-muted bg-fill-primary p-2"
-                    >
-                      <div className="flex flex-col">
-                        <Typography variant="bodySm" className="font-medium">
-                          {item.productName}
-                        </Typography>
-                        <Typography variant="bodyXs" colorRole="muted">
-                          {[item.producer, item.vintage, item.region].filter(Boolean).join(' • ')}
-                        </Typography>
-                      </div>
-                      <div className="text-right">
-                        <Typography variant="bodySm" className="font-medium">
-                          {item.quantity} cases
-                        </Typography>
-                        {item.unitPrice && (
-                          <Typography variant="bodyXs" colorRole="muted">
-                            {extractedData.currency || '$'}
-                            {item.unitPrice.toFixed(2)}/case
-                          </Typography>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
+              <div className="max-h-32 overflow-y-auto">
+                {extractedData.lineItems.map((item, index) => (
+                  <div key={index} className="flex justify-between py-1 text-sm">
+                    <span>{item.productName}</span>
+                    <span className="text-text-muted">{item.quantity} cases</span>
+                  </div>
+                ))}
               </div>
 
-              <Button type="button" variant="default" colorRole="brand" onClick={handleAddExtractedItems}>
-                <ButtonContent iconLeft={IconPlus}>Add {extractedData.lineItems.length} Items to Order</ButtonContent>
+              <Button type="button" variant="default" colorRole="brand" size="sm" onClick={handleAddExtractedItems}>
+                <ButtonContent iconLeft={IconPlus}>Add to Order</ButtonContent>
               </Button>
             </div>
           )}
@@ -523,46 +552,34 @@ const PrivateOrderForm = () => {
 
       {/* Line Items Section */}
       <Card>
-        <CardContent className="flex flex-col gap-4">
+        <CardContent className="flex flex-col gap-3 p-4">
           <div className="flex items-center justify-between">
-            <Typography variant="headingSm">Products</Typography>
+            <Typography variant="headingSm">Products ({lineItems.length})</Typography>
             <Button type="button" variant="outline" size="sm" onClick={handleAddLineItem}>
-              <ButtonContent iconLeft={IconPlus}>Add Product</ButtonContent>
+              <ButtonContent iconLeft={IconPlus}>Add</ButtonContent>
             </Button>
           </div>
 
           {lineItems.length === 0 ? (
-            <div className="flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-border-muted py-8">
+            <div className="flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-border-muted py-6">
               <Typography variant="bodySm" colorRole="muted">
-                No products added yet
+                No products added
               </Typography>
               <Button type="button" variant="default" colorRole="brand" size="sm" onClick={handleAddLineItem}>
                 <ButtonContent iconLeft={IconPlus}>Add First Product</ButtonContent>
               </Button>
             </div>
           ) : (
-            <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-2">
               {lineItems.map((item, index) => (
-                <div key={item.id} className="relative">
-                  <div className="mb-2 flex items-center justify-between">
-                    <Typography variant="labelSm" colorRole="muted">
-                      Item {index + 1}
-                    </Typography>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleRemoveLineItem(item.id)}
-                    >
-                      <Icon icon={IconTrash} size="sm" colorRole="danger" />
-                    </Button>
-                  </div>
-                  <ProductPicker
-                    value={item}
-                    onChange={(updates) => handleUpdateLineItem(item.id, updates)}
-                    omitProductIds={usedProductIds.filter((id) => id !== item.productId)}
-                  />
-                </div>
+                <ProductPicker
+                  key={item.id}
+                  index={index}
+                  value={item}
+                  onChange={(updates) => handleUpdateLineItem(item.id, updates)}
+                  onRemove={() => handleRemoveLineItem(item.id)}
+                  omitProductIds={usedProductIds.filter((id) => id !== item.productId)}
+                />
               ))}
             </div>
           )}
@@ -571,52 +588,47 @@ const PrivateOrderForm = () => {
 
       {/* Order Summary Section */}
       <Card>
-        <CardContent className="flex flex-col gap-4">
-          <Typography variant="headingSm">Order Summary</Typography>
+        <CardContent className="flex flex-col gap-3 p-4">
+          <Typography variant="headingSm">Summary</Typography>
 
-          <div className="flex flex-col gap-2">
-            <div className="flex items-center justify-between">
-              <Typography variant="bodySm" colorRole="muted">
-                Total Cases
-              </Typography>
-              <Typography variant="bodySm" className="font-medium">
-                {calculateTotalCases()}
-              </Typography>
-            </div>
-
-            <div className="flex items-center justify-between">
-              <Typography variant="bodySm" colorRole="muted">
-                Total Items
+          <div className="flex flex-wrap items-center gap-4">
+            <div>
+              <Typography variant="bodyXs" colorRole="muted">
+                Items
               </Typography>
               <Typography variant="bodySm" className="font-medium">
                 {lineItems.length}
               </Typography>
             </div>
-
-            <Divider />
-
-            <div className="flex items-center justify-between">
-              <Typography variant="bodySm" colorRole="muted">
+            <div>
+              <Typography variant="bodyXs" colorRole="muted">
+                Cases
+              </Typography>
+              <Typography variant="bodySm" className="font-medium">
+                {calculateTotalCases()}
+              </Typography>
+            </div>
+            <div className="ml-auto text-right">
+              <Typography variant="bodyXs" colorRole="muted">
                 Subtotal (USD)
               </Typography>
-              <Typography variant="bodyMd" className="font-semibold">
+              <Typography variant="bodyLg" className="font-semibold">
                 {formatCurrency(calculateSubtotal())}
               </Typography>
             </div>
-
-            <Typography variant="bodyXs" colorRole="muted">
-              Duty, VAT, and logistics will be calculated after C&C review
-            </Typography>
           </div>
 
-          <div className="flex flex-col gap-1.5">
-            <Typography variant="bodySm" className="font-medium">
+          <Divider />
+
+          <div>
+            <Typography variant="bodyXs" colorRole="muted" className="mb-1">
               Internal Notes
             </Typography>
             <Input
               placeholder="Notes for internal use only..."
               value={partnerNotes}
               onChange={(e) => setPartnerNotes(e.target.value)}
+              size="sm"
             />
           </div>
         </CardContent>
@@ -629,12 +641,20 @@ const PrivateOrderForm = () => {
         </Button>
         <Button
           type="submit"
+          variant="outline"
+          isDisabled={isSubmitting || !effectiveClientName.trim() || lineItems.length === 0}
+        >
+          {isSubmitting && !submitAfterCreate ? 'Saving...' : 'Save Draft'}
+        </Button>
+        <Button
+          type="button"
           variant="default"
           colorRole="brand"
-          isDisabled={createOrder.isPending || !clientName.trim()}
+          onClick={(e) => handleSubmit(e, true)}
+          isDisabled={isSubmitting || !effectiveClientName.trim() || lineItems.length === 0}
         >
           <ButtonContent iconLeft={IconSend}>
-            {createOrder.isPending ? 'Creating...' : 'Create Order'}
+            {isSubmitting && submitAfterCreate ? 'Submitting...' : 'Submit for Approval'}
           </ButtonContent>
         </Button>
       </div>

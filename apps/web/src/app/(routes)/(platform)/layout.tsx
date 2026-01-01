@@ -91,13 +91,6 @@ const PlatformLayout = async ({ children }: React.PropsWithChildren) => {
                     >
                       My Orders
                     </Link>
-                    <span className="text-border-muted">|</span>
-                    <Link
-                      href="/platform/private-orders/new"
-                      className="text-text-primary hover:bg-fill-muted rounded-md px-2.5 py-1 text-sm font-medium transition-all duration-200 hover:shadow-sm active:scale-[0.98]"
-                    >
-                      New Order
-                    </Link>
                   </div>
                   <div className="flex items-center rounded-lg border border-border-muted/50 bg-surface-secondary/40 px-1.5 py-1">
                     <span className="border-r border-border-muted/50 pr-2 text-[10px] font-medium uppercase tracking-wider text-text-muted">
