@@ -1,4 +1,4 @@
-import { openai } from '@ai-sdk/openai';
+import { createOpenAI } from '@ai-sdk/openai';
 import { TRPCError } from '@trpc/server';
 import { generateObject } from 'ai';
 import { z } from 'zod';
@@ -45,10 +45,18 @@ const documentsExtractInline = winePartnerProcedure.input(extractInlineSchema).m
 
   // Validate we have OpenAI key
   const openaiKey = process.env.OPENAI_API_KEY;
-  console.log('OPENAI_API_KEY check:', {
-    exists: !!openaiKey,
-    length: openaiKey?.length ?? 0,
+
+  // Debug: List all env vars that contain 'OPENAI' or 'API'
+  const relevantEnvVars = Object.keys(process.env).filter(
+    (key) => key.includes('OPENAI') || key.includes('API_KEY'),
+  );
+  console.log('Environment variables check:', {
+    openaiKeyExists: !!openaiKey,
+    openaiKeyLength: openaiKey?.length ?? 0,
     startsWithSk: openaiKey?.startsWith('sk-') ?? false,
+    relevantEnvVars,
+    nodeEnv: process.env.NODE_ENV,
+    vercelEnv: process.env.VERCEL_ENV,
   });
 
   if (!openaiKey) {
@@ -58,6 +66,11 @@ const documentsExtractInline = winePartnerProcedure.input(extractInlineSchema).m
       message: 'AI extraction is not configured. Please set OPENAI_API_KEY environment variable.',
     });
   }
+
+  // Create OpenAI client with explicit API key
+  const openai = createOpenAI({
+    apiKey: openaiKey,
+  });
 
   try {
     let extractedData: z.infer<typeof extractedDataSchema>;
