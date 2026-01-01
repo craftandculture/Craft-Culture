@@ -102,18 +102,32 @@ const PrivateOrderForm = () => {
   // Submission state
   const [submitAfterCreate, setSubmitAfterCreate] = useState(false);
 
+  // Compose full address from client contact fields
+  const composeAddress = (client: PrivateClientContact | null) => {
+    if (!client) return '';
+    const parts = [
+      client.addressLine1,
+      client.addressLine2,
+      client.city,
+      client.stateProvince,
+      client.postalCode,
+      client.country,
+    ].filter(Boolean);
+    return parts.join(', ');
+  };
+
   // Get effective client data
   const effectiveClientName = isManualClient ? clientName : selectedClient?.name ?? '';
   const effectiveClientEmail = isManualClient ? clientEmail : selectedClient?.email ?? '';
   const effectiveClientPhone = isManualClient ? clientPhone : selectedClient?.phone ?? '';
-  const effectiveClientAddress = isManualClient ? clientAddress : selectedClient?.address ?? '';
+  const effectiveClientAddress = isManualClient ? clientAddress : composeAddress(selectedClient);
 
   // Handle client selection from dropdown
   const handleClientSelect = (client: PrivateClientContact) => {
     setSelectedClient(client);
     setIsManualClient(false);
-    // Pre-fill any additional fields
-    setClientAddress(client.address ?? '');
+    // Pre-fill delivery address from client contact
+    setClientAddress(composeAddress(client));
   };
 
   // Switch to manual client entry
