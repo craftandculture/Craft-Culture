@@ -95,15 +95,31 @@ export const winePartnerProcedure = protectedProcedure.use(
 /**
  * Distributor procedure
  *
- * Only accessible to users linked to a distributor type partner.
+ * Accessible to users linked to a distributor partner OR B2B users.
+ * For B2B users without a partner, auto-creates a distributor partner.
  * Injects the partnerId into the context for data isolation.
  */
 export const distributorProcedure = protectedProcedure.use(
   async ({ ctx, next }) => {
     // Find the partner linked to this user
-    const partner = await db.query.partners.findFirst({
+    let partner = await db.query.partners.findFirst({
       where: { userId: ctx.user.id },
     });
+
+    // For B2B users, auto-create a distributor partner if none exists
+    if (!partner && ctx.user.customerType === 'b2b') {
+      const { partners } = await import('@/database/schema');
+      const [newPartner] = await db
+        .insert(partners)
+        .values({
+          userId: ctx.user.id,
+          businessName: ctx.user.name || 'B2B Distributor',
+          type: 'distributor',
+          status: 'active',
+        })
+        .returning();
+      partner = newPartner;
+    }
 
     if (!partner) {
       throw new TRPCError({
@@ -112,7 +128,8 @@ export const distributorProcedure = protectedProcedure.use(
       });
     }
 
-    if (partner.type !== 'distributor') {
+    // Allow B2B users even if their partner type isn't explicitly 'distributor'
+    if (partner.type !== 'distributor' && ctx.user.customerType !== 'b2b') {
       throw new TRPCError({
         code: 'FORBIDDEN',
         message: 'This action requires a distributor account',

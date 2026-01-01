@@ -112,11 +112,11 @@ const PlatformLayout = async ({ children }: React.PropsWithChildren) => {
                   </div>
                 </>
               )}
-              {/* Distributor section - for distributors like City Drinks */}
-              {user.customerType === 'private_clients' && user.partner?.type === 'distributor' && (
+              {/* Distributor section - for B2B users and distributor partners */}
+              {(user.customerType === 'b2b' || user.partner?.type === 'distributor') && (
                 <div className="flex items-center rounded-lg border border-border-muted/50 bg-surface-secondary/40 px-1.5 py-1">
                   <span className="border-r border-border-muted/50 pr-2 text-[10px] font-medium uppercase tracking-wider text-text-muted">
-                    Orders
+                    Private Orders
                   </span>
                   <Link
                     href="/platform/distributor/orders"
