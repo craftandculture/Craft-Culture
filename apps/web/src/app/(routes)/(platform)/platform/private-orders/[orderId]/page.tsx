@@ -1,10 +1,12 @@
 'use client';
 
 import { IconArrowLeft, IconLoader2 } from '@tabler/icons-react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 
+import DocumentUpload from '@/app/_privateClientOrders/components/DocumentUpload';
+import PaymentTracker from '@/app/_privateClientOrders/components/PaymentTracker';
 import PrivateOrderStatusBadge from '@/app/_privateClientOrders/components/PrivateOrderStatusBadge';
 import Button from '@/app/_ui/components/Button/Button';
 import Card from '@/app/_ui/components/Card/Card';
@@ -24,9 +26,10 @@ const PrivateOrderDetailPage = () => {
   const params = useParams();
   const orderId = params.orderId as string;
   const api = useTRPC();
+  const queryClient = useQueryClient();
 
   // Fetch order details
-  const { data: order, isLoading } = useQuery({
+  const { data: order, isLoading, refetch } = useQuery({
     ...api.privateClientOrders.getOne.queryOptions({ id: orderId }),
     enabled: !!orderId,
   });
@@ -205,10 +208,39 @@ const PrivateOrderDetailPage = () => {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Documents */}
+            <Card>
+              <CardContent className="p-6">
+                <Typography variant="headingSm" className="mb-4">
+                  Documents
+                </Typography>
+                <DocumentUpload
+                  orderId={orderId}
+                  onUploadComplete={() => void refetch()}
+                />
+              </CardContent>
+            </Card>
           </div>
 
           {/* Sidebar */}
           <div className="space-y-6">
+            {/* Payment Tracker */}
+            <Card>
+              <CardContent className="p-6">
+                <PaymentTracker
+                  order={order}
+                  canConfirmPayments={true}
+                  onPaymentConfirmed={() => {
+                    void queryClient.invalidateQueries({
+                      queryKey: ['privateClientOrders.getOne', orderId],
+                    });
+                    void refetch();
+                  }}
+                />
+              </CardContent>
+            </Card>
+
             {/* Order Summary */}
             <Card>
               <CardContent className="p-6">

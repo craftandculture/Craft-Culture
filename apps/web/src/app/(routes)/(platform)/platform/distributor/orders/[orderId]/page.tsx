@@ -13,6 +13,8 @@ import { useParams } from 'next/navigation';
 import { toast } from 'sonner';
 
 import ActivityTimeline from '@/app/_privateClientOrders/components/ActivityTimeline';
+import DocumentUpload from '@/app/_privateClientOrders/components/DocumentUpload';
+import PaymentTracker from '@/app/_privateClientOrders/components/PaymentTracker';
 import PrivateOrderStatusBadge from '@/app/_privateClientOrders/components/PrivateOrderStatusBadge';
 import WorkflowStepper from '@/app/_privateClientOrders/components/WorkflowStepper';
 import Button from '@/app/_ui/components/Button/Button';
@@ -273,10 +275,37 @@ const DistributorOrderDetailPage = () => {
                 <ActivityTimeline activities={order.activityLogs ?? []} />
               </CardContent>
             </Card>
+
+            {/* Documents */}
+            <Card>
+              <CardContent className="p-6">
+                <Typography variant="headingSm" className="mb-4">
+                  Documents
+                </Typography>
+                <DocumentUpload
+                  orderId={orderId}
+                  onUploadComplete={() => {
+                    void queryClient.invalidateQueries({
+                      queryKey: ['privateClientOrders.distributorGetOne'],
+                    });
+                  }}
+                />
+              </CardContent>
+            </Card>
           </div>
 
           {/* Sidebar */}
           <div className="space-y-6">
+            {/* Payment Tracker */}
+            <Card>
+              <CardContent className="p-6">
+                <PaymentTracker
+                  order={order}
+                  canConfirmPayments={false}
+                />
+              </CardContent>
+            </Card>
+
             {/* Order Summary */}
             <Card>
               <CardContent className="p-6">
