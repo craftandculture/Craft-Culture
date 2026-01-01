@@ -45,9 +45,10 @@ const documentsExtractInline = winePartnerProcedure.input(extractInlineSchema).m
 
   // Validate we have OpenAI key
   if (!process.env.OPENAI_API_KEY) {
+    console.error('Missing OPENAI_API_KEY environment variable');
     throw new TRPCError({
       code: 'INTERNAL_SERVER_ERROR',
-      message: 'AI extraction is not configured',
+      message: 'AI extraction is not configured. Please set OPENAI_API_KEY environment variable.',
     });
   }
 
