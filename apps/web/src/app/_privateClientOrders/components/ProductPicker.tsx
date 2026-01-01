@@ -37,7 +37,7 @@ interface ProductPickerProps {
   onChange: (data: LineItemData) => void;
   omitProductIds?: string[];
   onRemove?: () => void;
-  index: number;
+  index?: number;
 }
 
 /**
@@ -106,9 +106,11 @@ const ProductPicker = ({ value, onChange, omitProductIds = [], onRemove, index }
       {/* Header row with index, mode toggle, and remove */}
       <div className="mb-2 flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded bg-fill-muted text-xs font-medium text-text-muted">
-            {index + 1}
-          </span>
+          {index !== undefined && (
+            <span className="flex h-5 w-5 items-center justify-center rounded bg-fill-muted text-xs font-medium text-text-muted">
+              {index + 1}
+            </span>
+          )}
           <div className="flex items-center gap-1">
             <Button
               type="button"
