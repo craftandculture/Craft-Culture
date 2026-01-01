@@ -1,6 +1,15 @@
 'use client';
 
-import { IconArrowLeft, IconBuilding, IconLoader2, IconTruck } from '@tabler/icons-react';
+import {
+  IconArrowLeft,
+  IconBuilding,
+  IconCheck,
+  IconEdit,
+  IconLoader2,
+  IconTrash,
+  IconTruck,
+  IconX,
+} from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -16,6 +25,7 @@ import Card from '@/app/_ui/components/Card/Card';
 import CardContent from '@/app/_ui/components/Card/CardContent';
 import Divider from '@/app/_ui/components/Divider/Divider';
 import Icon from '@/app/_ui/components/Icon/Icon';
+import Input from '@/app/_ui/components/Input/Input';
 import Select from '@/app/_ui/components/Select/Select';
 import SelectContent from '@/app/_ui/components/Select/SelectContent';
 import SelectItem from '@/app/_ui/components/Select/SelectItem';
@@ -34,6 +44,9 @@ const DISTRIBUTOR_ASSIGNABLE_STATUSES: OrderStatus[] = [
   'awaiting_client_payment',
   'client_paid',
 ];
+
+// Statuses where admin cannot edit items
+const NON_EDITABLE_STATUSES: OrderStatus[] = ['delivered', 'cancelled'];
 
 const statusOptions: { value: OrderStatus; label: string }[] = [
   { value: 'draft', label: 'Draft' },
@@ -54,10 +67,19 @@ const statusOptions: { value: OrderStatus; label: string }[] = [
   { value: 'cancelled', label: 'Cancelled' },
 ];
 
+interface EditingItem {
+  id: string;
+  productName: string;
+  producer: string;
+  vintage: string;
+  quantity: number;
+  pricePerCaseUsd: number;
+}
+
 /**
  * Admin detail view for a single private client order
  *
- * Shows full order details including line items and allows status updates.
+ * Shows full order details including line items with inline editing.
  */
 const AdminPrivateOrderDetailPage = () => {
   const params = useParams();
@@ -66,9 +88,14 @@ const AdminPrivateOrderDetailPage = () => {
   const queryClient = useQueryClient();
   const [isUpdating, setIsUpdating] = useState(false);
   const [isAssigningDistributor, setIsAssigningDistributor] = useState(false);
+  const [editingItem, setEditingItem] = useState<EditingItem | null>(null);
 
   // Fetch order details
-  const { data: order, isLoading, refetch } = useQuery({
+  const {
+    data: order,
+    isLoading,
+    refetch,
+  } = useQuery({
     ...api.privateClientOrders.adminGetOne.queryOptions({ id: orderId }),
     enabled: !!orderId,
   });
@@ -97,13 +124,40 @@ const AdminPrivateOrderDetailPage = () => {
   const { mutate: assignDistributor } = useMutation(
     api.privateClientOrders.adminAssignDistributor.mutationOptions({
       onSuccess: () => {
-        toast.success('Distributor assigned successfully');
+        toast.success('Distributor assigned');
         setIsAssigningDistributor(false);
         void refetch();
       },
       onError: (error) => {
         toast.error(error.message || 'Failed to assign distributor');
         setIsAssigningDistributor(false);
+      },
+    }),
+  );
+
+  // Update item mutation
+  const { mutate: updateItem, isPending: isUpdatingItem } = useMutation(
+    api.privateClientOrders.adminUpdateItem.mutationOptions({
+      onSuccess: () => {
+        toast.success('Item updated');
+        setEditingItem(null);
+        void refetch();
+      },
+      onError: (error) => {
+        toast.error(error.message || 'Failed to update item');
+      },
+    }),
+  );
+
+  // Remove item mutation
+  const { mutate: removeItem, isPending: isRemovingItem } = useMutation(
+    api.privateClientOrders.adminRemoveItem.mutationOptions({
+      onSuccess: () => {
+        toast.success('Item removed');
+        void refetch();
+      },
+      onError: (error) => {
+        toast.error(error.message || 'Failed to remove item');
       },
     }),
   );
@@ -118,7 +172,44 @@ const AdminPrivateOrderDetailPage = () => {
     assignDistributor({ orderId, distributorId });
   };
 
+  const handleEditItem = (item: {
+    id: string;
+    productName: string;
+    producer: string | null;
+    vintage: string | null;
+    quantity: number;
+    pricePerCaseUsd: string | number;
+  }) => {
+    setEditingItem({
+      id: item.id,
+      productName: item.productName,
+      producer: item.producer ?? '',
+      vintage: item.vintage ?? '',
+      quantity: item.quantity,
+      pricePerCaseUsd: Number(item.pricePerCaseUsd),
+    });
+  };
+
+  const handleSaveItem = () => {
+    if (!editingItem) return;
+    updateItem({
+      itemId: editingItem.id,
+      productName: editingItem.productName,
+      producer: editingItem.producer || undefined,
+      vintage: editingItem.vintage || undefined,
+      quantity: editingItem.quantity,
+      pricePerCaseUsd: editingItem.pricePerCaseUsd,
+    });
+  };
+
+  const handleRemoveItem = (itemId: string) => {
+    if (confirm('Are you sure you want to remove this item?')) {
+      removeItem({ itemId });
+    }
+  };
+
   const canAssignDistributor = order && DISTRIBUTOR_ASSIGNABLE_STATUSES.includes(order.status);
+  const canEditItems = order && !NON_EDITABLE_STATUSES.includes(order.status);
 
   const formatDate = (date: Date | null | undefined) => {
     if (!date) return '-';
@@ -126,14 +217,12 @@ const AdminPrivateOrderDetailPage = () => {
       day: '2-digit',
       month: 'short',
       year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
     });
   };
 
   if (isLoading) {
     return (
-      <div className="container mx-auto max-w-5xl px-4 py-6 sm:px-6 sm:py-8">
+      <div className="container mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8">
         <div className="flex items-center justify-center p-12">
           <Icon icon={IconLoader2} className="animate-spin" colorRole="muted" size="lg" />
         </div>
@@ -143,7 +232,7 @@ const AdminPrivateOrderDetailPage = () => {
 
   if (!order) {
     return (
-      <div className="container mx-auto max-w-5xl px-4 py-6 sm:px-6 sm:py-8">
+      <div className="container mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8">
         <Card>
           <CardContent className="p-12 text-center">
             <Typography variant="headingSm" className="mb-2">
@@ -161,417 +250,411 @@ const AdminPrivateOrderDetailPage = () => {
     );
   }
 
+  const assignedDistributor = distributors.find((d) => d.id === order.distributor?.id);
+
   return (
-    <div className="container mx-auto max-w-5xl px-4 py-6 sm:px-6 sm:py-8">
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-4">
+    <div className="container mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8">
+      <div className="space-y-4">
+        {/* Header - compact */}
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
             <Button variant="ghost" size="sm" asChild>
               <Link href="/platform/admin/private-orders">
                 <Icon icon={IconArrowLeft} size="sm" />
               </Link>
             </Button>
-            <div>
-              <div className="flex items-center gap-3">
-                <Typography variant="headingLg">{order.orderNumber}</Typography>
-                <PrivateOrderStatusBadge status={order.status} />
-              </div>
-              <Typography variant="bodySm" colorRole="muted">
-                Created {formatDate(order.createdAt)}
-              </Typography>
-            </div>
+            <Typography variant="headingLg">{order.orderNumber}</Typography>
+            <PrivateOrderStatusBadge status={order.status} />
+          </div>
+
+          {/* Quick actions bar */}
+          <div className="flex items-center gap-2">
+            <Select
+              value={order.status}
+              onValueChange={(v) => handleStatusChange(v as OrderStatus)}
+              disabled={isUpdating}
+            >
+              <SelectTrigger className="w-[200px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {statusOptions.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-3">
-          {/* Main Content */}
-          <div className="space-y-6 lg:col-span-2">
-            {/* Line Items */}
-            <Card>
-              <CardContent className="p-6">
-                <Typography variant="headingSm" className="mb-4">
-                  Line Items ({order.items?.length ?? 0})
-                </Typography>
+        {/* Line Items - Full Width, Primary Focus */}
+        <Card>
+          <CardContent className="p-4">
+            <div className="mb-3 flex items-center justify-between">
+              <Typography variant="headingSm">
+                Line Items ({order.items?.length ?? 0})
+              </Typography>
+              <div className="flex items-center gap-4 text-sm text-text-muted">
+                <span>{order.caseCount ?? 0} cases</span>
+                <span className="font-semibold text-text-primary">
+                  {formatPrice(Number(order.totalUsd) || 0, 'USD')}
+                </span>
+              </div>
+            </div>
 
-                {order.items && order.items.length > 0 ? (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead className="border-b border-border-muted">
-                        <tr>
-                          <th className="pb-2 text-left font-medium text-text-muted">Product</th>
-                          <th className="pb-2 text-left font-medium text-text-muted">Producer</th>
-                          <th className="pb-2 text-center font-medium text-text-muted">Vintage</th>
-                          <th className="pb-2 text-center font-medium text-text-muted">Qty</th>
-                          <th className="pb-2 text-right font-medium text-text-muted">Price/Case</th>
-                          <th className="pb-2 text-right font-medium text-text-muted">Total</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-border-muted">
-                        {order.items.map((item) => (
-                          <tr key={item.id}>
-                            <td className="py-3">
-                              <Typography variant="bodySm" className="font-medium">
-                                {item.productName}
-                              </Typography>
-                              {item.lwin && (
-                                <Typography variant="bodyXs" colorRole="muted">
-                                  LWIN: {item.lwin}
-                                </Typography>
-                              )}
+            {order.items && order.items.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead className="border-b border-border-muted bg-surface-secondary/50">
+                    <tr>
+                      <th className="px-2 py-1.5 text-left text-[10px] font-medium uppercase tracking-wide text-text-muted">Product</th>
+                      <th className="px-2 py-1.5 text-left text-[10px] font-medium uppercase tracking-wide text-text-muted">Producer</th>
+                      <th className="px-2 py-1.5 text-center text-[10px] font-medium uppercase tracking-wide text-text-muted">Yr</th>
+                      <th className="px-2 py-1.5 text-center text-[10px] font-medium uppercase tracking-wide text-text-muted">Qty</th>
+                      <th className="px-2 py-1.5 text-right text-[10px] font-medium uppercase tracking-wide text-text-muted">$/Case</th>
+                      <th className="px-2 py-1.5 text-right text-[10px] font-medium uppercase tracking-wide text-text-muted">Total</th>
+                      {canEditItems && (
+                        <th className="px-2 py-1.5 text-center text-[10px] font-medium uppercase tracking-wide text-text-muted"></th>
+                      )}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border-muted/50">
+                    {order.items.map((item) => {
+                      const isEditing = editingItem?.id === item.id;
+
+                      if (isEditing && editingItem) {
+                        return (
+                          <tr key={item.id} className="bg-surface-muted/30">
+                            <td className="px-2 py-1">
+                              <Input
+                                value={editingItem.productName}
+                                onChange={(e) =>
+                                  setEditingItem({ ...editingItem, productName: e.target.value })
+                                }
+                                className="h-6 text-xs"
+                              />
                             </td>
-                            <td className="py-3">
-                              <Typography variant="bodySm">{item.producer || '-'}</Typography>
+                            <td className="px-2 py-1">
+                              <Input
+                                value={editingItem.producer}
+                                onChange={(e) =>
+                                  setEditingItem({ ...editingItem, producer: e.target.value })
+                                }
+                                className="h-6 text-xs"
+                              />
                             </td>
-                            <td className="py-3 text-center">
-                              <Typography variant="bodySm">{item.vintage || '-'}</Typography>
+                            <td className="px-2 py-1">
+                              <Input
+                                value={editingItem.vintage}
+                                onChange={(e) =>
+                                  setEditingItem({ ...editingItem, vintage: e.target.value })
+                                }
+                                className="h-6 w-14 text-center text-xs"
+                              />
                             </td>
-                            <td className="py-3 text-center">
-                              <Typography variant="bodySm">{item.quantity}</Typography>
+                            <td className="px-2 py-1">
+                              <Input
+                                type="number"
+                                min={1}
+                                value={editingItem.quantity}
+                                onChange={(e) =>
+                                  setEditingItem({
+                                    ...editingItem,
+                                    quantity: parseInt(e.target.value) || 1,
+                                  })
+                                }
+                                className="h-6 w-12 text-center text-xs"
+                              />
                             </td>
-                            <td className="py-3 text-right">
-                              <Typography variant="bodySm">
-                                {formatPrice(Number(item.pricePerCaseUsd) || 0, 'USD')}
-                              </Typography>
+                            <td className="px-2 py-1">
+                              <Input
+                                type="number"
+                                min={0}
+                                step={0.01}
+                                value={editingItem.pricePerCaseUsd}
+                                onChange={(e) =>
+                                  setEditingItem({
+                                    ...editingItem,
+                                    pricePerCaseUsd: parseFloat(e.target.value) || 0,
+                                  })
+                                }
+                                className="h-6 w-20 text-right text-xs"
+                              />
                             </td>
-                            <td className="py-3 text-right">
-                              <Typography variant="bodySm" className="font-medium">
-                                {formatPrice(Number(item.totalUsd) || 0, 'USD')}
-                              </Typography>
+                            <td className="px-2 py-1 text-right text-xs font-medium">
+                              {formatPrice(editingItem.quantity * editingItem.pricePerCaseUsd, 'USD')}
+                            </td>
+                            <td className="px-2 py-1">
+                              <div className="flex items-center justify-center gap-0.5">
+                                <Button
+                                  variant="ghost"
+                                  size="xs"
+                                  onClick={handleSaveItem}
+                                  disabled={isUpdatingItem}
+                                  className="h-5 w-5 p-0"
+                                >
+                                  <Icon icon={IconCheck} size="xs" colorRole="success" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="xs"
+                                  onClick={() => setEditingItem(null)}
+                                  className="h-5 w-5 p-0"
+                                >
+                                  <Icon icon={IconX} size="xs" colorRole="muted" />
+                                </Button>
+                              </div>
                             </td>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                ) : (
-                  <Typography variant="bodySm" colorRole="muted">
-                    No line items
-                  </Typography>
-                )}
-              </CardContent>
-            </Card>
+                        );
+                      }
 
-            {/* Client Information */}
-            <Card>
-              <CardContent className="p-6">
-                <Typography variant="headingSm" className="mb-4">
-                  Client Information
+                      return (
+                        <tr key={item.id} className="hover:bg-surface-muted/20">
+                          <td className="px-2 py-1.5">
+                            <span className="text-xs font-medium">{item.productName}</span>
+                            {item.lwin && (
+                              <span className="ml-1 text-[10px] text-text-muted">
+                                ({item.lwin})
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-2 py-1.5 text-xs">{item.producer || '-'}</td>
+                          <td className="px-2 py-1.5 text-center text-xs">{item.vintage || '-'}</td>
+                          <td className="px-2 py-1.5 text-center text-xs font-medium">{item.quantity}</td>
+                          <td className="px-2 py-1.5 text-right text-xs">
+                            {formatPrice(Number(item.pricePerCaseUsd) || 0, 'USD')}
+                          </td>
+                          <td className="px-2 py-1.5 text-right text-xs font-semibold">
+                            {formatPrice(Number(item.totalUsd) || 0, 'USD')}
+                          </td>
+                          {canEditItems && (
+                            <td className="px-2 py-1.5">
+                              <div className="flex items-center justify-center gap-0.5">
+                                <Button
+                                  variant="ghost"
+                                  size="xs"
+                                  onClick={() => handleEditItem(item)}
+                                  className="h-5 w-5 p-0"
+                                >
+                                  <Icon icon={IconEdit} size="xs" colorRole="muted" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="xs"
+                                  onClick={() => handleRemoveItem(item.id)}
+                                  disabled={isRemovingItem}
+                                  className="h-5 w-5 p-0"
+                                >
+                                  <Icon icon={IconTrash} size="xs" colorRole="danger" />
+                                </Button>
+                              </div>
+                            </td>
+                          )}
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <Typography variant="bodySm" colorRole="muted">
+                No line items
+              </Typography>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Secondary Info - Horizontal Grid Below */}
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {/* Order Summary - Compact */}
+          <Card>
+            <CardContent className="p-4">
+              <Typography variant="labelSm" colorRole="muted" className="mb-2">
+                Summary
+              </Typography>
+              <div className="space-y-1 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-text-muted">Subtotal</span>
+                  <span>{formatPrice(Number(order.subtotalUsd) || 0, 'USD')}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-text-muted">Duty (5%)</span>
+                  <span>{formatPrice(Number(order.dutyUsd) || 0, 'USD')}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-text-muted">VAT (5%)</span>
+                  <span>{formatPrice(Number(order.vatUsd) || 0, 'USD')}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-text-muted">Logistics</span>
+                  <span>{formatPrice(Number(order.logisticsUsd) || 0, 'USD')}</span>
+                </div>
+                <Divider />
+                <div className="flex justify-between font-semibold">
+                  <span>Total</span>
+                  <span>{formatPrice(Number(order.totalUsd) || 0, 'USD')}</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Client Info - Compact */}
+          <Card>
+            <CardContent className="p-4">
+              <Typography variant="labelSm" colorRole="muted" className="mb-2">
+                Client
+              </Typography>
+              <div className="space-y-1 text-sm">
+                <Typography variant="bodySm" className="font-medium">
+                  {order.clientName || '-'}
                 </Typography>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div>
-                    <Typography variant="bodyXs" colorRole="muted" className="mb-1">
-                      Name
-                    </Typography>
-                    <Typography variant="bodySm">{order.clientName || '-'}</Typography>
-                  </div>
-                  <div>
-                    <Typography variant="bodyXs" colorRole="muted" className="mb-1">
-                      Email
-                    </Typography>
-                    <Typography variant="bodySm">{order.clientEmail || '-'}</Typography>
-                  </div>
-                  <div>
-                    <Typography variant="bodyXs" colorRole="muted" className="mb-1">
-                      Phone
-                    </Typography>
-                    <Typography variant="bodySm">{order.clientPhone || '-'}</Typography>
-                  </div>
-                  <div>
-                    <Typography variant="bodyXs" colorRole="muted" className="mb-1">
-                      Address
-                    </Typography>
-                    <Typography variant="bodySm">{order.clientAddress || '-'}</Typography>
-                  </div>
-                  {order.deliveryNotes && (
-                    <div className="sm:col-span-2">
-                      <Typography variant="bodyXs" colorRole="muted" className="mb-1">
-                        Delivery Notes
-                      </Typography>
-                      <Typography variant="bodySm">{order.deliveryNotes}</Typography>
+                <Typography variant="bodyXs" colorRole="muted">
+                  {order.clientEmail || '-'}
+                </Typography>
+                <Typography variant="bodyXs" colorRole="muted">
+                  {order.clientPhone || '-'}
+                </Typography>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Distributor - Compact */}
+          <Card>
+            <CardContent className="p-4">
+              <div className="mb-2 flex items-center gap-1.5">
+                <Icon icon={IconTruck} size="xs" colorRole="muted" />
+                <Typography variant="labelSm" colorRole="muted">
+                  Distributor
+                </Typography>
+              </div>
+              {order.distributor ? (
+                <div className="flex items-center gap-2">
+                  {assignedDistributor?.logoUrl ? (
+                    <Image
+                      src={assignedDistributor.logoUrl}
+                      alt={order.distributor.businessName}
+                      width={28}
+                      height={28}
+                      className="rounded object-contain"
+                    />
+                  ) : (
+                    <div className="flex h-7 w-7 items-center justify-center rounded bg-fill-muted">
+                      <Icon icon={IconBuilding} size="xs" colorRole="muted" />
                     </div>
                   )}
+                  <Typography variant="bodySm" className="font-medium">
+                    {order.distributor.businessName}
+                  </Typography>
                 </div>
-              </CardContent>
-            </Card>
-
-            {/* Documents */}
-            <Card>
-              <CardContent className="p-6">
-                <Typography variant="headingSm" className="mb-4">
-                  Documents
-                </Typography>
-                <DocumentUpload orderId={orderId} />
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Sidebar */}
-          <div className="space-y-6">
-            {/* Status Update */}
-            <Card>
-              <CardContent className="p-6">
-                <Typography variant="headingSm" className="mb-4">
-                  Update Status
-                </Typography>
+              ) : canAssignDistributor ? (
                 <Select
-                  value={order.status}
-                  onValueChange={(v) => handleStatusChange(v as OrderStatus)}
-                  disabled={isUpdating}
+                  onValueChange={handleDistributorAssign}
+                  disabled={isAssigningDistributor}
                 >
-                  <SelectTrigger className="w-full">
-                    <SelectValue />
+                  <SelectTrigger className="h-8 text-xs">
+                    <SelectValue placeholder="Assign..." />
                   </SelectTrigger>
                   <SelectContent>
-                    {statusOptions.map((opt) => (
-                      <SelectItem key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </CardContent>
-            </Card>
-
-            {/* Distributor Assignment */}
-            <Card>
-              <CardContent className="p-6">
-                <div className="mb-4 flex items-center gap-2">
-                  <Icon icon={IconTruck} size="sm" colorRole="muted" />
-                  <Typography variant="headingSm">Distributor</Typography>
-                </div>
-
-                {order.distributor ? (
-                  <div className="space-y-3">
-                    {/* Current Distributor Card */}
-                    {(() => {
-                      const assignedDistributor = distributors.find((d) => d.id === order.distributor?.id);
-                      return (
-                        <div className="flex items-center gap-3 rounded-lg border border-border-muted bg-surface-secondary/50 p-3">
-                          {assignedDistributor?.logoUrl ? (
-                            <Image
-                              src={assignedDistributor.logoUrl}
-                              alt={order.distributor.businessName}
-                              width={40}
-                              height={40}
-                              className="rounded-lg object-contain"
-                            />
-                          ) : (
-                            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-fill-muted">
-                              <Icon icon={IconBuilding} size="md" colorRole="muted" />
-                            </div>
-                          )}
-                          <Typography variant="bodySm" className="font-medium">
-                            {order.distributor.businessName}
-                          </Typography>
-                        </div>
-                      );
-                    })()}
-                    {canAssignDistributor && (
-                      <>
-                        <Divider />
-                        <div>
-                          <Typography variant="bodyXs" colorRole="muted" className="mb-2">
-                            Reassign to different distributor:
-                          </Typography>
-                          <div className="space-y-2">
-                            {distributors
-                              .filter((d) => d.id !== order.distributor?.id)
-                              .map((d) => (
-                                <button
-                                  key={d.id}
-                                  type="button"
-                                  onClick={() => handleDistributorAssign(d.id)}
-                                  disabled={isAssigningDistributor}
-                                  className="flex w-full items-center gap-3 rounded-lg border border-border-muted p-2 text-left transition-colors hover:bg-surface-muted disabled:opacity-50"
-                                >
-                                  {d.logoUrl ? (
-                                    <Image
-                                      src={d.logoUrl}
-                                      alt={d.businessName}
-                                      width={32}
-                                      height={32}
-                                      className="rounded object-contain"
-                                    />
-                                  ) : (
-                                    <div className="flex h-8 w-8 items-center justify-center rounded bg-fill-muted">
-                                      <Icon icon={IconBuilding} size="sm" colorRole="muted" />
-                                    </div>
-                                  )}
-                                  <Typography variant="bodyXs" className="font-medium">
-                                    {d.businessName}
-                                  </Typography>
-                                </button>
-                              ))}
-                          </div>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                ) : canAssignDistributor ? (
-                  <div className="space-y-2">
-                    <Typography variant="bodyXs" colorRole="muted">
-                      Assign a distributor to handle delivery:
-                    </Typography>
-                    <div className="space-y-2">
-                      {distributors.map((d) => (
-                        <button
-                          key={d.id}
-                          type="button"
-                          onClick={() => handleDistributorAssign(d.id)}
-                          disabled={isAssigningDistributor}
-                          className="flex w-full items-center gap-3 rounded-lg border border-border-muted p-3 text-left transition-colors hover:bg-surface-muted disabled:opacity-50"
-                        >
+                    {distributors.map((d) => (
+                      <SelectItem key={d.id} value={d.id}>
+                        <div className="flex items-center gap-2">
                           {d.logoUrl ? (
                             <Image
                               src={d.logoUrl}
                               alt={d.businessName}
-                              width={40}
-                              height={40}
-                              className="rounded-lg object-contain"
+                              width={20}
+                              height={20}
+                              className="rounded object-contain"
                             />
                           ) : (
-                            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-fill-muted">
-                              <Icon icon={IconBuilding} size="md" colorRole="muted" />
+                            <div className="flex h-5 w-5 items-center justify-center rounded bg-fill-muted">
+                              <Icon icon={IconBuilding} size="xs" colorRole="muted" />
                             </div>
                           )}
-                          <Typography variant="bodySm" className="font-medium">
-                            {d.businessName}
-                          </Typography>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="rounded-lg border border-border-muted bg-surface-secondary/30 p-3">
-                    <Typography variant="bodyXs" colorRole="muted" className="text-center">
-                      Distributor can be assigned after order is approved
+                          <span>{d.businessName}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <Typography variant="bodyXs" colorRole="muted">
+                  Assign after approval
+                </Typography>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Partner Info - Compact */}
+          <Card>
+            <CardContent className="p-4">
+              <Typography variant="labelSm" colorRole="muted" className="mb-2">
+                Partner
+              </Typography>
+              <Typography variant="bodySm" className="font-medium">
+                {order.partner?.businessName ?? 'Unknown'}
+              </Typography>
+              <Typography variant="bodyXs" colorRole="muted">
+                Created {formatDate(order.createdAt)}
+              </Typography>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Payment & Documents - Full Width */}
+        <div className="grid gap-4 lg:grid-cols-2">
+          <Card>
+            <CardContent className="p-4">
+              <PaymentTracker
+                order={order}
+                canConfirmPayments={true}
+                onPaymentConfirmed={() => {
+                  void queryClient.invalidateQueries({
+                    queryKey: ['privateClientOrders.adminGetOne', orderId],
+                  });
+                  void refetch();
+                }}
+              />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-4">
+              <Typography variant="headingSm" className="mb-3">
+                Documents
+              </Typography>
+              <DocumentUpload orderId={orderId} />
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Notes - if present */}
+        {(order.partnerNotes || order.deliveryNotes) && (
+          <Card>
+            <CardContent className="p-4">
+              <div className="grid gap-4 sm:grid-cols-2">
+                {order.partnerNotes && (
+                  <div>
+                    <Typography variant="labelSm" colorRole="muted" className="mb-1">
+                      Partner Notes
                     </Typography>
+                    <Typography variant="bodySm">{order.partnerNotes}</Typography>
                   </div>
                 )}
-              </CardContent>
-            </Card>
-
-            {/* Payment Tracker */}
-            <Card>
-              <CardContent className="p-6">
-                <PaymentTracker
-                  order={order}
-                  canConfirmPayments={true}
-                  onPaymentConfirmed={() => {
-                    void queryClient.invalidateQueries({
-                      queryKey: ['privateClientOrders.adminGetOne', orderId],
-                    });
-                    void refetch();
-                  }}
-                />
-              </CardContent>
-            </Card>
-
-            {/* Order Summary */}
-            <Card>
-              <CardContent className="p-6">
-                <Typography variant="headingSm" className="mb-4">
-                  Order Summary
-                </Typography>
-                <div className="space-y-3">
-                  <div className="flex justify-between">
-                    <Typography variant="bodySm" colorRole="muted">
-                      Items
+                {order.deliveryNotes && (
+                  <div>
+                    <Typography variant="labelSm" colorRole="muted" className="mb-1">
+                      Delivery Notes
                     </Typography>
-                    <Typography variant="bodySm">{order.itemCount ?? 0}</Typography>
+                    <Typography variant="bodySm">{order.deliveryNotes}</Typography>
                   </div>
-                  <div className="flex justify-between">
-                    <Typography variant="bodySm" colorRole="muted">
-                      Cases
-                    </Typography>
-                    <Typography variant="bodySm">{order.caseCount ?? 0}</Typography>
-                  </div>
-
-                  <Divider />
-
-                  <div className="flex justify-between">
-                    <Typography variant="bodySm" colorRole="muted">
-                      Subtotal
-                    </Typography>
-                    <Typography variant="bodySm">
-                      {formatPrice(Number(order.subtotalUsd) || 0, 'USD')}
-                    </Typography>
-                  </div>
-                  <div className="flex justify-between">
-                    <Typography variant="bodySm" colorRole="muted">
-                      Duty
-                    </Typography>
-                    <Typography variant="bodySm">
-                      {formatPrice(Number(order.dutyUsd) || 0, 'USD')}
-                    </Typography>
-                  </div>
-                  <div className="flex justify-between">
-                    <Typography variant="bodySm" colorRole="muted">
-                      VAT
-                    </Typography>
-                    <Typography variant="bodySm">
-                      {formatPrice(Number(order.vatUsd) || 0, 'USD')}
-                    </Typography>
-                  </div>
-                  <div className="flex justify-between">
-                    <Typography variant="bodySm" colorRole="muted">
-                      Logistics
-                    </Typography>
-                    <Typography variant="bodySm">
-                      {formatPrice(Number(order.logisticsUsd) || 0, 'USD')}
-                    </Typography>
-                  </div>
-
-                  <Divider />
-
-                  <div className="flex justify-between">
-                    <Typography variant="bodySm" className="font-semibold">
-                      Total
-                    </Typography>
-                    <Typography variant="bodyMd" className="font-semibold">
-                      {formatPrice(Number(order.totalUsd) || 0, 'USD')}
-                    </Typography>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Partner Info */}
-            <Card>
-              <CardContent className="p-6">
-                <Typography variant="headingSm" className="mb-4">
-                  Partner
-                </Typography>
-                <div className="space-y-2">
-                  <Typography variant="bodySm" className="font-medium">
-                    {order.partner?.businessName ?? 'Unknown Partner'}
-                  </Typography>
-                  {order.partner?.contactEmail && (
-                    <Typography variant="bodyXs" colorRole="muted">
-                      {order.partner.contactEmail}
-                    </Typography>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Internal Notes */}
-            {order.partnerNotes && (
-              <Card>
-                <CardContent className="p-6">
-                  <Typography variant="headingSm" className="mb-4">
-                    Partner Notes
-                  </Typography>
-                  <Typography variant="bodySm" colorRole="muted">
-                    {order.partnerNotes}
-                  </Typography>
-                </CardContent>
-              </Card>
-            )}
-
-          </div>
-        </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   );
