@@ -1,7 +1,8 @@
 'use client';
 
-import { IconArrowLeft, IconLoader2, IconTruck } from '@tabler/icons-react';
+import { IconArrowLeft, IconBuilding, IconLoader2, IconMail, IconPhone, IconTruck } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import Image from 'next/image';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useState } from 'react';
@@ -342,16 +343,51 @@ const AdminPrivateOrderDetailPage = () => {
 
                 {order.distributor ? (
                   <div className="space-y-3">
-                    <div className="rounded-lg border border-border-muted bg-surface-secondary/50 p-3">
-                      <Typography variant="bodySm" className="font-medium">
-                        {order.distributor.businessName}
-                      </Typography>
-                      {order.distributorAssignedAt && (
-                        <Typography variant="bodyXs" colorRole="muted">
-                          Assigned {formatDate(order.distributorAssignedAt)}
-                        </Typography>
-                      )}
-                    </div>
+                    {/* Current Distributor Card */}
+                    {(() => {
+                      const assignedDistributor = distributors.find((d) => d.id === order.distributor?.id);
+                      return (
+                        <div className="rounded-lg border border-border-muted bg-surface-secondary/50 p-3">
+                          <div className="flex items-start gap-3">
+                            {assignedDistributor?.logoUrl ? (
+                              <Image
+                                src={assignedDistributor.logoUrl}
+                                alt={order.distributor.businessName}
+                                width={48}
+                                height={48}
+                                className="rounded-lg object-contain"
+                              />
+                            ) : (
+                              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-fill-muted">
+                                <Icon icon={IconBuilding} size="md" colorRole="muted" />
+                              </div>
+                            )}
+                            <div className="flex-1 space-y-1">
+                              <Typography variant="bodySm" className="font-semibold">
+                                {order.distributor.businessName}
+                              </Typography>
+                              {assignedDistributor?.businessEmail && (
+                                <div className="flex items-center gap-1.5 text-xs text-text-muted">
+                                  <Icon icon={IconMail} size="xs" />
+                                  <span>{assignedDistributor.businessEmail}</span>
+                                </div>
+                              )}
+                              {assignedDistributor?.businessPhone && (
+                                <div className="flex items-center gap-1.5 text-xs text-text-muted">
+                                  <Icon icon={IconPhone} size="xs" />
+                                  <span>{assignedDistributor.businessPhone}</span>
+                                </div>
+                              )}
+                              {order.distributorAssignedAt && (
+                                <Typography variant="bodyXs" colorRole="muted" className="pt-1">
+                                  Assigned {formatDate(order.distributorAssignedAt)}
+                                </Typography>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })()}
                     {canAssignDistributor && (
                       <>
                         <Divider />
@@ -359,24 +395,43 @@ const AdminPrivateOrderDetailPage = () => {
                           <Typography variant="bodyXs" colorRole="muted" className="mb-2">
                             Reassign to different distributor:
                           </Typography>
-                          <Select
-                            value=""
-                            onValueChange={handleDistributorAssign}
-                            disabled={isAssigningDistributor}
-                          >
-                            <SelectTrigger className="w-full">
-                              <SelectValue placeholder="Select distributor..." />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {distributors
-                                .filter((d) => d.id !== order.distributor?.id)
-                                .map((d) => (
-                                  <SelectItem key={d.id} value={d.id}>
-                                    {d.businessName}
-                                  </SelectItem>
-                                ))}
-                            </SelectContent>
-                          </Select>
+                          <div className="space-y-2">
+                            {distributors
+                              .filter((d) => d.id !== order.distributor?.id)
+                              .map((d) => (
+                                <button
+                                  key={d.id}
+                                  type="button"
+                                  onClick={() => handleDistributorAssign(d.id)}
+                                  disabled={isAssigningDistributor}
+                                  className="flex w-full items-center gap-3 rounded-lg border border-border-muted p-2 text-left transition-colors hover:bg-surface-muted disabled:opacity-50"
+                                >
+                                  {d.logoUrl ? (
+                                    <Image
+                                      src={d.logoUrl}
+                                      alt={d.businessName}
+                                      width={32}
+                                      height={32}
+                                      className="rounded object-contain"
+                                    />
+                                  ) : (
+                                    <div className="flex h-8 w-8 items-center justify-center rounded bg-fill-muted">
+                                      <Icon icon={IconBuilding} size="sm" colorRole="muted" />
+                                    </div>
+                                  )}
+                                  <div className="flex-1 min-w-0">
+                                    <Typography variant="bodyXs" className="font-medium truncate">
+                                      {d.businessName}
+                                    </Typography>
+                                    {d.businessEmail && (
+                                      <Typography variant="bodyXs" colorRole="muted" className="truncate">
+                                        {d.businessEmail}
+                                      </Typography>
+                                    )}
+                                  </div>
+                                </button>
+                              ))}
+                          </div>
                         </div>
                       </>
                     )}
@@ -386,22 +441,50 @@ const AdminPrivateOrderDetailPage = () => {
                     <Typography variant="bodyXs" colorRole="muted">
                       Assign a distributor to handle delivery:
                     </Typography>
-                    <Select
-                      value=""
-                      onValueChange={handleDistributorAssign}
-                      disabled={isAssigningDistributor}
-                    >
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Select distributor..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {distributors.map((d) => (
-                          <SelectItem key={d.id} value={d.id}>
-                            {d.businessName}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <div className="space-y-2">
+                      {distributors.map((d) => (
+                        <button
+                          key={d.id}
+                          type="button"
+                          onClick={() => handleDistributorAssign(d.id)}
+                          disabled={isAssigningDistributor}
+                          className="flex w-full items-center gap-3 rounded-lg border border-border-muted p-3 text-left transition-colors hover:bg-surface-muted disabled:opacity-50"
+                        >
+                          {d.logoUrl ? (
+                            <Image
+                              src={d.logoUrl}
+                              alt={d.businessName}
+                              width={40}
+                              height={40}
+                              className="rounded-lg object-contain"
+                            />
+                          ) : (
+                            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-fill-muted">
+                              <Icon icon={IconBuilding} size="md" colorRole="muted" />
+                            </div>
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <Typography variant="bodySm" className="font-medium truncate">
+                              {d.businessName}
+                            </Typography>
+                            <div className="flex flex-col gap-0.5">
+                              {d.businessEmail && (
+                                <div className="flex items-center gap-1.5 text-xs text-text-muted">
+                                  <Icon icon={IconMail} size="xs" />
+                                  <span className="truncate">{d.businessEmail}</span>
+                                </div>
+                              )}
+                              {d.businessPhone && (
+                                <div className="flex items-center gap-1.5 text-xs text-text-muted">
+                                  <Icon icon={IconPhone} size="xs" />
+                                  <span>{d.businessPhone}</span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 ) : (
                   <div className="rounded-lg border border-border-muted bg-surface-secondary/30 p-3">

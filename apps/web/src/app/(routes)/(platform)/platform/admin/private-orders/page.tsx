@@ -7,6 +7,7 @@ import {
   IconLoader2,
   IconPackage,
   IconPlus,
+  IconRefresh,
   IconSearch,
 } from '@tabler/icons-react';
 import { useMutation, useQuery } from '@tanstack/react-query';
@@ -70,14 +71,18 @@ const AdminPrivateOrdersPage = () => {
   const [updatingId, setUpdatingId] = useState<string | null>(null);
 
   // Fetch orders
-  const { data, isLoading, refetch } = useQuery({
+  const { data, isLoading, refetch, isFetching } = useQuery({
     ...api.privateClientOrders.adminGetMany.queryOptions({
       limit: 50,
       search: searchQuery || undefined,
       status: statusFilter === 'all' ? undefined : statusFilter,
     }),
-    staleTime: 30000,
+    staleTime: 0, // Always fetch fresh data
   });
+
+  const handleRefresh = () => {
+    void refetch();
+  };
 
   // Update status mutation
   const { mutate: updateStatus, isPending: isUpdating } = useMutation(
@@ -128,11 +133,25 @@ const AdminPrivateOrdersPage = () => {
               Manage orders from wine partners for their private clients
             </Typography>
           </div>
-          <Button asChild>
-            <Link href="/platform/admin/private-orders/new">
-              <ButtonContent iconLeft={IconPlus}>New Order</ButtonContent>
-            </Link>
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleRefresh}
+              disabled={isFetching}
+            >
+              <Icon
+                icon={IconRefresh}
+                size="sm"
+                className={isFetching ? 'animate-spin' : ''}
+              />
+            </Button>
+            <Button asChild>
+              <Link href="/platform/admin/private-orders/new">
+                <ButtonContent iconLeft={IconPlus}>New Order</ButtonContent>
+              </Link>
+            </Button>
+          </div>
         </div>
 
         {/* Summary Card */}
