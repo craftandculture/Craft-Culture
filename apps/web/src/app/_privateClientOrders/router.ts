@@ -16,6 +16,7 @@ import itemsAdd from './controller/itemsAdd';
 import ordersCreate from './controller/ordersCreate';
 import ordersGetMany from './controller/ordersGetMany';
 import ordersGetOne from './controller/ordersGetOne';
+import paymentsConfirm from './controller/paymentsConfirm';
 
 const privateClientOrdersRouter = createTRPCRouter({
   // Order CRUD (wine partner)
@@ -31,6 +32,9 @@ const privateClientOrdersRouter = createTRPCRouter({
   getDocuments: documentsGetMany,
   deleteDocument: documentsDelete,
   extractDocument: documentsExtract,
+
+  // Payment management
+  confirmPayment: paymentsConfirm,
 
   // Admin procedures
   adminCreate,
