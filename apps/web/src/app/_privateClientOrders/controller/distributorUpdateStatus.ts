@@ -16,6 +16,8 @@ type PrivateClientOrderStatus = (typeof privateClientOrderStatus.enumValues)[num
  * Valid status transitions for distributors
  */
 const distributorTransitions: Record<string, PrivateClientOrderStatus[]> = {
+  // After admin approval, distributor can confirm client payment
+  cc_approved: ['client_paid'],
   // When awaiting client payment, distributor can confirm payment received
   awaiting_client_payment: ['client_paid'],
   // When client has paid, distributor can pay C&C
