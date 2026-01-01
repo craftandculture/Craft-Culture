@@ -17,6 +17,7 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
+import Badge from '@/app/_ui/components/Badge/Badge';
 import Button from '@/app/_ui/components/Button/Button';
 import DataTable from '@/app/_ui/components/DataTable/DataTable';
 import DropdownMenu from '@/app/_ui/components/DropdownMenu/DropdownMenu';
@@ -32,9 +33,21 @@ import { useTRPCClient } from '@/lib/trpc/browser';
 
 import PrivateOrderStatusBadge from './PrivateOrderStatusBadge';
 
+type Currency = 'USD' | 'AED';
+
 type OrderWithPartner = PrivateClientOrder & {
   partner: { id: string; businessName: string; logoUrl: string | null } | null;
 };
+
+type StatusFilter = 'all' | 'pending_payment' | 'in_transit' | 'ready_delivery' | 'delivered';
+
+const statusFilters: { value: StatusFilter; label: string; count?: number }[] = [
+  { value: 'all', label: 'All Orders' },
+  { value: 'pending_payment', label: 'Pending Payment' },
+  { value: 'in_transit', label: 'In Transit' },
+  { value: 'ready_delivery', label: 'Ready for Delivery' },
+  { value: 'delivered', label: 'Delivered' },
+];
 
 /**
  * DistributorOrdersList displays a table of assigned orders
@@ -45,6 +58,8 @@ const DistributorOrdersList = () => {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [cursor, setCursor] = useState(0);
+  const [currency, setCurrency] = useState<Currency>('AED');
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
 
   const { data, isLoading } = useQuery({
     queryKey: [
@@ -81,14 +96,32 @@ const DistributorOrdersList = () => {
     },
   });
 
-  const orders = data?.data ?? [];
+  const allOrders = data?.data ?? [];
   const totalCount = data?.meta?.totalCount ?? 0;
   const hasMore = data?.meta?.hasMore ?? false;
 
-  const formatCurrency = (amount: number) => {
+  // Filter orders by status category
+  const filterByStatus = (orders: OrderWithPartner[], filter: StatusFilter) => {
+    if (filter === 'all') return orders;
+
+    const statusCategories: Record<StatusFilter, string[]> = {
+      all: [],
+      pending_payment: ['cc_approved', 'awaiting_client_payment', 'client_paid', 'awaiting_distributor_payment'],
+      in_transit: ['distributor_paid', 'stock_in_transit'],
+      ready_delivery: ['with_distributor', 'out_for_delivery'],
+      delivered: ['delivered'],
+    };
+
+    return orders.filter((order) => statusCategories[filter].includes(order.status));
+  };
+
+  const orders = filterByStatus(allOrders, statusFilter);
+
+  const formatCurrencyValue = (order: OrderWithPartner) => {
+    const amount = currency === 'USD' ? (order.totalUsd ?? 0) : (order.totalAed ?? 0);
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
-      currency: 'USD',
+      currency,
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(amount);
@@ -210,11 +243,11 @@ const DistributorOrdersList = () => {
       cell: ({ row }) => <Typography variant="bodySm">{row.original.caseCount}</Typography>,
     },
     {
-      accessorKey: 'totalAed',
-      header: 'Total (AED)',
+      accessorKey: 'total',
+      header: () => <span>Total ({currency})</span>,
       cell: ({ row }) => (
         <Typography variant="bodySm" className="font-medium">
-          {formatCurrency(row.original.totalAed ?? 0)} AED
+          {formatCurrencyValue(row.original)}
         </Typography>
       ),
     },
@@ -283,8 +316,38 @@ const DistributorOrdersList = () => {
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Header with search */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      {/* Status Filter Tabs */}
+      <div className="-mx-1 flex gap-1 overflow-x-auto pb-1">
+        {statusFilters.map((filter) => {
+          const count = filterByStatus(allOrders, filter.value).length;
+          const isActive = statusFilter === filter.value;
+
+          return (
+            <button
+              key={filter.value}
+              type="button"
+              onClick={() => setStatusFilter(filter.value)}
+              className={`flex shrink-0 items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium transition-all ${
+                isActive
+                  ? 'bg-fill-brand text-white'
+                  : 'bg-surface-secondary/50 text-text-muted hover:bg-surface-secondary hover:text-text-primary'
+              }`}
+            >
+              {filter.label}
+              <Badge
+                size="sm"
+                colorRole={isActive ? 'brand' : 'muted'}
+                className={isActive ? 'bg-white/20 text-white' : ''}
+              >
+                {count}
+              </Badge>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Header with search and currency toggle */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="relative max-w-sm flex-1">
           <Icon
             icon={IconSearch}
@@ -300,6 +363,32 @@ const DistributorOrdersList = () => {
             }}
             className="pl-9"
           />
+        </div>
+
+        {/* Currency Toggle */}
+        <div className="inline-flex items-center rounded-lg border border-border-muted bg-surface-secondary/50 p-0.5">
+          <button
+            type="button"
+            onClick={() => setCurrency('USD')}
+            className={`rounded-md px-3 py-1 text-xs font-medium transition-all ${
+              currency === 'USD'
+                ? 'bg-background-primary text-text-primary shadow-sm'
+                : 'text-text-muted hover:text-text-primary'
+            }`}
+          >
+            USD
+          </button>
+          <button
+            type="button"
+            onClick={() => setCurrency('AED')}
+            className={`rounded-md px-3 py-1 text-xs font-medium transition-all ${
+              currency === 'AED'
+                ? 'bg-background-primary text-text-primary shadow-sm'
+                : 'text-text-muted hover:text-text-primary'
+            }`}
+          >
+            AED
+          </button>
         </div>
       </div>
 

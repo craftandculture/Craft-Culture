@@ -17,6 +17,7 @@ import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useState } from 'react';
 
 import Badge from '@/app/_ui/components/Badge/Badge';
 import Button from '@/app/_ui/components/Button/Button';
@@ -28,22 +29,36 @@ import { useTRPCClient } from '@/lib/trpc/browser';
 
 import PrivateOrderStatusBadge from './PrivateOrderStatusBadge';
 
+type Currency = 'USD' | 'AED';
+
 /**
  * DistributorDashboard displays an overview of assigned orders
  * with KPIs, status pipeline, and recent activity
  */
 const DistributorDashboard = () => {
   const trpcClient = useTRPCClient();
+  const [currency, setCurrency] = useState<Currency>('AED');
 
   const { data, isLoading } = useQuery({
     queryKey: ['privateClientOrders.distributorDashboard'],
     queryFn: () => trpcClient.privateClientOrders.distributorDashboard.query(),
   });
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-AE', {
+  const formatCurrency = (amountUsd: number, amountAed: number) => {
+    const amount = currency === 'USD' ? amountUsd : amountAed;
+    return new Intl.NumberFormat('en-US', {
       style: 'currency',
-      currency: 'AED',
+      currency,
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(amount);
+  };
+
+  const formatOrderCurrency = (order: { totalUsd?: number | null; totalAed?: number | null }) => {
+    const amount = currency === 'USD' ? (order.totalUsd ?? 0) : (order.totalAed ?? 0);
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency,
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(amount);
@@ -120,6 +135,34 @@ const DistributorDashboard = () => {
 
   return (
     <div className="flex flex-col gap-6">
+      {/* Currency Toggle */}
+      <div className="flex items-center justify-end">
+        <div className="inline-flex items-center rounded-lg border border-border-muted bg-surface-secondary/50 p-0.5">
+          <button
+            type="button"
+            onClick={() => setCurrency('USD')}
+            className={`rounded-md px-3 py-1 text-xs font-medium transition-all ${
+              currency === 'USD'
+                ? 'bg-background-primary text-text-primary shadow-sm'
+                : 'text-text-muted hover:text-text-primary'
+            }`}
+          >
+            USD
+          </button>
+          <button
+            type="button"
+            onClick={() => setCurrency('AED')}
+            className={`rounded-md px-3 py-1 text-xs font-medium transition-all ${
+              currency === 'AED'
+                ? 'bg-background-primary text-text-primary shadow-sm'
+                : 'text-text-muted hover:text-text-primary'
+            }`}
+          >
+            AED
+          </button>
+        </div>
+      </div>
+
       {/* KPI Cards */}
       <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         {/* Active Orders */}
@@ -233,10 +276,10 @@ const DistributorDashboard = () => {
                   variant="headingLg"
                   className="mt-1 text-xl font-bold sm:text-2xl"
                 >
-                  {formatCurrency(kpis.totalValueAed)}
+                  {formatCurrency(kpis.totalValueUsd, kpis.totalValueAed)}
                 </Typography>
                 <Typography variant="bodyXs" colorRole="muted" className="mt-1">
-                  Monthly: {formatCurrency(kpis.monthlyValueAed)}
+                  Monthly: {formatCurrency(kpis.monthlyValueUsd, kpis.monthlyValueAed)}
                 </Typography>
               </div>
               <div className="rounded-lg bg-amber-100 p-2 dark:bg-amber-900/30">
@@ -398,7 +441,7 @@ const DistributorDashboard = () => {
                         variant="bodySm"
                         className="font-medium whitespace-nowrap"
                       >
-                        {formatCurrency(order.totalAed ?? 0)}
+                        {formatOrderCurrency(order)}
                       </Typography>
                       {order.distributorAssignedAt && (
                         <Typography variant="bodyXs" colorRole="muted">
@@ -487,7 +530,7 @@ const DistributorDashboard = () => {
                           variant="bodySm"
                           className="font-medium whitespace-nowrap"
                         >
-                          {formatCurrency(partner.totalValueAed)}
+                          {formatCurrency(partner.totalValueUsd, partner.totalValueAed)}
                         </Typography>
                       </div>
                       <div className="relative h-2 overflow-hidden rounded-full bg-surface-secondary">

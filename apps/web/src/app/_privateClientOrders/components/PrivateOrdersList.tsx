@@ -13,6 +13,7 @@ import { format } from 'date-fns';
 import Link from 'next/link';
 import { useState } from 'react';
 
+import Badge from '@/app/_ui/components/Badge/Badge';
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
 import DataTable from '@/app/_ui/components/DataTable/DataTable';
@@ -28,9 +29,21 @@ import { useTRPCClient } from '@/lib/trpc/browser';
 
 import PrivateOrderStatusBadge from './PrivateOrderStatusBadge';
 
+type Currency = 'USD' | 'AED';
+
 type OrderWithDistributor = PrivateClientOrder & {
   distributor: { id: string; businessName: string } | null;
 };
+
+type StatusFilter = 'all' | 'draft' | 'pending' | 'active' | 'completed';
+
+const statusFilters: { value: StatusFilter; label: string }[] = [
+  { value: 'all', label: 'All Orders' },
+  { value: 'draft', label: 'Drafts' },
+  { value: 'pending', label: 'Pending Approval' },
+  { value: 'active', label: 'In Progress' },
+  { value: 'completed', label: 'Completed' },
+];
 
 /**
  * PrivateOrdersList displays a table of private client orders
@@ -40,6 +53,8 @@ const PrivateOrdersList = () => {
   const trpcClient = useTRPCClient();
   const [search, setSearch] = useState('');
   const [cursor, setCursor] = useState(0);
+  const [currency, setCurrency] = useState<Currency>('USD');
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
 
   const { data, isLoading } = useQuery({
     queryKey: ['privateClientOrders.getMany', { limit: 20, cursor, search: search || undefined }],
@@ -51,14 +66,32 @@ const PrivateOrdersList = () => {
       }),
   });
 
-  const orders = data?.data ?? [];
+  const allOrders = data?.data ?? [];
   const totalCount = data?.meta?.totalCount ?? 0;
   const hasMore = data?.meta?.hasMore ?? false;
 
-  const formatCurrency = (amount: number) => {
+  // Filter orders by status category
+  const filterByStatus = (orders: OrderWithDistributor[], filter: StatusFilter) => {
+    if (filter === 'all') return orders;
+
+    const statusCategories: Record<StatusFilter, string[]> = {
+      all: [],
+      draft: ['draft'],
+      pending: ['submitted', 'under_cc_review', 'revision_requested'],
+      active: ['cc_approved', 'awaiting_client_payment', 'client_paid', 'awaiting_distributor_payment', 'distributor_paid', 'stock_in_transit', 'with_distributor', 'out_for_delivery'],
+      completed: ['delivered', 'cancelled'],
+    };
+
+    return orders.filter((order) => statusCategories[filter].includes(order.status));
+  };
+
+  const orders = filterByStatus(allOrders, statusFilter);
+
+  const formatCurrencyValue = (order: OrderWithDistributor) => {
+    const amount = currency === 'USD' ? (order.totalUsd ?? 0) : (order.totalAed ?? 0);
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
-      currency: 'USD',
+      currency,
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(amount);
@@ -100,11 +133,11 @@ const PrivateOrdersList = () => {
       ),
     },
     {
-      accessorKey: 'totalUsd',
-      header: 'Total',
+      accessorKey: 'total',
+      header: () => <span>Total ({currency})</span>,
       cell: ({ row }) => (
         <Typography variant="bodySm" className="font-medium">
-          {formatCurrency(row.original.totalUsd)}
+          {formatCurrencyValue(row.original)}
         </Typography>
       ),
     },
@@ -146,8 +179,38 @@ const PrivateOrdersList = () => {
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Header with search and new order button */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      {/* Status Filter Tabs */}
+      <div className="-mx-1 flex gap-1 overflow-x-auto pb-1">
+        {statusFilters.map((filter) => {
+          const count = filterByStatus(allOrders, filter.value).length;
+          const isActive = statusFilter === filter.value;
+
+          return (
+            <button
+              key={filter.value}
+              type="button"
+              onClick={() => setStatusFilter(filter.value)}
+              className={`flex shrink-0 items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium transition-all ${
+                isActive
+                  ? 'bg-fill-brand text-white'
+                  : 'bg-surface-secondary/50 text-text-muted hover:bg-surface-secondary hover:text-text-primary'
+              }`}
+            >
+              {filter.label}
+              <Badge
+                size="sm"
+                colorRole={isActive ? 'brand' : 'muted'}
+                className={isActive ? 'bg-white/20 text-white' : ''}
+              >
+                {count}
+              </Badge>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Header with search, currency toggle, and new order button */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="relative max-w-sm flex-1">
           <Icon
             icon={IconSearch}
@@ -164,11 +227,40 @@ const PrivateOrdersList = () => {
             className="pl-9"
           />
         </div>
-        <Button variant="default" colorRole="brand" asChild>
-          <Link href="/platform/private-orders/new">
-            <ButtonContent iconLeft={IconPlus}>New Order</ButtonContent>
-          </Link>
-        </Button>
+
+        <div className="flex items-center gap-3">
+          {/* Currency Toggle */}
+          <div className="inline-flex items-center rounded-lg border border-border-muted bg-surface-secondary/50 p-0.5">
+            <button
+              type="button"
+              onClick={() => setCurrency('USD')}
+              className={`rounded-md px-3 py-1 text-xs font-medium transition-all ${
+                currency === 'USD'
+                  ? 'bg-background-primary text-text-primary shadow-sm'
+                  : 'text-text-muted hover:text-text-primary'
+              }`}
+            >
+              USD
+            </button>
+            <button
+              type="button"
+              onClick={() => setCurrency('AED')}
+              className={`rounded-md px-3 py-1 text-xs font-medium transition-all ${
+                currency === 'AED'
+                  ? 'bg-background-primary text-text-primary shadow-sm'
+                  : 'text-text-muted hover:text-text-primary'
+              }`}
+            >
+              AED
+            </button>
+          </div>
+
+          <Button variant="default" colorRole="brand" asChild>
+            <Link href="/platform/private-orders/new">
+              <ButtonContent iconLeft={IconPlus}>New Order</ButtonContent>
+            </Link>
+          </Button>
+        </div>
       </div>
 
       {/* Orders table */}

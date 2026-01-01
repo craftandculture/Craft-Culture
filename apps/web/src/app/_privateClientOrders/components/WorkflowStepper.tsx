@@ -1,74 +1,85 @@
 'use client';
 
-import { IconCheck, IconClock, IconX } from '@tabler/icons-react';
+import {
+  IconCheck,
+  IconCircleDashed,
+  IconClock,
+  IconCreditCard,
+  IconFileCheck,
+  IconPackage,
+  IconSend,
+  IconTruck,
+  IconX,
+} from '@tabler/icons-react';
 import { format } from 'date-fns';
 
 import Icon from '@/app/_ui/components/Icon/Icon';
-import Typography from '@/app/_ui/components/Typography/Typography';
 import type { PrivateClientOrder } from '@/database/schema';
 
 interface WorkflowStepperProps {
   order: PrivateClientOrder;
+  compact?: boolean;
 }
 
 interface Step {
   id: string;
   label: string;
-  description?: string;
+  shortLabel: string;
+  icon: typeof IconCheck;
   timestamp?: Date | null;
 }
 
 /**
  * Visual workflow stepper showing order progress through stages
+ *
+ * Supports compact mode for mobile/smaller displays
  */
-const WorkflowStepper = ({ order }: WorkflowStepperProps) => {
+const WorkflowStepper = ({ order, compact = false }: WorkflowStepperProps) => {
   const getSteps = (): Step[] => {
-    const steps: Step[] = [
+    return [
       {
         id: 'created',
         label: 'Created',
-        description: 'Order created',
+        shortLabel: 'New',
+        icon: IconCircleDashed,
         timestamp: order.createdAt,
       },
       {
         id: 'submitted',
         label: 'Submitted',
-        description: 'Sent for review',
+        shortLabel: 'Sent',
+        icon: IconSend,
         timestamp: order.submittedAt,
       },
       {
         id: 'approved',
         label: 'Approved',
-        description: 'C&C approved',
+        shortLabel: 'OK',
+        icon: IconFileCheck,
         timestamp: order.ccApprovedAt,
       },
       {
-        id: 'client_paid',
-        label: 'Client Paid',
-        description: 'Payment received',
+        id: 'paid',
+        label: 'Paid',
+        shortLabel: 'Paid',
+        icon: IconCreditCard,
         timestamp: order.clientPaidAt,
       },
       {
-        id: 'distributor_paid',
-        label: 'Distributor Paid',
-        description: 'Payment to C&C',
-        timestamp: order.distributorPaidAt,
-      },
-      {
-        id: 'stock_received',
-        label: 'Stock Received',
-        description: 'At distributor',
+        id: 'in_transit',
+        label: 'In Transit',
+        shortLabel: 'Ship',
+        icon: IconTruck,
         timestamp: order.stockReceivedAt,
       },
       {
         id: 'delivered',
         label: 'Delivered',
-        description: 'Complete',
+        shortLabel: 'Done',
+        icon: IconPackage,
         timestamp: order.deliveredAt,
       },
     ];
-
-    return steps;
   };
 
   const steps = getSteps();
@@ -80,7 +91,6 @@ const WorkflowStepper = ({ order }: WorkflowStepperProps) => {
 
     if (step.timestamp) return 'completed';
 
-    // Find the current step based on status
     const statusToStep: Record<string, string> = {
       draft: 'created',
       submitted: 'submitted',
@@ -88,14 +98,14 @@ const WorkflowStepper = ({ order }: WorkflowStepperProps) => {
       revision_requested: 'submitted',
       cc_approved: 'approved',
       awaiting_client_payment: 'approved',
-      client_paid: 'client_paid',
-      awaiting_distributor_payment: 'client_paid',
-      distributor_paid: 'distributor_paid',
-      awaiting_partner_payment: 'distributor_paid',
-      partner_paid: 'distributor_paid',
-      stock_in_transit: 'distributor_paid',
-      with_distributor: 'stock_received',
-      out_for_delivery: 'stock_received',
+      client_paid: 'paid',
+      awaiting_distributor_payment: 'paid',
+      distributor_paid: 'paid',
+      awaiting_partner_payment: 'paid',
+      partner_paid: 'paid',
+      stock_in_transit: 'in_transit',
+      with_distributor: 'in_transit',
+      out_for_delivery: 'in_transit',
       delivered: 'delivered',
     };
 
@@ -112,20 +122,33 @@ const WorkflowStepper = ({ order }: WorkflowStepperProps) => {
     return format(new Date(date), 'MMM d');
   };
 
+  // Find the current step index for progress calculation
+  const currentStepIndex = steps.findIndex((step, index) => getStepStatus(step, index) === 'current');
+  const progressPercent = currentStepIndex >= 0 ? (currentStepIndex / (steps.length - 1)) * 100 : 0;
+
   return (
-    <div className="rounded-lg border border-border-muted bg-surface-secondary/30 p-4">
-      <div className="flex items-start justify-between gap-2 overflow-x-auto">
+    <div className="rounded-lg border border-border-muted bg-surface-secondary/30 p-3">
+      {/* Progress bar for mobile */}
+      <div className="mb-3 h-1 overflow-hidden rounded-full bg-border-muted sm:hidden">
+        <div
+          className="h-full bg-fill-brand transition-all duration-300"
+          style={{ width: `${progressPercent}%` }}
+        />
+      </div>
+
+      <div className="flex items-start justify-between gap-1 overflow-x-auto sm:gap-2">
         {steps.map((step, index) => {
           const status = getStepStatus(step, index);
+          const StepIcon = status === 'completed' ? IconCheck : status === 'current' ? IconClock : step.icon;
 
           return (
-            <div key={step.id} className="flex flex-1 flex-col items-center">
+            <div key={step.id} className="flex min-w-0 flex-1 flex-col items-center">
               {/* Step indicator */}
               <div className="relative flex w-full items-center">
                 {/* Connector line (left) */}
                 {index > 0 && (
                   <div
-                    className={`h-0.5 flex-1 ${
+                    className={`hidden h-0.5 flex-1 sm:block ${
                       status === 'pending' ? 'bg-border-muted' : 'bg-fill-brand'
                     }`}
                   />
@@ -133,7 +156,9 @@ const WorkflowStepper = ({ order }: WorkflowStepperProps) => {
 
                 {/* Circle */}
                 <div
-                  className={`relative z-10 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full ${
+                  className={`relative z-10 flex flex-shrink-0 items-center justify-center rounded-full transition-all ${
+                    compact ? 'h-6 w-6' : 'h-6 w-6 sm:h-8 sm:w-8'
+                  } ${
                     status === 'completed'
                       ? 'bg-fill-brand text-white'
                       : status === 'current'
@@ -143,21 +168,22 @@ const WorkflowStepper = ({ order }: WorkflowStepperProps) => {
                           : 'border-2 border-border-muted bg-background-primary'
                   }`}
                 >
-                  {status === 'completed' ? (
-                    <Icon icon={IconCheck} size="sm" />
-                  ) : status === 'current' ? (
-                    <Icon icon={IconClock} size="sm" colorRole="brand" />
-                  ) : order.status === 'cancelled' ? (
-                    <Icon icon={IconX} size="sm" colorRole="danger" />
+                  {order.status === 'cancelled' && status === 'pending' ? (
+                    <Icon icon={IconX} size="xs" colorRole="danger" />
                   ) : (
-                    <span className="h-2 w-2 rounded-full bg-border-muted" />
+                    <Icon
+                      icon={StepIcon}
+                      size="xs"
+                      colorRole={status === 'completed' ? undefined : status === 'current' ? 'brand' : 'muted'}
+                      className={status === 'completed' ? 'text-white' : ''}
+                    />
                   )}
                 </div>
 
                 {/* Connector line (right) */}
                 {index < steps.length - 1 && (
                   <div
-                    className={`h-0.5 flex-1 ${
+                    className={`hidden h-0.5 flex-1 sm:block ${
                       status === 'completed' ? 'bg-fill-brand' : 'bg-border-muted'
                     }`}
                   />
@@ -165,19 +191,19 @@ const WorkflowStepper = ({ order }: WorkflowStepperProps) => {
               </div>
 
               {/* Step label */}
-              <div className="mt-2 text-center">
-                <Typography
-                  variant="bodyXs"
-                  className={`font-medium ${
+              <div className="mt-1.5 text-center">
+                <span
+                  className={`block text-[10px] font-medium leading-tight sm:text-xs ${
                     status === 'pending' ? 'text-text-muted' : 'text-text-primary'
                   }`}
                 >
-                  {step.label}
-                </Typography>
+                  <span className="sm:hidden">{step.shortLabel}</span>
+                  <span className="hidden sm:inline">{step.label}</span>
+                </span>
                 {step.timestamp && (
-                  <Typography variant="bodyXs" colorRole="muted">
+                  <span className="block text-[9px] text-text-muted sm:text-[10px]">
                     {formatStepDate(step.timestamp)}
-                  </Typography>
+                  </span>
                 )}
               </div>
             </div>
