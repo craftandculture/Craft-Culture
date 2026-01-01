@@ -5,6 +5,7 @@ import adminCreate from './controller/adminCreate';
 import adminGetMany from './controller/adminGetMany';
 import adminGetOne from './controller/adminGetOne';
 import adminUpdateStatus from './controller/adminUpdateStatus';
+import distributorDashboard from './controller/distributorDashboard';
 import distributorGetMany from './controller/distributorGetMany';
 import distributorGetOne from './controller/distributorGetOne';
 import distributorUpdateStatus from './controller/distributorUpdateStatus';
@@ -58,6 +59,7 @@ const privateClientOrdersRouter = createTRPCRouter({
   adminAssignDistributor: ordersAssignDistributor,
 
   // Distributor procedures
+  distributorDashboard,
   distributorGetMany,
   distributorGetOne,
   distributorUpdateStatus,
