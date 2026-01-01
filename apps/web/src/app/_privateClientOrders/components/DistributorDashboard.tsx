@@ -278,7 +278,7 @@ const DistributorDashboard = () => {
                     {step.label}
                   </Typography>
                 </div>
-                <Badge variant="secondary" className="font-semibold">
+                <Badge colorRole="muted" size="sm" className="font-semibold">
                   {step.count}
                 </Badge>
               </div>

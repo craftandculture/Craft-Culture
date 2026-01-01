@@ -32,16 +32,17 @@ const statusConfig: Record<OrderStatus, StatusConfig> = {
 
 interface PrivateOrderStatusBadgeProps {
   status: OrderStatus;
+  size?: 'xs' | 'sm' | 'md';
 }
 
 /**
  * Badge component displaying private client order status
  */
-const PrivateOrderStatusBadge = ({ status }: PrivateOrderStatusBadgeProps) => {
+const PrivateOrderStatusBadge = ({ status, size }: PrivateOrderStatusBadgeProps) => {
   const config = statusConfig[status] ?? { label: status, colorRole: 'muted' as const };
 
   return (
-    <Badge colorRole={config.colorRole}>
+    <Badge colorRole={config.colorRole} size={size}>
       {config.label}
     </Badge>
   );
