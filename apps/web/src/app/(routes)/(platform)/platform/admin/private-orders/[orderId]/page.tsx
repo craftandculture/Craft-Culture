@@ -1,12 +1,14 @@
 'use client';
 
 import { IconArrowLeft, IconLoader2 } from '@tabler/icons-react';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
+import DocumentUpload from '@/app/_privateClientOrders/components/DocumentUpload';
+import PaymentTracker from '@/app/_privateClientOrders/components/PaymentTracker';
 import PrivateOrderStatusBadge from '@/app/_privateClientOrders/components/PrivateOrderStatusBadge';
 import Button from '@/app/_ui/components/Button/Button';
 import Card from '@/app/_ui/components/Card/Card';
@@ -53,6 +55,7 @@ const AdminPrivateOrderDetailPage = () => {
   const params = useParams();
   const orderId = params.orderId as string;
   const api = useTRPC();
+  const queryClient = useQueryClient();
   const [isUpdating, setIsUpdating] = useState(false);
 
   // Fetch order details
@@ -255,6 +258,19 @@ const AdminPrivateOrderDetailPage = () => {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Documents */}
+            <Card>
+              <CardContent className="p-6">
+                <Typography variant="headingSm" className="mb-4">
+                  Documents
+                </Typography>
+                <DocumentUpload
+                  orderId={orderId}
+                  onUploadComplete={() => void refetch()}
+                />
+              </CardContent>
+            </Card>
           </div>
 
           {/* Sidebar */}
@@ -281,6 +297,22 @@ const AdminPrivateOrderDetailPage = () => {
                     ))}
                   </SelectContent>
                 </Select>
+              </CardContent>
+            </Card>
+
+            {/* Payment Tracker */}
+            <Card>
+              <CardContent className="p-6">
+                <PaymentTracker
+                  order={order}
+                  canConfirmPayments={true}
+                  onPaymentConfirmed={() => {
+                    void queryClient.invalidateQueries({
+                      queryKey: ['privateClientOrders.adminGetOne', orderId],
+                    });
+                    void refetch();
+                  }}
+                />
               </CardContent>
             </Card>
 
