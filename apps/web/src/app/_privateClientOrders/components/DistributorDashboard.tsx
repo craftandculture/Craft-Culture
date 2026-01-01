@@ -133,8 +133,8 @@ const DistributorDashboard = () => {
                   Active Orders
                 </Typography>
                 <Typography
-                  variant="h2"
-                  className="mt-1 text-2xl font-bold sm:text-3xl"
+                  variant="headingLg"
+                  className="mt-1"
                 >
                   {totalActive}
                 </Typography>
@@ -162,7 +162,7 @@ const DistributorDashboard = () => {
                   This Month
                 </Typography>
                 <Typography
-                  variant="h2"
+                  variant="headingLg"
                   className="mt-1 text-2xl font-bold sm:text-3xl"
                 >
                   {kpis.monthlyOrders}
@@ -195,7 +195,7 @@ const DistributorDashboard = () => {
                   Total Cases
                 </Typography>
                 <Typography
-                  variant="h2"
+                  variant="headingLg"
                   className="mt-1 text-2xl font-bold sm:text-3xl"
                 >
                   {kpis.totalCases}
@@ -228,7 +228,7 @@ const DistributorDashboard = () => {
                   Total Value
                 </Typography>
                 <Typography
-                  variant="h2"
+                  variant="headingLg"
                   className="mt-1 text-xl font-bold sm:text-2xl"
                 >
                   {formatCurrency(kpis.totalValueAed)}
@@ -253,7 +253,7 @@ const DistributorDashboard = () => {
       <Card>
         <CardContent className="p-4 sm:p-6">
           <div className="mb-4 flex items-center justify-between">
-            <Typography variant="h4" className="font-semibold">
+            <Typography variant="headingSm" className="font-semibold">
               Order Pipeline
             </Typography>
             <Link href="/platform/distributor/orders">
@@ -297,7 +297,7 @@ const DistributorDashboard = () => {
                       <Icon icon={step.icon} size="md" className="text-white" />
                     </div>
                     <Typography
-                      variant="h3"
+                      variant="headingMd"
                       className="mb-0.5 text-xl font-bold"
                     >
                       {step.count}
@@ -330,7 +330,7 @@ const DistributorDashboard = () => {
         <Card>
           <CardContent className="p-4 sm:p-6">
             <div className="mb-4 flex items-center justify-between">
-              <Typography variant="h4" className="font-semibold">
+              <Typography variant="headingSm" className="font-semibold">
                 Recent Orders
               </Typography>
               <Link href="/platform/distributor/orders">
@@ -412,7 +412,7 @@ const DistributorDashboard = () => {
         <Card>
           <CardContent className="p-4 sm:p-6">
             <div className="mb-4">
-              <Typography variant="h4" className="font-semibold">
+              <Typography variant="headingSm" className="font-semibold">
                 Orders by Partner
               </Typography>
               <Typography variant="bodyXs" colorRole="muted" className="mt-1">
@@ -485,7 +485,7 @@ const DistributorDashboard = () => {
       {/* Quick Actions */}
       <Card>
         <CardContent className="p-4 sm:p-6">
-          <Typography variant="h4" className="mb-4 font-semibold">
+          <Typography variant="headingSm" className="mb-4 font-semibold">
             Quick Actions
           </Typography>
           <div className="flex flex-wrap gap-3">
