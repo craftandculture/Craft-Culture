@@ -5,6 +5,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
+import { useState } from 'react';
 
 import ActivityTimeline from '@/app/_privateClientOrders/components/ActivityTimeline';
 import DocumentUpload from '@/app/_privateClientOrders/components/DocumentUpload';
@@ -18,7 +19,20 @@ import Divider from '@/app/_ui/components/Divider/Divider';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import useTRPC from '@/lib/trpc/browser';
-import formatPrice from '@/utils/formatPrice';
+
+type Currency = 'USD' | 'AED';
+
+/**
+ * Format a price value with currency
+ */
+const formatCurrencyValue = (amount: number, currency: Currency) => {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency,
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(amount);
+};
 
 /**
  * Partner detail view for a single private client order
@@ -31,6 +45,7 @@ const PrivateOrderDetailPage = () => {
   const orderId = params.orderId as string;
   const api = useTRPC();
   const queryClient = useQueryClient();
+  const [currency, setCurrency] = useState<Currency>('USD');
 
   // Fetch order details
   const { data: order, isLoading, refetch } = useQuery({
@@ -77,6 +92,17 @@ const PrivateOrderDetailPage = () => {
     );
   }
 
+  // Calculate exchange rate for AED conversion
+  const usdToAedRate = Number(order.totalAed) / (Number(order.totalUsd) || 1) || 3.67;
+
+  /**
+   * Convert amount to selected currency
+   */
+  const getAmount = (usdAmount: number | string | null | undefined) => {
+    const amount = Number(usdAmount) || 0;
+    return currency === 'USD' ? amount : amount * usdToAedRate;
+  };
+
   return (
     <div className="container mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8">
       <div className="space-y-4">
@@ -91,9 +117,36 @@ const PrivateOrderDetailPage = () => {
             <Typography variant="headingLg">{order.orderNumber}</Typography>
             <PrivateOrderStatusBadge status={order.status} />
           </div>
-          <Typography variant="bodySm" colorRole="muted">
-            Created {formatDate(order.createdAt)}
-          </Typography>
+          <div className="flex items-center gap-3">
+            {/* Currency Toggle */}
+            <div className="inline-flex items-center rounded-lg border border-border-muted bg-surface-secondary/50 p-0.5">
+              <button
+                type="button"
+                onClick={() => setCurrency('USD')}
+                className={`rounded-md px-3 py-1 text-xs font-medium transition-all ${
+                  currency === 'USD'
+                    ? 'bg-background-primary text-text-primary shadow-sm'
+                    : 'text-text-muted hover:text-text-primary'
+                }`}
+              >
+                USD
+              </button>
+              <button
+                type="button"
+                onClick={() => setCurrency('AED')}
+                className={`rounded-md px-3 py-1 text-xs font-medium transition-all ${
+                  currency === 'AED'
+                    ? 'bg-background-primary text-text-primary shadow-sm'
+                    : 'text-text-muted hover:text-text-primary'
+                }`}
+              >
+                AED
+              </button>
+            </div>
+            <Typography variant="bodySm" colorRole="muted">
+              Created {formatDate(order.createdAt)}
+            </Typography>
+          </div>
         </div>
 
         {/* Workflow Stepper */}
@@ -109,7 +162,7 @@ const PrivateOrderDetailPage = () => {
               <div className="flex items-center gap-4 text-sm text-text-muted">
                 <span>{order.caseCount ?? 0} cases</span>
                 <span className="font-semibold text-text-primary">
-                  {formatPrice(Number(order.totalUsd) || 0, 'USD')}
+                  {formatCurrencyValue(getAmount(order.totalUsd), currency)}
                 </span>
               </div>
             </div>
@@ -123,8 +176,8 @@ const PrivateOrderDetailPage = () => {
                       <th className="px-2 py-1.5 text-left text-[10px] font-medium uppercase tracking-wide text-text-muted">Producer</th>
                       <th className="px-2 py-1.5 text-center text-[10px] font-medium uppercase tracking-wide text-text-muted">Yr</th>
                       <th className="px-2 py-1.5 text-center text-[10px] font-medium uppercase tracking-wide text-text-muted">Qty</th>
-                      <th className="px-2 py-1.5 text-right text-[10px] font-medium uppercase tracking-wide text-text-muted">$/Case</th>
-                      <th className="px-2 py-1.5 text-right text-[10px] font-medium uppercase tracking-wide text-text-muted">Total</th>
+                      <th className="px-2 py-1.5 text-right text-[10px] font-medium uppercase tracking-wide text-text-muted">{currency}/Case</th>
+                      <th className="px-2 py-1.5 text-right text-[10px] font-medium uppercase tracking-wide text-text-muted">Total ({currency})</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border-muted/50">
@@ -142,10 +195,10 @@ const PrivateOrderDetailPage = () => {
                         <td className="px-2 py-1.5 text-center text-xs">{item.vintage || '-'}</td>
                         <td className="px-2 py-1.5 text-center text-xs font-medium">{item.quantity}</td>
                         <td className="px-2 py-1.5 text-right text-xs">
-                          {formatPrice(Number(item.pricePerCaseUsd) || 0, 'USD')}
+                          {formatCurrencyValue(getAmount(item.pricePerCaseUsd), currency)}
                         </td>
                         <td className="px-2 py-1.5 text-right text-xs font-semibold">
-                          {formatPrice(Number(item.totalUsd) || 0, 'USD')}
+                          {formatCurrencyValue(getAmount(item.totalUsd), currency)}
                         </td>
                       </tr>
                     ))}
@@ -166,29 +219,29 @@ const PrivateOrderDetailPage = () => {
           <Card>
             <CardContent className="p-4">
               <Typography variant="labelSm" colorRole="muted" className="mb-2">
-                Summary
+                Summary ({currency})
               </Typography>
               <div className="space-y-1 text-sm">
                 <div className="flex justify-between">
                   <span className="text-text-muted">Subtotal</span>
-                  <span>{formatPrice(Number(order.subtotalUsd) || 0, 'USD')}</span>
+                  <span>{formatCurrencyValue(getAmount(order.subtotalUsd), currency)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-text-muted">Duty (5%)</span>
-                  <span>{formatPrice(Number(order.dutyUsd) || 0, 'USD')}</span>
+                  <span>{formatCurrencyValue(getAmount(order.dutyUsd), currency)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-text-muted">VAT (5%)</span>
-                  <span>{formatPrice(Number(order.vatUsd) || 0, 'USD')}</span>
+                  <span>{formatCurrencyValue(getAmount(order.vatUsd), currency)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-text-muted">Logistics</span>
-                  <span>{formatPrice(Number(order.logisticsUsd) || 0, 'USD')}</span>
+                  <span>{formatCurrencyValue(getAmount(order.logisticsUsd), currency)}</span>
                 </div>
                 <Divider />
                 <div className="flex justify-between font-semibold">
                   <span>Total</span>
-                  <span>{formatPrice(Number(order.totalUsd) || 0, 'USD')}</span>
+                  <span>{formatCurrencyValue(getAmount(order.totalUsd), currency)}</span>
                 </div>
               </div>
             </CardContent>

@@ -46,11 +46,12 @@ const distributorDashboard = distributorProcedure.query(
       )
       .groupBy(privateClientOrders.status);
 
-    // Get totals
+    // Get totals (both USD and AED)
     const [totals] = await db
       .select({
         totalOrders: sql<number>`count(*)`,
         totalCases: sql<number>`coalesce(sum(${privateClientOrders.caseCount}), 0)`,
+        totalValueUsd: sql<number>`coalesce(sum(${privateClientOrders.totalUsd}), 0)`,
         totalValueAed: sql<number>`coalesce(sum(${privateClientOrders.totalAed}), 0)`,
       })
       .from(privateClientOrders)
@@ -61,11 +62,12 @@ const distributorDashboard = distributorProcedure.query(
         ),
       );
 
-    // Get this month's totals
+    // Get this month's totals (both USD and AED)
     const [monthlyTotals] = await db
       .select({
         totalOrders: sql<number>`count(*)`,
         totalCases: sql<number>`coalesce(sum(${privateClientOrders.caseCount}), 0)`,
+        totalValueUsd: sql<number>`coalesce(sum(${privateClientOrders.totalUsd}), 0)`,
         totalValueAed: sql<number>`coalesce(sum(${privateClientOrders.totalAed}), 0)`,
       })
       .from(privateClientOrders)
@@ -98,7 +100,7 @@ const distributorDashboard = distributorProcedure.query(
       .orderBy(desc(privateClientOrders.distributorAssignedAt))
       .limit(5);
 
-    // Get orders by partner for breakdown
+    // Get orders by partner for breakdown (both USD and AED)
     const ordersByPartner = await db
       .select({
         partnerId: partners.id,
@@ -106,6 +108,7 @@ const distributorDashboard = distributorProcedure.query(
         partnerLogoUrl: partners.logoUrl,
         orderCount: sql<number>`count(*)`,
         totalCases: sql<number>`coalesce(sum(${privateClientOrders.caseCount}), 0)`,
+        totalValueUsd: sql<number>`coalesce(sum(${privateClientOrders.totalUsd}), 0)`,
         totalValueAed: sql<number>`coalesce(sum(${privateClientOrders.totalAed}), 0)`,
       })
       .from(privateClientOrders)
@@ -139,9 +142,11 @@ const distributorDashboard = distributorProcedure.query(
       kpis: {
         totalOrders: Number(totals?.totalOrders ?? 0),
         totalCases: Number(totals?.totalCases ?? 0),
+        totalValueUsd: Number(totals?.totalValueUsd ?? 0),
         totalValueAed: Number(totals?.totalValueAed ?? 0),
         monthlyOrders: Number(monthlyTotals?.totalOrders ?? 0),
         monthlyCases: Number(monthlyTotals?.totalCases ?? 0),
+        monthlyValueUsd: Number(monthlyTotals?.totalValueUsd ?? 0),
         monthlyValueAed: Number(monthlyTotals?.totalValueAed ?? 0),
       },
       statusBreakdown: {
@@ -165,6 +170,7 @@ const distributorDashboard = distributorProcedure.query(
         partnerLogoUrl: p.partnerLogoUrl,
         orderCount: Number(p.orderCount),
         totalCases: Number(p.totalCases),
+        totalValueUsd: Number(p.totalValueUsd),
         totalValueAed: Number(p.totalValueAed),
       })),
     };
