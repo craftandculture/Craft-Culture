@@ -81,11 +81,14 @@ const DistributorOrderDetailPage = () => {
   const getNextAction = () => {
     if (!order) return null;
 
+    // Match backend distributorTransitions exactly
     switch (order.status) {
       case 'cc_approved':
       case 'awaiting_client_payment':
         return { label: 'Confirm Client Payment', status: 'client_paid', icon: IconCheck };
       case 'client_paid':
+        return { label: 'Awaiting Distributor Payment', status: 'awaiting_distributor_payment', icon: IconCheck };
+      case 'awaiting_distributor_payment':
         return { label: 'Confirm Payment to C&C', status: 'distributor_paid', icon: IconCheck };
       case 'distributor_paid':
         return { label: 'Stock In Transit', status: 'stock_in_transit', icon: IconTruck };
