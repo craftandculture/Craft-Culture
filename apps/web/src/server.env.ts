@@ -10,6 +10,7 @@ const rawEnv = {
   TWILIO_AUTH_TOKEN: process.env.TWILIO_AUTH_TOKEN,
   TWILIO_PHONE_NUMBER: process.env.TWILIO_PHONE_NUMBER,
   ADMIN_PHONE_NUMBER: process.env.ADMIN_PHONE_NUMBER,
+  OPENAI_API_KEY: process.env.OPENAI_API_KEY,
 };
 
 const envSchema = z.object({
@@ -29,6 +30,7 @@ const envSchema = z.object({
   TWILIO_AUTH_TOKEN: z.string().optional(),
   TWILIO_PHONE_NUMBER: z.string().optional(),
   ADMIN_PHONE_NUMBER: z.string().optional(),
+  OPENAI_API_KEY: z.string().optional(),
 });
 
 const serverEnv = envSchema.parse(rawEnv);

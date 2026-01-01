@@ -4,6 +4,7 @@ import { generateObject } from 'ai';
 import { z } from 'zod';
 
 import { winePartnerProcedure } from '@/lib/trpc/procedures';
+import serverEnv from '@/server.env';
 
 const extractInlineSchema = z.object({
   file: z.string().describe('Base64 encoded file data URL'),
@@ -44,12 +45,12 @@ const documentsExtractInline = winePartnerProcedure.input(extractInlineSchema).m
   const { file, fileType } = input;
 
   // Validate we have OpenAI key
-  const openaiKey = process.env.OPENAI_API_KEY;
+  const openaiKey = serverEnv.OPENAI_API_KEY;
 
   if (!openaiKey) {
     throw new TRPCError({
       code: 'INTERNAL_SERVER_ERROR',
-      message: 'AI extraction is not configured',
+      message: 'AI extraction is not configured. Please set OPENAI_API_KEY.',
     });
   }
 
