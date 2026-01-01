@@ -36,7 +36,7 @@ const navItems: NavItem[] = [
     description: 'API access',
   },
   {
-    label: 'Private Orders',
+    label: 'Private Clients',
     href: '/platform/admin/private-orders',
     icon: IconPackage,
     description: 'Partner orders',
