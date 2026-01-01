@@ -282,14 +282,7 @@ const DistributorOrderDetailPage = () => {
                 <Typography variant="headingSm" className="mb-4">
                   Documents
                 </Typography>
-                <DocumentUpload
-                  orderId={orderId}
-                  onUploadComplete={() => {
-                    void queryClient.invalidateQueries({
-                      queryKey: ['privateClientOrders.distributorGetOne'],
-                    });
-                  }}
-                />
+                <DocumentUpload orderId={orderId} />
               </CardContent>
             </Card>
           </div>
