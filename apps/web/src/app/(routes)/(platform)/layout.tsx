@@ -78,12 +78,12 @@ const PlatformLayout = async ({ children }: React.PropsWithChildren) => {
                   </>
                 )}
               </div>
-              {/* Private Orders section - for Wine Partners */}
+              {/* Private Clients section - for Wine Partners */}
               {user.customerType === 'private_clients' && user.partner?.type === 'wine_partner' && (
                 <>
                   <div className="flex items-center rounded-lg border border-border-muted/50 bg-surface-secondary/40 px-1.5 py-1">
                     <span className="border-r border-border-muted/50 pr-2 text-[10px] font-medium uppercase tracking-wider text-text-muted">
-                      Orders
+                      Private Clients
                     </span>
                     <Link
                       href="/platform/private-orders"
@@ -116,7 +116,7 @@ const PlatformLayout = async ({ children }: React.PropsWithChildren) => {
               {(user.customerType === 'b2b' || user.partner?.type === 'distributor') && (
                 <div className="flex items-center rounded-lg border border-border-muted/50 bg-surface-secondary/40 px-1.5 py-1">
                   <span className="border-r border-border-muted/50 pr-2 text-[10px] font-medium uppercase tracking-wider text-text-muted">
-                    Private Orders
+                    Private Clients
                   </span>
                   <Link
                     href="/platform/distributor/orders"
