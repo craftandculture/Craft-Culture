@@ -78,6 +78,13 @@
       "when": 1767333317304,
       "tag": "0010_spooky_thing",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1767334946506,
+      "tag": "0011_add_partner_members",
+      "breakpoints": true
     }
   ]
 }

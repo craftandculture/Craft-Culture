@@ -95,20 +95,39 @@ export const winePartnerProcedure = protectedProcedure.use(
 /**
  * Distributor procedure
  *
- * Accessible to users linked to a distributor partner OR B2B users.
- * For B2B users without a partner, auto-creates a distributor partner.
+ * Accessible to users linked to a distributor partner via:
+ * 1. Direct link (partners.userId) - legacy/owner access
+ * 2. Member link (partnerMembers table) - staff access
+ * 3. B2B users get auto-created distributor partners
+ *
  * Injects the partnerId into the context for data isolation.
  */
 export const distributorProcedure = protectedProcedure.use(
   async ({ ctx, next }) => {
-    // Find the partner linked to this user
+    const { eq } = await import('drizzle-orm');
+    const { partners, partnerMembers } = await import('@/database/schema');
+
+    // First, check direct partner link (owner)
     let partner = await db.query.partners.findFirst({
       where: { userId: ctx.user.id },
     });
 
+    // If no direct link, check partnerMembers table
+    if (!partner) {
+      const membership = await db
+        .select({ partner: partners })
+        .from(partnerMembers)
+        .innerJoin(partners, eq(partnerMembers.partnerId, partners.id))
+        .where(eq(partnerMembers.userId, ctx.user.id))
+        .limit(1);
+
+      if (membership.length > 0 && membership[0]) {
+        partner = membership[0].partner;
+      }
+    }
+
     // For B2B users, auto-create a distributor partner if none exists
     if (!partner && ctx.user.customerType === 'b2b') {
-      const { partners } = await import('@/database/schema');
       const [newPartner] = await db
         .insert(partners)
         .values({

@@ -3,13 +3,17 @@ import usersGetManyWithPricingModels from '@/app/_pricingModels/controller/users
 import { protectedProcedure } from '@/lib/trpc/procedures';
 import { createTRPCRouter } from '@/lib/trpc/trpc';
 
+import partnersGetDistributors from './controllers/partnersGetDistributors';
 import signOutController from './controllers/signOut';
 import usersApprove from './controllers/usersApprove';
+import usersAssignPartner from './controllers/usersAssignPartner';
 import usersDelete from './controllers/usersDelete';
 import usersGetMe from './controllers/usersGetMe';
 import usersGetPaginated from './controllers/usersGetPaginated';
+import usersGetPartnerMembership from './controllers/usersGetPartnerMembership';
 import usersGetPendingCount from './controllers/usersGetPendingCount';
 import usersReject from './controllers/usersReject';
+import usersRemovePartner from './controllers/usersRemovePartner';
 import usersUpdate from './controllers/usersUpdate';
 
 const usersRouter = createTRPCRouter({
@@ -25,6 +29,11 @@ const usersRouter = createTRPCRouter({
   approve: usersApprove,
   reject: usersReject,
   delete: usersDelete,
+  // Partner membership management
+  getPartnerMembership: usersGetPartnerMembership,
+  assignPartner: usersAssignPartner,
+  removePartner: usersRemovePartner,
+  getDistributors: partnersGetDistributors,
 });
 
 export default usersRouter;
