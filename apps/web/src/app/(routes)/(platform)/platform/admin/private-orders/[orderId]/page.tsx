@@ -1,11 +1,13 @@
 'use client';
 
 import {
+  IconAlertCircle,
   IconArrowLeft,
   IconBuilding,
   IconCheck,
   IconEdit,
   IconLoader2,
+  IconRefresh,
   IconTrash,
   IconTruck,
   IconX,
@@ -33,7 +35,7 @@ import SelectTrigger from '@/app/_ui/components/Select/SelectTrigger';
 import SelectValue from '@/app/_ui/components/Select/SelectValue';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import type { PrivateClientOrder } from '@/database/schema';
-import useTRPC from '@/lib/trpc/browser';
+import useTRPC, { useTRPCClient } from '@/lib/trpc/browser';
 
 type Currency = 'USD' | 'AED';
 
@@ -100,15 +102,25 @@ interface EditingItem {
  *
  * Shows full order details including line items with inline editing.
  */
+type ResetTargetStatus = 'awaiting_partner_verification' | 'awaiting_distributor_verification' | 'awaiting_client_payment';
+
+const resetTargetOptions: { value: ResetTargetStatus; label: string; description: string }[] = [
+  { value: 'awaiting_partner_verification', label: 'Partner Verification', description: 'Restart from partner verification' },
+  { value: 'awaiting_distributor_verification', label: 'Distributor Verification', description: 'Skip to distributor verification' },
+  { value: 'awaiting_client_payment', label: 'Awaiting Payment', description: 'Skip verification, proceed to payment' },
+];
+
 const AdminPrivateOrderDetailPage = () => {
   const params = useParams();
   const orderId = params.orderId as string;
   const api = useTRPC();
+  const trpcClient = useTRPCClient();
   const queryClient = useQueryClient();
   const [isUpdating, setIsUpdating] = useState(false);
   const [isAssigningDistributor, setIsAssigningDistributor] = useState(false);
   const [editingItem, setEditingItem] = useState<EditingItem | null>(null);
   const [currency, setCurrency] = useState<Currency>('USD');
+  const [resetTarget, setResetTarget] = useState<ResetTargetStatus>('awaiting_distributor_verification');
 
   // Fetch order details
   const {
@@ -181,6 +193,24 @@ const AdminPrivateOrderDetailPage = () => {
       },
     }),
   );
+
+  // Reset verification mutation (for suspended orders)
+  const { mutate: resetVerification, isPending: isResetting } = useMutation({
+    mutationFn: ({ targetStatus, notes }: { targetStatus: ResetTargetStatus; notes?: string }) =>
+      trpcClient.privateClientOrders.adminResetVerification.mutate({
+        orderId,
+        targetStatus,
+        notes,
+      }),
+    onSuccess: () => {
+      toast.success('Order reset successfully. Verification flow resumed.');
+      void refetch();
+      void queryClient.invalidateQueries({ queryKey: ['privateClientOrders'] });
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to reset order');
+    },
+  });
 
   const handleStatusChange = (newStatus: OrderStatus) => {
     setIsUpdating(true);
@@ -346,6 +376,56 @@ const AdminPrivateOrderDetailPage = () => {
             </Select>
           </div>
         </div>
+
+        {/* Admin Reset for Suspended Orders */}
+        {order.status === 'verification_suspended' && (
+          <Card className="border-2 border-fill-warning/50 bg-fill-warning/5">
+            <CardContent className="p-6">
+              <div className="flex flex-col items-center gap-4 text-center sm:flex-row sm:text-left">
+                <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-fill-warning/20">
+                  <Icon icon={IconAlertCircle} size="lg" className="text-fill-warning" />
+                </div>
+                <div className="flex-1">
+                  <Typography variant="headingSm" className="mb-1">
+                    Order Suspended - Admin Override Available
+                  </Typography>
+                  <Typography variant="bodySm" colorRole="muted">
+                    This order is suspended due to verification issues. As C&C admin, you can reset the order
+                    to any point in the verification flow.
+                  </Typography>
+                </div>
+                <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center">
+                  <Select
+                    value={resetTarget}
+                    onValueChange={(v) => setResetTarget(v as ResetTargetStatus)}
+                  >
+                    <SelectTrigger className="w-[220px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {resetTargetOptions.map((opt) => (
+                        <SelectItem key={opt.value} value={opt.value}>
+                          <div className="flex flex-col">
+                            <span>{opt.label}</span>
+                            <span className="text-xs text-text-muted">{opt.description}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    onClick={() => resetVerification({ targetStatus: resetTarget })}
+                    disabled={isResetting}
+                    colorRole="brand"
+                  >
+                    <Icon icon={isResetting ? IconLoader2 : IconRefresh} size="sm" className={isResetting ? 'animate-spin' : ''} />
+                    <span className="ml-2">Reset Order</span>
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Line Items - Full Width, Primary Focus */}
         <Card>

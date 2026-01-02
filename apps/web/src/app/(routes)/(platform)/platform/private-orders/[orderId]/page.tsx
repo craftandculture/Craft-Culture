@@ -28,7 +28,7 @@ import CardContent from '@/app/_ui/components/Card/CardContent';
 import Divider from '@/app/_ui/components/Divider/Divider';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Typography from '@/app/_ui/components/Typography/Typography';
-import useTRPC from '@/lib/trpc/browser';
+import useTRPC, { useTRPCClient } from '@/lib/trpc/browser';
 
 type Currency = 'USD' | 'AED';
 
@@ -57,6 +57,7 @@ const PrivateOrderDetailPage = () => {
   const params = useParams();
   const orderId = params.orderId as string;
   const api = useTRPC();
+  const trpcClient = useTRPCClient();
   const queryClient = useQueryClient();
   const [currency, setCurrency] = useState<Currency>('USD');
 
@@ -96,6 +97,23 @@ const PrivateOrderDetailPage = () => {
       },
     }),
   );
+
+  // Re-initiate verification mutation (for suspended orders)
+  const { mutate: reinitiateVerification, isPending: isReinitiating } = useMutation({
+    mutationFn: (notes?: string) =>
+      trpcClient.privateClientOrders.partnerReinitiateVerification.mutate({
+        orderId,
+        notes,
+      }),
+    onSuccess: () => {
+      toast.success('Verification re-initiated. Distributor will now verify the client.');
+      void refetch();
+      void queryClient.invalidateQueries({ queryKey: ['privateClientOrders'] });
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to re-initiate verification');
+    },
+  });
 
   const handleApproveRevisions = () => {
     approveRevisions({ orderId });
@@ -262,23 +280,34 @@ const PrivateOrderDetailPage = () => {
           </Card>
         )}
 
-        {/* Verification Suspended Notice */}
+        {/* Verification Suspended Notice with Re-initiate Button */}
         {order.status === 'verification_suspended' && (
-          <Card className="border-2 border-fill-danger/50 bg-fill-danger/5">
+          <Card className="border-2 border-fill-warning/50 bg-fill-warning/5">
             <CardContent className="p-6">
               <div className="flex flex-col items-center gap-4 text-center sm:flex-row sm:text-left">
-                <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-fill-danger/20">
-                  <Icon icon={IconAlertCircle} size="lg" className="text-fill-danger" />
+                <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-fill-warning/20">
+                  <Icon icon={IconAlertCircle} size="lg" className="text-fill-warning" />
                 </div>
                 <div className="flex-1">
                   <Typography variant="headingSm" className="mb-1">
-                    Order Suspended - Verification Required
+                    Order Suspended - Client Verification Needed
                   </Typography>
                   <Typography variant="bodySm" colorRole="muted">
-                    This order is suspended because client verification with{' '}
-                    <strong>{order.distributor?.businessName ?? 'the distributor'}</strong> could not be confirmed.
-                    Please contact the client to register with the distributor, then notify C&C support to resume the order.
+                    This order is suspended because the client could not be verified with{' '}
+                    <strong>{order.distributor?.businessName ?? 'the distributor'}</strong>.
+                    Once your client has registered with the distributor, click the button to re-initiate verification.
                   </Typography>
+                </div>
+                <div className="flex flex-wrap justify-center gap-2 sm:flex-nowrap">
+                  <Button
+                    onClick={() => reinitiateVerification('Client has now registered with distributor')}
+                    disabled={isReinitiating}
+                    colorRole="brand"
+                  >
+                    <ButtonContent iconLeft={IconCheck} isLoading={isReinitiating}>
+                      Client Registered - Re-verify
+                    </ButtonContent>
+                  </Button>
                 </div>
               </div>
             </CardContent>
