@@ -2,6 +2,7 @@ import { TRPCError } from '@trpc/server';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 
+import createAdminNotifications from '@/app/_notifications/utils/createAdminNotifications';
 import db from '@/database/client';
 import { privateClientOrderActivityLogs, privateClientOrders } from '@/database/schema';
 import { winePartnerProcedure } from '@/lib/trpc/procedures';
@@ -66,6 +67,16 @@ const ordersApproveRevisions = winePartnerProcedure
       previousStatus,
       newStatus,
       notes: 'Partner approved C&C revisions',
+    });
+
+    // Notify admins that partner approved the revisions
+    await createAdminNotifications({
+      type: 'po_submitted',
+      title: 'Revisions Approved',
+      message: `Partner approved changes to order ${updatedOrder?.orderNumber ?? orderId}. Ready for final review.`,
+      entityType: 'private_client_order',
+      entityId: orderId,
+      actionUrl: `/platform/admin/private-orders/${orderId}`,
     });
 
     return updatedOrder;
