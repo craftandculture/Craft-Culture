@@ -4,6 +4,7 @@ import { protectedProcedure } from '@/lib/trpc/procedures';
 import { createTRPCRouter } from '@/lib/trpc/trpc';
 
 import partnersGetDistributors from './controllers/partnersGetDistributors';
+import partnersGetWinePartners from './controllers/partnersGetWinePartners';
 import signOutController from './controllers/signOut';
 import usersAdminUpdate from './controllers/usersAdminUpdate';
 import usersApprove from './controllers/usersApprove';
@@ -36,6 +37,7 @@ const usersRouter = createTRPCRouter({
   assignPartner: usersAssignPartner,
   removePartner: usersRemovePartner,
   getDistributors: partnersGetDistributors,
+  getWinePartners: partnersGetWinePartners,
 });
 
 export default usersRouter;
