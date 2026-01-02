@@ -113,6 +113,23 @@ const DistributorOrderDetailPage = () => {
     },
   });
 
+  // Unlock suspended order mutation
+  const { mutate: unlockSuspended, isPending: isUnlocking } = useMutation({
+    mutationFn: (notes?: string) =>
+      trpcClient.privateClientOrders.distributorUnlockSuspended.mutate({
+        orderId,
+        notes,
+      }),
+    onSuccess: () => {
+      toast.success('Order unlocked. Client verified. Ready for payment collection.');
+      void queryClient.invalidateQueries({ queryKey: ['privateClientOrders.distributorGetOne'] });
+      void queryClient.invalidateQueries({ queryKey: ['privateClientOrders.distributorGetMany'] });
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to unlock order');
+    },
+  });
+
   const formatDate = (date: Date | null | undefined) => {
     if (!date) return '-';
     return new Date(date).toLocaleDateString('en-GB', {
@@ -292,6 +309,44 @@ const DistributorOrderDetailPage = () => {
                     variant="outline"
                   >
                     <ButtonContent iconLeft={IconX}>Not Verified</ButtonContent>
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Unlock Suspended Order - shown when verification was previously suspended */}
+        {order.status === 'verification_suspended' && (
+          <Card className="border-2 border-fill-brand/50 bg-fill-brand/5">
+            <CardContent className="p-6">
+              <div className="flex flex-col items-center gap-4 text-center sm:flex-row sm:text-left">
+                <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-fill-brand/20">
+                  <Icon icon={IconShieldCheck} size="lg" className="text-fill-brand" />
+                </div>
+                <div className="flex-1">
+                  <Typography variant="headingSm" className="mb-1">
+                    Order Suspended - Client Verification Needed
+                  </Typography>
+                  <Typography variant="bodySm" colorRole="muted">
+                    This order was suspended because the client (<strong>{order.clientName}</strong>) was not found in your system.
+                    If the client has now registered, you can unlock the order to proceed with payment collection.
+                  </Typography>
+                  {order.clientPhone && (
+                    <Typography variant="bodyXs" colorRole="muted" className="mt-1">
+                      Client phone: {order.clientPhone}
+                    </Typography>
+                  )}
+                </div>
+                <div className="flex flex-wrap justify-center gap-2 sm:flex-nowrap">
+                  <Button
+                    onClick={() => unlockSuspended('Client now registered and verified')}
+                    disabled={isUnlocking}
+                    colorRole="brand"
+                  >
+                    <ButtonContent iconLeft={IconCheck} isLoading={isUnlocking}>
+                      Client Verified - Unlock Order
+                    </ButtonContent>
                   </Button>
                 </div>
               </div>

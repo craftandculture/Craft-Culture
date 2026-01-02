@@ -19,14 +19,17 @@ import documentsUpload from './controller/documentsUpload';
 import itemsAdd from './controller/itemsAdd';
 import itemsRemove from './controller/itemsRemove';
 import itemsUpdate from './controller/itemsUpdate';
+import ordersAdminResetVerification from './controller/ordersAdminResetVerification';
 import ordersApprove from './controller/ordersApprove';
 import ordersApproveRevisions from './controller/ordersApproveRevisions';
 import ordersAssignDistributor from './controller/ordersAssignDistributor';
 import ordersCancel from './controller/ordersCancel';
 import ordersCreate from './controller/ordersCreate';
+import ordersDistributorUnlockSuspended from './controller/ordersDistributorUnlockSuspended';
 import ordersDistributorVerification from './controller/ordersDistributorVerification';
 import ordersGetMany from './controller/ordersGetMany';
 import ordersGetOne from './controller/ordersGetOne';
+import ordersPartnerReinitiateVerification from './controller/ordersPartnerReinitiateVerification';
 import ordersPartnerVerification from './controller/ordersPartnerVerification';
 import ordersRequestRevision from './controller/ordersRequestRevision';
 import ordersSubmit from './controller/ordersSubmit';
@@ -41,6 +44,7 @@ const privateClientOrdersRouter = createTRPCRouter({
   cancel: ordersCancel,
   approveRevisions: ordersApproveRevisions,
   partnerVerification: ordersPartnerVerification,
+  partnerReinitiateVerification: ordersPartnerReinitiateVerification,
 
   // Line item management (wine partner)
   addItem: itemsAdd,
@@ -68,6 +72,7 @@ const privateClientOrdersRouter = createTRPCRouter({
   adminApprove: ordersApprove,
   adminRequestRevision: ordersRequestRevision,
   adminAssignDistributor: ordersAssignDistributor,
+  adminResetVerification: ordersAdminResetVerification,
 
   // Distributor procedures
   distributorDashboard,
@@ -75,6 +80,7 @@ const privateClientOrdersRouter = createTRPCRouter({
   distributorGetOne,
   distributorUpdateStatus,
   distributorVerification: ordersDistributorVerification,
+  distributorUnlockSuspended: ordersDistributorUnlockSuspended,
 });
 
 export default privateClientOrdersRouter;
