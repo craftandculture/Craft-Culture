@@ -6,6 +6,7 @@ import { createTRPCRouter } from '@/lib/trpc/trpc';
 import partnersGetDistributors from './controllers/partnersGetDistributors';
 import partnersGetWinePartners from './controllers/partnersGetWinePartners';
 import signOutController from './controllers/signOut';
+import usersAdminCreate from './controllers/usersAdminCreate';
 import usersAdminUpdate from './controllers/usersAdminUpdate';
 import usersApprove from './controllers/usersApprove';
 import usersAssignPartner from './controllers/usersAssignPartner';
@@ -29,6 +30,7 @@ const usersRouter = createTRPCRouter({
   assignPricingModel: userPricingModelsAssign,
   getPaginated: usersGetPaginated,
   getPendingCount: usersGetPendingCount,
+  adminCreate: usersAdminCreate,
   approve: usersApprove,
   reject: usersReject,
   delete: usersDelete,
