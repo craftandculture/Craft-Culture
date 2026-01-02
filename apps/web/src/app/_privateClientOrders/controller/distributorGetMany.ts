@@ -24,7 +24,9 @@ const distributorGetMany = distributorProcedure
       // Distributors only see orders that are past CC approval
       inArray(privateClientOrders.status, [
         'cc_approved',
-        'awaiting_client_verification',
+        'awaiting_partner_verification',
+        'awaiting_distributor_verification',
+        'verification_suspended',
         'awaiting_client_payment',
         'client_paid',
         'awaiting_distributor_payment',

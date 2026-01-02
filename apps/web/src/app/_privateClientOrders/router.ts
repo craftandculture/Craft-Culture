@@ -24,8 +24,10 @@ import ordersApproveRevisions from './controller/ordersApproveRevisions';
 import ordersAssignDistributor from './controller/ordersAssignDistributor';
 import ordersCancel from './controller/ordersCancel';
 import ordersCreate from './controller/ordersCreate';
+import ordersDistributorVerification from './controller/ordersDistributorVerification';
 import ordersGetMany from './controller/ordersGetMany';
 import ordersGetOne from './controller/ordersGetOne';
+import ordersPartnerVerification from './controller/ordersPartnerVerification';
 import ordersRequestRevision from './controller/ordersRequestRevision';
 import ordersSubmit from './controller/ordersSubmit';
 import paymentsConfirm from './controller/paymentsConfirm';
@@ -38,6 +40,7 @@ const privateClientOrdersRouter = createTRPCRouter({
   submit: ordersSubmit,
   cancel: ordersCancel,
   approveRevisions: ordersApproveRevisions,
+  partnerVerification: ordersPartnerVerification,
 
   // Line item management (wine partner)
   addItem: itemsAdd,
@@ -71,6 +74,7 @@ const privateClientOrdersRouter = createTRPCRouter({
   distributorGetMany,
   distributorGetOne,
   distributorUpdateStatus,
+  distributorVerification: ordersDistributorVerification,
 });
 
 export default privateClientOrdersRouter;

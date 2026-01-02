@@ -4,7 +4,6 @@ import { z } from 'zod';
 
 import db from '@/database/client';
 import {
-  privateClientContacts,
   privateClientOrderActivityLogs,
   privateClientOrderStatus,
   privateClientOrders,
@@ -15,15 +14,16 @@ type PrivateClientOrderStatus = (typeof privateClientOrderStatus.enumValues)[num
 
 /**
  * Valid status transitions for distributors
+ *
+ * New verification flow:
+ * - City Drinks (CD): Requires verification - partner confirms → distributor verifies → payment
+ * - The Bottle Store (TBS): No verification - straight to payment after admin assigns
  */
 const distributorTransitions: Record<string, PrivateClientOrderStatus[]> = {
-  // After admin approval, client needs to verify on City Drinks app
-  cc_approved: ['awaiting_client_verification'],
-  // After client verifies, await payment
-  awaiting_client_verification: ['awaiting_client_payment'],
-  // When awaiting client payment, distributor can confirm payment received
+  // When awaiting distributor verification (CD only), use dedicated verification endpoint
+  // Distributors can confirm client payment when awaiting
   awaiting_client_payment: ['client_paid'],
-  // When client has paid, distributor can pay C&C
+  // When client has paid, distributor raises PO to C&C
   client_paid: ['awaiting_distributor_payment'],
   awaiting_distributor_payment: ['distributor_paid'],
   // Distributor waits for C&C to mark stock_in_transit
@@ -38,7 +38,6 @@ const distributorTransitions: Record<string, PrivateClientOrderStatus[]> = {
 const updateStatusSchema = z.object({
   orderId: z.string().uuid(),
   status: z.enum([
-    'awaiting_client_verification',
     'awaiting_client_payment',
     'client_paid',
     'awaiting_distributor_payment',
@@ -49,9 +48,6 @@ const updateStatusSchema = z.object({
     'delivered',
   ]),
   notes: z.string().optional(),
-  // City Drinks verification details (required when confirming verification)
-  cityDrinksAccountName: z.string().optional(),
-  cityDrinksPhone: z.string().optional(),
 });
 
 /**
@@ -63,23 +59,20 @@ const updateStatusSchema = z.object({
  * - Confirm stock receipt
  * - Start delivery
  * - Complete delivery
+ *
+ * Note: Client verification is now handled by ordersDistributorVerification
  */
 const distributorUpdateStatus = distributorProcedure
   .input(updateStatusSchema)
   .mutation(async ({ input, ctx: { partnerId, user } }) => {
-    const { orderId, status, notes, cityDrinksAccountName, cityDrinksPhone } = input;
+    const { orderId, status, notes } = input;
 
-    // Get current order with client contact info
+    // Get current order
     const [orderResult] = await db
       .select({
         order: privateClientOrders,
-        client: {
-          id: privateClientContacts.id,
-          cityDrinksVerifiedAt: privateClientContacts.cityDrinksVerifiedAt,
-        },
       })
       .from(privateClientOrders)
-      .leftJoin(privateClientContacts, eq(privateClientOrders.clientId, privateClientContacts.id))
       .where(
         and(
           eq(privateClientOrders.id, orderId),
@@ -87,7 +80,9 @@ const distributorUpdateStatus = distributorProcedure
           // Only orders assigned to this distributor
           inArray(privateClientOrders.status, [
             'cc_approved',
-            'awaiting_client_verification',
+            'awaiting_partner_verification',
+            'awaiting_distributor_verification',
+            'verification_suspended',
             'awaiting_client_payment',
             'client_paid',
             'awaiting_distributor_payment',
@@ -109,15 +104,9 @@ const distributorUpdateStatus = distributorProcedure
     }
 
     const order = orderResult.order;
-    const clientAlreadyVerified = !!orderResult.client?.cityDrinksVerifiedAt;
 
     // Validate transition
-    let allowedTransitions = distributorTransitions[order.status] ?? [];
-
-    // Allow skipping verification step if client is already verified
-    if (order.status === 'cc_approved' && clientAlreadyVerified) {
-      allowedTransitions = [...allowedTransitions, 'awaiting_client_payment'];
-    }
+    const allowedTransitions = distributorTransitions[order.status] ?? [];
 
     if (!allowedTransitions.includes(status)) {
       throw new TRPCError({
@@ -130,28 +119,12 @@ const distributorUpdateStatus = distributorProcedure
     const updateData: Partial<typeof privateClientOrders.$inferInsert> = {
       status,
       distributorNotes: notes ?? order.distributorNotes,
+      updatedAt: new Date(),
     };
 
     // Add specific timestamp based on status
     const now = new Date();
-    if (status === 'awaiting_client_payment') {
-      // Client has been verified - record the verification timestamp on order
-      updateData.clientVerifiedAt = now;
-      updateData.clientVerifiedBy = user.id;
-
-      // Also update the client contact record if linked
-      if (order.clientId) {
-        await db
-          .update(privateClientContacts)
-          .set({
-            cityDrinksVerifiedAt: now,
-            cityDrinksVerifiedBy: user.id,
-            cityDrinksAccountName: cityDrinksAccountName ?? null,
-            cityDrinksPhone: cityDrinksPhone ?? null,
-          })
-          .where(eq(privateClientContacts.id, order.clientId));
-      }
-    } else if (status === 'client_paid') {
+    if (status === 'client_paid') {
       updateData.clientPaidAt = now;
     } else if (status === 'distributor_paid') {
       updateData.distributorPaidAt = now;
