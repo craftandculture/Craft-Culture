@@ -35,6 +35,9 @@ import PrivateOrderStatusBadge from './PrivateOrderStatusBadge';
 
 type Currency = 'USD' | 'AED';
 
+/** Default UAE exchange rate for AED/USD conversion */
+const DEFAULT_EXCHANGE_RATE = 3.67;
+
 type OrderWithPartner = PrivateClientOrder & {
   partner: { id: string; businessName: string; logoUrl: string | null } | null;
 };
@@ -118,7 +121,15 @@ const DistributorOrdersList = () => {
   const orders = filterByStatus(allOrders, statusFilter);
 
   const formatCurrencyValue = (order: OrderWithPartner) => {
-    const amount = currency === 'USD' ? (order.totalUsd ?? 0) : (order.totalAed ?? 0);
+    const usdAmount = order.totalUsd ?? 0;
+    const aedAmount = order.totalAed ?? 0;
+    let amount: number;
+    if (currency === 'USD') {
+      amount = usdAmount;
+    } else {
+      // Use AED if available, otherwise calculate from USD
+      amount = aedAmount > 0 ? aedAmount : usdAmount * DEFAULT_EXCHANGE_RATE;
+    }
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency,

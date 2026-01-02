@@ -22,6 +22,9 @@ import useTRPC from '@/lib/trpc/browser';
 
 type Currency = 'USD' | 'AED';
 
+/** Default UAE exchange rate for AED/USD conversion */
+const DEFAULT_EXCHANGE_RATE = 3.67;
+
 /**
  * Format a price value with currency
  */
@@ -92,8 +95,10 @@ const PrivateOrderDetailPage = () => {
     );
   }
 
-  // Calculate exchange rate for AED conversion
-  const usdToAedRate = Number(order.totalAed) / (Number(order.totalUsd) || 1) || 3.67;
+  // Calculate exchange rate for AED conversion (use actual rate if available, otherwise default)
+  const totalAed = Number(order.totalAed) || 0;
+  const totalUsd = Number(order.totalUsd) || 1;
+  const usdToAedRate = totalAed > 0 ? totalAed / totalUsd : DEFAULT_EXCHANGE_RATE;
 
   /**
    * Convert amount to selected currency
