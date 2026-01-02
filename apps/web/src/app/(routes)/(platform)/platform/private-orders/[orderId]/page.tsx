@@ -4,13 +4,16 @@ import {
   IconAlertCircle,
   IconArrowLeft,
   IconBuilding,
+  IconCalendar,
   IconCheck,
   IconDownload,
   IconExternalLink,
   IconFile,
   IconFileInvoice,
   IconLoader2,
+  IconPhone,
   IconQuestionMark,
+  IconTruck,
   IconX,
 } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -494,6 +497,183 @@ const PrivateOrderDetailPage = () => {
                       </Button>
                     </div>
                   </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Client Paid - Awaiting Delivery Scheduling */}
+        {order.status === 'client_paid' && (
+          <Card className="border-2 border-fill-success/50 bg-fill-success/5">
+            <CardContent className="p-6">
+              <div className="flex flex-col items-center gap-4 text-center sm:flex-row sm:text-left">
+                <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-fill-success/20">
+                  <Icon icon={IconCheck} size="lg" className="text-fill-success" />
+                </div>
+                <div className="flex-1">
+                  <Typography variant="headingSm" className="mb-1">
+                    Payment Confirmed - Awaiting Delivery
+                  </Typography>
+                  <Typography variant="bodySm" colorRole="muted">
+                    Client payment has been confirmed.{' '}
+                    <strong>{order.distributor?.businessName ?? 'The distributor'}</strong> will contact your client to arrange delivery.
+                  </Typography>
+                  {order.clientPaymentConfirmedAt && (
+                    <Typography variant="bodyXs" colorRole="muted" className="mt-1">
+                      Payment confirmed:{' '}
+                      {new Date(order.clientPaymentConfirmedAt).toLocaleDateString('en-GB', {
+                        day: '2-digit',
+                        month: 'short',
+                        year: 'numeric',
+                      })}
+                    </Typography>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Delivery Scheduling in Progress - shown when distributor is trying to contact client */}
+        {order.status === 'scheduling_delivery' && (
+          <Card className="border-2 border-fill-info/50 bg-fill-info/5">
+            <CardContent className="p-6">
+              <div className="flex flex-col items-center gap-4 text-center sm:flex-row sm:text-left">
+                <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-fill-info/20">
+                  <Icon icon={IconPhone} size="lg" className="text-fill-info" />
+                </div>
+                <div className="flex-1">
+                  <Typography variant="headingSm" className="mb-1">
+                    Delivery Being Scheduled
+                  </Typography>
+                  <Typography variant="bodySm" colorRole="muted">
+                    <strong>{order.distributor?.businessName ?? 'The distributor'}</strong> is contacting your client to arrange delivery.
+                  </Typography>
+                  {/* Show contact attempts if any */}
+                  {order.deliveryContactAttempts && (order.deliveryContactAttempts as Array<{ attemptedAt: string; notes: string }>).length > 0 && (
+                    <div className="mt-3 space-y-2">
+                      <Typography variant="labelSm" colorRole="muted">
+                        Contact Attempts:
+                      </Typography>
+                      {(order.deliveryContactAttempts as Array<{ attemptedAt: string; notes: string }>).map((attempt, idx) => (
+                        <div key={idx} className="rounded-md border border-border-muted bg-background-primary p-2">
+                          <Typography variant="bodyXs" colorRole="muted">
+                            {new Date(attempt.attemptedAt).toLocaleDateString('en-GB', {
+                              day: '2-digit',
+                              month: 'short',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })}
+                          </Typography>
+                          <Typography variant="bodySm">{attempt.notes}</Typography>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Delivery Scheduled - shown when delivery date is set */}
+        {order.status === 'delivery_scheduled' && (
+          <Card className="border-2 border-fill-info/50 bg-fill-info/5">
+            <CardContent className="p-6">
+              <div className="flex flex-col items-center gap-4 text-center sm:flex-row sm:text-left">
+                <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-fill-info/20">
+                  <Icon icon={IconCalendar} size="lg" className="text-fill-info" />
+                </div>
+                <div className="flex-1">
+                  <Typography variant="headingSm" className="mb-1">
+                    Delivery Scheduled
+                  </Typography>
+                  <Typography variant="bodySm" colorRole="muted">
+                    Delivery to your client is scheduled for{' '}
+                    <strong>
+                      {order.scheduledDeliveryDate
+                        ? new Date(order.scheduledDeliveryDate).toLocaleDateString('en-GB', {
+                            weekday: 'long',
+                            day: '2-digit',
+                            month: 'long',
+                            year: 'numeric',
+                          })
+                        : 'TBD'}
+                    </strong>
+                  </Typography>
+                  {order.deliveryNotes && (
+                    <Typography variant="bodyXs" colorRole="muted" className="mt-1">
+                      Notes: {order.deliveryNotes}
+                    </Typography>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Out for Delivery - shown when order is in transit */}
+        {order.status === 'out_for_delivery' && (
+          <Card className="border-2 border-fill-warning/50 bg-fill-warning/5">
+            <CardContent className="p-6">
+              <div className="flex flex-col items-center gap-4 text-center sm:flex-row sm:text-left">
+                <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-fill-warning/20">
+                  <Icon icon={IconTruck} size="lg" className="text-fill-warning" />
+                </div>
+                <div className="flex-1">
+                  <Typography variant="headingSm" className="mb-1">
+                    Out for Delivery
+                  </Typography>
+                  <Typography variant="bodySm" colorRole="muted">
+                    Your client&apos;s order is currently being delivered by{' '}
+                    <strong>{order.distributor?.businessName ?? 'the distributor'}</strong>.
+                  </Typography>
+                  {order.outForDeliveryAt && (
+                    <Typography variant="bodyXs" colorRole="muted" className="mt-1">
+                      Dispatched:{' '}
+                      {new Date(order.outForDeliveryAt).toLocaleDateString('en-GB', {
+                        day: '2-digit',
+                        month: 'short',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </Typography>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Delivered - shown when order has been delivered */}
+        {order.status === 'delivered' && (
+          <Card className="border-2 border-fill-success/50 bg-fill-success/5">
+            <CardContent className="p-6">
+              <div className="flex flex-col items-center gap-4 text-center sm:flex-row sm:text-left">
+                <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-fill-success/20">
+                  <Icon icon={IconCheck} size="lg" className="text-fill-success" />
+                </div>
+                <div className="flex-1">
+                  <Typography variant="headingSm" className="mb-1">
+                    Order Delivered
+                  </Typography>
+                  <Typography variant="bodySm" colorRole="muted">
+                    Your client&apos;s order has been successfully delivered.
+                  </Typography>
+                  {order.deliveredAt && (
+                    <Typography variant="bodyXs" colorRole="muted" className="mt-1">
+                      Delivered:{' '}
+                      {new Date(order.deliveredAt).toLocaleDateString('en-GB', {
+                        weekday: 'long',
+                        day: '2-digit',
+                        month: 'long',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </Typography>
+                  )}
                 </div>
               </div>
             </CardContent>
