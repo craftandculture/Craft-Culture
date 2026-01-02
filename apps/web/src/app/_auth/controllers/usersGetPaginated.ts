@@ -16,17 +16,23 @@ const usersGetPaginated = adminProcedure
       cursor: z.number().optional().default(0),
       limit: z.number().optional().default(50),
       status: z.enum(['pending', 'approved', 'rejected']).optional(),
+      customerType: z.enum(['b2b', 'b2c', 'private_clients']).optional(),
       search: z.string().optional(),
     }),
   )
   .query(async ({ input }) => {
-    const { cursor, limit, status, search } = input;
+    const { cursor, limit, status, customerType, search } = input;
 
     const whereConditions = [];
 
     // Filter by approval status
     if (status) {
       whereConditions.push(eq(users.approvalStatus, status));
+    }
+
+    // Filter by customer type
+    if (customerType) {
+      whereConditions.push(eq(users.customerType, customerType));
     }
 
     // Search by name or email
