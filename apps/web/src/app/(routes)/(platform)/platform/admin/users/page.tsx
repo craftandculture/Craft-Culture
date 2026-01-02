@@ -1,8 +1,8 @@
 'use client';
 
-import { IconCheck, IconSearch, IconTrash, IconX } from '@tabler/icons-react';
+import { IconCheck, IconEdit, IconSearch, IconTrash, IconX } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
 import AlertDialog from '@/app/_ui/components/AlertDialog/AlertDialog';
@@ -18,6 +18,14 @@ import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
 import Card from '@/app/_ui/components/Card/Card';
 import CardContent from '@/app/_ui/components/Card/CardContent';
+import Dialog from '@/app/_ui/components/Dialog/Dialog';
+import DialogContent from '@/app/_ui/components/Dialog/DialogContent';
+import DialogDescription from '@/app/_ui/components/Dialog/DialogDescription';
+import DialogFooter from '@/app/_ui/components/Dialog/DialogFooter';
+import DialogHeader from '@/app/_ui/components/Dialog/DialogHeader';
+import DialogTitle from '@/app/_ui/components/Dialog/DialogTitle';
+import Input from '@/app/_ui/components/Input/Input';
+import Label from '@/app/_ui/components/Label/Label';
 import Select from '@/app/_ui/components/Select/Select';
 import SelectContent from '@/app/_ui/components/Select/SelectContent';
 import SelectItem from '@/app/_ui/components/Select/SelectItem';
@@ -27,6 +35,160 @@ import Typography from '@/app/_ui/components/Typography/Typography';
 import useTRPC from '@/lib/trpc/browser';
 
 type StatusFilter = 'all' | 'pending' | 'approved' | 'rejected';
+type CustomerTypeFilter = 'all' | 'b2b' | 'b2c' | 'private_clients';
+
+interface UserToEdit {
+  id: string;
+  name: string | null;
+  email: string;
+  customerType: 'b2b' | 'b2c' | 'private_clients';
+  role: 'user' | 'admin';
+  approvalStatus: 'pending' | 'approved' | 'rejected';
+}
+
+/**
+ * Dialog component for editing user details
+ */
+const UserEditDialog = ({
+  user,
+  open,
+  onOpenChange,
+  onSuccess,
+}: {
+  user: UserToEdit | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSuccess: () => void;
+}) => {
+  const api = useTRPC();
+  const [name, setName] = useState(user?.name ?? '');
+  const [customerType, setCustomerType] = useState<'b2b' | 'b2c' | 'private_clients'>(
+    user?.customerType ?? 'b2c',
+  );
+  const [role, setRole] = useState<'user' | 'admin'>(user?.role ?? 'user');
+  const [approvalStatus, setApprovalStatus] = useState<'pending' | 'approved' | 'rejected'>(
+    user?.approvalStatus ?? 'pending',
+  );
+
+  // Reset form when user changes
+  useEffect(() => {
+    if (user) {
+      setName(user.name ?? '');
+      setCustomerType(user.customerType);
+      setRole(user.role);
+      setApprovalStatus(user.approvalStatus);
+    }
+  }, [user]);
+
+  const { mutate: updateUser, isPending } = useMutation(
+    api.users.adminUpdate.mutationOptions({
+      onSuccess: () => {
+        toast.success('User updated successfully');
+        onOpenChange(false);
+        onSuccess();
+      },
+      onError: (error) => {
+        toast.error(error.message || 'Failed to update user');
+      },
+    }),
+  );
+
+  if (!user) return null;
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    updateUser({
+      userId: user.id,
+      name: name || undefined,
+      customerType,
+      role,
+      approvalStatus,
+    });
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Edit User</DialogTitle>
+          <DialogDescription>Update user details for {user.email}</DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="name">Name</Label>
+            <Input
+              id="name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="User name"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Customer Type</Label>
+            <Select
+              value={customerType}
+              onValueChange={(v) => setCustomerType(v as typeof customerType)}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="b2b">Distributor (B2B)</SelectItem>
+                <SelectItem value="b2c">Sales Person (B2C)</SelectItem>
+                <SelectItem value="private_clients">Partner (Private Clients)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Role</Label>
+            <Select value={role} onValueChange={(v) => setRole(v as typeof role)}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="user">User</SelectItem>
+                <SelectItem value="admin">Admin</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Approval Status</Label>
+            <Select
+              value={approvalStatus}
+              onValueChange={(v) => setApprovalStatus(v as typeof approvalStatus)}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="approved">Approved</SelectItem>
+                <SelectItem value="rejected">Rejected</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              isDisabled={isPending}
+            >
+              <ButtonContent>Cancel</ButtonContent>
+            </Button>
+            <Button type="submit" colorRole="brand" isDisabled={isPending}>
+              <ButtonContent>{isPending ? 'Saving...' : 'Save Changes'}</ButtonContent>
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+};
 
 /**
  * Admin page for managing user approvals
@@ -138,12 +300,17 @@ const DistributorAssignment = ({
 const UserManagementPage = () => {
   const api = useTRPC();
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [customerTypeFilter, setCustomerTypeFilter] =
+    useState<CustomerTypeFilter>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [editingUser, setEditingUser] = useState<UserToEdit | null>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
 
   // Fetch users
   const { data, isLoading, refetch } = useQuery({
     ...api.users.getPaginated.queryOptions({
       status: statusFilter === 'all' ? undefined : statusFilter,
+      customerType: customerTypeFilter === 'all' ? undefined : customerTypeFilter,
       search: searchQuery || undefined,
       limit: 50,
     }),
@@ -210,7 +377,16 @@ const UserManagementPage = () => {
   };
 
   const getCustomerTypeLabel = (type: string) => {
-    return type === 'b2b' ? 'Distributor (B2B)' : 'Sales Person (B2C)';
+    switch (type) {
+      case 'b2b':
+        return 'Distributor (B2B)';
+      case 'b2c':
+        return 'Sales Person (B2C)';
+      case 'private_clients':
+        return 'Partner (Private Clients)';
+      default:
+        return type;
+    }
   };
 
   return (
@@ -230,20 +406,52 @@ const UserManagementPage = () => {
         <Card>
           <CardContent className="space-y-4 p-6">
             {/* Status Tabs */}
-            <div className="flex flex-wrap gap-2">
-              {(['all', 'pending', 'approved', 'rejected'] as const).map((status) => (
-                <Button
-                  key={status}
-                  variant={statusFilter === status ? 'default' : 'outline'}
-                  colorRole={statusFilter === status ? 'brand' : 'primary'}
-                  size="sm"
-                  onClick={() => setStatusFilter(status)}
-                >
-                  <ButtonContent>
-                    {status.charAt(0).toUpperCase() + status.slice(1)}
-                  </ButtonContent>
-                </Button>
-              ))}
+            <div>
+              <Typography variant="bodyXs" className="text-text-muted mb-2">
+                Approval Status
+              </Typography>
+              <div className="flex flex-wrap gap-2">
+                {(['all', 'pending', 'approved', 'rejected'] as const).map((status) => (
+                  <Button
+                    key={status}
+                    variant={statusFilter === status ? 'default' : 'outline'}
+                    colorRole={statusFilter === status ? 'brand' : 'primary'}
+                    size="sm"
+                    onClick={() => setStatusFilter(status)}
+                  >
+                    <ButtonContent>
+                      {status.charAt(0).toUpperCase() + status.slice(1)}
+                    </ButtonContent>
+                  </Button>
+                ))}
+              </div>
+            </div>
+
+            {/* Customer Type Tabs */}
+            <div>
+              <Typography variant="bodyXs" className="text-text-muted mb-2">
+                Customer Type
+              </Typography>
+              <div className="flex flex-wrap gap-2">
+                {(
+                  [
+                    { value: 'all', label: 'All Types' },
+                    { value: 'b2b', label: 'Distributor (B2B)' },
+                    { value: 'b2c', label: 'Sales Person (B2C)' },
+                    { value: 'private_clients', label: 'Partner' },
+                  ] as const
+                ).map((type) => (
+                  <Button
+                    key={type.value}
+                    variant={customerTypeFilter === type.value ? 'default' : 'outline'}
+                    colorRole={customerTypeFilter === type.value ? 'brand' : 'primary'}
+                    size="sm"
+                    onClick={() => setCustomerTypeFilter(type.value)}
+                  >
+                    <ButtonContent>{type.label}</ButtonContent>
+                  </Button>
+                ))}
+              </div>
             </div>
 
             {/* Search */}
@@ -384,6 +592,23 @@ const UserManagementPage = () => {
                                 <ButtonContent iconLeft={IconCheck}>Approve</ButtonContent>
                               </Button>
                             )}
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                setEditingUser({
+                                  id: user.id,
+                                  name: user.name,
+                                  email: user.email,
+                                  customerType: user.customerType as 'b2b' | 'b2c' | 'private_clients',
+                                  role: user.role as 'user' | 'admin',
+                                  approvalStatus: user.approvalStatus as 'pending' | 'approved' | 'rejected',
+                                });
+                                setEditDialogOpen(true);
+                              }}
+                            >
+                              <ButtonContent iconLeft={IconEdit}>Edit</ButtonContent>
+                            </Button>
                             <AlertDialog>
                               <AlertDialogTrigger asChild>
                                 <Button
@@ -490,38 +715,58 @@ const UserManagementPage = () => {
                           <ButtonContent iconLeft={IconCheck}>Approve</ButtonContent>
                         </Button>
                       )}
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            colorRole="danger"
-                            isDisabled={isDeleting}
-                            className="w-full"
-                          >
-                            <ButtonContent iconLeft={IconTrash}>Delete User</ButtonContent>
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Delete User</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Are you sure you want to delete {user.name}? This action cannot
-                              be undone and will permanently delete their account and all
-                              associated data.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={() => deleteUser({ userId: user.id })}
-                              className="bg-red-600 hover:bg-red-700 dark:bg-red-600 dark:hover:bg-red-700"
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="flex-1"
+                          onClick={() => {
+                            setEditingUser({
+                              id: user.id,
+                              name: user.name,
+                              email: user.email,
+                              customerType: user.customerType as 'b2b' | 'b2c' | 'private_clients',
+                              role: user.role as 'user' | 'admin',
+                              approvalStatus: user.approvalStatus as 'pending' | 'approved' | 'rejected',
+                            });
+                            setEditDialogOpen(true);
+                          }}
+                        >
+                          <ButtonContent iconLeft={IconEdit}>Edit</ButtonContent>
+                        </Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              colorRole="danger"
+                              isDisabled={isDeleting}
+                              className="flex-1"
                             >
-                              Delete User
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
+                              <ButtonContent iconLeft={IconTrash}>Delete</ButtonContent>
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Delete User</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Are you sure you want to delete {user.name}? This action cannot
+                                be undone and will permanently delete their account and all
+                                associated data.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => deleteUser({ userId: user.id })}
+                                className="bg-red-600 hover:bg-red-700 dark:bg-red-600 dark:hover:bg-red-700"
+                              >
+                                Delete User
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -529,6 +774,19 @@ const UserManagementPage = () => {
             </CardContent>
           </Card>
         )}
+
+        {/* User Edit Dialog */}
+        <UserEditDialog
+          user={editingUser}
+          open={editDialogOpen}
+          onOpenChange={(open) => {
+            setEditDialogOpen(open);
+            if (!open) setEditingUser(null);
+          }}
+          onSuccess={() => {
+            void refetch();
+          }}
+        />
       </div>
     </div>
   );
