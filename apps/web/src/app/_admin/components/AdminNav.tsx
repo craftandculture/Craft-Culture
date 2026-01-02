@@ -31,10 +31,10 @@ const navItems: NavItem[] = [
     description: 'Manage accounts',
   },
   {
-    label: 'Licensed Distributors',
+    label: 'Distributors',
     href: '/platform/admin/partners',
     icon: IconBuildingStore,
-    description: 'CD & TBS',
+    description: 'Licensed Distributors',
   },
   {
     label: 'Partners',
