@@ -66,6 +66,10 @@ const partnersGetMany = adminProcedure
         paymentMethod: partners.paymentMethod,
         paymentDetails: partners.paymentDetails,
         createdAt: partners.createdAt,
+        // PCO pricing settings
+        logisticsCostPerCase: partners.logisticsCostPerCase,
+        pcoDutyRate: partners.pcoDutyRate,
+        pcoVatRate: partners.pcoVatRate,
         userName: users.name,
         userEmail: users.email,
       })
@@ -137,6 +141,10 @@ const partnersGetMany = adminProcedure
         paymentUrl?: string;
       } | null,
       createdAt: p.createdAt,
+      // PCO pricing settings
+      logisticsCostPerCase: p.logisticsCostPerCase,
+      pcoDutyRate: p.pcoDutyRate,
+      pcoVatRate: p.pcoVatRate,
       // Optional linked user (for API access if applicable)
       linkedUser: p.userId
         ? {
