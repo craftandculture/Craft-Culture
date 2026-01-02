@@ -1,6 +1,7 @@
 'use client';
 
 import {
+  IconBottle,
   IconBuilding,
   IconEdit,
   IconMail,
@@ -11,7 +12,6 @@ import {
   IconReceipt,
   IconSearch,
   IconTrash,
-  IconWine,
 } from '@tabler/icons-react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
@@ -407,7 +407,7 @@ const WinePartnersPage = () => {
         ) : partners.length === 0 ? (
           <Card>
             <CardContent className="p-6 text-center">
-              <IconWine className="h-12 w-12 text-text-muted mx-auto mb-4" />
+              <IconBottle className="h-12 w-12 text-text-muted mx-auto mb-4" />
               <Typography variant="bodyMd" className="text-text-muted">
                 No wine partners found. Click &quot;Add Partner&quot; to create one.
               </Typography>
@@ -430,7 +430,7 @@ const WinePartnersPage = () => {
                           />
                         ) : (
                           <div className="h-10 w-10 bg-fill-muted rounded flex items-center justify-center">
-                            <IconWine className="h-5 w-5 text-text-muted" />
+                            <IconBottle className="h-5 w-5 text-text-muted" />
                           </div>
                         )}
                         <div>
