@@ -3,7 +3,7 @@ import { and, desc, eq, gte, inArray, isNotNull, sql } from 'drizzle-orm';
 import db from '@/database/client';
 import {
   partners,
-  privateClientOrderClients,
+  privateClientContacts,
   privateClientOrders,
 } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
@@ -22,7 +22,7 @@ const adminDashboard = adminProcedure.query(async () => {
   // All statuses except draft and cancelled
   const activeStatuses = [
     'submitted',
-    'under_review',
+    'under_cc_review',
     'revision_requested',
     'cc_approved',
     'awaiting_partner_verification',
@@ -85,7 +85,7 @@ const adminDashboard = adminProcedure.query(async () => {
     })
     .from(privateClientOrders)
     .where(
-      inArray(privateClientOrders.status, ['submitted', 'under_review']),
+      inArray(privateClientOrders.status, ['submitted', 'under_cc_review']),
     );
 
   // Get recent 8 orders with partner info
@@ -127,11 +127,11 @@ const adminDashboard = adminProcedure.query(async () => {
     .select({
       count: sql<number>`count(*)`,
     })
-    .from(privateClientOrderClients)
-    .where(isNotNull(privateClientOrderClients.cityDrinksVerifiedAt));
+    .from(privateClientContacts)
+    .where(isNotNull(privateClientContacts.cityDrinksVerifiedAt));
 
   // Build status breakdown for pipeline
-  const pendingReviewStatuses = ['submitted', 'under_review', 'revision_requested'];
+  const pendingReviewStatuses = ['submitted', 'under_cc_review', 'revision_requested'];
   const awaitingVerificationStatuses = [
     'cc_approved',
     'awaiting_partner_verification',

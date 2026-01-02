@@ -3,7 +3,7 @@ import { and, desc, eq, ilike, or, sql } from 'drizzle-orm';
 import db from '@/database/client';
 import {
   partners,
-  privateClientOrderClients,
+  privateClientContacts,
   privateClientOrders,
 } from '@/database/schema';
 import { winePartnerProcedure } from '@/lib/trpc/procedures';
@@ -59,15 +59,15 @@ const ordersGetMany = winePartnerProcedure
           businessName: partners.businessName,
         },
         client: {
-          id: privateClientOrderClients.id,
-          cityDrinksVerifiedAt: privateClientOrderClients.cityDrinksVerifiedAt,
+          id: privateClientContacts.id,
+          cityDrinksVerifiedAt: privateClientContacts.cityDrinksVerifiedAt,
         },
       })
       .from(privateClientOrders)
       .leftJoin(partners, eq(privateClientOrders.distributorId, partners.id))
       .leftJoin(
-        privateClientOrderClients,
-        eq(privateClientOrders.clientId, privateClientOrderClients.id),
+        privateClientContacts,
+        eq(privateClientOrders.clientId, privateClientContacts.id),
       )
       .where(and(...conditions))
       .orderBy(desc(privateClientOrders.createdAt))

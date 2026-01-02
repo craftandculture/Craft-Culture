@@ -572,7 +572,7 @@ const PartnerDashboard = () => {
           </Typography>
           <div className="flex flex-wrap gap-3">
             <Link href="/platform/private-orders/new">
-              <Button variant="primary" className="gap-2">
+              <Button className="gap-2">
                 <Icon icon={IconPlus} size="sm" />
                 New Order
               </Button>
