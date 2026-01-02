@@ -109,9 +109,10 @@ const DistributorsPage = () => {
     commissionRate: number;
   } | null>(null);
 
-  // Fetch partners
+  // Fetch distributors only (not wine partners)
   const { data, isLoading, refetch } = useQuery({
     ...api.partners.getMany.queryOptions({
+      type: 'distributor',
       status: statusFilter === 'all' ? undefined : statusFilter,
       search: searchQuery || undefined,
     }),
