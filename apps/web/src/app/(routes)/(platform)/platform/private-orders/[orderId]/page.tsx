@@ -797,66 +797,74 @@ const PrivateOrderDetailPage = () => {
             </CardContent>
           </Card>
 
-          {/* Distributor Info - Compact */}
+          {/* Distributor Info */}
           <Card>
             <CardContent className="p-4">
-              <Typography variant="labelSm" colorRole="muted" className="mb-2">
+              <Typography variant="labelSm" colorRole="muted" className="mb-3">
                 Distributor
               </Typography>
               {order.distributor ? (
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-3">
                   {order.distributor.logoUrl ? (
                     <Image
                       src={order.distributor.logoUrl}
                       alt={order.distributor.businessName}
-                      width={28}
-                      height={28}
-                      className="rounded object-contain"
+                      width={44}
+                      height={44}
+                      className="rounded-lg object-contain"
                     />
                   ) : (
-                    <div className="flex h-7 w-7 items-center justify-center rounded bg-fill-muted">
-                      <Icon icon={IconBuilding} size="xs" colorRole="muted" />
+                    <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-fill-muted">
+                      <Icon icon={IconBuilding} size="md" colorRole="muted" />
                     </div>
                   )}
-                  <Typography variant="bodySm" className="font-medium">
-                    {order.distributor.businessName}
-                  </Typography>
+                  <div>
+                    <Typography variant="bodySm" className="font-semibold">
+                      {order.distributor.businessName}
+                    </Typography>
+                    <Typography variant="bodyXs" colorRole="muted">
+                      Assigned Distributor
+                    </Typography>
+                  </div>
                 </div>
               ) : (
-                <Typography variant="bodyXs" colorRole="muted">
-                  Not yet assigned
-                </Typography>
+                <div className="flex items-center gap-3 text-text-muted">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-lg border-2 border-dashed border-border-muted">
+                    <Icon icon={IconBuilding} size="md" colorRole="muted" />
+                  </div>
+                  <Typography variant="bodySm">Not yet assigned</Typography>
+                </div>
               )}
             </CardContent>
           </Card>
 
-          {/* Key Dates - Compact */}
+          {/* Key Dates */}
           <Card>
             <CardContent className="p-4">
-              <Typography variant="labelSm" colorRole="muted" className="mb-2">
+              <Typography variant="labelSm" colorRole="muted" className="mb-3">
                 Key Dates
               </Typography>
-              <div className="space-y-1 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-text-muted">Created</span>
-                  <span>{formatDate(order.createdAt)}</span>
+              <div className="space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-text-muted">Created</span>
+                  <span className="text-xs">{formatDate(order.createdAt)}</span>
                 </div>
                 {order.submittedAt && (
-                  <div className="flex justify-between">
-                    <span className="text-text-muted">Submitted</span>
-                    <span>{formatDate(order.submittedAt)}</span>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-text-muted">Submitted</span>
+                    <span className="text-xs font-medium">{formatDate(order.submittedAt)}</span>
                   </div>
                 )}
                 {order.ccApprovedAt && (
-                  <div className="flex justify-between">
-                    <span className="text-text-muted">Approved</span>
-                    <span>{formatDate(order.ccApprovedAt)}</span>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-medium text-green-600 dark:text-green-400">Approved</span>
+                    <span className="text-xs font-medium text-green-600 dark:text-green-400">{formatDate(order.ccApprovedAt)}</span>
                   </div>
                 )}
                 {order.deliveredAt && (
-                  <div className="flex justify-between">
-                    <span className="text-text-muted">Delivered</span>
-                    <span>{formatDate(order.deliveredAt)}</span>
+                  <div className="flex items-center justify-between rounded-md bg-green-50 px-2 py-1.5 dark:bg-green-900/20">
+                    <span className="text-xs font-semibold text-green-700 dark:text-green-300">Delivered</span>
+                    <span className="text-xs font-semibold text-green-700 dark:text-green-300">{formatDate(order.deliveredAt)}</span>
                   </div>
                 )}
               </div>

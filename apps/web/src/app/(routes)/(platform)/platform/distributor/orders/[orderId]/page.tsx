@@ -956,72 +956,80 @@ const DistributorOrderDetailPage = () => {
             </CardContent>
           </Card>
 
-          {/* Partner Info - Compact with logo */}
+          {/* Partner Info */}
           <Card>
             <CardContent className="p-4">
-              <Typography variant="labelSm" colorRole="muted" className="mb-2">
+              <Typography variant="labelSm" colorRole="muted" className="mb-3">
                 Partner
               </Typography>
               {order.partner ? (
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-3">
                   {order.partner.logoUrl ? (
                     <Image
                       src={order.partner.logoUrl}
                       alt={order.partner.businessName}
-                      width={28}
-                      height={28}
-                      className="rounded object-contain"
+                      width={44}
+                      height={44}
+                      className="rounded-lg object-contain"
                     />
                   ) : (
-                    <div className="flex h-7 w-7 items-center justify-center rounded bg-fill-muted">
-                      <Icon icon={IconBuilding} size="xs" colorRole="muted" />
+                    <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-fill-muted">
+                      <Icon icon={IconBuilding} size="md" colorRole="muted" />
                     </div>
                   )}
-                  <Typography variant="bodySm" className="font-medium">
-                    {order.partner.businessName}
-                  </Typography>
+                  <div>
+                    <Typography variant="bodySm" className="font-semibold">
+                      {order.partner.businessName}
+                    </Typography>
+                    <Typography variant="bodyXs" colorRole="muted">
+                      Wine Partner
+                    </Typography>
+                  </div>
                 </div>
               ) : (
-                <Typography variant="bodyXs" colorRole="muted">
-                  Unknown
-                </Typography>
+                <div className="flex items-center gap-3 text-text-muted">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-fill-muted">
+                    <Icon icon={IconBuilding} size="md" colorRole="muted" />
+                  </div>
+                  <Typography variant="bodySm">Unknown</Typography>
+                </div>
               )}
             </CardContent>
           </Card>
 
-          {/* Key Dates - Compact */}
+          {/* Key Dates */}
           <Card>
             <CardContent className="p-4">
-              <Typography variant="labelSm" colorRole="muted" className="mb-2">
+              <Typography variant="labelSm" colorRole="muted" className="mb-3">
                 Key Dates
               </Typography>
-              <div className="space-y-1 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-text-muted">Assigned</span>
-                  <span>{formatDate(order.distributorAssignedAt)}</span>
+              <div className="space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-text-muted">Assigned</span>
+                  <span className="text-xs">{formatDate(order.distributorAssignedAt)}</span>
                 </div>
                 {order.clientPaidAt && (
-                  <div className="flex justify-between">
-                    <span className="text-text-muted">Client Paid</span>
-                    <span>{formatDate(order.clientPaidAt)}</span>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-medium text-green-600 dark:text-green-400">Client Paid</span>
+                    <span className="text-xs font-medium text-green-600 dark:text-green-400">{formatDate(order.clientPaidAt)}</span>
                   </div>
                 )}
                 {order.distributorPaidAt && (
-                  <div className="flex justify-between">
-                    <span className="text-text-muted">Paid to C&C</span>
-                    <span>{formatDate(order.distributorPaidAt)}</span>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-medium text-blue-600 dark:text-blue-400">Paid to C&C</span>
+                    <span className="text-xs font-medium text-blue-600 dark:text-blue-400">{formatDate(order.distributorPaidAt)}</span>
                   </div>
                 )}
                 {order.stockReceivedAt && (
-                  <div className="flex justify-between">
-                    <span className="text-text-muted">Stock Received</span>
-                    <span>{formatDate(order.stockReceivedAt)}</span>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-medium text-purple-600 dark:text-purple-400">Stock Received</span>
+                    <span className="text-xs font-medium text-purple-600 dark:text-purple-400">{formatDate(order.stockReceivedAt)}</span>
                   </div>
                 )}
                 {order.deliveredAt && (
-                  <div className="flex justify-between">
-                    <span className="text-text-muted">Delivered</span>
-                    <span>{formatDate(order.deliveredAt)}</span>
+                  <div className="flex items-center justify-between rounded-md bg-green-50 px-2 py-1.5 dark:bg-green-900/20">
+                    <span className="text-xs font-semibold text-green-700 dark:text-green-300">Delivered</span>
+                    <span className="text-xs font-semibold text-green-700 dark:text-green-300">{formatDate(order.deliveredAt)}</span>
                   </div>
                 )}
               </div>
