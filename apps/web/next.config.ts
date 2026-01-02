@@ -36,6 +36,14 @@ const nextConfig: NextConfig = {
         protocol: 'https',
         hostname: 'craft-and-culture.gitbook.io',
       } as const,
+      {
+        protocol: 'https',
+        hostname: 'media.licdn.com',
+      } as const,
+      {
+        protocol: 'https',
+        hostname: 'encrypted-tbn0.gstatic.com',
+      } as const,
       ...(process.env.NODE_ENV === 'development'
         ? [
             {
