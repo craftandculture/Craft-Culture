@@ -64,12 +64,15 @@ export const winePartnerProcedure = protectedProcedure.use(
     const { partners, partnerMembers } = await import('@/database/schema');
 
     // First, check direct partner link (owner) - must be wine_partner type
-    let partner = await db.query.partners.findFirst({
-      where: and(
-        eq(partners.userId, ctx.user.id),
-        eq(partners.type, 'wine_partner'),
-      ),
-    });
+    const directPartnerResult = await db
+      .select()
+      .from(partners)
+      .where(
+        and(eq(partners.userId, ctx.user.id), eq(partners.type, 'wine_partner')),
+      )
+      .limit(1);
+
+    let partner = directPartnerResult[0];
 
     // If no direct link, check partnerMembers table for wine partner membership
     if (!partner) {
@@ -131,12 +134,15 @@ export const distributorProcedure = protectedProcedure.use(
     const { partners, partnerMembers } = await import('@/database/schema');
 
     // First, check direct partner link (owner) - must be distributor type
-    let partner = await db.query.partners.findFirst({
-      where: and(
-        eq(partners.userId, ctx.user.id),
-        eq(partners.type, 'distributor'),
-      ),
-    });
+    const directPartnerResult = await db
+      .select()
+      .from(partners)
+      .where(
+        and(eq(partners.userId, ctx.user.id), eq(partners.type, 'distributor')),
+      )
+      .limit(1);
+
+    let partner = directPartnerResult[0];
 
     // If no direct link, check partnerMembers table for distributor membership
     if (!partner) {
