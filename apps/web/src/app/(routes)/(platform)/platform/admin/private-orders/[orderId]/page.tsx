@@ -268,7 +268,7 @@ const AdminPrivateOrderDetailPage = () => {
     );
   }
 
-  const assignedDistributor = distributors.find((d) => d.id === order.distributor?.id);
+  const _assignedDistributor = distributors.find((d) => d.id === order.distributor?.id);
 
   // Calculate exchange rate for AED conversion (use actual rate if available, otherwise default)
   const totalAed = Number(order.totalAed) || 0;
@@ -577,10 +577,10 @@ const AdminPrivateOrderDetailPage = () => {
             </CardContent>
           </Card>
 
-          {/* Distributor - Compact with reassign dropdown */}
+          {/* Distributor - With logo */}
           <Card>
             <CardContent className="p-4">
-              <div className="mb-2 flex items-center gap-1.5">
+              <div className="mb-3 flex items-center gap-1.5">
                 <Icon icon={IconTruck} size="xs" colorRole="muted" />
                 <Typography variant="labelSm" colorRole="muted">
                   Distributor
@@ -619,18 +619,18 @@ const AdminPrivateOrderDetailPage = () => {
                   </SelectContent>
                 </Select>
               ) : order.distributor ? (
-                <div className="flex items-center gap-2">
-                  {assignedDistributor?.logoUrl ? (
+                <div className="flex items-center gap-3">
+                  {order.distributor.logoUrl ? (
                     <Image
-                      src={assignedDistributor.logoUrl}
+                      src={order.distributor.logoUrl}
                       alt={order.distributor.businessName}
-                      width={28}
-                      height={28}
-                      className="rounded object-contain"
+                      width={48}
+                      height={48}
+                      className="rounded-lg border border-border-muted object-contain p-1"
                     />
                   ) : (
-                    <div className="flex h-7 w-7 items-center justify-center rounded bg-fill-muted">
-                      <Icon icon={IconBuilding} size="xs" colorRole="muted" />
+                    <div className="flex h-12 w-12 items-center justify-center rounded-lg border border-border-muted bg-fill-muted">
+                      <Icon icon={IconTruck} size="md" colorRole="muted" />
                     </div>
                   )}
                   <Typography variant="bodySm" className="font-medium">
@@ -638,25 +638,57 @@ const AdminPrivateOrderDetailPage = () => {
                   </Typography>
                 </div>
               ) : (
-                <Typography variant="bodyXs" colorRole="muted">
-                  Assign after approval
-                </Typography>
+                <div className="flex items-center gap-3">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-lg border border-dashed border-border-muted bg-surface-muted">
+                    <Icon icon={IconTruck} size="md" colorRole="muted" />
+                  </div>
+                  <Typography variant="bodyXs" colorRole="muted">
+                    Assign after approval
+                  </Typography>
+                </div>
               )}
             </CardContent>
           </Card>
 
-          {/* Partner Info - Compact */}
+          {/* Partner Info - With logo */}
           <Card>
             <CardContent className="p-4">
-              <Typography variant="labelSm" colorRole="muted" className="mb-2">
-                Partner
-              </Typography>
-              <Typography variant="bodySm" className="font-medium">
-                {order.partner?.businessName ?? 'Unknown'}
-              </Typography>
-              <Typography variant="bodyXs" colorRole="muted">
-                Created {formatDate(order.createdAt)}
-              </Typography>
+              <div className="mb-3 flex items-center gap-1.5">
+                <Icon icon={IconBuilding} size="xs" colorRole="muted" />
+                <Typography variant="labelSm" colorRole="muted">
+                  Partner
+                </Typography>
+              </div>
+              <div className="flex items-center gap-3">
+                {order.partner?.logoUrl ? (
+                  <Image
+                    src={order.partner.logoUrl}
+                    alt={order.partner.businessName}
+                    width={48}
+                    height={48}
+                    className="rounded-lg border border-border-muted object-contain p-1"
+                  />
+                ) : (
+                  <div
+                    className="flex h-12 w-12 items-center justify-center rounded-lg border border-border-muted"
+                    style={{
+                      backgroundColor: order.partner?.brandColor
+                        ? `${order.partner.brandColor}20`
+                        : undefined,
+                    }}
+                  >
+                    <Icon icon={IconBuilding} size="md" colorRole="muted" />
+                  </div>
+                )}
+                <div>
+                  <Typography variant="bodySm" className="font-medium">
+                    {order.partner?.businessName ?? 'Unknown'}
+                  </Typography>
+                  <Typography variant="bodyXs" colorRole="muted">
+                    Created {formatDate(order.createdAt)}
+                  </Typography>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </div>
