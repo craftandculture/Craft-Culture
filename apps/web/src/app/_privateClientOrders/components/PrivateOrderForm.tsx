@@ -139,6 +139,7 @@ const PrivateOrderForm = () => {
   // Create order mutation
   const createOrder = useMutation({
     mutationFn: async (data: {
+      clientId?: string;
       clientName: string;
       clientEmail?: string;
       clientPhone?: string;
@@ -314,6 +315,7 @@ const PrivateOrderForm = () => {
     try {
       // Create the order first
       const order = await createOrder.mutateAsync({
+        clientId: selectedClient?.id || undefined,
         clientName: effectiveClientName,
         clientEmail: effectiveClientEmail || undefined,
         clientPhone: effectiveClientPhone || undefined,
