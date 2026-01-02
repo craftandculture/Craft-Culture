@@ -55,6 +55,8 @@ const distributorGetOne = distributorProcedure
             'verification_suspended',
             'awaiting_client_payment',
             'client_paid',
+            'scheduling_delivery',
+            'delivery_scheduled',
             'awaiting_distributor_payment',
             'distributor_paid',
             'awaiting_partner_payment',
