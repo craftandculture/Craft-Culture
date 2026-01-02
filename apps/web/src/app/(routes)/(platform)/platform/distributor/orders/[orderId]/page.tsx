@@ -7,6 +7,7 @@ import {
   IconDeviceMobile,
   IconLoader2,
   IconPackage,
+  IconShieldCheck,
   IconTruck,
 } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -106,8 +107,15 @@ const DistributorOrderDetailPage = () => {
   const getNextAction = () => {
     if (!order) return null;
 
+    // Check if client is already verified (from client profile)
+    const clientAlreadyVerified = !!order.client?.cityDrinksVerifiedAt;
+
     switch (order.status) {
       case 'cc_approved':
+        // If client is already verified, skip to payment collection
+        if (clientAlreadyVerified) {
+          return { label: 'Proceed to Payment', status: 'awaiting_client_payment', icon: IconShieldCheck };
+        }
         // Client needs to verify on City Drinks app
         return { label: 'Request Verification', status: 'awaiting_client_verification', icon: IconDeviceMobile };
       case 'awaiting_client_verification':
@@ -325,9 +333,17 @@ const DistributorOrderDetailPage = () => {
           {/* Client Info - Compact */}
           <Card>
             <CardContent className="p-4">
-              <Typography variant="labelSm" colorRole="muted" className="mb-2">
-                Client
-              </Typography>
+              <div className="mb-2 flex items-center justify-between">
+                <Typography variant="labelSm" colorRole="muted">
+                  Client
+                </Typography>
+                {order.client?.cityDrinksVerifiedAt && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-medium text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                    <IconShieldCheck className="h-3 w-3" />
+                    Verified by CD
+                  </span>
+                )}
+              </div>
               <div className="space-y-1 text-sm">
                 <Typography variant="bodySm" className="font-medium">
                   {order.clientName || '-'}
@@ -338,6 +354,16 @@ const DistributorOrderDetailPage = () => {
                 {order.clientAddress && (
                   <Typography variant="bodyXs" colorRole="muted" className="line-clamp-2">
                     {order.clientAddress}
+                  </Typography>
+                )}
+                {order.client?.cityDrinksAccountName && (
+                  <Typography variant="bodyXs" colorRole="muted">
+                    CD Account: {order.client.cityDrinksAccountName}
+                  </Typography>
+                )}
+                {order.client?.cityDrinksPhone && (
+                  <Typography variant="bodyXs" colorRole="muted">
+                    CD Phone: {order.client.cityDrinksPhone}
                   </Typography>
                 )}
               </div>

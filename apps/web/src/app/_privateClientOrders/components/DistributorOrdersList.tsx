@@ -8,6 +8,7 @@ import {
   IconEye,
   IconPackage,
   IconSearch,
+  IconShieldCheck,
   IconTruck,
 } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -41,6 +42,7 @@ const DEFAULT_EXCHANGE_RATE = 3.67;
 
 type OrderWithPartner = PrivateClientOrder & {
   partner: { id: string; businessName: string; logoUrl: string | null } | null;
+  client: { id: string; cityDrinksVerifiedAt: Date | null } | null;
 };
 
 type StatusFilter = 'all' | 'pending_payment' | 'in_transit' | 'ready_delivery' | 'delivered';
@@ -112,7 +114,7 @@ const DistributorOrdersList = () => {
 
     const statusCategories: Record<StatusFilter, string[]> = {
       all: [],
-      pending_payment: ['cc_approved', 'awaiting_client_payment', 'client_paid', 'awaiting_distributor_payment'],
+      pending_payment: ['cc_approved', 'awaiting_client_verification', 'awaiting_client_payment', 'client_paid', 'awaiting_distributor_payment'],
       in_transit: ['distributor_paid', 'stock_in_transit'],
       ready_delivery: ['with_distributor', 'out_for_delivery'],
       delivered: ['delivered'],
@@ -144,17 +146,27 @@ const DistributorOrdersList = () => {
   /**
    * Get available actions matching backend distributorTransitions exactly
    */
-  const getAvailableActions = (status: string) => {
+  const getAvailableActions = (order: OrderWithPartner) => {
     const actions: { label: string; status: string; icon: typeof IconCheck }[] = [];
+    const clientAlreadyVerified = !!order.client?.cityDrinksVerifiedAt;
 
-    switch (status) {
+    switch (order.status) {
       case 'cc_approved':
-        // After approval, client needs to verify on City Drinks app
-        actions.push({
-          label: 'Client Verified',
-          status: 'awaiting_client_verification',
-          icon: IconDeviceMobile,
-        });
+        // If client is already verified, skip to payment collection
+        if (clientAlreadyVerified) {
+          actions.push({
+            label: 'Proceed to Payment',
+            status: 'awaiting_client_payment',
+            icon: IconShieldCheck,
+          });
+        } else {
+          // After approval, client needs to verify on City Drinks app
+          actions.push({
+            label: 'Request Verification',
+            status: 'awaiting_client_verification',
+            icon: IconDeviceMobile,
+          });
+        }
         break;
       case 'awaiting_client_verification':
         // Client has verified, now awaiting payment
@@ -254,10 +266,18 @@ const DistributorOrdersList = () => {
       accessorKey: 'clientName',
       header: 'Client',
       cell: ({ row }) => (
-        <div className="flex flex-col">
-          <Typography variant="bodySm" className="font-medium">
-            {row.original.clientName}
-          </Typography>
+        <div className="flex flex-col gap-0.5">
+          <div className="flex items-center gap-1.5">
+            <Typography variant="bodySm" className="font-medium">
+              {row.original.clientName}
+            </Typography>
+            {row.original.client?.cityDrinksVerifiedAt && (
+              <span className="inline-flex items-center gap-0.5 rounded-full bg-green-100 px-1.5 py-0.5 text-[9px] font-medium text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                <IconShieldCheck className="h-2.5 w-2.5" />
+                CD
+              </span>
+            )}
+          </div>
           {row.original.clientPhone && (
             <Typography variant="bodyXs" colorRole="muted">
               {row.original.clientPhone}
@@ -299,7 +319,7 @@ const DistributorOrdersList = () => {
     {
       id: 'actions',
       cell: ({ row }) => {
-        const availableActions = getAvailableActions(row.original.status);
+        const availableActions = getAvailableActions(row.original);
 
         return (
           <DropdownMenu>

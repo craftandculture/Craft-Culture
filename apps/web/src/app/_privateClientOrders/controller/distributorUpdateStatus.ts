@@ -4,6 +4,7 @@ import { z } from 'zod';
 
 import db from '@/database/client';
 import {
+  privateClientContacts,
   privateClientOrderActivityLogs,
   privateClientOrderStatus,
   privateClientOrders,
@@ -48,6 +49,9 @@ const updateStatusSchema = z.object({
     'delivered',
   ]),
   notes: z.string().optional(),
+  // City Drinks verification details (required when confirming verification)
+  cityDrinksAccountName: z.string().optional(),
+  cityDrinksPhone: z.string().optional(),
 });
 
 /**
@@ -63,12 +67,19 @@ const updateStatusSchema = z.object({
 const distributorUpdateStatus = distributorProcedure
   .input(updateStatusSchema)
   .mutation(async ({ input, ctx: { partnerId, user } }) => {
-    const { orderId, status, notes } = input;
+    const { orderId, status, notes, cityDrinksAccountName, cityDrinksPhone } = input;
 
-    // Get current order
-    const [order] = await db
-      .select()
+    // Get current order with client contact info
+    const [orderResult] = await db
+      .select({
+        order: privateClientOrders,
+        client: {
+          id: privateClientContacts.id,
+          cityDrinksVerifiedAt: privateClientContacts.cityDrinksVerifiedAt,
+        },
+      })
       .from(privateClientOrders)
+      .leftJoin(privateClientContacts, eq(privateClientOrders.clientId, privateClientContacts.id))
       .where(
         and(
           eq(privateClientOrders.id, orderId),
@@ -90,15 +101,24 @@ const distributorUpdateStatus = distributorProcedure
         ),
       );
 
-    if (!order) {
+    if (!orderResult) {
       throw new TRPCError({
         code: 'NOT_FOUND',
         message: 'Order not found or not accessible',
       });
     }
 
+    const order = orderResult.order;
+    const clientAlreadyVerified = !!orderResult.client?.cityDrinksVerifiedAt;
+
     // Validate transition
-    const allowedTransitions = distributorTransitions[order.status] ?? [];
+    let allowedTransitions = distributorTransitions[order.status] ?? [];
+
+    // Allow skipping verification step if client is already verified
+    if (order.status === 'cc_approved' && clientAlreadyVerified) {
+      allowedTransitions = [...allowedTransitions, 'awaiting_client_payment'];
+    }
+
     if (!allowedTransitions.includes(status)) {
       throw new TRPCError({
         code: 'BAD_REQUEST',
@@ -115,9 +135,22 @@ const distributorUpdateStatus = distributorProcedure
     // Add specific timestamp based on status
     const now = new Date();
     if (status === 'awaiting_client_payment') {
-      // Client has been verified - record the verification timestamp
+      // Client has been verified - record the verification timestamp on order
       updateData.clientVerifiedAt = now;
       updateData.clientVerifiedBy = user.id;
+
+      // Also update the client contact record if linked
+      if (order.clientId) {
+        await db
+          .update(privateClientContacts)
+          .set({
+            cityDrinksVerifiedAt: now,
+            cityDrinksVerifiedBy: user.id,
+            cityDrinksAccountName: cityDrinksAccountName ?? null,
+            cityDrinksPhone: cityDrinksPhone ?? null,
+          })
+          .where(eq(privateClientContacts.id, order.clientId));
+      }
     } else if (status === 'client_paid') {
       updateData.clientPaidAt = now;
     } else if (status === 'distributor_paid') {

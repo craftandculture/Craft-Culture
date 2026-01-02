@@ -1,7 +1,7 @@
 import { and, desc, eq, ilike, inArray, or, sql } from 'drizzle-orm';
 
 import db from '@/database/client';
-import { partners, privateClientOrders } from '@/database/schema';
+import { partners, privateClientContacts, privateClientOrders } from '@/database/schema';
 import { distributorProcedure } from '@/lib/trpc/procedures';
 
 import getOrdersSchema from '../schemas/getOrdersSchema';
@@ -24,6 +24,7 @@ const distributorGetMany = distributorProcedure
       // Distributors only see orders that are past CC approval
       inArray(privateClientOrders.status, [
         'cc_approved',
+        'awaiting_client_verification',
         'awaiting_client_payment',
         'client_paid',
         'awaiting_distributor_payment',
@@ -59,7 +60,7 @@ const distributorGetMany = distributorProcedure
 
     const totalCount = Number(countResult?.count ?? 0);
 
-    // Get orders with partner info
+    // Get orders with partner and client info
     const ordersList = await db
       .select({
         order: privateClientOrders,
@@ -68,9 +69,14 @@ const distributorGetMany = distributorProcedure
           businessName: partners.businessName,
           logoUrl: partners.logoUrl,
         },
+        client: {
+          id: privateClientContacts.id,
+          cityDrinksVerifiedAt: privateClientContacts.cityDrinksVerifiedAt,
+        },
       })
       .from(privateClientOrders)
       .leftJoin(partners, eq(privateClientOrders.partnerId, partners.id))
+      .leftJoin(privateClientContacts, eq(privateClientOrders.clientId, privateClientContacts.id))
       .where(and(...conditions))
       .orderBy(desc(privateClientOrders.createdAt))
       .limit(limit)
@@ -80,6 +86,7 @@ const distributorGetMany = distributorProcedure
     const ordersWithPartner = ordersList.map((row) => ({
       ...row.order,
       partner: row.partner,
+      client: row.client,
     }));
 
     const nextCursor = cursor + limit < totalCount ? cursor + limit : null;
