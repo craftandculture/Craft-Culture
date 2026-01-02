@@ -282,7 +282,7 @@ const DistributorOrderDetailPage = () => {
                   <Button
                     onClick={() => distributorVerification({ response: 'verified' })}
                     disabled={isVerifying}
-                    variant="primary"
+                    variant="default"
                   >
                     <ButtonContent iconLeft={IconCheck}>Client Verified</ButtonContent>
                   </Button>
