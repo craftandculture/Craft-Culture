@@ -172,8 +172,8 @@ const PartnerDashboard = () => {
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Header with Currency Toggle */}
-      <div className="flex items-center justify-between">
+      {/* Header with New Order Button and Currency Toggle */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <Typography variant="headingLg" className="font-bold">
             Dashboard
@@ -182,29 +182,37 @@ const PartnerDashboard = () => {
             Overview of your private client orders
           </Typography>
         </div>
-        <div className="inline-flex items-center rounded-lg border border-border-muted bg-surface-secondary/50 p-0.5">
-          <button
-            type="button"
-            onClick={() => setCurrency('USD')}
-            className={`rounded-md px-3 py-1 text-xs font-medium transition-all ${
-              currency === 'USD'
-                ? 'bg-background-primary text-text-primary shadow-sm'
-                : 'text-text-muted hover:text-text-primary'
-            }`}
-          >
-            USD
-          </button>
-          <button
-            type="button"
-            onClick={() => setCurrency('AED')}
-            className={`rounded-md px-3 py-1 text-xs font-medium transition-all ${
-              currency === 'AED'
-                ? 'bg-background-primary text-text-primary shadow-sm'
-                : 'text-text-muted hover:text-text-primary'
-            }`}
-          >
-            AED
-          </button>
+        <div className="flex items-center gap-3">
+          <Link href="/platform/private-orders/new">
+            <Button className="gap-2">
+              <Icon icon={IconPlus} size="sm" />
+              New Order
+            </Button>
+          </Link>
+          <div className="inline-flex items-center rounded-lg border border-border-muted bg-surface-secondary/50 p-0.5">
+            <button
+              type="button"
+              onClick={() => setCurrency('USD')}
+              className={`rounded-md px-3 py-1 text-xs font-medium transition-all ${
+                currency === 'USD'
+                  ? 'bg-background-primary text-text-primary shadow-sm'
+                  : 'text-text-muted hover:text-text-primary'
+              }`}
+            >
+              USD
+            </button>
+            <button
+              type="button"
+              onClick={() => setCurrency('AED')}
+              className={`rounded-md px-3 py-1 text-xs font-medium transition-all ${
+                currency === 'AED'
+                  ? 'bg-background-primary text-text-primary shadow-sm'
+                  : 'text-text-muted hover:text-text-primary'
+              }`}
+            >
+              AED
+            </button>
+          </div>
         </div>
       </div>
 
@@ -564,34 +572,30 @@ const PartnerDashboard = () => {
         </Card>
       </div>
 
-      {/* Quick Actions */}
-      <Card>
-        <CardContent className="p-4 sm:p-6">
-          <Typography variant="headingSm" className="mb-4 font-semibold">
-            Quick Actions
-          </Typography>
-          <div className="flex flex-wrap gap-3">
-            <Link href="/platform/private-orders/new">
-              <Button className="gap-2">
-                <Icon icon={IconPlus} size="sm" />
-                New Order
-              </Button>
-            </Link>
-            <Link href="/platform/private-orders/orders?status=draft">
-              <Button variant="outline" className="gap-2">
-                <Icon icon={IconFileCheck} size="sm" />
-                Drafts ({statusBreakdown.drafts})
-              </Button>
-            </Link>
-            <Link href="/platform/private-orders/orders">
-              <Button variant="outline" className="gap-2">
-                <Icon icon={IconPackage} size="sm" />
-                All Orders ({kpis.totalOrders})
-              </Button>
-            </Link>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Quick Links - Compact inline actions */}
+      <div className="flex flex-wrap items-center justify-center gap-2 text-sm">
+        <Link
+          href="/platform/private-orders/orders?status=draft"
+          className="flex items-center gap-1.5 rounded-full border border-border-muted bg-surface-secondary/50 px-3 py-1.5 text-text-muted transition-colors hover:bg-surface-secondary hover:text-text-primary"
+        >
+          <Icon icon={IconFileCheck} size="xs" />
+          <span>{statusBreakdown.drafts} Drafts</span>
+        </Link>
+        <Link
+          href="/platform/private-orders/orders"
+          className="flex items-center gap-1.5 rounded-full border border-border-muted bg-surface-secondary/50 px-3 py-1.5 text-text-muted transition-colors hover:bg-surface-secondary hover:text-text-primary"
+        >
+          <Icon icon={IconPackage} size="xs" />
+          <span>All Orders</span>
+        </Link>
+        <Link
+          href="/platform/clients"
+          className="flex items-center gap-1.5 rounded-full border border-border-muted bg-surface-secondary/50 px-3 py-1.5 text-text-muted transition-colors hover:bg-surface-secondary hover:text-text-primary"
+        >
+          <Icon icon={IconUsers} size="xs" />
+          <span>Manage Clients</span>
+        </Link>
+      </div>
     </div>
   );
 };
