@@ -360,6 +360,12 @@ export const partners = pgTable(
     // Partner branding
     logoUrl: text('logo_url'),
     brandColor: text('brand_color'),
+    // Distributor-specific: requires client verification before order proceeds
+    requiresClientVerification: boolean('requires_client_verification')
+      .notNull()
+      .default(false),
+    // Distributor code for payment references (e.g., 'CD', 'TBS')
+    distributorCode: text('distributor_code'),
     // Private client pricing configuration
     marginPercentage: doublePrecision('margin_percentage').default(40.6),
     logisticsCostPerCase: doublePrecision('logistics_cost_per_case'),
@@ -836,13 +842,18 @@ export const privateClientOrderStatus = pgEnum('private_client_order_status', [
   'under_cc_review',
   'revision_requested',
   'cc_approved',
-  'awaiting_client_verification', // Client needs to register/verify on City Drinks app
-  'awaiting_client_payment',
-  'client_paid',
+  // Verification flow (only for distributors that require it, e.g., City Drinks)
+  'awaiting_partner_verification', // Partner confirms client is verified with distributor
+  'awaiting_distributor_verification', // Distributor verifies client in their system
+  'verification_suspended', // Verification failed - partner needs to resolve
+  // Payment flow
+  'awaiting_client_payment', // Distributor collecting payment from client
+  'client_paid', // Client paid, distributor raises PO to C&C
   'awaiting_distributor_payment',
   'distributor_paid',
   'awaiting_partner_payment',
   'partner_paid',
+  // Fulfillment flow
   'stock_in_transit',
   'with_distributor',
   'out_for_delivery',
@@ -959,7 +970,33 @@ export const privateClientOrders = pgTable(
       { onDelete: 'set null' },
     ),
 
-    // Client verification (City Drinks app registration)
+    // Partner verification step (partner confirms client is verified with distributor)
+    partnerVerificationResponse: text('partner_verification_response'), // 'yes', 'no', 'dont_know'
+    partnerVerificationAt: timestamp('partner_verification_at', { mode: 'date' }),
+    partnerVerificationBy: uuid('partner_verification_by').references(
+      () => users.id,
+      { onDelete: 'set null' },
+    ),
+
+    // Distributor verification step (distributor confirms client in their system)
+    distributorVerificationResponse: text('distributor_verification_response'), // 'verified', 'not_verified'
+    distributorVerificationAt: timestamp('distributor_verification_at', {
+      mode: 'date',
+    }),
+    distributorVerificationBy: uuid('distributor_verification_by').references(
+      () => users.id,
+      { onDelete: 'set null' },
+    ),
+    distributorVerificationNotes: text('distributor_verification_notes'),
+
+    // Payment reference for distributor finance (e.g., CD-PCO-2026-00001)
+    paymentReference: text('payment_reference'),
+
+    // Partner can add notes/proof about client payment
+    partnerPaymentNotes: text('partner_payment_notes'),
+    partnerPaymentProofUrl: text('partner_payment_proof_url'),
+
+    // Legacy client verification fields (kept for backwards compatibility)
     clientVerifiedAt: timestamp('client_verified_at', { mode: 'date' }),
     clientVerifiedBy: uuid('client_verified_by').references(() => users.id, {
       onDelete: 'set null',
