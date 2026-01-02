@@ -4,23 +4,25 @@ import {
   IconArrowLeft,
   IconBuilding,
   IconCheck,
+  IconCloudUpload,
+  IconFile,
   IconFileInvoice,
+  IconFileText,
   IconLoader2,
   IconPackage,
+  IconPhoto,
   IconShieldCheck,
   IconTruck,
-  IconUpload,
   IconX,
 } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
 import ActivityTimeline from '@/app/_privateClientOrders/components/ActivityTimeline';
-import DocumentUpload from '@/app/_privateClientOrders/components/DocumentUpload';
 import PaymentTracker from '@/app/_privateClientOrders/components/PaymentTracker';
 import PrivateOrderStatusBadge from '@/app/_privateClientOrders/components/PrivateOrderStatusBadge';
 import WorkflowStepper from '@/app/_privateClientOrders/components/WorkflowStepper';
@@ -140,6 +142,77 @@ const DistributorOrderDetailPage = () => {
       toast.error(error.message || 'Failed to unlock order');
     },
   });
+
+  // Invoice upload
+  const invoiceInputRef = useRef<HTMLInputElement>(null);
+  const [isUploadingInvoice, setIsUploadingInvoice] = useState(false);
+
+  const { mutateAsync: uploadInvoice } = useMutation({
+    mutationFn: async (data: { file: string; filename: string; fileType: string }) => {
+      return trpcClient.privateClientOrders.uploadDocument.mutate({
+        orderId,
+        documentType: 'distributor_invoice',
+        file: data.file,
+        filename: data.filename,
+        fileType: data.fileType as 'application/pdf' | 'image/png' | 'image/jpeg' | 'image/jpg',
+      });
+    },
+    onSuccess: () => {
+      toast.success('Invoice uploaded successfully');
+      void queryClient.invalidateQueries({ queryKey: ['privateClientOrderDocuments', orderId] });
+      void refetch();
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to upload invoice');
+    },
+  });
+
+  const handleInvoiceFileSelect = useCallback(
+    async (event: React.ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0];
+      if (!file) return;
+
+      // Validate file type
+      const allowedTypes = ['application/pdf', 'image/png', 'image/jpeg', 'image/jpg'];
+      if (!allowedTypes.includes(file.type)) {
+        toast.error('Please select a PDF or image file (PNG, JPG)');
+        return;
+      }
+
+      // Validate file size (max 10MB)
+      if (file.size > 10 * 1024 * 1024) {
+        toast.error('File size must be less than 10MB');
+        return;
+      }
+
+      setIsUploadingInvoice(true);
+      try {
+        // Convert to base64
+        const reader = new FileReader();
+        const base64Promise = new Promise<string>((resolve, reject) => {
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = () => reject(new Error('Failed to read file'));
+        });
+        reader.readAsDataURL(file);
+        const base64 = await base64Promise;
+
+        await uploadInvoice({
+          file: base64,
+          filename: file.name,
+          fileType: file.type,
+        });
+      } catch (err) {
+        console.error('Error uploading invoice:', err);
+      } finally {
+        setIsUploadingInvoice(false);
+        // Reset input so same file can be selected again
+        if (invoiceInputRef.current) {
+          invoiceInputRef.current.value = '';
+        }
+      }
+    },
+    [uploadInvoice],
+  );
 
   const formatDate = (date: Date | null | undefined) => {
     if (!date) return '-';
@@ -369,6 +442,14 @@ const DistributorOrderDetailPage = () => {
         {order.status === 'awaiting_client_payment' && (
           <Card className={`border-2 ${hasDistributorInvoice && partnerAcknowledgedInvoice ? 'border-fill-success/50 bg-fill-success/5' : 'border-fill-warning/50 bg-fill-warning/5'}`}>
             <CardContent className="p-6">
+              {/* Hidden file input for invoice upload */}
+              <input
+                ref={invoiceInputRef}
+                type="file"
+                accept=".pdf,.png,.jpg,.jpeg"
+                className="hidden"
+                onChange={handleInvoiceFileSelect}
+              />
               <div className="flex flex-col items-center gap-4 text-center sm:flex-row sm:text-left">
                 <div className={`flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full ${hasDistributorInvoice && partnerAcknowledgedInvoice ? 'bg-fill-success/20' : 'bg-fill-warning/20'}`}>
                   <Icon
@@ -385,7 +466,7 @@ const DistributorOrderDetailPage = () => {
                   </Typography>
                   <Typography variant="bodySm" colorRole="muted">
                     {!hasDistributorInvoice ? (
-                      <>Upload an invoice in the Documents section below before confirming client payment.</>
+                      <>Upload your invoice to send to the partner for client payment.</>
                     ) : !partnerAcknowledgedInvoice ? (
                       <>Invoice uploaded. Waiting for partner to acknowledge receipt before you can confirm payment.</>
                     ) : (
@@ -393,16 +474,30 @@ const DistributorOrderDetailPage = () => {
                     )}
                   </Typography>
                   <div className="mt-2 flex flex-wrap gap-2">
-                    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs ${hasDistributorInvoice ? 'bg-fill-success/20 text-fill-success' : 'bg-fill-warning/20 text-fill-warning'}`}>
-                      {hasDistributorInvoice ? <IconCheck className="h-3 w-3" /> : <IconUpload className="h-3 w-3" />}
-                      {hasDistributorInvoice ? 'Invoice Uploaded' : 'Upload Invoice'}
-                    </span>
+                    {hasDistributorInvoice && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-fill-success/20 px-2 py-0.5 text-xs text-fill-success">
+                        <IconCheck className="h-3 w-3" />
+                        Invoice Uploaded
+                      </span>
+                    )}
                     <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs ${partnerAcknowledgedInvoice ? 'bg-fill-success/20 text-fill-success' : 'bg-surface-muted text-text-muted'}`}>
                       {partnerAcknowledgedInvoice ? <IconCheck className="h-3 w-3" /> : <IconFileInvoice className="h-3 w-3" />}
                       {partnerAcknowledgedInvoice ? 'Partner Acknowledged' : 'Awaiting Partner'}
                     </span>
                   </div>
                 </div>
+                {/* Upload button */}
+                {!hasDistributorInvoice && (
+                  <Button
+                    onClick={() => invoiceInputRef.current?.click()}
+                    disabled={isUploadingInvoice}
+                    variant="default"
+                  >
+                    <ButtonContent iconLeft={isUploadingInvoice ? IconLoader2 : IconCloudUpload} isLoading={isUploadingInvoice}>
+                      {isUploadingInvoice ? 'Uploading...' : 'Upload Invoice'}
+                    </ButtonContent>
+                  </Button>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -650,7 +745,55 @@ const DistributorOrderDetailPage = () => {
               <Typography variant="headingSm" className="mb-3">
                 Documents
               </Typography>
-              <DocumentUpload orderId={orderId} />
+              {documents && documents.length > 0 ? (
+                <div className="flex flex-col gap-2">
+                  {documents.map((doc) => {
+                    const docTypeLabels: Record<string, string> = {
+                      partner_invoice: 'Partner Invoice',
+                      cc_invoice: 'C&C Invoice',
+                      distributor_invoice: 'Distributor Invoice',
+                      payment_proof: 'Payment Proof',
+                    };
+                    const FileIcon = doc.mimeType?.startsWith('image/') ? IconPhoto : IconFileText;
+                    const formatFileSize = (bytes: number | null) => {
+                      if (!bytes) return '';
+                      if (bytes < 1024) return `${bytes} B`;
+                      if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+                      return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+                    };
+                    return (
+                      <div
+                        key={doc.id}
+                        className="flex items-center gap-3 rounded-lg border border-border-muted bg-fill-muted/30 px-3 py-2"
+                      >
+                        <Icon icon={FileIcon} size="md" colorRole="muted" />
+                        <div className="flex flex-1 flex-col gap-0.5 overflow-hidden">
+                          <div className="flex items-center gap-2">
+                            <Typography variant="bodySm" className="truncate font-medium">
+                              {doc.fileName}
+                            </Typography>
+                            <span className="inline-flex items-center rounded-full bg-surface-muted px-2 py-0.5 text-[10px] text-text-muted">
+                              {docTypeLabels[doc.documentType] || doc.documentType}
+                            </span>
+                          </div>
+                          <Typography variant="bodyXs" colorRole="muted">
+                            {formatFileSize(doc.fileSize)}
+                          </Typography>
+                        </div>
+                        <Button variant="ghost" size="sm" asChild>
+                          <a href={doc.fileUrl} target="_blank" rel="noopener noreferrer">
+                            <Icon icon={IconFile} size="sm" />
+                          </a>
+                        </Button>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <Typography variant="bodySm" colorRole="muted">
+                  No documents uploaded yet
+                </Typography>
+              )}
             </CardContent>
           </Card>
         </div>
