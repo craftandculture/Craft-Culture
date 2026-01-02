@@ -1,8 +1,9 @@
 'use client';
 
 import { IconCheck, IconSearch, IconTrash, IconX } from '@tabler/icons-react';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
+import { toast } from 'sonner';
 
 import AlertDialog from '@/app/_ui/components/AlertDialog/AlertDialog';
 import AlertDialogAction from '@/app/_ui/components/AlertDialog/AlertDialogAction';
@@ -17,6 +18,11 @@ import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
 import Card from '@/app/_ui/components/Card/Card';
 import CardContent from '@/app/_ui/components/Card/CardContent';
+import Select from '@/app/_ui/components/Select/Select';
+import SelectContent from '@/app/_ui/components/Select/SelectContent';
+import SelectItem from '@/app/_ui/components/Select/SelectItem';
+import SelectTrigger from '@/app/_ui/components/Select/SelectTrigger';
+import SelectValue from '@/app/_ui/components/Select/SelectValue';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import useTRPC from '@/lib/trpc/browser';
 
@@ -32,6 +38,103 @@ type StatusFilter = 'all' | 'pending' | 'approved' | 'rejected';
  * - Delete user accounts with confirmation
  * - Real-time status updates
  */
+/**
+ * Component to manage distributor assignment for a user
+ */
+const DistributorAssignment = ({
+  userId,
+  distributors,
+}: {
+  userId: string;
+  distributors: { id: string; businessName: string; status: string }[];
+}) => {
+  const api = useTRPC();
+  const queryClient = useQueryClient();
+
+  // Fetch current membership
+  const { data: membership, isLoading } = useQuery({
+    ...api.users.getPartnerMembership.queryOptions({ userId }),
+  });
+
+  // Assign mutation
+  const { mutate: assignPartner, isPending: isAssigning } = useMutation(
+    api.users.assignPartner.mutationOptions({
+      onSuccess: (data) => {
+        toast.success(`Assigned to ${data.partner.businessName}`);
+        void queryClient.invalidateQueries({
+          queryKey: api.users.getPartnerMembership.queryKey({ userId }),
+        });
+      },
+      onError: (error) => {
+        toast.error(error.message || 'Failed to assign distributor');
+      },
+    }),
+  );
+
+  // Remove mutation
+  const { mutate: removePartner, isPending: isRemoving } = useMutation(
+    api.users.removePartner.mutationOptions({
+      onSuccess: () => {
+        toast.success('Removed from distributor');
+        void queryClient.invalidateQueries({
+          queryKey: api.users.getPartnerMembership.queryKey({ userId }),
+        });
+      },
+      onError: (error) => {
+        toast.error(error.message || 'Failed to remove from distributor');
+      },
+    }),
+  );
+
+  if (isLoading) {
+    return <span className="text-text-muted text-xs">Loading...</span>;
+  }
+
+  const currentPartnerId =
+    membership?.type === 'member'
+      ? membership.membership.partnerId
+      : membership?.type === 'owner'
+        ? membership.partner.id
+        : undefined;
+
+  const currentPartnerName =
+    membership?.type === 'member'
+      ? membership.membership.partner.businessName
+      : membership?.type === 'owner'
+        ? membership.partner.businessName
+        : undefined;
+
+  return (
+    <Select
+      value={currentPartnerId ?? 'none'}
+      onValueChange={(value) => {
+        if (value === 'none') {
+          removePartner({ userId });
+        } else {
+          assignPartner({ userId, partnerId: value });
+        }
+      }}
+      disabled={isAssigning || isRemoving}
+    >
+      <SelectTrigger className="h-8 w-[180px] text-xs">
+        <SelectValue placeholder="Not assigned">
+          {currentPartnerName ?? 'Not assigned'}
+        </SelectValue>
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="none">
+          <span className="text-text-muted">Not assigned</span>
+        </SelectItem>
+        {distributors.map((d) => (
+          <SelectItem key={d.id} value={d.id}>
+            {d.businessName}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+};
+
 const UserManagementPage = () => {
   const api = useTRPC();
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
@@ -44,6 +147,11 @@ const UserManagementPage = () => {
       search: searchQuery || undefined,
       limit: 50,
     }),
+  });
+
+  // Fetch distributors for assignment dropdown
+  const { data: distributors } = useQuery({
+    ...api.users.getDistributors.queryOptions(),
   });
 
   // Approve user mutation
@@ -189,6 +297,9 @@ const UserManagementPage = () => {
                         Customer Type
                       </th>
                       <th className="text-text-secondary px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">
+                        Distributor
+                      </th>
+                      <th className="text-text-secondary px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">
                         Status
                       </th>
                       <th className="text-text-secondary px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">
@@ -219,6 +330,12 @@ const UserManagementPage = () => {
                           <Typography variant="bodySm">
                             {getCustomerTypeLabel(user.customerType)}
                           </Typography>
+                        </td>
+                        <td className="px-6 py-4">
+                          <DistributorAssignment
+                            userId={user.id}
+                            distributors={distributors ?? []}
+                          />
                         </td>
                         <td className="px-6 py-4">{getStatusBadge(user.approvalStatus)}</td>
                         <td className="px-6 py-4">

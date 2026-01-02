@@ -389,6 +389,41 @@ export const partners = pgTable(
 
 export type Partner = typeof partners.$inferSelect;
 
+/**
+ * Partner member roles for access control
+ */
+export const partnerMemberRole = pgEnum('partner_member_role', [
+  'owner',
+  'member',
+  'viewer',
+]);
+
+/**
+ * Partner members - links users to partners (distributors, retailers, etc.)
+ * Enables multiple staff members to access a partner's data
+ */
+export const partnerMembers = pgTable(
+  'partner_members',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    partnerId: uuid('partner_id')
+      .references(() => partners.id, { onDelete: 'cascade' })
+      .notNull(),
+    userId: uuid('user_id')
+      .references(() => users.id, { onDelete: 'cascade' })
+      .notNull(),
+    role: partnerMemberRole('role').notNull().default('member'),
+    addedBy: uuid('added_by').references(() => users.id, { onDelete: 'set null' }),
+    ...timestamps,
+  },
+  (table) => [
+    index('partner_members_partner_id_idx').on(table.partnerId),
+    index('partner_members_user_id_idx').on(table.userId),
+  ],
+).enableRLS();
+
+export type PartnerMember = typeof partnerMembers.$inferSelect;
+
 export const quotes = pgTable(
   'quotes',
   {
