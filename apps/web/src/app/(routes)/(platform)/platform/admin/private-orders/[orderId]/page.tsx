@@ -15,7 +15,7 @@ import {
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
@@ -112,6 +112,7 @@ const resetTargetOptions: { value: ResetTargetStatus; label: string; description
 
 const AdminPrivateOrderDetailPage = () => {
   const params = useParams();
+  const router = useRouter();
   const orderId = params.orderId as string;
   const api = useTRPC();
   const trpcClient = useTRPCClient();
@@ -219,7 +220,7 @@ const AdminPrivateOrderDetailPage = () => {
       toast.success(`Order ${data.orderNumber} deleted`);
       void queryClient.invalidateQueries({ queryKey: ['privateClientOrders'] });
       // Redirect to orders list
-      window.location.href = '/platform/admin/private-orders';
+      router.push('/platform/admin/private-orders');
     },
     onError: (error) => {
       toast.error(error.message || 'Failed to delete order');
