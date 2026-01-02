@@ -105,8 +105,8 @@ const PlatformLayout = async ({ children }: React.PropsWithChildren) => {
                   </div>
                 </>
               )}
-              {/* Distributor section - for B2B users and distributor partners */}
-              {(user.customerType === 'b2b' || user.partner?.type === 'distributor') && (
+              {/* Distributor section - for B2B users and distributor partners (not admins - they have their own section) */}
+              {(user.customerType === 'b2b' || user.partner?.type === 'distributor') && user.role !== 'admin' && (
                 <div className="flex items-center rounded-lg border border-border-muted/50 bg-surface-secondary/40 px-1.5 py-1">
                   <span className="border-r border-border-muted/50 pr-2 text-[10px] font-medium uppercase tracking-wider text-text-muted">
                     Private Clients
