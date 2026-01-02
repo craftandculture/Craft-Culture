@@ -16,8 +16,10 @@ type PrivateClientOrderStatus = (typeof privateClientOrderStatus.enumValues)[num
  * Valid status transitions for distributors
  */
 const distributorTransitions: Record<string, PrivateClientOrderStatus[]> = {
-  // After admin approval, distributor can confirm client payment
-  cc_approved: ['client_paid'],
+  // After admin approval, client needs to verify on City Drinks app
+  cc_approved: ['awaiting_client_verification'],
+  // After client verifies, await payment
+  awaiting_client_verification: ['awaiting_client_payment'],
   // When awaiting client payment, distributor can confirm payment received
   awaiting_client_payment: ['client_paid'],
   // When client has paid, distributor can pay C&C
@@ -35,6 +37,8 @@ const distributorTransitions: Record<string, PrivateClientOrderStatus[]> = {
 const updateStatusSchema = z.object({
   orderId: z.string().uuid(),
   status: z.enum([
+    'awaiting_client_verification',
+    'awaiting_client_payment',
     'client_paid',
     'awaiting_distributor_payment',
     'distributor_paid',
@@ -72,6 +76,7 @@ const distributorUpdateStatus = distributorProcedure
           // Only orders assigned to this distributor
           inArray(privateClientOrders.status, [
             'cc_approved',
+            'awaiting_client_verification',
             'awaiting_client_payment',
             'client_paid',
             'awaiting_distributor_payment',
@@ -109,7 +114,11 @@ const distributorUpdateStatus = distributorProcedure
 
     // Add specific timestamp based on status
     const now = new Date();
-    if (status === 'client_paid') {
+    if (status === 'awaiting_client_payment') {
+      // Client has been verified - record the verification timestamp
+      updateData.clientVerifiedAt = now;
+      updateData.clientVerifiedBy = user.id;
+    } else if (status === 'client_paid') {
       updateData.clientPaidAt = now;
     } else if (status === 'distributor_paid') {
       updateData.distributorPaidAt = now;

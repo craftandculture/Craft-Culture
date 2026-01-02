@@ -17,6 +17,7 @@ const statusConfig: Record<OrderStatus, StatusConfig> = {
   under_cc_review: { label: 'Under Review', colorRole: 'brand' },
   revision_requested: { label: 'Revision Requested', colorRole: 'warning' },
   cc_approved: { label: 'Approved', colorRole: 'success' },
+  awaiting_client_verification: { label: 'Awaiting Verification', colorRole: 'warning' },
   awaiting_client_payment: { label: 'Awaiting Payment', colorRole: 'warning' },
   client_paid: { label: 'Client Paid', colorRole: 'success' },
   awaiting_distributor_payment: { label: 'Awaiting Distributor', colorRole: 'warning' },

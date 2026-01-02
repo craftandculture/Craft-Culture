@@ -70,6 +70,7 @@ const statusOptions: { value: OrderStatus; label: string }[] = [
   { value: 'under_cc_review', label: 'Under Review' },
   { value: 'revision_requested', label: 'Revision Requested' },
   { value: 'cc_approved', label: 'Approved' },
+  { value: 'awaiting_client_verification', label: 'Awaiting Client Verification' },
   { value: 'awaiting_client_payment', label: 'Awaiting Client Payment' },
   { value: 'client_paid', label: 'Client Paid' },
   { value: 'awaiting_distributor_payment', label: 'Awaiting Distributor Payment' },

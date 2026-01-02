@@ -19,6 +19,7 @@ const distributorDashboard = distributorProcedure.query(
     // Status categories for distributors
     const visibleStatuses = [
       'cc_approved',
+      'awaiting_client_verification',
       'awaiting_client_payment',
       'client_paid',
       'awaiting_distributor_payment',
@@ -124,6 +125,7 @@ const distributorDashboard = distributorProcedure.query(
     // Build status breakdown with proper categorization
     const pendingPaymentStatuses = [
       'cc_approved',
+      'awaiting_client_verification',
       'awaiting_client_payment',
       'client_paid',
       'awaiting_distributor_payment',

@@ -64,6 +64,13 @@
       "when": 1767183203462,
       "tag": "0008_omniscient_karma",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1767332407981,
+      "tag": "0009_omniscient_the_leader",
+      "breakpoints": true
     }
   ]
 }
