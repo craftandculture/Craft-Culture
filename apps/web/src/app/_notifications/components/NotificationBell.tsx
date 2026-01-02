@@ -32,7 +32,7 @@ if (typeof window !== 'undefined') {
 
 /**
  * Play notification sound using Web Audio API
- * Creates a gentle two-tone chime sound without needing an audio file
+ * Creates a prominent three-tone chime sound without needing an audio file
  */
 const playNotificationSound = async () => {
   try {
@@ -52,36 +52,52 @@ const playNotificationSound = async () => {
 
     const now = audioContext.currentTime;
 
-    // First tone - higher pitch
+    // First tone - high pitch (attention grabber)
     const osc1 = audioContext.createOscillator();
     const gain1 = audioContext.createGain();
     osc1.connect(gain1);
     gain1.connect(audioContext.destination);
-    osc1.frequency.setValueAtTime(880, now); // A5
+    osc1.frequency.setValueAtTime(1047, now); // C6
     osc1.type = 'sine';
     gain1.gain.setValueAtTime(0, now);
-    gain1.gain.linearRampToValueAtTime(0.4, now + 0.02);
-    gain1.gain.linearRampToValueAtTime(0, now + 0.15);
+    gain1.gain.linearRampToValueAtTime(0.7, now + 0.01);
+    gain1.gain.linearRampToValueAtTime(0.3, now + 0.1);
+    gain1.gain.linearRampToValueAtTime(0, now + 0.2);
     osc1.start(now);
-    osc1.stop(now + 0.15);
+    osc1.stop(now + 0.2);
 
-    // Second tone - lower pitch (delayed)
+    // Second tone - mid pitch
     const osc2 = audioContext.createOscillator();
     const gain2 = audioContext.createGain();
     osc2.connect(gain2);
     gain2.connect(audioContext.destination);
-    osc2.frequency.setValueAtTime(660, now + 0.1); // E5
+    osc2.frequency.setValueAtTime(880, now + 0.12); // A5
     osc2.type = 'sine';
-    gain2.gain.setValueAtTime(0, now + 0.1);
-    gain2.gain.linearRampToValueAtTime(0.4, now + 0.12);
+    gain2.gain.setValueAtTime(0, now + 0.12);
+    gain2.gain.linearRampToValueAtTime(0.7, now + 0.13);
+    gain2.gain.linearRampToValueAtTime(0.3, now + 0.22);
     gain2.gain.linearRampToValueAtTime(0, now + 0.35);
-    osc2.start(now + 0.1);
+    osc2.start(now + 0.12);
     osc2.stop(now + 0.35);
+
+    // Third tone - higher pitch (pleasant resolution)
+    const osc3 = audioContext.createOscillator();
+    const gain3 = audioContext.createGain();
+    osc3.connect(gain3);
+    gain3.connect(audioContext.destination);
+    osc3.frequency.setValueAtTime(1319, now + 0.25); // E6
+    osc3.type = 'sine';
+    gain3.gain.setValueAtTime(0, now + 0.25);
+    gain3.gain.linearRampToValueAtTime(0.6, now + 0.26);
+    gain3.gain.linearRampToValueAtTime(0.2, now + 0.4);
+    gain3.gain.linearRampToValueAtTime(0, now + 0.55);
+    osc3.start(now + 0.25);
+    osc3.stop(now + 0.55);
 
     // Clean up after sound completes
     setTimeout(() => {
       void audioContext.close();
-    }, 500);
+    }, 700);
   } catch (error) {
     console.warn('Notification sound failed:', error);
   }
@@ -125,7 +141,7 @@ const NotificationBell = () => {
   const { data: unreadData } = useQuery({
     queryKey: ['notifications-unread-count'],
     queryFn: () => trpcClient.notifications.getUnreadCount.query(),
-    refetchInterval: 30000, // Poll every 30 seconds
+    refetchInterval: 10000, // Poll every 10 seconds
   });
 
   // Play sound when unread count changes

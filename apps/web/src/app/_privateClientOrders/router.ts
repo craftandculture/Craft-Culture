@@ -2,6 +2,7 @@ import { createTRPCRouter } from '@/lib/trpc/trpc';
 
 import adminAddItem from './controller/adminAddItem';
 import adminCreate from './controller/adminCreate';
+import adminDelete from './controller/adminDelete';
 import adminGetMany from './controller/adminGetMany';
 import adminGetOne from './controller/adminGetOne';
 import adminRemoveItem from './controller/adminRemoveItem';
@@ -75,6 +76,7 @@ const privateClientOrdersRouter = createTRPCRouter({
   adminGetMany,
   adminGetOne,
   adminUpdateStatus,
+  adminDelete,
   adminApprove: ordersApprove,
   adminRequestRevision: ordersRequestRevision,
   adminAssignDistributor: ordersAssignDistributor,

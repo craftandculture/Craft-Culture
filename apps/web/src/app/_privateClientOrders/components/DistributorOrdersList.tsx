@@ -186,21 +186,11 @@ const DistributorOrdersList = () => {
           icon: IconPackage,
         });
         break;
+      // with_distributor and out_for_delivery actions are handled in order detail page
+      // to ensure proper delivery scheduling workflow is followed
       case 'with_distributor':
-        // Ready for delivery
-        actions.push({
-          label: 'Start Delivery',
-          status: 'out_for_delivery',
-          icon: IconTruck,
-        });
-        break;
       case 'out_for_delivery':
-        // Mark as delivered
-        actions.push({
-          label: 'Mark Delivered',
-          status: 'delivered',
-          icon: IconCheck,
-        });
+        // No quick actions - must go to order detail page for delivery workflow
         break;
     }
 

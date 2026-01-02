@@ -212,6 +212,20 @@ const AdminPrivateOrderDetailPage = () => {
     },
   });
 
+  // Delete order mutation (admin only, for draft/cancelled orders)
+  const { mutate: deleteOrder, isPending: isDeleting } = useMutation({
+    mutationFn: () => trpcClient.privateClientOrders.adminDelete.mutate({ orderId }),
+    onSuccess: (data) => {
+      toast.success(`Order ${data.orderNumber} deleted`);
+      void queryClient.invalidateQueries({ queryKey: ['privateClientOrders'] });
+      // Redirect to orders list
+      window.location.href = '/platform/admin/private-orders';
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to delete order');
+    },
+  });
+
   const handleStatusChange = (newStatus: OrderStatus) => {
     setIsUpdating(true);
     updateStatus({ orderId, status: newStatus });
@@ -260,6 +274,13 @@ const AdminPrivateOrderDetailPage = () => {
 
   const canAssignDistributor = order && DISTRIBUTOR_ASSIGNABLE_STATUSES.includes(order.status);
   const canEditItems = order && !NON_EDITABLE_STATUSES.includes(order.status);
+  const canDelete = order && ['draft', 'cancelled'].includes(order.status);
+
+  const handleDeleteOrder = () => {
+    if (confirm(`Are you sure you want to permanently delete order ${order?.orderNumber}? This action cannot be undone.`)) {
+      deleteOrder();
+    }
+  };
 
   const formatDate = (date: Date | null | undefined) => {
     if (!date) return '-';
@@ -374,6 +395,20 @@ const AdminPrivateOrderDetailPage = () => {
                 ))}
               </SelectContent>
             </Select>
+
+            {/* Delete button - only for draft/cancelled orders */}
+            {canDelete && (
+              <Button
+                variant="outline"
+                colorRole="danger"
+                size="sm"
+                onClick={handleDeleteOrder}
+                disabled={isDeleting}
+              >
+                <Icon icon={IconTrash} size="sm" />
+                {isDeleting ? 'Deleting...' : 'Delete'}
+              </Button>
+            )}
           </div>
         </div>
 
