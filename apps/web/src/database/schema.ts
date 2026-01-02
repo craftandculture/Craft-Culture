@@ -621,6 +621,9 @@ export const notificationType = pgEnum('notification_type', [
   'payment_received',
   'payment_proof_submitted',
   'order_delivered',
+  'action_required',
+  'po_assigned',
+  'status_update',
 ]);
 
 /**

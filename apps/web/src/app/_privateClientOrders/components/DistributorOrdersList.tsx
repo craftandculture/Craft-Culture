@@ -3,7 +3,6 @@
 import {
   IconBuilding,
   IconCheck,
-  IconDeviceMobile,
   IconDots,
   IconEye,
   IconPackage,
@@ -85,7 +84,6 @@ const DistributorOrdersList = () => {
       trpcClient.privateClientOrders.distributorUpdateStatus.mutate({
         orderId: params.orderId,
         status: params.status as
-          | 'awaiting_client_verification'
           | 'awaiting_client_payment'
           | 'client_paid'
           | 'awaiting_distributor_payment'
@@ -148,33 +146,11 @@ const DistributorOrdersList = () => {
    */
   const getAvailableActions = (order: OrderWithPartner) => {
     const actions: { label: string; status: string; icon: typeof IconCheck }[] = [];
-    const clientAlreadyVerified = !!order.client?.cityDrinksVerifiedAt;
 
     switch (order.status) {
-      case 'cc_approved':
-        // If client is already verified, skip to payment collection
-        if (clientAlreadyVerified) {
-          actions.push({
-            label: 'Proceed to Payment',
-            status: 'awaiting_client_payment',
-            icon: IconShieldCheck,
-          });
-        } else {
-          // After approval, client needs to verify on City Drinks app
-          actions.push({
-            label: 'Request Verification',
-            status: 'awaiting_client_verification',
-            icon: IconDeviceMobile,
-          });
-        }
-        break;
-      case 'awaiting_client_verification':
-        // Client has verified, now awaiting payment
-        actions.push({
-          label: 'Confirm Verified',
-          status: 'awaiting_client_payment',
-          icon: IconCheck,
-        });
+      case 'awaiting_distributor_verification':
+        // Distributor needs to verify client - this is handled by the verification UI
+        // No action buttons here, verification is done via separate UI
         break;
       case 'awaiting_client_payment':
         // Distributor can confirm client payment received

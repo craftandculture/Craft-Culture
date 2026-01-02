@@ -4,6 +4,7 @@ import { z } from 'zod';
 
 import createNotification from '@/app/_notifications/utils/createNotification';
 import db from '@/database/client';
+import type { PrivateClientOrder } from '@/database/schema';
 import { partnerMembers, privateClientOrderActivityLogs, privateClientOrders } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
@@ -71,7 +72,7 @@ const ordersAssignDistributor = adminProcedure.input(assignDistributorSchema).mu
 
   // Determine the new status based on whether distributor requires verification
   const previousStatus = order.status;
-  let newStatus: string;
+  let newStatus: PrivateClientOrder['status'];
   let paymentReference: string | null = null;
 
   if (distributor.requiresClientVerification) {

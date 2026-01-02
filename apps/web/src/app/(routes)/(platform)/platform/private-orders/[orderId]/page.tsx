@@ -238,7 +238,7 @@ const PrivateOrderDetailPage = () => {
                   <Button
                     onClick={() => handlePartnerVerification('yes')}
                     disabled={isVerifying}
-                    variant="primary"
+                    variant="default"
                   >
                     <ButtonContent iconLeft={IconCheck}>Yes, Verified</ButtonContent>
                   </Button>
