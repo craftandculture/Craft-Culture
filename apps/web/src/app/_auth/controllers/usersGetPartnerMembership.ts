@@ -10,18 +10,18 @@ const inputSchema = z.object({
 });
 
 /**
- * Get the partner membership for a user
+ * Get all partner memberships for a user
  *
- * Returns the partner the user is linked to via partnerMembers table,
- * or the partner where userId matches (legacy direct link).
+ * Returns both distributor and wine partner memberships.
+ * A user can be linked to one distributor AND one wine partner.
  */
 const usersGetPartnerMembership = adminProcedure
   .input(inputSchema)
   .query(async ({ input }) => {
     const { userId } = input;
 
-    // Check partnerMembers first
-    const membership = await db
+    // Get all memberships for this user
+    const memberships = await db
       .select({
         id: partnerMembers.id,
         partnerId: partnerMembers.partnerId,
@@ -34,19 +34,11 @@ const usersGetPartnerMembership = adminProcedure
       })
       .from(partnerMembers)
       .innerJoin(partners, eq(partnerMembers.partnerId, partners.id))
-      .where(eq(partnerMembers.userId, userId))
-      .limit(1);
+      .where(eq(partnerMembers.userId, userId));
 
-    if (membership.length > 0 && membership[0]) {
-      return {
-        type: 'member' as const,
-        membership: membership[0],
-      };
-    }
-
-    // Check direct partner link (legacy)
-    const directPartner = await db.query.partners.findFirst({
-      where: { userId },
+    // Also check for direct partner links (legacy)
+    const directPartners = await db.query.partners.findMany({
+      where: eq(partners.userId, userId),
       columns: {
         id: true,
         businessName: true,
@@ -54,14 +46,29 @@ const usersGetPartnerMembership = adminProcedure
       },
     });
 
-    if (directPartner) {
-      return {
-        type: 'owner' as const,
-        partner: directPartner,
-      };
-    }
+    // Separate by type
+    const distributorMembership = memberships.find(
+      (m) => m.partner.type === 'distributor',
+    );
+    const winePartnerMembership = memberships.find(
+      (m) => m.partner.type === 'wine_partner',
+    );
 
-    return null;
+    const directDistributor = directPartners.find((p) => p.type === 'distributor');
+    const directWinePartner = directPartners.find((p) => p.type === 'wine_partner');
+
+    return {
+      distributor: distributorMembership
+        ? { type: 'member' as const, membership: distributorMembership }
+        : directDistributor
+          ? { type: 'owner' as const, partner: directDistributor }
+          : null,
+      winePartner: winePartnerMembership
+        ? { type: 'member' as const, membership: winePartnerMembership }
+        : directWinePartner
+          ? { type: 'owner' as const, partner: directWinePartner }
+          : null,
+    };
   });
 
 export default usersGetPartnerMembership;

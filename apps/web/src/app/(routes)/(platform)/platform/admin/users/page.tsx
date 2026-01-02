@@ -137,9 +137,9 @@ const UserEditDialog = ({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="b2b">Distributor (B2B)</SelectItem>
-                <SelectItem value="b2c">Sales Person (B2C)</SelectItem>
-                <SelectItem value="private_clients">Partner (Private Clients)</SelectItem>
+                <SelectItem value="b2b">Distributor Staff</SelectItem>
+                <SelectItem value="b2c">Sales Rep</SelectItem>
+                <SelectItem value="private_clients">Partner Staff</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -386,11 +386,11 @@ const UserManagementPage = () => {
   const getCustomerTypeLabel = (type: string) => {
     switch (type) {
       case 'b2b':
-        return 'Distributor (B2B)';
+        return 'Distributor Staff';
       case 'b2c':
-        return 'Sales Person (B2C)';
+        return 'Sales Rep';
       case 'private_clients':
-        return 'Partner (Private Clients)';
+        return 'Partner Staff';
       default:
         return type;
     }
@@ -404,9 +404,14 @@ const UserManagementPage = () => {
           <Typography variant="headingLg" className="mb-2">
             User Management
           </Typography>
-          <Typography variant="bodyMd" colorRole="muted">
+          <Typography variant="bodyMd" colorRole="muted" className="mb-3">
             Review and approve user applications
           </Typography>
+          <div className="flex flex-wrap gap-4 text-xs text-text-muted">
+            <span><strong>Distributor Staff:</strong> CD/TBS employees</span>
+            <span><strong>Partner Staff:</strong> Wine company employees</span>
+            <span><strong>Sales Rep:</strong> B2C sales agents</span>
+          </div>
         </div>
 
         {/* Filters Card */}
@@ -443,9 +448,9 @@ const UserManagementPage = () => {
                 {(
                   [
                     { value: 'all', label: 'All Types' },
-                    { value: 'b2b', label: 'Distributor (B2B)' },
-                    { value: 'b2c', label: 'Sales Person (B2C)' },
-                    { value: 'private_clients', label: 'Partner' },
+                    { value: 'b2b', label: 'Distributor Staff' },
+                    { value: 'b2c', label: 'Sales Rep' },
+                    { value: 'private_clients', label: 'Partner Staff' },
                   ] as const
                 ).map((type) => (
                   <Button
