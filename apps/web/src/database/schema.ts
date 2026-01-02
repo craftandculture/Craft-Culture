@@ -801,6 +801,7 @@ export const privateClientOrderStatus = pgEnum('private_client_order_status', [
   'under_cc_review',
   'revision_requested',
   'cc_approved',
+  'awaiting_client_verification', // Client needs to register/verify on City Drinks app
   'awaiting_client_payment',
   'client_paid',
   'awaiting_distributor_payment',
@@ -922,6 +923,13 @@ export const privateClientOrders = pgTable(
       () => users.id,
       { onDelete: 'set null' },
     ),
+
+    // Client verification (City Drinks app registration)
+    clientVerifiedAt: timestamp('client_verified_at', { mode: 'date' }),
+    clientVerifiedBy: uuid('client_verified_by').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+    clientVerificationNotes: text('client_verification_notes'),
 
     // Payment timestamps
     clientPaidAt: timestamp('client_paid_at', { mode: 'date' }),

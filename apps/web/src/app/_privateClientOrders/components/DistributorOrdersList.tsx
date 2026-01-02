@@ -3,6 +3,7 @@
 import {
   IconBuilding,
   IconCheck,
+  IconDeviceMobile,
   IconDots,
   IconEye,
   IconPackage,
@@ -82,6 +83,8 @@ const DistributorOrdersList = () => {
       trpcClient.privateClientOrders.distributorUpdateStatus.mutate({
         orderId: params.orderId,
         status: params.status as
+          | 'awaiting_client_verification'
+          | 'awaiting_client_payment'
           | 'client_paid'
           | 'awaiting_distributor_payment'
           | 'distributor_paid'
@@ -146,6 +149,21 @@ const DistributorOrdersList = () => {
 
     switch (status) {
       case 'cc_approved':
+        // After approval, client needs to verify on City Drinks app
+        actions.push({
+          label: 'Client Verified',
+          status: 'awaiting_client_verification',
+          icon: IconDeviceMobile,
+        });
+        break;
+      case 'awaiting_client_verification':
+        // Client has verified, now awaiting payment
+        actions.push({
+          label: 'Confirm Verified',
+          status: 'awaiting_client_payment',
+          icon: IconCheck,
+        });
+        break;
       case 'awaiting_client_payment':
         // Distributor can confirm client payment received
         actions.push({

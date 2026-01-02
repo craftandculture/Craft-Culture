@@ -5,6 +5,7 @@ import {
   IconCircleDashed,
   IconClock,
   IconCreditCard,
+  IconDeviceMobile,
   IconFileCheck,
   IconPackage,
   IconSend,
@@ -16,8 +17,13 @@ import { format } from 'date-fns';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import type { PrivateClientOrder } from '@/database/schema';
 
+/** City Drinks distributor requires client app verification */
+const CITY_DRINKS_NAME = 'City Drinks';
+
 interface WorkflowStepperProps {
-  order: PrivateClientOrder;
+  order: PrivateClientOrder & {
+    distributor?: { id: string; businessName: string } | null;
+  };
   compact?: boolean;
 }
 
@@ -32,11 +38,15 @@ interface Step {
 /**
  * Visual workflow stepper showing order progress through stages
  *
- * Supports compact mode for mobile/smaller displays
+ * Supports compact mode for mobile/smaller displays.
+ * Shows verification step only for City Drinks distributor.
  */
 const WorkflowStepper = ({ order, compact = false }: WorkflowStepperProps) => {
+  // Check if this order requires client verification (City Drinks only)
+  const requiresVerification = order.distributor?.businessName === CITY_DRINKS_NAME;
+
   const getSteps = (): Step[] => {
-    return [
+    const baseSteps: Step[] = [
       {
         id: 'created',
         label: 'Created',
@@ -58,6 +68,21 @@ const WorkflowStepper = ({ order, compact = false }: WorkflowStepperProps) => {
         icon: IconFileCheck,
         timestamp: order.ccApprovedAt,
       },
+    ];
+
+    // Add verification step only for City Drinks
+    if (requiresVerification) {
+      baseSteps.push({
+        id: 'verified',
+        label: 'Verified',
+        shortLabel: 'App',
+        icon: IconDeviceMobile,
+        timestamp: order.clientVerifiedAt,
+      });
+    }
+
+    // Continue with remaining steps
+    baseSteps.push(
       {
         id: 'paid',
         label: 'Paid',
@@ -79,7 +104,9 @@ const WorkflowStepper = ({ order, compact = false }: WorkflowStepperProps) => {
         icon: IconPackage,
         timestamp: order.deliveredAt,
       },
-    ];
+    );
+
+    return baseSteps;
   };
 
   const steps = getSteps();
@@ -91,13 +118,15 @@ const WorkflowStepper = ({ order, compact = false }: WorkflowStepperProps) => {
 
     if (step.timestamp) return 'completed';
 
+    // Map status to current step - verification step only applies for City Drinks
     const statusToStep: Record<string, string> = {
       draft: 'created',
       submitted: 'submitted',
       under_cc_review: 'submitted',
       revision_requested: 'submitted',
       cc_approved: 'approved',
-      awaiting_client_payment: 'approved',
+      awaiting_client_verification: requiresVerification ? 'verified' : 'approved',
+      awaiting_client_payment: requiresVerification ? 'verified' : 'approved',
       client_paid: 'paid',
       awaiting_distributor_payment: 'paid',
       distributor_paid: 'paid',
