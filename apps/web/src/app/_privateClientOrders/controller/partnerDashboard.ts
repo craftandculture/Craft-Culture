@@ -1,12 +1,8 @@
 import { and, desc, eq, gte, inArray, sql } from 'drizzle-orm';
 
 import db from '@/database/client';
-import {
-  partnerMembers,
-  privateClientOrderClients,
-  privateClientOrders,
-} from '@/database/schema';
-import { partnerProcedure } from '@/lib/trpc/procedures';
+import { privateClientContacts, privateClientOrders } from '@/database/schema';
+import { winePartnerProcedure } from '@/lib/trpc/procedures';
 
 /**
  * Get dashboard statistics for the current partner (wine company)
@@ -14,19 +10,8 @@ import { partnerProcedure } from '@/lib/trpc/procedures';
  * Returns KPIs including order counts by status, recent orders,
  * client breakdown, and aggregated metrics for the partner dashboard.
  */
-const partnerDashboard = partnerProcedure.query(async ({ ctx: { userId } }) => {
-  // Get the partner for this user
-  const [membership] = await db
-    .select({ partnerId: partnerMembers.partnerId })
-    .from(partnerMembers)
-    .where(eq(partnerMembers.userId, userId))
-    .limit(1);
-
-  if (!membership) {
-    return null;
-  }
-
-  const partnerId = membership.partnerId;
+const partnerDashboard = winePartnerProcedure.query(
+  async ({ ctx: { partnerId } }) => {
 
   // Get date 30 days ago for "this month" metrics
   const thirtyDaysAgo = new Date();
@@ -36,7 +21,7 @@ const partnerDashboard = partnerProcedure.query(async ({ ctx: { userId } }) => {
   const visibleStatuses = [
     'draft',
     'submitted',
-    'under_review',
+    'under_cc_review',
     'revision_requested',
     'cc_approved',
     'awaiting_partner_verification',
@@ -109,14 +94,14 @@ const partnerDashboard = partnerProcedure.query(async ({ ctx: { userId } }) => {
     .select({
       order: privateClientOrders,
       client: {
-        id: privateClientOrderClients.id,
-        cityDrinksVerifiedAt: privateClientOrderClients.cityDrinksVerifiedAt,
+        id: privateClientContacts.id,
+        cityDrinksVerifiedAt: privateClientContacts.cityDrinksVerifiedAt,
       },
     })
     .from(privateClientOrders)
     .leftJoin(
-      privateClientOrderClients,
-      eq(privateClientOrders.clientId, privateClientOrderClients.id),
+      privateClientContacts,
+      eq(privateClientOrders.clientId, privateClientContacts.id),
     )
     .where(eq(privateClientOrders.partnerId, partnerId))
     .orderBy(desc(privateClientOrders.createdAt))
@@ -126,12 +111,12 @@ const partnerDashboard = partnerProcedure.query(async ({ ctx: { userId } }) => {
   const [clientsCount] = await db
     .select({
       total: sql<number>`count(distinct ${privateClientOrders.clientName})`,
-      verified: sql<number>`count(distinct case when ${privateClientOrderClients.cityDrinksVerifiedAt} is not null then ${privateClientOrders.clientName} end)`,
+      verified: sql<number>`count(distinct case when ${privateClientContacts.cityDrinksVerifiedAt} is not null then ${privateClientOrders.clientName} end)`,
     })
     .from(privateClientOrders)
     .leftJoin(
-      privateClientOrderClients,
-      eq(privateClientOrders.clientId, privateClientOrderClients.id),
+      privateClientContacts,
+      eq(privateClientOrders.clientId, privateClientContacts.id),
     )
     .where(eq(privateClientOrders.partnerId, partnerId));
 
@@ -144,12 +129,12 @@ const partnerDashboard = partnerProcedure.query(async ({ ctx: { userId } }) => {
       totalCases: sql<number>`coalesce(sum(${privateClientOrders.caseCount}), 0)`,
       totalValueUsd: sql<number>`coalesce(sum(${privateClientOrders.totalUsd}), 0)`,
       totalValueAed: sql<number>`coalesce(sum(${privateClientOrders.totalAed}), 0)`,
-      isVerified: sql<boolean>`max(case when ${privateClientOrderClients.cityDrinksVerifiedAt} is not null then 1 else 0 end) = 1`,
+      isVerified: sql<boolean>`max(case when ${privateClientContacts.cityDrinksVerifiedAt} is not null then 1 else 0 end) = 1`,
     })
     .from(privateClientOrders)
     .leftJoin(
-      privateClientOrderClients,
-      eq(privateClientOrders.clientId, privateClientOrderClients.id),
+      privateClientContacts,
+      eq(privateClientOrders.clientId, privateClientContacts.id),
     )
     .where(
       and(
@@ -163,7 +148,7 @@ const partnerDashboard = partnerProcedure.query(async ({ ctx: { userId } }) => {
 
   // Build status breakdown for pipeline
   const draftStatuses = ['draft'];
-  const pendingApprovalStatuses = ['submitted', 'under_review', 'revision_requested'];
+  const pendingApprovalStatuses = ['submitted', 'under_cc_review', 'revision_requested'];
   const awaitingVerificationStatuses = [
     'cc_approved',
     'awaiting_partner_verification',
@@ -232,6 +217,7 @@ const partnerDashboard = partnerProcedure.query(async ({ ctx: { userId } }) => {
       isVerified: Boolean(c.isVerified),
     })),
   };
-});
+  },
+);
 
 export default partnerDashboard;
