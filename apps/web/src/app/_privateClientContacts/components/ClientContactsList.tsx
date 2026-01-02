@@ -6,6 +6,7 @@ import {
   IconPencil,
   IconPlus,
   IconSearch,
+  IconShieldCheck,
   IconTrash,
   IconUser,
 } from '@tabler/icons-react';
@@ -81,9 +82,20 @@ const ClientContactsList = () => {
       header: 'Name',
       cell: ({ row }) => (
         <div className="flex flex-col">
-          <Typography variant="bodySm" className="font-medium">
-            {row.original.name}
-          </Typography>
+          <div className="flex items-center gap-1.5">
+            <Typography variant="bodySm" className="font-medium">
+              {row.original.name}
+            </Typography>
+            {row.original.cityDrinksVerifiedAt && (
+              <span
+                className="inline-flex items-center gap-0.5 rounded-full bg-green-100 px-1.5 py-0.5 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                title="City Drinks Verified"
+              >
+                <Icon icon={IconShieldCheck} size="xs" />
+                <span className="text-[10px] font-medium">Verified</span>
+              </span>
+            )}
+          </div>
           {row.original.email && (
             <Typography variant="bodyXs" colorRole="muted">
               {row.original.email}
