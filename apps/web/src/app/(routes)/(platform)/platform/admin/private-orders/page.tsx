@@ -9,6 +9,7 @@ import {
   IconPlus,
   IconRefresh,
   IconSearch,
+  IconShieldCheck,
 } from '@tabler/icons-react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
@@ -299,9 +300,20 @@ const AdminPrivateOrdersPage = () => {
                             </td>
                             <td className="px-6 py-4">
                               <div className="flex flex-col">
-                                <Typography variant="bodySm" className="font-medium">
-                                  {order.clientName || 'No name'}
-                                </Typography>
+                                <div className="flex items-center gap-1.5">
+                                  <Typography variant="bodySm" className="font-medium">
+                                    {order.clientName || 'No name'}
+                                  </Typography>
+                                  {order.client?.cityDrinksVerifiedAt && (
+                                    <span
+                                      className="inline-flex items-center gap-0.5 rounded-full bg-green-100 px-1.5 py-0.5 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                                      title="City Drinks Verified"
+                                    >
+                                      <Icon icon={IconShieldCheck} size="xs" />
+                                      <span className="text-[10px] font-medium">Verified</span>
+                                    </span>
+                                  )}
+                                </div>
                                 <Typography variant="bodyXs" colorRole="muted">
                                   {order.clientEmail || '-'}
                                 </Typography>
@@ -473,9 +485,19 @@ const AdminPrivateOrdersPage = () => {
 
                         <div className="flex items-center justify-between">
                           <div>
-                            <Typography variant="bodyXs" className="font-medium">
-                              {order.clientName || 'No client name'}
-                            </Typography>
+                            <div className="flex items-center gap-1.5">
+                              <Typography variant="bodyXs" className="font-medium">
+                                {order.clientName || 'No client name'}
+                              </Typography>
+                              {order.client?.cityDrinksVerifiedAt && (
+                                <span
+                                  className="inline-flex items-center gap-0.5 rounded-full bg-green-100 px-1 py-0.5 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                                  title="City Drinks Verified"
+                                >
+                                  <Icon icon={IconShieldCheck} size="xs" />
+                                </span>
+                              )}
+                            </div>
                             <Typography variant="bodyXs" colorRole="muted">
                               {order.itemCount ?? 0} items · {order.caseCount ?? 0} cases
                             </Typography>

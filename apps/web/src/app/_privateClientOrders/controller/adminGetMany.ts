@@ -2,7 +2,11 @@ import { and, desc, eq, ilike, or, sql } from 'drizzle-orm';
 import { z } from 'zod';
 
 import db from '@/database/client';
-import { partners, privateClientOrders } from '@/database/schema';
+import {
+  partners,
+  privateClientOrderClients,
+  privateClientOrders,
+} from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
 import { privateClientOrderStatusEnum } from '../schemas/getOrdersSchema';
@@ -56,7 +60,7 @@ const adminGetMany = adminProcedure
 
     const totalCount = Number(countResult?.count ?? 0);
 
-    // Get orders with pagination, including partner info
+    // Get orders with pagination, including partner and client info
     const ordersList = await db
       .select({
         order: privateClientOrders,
@@ -64,9 +68,17 @@ const adminGetMany = adminProcedure
           id: partners.id,
           businessName: partners.businessName,
         },
+        client: {
+          id: privateClientOrderClients.id,
+          cityDrinksVerifiedAt: privateClientOrderClients.cityDrinksVerifiedAt,
+        },
       })
       .from(privateClientOrders)
       .leftJoin(partners, eq(privateClientOrders.partnerId, partners.id))
+      .leftJoin(
+        privateClientOrderClients,
+        eq(privateClientOrders.clientId, privateClientOrderClients.id),
+      )
       .where(whereClause)
       .orderBy(desc(privateClientOrders.createdAt))
       .limit(limit)
@@ -76,6 +88,7 @@ const adminGetMany = adminProcedure
     const ordersWithPartner = ordersList.map((row) => ({
       ...row.order,
       partner: row.partner,
+      client: row.client,
     }));
 
     const nextCursor = cursor + limit < totalCount ? cursor + limit : null;

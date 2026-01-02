@@ -1,7 +1,11 @@
 import { and, desc, eq, ilike, or, sql } from 'drizzle-orm';
 
 import db from '@/database/client';
-import { partners, privateClientOrders } from '@/database/schema';
+import {
+  partners,
+  privateClientOrderClients,
+  privateClientOrders,
+} from '@/database/schema';
 import { winePartnerProcedure } from '@/lib/trpc/procedures';
 
 import getOrdersSchema from '../schemas/getOrdersSchema';
@@ -54,9 +58,17 @@ const ordersGetMany = winePartnerProcedure
           id: partners.id,
           businessName: partners.businessName,
         },
+        client: {
+          id: privateClientOrderClients.id,
+          cityDrinksVerifiedAt: privateClientOrderClients.cityDrinksVerifiedAt,
+        },
       })
       .from(privateClientOrders)
       .leftJoin(partners, eq(privateClientOrders.distributorId, partners.id))
+      .leftJoin(
+        privateClientOrderClients,
+        eq(privateClientOrders.clientId, privateClientOrderClients.id),
+      )
       .where(and(...conditions))
       .orderBy(desc(privateClientOrders.createdAt))
       .limit(limit)
@@ -66,6 +78,7 @@ const ordersGetMany = winePartnerProcedure
     const ordersWithDistributor = ordersList.map((row) => ({
       ...row.order,
       distributor: row.distributor,
+      client: row.client,
     }));
 
     const nextCursor = cursor + limit < totalCount ? cursor + limit : null;
