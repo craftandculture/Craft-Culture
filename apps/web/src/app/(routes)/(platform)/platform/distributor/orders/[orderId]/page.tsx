@@ -3,6 +3,7 @@
 import {
   IconArrowLeft,
   IconBuilding,
+  IconCalendar,
   IconCheck,
   IconCloudUpload,
   IconFile,
@@ -10,6 +11,8 @@ import {
   IconFileText,
   IconLoader2,
   IconPackage,
+  IconPhone,
+  IconPhoneOff,
   IconPhoto,
   IconShieldCheck,
   IconTruck,
@@ -143,6 +146,84 @@ const DistributorOrderDetailPage = () => {
     },
   });
 
+  // Delivery scheduling state
+  const [showScheduleDelivery, setShowScheduleDelivery] = useState(false);
+  const [scheduledDate, setScheduledDate] = useState('');
+  const [deliveryNotes, setDeliveryNotes] = useState('');
+  const [contactNotes, setContactNotes] = useState('');
+  const [showContactAttempt, setShowContactAttempt] = useState(false);
+
+  // Delivery mutations
+  const { mutate: logContactAttempt, isPending: isLoggingContact } = useMutation({
+    mutationFn: (notes: string) =>
+      trpcClient.privateClientOrders.logContactAttempt.mutate({
+        orderId,
+        notes,
+      }),
+    onSuccess: () => {
+      toast.success('Contact attempt logged');
+      setShowContactAttempt(false);
+      setContactNotes('');
+      void refetch();
+      void queryClient.invalidateQueries({ queryKey: ['privateClientOrders'] });
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to log contact attempt');
+    },
+  });
+
+  const { mutate: scheduleDelivery, isPending: isScheduling } = useMutation({
+    mutationFn: ({ date, notes }: { date: string; notes?: string }) =>
+      trpcClient.privateClientOrders.scheduleDelivery.mutate({
+        orderId,
+        scheduledDate: date,
+        notes,
+      }),
+    onSuccess: () => {
+      toast.success('Delivery scheduled');
+      setShowScheduleDelivery(false);
+      setScheduledDate('');
+      setDeliveryNotes('');
+      void refetch();
+      void queryClient.invalidateQueries({ queryKey: ['privateClientOrders'] });
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to schedule delivery');
+    },
+  });
+
+  const { mutate: markInTransit, isPending: isMarkingInTransit } = useMutation({
+    mutationFn: (notes?: string) =>
+      trpcClient.privateClientOrders.markInTransit.mutate({
+        orderId,
+        notes,
+      }),
+    onSuccess: () => {
+      toast.success('Order marked as in transit');
+      void refetch();
+      void queryClient.invalidateQueries({ queryKey: ['privateClientOrders'] });
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to mark as in transit');
+    },
+  });
+
+  const { mutate: markDelivered, isPending: isMarkingDelivered } = useMutation({
+    mutationFn: (notes?: string) =>
+      trpcClient.privateClientOrders.markDelivered.mutate({
+        orderId,
+        notes,
+      }),
+    onSuccess: () => {
+      toast.success('Order marked as delivered');
+      void refetch();
+      void queryClient.invalidateQueries({ queryKey: ['privateClientOrders'] });
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to mark as delivered');
+    },
+  });
+
   // Invoice upload
   const invoiceInputRef = useRef<HTMLInputElement>(null);
   const [isUploadingInvoice, setIsUploadingInvoice] = useState(false);
@@ -228,6 +309,7 @@ const DistributorOrderDetailPage = () => {
    * Get next action matching backend distributorTransitions exactly
    *
    * Note: awaiting_distributor_verification is handled by a separate verification UI
+   * Note: Delivery workflow (client_paid -> delivered) is handled by dedicated delivery UI
    */
   const getNextAction = () => {
     if (!order) return null;
@@ -237,17 +319,10 @@ const DistributorOrderDetailPage = () => {
       // are handled by dedicated verification UI components, not action buttons
       case 'awaiting_client_payment':
         return { label: 'Confirm Client Payment', status: 'client_paid', icon: IconCheck };
-      case 'client_paid':
-        return { label: 'Awaiting Distributor Payment', status: 'awaiting_distributor_payment', icon: IconCheck };
-      case 'awaiting_distributor_payment':
-        return { label: 'Confirm Payment to C&C', status: 'distributor_paid', icon: IconCheck };
-      // distributor_paid: Wait for C&C to mark stock_in_transit - no action button
+      // After client_paid, delivery workflow is handled by dedicated UI below
+      // client_paid, scheduling_delivery, delivery_scheduled, out_for_delivery - all handled by delivery UI
       case 'stock_in_transit':
         return { label: 'Stock Received', status: 'with_distributor', icon: IconPackage };
-      case 'with_distributor':
-        return { label: 'Start Delivery', status: 'out_for_delivery', icon: IconTruck };
-      case 'out_for_delivery':
-        return { label: 'Mark Delivered', status: 'delivered', icon: IconCheck };
       default:
         return null;
     }
@@ -524,6 +599,228 @@ const DistributorOrderDetailPage = () => {
                   </Typography>
                   <Typography variant="headingSm">
                     {formatPrice(getAmount(order.totalUsd), currency)}
+                  </Typography>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Delivery Workflow - Schedule Delivery */}
+        {(order.status === 'client_paid' || order.status === 'scheduling_delivery') && (
+          <Card className="border-2 border-fill-brand/50 bg-fill-brand/5">
+            <CardContent className="p-6">
+              <div className="flex flex-col gap-4">
+                <div className="flex items-start gap-4">
+                  <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-fill-brand/20">
+                    <Icon icon={IconPhone} size="lg" className="text-fill-brand" />
+                  </div>
+                  <div className="flex-1">
+                    <Typography variant="headingSm" className="mb-1">
+                      Schedule Delivery
+                    </Typography>
+                    <Typography variant="bodySm" colorRole="muted">
+                      Contact {order.clientName} to arrange delivery.
+                      {order.clientPhone && <> Phone: <strong>{order.clientPhone}</strong></>}
+                    </Typography>
+                    {/* Show contact attempts */}
+                    {order.deliveryContactAttempts && (order.deliveryContactAttempts as Array<{ attemptedAt: string; notes: string }>).length > 0 && (
+                      <div className="mt-2 space-y-1">
+                        <Typography variant="labelXs" colorRole="muted">Previous contact attempts:</Typography>
+                        {(order.deliveryContactAttempts as Array<{ attemptedAt: string; notes: string }>).map((attempt, idx) => (
+                          <div key={idx} className="flex items-center gap-2 text-xs text-text-muted">
+                            <IconPhoneOff className="h-3 w-3" />
+                            <span>{new Date(attempt.attemptedAt).toLocaleString()}: {attempt.notes}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Schedule Form */}
+                {showScheduleDelivery ? (
+                  <div className="ml-16 space-y-3 rounded-lg border border-border-muted bg-surface-secondary/50 p-4">
+                    <div>
+                      <label className="mb-1 block text-xs font-medium text-text-muted">Delivery Date</label>
+                      <input
+                        type="datetime-local"
+                        value={scheduledDate}
+                        onChange={(e) => setScheduledDate(e.target.value)}
+                        className="w-full rounded-md border border-border-muted bg-background-primary px-3 py-2 text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-xs font-medium text-text-muted">Notes (optional)</label>
+                      <textarea
+                        value={deliveryNotes}
+                        onChange={(e) => setDeliveryNotes(e.target.value)}
+                        placeholder="Any special instructions..."
+                        className="w-full rounded-md border border-border-muted bg-background-primary px-3 py-2 text-sm"
+                        rows={2}
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        onClick={() => scheduleDelivery({ date: new Date(scheduledDate).toISOString(), notes: deliveryNotes })}
+                        disabled={!scheduledDate || isScheduling}
+                        colorRole="brand"
+                      >
+                        <ButtonContent iconLeft={IconCalendar} isLoading={isScheduling}>
+                          Confirm Schedule
+                        </ButtonContent>
+                      </Button>
+                      <Button variant="ghost" onClick={() => setShowScheduleDelivery(false)}>
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                ) : showContactAttempt ? (
+                  <div className="ml-16 space-y-3 rounded-lg border border-border-muted bg-surface-secondary/50 p-4">
+                    <div>
+                      <label className="mb-1 block text-xs font-medium text-text-muted">What happened?</label>
+                      <textarea
+                        value={contactNotes}
+                        onChange={(e) => setContactNotes(e.target.value)}
+                        placeholder="e.g., No answer, voicemail left, wrong number..."
+                        className="w-full rounded-md border border-border-muted bg-background-primary px-3 py-2 text-sm"
+                        rows={2}
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        onClick={() => logContactAttempt(contactNotes)}
+                        disabled={!contactNotes || isLoggingContact}
+                        variant="outline"
+                      >
+                        <ButtonContent iconLeft={IconPhoneOff} isLoading={isLoggingContact}>
+                          Log Attempt
+                        </ButtonContent>
+                      </Button>
+                      <Button variant="ghost" onClick={() => setShowContactAttempt(false)}>
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="ml-16 flex flex-wrap gap-2">
+                    <Button onClick={() => setShowScheduleDelivery(true)} colorRole="brand">
+                      <ButtonContent iconLeft={IconCalendar}>
+                        Schedule Delivery
+                      </ButtonContent>
+                    </Button>
+                    <Button onClick={() => setShowContactAttempt(true)} variant="outline">
+                      <ButtonContent iconLeft={IconPhoneOff}>
+                        Couldn&apos;t Reach Client
+                      </ButtonContent>
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Delivery Workflow - Delivery Scheduled, Ready to Dispatch */}
+        {order.status === 'delivery_scheduled' && (
+          <Card className="border-2 border-fill-success/50 bg-fill-success/5">
+            <CardContent className="p-6">
+              <div className="flex flex-col items-center gap-4 text-center sm:flex-row sm:text-left">
+                <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-fill-success/20">
+                  <Icon icon={IconCalendar} size="lg" className="text-fill-success" />
+                </div>
+                <div className="flex-1">
+                  <Typography variant="headingSm" className="mb-1">
+                    Delivery Scheduled
+                  </Typography>
+                  <Typography variant="bodySm" colorRole="muted">
+                    Scheduled for{' '}
+                    <strong>
+                      {order.scheduledDeliveryDate
+                        ? new Date(order.scheduledDeliveryDate).toLocaleDateString('en-GB', {
+                            weekday: 'long',
+                            day: 'numeric',
+                            month: 'long',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })
+                        : 'TBD'}
+                    </strong>
+                  </Typography>
+                  {order.deliveryNotes && (
+                    <Typography variant="bodyXs" colorRole="muted" className="mt-1">
+                      Notes: {order.deliveryNotes}
+                    </Typography>
+                  )}
+                </div>
+                <Button
+                  onClick={() => markInTransit()}
+                  disabled={isMarkingInTransit}
+                  colorRole="brand"
+                >
+                  <ButtonContent iconLeft={IconTruck} isLoading={isMarkingInTransit}>
+                    Mark In Transit
+                  </ButtonContent>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Delivery Workflow - Out for Delivery */}
+        {order.status === 'out_for_delivery' && (
+          <Card className="border-2 border-fill-warning/50 bg-fill-warning/5">
+            <CardContent className="p-6">
+              <div className="flex flex-col items-center gap-4 text-center sm:flex-row sm:text-left">
+                <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-fill-warning/20">
+                  <Icon icon={IconTruck} size="lg" className="text-fill-warning" />
+                </div>
+                <div className="flex-1">
+                  <Typography variant="headingSm" className="mb-1">
+                    Out for Delivery
+                  </Typography>
+                  <Typography variant="bodySm" colorRole="muted">
+                    Order is being delivered to {order.clientName}.
+                    {order.clientAddress && <> Address: {order.clientAddress}</>}
+                  </Typography>
+                </div>
+                <Button
+                  onClick={() => markDelivered()}
+                  disabled={isMarkingDelivered}
+                  colorRole="brand"
+                >
+                  <ButtonContent iconLeft={IconCheck} isLoading={isMarkingDelivered}>
+                    Mark Delivered
+                  </ButtonContent>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Delivery Complete */}
+        {order.status === 'delivered' && (
+          <Card className="border-2 border-fill-success/50 bg-fill-success/5">
+            <CardContent className="p-6">
+              <div className="flex flex-col items-center gap-4 text-center sm:flex-row sm:text-left">
+                <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-fill-success/20">
+                  <Icon icon={IconCheck} size="lg" className="text-fill-success" />
+                </div>
+                <div className="flex-1">
+                  <Typography variant="headingSm" className="mb-1">
+                    Order Delivered
+                  </Typography>
+                  <Typography variant="bodySm" colorRole="muted">
+                    Successfully delivered on{' '}
+                    {order.deliveredAt
+                      ? new Date(order.deliveredAt).toLocaleDateString('en-GB', {
+                          weekday: 'long',
+                          day: 'numeric',
+                          month: 'long',
+                          year: 'numeric',
+                        })
+                      : 'Unknown date'}
                   </Typography>
                 </div>
               </div>

@@ -1,0 +1,108 @@
+import { TRPCError } from '@trpc/server';
+import { eq } from 'drizzle-orm';
+import { z } from 'zod';
+
+import createNotification from '@/app/_notifications/utils/createNotification';
+import db from '@/database/client';
+import {
+  partnerMembers,
+  privateClientOrderActivityLogs,
+  privateClientOrders,
+} from '@/database/schema';
+import { distributorProcedure } from '@/lib/trpc/procedures';
+
+const markDeliveredSchema = z.object({
+  orderId: z.string().uuid(),
+  notes: z.string().optional(),
+  signature: z.string().optional(), // Base64 signature or URL
+  photo: z.string().optional(), // Photo proof URL
+});
+
+/**
+ * Mark order as delivered
+ *
+ * The distributor marks the order as delivered when the client receives it.
+ * This is the final step in the delivery flow.
+ */
+const ordersMarkDelivered = distributorProcedure
+  .input(markDeliveredSchema)
+  .mutation(async ({ input, ctx }) => {
+    const { orderId, notes, signature, photo } = input;
+    const { partnerId, user } = ctx;
+
+    // Fetch the order
+    const order = await db.query.privateClientOrders.findFirst({
+      where: { id: orderId, distributorId: partnerId },
+    });
+
+    if (!order) {
+      throw new TRPCError({
+        code: 'NOT_FOUND',
+        message: 'Order not found or not assigned to you',
+      });
+    }
+
+    // Validate order status - must be out_for_delivery
+    if (order.status !== 'out_for_delivery') {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: `Cannot mark as delivered. Order must be "out_for_delivery", current status is "${order.status}"`,
+      });
+    }
+
+    const now = new Date();
+
+    // Update order status
+    const [updatedOrder] = await db
+      .update(privateClientOrders)
+      .set({
+        status: 'delivered',
+        deliveredAt: now,
+        deliveredConfirmedBy: user.id,
+        deliveryNotes: notes ?? order.deliveryNotes,
+        deliverySignature: signature,
+        deliveryPhoto: photo,
+        updatedAt: now,
+      })
+      .where(eq(privateClientOrders.id, orderId))
+      .returning();
+
+    // Log the activity
+    await db.insert(privateClientOrderActivityLogs).values({
+      orderId,
+      userId: user.id,
+      partnerId,
+      action: 'marked_delivered',
+      previousStatus: order.status,
+      newStatus: 'delivered',
+      notes: notes ?? 'Order delivered successfully',
+      metadata: {
+        hasSignature: !!signature,
+        hasPhoto: !!photo,
+      },
+    });
+
+    // Notify partner about successful delivery
+    if (order.partnerId) {
+      const partnerMembersList = await db
+        .select({ userId: partnerMembers.userId })
+        .from(partnerMembers)
+        .where(eq(partnerMembers.partnerId, order.partnerId));
+
+      for (const member of partnerMembersList) {
+        await createNotification({
+          userId: member.userId,
+          type: 'status_update',
+          title: 'Order Delivered',
+          message: `Order ${updatedOrder?.orderNumber ?? orderId} has been delivered to your client`,
+          entityType: 'private_client_order',
+          entityId: orderId,
+          actionUrl: `/platform/private-orders/${orderId}`,
+        });
+      }
+    }
+
+    return updatedOrder;
+  });
+
+export default ordersMarkDelivered;
