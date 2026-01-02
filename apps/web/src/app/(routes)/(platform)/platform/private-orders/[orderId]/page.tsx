@@ -1,10 +1,13 @@
 'use client';
 
 import {
+  IconAlertCircle,
   IconArrowLeft,
   IconBuilding,
   IconCheck,
   IconLoader2,
+  IconQuestionMark,
+  IconX,
 } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Image from 'next/image';
@@ -76,8 +79,30 @@ const PrivateOrderDetailPage = () => {
     }),
   );
 
+  // Partner verification mutation
+  const { mutate: partnerVerification, isPending: isVerifying } = useMutation(
+    api.privateClientOrders.partnerVerification.mutationOptions({
+      onSuccess: (_data, variables) => {
+        if (variables.response === 'yes') {
+          toast.success('Verification confirmed. Distributor will now verify the client.');
+        } else {
+          toast.info('Order suspended. Please resolve client verification with the distributor.');
+        }
+        void refetch();
+        void queryClient.invalidateQueries({ queryKey: ['privateClientOrders'] });
+      },
+      onError: (error) => {
+        toast.error(error.message || 'Failed to submit verification response');
+      },
+    }),
+  );
+
   const handleApproveRevisions = () => {
     approveRevisions({ orderId });
+  };
+
+  const handlePartnerVerification = (response: 'yes' | 'no' | 'dont_know') => {
+    partnerVerification({ orderId, response });
   };
 
   const formatDate = (date: Date | null | undefined) => {
@@ -191,6 +216,74 @@ const PrivateOrderDetailPage = () => {
 
         {/* Workflow Stepper */}
         <WorkflowStepper order={order} />
+
+        {/* Partner Verification Prompt - shown when awaiting partner verification */}
+        {order.status === 'awaiting_partner_verification' && order.distributor && (
+          <Card className="border-2 border-fill-warning/50 bg-fill-warning/5">
+            <CardContent className="p-6">
+              <div className="flex flex-col items-center gap-4 text-center sm:flex-row sm:text-left">
+                <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-fill-warning/20">
+                  <Icon icon={IconAlertCircle} size="lg" className="text-fill-warning" />
+                </div>
+                <div className="flex-1">
+                  <Typography variant="headingSm" className="mb-1">
+                    Client Verification Required
+                  </Typography>
+                  <Typography variant="bodySm" colorRole="muted">
+                    Is your client verified with <strong>{order.distributor.businessName}</strong>?
+                    This confirmation is required before the order can proceed.
+                  </Typography>
+                </div>
+                <div className="flex flex-wrap justify-center gap-2 sm:flex-nowrap">
+                  <Button
+                    onClick={() => handlePartnerVerification('yes')}
+                    disabled={isVerifying}
+                    variant="primary"
+                  >
+                    <ButtonContent iconLeft={IconCheck}>Yes, Verified</ButtonContent>
+                  </Button>
+                  <Button
+                    onClick={() => handlePartnerVerification('no')}
+                    disabled={isVerifying}
+                    variant="outline"
+                  >
+                    <ButtonContent iconLeft={IconX}>No</ButtonContent>
+                  </Button>
+                  <Button
+                    onClick={() => handlePartnerVerification('dont_know')}
+                    disabled={isVerifying}
+                    variant="ghost"
+                  >
+                    <ButtonContent iconLeft={IconQuestionMark}>Don&apos;t Know</ButtonContent>
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Verification Suspended Notice */}
+        {order.status === 'verification_suspended' && (
+          <Card className="border-2 border-fill-danger/50 bg-fill-danger/5">
+            <CardContent className="p-6">
+              <div className="flex flex-col items-center gap-4 text-center sm:flex-row sm:text-left">
+                <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-fill-danger/20">
+                  <Icon icon={IconAlertCircle} size="lg" className="text-fill-danger" />
+                </div>
+                <div className="flex-1">
+                  <Typography variant="headingSm" className="mb-1">
+                    Order Suspended - Verification Required
+                  </Typography>
+                  <Typography variant="bodySm" colorRole="muted">
+                    This order is suspended because client verification with{' '}
+                    <strong>{order.distributor?.businessName ?? 'the distributor'}</strong> could not be confirmed.
+                    Please contact the client to register with the distributor, then notify C&C support to resume the order.
+                  </Typography>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Line Items - Full Width, Primary Focus */}
         <Card>
