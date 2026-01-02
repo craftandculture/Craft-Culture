@@ -72,7 +72,7 @@ const DistributorOrderDetailPage = () => {
   });
 
   // Fetch documents to check for invoice status
-  const { data: documents } = useQuery({
+  const { data: documents, refetch: refetchDocuments } = useQuery({
     ...api.privateClientOrders.getDocuments.queryOptions({ orderId }),
     enabled: !!orderId,
   });
@@ -159,7 +159,8 @@ const DistributorOrderDetailPage = () => {
     },
     onSuccess: () => {
       toast.success('Invoice uploaded successfully');
-      void queryClient.invalidateQueries({ queryKey: ['privateClientOrderDocuments', orderId] });
+      // Refetch documents to show the uploaded invoice
+      void refetchDocuments();
       void refetch();
     },
     onError: (error) => {
