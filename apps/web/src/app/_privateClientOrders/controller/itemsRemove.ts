@@ -3,8 +3,10 @@ import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 
 import db from '@/database/client';
-import { privateClientOrderItems, privateClientOrders } from '@/database/schema';
+import { privateClientOrderItems } from '@/database/schema';
 import { winePartnerProcedure } from '@/lib/trpc/procedures';
+
+import recalculateOrderTotals from '../utils/recalculateOrderTotals';
 
 const removeItemSchema = z.object({
   itemId: z.string().uuid(),
@@ -56,23 +58,8 @@ const itemsRemove = winePartnerProcedure.input(removeItemSchema).mutation(async 
   // Delete the item
   await db.delete(privateClientOrderItems).where(eq(privateClientOrderItems.id, itemId));
 
-  // Recalculate order totals
-  const remainingItems = await db.query.privateClientOrderItems.findMany({
-    where: { orderId: item.order.id },
-  });
-
-  const subtotalUsd = remainingItems.reduce((sum, i) => sum + Number(i.totalUsd), 0);
-  const caseCount = remainingItems.reduce((sum, i) => sum + i.quantity, 0);
-
-  await db
-    .update(privateClientOrders)
-    .set({
-      subtotalUsd,
-      caseCount,
-      itemCount: remainingItems.length,
-      updatedAt: new Date(),
-    })
-    .where(eq(privateClientOrders.id, item.order.id));
+  // Recalculate order totals using partner settings
+  await recalculateOrderTotals(item.order.id);
 
   return { success: true, deletedItemId: itemId };
 });

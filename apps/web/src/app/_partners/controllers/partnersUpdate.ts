@@ -51,6 +51,12 @@ const partnersUpdate = adminProcedure
       updates.logoUrl = updateData.logoUrl || null;
     if (updateData.paymentDetails !== undefined)
       updates.paymentDetails = updateData.paymentDetails;
+    if (updateData.logisticsCostPerCase !== undefined)
+      updates.logisticsCostPerCase = updateData.logisticsCostPerCase;
+    if (updateData.pcoDutyRate !== undefined)
+      updates.pcoDutyRate = updateData.pcoDutyRate;
+    if (updateData.pcoVatRate !== undefined)
+      updates.pcoVatRate = updateData.pcoVatRate;
 
     if (Object.keys(updates).length === 0) {
       throw new TRPCError({
