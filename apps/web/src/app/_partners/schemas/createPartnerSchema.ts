@@ -10,7 +10,7 @@ import z from 'zod';
  */
 const createPartnerSchema = z.object({
   // Core business details
-  type: z.enum(['retailer', 'sommelier', 'distributor']),
+  type: z.enum(['retailer', 'sommelier', 'distributor', 'wine_partner']),
   businessName: z.string().min(1, 'Business name is required'),
   businessAddress: z.string().min(1, 'Business address is required'),
   businessPhone: z.string().optional(),
