@@ -8,7 +8,6 @@ import {
   IconPackage,
   IconSearch,
   IconShieldCheck,
-  IconTruck,
 } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ColumnDef } from '@tanstack/react-table';
