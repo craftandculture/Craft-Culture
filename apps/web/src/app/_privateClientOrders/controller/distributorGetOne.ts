@@ -5,6 +5,7 @@ import { z } from 'zod';
 import db from '@/database/client';
 import {
   partners,
+  privateClientContacts,
   privateClientOrderActivityLogs,
   privateClientOrderItems,
   privateClientOrders,
@@ -16,6 +17,7 @@ import { distributorProcedure } from '@/lib/trpc/procedures';
  * Get a single private client order by ID for distributor
  *
  * Returns the order with all line items, activity logs, and related data.
+ * Includes client verification status from the client contact record.
  * Only accessible to the distributor assigned to the order.
  */
 const distributorGetOne = distributorProcedure
@@ -30,9 +32,17 @@ const distributorGetOne = distributorProcedure
           businessName: partners.businessName,
           logoUrl: partners.logoUrl,
         },
+        client: {
+          id: privateClientContacts.id,
+          name: privateClientContacts.name,
+          cityDrinksVerifiedAt: privateClientContacts.cityDrinksVerifiedAt,
+          cityDrinksAccountName: privateClientContacts.cityDrinksAccountName,
+          cityDrinksPhone: privateClientContacts.cityDrinksPhone,
+        },
       })
       .from(privateClientOrders)
       .leftJoin(partners, eq(privateClientOrders.partnerId, partners.id))
+      .leftJoin(privateClientContacts, eq(privateClientOrders.clientId, privateClientContacts.id))
       .where(
         and(
           eq(privateClientOrders.id, input.id),
@@ -40,6 +50,7 @@ const distributorGetOne = distributorProcedure
           // Only show orders that are past CC approval
           inArray(privateClientOrders.status, [
             'cc_approved',
+            'awaiting_client_verification',
             'awaiting_client_payment',
             'client_paid',
             'awaiting_distributor_payment',
@@ -91,6 +102,7 @@ const distributorGetOne = distributorProcedure
     return {
       ...orderResult.order,
       partner: orderResult.partner,
+      client: orderResult.client,
       items,
       activityLogs: activityLogs.map((row) => ({
         ...row.log,

@@ -1203,6 +1203,15 @@ export const privateClientContacts = pgTable(
     totalSpendUsd: doublePrecision('total_spend_usd').notNull().default(0),
     lastOrderAt: timestamp('last_order_at', { mode: 'date' }),
 
+    // City Drinks app verification (required for City Drinks distributor orders)
+    cityDrinksVerifiedAt: timestamp('city_drinks_verified_at', { mode: 'date' }),
+    cityDrinksVerifiedBy: uuid('city_drinks_verified_by').references(
+      () => users.id,
+      { onDelete: 'set null' },
+    ),
+    cityDrinksAccountName: text('city_drinks_account_name'),
+    cityDrinksPhone: text('city_drinks_phone'),
+
     ...timestamps,
   },
   (table) => [
