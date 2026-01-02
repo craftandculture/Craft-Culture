@@ -856,6 +856,9 @@ export const privateClientOrderStatus = pgEnum('private_client_order_status', [
   'distributor_paid',
   'awaiting_partner_payment',
   'partner_paid',
+  // Delivery scheduling flow
+  'scheduling_delivery', // Distributor is trying to contact client
+  'delivery_scheduled', // Delivery date confirmed with client
   // Fulfillment flow
   'stock_in_transit',
   'with_distributor',
@@ -1047,6 +1050,20 @@ export const privateClientOrders = pgTable(
       onDelete: 'set null',
     }),
 
+    // Delivery scheduling
+    scheduledDeliveryDate: timestamp('scheduled_delivery_date', { mode: 'date' }),
+    scheduledDeliveryAt: timestamp('scheduled_delivery_at', { mode: 'date' }),
+    scheduledDeliveryBy: uuid('scheduled_delivery_by').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+    deliveryContactAttempts: jsonb('delivery_contact_attempts').$type<
+      Array<{
+        attemptedAt: string;
+        attemptedBy: string;
+        notes: string;
+      }>
+    >(),
+
     // Delivery timestamps
     outForDeliveryAt: timestamp('out_for_delivery_at', { mode: 'date' }),
     outForDeliveryBy: uuid('out_for_delivery_by').references(() => users.id, {
@@ -1058,6 +1075,8 @@ export const privateClientOrders = pgTable(
       () => users.id,
       { onDelete: 'set null' },
     ),
+    deliverySignature: text('delivery_signature'), // Base64 signature or URL
+    deliveryPhoto: text('delivery_photo'), // Photo proof URL
 
     cancelledAt: timestamp('cancelled_at', { mode: 'date' }),
     cancelledBy: uuid('cancelled_by').references(() => users.id, {

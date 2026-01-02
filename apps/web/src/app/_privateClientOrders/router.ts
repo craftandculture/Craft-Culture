@@ -29,10 +29,14 @@ import ordersDistributorUnlockSuspended from './controller/ordersDistributorUnlo
 import ordersDistributorVerification from './controller/ordersDistributorVerification';
 import ordersGetMany from './controller/ordersGetMany';
 import ordersGetOne from './controller/ordersGetOne';
+import ordersLogContactAttempt from './controller/ordersLogContactAttempt';
+import ordersMarkDelivered from './controller/ordersMarkDelivered';
+import ordersMarkInTransit from './controller/ordersMarkInTransit';
 import ordersPartnerAcknowledgeInvoice from './controller/ordersPartnerAcknowledgeInvoice';
 import ordersPartnerReinitiateVerification from './controller/ordersPartnerReinitiateVerification';
 import ordersPartnerVerification from './controller/ordersPartnerVerification';
 import ordersRequestRevision from './controller/ordersRequestRevision';
+import ordersScheduleDelivery from './controller/ordersScheduleDelivery';
 import ordersSubmit from './controller/ordersSubmit';
 import paymentsConfirm from './controller/paymentsConfirm';
 
@@ -83,6 +87,12 @@ const privateClientOrdersRouter = createTRPCRouter({
   distributorUpdateStatus,
   distributorVerification: ordersDistributorVerification,
   distributorUnlockSuspended: ordersDistributorUnlockSuspended,
+
+  // Delivery workflow (distributor)
+  logContactAttempt: ordersLogContactAttempt,
+  scheduleDelivery: ordersScheduleDelivery,
+  markInTransit: ordersMarkInTransit,
+  markDelivered: ordersMarkDelivered,
 });
 
 export default privateClientOrdersRouter;
