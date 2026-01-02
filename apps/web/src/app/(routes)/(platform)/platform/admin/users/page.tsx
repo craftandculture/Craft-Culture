@@ -281,7 +281,7 @@ const DistributorAssignment = ({
       value={currentPartnerId ?? 'none'}
       onValueChange={(value) => {
         if (value === 'none') {
-          removePartner({ userId });
+          removePartner({ userId, partnerType: 'distributor' });
         } else {
           assignPartner({ userId, partnerId: value });
         }
@@ -300,6 +300,106 @@ const DistributorAssignment = ({
         {distributors.map((d) => (
           <SelectItem key={d.id} value={d.id}>
             {d.businessName}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+};
+
+/**
+ * Component to manage wine partner assignment for a user
+ */
+const WinePartnerAssignment = ({
+  userId,
+  winePartners,
+}: {
+  userId: string;
+  winePartners: { id: string; businessName: string; status: string }[];
+}) => {
+  const api = useTRPC();
+  const queryClient = useQueryClient();
+
+  // Fetch current membership
+  const { data: membership, isLoading } = useQuery({
+    ...api.users.getPartnerMembership.queryOptions({ userId }),
+  });
+
+  // Assign mutation
+  const { mutate: assignPartner, isPending: isAssigning } = useMutation(
+    api.users.assignPartner.mutationOptions({
+      onSuccess: (data) => {
+        toast.success(`Assigned to ${data.partner.businessName}`);
+        void queryClient.invalidateQueries({
+          queryKey: api.users.getPartnerMembership.queryKey({ userId }),
+        });
+      },
+      onError: (error) => {
+        toast.error(error.message || 'Failed to assign wine partner');
+      },
+    }),
+  );
+
+  // Remove mutation
+  const { mutate: removePartner, isPending: isRemoving } = useMutation(
+    api.users.removePartner.mutationOptions({
+      onSuccess: () => {
+        toast.success('Removed from wine partner');
+        void queryClient.invalidateQueries({
+          queryKey: api.users.getPartnerMembership.queryKey({ userId }),
+        });
+      },
+      onError: (error) => {
+        toast.error(error.message || 'Failed to remove from wine partner');
+      },
+    }),
+  );
+
+  if (isLoading) {
+    return <span className="text-text-muted text-xs">Loading...</span>;
+  }
+
+  // Get wine partner membership from the structure
+  const winePartnerMembership = membership?.winePartner;
+
+  const currentPartnerId =
+    winePartnerMembership?.type === 'member'
+      ? winePartnerMembership.membership.partnerId
+      : winePartnerMembership?.type === 'owner'
+        ? winePartnerMembership.partner.id
+        : undefined;
+
+  const currentPartnerName =
+    winePartnerMembership?.type === 'member'
+      ? winePartnerMembership.membership.partner.businessName
+      : winePartnerMembership?.type === 'owner'
+        ? winePartnerMembership.partner.businessName
+        : undefined;
+
+  return (
+    <Select
+      value={currentPartnerId ?? 'none'}
+      onValueChange={(value) => {
+        if (value === 'none') {
+          removePartner({ userId, partnerType: 'wine_partner' });
+        } else {
+          assignPartner({ userId, partnerId: value });
+        }
+      }}
+      disabled={isAssigning || isRemoving}
+    >
+      <SelectTrigger className="h-8 w-[180px] text-xs">
+        <SelectValue placeholder="Not assigned">
+          {currentPartnerName ?? 'Not assigned'}
+        </SelectValue>
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="none">
+          <span className="text-text-muted">Not assigned</span>
+        </SelectItem>
+        {winePartners.map((p) => (
+          <SelectItem key={p.id} value={p.id}>
+            {p.businessName}
           </SelectItem>
         ))}
       </SelectContent>
@@ -329,6 +429,11 @@ const UserManagementPage = () => {
   // Fetch distributors for assignment dropdown
   const { data: distributors } = useQuery({
     ...api.users.getDistributors.queryOptions(),
+  });
+
+  // Fetch wine partners for assignment dropdown
+  const { data: winePartners } = useQuery({
+    ...api.users.getWinePartners.queryOptions(),
   });
 
   // Approve user mutation
@@ -411,7 +516,7 @@ const UserManagementPage = () => {
             Review and approve user applications
           </Typography>
           <div className="flex flex-wrap gap-4 text-xs text-text-muted">
-            <span><strong>Distributor Staff:</strong> CD/TBS employees</span>
+            <span><strong>Distributor Staff:</strong> Licensed Distributors employees</span>
             <span><strong>Partner Staff:</strong> Wine company employees</span>
             <span><strong>Sales Rep:</strong> B2C sales agents</span>
           </div>
@@ -523,6 +628,9 @@ const UserManagementPage = () => {
                         Distributor
                       </th>
                       <th className="text-text-secondary px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">
+                        Partner
+                      </th>
+                      <th className="text-text-secondary px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">
                         Status
                       </th>
                       <th className="text-text-secondary px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">
@@ -558,6 +666,12 @@ const UserManagementPage = () => {
                           <DistributorAssignment
                             userId={user.id}
                             distributors={distributors ?? []}
+                          />
+                        </td>
+                        <td className="px-6 py-4">
+                          <WinePartnerAssignment
+                            userId={user.id}
+                            winePartners={winePartners ?? []}
                           />
                         </td>
                         <td className="px-6 py-4">{getStatusBadge(user.approvalStatus)}</td>

@@ -1,9 +1,9 @@
 import { TRPCError } from '@trpc/server';
-import { eq } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import { z } from 'zod';
 
 import db from '@/database/client';
-import { partnerMembers } from '@/database/schema';
+import { partnerMembers, partners } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
 const inputSchema = z.object({
@@ -13,20 +13,25 @@ const inputSchema = z.object({
 });
 
 /**
- * Assign a user to a partner (distributor)
+ * Assign a user to a partner (distributor or wine partner)
  *
  * Creates a partnerMembers record linking the user to the partner.
- * Replaces any existing membership for this user.
+ * Only replaces existing membership for the same partner type.
+ * A user can be assigned to both a distributor AND a wine partner.
  */
 const usersAssignPartner = adminProcedure
   .input(inputSchema)
   .mutation(async ({ input, ctx }) => {
     const { userId, partnerId, role } = input;
 
-    // Verify the partner exists
-    const partner = await db.query.partners.findFirst({
-      where: { id: partnerId },
-    });
+    // Verify the partner exists and get its type
+    const partnerResult = await db
+      .select()
+      .from(partners)
+      .where(eq(partners.id, partnerId))
+      .limit(1);
+
+    const partner = partnerResult[0];
 
     if (!partner) {
       throw new TRPCError({
@@ -35,10 +40,25 @@ const usersAssignPartner = adminProcedure
       });
     }
 
-    // Remove any existing membership for this user
-    await db
-      .delete(partnerMembers)
-      .where(eq(partnerMembers.userId, userId));
+    // Get all partners of the same type to remove only those memberships
+    const sameTypePartners = await db
+      .select({ id: partners.id })
+      .from(partners)
+      .where(eq(partners.type, partner.type));
+
+    const sameTypePartnerIds = sameTypePartners.map((p) => p.id);
+
+    // Remove existing membership for this user with partners of the same type only
+    if (sameTypePartnerIds.length > 0) {
+      await db
+        .delete(partnerMembers)
+        .where(
+          and(
+            eq(partnerMembers.userId, userId),
+            inArray(partnerMembers.partnerId, sameTypePartnerIds),
+          ),
+        );
+    }
 
     // Create new membership
     const [membership] = await db
