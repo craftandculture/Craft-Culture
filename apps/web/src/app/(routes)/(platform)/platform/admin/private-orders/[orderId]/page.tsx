@@ -22,6 +22,7 @@ import { toast } from 'sonner';
 import DocumentUpload from '@/app/_privateClientOrders/components/DocumentUpload';
 import PaymentTracker from '@/app/_privateClientOrders/components/PaymentTracker';
 import PrivateOrderStatusBadge from '@/app/_privateClientOrders/components/PrivateOrderStatusBadge';
+import WorkflowStepper from '@/app/_privateClientOrders/components/WorkflowStepper';
 import Button from '@/app/_ui/components/Button/Button';
 import Card from '@/app/_ui/components/Card/Card';
 import CardContent from '@/app/_ui/components/Card/CardContent';
@@ -412,6 +413,9 @@ const AdminPrivateOrderDetailPage = () => {
             )}
           </div>
         </div>
+
+        {/* Workflow Stepper */}
+        <WorkflowStepper order={order} />
 
         {/* Admin Reset for Suspended Orders */}
         {order.status === 'verification_suspended' && (
