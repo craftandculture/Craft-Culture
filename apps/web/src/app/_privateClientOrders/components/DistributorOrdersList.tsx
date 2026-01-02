@@ -210,21 +210,23 @@ const DistributorOrdersList = () => {
       accessorKey: 'partner.businessName',
       header: 'Partner',
       cell: ({ row }) => (
-        <div className="flex items-center gap-2">
+        <div className="flex flex-col items-center gap-1.5">
           {row.original.partner?.logoUrl ? (
             <Image
               src={row.original.partner.logoUrl}
               alt={row.original.partner?.businessName ?? 'Partner'}
-              width={20}
-              height={20}
-              className="h-5 w-5 rounded object-contain"
+              width={40}
+              height={40}
+              className="h-10 w-10 rounded-lg object-contain"
             />
           ) : (
-            <div className="flex h-5 w-5 items-center justify-center rounded bg-fill-muted">
-              <Icon icon={IconBuilding} size="xs" colorRole="muted" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-surface-secondary">
+              <Icon icon={IconBuilding} size="md" colorRole="muted" />
             </div>
           )}
-          <Typography variant="bodySm">{row.original.partner?.businessName ?? '-'}</Typography>
+          <Typography variant="bodyXs" className="text-center">
+            {row.original.partner?.businessName ?? '-'}
+          </Typography>
         </div>
       ),
     },
