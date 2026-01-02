@@ -23,7 +23,6 @@ import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
 import Card from '@/app/_ui/components/Card/Card';
 import CardContent from '@/app/_ui/components/Card/CardContent';
-import Divider from '@/app/_ui/components/Divider/Divider';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Input from '@/app/_ui/components/Input/Input';
 import Typography from '@/app/_ui/components/Typography/Typography';
@@ -568,25 +567,40 @@ const PrivateOrderForm = () => {
 
       {/* Line Items Section */}
       <Card>
-        <CardContent className="flex flex-col gap-3 p-4">
+        <CardContent className="flex flex-col gap-4 p-4">
           <div className="flex items-center justify-between">
-            <Typography variant="headingSm">Products ({lineItems.length})</Typography>
+            <div>
+              <Typography variant="headingSm">Products</Typography>
+              {lineItems.length > 0 && (
+                <Typography variant="bodyXs" colorRole="muted">
+                  {lineItems.length} {lineItems.length === 1 ? 'item' : 'items'} · {calculateTotalCases()} cases
+                </Typography>
+              )}
+            </div>
             <Button type="button" variant="outline" size="sm" onClick={handleAddLineItem}>
-              <ButtonContent iconLeft={IconPlus}>Add</ButtonContent>
+              <ButtonContent iconLeft={IconPlus}>Add Product</ButtonContent>
             </Button>
           </div>
 
           {lineItems.length === 0 ? (
-            <div className="flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-border-muted py-6">
-              <Typography variant="bodySm" colorRole="muted">
-                No products added
-              </Typography>
+            <div className="flex flex-col items-center justify-center gap-3 rounded-lg border-2 border-dashed border-border-muted bg-surface-secondary/30 py-8">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-fill-brand/10">
+                <Icon icon={IconPlus} size="lg" className="text-text-brand" />
+              </div>
+              <div className="text-center">
+                <Typography variant="bodySm" className="font-medium">
+                  Add products from the catalog
+                </Typography>
+                <Typography variant="bodyXs" colorRole="muted" className="mt-1">
+                  Search our wine inventory or enter products manually
+                </Typography>
+              </div>
               <Button type="button" variant="default" colorRole="brand" size="sm" onClick={handleAddLineItem}>
                 <ButtonContent iconLeft={IconPlus}>Add First Product</ButtonContent>
               </Button>
             </div>
           ) : (
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-3">
               {lineItems.map((item, index) => (
                 <ProductPicker
                   key={item.id}
@@ -604,41 +618,39 @@ const PrivateOrderForm = () => {
 
       {/* Order Summary Section */}
       <Card>
-        <CardContent className="flex flex-col gap-3 p-4">
-          <Typography variant="headingSm">Summary</Typography>
+        <CardContent className="flex flex-col gap-4 p-4">
+          <Typography variant="headingSm">Order Summary</Typography>
 
-          <div className="flex flex-wrap items-center gap-4">
-            <div>
+          <div className="grid grid-cols-3 gap-4 rounded-lg bg-fill-muted/30 p-3">
+            <div className="text-center">
               <Typography variant="bodyXs" colorRole="muted">
                 Items
               </Typography>
-              <Typography variant="bodySm" className="font-medium">
+              <Typography variant="headingSm" className="font-bold">
                 {lineItems.length}
               </Typography>
             </div>
-            <div>
+            <div className="text-center">
               <Typography variant="bodyXs" colorRole="muted">
                 Cases
               </Typography>
-              <Typography variant="bodySm" className="font-medium">
+              <Typography variant="headingSm" className="font-bold">
                 {calculateTotalCases()}
               </Typography>
             </div>
-            <div className="ml-auto text-right">
+            <div className="text-center">
               <Typography variant="bodyXs" colorRole="muted">
-                Subtotal (USD)
+                Subtotal
               </Typography>
-              <Typography variant="bodyLg" className="font-semibold">
+              <Typography variant="headingSm" className="font-bold text-text-brand">
                 {formatCurrency(calculateSubtotal())}
               </Typography>
             </div>
           </div>
 
-          <Divider />
-
           <div>
             <Typography variant="bodyXs" colorRole="muted" className="mb-1">
-              Internal Notes
+              Internal Notes (optional)
             </Typography>
             <Input
               placeholder="Notes for internal use only..."
@@ -650,14 +662,15 @@ const PrivateOrderForm = () => {
         </CardContent>
       </Card>
 
-      {/* Actions */}
-      <div className="flex items-center justify-end gap-3">
-        <Button variant="outline" asChild>
+      {/* Actions - responsive layout */}
+      <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-end">
+        <Button variant="outline" asChild className="w-full sm:w-auto">
           <Link href="/platform/private-orders">Cancel</Link>
         </Button>
         <Button
           type="submit"
           variant="outline"
+          className="w-full sm:w-auto"
           isDisabled={isSubmitting || !effectiveClientName.trim() || lineItems.length === 0}
         >
           {isSubmitting && !submitAfterCreate ? 'Saving...' : 'Save Draft'}
@@ -666,6 +679,7 @@ const PrivateOrderForm = () => {
           type="button"
           variant="default"
           colorRole="brand"
+          className="w-full sm:w-auto"
           onClick={(e) => handleSubmit(e, true)}
           isDisabled={isSubmitting || !effectiveClientName.trim() || lineItems.length === 0}
         >
