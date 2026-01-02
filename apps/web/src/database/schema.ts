@@ -368,7 +368,9 @@ export const partners = pgTable(
     distributorCode: text('distributor_code'),
     // Private client pricing configuration
     marginPercentage: doublePrecision('margin_percentage').default(40.6),
-    logisticsCostPerCase: doublePrecision('logistics_cost_per_case'),
+    logisticsCostPerCase: doublePrecision('logistics_cost_per_case').default(60),
+    pcoDutyRate: doublePrecision('pco_duty_rate').default(0.05),
+    pcoVatRate: doublePrecision('pco_vat_rate').default(0.05),
     currencyPreference: text('currency_preference').default('USD'),
     // Payment configuration for licensed partners
     paymentMethod: paymentMethod('payment_method'),

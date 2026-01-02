@@ -3,8 +3,10 @@ import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 
 import db from '@/database/client';
-import { privateClientOrderItems, privateClientOrders } from '@/database/schema';
+import { privateClientOrderItems } from '@/database/schema';
 import { winePartnerProcedure } from '@/lib/trpc/procedures';
+
+import recalculateOrderTotals from '../utils/recalculateOrderTotals';
 
 const updateItemSchema = z.object({
   itemId: z.string().uuid(),
@@ -91,23 +93,8 @@ const itemsUpdate = winePartnerProcedure.input(updateItemSchema).mutation(async 
     .where(eq(privateClientOrderItems.id, itemId))
     .returning();
 
-  // Recalculate order totals
-  const allItems = await db.query.privateClientOrderItems.findMany({
-    where: { orderId: item.order.id },
-  });
-
-  const subtotalUsd = allItems.reduce((sum, i) => sum + Number(i.totalUsd), 0);
-  const caseCount = allItems.reduce((sum, i) => sum + i.quantity, 0);
-
-  await db
-    .update(privateClientOrders)
-    .set({
-      subtotalUsd,
-      caseCount,
-      itemCount: allItems.length,
-      updatedAt: new Date(),
-    })
-    .where(eq(privateClientOrders.id, item.order.id));
+  // Recalculate order totals using partner settings
+  await recalculateOrderTotals(item.order.id);
 
   return updatedItem;
 });

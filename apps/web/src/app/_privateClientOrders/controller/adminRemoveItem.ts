@@ -1,56 +1,16 @@
 import { TRPCError } from '@trpc/server';
-import { eq, sql } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 
 import db from '@/database/client';
-import { privateClientOrderItems, privateClientOrders } from '@/database/schema';
+import { privateClientOrderItems } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
+
+import recalculateOrderTotals from '../utils/recalculateOrderTotals';
 
 const adminRemoveItemSchema = z.object({
   itemId: z.string().uuid(),
 });
-
-/**
- * Recalculate order totals based on line items
- */
-const recalculateOrderTotals = async (orderId: string) => {
-  const [totals] = await db
-    .select({
-      itemCount: sql<number>`count(*)`,
-      caseCount: sql<number>`coalesce(sum(${privateClientOrderItems.quantity}), 0)`,
-      subtotalUsd: sql<number>`coalesce(sum(${privateClientOrderItems.totalUsd}), 0)`,
-    })
-    .from(privateClientOrderItems)
-    .where(eq(privateClientOrderItems.orderId, orderId));
-
-  const itemCount = Number(totals?.itemCount ?? 0);
-  const caseCount = Number(totals?.caseCount ?? 0);
-  const subtotalUsd = Number(totals?.subtotalUsd ?? 0);
-
-  // Calculate duty and VAT (5% each for UAE)
-  const dutyUsd = subtotalUsd * 0.05;
-  const vatUsd = (subtotalUsd + dutyUsd) * 0.05;
-
-  // Get partner's logistics cost per case (default $60)
-  const logisticsPerCase = 60;
-  const logisticsUsd = caseCount * logisticsPerCase;
-
-  const totalUsd = subtotalUsd + dutyUsd + vatUsd + logisticsUsd;
-
-  await db
-    .update(privateClientOrders)
-    .set({
-      itemCount,
-      caseCount,
-      subtotalUsd,
-      dutyUsd,
-      vatUsd,
-      logisticsUsd,
-      totalUsd,
-      updatedAt: new Date(),
-    })
-    .where(eq(privateClientOrders.id, orderId));
-};
 
 // Statuses where admin cannot edit (final statuses)
 const NON_EDITABLE_STATUSES = ['delivered', 'cancelled'];

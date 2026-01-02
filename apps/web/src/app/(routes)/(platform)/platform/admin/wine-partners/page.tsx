@@ -3,6 +3,7 @@
 import {
   IconBottle,
   IconBuilding,
+  IconCalculator,
   IconEdit,
   IconMail,
   IconMapPin,
@@ -72,6 +73,10 @@ const WinePartnersPage = () => {
     businessEmail: string;
     taxId: string;
     logoUrl: string;
+    // PCO pricing settings
+    logisticsCostPerCase: number;
+    pcoDutyRate: number;
+    pcoVatRate: number;
   } | null>(null);
 
   // Fetch wine partners only
@@ -155,6 +160,10 @@ const WinePartnersPage = () => {
       businessEmail: partner.businessEmail || '',
       taxId: partner.taxId || '',
       logoUrl: partner.logoUrl || '',
+      // PCO pricing settings with defaults
+      logisticsCostPerCase: partner.logisticsCostPerCase ?? 60,
+      pcoDutyRate: partner.pcoDutyRate ?? 0.05,
+      pcoVatRate: partner.pcoVatRate ?? 0.05,
     });
     setIsEditDialogOpen(true);
   };
@@ -170,6 +179,10 @@ const WinePartnersPage = () => {
       businessEmail: editingPartner.businessEmail || undefined,
       taxId: editingPartner.taxId || undefined,
       logoUrl: editingPartner.logoUrl || undefined,
+      // PCO pricing settings
+      logisticsCostPerCase: editingPartner.logisticsCostPerCase,
+      pcoDutyRate: editingPartner.pcoDutyRate,
+      pcoVatRate: editingPartner.pcoVatRate,
     });
   };
 
@@ -638,6 +651,89 @@ const WinePartnersPage = () => {
                         />
                       </div>
                     )}
+                  </div>
+                </div>
+
+                {/* Private Client Order Pricing */}
+                <div className="space-y-4 border-t border-border-muted pt-4">
+                  <Typography variant="bodySm" className="font-semibold flex items-center gap-2">
+                    <IconCalculator className="h-4 w-4" />
+                    Private Client Order Pricing
+                  </Typography>
+
+                  <Typography variant="bodyXs" colorRole="muted">
+                    Configure how duty, VAT, and logistics costs are calculated for this
+                    partner&apos;s private client orders
+                  </Typography>
+
+                  <div className="grid grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-text-primary mb-1">
+                        Duty Rate (%)
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="0.1"
+                        value={(editingPartner.pcoDutyRate * 100).toFixed(1)}
+                        onChange={(e) =>
+                          setEditingPartner({
+                            ...editingPartner,
+                            pcoDutyRate: parseFloat(e.target.value) / 100 || 0,
+                          })
+                        }
+                        className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm"
+                      />
+                      <Typography variant="bodyXs" colorRole="muted" className="mt-1">
+                        Default: 5%
+                      </Typography>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-text-primary mb-1">
+                        VAT Rate (%)
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="0.1"
+                        value={(editingPartner.pcoVatRate * 100).toFixed(1)}
+                        onChange={(e) =>
+                          setEditingPartner({
+                            ...editingPartner,
+                            pcoVatRate: parseFloat(e.target.value) / 100 || 0,
+                          })
+                        }
+                        className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm"
+                      />
+                      <Typography variant="bodyXs" colorRole="muted" className="mt-1">
+                        Default: 5%
+                      </Typography>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-text-primary mb-1">
+                        Logistics ($/case)
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="1"
+                        value={editingPartner.logisticsCostPerCase}
+                        onChange={(e) =>
+                          setEditingPartner({
+                            ...editingPartner,
+                            logisticsCostPerCase: parseFloat(e.target.value) || 0,
+                          })
+                        }
+                        className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm"
+                      />
+                      <Typography variant="bodyXs" colorRole="muted" className="mt-1">
+                        Default: $60/case
+                      </Typography>
+                    </div>
                   </div>
                 </div>
 

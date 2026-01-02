@@ -28,6 +28,10 @@ const updatePartnerSchema = z.object({
   logoUrl: z.string().url().optional().or(z.literal('')),
   // Payment configuration (partner can have both bank transfer AND payment link)
   paymentDetails: paymentDetailsSchema.optional(),
+  // PCO pricing settings
+  logisticsCostPerCase: z.number().min(0).optional(),
+  pcoDutyRate: z.number().min(0).max(1).optional(),
+  pcoVatRate: z.number().min(0).max(1).optional(),
 });
 
 export type UpdatePartnerInput = z.infer<typeof updatePartnerSchema>;
