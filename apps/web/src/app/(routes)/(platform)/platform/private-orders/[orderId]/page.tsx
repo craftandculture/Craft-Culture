@@ -519,10 +519,10 @@ const PrivateOrderDetailPage = () => {
                     Client payment has been confirmed.{' '}
                     <strong>{order.distributor?.businessName ?? 'The distributor'}</strong> will contact your client to arrange delivery.
                   </Typography>
-                  {order.clientPaymentConfirmedAt && (
+                  {order.clientPaidAt && (
                     <Typography variant="bodyXs" colorRole="muted" className="mt-1">
                       Payment confirmed:{' '}
-                      {new Date(order.clientPaymentConfirmedAt).toLocaleDateString('en-GB', {
+                      {new Date(order.clientPaidAt).toLocaleDateString('en-GB', {
                         day: '2-digit',
                         month: 'short',
                         year: 'numeric',
