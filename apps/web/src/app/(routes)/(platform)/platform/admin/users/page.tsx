@@ -25,7 +25,6 @@ import DialogFooter from '@/app/_ui/components/Dialog/DialogFooter';
 import DialogHeader from '@/app/_ui/components/Dialog/DialogHeader';
 import DialogTitle from '@/app/_ui/components/Dialog/DialogTitle';
 import Input from '@/app/_ui/components/Input/Input';
-import Label from '@/app/_ui/components/Label/Label';
 import Select from '@/app/_ui/components/Select/Select';
 import SelectContent from '@/app/_ui/components/Select/SelectContent';
 import SelectItem from '@/app/_ui/components/Select/SelectItem';
@@ -115,7 +114,9 @@ const UserEditDialog = ({
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="name">Name</Label>
+            <Typography variant="bodySm" className="font-medium">
+              Name
+            </Typography>
             <Input
               id="name"
               value={name}
@@ -125,7 +126,9 @@ const UserEditDialog = ({
           </div>
 
           <div className="space-y-2">
-            <Label>Customer Type</Label>
+            <Typography variant="bodySm" className="font-medium">
+              Customer Type
+            </Typography>
             <Select
               value={customerType}
               onValueChange={(v) => setCustomerType(v as typeof customerType)}
@@ -142,7 +145,9 @@ const UserEditDialog = ({
           </div>
 
           <div className="space-y-2">
-            <Label>Role</Label>
+            <Typography variant="bodySm" className="font-medium">
+              Role
+            </Typography>
             <Select value={role} onValueChange={(v) => setRole(v as typeof role)}>
               <SelectTrigger>
                 <SelectValue />
@@ -155,7 +160,9 @@ const UserEditDialog = ({
           </div>
 
           <div className="space-y-2">
-            <Label>Approval Status</Label>
+            <Typography variant="bodySm" className="font-medium">
+              Approval Status
+            </Typography>
             <Select
               value={approvalStatus}
               onValueChange={(v) => setApprovalStatus(v as typeof approvalStatus)}
