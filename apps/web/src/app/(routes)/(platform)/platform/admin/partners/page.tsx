@@ -317,7 +317,7 @@ const DistributorsPage = () => {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 sm:mb-8">
           <div>
             <Typography variant="headingLg" className="mb-2">
-              Distributors
+              Licensed Distributors
             </Typography>
             <Typography variant="bodyMd" colorRole="muted">
               Manage licensed distributors that fulfill B2C orders
