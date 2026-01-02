@@ -4,11 +4,11 @@ import {
   IconArrowLeft,
   IconBuilding,
   IconCheck,
-  IconDeviceMobile,
   IconLoader2,
   IconPackage,
   IconShieldCheck,
   IconTruck,
+  IconX,
 } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Image from 'next/image';
@@ -72,7 +72,6 @@ const DistributorOrderDetailPage = () => {
       trpcClient.privateClientOrders.distributorUpdateStatus.mutate({
         orderId,
         status: status as
-          | 'awaiting_client_verification'
           | 'awaiting_client_payment'
           | 'client_paid'
           | 'awaiting_distributor_payment'
@@ -92,6 +91,28 @@ const DistributorOrderDetailPage = () => {
     },
   });
 
+  // Distributor verification mutation
+  const { mutate: distributorVerification, isPending: isVerifying } = useMutation({
+    mutationFn: ({ response, notes }: { response: 'verified' | 'not_verified'; notes?: string }) =>
+      trpcClient.privateClientOrders.distributorVerification.mutate({
+        orderId,
+        response,
+        notes,
+      }),
+    onSuccess: (_data, variables) => {
+      if (variables.response === 'verified') {
+        toast.success('Client verified. Ready for payment collection.');
+      } else {
+        toast.info('Client not verified. Order suspended for partner to resolve.');
+      }
+      void queryClient.invalidateQueries({ queryKey: ['privateClientOrders.distributorGetOne'] });
+      void queryClient.invalidateQueries({ queryKey: ['privateClientOrders.distributorGetMany'] });
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to submit verification');
+    },
+  });
+
   const formatDate = (date: Date | null | undefined) => {
     if (!date) return '-';
     return new Date(date).toLocaleDateString('en-GB', {
@@ -103,24 +124,15 @@ const DistributorOrderDetailPage = () => {
 
   /**
    * Get next action matching backend distributorTransitions exactly
+   *
+   * Note: awaiting_distributor_verification is handled by a separate verification UI
    */
   const getNextAction = () => {
     if (!order) return null;
 
-    // Check if client is already verified (from client profile)
-    const clientAlreadyVerified = !!order.client?.cityDrinksVerifiedAt;
-
     switch (order.status) {
-      case 'cc_approved':
-        // If client is already verified, skip to payment collection
-        if (clientAlreadyVerified) {
-          return { label: 'Proceed to Payment', status: 'awaiting_client_payment', icon: IconShieldCheck };
-        }
-        // Client needs to verify on City Drinks app
-        return { label: 'Request Verification', status: 'awaiting_client_verification', icon: IconDeviceMobile };
-      case 'awaiting_client_verification':
-        // Client has verified, proceed to payment
-        return { label: 'Confirm Verified', status: 'awaiting_client_payment', icon: IconCheck };
+      // Note: awaiting_partner_verification and awaiting_distributor_verification
+      // are handled by dedicated verification UI components, not action buttons
       case 'awaiting_client_payment':
         return { label: 'Confirm Client Payment', status: 'client_paid', icon: IconCheck };
       case 'client_paid':
@@ -243,6 +255,76 @@ const DistributorOrderDetailPage = () => {
 
         {/* Workflow Stepper */}
         <WorkflowStepper order={order} />
+
+        {/* Distributor Verification Prompt - shown when awaiting distributor verification */}
+        {order.status === 'awaiting_distributor_verification' && (
+          <Card className="border-2 border-fill-warning/50 bg-fill-warning/5">
+            <CardContent className="p-6">
+              <div className="flex flex-col items-center gap-4 text-center sm:flex-row sm:text-left">
+                <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-fill-warning/20">
+                  <Icon icon={IconShieldCheck} size="lg" className="text-fill-warning" />
+                </div>
+                <div className="flex-1">
+                  <Typography variant="headingSm" className="mb-1">
+                    Client Verification Required
+                  </Typography>
+                  <Typography variant="bodySm" colorRole="muted">
+                    Please verify that <strong>{order.clientName}</strong> is registered in your system.
+                    The partner has confirmed the client should be verified with you.
+                  </Typography>
+                  {order.clientPhone && (
+                    <Typography variant="bodyXs" colorRole="muted" className="mt-1">
+                      Client phone: {order.clientPhone}
+                    </Typography>
+                  )}
+                </div>
+                <div className="flex flex-wrap justify-center gap-2 sm:flex-nowrap">
+                  <Button
+                    onClick={() => distributorVerification({ response: 'verified' })}
+                    disabled={isVerifying}
+                    variant="primary"
+                  >
+                    <ButtonContent iconLeft={IconCheck}>Client Verified</ButtonContent>
+                  </Button>
+                  <Button
+                    onClick={() => distributorVerification({ response: 'not_verified', notes: 'Client not found in system' })}
+                    disabled={isVerifying}
+                    variant="outline"
+                  >
+                    <ButtonContent iconLeft={IconX}>Not Verified</ButtonContent>
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Payment Reference Display - shown when order has a payment reference */}
+        {order.paymentReference && order.status === 'awaiting_client_payment' && (
+          <Card className="border-2 border-fill-brand/50 bg-fill-brand/5">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-fill-brand/20">
+                  <Icon icon={IconCheck} size="md" className="text-fill-brand" />
+                </div>
+                <div>
+                  <Typography variant="labelSm" colorRole="muted">
+                    Payment Reference
+                  </Typography>
+                  <Typography variant="headingSm">{order.paymentReference}</Typography>
+                </div>
+                <div className="ml-auto text-right">
+                  <Typography variant="labelSm" colorRole="muted">
+                    Amount Due
+                  </Typography>
+                  <Typography variant="headingSm">
+                    {formatPrice(getAmount(order.totalUsd), currency)}
+                  </Typography>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Line Items - Full Width, Primary Focus */}
         <Card>
