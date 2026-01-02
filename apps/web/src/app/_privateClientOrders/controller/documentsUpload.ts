@@ -1,9 +1,10 @@
 import { tasks } from '@trigger.dev/sdk/v3';
 import { TRPCError } from '@trpc/server';
 import { put } from '@vercel/blob';
+import { eq } from 'drizzle-orm';
 
 import db from '@/database/client';
-import { privateClientOrderDocuments } from '@/database/schema';
+import { partnerMembers, privateClientOrderDocuments } from '@/database/schema';
 import { protectedProcedure } from '@/lib/trpc/procedures';
 import { extractDocumentJob } from '@/trigger/jobs/extract-document/extractDocumentJob';
 
@@ -43,14 +44,15 @@ const documentsUpload = protectedProcedure.input(uploadDocumentSchema).mutation(
   // Check access - must be admin, the partner who created it, or assigned distributor
   const isAdmin = user.role === 'admin';
 
-  // Get user's partner (if any)
-  const userPartner = await db.query.partners.findFirst({
-    where: { userId: user.id },
-    columns: { id: true },
-  });
+  // Check if user is a member of any partner
+  const [userPartnerMembership] = await db
+    .select({ partnerId: partnerMembers.partnerId })
+    .from(partnerMembers)
+    .where(eq(partnerMembers.userId, user.id))
+    .limit(1);
 
-  const isPartner = userPartner && order.partnerId === userPartner.id;
-  const isDistributor = userPartner && order.distributorId === userPartner.id;
+  const isPartner = userPartnerMembership && order.partnerId === userPartnerMembership.partnerId;
+  const isDistributor = userPartnerMembership && order.distributorId === userPartnerMembership.partnerId;
 
   if (!isAdmin && !isPartner && !isDistributor) {
     throw new TRPCError({
