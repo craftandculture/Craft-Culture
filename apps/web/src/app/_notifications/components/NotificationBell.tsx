@@ -114,6 +114,8 @@ const NotificationBell = () => {
       // Admin: Quote approvals table and user management
       void queryClient.invalidateQueries({ queryKey: ['admin-quotes'] });
       void queryClient.invalidateQueries({ queryKey: ['admin-users'] });
+      // Private client orders - partner and admin views
+      void queryClient.invalidateQueries({ queryKey: ['privateClientOrders'] });
     }
 
     previousCountRef.current = newCount;
@@ -158,6 +160,11 @@ const NotificationBell = () => {
     if (notification.entityType === 'quote') {
       void queryClient.invalidateQueries({ queryKey: ['quotes.getMany'] });
       void queryClient.invalidateQueries({ queryKey: ['quotes.get'] });
+    }
+
+    // If this is a private client order notification, invalidate order queries
+    if (notification.entityType === 'private_client_order') {
+      void queryClient.invalidateQueries({ queryKey: ['privateClientOrders'] });
     }
 
     // Navigate to action URL if present
