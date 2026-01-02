@@ -107,6 +107,10 @@ const DistributorsPage = () => {
     enablePaymentLink: boolean;
     paymentDetails: PaymentDetails | null;
     commissionRate: number;
+    // PCO pricing fields
+    pcoDutyRate: number;
+    pcoVatRate: number;
+    logisticsCostPerCase: number;
   } | null>(null);
 
   // Fetch distributors only (not wine partners)
@@ -250,6 +254,10 @@ const DistributorsPage = () => {
       enablePaymentLink: hasPaymentLink,
       paymentDetails: partner.paymentDetails,
       commissionRate: partner.commissionRate,
+      // PCO pricing fields with defaults
+      pcoDutyRate: partner.pcoDutyRate ?? 0.05,
+      pcoVatRate: partner.pcoVatRate ?? 0.05,
+      logisticsCostPerCase: partner.logisticsCostPerCase ?? 60,
     });
     setIsEditDialogOpen(true);
   };
@@ -280,6 +288,10 @@ const DistributorsPage = () => {
       logoUrl: editingPartner.logoUrl || undefined,
       paymentDetails: Object.keys(paymentDetails).length > 0 ? paymentDetails : undefined,
       commissionRate: editingPartner.commissionRate,
+      // PCO pricing fields
+      pcoDutyRate: editingPartner.pcoDutyRate,
+      pcoVatRate: editingPartner.pcoVatRate,
+      logisticsCostPerCase: editingPartner.logisticsCostPerCase,
     });
   };
 
@@ -1073,6 +1085,89 @@ const DistributorsPage = () => {
                         />
                       </div>
                     )}
+                  </div>
+                </div>
+
+                {/* PCO Pricing Configuration */}
+                <div className="space-y-4 border-t border-border-muted pt-4">
+                  <Typography variant="bodySm" className="font-semibold flex items-center gap-2">
+                    <IconReceipt className="h-4 w-4" />
+                    Private Client Order Pricing
+                  </Typography>
+
+                  <Typography variant="bodyXs" colorRole="muted">
+                    Configure duty, VAT, and logistics rates applied when this distributor is
+                    assigned to a private client order
+                  </Typography>
+
+                  <div className="grid grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-text-primary mb-1">
+                        Duty Rate (%)
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="0.1"
+                        value={(editingPartner.pcoDutyRate * 100).toFixed(1)}
+                        onChange={(e) =>
+                          setEditingPartner({
+                            ...editingPartner,
+                            pcoDutyRate: parseFloat(e.target.value) / 100 || 0,
+                          })
+                        }
+                        className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm"
+                      />
+                      <Typography variant="bodyXs" colorRole="muted" className="mt-1">
+                        Default: 5%
+                      </Typography>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-text-primary mb-1">
+                        VAT Rate (%)
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="0.1"
+                        value={(editingPartner.pcoVatRate * 100).toFixed(1)}
+                        onChange={(e) =>
+                          setEditingPartner({
+                            ...editingPartner,
+                            pcoVatRate: parseFloat(e.target.value) / 100 || 0,
+                          })
+                        }
+                        className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm"
+                      />
+                      <Typography variant="bodyXs" colorRole="muted" className="mt-1">
+                        Default: 5%
+                      </Typography>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-text-primary mb-1">
+                        Logistics ($/case)
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="1"
+                        value={editingPartner.logisticsCostPerCase}
+                        onChange={(e) =>
+                          setEditingPartner({
+                            ...editingPartner,
+                            logisticsCostPerCase: parseFloat(e.target.value) || 0,
+                          })
+                        }
+                        className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm"
+                      />
+                      <Typography variant="bodyXs" colorRole="muted" className="mt-1">
+                        Default: $60/case
+                      </Typography>
+                    </div>
                   </div>
                 </div>
 

@@ -72,10 +72,6 @@ const WinePartnersPage = () => {
     businessEmail: string;
     taxId: string;
     logoUrl: string;
-    // PCO pricing settings
-    logisticsCostPerCase: number;
-    pcoDutyRate: number;
-    pcoVatRate: number;
   } | null>(null);
 
   // Fetch wine partners only
@@ -159,10 +155,6 @@ const WinePartnersPage = () => {
       businessEmail: partner.businessEmail || '',
       taxId: partner.taxId || '',
       logoUrl: partner.logoUrl || '',
-      // PCO pricing settings with defaults
-      logisticsCostPerCase: partner.logisticsCostPerCase ?? 60,
-      pcoDutyRate: partner.pcoDutyRate ?? 0.05,
-      pcoVatRate: partner.pcoVatRate ?? 0.05,
     });
     setIsEditDialogOpen(true);
   };
@@ -178,10 +170,6 @@ const WinePartnersPage = () => {
       businessEmail: editingPartner.businessEmail || undefined,
       taxId: editingPartner.taxId || undefined,
       logoUrl: editingPartner.logoUrl || undefined,
-      // PCO pricing settings
-      logisticsCostPerCase: editingPartner.logisticsCostPerCase,
-      pcoDutyRate: editingPartner.pcoDutyRate,
-      pcoVatRate: editingPartner.pcoVatRate,
     });
   };
 
@@ -640,65 +628,6 @@ const WinePartnersPage = () => {
                       }
                       className="w-full rounded-md border border-border-primary bg-background-primary px-3 py-1.5 text-sm"
                     />
-                  </div>
-                </div>
-
-                {/* PCO Pricing - compact section */}
-                <div className="bg-fill-muted/50 rounded-lg p-3 space-y-2">
-                  <Typography variant="bodyXs" className="font-medium text-text-muted">
-                    Private Client Order Pricing
-                  </Typography>
-                  <div className="grid grid-cols-3 gap-2">
-                    <div>
-                      <label className="block text-xs text-text-muted mb-1">Duty %</label>
-                      <input
-                        type="number"
-                        min="0"
-                        max="100"
-                        step="0.1"
-                        value={(editingPartner.pcoDutyRate * 100).toFixed(1)}
-                        onChange={(e) =>
-                          setEditingPartner({
-                            ...editingPartner,
-                            pcoDutyRate: parseFloat(e.target.value) / 100 || 0,
-                          })
-                        }
-                        className="w-full rounded-md border border-border-primary bg-background-primary px-2 py-1 text-sm text-center"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs text-text-muted mb-1">VAT %</label>
-                      <input
-                        type="number"
-                        min="0"
-                        max="100"
-                        step="0.1"
-                        value={(editingPartner.pcoVatRate * 100).toFixed(1)}
-                        onChange={(e) =>
-                          setEditingPartner({
-                            ...editingPartner,
-                            pcoVatRate: parseFloat(e.target.value) / 100 || 0,
-                          })
-                        }
-                        className="w-full rounded-md border border-border-primary bg-background-primary px-2 py-1 text-sm text-center"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs text-text-muted mb-1">Logistics $/cs</label>
-                      <input
-                        type="number"
-                        min="0"
-                        step="1"
-                        value={editingPartner.logisticsCostPerCase}
-                        onChange={(e) =>
-                          setEditingPartner({
-                            ...editingPartner,
-                            logisticsCostPerCase: parseFloat(e.target.value) || 0,
-                          })
-                        }
-                        className="w-full rounded-md border border-border-primary bg-background-primary px-2 py-1 text-sm text-center"
-                      />
-                    </div>
                   </div>
                 </div>
 

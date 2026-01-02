@@ -8,39 +8,39 @@ import {
 } from '@/database/schema';
 
 /**
- * Recalculate order totals based on line items and partner settings
+ * Recalculate order totals based on line items and distributor settings
  *
- * Fetches partner-specific rates for duty, VAT, and logistics.
- * Falls back to defaults if partner settings are not configured.
+ * Fetches distributor-specific rates for duty, VAT, and logistics.
+ * Falls back to defaults if distributor is not assigned or settings are not configured.
  */
 const recalculateOrderTotals = async (orderId: string) => {
-  // Get the order to find the partner
+  // Get the order to find the assigned distributor
   const [order] = await db
     .select({
-      partnerId: privateClientOrders.partnerId,
+      distributorId: privateClientOrders.distributorId,
     })
     .from(privateClientOrders)
     .where(eq(privateClientOrders.id, orderId));
 
-  // Get partner pricing settings (with defaults)
+  // Get distributor pricing settings (with defaults)
   let dutyRate = 0.05;
   let vatRate = 0.05;
   let logisticsPerCase = 60;
 
-  if (order?.partnerId) {
-    const [partner] = await db
+  if (order?.distributorId) {
+    const [distributor] = await db
       .select({
         pcoDutyRate: partners.pcoDutyRate,
         pcoVatRate: partners.pcoVatRate,
         logisticsCostPerCase: partners.logisticsCostPerCase,
       })
       .from(partners)
-      .where(eq(partners.id, order.partnerId));
+      .where(eq(partners.id, order.distributorId));
 
-    if (partner) {
-      dutyRate = partner.pcoDutyRate ?? 0.05;
-      vatRate = partner.pcoVatRate ?? 0.05;
-      logisticsPerCase = partner.logisticsCostPerCase ?? 60;
+    if (distributor) {
+      dutyRate = distributor.pcoDutyRate ?? 0.05;
+      vatRate = distributor.pcoVatRate ?? 0.05;
+      logisticsPerCase = distributor.logisticsCostPerCase ?? 60;
     }
   }
 
