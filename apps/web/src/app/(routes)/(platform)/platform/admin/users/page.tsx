@@ -1,6 +1,13 @@
 'use client';
 
-import { IconCheck, IconEdit, IconSearch, IconTrash, IconX } from '@tabler/icons-react';
+import {
+  IconCheck,
+  IconEdit,
+  IconPlus,
+  IconSearch,
+  IconTrash,
+  IconX,
+} from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
@@ -198,6 +205,172 @@ const UserEditDialog = ({
 };
 
 /**
+ * Dialog component for creating a new user
+ */
+const UserCreateDialog = ({
+  open,
+  onOpenChange,
+  onSuccess,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSuccess: () => void;
+}) => {
+  const api = useTRPC();
+  const [email, setEmail] = useState('');
+  const [name, setName] = useState('');
+  const [customerType, setCustomerType] = useState<'b2b' | 'b2c' | 'private_clients'>(
+    'private_clients',
+  );
+  const [role, setRole] = useState<'user' | 'admin'>('user');
+  const [approvalStatus, setApprovalStatus] = useState<'pending' | 'approved' | 'rejected'>(
+    'approved',
+  );
+
+  const resetForm = () => {
+    setEmail('');
+    setName('');
+    setCustomerType('private_clients');
+    setRole('user');
+    setApprovalStatus('approved');
+  };
+
+  const { mutate: createUser, isPending } = useMutation(
+    api.users.adminCreate.mutationOptions({
+      onSuccess: () => {
+        toast.success('User created successfully');
+        onOpenChange(false);
+        resetForm();
+        onSuccess();
+      },
+      onError: (error) => {
+        toast.error(error.message || 'Failed to create user');
+      },
+    }),
+  );
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    createUser({
+      email,
+      name,
+      customerType,
+      role,
+      approvalStatus,
+    });
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Create New User</DialogTitle>
+          <DialogDescription>
+            Create a user directly without requiring them to register. They can sign in using magic
+            link.
+          </DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Typography variant="bodySm" className="font-medium">
+              Email
+            </Typography>
+            <Input
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="user@example.com"
+              required
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Typography variant="bodySm" className="font-medium">
+              Name
+            </Typography>
+            <Input
+              id="name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="User name"
+              required
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Typography variant="bodySm" className="font-medium">
+              Customer Type
+            </Typography>
+            <Select
+              value={customerType}
+              onValueChange={(v) => setCustomerType(v as typeof customerType)}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="b2b">Distributor Staff</SelectItem>
+                <SelectItem value="b2c">Sales Rep</SelectItem>
+                <SelectItem value="private_clients">Partner Staff</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Typography variant="bodySm" className="font-medium">
+              Role
+            </Typography>
+            <Select value={role} onValueChange={(v) => setRole(v as typeof role)}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="user">User</SelectItem>
+                <SelectItem value="admin">Admin</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Typography variant="bodySm" className="font-medium">
+              Approval Status
+            </Typography>
+            <Select
+              value={approvalStatus}
+              onValueChange={(v) => setApprovalStatus(v as typeof approvalStatus)}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="approved">Approved</SelectItem>
+                <SelectItem value="rejected">Rejected</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              isDisabled={isPending}
+            >
+              <ButtonContent>Cancel</ButtonContent>
+            </Button>
+            <Button type="submit" colorRole="brand" isDisabled={isPending || !email || !name}>
+              <ButtonContent>{isPending ? 'Creating...' : 'Create User'}</ButtonContent>
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+/**
  * Admin page for managing user approvals
  *
  * Features:
@@ -207,6 +380,7 @@ const UserEditDialog = ({
  * - Delete user accounts with confirmation
  * - Real-time status updates
  */
+
 /**
  * Component to manage distributor assignment for a user
  */
@@ -415,6 +589,7 @@ const UserManagementPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [editingUser, setEditingUser] = useState<UserToEdit | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
 
   // Fetch users
   const { data, isLoading, refetch } = useQuery({
@@ -509,16 +684,29 @@ const UserManagementPage = () => {
       <div className="space-y-6">
         {/* Header */}
         <div className="mb-6 sm:mb-8">
-          <Typography variant="headingLg" className="mb-2">
-            User Management
-          </Typography>
-          <Typography variant="bodyMd" colorRole="muted" className="mb-3">
-            Review and approve user applications
-          </Typography>
-          <div className="flex flex-wrap gap-4 text-xs text-text-muted">
-            <span><strong>Distributor Staff:</strong> Licensed Distributors employees</span>
-            <span><strong>Partner Staff:</strong> Wine company employees</span>
-            <span><strong>Sales Rep:</strong> B2C sales agents</span>
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <Typography variant="headingLg" className="mb-2">
+                User Management
+              </Typography>
+              <Typography variant="bodyMd" colorRole="muted" className="mb-3">
+                Review and approve user applications
+              </Typography>
+              <div className="flex flex-wrap gap-4 text-xs text-text-muted">
+                <span>
+                  <strong>Distributor Staff:</strong> Licensed Distributors employees
+                </span>
+                <span>
+                  <strong>Partner Staff:</strong> Wine company employees
+                </span>
+                <span>
+                  <strong>Sales Rep:</strong> B2C sales agents
+                </span>
+              </div>
+            </div>
+            <Button colorRole="brand" onClick={() => setCreateDialogOpen(true)}>
+              <ButtonContent iconLeft={IconPlus}>Create User</ButtonContent>
+            </Button>
           </div>
         </div>
 
@@ -912,6 +1100,15 @@ const UserManagementPage = () => {
             setEditDialogOpen(open);
             if (!open) setEditingUser(null);
           }}
+          onSuccess={() => {
+            void refetch();
+          }}
+        />
+
+        {/* User Create Dialog */}
+        <UserCreateDialog
+          open={createDialogOpen}
+          onOpenChange={setCreateDialogOpen}
           onSuccess={() => {
             void refetch();
           }}
