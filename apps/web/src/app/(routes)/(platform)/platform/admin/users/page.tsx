@@ -259,18 +259,21 @@ const DistributorAssignment = ({
     return <span className="text-text-muted text-xs">Loading...</span>;
   }
 
+  // Get distributor membership from the new structure
+  const distributorMembership = membership?.distributor;
+
   const currentPartnerId =
-    membership?.type === 'member'
-      ? membership.membership.partnerId
-      : membership?.type === 'owner'
-        ? membership.partner.id
+    distributorMembership?.type === 'member'
+      ? distributorMembership.membership.partnerId
+      : distributorMembership?.type === 'owner'
+        ? distributorMembership.partner.id
         : undefined;
 
   const currentPartnerName =
-    membership?.type === 'member'
-      ? membership.membership.partner.businessName
-      : membership?.type === 'owner'
-        ? membership.partner.businessName
+    distributorMembership?.type === 'member'
+      ? distributorMembership.membership.partner.businessName
+      : distributorMembership?.type === 'owner'
+        ? distributorMembership.partner.businessName
         : undefined;
 
   return (

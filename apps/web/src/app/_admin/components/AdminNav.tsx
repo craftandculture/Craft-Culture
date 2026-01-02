@@ -2,13 +2,13 @@
 
 import {
   IconActivity,
+  IconBottle,
   IconBuildingStore,
   IconCoin,
   IconPackage,
   IconSettings,
   IconTable,
   IconUsers,
-  IconWine,
 } from '@tabler/icons-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -39,7 +39,7 @@ const navItems: NavItem[] = [
   {
     label: 'Partners',
     href: '/platform/admin/wine-partners',
-    icon: IconWine,
+    icon: IconBottle,
     description: 'Wine companies',
   },
   {
