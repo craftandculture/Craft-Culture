@@ -38,10 +38,11 @@ const paymentsConfirm = protectedProcedure.input(confirmPaymentSchema).mutation(
   const isAdmin = user.role === 'admin';
 
   // Check if user is a member of the partner that owns this order
-  const userPartnerMembership = await db.query.partnerMembers.findFirst({
-    where: eq(partnerMembers.userId, user.id),
-    columns: { partnerId: true },
-  });
+  const [userPartnerMembership] = await db
+    .select({ partnerId: partnerMembers.partnerId })
+    .from(partnerMembers)
+    .where(eq(partnerMembers.userId, user.id))
+    .limit(1);
 
   const isPartner = userPartnerMembership && order.partnerId === userPartnerMembership.partnerId;
   const _isDistributor = userPartnerMembership && order.distributorId === userPartnerMembership.partnerId;
