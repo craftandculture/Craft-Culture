@@ -8,6 +8,7 @@ import {
   IconSettings,
   IconTable,
   IconUsers,
+  IconWine,
 } from '@tabler/icons-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -30,10 +31,16 @@ const navItems: NavItem[] = [
     description: 'Manage accounts',
   },
   {
-    label: 'Partners',
+    label: 'Distributors',
     href: '/platform/admin/partners',
     icon: IconBuildingStore,
-    description: 'API access',
+    description: 'CD & TBS',
+  },
+  {
+    label: 'Partners',
+    href: '/platform/admin/wine-partners',
+    icon: IconWine,
+    description: 'Wine companies',
   },
   {
     label: 'Private Clients',

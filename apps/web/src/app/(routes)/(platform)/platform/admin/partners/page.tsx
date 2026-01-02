@@ -58,10 +58,11 @@ interface PaymentDetails {
 /**
  * Admin page for managing distributors
  *
- * Distributors are licensed mainland entities that fulfill B2C orders.
+ * Distributors are licensed mainland entities that fulfill private client orders.
  * They receive payment from customers and purchase inventory from C&C.
+ * Note: "Partners" in the codebase refers to wine companies who source stock and bring clients.
  */
-const PartnersPage = () => {
+const DistributorsPage = () => {
   const api = useTRPC();
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<PartnerStatus | 'all'>('all');
@@ -1378,4 +1379,4 @@ const PartnersPage = () => {
   );
 };
 
-export default PartnersPage;
+export default DistributorsPage;
