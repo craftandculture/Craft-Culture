@@ -8,6 +8,7 @@ import {
   IconPencil,
   IconPhone,
   IconPlus,
+  IconShieldCheck,
 } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
@@ -92,7 +93,18 @@ const ClientContactDetail = ({ clientId }: ClientContactDetailProps) => {
             <Icon icon={IconArrowLeft} size="sm" />
             Back to Clients
           </Link>
-          <Typography variant="headingLg">{contact.name}</Typography>
+          <div className="flex items-center gap-2">
+            <Typography variant="headingLg">{contact.name}</Typography>
+            {contact.cityDrinksVerifiedAt && (
+              <span
+                className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-1 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                title="City Drinks Verified"
+              >
+                <Icon icon={IconShieldCheck} size="sm" />
+                <span className="text-xs font-medium">Verified</span>
+              </span>
+            )}
+          </div>
           <Typography variant="bodySm" colorRole="muted">
             Client since {format(new Date(contact.createdAt), 'MMMM yyyy')}
           </Typography>

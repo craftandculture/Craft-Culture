@@ -1,7 +1,7 @@
 'use client';
 
 import * as PopoverPrimitive from '@radix-ui/react-popover';
-import { IconChevronDown, IconUser } from '@tabler/icons-react';
+import { IconChevronDown, IconShieldCheck, IconUser } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import { useCallback, useEffect, useState } from 'react';
 
@@ -81,7 +81,15 @@ const ClientsCombobox = ({
             <div className="flex items-center gap-2 text-left">
               <Icon icon={IconUser} size="sm" colorRole="muted" />
               <div className="flex flex-col">
-                <span className="text-sm font-medium">{value.name}</span>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-sm font-medium">{value.name}</span>
+                  {value.cityDrinksVerifiedAt && (
+                    <span className="inline-flex items-center gap-0.5 rounded-full bg-green-100 px-1 py-0.5 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                      <IconShieldCheck size={10} />
+                      <span className="text-[9px] font-medium">Verified</span>
+                    </span>
+                  )}
+                </div>
                 {value.email && (
                   <span className="text-xs text-text-muted">{value.email}</span>
                 )}
@@ -122,9 +130,17 @@ const ClientsCombobox = ({
                 >
                   <Icon icon={IconUser} size="sm" colorRole="muted" />
                   <div className="flex flex-col">
-                    <Typography variant="bodySm" className="font-medium">
-                      {client.name}
-                    </Typography>
+                    <div className="flex items-center gap-1.5">
+                      <Typography variant="bodySm" className="font-medium">
+                        {client.name}
+                      </Typography>
+                      {client.cityDrinksVerifiedAt && (
+                        <span className="inline-flex items-center gap-0.5 rounded-full bg-green-100 px-1 py-0.5 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                          <IconShieldCheck size={10} />
+                          <span className="text-[9px] font-medium">Verified</span>
+                        </span>
+                      )}
+                    </div>
                     <Typography variant="bodyXs" colorRole="muted">
                       {[client.email, client.phone].filter(Boolean).join(' · ')}
                     </Typography>
