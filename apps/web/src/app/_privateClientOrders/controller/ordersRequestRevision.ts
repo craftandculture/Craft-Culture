@@ -2,8 +2,9 @@ import { TRPCError } from '@trpc/server';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 
+import createNotification from '@/app/_notifications/utils/createNotification';
 import db from '@/database/client';
-import { privateClientOrderActivityLogs, privateClientOrders } from '@/database/schema';
+import { partnerMembers, privateClientOrderActivityLogs, privateClientOrders } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
 const requestRevisionSchema = z.object({
@@ -66,6 +67,26 @@ const ordersRequestRevision = adminProcedure.input(requestRevisionSchema).mutati
     newStatus,
     notes: reason,
   });
+
+  // Send notifications to partner members
+  if (order.partnerId) {
+    const members = await db
+      .select({ userId: partnerMembers.userId })
+      .from(partnerMembers)
+      .where(eq(partnerMembers.partnerId, order.partnerId));
+
+    for (const member of members) {
+      await createNotification({
+        userId: member.userId,
+        type: 'revision_requested',
+        title: 'Order Revision Requested',
+        message: `C&C has made changes to order ${updatedOrder?.orderNumber ?? orderId} that need your review.`,
+        entityType: 'private_client_order',
+        entityId: orderId,
+        actionUrl: `/platform/private-orders/${orderId}`,
+      });
+    }
+  }
 
   return updatedOrder;
 });
