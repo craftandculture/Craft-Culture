@@ -3,7 +3,6 @@
 import {
   IconBottle,
   IconBuilding,
-  IconCalculator,
   IconEdit,
   IconMail,
   IconMapPin,
@@ -533,103 +532,58 @@ const WinePartnersPage = () => {
 
         {/* Edit Partner Dialog */}
         <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-          <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Edit Partner</DialogTitle>
-              <DialogDescription>Update wine partner details</DialogDescription>
+              <DialogTitle className="flex items-center gap-3">
+                {editingPartner?.logoUrl ? (
+                  <img
+                    src={editingPartner.logoUrl}
+                    alt=""
+                    className="h-8 w-8 object-contain rounded"
+                  />
+                ) : (
+                  <div className="h-8 w-8 bg-fill-muted rounded flex items-center justify-center">
+                    <IconBottle className="h-4 w-4 text-text-muted" />
+                  </div>
+                )}
+                {editingPartner?.businessName || 'Edit Partner'}
+              </DialogTitle>
             </DialogHeader>
 
             {editingPartner && (
-              <div className="space-y-6 mt-4">
-                {/* Company Details */}
-                <div className="space-y-4">
-                  <Typography variant="bodySm" className="font-semibold flex items-center gap-2">
-                    <IconBuilding className="h-4 w-4" />
-                    Company Details
-                  </Typography>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="col-span-2">
-                      <label className="block text-sm font-medium text-text-primary mb-1">
-                        Company Name
-                      </label>
-                      <input
-                        type="text"
-                        value={editingPartner.businessName}
-                        onChange={(e) =>
-                          setEditingPartner({ ...editingPartner, businessName: e.target.value })
-                        }
-                        className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-text-primary mb-1">
-                        TRN / Tax ID
-                      </label>
-                      <input
-                        type="text"
-                        value={editingPartner.taxId}
-                        onChange={(e) =>
-                          setEditingPartner({ ...editingPartner, taxId: e.target.value })
-                        }
-                        className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm"
-                      />
-                    </div>
-
-                    <div className="col-span-2">
-                      <label className="block text-sm font-medium text-text-primary mb-1">
-                        Business Address
-                      </label>
-                      <textarea
-                        value={editingPartner.businessAddress}
-                        onChange={(e) =>
-                          setEditingPartner({ ...editingPartner, businessAddress: e.target.value })
-                        }
-                        rows={2}
-                        className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-text-primary mb-1">
-                        Email
-                      </label>
-                      <input
-                        type="email"
-                        value={editingPartner.businessEmail}
-                        onChange={(e) =>
-                          setEditingPartner({ ...editingPartner, businessEmail: e.target.value })
-                        }
-                        className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-text-primary mb-1">
-                        Phone
-                      </label>
-                      <input
-                        type="tel"
-                        value={editingPartner.businessPhone}
-                        onChange={(e) =>
-                          setEditingPartner({ ...editingPartner, businessPhone: e.target.value })
-                        }
-                        className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm"
-                      />
-                    </div>
-                  </div>
+              <div className="space-y-4 mt-2">
+                {/* Company Name */}
+                <div>
+                  <label className="block text-xs font-medium text-text-muted mb-1">
+                    Company Name
+                  </label>
+                  <input
+                    type="text"
+                    value={editingPartner.businessName}
+                    onChange={(e) =>
+                      setEditingPartner({ ...editingPartner, businessName: e.target.value })
+                    }
+                    className="w-full rounded-md border border-border-primary bg-background-primary px-3 py-1.5 text-sm"
+                  />
                 </div>
 
-                {/* Branding */}
-                <div className="space-y-4 border-t border-border-muted pt-4">
-                  <Typography variant="bodySm" className="font-semibold flex items-center gap-2">
-                    <IconPhoto className="h-4 w-4" />
-                    Branding
-                  </Typography>
-
+                {/* Tax ID & Logo URL row */}
+                <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-sm font-medium text-text-primary mb-1">
+                    <label className="block text-xs font-medium text-text-muted mb-1">
+                      TRN / Tax ID
+                    </label>
+                    <input
+                      type="text"
+                      value={editingPartner.taxId}
+                      onChange={(e) =>
+                        setEditingPartner({ ...editingPartner, taxId: e.target.value })
+                      }
+                      className="w-full rounded-md border border-border-primary bg-background-primary px-3 py-1.5 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-text-muted mb-1">
                       Logo URL
                     </label>
                     <input
@@ -638,39 +592,65 @@ const WinePartnersPage = () => {
                       onChange={(e) =>
                         setEditingPartner({ ...editingPartner, logoUrl: e.target.value })
                       }
-                      placeholder="https://example.com/logo.png"
-                      className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm"
+                      placeholder="https://..."
+                      className="w-full rounded-md border border-border-primary bg-background-primary px-3 py-1.5 text-sm"
                     />
-                    {editingPartner.logoUrl && (
-                      <div className="mt-2 p-2 bg-fill-muted rounded-lg inline-block">
-                        <img
-                          src={editingPartner.logoUrl}
-                          alt="Logo preview"
-                          className="max-h-12 object-contain"
-                          onError={(e) => (e.currentTarget.style.display = 'none')}
-                        />
-                      </div>
-                    )}
                   </div>
                 </div>
 
-                {/* Private Client Order Pricing */}
-                <div className="space-y-4 border-t border-border-muted pt-4">
-                  <Typography variant="bodySm" className="font-semibold flex items-center gap-2">
-                    <IconCalculator className="h-4 w-4" />
+                {/* Address */}
+                <div>
+                  <label className="block text-xs font-medium text-text-muted mb-1">
+                    Business Address
+                  </label>
+                  <textarea
+                    value={editingPartner.businessAddress}
+                    onChange={(e) =>
+                      setEditingPartner({ ...editingPartner, businessAddress: e.target.value })
+                    }
+                    rows={2}
+                    className="w-full rounded-md border border-border-primary bg-background-primary px-3 py-1.5 text-sm resize-none"
+                  />
+                </div>
+
+                {/* Email & Phone row */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-text-muted mb-1">
+                      Email
+                    </label>
+                    <input
+                      type="email"
+                      value={editingPartner.businessEmail}
+                      onChange={(e) =>
+                        setEditingPartner({ ...editingPartner, businessEmail: e.target.value })
+                      }
+                      className="w-full rounded-md border border-border-primary bg-background-primary px-3 py-1.5 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-text-muted mb-1">
+                      Phone
+                    </label>
+                    <input
+                      type="tel"
+                      value={editingPartner.businessPhone}
+                      onChange={(e) =>
+                        setEditingPartner({ ...editingPartner, businessPhone: e.target.value })
+                      }
+                      className="w-full rounded-md border border-border-primary bg-background-primary px-3 py-1.5 text-sm"
+                    />
+                  </div>
+                </div>
+
+                {/* PCO Pricing - compact section */}
+                <div className="bg-fill-muted/50 rounded-lg p-3 space-y-2">
+                  <Typography variant="bodyXs" className="font-medium text-text-muted">
                     Private Client Order Pricing
                   </Typography>
-
-                  <Typography variant="bodyXs" colorRole="muted">
-                    Configure how duty, VAT, and logistics costs are calculated for this
-                    partner&apos;s private client orders
-                  </Typography>
-
-                  <div className="grid grid-cols-3 gap-4">
+                  <div className="grid grid-cols-3 gap-2">
                     <div>
-                      <label className="block text-sm font-medium text-text-primary mb-1">
-                        Duty Rate (%)
-                      </label>
+                      <label className="block text-xs text-text-muted mb-1">Duty %</label>
                       <input
                         type="number"
                         min="0"
@@ -683,17 +663,11 @@ const WinePartnersPage = () => {
                             pcoDutyRate: parseFloat(e.target.value) / 100 || 0,
                           })
                         }
-                        className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm"
+                        className="w-full rounded-md border border-border-primary bg-background-primary px-2 py-1 text-sm text-center"
                       />
-                      <Typography variant="bodyXs" colorRole="muted" className="mt-1">
-                        Default: 5%
-                      </Typography>
                     </div>
-
                     <div>
-                      <label className="block text-sm font-medium text-text-primary mb-1">
-                        VAT Rate (%)
-                      </label>
+                      <label className="block text-xs text-text-muted mb-1">VAT %</label>
                       <input
                         type="number"
                         min="0"
@@ -706,17 +680,11 @@ const WinePartnersPage = () => {
                             pcoVatRate: parseFloat(e.target.value) / 100 || 0,
                           })
                         }
-                        className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm"
+                        className="w-full rounded-md border border-border-primary bg-background-primary px-2 py-1 text-sm text-center"
                       />
-                      <Typography variant="bodyXs" colorRole="muted" className="mt-1">
-                        Default: 5%
-                      </Typography>
                     </div>
-
                     <div>
-                      <label className="block text-sm font-medium text-text-primary mb-1">
-                        Logistics ($/case)
-                      </label>
+                      <label className="block text-xs text-text-muted mb-1">Logistics $/cs</label>
                       <input
                         type="number"
                         min="0"
@@ -728,19 +696,18 @@ const WinePartnersPage = () => {
                             logisticsCostPerCase: parseFloat(e.target.value) || 0,
                           })
                         }
-                        className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm"
+                        className="w-full rounded-md border border-border-primary bg-background-primary px-2 py-1 text-sm text-center"
                       />
-                      <Typography variant="bodyXs" colorRole="muted" className="mt-1">
-                        Default: $60/case
-                      </Typography>
                     </div>
                   </div>
                 </div>
 
-                <div className="flex justify-end gap-2 pt-4 border-t border-border-muted">
+                {/* Actions */}
+                <div className="flex justify-end gap-2 pt-2">
                   <Button
                     type="button"
-                    variant="outline"
+                    variant="ghost"
+                    size="sm"
                     onClick={() => setIsEditDialogOpen(false)}
                   >
                     <ButtonContent>Cancel</ButtonContent>
@@ -749,6 +716,7 @@ const WinePartnersPage = () => {
                     type="button"
                     variant="default"
                     colorRole="brand"
+                    size="sm"
                     onClick={handleSavePartner}
                     isDisabled={isUpdating}
                   >
