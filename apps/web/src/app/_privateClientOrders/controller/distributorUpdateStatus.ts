@@ -118,12 +118,16 @@ const distributorUpdateStatus = distributorProcedure
 
     // Check if invoice is required before confirming client payment
     if (status === 'client_paid') {
-      const invoice = await db.query.privateClientOrderDocuments.findFirst({
-        where: and(
-          eq(privateClientOrderDocuments.orderId, orderId),
-          eq(privateClientOrderDocuments.documentType, 'distributor_invoice'),
-        ),
-      });
+      const [invoice] = await db
+        .select()
+        .from(privateClientOrderDocuments)
+        .where(
+          and(
+            eq(privateClientOrderDocuments.orderId, orderId),
+            eq(privateClientOrderDocuments.documentType, 'distributor_invoice'),
+          ),
+        )
+        .limit(1);
 
       if (!invoice) {
         throw new TRPCError({

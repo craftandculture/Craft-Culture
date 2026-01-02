@@ -58,12 +58,16 @@ const ordersPartnerAcknowledgeInvoice = winePartnerProcedure
     }
 
     // Verify invoice exists
-    const invoice = await db.query.privateClientOrderDocuments.findFirst({
-      where: and(
-        eq(privateClientOrderDocuments.orderId, orderId),
-        eq(privateClientOrderDocuments.documentType, 'distributor_invoice'),
-      ),
-    });
+    const [invoice] = await db
+      .select()
+      .from(privateClientOrderDocuments)
+      .where(
+        and(
+          eq(privateClientOrderDocuments.orderId, orderId),
+          eq(privateClientOrderDocuments.documentType, 'distributor_invoice'),
+        ),
+      )
+      .limit(1);
 
     if (!invoice) {
       throw new TRPCError({
@@ -105,7 +109,7 @@ const ordersPartnerAcknowledgeInvoice = winePartnerProcedure
       for (const member of distributorMembers) {
         await createNotification({
           userId: member.userId,
-          type: 'info',
+          type: 'status_update',
           title: 'Invoice Acknowledged',
           message: `Partner has acknowledged the invoice for order ${updatedOrder?.orderNumber ?? orderId}. You can now confirm payment once received.`,
           entityType: 'private_client_order',
