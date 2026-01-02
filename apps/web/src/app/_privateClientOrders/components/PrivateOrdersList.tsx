@@ -6,6 +6,7 @@ import {
   IconFileText,
   IconPlus,
   IconSearch,
+  IconShieldCheck,
 } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import type { ColumnDef } from '@tanstack/react-table';
@@ -33,6 +34,7 @@ type Currency = 'USD' | 'AED';
 
 type OrderWithDistributor = PrivateClientOrder & {
   distributor: { id: string; businessName: string } | null;
+  client: { id: string; cityDrinksVerifiedAt: Date | null } | null;
 };
 
 type StatusFilter = 'all' | 'draft' | 'pending' | 'active' | 'completed';
@@ -112,9 +114,20 @@ const PrivateOrdersList = () => {
       header: 'Client',
       cell: ({ row }) => (
         <div className="flex flex-col">
-          <Typography variant="bodySm" className="font-medium">
-            {row.original.clientName}
-          </Typography>
+          <div className="flex items-center gap-1.5">
+            <Typography variant="bodySm" className="font-medium">
+              {row.original.clientName}
+            </Typography>
+            {row.original.client?.cityDrinksVerifiedAt && (
+              <span
+                className="inline-flex items-center gap-0.5 rounded-full bg-green-100 px-1.5 py-0.5 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                title="City Drinks Verified"
+              >
+                <Icon icon={IconShieldCheck} size="xs" />
+                <span className="text-[10px] font-medium">Verified</span>
+              </span>
+            )}
+          </div>
           {row.original.clientEmail && (
             <Typography variant="bodyXs" colorRole="muted">
               {row.original.clientEmail}

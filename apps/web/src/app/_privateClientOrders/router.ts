@@ -2,6 +2,7 @@ import { createTRPCRouter } from '@/lib/trpc/trpc';
 
 import adminAddItem from './controller/adminAddItem';
 import adminCreate from './controller/adminCreate';
+import adminDashboard from './controller/adminDashboard';
 import adminDelete from './controller/adminDelete';
 import adminGetMany from './controller/adminGetMany';
 import adminGetOne from './controller/adminGetOne';
@@ -39,6 +40,7 @@ import ordersPartnerVerification from './controller/ordersPartnerVerification';
 import ordersRequestRevision from './controller/ordersRequestRevision';
 import ordersScheduleDelivery from './controller/ordersScheduleDelivery';
 import ordersSubmit from './controller/ordersSubmit';
+import partnerDashboard from './controller/partnerDashboard';
 import paymentsConfirm from './controller/paymentsConfirm';
 
 const privateClientOrdersRouter = createTRPCRouter({
@@ -68,7 +70,11 @@ const privateClientOrdersRouter = createTRPCRouter({
   // Payment management
   confirmPayment: paymentsConfirm,
 
+  // Partner dashboard
+  partnerDashboard,
+
   // Admin procedures
+  adminDashboard,
   adminCreate,
   adminAddItem,
   adminUpdateItem,
