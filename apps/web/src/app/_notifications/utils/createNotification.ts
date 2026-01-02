@@ -1,17 +1,10 @@
 import db from '@/database/client';
+import type { Notification } from '@/database/schema';
 import { notifications } from '@/database/schema';
 
 interface CreateNotificationParams {
   userId: string;
-  type:
-    | 'buy_request_submitted'
-    | 'cc_review_started'
-    | 'quote_confirmed'
-    | 'revision_requested'
-    | 'po_submitted'
-    | 'po_confirmed'
-    | 'payment_received'
-    | 'order_delivered';
+  type: Notification['type'];
   title: string;
   message: string;
   entityType?: string;

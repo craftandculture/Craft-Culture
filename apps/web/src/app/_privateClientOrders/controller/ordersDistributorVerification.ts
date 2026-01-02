@@ -4,6 +4,7 @@ import { z } from 'zod';
 
 import createNotification from '@/app/_notifications/utils/createNotification';
 import db from '@/database/client';
+import type { PrivateClientOrder } from '@/database/schema';
 import { partnerMembers, privateClientOrderActivityLogs, privateClientOrders } from '@/database/schema';
 import { distributorProcedure } from '@/lib/trpc/procedures';
 
@@ -54,7 +55,7 @@ const ordersDistributorVerification = distributorProcedure
     });
 
     const previousStatus = order.status;
-    let newStatus: string;
+    let newStatus: PrivateClientOrder['status'];
     let paymentReference: string | null = null;
 
     if (response === 'verified') {

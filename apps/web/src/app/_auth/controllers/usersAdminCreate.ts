@@ -67,6 +67,13 @@ const usersAdminCreate = adminProcedure
         createdAt: users.createdAt,
       });
 
+    if (!newUser) {
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Failed to create user',
+      });
+    }
+
     // Log the creation action
     await logAdminActivity({
       adminId: ctx.user.id,
