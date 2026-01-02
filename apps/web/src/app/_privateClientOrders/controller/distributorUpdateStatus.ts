@@ -5,6 +5,7 @@ import { z } from 'zod';
 import db from '@/database/client';
 import {
   privateClientOrderActivityLogs,
+  privateClientOrderDocuments,
   privateClientOrderStatus,
   privateClientOrders,
 } from '@/database/schema';
@@ -113,6 +114,31 @@ const distributorUpdateStatus = distributorProcedure
         code: 'BAD_REQUEST',
         message: `Cannot transition from ${order.status} to ${status}`,
       });
+    }
+
+    // Check if invoice is required before confirming client payment
+    if (status === 'client_paid') {
+      const invoice = await db.query.privateClientOrderDocuments.findFirst({
+        where: and(
+          eq(privateClientOrderDocuments.orderId, orderId),
+          eq(privateClientOrderDocuments.documentType, 'distributor_invoice'),
+        ),
+      });
+
+      if (!invoice) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'You must upload an invoice before confirming client payment',
+        });
+      }
+
+      // Check if partner has acknowledged the invoice
+      if (!order.partnerInvoiceAcknowledgedAt) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Partner must acknowledge the invoice before you can confirm payment',
+        });
+      }
     }
 
     // Build update data with timestamp

@@ -992,7 +992,16 @@ export const privateClientOrders = pgTable(
     ),
     distributorVerificationNotes: text('distributor_verification_notes'),
 
-    // Payment reference for distributor finance (e.g., CD-PCO-2026-00001)
+    // Invoice workflow - distributor uploads, partner acknowledges
+    partnerInvoiceAcknowledgedAt: timestamp('partner_invoice_acknowledged_at', {
+      mode: 'date',
+    }),
+    partnerInvoiceAcknowledgedBy: uuid('partner_invoice_acknowledged_by').references(
+      () => users.id,
+      { onDelete: 'set null' },
+    ),
+
+    // Payment reference for distributor finance (captured when confirming payment)
     paymentReference: text('payment_reference'),
 
     // Partner can add notes/proof about client payment

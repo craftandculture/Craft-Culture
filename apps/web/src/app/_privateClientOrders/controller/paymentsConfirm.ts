@@ -3,13 +3,13 @@ import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 
 import db from '@/database/client';
-import { privateClientOrders } from '@/database/schema';
+import { partnerMembers, privateClientOrders } from '@/database/schema';
 import { protectedProcedure } from '@/lib/trpc/procedures';
 
 const confirmPaymentSchema = z.object({
   orderId: z.string().uuid(),
   paymentStage: z.enum(['client', 'distributor', 'partner']),
-  reference: z.string().optional(),
+  reference: z.string().min(1, 'Payment reference is required'),
 });
 
 /**
@@ -37,13 +37,14 @@ const paymentsConfirm = protectedProcedure.input(confirmPaymentSchema).mutation(
   // Check access - must be admin or relevant party
   const isAdmin = user.role === 'admin';
 
-  const userPartner = await db.query.partners.findFirst({
-    where: { userId: user.id },
-    columns: { id: true },
+  // Check if user is a member of the partner that owns this order
+  const userPartnerMembership = await db.query.partnerMembers.findFirst({
+    where: eq(partnerMembers.userId, user.id),
+    columns: { partnerId: true },
   });
 
-  const isPartner = userPartner && order.partnerId === userPartner.id;
-  const _isDistributor = userPartner && order.distributorId === userPartner.id;
+  const isPartner = userPartnerMembership && order.partnerId === userPartnerMembership.partnerId;
+  const _isDistributor = userPartnerMembership && order.distributorId === userPartnerMembership.partnerId;
 
   // Validate permissions based on payment stage
   if (paymentStage === 'client') {
@@ -91,7 +92,7 @@ const paymentsConfirm = protectedProcedure.input(confirmPaymentSchema).mutation(
       }
       updateData.clientPaidAt = now;
       updateData.clientPaymentConfirmedBy = user.id;
-      if (reference) updateData.clientPaymentReference = reference;
+      updateData.clientPaymentReference = reference;
       updateData.status = 'client_paid';
       break;
 
@@ -104,7 +105,7 @@ const paymentsConfirm = protectedProcedure.input(confirmPaymentSchema).mutation(
       }
       updateData.distributorPaidAt = now;
       updateData.distributorPaymentConfirmedBy = user.id;
-      if (reference) updateData.distributorPaymentReference = reference;
+      updateData.distributorPaymentReference = reference;
       updateData.status = 'distributor_paid';
       break;
 
@@ -117,7 +118,7 @@ const paymentsConfirm = protectedProcedure.input(confirmPaymentSchema).mutation(
       }
       updateData.partnerPaidAt = now;
       updateData.partnerPaymentConfirmedBy = user.id;
-      if (reference) updateData.partnerPaymentReference = reference;
+      updateData.partnerPaymentReference = reference;
       updateData.status = 'partner_paid';
       break;
   }

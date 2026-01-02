@@ -29,6 +29,7 @@ import ordersDistributorUnlockSuspended from './controller/ordersDistributorUnlo
 import ordersDistributorVerification from './controller/ordersDistributorVerification';
 import ordersGetMany from './controller/ordersGetMany';
 import ordersGetOne from './controller/ordersGetOne';
+import ordersPartnerAcknowledgeInvoice from './controller/ordersPartnerAcknowledgeInvoice';
 import ordersPartnerReinitiateVerification from './controller/ordersPartnerReinitiateVerification';
 import ordersPartnerVerification from './controller/ordersPartnerVerification';
 import ordersRequestRevision from './controller/ordersRequestRevision';
@@ -45,6 +46,7 @@ const privateClientOrdersRouter = createTRPCRouter({
   approveRevisions: ordersApproveRevisions,
   partnerVerification: ordersPartnerVerification,
   partnerReinitiateVerification: ordersPartnerReinitiateVerification,
+  partnerAcknowledgeInvoice: ordersPartnerAcknowledgeInvoice,
 
   // Line item management (wine partner)
   addItem: itemsAdd,

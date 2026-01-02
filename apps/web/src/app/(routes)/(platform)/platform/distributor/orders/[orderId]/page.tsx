@@ -4,10 +4,12 @@ import {
   IconArrowLeft,
   IconBuilding,
   IconCheck,
+  IconFileInvoice,
   IconLoader2,
   IconPackage,
   IconShieldCheck,
   IconTruck,
+  IconUpload,
   IconX,
 } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -62,10 +64,19 @@ const DistributorOrderDetailPage = () => {
   const queryClient = useQueryClient();
   const [currency, setCurrency] = useState<Currency>('AED');
 
-  const { data: order, isLoading } = useQuery({
+  const { data: order, isLoading, refetch } = useQuery({
     ...api.privateClientOrders.distributorGetOne.queryOptions({ id: orderId }),
     enabled: !!orderId,
   });
+
+  // Fetch documents to check for invoice status
+  const { data: documents } = useQuery({
+    ...api.privateClientOrders.getDocuments.queryOptions({ orderId }),
+    enabled: !!orderId,
+  });
+
+  const hasDistributorInvoice = documents?.some((doc) => doc.documentType === 'distributor_invoice');
+  const partnerAcknowledgedInvoice = !!order?.partnerInvoiceAcknowledgedAt;
 
   const updateStatus = useMutation({
     mutationFn: (status: string) =>
@@ -82,8 +93,8 @@ const DistributorOrderDetailPage = () => {
           | 'delivered',
       }),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['privateClientOrders.distributorGetOne'] });
-      void queryClient.invalidateQueries({ queryKey: ['privateClientOrders.distributorGetMany'] });
+      void refetch();
+      void queryClient.invalidateQueries({ queryKey: ['privateClientOrders'] });
       toast.success('Order status updated');
     },
     onError: (error) => {
@@ -105,8 +116,8 @@ const DistributorOrderDetailPage = () => {
       } else {
         toast.info('Client not verified. Order suspended for partner to resolve.');
       }
-      void queryClient.invalidateQueries({ queryKey: ['privateClientOrders.distributorGetOne'] });
-      void queryClient.invalidateQueries({ queryKey: ['privateClientOrders.distributorGetMany'] });
+      void refetch();
+      void queryClient.invalidateQueries({ queryKey: ['privateClientOrders'] });
     },
     onError: (error) => {
       toast.error(error.message || 'Failed to submit verification');
@@ -122,8 +133,8 @@ const DistributorOrderDetailPage = () => {
       }),
     onSuccess: () => {
       toast.success('Order unlocked. Client verified. Ready for payment collection.');
-      void queryClient.invalidateQueries({ queryKey: ['privateClientOrders.distributorGetOne'] });
-      void queryClient.invalidateQueries({ queryKey: ['privateClientOrders.distributorGetMany'] });
+      void refetch();
+      void queryClient.invalidateQueries({ queryKey: ['privateClientOrders'] });
     },
     onError: (error) => {
       toast.error(error.message || 'Failed to unlock order');
@@ -260,7 +271,7 @@ const DistributorOrderDetailPage = () => {
               <Button
                 colorRole="brand"
                 onClick={() => updateStatus.mutate(nextAction.status)}
-                disabled={updateStatus.isPending}
+                disabled={updateStatus.isPending || (nextAction.status === 'client_paid' && (!hasDistributorInvoice || !partnerAcknowledgedInvoice))}
               >
                 <ButtonContent iconLeft={nextAction.icon} isLoading={updateStatus.isPending}>
                   {nextAction.label}
@@ -348,6 +359,49 @@ const DistributorOrderDetailPage = () => {
                       Client Verified - Unlock Order
                     </ButtonContent>
                   </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Invoice Status - shown when awaiting client payment */}
+        {order.status === 'awaiting_client_payment' && (
+          <Card className={`border-2 ${hasDistributorInvoice && partnerAcknowledgedInvoice ? 'border-fill-success/50 bg-fill-success/5' : 'border-fill-warning/50 bg-fill-warning/5'}`}>
+            <CardContent className="p-6">
+              <div className="flex flex-col items-center gap-4 text-center sm:flex-row sm:text-left">
+                <div className={`flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full ${hasDistributorInvoice && partnerAcknowledgedInvoice ? 'bg-fill-success/20' : 'bg-fill-warning/20'}`}>
+                  <Icon
+                    icon={hasDistributorInvoice && partnerAcknowledgedInvoice ? IconCheck : IconFileInvoice}
+                    size="lg"
+                    className={hasDistributorInvoice && partnerAcknowledgedInvoice ? 'text-fill-success' : 'text-fill-warning'}
+                  />
+                </div>
+                <div className="flex-1">
+                  <Typography variant="headingSm" className="mb-1">
+                    {hasDistributorInvoice && partnerAcknowledgedInvoice
+                      ? 'Ready for Payment Confirmation'
+                      : 'Invoice Required Before Payment Confirmation'}
+                  </Typography>
+                  <Typography variant="bodySm" colorRole="muted">
+                    {!hasDistributorInvoice ? (
+                      <>Upload an invoice in the Documents section below before confirming client payment.</>
+                    ) : !partnerAcknowledgedInvoice ? (
+                      <>Invoice uploaded. Waiting for partner to acknowledge receipt before you can confirm payment.</>
+                    ) : (
+                      <>Partner has acknowledged the invoice. You can now confirm payment once received from the client.</>
+                    )}
+                  </Typography>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs ${hasDistributorInvoice ? 'bg-fill-success/20 text-fill-success' : 'bg-fill-warning/20 text-fill-warning'}`}>
+                      {hasDistributorInvoice ? <IconCheck className="h-3 w-3" /> : <IconUpload className="h-3 w-3" />}
+                      {hasDistributorInvoice ? 'Invoice Uploaded' : 'Upload Invoice'}
+                    </span>
+                    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs ${partnerAcknowledgedInvoice ? 'bg-fill-success/20 text-fill-success' : 'bg-surface-muted text-text-muted'}`}>
+                      {partnerAcknowledgedInvoice ? <IconCheck className="h-3 w-3" /> : <IconFileInvoice className="h-3 w-3" />}
+                      {partnerAcknowledgedInvoice ? 'Partner Acknowledged' : 'Awaiting Partner'}
+                    </span>
+                  </div>
                 </div>
               </div>
             </CardContent>
