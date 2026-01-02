@@ -1,6 +1,6 @@
 'use client';
 
-import { IconPackage, IconSearch, IconX } from '@tabler/icons-react';
+import { IconPencil, IconSearch, IconX } from '@tabler/icons-react';
 import { useState } from 'react';
 
 import ProductsCombobox from '@/app/_products/components/ProductsCombobox';
@@ -41,11 +41,13 @@ interface ProductPickerProps {
 }
 
 /**
- * Compact product picker for private client orders.
- * Designed to fit many items on screen with inline layout.
+ * Product picker for private client orders.
+ * Defaults to catalog search mode with option for manual entry.
  */
 const ProductPicker = ({ value, onChange, omitProductIds = [], onRemove, index }: ProductPickerProps) => {
-  const [mode, setMode] = useState<'search' | 'manual'>(value.productId ? 'search' : 'manual');
+  // Default to search mode - only show manual if explicitly toggled or has manual data without productId
+  const hasManualDataOnly = !value.productId && value.productName.trim().length > 0;
+  const [mode, setMode] = useState<'search' | 'manual'>(hasManualDataOnly ? 'manual' : 'search');
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
   const handleProductSelect = (product: Product) => {
@@ -103,53 +105,65 @@ const ProductPicker = ({ value, onChange, omitProductIds = [], onRemove, index }
 
   return (
     <div className="rounded-lg border border-border-muted bg-surface-secondary/30 p-3">
-      {/* Header row with index, mode toggle, and remove */}
-      <div className="mb-2 flex items-center justify-between gap-2">
+      {/* Header row with index and remove */}
+      <div className="mb-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
           {index !== undefined && (
-            <span className="flex h-5 w-5 items-center justify-center rounded bg-fill-muted text-xs font-medium text-text-muted">
+            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-fill-brand/10 text-xs font-semibold text-text-brand">
               {index + 1}
             </span>
           )}
-          <div className="flex items-center gap-1">
-            <Button
+          {mode === 'search' ? (
+            <Typography variant="bodyXs" colorRole="muted">
+              Search catalog
+            </Typography>
+          ) : (
+            <Typography variant="bodyXs" colorRole="muted">
+              Manual entry
+            </Typography>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          {mode === 'search' ? (
+            <button
               type="button"
-              variant={mode === 'search' ? 'default' : 'ghost'}
-              size="xs"
+              onClick={handleModeSwitch}
+              className="flex items-center gap-1 text-xs text-text-muted transition-colors hover:text-text-primary"
+            >
+              <Icon icon={IconPencil} size="xs" />
+              <span className="hidden sm:inline">Enter manually</span>
+            </button>
+          ) : (
+            <button
+              type="button"
               onClick={() => setMode('search')}
+              className="flex items-center gap-1 text-xs text-text-muted transition-colors hover:text-text-primary"
             >
               <Icon icon={IconSearch} size="xs" />
+              <span className="hidden sm:inline">Search catalog</span>
+            </button>
+          )}
+          {onRemove && (
+            <Button type="button" variant="ghost" size="xs" onClick={onRemove}>
+              <Icon icon={IconX} size="sm" colorRole="danger" />
             </Button>
-            <Button
-              type="button"
-              variant={mode === 'manual' ? 'default' : 'ghost'}
-              size="xs"
-              onClick={handleModeSwitch}
-            >
-              <Icon icon={IconPackage} size="xs" />
-            </Button>
-          </div>
+          )}
         </div>
-        {onRemove && (
-          <Button type="button" variant="ghost" size="xs" onClick={onRemove}>
-            <Icon icon={IconX} size="xs" colorRole="danger" />
-          </Button>
-        )}
       </div>
 
-      {/* Product selection row */}
+      {/* Product selection */}
       {mode === 'search' ? (
-        <div className="mb-2">
+        <div className="mb-3">
           <ProductsCombobox
             value={selectedProduct}
             onSelect={handleProductSelect}
-            placeholder="Search wines..."
+            placeholder="Search wines by name, producer, region..."
             omitProductIds={omitProductIds}
           />
         </div>
       ) : (
-        <div className="mb-2 grid grid-cols-4 gap-2">
-          <div className="col-span-2">
+        <div className="mb-3 grid grid-cols-1 gap-2 sm:grid-cols-4">
+          <div className="sm:col-span-2">
             <Input
               placeholder="Product name *"
               value={value.productName}
@@ -172,14 +186,15 @@ const ProductPicker = ({ value, onChange, omitProductIds = [], onRemove, index }
         </div>
       )}
 
-      {/* Quantity and pricing row */}
-      <div className="flex flex-wrap items-center gap-2">
+      {/* Quantity and pricing - responsive grid */}
+      <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center sm:gap-3">
+        {/* Bottle config */}
         <div className="flex items-center gap-1">
           <Select
             value={value.bottleSize || '750ml'}
             onValueChange={(size) => onChange({ ...value, bottleSize: size })}
           >
-            <SelectTrigger className="h-8 w-[80px] text-xs">
+            <SelectTrigger className="h-8 w-full text-xs sm:w-[80px]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -189,12 +204,11 @@ const ProductPicker = ({ value, onChange, omitProductIds = [], onRemove, index }
               <SelectItem value="3000ml">3L</SelectItem>
             </SelectContent>
           </Select>
-
           <Select
             value={value.caseConfig?.toString() || '12'}
             onValueChange={(config) => onChange({ ...value, caseConfig: parseInt(config) })}
           >
-            <SelectTrigger className="h-8 w-[70px] text-xs">
+            <SelectTrigger className="h-8 w-full text-xs sm:w-[65px]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -207,32 +221,35 @@ const ProductPicker = ({ value, onChange, omitProductIds = [], onRemove, index }
           </Select>
         </div>
 
-        <div className="flex items-center gap-1">
-          <Typography variant="bodyXs" colorRole="muted">Qty:</Typography>
+        {/* Quantity */}
+        <div className="flex items-center gap-1.5">
+          <Typography variant="bodyXs" colorRole="muted" className="whitespace-nowrap">Cases:</Typography>
           <Input
             type="number"
             min={1}
             value={value.quantity}
             onChange={(e) => onChange({ ...value, quantity: parseInt(e.target.value) || 1 })}
-            className="h-8 w-16 text-center text-xs"
+            className="h-8 w-full text-center text-xs sm:w-16"
           />
         </div>
 
-        <div className="flex items-center gap-1">
-          <Typography variant="bodyXs" colorRole="muted">$/case:</Typography>
+        {/* Price per case */}
+        <div className="flex items-center gap-1.5">
+          <Typography variant="bodyXs" colorRole="muted" className="whitespace-nowrap">$/case:</Typography>
           <Input
             type="number"
             min={0}
             step={0.01}
             value={value.pricePerCaseUsd || ''}
             onChange={handlePriceChange}
-            className="h-8 w-24 text-right text-xs"
+            className="h-8 w-full text-right text-xs sm:w-24"
           />
         </div>
 
-        <div className="ml-auto flex items-center gap-1">
-          <Typography variant="bodyXs" colorRole="muted">Total:</Typography>
-          <Typography variant="bodySm" className="font-semibold">
+        {/* Line total */}
+        <div className="col-span-2 flex items-center justify-end gap-1.5 border-t border-border-muted pt-2 sm:ml-auto sm:border-t-0 sm:pt-0">
+          <Typography variant="bodyXs" colorRole="muted">Line Total:</Typography>
+          <Typography variant="bodySm" className="font-semibold text-text-brand">
             {formattedTotal}
           </Typography>
         </div>
