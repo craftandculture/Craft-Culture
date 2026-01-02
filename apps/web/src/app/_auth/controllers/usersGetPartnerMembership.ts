@@ -37,14 +37,14 @@ const usersGetPartnerMembership = adminProcedure
       .where(eq(partnerMembers.userId, userId));
 
     // Also check for direct partner links (legacy)
-    const directPartners = await db.query.partners.findMany({
-      where: eq(partners.userId, userId),
-      columns: {
-        id: true,
-        businessName: true,
-        type: true,
-      },
-    });
+    const directPartners = await db
+      .select({
+        id: partners.id,
+        businessName: partners.businessName,
+        type: partners.type,
+      })
+      .from(partners)
+      .where(eq(partners.userId, userId));
 
     // Separate by type
     const distributorMembership = memberships.find(
