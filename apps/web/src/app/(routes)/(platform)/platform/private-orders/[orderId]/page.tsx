@@ -5,6 +5,9 @@ import {
   IconArrowLeft,
   IconBuilding,
   IconCheck,
+  IconDownload,
+  IconExternalLink,
+  IconFile,
   IconFileInvoice,
   IconLoader2,
   IconQuestionMark,
@@ -18,7 +21,6 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 
 import ActivityTimeline from '@/app/_privateClientOrders/components/ActivityTimeline';
-import DocumentUpload from '@/app/_privateClientOrders/components/DocumentUpload';
 import PaymentTracker from '@/app/_privateClientOrders/components/PaymentTracker';
 import PrivateOrderStatusBadge from '@/app/_privateClientOrders/components/PrivateOrderStatusBadge';
 import WorkflowStepper from '@/app/_privateClientOrders/components/WorkflowStepper';
@@ -35,6 +37,19 @@ type Currency = 'USD' | 'AED';
 
 /** Default UAE exchange rate for AED/USD conversion */
 const DEFAULT_EXCHANGE_RATE = 3.67;
+
+/** Format file size in human-readable format */
+const formatBytes = (bytes: number | null | undefined) => {
+  if (!bytes) return '';
+  const units = ['B', 'KB', 'MB', 'GB'];
+  let size = bytes;
+  let unitIndex = 0;
+  while (size >= 1024 && unitIndex < units.length - 1) {
+    size /= 1024;
+    unitIndex++;
+  }
+  return `${size.toFixed(1)} ${units[unitIndex]}`;
+};
 
 /**
  * Format a price value with currency
@@ -343,27 +358,74 @@ const PrivateOrderDetailPage = () => {
         {order.status === 'awaiting_client_payment' && distributorInvoice && !order.partnerInvoiceAcknowledgedAt && (
           <Card className="border-2 border-fill-info/50 bg-fill-info/5">
             <CardContent className="p-6">
-              <div className="flex flex-col items-center gap-4 text-center sm:flex-row sm:text-left">
-                <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-fill-info/20">
-                  <Icon icon={IconFileInvoice} size="lg" className="text-fill-info" />
+              <div className="flex flex-col gap-4">
+                <div className="flex flex-col items-center gap-4 text-center sm:flex-row sm:text-left">
+                  <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-fill-info/20">
+                    <Icon icon={IconFileInvoice} size="lg" className="text-fill-info" />
+                  </div>
+                  <div className="flex-1">
+                    <Typography variant="headingSm" className="mb-1">
+                      Invoice Received - Acknowledgment Required
+                    </Typography>
+                    <Typography variant="bodySm" colorRole="muted">
+                      <strong>{order.distributor?.businessName ?? 'The distributor'}</strong> has uploaded an invoice.
+                      Please review and forward it to your client for payment.
+                    </Typography>
+                  </div>
                 </div>
-                <div className="flex-1">
-                  <Typography variant="headingSm" className="mb-1">
-                    Invoice Received - Acknowledgment Required
-                  </Typography>
-                  <Typography variant="bodySm" colorRole="muted">
-                    <strong>{order.distributor?.businessName ?? 'The distributor'}</strong> has uploaded an invoice for this order.
-                    Please review the invoice in the documents section below and acknowledge receipt to proceed with payment monitoring.
-                  </Typography>
+
+                {/* Invoice Details Card */}
+                <div className="rounded-lg border border-border-muted bg-background-primary p-4">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex items-start gap-3">
+                      <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-fill-info/10">
+                        <Icon icon={IconFile} size="md" className="text-fill-info" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <Typography variant="bodySm" className="truncate font-medium">
+                          {distributorInvoice.fileName}
+                        </Typography>
+                        <Typography variant="bodyXs" colorRole="muted">
+                          {formatBytes(distributorInvoice.fileSize)} • Uploaded {new Date(distributorInvoice.uploadedAt).toLocaleDateString()}
+                        </Typography>
+                        {/* Show extracted invoice number if available */}
+                        {distributorInvoice.extractedData?.invoiceNumber && (
+                          <Typography variant="bodyXs" className="mt-1 font-medium text-fill-info">
+                            Invoice #: {distributorInvoice.extractedData.invoiceNumber}
+                          </Typography>
+                        )}
+                        {/* Show extracted payment reference if available */}
+                        {distributorInvoice.extractedData?.paymentReference && (
+                          <Typography variant="bodyXs" className="font-medium text-fill-success">
+                            Payment Ref: {distributorInvoice.extractedData.paymentReference}
+                          </Typography>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button variant="outline" size="sm" asChild>
+                        <a href={distributorInvoice.fileUrl} target="_blank" rel="noopener noreferrer">
+                          <ButtonContent iconLeft={IconExternalLink}>View</ButtonContent>
+                        </a>
+                      </Button>
+                      <Button variant="outline" size="sm" asChild>
+                        <a href={distributorInvoice.fileUrl} download={distributorInvoice.fileName}>
+                          <ButtonContent iconLeft={IconDownload}>Download</ButtonContent>
+                        </a>
+                      </Button>
+                    </div>
+                  </div>
                 </div>
-                <div className="flex flex-wrap justify-center gap-2 sm:flex-nowrap">
+
+                {/* Action Button */}
+                <div className="flex justify-end">
                   <Button
                     onClick={() => acknowledgeInvoice()}
                     disabled={isAcknowledging}
                     colorRole="brand"
                   >
                     <ButtonContent iconLeft={IconCheck} isLoading={isAcknowledging}>
-                      Acknowledge Invoice
+                      Acknowledge Invoice & Forward to Client
                     </ButtonContent>
                   </Button>
                 </div>
@@ -373,21 +435,65 @@ const PrivateOrderDetailPage = () => {
         )}
 
         {/* Invoice Acknowledged - shown when acknowledged and awaiting client payment */}
-        {order.status === 'awaiting_client_payment' && order.partnerInvoiceAcknowledgedAt && (
+        {order.status === 'awaiting_client_payment' && order.partnerInvoiceAcknowledgedAt && distributorInvoice && (
           <Card className="border-2 border-fill-success/50 bg-fill-success/5">
             <CardContent className="p-6">
-              <div className="flex flex-col items-center gap-4 text-center sm:flex-row sm:text-left">
-                <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-fill-success/20">
-                  <Icon icon={IconCheck} size="lg" className="text-fill-success" />
+              <div className="flex flex-col gap-4">
+                <div className="flex flex-col items-center gap-4 text-center sm:flex-row sm:text-left">
+                  <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-fill-success/20">
+                    <Icon icon={IconCheck} size="lg" className="text-fill-success" />
+                  </div>
+                  <div className="flex-1">
+                    <Typography variant="headingSm" className="mb-1">
+                      Invoice Acknowledged - Awaiting Client Payment
+                    </Typography>
+                    <Typography variant="bodySm" colorRole="muted">
+                      Forward the invoice to your client. Once payment is received, the distributor will confirm.
+                    </Typography>
+                  </div>
                 </div>
-                <div className="flex-1">
-                  <Typography variant="headingSm" className="mb-1">
-                    Invoice Acknowledged - Awaiting Client Payment
-                  </Typography>
-                  <Typography variant="bodySm" colorRole="muted">
-                    You have acknowledged the invoice. Please forward it to your client and monitor for payment.
-                    Once payment is received, the distributor will confirm and proceed with the order.
-                  </Typography>
+
+                {/* Invoice Details Card */}
+                <div className="rounded-lg border border-border-muted bg-background-primary p-4">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex items-start gap-3">
+                      <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-fill-success/10">
+                        <Icon icon={IconFile} size="md" className="text-fill-success" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <Typography variant="bodySm" className="truncate font-medium">
+                          {distributorInvoice.fileName}
+                        </Typography>
+                        <Typography variant="bodyXs" colorRole="muted">
+                          {formatBytes(distributorInvoice.fileSize)} • Uploaded {new Date(distributorInvoice.uploadedAt).toLocaleDateString()}
+                        </Typography>
+                        {/* Show extracted invoice number if available */}
+                        {distributorInvoice.extractedData?.invoiceNumber && (
+                          <Typography variant="bodyXs" className="mt-1 font-medium text-fill-info">
+                            Invoice #: {distributorInvoice.extractedData.invoiceNumber}
+                          </Typography>
+                        )}
+                        {/* Show extracted payment reference if available */}
+                        {distributorInvoice.extractedData?.paymentReference && (
+                          <Typography variant="bodyXs" className="font-medium text-fill-success">
+                            Payment Ref: {distributorInvoice.extractedData.paymentReference}
+                          </Typography>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button variant="outline" size="sm" asChild>
+                        <a href={distributorInvoice.fileUrl} target="_blank" rel="noopener noreferrer">
+                          <ButtonContent iconLeft={IconExternalLink}>View</ButtonContent>
+                        </a>
+                      </Button>
+                      <Button variant="outline" size="sm" asChild>
+                        <a href={distributorInvoice.fileUrl} download={distributorInvoice.fileName}>
+                          <ButtonContent iconLeft={IconDownload}>Download</ButtonContent>
+                        </a>
+                      </Button>
+                    </div>
+                  </div>
                 </div>
               </div>
             </CardContent>
@@ -598,7 +704,46 @@ const PrivateOrderDetailPage = () => {
               <Typography variant="headingSm" className="mb-3">
                 Documents
               </Typography>
-              <DocumentUpload orderId={orderId} />
+              {documents && documents.length > 0 ? (
+                <div className="space-y-2">
+                  {documents.map((doc) => (
+                    <div
+                      key={doc.id}
+                      className="flex items-center justify-between rounded-lg border border-border-muted bg-surface-secondary/30 p-3"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-8 w-8 items-center justify-center rounded bg-fill-muted/20">
+                          <Icon icon={IconFile} size="sm" colorRole="muted" />
+                        </div>
+                        <div>
+                          <Typography variant="bodySm" className="font-medium">
+                            {doc.fileName}
+                          </Typography>
+                          <Typography variant="bodyXs" colorRole="muted">
+                            {doc.documentType.replace(/_/g, ' ')} • {formatBytes(doc.fileSize)}
+                          </Typography>
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button variant="ghost" size="sm" asChild>
+                          <a href={doc.fileUrl} target="_blank" rel="noopener noreferrer">
+                            <Icon icon={IconExternalLink} size="sm" />
+                          </a>
+                        </Button>
+                        <Button variant="ghost" size="sm" asChild>
+                          <a href={doc.fileUrl} download={doc.fileName}>
+                            <Icon icon={IconDownload} size="sm" />
+                          </a>
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <Typography variant="bodySm" colorRole="muted">
+                  No documents uploaded yet
+                </Typography>
+              )}
             </CardContent>
           </Card>
         </div>
