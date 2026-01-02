@@ -31,6 +31,9 @@ import PrivateOrderStatusBadge from './PrivateOrderStatusBadge';
 
 type Currency = 'USD' | 'AED';
 
+/** Default UAE exchange rate for AED/USD conversion */
+const DEFAULT_EXCHANGE_RATE = 3.67;
+
 /**
  * DistributorDashboard displays an overview of assigned orders
  * with KPIs, status pipeline, and recent activity
@@ -44,8 +47,17 @@ const DistributorDashboard = () => {
     queryFn: () => trpcClient.privateClientOrders.distributorDashboard.query(),
   });
 
+  /**
+   * Format currency value, calculating AED from USD if AED is not available
+   */
   const formatCurrency = (amountUsd: number, amountAed: number) => {
-    const amount = currency === 'USD' ? amountUsd : amountAed;
+    let amount: number;
+    if (currency === 'USD') {
+      amount = amountUsd;
+    } else {
+      // Use AED if available, otherwise calculate from USD
+      amount = amountAed > 0 ? amountAed : amountUsd * DEFAULT_EXCHANGE_RATE;
+    }
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency,
@@ -54,8 +66,19 @@ const DistributorDashboard = () => {
     }).format(amount);
   };
 
+  /**
+   * Format order currency value, calculating AED from USD if needed
+   */
   const formatOrderCurrency = (order: { totalUsd?: number | null; totalAed?: number | null }) => {
-    const amount = currency === 'USD' ? (order.totalUsd ?? 0) : (order.totalAed ?? 0);
+    const usdAmount = order.totalUsd ?? 0;
+    const aedAmount = order.totalAed ?? 0;
+    let amount: number;
+    if (currency === 'USD') {
+      amount = usdAmount;
+    } else {
+      // Use AED if available, otherwise calculate from USD
+      amount = aedAmount > 0 ? aedAmount : usdAmount * DEFAULT_EXCHANGE_RATE;
+    }
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency,
