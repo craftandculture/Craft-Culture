@@ -8,11 +8,13 @@ import {
 } from '@tabler/icons-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
+import { useState } from 'react';
 import { toast } from 'sonner';
 
 import Badge from '@/app/_ui/components/Badge/Badge';
 import Button from '@/app/_ui/components/Button/Button';
 import Icon from '@/app/_ui/components/Icon/Icon';
+import Input from '@/app/_ui/components/Input/Input';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import type { PrivateClientOrder } from '@/database/schema';
 import { useTRPCClient } from '@/lib/trpc/browser';
@@ -173,16 +175,29 @@ const PaymentTracker = ({
   const queryClient = useQueryClient();
   const payments = buildPaymentInfo(order);
 
+  // Track payment reference inputs for each stage
+  const [paymentReferences, setPaymentReferences] = useState<Record<PaymentStage, string>>({
+    client: '',
+    distributor: '',
+    partner: '',
+  });
+
+  const handleReferenceChange = (stage: PaymentStage, value: string) => {
+    setPaymentReferences((prev) => ({ ...prev, [stage]: value }));
+  };
+
   const confirmPaymentMutation = useMutation({
-    mutationFn: async ({ stage, reference }: { stage: PaymentStage; reference?: string }) => {
+    mutationFn: async ({ stage, reference }: { stage: PaymentStage; reference: string }) => {
       return trpcClient.privateClientOrders.confirmPayment.mutate({
         orderId: order.id,
         paymentStage: stage,
         reference,
       });
     },
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       toast.success('Payment confirmed');
+      // Clear the reference input
+      setPaymentReferences((prev) => ({ ...prev, [variables.stage]: '' }));
       void queryClient.invalidateQueries({ queryKey: ['privateClientOrder', order.id] });
       onPaymentConfirmed?.();
     },
@@ -261,22 +276,38 @@ const PaymentTracker = ({
 
                   {/* Confirm button for awaiting payments */}
                   {canConfirmPayments && payment.status === 'awaiting' && (
-                    <div className="mt-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() =>
-                          confirmPaymentMutation.mutate({ stage: payment.stage })
-                        }
-                        isDisabled={confirmPaymentMutation.isPending}
-                      >
-                        {confirmPaymentMutation.isPending ? (
-                          <Icon icon={IconLoader2} size="sm" className="animate-spin" />
-                        ) : (
-                          <Icon icon={IconCheck} size="sm" />
-                        )}
-                        Confirm Payment
-                      </Button>
+                    <div className="mt-2 flex flex-col gap-2">
+                      <div className="flex items-center gap-2">
+                        <Input
+                          placeholder="Payment reference (required)"
+                          value={paymentReferences[payment.stage]}
+                          onChange={(e) => handleReferenceChange(payment.stage, e.target.value)}
+                          className="max-w-[200px] text-sm"
+                        />
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() =>
+                            confirmPaymentMutation.mutate({
+                              stage: payment.stage,
+                              reference: paymentReferences[payment.stage],
+                            })
+                          }
+                          isDisabled={confirmPaymentMutation.isPending || !paymentReferences[payment.stage].trim()}
+                        >
+                          {confirmPaymentMutation.isPending ? (
+                            <Icon icon={IconLoader2} size="sm" className="animate-spin" />
+                          ) : (
+                            <Icon icon={IconCheck} size="sm" />
+                          )}
+                          Confirm
+                        </Button>
+                      </div>
+                      {!paymentReferences[payment.stage].trim() && (
+                        <Typography variant="bodyXs" colorRole="muted">
+                          Enter the payment reference number to confirm
+                        </Typography>
+                      )}
                     </div>
                   )}
                 </div>

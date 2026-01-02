@@ -66,7 +66,7 @@ const DistributorOrdersList = () => {
   const [currency, setCurrency] = useState<Currency>('AED');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, refetch } = useQuery({
     queryKey: [
       'privateClientOrders.distributorGetMany',
       { limit: 20, cursor, search: search || undefined },
@@ -94,7 +94,8 @@ const DistributorOrdersList = () => {
           | 'delivered',
       }),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['privateClientOrders.distributorGetMany'] });
+      void refetch();
+      void queryClient.invalidateQueries({ queryKey: ['privateClientOrders'] });
       toast.success('Order status updated');
     },
     onError: (error) => {

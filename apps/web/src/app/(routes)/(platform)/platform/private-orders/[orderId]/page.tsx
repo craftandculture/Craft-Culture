@@ -5,6 +5,7 @@ import {
   IconArrowLeft,
   IconBuilding,
   IconCheck,
+  IconFileInvoice,
   IconLoader2,
   IconQuestionMark,
   IconX,
@@ -67,6 +68,14 @@ const PrivateOrderDetailPage = () => {
     enabled: !!orderId,
   });
 
+  // Fetch documents to check for distributor invoice
+  const { data: documents } = useQuery({
+    ...api.privateClientOrders.getDocuments.queryOptions({ orderId }),
+    enabled: !!orderId,
+  });
+
+  const distributorInvoice = documents?.find((doc) => doc.documentType === 'distributor_invoice');
+
   // Approve revisions mutation
   const { mutate: approveRevisions, isPending: isApproving } = useMutation(
     api.privateClientOrders.approveRevisions.mutationOptions({
@@ -112,6 +121,22 @@ const PrivateOrderDetailPage = () => {
     },
     onError: (error) => {
       toast.error(error.message || 'Failed to re-initiate verification');
+    },
+  });
+
+  // Acknowledge invoice mutation
+  const { mutate: acknowledgeInvoice, isPending: isAcknowledging } = useMutation({
+    mutationFn: () =>
+      trpcClient.privateClientOrders.partnerAcknowledgeInvoice.mutate({
+        orderId,
+      }),
+    onSuccess: () => {
+      toast.success('Invoice acknowledged. You can now monitor for client payment.');
+      void refetch();
+      void queryClient.invalidateQueries({ queryKey: ['privateClientOrders'] });
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to acknowledge invoice');
     },
   });
 
@@ -308,6 +333,61 @@ const PrivateOrderDetailPage = () => {
                       Client Registered - Re-verify
                     </ButtonContent>
                   </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Invoice Acknowledgment Required - shown when invoice uploaded but not acknowledged */}
+        {order.status === 'awaiting_client_payment' && distributorInvoice && !order.partnerInvoiceAcknowledgedAt && (
+          <Card className="border-2 border-fill-info/50 bg-fill-info/5">
+            <CardContent className="p-6">
+              <div className="flex flex-col items-center gap-4 text-center sm:flex-row sm:text-left">
+                <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-fill-info/20">
+                  <Icon icon={IconFileInvoice} size="lg" className="text-fill-info" />
+                </div>
+                <div className="flex-1">
+                  <Typography variant="headingSm" className="mb-1">
+                    Invoice Received - Acknowledgment Required
+                  </Typography>
+                  <Typography variant="bodySm" colorRole="muted">
+                    <strong>{order.distributor?.businessName ?? 'The distributor'}</strong> has uploaded an invoice for this order.
+                    Please review the invoice in the documents section below and acknowledge receipt to proceed with payment monitoring.
+                  </Typography>
+                </div>
+                <div className="flex flex-wrap justify-center gap-2 sm:flex-nowrap">
+                  <Button
+                    onClick={() => acknowledgeInvoice()}
+                    disabled={isAcknowledging}
+                    colorRole="brand"
+                  >
+                    <ButtonContent iconLeft={IconCheck} isLoading={isAcknowledging}>
+                      Acknowledge Invoice
+                    </ButtonContent>
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Invoice Acknowledged - shown when acknowledged and awaiting client payment */}
+        {order.status === 'awaiting_client_payment' && order.partnerInvoiceAcknowledgedAt && (
+          <Card className="border-2 border-fill-success/50 bg-fill-success/5">
+            <CardContent className="p-6">
+              <div className="flex flex-col items-center gap-4 text-center sm:flex-row sm:text-left">
+                <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-fill-success/20">
+                  <Icon icon={IconCheck} size="lg" className="text-fill-success" />
+                </div>
+                <div className="flex-1">
+                  <Typography variant="headingSm" className="mb-1">
+                    Invoice Acknowledged - Awaiting Client Payment
+                  </Typography>
+                  <Typography variant="bodySm" colorRole="muted">
+                    You have acknowledged the invoice. Please forward it to your client and monitor for payment.
+                    Once payment is received, the distributor will confirm and proceed with the order.
+                  </Typography>
                 </div>
               </div>
             </CardContent>
