@@ -1,6 +1,7 @@
 'use client';
 
 import {
+  IconBuilding,
   IconChevronDown,
   IconChevronUp,
   IconEye,
@@ -12,6 +13,7 @@ import {
   IconShieldCheck,
 } from '@tabler/icons-react';
 import { useMutation, useQuery } from '@tanstack/react-query';
+import Image from 'next/image';
 import Link from 'next/link';
 import { useState } from 'react';
 import { toast } from 'sonner';
@@ -294,9 +296,24 @@ const AdminPrivateOrdersPage = () => {
                               </div>
                             </td>
                             <td className="px-6 py-4">
-                              <Typography variant="bodySm">
-                                {order.partner?.businessName ?? 'Unknown'}
-                              </Typography>
+                              <div className="flex flex-col items-center gap-1.5">
+                                {order.partner?.logoUrl ? (
+                                  <Image
+                                    src={order.partner.logoUrl}
+                                    alt={order.partner?.businessName ?? 'Partner'}
+                                    width={40}
+                                    height={40}
+                                    className="h-10 w-10 rounded-lg object-contain"
+                                  />
+                                ) : (
+                                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-surface-secondary">
+                                    <Icon icon={IconBuilding} size="md" className="text-text-muted" />
+                                  </div>
+                                )}
+                                <Typography variant="bodyXs" className="text-center">
+                                  {order.partner?.businessName ?? 'Unknown'}
+                                </Typography>
+                              </div>
                             </td>
                             <td className="px-6 py-4">
                               <div className="flex flex-col">
@@ -465,12 +482,25 @@ const AdminPrivateOrdersPage = () => {
                         onClick={() => toggleExpanded(order.id)}
                       >
                         <div className="flex items-start justify-between">
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-3">
                             <Icon
                               icon={isExpanded ? IconChevronUp : IconChevronDown}
                               size="sm"
                               colorRole="muted"
                             />
+                            {order.partner?.logoUrl ? (
+                              <Image
+                                src={order.partner.logoUrl}
+                                alt={order.partner?.businessName ?? 'Partner'}
+                                width={32}
+                                height={32}
+                                className="h-8 w-8 rounded-lg object-contain"
+                              />
+                            ) : (
+                              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-surface-secondary">
+                                <Icon icon={IconBuilding} size="sm" className="text-text-muted" />
+                              </div>
+                            )}
                             <div>
                               <Typography variant="bodySm" className="font-medium">
                                 {order.orderNumber}

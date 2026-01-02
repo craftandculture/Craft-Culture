@@ -67,6 +67,7 @@ const adminGetMany = adminProcedure
         partner: {
           id: partners.id,
           businessName: partners.businessName,
+          logoUrl: partners.logoUrl,
         },
         client: {
           id: privateClientContacts.id,
