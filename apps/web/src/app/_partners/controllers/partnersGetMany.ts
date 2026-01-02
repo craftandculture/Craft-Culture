@@ -15,7 +15,9 @@ const partnersGetMany = adminProcedure
     z.object({
       cursor: z.number().optional().default(0),
       limit: z.number().optional().default(50),
-      type: z.enum(['retailer', 'sommelier', 'distributor']).optional(),
+      type: z
+        .enum(['retailer', 'sommelier', 'distributor', 'wine_partner'])
+        .optional(),
       status: z.enum(['active', 'inactive', 'suspended']).optional(),
       search: z.string().optional(),
     }),
