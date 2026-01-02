@@ -755,7 +755,7 @@ const DistributorOrderDetailPage = () => {
                   )}
                 </div>
                 <Button
-                  onClick={() => markInTransit()}
+                  onClick={() => markInTransit(undefined)}
                   disabled={isMarkingInTransit}
                   colorRole="brand"
                 >
@@ -786,7 +786,7 @@ const DistributorOrderDetailPage = () => {
                   </Typography>
                 </div>
                 <Button
-                  onClick={() => markDelivered()}
+                  onClick={() => markDelivered(undefined)}
                   disabled={isMarkingDelivered}
                   colorRole="brand"
                 >
