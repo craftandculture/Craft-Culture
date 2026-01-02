@@ -1,11 +1,17 @@
 'use client';
 
-import { IconArrowLeft, IconBuilding, IconLoader2 } from '@tabler/icons-react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  IconArrowLeft,
+  IconBuilding,
+  IconCheck,
+  IconLoader2,
+} from '@tabler/icons-react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useState } from 'react';
+import { toast } from 'sonner';
 
 import ActivityTimeline from '@/app/_privateClientOrders/components/ActivityTimeline';
 import DocumentUpload from '@/app/_privateClientOrders/components/DocumentUpload';
@@ -13,6 +19,7 @@ import PaymentTracker from '@/app/_privateClientOrders/components/PaymentTracker
 import PrivateOrderStatusBadge from '@/app/_privateClientOrders/components/PrivateOrderStatusBadge';
 import WorkflowStepper from '@/app/_privateClientOrders/components/WorkflowStepper';
 import Button from '@/app/_ui/components/Button/Button';
+import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
 import Card from '@/app/_ui/components/Card/Card';
 import CardContent from '@/app/_ui/components/Card/CardContent';
 import Divider from '@/app/_ui/components/Divider/Divider';
@@ -55,6 +62,23 @@ const PrivateOrderDetailPage = () => {
     ...api.privateClientOrders.getOne.queryOptions({ id: orderId }),
     enabled: !!orderId,
   });
+
+  // Approve revisions mutation
+  const { mutate: approveRevisions, isPending: isApproving } = useMutation(
+    api.privateClientOrders.approveRevisions.mutationOptions({
+      onSuccess: () => {
+        toast.success('Revisions approved! Order resubmitted for review.');
+        void refetch();
+      },
+      onError: (error) => {
+        toast.error(error.message || 'Failed to approve revisions');
+      },
+    }),
+  );
+
+  const handleApproveRevisions = () => {
+    approveRevisions({ orderId });
+  };
 
   const formatDate = (date: Date | null | undefined) => {
     if (!date) return '-';
@@ -123,6 +147,17 @@ const PrivateOrderDetailPage = () => {
             <PrivateOrderStatusBadge status={order.status} />
           </div>
           <div className="flex items-center gap-3">
+            {/* Approve Revisions button - shown when C&C has made changes and requested review */}
+            {order.status === 'revision_requested' && (
+              <Button
+                onClick={handleApproveRevisions}
+                disabled={isApproving}
+              >
+                <ButtonContent iconLeft={IconCheck}>
+                  {isApproving ? 'Approving...' : 'Approve Revisions'}
+                </ButtonContent>
+              </Button>
+            )}
             {/* Currency Toggle */}
             <div className="inline-flex items-center rounded-lg border border-border-muted bg-surface-secondary/50 p-0.5">
               <button

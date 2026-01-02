@@ -28,6 +28,8 @@ const adminGetOne = adminProcedure
           id: partners.id,
           businessName: partners.businessName,
           contactEmail: partners.businessEmail,
+          logoUrl: partners.logoUrl,
+          brandColor: partners.brandColor,
         },
         client: {
           id: privateClientContacts.id,
@@ -65,6 +67,8 @@ const adminGetOne = adminProcedure
         .select({
           id: partners.id,
           businessName: partners.businessName,
+          logoUrl: partners.logoUrl,
+          brandColor: partners.brandColor,
         })
         .from(partners)
         .where(eq(partners.id, orderResult.order.distributorId));
