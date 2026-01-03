@@ -6,6 +6,7 @@ import {
   IconDownload,
   IconEye,
   IconFileText,
+  IconRefresh,
   IconSearch,
   IconSend,
   IconTruck,
@@ -88,7 +89,12 @@ const QuoteApprovalsList = () => {
   const [activeFilter, setActiveFilter] = useState<QuoteStatus | 'all'>('all');
 
   // Fetch all quotes that need admin attention (using admin endpoint to see all users' quotes)
-  const { data: quotesData, isLoading } = useQuery({
+  const {
+    data: quotesData,
+    isLoading,
+    refetch,
+    isFetching,
+  } = useQuery({
     queryKey: ['admin-quotes', { search: search || undefined }],
     queryFn: () =>
       trpcClient.quotes.getManyAdmin.query({
@@ -96,6 +102,7 @@ const QuoteApprovalsList = () => {
         cursor: 0,
         search: search || undefined,
       }),
+    refetchInterval: 10000, // Refresh every 10 seconds
   });
 
   const quotes = quotesData?.data ?? [];
@@ -355,7 +362,7 @@ const QuoteApprovalsList = () => {
         ))}
       </div>
 
-      {/* Search Input */}
+      {/* Search Input with Refresh */}
       <div className="flex items-center gap-2">
         <Input
           placeholder="Search by quote name, client name, or company..."
@@ -364,6 +371,19 @@ const QuoteApprovalsList = () => {
           iconLeft={IconSearch}
           className="w-full"
         />
+        <Button
+          variant="outline"
+          size="md"
+          onClick={() => refetch()}
+          disabled={isFetching}
+          className="shrink-0"
+        >
+          <Icon
+            icon={IconRefresh}
+            size="sm"
+            className={isFetching ? 'animate-spin' : ''}
+          />
+        </Button>
       </div>
 
       {/* Quotes Table */}

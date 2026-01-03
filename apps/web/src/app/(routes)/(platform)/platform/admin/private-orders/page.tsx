@@ -81,6 +81,7 @@ const AdminPrivateOrdersPage = () => {
       status: statusFilter === 'all' ? undefined : statusFilter,
     }),
     staleTime: 0, // Always fetch fresh data
+    refetchInterval: 10000, // Refresh every 10 seconds
   });
 
   const handleRefresh = () => {
