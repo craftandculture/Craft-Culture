@@ -26,6 +26,7 @@ import { toast } from 'sonner';
 import ActivityTimeline from '@/app/_privateClientOrders/components/ActivityTimeline';
 import PaymentTracker from '@/app/_privateClientOrders/components/PaymentTracker';
 import PrivateOrderStatusBadge from '@/app/_privateClientOrders/components/PrivateOrderStatusBadge';
+import StockStatusSection from '@/app/_privateClientOrders/components/StockStatusSection';
 import WorkflowStepper from '@/app/_privateClientOrders/components/WorkflowStepper';
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
@@ -742,6 +743,22 @@ const PrivateOrderDetailPage = () => {
             )}
           </CardContent>
         </Card>
+
+        {/* Stock Status Section - Show after order is approved */}
+        {order.items && order.items.length > 0 && order.status !== 'draft' && order.status !== 'pending_review' && (
+          <StockStatusSection
+            items={order.items.map((item) => ({
+              id: item.id,
+              productName: item.productName,
+              vintage: item.vintage,
+              quantity: item.quantity,
+              source: item.source,
+              stockStatus: item.stockStatus,
+              stockExpectedAt: item.stockExpectedAt ? new Date(item.stockExpectedAt) : null,
+              stockConfirmedAt: item.stockConfirmedAt ? new Date(item.stockConfirmedAt) : null,
+            }))}
+          />
+        )}
 
         {/* Secondary Info - Horizontal Grid Below */}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
