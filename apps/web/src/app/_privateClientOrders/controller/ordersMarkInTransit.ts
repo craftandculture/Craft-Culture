@@ -11,6 +11,8 @@ import {
 } from '@/database/schema';
 import { distributorProcedure } from '@/lib/trpc/procedures';
 
+import checkStockReadiness from '../utils/checkStockReadiness';
+
 const markInTransitSchema = z.object({
   orderId: z.string().uuid(),
   notes: z.string().optional(),
@@ -45,6 +47,23 @@ const ordersMarkInTransit = distributorProcedure
       throw new TRPCError({
         code: 'BAD_REQUEST',
         message: `Cannot mark as in transit. Order must be in "delivery_scheduled" status, current status is "${order.status}"`,
+      });
+    }
+
+    // Check that all stock is at distributor before dispatching
+    const stockReadiness = await checkStockReadiness(orderId, 'at_distributor');
+    if (!stockReadiness.allReady) {
+      const pendingNames = stockReadiness.pendingItems
+        .slice(0, 3)
+        .map((item) => item.productName)
+        .join(', ');
+      const remaining =
+        stockReadiness.pendingItems.length > 3
+          ? ` and ${stockReadiness.pendingItems.length - 3} more`
+          : '';
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: `Cannot dispatch for delivery. ${stockReadiness.pendingItems.length} item(s) not yet at distributor: ${pendingNames}${remaining}`,
       });
     }
 
