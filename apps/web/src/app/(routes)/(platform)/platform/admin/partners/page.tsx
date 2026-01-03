@@ -16,6 +16,7 @@ import {
   IconTrash,
 } from '@tabler/icons-react';
 import { useMutation, useQuery } from '@tanstack/react-query';
+import Image from 'next/image';
 import Link from 'next/link';
 import { useState } from 'react';
 
@@ -467,11 +468,13 @@ const DistributorsPage = () => {
                       />
                       {newPartner.logoUrl && (
                         <div className="mt-2 p-2 bg-fill-muted rounded-lg inline-block">
-                          <img
+                          <Image
                             src={newPartner.logoUrl}
                             alt="Logo preview"
-                            className="max-h-12 object-contain"
-                            onError={(e) => (e.currentTarget.style.display = 'none')}
+                            width={48}
+                            height={48}
+                            className="max-h-12 w-auto object-contain"
+                            unoptimized
                           />
                         </div>
                       )}
@@ -723,10 +726,13 @@ const DistributorsPage = () => {
                     <div className="flex-1 space-y-3">
                       <div className="flex items-center gap-3">
                         {partner.logoUrl && (
-                          <img
+                          <Image
                             src={partner.logoUrl}
                             alt={partner.businessName}
+                            width={40}
+                            height={40}
                             className="h-10 w-10 object-contain rounded"
+                            unoptimized
                           />
                         )}
                         <div>
@@ -1077,11 +1083,13 @@ const DistributorsPage = () => {
                     />
                     {editingPartner.logoUrl && (
                       <div className="mt-2 p-2 bg-fill-muted rounded-lg inline-block">
-                        <img
+                        <Image
                           src={editingPartner.logoUrl}
                           alt="Logo preview"
-                          className="max-h-12 object-contain"
-                          onError={(e) => (e.currentTarget.style.display = 'none')}
+                          width={48}
+                          height={48}
+                          className="max-h-12 w-auto object-contain"
+                          unoptimized
                         />
                       </div>
                     )}

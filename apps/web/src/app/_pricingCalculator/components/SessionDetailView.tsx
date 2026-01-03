@@ -58,24 +58,24 @@ const SessionDetailView = ({ session: initialSession }: SessionDetailViewProps) 
   });
 
   const updateVariablesMutation = useMutation(api.pricingCalc.session.updateVariables.mutationOptions());
+  const { mutate: updateVariables, isPending: isUpdatingVariables } = updateVariablesMutation;
   const calculateMutation = useMutation(api.pricingCalc.session.calculate.mutationOptions());
   const updateCaseConfigMutation = useMutation(api.pricingCalc.item.updateCaseConfig.mutationOptions());
+  const sessionQueryKey = api.pricingCalc.session.getOne.queryKey({ id: session.id });
 
   // Auto-save default variables on first load if they don't exist
   useEffect(() => {
-    if (!session.calculationVariables && !updateVariablesMutation.isPending) {
-      updateVariablesMutation.mutate(
+    if (!session.calculationVariables && !isUpdatingVariables) {
+      updateVariables(
         { id: session.id, variables: defaultCalculationVariables },
         {
           onSuccess: () => {
-            void queryClient.invalidateQueries({
-              queryKey: api.pricingCalc.session.getOne.queryKey({ id: session.id }),
-            });
+            void queryClient.invalidateQueries({ queryKey: sessionQueryKey });
           },
         },
       );
     }
-  }, [session.id, session.calculationVariables]);
+  }, [session.id, session.calculationVariables, updateVariables, isUpdatingVariables, queryClient, sessionQueryKey]);
 
   const handleVariablesChange = (variables: CalculationVariables) => {
     updateVariablesMutation.mutate(

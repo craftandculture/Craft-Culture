@@ -12,6 +12,7 @@ import {
 } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
+import Image from 'next/image';
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
@@ -1256,10 +1257,13 @@ const QuoteApprovalDialog = ({
                         <div className="rounded-lg bg-gradient-to-br from-fill-brand/5 to-fill-brand/10 p-5 border-2 border-border-brand/30">
                           <div className="flex items-center gap-3 mb-4">
                             {selectedPartner.logoUrl && (
-                              <img
+                              <Image
                                 src={selectedPartner.logoUrl}
                                 alt={selectedPartner.businessName}
+                                width={48}
+                                height={48}
                                 className="h-12 w-12 object-contain rounded-lg bg-white border border-border-muted p-1"
+                                unoptimized
                               />
                             )}
                             <div className="flex-1">
@@ -1705,10 +1709,13 @@ const QuoteApprovalDialog = ({
                     {confirmedPartnerInfo && (
                       <div className="flex items-center gap-3 pb-3 border-b border-border-muted">
                         {confirmedPartnerInfo.logoUrl ? (
-                          <img
+                          <Image
                             src={confirmedPartnerInfo.logoUrl}
                             alt={confirmedPartnerInfo.businessName || 'Distributor'}
+                            width={100}
+                            height={32}
                             className="h-8 w-auto max-w-[100px] object-contain"
+                            unoptimized
                           />
                         ) : (
                           <div className="h-8 w-8 rounded bg-fill-muted flex items-center justify-center">

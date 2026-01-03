@@ -18,6 +18,7 @@ import {
 } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
+import Image from 'next/image';
 import { useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
@@ -1319,10 +1320,13 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                       {partnerInfo && (
                         <div className="flex items-center gap-3 pb-2 border-b border-border-muted">
                           {partnerInfo.logoUrl ? (
-                            <img
+                            <Image
                               src={partnerInfo.logoUrl}
                               alt={partnerInfo.businessName || 'Distributor'}
+                              width={100}
+                              height={32}
                               className="h-8 w-auto max-w-[100px] object-contain"
+                              unoptimized
                             />
                           ) : (
                             <div className="h-8 w-8 rounded bg-fill-muted flex items-center justify-center">

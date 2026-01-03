@@ -111,6 +111,7 @@ const NotificationBell = () => {
   const trpcClient = useTRPCClient();
   const queryClient = useQueryClient();
   const [isOpen, setIsOpen] = useState(false);
+  const [showPulse, setShowPulse] = useState(false);
   const previousCountRef = useRef<number | null>(null);
 
   // Play sound and refresh relevant data when new notifications arrive
@@ -122,6 +123,13 @@ const NotificationBell = () => {
       // Play sound (function checks for user interaction internally)
       void playNotificationSound();
 
+      // Trigger pulse animation
+      setShowPulse(true);
+      setTimeout(() => setShowPulse(false), 2000);
+
+      // Invalidate notifications list to show new notifications immediately
+      void queryClient.invalidateQueries({ queryKey: ['notifications-list'] });
+
       // Invalidate queries to refresh data across both B2C and admin views
       // B2C: User's quotes list (uses 'quotes.getMany' key pattern)
       void queryClient.invalidateQueries({ queryKey: ['quotes.getMany'] });
@@ -132,16 +140,22 @@ const NotificationBell = () => {
       void queryClient.invalidateQueries({ queryKey: ['admin-users'] });
       // Private client orders - partner and admin views
       void queryClient.invalidateQueries({ queryKey: ['privateClientOrders'] });
+      // Dashboards
+      void queryClient.invalidateQueries({ queryKey: ['admin-dashboard'] });
+      void queryClient.invalidateQueries({ queryKey: ['partner-dashboard'] });
+      void queryClient.invalidateQueries({ queryKey: ['distributor-dashboard'] });
     }
 
     previousCountRef.current = newCount;
   }, [queryClient]);
 
-  // Fetch unread count
+  // Fetch unread count - poll every 5 seconds for more responsive updates
   const { data: unreadData } = useQuery({
     queryKey: ['notifications-unread-count'],
     queryFn: () => trpcClient.notifications.getUnreadCount.query(),
-    refetchInterval: 10000, // Poll every 10 seconds
+    refetchInterval: 5000, // Poll every 5 seconds for faster notification awareness
+    refetchOnWindowFocus: true, // Refresh when user returns to tab
+    staleTime: 3000, // Consider data fresh for 3 seconds
   });
 
   // Play sound when unread count changes
@@ -151,11 +165,13 @@ const NotificationBell = () => {
     }
   }, [unreadData?.count, handleNewNotifications]);
 
-  // Fetch recent notifications when popover is open
+  // Fetch recent notifications - always enabled for background updates
   const { data: notificationsData, isLoading } = useQuery({
     queryKey: ['notifications-list'],
     queryFn: () => trpcClient.notifications.getMany.query({ limit: 10 }),
-    enabled: isOpen,
+    refetchInterval: isOpen ? 5000 : 30000, // Poll faster when open, slower in background
+    refetchOnWindowFocus: true,
+    staleTime: 3000,
   });
 
   const unreadCount = unreadData?.count ?? 0;
@@ -210,9 +226,14 @@ const NotificationBell = () => {
         >
           <Icon icon={IconBell} size="md" colorRole="muted" />
           {unreadCount > 0 && (
-            <span className="absolute -right-0.5 -top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-fill-danger px-1 text-[10px] font-bold text-white">
-              {unreadCount > 99 ? '99+' : unreadCount}
-            </span>
+            <>
+              {showPulse && (
+                <span className="absolute -right-0.5 -top-0.5 h-5 min-w-5 animate-ping rounded-full bg-fill-danger opacity-75" />
+              )}
+              <span className={`absolute -right-0.5 -top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-fill-danger px-1 text-[10px] font-bold text-white ${showPulse ? 'animate-pulse' : ''}`}>
+                {unreadCount > 99 ? '99+' : unreadCount}
+              </span>
+            </>
           )}
         </button>
       </PopoverTrigger>

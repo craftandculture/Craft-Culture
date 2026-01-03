@@ -14,6 +14,7 @@ import {
   IconTrash,
 } from '@tabler/icons-react';
 import { useMutation, useQuery } from '@tanstack/react-query';
+import Image from 'next/image';
 import { useState } from 'react';
 
 import AlertDialog from '@/app/_ui/components/AlertDialog/AlertDialog';
@@ -323,11 +324,13 @@ const WinePartnersPage = () => {
                       />
                       {newPartner.logoUrl && (
                         <div className="mt-2 p-2 bg-fill-muted rounded-lg inline-block">
-                          <img
+                          <Image
                             src={newPartner.logoUrl}
                             alt="Logo preview"
-                            className="max-h-12 object-contain"
-                            onError={(e) => (e.currentTarget.style.display = 'none')}
+                            width={48}
+                            height={48}
+                            className="max-h-12 w-auto object-contain"
+                            unoptimized
                           />
                         </div>
                       )}
@@ -423,10 +426,13 @@ const WinePartnersPage = () => {
                     <div className="flex-1 space-y-3">
                       <div className="flex items-center gap-3">
                         {partner.logoUrl ? (
-                          <img
+                          <Image
                             src={partner.logoUrl}
                             alt={partner.businessName}
+                            width={40}
+                            height={40}
                             className="h-10 w-10 object-contain rounded"
+                            unoptimized
                           />
                         ) : (
                           <div className="h-10 w-10 bg-fill-muted rounded flex items-center justify-center">
@@ -524,10 +530,13 @@ const WinePartnersPage = () => {
             <DialogHeader>
               <DialogTitle className="flex items-center gap-3">
                 {editingPartner?.logoUrl ? (
-                  <img
+                  <Image
                     src={editingPartner.logoUrl}
                     alt=""
+                    width={32}
+                    height={32}
                     className="h-8 w-8 object-contain rounded"
+                    unoptimized
                   />
                 ) : (
                   <div className="h-8 w-8 bg-fill-muted rounded flex items-center justify-center">
