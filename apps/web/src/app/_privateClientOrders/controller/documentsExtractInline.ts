@@ -4,7 +4,6 @@ import { generateObject } from 'ai';
 import { z } from 'zod';
 
 import { winePartnerProcedure } from '@/lib/trpc/procedures';
-import serverEnv from '@/server.env';
 
 const extractInlineSchema = z.object({
   file: z.string().describe('Base64 encoded file data URL'),
@@ -44,14 +43,16 @@ const extractedDataSchema = z.object({
 const documentsExtractInline = winePartnerProcedure.input(extractInlineSchema).mutation(async ({ input }) => {
   const { file, fileType } = input;
 
-  // Get OpenAI key from validated server environment
-  const openaiKey = serverEnv.OPENAI_API_KEY;
+  // Read OpenAI key at runtime - MUST be read here, not from a module-level import
+  // because env vars may not be available during build/module initialization
+  const openaiKey = process.env.OPENAI_API_KEY;
 
-  // Debug logging - will show in Vercel logs
-  console.log('[DocumentExtraction] Checking OPENAI_API_KEY:', {
+  // Debug logging - will show in Vercel function logs
+  console.log('[DocumentExtraction] Runtime env check:', {
     hasKey: !!openaiKey,
     keyLength: openaiKey?.length ?? 0,
     keyPrefix: openaiKey?.substring(0, 7) ?? 'none',
+    nodeEnv: process.env.NODE_ENV,
   });
 
   if (!openaiKey) {
