@@ -5,7 +5,12 @@ import { z } from 'zod';
 import createNotification from '@/app/_notifications/utils/createNotification';
 import db from '@/database/client';
 import type { PrivateClientOrder } from '@/database/schema';
-import { partnerMembers, privateClientOrderActivityLogs, privateClientOrders } from '@/database/schema';
+import {
+  partnerMembers,
+  privateClientContacts,
+  privateClientOrderActivityLogs,
+  privateClientOrders,
+} from '@/database/schema';
 import { distributorProcedure } from '@/lib/trpc/procedures';
 
 const distributorVerificationSchema = z.object({
@@ -82,6 +87,18 @@ const ordersDistributorVerification = distributorProcedure
       })
       .where(eq(privateClientOrders.id, orderId))
       .returning();
+
+    // If verified and order has a linked client, mark the client as verified
+    if (response === 'verified' && order.clientId) {
+      await db
+        .update(privateClientContacts)
+        .set({
+          cityDrinksVerifiedAt: new Date(),
+          cityDrinksVerifiedBy: user.id,
+          updatedAt: new Date(),
+        })
+        .where(eq(privateClientContacts.id, order.clientId));
+    }
 
     // Log the activity
     await db.insert(privateClientOrderActivityLogs).values({
