@@ -23,6 +23,7 @@ import DocumentUpload from '@/app/_privateClientOrders/components/DocumentUpload
 import PaymentTracker from '@/app/_privateClientOrders/components/PaymentTracker';
 import PrivateOrderStatusBadge from '@/app/_privateClientOrders/components/PrivateOrderStatusBadge';
 import StockIdentificationSection from '@/app/_privateClientOrders/components/StockIdentificationSection';
+import StockManagementSection from '@/app/_privateClientOrders/components/StockManagementSection';
 import WorkflowStepper from '@/app/_privateClientOrders/components/WorkflowStepper';
 import Button from '@/app/_ui/components/Button/Button';
 import Card from '@/app/_ui/components/Card/Card';
@@ -653,6 +654,29 @@ const AdminPrivateOrderDetailPage = () => {
             )}
           </CardContent>
         </Card>
+
+        {/* Stock Management - Show after order is approved */}
+        {order.items &&
+          order.items.length > 0 &&
+          !['draft', 'submitted', 'under_cc_review', 'revision_requested', 'cancelled'].includes(
+            order.status,
+          ) && (
+            <StockManagementSection
+              orderId={orderId}
+              items={order.items.map((item) => ({
+                id: item.id,
+                productName: item.productName,
+                vintage: item.vintage,
+                quantity: item.quantity,
+                source: item.source,
+                stockStatus: item.stockStatus,
+                stockExpectedAt: item.stockExpectedAt,
+                stockConfirmedAt: item.stockConfirmedAt,
+                stockNotes: item.stockNotes,
+              }))}
+              onUpdated={() => void refetch()}
+            />
+          )}
 
         {/* Secondary Info - Horizontal Grid Below */}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

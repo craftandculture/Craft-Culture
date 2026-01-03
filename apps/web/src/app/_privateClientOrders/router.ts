@@ -20,6 +20,7 @@ import documentsExtractInline from './controller/documentsExtractInline';
 import documentsGetMany from './controller/documentsGetMany';
 import documentsUpload from './controller/documentsUpload';
 import itemsAdd from './controller/itemsAdd';
+import itemsBulkUpdateStockStatus from './controller/itemsBulkUpdateStockStatus';
 import itemsRemove from './controller/itemsRemove';
 import itemsUpdate from './controller/itemsUpdate';
 import itemsUpdateStockStatus from './controller/itemsUpdateStockStatus';
@@ -89,7 +90,8 @@ const privateClientOrdersRouter = createTRPCRouter({
   adminRequestRevision: ordersRequestRevision,
   adminAssignDistributor: ordersAssignDistributor,
   adminResetVerification: ordersAdminResetVerification,
-  adminUpdateStockStatus: itemsUpdateStockStatus,
+  itemsUpdateStockStatus,
+  itemsBulkUpdateStockStatus,
   checkLocalStock,
 
   // Distributor procedures
