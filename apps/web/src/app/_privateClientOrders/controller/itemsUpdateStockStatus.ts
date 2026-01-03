@@ -2,12 +2,23 @@ import { TRPCError } from '@trpc/server';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 
+import createNotification from '@/app/_notifications/utils/createNotification';
 import db from '@/database/client';
 import {
+  partnerMembers,
   privateClientOrderActivityLogs,
   privateClientOrderItems,
 } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
+
+const stockStatusLabels: Record<string, string> = {
+  pending: 'Pending',
+  confirmed: 'Confirmed',
+  at_cc_bonded: 'At C&C Bonded',
+  in_transit_to_cc: 'In Transit to C&C',
+  at_distributor: 'At Distributor',
+  delivered: 'Delivered',
+};
 
 const updateStockStatusSchema = z.object({
   itemId: z.string().uuid(),
@@ -41,7 +52,7 @@ const itemsUpdateStockStatus = adminProcedure
       where: { id: itemId },
       with: {
         order: {
-          columns: { id: true, status: true },
+          columns: { id: true, status: true, partnerId: true, distributorId: true, orderNumber: true },
         },
       },
     });
@@ -112,6 +123,56 @@ const itemsUpdateStockStatus = adminProcedure
         stockExpectedAt: stockExpectedAt?.toISOString(),
       },
     });
+
+    // Send notifications when stock status changes
+    if (previousStatus !== stockStatus) {
+      const statusLabel = stockStatusLabels[stockStatus] ?? stockStatus;
+      const orderRef = item.order.orderNumber ?? item.order.id;
+      const productName = item.productName;
+
+      // Notify partner
+      if (item.order.partnerId) {
+        const partnerMembersList = await db
+          .select({ userId: partnerMembers.userId })
+          .from(partnerMembers)
+          .where(eq(partnerMembers.partnerId, item.order.partnerId));
+
+        for (const member of partnerMembersList) {
+          await createNotification({
+            userId: member.userId,
+            type: 'status_update',
+            title: 'Stock Status Updated',
+            message: `${productName} for order ${orderRef}: ${statusLabel}`,
+            entityType: 'private_client_order',
+            entityId: item.order.id,
+            actionUrl: `/platform/private-orders/${item.order.id}`,
+          });
+        }
+      }
+
+      // Notify distributor when stock arrives at C&C or at distributor
+      if (
+        item.order.distributorId &&
+        (stockStatus === 'at_cc_bonded' || stockStatus === 'at_distributor')
+      ) {
+        const distributorMembersList = await db
+          .select({ userId: partnerMembers.userId })
+          .from(partnerMembers)
+          .where(eq(partnerMembers.partnerId, item.order.distributorId));
+
+        for (const member of distributorMembersList) {
+          await createNotification({
+            userId: member.userId,
+            type: 'status_update',
+            title: stockStatus === 'at_distributor' ? 'Stock Ready for Pickup' : 'Stock Arrived at C&C',
+            message: `${productName} for order ${orderRef}: ${statusLabel}`,
+            entityType: 'private_client_order',
+            entityId: item.order.id,
+            actionUrl: `/platform/distributor/orders/${item.order.id}`,
+          });
+        }
+      }
+    }
 
     return updatedItem;
   });
