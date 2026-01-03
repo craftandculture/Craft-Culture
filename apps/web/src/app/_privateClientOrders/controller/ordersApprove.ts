@@ -3,12 +3,23 @@ import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 
 import db from '@/database/client';
-import { privateClientOrderActivityLogs, privateClientOrders } from '@/database/schema';
+import {
+  privateClientOrderActivityLogs,
+  privateClientOrderItems,
+  privateClientOrders,
+} from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
+
+const lineItemStockSchema = z.object({
+  itemId: z.string().uuid(),
+  source: z.enum(['cc_inventory', 'partner_airfreight', 'partner_local', 'manual']),
+  stockExpectedAt: z.date().optional(),
+});
 
 const approveOrderSchema = z.object({
   orderId: z.string().uuid(),
   notes: z.string().optional(),
+  lineItems: z.array(lineItemStockSchema).optional(),
 });
 
 /**
@@ -16,9 +27,13 @@ const approveOrderSchema = z.object({
  *
  * Admin approves an order that is under review.
  * The order status changes from 'under_cc_review' to 'cc_approved'.
+ *
+ * Optionally updates line items with stock source and expected arrival dates.
+ * - CC_INVENTORY items are marked as 'confirmed' (ready in warehouse)
+ * - PARTNER_AIRFREIGHT items are marked as 'pending' with an expected arrival date
  */
 const ordersApprove = adminProcedure.input(approveOrderSchema).mutation(async ({ input, ctx }) => {
-  const { orderId, notes } = input;
+  const { orderId, notes, lineItems } = input;
   const { user } = ctx;
 
   // Fetch the order
@@ -45,6 +60,28 @@ const ordersApprove = adminProcedure.input(approveOrderSchema).mutation(async ({
   const previousStatus = order.status;
   const newStatus = 'cc_approved';
 
+  // Update line items with stock source and status if provided
+  if (lineItems && lineItems.length > 0) {
+    for (const item of lineItems) {
+      // Determine stock status based on source
+      // cc_inventory = already in warehouse, mark as confirmed
+      // partner_airfreight = needs sourcing, mark as pending
+      const stockStatus = item.source === 'cc_inventory' ? 'confirmed' : 'pending';
+      const stockConfirmedAt = item.source === 'cc_inventory' ? new Date() : null;
+
+      await db
+        .update(privateClientOrderItems)
+        .set({
+          source: item.source,
+          stockStatus,
+          stockConfirmedAt,
+          stockExpectedAt: item.stockExpectedAt ?? null,
+          updatedAt: new Date(),
+        })
+        .where(eq(privateClientOrderItems.id, item.itemId));
+    }
+  }
+
   // Update order status
   const [updatedOrder] = await db
     .update(privateClientOrders)
@@ -65,6 +102,12 @@ const ordersApprove = adminProcedure.input(approveOrderSchema).mutation(async ({
     previousStatus,
     newStatus,
     notes,
+    metadata: lineItems
+      ? {
+          lineItemsUpdated: lineItems.length,
+          stockSources: lineItems.map((i) => ({ itemId: i.itemId, source: i.source })),
+        }
+      : undefined,
   });
 
   return updatedOrder;

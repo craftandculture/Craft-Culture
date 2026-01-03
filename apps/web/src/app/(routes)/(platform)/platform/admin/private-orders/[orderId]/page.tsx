@@ -22,6 +22,7 @@ import { toast } from 'sonner';
 import DocumentUpload from '@/app/_privateClientOrders/components/DocumentUpload';
 import PaymentTracker from '@/app/_privateClientOrders/components/PaymentTracker';
 import PrivateOrderStatusBadge from '@/app/_privateClientOrders/components/PrivateOrderStatusBadge';
+import StockIdentificationSection from '@/app/_privateClientOrders/components/StockIdentificationSection';
 import WorkflowStepper from '@/app/_privateClientOrders/components/WorkflowStepper';
 import Button from '@/app/_ui/components/Button/Button';
 import Card from '@/app/_ui/components/Card/Card';
@@ -416,6 +417,14 @@ const AdminPrivateOrderDetailPage = () => {
 
         {/* Workflow Stepper */}
         <WorkflowStepper order={order} />
+
+        {/* Stock Identification for Approval */}
+        {['submitted', 'under_cc_review'].includes(order.status) && (
+          <StockIdentificationSection
+            order={order}
+            onApproved={() => void refetch()}
+          />
+        )}
 
         {/* Admin Reset for Suspended Orders */}
         {order.status === 'verification_suspended' && (
