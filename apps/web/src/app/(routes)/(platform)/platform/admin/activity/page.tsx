@@ -9,6 +9,7 @@ import {
   IconFilter,
   IconLogin,
   IconReceipt,
+  IconRefresh,
   IconSearch,
   IconSend,
   IconUser,
@@ -49,7 +50,12 @@ const ActivityFeedPage = () => {
     void markActivitiesAsViewed();
   }, []);
 
-  const { data: activityData, isLoading } = useQuery({
+  const {
+    data: activityData,
+    isLoading,
+    refetch,
+    isFetching,
+  } = useQuery({
     ...api.admin.userActivityLogs.getMany.queryOptions({
       limit: 100,
       offset: 0,
@@ -166,14 +172,24 @@ const ActivityFeedPage = () => {
             {activityData?.total || 0} total activities
           </Typography>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setShowFilters(!showFilters)}
-          className="sm:hidden"
-        >
-          <IconFilter className="h-4 w-4" />
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => refetch()}
+            disabled={isFetching}
+          >
+            <IconRefresh className={`h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowFilters(!showFilters)}
+            className="sm:hidden"
+          >
+            <IconFilter className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
 
       {/* Filters - Always visible on desktop, toggleable on mobile */}

@@ -4,6 +4,7 @@ import {
   IconCheck,
   IconEdit,
   IconPlus,
+  IconRefresh,
   IconSearch,
   IconTrash,
   IconX,
@@ -592,13 +593,14 @@ const UserManagementPage = () => {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
 
   // Fetch users
-  const { data, isLoading, refetch } = useQuery({
+  const { data, isLoading, refetch, isFetching } = useQuery({
     ...api.users.getPaginated.queryOptions({
       status: statusFilter === 'all' ? undefined : statusFilter,
       customerType: customerTypeFilter === 'all' ? undefined : customerTypeFilter,
       search: searchQuery || undefined,
       limit: 50,
     }),
+    refetchInterval: 10000, // Refresh every 10 seconds
   });
 
   // Fetch distributors for assignment dropdown
@@ -762,16 +764,27 @@ const UserManagementPage = () => {
               </div>
             </div>
 
-            {/* Search */}
-            <div className="relative">
-              <IconSearch className="text-text-muted absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" />
-              <input
-                type="text"
-                placeholder="Search by name or email..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="bg-background-primary border-border-primary text-text-primary placeholder:text-text-muted w-full rounded-lg border px-10 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
+            {/* Search with Refresh */}
+            <div className="flex items-center gap-2">
+              <div className="relative flex-1">
+                <IconSearch className="text-text-muted absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" />
+                <input
+                  type="text"
+                  placeholder="Search by name or email..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="bg-background-primary border-border-primary text-text-primary placeholder:text-text-muted w-full rounded-lg border px-10 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <Button
+                variant="outline"
+                size="md"
+                onClick={() => refetch()}
+                disabled={isFetching}
+                className="shrink-0"
+              >
+                <IconRefresh className={`h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
+              </Button>
             </div>
 
             {/* Results count */}
