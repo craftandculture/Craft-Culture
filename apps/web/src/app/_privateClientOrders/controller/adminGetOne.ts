@@ -53,9 +53,30 @@ const adminGetOne = adminProcedure
       });
     }
 
-    // Get line items
+    // Get line items with explicit column selection to ensure stock fields are included
     const items = await db
-      .select()
+      .select({
+        id: privateClientOrderItems.id,
+        orderId: privateClientOrderItems.orderId,
+        productId: privateClientOrderItems.productId,
+        productName: privateClientOrderItems.productName,
+        producer: privateClientOrderItems.producer,
+        vintage: privateClientOrderItems.vintage,
+        lwin: privateClientOrderItems.lwin,
+        quantity: privateClientOrderItems.quantity,
+        bottleSize: privateClientOrderItems.bottleSize,
+        bottlesPerCase: privateClientOrderItems.bottlesPerCase,
+        pricePerCaseUsd: privateClientOrderItems.pricePerCaseUsd,
+        totalUsd: privateClientOrderItems.totalUsd,
+        notes: privateClientOrderItems.notes,
+        source: privateClientOrderItems.source,
+        stockStatus: privateClientOrderItems.stockStatus,
+        stockConfirmedAt: privateClientOrderItems.stockConfirmedAt,
+        stockExpectedAt: privateClientOrderItems.stockExpectedAt,
+        stockNotes: privateClientOrderItems.stockNotes,
+        createdAt: privateClientOrderItems.createdAt,
+        updatedAt: privateClientOrderItems.updatedAt,
+      })
       .from(privateClientOrderItems)
       .where(eq(privateClientOrderItems.orderId, input.id))
       .orderBy(privateClientOrderItems.createdAt);
