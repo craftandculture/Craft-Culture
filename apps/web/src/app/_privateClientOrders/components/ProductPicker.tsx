@@ -50,6 +50,9 @@ const ProductPicker = ({ value, onChange, omitProductIds = [], onRemove, index }
   const [mode, setMode] = useState<'search' | 'manual'>(hasManualDataOnly ? 'manual' : 'search');
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
+  // Check if we have a pre-populated product (from AI matching)
+  const hasPrePopulatedProduct = value.productId && value.productName.trim().length > 0;
+
   const handleProductSelect = (product: Product) => {
     setSelectedProduct(product);
 
@@ -154,12 +157,34 @@ const ProductPicker = ({ value, onChange, omitProductIds = [], onRemove, index }
       {/* Product selection */}
       {mode === 'search' ? (
         <div className="mb-3">
-          <ProductsCombobox
-            value={selectedProduct}
-            onSelect={handleProductSelect}
-            placeholder="Search wines by name, producer, region..."
-            omitProductIds={omitProductIds}
-          />
+          {hasPrePopulatedProduct && !selectedProduct ? (
+            // Show pre-populated product from AI matching
+            <div className="flex items-center justify-between rounded-lg border border-border-brand bg-fill-brand-muted/50 px-3 py-2">
+              <div className="flex flex-col gap-0.5 min-w-0">
+                <Typography variant="bodySm" className="font-medium truncate">
+                  {value.productName}
+                </Typography>
+                <div className="flex items-center gap-2 text-xs text-text-muted">
+                  {value.producer && <span>{value.producer}</span>}
+                  {value.vintage && <span>{value.vintage}</span>}
+                  {value.region && <span>{value.region}</span>}
+                  {value.source === 'cc_inventory' && (
+                    <span className="rounded bg-green-100 px-1.5 py-0.5 text-green-700">Local Stock</span>
+                  )}
+                </div>
+              </div>
+              <Button type="button" variant="ghost" size="xs" onClick={handleClearProduct}>
+                <Icon icon={IconX} size="sm" colorRole="muted" />
+              </Button>
+            </div>
+          ) : (
+            <ProductsCombobox
+              value={selectedProduct}
+              onSelect={handleProductSelect}
+              placeholder="Search wines by name, producer, region..."
+              omitProductIds={omitProductIds}
+            />
+          )}
         </div>
       ) : (
         <div className="mb-3 grid grid-cols-1 gap-2 sm:grid-cols-4">
