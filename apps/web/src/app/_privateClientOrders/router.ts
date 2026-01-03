@@ -24,6 +24,7 @@ import itemsBulkUpdateStockStatus from './controller/itemsBulkUpdateStockStatus'
 import itemsRemove from './controller/itemsRemove';
 import itemsUpdate from './controller/itemsUpdate';
 import itemsUpdateStockStatus from './controller/itemsUpdateStockStatus';
+import matchExtractedToLocalStock from './controller/matchExtractedToLocalStock';
 import ordersAdminResetVerification from './controller/ordersAdminResetVerification';
 import ordersApprove from './controller/ordersApprove';
 import ordersApproveRevisions from './controller/ordersApproveRevisions';
@@ -69,6 +70,7 @@ const privateClientOrdersRouter = createTRPCRouter({
   deleteDocument: documentsDelete,
   extractDocument: documentsExtract,
   extractDocumentInline: documentsExtractInline,
+  matchExtractedToLocalStock,
 
   // Payment management
   confirmPayment: paymentsConfirm,

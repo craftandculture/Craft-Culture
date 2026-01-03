@@ -2,10 +2,12 @@
 
 import {
   IconArrowLeft,
+  IconBox,
   IconCheck,
   IconCloudUpload,
   IconLoader2,
   IconPlus,
+  IconQuestionMark,
   IconSend,
   IconSparkles,
   IconX,
@@ -67,6 +69,34 @@ interface ExtractedData {
   totalAmount?: number;
 }
 
+interface MatchedProduct {
+  id: string;
+  name: string;
+  producer: string | null;
+  year: number | null;
+  region: string | null;
+  country: string | null;
+  lwin18: string;
+}
+
+interface MatchedOffer {
+  id: string;
+  price: number | null;
+  currency: string | null;
+  unitSize: string | null;
+  unitCount: number | null;
+  availableQuantity: number;
+}
+
+interface MatchResult {
+  extractedIndex: number;
+  matched: boolean;
+  confidence: 'high' | 'medium' | 'low' | 'none';
+  product?: MatchedProduct;
+  offer?: MatchedOffer;
+  extracted: ExtractedLineItem;
+}
+
 /**
  * Private Order Creation Form
  *
@@ -94,7 +124,15 @@ const PrivateOrderForm = () => {
 
   // Document extraction state
   const [isExtracting, setIsExtracting] = useState(false);
+  const [isMatching, setIsMatching] = useState(false);
   const [extractedData, setExtractedData] = useState<ExtractedData | null>(null);
+  const [matchResults, setMatchResults] = useState<MatchResult[] | null>(null);
+  const [matchSummary, setMatchSummary] = useState<{
+    total: number;
+    matched: number;
+    highConfidence: number;
+    unmatched: number;
+  } | null>(null);
   const [extractionError, setExtractionError] = useState<string | null>(null);
   const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
 
@@ -187,6 +225,8 @@ const PrivateOrderForm = () => {
       setIsExtracting(true);
       setExtractionError(null);
       setExtractedData(null);
+      setMatchResults(null);
+      setMatchSummary(null);
       setUploadedFileName(file.name);
 
       try {
@@ -208,6 +248,33 @@ const PrivateOrderForm = () => {
         if (result.success && result.data) {
           setExtractedData(result.data);
           toast.success(`Extracted ${result.data.lineItems.length} items from document`);
+
+          // Now match against local stock
+          if (result.data.lineItems.length > 0) {
+            setIsMatching(true);
+            try {
+              const matchResult = await trpcClient.privateClientOrders.matchExtractedToLocalStock.mutate({
+                extractedItems: result.data.lineItems,
+              });
+
+              setMatchResults(matchResult.results);
+              setMatchSummary(matchResult.summary);
+
+              if (matchResult.summary.matched > 0) {
+                toast.success(
+                  `Matched ${matchResult.summary.matched} of ${matchResult.summary.total} items to local stock`,
+                );
+              } else {
+                toast.info('No matches found in local stock');
+              }
+            } catch (matchError) {
+              console.error('Matching failed:', matchError);
+              // Don't fail the whole operation, just show extracted data without matches
+              toast.info('Items extracted but could not match to local stock');
+            } finally {
+              setIsMatching(false);
+            }
+          }
         }
       } catch (error) {
         console.error('Extraction failed:', error);
@@ -231,32 +298,67 @@ const PrivateOrderForm = () => {
     disabled: isExtracting,
   });
 
-  // Add extracted items to line items
+  // Add extracted items to line items (using matched product data when available)
   const handleAddExtractedItems = () => {
     if (!extractedData?.lineItems) return;
 
-    const newItems: LineItem[] = extractedData.lineItems.map((item) => ({
-      id: crypto.randomUUID(),
-      productName: item.productName,
-      producer: item.producer || '',
-      vintage: item.vintage || '',
-      region: item.region || '',
-      lwin: '',
-      bottleSize: '750ml',
-      caseConfig: 12,
-      quantity: item.quantity,
-      pricePerCaseUsd: item.unitPrice ? Math.round(item.unitPrice * 100) / 100 : 0,
-      source: 'manual' as StockSource,
-    }));
+    const newItems: LineItem[] = extractedData.lineItems.map((item, index) => {
+      // Check if we have a match for this item
+      const match = matchResults?.find((m) => m.extractedIndex === index && m.matched);
 
+      if (match && match.product && match.offer) {
+        // Use matched product data - this links to local stock
+        return {
+          id: crypto.randomUUID(),
+          productId: match.product.id,
+          productOfferId: match.offer.id,
+          productName: match.product.name,
+          producer: match.product.producer || '',
+          vintage: match.product.year?.toString() || '',
+          region: match.product.region || '',
+          lwin: match.product.lwin18 || '',
+          bottleSize: match.offer.unitSize || '750ml',
+          caseConfig: match.offer.unitCount || 12,
+          quantity: item.quantity,
+          pricePerCaseUsd: match.offer.price ? Math.round(match.offer.price * 100) / 100 : 0,
+          source: 'cc_inventory' as StockSource, // Local stock!
+        };
+      }
+
+      // No match - use extracted data as manual entry
+      return {
+        id: crypto.randomUUID(),
+        productName: item.productName,
+        producer: item.producer || '',
+        vintage: item.vintage || '',
+        region: item.region || '',
+        lwin: '',
+        bottleSize: '750ml',
+        caseConfig: 12,
+        quantity: item.quantity,
+        pricePerCaseUsd: item.unitPrice ? Math.round(item.unitPrice * 100) / 100 : 0,
+        source: 'manual' as StockSource,
+      };
+    });
+
+    const matchedCount = newItems.filter((i) => i.productId).length;
     setLineItems([...lineItems, ...newItems]);
     setExtractedData(null);
+    setMatchResults(null);
+    setMatchSummary(null);
     setUploadedFileName(null);
-    toast.success(`Added ${newItems.length} items to order`);
+
+    if (matchedCount > 0) {
+      toast.success(`Added ${newItems.length} items (${matchedCount} from local stock)`);
+    } else {
+      toast.success(`Added ${newItems.length} items to order`);
+    }
   };
 
   const handleClearExtraction = () => {
     setExtractedData(null);
+    setMatchResults(null);
+    setMatchSummary(null);
     setExtractionError(null);
     setUploadedFileName(null);
   };
@@ -516,10 +618,12 @@ const PrivateOrderForm = () => {
             </div>
           )}
 
-          {isExtracting && (
+          {(isExtracting || isMatching) && (
             <div className="flex items-center justify-center gap-3 rounded-lg border border-border-muted bg-fill-muted p-4">
               <Icon icon={IconLoader2} size="md" colorRole="brand" className="animate-spin" />
-              <Typography variant="bodySm">Extracting from {uploadedFileName}...</Typography>
+              <Typography variant="bodySm">
+                {isExtracting ? `Extracting from ${uploadedFileName}...` : 'Matching to local stock...'}
+              </Typography>
             </div>
           )}
 
@@ -534,7 +638,7 @@ const PrivateOrderForm = () => {
             </div>
           )}
 
-          {extractedData && extractedData.lineItems.length > 0 && (
+          {extractedData && extractedData.lineItems.length > 0 && !isMatching && (
             <div className="flex flex-col gap-3 rounded-lg border border-border-brand bg-fill-brand-muted p-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -542,23 +646,75 @@ const PrivateOrderForm = () => {
                   <Typography variant="bodySm" className="font-medium">
                     {extractedData.lineItems.length} items extracted
                   </Typography>
+                  {matchSummary && matchSummary.matched > 0 && (
+                    <span className="flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-700">
+                      <IconBox size={12} />
+                      {matchSummary.matched} in local stock
+                    </span>
+                  )}
                 </div>
                 <Button type="button" variant="ghost" size="sm" onClick={handleClearExtraction}>
                   <Icon icon={IconX} size="sm" />
                 </Button>
               </div>
 
-              <div className="max-h-32 overflow-y-auto">
-                {extractedData.lineItems.map((item, index) => (
-                  <div key={index} className="flex justify-between py-1 text-sm">
-                    <span>{item.productName}</span>
-                    <span className="text-text-muted">{item.quantity} cases</span>
-                  </div>
-                ))}
+              <div className="max-h-48 overflow-y-auto space-y-1">
+                {extractedData.lineItems.map((item, index) => {
+                  const match = matchResults?.find((m) => m.extractedIndex === index);
+                  const isMatched = match?.matched;
+                  const confidence = match?.confidence || 'none';
+
+                  return (
+                    <div
+                      key={index}
+                      className={`flex items-center justify-between rounded px-2 py-1.5 text-sm ${
+                        isMatched ? 'bg-green-50' : 'bg-white/50'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        {isMatched ? (
+                          <span
+                            className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full ${
+                              confidence === 'high'
+                                ? 'bg-green-500 text-white'
+                                : confidence === 'medium'
+                                  ? 'bg-amber-500 text-white'
+                                  : 'bg-slate-400 text-white'
+                            }`}
+                          >
+                            <IconCheck size={12} />
+                          </span>
+                        ) : (
+                          <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-slate-200 text-slate-500">
+                            <IconQuestionMark size={12} />
+                          </span>
+                        )}
+                        <div className="truncate">
+                          <span className="font-medium">{item.productName}</span>
+                          {isMatched && match?.product && (
+                            <span className="ml-2 text-xs text-green-600">
+                              → {match.product.name}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        {isMatched && match?.offer && (
+                          <span className="text-xs text-green-600">
+                            ${match.offer.price?.toFixed(0)}/cs
+                          </span>
+                        )}
+                        <span className="text-text-muted">{item.quantity} cs</span>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
 
               <Button type="button" variant="default" colorRole="brand" size="sm" onClick={handleAddExtractedItems}>
-                <ButtonContent iconLeft={IconPlus}>Add to Order</ButtonContent>
+                <ButtonContent iconLeft={IconPlus}>
+                  Add {matchSummary?.matched ? `${matchSummary.matched} matched + ${matchSummary.unmatched} manual` : 'to Order'}
+                </ButtonContent>
               </Button>
             </div>
           )}
