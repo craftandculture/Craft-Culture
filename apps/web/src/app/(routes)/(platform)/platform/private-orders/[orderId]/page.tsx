@@ -745,7 +745,7 @@ const PrivateOrderDetailPage = () => {
         </Card>
 
         {/* Stock Status Section - Show after order is approved */}
-        {order.items && order.items.length > 0 && order.status !== 'draft' && order.status !== 'pending_review' && (
+        {order.items && order.items.length > 0 && order.status !== 'submitted' && order.status !== 'under_cc_review' && order.status !== 'revision_requested' && (
           <StockStatusSection
             items={order.items.map((item) => ({
               id: item.id,
