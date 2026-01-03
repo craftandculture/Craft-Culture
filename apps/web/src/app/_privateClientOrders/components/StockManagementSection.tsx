@@ -302,7 +302,9 @@ const StockManagementSection = ({
                         </Select>
                       </td>
                       <td className="px-2 py-2">
-                        {item.stockExpectedAt ? (
+                        {/* Only show ETA for pending/confirmed - hide once stock has arrived */}
+                        {item.stockExpectedAt &&
+                        ['pending', 'confirmed'].includes(currentStatus) ? (
                           <span className="text-text-muted">
                             {formatDate(item.stockExpectedAt)}
                           </span>
