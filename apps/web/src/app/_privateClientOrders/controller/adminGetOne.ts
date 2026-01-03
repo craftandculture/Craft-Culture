@@ -6,8 +6,10 @@ import db from '@/database/client';
 import {
   partners,
   privateClientContacts,
+  privateClientOrderActivityLogs,
   privateClientOrderItems,
   privateClientOrders,
+  users,
 } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
@@ -75,12 +77,37 @@ const adminGetOne = adminProcedure
       distributor = distResult ?? null;
     }
 
+    // Get activity logs with user info
+    const activityLogs = await db
+      .select({
+        log: privateClientOrderActivityLogs,
+        user: {
+          id: users.id,
+          name: users.name,
+          email: users.email,
+        },
+        partner: {
+          id: partners.id,
+          businessName: partners.businessName,
+        },
+      })
+      .from(privateClientOrderActivityLogs)
+      .leftJoin(users, eq(privateClientOrderActivityLogs.userId, users.id))
+      .leftJoin(partners, eq(privateClientOrderActivityLogs.partnerId, partners.id))
+      .where(eq(privateClientOrderActivityLogs.orderId, input.id))
+      .orderBy(privateClientOrderActivityLogs.createdAt);
+
     return {
       ...orderResult.order,
       partner: orderResult.partner,
       distributor,
       client: orderResult.client,
       items,
+      activityLogs: activityLogs.map((row) => ({
+        ...row.log,
+        user: row.user,
+        partner: row.partner,
+      })),
     };
   });
 
