@@ -383,11 +383,12 @@ const StockManagementSection = ({
                             <Button
                               size="sm"
                               onClick={() => {
+                                const etaValue = editingETA[item.id];
                                 updateStockStatusMutation.mutate({
                                   itemId: item.id,
                                   stockStatus: currentStatus,
-                                  stockExpectedAt: editingETA[item.id]
-                                    ? new Date(editingETA[item.id])
+                                  stockExpectedAt: etaValue
+                                    ? new Date(etaValue)
                                     : undefined,
                                   stockNotes: editingNotes[item.id] || undefined,
                                 });
