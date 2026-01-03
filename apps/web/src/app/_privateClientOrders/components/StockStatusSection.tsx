@@ -9,12 +9,12 @@ import {
   IconTruck,
 } from '@tabler/icons-react';
 
-import { SourceBadge } from './StockStatusBadge';
+import { StockSourceBadge } from './StockStatusBadge';
 
 interface LineItem {
   id: string;
   productName: string;
-  vintage: number | null;
+  vintage: number | string | null;
   quantity: number;
   source: 'cc_inventory' | 'partner_airfreight' | 'partner_local' | 'manual' | null;
   stockStatus: string | null;
@@ -170,7 +170,7 @@ const StockStatusSection = ({ items, className }: StockStatusSectionProps) => {
                       </div>
                       <div className="mt-1 flex flex-wrap items-center gap-2">
                         <span className="text-xs text-text-muted">{item.quantity} cases</span>
-                        {item.source && <SourceBadge source={item.source} size="sm" />}
+                        {item.source && <StockSourceBadge source={item.source} />}
                       </div>
                     </div>
 
