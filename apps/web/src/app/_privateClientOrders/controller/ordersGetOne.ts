@@ -55,33 +55,9 @@ const ordersGetOne = winePartnerProcedure
       });
     }
 
-    // Get line items with explicit column selection to ensure stock fields are included
+    // Get all line items for this order
     const items = await db
-      .select({
-        id: privateClientOrderItems.id,
-        orderId: privateClientOrderItems.orderId,
-        productId: privateClientOrderItems.productId,
-        productName: privateClientOrderItems.productName,
-        producer: privateClientOrderItems.producer,
-        vintage: privateClientOrderItems.vintage,
-        lwin: privateClientOrderItems.lwin,
-        quantity: privateClientOrderItems.quantity,
-        bottleSize: privateClientOrderItems.bottleSize,
-        bottlesPerCase: privateClientOrderItems.bottlesPerCase,
-        pricePerCaseUsd: privateClientOrderItems.pricePerCaseUsd,
-        totalUsd: privateClientOrderItems.totalUsd,
-        notes: privateClientOrderItems.notes,
-        source: privateClientOrderItems.source,
-        stockStatus: privateClientOrderItems.stockStatus,
-        stockConfirmedAt: privateClientOrderItems.stockConfirmedAt,
-        stockExpectedAt: privateClientOrderItems.stockExpectedAt,
-        stockNotes: privateClientOrderItems.stockNotes,
-        region: privateClientOrderItems.region,
-        caseConfig: privateClientOrderItems.caseConfig,
-        productOfferId: privateClientOrderItems.productOfferId,
-        createdAt: privateClientOrderItems.createdAt,
-        updatedAt: privateClientOrderItems.updatedAt,
-      })
+      .select()
       .from(privateClientOrderItems)
       .where(eq(privateClientOrderItems.orderId, input.id))
       .orderBy(privateClientOrderItems.createdAt);
