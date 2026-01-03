@@ -4,13 +4,17 @@ import {
   IconArrowRight,
   IconBox,
   IconCheck,
+  IconChevronDown,
+  IconChevronUp,
   IconClock,
   IconPackage,
   IconPlane,
   IconTruck,
 } from '@tabler/icons-react';
 import { formatDistanceToNow } from 'date-fns';
+import { useState } from 'react';
 
+import Button from '@/app/_ui/components/Button/Button';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import type { PrivateClientOrderActivityLog } from '@/database/schema';
@@ -23,12 +27,14 @@ interface ActivityWithUser extends PrivateClientOrderActivityLog {
 export interface StockFlowTimelineProps {
   activities: ActivityWithUser[];
   className?: string;
+  /** Number of entries to show when collapsed. Default: 3 */
+  collapsedCount?: number;
 }
 
 const stockStatusLabels: Record<string, string> = {
   pending: 'Pending',
   confirmed: 'Confirmed',
-  at_cc_bonded: 'At C&C Bonded',
+  at_cc_bonded: 'At C&C',
   in_transit_to_cc: 'In Transit',
   at_distributor: 'At Distributor',
   delivered: 'Delivered',
@@ -66,11 +72,16 @@ interface StockStatusMetadata {
 /**
  * Stock Flow Timeline Component
  *
- * Displays a dedicated timeline for stock movement activities,
- * separate from the main order workflow timeline.
- * Shows transitions between stock statuses with visual indicators.
+ * Displays a dedicated timeline for stock movement activities.
+ * Collapsed by default showing only recent entries, expandable to see full history.
  */
-const StockFlowTimeline = ({ activities, className }: StockFlowTimelineProps) => {
+const StockFlowTimeline = ({
+  activities,
+  className,
+  collapsedCount = 3,
+}: StockFlowTimelineProps) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+
   // Filter only stock-related activities
   const stockActivities = activities.filter(
     (a) => a.action === 'stock_status_updated' || a.action === 'stock_status_bulk_updated',
@@ -79,13 +90,11 @@ const StockFlowTimeline = ({ activities, className }: StockFlowTimelineProps) =>
   if (stockActivities.length === 0) {
     return (
       <div className={className}>
-        <div className="rounded-lg border border-border-secondary bg-fill-secondary/50 p-4">
-          <div className="flex items-center gap-2 text-text-muted">
-            <Icon icon={IconClock} size="sm" colorRole="muted" />
-            <Typography variant="bodySm" colorRole="muted">
-              No stock movement history yet
-            </Typography>
-          </div>
+        <div className="flex items-center gap-2 rounded-lg border border-border-secondary bg-fill-secondary/50 p-3">
+          <Icon icon={IconClock} size="sm" colorRole="muted" />
+          <Typography variant="bodySm" colorRole="muted">
+            No stock movement history yet
+          </Typography>
         </div>
       </div>
     );
@@ -95,6 +104,12 @@ const StockFlowTimeline = ({ activities, className }: StockFlowTimelineProps) =>
   const sortedActivities = [...stockActivities].sort(
     (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
   );
+
+  const hasMoreToShow = sortedActivities.length > collapsedCount;
+  const visibleActivities = isExpanded
+    ? sortedActivities
+    : sortedActivities.slice(0, collapsedCount);
+  const hiddenCount = sortedActivities.length - collapsedCount;
 
   const getActorName = (activity: ActivityWithUser) => {
     if (activity.user?.name) return activity.user.name;
@@ -106,13 +121,15 @@ const StockFlowTimeline = ({ activities, className }: StockFlowTimelineProps) =>
     return formatDistanceToNow(new Date(date), { addSuffix: true });
   };
 
-  const renderStatusBadge = (status: string) => {
+  const renderCompactStatusBadge = (status: string) => {
     const StatusIcon = stockStatusIcons[status] || IconClock;
     const colorClass = stockStatusColors[status] || stockStatusColors.pending;
 
     return (
-      <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${colorClass}`}>
-        <StatusIcon size={12} />
+      <span
+        className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium ${colorClass}`}
+      >
+        <StatusIcon size={10} />
         {stockStatusLabels[status] || status}
       </span>
     );
@@ -120,102 +137,96 @@ const StockFlowTimeline = ({ activities, className }: StockFlowTimelineProps) =>
 
   return (
     <div className={className}>
-      <div className="mb-3 flex items-center gap-2">
-        <Icon icon={IconBox} size="sm" colorRole="muted" />
-        <Typography variant="headingSm">Stock Movement History</Typography>
-      </div>
-
-      <div className="relative">
-        {/* Timeline line */}
-        <div className="absolute bottom-0 left-3 top-0 w-px bg-border-muted" />
-
-        <div className="space-y-3">
-          {sortedActivities.map((activity, index) => {
-            const metadata = activity.metadata as StockStatusMetadata | null;
-            const isFirst = index === 0;
-            const isBulk = activity.action === 'stock_status_bulk_updated';
-            const newStatus = metadata?.newStockStatus || 'pending';
-            const NewStatusIcon = stockStatusIcons[newStatus] || IconClock;
-
-            return (
-              <div key={activity.id} className="relative flex gap-3 pl-8">
-                {/* Timeline dot */}
-                <div
-                  className={`absolute left-0 top-0 flex h-6 w-6 items-center justify-center rounded-full border-2 ${
-                    isFirst
-                      ? 'border-fill-brand bg-fill-brand'
-                      : 'border-border-muted bg-background-primary'
-                  }`}
-                >
-                  <NewStatusIcon
-                    size={14}
-                    className={isFirst ? 'text-white' : 'text-text-muted'}
-                  />
-                </div>
-
-                <div className="min-w-0 flex-1 rounded-lg border border-border-secondary bg-surface-secondary/30 p-3">
-                  {/* Header */}
-                  <div className="mb-2 flex flex-wrap items-center gap-2">
-                    {isBulk ? (
-                      <Typography variant="bodySm" className="font-medium">
-                        {metadata?.itemCount || 'Multiple'} items updated
-                      </Typography>
-                    ) : (
-                      <Typography variant="bodySm" className="font-medium">
-                        {metadata?.productName || 'Item'}
-                      </Typography>
-                    )}
-                    <Typography variant="bodyXs" colorRole="muted">
-                      {formatActivityDate(activity.createdAt)}
-                    </Typography>
-                  </div>
-
-                  {/* Status Transition */}
-                  <div className="mb-2 flex flex-wrap items-center gap-2">
-                    {metadata?.previousStockStatus && (
-                      <>
-                        {renderStatusBadge(metadata.previousStockStatus)}
-                        <Icon icon={IconArrowRight} size="xs" colorRole="muted" />
-                      </>
-                    )}
-                    {renderStatusBadge(newStatus)}
-                  </div>
-
-                  {/* Additional Info */}
-                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-text-muted">
-                    <span>by {getActorName(activity)}</span>
-                    {/* Only show ETA for pending/confirmed status - hide once stock has arrived/is in transit */}
-                    {metadata?.stockExpectedAt &&
-                      ['pending', 'confirmed'].includes(newStatus) && (
-                        <span>
-                          ETA: {new Date(metadata.stockExpectedAt).toLocaleDateString()}
-                        </span>
-                      )}
-                  </div>
-
-                  {/* Notes or bulk items list */}
-                  {activity.notes && (
-                    <div className="mt-2 rounded bg-fill-secondary/50 px-2 py-1.5">
-                      <Typography variant="bodyXs" colorRole="muted">
-                        {activity.notes}
-                      </Typography>
-                    </div>
-                  )}
-
-                  {/* For bulk updates, show affected items */}
-                  {isBulk && metadata?.itemNames && (
-                    <div className="mt-2 rounded bg-fill-secondary/50 px-2 py-1.5">
-                      <Typography variant="bodyXs" colorRole="muted">
-                        Items: {metadata.itemNames}
-                      </Typography>
-                    </div>
-                  )}
-                </div>
-              </div>
-            );
-          })}
+      {/* Header with count */}
+      <div className="mb-2 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Icon icon={IconBox} size="sm" colorRole="muted" />
+          <Typography variant="headingSm">Stock Movement History</Typography>
+          <span className="rounded-full bg-fill-muted px-2 py-0.5 text-[10px] font-medium text-text-muted">
+            {stockActivities.length}
+          </span>
         </div>
       </div>
+
+      {/* Compact Timeline */}
+      <div className="space-y-1.5">
+        {visibleActivities.map((activity, index) => {
+          const metadata = activity.metadata as StockStatusMetadata | null;
+          const isFirst = index === 0;
+          const isBulk = activity.action === 'stock_status_bulk_updated';
+          const newStatus = metadata?.newStockStatus || 'pending';
+          const NewStatusIcon = stockStatusIcons[newStatus] || IconClock;
+
+          return (
+            <div
+              key={activity.id}
+              className={`flex items-center gap-2 rounded-lg border px-3 py-2 ${
+                isFirst
+                  ? 'border-fill-brand/30 bg-fill-brand/5'
+                  : 'border-border-secondary bg-surface-secondary/30'
+              }`}
+            >
+              {/* Icon */}
+              <div
+                className={`flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full ${
+                  isFirst ? 'bg-fill-brand text-white' : 'bg-fill-muted text-text-muted'
+                }`}
+              >
+                <NewStatusIcon size={12} />
+              </div>
+
+              {/* Content - single line */}
+              <div className="flex min-w-0 flex-1 items-center gap-2">
+                {/* Item name or bulk count */}
+                <span className="truncate text-xs font-medium text-text-primary">
+                  {isBulk ? `${metadata?.itemCount || 'Multiple'} items` : metadata?.productName || 'Item'}
+                </span>
+
+                {/* Status transition */}
+                <div className="flex flex-shrink-0 items-center gap-1">
+                  {metadata?.previousStockStatus && (
+                    <>
+                      {renderCompactStatusBadge(metadata.previousStockStatus)}
+                      <IconArrowRight size={10} className="text-text-muted" />
+                    </>
+                  )}
+                  {renderCompactStatusBadge(newStatus)}
+                </div>
+              </div>
+
+              {/* Time and actor */}
+              <div className="flex flex-shrink-0 items-center gap-2 text-[10px] text-text-muted">
+                <span className="hidden sm:inline">{getActorName(activity)}</span>
+                <span>{formatActivityDate(activity.createdAt)}</span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Expand/Collapse button */}
+      {hasMoreToShow && (
+        <div className="mt-2 flex justify-center">
+          <Button
+            variant="ghost"
+            size="xs"
+            onClick={() => setIsExpanded(!isExpanded)}
+            className="text-xs text-text-muted hover:text-text-primary"
+          >
+            {isExpanded ? (
+              <>
+                <IconChevronUp size={14} />
+                Show less
+              </>
+            ) : (
+              <>
+                <IconChevronDown size={14} />
+                Show {hiddenCount} more
+              </>
+            )}
+          </Button>
+        </div>
+      )}
     </div>
   );
 };
