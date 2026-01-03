@@ -16,7 +16,6 @@ export const GET = () => {
         prefix: openaiKey?.substring(0, 7) ?? 'not-set',
       },
       NODE_ENV: process.env.NODE_ENV,
-      VERCEL_ENV: process.env.VERCEL_ENV,
     },
   });
 };
