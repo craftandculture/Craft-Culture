@@ -1132,6 +1132,7 @@ export const privateClientOrderItems = pgTable(
     source: orderItemSource('source').notNull().default('manual'),
     stockStatus: orderItemStockStatus('stock_status').notNull().default('pending'),
     stockConfirmedAt: timestamp('stock_confirmed_at', { mode: 'date' }),
+    stockExpectedAt: timestamp('stock_expected_at', { mode: 'date' }),
     stockNotes: text('stock_notes'),
 
     // Quantity and pricing

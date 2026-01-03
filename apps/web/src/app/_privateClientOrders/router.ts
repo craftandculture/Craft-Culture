@@ -9,6 +9,7 @@ import adminGetOne from './controller/adminGetOne';
 import adminRemoveItem from './controller/adminRemoveItem';
 import adminUpdateItem from './controller/adminUpdateItem';
 import adminUpdateStatus from './controller/adminUpdateStatus';
+import checkLocalStock from './controller/checkLocalStock';
 import distributorDashboard from './controller/distributorDashboard';
 import distributorGetMany from './controller/distributorGetMany';
 import distributorGetOne from './controller/distributorGetOne';
@@ -87,6 +88,7 @@ const privateClientOrdersRouter = createTRPCRouter({
   adminRequestRevision: ordersRequestRevision,
   adminAssignDistributor: ordersAssignDistributor,
   adminResetVerification: ordersAdminResetVerification,
+  checkLocalStock,
 
   // Distributor procedures
   distributorDashboard,
