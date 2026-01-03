@@ -58,6 +58,8 @@ const matchExtractedToLocalStock = winePartnerProcedure
 
     for (let i = 0; i < extractedItems.length; i++) {
       const item = extractedItems[i];
+      if (!item) continue;
+
       const result: MatchResult = {
         extractedIndex: i,
         matched: false,
@@ -122,8 +124,8 @@ const matchExtractedToLocalStock = winePartnerProcedure
           },
           offer: {
             id: productOffers.id,
-            price: productOffers.inBondPriceUsd,
-            currency: sql<string>`'USD'`,
+            price: productOffers.price,
+            currency: productOffers.currency,
             unitSize: productOffers.unitSize,
             unitCount: productOffers.unitCount,
             availableQuantity: productOffers.availableQuantity,
@@ -145,7 +147,13 @@ const matchExtractedToLocalStock = winePartnerProcedure
 
       if (matches.length > 0) {
         // Score and rank matches
-        let bestMatch = matches[0];
+        const firstMatch = matches[0];
+        if (!firstMatch) {
+          results.push(result);
+          continue;
+        }
+
+        let bestMatch = firstMatch;
         let bestScore = 0;
 
         for (const match of matches) {
