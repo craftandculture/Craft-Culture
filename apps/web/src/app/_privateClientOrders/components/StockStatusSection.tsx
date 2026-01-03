@@ -90,9 +90,9 @@ const StockStatusSection = ({ items, className }: StockStatusSectionProps) => {
     (i) => i.stockStatus === 'at_cc_bonded' || i.stockStatus === 'in_transit_to_cc',
   ).length;
 
-  // Find latest ETA for pending/in-transit items
+  // Find latest ETA for pending/confirmed items only - once stock has arrived (at_cc_bonded+) ETA is no longer relevant
   const pendingETAs = items
-    .filter((i) => i.stockExpectedAt && i.stockStatus !== 'at_distributor' && i.stockStatus !== 'delivered')
+    .filter((i) => i.stockExpectedAt && (i.stockStatus === 'pending' || i.stockStatus === 'confirmed' || !i.stockStatus))
     .map((i) => i.stockExpectedAt!)
     .sort((a, b) => b.getTime() - a.getTime());
   const latestETA = pendingETAs[0];
@@ -175,7 +175,8 @@ const StockStatusSection = ({ items, className }: StockStatusSectionProps) => {
                     </div>
 
                     <div className="flex items-center gap-3 text-right">
-                      {item.stockExpectedAt && status !== 'at_distributor' && status !== 'delivered' && (
+                      {/* Only show ETA for pending/confirmed - once stock arrives at C&C, ETA is complete */}
+                      {item.stockExpectedAt && (status === 'pending' || status === 'confirmed') && (
                         <div className="text-xs">
                           <div className="text-text-muted">ETA</div>
                           <div className="font-medium text-text-primary">
