@@ -74,6 +74,9 @@ const adminGetOne = adminProcedure
         stockConfirmedAt: privateClientOrderItems.stockConfirmedAt,
         stockExpectedAt: privateClientOrderItems.stockExpectedAt,
         stockNotes: privateClientOrderItems.stockNotes,
+        region: privateClientOrderItems.region,
+        caseConfig: privateClientOrderItems.caseConfig,
+        productOfferId: privateClientOrderItems.productOfferId,
         createdAt: privateClientOrderItems.createdAt,
         updatedAt: privateClientOrderItems.updatedAt,
       })
