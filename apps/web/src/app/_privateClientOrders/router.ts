@@ -22,6 +22,7 @@ import documentsUpload from './controller/documentsUpload';
 import itemsAdd from './controller/itemsAdd';
 import itemsRemove from './controller/itemsRemove';
 import itemsUpdate from './controller/itemsUpdate';
+import itemsUpdateStockStatus from './controller/itemsUpdateStockStatus';
 import ordersAdminResetVerification from './controller/ordersAdminResetVerification';
 import ordersApprove from './controller/ordersApprove';
 import ordersApproveRevisions from './controller/ordersApproveRevisions';
@@ -88,6 +89,7 @@ const privateClientOrdersRouter = createTRPCRouter({
   adminRequestRevision: ordersRequestRevision,
   adminAssignDistributor: ordersAssignDistributor,
   adminResetVerification: ordersAdminResetVerification,
+  adminUpdateStockStatus: itemsUpdateStockStatus,
   checkLocalStock,
 
   // Distributor procedures
