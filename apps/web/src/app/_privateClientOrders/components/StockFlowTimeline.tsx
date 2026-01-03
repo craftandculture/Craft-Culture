@@ -184,11 +184,13 @@ const StockFlowTimeline = ({ activities, className }: StockFlowTimelineProps) =>
                   {/* Additional Info */}
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-text-muted">
                     <span>by {getActorName(activity)}</span>
-                    {metadata?.stockExpectedAt && (
-                      <span>
-                        ETA: {new Date(metadata.stockExpectedAt).toLocaleDateString()}
-                      </span>
-                    )}
+                    {/* Only show ETA for pending/confirmed status - hide once stock has arrived/is in transit */}
+                    {metadata?.stockExpectedAt &&
+                      ['pending', 'confirmed'].includes(newStatus) && (
+                        <span>
+                          ETA: {new Date(metadata.stockExpectedAt).toLocaleDateString()}
+                        </span>
+                      )}
                   </div>
 
                   {/* Notes or bulk items list */}
