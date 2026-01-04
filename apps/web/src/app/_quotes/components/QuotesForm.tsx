@@ -1036,6 +1036,7 @@ const QuotesForm = () => {
                       const quotedLineItem = quoteData.lineItems.find(
                         (qli) => qli.productId === item.product?.id,
                       );
+                      const offer = item.product?.productOffers?.[0];
 
                       return {
                         productName: `${item.product?.name ?? 'Unknown'}${
@@ -1044,7 +1045,8 @@ const QuotesForm = () => {
                         quantity: item.quantity ?? 1,
                         basePriceUsd: quotedLineItem?.basePriceUsd ?? 0,
                         lineItemTotalUsd: quotedLineItem?.lineItemTotalUsd ?? 0,
-                        unitCount: item.product?.productOffers?.[0]?.unitCount ?? 12,
+                        unitCount: offer?.unitCount ?? 12,
+                        unitSize: offer?.unitSize ?? '750ml',
                       };
                     })}
                   onSaveWithMargins={(config) => {

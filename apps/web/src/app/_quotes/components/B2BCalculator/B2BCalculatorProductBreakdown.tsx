@@ -180,14 +180,21 @@ const B2BCalculatorProductBreakdown = ({
               key={index}
               className="flex flex-col space-y-3 rounded-lg border border-border-muted bg-background-primary p-3 sm:p-4"
             >
-              {/* Product Name & Quantity */}
-              <div className="flex items-baseline justify-between gap-2">
-                <Typography variant="bodySm" className="font-semibold">
-                  {item.productName}
-                </Typography>
-                <Typography variant="bodySm" colorRole="muted">
-                  {item.quantity} {item.quantity === 1 ? 'case' : 'cases'}
-                </Typography>
+              {/* Product Name, Case Config & Quantity */}
+              <div className="flex flex-col gap-1">
+                <div className="flex items-baseline justify-between gap-2">
+                  <Typography variant="bodySm" className="font-semibold">
+                    {item.productName}
+                  </Typography>
+                  <Typography variant="bodySm" colorRole="muted">
+                    {item.quantity} {item.quantity === 1 ? 'case' : 'cases'}
+                  </Typography>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Typography variant="bodyXs" colorRole="muted" className="rounded bg-fill-muted px-1.5 py-0.5">
+                    {item.unitCount}×{item.unitSize}
+                  </Typography>
+                </div>
               </div>
 
               {/* In-Bond Price */}
@@ -216,7 +223,7 @@ const B2BCalculatorProductBreakdown = ({
                 {/* Per Bottle Price */}
                 <div className="flex items-baseline justify-between gap-2">
                   <Typography variant="bodyXs" colorRole="muted">
-                    Per bottle ({item.unitCount}-pack)
+                    Per {item.unitSize} bottle
                   </Typography>
                   <Typography variant="bodyXs" className="tabular-nums font-medium">
                     {formatPrice(convertValue(getCustomerPricePerBottle(item, index)), currency)}

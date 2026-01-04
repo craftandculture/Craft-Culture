@@ -854,6 +854,7 @@ const DistributorOrderDetailPage = () => {
                       <th className="px-2 py-1.5 text-left text-[10px] font-medium uppercase tracking-wide text-text-muted">Product</th>
                       <th className="px-2 py-1.5 text-left text-[10px] font-medium uppercase tracking-wide text-text-muted">Producer</th>
                       <th className="px-2 py-1.5 text-center text-[10px] font-medium uppercase tracking-wide text-text-muted">Yr</th>
+                      <th className="px-2 py-1.5 text-center text-[10px] font-medium uppercase tracking-wide text-text-muted">Pack</th>
                       <th className="px-2 py-1.5 text-center text-[10px] font-medium uppercase tracking-wide text-text-muted">Qty</th>
                       <th className="px-2 py-1.5 text-right text-[10px] font-medium uppercase tracking-wide text-text-muted">Total ({currency})</th>
                     </tr>
@@ -866,6 +867,7 @@ const DistributorOrderDetailPage = () => {
                         </td>
                         <td className="px-2 py-1.5 text-xs">{item.producer || '-'}</td>
                         <td className="px-2 py-1.5 text-center text-xs">{item.vintage || '-'}</td>
+                        <td className="px-2 py-1.5 text-center text-xs text-text-muted">{item.caseConfig}×{item.bottleSize}</td>
                         <td className="px-2 py-1.5 text-center text-xs font-medium">{item.quantity}</td>
                         <td className="px-2 py-1.5 text-right text-xs font-semibold">
                           {formatPrice(getAmount(item.totalUsd), currency)}

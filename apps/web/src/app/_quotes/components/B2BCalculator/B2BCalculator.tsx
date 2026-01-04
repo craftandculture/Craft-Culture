@@ -38,6 +38,8 @@ export interface B2BCalculatorLineItem {
   lineItemTotalUsd: number;
   /** Number of bottles per case (e.g., 6, 12, 3) */
   unitCount: number;
+  /** Bottle size (e.g., '750ml', '1500ml') */
+  unitSize: string;
   /** Optional margin override (percentage) for this specific product */
   marginOverride?: number;
 }
