@@ -133,7 +133,7 @@ const adminDashboard = adminProcedure.query(async () => {
 
   // Get orders with pending stock items (for stock update reminder)
   // These are orders in fulfillment phase that have items with pending stock status
-  const fulfillmentStatuses = [
+  const stockReminderStatuses = [
     'distributor_paid',
     'awaiting_partner_payment',
     'partner_paid',
@@ -142,7 +142,7 @@ const adminDashboard = adminProcedure.query(async () => {
     'scheduling_delivery',
     'delivery_scheduled',
     'out_for_delivery',
-  ];
+  ] as const;
 
   const ordersNeedingStockUpdate = await db
     .selectDistinct({
@@ -159,7 +159,7 @@ const adminDashboard = adminProcedure.query(async () => {
     )
     .where(
       and(
-        inArray(privateClientOrders.status, fulfillmentStatuses),
+        inArray(privateClientOrders.status, stockReminderStatuses),
         eq(privateClientOrderItems.stockStatus, 'pending'),
       ),
     )
