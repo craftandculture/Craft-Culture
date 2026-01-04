@@ -58,6 +58,19 @@ const ProductPicker = ({ value, onChange, omitProductIds = [], onRemove, index }
 
     const offer = product.productOffers?.[0];
 
+    // Use raw supplier price, converting to USD if needed
+    // This avoids double markup from the B2B pricing model
+    let rawPriceUsd = value.pricePerCaseUsd;
+    if (offer?.price) {
+      const exchangeRates: Record<string, number> = {
+        USD: 1,
+        GBP: 1.27,
+        EUR: 1.08,
+      };
+      const rate = exchangeRates[offer.currency] ?? 1;
+      rawPriceUsd = Math.round(offer.price * rate * 100) / 100;
+    }
+
     onChange({
       ...value,
       productId: product.id,
@@ -69,7 +82,7 @@ const ProductPicker = ({ value, onChange, omitProductIds = [], onRemove, index }
       lwin: product.lwin18,
       bottleSize: offer?.unitSize ?? '750ml',
       caseConfig: offer?.unitCount ?? 12,
-      pricePerCaseUsd: offer?.inBondPriceUsd ? Math.round(offer.inBondPriceUsd * 100) / 100 : value.pricePerCaseUsd,
+      pricePerCaseUsd: rawPriceUsd,
       source: offer?.source === 'local_inventory' ? 'cc_inventory' : value.source,
     });
   };

@@ -688,20 +688,20 @@ const AdminPrivateOrderDetailPage = () => {
               </Typography>
               <div className="space-y-1 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-text-muted">Subtotal</span>
+                  <span className="text-text-muted">Landed Duty Free</span>
                   <span>{formatCurrencyValue(getAmount(order.subtotalUsd), currency)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-text-muted">Duty (5%)</span>
+                  <span className="text-text-muted">Import Duty (20%)</span>
                   <span>{formatCurrencyValue(getAmount(order.dutyUsd), currency)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-text-muted">Transfer (0.75%)</span>
+                  <span>{formatCurrencyValue(getAmount(order.logisticsUsd), currency)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-text-muted">VAT (5%)</span>
                   <span>{formatCurrencyValue(getAmount(order.vatUsd), currency)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-text-muted">Logistics</span>
-                  <span>{formatCurrencyValue(getAmount(order.logisticsUsd), currency)}</span>
                 </div>
                 <Divider />
                 <div className="flex justify-between font-semibold">
