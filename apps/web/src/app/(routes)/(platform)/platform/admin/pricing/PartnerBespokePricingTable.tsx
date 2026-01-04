@@ -346,7 +346,7 @@ const PartnerBespokePricingTable = () => {
                   <td className="px-3 py-2">
                     <div className="flex items-center gap-2">
                       <span>{override.partnerName}</span>
-                      <Badge variant="muted" size="sm">
+                      <Badge colorRole="muted" size="sm">
                         {override.partnerType}
                       </Badge>
                     </div>
