@@ -75,7 +75,7 @@ const UserDropdown = ({ user }: UserDropdownProps) => {
         {user.role === 'admin' && (
           <>
             <DropdownMenuItem asChild>
-              <Link href="/platform/admin/pricing-models">
+              <Link href="/platform/admin/pricing">
                 <DropdownMenuContentWrapper iconLeft={IconSettings} align="start">
                   Admin
                 </DropdownMenuContentWrapper>
