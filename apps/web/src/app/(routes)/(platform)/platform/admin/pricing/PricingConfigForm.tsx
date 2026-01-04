@@ -1,6 +1,6 @@
 'use client';
 
-import { IconCheck, IconLoader2 } from '@tabler/icons-react';
+import { IconCheck, IconLoader2, IconRefresh } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
@@ -13,7 +13,7 @@ import Input from '@/app/_ui/components/Input/Input';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import useTRPC, { useTRPCClient } from '@/lib/trpc/browser';
 
-type TabType = 'b2b' | 'pco' | 'pocket_cellar';
+type TabType = 'exchange_rates' | 'b2b' | 'pco' | 'pocket_cellar';
 
 interface PricingVariable {
   key: string;
@@ -22,6 +22,30 @@ interface PricingVariable {
   suffix: string;
   step: string;
 }
+
+const EXCHANGE_RATE_VARIABLES: PricingVariable[] = [
+  {
+    key: 'gbp_to_usd',
+    label: 'GBP → USD',
+    description: 'British Pound to US Dollar exchange rate',
+    suffix: '',
+    step: '0.01',
+  },
+  {
+    key: 'eur_to_usd',
+    label: 'EUR → USD',
+    description: 'Euro to US Dollar exchange rate',
+    suffix: '',
+    step: '0.01',
+  },
+  {
+    key: 'usd_to_aed',
+    label: 'USD → AED',
+    description: 'US Dollar to UAE Dirham exchange rate',
+    suffix: '',
+    step: '0.01',
+  },
+];
 
 const B2B_VARIABLES: PricingVariable[] = [
   {
@@ -131,6 +155,7 @@ const POCKET_CELLAR_VARIABLES: PricingVariable[] = [
 ];
 
 const TAB_CONFIG = {
+  exchange_rates: { label: 'Exchange Rates', variables: EXCHANGE_RATE_VARIABLES },
   b2b: { label: 'B2B Quote Tool', variables: B2B_VARIABLES },
   pco: { label: 'PCO Module', variables: PCO_VARIABLES },
   pocket_cellar: { label: 'Pocket Cellar', variables: POCKET_CELLAR_VARIABLES },
@@ -146,13 +171,15 @@ const PricingConfigForm = () => {
   const trpcClient = useTRPCClient();
   const queryClient = useQueryClient();
 
-  const [activeTab, setActiveTab] = useState<TabType>('pco');
+  const [activeTab, setActiveTab] = useState<TabType>('exchange_rates');
   const [formValues, setFormValues] = useState<Record<string, Record<string, number>>>({
+    exchange_rates: {},
     b2b: {},
     pco: {},
     pocket_cellar: {},
   });
   const [hasChanges, setHasChanges] = useState(false);
+  const [isFetchingRates, setIsFetchingRates] = useState(false);
 
   // Fetch current pricing config
   const { data: pricingConfig, isLoading } = useQuery(api.pricing.getConfig.queryOptions({}));
@@ -161,10 +188,20 @@ const PricingConfigForm = () => {
   useEffect(() => {
     if (pricingConfig) {
       const newValues: Record<string, Record<string, number>> = {
+        exchange_rates: {},
         b2b: {},
         pco: {},
         pocket_cellar: {},
       };
+
+      // Map Exchange Rates
+      if (pricingConfig.exchangeRates) {
+        newValues.exchange_rates = {
+          gbp_to_usd: pricingConfig.exchangeRates.gbpToUsd,
+          eur_to_usd: pricingConfig.exchangeRates.eurToUsd,
+          usd_to_aed: pricingConfig.exchangeRates.usdToAed,
+        };
+      }
 
       // Map B2B
       if (pricingConfig.b2b) {
@@ -221,6 +258,28 @@ const PricingConfigForm = () => {
       },
     }));
     setHasChanges(true);
+  };
+
+  // Fetch latest exchange rates from ECB
+  const handleFetchLatestRates = async () => {
+    setIsFetchingRates(true);
+    try {
+      const result = await trpcClient.pricing.fetchLatestExchangeRates.mutate();
+      setFormValues((prev) => ({
+        ...prev,
+        exchange_rates: {
+          gbp_to_usd: result.gbpToUsd,
+          eur_to_usd: result.eurToUsd,
+          usd_to_aed: result.usdToAed,
+        },
+      }));
+      setHasChanges(true);
+      toast.success('Exchange rates fetched from ECB');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to fetch exchange rates');
+    } finally {
+      setIsFetchingRates(false);
+    }
   };
 
   const handleSave = async () => {
@@ -282,11 +341,34 @@ const PricingConfigForm = () => {
         ))}
       </div>
 
-      {/* Formula Preview */}
+      {/* Formula Preview / Info Section */}
       <div className="rounded-lg border border-border-muted bg-surface-secondary/50 p-4">
         <Typography variant="bodyXs" colorRole="muted" className="mb-2 font-medium uppercase tracking-wide">
-          Calculation Method
+          {activeTab === 'exchange_rates' ? 'Exchange Rate Info' : 'Calculation Method'}
         </Typography>
+        {activeTab === 'exchange_rates' && (
+          <div className="space-y-3">
+            <Typography variant="bodySm">
+              Exchange rates are used for currency conversion in pricing calculations. USD is the base currency for all pricing.
+            </Typography>
+            <div className="flex items-center gap-3">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleFetchLatestRates}
+                isDisabled={isFetchingRates}
+              >
+                <ButtonContent>
+                  <Icon icon={isFetchingRates ? IconLoader2 : IconRefresh} size="sm" className={isFetchingRates ? 'animate-spin' : ''} />
+                  <span className="ml-2">{isFetchingRates ? 'Fetching...' : 'Fetch Latest from ECB'}</span>
+                </ButtonContent>
+              </Button>
+              <Typography variant="bodyXs" colorRole="muted">
+                Fetches current rates from European Central Bank
+              </Typography>
+            </div>
+          </div>
+        )}
         {activeTab === 'b2b' && (
           <Typography variant="bodySm" className="font-mono">
             Final B2B Price = Supplier Price ÷ (1 - {currentValues.cc_margin_percent ?? 5}%)
