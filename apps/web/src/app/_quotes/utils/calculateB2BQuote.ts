@@ -15,6 +15,8 @@ export interface B2BCalculatorInputs {
     /** Margin value: percentage (e.g., 15) or fixed USD amount */
     value: number;
   };
+  /** VAT percentage (default: 5%) - from admin pricing config */
+  vatPercent?: number;
 }
 
 /**
@@ -65,7 +67,8 @@ export interface B2BCalculatorResult {
  * @returns Calculated pricing breakdown
  */
 const calculateB2BQuote = (inputs: B2BCalculatorInputs): B2BCalculatorResult => {
-  const { inBondPriceUsd, transferCostUsd, importTaxPercent, distributorMargin } = inputs;
+  const { inBondPriceUsd, transferCostUsd, importTaxPercent, distributorMargin, vatPercent = 5 } =
+    inputs;
 
   // Import tax calculated on in bond price
   const importTax = inBondPriceUsd * (importTaxPercent / 100);
@@ -82,8 +85,8 @@ const calculateB2BQuote = (inputs: B2BCalculatorInputs): B2BCalculatorResult => 
   // Calculate actual margin profit
   const margin = priceAfterMargin - landedPrice;
 
-  // Calculate 5% VAT on price after margin
-  const vat = priceAfterMargin * 0.05;
+  // Calculate VAT on price after margin (from admin config, default 5%)
+  const vat = priceAfterMargin * (vatPercent / 100);
 
   // Final customer price
   const customerQuotePrice = priceAfterMargin + vat;

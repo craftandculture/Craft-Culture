@@ -8,7 +8,7 @@ import {
   IconInfoCircle,
 } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
@@ -18,7 +18,6 @@ import PopoverContent from '@/app/_ui/components/Popover/PopoverContent';
 import PopoverTrigger from '@/app/_ui/components/Popover/PopoverTrigger';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import useTRPC from '@/lib/trpc/browser';
-import convertUsdToAed from '@/utils/convertUsdToAed';
 import formatPrice from '@/utils/formatPrice';
 
 import B2BCalculatorBreakdown from './B2BCalculatorBreakdown';
@@ -81,14 +80,27 @@ const B2BCalculator = ({ inBondPriceUsd, lineItems, onSaveWithMargins }: B2BCalc
     api.admin.settings.get.queryOptions({ key: 'leadTimeMax' }),
   );
 
+  // Fetch shared pricing defaults from pricing engine
+  const { data: pricingDefaults } = useQuery(api.pricing.getSharedDefaults.queryOptions());
+
   // Accordion expansion state
   const [isExpanded, setIsExpanded] = useState(false);
 
-  // Calculator inputs with defaults
+  // Calculator inputs with defaults (will be updated when pricing defaults load)
   const [transferCost, setTransferCost] = useState(200);
   const [importTax, setImportTax] = useState(20);
   const [marginType, setMarginType] = useState<'percentage' | 'fixed'>('percentage');
   const [marginValue, setMarginValue] = useState(15);
+
+  // Update import tax when pricing defaults load
+  useEffect(() => {
+    if (pricingDefaults?.importDutyPercent) {
+      setImportTax(pricingDefaults.importDutyPercent);
+    }
+  }, [pricingDefaults?.importDutyPercent]);
+
+  // Get exchange rate from pricing defaults or use fallback
+  const usdToAedRate = pricingDefaults?.usdToAed ?? 3.67;
 
   // Lead time from settings or defaults
   const leadTimeMin = leadTimeMinData ? Number(leadTimeMinData) : 14;
@@ -108,6 +120,9 @@ const B2BCalculator = ({ inBondPriceUsd, lineItems, onSaveWithMargins }: B2BCalc
     }));
   };
 
+  // Get VAT percentage from pricing defaults
+  const vatPercent = pricingDefaults?.vatPercent ?? 5;
+
   // Calculate quote based on inputs
   const calculatedQuote = useMemo(
     () =>
@@ -119,8 +134,9 @@ const B2BCalculator = ({ inBondPriceUsd, lineItems, onSaveWithMargins }: B2BCalc
           type: marginType,
           value: marginValue,
         },
+        vatPercent,
       }),
-    [inBondPriceUsd, transferCost, importTax, marginType, marginValue],
+    [inBondPriceUsd, transferCost, importTax, marginType, marginValue, vatPercent],
   );
 
   // Calculate actual quote totals when using per-product margins
@@ -156,7 +172,7 @@ const B2BCalculator = ({ inBondPriceUsd, lineItems, onSaveWithMargins }: B2BCalc
           : landedPrice + marginConfig.value;
 
       const marginAmount = priceAfterMargin - landedPrice;
-      const vat = priceAfterMargin * 0.05;
+      const vat = priceAfterMargin * (vatPercent / 100);
       const customerPrice = priceAfterMargin + vat;
 
       // Accumulate totals (multiply by quantity)
@@ -181,7 +197,7 @@ const B2BCalculator = ({ inBondPriceUsd, lineItems, onSaveWithMargins }: B2BCalc
       vat: totalVAT,
       customerQuotePrice: totalCustomerPrice,
     };
-  }, [lineItems, transferCost, importTax, marginType, marginValue, productMargins, calculatedQuote]);
+  }, [lineItems, transferCost, importTax, marginType, marginValue, productMargins, calculatedQuote, vatPercent]);
 
   // Reset to default values
   const handleReset = () => {
@@ -213,7 +229,7 @@ const B2BCalculator = ({ inBondPriceUsd, lineItems, onSaveWithMargins }: B2BCalc
   };
 
   const displayValue = (usdValue: number) => {
-    return displayCurrency === 'AED' ? convertUsdToAed(usdValue) : usdValue;
+    return displayCurrency === 'AED' ? usdValue * usdToAedRate : usdValue;
   };
 
   // Handle save quote with current margin configuration
