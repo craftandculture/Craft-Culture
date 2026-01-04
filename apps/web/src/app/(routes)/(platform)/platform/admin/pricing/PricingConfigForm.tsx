@@ -13,6 +13,8 @@ import Input from '@/app/_ui/components/Input/Input';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import useTRPC, { useTRPCClient } from '@/lib/trpc/browser';
 
+import PartnerBespokePricingTable from './PartnerBespokePricingTable';
+
 type TabType = 'exchange_rates' | 'b2b' | 'pco' | 'pocket_cellar';
 
 interface PricingVariable {
@@ -460,6 +462,14 @@ const PricingConfigForm = () => {
           ))}
         </div>
       </div>
+
+      {/* Partner Bespoke Pricing Table (PCO tab only) */}
+      {activeTab === 'pco' && (
+        <>
+          <Divider />
+          <PartnerBespokePricingTable />
+        </>
+      )}
 
       <Divider />
 
