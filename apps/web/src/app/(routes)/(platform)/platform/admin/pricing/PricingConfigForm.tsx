@@ -230,7 +230,7 @@ const PricingConfigForm = () => {
       // Save all changed values for current tab
       const currentTab = activeTab;
       const variables = TAB_CONFIG[currentTab].variables;
-      const currentValues = formValues[currentTab];
+      const currentValues = formValues[currentTab] ?? {};
 
       for (const variable of variables) {
         const value = currentValues[variable.key];
@@ -258,7 +258,7 @@ const PricingConfigForm = () => {
   }
 
   const currentVariables = TAB_CONFIG[activeTab].variables;
-  const currentValues = formValues[activeTab];
+  const currentValues = formValues[activeTab] ?? {};
 
   return (
     <div className="space-y-6">

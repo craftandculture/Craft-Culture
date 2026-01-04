@@ -1,8 +1,6 @@
-import { eq } from 'drizzle-orm';
 import { cache } from 'react';
 
 import db from '@/database/client';
-import { pricingConfig } from '@/database/schema';
 import { DEFAULT_PCO_VARIABLES } from '@/lib/pricing/defaults';
 import type { PCOPricingVariables, PricingModuleType } from '@/lib/pricing/types';
 
@@ -14,7 +12,7 @@ import type { PCOPricingVariables, PricingModuleType } from '@/lib/pricing/types
  */
 const getPricingConfig = cache(async (module: PricingModuleType) => {
   const config = await db.query.pricingConfig.findMany({
-    where: eq(pricingConfig.module, module),
+    where: { module },
   });
 
   return config.reduce(

@@ -1,8 +1,6 @@
-import { eq } from 'drizzle-orm';
 import { cache } from 'react';
 
 import db from '@/database/client';
-import { orderPricingOverrides } from '@/database/schema';
 import type { PCOPricingVariables } from '@/lib/pricing/types';
 
 /**
@@ -12,7 +10,7 @@ import type { PCOPricingVariables } from '@/lib/pricing/types';
  */
 const getOrderPricingOverrides = cache(async (orderId: string) => {
   const override = await db.query.orderPricingOverrides.findFirst({
-    where: eq(orderPricingOverrides.orderId, orderId),
+    where: { orderId },
   });
 
   return override;

@@ -1,4 +1,4 @@
-import { and, eq } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 
 import db from '@/database/client';
@@ -23,7 +23,7 @@ const configUpdate = adminProcedure.input(inputSchema).mutation(async ({ input, 
 
   // Check if config exists
   const existing = await db.query.pricingConfig.findFirst({
-    where: and(eq(pricingConfig.module, module), eq(pricingConfig.key, key)),
+    where: { module, key },
   });
 
   if (existing) {

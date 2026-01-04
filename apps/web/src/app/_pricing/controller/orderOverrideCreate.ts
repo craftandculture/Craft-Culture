@@ -26,7 +26,7 @@ const orderOverrideCreate = adminProcedure.input(inputSchema).mutation(async ({ 
 
   // Check if override already exists
   const existing = await db.query.orderPricingOverrides.findFirst({
-    where: eq(orderPricingOverrides.orderId, orderId),
+    where: { orderId },
   });
 
   if (existing) {
