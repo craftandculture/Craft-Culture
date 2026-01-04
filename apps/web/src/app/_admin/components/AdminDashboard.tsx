@@ -1,6 +1,7 @@
 'use client';
 
 import {
+  IconAlertTriangle,
   IconArrowRight,
   IconBox,
   IconBuilding,
@@ -110,7 +111,7 @@ const AdminDashboard = () => {
     );
   }
 
-  const { kpis, statusBreakdown, recentOrders, ordersByPartner } = data;
+  const { kpis, statusBreakdown, recentOrders, ordersByPartner, ordersNeedingStockUpdate } = data;
 
   // Status pipeline steps for admin
   const pipelineSteps = [
@@ -200,6 +201,63 @@ const AdminDashboard = () => {
           </button>
         </div>
       </div>
+
+      {/* Stock Update Reminder Alert */}
+      {ordersNeedingStockUpdate && ordersNeedingStockUpdate.length > 0 && (
+        <div className="rounded-lg border-2 border-amber-400 bg-amber-50 p-4 dark:border-amber-500 dark:bg-amber-900/20">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-3">
+              <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-amber-400 dark:bg-amber-500">
+                <Icon
+                  icon={IconAlertTriangle}
+                  size="md"
+                  className="text-amber-900 dark:text-amber-100"
+                />
+              </div>
+              <div>
+                <Typography variant="headingSm" className="font-semibold text-amber-900 dark:text-amber-100">
+                  Stock Update Required
+                </Typography>
+                <Typography variant="bodySm" className="mt-0.5 text-amber-800 dark:text-amber-200">
+                  {ordersNeedingStockUpdate.length} order{ordersNeedingStockUpdate.length !== 1 ? 's' : ''} in
+                  fulfillment have items with pending stock status
+                </Typography>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {ordersNeedingStockUpdate.slice(0, 3).map((order) => (
+                    <Link
+                      key={order.orderId}
+                      href={`/platform/admin/private-orders/${order.orderId}`}
+                      className="inline-flex items-center gap-1 rounded-md bg-amber-100 px-2 py-1 text-xs font-medium text-amber-800 transition-colors hover:bg-amber-200 dark:bg-amber-800/50 dark:text-amber-100 dark:hover:bg-amber-800/70"
+                    >
+                      {order.orderNumber}
+                      <span className="rounded bg-amber-200 px-1 dark:bg-amber-700">
+                        {order.pendingItemCount} item{order.pendingItemCount !== 1 ? 's' : ''}
+                      </span>
+                    </Link>
+                  ))}
+                  {ordersNeedingStockUpdate.length > 3 && (
+                    <span className="inline-flex items-center px-2 py-1 text-xs text-amber-700 dark:text-amber-300">
+                      +{ordersNeedingStockUpdate.length - 3} more
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+            <div className="flex-shrink-0">
+              <Link href="/platform/admin/private-orders?status=fulfillment">
+                <Button
+                  variant="default"
+                  size="sm"
+                  className="w-full bg-amber-600 text-white hover:bg-amber-700 sm:w-auto"
+                >
+                  Update Stock Status
+                  <Icon icon={IconArrowRight} size="sm" className="ml-1" />
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* KPI Cards */}
       <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-5">
