@@ -6,7 +6,7 @@ import { pricingConfig } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
 const inputSchema = z.object({
-  module: z.enum(['b2b', 'pco', 'pocket_cellar']),
+  module: z.enum(['b2b', 'pco', 'pocket_cellar', 'exchange_rates']),
   key: z.string(),
   value: z.number(),
   description: z.string().optional(),
