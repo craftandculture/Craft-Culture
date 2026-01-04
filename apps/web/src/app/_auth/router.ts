@@ -1,5 +1,3 @@
-import userPricingModelsAssign from '@/app/_pricingModels/controller/userPricingModelsAssign';
-import usersGetManyWithPricingModels from '@/app/_pricingModels/controller/usersGetManyWithPricingModels';
 import { protectedProcedure } from '@/lib/trpc/procedures';
 import { createTRPCRouter } from '@/lib/trpc/trpc';
 
@@ -26,8 +24,6 @@ const usersRouter = createTRPCRouter({
   signOut: protectedProcedure.mutation(async ({ ctx }) => {
     return await signOutController({ user: ctx.user });
   }),
-  getManyWithPricingModels: usersGetManyWithPricingModels,
-  assignPricingModel: userPricingModelsAssign,
   getPaginated: usersGetPaginated,
   getPendingCount: usersGetPendingCount,
   adminCreate: usersAdminCreate,

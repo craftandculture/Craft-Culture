@@ -1,7 +1,7 @@
 import { type SQL, sql } from 'drizzle-orm';
 import z from 'zod';
 
-import calculateInBondPrices from '@/app/_pricingModels/utils/calculateInBondPrices';
+import { getPricingConfig } from '@/app/_pricing/data/getPricingConfig';
 import db from '@/database/client';
 import { productOffers, products } from '@/database/schema';
 import exchangeRateService, {
@@ -183,7 +183,7 @@ const productsGetMany = protectedProcedure
         source,
         sortBy,
       },
-      ctx: { user },
+      ctx: { user: _user },
     }) => {
       const preparedSearch =
         search && search.trim().length > 0
@@ -327,54 +327,45 @@ const productsGetMany = protectedProcedure
         })),
       );
 
-      // Calculate In-Bond prices if we have offers
-      let inBondPriceMap = new Map<string, number>();
+      // Calculate In-Bond prices using new B2B pricing config
+      const inBondPriceMap = new Map<string, number>();
 
       if (allOffers.length > 0) {
-        // Fetch pricing model for user
-        const pricingModel = await db.query.pricingModels.findFirst({
-          where: user.pricingModelId
-            ? { id: user.pricingModelId }
-            : user.customerType === 'b2c'
-              ? { isDefaultB2C: true }
-              : { isDefaultB2B: true },
-          with: {
-            sheet: true,
-          },
-        });
+        // Get B2B pricing config
+        const b2bConfig = await getPricingConfig('b2b');
+        const ccMarginPercent = b2bConfig.cc_margin_percent ?? 0;
 
-        if (pricingModel) {
-          // Get unique currencies and fetch exchange rates
-          const uniqueCurrencies = [
-            ...new Set(allOffers.map((offer) => offer.currency)),
-          ] as SupportedCurrency[];
+        // Get unique currencies and fetch exchange rates
+        const uniqueCurrencies = [
+          ...new Set(allOffers.map((offer) => offer.currency)),
+        ] as SupportedCurrency[];
 
-          const yesterday = new Date();
-          yesterday.setDate(yesterday.getDate() - 1);
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
 
-          const exchangeRatePromises = uniqueCurrencies.map((currency) =>
-            exchangeRateService
-              .getExchangeRate(currency, 'USD', yesterday)
-              .catch(() => 1),
-          );
+        const exchangeRatePromises = uniqueCurrencies.map((currency) =>
+          exchangeRateService
+            .getExchangeRate(currency, 'USD', yesterday)
+            .catch(() => 1),
+        );
 
-          const exchangeRates = await Promise.all(exchangeRatePromises);
+        const exchangeRates = await Promise.all(exchangeRatePromises);
 
-          const exchangeRateMap = new Map(
-            uniqueCurrencies.map((currency, index) => [
-              currency,
-              exchangeRates[index] ?? 1,
-            ]),
-          );
+        const exchangeRateMap = new Map(
+          uniqueCurrencies.map((currency, index) => [
+            currency,
+            exchangeRates[index] ?? 1,
+          ]),
+        );
 
-          // Calculate In-Bond prices
-          inBondPriceMap = calculateInBondPrices(
-            allOffers,
-            pricingModel.cellMappings,
-            pricingModel.sheet.formulaData as Record<string, unknown>,
-            user.customerType,
-            exchangeRateMap,
-          );
+        // Calculate In-Bond prices: rawPrice * exchangeRate / (1 - ccMarginPercent/100)
+        const marginMultiplier = 1 / (1 - ccMarginPercent / 100);
+
+        for (const offer of allOffers) {
+          const exchangeRate = exchangeRateMap.get(offer.currency as SupportedCurrency) ?? 1;
+          const rawPriceUsd = offer.price * exchangeRate;
+          const inBondPriceUsd = Math.round(rawPriceUsd * marginMultiplier * 100) / 100;
+          inBondPriceMap.set(offer.id, inBondPriceUsd);
         }
       }
 
