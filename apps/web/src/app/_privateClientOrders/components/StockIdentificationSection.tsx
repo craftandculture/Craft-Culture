@@ -1,6 +1,13 @@
 'use client';
 
-import { IconAlertCircle, IconBox, IconCheck, IconLoader2, IconPlane } from '@tabler/icons-react';
+import {
+  IconAlertCircle,
+  IconBox,
+  IconCheck,
+  IconCurrencyDollar,
+  IconLoader2,
+  IconPlane,
+} from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { useState } from 'react';
@@ -13,16 +20,26 @@ import Icon from '@/app/_ui/components/Icon/Icon';
 import Input from '@/app/_ui/components/Input/Input';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import type { PrivateClientOrder, PrivateClientOrderItem } from '@/database/schema';
+import { DEFAULT_PCO_VARIABLES } from '@/lib/pricing/defaults';
 import useTRPC, { useTRPCClient } from '@/lib/trpc/browser';
 
 import StockSourceSelect from './StockSourceSelect';
 
 type StockSource = 'cc_inventory' | 'partner_airfreight' | 'partner_local' | 'manual';
+type PricingType = 'standard' | 'bespoke';
 
 interface LineItemStock {
   itemId: string;
   source: StockSource;
   stockExpectedAt?: Date;
+}
+
+interface BespokePricing {
+  ccMarginPercent: number;
+  importDutyPercent: number;
+  transferCostPercent: number;
+  distributorMarginPercent: number;
+  vatPercent: number;
 }
 
 interface StockIdentificationSectionProps {
@@ -56,6 +73,12 @@ const StockIdentificationSection = ({ order, onApproved }: StockIdentificationSe
     return map;
   });
 
+  // Pricing type state
+  const [pricingType, setPricingType] = useState<PricingType>('standard');
+  const [bespokePricing, setBespokePricing] = useState<BespokePricing>({
+    ...DEFAULT_PCO_VARIABLES,
+  });
+
   // Check local stock availability for products
   const productIds = order.items?.map((item) => item.productId).filter(Boolean) as string[];
   const { data: stockAvailability } = useQuery({
@@ -69,9 +92,15 @@ const StockIdentificationSection = ({ order, onApproved }: StockIdentificationSe
       trpcClient.privateClientOrders.adminApprove.mutate({
         orderId: order.id,
         lineItems: Array.from(lineItemStocks.values()),
+        pricingType,
+        bespokePricing: pricingType === 'bespoke' ? bespokePricing : undefined,
       }),
     onSuccess: () => {
-      toast.success('Order approved with stock identification');
+      toast.success(
+        pricingType === 'bespoke'
+          ? 'Order approved with bespoke pricing'
+          : 'Order approved with standard pricing',
+      );
       void queryClient.invalidateQueries({ queryKey: ['privateClientOrders'] });
       onApproved?.();
     },
@@ -79,6 +108,10 @@ const StockIdentificationSection = ({ order, onApproved }: StockIdentificationSe
       toast.error(error.message || 'Failed to approve order');
     },
   });
+
+  const updateBespokePricing = (key: keyof BespokePricing, value: number) => {
+    setBespokePricing((prev) => ({ ...prev, [key]: value }));
+  };
 
   const updateItemStock = (itemId: string, updates: Partial<LineItemStock>) => {
     setLineItemStocks((prev) => {
@@ -240,6 +273,104 @@ const StockIdentificationSection = ({ order, onApproved }: StockIdentificationSe
               })}
             </tbody>
           </table>
+        </div>
+
+        {/* Pricing Type Selection */}
+        <div className="mb-4 rounded-lg border border-border-muted p-3">
+          <div className="mb-2 flex items-center gap-2">
+            <Icon icon={IconCurrencyDollar} size="sm" className="text-text-muted" />
+            <Typography variant="headingXs">Pricing Model</Typography>
+          </div>
+
+          <div className="mb-3 flex gap-2">
+            <button
+              type="button"
+              onClick={() => setPricingType('standard')}
+              className={`flex-1 rounded-md border px-3 py-2 text-xs font-medium transition-colors ${
+                pricingType === 'standard'
+                  ? 'border-fill-brand bg-fill-brand/10 text-fill-brand'
+                  : 'border-border-muted text-text-muted hover:bg-surface-muted'
+              }`}
+            >
+              Standard
+            </button>
+            <button
+              type="button"
+              onClick={() => setPricingType('bespoke')}
+              className={`flex-1 rounded-md border px-3 py-2 text-xs font-medium transition-colors ${
+                pricingType === 'bespoke'
+                  ? 'border-fill-brand bg-fill-brand/10 text-fill-brand'
+                  : 'border-border-muted text-text-muted hover:bg-surface-muted'
+              }`}
+            >
+              Bespoke
+            </button>
+          </div>
+
+          {pricingType === 'bespoke' && (
+            <div className="grid grid-cols-2 gap-2 rounded-md bg-surface-muted/50 p-2 md:grid-cols-5">
+              <div>
+                <label className="mb-1 block text-[10px] font-medium text-text-muted">
+                  C&C Margin %
+                </label>
+                <Input
+                  type="number"
+                  step="0.1"
+                  value={bespokePricing.ccMarginPercent}
+                  onChange={(e) => updateBespokePricing('ccMarginPercent', parseFloat(e.target.value))}
+                  className="h-7 text-xs"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-[10px] font-medium text-text-muted">
+                  Import Duty %
+                </label>
+                <Input
+                  type="number"
+                  step="0.1"
+                  value={bespokePricing.importDutyPercent}
+                  onChange={(e) => updateBespokePricing('importDutyPercent', parseFloat(e.target.value))}
+                  className="h-7 text-xs"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-[10px] font-medium text-text-muted">
+                  Transfer %
+                </label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={bespokePricing.transferCostPercent}
+                  onChange={(e) => updateBespokePricing('transferCostPercent', parseFloat(e.target.value))}
+                  className="h-7 text-xs"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-[10px] font-medium text-text-muted">
+                  Distributor %
+                </label>
+                <Input
+                  type="number"
+                  step="0.1"
+                  value={bespokePricing.distributorMarginPercent}
+                  onChange={(e) => updateBespokePricing('distributorMarginPercent', parseFloat(e.target.value))}
+                  className="h-7 text-xs"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-[10px] font-medium text-text-muted">
+                  VAT %
+                </label>
+                <Input
+                  type="number"
+                  step="0.1"
+                  value={bespokePricing.vatPercent}
+                  onChange={(e) => updateBespokePricing('vatPercent', parseFloat(e.target.value))}
+                  className="h-7 text-xs"
+                />
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Validation warnings */}

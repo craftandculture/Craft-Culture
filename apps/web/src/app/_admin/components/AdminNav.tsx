@@ -5,6 +5,7 @@ import {
   IconBottle,
   IconBuildingStore,
   IconCoin,
+  IconCurrencyDollar,
   IconPackage,
   IconSettings,
   IconTable,
@@ -59,6 +60,12 @@ const navItems: NavItem[] = [
     href: '/platform/admin/activity',
     icon: IconActivity,
     description: 'Platform logs',
+  },
+  {
+    label: 'Pricing',
+    href: '/platform/admin/pricing',
+    icon: IconCurrencyDollar,
+    description: 'Pricing config',
   },
   {
     label: 'Pricing Models',

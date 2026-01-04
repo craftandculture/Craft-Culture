@@ -5,6 +5,7 @@ import { z } from 'zod';
 import createNotification from '@/app/_notifications/utils/createNotification';
 import db from '@/database/client';
 import {
+  orderPricingOverrides,
   partnerMembers,
   privateClientOrderActivityLogs,
   privateClientOrderItems,
@@ -18,10 +19,20 @@ const lineItemStockSchema = z.object({
   stockExpectedAt: z.date().optional(),
 });
 
+const bespokePricingSchema = z.object({
+  ccMarginPercent: z.number().optional(),
+  importDutyPercent: z.number().optional(),
+  transferCostPercent: z.number().optional(),
+  distributorMarginPercent: z.number().optional(),
+  vatPercent: z.number().optional(),
+});
+
 const approveOrderSchema = z.object({
   orderId: z.string().uuid(),
   notes: z.string().optional(),
   lineItems: z.array(lineItemStockSchema).optional(),
+  pricingType: z.enum(['standard', 'bespoke']).default('standard'),
+  bespokePricing: bespokePricingSchema.optional(),
 });
 
 /**
@@ -35,7 +46,7 @@ const approveOrderSchema = z.object({
  * - PARTNER_AIRFREIGHT items are marked as 'pending' with an expected arrival date
  */
 const ordersApprove = adminProcedure.input(approveOrderSchema).mutation(async ({ input, ctx }) => {
-  const { orderId, notes, lineItems } = input;
+  const { orderId, notes, lineItems, pricingType, bespokePricing } = input;
   const { user } = ctx;
 
   // Fetch the order
@@ -96,6 +107,30 @@ const ordersApprove = adminProcedure.input(approveOrderSchema).mutation(async ({
     .where(eq(privateClientOrders.id, orderId))
     .returning();
 
+  // Save bespoke pricing if selected
+  if (pricingType === 'bespoke' && bespokePricing) {
+    // Check if override already exists
+    const existingOverride = await db.query.orderPricingOverrides.findFirst({
+      where: eq(orderPricingOverrides.orderId, orderId),
+    });
+
+    if (existingOverride) {
+      await db
+        .update(orderPricingOverrides)
+        .set({
+          ...bespokePricing,
+        })
+        .where(eq(orderPricingOverrides.id, existingOverride.id));
+    } else {
+      await db.insert(orderPricingOverrides).values({
+        orderId,
+        ...bespokePricing,
+        createdBy: user.id,
+        notes: `Bespoke pricing set during approval`,
+      });
+    }
+  }
+
   // Log the activity
   await db.insert(privateClientOrderActivityLogs).values({
     orderId,
@@ -104,12 +139,14 @@ const ordersApprove = adminProcedure.input(approveOrderSchema).mutation(async ({
     previousStatus,
     newStatus,
     notes,
-    metadata: lineItems
-      ? {
-          lineItemsUpdated: lineItems.length,
-          stockSources: lineItems.map((i) => ({ itemId: i.itemId, source: i.source })),
-        }
-      : undefined,
+    metadata: {
+      ...(lineItems && {
+        lineItemsUpdated: lineItems.length,
+        stockSources: lineItems.map((i) => ({ itemId: i.itemId, source: i.source })),
+      }),
+      pricingType,
+      ...(pricingType === 'bespoke' && bespokePricing && { bespokePricing }),
+    },
   });
 
   // Notify partner that their order was approved
