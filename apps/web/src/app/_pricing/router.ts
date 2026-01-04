@@ -7,6 +7,7 @@ import orderOverrideCreate from './controller/orderOverrideCreate';
 import partnerOverridesDelete from './controller/partnerOverridesDelete';
 import partnerOverridesList from './controller/partnerOverridesList';
 import partnerOverridesUpsert from './controller/partnerOverridesUpsert';
+import sharedDefaultsGet from './controller/sharedDefaultsGet';
 
 const pricingRouter = createTRPCRouter({
   getConfig: configGet,
@@ -16,6 +17,7 @@ const pricingRouter = createTRPCRouter({
   listPartnerOverrides: partnerOverridesList,
   upsertPartnerOverride: partnerOverridesUpsert,
   deletePartnerOverride: partnerOverridesDelete,
+  getSharedDefaults: sharedDefaultsGet,
 });
 
 export default pricingRouter;
