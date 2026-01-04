@@ -122,7 +122,7 @@ const DataTable = <TData, TValue>({
                   colSpan={columns.length}
                   className="h-24 border-0 text-center"
                 >
-                  Geen resultaten gevonden
+                  No results found
                 </TableCell>
               </TableRow>
             )}
