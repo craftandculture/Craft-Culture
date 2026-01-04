@@ -8,7 +8,6 @@ import {
   IconCurrencyDollar,
   IconPackage,
   IconSettings,
-  IconTable,
   IconUsers,
 } from '@tabler/icons-react';
 import Link from 'next/link';
@@ -66,12 +65,6 @@ const navItems: NavItem[] = [
     href: '/platform/admin/pricing',
     icon: IconCurrencyDollar,
     description: 'Pricing config',
-  },
-  {
-    label: 'Pricing Models',
-    href: '/platform/admin/pricing-models',
-    icon: IconTable,
-    description: 'Formulas',
   },
   {
     label: 'Settings',

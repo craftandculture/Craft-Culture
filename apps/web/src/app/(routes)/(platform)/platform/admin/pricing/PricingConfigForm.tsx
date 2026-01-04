@@ -326,25 +326,27 @@ const PricingConfigForm = () => {
       <Divider />
 
       {/* Tab Navigation */}
-      <div className="flex gap-2 border-b border-border-muted">
-        {(Object.keys(TAB_CONFIG) as TabType[]).map((tab) => (
-          <button
-            key={tab}
-            type="button"
-            onClick={() => setActiveTab(tab)}
-            className={`border-b-2 px-4 py-2 text-sm font-medium transition-colors ${
-              activeTab === tab
-                ? 'border-fill-brand text-fill-brand'
-                : 'border-transparent text-text-muted hover:border-border-muted hover:text-text-primary'
-            }`}
-          >
-            {TAB_CONFIG[tab].label}
-          </button>
-        ))}
+      <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
+        <div className="flex min-w-max gap-1 border-b border-border-muted sm:gap-2">
+          {(Object.keys(TAB_CONFIG) as TabType[]).map((tab) => (
+            <button
+              key={tab}
+              type="button"
+              onClick={() => setActiveTab(tab)}
+              className={`whitespace-nowrap border-b-2 px-3 py-2 text-sm font-medium transition-colors sm:px-4 ${
+                activeTab === tab
+                  ? 'border-fill-brand text-fill-brand'
+                  : 'border-transparent text-text-muted hover:border-border-muted hover:text-text-primary'
+              }`}
+            >
+              {TAB_CONFIG[tab].label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Formula Preview / Info Section */}
-      <div className="rounded-lg border border-border-muted bg-surface-secondary/50 p-4">
+      <div className="rounded-lg border border-border-muted bg-surface-secondary/50 p-3 sm:p-4">
         <Typography variant="bodyXs" colorRole="muted" className="mb-2 font-medium uppercase tracking-wide">
           {activeTab === 'exchange_rates' ? 'Exchange Rate Info' : 'Calculation Method'}
         </Typography>
@@ -353,12 +355,13 @@ const PricingConfigForm = () => {
             <Typography variant="bodySm">
               Exchange rates are used for currency conversion in pricing calculations. USD is the base currency for all pricing.
             </Typography>
-            <div className="flex items-center gap-3">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={handleFetchLatestRates}
                 isDisabled={isFetchingRates}
+                className="w-full sm:w-auto"
               >
                 <ButtonContent>
                   <Icon icon={isFetchingRates ? IconLoader2 : IconRefresh} size="sm" className={isFetchingRates ? 'animate-spin' : ''} />
@@ -372,58 +375,64 @@ const PricingConfigForm = () => {
           </div>
         )}
         {activeTab === 'b2b' && (
-          <Typography variant="bodySm" className="font-mono">
-            Final B2B Price = Supplier Price ÷ (1 - {currentValues.cc_margin_percent ?? 5}%)
-          </Typography>
-        )}
-        {activeTab === 'pco' && (
-          <div className="space-y-1 font-mono text-sm">
-            <Typography variant="bodySm">
-              1. Landed Duty Free = Supplier Price ÷ (1 - {currentValues.cc_margin_percent ?? 2.5}%)
-            </Typography>
-            <Typography variant="bodySm">
-              2. Import Duty = LDF × {currentValues.import_duty_percent ?? 20}%
-            </Typography>
-            <Typography variant="bodySm">
-              3. Transfer = LDF × {currentValues.transfer_cost_percent ?? 0.75}%
-            </Typography>
-            <Typography variant="bodySm">
-              4. Duty Paid = LDF + Duty + Transfer
-            </Typography>
-            <Typography variant="bodySm">
-              5. After Distributor = Duty Paid ÷ (1 - {currentValues.distributor_margin_percent ?? 7.5}%)
-            </Typography>
-            <Typography variant="bodySm">
-              6. Final = After Distributor + ({currentValues.vat_percent ?? 5}% VAT)
+          <div className="overflow-x-auto">
+            <Typography variant="bodySm" className="whitespace-nowrap font-mono text-xs sm:text-sm">
+              Final B2B Price = Supplier Price ÷ (1 - {currentValues.cc_margin_percent ?? 5}%)
             </Typography>
           </div>
         )}
+        {activeTab === 'pco' && (
+          <div className="overflow-x-auto">
+            <div className="min-w-max space-y-1 font-mono text-xs sm:text-sm">
+              <Typography variant="bodySm" className="whitespace-nowrap">
+                1. LDF = Supplier Price ÷ (1 - {currentValues.cc_margin_percent ?? 2.5}%)
+              </Typography>
+              <Typography variant="bodySm" className="whitespace-nowrap">
+                2. Import Duty = LDF × {currentValues.import_duty_percent ?? 20}%
+              </Typography>
+              <Typography variant="bodySm" className="whitespace-nowrap">
+                3. Transfer = LDF × {currentValues.transfer_cost_percent ?? 0.75}%
+              </Typography>
+              <Typography variant="bodySm" className="whitespace-nowrap">
+                4. Duty Paid = LDF + Duty + Transfer
+              </Typography>
+              <Typography variant="bodySm" className="whitespace-nowrap">
+                5. After Dist = Duty Paid ÷ (1 - {currentValues.distributor_margin_percent ?? 7.5}%)
+              </Typography>
+              <Typography variant="bodySm" className="whitespace-nowrap">
+                6. Final = After Dist + ({currentValues.vat_percent ?? 5}% VAT)
+              </Typography>
+            </div>
+          </div>
+        )}
         {activeTab === 'pocket_cellar' && (
-          <div className="space-y-1 font-mono text-sm">
-            <Typography variant="bodySm">
-              1. After C&C = Supplier Price ÷ (1 - {currentValues.cc_margin_percent ?? 5}%)
-            </Typography>
-            <Typography variant="bodySm">
-              2. LDF = After C&C + Logistics (${currentValues.logistics_air_per_bottle ?? 20} air / ${currentValues.logistics_ocean_per_bottle ?? 5} ocean)
-            </Typography>
-            <Typography variant="bodySm">
-              3. Import Duty = LDF × {currentValues.import_duty_percent ?? 20}%
-            </Typography>
-            <Typography variant="bodySm">
-              4. Transfer = LDF × {currentValues.transfer_cost_percent ?? 0.75}%
-            </Typography>
-            <Typography variant="bodySm">
-              5. Duty Paid = LDF + Duty + Transfer
-            </Typography>
-            <Typography variant="bodySm">
-              6. After Distributor = Duty Paid ÷ (1 - {currentValues.distributor_margin_percent ?? 7.5}%)
-            </Typography>
-            <Typography variant="bodySm">
-              7. Pre-VAT = After Distributor × (1 + {currentValues.sales_commission_percent ?? 2}%)
-            </Typography>
-            <Typography variant="bodySm">
-              8. Final = Pre-VAT + ({currentValues.vat_percent ?? 5}% VAT)
-            </Typography>
+          <div className="overflow-x-auto">
+            <div className="min-w-max space-y-1 font-mono text-xs sm:text-sm">
+              <Typography variant="bodySm" className="whitespace-nowrap">
+                1. After C&C = Supplier Price ÷ (1 - {currentValues.cc_margin_percent ?? 5}%)
+              </Typography>
+              <Typography variant="bodySm" className="whitespace-nowrap">
+                2. LDF = After C&C + Logistics (${currentValues.logistics_air_per_bottle ?? 20} air / ${currentValues.logistics_ocean_per_bottle ?? 5} ocean)
+              </Typography>
+              <Typography variant="bodySm" className="whitespace-nowrap">
+                3. Import Duty = LDF × {currentValues.import_duty_percent ?? 20}%
+              </Typography>
+              <Typography variant="bodySm" className="whitespace-nowrap">
+                4. Transfer = LDF × {currentValues.transfer_cost_percent ?? 0.75}%
+              </Typography>
+              <Typography variant="bodySm" className="whitespace-nowrap">
+                5. Duty Paid = LDF + Duty + Transfer
+              </Typography>
+              <Typography variant="bodySm" className="whitespace-nowrap">
+                6. After Dist = Duty Paid ÷ (1 - {currentValues.distributor_margin_percent ?? 7.5}%)
+              </Typography>
+              <Typography variant="bodySm" className="whitespace-nowrap">
+                7. Pre-VAT = After Dist × (1 + {currentValues.sales_commission_percent ?? 2}%)
+              </Typography>
+              <Typography variant="bodySm" className="whitespace-nowrap">
+                8. Final = Pre-VAT + ({currentValues.vat_percent ?? 5}% VAT)
+              </Typography>
+            </div>
           </div>
         )}
       </div>
@@ -474,7 +483,7 @@ const PricingConfigForm = () => {
       <Divider />
 
       {/* Save Button */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
         <Typography variant="bodyXs" colorRole="muted">
           {hasChanges ? 'You have unsaved changes' : 'All changes saved'}
         </Typography>
@@ -483,6 +492,7 @@ const PricingConfigForm = () => {
           colorRole="brand"
           onClick={handleSave}
           isDisabled={isUpdating || !hasChanges}
+          className="w-full sm:w-auto"
         >
           <ButtonContent>
             {isUpdating ? (
