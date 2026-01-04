@@ -140,11 +140,11 @@ const LineItemRow = ({
           )}
         </div>
 
-        {/* Row 2: Year, Qty, Prices, Delete */}
+        {/* Row 2: Year, Pack, Qty, Prices, Delete */}
         {!isPlaceholder && (
           <div className="flex w-full items-center gap-2">
             {/* Year */}
-            <div className="w-16 shrink-0">
+            <div className="w-14 shrink-0">
               <Input
                 type="text"
                 size="md"
@@ -154,8 +154,19 @@ const LineItemRow = ({
                 isDisabled={false}
               />
             </div>
+            {/* Pack Size */}
+            {offer && (
+              <div className="flex shrink-0 flex-col items-center">
+                <Typography variant="bodyXs" className="text-text-muted/70 uppercase">
+                  Pack
+                </Typography>
+                <Typography variant="bodyXs" className="text-text-muted/70 whitespace-nowrap">
+                  {offer.unitCount}×{offer.unitSize}
+                </Typography>
+              </div>
+            )}
             {/* Qty */}
-            <div className="w-16 shrink-0">
+            <div className="w-14 shrink-0">
               <Input
                 type="number"
                 size="md"
