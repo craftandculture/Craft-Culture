@@ -111,7 +111,7 @@ const ordersApprove = adminProcedure.input(approveOrderSchema).mutation(async ({
   if (pricingType === 'bespoke' && bespokePricing) {
     // Check if override already exists
     const existingOverride = await db.query.orderPricingOverrides.findFirst({
-      where: eq(orderPricingOverrides.orderId, orderId),
+      where: { orderId },
     });
 
     if (existingOverride) {
