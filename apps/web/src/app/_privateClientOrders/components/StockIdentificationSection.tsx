@@ -164,20 +164,20 @@ const StockIdentificationSection = ({ order, onApproved }: StockIdentificationSe
           <table className="w-full text-xs">
             <thead className="border-b border-border-muted bg-surface-secondary/50">
               <tr>
-                <th className="px-3 py-2 text-left text-[10px] font-medium uppercase tracking-wide text-text-muted">
+                <th className="px-2 py-2 text-left text-[10px] font-medium uppercase tracking-wide text-text-muted">
                   Product
                 </th>
-                <th className="px-3 py-2 text-center text-[10px] font-medium uppercase tracking-wide text-text-muted">
+                <th className="w-12 px-2 py-2 text-center text-[10px] font-medium uppercase tracking-wide text-text-muted">
                   Qty
                 </th>
-                <th className="px-3 py-2 text-left text-[10px] font-medium uppercase tracking-wide text-text-muted">
-                  Local Stock
+                <th className="w-16 px-2 py-2 text-left text-[10px] font-medium uppercase tracking-wide text-text-muted">
+                  Stock
                 </th>
-                <th className="w-[180px] px-3 py-2 text-left text-[10px] font-medium uppercase tracking-wide text-text-muted">
+                <th className="w-[110px] px-2 py-2 text-left text-[10px] font-medium uppercase tracking-wide text-text-muted">
                   Source
                 </th>
-                <th className="w-[140px] px-3 py-2 text-left text-[10px] font-medium uppercase tracking-wide text-text-muted">
-                  ETA (if sourced)
+                <th className="w-[90px] px-2 py-2 text-left text-[10px] font-medium uppercase tracking-wide text-text-muted">
+                  ETA
                 </th>
               </tr>
             </thead>
@@ -190,35 +190,32 @@ const StockIdentificationSection = ({ order, onApproved }: StockIdentificationSe
 
                 return (
                   <tr key={item.id} className="hover:bg-surface-muted/20">
-                    <td className="px-3 py-2">
-                      <div>
+                    <td className="px-2 py-1.5">
+                      <div className="flex items-baseline gap-1">
                         <span className="font-medium">{item.productName}</span>
                         {item.vintage && (
-                          <span className="ml-1 text-text-muted">{item.vintage}</span>
+                          <span className="text-text-muted">{item.vintage}</span>
                         )}
                       </div>
-                      {item.producer && (
-                        <div className="text-[10px] text-text-muted">{item.producer}</div>
-                      )}
                     </td>
-                    <td className="px-3 py-2 text-center font-medium">{item.quantity} cs</td>
-                    <td className="px-3 py-2">
+                    <td className="px-2 py-1.5 text-center font-medium">{item.quantity}</td>
+                    <td className="px-2 py-1.5">
                       {availability ? (
                         <span className={`text-xs ${availability.availableQuantity >= item.quantity ? 'text-text-success' : 'text-text-warning'}`}>
-                          {availability.availableQuantity} available
+                          {availability.availableQuantity}
                         </span>
                       ) : (
                         <span className="text-xs text-text-muted">-</span>
                       )}
                     </td>
-                    <td className="px-3 py-2">
+                    <td className="px-2 py-1.5">
                       <StockSourceSelect
                         value={stock?.source}
                         onChange={(source) => updateItemStock(item.id, { source })}
-                        className="h-8 w-full text-xs"
+                        className="h-7 w-full text-xs"
                       />
                     </td>
-                    <td className="px-3 py-2">
+                    <td className="px-2 py-1.5">
                       {needsEta ? (
                         <Input
                           type="date"
@@ -227,10 +224,10 @@ const StockIdentificationSection = ({ order, onApproved }: StockIdentificationSe
                             const date = e.target.value ? new Date(e.target.value) : undefined;
                             updateItemStock(item.id, { stockExpectedAt: date });
                           }}
-                          className="h-8 w-full text-xs"
+                          className="h-7 w-full text-xs"
                         />
                       ) : isLocal ? (
-                        <span className="flex items-center gap-1 text-xs text-text-success">
+                        <span className="inline-flex items-center gap-1 text-xs text-text-success">
                           <Icon icon={IconCheck} size="xs" />
                           Ready
                         </span>

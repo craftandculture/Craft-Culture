@@ -7,7 +7,6 @@ import Select from '@/app/_ui/components/Select/Select';
 import SelectContent from '@/app/_ui/components/Select/SelectContent';
 import SelectItem from '@/app/_ui/components/Select/SelectItem';
 import SelectTrigger from '@/app/_ui/components/Select/SelectTrigger';
-import SelectValue from '@/app/_ui/components/Select/SelectValue';
 
 type StockSource = 'cc_inventory' | 'partner_airfreight' | 'partner_local' | 'manual';
 
@@ -57,19 +56,28 @@ export interface StockSourceSelectProps {
  * stock will be sourced from.
  */
 const StockSourceSelect = ({ value, onChange, disabled, className }: StockSourceSelectProps) => {
+  const selectedOption = value ? stockSourceOptions.find((o) => o.value === value) : null;
+
   return (
     <Select value={value} onValueChange={(v) => onChange(v as StockSource)} disabled={disabled}>
       <SelectTrigger className={className}>
-        <SelectValue placeholder="Select source..." />
+        {selectedOption ? (
+          <span className="flex items-center gap-1.5">
+            <Icon icon={selectedOption.icon} size="xs" className={selectedOption.colorClass} />
+            <span className="truncate">{selectedOption.label}</span>
+          </span>
+        ) : (
+          <span className="text-text-muted">Select...</span>
+        )}
       </SelectTrigger>
       <SelectContent>
         {stockSourceOptions.map((option) => (
-          <SelectItem key={option.value} value={option.value}>
+          <SelectItem key={option.value} value={option.value} textValue={option.label}>
             <div className="flex items-center gap-2">
               <Icon icon={option.icon} size="xs" className={option.colorClass} />
-              <div className="flex flex-col">
-                <span className="text-sm font-medium">{option.label}</span>
-                <span className="text-xs text-text-muted">{option.description}</span>
+              <div>
+                <div className="text-sm font-medium">{option.label}</div>
+                <div className="text-xs text-text-muted">{option.description}</div>
               </div>
             </div>
           </SelectItem>
