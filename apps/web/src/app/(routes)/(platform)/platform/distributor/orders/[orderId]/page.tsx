@@ -909,16 +909,12 @@ const DistributorOrderDetailPage = () => {
               </Typography>
               <div className="space-y-1 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-text-muted">Landed Duty Free</span>
-                  <span>{formatPrice(getAmount(order.subtotalUsd), currency)}</span>
+                  <span className="text-text-muted">Landed Duty Free (inc. Transfer)</span>
+                  <span>{formatPrice(getAmount((Number(order.subtotalUsd) || 0) + (Number(order.logisticsUsd) || 0)), currency)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-text-muted">Import Duty (20%)</span>
                   <span>{formatPrice(getAmount(order.dutyUsd), currency)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-text-muted">Transfer (0.75%)</span>
-                  <span>{formatPrice(getAmount(order.logisticsUsd), currency)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-text-muted">VAT (5%)</span>
