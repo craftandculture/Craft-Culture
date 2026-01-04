@@ -26,7 +26,6 @@ import { toast } from 'sonner';
 import ActivityTimeline from '@/app/_privateClientOrders/components/ActivityTimeline';
 import PaymentTracker from '@/app/_privateClientOrders/components/PaymentTracker';
 import PrivateOrderStatusBadge from '@/app/_privateClientOrders/components/PrivateOrderStatusBadge';
-import StockFlowTimeline from '@/app/_privateClientOrders/components/StockFlowTimeline';
 import StockStatusSection from '@/app/_privateClientOrders/components/StockStatusSection';
 import WorkflowStepper from '@/app/_privateClientOrders/components/WorkflowStepper';
 import Button from '@/app/_ui/components/Button/Button';
@@ -761,14 +760,6 @@ const PrivateOrderDetailPage = () => {
           />
         )}
 
-        {/* Stock Flow Timeline - Shows history of stock status changes */}
-        {order.activityLogs && order.activityLogs.length > 0 && order.status !== 'submitted' && order.status !== 'under_cc_review' && order.status !== 'revision_requested' && (
-          <Card>
-            <CardContent className="p-4">
-              <StockFlowTimeline activities={order.activityLogs} />
-            </CardContent>
-          </Card>
-        )}
 
         {/* Secondary Info - Horizontal Grid Below */}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
