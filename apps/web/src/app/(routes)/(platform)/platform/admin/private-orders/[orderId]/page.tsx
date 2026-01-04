@@ -22,7 +22,6 @@ import { toast } from 'sonner';
 import DocumentUpload from '@/app/_privateClientOrders/components/DocumentUpload';
 import PaymentTracker from '@/app/_privateClientOrders/components/PaymentTracker';
 import PrivateOrderStatusBadge from '@/app/_privateClientOrders/components/PrivateOrderStatusBadge';
-import StockFlowTimeline from '@/app/_privateClientOrders/components/StockFlowTimeline';
 import StockIdentificationSection from '@/app/_privateClientOrders/components/StockIdentificationSection';
 import StockManagementSection from '@/app/_privateClientOrders/components/StockManagementSection';
 import WorkflowStepper from '@/app/_privateClientOrders/components/WorkflowStepper';
@@ -678,15 +677,6 @@ const AdminPrivateOrderDetailPage = () => {
               onUpdated={() => void refetch()}
             />
           )}
-
-        {/* Stock Flow Timeline - Shows history of stock status changes */}
-        {order.activityLogs && order.activityLogs.length > 0 && (
-          <Card>
-            <CardContent className="p-4">
-              <StockFlowTimeline activities={order.activityLogs} />
-            </CardContent>
-          </Card>
-        )}
 
         {/* Secondary Info - Horizontal Grid Below */}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
