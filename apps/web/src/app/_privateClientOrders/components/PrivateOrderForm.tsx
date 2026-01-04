@@ -307,6 +307,18 @@ const PrivateOrderForm = () => {
       const match = matchResults?.find((m) => m.extractedIndex === index && m.matched);
 
       if (match && match.product && match.offer) {
+        // Use raw supplier price, converting to USD if needed
+        // This avoids double markup from the B2B pricing model
+        const exchangeRates: Record<string, number> = {
+          USD: 1,
+          GBP: 1.27,
+          EUR: 1.08,
+        };
+        const rate = exchangeRates[match.offer.currency ?? 'USD'] ?? 1;
+        const rawPriceUsd = match.offer.price
+          ? Math.round(match.offer.price * rate * 100) / 100
+          : 0;
+
         // Use matched product data - this links to local stock
         return {
           id: crypto.randomUUID(),
@@ -320,7 +332,7 @@ const PrivateOrderForm = () => {
           bottleSize: match.offer.unitSize || '750ml',
           caseConfig: match.offer.unitCount || 12,
           quantity: item.quantity,
-          pricePerCaseUsd: match.offer.price ? Math.round(match.offer.price * 100) / 100 : 0,
+          pricePerCaseUsd: rawPriceUsd,
           source: 'cc_inventory' as StockSource, // Local stock!
         };
       }
