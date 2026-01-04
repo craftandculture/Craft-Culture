@@ -477,9 +477,117 @@ const QuotesList = () => {
           </Typography>
         </div>
       ) : (
-        <div className="rounded-lg border border-border-muted bg-white dark:bg-background-secondary shadow-sm">
-          <DataTable columns={columns} data={filteredQuotes} />
-        </div>
+        <>
+          {/* Desktop Table */}
+          <div className="hidden rounded-lg border border-border-muted bg-white dark:bg-background-secondary shadow-sm md:block">
+            <DataTable columns={columns} data={filteredQuotes} />
+          </div>
+
+          {/* Mobile Cards */}
+          <div className="flex flex-col divide-y divide-border-muted rounded-lg border border-border-muted bg-white dark:bg-background-secondary shadow-sm md:hidden">
+            {filteredQuotes.map((quote) => (
+              <div
+                key={quote.id}
+                className="flex flex-col gap-3 p-4"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <Typography variant="bodySm" className="font-medium">
+                      {quote.name}
+                    </Typography>
+                    {(quote.clientName || quote.clientCompany) && (
+                      <Typography variant="bodyXs" colorRole="muted">
+                        {quote.clientName || quote.clientCompany}
+                      </Typography>
+                    )}
+                  </div>
+                  <QuoteStatusBadge status={quote.status} size="xs" />
+                </div>
+                <div className="flex items-center justify-between">
+                  <Typography variant="bodyXs" colorRole="muted">
+                    {format(new Date(quote.createdAt), 'MMM d, yyyy')}
+                  </Typography>
+                  <Typography variant="bodySm" className="font-semibold">
+                    {quote.currency}{' '}
+                    {(quote.currency === 'AED' ? quote.totalAed : quote.totalUsd)?.toLocaleString('en-US', {
+                      minimumFractionDigits: 0,
+                      maximumFractionDigits: 0,
+                    })}
+                  </Typography>
+                </div>
+                <div className="flex items-center gap-2">
+                  {(quote.status === 'draft' || quote.status === 'sent') && (
+                    <Button
+                      variant="default"
+                      colorRole="brand"
+                      size="sm"
+                      className="flex-1"
+                      onClick={() => submitBuyRequestMutation.mutate(quote.id)}
+                      isDisabled={submittingQuoteId === quote.id}
+                    >
+                      <ButtonContent iconLeft={IconSend}>
+                        {submittingQuoteId === quote.id ? 'Submitting...' : 'Place Order'}
+                      </ButtonContent>
+                    </Button>
+                  )}
+                  {quote.status === 'revision_requested' && (
+                    <Button
+                      variant="default"
+                      colorRole="danger"
+                      size="sm"
+                      className="flex-1"
+                      onClick={() => handleViewDetails(quote)}
+                    >
+                      <ButtonContent iconLeft={IconSend}>Resubmit</ButtonContent>
+                    </Button>
+                  )}
+                  {quote.status === 'cc_confirmed' && (
+                    <Button
+                      variant="default"
+                      colorRole="brand"
+                      size="sm"
+                      className="flex-1"
+                      onClick={() => handleViewDetails(quote)}
+                    >
+                      <ButtonContent iconLeft={IconSend}>Submit PO</ButtonContent>
+                    </Button>
+                  )}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleViewDetails(quote)}
+                  >
+                    <ButtonContent iconLeft={IconEye}>View</ButtonContent>
+                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="sm">
+                        <Icon icon={IconDots} size="md" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => handleEdit(quote)}>
+                        <Icon icon={IconEdit} size="sm" />
+                        <span>Edit</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleDownloadExcel(quote)}>
+                        <Icon icon={IconDownload} size="sm" />
+                        <span>Download Excel</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => void handleDelete(quote.id)}
+                        className="text-text-danger focus:text-text-danger"
+                      >
+                        <Icon icon={IconTrash} size="sm" colorRole="danger" />
+                        <span>Delete</span>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
       )}
 
       {/* Pagination Info */}

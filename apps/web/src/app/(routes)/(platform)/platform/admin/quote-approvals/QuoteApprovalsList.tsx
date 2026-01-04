@@ -402,9 +402,59 @@ const QuoteApprovalsList = () => {
           </Typography>
         </div>
       ) : (
-        <div className="rounded-lg border border-border-muted bg-white dark:bg-background-secondary shadow-sm">
-          <DataTable columns={getColumns()} data={filteredQuotes} />
-        </div>
+        <>
+          {/* Desktop Table */}
+          <div className="hidden rounded-lg border border-border-muted bg-white dark:bg-background-secondary shadow-sm md:block">
+            <DataTable columns={getColumns()} data={filteredQuotes} />
+          </div>
+
+          {/* Mobile Cards */}
+          <div className="flex flex-col divide-y divide-border-muted rounded-lg border border-border-muted bg-white dark:bg-background-secondary shadow-sm md:hidden">
+            {filteredQuotes.map((quote) => (
+              <button
+                key={quote.id}
+                onClick={() => handleViewQuote(quote)}
+                className="flex flex-col gap-2 p-4 text-left transition-colors hover:bg-surface-secondary/50"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <Typography variant="bodySm" className="font-medium">
+                    {quote.name}
+                  </Typography>
+                  <Typography variant="bodySm" className="shrink-0 font-medium">
+                    {quote.currency}{' '}
+                    {(quote.currency === 'AED' ? quote.totalAed : quote.totalUsd)?.toLocaleString('en-US', {
+                      minimumFractionDigits: 0,
+                      maximumFractionDigits: 0,
+                    })}
+                  </Typography>
+                </div>
+                {(quote.createdBy?.name || quote.createdBy?.email) && (
+                  <Typography variant="bodyXs" colorRole="muted">
+                    By: {quote.createdBy?.name || quote.createdBy?.email}
+                  </Typography>
+                )}
+                {(quote.clientName || quote.clientCompany) && (
+                  <Typography variant="bodyXs" colorRole="muted">
+                    Client: {quote.clientName || quote.clientCompany}
+                  </Typography>
+                )}
+                <div className="flex items-center justify-between">
+                  <Typography variant="bodyXs" colorRole="muted">
+                    {quote.buyRequestSubmittedAt
+                      ? format(new Date(quote.buyRequestSubmittedAt), 'MMM d, yyyy')
+                      : '-'}
+                  </Typography>
+                  <div className="flex items-center gap-1 text-text-brand">
+                    <Icon icon={IconEye} size="xs" />
+                    <Typography variant="bodyXs" className="font-medium">
+                      Review
+                    </Typography>
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
+        </>
       )}
 
       {/* Results Info */}

@@ -430,7 +430,71 @@ const DistributorOrdersList = () => {
         </div>
       ) : (
         <>
-          <DataTable columns={columns} data={orders} />
+          {/* Desktop Table */}
+          <div className="hidden md:block">
+            <DataTable columns={columns} data={orders} />
+          </div>
+
+          {/* Mobile Cards */}
+          <div className="flex flex-col divide-y divide-border-muted rounded-lg border border-border-muted md:hidden">
+            {orders.map((order) => (
+              <Link
+                key={order.id}
+                href={`/platform/distributor/orders/${order.id}`}
+                className="flex flex-col gap-3 p-4 transition-colors hover:bg-surface-secondary/50"
+              >
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-3">
+                    {order.partner?.logoUrl ? (
+                      <Image
+                        src={order.partner.logoUrl}
+                        alt={order.partner?.businessName ?? 'Partner'}
+                        width={32}
+                        height={32}
+                        className="h-8 w-8 rounded-lg object-contain"
+                      />
+                    ) : (
+                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-surface-secondary">
+                        <Icon icon={IconBuilding} size="sm" colorRole="muted" />
+                      </div>
+                    )}
+                    <div>
+                      <Typography variant="bodySm" className="font-mono font-medium">
+                        {order.orderNumber}
+                      </Typography>
+                      <Typography variant="bodyXs" colorRole="muted">
+                        {order.partner?.businessName ?? '-'}
+                      </Typography>
+                    </div>
+                  </div>
+                  <PrivateOrderStatusBadge status={order.status} />
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <Typography variant="bodySm" className="font-medium">
+                    {order.clientName}
+                  </Typography>
+                  {order.client?.cityDrinksVerifiedAt && (
+                    <span className="inline-flex items-center gap-0.5 rounded-full bg-green-100 px-1 py-0.5 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                      <Icon icon={IconShieldCheck} size="xs" />
+                    </span>
+                  )}
+                </div>
+                {order.clientPhone && (
+                  <Typography variant="bodyXs" colorRole="muted">
+                    {order.clientPhone}
+                  </Typography>
+                )}
+                <div className="flex items-center justify-between">
+                  <Typography variant="bodyXs" colorRole="muted">
+                    {order.caseCount} cases
+                  </Typography>
+                  <Typography variant="bodySm" className="font-semibold">
+                    {formatCurrencyValue(order)}
+                  </Typography>
+                </div>
+              </Link>
+            ))}
+          </div>
 
           {/* Pagination */}
           <div className="flex items-center justify-between">

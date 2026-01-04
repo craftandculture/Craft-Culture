@@ -243,7 +243,50 @@ const ClientContactsList = () => {
         </div>
       ) : (
         <>
-          <DataTable columns={columns} data={contacts} />
+          {/* Desktop Table */}
+          <div className="hidden md:block">
+            <DataTable columns={columns} data={contacts} />
+          </div>
+
+          {/* Mobile Cards */}
+          <div className="flex flex-col divide-y divide-border-muted rounded-lg border border-border-muted md:hidden">
+            {contacts.map((contact) => (
+              <Link
+                key={contact.id}
+                href={`/platform/clients/${contact.id}`}
+                className="flex flex-col gap-2 p-4 transition-colors hover:bg-surface-secondary/50"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-center gap-1.5">
+                    <Typography variant="bodySm" className="font-medium">
+                      {contact.name}
+                    </Typography>
+                    {contact.cityDrinksVerifiedAt && (
+                      <span className="inline-flex items-center gap-0.5 rounded-full bg-green-100 px-1.5 py-0.5 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                        <Icon icon={IconShieldCheck} size="xs" />
+                      </span>
+                    )}
+                  </div>
+                  <Typography variant="bodySm" className="shrink-0 font-semibold">
+                    {formatCurrency(contact.totalSpendUsd)}
+                  </Typography>
+                </div>
+                {contact.email && (
+                  <Typography variant="bodyXs" colorRole="muted">
+                    {contact.email}
+                  </Typography>
+                )}
+                <div className="flex items-center justify-between">
+                  <Typography variant="bodyXs" colorRole="muted">
+                    {[contact.city, contact.country].filter(Boolean).join(', ') || '-'}
+                  </Typography>
+                  <Typography variant="bodyXs" colorRole="muted">
+                    {contact.totalOrders} orders
+                  </Typography>
+                </div>
+              </Link>
+            ))}
+          </div>
 
           {/* Pagination */}
           <div className="flex items-center justify-between">
