@@ -1332,3 +1332,67 @@ export const privateClientContacts = pgTable(
 ).enableRLS();
 
 export type PrivateClientContact = typeof privateClientContacts.$inferSelect;
+
+// ============================================================================
+// Pricing Configuration
+// ============================================================================
+
+export const pricingModule = pgEnum('pricing_module', ['b2b', 'pco', 'pocket_cellar']);
+
+/**
+ * Global pricing configuration for each commercial model
+ * Stores default pricing variables that can be overridden at partner or order level
+ */
+export const pricingConfig = pgTable(
+  'pricing_config',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    module: pricingModule('module').notNull(),
+    key: text('key').notNull(), // e.g., 'cc_margin_percent', 'duty_percent', 'vat_percent'
+    value: doublePrecision('value').notNull(),
+    description: text('description'),
+    updatedAt: timestamp('updated_at', { mode: 'date' })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+    updatedBy: uuid('updated_by').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+  },
+  (table) => [
+    index('pricing_config_module_idx').on(table.module),
+    index('pricing_config_module_key_idx').on(table.module, table.key),
+  ],
+).enableRLS();
+
+export type PricingConfig = typeof pricingConfig.$inferSelect;
+
+/**
+ * Order-level pricing overrides for bespoke PCO pricing
+ * When admin approves an order with "Bespoke" pricing, custom variables are stored here
+ */
+export const orderPricingOverrides = pgTable(
+  'order_pricing_overrides',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    orderId: uuid('order_id')
+      .references(() => privateClientOrders.id, { onDelete: 'cascade' })
+      .notNull()
+      .unique(),
+    // Bespoke pricing variables
+    ccMarginPercent: doublePrecision('cc_margin_percent'), // default 2.5% for PCO
+    importDutyPercent: doublePrecision('import_duty_percent'), // default 20%
+    transferCostPercent: doublePrecision('transfer_cost_percent'), // default 0.75%
+    distributorMarginPercent: doublePrecision('distributor_margin_percent'), // default 7.5%
+    vatPercent: doublePrecision('vat_percent'), // default 5%
+    // Audit
+    createdAt: timestamp('created_at', { mode: 'date' }).notNull().defaultNow(),
+    createdBy: uuid('created_by').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+    notes: text('notes'),
+  },
+  (table) => [index('order_pricing_overrides_order_id_idx').on(table.orderId)],
+).enableRLS();
+
+export type OrderPricingOverride = typeof orderPricingOverrides.$inferSelect;
