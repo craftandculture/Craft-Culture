@@ -118,6 +118,12 @@ const relations = defineRelations(schema, (r) => ({
       from: r.partners.id,
       to: r.privateClientContacts.partnerId,
     }),
+    // Bespoke pricing override for this partner
+    pricingOverride: r.one.partnerPricingOverrides({
+      from: r.partners.id,
+      to: r.partnerPricingOverrides.partnerId,
+      optional: true,
+    }),
   },
   partnerApiKeys: {
     partner: r.one.partners({
@@ -232,6 +238,19 @@ const relations = defineRelations(schema, (r) => ({
     orders: r.many.privateClientOrders({
       from: r.privateClientContacts.id,
       to: r.privateClientOrders.clientId,
+    }),
+  },
+  // Partner pricing overrides
+  partnerPricingOverrides: {
+    partner: r.one.partners({
+      from: r.partnerPricingOverrides.partnerId,
+      to: r.partners.id,
+      optional: false,
+    }),
+    createdByUser: r.one.users({
+      from: r.partnerPricingOverrides.createdBy,
+      to: r.users.id,
+      optional: true,
     }),
   },
 }));

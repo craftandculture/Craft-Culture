@@ -1401,3 +1401,40 @@ export const orderPricingOverrides = pgTable(
 ).enableRLS();
 
 export type OrderPricingOverride = typeof orderPricingOverrides.$inferSelect;
+
+/**
+ * Partner-level pricing overrides for bespoke PCO pricing
+ * Partners with custom pricing will use these values as defaults for their orders
+ */
+export const partnerPricingOverrides = pgTable(
+  'partner_pricing_overrides',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    partnerId: uuid('partner_id')
+      .references(() => partners.id, { onDelete: 'cascade' })
+      .notNull()
+      .unique(),
+    // Bespoke pricing variables
+    ccMarginPercent: doublePrecision('cc_margin_percent'), // default 2.5% for PCO
+    importDutyPercent: doublePrecision('import_duty_percent'), // default 20%
+    transferCostPercent: doublePrecision('transfer_cost_percent'), // default 0.75%
+    distributorMarginPercent: doublePrecision('distributor_margin_percent'), // default 7.5%
+    vatPercent: doublePrecision('vat_percent'), // default 5%
+    // Effective date range (optional)
+    effectiveFrom: timestamp('effective_from', { mode: 'date' }),
+    effectiveUntil: timestamp('effective_until', { mode: 'date' }), // null = indefinite
+    // Audit
+    createdAt: timestamp('created_at', { mode: 'date' }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { mode: 'date' })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+    createdBy: uuid('created_by').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+    notes: text('notes'),
+  },
+  (table) => [index('partner_pricing_overrides_partner_id_idx').on(table.partnerId)],
+).enableRLS();
+
+export type PartnerPricingOverride = typeof partnerPricingOverrides.$inferSelect;
