@@ -145,7 +145,7 @@ const adminDashboard = adminProcedure.query(async () => {
   ] as const;
 
   const ordersNeedingStockUpdate = await db
-    .selectDistinct({
+    .select({
       orderId: privateClientOrders.id,
       orderNumber: privateClientOrders.orderNumber,
       clientName: privateClientOrders.clientName,
