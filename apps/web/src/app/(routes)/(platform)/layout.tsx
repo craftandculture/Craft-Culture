@@ -7,6 +7,7 @@ import BrandedTitleProvider from '@/app/_ui/components/BrandedTitleProvider/Bran
 import CommandBar from '@/app/_ui/components/CommandBar/CommandBar';
 import BrandedFooter from '@/app/_ui/components/Footer/BrandedFooter';
 import BrandedLogo from '@/app/_ui/components/Logo/BrandedLogo';
+import PlatformMobileNav from '@/app/_ui/components/MobileNav/PlatformMobileNav';
 import ThemeToggle from '@/app/_ui/components/ThemeToggle/ThemeToggle';
 import getQueryClient from '@/lib/react-query';
 import api from '@/lib/trpc/server';
@@ -40,7 +41,8 @@ const PlatformLayout = async ({ children }: React.PropsWithChildren) => {
       <CommandBar />
       <header className="border-border-primary sticky top-0 z-50 border-b bg-background-primary/80 backdrop-blur-xl">
         <div className="container flex h-14 items-center justify-between gap-4">
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-3 md:gap-6">
+            <PlatformMobileNav user={{ role: user.role, customerType: user.customerType, partner: user.partner }} />
             <Link
               href="/platform/quotes"
               className="transition-opacity duration-200 hover:opacity-80"
