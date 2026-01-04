@@ -620,6 +620,7 @@ export const notificationType = pgEnum('notification_type', [
   'revision_requested',
   'po_submitted',
   'po_confirmed',
+  'po_approved',
   'payment_received',
   'payment_proof_submitted',
   'order_delivered',
