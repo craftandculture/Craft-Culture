@@ -1,22 +1,28 @@
 import { z } from 'zod';
 
 import { getPCOVariables, getPricingConfig } from '@/app/_pricing/data/getPricingConfig';
-import { DEFAULT_B2B_VARIABLES, DEFAULT_POCKET_CELLAR_VARIABLES } from '@/lib/pricing/defaults';
+import {
+  DEFAULT_B2B_VARIABLES,
+  DEFAULT_EXCHANGE_RATES,
+  DEFAULT_POCKET_CELLAR_VARIABLES,
+} from '@/lib/pricing/defaults';
 import type {
   B2BPricingVariables,
+  ExchangeRates,
   PCOPricingVariables,
   PocketCellarPricingVariables,
 } from '@/lib/pricing/types';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
 const inputSchema = z.object({
-  module: z.enum(['b2b', 'pco', 'pocket_cellar']).optional(),
+  module: z.enum(['b2b', 'pco', 'pocket_cellar', 'exchange_rates']).optional(),
 });
 
 interface PricingConfigResponse {
   b2b: B2BPricingVariables;
   pco: PCOPricingVariables;
   pocketCellar: PocketCellarPricingVariables;
+  exchangeRates: ExchangeRates;
 }
 
 /**
@@ -55,16 +61,26 @@ const configGet = adminProcedure.input(inputSchema).query(async ({ input }) => {
     vatPercent: pcConfig.vat_percent ?? DEFAULT_POCKET_CELLAR_VARIABLES.vatPercent,
   };
 
+  // Get Exchange Rates config from database
+  const exConfig = await getPricingConfig('exchange_rates');
+  const exchangeRates: ExchangeRates = {
+    gbpToUsd: exConfig.gbp_to_usd ?? DEFAULT_EXCHANGE_RATES.gbpToUsd,
+    eurToUsd: exConfig.eur_to_usd ?? DEFAULT_EXCHANGE_RATES.eurToUsd,
+    usdToAed: exConfig.usd_to_aed ?? DEFAULT_EXCHANGE_RATES.usdToAed,
+  };
+
   const response: PricingConfigResponse = {
     b2b: b2bVariables,
     pco: pcoVariables,
     pocketCellar: pocketCellarVariables,
+    exchangeRates,
   };
 
   if (module) {
     if (module === 'b2b') return { b2b: b2bVariables };
     if (module === 'pco') return { pco: pcoVariables };
     if (module === 'pocket_cellar') return { pocketCellar: pocketCellarVariables };
+    if (module === 'exchange_rates') return { exchangeRates };
   }
 
   return response;

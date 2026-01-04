@@ -1337,7 +1337,12 @@ export type PrivateClientContact = typeof privateClientContacts.$inferSelect;
 // Pricing Configuration
 // ============================================================================
 
-export const pricingModule = pgEnum('pricing_module', ['b2b', 'pco', 'pocket_cellar']);
+export const pricingModule = pgEnum('pricing_module', [
+  'b2b',
+  'pco',
+  'pocket_cellar',
+  'exchange_rates',
+]);
 
 /**
  * Global pricing configuration for each commercial model

@@ -57,7 +57,7 @@ export type UserType = 'b2b' | 'b2c' | 'private_clients';
 // ============================================================================
 
 /** Pricing modules available in the system */
-export type PricingModuleType = 'b2b' | 'pco' | 'pocket_cellar';
+export type PricingModuleType = 'b2b' | 'pco' | 'pocket_cellar' | 'exchange_rates';
 
 /** Product source determines logistics costs for Pocket Cellar */
 export type ProductSourceType = 'cultx' | 'local_inventory';
@@ -257,11 +257,7 @@ export const POCKET_CELLAR_CONFIG_KEYS = [
   'vat_percent',
 ] as const;
 
-export const EXCHANGE_RATE_KEYS = [
-  'gbp_to_usd_rate',
-  'eur_to_usd_rate',
-  'usd_to_aed_rate',
-] as const;
+export const EXCHANGE_RATE_KEYS = ['gbp_to_usd', 'eur_to_usd', 'usd_to_aed'] as const;
 
 export type PCOConfigKey = (typeof PCO_CONFIG_KEYS)[number];
 export type B2BConfigKey = (typeof B2B_CONFIG_KEYS)[number];
