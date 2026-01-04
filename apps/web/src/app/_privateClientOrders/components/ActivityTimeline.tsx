@@ -1,7 +1,6 @@
 'use client';
 
 import {
-  IconArrowRight,
   IconBox,
   IconCheck,
   IconCirclePlus,
@@ -258,26 +257,27 @@ const ActivityTimeline = ({ activities, maxItems }: ActivityTimelineProps) => {
 
                 {/* Stock-specific details: product name + status transition */}
                 {isStock && stockMeta && (
-                  <div className="mt-1 flex flex-wrap items-center gap-2">
-                    {/* Product name */}
-                    {stockMeta.productName && (
-                      <span className="text-xs text-text-primary">{stockMeta.productName}</span>
-                    )}
-                    {/* Status transition */}
-                    {(stockMeta.previousStockStatus || stockMeta.newStockStatus) && (
-                      <div className="flex items-center gap-1">
-                        {stockMeta.previousStockStatus && (
-                          <>
-                            {renderStockBadge(stockMeta.previousStockStatus)}
-                            <IconArrowRight size={10} className="text-text-muted" />
-                          </>
-                        )}
-                        {stockMeta.newStockStatus && renderStockBadge(stockMeta.newStockStatus)}
+                  <div className="mt-1">
+                    {/* Status badge */}
+                    {stockMeta.newStockStatus && (
+                      <div className="mb-1.5">
+                        {renderStockBadge(stockMeta.newStockStatus)}
                       </div>
                     )}
-                    {/* Bulk item names */}
+                    {/* Single product name */}
+                    {stockMeta.productName && (
+                      <div className="text-xs text-text-primary">{stockMeta.productName}</div>
+                    )}
+                    {/* Bulk item names - display as compact list */}
                     {!stockMeta.productName && stockMeta.itemNames && (
-                      <span className="text-xs text-text-muted">{stockMeta.itemNames}</span>
+                      <ul className="mt-1 space-y-0.5 text-xs text-text-muted">
+                        {stockMeta.itemNames.split(', ').map((name, idx) => (
+                          <li key={idx} className="flex items-center gap-1.5">
+                            <span className="h-1 w-1 shrink-0 rounded-full bg-text-muted/50" />
+                            <span className="truncate">{name}</span>
+                          </li>
+                        ))}
+                      </ul>
                     )}
                   </div>
                 )}
