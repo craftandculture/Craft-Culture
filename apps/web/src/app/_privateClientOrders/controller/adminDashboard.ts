@@ -4,6 +4,7 @@ import db from '@/database/client';
 import {
   partners,
   privateClientContacts,
+  privateClientOrderItems,
   privateClientOrders,
 } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
@@ -130,6 +131,47 @@ const adminDashboard = adminProcedure.query(async () => {
     .from(privateClientContacts)
     .where(isNotNull(privateClientContacts.cityDrinksVerifiedAt));
 
+  // Get orders with pending stock items (for stock update reminder)
+  // These are orders in fulfillment phase that have items with pending stock status
+  const fulfillmentStatuses = [
+    'distributor_paid',
+    'awaiting_partner_payment',
+    'partner_paid',
+    'stock_in_transit',
+    'with_distributor',
+    'scheduling_delivery',
+    'delivery_scheduled',
+    'out_for_delivery',
+  ];
+
+  const ordersNeedingStockUpdate = await db
+    .selectDistinct({
+      orderId: privateClientOrders.id,
+      orderNumber: privateClientOrders.orderNumber,
+      clientName: privateClientOrders.clientName,
+      status: privateClientOrders.status,
+      pendingItemCount: sql<number>`count(${privateClientOrderItems.id})`,
+    })
+    .from(privateClientOrders)
+    .innerJoin(
+      privateClientOrderItems,
+      eq(privateClientOrderItems.orderId, privateClientOrders.id),
+    )
+    .where(
+      and(
+        inArray(privateClientOrders.status, fulfillmentStatuses),
+        eq(privateClientOrderItems.stockStatus, 'pending'),
+      ),
+    )
+    .groupBy(
+      privateClientOrders.id,
+      privateClientOrders.orderNumber,
+      privateClientOrders.clientName,
+      privateClientOrders.status,
+    )
+    .orderBy(desc(privateClientOrders.createdAt))
+    .limit(5);
+
   // Build status breakdown for pipeline
   const pendingReviewStatuses = ['submitted', 'under_cc_review', 'revision_requested'];
   const awaitingVerificationStatuses = [
@@ -199,6 +241,13 @@ const adminDashboard = adminProcedure.query(async () => {
       totalCases: Number(p.totalCases),
       totalValueUsd: Number(p.totalValueUsd),
       totalValueAed: Number(p.totalValueAed),
+    })),
+    ordersNeedingStockUpdate: ordersNeedingStockUpdate.map((o) => ({
+      orderId: o.orderId,
+      orderNumber: o.orderNumber,
+      clientName: o.clientName,
+      status: o.status,
+      pendingItemCount: Number(o.pendingItemCount),
     })),
   };
 });
