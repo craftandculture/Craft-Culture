@@ -2,8 +2,9 @@ import { TRPCError } from '@trpc/server';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 
+import createNotification from '@/app/_notifications/utils/createNotification';
 import db from '@/database/client';
-import { privateClientOrderActivityLogs, privateClientOrders } from '@/database/schema';
+import { privateClientOrderActivityLogs, privateClientOrders, users } from '@/database/schema';
 import { winePartnerProcedure } from '@/lib/trpc/procedures';
 
 const submitOrderSchema = z.object({
@@ -84,6 +85,24 @@ const ordersSubmit = winePartnerProcedure.input(submitOrderSchema).mutation(asyn
     newStatus,
     notes,
   });
+
+  // Notify admins that there's a new order to review
+  const adminUsers = await db
+    .select({ id: users.id })
+    .from(users)
+    .where(eq(users.role, 'admin'));
+
+  for (const admin of adminUsers) {
+    await createNotification({
+      userId: admin.id,
+      type: 'action_required',
+      title: 'New Private Order Submitted',
+      message: `Order ${updatedOrder?.orderNumber ?? orderId} has been submitted and needs review.`,
+      entityType: 'private_client_order',
+      entityId: orderId,
+      actionUrl: `/platform/admin/private-orders/${orderId}`,
+    });
+  }
 
   return updatedOrder;
 });
