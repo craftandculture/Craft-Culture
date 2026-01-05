@@ -1,10 +1,10 @@
 import { inArray } from 'drizzle-orm';
 
 import settingsGetController from '@/app/_admin/controllers/settingsGetController';
-import downloadGoogleSheet from '@/app/_pricingModels/utils/downloadGoogleSheet';
 import db from '@/database/client';
 import { productOffers, products } from '@/database/schema';
 import conflictUpdateSet from '@/database/utils/conflictUpdateSet';
+import downloadGoogleSheet from '@/utils/downloadGoogleSheet';
 import splitArrayBatches from '@/utils/splitArrayBatches';
 
 import parseLocalInventorySheet from '../utils/parseLocalInventorySheet';
