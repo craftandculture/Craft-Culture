@@ -5,6 +5,7 @@ import {
   IconArrowLeft,
   IconBuilding,
   IconCheck,
+  IconCurrencyDollar,
   IconEdit,
   IconHistory,
   IconLoader2,
@@ -130,6 +131,7 @@ const AdminPrivateOrderDetailPage = () => {
   const [resetTarget, setResetTarget] = useState<ResetTargetStatus>('awaiting_distributor_verification');
   const [showDeliveryPhoto, setShowDeliveryPhoto] = useState(false);
   const [activityFilter, setActivityFilter] = useState<'all' | 'partner' | 'distributor' | 'admin'>('all');
+  const [partnerPaymentRef, setPartnerPaymentRef] = useState('');
 
   // Fetch order details
   const {
@@ -232,6 +234,24 @@ const AdminPrivateOrderDetailPage = () => {
     },
     onError: (error) => {
       toast.error(error.message || 'Failed to delete order');
+    },
+  });
+
+  // Mark partner paid mutation (C&C pays wine partner)
+  const { mutate: markPartnerPaid, isPending: isMarkingPartnerPaid } = useMutation({
+    mutationFn: ({ reference }: { reference?: string }) =>
+      trpcClient.privateClientOrders.adminMarkPartnerPaid.mutate({
+        orderId,
+        reference,
+      }),
+    onSuccess: () => {
+      toast.success('Partner payment recorded');
+      setPartnerPaymentRef('');
+      void refetch();
+      void queryClient.invalidateQueries({ queryKey: ['privateClientOrders'] });
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to record payment');
     },
   });
 
@@ -875,6 +895,58 @@ const AdminPrivateOrderDetailPage = () => {
             </CardContent>
           </Card>
         </div>
+
+        {/* C&C Payment to Partner - Admin Independent Action */}
+        <Card className={order.partnerPaidAt ? 'border-fill-success/50 bg-fill-success/5' : ''}>
+          <CardContent className="p-4">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+              <div className="flex items-start gap-3">
+                <div className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full ${
+                  order.partnerPaidAt ? 'bg-fill-success/20' : 'bg-fill-muted'
+                }`}>
+                  <Icon
+                    icon={order.partnerPaidAt ? IconCheck : IconCurrencyDollar}
+                    size="md"
+                    className={order.partnerPaidAt ? 'text-fill-success' : 'text-text-muted'}
+                  />
+                </div>
+                <div>
+                  <Typography variant="headingSm" className="mb-1">
+                    C&C Payment to Partner
+                  </Typography>
+                  <Typography variant="bodySm" colorRole="muted">
+                    {order.partnerPaidAt
+                      ? `Payment processed on ${formatDate(order.partnerPaidAt)}${order.partnerPaymentReference ? ` (Ref: ${order.partnerPaymentReference})` : ''}`
+                      : 'Record when C&C has paid the wine partner for stock. This is independent of the order status.'}
+                  </Typography>
+                </div>
+              </div>
+
+              {!order.partnerPaidAt && (
+                <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center">
+                  <Input
+                    placeholder="Payment reference (optional)"
+                    value={partnerPaymentRef}
+                    onChange={(e) => setPartnerPaymentRef(e.target.value)}
+                    className="w-full sm:w-[200px]"
+                  />
+                  <Button
+                    onClick={() => markPartnerPaid({ reference: partnerPaymentRef || undefined })}
+                    disabled={isMarkingPartnerPaid}
+                    colorRole="brand"
+                  >
+                    <Icon
+                      icon={isMarkingPartnerPaid ? IconLoader2 : IconCurrencyDollar}
+                      size="sm"
+                      className={isMarkingPartnerPaid ? 'animate-spin' : ''}
+                    />
+                    <span className="ml-2">{isMarkingPartnerPaid ? 'Recording...' : 'Mark C&C Paid'}</span>
+                  </Button>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Notes - if present */}
         {(order.partnerNotes || order.deliveryNotes) && (
