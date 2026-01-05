@@ -20,6 +20,7 @@ const relations = defineRelations(schema, (r) => ({
       from: r.users.id,
       to: r.quotes.userId,
     }),
+// @deprecated Legacy pricing model relation - no longer used
     pricingModel: r.one.pricingModels({
       from: r.users.pricingModelId,
       to: r.pricingModels.id,
@@ -31,12 +32,14 @@ const relations = defineRelations(schema, (r) => ({
       optional: true,
     }),
   },
+// @deprecated Legacy sheets relations - no longer used
   sheets: {
     pricingModels: r.many.pricingModels({
       from: r.sheets.id,
       to: r.pricingModels.sheetId,
     }),
   },
+  // @deprecated Legacy pricing models relations - no longer used
   pricingModels: {
     users: r.many.users({
       from: r.pricingModels.id,

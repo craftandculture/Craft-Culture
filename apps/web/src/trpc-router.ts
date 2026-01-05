@@ -9,7 +9,6 @@ import privateClientContactsRouter from '@/app/_privateClientContacts/router';
 import privateClientOrdersRouter from '@/app/_privateClientOrders/router';
 import quotesRouter from '@/app/_quotes/router';
 import settingsRouter from '@/app/_settings/router';
-import sheetsRouter from '@/app/_sheets/router';
 import warehouseRouter from '@/app/_warehouse/router';
 
 import productsRouter from './app/_products/router';
@@ -27,7 +26,6 @@ export const appRouter = createTRPCRouter({
   privateClientOrders: privateClientOrdersRouter,
   products: productsRouter,
   quotes: quotesRouter,
-  sheets: sheetsRouter,
   warehouse: warehouseRouter,
   settings: settingsRouter,
 });

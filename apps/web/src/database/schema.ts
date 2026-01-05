@@ -12,7 +12,12 @@ import {
   uuid,
 } from 'drizzle-orm/pg-core';
 
-import { CellMappingSchema } from '@/app/_pricingModels/schemas/cellMappingSchema';
+/**
+ * @deprecated Legacy cell mapping type - kept for backwards compatibility with existing data
+ */
+interface LegacyCellMapping {
+  [key: string]: { row: number; col: number };
+}
 
 export const timestamps = {
   createdAt: timestamp('created_at', { mode: 'date' }).notNull().defaultNow(),
@@ -53,6 +58,9 @@ export const quoteStatus = pgEnum('quote_status', [
 
 export const paymentMethod = pgEnum('payment_method', ['bank_transfer', 'link']);
 
+/**
+ * @deprecated Legacy sheets table - kept for data preservation, no longer actively used
+ */
 export const sheets = pgTable('sheets', {
   id: uuid('id').primaryKey().defaultRandom(),
   name: text('name').notNull(),
@@ -61,6 +69,9 @@ export const sheets = pgTable('sheets', {
   ...timestamps,
 }).enableRLS();
 
+/**
+ * @deprecated Legacy pricing models table - kept for data preservation, no longer actively used
+ */
 export const pricingModels = pgTable(
   'pricing_models',
   {
@@ -71,7 +82,7 @@ export const pricingModels = pgTable(
     sheetId: uuid('sheet_id')
       .references(() => sheets.id, { onDelete: 'cascade' })
       .notNull(),
-    cellMappings: jsonb('cell_mappings').$type<CellMappingSchema>().notNull(),
+    cellMappings: jsonb('cell_mappings').$type<LegacyCellMapping>().notNull(),
     ...timestamps,
   },
   (table) => [

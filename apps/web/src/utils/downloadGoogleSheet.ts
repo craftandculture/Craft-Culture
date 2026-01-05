@@ -1,3 +1,9 @@
+/**
+ * Download a Google Sheet as an Excel file buffer
+ *
+ * @param googleSheetId - The Google Sheet ID to download
+ * @returns ArrayBuffer containing the Excel file data
+ */
 const downloadGoogleSheet = async (
   googleSheetId: string,
 ): Promise<ArrayBuffer> => {
