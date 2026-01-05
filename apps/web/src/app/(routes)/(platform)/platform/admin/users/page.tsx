@@ -1091,10 +1091,7 @@ const UserManagementPage = () => {
                         Customer Type
                       </th>
                       <th className="text-text-secondary px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">
-                        Distributor
-                      </th>
-                      <th className="text-text-secondary px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">
-                        Partner
+                        Organization
                       </th>
                       <th className="text-text-secondary px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">
                         Status
@@ -1139,17 +1136,20 @@ const UserManagementPage = () => {
                             {getCustomerTypeLabel(user.customerType)}
                           </Typography>
                         </td>
-                        <td className="px-6 py-4">
-                          <DistributorAssignment
-                            userId={user.id}
-                            distributors={distributors ?? []}
-                          />
-                        </td>
-                        <td className="px-6 py-4">
-                          <WinePartnerAssignment
-                            userId={user.id}
-                            winePartners={winePartners ?? []}
-                          />
+                        <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
+                          {user.customerType === 'b2b' || user.customerType === 'b2c' ? (
+                            <DistributorAssignment
+                              userId={user.id}
+                              distributors={distributors ?? []}
+                            />
+                          ) : user.customerType === 'private_clients' ? (
+                            <WinePartnerAssignment
+                              userId={user.id}
+                              winePartners={winePartners ?? []}
+                            />
+                          ) : (
+                            <span className="text-text-muted text-sm">-</span>
+                          )}
                         </td>
                         <td className="px-6 py-4">{getStatusBadge(user.approvalStatus)}</td>
                         <td className="px-6 py-4">
