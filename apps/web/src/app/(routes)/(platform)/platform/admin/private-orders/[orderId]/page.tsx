@@ -857,16 +857,7 @@ const AdminPrivateOrderDetailPage = () => {
         <div className="grid gap-4 lg:grid-cols-2">
           <Card>
             <CardContent className="p-4">
-              <PaymentTracker
-                order={order}
-                canConfirmPayments={true}
-                onPaymentConfirmed={() => {
-                  void queryClient.invalidateQueries({
-                    queryKey: ['privateClientOrders.adminGetOne', orderId],
-                  });
-                  void refetch();
-                }}
-              />
+              <PaymentTracker order={order} />
             </CardContent>
           </Card>
 
