@@ -7,13 +7,27 @@ import db from '@/database/client';
 import { users } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
-const inputSchema = z.object({
-  email: z.string().email(),
-  name: z.string().min(1),
-  customerType: z.enum(['b2b', 'b2c', 'private_clients']),
-  role: z.enum(['user', 'admin']).default('user'),
-  approvalStatus: z.enum(['pending', 'approved', 'rejected']).default('approved'),
-});
+const inputSchema = z
+  .object({
+    email: z.string().email().optional(),
+    name: z.string().min(1),
+    customerType: z.enum(['b2b', 'b2c', 'private_clients']),
+    role: z.enum(['user', 'admin']).default('user'),
+    approvalStatus: z
+      .enum(['pending', 'approved', 'rejected'])
+      .default('approved'),
+    isTestUser: z.boolean().default(false),
+  })
+  .refine(
+    (data) => {
+      // Email is required for regular users, optional for test users
+      if (!data.isTestUser && !data.email) {
+        return false;
+      }
+      return true;
+    },
+    { message: 'Email is required for non-test users', path: ['email'] },
+  );
 
 /**
  * Admin endpoint to create a new user
@@ -24,32 +38,41 @@ const inputSchema = z.object({
 const usersAdminCreate = adminProcedure
   .input(inputSchema)
   .mutation(async ({ input, ctx }) => {
-    const { email, name, customerType, role, approvalStatus } = input;
+    const { name, customerType, role, approvalStatus, isTestUser } = input;
 
-    // Check if user already exists
-    const [existingUser] = await db
-      .select({ id: users.id })
-      .from(users)
-      .where(eq(users.email, email))
-      .limit(1);
+    // Generate placeholder email for test users
+    const userId = crypto.randomUUID();
+    const email = isTestUser
+      ? `test-${userId.slice(0, 8)}@placeholder.local`
+      : input.email!;
 
-    if (existingUser) {
-      throw new TRPCError({
-        code: 'CONFLICT',
-        message: 'A user with this email already exists',
-      });
+    // Check if user already exists (skip for test users since email is unique)
+    if (!isTestUser) {
+      const [existingUser] = await db
+        .select({ id: users.id })
+        .from(users)
+        .where(eq(users.email, email))
+        .limit(1);
+
+      if (existingUser) {
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message: 'A user with this email already exists',
+        });
+      }
     }
 
     // Create the new user
     const [newUser] = await db
       .insert(users)
       .values({
-        id: crypto.randomUUID(),
+        id: userId,
         email,
         name,
         customerType,
         role,
         approvalStatus,
+        isTestUser,
         emailVerified: false,
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -64,6 +87,7 @@ const usersAdminCreate = adminProcedure
         customerType: users.customerType,
         role: users.role,
         approvalStatus: users.approvalStatus,
+        isTestUser: users.isTestUser,
         createdAt: users.createdAt,
       });
 
@@ -86,6 +110,7 @@ const usersAdminCreate = adminProcedure
         customerType: newUser.customerType,
         role: newUser.role,
         approvalStatus: newUser.approvalStatus,
+        isTestUser: newUser.isTestUser,
       },
     });
 

@@ -134,6 +134,7 @@ const usersAdminGetOne = adminProcedure
         approvedAt: user.approvedAt,
         approvedBy: approvedByUser,
         emailVerified: user.emailVerified,
+        isTestUser: user.isTestUser,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
         onboardingCompletedAt: user.onboardingCompletedAt,
