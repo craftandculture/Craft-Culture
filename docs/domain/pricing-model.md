@@ -9,7 +9,7 @@ Craft & Culture operates three pricing channels for wine distribution into UAE/G
 
 | Channel | Customer Type | Complexity | Use Case |
 |---------|--------------|------------|----------|
-| **B2B** | Business partners | Simple | CultX trading platform quotes |
+| **B2B** | Business partners | Simple | Trade partner quotes |
 | **PCO** | Private clients | Complex | High-net-worth individual orders |
 | **Pocket Cellar** | Consumers | Most complex | B2C marketplace (per-bottle) |
 
@@ -159,7 +159,7 @@ Supplier Price (USD)
 
 | Source | Per Bottle | Notes |
 |--------|------------|-------|
-| **Air Freight** | $20 | Fast, higher cost - CultX products |
+| **Air Freight** | $20 | Fast, higher cost - international products |
 | **Ocean Freight** | $5 | Slower, lower cost - bulk shipments |
 | **Local Inventory** | $0 | Already in UAE warehouse |
 
@@ -174,7 +174,7 @@ QUESTION FOR KEVIN:
 
 ### Worked Example
 
-$100 supplier price, 6-bottle case, CultX source:
+$100 supplier price, 6-bottle case, air freight:
 
 | Step | Calculation | Result |
 |------|-------------|--------|

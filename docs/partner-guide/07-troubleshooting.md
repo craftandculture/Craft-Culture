@@ -82,7 +82,7 @@ Look for:
 
 ### "Product shows out of stock"
 
-Stock updates automatically from CultX.
+Stock updates automatically from our system.
 
 **Options:**
 1. Check back later

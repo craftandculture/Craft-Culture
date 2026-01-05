@@ -82,7 +82,7 @@ Your catalog has standard prices. For custom arrangements:
 
 ### How often do prices update?
 
-Prices sync from CultX and can update:
+Prices can update:
 - When exchange rates change
 - When supplier prices change
 - When you request changes
@@ -113,7 +113,7 @@ Yes - filter your orders by "Partner Paid" status to see completed payments.
 
 ### How do I add products to my catalog?
 
-Products are synced from CultX. Contact C&C to:
+Your catalog is managed by C&C. Contact us to:
 - Add new products
 - Update existing listings
 - Remove discontinued items
@@ -244,5 +244,4 @@ For urgent matters, contact your C&C account manager directly.
 | **Freezone** | UAE tax-free zone where goods arrive |
 | **Mainland** | Regular UAE territory where clients receive goods |
 | **Distributor** | Licensed UAE company handling final delivery |
-| **CultX** | Trading platform where products are sourced |
 | **Pack** | Case configuration (e.g., 12×750ml) |
