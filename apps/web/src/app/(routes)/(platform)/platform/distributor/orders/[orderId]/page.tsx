@@ -26,8 +26,10 @@ import { useCallback, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
 import ActivityTimeline from '@/app/_privateClientOrders/components/ActivityTimeline';
+import DeliveryPhotoUpload from '@/app/_privateClientOrders/components/DeliveryPhotoUpload';
 import PaymentTracker from '@/app/_privateClientOrders/components/PaymentTracker';
 import PrivateOrderStatusBadge from '@/app/_privateClientOrders/components/PrivateOrderStatusBadge';
+import StockReceiptConfirmation from '@/app/_privateClientOrders/components/StockReceiptConfirmation';
 import StockStatusSection from '@/app/_privateClientOrders/components/StockStatusSection';
 import WorkflowStepper from '@/app/_privateClientOrders/components/WorkflowStepper';
 import Button from '@/app/_ui/components/Button/Button';
@@ -831,6 +833,16 @@ const DistributorOrderDetailPage = () => {
           </Card>
         )}
 
+        {/* Delivery Photo Upload - Available during and after delivery */}
+        {(order.status === 'out_for_delivery' || order.status === 'delivered') && (
+          <DeliveryPhotoUpload
+            orderId={orderId}
+            existingPhotoUrl={order.deliveryPhoto}
+            orderStatus={order.status}
+            onUploaded={() => void refetch()}
+          />
+        )}
+
         {/* Line Items - Full Width, Primary Focus */}
         <Card>
           <CardContent className="p-4">
@@ -884,6 +896,25 @@ const DistributorOrderDetailPage = () => {
             )}
           </CardContent>
         </Card>
+
+        {/* Stock Receipt Confirmation - Shows when items are in transit to distributor */}
+        {order.items && order.items.some(
+          (item) =>
+            item.stockStatus === 'in_transit_to_distributor' ||
+            item.stockStatus === 'at_cc_bonded',
+        ) && (
+          <StockReceiptConfirmation
+            orderId={orderId}
+            items={order.items.map((item) => ({
+              id: item.id,
+              productName: item.productName,
+              vintage: item.vintage,
+              quantity: item.quantity,
+              stockStatus: item.stockStatus,
+            }))}
+            onConfirmed={() => void refetch()}
+          />
+        )}
 
         {/* Stock Status Section - Important for distributor to know what's ready for delivery */}
         {order.items && order.items.length > 0 && (

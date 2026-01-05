@@ -653,31 +653,58 @@ const PrivateOrderDetailPage = () => {
         {order.status === 'delivered' && (
           <Card className="border-2 border-fill-success/50 bg-fill-success/5">
             <CardContent className="p-6">
-              <div className="flex flex-col items-center gap-4 text-center sm:flex-row sm:text-left">
-                <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-fill-success/20">
-                  <Icon icon={IconCheck} size="lg" className="text-fill-success" />
-                </div>
-                <div className="flex-1">
-                  <Typography variant="headingSm" className="mb-1">
-                    Order Delivered
-                  </Typography>
-                  <Typography variant="bodySm" colorRole="muted">
-                    Your client&apos;s order has been successfully delivered.
-                  </Typography>
-                  {order.deliveredAt && (
-                    <Typography variant="bodyXs" colorRole="muted" className="mt-1">
-                      Delivered:{' '}
-                      {new Date(order.deliveredAt).toLocaleDateString('en-GB', {
-                        weekday: 'long',
-                        day: '2-digit',
-                        month: 'long',
-                        year: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}
+              <div className="flex flex-col gap-4">
+                <div className="flex flex-col items-center gap-4 text-center sm:flex-row sm:text-left">
+                  <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-fill-success/20">
+                    <Icon icon={IconCheck} size="lg" className="text-fill-success" />
+                  </div>
+                  <div className="flex-1">
+                    <Typography variant="headingSm" className="mb-1">
+                      Order Delivered
                     </Typography>
-                  )}
+                    <Typography variant="bodySm" colorRole="muted">
+                      Your client&apos;s order has been successfully delivered.
+                    </Typography>
+                    {order.deliveredAt && (
+                      <Typography variant="bodyXs" colorRole="muted" className="mt-1">
+                        Delivered:{' '}
+                        {new Date(order.deliveredAt).toLocaleDateString('en-GB', {
+                          weekday: 'long',
+                          day: '2-digit',
+                          month: 'long',
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                      </Typography>
+                    )}
+                  </div>
                 </div>
+                {/* Delivery Proof Photo */}
+                {order.deliveryPhoto && (
+                  <div className="ml-0 border-t border-fill-success/20 pt-4 sm:ml-16">
+                    <Typography variant="labelSm" colorRole="muted" className="mb-2">
+                      Delivery Proof Photo
+                    </Typography>
+                    <a
+                      href={order.deliveryPhoto}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="group relative inline-block overflow-hidden rounded-lg border border-fill-success/30"
+                    >
+                      <Image
+                        src={order.deliveryPhoto}
+                        alt="Delivery proof"
+                        width={200}
+                        height={150}
+                        className="h-[150px] w-[200px] object-cover transition-transform group-hover:scale-105"
+                      />
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover:bg-black/20">
+                        <IconExternalLink className="h-6 w-6 text-white opacity-0 transition-opacity group-hover:opacity-100" />
+                      </div>
+                    </a>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>

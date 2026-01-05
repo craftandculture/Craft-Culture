@@ -10,10 +10,12 @@ import adminRemoveItem from './controller/adminRemoveItem';
 import adminUpdateItem from './controller/adminUpdateItem';
 import adminUpdateStatus from './controller/adminUpdateStatus';
 import checkLocalStock from './controller/checkLocalStock';
+import distributorConfirmStockReceipt from './controller/distributorConfirmStockReceipt';
 import distributorDashboard from './controller/distributorDashboard';
 import distributorGetMany from './controller/distributorGetMany';
 import distributorGetOne from './controller/distributorGetOne';
 import distributorUpdateStatus from './controller/distributorUpdateStatus';
+import distributorUploadDeliveryPhoto from './controller/distributorUploadDeliveryPhoto';
 import documentsDelete from './controller/documentsDelete';
 import documentsExtract from './controller/documentsExtract';
 import documentsExtractInline from './controller/documentsExtractInline';
@@ -105,6 +107,8 @@ const privateClientOrdersRouter = createTRPCRouter({
   distributorVerification: ordersDistributorVerification,
   distributorPaymentVerification: ordersDistributorPaymentVerification,
   distributorUnlockSuspended: ordersDistributorUnlockSuspended,
+  distributorConfirmStockReceipt,
+  distributorUploadDeliveryPhoto,
 
   // Delivery workflow (distributor)
   logContactAttempt: ordersLogContactAttempt,
