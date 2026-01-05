@@ -58,6 +58,7 @@ const usersAdminImpersonate = adminProcedure
       headersList.get('x-forwarded-for') ?? headersList.get('x-real-ip');
     const userAgent = headersList.get('user-agent');
 
+    // Insert the session directly into the database
     const [newSession] = await db
       .insert(sessions)
       .values({
@@ -77,9 +78,13 @@ const usersAdminImpersonate = adminProcedure
       });
     }
 
-    // Set the session cookie
+    // Set the session cookie - MUST match Better Auth's cookie name exactly
     const cookieStore = await cookies();
-    cookieStore.set(`${clientConfig.cookiePrefix}.session_token`, sessionToken, {
+
+    // Better Auth uses this exact cookie name format
+    const cookieName = `${clientConfig.cookiePrefix}.session_token`;
+
+    cookieStore.set(cookieName, sessionToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
