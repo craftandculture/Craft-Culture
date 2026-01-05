@@ -14,8 +14,9 @@ import { adminProcedure } from '@/lib/trpc/procedures';
 const stockStatusLabels: Record<string, string> = {
   pending: 'Pending',
   confirmed: 'Confirmed',
-  at_cc_bonded: 'At C&C Bonded',
   in_transit_to_cc: 'In Transit to C&C',
+  at_cc_bonded: 'At C&C Bonded',
+  in_transit_to_distributor: 'In Transit to Distributor',
   at_distributor: 'At Distributor',
   delivered: 'Delivered',
 };
@@ -26,8 +27,9 @@ const bulkUpdateStockStatusSchema = z.object({
   stockStatus: z.enum([
     'pending',
     'confirmed',
-    'at_cc_bonded',
     'in_transit_to_cc',
+    'at_cc_bonded',
+    'in_transit_to_distributor',
     'at_distributor',
     'delivered',
   ]),
@@ -160,21 +162,30 @@ const itemsBulkUpdateStockStatus = adminProcedure
       }
     }
 
-    // Notify distributor when stock arrives at C&C or at distributor
+    // Notify distributor when stock is in transit to them, arrives at C&C, or at distributor
     if (
       order.distributorId &&
-      (stockStatus === 'at_cc_bonded' || stockStatus === 'at_distributor')
+      (stockStatus === 'at_cc_bonded' ||
+        stockStatus === 'in_transit_to_distributor' ||
+        stockStatus === 'at_distributor')
     ) {
       const distributorMembersList = await db
         .select({ userId: partnerMembers.userId })
         .from(partnerMembers)
         .where(eq(partnerMembers.partnerId, order.distributorId));
 
+      const notificationTitle =
+        stockStatus === 'at_distributor'
+          ? 'Stock Ready for Pickup'
+          : stockStatus === 'in_transit_to_distributor'
+            ? 'Stock In Transit'
+            : 'Stock Arrived at C&C';
+
       for (const member of distributorMembersList) {
         await createNotification({
           userId: member.userId,
           type: 'status_update',
-          title: stockStatus === 'at_distributor' ? 'Stock Ready for Pickup' : 'Stock Arrived at C&C',
+          title: notificationTitle,
           message: `${items.length} items for order ${orderRef}: ${statusLabel}`,
           entityType: 'private_client_order',
           entityId: orderId,
