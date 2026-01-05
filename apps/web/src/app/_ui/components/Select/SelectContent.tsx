@@ -37,7 +37,7 @@ const { content, viewport } = selectContentStyles();
 const SelectContent = ({
   className,
   children,
-  position,
+  position = 'popper',
   ...props
 }: SelectContentProps) => {
   return (
