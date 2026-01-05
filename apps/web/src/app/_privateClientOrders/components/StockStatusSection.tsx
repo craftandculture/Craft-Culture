@@ -136,7 +136,8 @@ const StockStatusSection = ({ items, className }: StockStatusSectionProps) => {
   // Find the furthest stage any item has reached (for highlighting current stage)
   const getCurrentStageIndex = () => {
     for (let i = stockStages.length - 1; i >= 0; i--) {
-      if (stageCounts[stockStages[i].key] > 0) return i;
+      const stage = stockStages[i];
+      if (stage && (stageCounts[stage.key] ?? 0) > 0) return i;
     }
     return 0;
   };
