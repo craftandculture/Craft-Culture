@@ -1056,11 +1056,7 @@ const DistributorOrderDetailPage = () => {
         <div className="grid gap-4 lg:grid-cols-2">
           <Card>
             <CardContent className="p-4">
-              <PaymentTracker
-                order={order}
-                canConfirmPayments={false}
-                canVerifyPayments={true}
-              />
+              <PaymentTracker order={order} canVerifyPayments={true} />
             </CardContent>
           </Card>
 

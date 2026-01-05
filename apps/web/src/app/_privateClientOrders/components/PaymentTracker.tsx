@@ -41,7 +41,6 @@ interface PaymentTrackerProps {
     | 'partnerPaidAt'
     | 'partnerPaymentReference'
   >;
-  canConfirmPayments?: boolean;
   canVerifyPayments?: boolean;
   onPaymentConfirmed?: () => void;
 }
@@ -144,30 +143,12 @@ const statusConfig: Record<
  */
 const PaymentTracker = ({
   order,
-  canConfirmPayments = false,
   canVerifyPayments = false,
   onPaymentConfirmed,
 }: PaymentTrackerProps) => {
   const trpcClient = useTRPCClient();
   const queryClient = useQueryClient();
   const payments = buildPaymentInfo(order);
-
-  const confirmPaymentMutation = useMutation({
-    mutationFn: async ({ stage }: { stage: PaymentStage }) => {
-      return trpcClient.privateClientOrders.confirmPayment.mutate({
-        orderId: order.id,
-        paymentStage: stage,
-      });
-    },
-    onSuccess: () => {
-      toast.success('Payment confirmed - awaiting distributor verification');
-      void queryClient.invalidateQueries({ queryKey: ['privateClientOrder', order.id] });
-      onPaymentConfirmed?.();
-    },
-    onError: (error) => {
-      toast.error(error.message || 'Failed to confirm payment');
-    },
-  });
 
   const verifyPaymentMutation = useMutation({
     mutationFn: async () => {
@@ -262,29 +243,6 @@ const PaymentTracker = ({
                     <Typography variant="bodyXs" className="mt-2 text-text-brand">
                       Partner confirmed payment received. Awaiting distributor verification.
                     </Typography>
-                  )}
-
-                  {/* Confirm button for awaiting payments (partner) */}
-                  {canConfirmPayments && payment.status === 'awaiting' && (
-                    <div className="mt-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() =>
-                          confirmPaymentMutation.mutate({
-                            stage: payment.stage,
-                          })
-                        }
-                        isDisabled={confirmPaymentMutation.isPending}
-                      >
-                        {confirmPaymentMutation.isPending ? (
-                          <Icon icon={IconLoader2} size="sm" className="animate-spin" />
-                        ) : (
-                          <Icon icon={IconCheck} size="sm" />
-                        )}
-                        Confirm Payment
-                      </Button>
-                    </div>
                   )}
 
                   {/* Verify button for distributor */}
