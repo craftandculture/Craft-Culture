@@ -1,12 +1,12 @@
 import { TRPCError } from '@trpc/server';
 import { eq } from 'drizzle-orm';
-import { cookies, headers } from 'next/headers';
+import { headers } from 'next/headers';
 import { z } from 'zod';
 
 import logAdminActivity from '@/app/_admin/utils/logAdminActivity';
-import clientConfig from '@/client.config';
 import db from '@/database/client';
-import { sessions, users } from '@/database/schema';
+import { users } from '@/database/schema';
+import authServerClient from '@/lib/better-auth/server';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
 const inputSchema = z.object({
@@ -16,8 +16,8 @@ const inputSchema = z.object({
 /**
  * Admin endpoint to impersonate a user
  *
- * Creates a new session for the target user that allows
- * the admin to view the platform as that user.
+ * Uses Better Auth's admin plugin to create a properly signed
+ * impersonation session for the target user.
  */
 const usersAdminImpersonate = adminProcedure
   .input(inputSchema)
@@ -33,7 +33,7 @@ const usersAdminImpersonate = adminProcedure
       });
     }
 
-    // Get the target user
+    // Get the target user for logging
     const [targetUser] = await db
       .select()
       .from(users)
@@ -47,50 +47,23 @@ const usersAdminImpersonate = adminProcedure
       });
     }
 
-    // Generate a unique session token
-    const sessionToken = crypto.randomUUID();
-
-    // Create impersonation session (expires in 1 hour)
-    const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
-
     const headersList = await headers();
     const ipAddress =
       headersList.get('x-forwarded-for') ?? headersList.get('x-real-ip');
     const userAgent = headersList.get('user-agent');
 
-    // Insert the session directly into the database
-    const [newSession] = await db
-      .insert(sessions)
-      .values({
-        userId: targetUser.id,
-        token: sessionToken,
-        expiresAt,
-        ipAddress,
-        userAgent,
-        impersonatedBy: admin.id,
-      })
-      .returning();
+    // Use Better Auth's admin plugin to create impersonation session
+    const result = await authServerClient.api.impersonateUser({
+      body: { userId },
+      headers: headersList,
+    });
 
-    if (!newSession) {
+    if (!result) {
       throw new TRPCError({
         code: 'INTERNAL_SERVER_ERROR',
         message: 'Failed to create impersonation session',
       });
     }
-
-    // Set the session cookie - MUST match Better Auth's cookie name exactly
-    const cookieStore = await cookies();
-
-    // Better Auth uses this exact cookie name format
-    const cookieName = `${clientConfig.cookiePrefix}.session_token`;
-
-    cookieStore.set(cookieName, sessionToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      expires: expiresAt,
-      path: '/',
-    });
 
     // Log the impersonation
     await logAdminActivity({
@@ -104,7 +77,6 @@ const usersAdminImpersonate = adminProcedure
         targetUserId: targetUser.id,
         targetUserEmail: targetUser.email,
         targetUserName: targetUser.name,
-        sessionId: newSession.id,
       },
     });
 

@@ -1,7 +1,7 @@
 import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { nextCookies } from 'better-auth/next-js';
-import { magicLink } from 'better-auth/plugins';
+import { admin, magicLink } from 'better-auth/plugins';
 
 import notifyAdminsOfNewUser from '@/app/_auth/utils/notifyAdminsOfNewUser';
 import clientConfig from '@/client.config';
@@ -19,6 +19,9 @@ const authServerClient = betterAuth({
   basePath: '/api/auth',
   secret: serverConfig.betterAuthSecret,
   plugins: [
+    admin({
+      impersonationSessionDuration: 60 * 60, // 1 hour
+    }),
     magicLink({
       sendMagicLink: async ({ email, token, url }) => {
         if (serverConfig.env !== 'production') {
