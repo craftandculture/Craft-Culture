@@ -48,6 +48,7 @@ import TabsContent from '@/app/_ui/components/Tabs/TabsContent';
 import TabsList from '@/app/_ui/components/Tabs/TabsList';
 import TabsTrigger from '@/app/_ui/components/Tabs/TabsTrigger';
 import Typography from '@/app/_ui/components/Typography/Typography';
+import authBrowserClient from '@/lib/better-auth/browser';
 import useTRPC from '@/lib/trpc/browser';
 
 interface UserDetailViewProps {
@@ -149,18 +150,31 @@ const UserDetailView = ({ userId }: UserDetailViewProps) => {
     }),
   );
 
-  const { mutate: impersonateUser, isPending: isImpersonating } = useMutation(
-    api.users.impersonate.mutationOptions({
-      onSuccess: (result) => {
-        toast.success(`Now viewing as ${result.targetUser.name || result.targetUser.email}`);
-        // Use full page reload to pick up new session cookie
-        globalThis.location.assign('/platform');
-      },
-      onError: (err) => {
-        toast.error(err.message || 'Failed to impersonate user');
-      },
-    }),
-  );
+  // Impersonation - call Better Auth client directly (not through tRPC)
+  // This ensures the session cookie is properly set in the browser
+  const [isImpersonating, setIsImpersonating] = useState(false);
+
+  const handleImpersonate = async (targetUserId: string, targetUserName: string | null, targetUserEmail: string) => {
+    setIsImpersonating(true);
+    try {
+      const result = await authBrowserClient.admin.impersonateUser({
+        userId: targetUserId,
+      });
+
+      if (result.error) {
+        toast.error(result.error.message || 'Failed to impersonate user');
+        return;
+      }
+
+      toast.success(`Now viewing as ${targetUserName || targetUserEmail}`);
+      // Use full page reload to pick up new session cookie
+      globalThis.location.assign('/platform');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to impersonate user');
+    } finally {
+      setIsImpersonating(false);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -308,7 +322,7 @@ const UserDetailView = ({ userId }: UserDetailViewProps) => {
           <Button
             size="sm"
             variant="outline"
-            onClick={() => impersonateUser({ userId: user.id })}
+            onClick={() => handleImpersonate(user.id, user.name, user.email)}
             isDisabled={isImpersonating}
           >
             <ButtonContent iconLeft={IconLogin}>Login as User</ButtonContent>
