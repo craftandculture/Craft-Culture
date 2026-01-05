@@ -61,57 +61,27 @@ const getPaymentStatus = (
       if (status === 'awaiting_payment_verification') {
         return 'awaiting_verification';
       }
-      if (order.clientPaidAt) return 'paid';
-      if (
-        status === 'awaiting_client_payment' ||
-        status === 'cc_approved'
-      ) {
+      // Only show as paid if we have the timestamp AND we're past the payment stages
+      if (order.clientPaidAt && !['awaiting_client_payment', 'awaiting_payment_verification'].includes(status)) {
+        return 'paid';
+      }
+      if (status === 'awaiting_client_payment') {
         return 'awaiting';
       }
-      if (['submitted', 'under_cc_review', 'revision_requested'].includes(status)) {
-        return 'pending';
-      }
-      return 'paid';
+      // All other statuses before payment = pending
+      return 'pending';
 
     case 'distributor':
       if (order.distributorPaidAt) return 'paid';
       if (status === 'awaiting_distributor_payment') return 'awaiting';
-      if (
-        [
-          'draft',
-          'submitted',
-          'under_cc_review',
-          'revision_requested',
-          'cc_approved',
-          'awaiting_client_payment',
-          'awaiting_payment_verification',
-          'client_paid',
-        ].includes(status)
-      ) {
-        return 'pending';
-      }
-      return 'paid';
+      // All other statuses = pending (distributor payment comes late in workflow)
+      return 'pending';
 
     case 'partner':
       if (order.partnerPaidAt) return 'paid';
       if (status === 'awaiting_partner_payment') return 'awaiting';
-      if (
-        [
-          'draft',
-          'submitted',
-          'under_cc_review',
-          'revision_requested',
-          'cc_approved',
-          'awaiting_client_payment',
-          'awaiting_payment_verification',
-          'client_paid',
-          'awaiting_distributor_payment',
-          'distributor_paid',
-        ].includes(status)
-      ) {
-        return 'pending';
-      }
-      return 'paid';
+      // All other statuses = pending (partner payment is last in workflow)
+      return 'pending';
 
     default:
       return 'pending';
