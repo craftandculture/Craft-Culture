@@ -22,6 +22,8 @@ const BrandedFooter = ({ customerType }: BrandedFooterProps) => {
   const latestVersion = versions[0]?.version ?? '1.0.0';
 
   const isB2C = customerType === 'b2c';
+  const isPartner = customerType === 'private_clients';
+  const supportHref = isPartner ? '/platform/partner/support' : '/platform/support';
 
   return (
     <footer className="border-border-primary mt-auto border-t bg-fill-secondary/30">
@@ -77,10 +79,10 @@ const BrandedFooter = ({ customerType }: BrandedFooterProps) => {
             <h3 className="text-text-primary text-sm font-semibold">Support</h3>
             <nav className="flex flex-col space-y-1.5">
               <Link
-                href="/platform/support"
+                href={supportHref}
                 className="text-text-muted hover:text-text-primary text-xs transition-colors"
               >
-                Support
+                Help Center
               </Link>
               <Link
                 href="/platform/development-log"
