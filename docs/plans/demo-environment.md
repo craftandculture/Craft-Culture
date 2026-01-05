@@ -1,7 +1,17 @@
-# Demo Environment Setup Plan
+# Staging Environment Setup Plan
 
 > **Status:** Planning
-> **Goal:** Set up isolated demo/staging environment to test changes before production
+> **Goal:** Set up isolated staging environment to test changes before production
+
+---
+
+## Decisions Made
+
+| Question | Decision |
+|----------|----------|
+| **Domain** | `staging.craftculture.xyz` |
+| **Email** | Separate Loops test account |
+| **Data Refresh** | Regular (weekly sync from prod) |
 
 ---
 
@@ -11,7 +21,7 @@
 |-----------|------------|-------|
 | **Vercel** | craftculture.xyz | Single project, deploys from `main` |
 | **Neon DB** | `main` branch | Project: `little-river-49556671` |
-| **Email** | Loops.so | Single API key |
+| **Email** | Loops.so | Production API key |
 | **Errors** | Sentry | Single DSN |
 
 ---
@@ -31,7 +41,7 @@
                     │     VERCEL      │          │     VERCEL      │
                     │   Production    │          │     Staging     │
                     │                 │          │                 │
-                    │ craftculture.xyz│          │ demo.craftculture.xyz
+                    │ craftculture.xyz│          │ staging.craftculture.xyz
                     └────────┬────────┘          └────────┬────────┘
                              │                            │
                              ▼                            ▼
@@ -70,9 +80,9 @@
 **Option A: Separate Project** (Recommended)
 | Step | Action | Details |
 |------|--------|---------|
-| 2.1 | Create new Vercel project | Name: `craft-culture-demo` |
+| 2.1 | Create new Vercel project | Name: `craft-culture-staging` |
 | 2.2 | Connect to same repo | Deploy from `staging` branch |
-| 2.3 | Add custom domain | `demo.craftculture.xyz` |
+| 2.3 | Add custom domain | `staging.craftculture.xyz` |
 | 2.4 | Configure env vars | Point to staging database |
 
 **Option B: Preview Deployments + Branch**
@@ -95,8 +105,8 @@
 | `DB_URL` | **New value** | Staging branch connection string |
 | `BETTER_AUTH_SECRET` | **New value** | Generate new: `openssl rand -base64 32` |
 | `ENCRYPTION_KEY` | **New value** | Generate new: `openssl rand -base64 32` |
-| `LOOPS_API_KEY` | **Same or new** | Same key works, or create test key |
-| `NEXT_PUBLIC_APP_URL` | **New value** | `https://demo.craftculture.xyz` |
+| `LOOPS_API_KEY` | **New value** | Separate test account API key |
+| `NEXT_PUBLIC_APP_URL` | **New value** | `https://staging.craftculture.xyz` |
 | `SENTRY_DSN` | **Same or new** | Can use same, filter by environment |
 | `NODE_ENV` | `preview` | Distinguish from production |
 
@@ -108,14 +118,15 @@
 
 | Service | Action Required | Notes |
 |---------|-----------------|-------|
-| **Loops.so** | Optional | Same API key works; emails send normally |
+| **Loops.so** | **Create test account** | Separate account for staging emails |
 | **Sentry** | Optional | Add `environment: staging` tag |
 | **Trigger.dev** | Consider | May want separate project to avoid duplicate jobs |
 
-**Loops consideration:** Magic link emails will still send. Options:
-1. Use same key (emails work, but go to real addresses)
-2. Create test account in Loops (recommended for heavy testing)
-3. Use email interception service like Mailpit for local
+**Loops setup:**
+1. Create new Loops account for staging (e.g., staging@craftculture.xyz)
+2. Duplicate email templates from production account
+3. Use staging API key in staging environment
+4. Emails go to real addresses but from staging account (can track separately)
 
 ---
 
@@ -123,7 +134,7 @@
 
 | Record | Type | Value |
 |--------|------|-------|
-| `demo.craftculture.xyz` | CNAME | `cname.vercel-dns.com` |
+| `staging.craftculture.xyz` | CNAME | `cname.vercel-dns.com` |
 
 Configure in your domain registrar (wherever craftculture.xyz DNS is managed).
 
@@ -138,10 +149,10 @@ Configure in your domain registrar (wherever craftculture.xyz DNS is managed).
 │                           DEVELOPMENT WORKFLOW                               │
 └─────────────────────────────────────────────────────────────────────────────┘
 
-     LOCAL                    DEMO/STAGING                   PRODUCTION
+     LOCAL                       STAGING                      PRODUCTION
   ┌──────────┐              ┌──────────────┐              ┌──────────────┐
   │          │              │              │              │              │
-  │  Your    │   push to    │    demo.     │  merge to    │ craftculture │
+  │  Your    │   push to    │   staging.   │  merge to    │ craftculture │
   │ Machine  │ ──────────►  │ craftculture │ ──────────►  │    .xyz      │
   │          │   staging    │    .xyz      │    main      │              │
   │          │              │              │              │              │
@@ -159,8 +170,8 @@ Configure in your domain registrar (wherever craftculture.xyz DNS is managed).
 |------|-------------|--------------|-------------|
 | 1 | Develop feature locally | Code on your machine | Local |
 | 2 | Test locally | Run `pnpm dev` | localhost:3000 |
-| 3 | Push to `staging` branch | Vercel auto-deploys | demo.craftculture.xyz |
-| 4 | Test on demo site | Verify with staging data | Staging DB |
+| 3 | Push to `staging` branch | Vercel auto-deploys | staging.craftculture.xyz |
+| 4 | Test on staging site | Verify with staging data | Staging DB |
 | 5 | Fix issues if needed | Repeat steps 1-4 | — |
 | 6 | Merge `staging` → `main` | Vercel auto-deploys | craftculture.xyz |
 | 7 | Verify in production | Quick smoke test | Production |
@@ -181,7 +192,7 @@ git commit -m "feat: add new feature"
 git checkout staging
 git merge feature/my-feature
 git push origin staging
-# → Auto-deploys to demo.craftculture.xyz
+# → Auto-deploys to staging.craftculture.xyz
 
 # After testing, promote to production
 git checkout main
@@ -235,13 +246,19 @@ For everything else → **always go through staging first**.
 - Staging branch starts as copy of production
 - All users, orders, products copied
 
-### Ongoing Options
+### Ongoing Data Sync (Weekly)
 
-| Strategy | Command | Use Case |
-|----------|---------|----------|
-| **Reset to prod** | Neon: Reset from parent | Fresh copy of prod data |
-| **Keep staging data** | Do nothing | Accumulate test data |
-| **Periodic refresh** | Reset weekly/monthly | Balance of both |
+| Day | Action | How |
+|-----|--------|-----|
+| **Monday** | Reset staging DB from prod | Neon: Reset from parent |
+| **Tues-Fri** | Accumulate test data | Normal development |
+| **Weekend** | Leave as-is | No action needed |
+
+**To reset staging database:**
+1. Go to Neon Console → Project → Branches
+2. Select `staging` branch
+3. Click "Reset from parent"
+4. Confirm (takes ~30 seconds)
 
 ### Test Accounts
 Consider creating dedicated test accounts:
@@ -277,22 +294,24 @@ No impact on production.
 
 - [ ] Create Neon `staging` branch
 - [ ] Get staging DB connection string
+- [ ] Create Loops test account
+- [ ] Duplicate email templates in Loops
 - [ ] Create Vercel staging project
 - [ ] Configure staging environment variables
-- [ ] Add `demo.craftculture.xyz` domain
+- [ ] Add `staging.craftculture.xyz` domain
 - [ ] Configure DNS CNAME record
-- [ ] Test authentication flow
+- [ ] Test authentication flow (magic link emails)
 - [ ] Test database operations
 - [ ] Create test user accounts
 - [ ] Document staging URLs for team
+- [ ] Set up weekly DB refresh reminder
 
 ---
 
-## Questions to Decide
+## Remaining Decisions
 
-1. **Domain:** `demo.craftculture.xyz` or `staging.craftculture.xyz`?
-2. **Email:** Use same Loops key or create test account?
-3. **Data refresh:** How often to reset staging from prod?
-4. **Access:** Should staging require password protection?
-5. **Trigger.dev:** Share jobs or separate project?
+| Question | Options | Recommendation |
+|----------|---------|----------------|
+| **Staging password protection** | Yes / No | Optional - adds friction but prevents accidental use |
+| **Trigger.dev** | Share / Separate | Separate recommended to avoid duplicate jobs |
 
