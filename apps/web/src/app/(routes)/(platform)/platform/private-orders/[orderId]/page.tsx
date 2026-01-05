@@ -6,12 +6,14 @@ import {
   IconBuilding,
   IconCalendar,
   IconCheck,
+  IconChevronDown,
   IconDownload,
   IconExternalLink,
   IconFile,
   IconFileInvoice,
   IconLoader2,
   IconPhone,
+  IconPhoto,
   IconQuestionMark,
   IconTruck,
   IconX,
@@ -80,6 +82,7 @@ const PrivateOrderDetailPage = () => {
   const trpcClient = useTRPCClient();
   const queryClient = useQueryClient();
   const [currency, setCurrency] = useState<Currency>('USD');
+  const [isDeliveredExpanded, setIsDeliveredExpanded] = useState(true);
 
   // Fetch order details
   const { data: order, isLoading, refetch } = useQuery({
@@ -652,61 +655,124 @@ const PrivateOrderDetailPage = () => {
         {/* Delivered - shown when order has been delivered */}
         {order.status === 'delivered' && (
           <Card className="border-2 border-fill-success/50 bg-fill-success/5">
-            <CardContent className="p-6">
-              <div className="flex flex-col gap-4">
-                <div className="flex flex-col items-center gap-4 text-center sm:flex-row sm:text-left">
-                  <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-fill-success/20">
-                    <Icon icon={IconCheck} size="lg" className="text-fill-success" />
+            <CardContent className="p-0">
+              {/* Collapsible Header */}
+              <button
+                type="button"
+                onClick={() => setIsDeliveredExpanded(!isDeliveredExpanded)}
+                className="flex w-full items-center justify-between p-4 text-left hover:bg-fill-success/5"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-fill-success/20">
+                    <Icon icon={IconCheck} size="md" className="text-fill-success" />
                   </div>
-                  <div className="flex-1">
-                    <Typography variant="headingSm" className="mb-1">
+                  <div>
+                    <Typography variant="headingSm" className="mb-0.5">
                       Order Delivered
                     </Typography>
-                    <Typography variant="bodySm" colorRole="muted">
-                      Your client&apos;s order has been successfully delivered.
-                    </Typography>
-                    {order.deliveredAt && (
-                      <Typography variant="bodyXs" colorRole="muted" className="mt-1">
-                        Delivered:{' '}
-                        {new Date(order.deliveredAt).toLocaleDateString('en-GB', {
-                          weekday: 'long',
-                          day: '2-digit',
-                          month: 'long',
-                          year: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })}
-                      </Typography>
-                    )}
+                    <div className="flex flex-wrap items-center gap-2 text-xs text-text-muted">
+                      <span className="inline-flex items-center gap-1 rounded-full bg-fill-success/20 px-2 py-0.5 text-fill-success">
+                        <IconCheck size={12} /> Delivered
+                      </span>
+                      {order.deliveryPhoto && (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-fill-success/20 px-2 py-0.5 text-fill-success">
+                          <IconCheck size={12} /> Proof of Delivery
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
-                {/* Proof of Delivery */}
-                {order.deliveryPhoto && (
-                  <div className="ml-0 border-t border-fill-success/20 pt-4 sm:ml-16">
-                    <Typography variant="labelSm" colorRole="muted" className="mb-2">
-                      Proof of Delivery
-                    </Typography>
-                    <a
-                      href={order.deliveryPhoto}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="group relative inline-block overflow-hidden rounded-lg border border-fill-success/30"
-                    >
-                      <Image
-                        src={order.deliveryPhoto}
-                        alt="Proof of delivery"
-                        width={200}
-                        height={150}
-                        className="h-[150px] w-[200px] object-cover transition-transform group-hover:scale-105"
-                        unoptimized
-                      />
-                      <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover:bg-black/20">
-                        <IconExternalLink className="h-6 w-6 text-white opacity-0 transition-opacity group-hover:opacity-100" />
+                <Icon
+                  icon={IconChevronDown}
+                  size="md"
+                  className={`text-text-muted transition-transform ${isDeliveredExpanded ? 'rotate-180' : ''}`}
+                />
+              </button>
+
+              {/* Collapsible Content */}
+              {isDeliveredExpanded && (
+                <div className="border-t border-fill-success/20 p-4 pt-4">
+                  <div className="space-y-4">
+                    {/* Delivery Confirmation */}
+                    <div className="flex flex-col gap-3 rounded-lg bg-background-primary/50 p-4 sm:flex-row sm:items-start sm:justify-between">
+                      <div className="flex items-start gap-3">
+                        <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-fill-success/20">
+                          <Icon icon={IconCheck} size="sm" className="text-fill-success" />
+                        </div>
+                        <div>
+                          <Typography variant="labelMd" className="mb-0.5">
+                            Successfully Delivered
+                          </Typography>
+                          <Typography variant="bodyXs" colorRole="muted">
+                            Your client&apos;s order has been successfully delivered.
+                          </Typography>
+                          {order.deliveredAt && (
+                            <Typography variant="bodyXs" colorRole="muted" className="mt-1">
+                              {new Date(order.deliveredAt).toLocaleDateString('en-GB', {
+                                weekday: 'long',
+                                day: '2-digit',
+                                month: 'long',
+                                year: 'numeric',
+                              })}{' '}
+                              at{' '}
+                              {new Date(order.deliveredAt).toLocaleTimeString('en-GB', {
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              })}
+                            </Typography>
+                          )}
+                        </div>
                       </div>
-                    </a>
+                    </div>
+
+                    {/* Proof of Delivery */}
+                    <div className="flex flex-col gap-3 rounded-lg bg-background-primary/50 p-4 sm:flex-row sm:items-start sm:justify-between">
+                      <div className="flex items-start gap-3">
+                        <div className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full ${
+                          order.deliveryPhoto ? 'bg-fill-success/20' : 'bg-fill-muted'
+                        }`}>
+                          <Icon
+                            icon={order.deliveryPhoto ? IconCheck : IconPhoto}
+                            size="sm"
+                            className={order.deliveryPhoto ? 'text-fill-success' : 'text-text-muted'}
+                          />
+                        </div>
+                        <div>
+                          <Typography variant="labelMd" className="mb-0.5">
+                            Proof of Delivery
+                          </Typography>
+                          <Typography variant="bodyXs" colorRole="muted">
+                            {order.deliveryPhoto
+                              ? 'Photo uploaded by distributor'
+                              : 'No delivery photo available'}
+                          </Typography>
+                        </div>
+                      </div>
+
+                      {order.deliveryPhoto && (
+                        <a
+                          href={order.deliveryPhoto}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="group relative overflow-hidden rounded-lg border border-border-muted"
+                        >
+                          <Image
+                            src={order.deliveryPhoto}
+                            alt="Proof of delivery"
+                            width={120}
+                            height={80}
+                            className="h-[80px] w-[120px] object-cover transition-transform group-hover:scale-105"
+                            unoptimized
+                          />
+                          <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover:bg-black/30">
+                            <IconExternalLink className="h-5 w-5 text-white opacity-0 transition-opacity group-hover:opacity-100" />
+                          </div>
+                        </a>
+                      )}
+                    </div>
                   </div>
-                )}
-              </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         )}

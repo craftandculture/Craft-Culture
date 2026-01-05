@@ -29,7 +29,7 @@ export interface DeliveryPhotoUploadProps {
 }
 
 /**
- * Delivery Photo Upload component for distributors
+ * Proof of Delivery Upload component for distributors
  *
  * Allows distributors to upload proof of delivery photos.
  * Shows after delivery is complete or during out_for_delivery status.
@@ -143,10 +143,11 @@ const DeliveryPhotoUpload = ({
           </button>
           <Image
             src={displayUrl}
-            alt="Delivery proof"
+            alt="Proof of delivery"
             width={1200}
             height={800}
             className="max-h-[90vh] max-w-[90vw] rounded-lg object-contain"
+            unoptimized
           />
         </div>
       )}
@@ -196,11 +197,11 @@ const DeliveryPhotoUpload = ({
             {/* Content */}
             <div className="flex-1">
               <Typography variant="headingSm" className="mb-1">
-                {hasPhoto ? 'Delivery Photo Uploaded' : 'Upload Delivery Proof'}
+                {hasPhoto ? 'Proof of Delivery Uploaded' : 'Upload Proof of Delivery'}
               </Typography>
               <Typography variant="bodySm" colorRole="muted">
                 {hasPhoto
-                  ? 'Photo proof of delivery is on file. You can upload a new photo to replace it.'
+                  ? 'Proof of delivery photo is on file. You can upload a new photo to replace it.'
                   : 'Upload a photo showing the package at the delivery location (e.g., on doorstep with ID visible).'}
               </Typography>
 
@@ -214,10 +215,11 @@ const DeliveryPhotoUpload = ({
                   >
                     <Image
                       src={displayUrl}
-                      alt="Delivery proof"
+                      alt="Proof of delivery"
                       width={120}
                       height={90}
                       className="h-[90px] w-[120px] object-cover transition-transform group-hover:scale-105"
+                      unoptimized
                     />
                     <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover:bg-black/20">
                       <IconPhoto className="h-6 w-6 text-white opacity-0 transition-opacity group-hover:opacity-100" />
