@@ -21,6 +21,7 @@ const statusConfig: Record<OrderStatus, StatusConfig> = {
   awaiting_distributor_verification: { label: 'Awaiting Distributor Verification', colorRole: 'warning' },
   verification_suspended: { label: 'Verification Suspended', colorRole: 'danger' },
   awaiting_client_payment: { label: 'Awaiting Payment', colorRole: 'warning' },
+  awaiting_payment_verification: { label: 'Awaiting Payment Verification', colorRole: 'brand' },
   client_paid: { label: 'Client Paid', colorRole: 'success' },
   scheduling_delivery: { label: 'Scheduling Delivery', colorRole: 'brand' },
   delivery_scheduled: { label: 'Delivery Scheduled', colorRole: 'brand' },

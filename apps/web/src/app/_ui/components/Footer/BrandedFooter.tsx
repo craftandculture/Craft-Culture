@@ -5,6 +5,7 @@ import parseChangelog from '@/utils/parseChangelog';
 
 export interface BrandedFooterProps {
   customerType: 'b2b' | 'b2c' | 'private_clients';
+  partnerType?: 'wine_partner' | 'distributor' | null;
 }
 
 /**
@@ -16,14 +17,22 @@ export interface BrandedFooterProps {
  * @param props - The footer props including customerType
  * @returns The branded footer
  */
-const BrandedFooter = ({ customerType }: BrandedFooterProps) => {
+const BrandedFooter = ({ customerType, partnerType }: BrandedFooterProps) => {
   const currentYear = new Date().getFullYear();
   const versions = parseChangelog();
   const latestVersion = versions[0]?.version ?? '1.0.0';
 
   const isB2C = customerType === 'b2c';
-  const isPartner = customerType === 'private_clients';
-  const supportHref = isPartner ? '/platform/partner/support' : '/platform/support';
+  const isWinePartner = customerType === 'private_clients' && partnerType === 'wine_partner';
+  const isDistributor = customerType === 'b2b' || partnerType === 'distributor';
+
+  // Route to appropriate support page based on user type
+  const getSupportHref = () => {
+    if (isWinePartner) return '/platform/partner/support';
+    if (isDistributor) return '/platform/distributor/support';
+    return '/platform/support';
+  };
+  const supportHref = getSupportHref();
 
   return (
     <footer className="border-border-primary mt-auto border-t bg-fill-secondary/30">

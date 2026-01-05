@@ -26,7 +26,7 @@ interface PaymentInfo {
   paidAt: Date | null;
   confirmedBy: string | null;
   reference: string | null;
-  status: 'pending' | 'awaiting' | 'paid' | 'confirmed';
+  status: 'pending' | 'awaiting' | 'awaiting_verification' | 'paid' | 'confirmed';
 }
 
 interface PaymentTrackerProps {
@@ -42,6 +42,7 @@ interface PaymentTrackerProps {
     | 'partnerPaymentReference'
   >;
   canConfirmPayments?: boolean;
+  canVerifyPayments?: boolean;
   onPaymentConfirmed?: () => void;
 }
 
@@ -56,6 +57,10 @@ const getPaymentStatus = (
 
   switch (stage) {
     case 'client':
+      // If payment is confirmed by partner but awaiting distributor verification
+      if (status === 'awaiting_payment_verification') {
+        return 'awaiting_verification';
+      }
       if (order.clientPaidAt) return 'paid';
       if (
         status === 'awaiting_client_payment' ||
@@ -79,6 +84,7 @@ const getPaymentStatus = (
           'revision_requested',
           'cc_approved',
           'awaiting_client_payment',
+          'awaiting_payment_verification',
           'client_paid',
         ].includes(status)
       ) {
@@ -97,6 +103,7 @@ const getPaymentStatus = (
           'revision_requested',
           'cc_approved',
           'awaiting_client_payment',
+          'awaiting_payment_verification',
           'client_paid',
           'awaiting_distributor_payment',
           'distributor_paid',
@@ -152,6 +159,7 @@ const statusConfig: Record<
 > = {
   pending: { icon: IconCircleDashed, colorRole: 'muted', label: 'Pending' },
   awaiting: { icon: IconClock, colorRole: 'warning', label: 'Awaiting' },
+  awaiting_verification: { icon: IconClock, colorRole: 'brand', label: 'Awaiting Verification' },
   paid: { icon: IconCheck, colorRole: 'success', label: 'Paid' },
   confirmed: { icon: IconCheck, colorRole: 'success', label: 'Confirmed' },
 };
@@ -167,6 +175,7 @@ const statusConfig: Record<
 const PaymentTracker = ({
   order,
   canConfirmPayments = false,
+  canVerifyPayments = false,
   onPaymentConfirmed,
 }: PaymentTrackerProps) => {
   const trpcClient = useTRPCClient();
@@ -181,12 +190,28 @@ const PaymentTracker = ({
       });
     },
     onSuccess: () => {
-      toast.success('Payment confirmed');
+      toast.success('Payment confirmed - awaiting distributor verification');
       void queryClient.invalidateQueries({ queryKey: ['privateClientOrder', order.id] });
       onPaymentConfirmed?.();
     },
     onError: (error) => {
       toast.error(error.message || 'Failed to confirm payment');
+    },
+  });
+
+  const verifyPaymentMutation = useMutation({
+    mutationFn: async () => {
+      return trpcClient.privateClientOrders.distributorPaymentVerification.mutate({
+        orderId: order.id,
+      });
+    },
+    onSuccess: () => {
+      toast.success('Payment verified - delivery scheduling can begin');
+      void queryClient.invalidateQueries({ queryKey: ['privateClientOrder', order.id] });
+      onPaymentConfirmed?.();
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to verify payment');
     },
   });
 
@@ -212,7 +237,9 @@ const PaymentTracker = ({
                       ? 'bg-fill-success'
                       : payment.status === 'awaiting'
                         ? 'bg-fill-warning'
-                        : 'bg-fill-muted'
+                        : payment.status === 'awaiting_verification'
+                          ? 'bg-fill-brand'
+                          : 'bg-fill-muted'
                   }`}
                 >
                   <Icon
@@ -224,7 +251,9 @@ const PaymentTracker = ({
                         ? 'text-text-on-fill'
                         : payment.status === 'awaiting'
                           ? 'text-text-warning'
-                          : ''
+                          : payment.status === 'awaiting_verification'
+                            ? 'text-text-on-fill'
+                            : ''
                     }
                   />
                 </div>
@@ -247,7 +276,7 @@ const PaymentTracker = ({
                     <div className="mt-2 flex flex-wrap items-center gap-3">
                       {payment.paidAt && (
                         <Typography variant="bodyXs" colorRole="muted">
-                          Paid: {format(payment.paidAt, 'MMM d, yyyy HH:mm')}
+                          Confirmed: {format(payment.paidAt, 'MMM d, yyyy HH:mm')}
                         </Typography>
                       )}
                       {payment.reference && (
@@ -258,7 +287,14 @@ const PaymentTracker = ({
                     </div>
                   )}
 
-                  {/* Confirm button for awaiting payments */}
+                  {/* Message for awaiting verification status */}
+                  {payment.status === 'awaiting_verification' && (
+                    <Typography variant="bodyXs" className="mt-2 text-text-brand">
+                      Partner confirmed payment received. Awaiting distributor verification.
+                    </Typography>
+                  )}
+
+                  {/* Confirm button for awaiting payments (partner) */}
                   {canConfirmPayments && payment.status === 'awaiting' && (
                     <div className="mt-2">
                       <Button
@@ -277,6 +313,26 @@ const PaymentTracker = ({
                           <Icon icon={IconCheck} size="sm" />
                         )}
                         Confirm Payment
+                      </Button>
+                    </div>
+                  )}
+
+                  {/* Verify button for distributor */}
+                  {canVerifyPayments && payment.status === 'awaiting_verification' && (
+                    <div className="mt-2">
+                      <Button
+                        variant="default"
+                        colorRole="brand"
+                        size="sm"
+                        onClick={() => verifyPaymentMutation.mutate()}
+                        isDisabled={verifyPaymentMutation.isPending}
+                      >
+                        {verifyPaymentMutation.isPending ? (
+                          <Icon icon={IconLoader2} size="sm" className="animate-spin" />
+                        ) : (
+                          <Icon icon={IconCheck} size="sm" />
+                        )}
+                        Verify Payment & Schedule Delivery
                       </Button>
                     </div>
                   )}

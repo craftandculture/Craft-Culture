@@ -494,7 +494,7 @@ const PartnerSupportPage = () => {
           {/* Products */}
           <HelpSection id="products" icon={IconPackage} title="Products & Catalog">
             <Typography variant="bodySm" colorRole="muted" className="leading-relaxed">
-              Your product catalog syncs from CultX. Here is how to manage it:
+              Your product catalog is managed by Craft & Culture. Here is how to work with it:
             </Typography>
 
             <div className="mt-4 space-y-3">

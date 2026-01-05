@@ -75,11 +75,17 @@ const PlatformMobileNav = ({ user }: PlatformMobileNavProps) => {
   // Support section - route to appropriate support page based on user type
   const isWinePartner =
     user.customerType === 'private_clients' && user.partner?.type === 'wine_partner';
-  const supportHref = isWinePartner ? '/platform/partner/support' : '/platform/support';
+  const isDistributor = user.customerType === 'b2b' || user.partner?.type === 'distributor';
+
+  const getSupportHref = () => {
+    if (isWinePartner) return '/platform/partner/support';
+    if (isDistributor) return '/platform/distributor/support';
+    return '/platform/support';
+  };
 
   sections.push({
     title: 'Help',
-    links: [{ href: supportHref, label: 'Support' }],
+    links: [{ href: getSupportHref(), label: 'Support' }],
   });
 
   return <MobileNav sections={sections} />;

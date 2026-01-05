@@ -31,6 +31,7 @@ import ordersApproveRevisions from './controller/ordersApproveRevisions';
 import ordersAssignDistributor from './controller/ordersAssignDistributor';
 import ordersCancel from './controller/ordersCancel';
 import ordersCreate from './controller/ordersCreate';
+import ordersDistributorPaymentVerification from './controller/ordersDistributorPaymentVerification';
 import ordersDistributorUnlockSuspended from './controller/ordersDistributorUnlockSuspended';
 import ordersDistributorVerification from './controller/ordersDistributorVerification';
 import ordersGetMany from './controller/ordersGetMany';
@@ -102,6 +103,7 @@ const privateClientOrdersRouter = createTRPCRouter({
   distributorGetOne,
   distributorUpdateStatus,
   distributorVerification: ordersDistributorVerification,
+  distributorPaymentVerification: ordersDistributorPaymentVerification,
   distributorUnlockSuspended: ordersDistributorUnlockSuspended,
 
   // Delivery workflow (distributor)
