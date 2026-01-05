@@ -16,8 +16,8 @@ import Icon from '@/app/_ui/components/Icon/Icon';
 import Typography from '@/app/_ui/components/Typography/Typography';
 
 import DistributorHelpNavigation from './DistributorHelpNavigation';
-import FAQAccordion from '../../../support/FAQAccordion';
-import HelpSection from '../../../support/HelpSection';
+import FAQAccordion from '../../support/FAQAccordion';
+import HelpSection from '../../support/HelpSection';
 
 const faqItems = [
   {
