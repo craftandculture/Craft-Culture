@@ -1059,6 +1059,7 @@ const DistributorOrderDetailPage = () => {
               <PaymentTracker
                 order={order}
                 canConfirmPayments={false}
+                canVerifyPayments={true}
               />
             </CardContent>
           </Card>

@@ -2,8 +2,13 @@ import { TRPCError } from '@trpc/server';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 
+import createNotification from '@/app/_notifications/utils/createNotification';
 import db from '@/database/client';
-import { partnerMembers, privateClientOrders } from '@/database/schema';
+import {
+  partnerMembers,
+  privateClientOrderActivityLogs,
+  privateClientOrders,
+} from '@/database/schema';
 import { protectedProcedure } from '@/lib/trpc/procedures';
 
 const confirmPaymentSchema = z.object({
@@ -96,7 +101,8 @@ const paymentsConfirm = protectedProcedure.input(confirmPaymentSchema).mutation(
       if (reference) {
         updateData.clientPaymentReference = reference;
       }
-      updateData.status = 'client_paid';
+      // Partner confirms payment received - now needs distributor verification
+      updateData.status = 'awaiting_payment_verification';
       break;
 
     case 'distributor':
@@ -136,6 +142,48 @@ const paymentsConfirm = protectedProcedure.input(confirmPaymentSchema).mutation(
     .set(updateData)
     .where(eq(privateClientOrders.id, orderId))
     .returning();
+
+  // Log activity and send notifications for client payment confirmation
+  if (paymentStage === 'client' && updatedOrder) {
+    // Log the activity
+    await db.insert(privateClientOrderActivityLogs).values({
+      orderId,
+      userId: user.id,
+      partnerId: order.partnerId,
+      action: 'payment_confirmed_by_partner',
+      previousStatus: order.status,
+      newStatus: 'awaiting_payment_verification',
+      notes: 'Partner confirmed client payment received. Awaiting distributor verification.',
+    });
+
+    // Get partner name for notification
+    const partner = order.partnerId
+      ? await db.query.partners.findFirst({
+          where: { id: order.partnerId },
+          columns: { businessName: true },
+        })
+      : null;
+
+    // Notify distributor members to verify the payment
+    if (order.distributorId) {
+      const distributorMembers = await db
+        .select({ userId: partnerMembers.userId })
+        .from(partnerMembers)
+        .where(eq(partnerMembers.partnerId, order.distributorId));
+
+      for (const member of distributorMembers) {
+        await createNotification({
+          userId: member.userId,
+          type: 'action_required',
+          title: 'Payment Verification Required',
+          message: `${partner?.businessName ?? 'Partner'} confirmed client payment for order ${updatedOrder.orderNumber}. Please verify and schedule delivery.`,
+          entityType: 'private_client_order',
+          entityId: orderId,
+          actionUrl: `/platform/distributor/orders/${orderId}`,
+        });
+      }
+    }
+  }
 
   return updatedOrder;
 });

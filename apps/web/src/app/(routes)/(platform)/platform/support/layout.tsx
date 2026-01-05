@@ -27,12 +27,11 @@ const SupportLayout = async ({ children }: React.PropsWithChildren) => {
     redirect('/platform/partner/support');
   }
 
-  // Redirect distributors to distributor support (when available)
+  // Redirect distributors to distributor support
   const isDistributor = user.customerType === 'b2b' || user.partner?.type === 'distributor';
 
   if (isDistributor) {
-    // TODO: Create distributor support page
-    // For now, allow access to general support
+    redirect('/platform/distributor/support');
   }
 
   return <>{children}</>;

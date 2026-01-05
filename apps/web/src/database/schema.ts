@@ -870,6 +870,7 @@ export const privateClientOrderStatus = pgEnum('private_client_order_status', [
   'verification_suspended', // Verification failed - partner needs to resolve
   // Payment flow
   'awaiting_client_payment', // Distributor collecting payment from client
+  'awaiting_payment_verification', // Partner confirmed payment, awaiting distributor verification
   'client_paid', // Client paid, distributor raises PO to C&C
   'awaiting_distributor_payment',
   'distributor_paid',
@@ -1044,6 +1045,14 @@ export const privateClientOrders = pgTable(
       { onDelete: 'set null' },
     ),
     clientPaymentReference: text('client_payment_reference'),
+
+    // Distributor payment verification (after partner confirms client payment)
+    distributorPaymentVerifiedAt: timestamp('distributor_payment_verified_at', {
+      mode: 'date',
+    }),
+    distributorPaymentVerifiedBy: uuid(
+      'distributor_payment_verified_by',
+    ).references(() => users.id, { onDelete: 'set null' }),
 
     distributorPaidAt: timestamp('distributor_paid_at', { mode: 'date' }),
     distributorPaymentConfirmedBy: uuid(

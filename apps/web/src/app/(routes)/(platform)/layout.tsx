@@ -178,7 +178,7 @@ const PlatformLayout = async ({ children }: React.PropsWithChildren) => {
         </div>
       </header>
       <div className="flex-1">{children}</div>
-      <BrandedFooter customerType={user.customerType} />
+      <BrandedFooter customerType={user.customerType} partnerType={user.partner?.type as 'wine_partner' | 'distributor' | undefined} />
     </div>
   );
 };
