@@ -275,151 +275,146 @@ const StockIdentificationSection = ({ order, onApproved }: StockIdentificationSe
           </table>
         </div>
 
-        {/* Pricing Type Selection */}
-        <div className="mb-4 rounded-lg border border-border-muted p-3">
-          <div className="mb-2 flex items-center gap-2">
-            <Icon icon={IconCurrencyDollar} size="sm" className="text-text-muted" />
-            <Typography variant="headingXs">Pricing Model</Typography>
-          </div>
-
-          <div className="mb-3 flex gap-2">
-            <button
-              type="button"
-              onClick={() => setPricingType('standard')}
-              className={`flex-1 rounded-md border px-3 py-2 text-xs font-medium transition-colors ${
-                pricingType === 'standard'
-                  ? 'border-fill-brand bg-fill-brand/10 text-fill-brand'
-                  : 'border-border-muted text-text-muted hover:bg-surface-muted'
-              }`}
-            >
-              Standard
-            </button>
-            <button
-              type="button"
-              onClick={() => setPricingType('bespoke')}
-              className={`flex-1 rounded-md border px-3 py-2 text-xs font-medium transition-colors ${
-                pricingType === 'bespoke'
-                  ? 'border-fill-brand bg-fill-brand/10 text-fill-brand'
-                  : 'border-border-muted text-text-muted hover:bg-surface-muted'
-              }`}
-            >
-              Bespoke
-            </button>
-          </div>
-
-          {pricingType === 'bespoke' && (
-            <div className="grid grid-cols-2 gap-2 rounded-md bg-surface-muted/50 p-2 md:grid-cols-5">
-              <div>
-                <label className="mb-1 block text-[10px] font-medium text-text-muted">
-                  C&C Margin %
-                </label>
-                <Input
-                  type="number"
-                  step="0.1"
-                  value={bespokePricing.ccMarginPercent}
-                  onChange={(e) => updateBespokePricing('ccMarginPercent', parseFloat(e.target.value))}
-                  className="h-7 text-xs"
-                />
-              </div>
-              <div>
-                <label className="mb-1 block text-[10px] font-medium text-text-muted">
-                  Import Duty %
-                </label>
-                <Input
-                  type="number"
-                  step="0.1"
-                  value={bespokePricing.importDutyPercent}
-                  onChange={(e) => updateBespokePricing('importDutyPercent', parseFloat(e.target.value))}
-                  className="h-7 text-xs"
-                />
-              </div>
-              <div>
-                <label className="mb-1 block text-[10px] font-medium text-text-muted">
-                  Transfer %
-                </label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={bespokePricing.transferCostPercent}
-                  onChange={(e) => updateBespokePricing('transferCostPercent', parseFloat(e.target.value))}
-                  className="h-7 text-xs"
-                />
-              </div>
-              <div>
-                <label className="mb-1 block text-[10px] font-medium text-text-muted">
-                  Distributor %
-                </label>
-                <Input
-                  type="number"
-                  step="0.1"
-                  value={bespokePricing.distributorMarginPercent}
-                  onChange={(e) => updateBespokePricing('distributorMarginPercent', parseFloat(e.target.value))}
-                  className="h-7 text-xs"
-                />
-              </div>
-              <div>
-                <label className="mb-1 block text-[10px] font-medium text-text-muted">
-                  VAT %
-                </label>
-                <Input
-                  type="number"
-                  step="0.1"
-                  value={bespokePricing.vatPercent}
-                  onChange={(e) => updateBespokePricing('vatPercent', parseFloat(e.target.value))}
-                  className="h-7 text-xs"
-                />
-              </div>
+        {/* Footer: Pricing + Warnings + Action */}
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border-muted pt-3">
+          {/* Left: Pricing toggle + Warnings */}
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Pricing Model Toggle - Compact inline */}
+            <div className="flex items-center gap-1.5 rounded-lg border border-border-muted bg-surface-secondary/50 p-0.5">
+              <button
+                type="button"
+                onClick={() => setPricingType('standard')}
+                className={`rounded-md px-2.5 py-1 text-xs font-medium transition-all ${
+                  pricingType === 'standard'
+                    ? 'bg-background-primary text-text-primary shadow-sm'
+                    : 'text-text-muted hover:text-text-primary'
+                }`}
+              >
+                Standard
+              </button>
+              <button
+                type="button"
+                onClick={() => setPricingType('bespoke')}
+                className={`rounded-md px-2.5 py-1 text-xs font-medium transition-all ${
+                  pricingType === 'bespoke'
+                    ? 'bg-fill-warning text-white shadow-sm'
+                    : 'text-text-muted hover:text-text-primary'
+                }`}
+              >
+                Bespoke
+              </button>
             </div>
-          )}
-        </div>
 
-        {/* Validation warnings */}
-        {!allItemsHaveSource && (
-          <div className="mb-3 flex items-center gap-2 rounded-md bg-fill-warning/10 px-3 py-2 text-xs text-text-warning">
-            <Icon icon={IconAlertCircle} size="xs" />
-            Please select a source for all items
-          </div>
-        )}
-        {sourcedItemsMissingEta.length > 0 && (
-          <div className="mb-3 flex items-center gap-2 rounded-md bg-fill-warning/10 px-3 py-2 text-xs text-text-warning">
-            <Icon icon={IconAlertCircle} size="xs" />
-            {sourcedItemsMissingEta.length} sourced item(s) need ETA dates
-          </div>
-        )}
+            {/* Validation warnings - inline */}
+            {!allItemsHaveSource && (
+              <span className="flex items-center gap-1 text-xs text-text-warning">
+                <Icon icon={IconAlertCircle} size="xs" />
+                Select source for all items
+              </span>
+            )}
+            {sourcedItemsMissingEta.length > 0 && (
+              <span className="flex items-center gap-1 text-xs text-text-warning">
+                <Icon icon={IconAlertCircle} size="xs" />
+                {sourcedItemsMissingEta.length} need ETA
+              </span>
+            )}
 
-        {/* Footer with ETA summary and approve button */}
-        <div className="flex items-center justify-between border-t border-border-muted pt-3">
-          <div>
+            {/* ETA summary */}
             {latestEta && (
-              <Typography variant="bodySm" colorRole="muted">
-                Estimated delivery: <span className="font-medium text-text-primary">{format(latestEta, 'MMM d, yyyy')}</span>
-              </Typography>
+              <span className="text-xs text-text-muted">
+                Est. delivery: <span className="font-medium text-text-primary">{format(latestEta, 'MMM d')}</span>
+              </span>
             )}
-            {!latestEta && localItems.length === items.length && (
-              <Typography variant="bodySm" className="text-text-success">
-                All items in stock - ready for immediate dispatch
-              </Typography>
+            {!latestEta && localItems.length === items.length && allItemsHaveSource && (
+              <span className="text-xs text-text-success">Ready for dispatch</span>
             )}
           </div>
 
+          {/* Right: Approve button */}
           <Button
             onClick={() => approveOrder()}
             disabled={!canApprove || isApproving}
             colorRole="brand"
+            size="sm"
           >
             {isApproving ? (
               <>
-                <Icon icon={IconLoader2} size="sm" className="animate-spin" />
-                <span className="ml-2">Approving...</span>
+                <Icon icon={IconLoader2} size="xs" className="animate-spin" />
+                Approving...
               </>
             ) : (
               <>
-                <Icon icon={IconCheck} size="sm" />
-                <span className="ml-2">Approve Order</span>
+                <Icon icon={IconCheck} size="xs" />
+                Approve
               </>
             )}
           </Button>
         </div>
+
+        {/* Bespoke pricing inputs - expandable below */}
+        {pricingType === 'bespoke' && (
+          <div className="mt-3 flex flex-wrap items-end gap-2 rounded-lg border border-fill-warning/30 bg-fill-warning/5 p-2">
+            <div className="flex items-center gap-1">
+              <Icon icon={IconCurrencyDollar} size="xs" className="text-fill-warning" />
+              <span className="text-[10px] font-medium text-text-muted">Bespoke:</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <label className="text-[10px] text-text-muted">C&C</label>
+              <Input
+                type="number"
+                step="0.1"
+                value={bespokePricing.ccMarginPercent}
+                onChange={(e) => updateBespokePricing('ccMarginPercent', parseFloat(e.target.value))}
+                className="h-6 w-14 text-center text-xs"
+              />
+              <span className="text-[10px] text-text-muted">%</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <label className="text-[10px] text-text-muted">Duty</label>
+              <Input
+                type="number"
+                step="0.1"
+                value={bespokePricing.importDutyPercent}
+                onChange={(e) => updateBespokePricing('importDutyPercent', parseFloat(e.target.value))}
+                className="h-6 w-14 text-center text-xs"
+              />
+              <span className="text-[10px] text-text-muted">%</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <label className="text-[10px] text-text-muted">Transfer</label>
+              <Input
+                type="number"
+                step="0.01"
+                value={bespokePricing.transferCostPercent}
+                onChange={(e) => updateBespokePricing('transferCostPercent', parseFloat(e.target.value))}
+                className="h-6 w-14 text-center text-xs"
+              />
+              <span className="text-[10px] text-text-muted">%</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <label className="text-[10px] text-text-muted">Dist.</label>
+              <Input
+                type="number"
+                step="0.1"
+                value={bespokePricing.distributorMarginPercent}
+                onChange={(e) => updateBespokePricing('distributorMarginPercent', parseFloat(e.target.value))}
+                className="h-6 w-14 text-center text-xs"
+              />
+              <span className="text-[10px] text-text-muted">%</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <label className="text-[10px] text-text-muted">VAT</label>
+              <Input
+                type="number"
+                step="0.1"
+                value={bespokePricing.vatPercent}
+                onChange={(e) => updateBespokePricing('vatPercent', parseFloat(e.target.value))}
+                className="h-6 w-14 text-center text-xs"
+              />
+              <span className="text-[10px] text-text-muted">%</span>
+            </div>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
