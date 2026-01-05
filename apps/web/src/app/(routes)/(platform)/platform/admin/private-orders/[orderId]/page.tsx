@@ -7,6 +7,7 @@ import {
   IconCheck,
   IconEdit,
   IconLoader2,
+  IconPhoto,
   IconRefresh,
   IconTrash,
   IconTruck,
@@ -125,6 +126,7 @@ const AdminPrivateOrderDetailPage = () => {
   const [editingItem, setEditingItem] = useState<EditingItem | null>(null);
   const [currency, setCurrency] = useState<Currency>('USD');
   const [resetTarget, setResetTarget] = useState<ResetTargetStatus>('awaiting_distributor_verification');
+  const [showDeliveryPhoto, setShowDeliveryPhoto] = useState(false);
 
   // Fetch order details
   const {
@@ -895,6 +897,70 @@ const AdminPrivateOrderDetailPage = () => {
               </div>
             </CardContent>
           </Card>
+        )}
+
+        {/* Delivery Photo - show when available */}
+        {order.deliveryPhoto && (
+          <>
+            {/* Full Image Modal */}
+            {showDeliveryPhoto && (
+              <div
+                className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
+                onClick={() => setShowDeliveryPhoto(false)}
+              >
+                <button
+                  className="absolute right-4 top-4 rounded-full bg-white/10 p-2 text-white hover:bg-white/20"
+                  onClick={() => setShowDeliveryPhoto(false)}
+                >
+                  <IconX size={24} />
+                </button>
+                <Image
+                  src={order.deliveryPhoto}
+                  alt="Delivery proof"
+                  width={1200}
+                  height={800}
+                  className="max-h-[90vh] max-w-[90vw] rounded-lg object-contain"
+                />
+              </div>
+            )}
+
+            <Card className="border-2 border-fill-success/50 bg-fill-success/5">
+              <CardContent className="p-4">
+                <div className="flex items-start gap-4">
+                  <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-fill-success/20">
+                    <Icon icon={IconPhoto} size="md" className="text-fill-success" />
+                  </div>
+                  <div className="flex-1">
+                    <Typography variant="headingSm" className="mb-1">
+                      Delivery Photo
+                    </Typography>
+                    <Typography variant="bodySm" colorRole="muted" className="mb-3">
+                      Proof of delivery uploaded by distributor
+                    </Typography>
+                    <button
+                      type="button"
+                      onClick={() => setShowDeliveryPhoto(true)}
+                      className="group relative overflow-hidden rounded-lg border border-border-muted"
+                    >
+                      <Image
+                        src={order.deliveryPhoto}
+                        alt="Delivery proof"
+                        width={200}
+                        height={150}
+                        className="h-[150px] w-[200px] object-cover transition-transform group-hover:scale-105"
+                      />
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover:bg-black/20">
+                        <IconPhoto className="h-6 w-6 text-white opacity-0 transition-opacity group-hover:opacity-100" />
+                      </div>
+                    </button>
+                    <Typography variant="bodyXs" colorRole="muted" className="mt-2">
+                      Click to view full size
+                    </Typography>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </>
         )}
       </div>
     </div>
