@@ -15,19 +15,28 @@ interface PlatformMobileNavProps {
  */
 const PlatformMobileNav = ({ user }: PlatformMobileNavProps) => {
   const sections = [];
+  const isWinePartner = user.customerType === 'private_clients' && user.partner?.type === 'wine_partner';
 
-  // Quotes section - always shown
-  const quotesLinks = [
-    { href: '/platform/quotes', label: 'Create Quote' },
-    { href: '/platform/my-quotes', label: 'My Quotes' },
-  ];
-  if (user.role === 'admin') {
-    quotesLinks.push({ href: '/platform/admin/quote-approvals', label: 'Approvals' });
+  // Local Stock section - for Wine Partners only (replaces Quotes)
+  if (isWinePartner) {
+    sections.push({
+      title: 'Inventory',
+      links: [{ href: '/platform/local-stock', label: 'Local Stock' }],
+    });
+  } else {
+    // Quotes section - for non-wine partners
+    const quotesLinks = [
+      { href: '/platform/quotes', label: 'Create Quote' },
+      { href: '/platform/my-quotes', label: 'My Quotes' },
+    ];
+    if (user.role === 'admin') {
+      quotesLinks.push({ href: '/platform/admin/quote-approvals', label: 'Approvals' });
+    }
+    sections.push({ title: 'Quotes', links: quotesLinks });
   }
-  sections.push({ title: 'Quotes', links: quotesLinks });
 
   // Private Clients section - for Wine Partners
-  if (user.customerType === 'private_clients' && user.partner?.type === 'wine_partner') {
+  if (isWinePartner) {
     sections.push({
       title: 'Private Clients',
       links: [{ href: '/platform/private-orders', label: 'My Orders' }],
@@ -73,8 +82,6 @@ const PlatformMobileNav = ({ user }: PlatformMobileNavProps) => {
   }
 
   // Support section - route to appropriate support page based on user type
-  const isWinePartner =
-    user.customerType === 'private_clients' && user.partner?.type === 'wine_partner';
   const isDistributor = user.customerType === 'b2b' || user.partner?.type === 'distributor';
 
   const getSupportHref = () => {
