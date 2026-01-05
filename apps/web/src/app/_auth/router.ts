@@ -8,6 +8,7 @@ import usersActivateTestUser from './controllers/usersActivateTestUser';
 import usersAdminChangeEmail from './controllers/usersAdminChangeEmail';
 import usersAdminCreate from './controllers/usersAdminCreate';
 import usersAdminGetOne from './controllers/usersAdminGetOne';
+import usersAdminImpersonate from './controllers/usersAdminImpersonate';
 import usersAdminUpdate from './controllers/usersAdminUpdate';
 import usersApprove from './controllers/usersApprove';
 import usersAssignPartner from './controllers/usersAssignPartner';
@@ -18,6 +19,7 @@ import usersGetPartnerMembership from './controllers/usersGetPartnerMembership';
 import usersGetPendingCount from './controllers/usersGetPendingCount';
 import usersReject from './controllers/usersReject';
 import usersRemovePartner from './controllers/usersRemovePartner';
+import usersStopImpersonate from './controllers/usersStopImpersonate';
 import usersUpdate from './controllers/usersUpdate';
 
 const usersRouter = createTRPCRouter({
@@ -42,6 +44,9 @@ const usersRouter = createTRPCRouter({
   removePartner: usersRemovePartner,
   getDistributors: partnersGetDistributors,
   getWinePartners: partnersGetWinePartners,
+  // Impersonation
+  impersonate: usersAdminImpersonate,
+  stopImpersonate: usersStopImpersonate,
 });
 
 export default usersRouter;
