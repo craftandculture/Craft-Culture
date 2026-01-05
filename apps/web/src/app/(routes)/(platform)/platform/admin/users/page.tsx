@@ -877,8 +877,8 @@ const UserManagementPage = () => {
     api.users.impersonate.mutationOptions({
       onSuccess: (data) => {
         toast.success(`Now viewing as ${data.targetUser.name || data.targetUser.email}`);
-        router.push('/platform');
-        router.refresh();
+        // Use full page reload to pick up new session cookie
+        globalThis.location.assign('/platform');
       },
       onError: (error) => {
         toast.error(error.message || 'Failed to impersonate user');

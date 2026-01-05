@@ -153,8 +153,8 @@ const UserDetailView = ({ userId }: UserDetailViewProps) => {
     api.users.impersonate.mutationOptions({
       onSuccess: (result) => {
         toast.success(`Now viewing as ${result.targetUser.name || result.targetUser.email}`);
-        router.push('/platform');
-        router.refresh();
+        // Use full page reload to pick up new session cookie
+        globalThis.location.assign('/platform');
       },
       onError: (err) => {
         toast.error(err.message || 'Failed to impersonate user');
