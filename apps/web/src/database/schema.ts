@@ -106,6 +106,7 @@ export const users = pgTable('users', {
   role: userRole('role').notNull().default('user'),
   customerType: customerType('customer_type').notNull().default('b2c'),
   isRetailPartner: boolean('is_retail_partner').notNull().default(false),
+  isTestUser: boolean('is_test_user').notNull().default(false),
   companyName: text('company_name'),
   companyLogo: text('company_logo'),
   companyAddress: text('company_address'),

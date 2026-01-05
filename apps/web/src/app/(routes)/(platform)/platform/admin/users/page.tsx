@@ -8,6 +8,7 @@ import {
   IconRefresh,
   IconSearch,
   IconTrash,
+  IconUserCheck,
   IconX,
 } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -54,6 +55,7 @@ interface UserToEdit {
   customerType: 'b2b' | 'b2c' | 'private_clients';
   role: 'user' | 'admin';
   approvalStatus: 'pending' | 'approved' | 'rejected';
+  isTestUser?: boolean;
 }
 
 /**
@@ -316,6 +318,7 @@ const UserCreateDialog = ({
   const [approvalStatus, setApprovalStatus] = useState<'pending' | 'approved' | 'rejected'>(
     'approved',
   );
+  const [isTestUser, setIsTestUser] = useState(false);
 
   const resetForm = () => {
     setEmail('');
@@ -323,12 +326,17 @@ const UserCreateDialog = ({
     setCustomerType('private_clients');
     setRole('user');
     setApprovalStatus('approved');
+    setIsTestUser(false);
   };
 
   const { mutate: createUser, isPending } = useMutation(
     api.users.adminCreate.mutationOptions({
       onSuccess: () => {
-        toast.success('User created successfully');
+        toast.success(
+          isTestUser
+            ? 'Test user created successfully. Activate them later to assign an email.'
+            : 'User created successfully',
+        );
         onOpenChange(false);
         resetForm();
         onSuccess();
@@ -342,11 +350,12 @@ const UserCreateDialog = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     createUser({
-      email,
+      email: isTestUser ? undefined : email,
       name,
       customerType,
       role,
       approvalStatus,
+      isTestUser,
     });
   };
 
@@ -356,24 +365,51 @@ const UserCreateDialog = ({
         <DialogHeader>
           <DialogTitle>Create New User</DialogTitle>
           <DialogDescription>
-            Create a user directly without requiring them to register. They can sign in using magic
-            link.
+            {isTestUser
+              ? 'Create a test user without an email. They cannot sign in until activated with a real email.'
+              : 'Create a user directly without requiring them to register. They can sign in using magic link.'}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Typography variant="bodySm" className="font-medium">
-              Email
-            </Typography>
-            <Input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="user@example.com"
-              required
+          {/* Test User Toggle */}
+          <div className="flex items-center gap-3 rounded-lg border border-border-muted p-3">
+            <input
+              type="checkbox"
+              id="isTestUser"
+              checked={isTestUser}
+              onChange={(e) => {
+                setIsTestUser(e.target.checked);
+                if (e.target.checked) {
+                  setEmail('');
+                }
+              }}
+              className="h-4 w-4 rounded border-gray-300"
             />
+            <div>
+              <Typography variant="bodySm" className="font-medium">
+                Create as Test User
+              </Typography>
+              <Typography variant="bodyXs" className="text-text-muted">
+                Test users cannot sign in until activated with a real email
+              </Typography>
+            </div>
           </div>
+
+          {!isTestUser && (
+            <div className="space-y-2">
+              <Typography variant="bodySm" className="font-medium">
+                Email
+              </Typography>
+              <Input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="user@example.com"
+                required={!isTestUser}
+              />
+            </div>
+          )}
 
           <div className="space-y-2">
             <Typography variant="bodySm" className="font-medium">
@@ -450,8 +486,108 @@ const UserCreateDialog = ({
             >
               <ButtonContent>Cancel</ButtonContent>
             </Button>
-            <Button type="submit" colorRole="brand" isDisabled={isPending || !email || !name}>
-              <ButtonContent>{isPending ? 'Creating...' : 'Create User'}</ButtonContent>
+            <Button
+              type="submit"
+              colorRole="brand"
+              isDisabled={isPending || (!isTestUser && !email) || !name}
+            >
+              <ButtonContent>
+                {isPending ? 'Creating...' : isTestUser ? 'Create Test User' : 'Create User'}
+              </ButtonContent>
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+/**
+ * Dialog component for activating a test user by assigning a real email
+ */
+const ActivateTestUserDialog = ({
+  user,
+  open,
+  onOpenChange,
+  onSuccess,
+}: {
+  user: { id: string; name: string | null } | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSuccess: () => void;
+}) => {
+  const api = useTRPC();
+  const [email, setEmail] = useState('');
+
+  // Reset form when dialog closes
+  useEffect(() => {
+    if (!open) {
+      setEmail('');
+    }
+  }, [open]);
+
+  const { mutate: activateTestUser, isPending } = useMutation(
+    api.users.activateTestUser.mutationOptions({
+      onSuccess: (result) => {
+        toast.success(result.message);
+        onOpenChange(false);
+        onSuccess();
+      },
+      onError: (error) => {
+        toast.error(error.message || 'Failed to activate test user');
+      },
+    }),
+  );
+
+  if (!user) return null;
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    activateTestUser({
+      userId: user.id,
+      email: email.trim(),
+    });
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Activate Test User</DialogTitle>
+          <DialogDescription>
+            Assign a real email address to <strong>{user.name}</strong> so they can sign in using
+            magic link.
+          </DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Typography variant="bodySm" className="font-medium">
+              Email Address
+            </Typography>
+            <Input
+              id="activateEmail"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="user@example.com"
+              required
+            />
+            <Typography variant="bodyXs" className="text-text-muted">
+              The user will be able to sign in with this email using magic link
+            </Typography>
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              isDisabled={isPending}
+            >
+              <ButtonContent>Cancel</ButtonContent>
+            </Button>
+            <Button type="submit" colorRole="brand" isDisabled={isPending || !email.trim()}>
+              <ButtonContent>{isPending ? 'Activating...' : 'Activate User'}</ButtonContent>
             </Button>
           </DialogFooter>
         </form>
@@ -681,6 +817,11 @@ const UserManagementPage = () => {
   const [editingUser, setEditingUser] = useState<UserToEdit | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [activateUser, setActivateUser] = useState<{
+    id: string;
+    name: string | null;
+  } | null>(null);
+  const [activateDialogOpen, setActivateDialogOpen] = useState(false);
 
   // Fetch users
   const { data, isLoading, refetch, isFetching } = useQuery({
@@ -757,6 +898,12 @@ const UserManagementPage = () => {
         return null;
     }
   };
+
+  const getTestBadge = () => (
+    <span className="bg-purple-100 text-purple-700 border border-purple-300 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-700 inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium">
+      Test
+    </span>
+  );
 
   const getCustomerTypeLabel = (type: string) => {
     switch (type) {
@@ -944,15 +1091,18 @@ const UserManagementPage = () => {
                       >
                         <td className="px-6 py-4">
                           <div className="flex flex-col">
-                            <Link
-                              href={`/platform/admin/users/${user.id}`}
-                              className="font-medium hover:text-text-brand hover:underline"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              {user.name}
-                            </Link>
+                            <div className="flex items-center gap-2">
+                              <Link
+                                href={`/platform/admin/users/${user.id}`}
+                                className="font-medium hover:text-text-brand hover:underline"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                {user.name}
+                              </Link>
+                              {user.isTestUser && getTestBadge()}
+                            </div>
                             <Typography variant="bodyXs" className="text-text-muted">
-                              {user.email}
+                              {user.isTestUser ? 'No email assigned' : user.email}
                             </Typography>
                           </div>
                         </td>
@@ -1029,6 +1179,20 @@ const UserManagementPage = () => {
                                 <ButtonContent iconLeft={IconCheck}>Approve</ButtonContent>
                               </Button>
                             )}
+                            {user.isTestUser && (
+                              <Button
+                                size="sm"
+                                variant="default"
+                                colorRole="brand"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setActivateUser({ id: user.id, name: user.name });
+                                  setActivateDialogOpen(true);
+                                }}
+                              >
+                                <ButtonContent iconLeft={IconUserCheck}>Activate</ButtonContent>
+                              </Button>
+                            )}
                             <Button
                               size="sm"
                               variant="outline"
@@ -1103,11 +1267,14 @@ const UserManagementPage = () => {
                   <div key={user.id} className="space-y-3 p-4">
                     <div className="flex items-start justify-between">
                       <div>
-                        <Typography variant="bodySm" className="font-medium">
-                          {user.name}
-                        </Typography>
+                        <div className="flex items-center gap-2">
+                          <Typography variant="bodySm" className="font-medium">
+                            {user.name}
+                          </Typography>
+                          {user.isTestUser && getTestBadge()}
+                        </div>
                         <Typography variant="bodyXs" className="text-text-muted">
-                          {user.email}
+                          {user.isTestUser ? 'No email assigned' : user.email}
                         </Typography>
                       </div>
                       {getStatusBadge(user.approvalStatus)}
@@ -1129,6 +1296,20 @@ const UserManagementPage = () => {
                     </div>
 
                     <div className="space-y-2">
+                      {user.isTestUser && (
+                        <Button
+                          size="sm"
+                          variant="default"
+                          colorRole="brand"
+                          onClick={() => {
+                            setActivateUser({ id: user.id, name: user.name });
+                            setActivateDialogOpen(true);
+                          }}
+                          className="w-full"
+                        >
+                          <ButtonContent iconLeft={IconUserCheck}>Activate</ButtonContent>
+                        </Button>
+                      )}
                       {user.approvalStatus === 'pending' && (
                         <div className="flex gap-2">
                           <Button
@@ -1241,6 +1422,19 @@ const UserManagementPage = () => {
         <UserCreateDialog
           open={createDialogOpen}
           onOpenChange={setCreateDialogOpen}
+          onSuccess={() => {
+            void refetch();
+          }}
+        />
+
+        {/* Activate Test User Dialog */}
+        <ActivateTestUserDialog
+          user={activateUser}
+          open={activateDialogOpen}
+          onOpenChange={(open) => {
+            setActivateDialogOpen(open);
+            if (!open) setActivateUser(null);
+          }}
           onSuccess={() => {
             void refetch();
           }}

@@ -69,6 +69,7 @@ const usersGetPaginated = adminProcedure
         approvalStatus: users.approvalStatus,
         approvedAt: users.approvedAt,
         approvedBy: users.approvedBy,
+        isTestUser: users.isTestUser,
         createdAt: users.createdAt,
         onboardingCompletedAt: users.onboardingCompletedAt,
         lastLogin: lastLoginSubquery.lastLogin,
