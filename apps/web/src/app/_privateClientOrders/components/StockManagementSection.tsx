@@ -54,6 +54,8 @@ export interface StockManagementSectionProps {
   items: LineItem[];
   onUpdated?: () => void;
   className?: string;
+  /** Statuses to exclude from selection (e.g., 'at_distributor' for admin - distributor action only) */
+  excludeStatuses?: StockStatus[];
 }
 
 const stockStatusOptions: { value: StockStatus; label: string; icon: React.ReactNode }[] = [
@@ -85,12 +87,21 @@ const StockManagementSection = ({
   items,
   onUpdated,
   className,
+  excludeStatuses = [],
 }: StockManagementSectionProps) => {
   const api = useTRPC();
   const queryClient = useQueryClient();
   const [expandedItem, setExpandedItem] = useState<string | null>(null);
   const [editingNotes, setEditingNotes] = useState<Record<string, string>>({});
   const [editingETA, setEditingETA] = useState<Record<string, string>>({});
+
+  // Filter out excluded statuses
+  const filteredStatusOptions = stockStatusOptions.filter(
+    (opt) => !excludeStatuses.includes(opt.value),
+  );
+  const filteredBulkOptions = bulkStatusOptions.filter(
+    (opt) => !excludeStatuses.includes(opt.value),
+  );
 
   // Update single item stock status (admin only)
   const updateStockStatusMutation = useMutation(
@@ -218,7 +229,7 @@ const StockManagementSection = ({
           <Typography variant="labelSm" colorRole="muted" className="mr-2 self-center">
             Bulk Actions:
           </Typography>
-          {bulkStatusOptions.map((opt) => (
+          {filteredBulkOptions.map((opt) => (
             <Button
               key={opt.value}
               variant="outline"
@@ -296,7 +307,7 @@ const StockManagementSection = ({
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            {stockStatusOptions.map((opt) => (
+                            {filteredStatusOptions.map((opt) => (
                               <SelectItem key={opt.value} value={opt.value}>
                                 <div className="flex items-center gap-2">
                                   {opt.icon}

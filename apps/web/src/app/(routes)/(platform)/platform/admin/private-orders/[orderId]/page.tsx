@@ -28,7 +28,7 @@ import DocumentUpload from '@/app/_privateClientOrders/components/DocumentUpload
 import PaymentTracker from '@/app/_privateClientOrders/components/PaymentTracker';
 import PrivateOrderStatusBadge from '@/app/_privateClientOrders/components/PrivateOrderStatusBadge';
 import StockIdentificationSection from '@/app/_privateClientOrders/components/StockIdentificationSection';
-import StockStatusSection from '@/app/_privateClientOrders/components/StockStatusSection';
+import StockManagementSection from '@/app/_privateClientOrders/components/StockManagementSection';
 import WorkflowStepper from '@/app/_privateClientOrders/components/WorkflowStepper';
 import Button from '@/app/_ui/components/Button/Button';
 import Card from '@/app/_ui/components/Card/Card';
@@ -687,13 +687,14 @@ const AdminPrivateOrderDetailPage = () => {
           </CardContent>
         </Card>
 
-        {/* Stock Status - Read-only view for admin (distributor manages stock flow) */}
+        {/* Stock Management - Admin can update statuses except "at_distributor" (distributor action) */}
         {order.items &&
           order.items.length > 0 &&
           !['draft', 'submitted', 'under_cc_review', 'revision_requested', 'cancelled'].includes(
             order.status,
           ) && (
-            <StockStatusSection
+            <StockManagementSection
+              orderId={orderId}
               items={order.items.map((item) => ({
                 id: item.id,
                 productName: item.productName,
@@ -703,7 +704,10 @@ const AdminPrivateOrderDetailPage = () => {
                 stockStatus: item.stockStatus,
                 stockExpectedAt: item.stockExpectedAt,
                 stockConfirmedAt: item.stockConfirmedAt,
+                stockNotes: item.stockNotes,
               }))}
+              onUpdated={() => void refetch()}
+              excludeStatuses={['at_distributor']}
             />
           )}
 
