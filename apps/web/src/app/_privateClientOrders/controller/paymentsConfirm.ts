@@ -9,7 +9,7 @@ import { protectedProcedure } from '@/lib/trpc/procedures';
 const confirmPaymentSchema = z.object({
   orderId: z.string().uuid(),
   paymentStage: z.enum(['client', 'distributor', 'partner']),
-  reference: z.string().min(1, 'Payment reference is required'),
+  reference: z.string().optional(),
 });
 
 /**
@@ -93,7 +93,9 @@ const paymentsConfirm = protectedProcedure.input(confirmPaymentSchema).mutation(
       }
       updateData.clientPaidAt = now;
       updateData.clientPaymentConfirmedBy = user.id;
-      updateData.clientPaymentReference = reference;
+      if (reference) {
+        updateData.clientPaymentReference = reference;
+      }
       updateData.status = 'client_paid';
       break;
 
@@ -106,7 +108,9 @@ const paymentsConfirm = protectedProcedure.input(confirmPaymentSchema).mutation(
       }
       updateData.distributorPaidAt = now;
       updateData.distributorPaymentConfirmedBy = user.id;
-      updateData.distributorPaymentReference = reference;
+      if (reference) {
+        updateData.distributorPaymentReference = reference;
+      }
       updateData.status = 'distributor_paid';
       break;
 
@@ -119,7 +123,9 @@ const paymentsConfirm = protectedProcedure.input(confirmPaymentSchema).mutation(
       }
       updateData.partnerPaidAt = now;
       updateData.partnerPaymentConfirmedBy = user.id;
-      updateData.partnerPaymentReference = reference;
+      if (reference) {
+        updateData.partnerPaymentReference = reference;
+      }
       updateData.status = 'partner_paid';
       break;
   }
