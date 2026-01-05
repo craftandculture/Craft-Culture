@@ -12,7 +12,7 @@ Next.js application for the Craft & Culture platform. Helps wine and spirits bra
 - tRPC for type-safe APIs
 - Trigger.dev for background jobs
 - Sentry error tracking
-- CultX API integration for wine products
+- Wine product catalog management
 
 ## Getting Started
 
@@ -21,7 +21,7 @@ Next.js application for the Craft & Culture platform. Helps wine and spirits bra
 - Node.js 18+
 - pnpm 9+
 - PostgreSQL database (Neon recommended)
-- CultX API credentials
+- Product API credentials (if syncing externally)
 
 ### Installation
 

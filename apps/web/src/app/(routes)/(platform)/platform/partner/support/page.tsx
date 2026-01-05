@@ -63,7 +63,7 @@ const faqItems = [
   {
     question: 'How do I add products to my catalog?',
     answer:
-      'Products are synced from CultX. Contact C&C to add new products, update existing listings, or remove discontinued items.',
+      'Your catalog is managed by C&C. Contact us to add new products, update existing listings, or remove discontinued items.',
   },
   {
     question: 'Do I contact the client directly?',

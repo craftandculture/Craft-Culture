@@ -6,7 +6,7 @@ Managing your wine listings on the platform.
 
 ## Your Product Catalog
 
-Your products are synced from the CultX trading platform. Each product shows:
+Your product catalog is managed by Craft & Culture. Each product shows:
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
@@ -158,7 +158,7 @@ Need a wine not in your catalog?
 
 ## Product Sync
 
-Your catalog is synced from CultX:
+Your catalog updates automatically:
 - Prices update automatically
 - New products appear when listed
 - Stock status reflects availability

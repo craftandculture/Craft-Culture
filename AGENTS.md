@@ -6,7 +6,7 @@ This document provides instructions for AI agents (LLMs) working on the Craft & 
 
 Craft & Culture is a B2B/B2C web application helping wine and spirits brands succeed in GCC markets. The platform features:
 
-- **Product management** - Syncing wine products from CultX trading platform
+- **Product management** - Wine product catalog and inventory management
 - **Quote generation** - Creating quotes with multiple line items
 - **Custom pricing models** - Spreadsheet-like pricing formulas
 - **User management** - Magic link authentication with B2B/B2C customer types
