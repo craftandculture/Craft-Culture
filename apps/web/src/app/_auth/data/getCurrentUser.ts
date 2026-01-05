@@ -29,6 +29,17 @@ const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
     return null;
   }
 
+  // Get the full user from database (session.user only has Better Auth fields)
+  const [fullUser] = await db
+    .select()
+    .from(users)
+    .where(eq(users.id, session.user.id))
+    .limit(1);
+
+  if (!fullUser) {
+    return null;
+  }
+
   // Check if this is an impersonation session
   const cookieStore = await cookies();
   const sessionToken = cookieStore.get(
@@ -71,13 +82,13 @@ const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
   }
 
   return {
-    ...session.user,
-    firstName: parse(session.user.name).first,
-    lastName: parse(session.user.name).last,
+    ...fullUser,
+    firstName: parse(fullUser.name).first,
+    lastName: parse(fullUser.name).last,
     isImpersonated,
     impersonatedBy,
     impersonatingAdmin,
-  } as CurrentUser;
+  };
 });
 
 export default getCurrentUser;
