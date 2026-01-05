@@ -129,22 +129,103 @@ Configure in your domain registrar (wherever craftculture.xyz DNS is managed).
 
 ---
 
-## Workflow After Setup
+## Development Workflow
+
+### Overview
 
 ```
-Developer Workflow:
-───────────────────
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           DEVELOPMENT WORKFLOW                               │
+└─────────────────────────────────────────────────────────────────────────────┘
 
-1. Work on feature branch locally
-   └── Test against local DB or staging DB
-
-2. Push to staging branch
-   └── Auto-deploys to demo.craftculture.xyz
-   └── Test with real-ish data
-
-3. Merge staging → main
-   └── Auto-deploys to craftculture.xyz (production)
+     LOCAL                    DEMO/STAGING                   PRODUCTION
+  ┌──────────┐              ┌──────────────┐              ┌──────────────┐
+  │          │              │              │              │              │
+  │  Your    │   push to    │    demo.     │  merge to    │ craftculture │
+  │ Machine  │ ──────────►  │ craftculture │ ──────────►  │    .xyz      │
+  │          │   staging    │    .xyz      │    main      │              │
+  │          │              │              │              │              │
+  └──────────┘              └──────────────┘              └──────────────┘
+       │                           │                            │
+       │                           │                            │
+       ▼                           ▼                            ▼
+  Local DB or              Staging DB                    Production DB
+  Staging DB               (copy of prod)                (real users)
 ```
+
+### Step-by-Step Flow
+
+| Step | What You Do | What Happens | Environment |
+|------|-------------|--------------|-------------|
+| 1 | Develop feature locally | Code on your machine | Local |
+| 2 | Test locally | Run `pnpm dev` | localhost:3000 |
+| 3 | Push to `staging` branch | Vercel auto-deploys | demo.craftculture.xyz |
+| 4 | Test on demo site | Verify with staging data | Staging DB |
+| 5 | Fix issues if needed | Repeat steps 1-4 | — |
+| 6 | Merge `staging` → `main` | Vercel auto-deploys | craftculture.xyz |
+| 7 | Verify in production | Quick smoke test | Production |
+
+### Git Commands
+
+```bash
+# Start new feature
+git checkout staging
+git pull origin staging
+git checkout -b feature/my-feature
+
+# Develop and commit
+git add .
+git commit -m "feat: add new feature"
+
+# Push to staging for testing
+git checkout staging
+git merge feature/my-feature
+git push origin staging
+# → Auto-deploys to demo.craftculture.xyz
+
+# After testing, promote to production
+git checkout main
+git merge staging
+git push origin main
+# → Auto-deploys to craftculture.xyz
+```
+
+### Branch Strategy
+
+```
+main (production)
+  │
+  └── staging (demo)
+        │
+        ├── feature/add-inventory-page
+        ├── feature/fix-pricing-bug
+        └── feature/partner-support-docs
+```
+
+| Branch | Purpose | Deploys To |
+|--------|---------|------------|
+| `main` | Production-ready code | craftculture.xyz |
+| `staging` | Integration testing | demo.craftculture.xyz |
+| `feature/*` | Individual features | Local only (or PR previews) |
+
+### Safety Benefits
+
+| Risk | How Demo Prevents It |
+|------|---------------------|
+| Breaking production | Test on demo first with real data |
+| Bad migrations | Run against staging DB, verify before prod |
+| Auth issues | Test login flows without affecting real users |
+| Payment bugs | Safe environment to test order flows |
+| UI regressions | Full testing before users see changes |
+
+### When to Skip Staging
+
+For truly trivial changes, you can push directly to main:
+- Typo fixes in docs
+- Copy changes (text updates)
+- README updates
+
+For everything else → **always go through staging first**.
 
 ---
 
