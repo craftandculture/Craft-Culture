@@ -897,8 +897,9 @@ export const orderItemSource = pgEnum('order_item_source', [
 export const orderItemStockStatus = pgEnum('order_item_stock_status', [
   'pending',
   'confirmed',
-  'at_cc_bonded',
   'in_transit_to_cc',
+  'at_cc_bonded',
+  'in_transit_to_distributor',
   'at_distributor',
   'delivered',
 ]);
