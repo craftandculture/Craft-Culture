@@ -1,4 +1,5 @@
 import {
+  adminClient,
   inferAdditionalFields,
   passkeyClient,
 } from 'better-auth/client/plugins';
@@ -13,6 +14,7 @@ const authBrowserClient = createAuthClient({
   baseURL: clientConfig.appUrl.toString(),
   basePath: '/api/auth',
   plugins: [
+    adminClient(),
     passkeyClient(),
     inferAdditionalFields<typeof authServerClient>(),
     magicLinkClient(),
