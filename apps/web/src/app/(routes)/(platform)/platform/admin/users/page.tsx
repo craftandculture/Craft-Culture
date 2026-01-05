@@ -3,6 +3,7 @@
 import {
   IconCheck,
   IconEdit,
+  IconEye,
   IconPlus,
   IconRefresh,
   IconSearch,
@@ -10,6 +11,8 @@ import {
   IconX,
 } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
@@ -69,6 +72,8 @@ const UserEditDialog = ({
 }) => {
   const api = useTRPC();
   const [name, setName] = useState(user?.name ?? '');
+  const [newEmail, setNewEmail] = useState('');
+  const [isEditingEmail, setIsEditingEmail] = useState(false);
   const [customerType, setCustomerType] = useState<'b2b' | 'b2c' | 'private_clients'>(
     user?.customerType ?? 'b2c',
   );
@@ -81,6 +86,8 @@ const UserEditDialog = ({
   useEffect(() => {
     if (user) {
       setName(user.name ?? '');
+      setNewEmail('');
+      setIsEditingEmail(false);
       setCustomerType(user.customerType);
       setRole(user.role);
       setApprovalStatus(user.approvalStatus);
@@ -100,6 +107,20 @@ const UserEditDialog = ({
     }),
   );
 
+  const { mutate: changeEmail, isPending: isChangingEmail } = useMutation(
+    api.users.adminChangeEmail.mutationOptions({
+      onSuccess: (result) => {
+        toast.success(result.message);
+        setNewEmail('');
+        setIsEditingEmail(false);
+        onSuccess();
+      },
+      onError: (error) => {
+        toast.error(error.message || 'Failed to change email');
+      },
+    }),
+  );
+
   if (!user) return null;
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -113,6 +134,17 @@ const UserEditDialog = ({
     });
   };
 
+  const handleEmailChange = () => {
+    if (!newEmail.trim()) {
+      toast.error('Please enter a new email address');
+      return;
+    }
+    changeEmail({
+      userId: user.id,
+      newEmail: newEmail.trim(),
+    });
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
@@ -121,6 +153,63 @@ const UserEditDialog = ({
           <DialogDescription>Update user details for {user.email}</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Email Section */}
+          <div className="space-y-2">
+            <Typography variant="bodySm" className="font-medium">
+              Email
+            </Typography>
+            {!isEditingEmail ? (
+              <div className="flex items-center gap-2">
+                <Input
+                  value={user.email}
+                  disabled
+                  className="flex-1 bg-surface-muted"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsEditingEmail(true)}
+                >
+                  Change
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <Input
+                  type="email"
+                  value={newEmail}
+                  onChange={(e) => setNewEmail(e.target.value)}
+                  placeholder="Enter new email address"
+                />
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setIsEditingEmail(false);
+                      setNewEmail('');
+                    }}
+                    isDisabled={isChangingEmail}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="default"
+                    colorRole="brand"
+                    size="sm"
+                    onClick={handleEmailChange}
+                    isDisabled={isChangingEmail || !newEmail.trim()}
+                  >
+                    {isChangingEmail ? 'Updating...' : 'Update Email'}
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+
           <div className="space-y-2">
             <Typography variant="bodySm" className="font-medium">
               Name
@@ -584,6 +673,7 @@ const WinePartnerAssignment = ({
 
 const UserManagementPage = () => {
   const api = useTRPC();
+  const router = useRouter();
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [customerTypeFilter, setCustomerTypeFilter] =
     useState<CustomerTypeFilter>('all');
@@ -847,12 +937,20 @@ const UserManagementPage = () => {
                   </thead>
                   <tbody className="divide-border-muted divide-y">
                     {users.map((user) => (
-                      <tr key={user.id} className="hover:bg-surface-muted">
+                      <tr
+                        key={user.id}
+                        className="hover:bg-surface-muted cursor-pointer"
+                        onClick={() => router.push(`/platform/admin/users/${user.id}`)}
+                      >
                         <td className="px-6 py-4">
                           <div className="flex flex-col">
-                            <Typography variant="bodySm" className="font-medium">
+                            <Link
+                              href={`/platform/admin/users/${user.id}`}
+                              className="font-medium hover:text-text-brand hover:underline"
+                              onClick={(e) => e.stopPropagation()}
+                            >
                               {user.name}
-                            </Typography>
+                            </Link>
                             <Typography variant="bodyXs" className="text-text-muted">
                               {user.email}
                             </Typography>
@@ -896,7 +994,10 @@ const UserManagementPage = () => {
                                   size="sm"
                                   variant="default"
                                   colorRole="brand"
-                                  onClick={() => approveUser({ userId: user.id })}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    approveUser({ userId: user.id });
+                                  }}
                                   isDisabled={isApproving}
                                 >
                                   <ButtonContent iconLeft={IconCheck}>Approve</ButtonContent>
@@ -904,7 +1005,10 @@ const UserManagementPage = () => {
                                 <Button
                                   size="sm"
                                   variant="outline"
-                                  onClick={() => rejectUser({ userId: user.id })}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    rejectUser({ userId: user.id });
+                                  }}
                                   isDisabled={isRejecting}
                                 >
                                   <ButtonContent iconLeft={IconX}>Reject</ButtonContent>
@@ -916,7 +1020,10 @@ const UserManagementPage = () => {
                                 size="sm"
                                 variant="default"
                                 colorRole="brand"
-                                onClick={() => approveUser({ userId: user.id })}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  approveUser({ userId: user.id });
+                                }}
                                 isDisabled={isApproving}
                               >
                                 <ButtonContent iconLeft={IconCheck}>Approve</ButtonContent>
@@ -925,7 +1032,18 @@ const UserManagementPage = () => {
                             <Button
                               size="sm"
                               variant="outline"
-                              onClick={() => {
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                router.push(`/platform/admin/users/${user.id}`);
+                              }}
+                            >
+                              <ButtonContent iconLeft={IconEye}>View</ButtonContent>
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={(e) => {
+                                e.stopPropagation();
                                 setEditingUser({
                                   id: user.id,
                                   name: user.name,
@@ -946,6 +1064,7 @@ const UserManagementPage = () => {
                                   variant="outline"
                                   colorRole="danger"
                                   isDisabled={isDeleting}
+                                  onClick={(e) => e.stopPropagation()}
                                 >
                                   <ButtonContent iconLeft={IconTrash}>Delete</ButtonContent>
                                 </Button>

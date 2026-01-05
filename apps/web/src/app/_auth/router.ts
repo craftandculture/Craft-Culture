@@ -4,7 +4,9 @@ import { createTRPCRouter } from '@/lib/trpc/trpc';
 import partnersGetDistributors from './controllers/partnersGetDistributors';
 import partnersGetWinePartners from './controllers/partnersGetWinePartners';
 import signOutController from './controllers/signOut';
+import usersAdminChangeEmail from './controllers/usersAdminChangeEmail';
 import usersAdminCreate from './controllers/usersAdminCreate';
+import usersAdminGetOne from './controllers/usersAdminGetOne';
 import usersAdminUpdate from './controllers/usersAdminUpdate';
 import usersApprove from './controllers/usersApprove';
 import usersAssignPartner from './controllers/usersAssignPartner';
@@ -21,6 +23,8 @@ const usersRouter = createTRPCRouter({
   getMe: usersGetMe,
   update: usersUpdate,
   adminUpdate: usersAdminUpdate,
+  adminChangeEmail: usersAdminChangeEmail,
+  adminGetOne: usersAdminGetOne,
   signOut: protectedProcedure.mutation(async ({ ctx }) => {
     return await signOutController({ user: ctx.user });
   }),
