@@ -31,8 +31,9 @@ import { StockSourceBadge } from './StockStatusBadge';
 type StockStatus =
   | 'pending'
   | 'confirmed'
-  | 'at_cc_bonded'
   | 'in_transit_to_cc'
+  | 'at_cc_bonded'
+  | 'in_transit_to_distributor'
   | 'at_distributor'
   | 'delivered';
 
@@ -56,18 +57,21 @@ export interface StockManagementSectionProps {
 }
 
 const stockStatusOptions: { value: StockStatus; label: string; icon: React.ReactNode }[] = [
-  { value: 'pending', label: 'Pending', icon: <IconClock size={14} /> },
+  { value: 'pending', label: 'Sourcing', icon: <IconClock size={14} /> },
   { value: 'confirmed', label: 'Confirmed', icon: <IconCheck size={14} /> },
-  { value: 'at_cc_bonded', label: 'At C&C Bonded', icon: <IconBox size={14} /> },
-  { value: 'in_transit_to_cc', label: 'In Transit', icon: <IconPlane size={14} /> },
-  { value: 'at_distributor', label: 'At Distributor', icon: <IconPackage size={14} /> },
-  { value: 'delivered', label: 'Delivered', icon: <IconTruck size={14} /> },
+  { value: 'in_transit_to_cc', label: 'In Air', icon: <IconPlane size={14} /> },
+  { value: 'at_cc_bonded', label: 'At C&C', icon: <IconBox size={14} /> },
+  { value: 'in_transit_to_distributor', label: 'To Distributor', icon: <IconTruck size={14} /> },
+  { value: 'at_distributor', label: 'Ready', icon: <IconPackage size={14} /> },
+  { value: 'delivered', label: 'Delivered', icon: <IconCheck size={14} /> },
 ];
 
 const bulkStatusOptions: { value: StockStatus; label: string; description: string }[] = [
-  { value: 'confirmed', label: 'Mark All Confirmed', description: 'Supplier confirmed stock' },
-  { value: 'at_cc_bonded', label: 'Mark All at C&C', description: 'Shipment arrived at warehouse' },
-  { value: 'at_distributor', label: 'Mark All at Distributor', description: 'Ready for delivery' },
+  { value: 'confirmed', label: 'Confirmed', description: 'Supplier confirmed stock' },
+  { value: 'in_transit_to_cc', label: 'In Air', description: 'Shipment in transit to Dubai' },
+  { value: 'at_cc_bonded', label: 'At C&C', description: 'Arrived at C&C warehouse' },
+  { value: 'in_transit_to_distributor', label: 'To Distributor', description: 'In transit to distributor' },
+  { value: 'at_distributor', label: 'Ready', description: 'Ready for delivery' },
 ];
 
 /**
@@ -173,7 +177,9 @@ const StockManagementSection = ({
   const readyCount =
     (statusCounts['at_distributor'] || 0) + (statusCounts['delivered'] || 0);
   const inTransitCount =
-    (statusCounts['at_cc_bonded'] || 0) + (statusCounts['in_transit_to_cc'] || 0);
+    (statusCounts['at_cc_bonded'] || 0) +
+    (statusCounts['in_transit_to_cc'] || 0) +
+    (statusCounts['in_transit_to_distributor'] || 0);
   const pendingCount =
     (statusCounts['pending'] || 0) + (statusCounts['confirmed'] || 0);
 
@@ -302,9 +308,9 @@ const StockManagementSection = ({
                         </Select>
                       </td>
                       <td className="px-2 py-2">
-                        {/* Only show ETA for pending/confirmed - hide once stock has arrived */}
+                        {/* Show ETA for pending/confirmed/in_transit - hide once stock has arrived */}
                         {item.stockExpectedAt &&
-                        ['pending', 'confirmed'].includes(currentStatus) ? (
+                        ['pending', 'confirmed', 'in_transit_to_cc'].includes(currentStatus) ? (
                           <span className="text-text-muted">
                             {formatDate(item.stockExpectedAt)}
                           </span>
