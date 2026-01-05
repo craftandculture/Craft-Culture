@@ -160,8 +160,12 @@ export const sessions = pgTable('sessions', {
   }).notNull(),
   ipAddress: text('ip_address'),
   userAgent: text('user_agent'),
+  /** If set, this session is an impersonation - the admin who started it */
+  impersonatedBy: uuid('impersonated_by').references(() => users.id),
   ...timestamps,
 }).enableRLS();
+
+export type Session = typeof sessions.$inferSelect;
 
 export const accounts = pgTable('accounts', {
   id: uuid('id').primaryKey().defaultRandom(),

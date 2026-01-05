@@ -1,15 +1,14 @@
 import { and, eq } from 'drizzle-orm';
 
+import type { CurrentUser } from '@/app/_auth/data/getCurrentUser';
 import db from '@/database/client';
-import type { Partner, User } from '@/database/schema';
+import type { Partner } from '@/database/schema';
 import { partnerMembers, partners } from '@/database/schema';
 import { protectedProcedure } from '@/lib/trpc/procedures';
 
 type PartnerInfo = Pick<Partner, 'id' | 'type' | 'businessName' | 'logoUrl' | 'brandColor'>;
 
-interface UserWithPartner extends User {
-  firstName: string | null;
-  lastName: string | null;
+interface UserWithPartner extends CurrentUser {
   partner: PartnerInfo | null;
 }
 

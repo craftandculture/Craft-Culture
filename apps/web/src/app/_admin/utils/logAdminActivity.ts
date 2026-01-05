@@ -10,6 +10,8 @@ export type AdminAction =
   | 'user.rejected'
   | 'user.email_changed'
   | 'user.test_activated'
+  | 'user.impersonation_started'
+  | 'user.impersonation_ended'
   | 'quote.viewed'
   | 'quote.created'
   | 'quote.updated'

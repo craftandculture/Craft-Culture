@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 
+import ImpersonationBanner from '@/app/_auth/components/ImpersonationBanner';
 import UserDropdown from '@/app/_auth/components/UserDropdown';
 import NotificationBell from '@/app/_notifications/components/NotificationBell';
 import BrandedTitleProvider from '@/app/_ui/components/BrandedTitleProvider/BrandedTitleProvider';
@@ -39,6 +40,9 @@ const PlatformLayout = async ({ children }: React.PropsWithChildren) => {
     <div className="bg-background-primary flex min-h-dvh flex-col">
       <BrandedTitleProvider customerType={user.customerType} />
       <CommandBar />
+      {user.isImpersonated && (
+        <ImpersonationBanner userName={user.name} userEmail={user.email} />
+      )}
       <header className="border-border-primary sticky top-0 z-50 border-b bg-background-primary/80 backdrop-blur-xl">
         <div className="container flex h-14 items-center justify-between gap-4">
           <div className="flex items-center gap-3 md:gap-6">

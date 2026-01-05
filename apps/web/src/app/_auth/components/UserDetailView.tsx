@@ -8,6 +8,7 @@ import {
   IconDevices,
   IconEdit,
   IconLoader2,
+  IconLogin,
   IconMail,
   IconMapPin,
   IconPhone,
@@ -144,6 +145,19 @@ const UserDetailView = ({ userId }: UserDetailViewProps) => {
       },
       onError: (err) => {
         toast.error(err.message || 'Failed to delete user');
+      },
+    }),
+  );
+
+  const { mutate: impersonateUser, isPending: isImpersonating } = useMutation(
+    api.users.impersonate.mutationOptions({
+      onSuccess: (result) => {
+        toast.success(`Now viewing as ${result.targetUser.name || result.targetUser.email}`);
+        router.push('/platform');
+        router.refresh();
+      },
+      onError: (err) => {
+        toast.error(err.message || 'Failed to impersonate user');
       },
     }),
   );
@@ -291,6 +305,14 @@ const UserDetailView = ({ userId }: UserDetailViewProps) => {
               </Button>
             </>
           )}
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => impersonateUser({ userId: user.id })}
+            isDisabled={isImpersonating}
+          >
+            <ButtonContent iconLeft={IconLogin}>Login as User</ButtonContent>
+          </Button>
           <AlertDialog>
             <AlertDialogTrigger asChild>
               <Button size="sm" variant="outline" colorRole="danger">

@@ -4,6 +4,7 @@ import {
   IconCheck,
   IconEdit,
   IconEye,
+  IconLogin,
   IconPlus,
   IconRefresh,
   IconSearch,
@@ -871,6 +872,20 @@ const UserManagementPage = () => {
     }),
   );
 
+  // Impersonate user mutation
+  const { mutate: impersonateUser, isPending: isImpersonating } = useMutation(
+    api.users.impersonate.mutationOptions({
+      onSuccess: (data) => {
+        toast.success(`Now viewing as ${data.targetUser.name || data.targetUser.email}`);
+        router.push('/platform');
+        router.refresh();
+      },
+      onError: (error) => {
+        toast.error(error.message || 'Failed to impersonate user');
+      },
+    }),
+  );
+
   const users = data?.data ?? [];
   const totalCount = data?.meta.totalCount ?? 0;
 
@@ -1203,6 +1218,19 @@ const UserManagementPage = () => {
                             >
                               <ButtonContent iconLeft={IconEye}>View</ButtonContent>
                             </Button>
+                            {!user.isTestUser && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  impersonateUser({ userId: user.id });
+                                }}
+                                isDisabled={isImpersonating}
+                              >
+                                <ButtonContent iconLeft={IconLogin}>Login as</ButtonContent>
+                              </Button>
+                            )}
                             <Button
                               size="sm"
                               variant="outline"
@@ -1343,6 +1371,17 @@ const UserManagementPage = () => {
                           className="w-full"
                         >
                           <ButtonContent iconLeft={IconCheck}>Approve</ButtonContent>
+                        </Button>
+                      )}
+                      {!user.isTestUser && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => impersonateUser({ userId: user.id })}
+                          isDisabled={isImpersonating}
+                          className="w-full"
+                        >
+                          <ButtonContent iconLeft={IconLogin}>Login as User</ButtonContent>
                         </Button>
                       )}
                       <div className="flex gap-2">
