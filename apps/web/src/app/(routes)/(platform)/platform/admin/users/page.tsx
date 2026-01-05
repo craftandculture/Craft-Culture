@@ -44,6 +44,7 @@ import SelectItem from '@/app/_ui/components/Select/SelectItem';
 import SelectTrigger from '@/app/_ui/components/Select/SelectTrigger';
 import SelectValue from '@/app/_ui/components/Select/SelectValue';
 import Typography from '@/app/_ui/components/Typography/Typography';
+import authBrowserClient from '@/lib/better-auth/browser';
 import useTRPC from '@/lib/trpc/browser';
 
 type StatusFilter = 'all' | 'pending' | 'approved' | 'rejected';
@@ -872,19 +873,31 @@ const UserManagementPage = () => {
     }),
   );
 
-  // Impersonate user mutation
-  const { mutate: impersonateUser, isPending: isImpersonating } = useMutation(
-    api.users.impersonate.mutationOptions({
-      onSuccess: (data) => {
-        toast.success(`Now viewing as ${data.targetUser.name || data.targetUser.email}`);
-        // Use full page reload to pick up new session cookie
-        globalThis.location.assign('/platform');
-      },
-      onError: (error) => {
-        toast.error(error.message || 'Failed to impersonate user');
-      },
-    }),
-  );
+  // Impersonation - call Better Auth client directly (not through tRPC)
+  // This ensures the session cookie is properly set in the browser
+  const [isImpersonating, setIsImpersonating] = useState(false);
+
+  const handleImpersonate = async (targetUserId: string, targetUserName: string | null, targetUserEmail: string) => {
+    setIsImpersonating(true);
+    try {
+      const result = await authBrowserClient.admin.impersonateUser({
+        userId: targetUserId,
+      });
+
+      if (result.error) {
+        toast.error(result.error.message || 'Failed to impersonate user');
+        return;
+      }
+
+      toast.success(`Now viewing as ${targetUserName || targetUserEmail}`);
+      // Use full page reload to pick up new session cookie
+      globalThis.location.assign('/platform');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to impersonate user');
+    } finally {
+      setIsImpersonating(false);
+    }
+  };
 
   const users = data?.data ?? [];
   const totalCount = data?.meta.totalCount ?? 0;
@@ -1224,7 +1237,7 @@ const UserManagementPage = () => {
                                 variant="outline"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  impersonateUser({ userId: user.id });
+                                  void handleImpersonate(user.id, user.name, user.email);
                                 }}
                                 isDisabled={isImpersonating}
                               >
@@ -1377,7 +1390,7 @@ const UserManagementPage = () => {
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => impersonateUser({ userId: user.id })}
+                          onClick={() => void handleImpersonate(user.id, user.name, user.email)}
                           isDisabled={isImpersonating}
                           className="w-full"
                         >
