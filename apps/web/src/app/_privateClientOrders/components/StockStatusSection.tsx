@@ -225,7 +225,7 @@ const StockStatusSection = ({ items, className }: StockStatusSectionProps) => {
         <div className="px-4 pb-4">
           <div className="flex items-stretch gap-1">
             {stockStages.map((stage, index) => {
-              const count = stageCounts[stage.key];
+              const count = stageCounts[stage.key] ?? 0;
               const isActive = count > 0;
               const isPast = index < currentStageIndex;
               const isCurrent = index === currentStageIndex && !allReady;
