@@ -680,11 +680,11 @@ const PrivateOrderDetailPage = () => {
                     )}
                   </div>
                 </div>
-                {/* Delivery Proof Photo */}
+                {/* Proof of Delivery */}
                 {order.deliveryPhoto && (
                   <div className="ml-0 border-t border-fill-success/20 pt-4 sm:ml-16">
                     <Typography variant="labelSm" colorRole="muted" className="mb-2">
-                      Delivery Proof Photo
+                      Proof of Delivery
                     </Typography>
                     <a
                       href={order.deliveryPhoto}
@@ -694,10 +694,11 @@ const PrivateOrderDetailPage = () => {
                     >
                       <Image
                         src={order.deliveryPhoto}
-                        alt="Delivery proof"
+                        alt="Proof of delivery"
                         width={200}
                         height={150}
                         className="h-[150px] w-[200px] object-cover transition-transform group-hover:scale-105"
+                        unoptimized
                       />
                       <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover:bg-black/20">
                         <IconExternalLink className="h-6 w-6 text-white opacity-0 transition-opacity group-hover:opacity-100" />
