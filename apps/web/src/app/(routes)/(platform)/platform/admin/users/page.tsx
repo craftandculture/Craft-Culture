@@ -3,8 +3,6 @@
 import {
   IconCheck,
   IconEdit,
-  IconEye,
-  IconLogin,
   IconPlus,
   IconRefresh,
   IconSearch,
@@ -44,7 +42,6 @@ import SelectItem from '@/app/_ui/components/Select/SelectItem';
 import SelectTrigger from '@/app/_ui/components/Select/SelectTrigger';
 import SelectValue from '@/app/_ui/components/Select/SelectValue';
 import Typography from '@/app/_ui/components/Typography/Typography';
-import authBrowserClient from '@/lib/better-auth/browser';
 import useTRPC from '@/lib/trpc/browser';
 
 type StatusFilter = 'all' | 'pending' | 'approved' | 'rejected';
@@ -873,32 +870,6 @@ const UserManagementPage = () => {
     }),
   );
 
-  // Impersonation - call Better Auth client directly (not through tRPC)
-  // This ensures the session cookie is properly set in the browser
-  const [isImpersonating, setIsImpersonating] = useState(false);
-
-  const handleImpersonate = async (targetUserId: string, targetUserName: string | null, targetUserEmail: string) => {
-    setIsImpersonating(true);
-    try {
-      const result = await authBrowserClient.admin.impersonateUser({
-        userId: targetUserId,
-      });
-
-      if (result.error) {
-        toast.error(result.error.message || 'Failed to impersonate user');
-        return;
-      }
-
-      toast.success(`Now viewing as ${targetUserName || targetUserEmail}`);
-      // Use full page reload to pick up new session cookie
-      globalThis.location.assign('/platform');
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to impersonate user');
-    } finally {
-      setIsImpersonating(false);
-    }
-  };
-
   const users = data?.data ?? [];
   const totalCount = data?.meta.totalCount ?? 0;
 
@@ -1097,9 +1068,6 @@ const UserManagementPage = () => {
                         Status
                       </th>
                       <th className="text-text-secondary px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">
-                        Signup Date
-                      </th>
-                      <th className="text-text-secondary px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">
                         Last Login
                       </th>
                       <th className="text-text-secondary px-6 py-3 text-right text-xs font-medium uppercase tracking-wider">
@@ -1137,7 +1105,7 @@ const UserManagementPage = () => {
                           </Typography>
                         </td>
                         <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
-                          {user.customerType === 'b2b' || user.customerType === 'b2c' ? (
+                          {user.customerType === 'b2b' ? (
                             <DistributorAssignment
                               userId={user.id}
                               distributors={distributors ?? []}
@@ -1152,11 +1120,6 @@ const UserManagementPage = () => {
                           )}
                         </td>
                         <td className="px-6 py-4">{getStatusBadge(user.approvalStatus)}</td>
-                        <td className="px-6 py-4">
-                          <Typography variant="bodySm" className="text-text-secondary">
-                            {new Date(user.createdAt).toLocaleDateString()}
-                          </Typography>
-                        </td>
                         <td className="px-6 py-4">
                           <Typography variant="bodySm" className="text-text-secondary">
                             {user.lastLogin
@@ -1219,29 +1182,6 @@ const UserManagementPage = () => {
                                 }}
                               >
                                 <ButtonContent iconLeft={IconUserCheck}>Activate</ButtonContent>
-                              </Button>
-                            )}
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                router.push(`/platform/admin/users/${user.id}`);
-                              }}
-                            >
-                              <ButtonContent iconLeft={IconEye}>View</ButtonContent>
-                            </Button>
-                            {!user.isTestUser && (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  void handleImpersonate(user.id, user.name, user.email);
-                                }}
-                                isDisabled={isImpersonating}
-                              >
-                                <ButtonContent iconLeft={IconLogin}>Login as</ButtonContent>
                               </Button>
                             )}
                             <Button
@@ -1326,9 +1266,6 @@ const UserManagementPage = () => {
                         {getCustomerTypeLabel(user.customerType)}
                       </Typography>
                       <Typography variant="bodyXs" className="text-text-muted">
-                        Signed up {new Date(user.createdAt).toLocaleDateString()}
-                      </Typography>
-                      <Typography variant="bodyXs" className="text-text-muted">
                         Last login:{' '}
                         {user.lastLogin
                           ? new Date(user.lastLogin).toLocaleDateString()
@@ -1384,17 +1321,6 @@ const UserManagementPage = () => {
                           className="w-full"
                         >
                           <ButtonContent iconLeft={IconCheck}>Approve</ButtonContent>
-                        </Button>
-                      )}
-                      {!user.isTestUser && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => void handleImpersonate(user.id, user.name, user.email)}
-                          isDisabled={isImpersonating}
-                          className="w-full"
-                        >
-                          <ButtonContent iconLeft={IconLogin}>Login as User</ButtonContent>
                         </Button>
                       )}
                       <div className="flex gap-2">
