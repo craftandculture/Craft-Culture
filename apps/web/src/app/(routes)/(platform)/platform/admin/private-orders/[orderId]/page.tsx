@@ -6,6 +6,7 @@ import {
   IconBuilding,
   IconCheck,
   IconEdit,
+  IconHistory,
   IconLoader2,
   IconPhoto,
   IconRefresh,
@@ -20,6 +21,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
+import ActivityTimeline from '@/app/_privateClientOrders/components/ActivityTimeline';
 import DocumentUpload from '@/app/_privateClientOrders/components/DocumentUpload';
 import PaymentTracker from '@/app/_privateClientOrders/components/PaymentTracker';
 import PrivateOrderStatusBadge from '@/app/_privateClientOrders/components/PrivateOrderStatusBadge';
@@ -127,6 +129,7 @@ const AdminPrivateOrderDetailPage = () => {
   const [currency, setCurrency] = useState<Currency>('USD');
   const [resetTarget, setResetTarget] = useState<ResetTargetStatus>('awaiting_distributor_verification');
   const [showDeliveryPhoto, setShowDeliveryPhoto] = useState(false);
+  const [activityFilter, setActivityFilter] = useState<'all' | 'partner' | 'distributor' | 'admin'>('all');
 
   // Fetch order details
   const {
@@ -962,6 +965,69 @@ const AdminPrivateOrderDetailPage = () => {
             </Card>
           </>
         )}
+
+        {/* Activity Log - Full timeline with filters */}
+        <Card>
+          <CardContent className="p-4">
+            <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-2">
+                <Icon icon={IconHistory} size="md" colorRole="brand" />
+                <Typography variant="headingSm">Activity Log</Typography>
+                <span className="rounded-full bg-fill-muted px-2 py-0.5 text-xs text-text-muted">
+                  {order.activityLogs?.length || 0}
+                </span>
+              </div>
+              <div className="flex gap-1">
+                {(['all', 'partner', 'distributor', 'admin'] as const).map((filter) => (
+                  <button
+                    key={filter}
+                    type="button"
+                    onClick={() => setActivityFilter(filter)}
+                    className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                      activityFilter === filter
+                        ? 'bg-fill-brand text-white'
+                        : 'bg-surface-secondary text-text-muted hover:bg-surface-muted'
+                    }`}
+                  >
+                    {filter === 'all' ? 'All' : filter.charAt(0).toUpperCase() + filter.slice(1)}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <Typography variant="bodyXs" colorRole="muted" className="mb-4">
+              Complete order history showing all actions by partners, distributors, and admins
+            </Typography>
+            <ActivityTimeline
+              activities={
+                order.activityLogs?.filter((activity) => {
+                  if (activityFilter === 'all') return true;
+                  if (activityFilter === 'partner') {
+                    return activity.partnerId && !activity.user?.email?.includes('@craftculture');
+                  }
+                  if (activityFilter === 'distributor') {
+                    // Distributor actions typically have distributor-related actions
+                    const distributorActions = [
+                      'distributor_verified',
+                      'distributor_assigned',
+                      'stock_received_at_distributor',
+                      'delivery_scheduled',
+                      'delivery_photo_uploaded',
+                      'marked_in_transit',
+                      'marked_delivered',
+                      'contact_attempted',
+                    ];
+                    return distributorActions.some((a) => activity.action.includes(a));
+                  }
+                  if (activityFilter === 'admin') {
+                    // Admin actions or system actions
+                    return activity.user?.email?.includes('@craftculture') || !activity.partnerId;
+                  }
+                  return true;
+                }) || []
+              }
+            />
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
