@@ -3,6 +3,7 @@
 import {
   IconArrowLeft,
   IconBuilding,
+  IconBuildingBank,
   IconCheck,
   IconClock,
   IconDevices,
@@ -717,70 +718,133 @@ const UserDetailView = ({ userId }: UserDetailViewProps) => {
 
         {/* Company Tab */}
         <TabsContent value="company" className="mt-6">
-          <Card>
-            <CardContent className="p-6">
-              <Typography variant="headingSm" className="mb-4">
-                Company Information
-              </Typography>
-
-              {user.companyName ? (
-                <div className="grid gap-6 md:grid-cols-2">
-                  <div className="space-y-4">
-                    <div>
-                      <Typography variant="bodyXs" colorRole="muted" className="mb-1">
-                        Company Name
-                      </Typography>
-                      <Typography variant="bodySm">{user.companyName}</Typography>
-                    </div>
-
-                    <div>
-                      <Typography variant="bodyXs" colorRole="muted" className="mb-1">
-                        VAT Number
-                      </Typography>
-                      <Typography variant="bodySm">{user.companyVatNumber || '-'}</Typography>
-                    </div>
-
-                    <div>
-                      <Typography variant="bodyXs" colorRole="muted" className="mb-1">
-                        Website
-                      </Typography>
-                      <Typography variant="bodySm">{user.companyWebsite || '-'}</Typography>
-                    </div>
-                  </div>
-
-                  <div className="space-y-4">
-                    <div>
-                      <Typography variant="bodyXs" colorRole="muted" className="mb-1">
-                        <Icon icon={IconMail} size="xs" className="mr-1 inline" />
-                        Company Email
-                      </Typography>
-                      <Typography variant="bodySm">{user.companyEmail || '-'}</Typography>
-                    </div>
-
-                    <div>
-                      <Typography variant="bodyXs" colorRole="muted" className="mb-1">
-                        <Icon icon={IconPhone} size="xs" className="mr-1 inline" />
-                        Company Phone
-                      </Typography>
-                      <Typography variant="bodySm">{user.companyPhone || '-'}</Typography>
-                    </div>
-
-                    <div>
-                      <Typography variant="bodyXs" colorRole="muted" className="mb-1">
-                        <Icon icon={IconMapPin} size="xs" className="mr-1 inline" />
-                        Company Address
-                      </Typography>
-                      <Typography variant="bodySm">{user.companyAddress || '-'}</Typography>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <Typography variant="bodySm" colorRole="muted">
-                  No company information provided
+          <div className="grid gap-6">
+            {/* Company Information Card */}
+            <Card>
+              <CardContent className="p-6">
+                <Typography variant="headingSm" className="mb-4">
+                  Company Information
                 </Typography>
-              )}
-            </CardContent>
-          </Card>
+
+                {user.companyName ? (
+                  <div className="grid gap-6 md:grid-cols-2">
+                    <div className="space-y-4">
+                      <div>
+                        <Typography variant="bodyXs" colorRole="muted" className="mb-1">
+                          Company Name
+                        </Typography>
+                        <Typography variant="bodySm">{user.companyName}</Typography>
+                      </div>
+
+                      <div>
+                        <Typography variant="bodyXs" colorRole="muted" className="mb-1">
+                          VAT Number
+                        </Typography>
+                        <Typography variant="bodySm">{user.companyVatNumber || '-'}</Typography>
+                      </div>
+
+                      <div>
+                        <Typography variant="bodyXs" colorRole="muted" className="mb-1">
+                          Website
+                        </Typography>
+                        <Typography variant="bodySm">{user.companyWebsite || '-'}</Typography>
+                      </div>
+                    </div>
+
+                    <div className="space-y-4">
+                      <div>
+                        <Typography variant="bodyXs" colorRole="muted" className="mb-1">
+                          <Icon icon={IconMail} size="xs" className="mr-1 inline" />
+                          Company Email
+                        </Typography>
+                        <Typography variant="bodySm">{user.companyEmail || '-'}</Typography>
+                      </div>
+
+                      <div>
+                        <Typography variant="bodyXs" colorRole="muted" className="mb-1">
+                          <Icon icon={IconPhone} size="xs" className="mr-1 inline" />
+                          Company Phone
+                        </Typography>
+                        <Typography variant="bodySm">{user.companyPhone || '-'}</Typography>
+                      </div>
+
+                      <div>
+                        <Typography variant="bodyXs" colorRole="muted" className="mb-1">
+                          <Icon icon={IconMapPin} size="xs" className="mr-1 inline" />
+                          Company Address
+                        </Typography>
+                        <Typography variant="bodySm">{user.companyAddress || '-'}</Typography>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <Typography variant="bodySm" colorRole="muted">
+                    No company information provided
+                  </Typography>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Bank Details Card */}
+            <Card>
+              <CardContent className="p-6">
+                <div className="mb-4 flex items-center gap-2">
+                  <Icon icon={IconBuildingBank} size="sm" colorRole="muted" />
+                  <Typography variant="headingSm">Bank Details</Typography>
+                </div>
+
+                {user.bankDetails &&
+                typeof user.bankDetails === 'object' &&
+                Object.keys(user.bankDetails).length > 0 ? (
+                  <div className="grid gap-6 md:grid-cols-2">
+                    <div className="space-y-4">
+                      <div>
+                        <Typography variant="bodyXs" colorRole="muted" className="mb-1">
+                          Bank Name
+                        </Typography>
+                        <Typography variant="bodySm">
+                          {(user.bankDetails as Record<string, string>).bankName || '-'}
+                        </Typography>
+                      </div>
+
+                      <div>
+                        <Typography variant="bodyXs" colorRole="muted" className="mb-1">
+                          Account Holder
+                        </Typography>
+                        <Typography variant="bodySm">
+                          {(user.bankDetails as Record<string, string>).accountHolder || '-'}
+                        </Typography>
+                      </div>
+                    </div>
+
+                    <div className="space-y-4">
+                      <div>
+                        <Typography variant="bodyXs" colorRole="muted" className="mb-1">
+                          IBAN
+                        </Typography>
+                        <Typography variant="bodySm">
+                          {(user.bankDetails as Record<string, string>).iban || '-'}
+                        </Typography>
+                      </div>
+
+                      <div>
+                        <Typography variant="bodyXs" colorRole="muted" className="mb-1">
+                          SWIFT/BIC
+                        </Typography>
+                        <Typography variant="bodySm">
+                          {(user.bankDetails as Record<string, string>).swiftBic || '-'}
+                        </Typography>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <Typography variant="bodySm" colorRole="muted">
+                    No bank details provided
+                  </Typography>
+                )}
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
 
         {/* Activity Tab */}
