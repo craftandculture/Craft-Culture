@@ -5,6 +5,7 @@ import {
   IconArrowLeft,
   IconBuilding,
   IconCheck,
+  IconChevronDown,
   IconCurrencyDollar,
   IconEdit,
   IconHistory,
@@ -132,6 +133,7 @@ const AdminPrivateOrderDetailPage = () => {
   const [showDeliveryPhoto, setShowDeliveryPhoto] = useState(false);
   const [activityFilter, setActivityFilter] = useState<'all' | 'partner' | 'distributor' | 'admin'>('all');
   const [partnerPaymentRef, setPartnerPaymentRef] = useState('');
+  const [isCompletionExpanded, setIsCompletionExpanded] = useState(true);
 
   // Fetch order details
   const {
@@ -896,55 +898,170 @@ const AdminPrivateOrderDetailPage = () => {
           </Card>
         </div>
 
-        {/* C&C Payment to Partner - Admin Independent Action */}
-        <Card className={order.partnerPaidAt ? 'border-fill-success/50 bg-fill-success/5' : ''}>
-          <CardContent className="p-4">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-              <div className="flex items-start gap-3">
-                <div className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full ${
-                  order.partnerPaidAt ? 'bg-fill-success/20' : 'bg-fill-muted'
-                }`}>
-                  <Icon
-                    icon={order.partnerPaidAt ? IconCheck : IconCurrencyDollar}
-                    size="md"
-                    className={order.partnerPaidAt ? 'text-fill-success' : 'text-text-muted'}
-                  />
+        {/* Full Image Modal for Proof of Delivery */}
+        {showDeliveryPhoto && order.deliveryPhoto && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
+            onClick={() => setShowDeliveryPhoto(false)}
+          >
+            <button
+              className="absolute right-4 top-4 rounded-full bg-white/10 p-2 text-white hover:bg-white/20"
+              onClick={() => setShowDeliveryPhoto(false)}
+            >
+              <IconX size={24} />
+            </button>
+            <Image
+              src={order.deliveryPhoto}
+              alt="Proof of delivery"
+              width={1200}
+              height={800}
+              className="max-h-[90vh] max-w-[90vw] rounded-lg object-contain"
+              unoptimized
+            />
+          </div>
+        )}
+
+        {/* Order Completion - Unified C&C Payment & Proof of Delivery */}
+        <Card className="border-2 border-fill-success/50 bg-fill-success/5">
+          <CardContent className="p-0">
+            {/* Collapsible Header */}
+            <button
+              type="button"
+              onClick={() => setIsCompletionExpanded(!isCompletionExpanded)}
+              className="flex w-full items-center justify-between p-4 text-left hover:bg-fill-success/5"
+            >
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-fill-success/20">
+                  <Icon icon={IconCheck} size="md" className="text-fill-success" />
                 </div>
                 <div>
-                  <Typography variant="headingSm" className="mb-1">
-                    C&C Payment to Partner
+                  <Typography variant="headingSm" className="mb-0.5">
+                    Order Completion
                   </Typography>
-                  <Typography variant="bodySm" colorRole="muted">
-                    {order.partnerPaidAt
-                      ? `Payment processed on ${formatDate(order.partnerPaidAt)}${order.partnerPaymentReference ? ` (Ref: ${order.partnerPaymentReference})` : ''}`
-                      : 'Record when C&C has paid the wine partner for stock. This is independent of the order status.'}
-                  </Typography>
+                  <div className="flex flex-wrap items-center gap-2 text-xs text-text-muted">
+                    {order.partnerPaidAt && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-fill-success/20 px-2 py-0.5 text-fill-success">
+                        <IconCheck size={12} /> C&C Paid
+                      </span>
+                    )}
+                    {order.deliveryPhoto && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-fill-success/20 px-2 py-0.5 text-fill-success">
+                        <IconCheck size={12} /> Proof of Delivery
+                      </span>
+                    )}
+                    {!order.partnerPaidAt && !order.deliveryPhoto && (
+                      <span className="text-text-muted">Pending actions</span>
+                    )}
+                  </div>
                 </div>
               </div>
+              <Icon
+                icon={IconChevronDown}
+                size="md"
+                className={`text-text-muted transition-transform ${isCompletionExpanded ? 'rotate-180' : ''}`}
+              />
+            </button>
 
-              {!order.partnerPaidAt && (
-                <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center">
-                  <Input
-                    placeholder="Payment reference (optional)"
-                    value={partnerPaymentRef}
-                    onChange={(e) => setPartnerPaymentRef(e.target.value)}
-                    className="w-full sm:w-[200px]"
-                  />
-                  <Button
-                    onClick={() => markPartnerPaid({ reference: partnerPaymentRef || undefined })}
-                    disabled={isMarkingPartnerPaid}
-                    colorRole="brand"
-                  >
-                    <Icon
-                      icon={isMarkingPartnerPaid ? IconLoader2 : IconCurrencyDollar}
-                      size="sm"
-                      className={isMarkingPartnerPaid ? 'animate-spin' : ''}
-                    />
-                    <span className="ml-2">{isMarkingPartnerPaid ? 'Recording...' : 'Mark C&C Paid'}</span>
-                  </Button>
+            {/* Collapsible Content */}
+            {isCompletionExpanded && (
+              <div className="border-t border-fill-success/20 p-4 pt-4">
+                <div className="space-y-4">
+                  {/* C&C Payment to Partner */}
+                  <div className="flex flex-col gap-3 rounded-lg bg-background-primary/50 p-4 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="flex items-start gap-3">
+                      <div className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full ${
+                        order.partnerPaidAt ? 'bg-fill-success/20' : 'bg-fill-muted'
+                      }`}>
+                        <Icon
+                          icon={order.partnerPaidAt ? IconCheck : IconCurrencyDollar}
+                          size="sm"
+                          className={order.partnerPaidAt ? 'text-fill-success' : 'text-text-muted'}
+                        />
+                      </div>
+                      <div>
+                        <Typography variant="labelMd" className="mb-0.5">
+                          C&C Payment to Partner
+                        </Typography>
+                        <Typography variant="bodyXs" colorRole="muted">
+                          {order.partnerPaidAt
+                            ? `Paid on ${formatDate(order.partnerPaidAt)}${order.partnerPaymentReference ? ` • Ref: ${order.partnerPaymentReference}` : ''}`
+                            : 'Record when C&C has paid the wine partner for stock'}
+                        </Typography>
+                      </div>
+                    </div>
+
+                    {!order.partnerPaidAt && (
+                      <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center">
+                        <Input
+                          placeholder="Reference (optional)"
+                          value={partnerPaymentRef}
+                          onChange={(e) => setPartnerPaymentRef(e.target.value)}
+                          className="w-full text-xs sm:w-[160px]"
+                        />
+                        <Button
+                          onClick={() => markPartnerPaid({ reference: partnerPaymentRef || undefined })}
+                          disabled={isMarkingPartnerPaid}
+                          colorRole="brand"
+                          size="sm"
+                        >
+                          <Icon
+                            icon={isMarkingPartnerPaid ? IconLoader2 : IconCurrencyDollar}
+                            size="xs"
+                            className={isMarkingPartnerPaid ? 'animate-spin' : ''}
+                          />
+                          <span className="ml-1.5">{isMarkingPartnerPaid ? 'Recording...' : 'Mark Paid'}</span>
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Proof of Delivery */}
+                  <div className="flex flex-col gap-3 rounded-lg bg-background-primary/50 p-4 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="flex items-start gap-3">
+                      <div className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full ${
+                        order.deliveryPhoto ? 'bg-fill-success/20' : 'bg-fill-muted'
+                      }`}>
+                        <Icon
+                          icon={order.deliveryPhoto ? IconCheck : IconPhoto}
+                          size="sm"
+                          className={order.deliveryPhoto ? 'text-fill-success' : 'text-text-muted'}
+                        />
+                      </div>
+                      <div>
+                        <Typography variant="labelMd" className="mb-0.5">
+                          Proof of Delivery
+                        </Typography>
+                        <Typography variant="bodyXs" colorRole="muted">
+                          {order.deliveryPhoto
+                            ? 'Photo uploaded by distributor'
+                            : 'Awaiting delivery confirmation from distributor'}
+                        </Typography>
+                      </div>
+                    </div>
+
+                    {order.deliveryPhoto && (
+                      <button
+                        type="button"
+                        onClick={() => setShowDeliveryPhoto(true)}
+                        className="group relative overflow-hidden rounded-lg border border-border-muted"
+                      >
+                        <Image
+                          src={order.deliveryPhoto}
+                          alt="Proof of delivery"
+                          width={120}
+                          height={80}
+                          className="h-[80px] w-[120px] object-cover transition-transform group-hover:scale-105"
+                          unoptimized
+                        />
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover:bg-black/30">
+                          <IconPhoto className="h-5 w-5 text-white opacity-0 transition-opacity group-hover:opacity-100" />
+                        </div>
+                      </button>
+                    )}
+                  </div>
                 </div>
-              )}
-            </div>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -972,70 +1089,6 @@ const AdminPrivateOrderDetailPage = () => {
               </div>
             </CardContent>
           </Card>
-        )}
-
-        {/* Delivery Photo - show when available */}
-        {order.deliveryPhoto && (
-          <>
-            {/* Full Image Modal */}
-            {showDeliveryPhoto && (
-              <div
-                className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
-                onClick={() => setShowDeliveryPhoto(false)}
-              >
-                <button
-                  className="absolute right-4 top-4 rounded-full bg-white/10 p-2 text-white hover:bg-white/20"
-                  onClick={() => setShowDeliveryPhoto(false)}
-                >
-                  <IconX size={24} />
-                </button>
-                <Image
-                  src={order.deliveryPhoto}
-                  alt="Delivery proof"
-                  width={1200}
-                  height={800}
-                  className="max-h-[90vh] max-w-[90vw] rounded-lg object-contain"
-                />
-              </div>
-            )}
-
-            <Card className="border-2 border-fill-success/50 bg-fill-success/5">
-              <CardContent className="p-4">
-                <div className="flex items-start gap-4">
-                  <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-fill-success/20">
-                    <Icon icon={IconPhoto} size="md" className="text-fill-success" />
-                  </div>
-                  <div className="flex-1">
-                    <Typography variant="headingSm" className="mb-1">
-                      Delivery Photo
-                    </Typography>
-                    <Typography variant="bodySm" colorRole="muted" className="mb-3">
-                      Proof of delivery uploaded by distributor
-                    </Typography>
-                    <button
-                      type="button"
-                      onClick={() => setShowDeliveryPhoto(true)}
-                      className="group relative overflow-hidden rounded-lg border border-border-muted"
-                    >
-                      <Image
-                        src={order.deliveryPhoto}
-                        alt="Delivery proof"
-                        width={200}
-                        height={150}
-                        className="h-[150px] w-[200px] object-cover transition-transform group-hover:scale-105"
-                      />
-                      <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover:bg-black/20">
-                        <IconPhoto className="h-6 w-6 text-white opacity-0 transition-opacity group-hover:opacity-100" />
-                      </div>
-                    </button>
-                    <Typography variant="bodyXs" colorRole="muted" className="mt-2">
-                      Click to view full size
-                    </Typography>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </>
         )}
 
         {/* Activity Log - Full timeline with filters */}
