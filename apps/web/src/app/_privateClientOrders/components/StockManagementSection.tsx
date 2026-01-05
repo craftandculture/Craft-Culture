@@ -10,7 +10,7 @@ import {
   IconTruck,
 } from '@tabler/icons-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { toast } from 'sonner';
 
 import Button from '@/app/_ui/components/Button/Button';
@@ -277,8 +277,8 @@ const StockManagementSection = ({
                 const currentStatus = item.stockStatus ?? 'pending';
 
                 return (
-                  <>
-                    <tr key={item.id} className="hover:bg-surface-muted/20">
+                  <React.Fragment key={item.id}>
+                    <tr className="hover:bg-surface-muted/20">
                       <td className="px-2 py-2">
                         <div className="font-medium">{item.productName}</div>
                         {item.vintage && (
@@ -342,7 +342,7 @@ const StockManagementSection = ({
                       </td>
                     </tr>
                     {isExpanded && (
-                      <tr key={`${item.id}-expanded`} className="bg-surface-muted/30">
+                      <tr className="bg-surface-muted/30">
                         <td colSpan={6} className="px-4 py-3">
                           <div className="grid gap-4 sm:grid-cols-2">
                             <div>
@@ -439,7 +439,7 @@ const StockManagementSection = ({
                         </td>
                       </tr>
                     )}
-                  </>
+                  </React.Fragment>
                 );
               })}
             </tbody>

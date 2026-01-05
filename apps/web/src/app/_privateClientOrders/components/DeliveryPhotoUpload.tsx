@@ -232,16 +232,6 @@ const DeliveryPhotoUpload = ({
                   </button>
                   <div className="text-xs text-text-muted">
                     <p>Click to view full size</p>
-                    {existingPhotoUrl && !previewUrl && (
-                      <p className="mt-1">
-                        Uploaded on{' '}
-                        {new Date().toLocaleDateString('en-GB', {
-                          day: '2-digit',
-                          month: 'short',
-                          year: 'numeric',
-                        })}
-                      </p>
-                    )}
                   </div>
                 </div>
               )}

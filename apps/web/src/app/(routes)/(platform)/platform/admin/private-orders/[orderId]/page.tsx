@@ -352,8 +352,6 @@ const AdminPrivateOrderDetailPage = () => {
     );
   }
 
-  const _assignedDistributor = distributors.find((d) => d.id === order.distributor?.id);
-
   // Calculate exchange rate for AED conversion (use actual rate if available, otherwise default)
   const totalAed = Number(order.totalAed) || 0;
   const totalUsd = Number(order.totalUsd) || 1;

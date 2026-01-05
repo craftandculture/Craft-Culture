@@ -95,7 +95,7 @@ const buildPaymentInfo = (order: PaymentTrackerProps['order']): PaymentInfo[] =>
     {
       stage: 'client',
       title: 'Client Payment',
-      description: 'Client pays Partner for the order',
+      description: 'Client pays Distributor for the order',
       paidAt: order.clientPaidAt,
       confirmedBy: null,
       reference: order.clientPaymentReference,
@@ -137,7 +137,7 @@ const statusConfig: Record<
  * Payment Tracker component for private client orders
  *
  * Displays a cascade view of all payment stages:
- * 1. Client Payment - Client pays Partner
+ * 1. Client Payment - Client pays Distributor
  * 2. Distributor Payment - Distributor pays C&C
  * 3. Partner Payment - C&C pays Partner
  */
@@ -158,7 +158,7 @@ const PaymentTracker = ({
     },
     onSuccess: () => {
       toast.success('Payment verified - delivery scheduling can begin');
-      void queryClient.invalidateQueries({ queryKey: ['privateClientOrder', order.id] });
+      void queryClient.invalidateQueries({ queryKey: ['privateClientOrders'] });
       onPaymentConfirmed?.();
     },
     onError: (error) => {
