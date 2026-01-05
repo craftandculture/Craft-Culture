@@ -23,7 +23,7 @@ const uploadDeliveryPhotoSchema = z.object({
 });
 
 /**
- * Upload delivery proof photo
+ * Upload proof of delivery photo
  *
  * Distributor procedure to upload a photo as proof of delivery.
  * This can be done independently of marking the order as delivered.
@@ -117,8 +117,8 @@ const distributorUploadDeliveryPhoto = distributorProcedure
         await createNotification({
           userId: member.userId,
           type: 'status_update',
-          title: 'Delivery Photo Uploaded',
-          message: `Delivery proof uploaded for order ${orderRef}`,
+          title: 'Proof of Delivery Uploaded',
+          message: `Proof of delivery uploaded for order ${orderRef}`,
           entityType: 'private_client_order',
           entityId: orderId,
           actionUrl: `/platform/private-orders/${orderId}`,

@@ -104,7 +104,7 @@ const buildPaymentInfo = (order: PaymentTrackerProps['order']): PaymentInfo[] =>
     {
       stage: 'distributor',
       title: 'Distributor Payment',
-      description: 'C&C pays Distributor for delivery services',
+      description: 'Distributor pays C&C for the stock',
       paidAt: order.distributorPaidAt,
       confirmedBy: null,
       reference: order.distributorPaymentReference,
@@ -138,7 +138,7 @@ const statusConfig: Record<
  *
  * Displays a cascade view of all payment stages:
  * 1. Client Payment - Client pays Partner
- * 2. Distributor Payment - C&C pays Distributor
+ * 2. Distributor Payment - Distributor pays C&C
  * 3. Partner Payment - C&C pays Partner
  */
 const PaymentTracker = ({
