@@ -28,7 +28,7 @@ import DocumentUpload from '@/app/_privateClientOrders/components/DocumentUpload
 import PaymentTracker from '@/app/_privateClientOrders/components/PaymentTracker';
 import PrivateOrderStatusBadge from '@/app/_privateClientOrders/components/PrivateOrderStatusBadge';
 import StockIdentificationSection from '@/app/_privateClientOrders/components/StockIdentificationSection';
-import StockManagementSection from '@/app/_privateClientOrders/components/StockManagementSection';
+import StockStatusSection from '@/app/_privateClientOrders/components/StockStatusSection';
 import WorkflowStepper from '@/app/_privateClientOrders/components/WorkflowStepper';
 import Button from '@/app/_ui/components/Button/Button';
 import Card from '@/app/_ui/components/Card/Card';
@@ -687,14 +687,13 @@ const AdminPrivateOrderDetailPage = () => {
           </CardContent>
         </Card>
 
-        {/* Stock Management - Show after order is approved */}
+        {/* Stock Status - Read-only view for admin (distributor manages stock flow) */}
         {order.items &&
           order.items.length > 0 &&
           !['draft', 'submitted', 'under_cc_review', 'revision_requested', 'cancelled'].includes(
             order.status,
           ) && (
-            <StockManagementSection
-              orderId={orderId}
+            <StockStatusSection
               items={order.items.map((item) => ({
                 id: item.id,
                 productName: item.productName,
@@ -704,9 +703,7 @@ const AdminPrivateOrderDetailPage = () => {
                 stockStatus: item.stockStatus,
                 stockExpectedAt: item.stockExpectedAt,
                 stockConfirmedAt: item.stockConfirmedAt,
-                stockNotes: item.stockNotes,
               }))}
-              onUpdated={() => void refetch()}
             />
           )}
 
