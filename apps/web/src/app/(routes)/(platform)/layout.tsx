@@ -48,42 +48,58 @@ const PlatformLayout = async ({ children }: React.PropsWithChildren) => {
           <div className="flex items-center gap-3 md:gap-6">
             <PlatformMobileNav user={{ role: user.role, customerType: user.customerType, partner: user.partner }} />
             <Link
-              href="/platform/quotes"
+              href={user.customerType === 'private_clients' && user.partner?.type === 'wine_partner' ? '/platform/local-stock' : '/platform/quotes'}
               className="transition-opacity duration-200 hover:opacity-80"
             >
               <BrandedLogo customerType={user.customerType} height={144} />
             </Link>
             <nav className="hidden items-center gap-2 md:flex">
-              {/* Quotes section */}
-              <div className="flex items-center rounded-lg border border-border-muted/50 px-1.5 py-1">
-                <span className="border-r border-border-muted/50 pr-2 text-[10px] font-medium uppercase tracking-wider text-text-muted">
-                  Quotes
-                </span>
-                <Link
-                  href="/platform/quotes"
-                  className="text-text-primary hover:bg-fill-muted ml-1 rounded-md px-2.5 py-1 text-sm font-medium transition-all duration-200 hover:shadow-sm active:scale-[0.98]"
-                >
-                  Create
-                </Link>
-                <span className="text-border-muted">|</span>
-                <Link
-                  href="/platform/my-quotes"
-                  className="text-text-primary hover:bg-fill-muted rounded-md px-2.5 py-1 text-sm font-medium transition-all duration-200 hover:shadow-sm active:scale-[0.98]"
-                >
-                  My Quotes
-                </Link>
-                {user.role === 'admin' && (
-                  <>
-                    <span className="text-border-muted">|</span>
-                    <Link
-                      href="/platform/admin/quote-approvals"
-                      className="text-text-primary hover:bg-fill-muted rounded-md px-2.5 py-1 text-sm font-medium transition-all duration-200 hover:shadow-sm active:scale-[0.98]"
-                    >
-                      Approvals
-                    </Link>
-                  </>
-                )}
-              </div>
+              {/* Quotes section - hidden for wine partners */}
+              {!(user.customerType === 'private_clients' && user.partner?.type === 'wine_partner') && (
+                <div className="flex items-center rounded-lg border border-border-muted/50 px-1.5 py-1">
+                  <span className="border-r border-border-muted/50 pr-2 text-[10px] font-medium uppercase tracking-wider text-text-muted">
+                    Quotes
+                  </span>
+                  <Link
+                    href="/platform/quotes"
+                    className="text-text-primary hover:bg-fill-muted ml-1 rounded-md px-2.5 py-1 text-sm font-medium transition-all duration-200 hover:shadow-sm active:scale-[0.98]"
+                  >
+                    Create
+                  </Link>
+                  <span className="text-border-muted">|</span>
+                  <Link
+                    href="/platform/my-quotes"
+                    className="text-text-primary hover:bg-fill-muted rounded-md px-2.5 py-1 text-sm font-medium transition-all duration-200 hover:shadow-sm active:scale-[0.98]"
+                  >
+                    My Quotes
+                  </Link>
+                  {user.role === 'admin' && (
+                    <>
+                      <span className="text-border-muted">|</span>
+                      <Link
+                        href="/platform/admin/quote-approvals"
+                        className="text-text-primary hover:bg-fill-muted rounded-md px-2.5 py-1 text-sm font-medium transition-all duration-200 hover:shadow-sm active:scale-[0.98]"
+                      >
+                        Approvals
+                      </Link>
+                    </>
+                  )}
+                </div>
+              )}
+              {/* Local Stock section - for Wine Partners */}
+              {user.customerType === 'private_clients' && user.partner?.type === 'wine_partner' && (
+                <div className="flex items-center rounded-lg border border-border-muted/50 px-1.5 py-1">
+                  <span className="border-r border-border-muted/50 pr-2 text-[10px] font-medium uppercase tracking-wider text-text-muted">
+                    Inventory
+                  </span>
+                  <Link
+                    href="/platform/local-stock"
+                    className="text-text-primary hover:bg-fill-muted ml-1 rounded-md px-2.5 py-1 text-sm font-medium transition-all duration-200 hover:shadow-sm active:scale-[0.98]"
+                  >
+                    Local Stock
+                  </Link>
+                </div>
+              )}
               {/* Private Clients section - for Wine Partners */}
               {user.customerType === 'private_clients' && user.partner?.type === 'wine_partner' && (
                 <>
