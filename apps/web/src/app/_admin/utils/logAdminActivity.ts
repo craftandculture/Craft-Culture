@@ -8,6 +8,7 @@ export type AdminAction =
   | 'user.deleted'
   | 'user.approved'
   | 'user.rejected'
+  | 'user.email_changed'
   | 'quote.viewed'
   | 'quote.created'
   | 'quote.updated'
