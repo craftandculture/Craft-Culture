@@ -1464,3 +1464,294 @@ export const partnerPricingOverrides = pgTable(
 ).enableRLS();
 
 export type PartnerPricingOverride = typeof partnerPricingOverrides.$inferSelect;
+
+// ============================================================================
+// SOURCE Module - RFQ System for Out-of-Stock Items
+// ============================================================================
+
+export const sourceRfqStatus = pgEnum('source_rfq_status', [
+  'draft',
+  'parsing',
+  'ready_to_send',
+  'sent',
+  'collecting',
+  'comparing',
+  'selecting',
+  'quote_generated',
+  'closed',
+  'cancelled',
+]);
+
+export const sourceRfqItemStatus = pgEnum('source_rfq_item_status', [
+  'pending',
+  'quoted',
+  'selected',
+  'no_response',
+]);
+
+export const sourceRfqPartnerResponseStatus = pgEnum(
+  'source_rfq_partner_response_status',
+  ['pending', 'viewed', 'in_progress', 'submitted', 'declined', 'expired'],
+);
+
+export const sourceRfqQuoteType = pgEnum('source_rfq_quote_type', [
+  'exact',
+  'alternative',
+]);
+
+/**
+ * SOURCE RFQs - main request for quote record
+ * Admin creates RFQ from messy client lists, sends to wine partners for pricing
+ */
+export const sourceRfqs = pgTable(
+  'source_rfqs',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    rfqNumber: text('rfq_number').notNull().unique(),
+
+    // Metadata
+    name: text('name').notNull(),
+    description: text('description'),
+    status: sourceRfqStatus('status').notNull().default('draft'),
+
+    // Source input
+    sourceType: text('source_type').notNull(), // 'excel', 'email_text', 'manual'
+    sourceFileName: text('source_file_name'),
+    sourceFileUrl: text('source_file_url'),
+    rawInputText: text('raw_input_text'),
+    parsedAt: timestamp('parsed_at', { mode: 'date' }),
+    parsingError: text('parsing_error'),
+
+    // Distributor info (B2B trade customer receiving the final quote)
+    distributorName: text('distributor_name'),
+    distributorEmail: text('distributor_email'),
+    distributorCompany: text('distributor_company'),
+    distributorNotes: text('distributor_notes'),
+
+    // Deadlines
+    responseDeadline: timestamp('response_deadline', { mode: 'date' }),
+
+    // Counts (denormalized)
+    itemCount: integer('item_count').notNull().default(0),
+    partnerCount: integer('partner_count').notNull().default(0),
+    responseCount: integer('response_count').notNull().default(0),
+
+    // Audit
+    createdBy: uuid('created_by')
+      .references(() => users.id, { onDelete: 'set null' })
+      .notNull(),
+    sentAt: timestamp('sent_at', { mode: 'date' }),
+    sentBy: uuid('sent_by').references(() => users.id, { onDelete: 'set null' }),
+    closedAt: timestamp('closed_at', { mode: 'date' }),
+    closedBy: uuid('closed_by').references(() => users.id, { onDelete: 'set null' }),
+
+    ...timestamps,
+  },
+  (table) => [
+    index('source_rfqs_status_idx').on(table.status),
+    index('source_rfqs_created_at_idx').on(table.createdAt),
+    index('source_rfqs_created_by_idx').on(table.createdBy),
+  ],
+).enableRLS();
+
+export type SourceRfq = typeof sourceRfqs.$inferSelect;
+
+/**
+ * SOURCE RFQ Items - line items parsed from client request
+ */
+export const sourceRfqItems = pgTable(
+  'source_rfq_items',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    rfqId: uuid('rfq_id')
+      .references(() => sourceRfqs.id, { onDelete: 'cascade' })
+      .notNull(),
+
+    // Item details (parsed from input or manually entered)
+    productName: text('product_name').notNull(),
+    producer: text('producer'),
+    vintage: text('vintage'),
+    region: text('region'),
+    country: text('country'),
+    bottleSize: text('bottle_size'),
+    caseConfig: integer('case_config'),
+    lwin: text('lwin'),
+
+    // Requested quantity
+    quantity: integer('quantity').notNull().default(1),
+
+    // Original text from source (for reference)
+    originalText: text('original_text'),
+
+    // AI parsing confidence (0-1)
+    parseConfidence: doublePrecision('parse_confidence'),
+
+    // Status
+    status: sourceRfqItemStatus('status').notNull().default('pending'),
+
+    // Selected winning quote
+    selectedQuoteId: uuid('selected_quote_id'),
+    selectedAt: timestamp('selected_at', { mode: 'date' }),
+    selectedBy: uuid('selected_by').references(() => users.id, { onDelete: 'set null' }),
+
+    // Final pricing (after admin adjustment)
+    calculatedPriceUsd: doublePrecision('calculated_price_usd'),
+    finalPriceUsd: doublePrecision('final_price_usd'),
+    priceAdjustedBy: uuid('price_adjusted_by').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+
+    // Notes
+    adminNotes: text('admin_notes'),
+
+    // Sort order
+    sortOrder: integer('sort_order').notNull().default(0),
+
+    ...timestamps,
+  },
+  (table) => [
+    index('source_rfq_items_rfq_id_idx').on(table.rfqId),
+    index('source_rfq_items_status_idx').on(table.status),
+  ],
+).enableRLS();
+
+export type SourceRfqItem = typeof sourceRfqItems.$inferSelect;
+
+/**
+ * SOURCE RFQ Partners - wine partners assigned to quote on an RFQ
+ */
+export const sourceRfqPartners = pgTable(
+  'source_rfq_partners',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    rfqId: uuid('rfq_id')
+      .references(() => sourceRfqs.id, { onDelete: 'cascade' })
+      .notNull(),
+    partnerId: uuid('partner_id')
+      .references(() => partners.id, { onDelete: 'cascade' })
+      .notNull(),
+
+    // Response status
+    status: sourceRfqPartnerResponseStatus('status').notNull().default('pending'),
+
+    // Tracking
+    notifiedAt: timestamp('notified_at', { mode: 'date' }),
+    viewedAt: timestamp('viewed_at', { mode: 'date' }),
+    submittedAt: timestamp('submitted_at', { mode: 'date' }),
+    declinedAt: timestamp('declined_at', { mode: 'date' }),
+    declineReason: text('decline_reason'),
+
+    // Partner notes
+    partnerNotes: text('partner_notes'),
+
+    // Count of quotes submitted
+    quoteCount: integer('quote_count').notNull().default(0),
+
+    ...timestamps,
+  },
+  (table) => [
+    index('source_rfq_partners_rfq_id_idx').on(table.rfqId),
+    index('source_rfq_partners_partner_id_idx').on(table.partnerId),
+    index('source_rfq_partners_status_idx').on(table.status),
+  ],
+).enableRLS();
+
+export type SourceRfqPartner = typeof sourceRfqPartners.$inferSelect;
+
+/**
+ * SOURCE RFQ Quotes - partner quotes for individual items
+ */
+export const sourceRfqQuotes = pgTable(
+  'source_rfq_quotes',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    rfqId: uuid('rfq_id')
+      .references(() => sourceRfqs.id, { onDelete: 'cascade' })
+      .notNull(),
+    itemId: uuid('item_id')
+      .references(() => sourceRfqItems.id, { onDelete: 'cascade' })
+      .notNull(),
+    rfqPartnerId: uuid('rfq_partner_id')
+      .references(() => sourceRfqPartners.id, { onDelete: 'cascade' })
+      .notNull(),
+    partnerId: uuid('partner_id')
+      .references(() => partners.id, { onDelete: 'cascade' })
+      .notNull(),
+
+    // Quote type
+    quoteType: sourceRfqQuoteType('quote_type').notNull().default('exact'),
+
+    // For alternatives: product details
+    alternativeProductName: text('alternative_product_name'),
+    alternativeProducer: text('alternative_producer'),
+    alternativeVintage: text('alternative_vintage'),
+    alternativeRegion: text('alternative_region'),
+    alternativeBottleSize: text('alternative_bottle_size'),
+    alternativeCaseConfig: integer('alternative_case_config'),
+    alternativeLwin: text('alternative_lwin'),
+    alternativeReason: text('alternative_reason'),
+
+    // Partner's cost price (what they charge C&C)
+    costPricePerCaseUsd: doublePrecision('cost_price_per_case_usd').notNull(),
+    currency: text('currency').notNull().default('USD'),
+    moq: integer('moq'),
+
+    // Availability
+    availableQuantity: integer('available_quantity'),
+    leadTimeDays: integer('lead_time_days'),
+    stockLocation: text('stock_location'),
+
+    // Validity
+    validUntil: timestamp('valid_until', { mode: 'date' }),
+
+    // Partner notes
+    notes: text('notes'),
+
+    // Selection
+    isSelected: boolean('is_selected').notNull().default(false),
+
+    ...timestamps,
+  },
+  (table) => [
+    index('source_rfq_quotes_rfq_id_idx').on(table.rfqId),
+    index('source_rfq_quotes_item_id_idx').on(table.itemId),
+    index('source_rfq_quotes_partner_id_idx').on(table.partnerId),
+    index('source_rfq_quotes_is_selected_idx').on(table.isSelected),
+  ],
+).enableRLS();
+
+export type SourceRfqQuote = typeof sourceRfqQuotes.$inferSelect;
+
+/**
+ * SOURCE RFQ Activity Logs - audit trail for RFQ actions
+ */
+export const sourceRfqActivityLogs = pgTable(
+  'source_rfq_activity_logs',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    rfqId: uuid('rfq_id')
+      .references(() => sourceRfqs.id, { onDelete: 'cascade' })
+      .notNull(),
+
+    // Actor
+    userId: uuid('user_id').references(() => users.id, { onDelete: 'set null' }),
+    partnerId: uuid('partner_id').references(() => partners.id, { onDelete: 'set null' }),
+
+    // Action
+    action: text('action').notNull(),
+    previousStatus: sourceRfqStatus('previous_status'),
+    newStatus: sourceRfqStatus('new_status'),
+
+    // Context
+    metadata: jsonb('metadata'),
+    notes: text('notes'),
+
+    ...timestamps,
+  },
+  (table) => [
+    index('source_rfq_activity_logs_rfq_id_idx').on(table.rfqId),
+    index('source_rfq_activity_logs_created_at_idx').on(table.createdAt),
+  ],
+).enableRLS();
+
+export type SourceRfqActivityLog = typeof sourceRfqActivityLogs.$inferSelect;

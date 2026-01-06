@@ -52,7 +52,7 @@ const CookieConsentDialog = ({
             We use cookies to personalize and analyze your experience. Read
             our{' '}
             <Link
-              href="/policies/privacy"
+              href="/privacy"
               onClick={() => hideCookieDialog()}
               variant="bodySm"
               colorRole="muted"

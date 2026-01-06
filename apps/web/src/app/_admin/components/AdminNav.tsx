@@ -7,6 +7,7 @@ import {
   IconCoin,
   IconCurrencyDollar,
   IconPackage,
+  IconSearch,
   IconSettings,
   IconUsers,
 } from '@tabler/icons-react';
@@ -47,6 +48,12 @@ const navItems: NavItem[] = [
     href: '/platform/admin/private-orders',
     icon: IconPackage,
     description: 'Partner orders',
+  },
+  {
+    label: 'Source',
+    href: '/platform/admin/source',
+    icon: IconSearch,
+    description: 'RFQ sourcing',
   },
   {
     label: 'Commissions',
