@@ -59,6 +59,8 @@ interface ExtractedLineItem {
   quantity: number;
   unitPrice?: number;
   total?: number;
+  caseConfig?: number;
+  bottleSize?: number;
 }
 
 interface ExtractedData {
@@ -320,6 +322,9 @@ const PrivateOrderForm = () => {
           : 0;
 
         // Use matched product data - this links to local stock
+        // Fallback to extracted values if offer doesn't have them
+        const bottleSizeFromExtracted = item.bottleSize ? `${item.bottleSize}ml` : '750ml';
+
         return {
           id: crypto.randomUUID(),
           productId: match.product.id,
@@ -329,8 +334,8 @@ const PrivateOrderForm = () => {
           vintage: match.product.year?.toString() || '',
           region: match.product.region || '',
           lwin: match.product.lwin18 || '',
-          bottleSize: match.offer.unitSize || '750ml',
-          caseConfig: match.offer.unitCount || 12,
+          bottleSize: match.offer.unitSize || bottleSizeFromExtracted,
+          caseConfig: match.offer.unitCount || item.caseConfig || 12,
           quantity: item.quantity,
           pricePerCaseUsd: rawPriceUsd,
           source: 'cc_inventory' as StockSource, // Local stock!
@@ -338,6 +343,9 @@ const PrivateOrderForm = () => {
       }
 
       // No match - use extracted data as manual entry
+      // Convert bottleSize from ml number to string format (e.g., 750 -> "750ml")
+      const bottleSizeStr = item.bottleSize ? `${item.bottleSize}ml` : '750ml';
+
       return {
         id: crypto.randomUUID(),
         productName: item.productName,
@@ -345,8 +353,8 @@ const PrivateOrderForm = () => {
         vintage: item.vintage || '',
         region: item.region || '',
         lwin: '',
-        bottleSize: '750ml',
-        caseConfig: 12,
+        bottleSize: bottleSizeStr,
+        caseConfig: item.caseConfig || 12,
         quantity: item.quantity,
         pricePerCaseUsd: item.unitPrice ? Math.round(item.unitPrice * 100) / 100 : 0,
         source: 'manual' as StockSource,

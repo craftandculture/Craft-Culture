@@ -22,6 +22,14 @@ const extractedDataSchema = z.object({
         quantity: z.number().optional().describe('Quantity ordered'),
         unitPrice: z.number().optional().describe('Price per unit'),
         total: z.number().optional().describe('Line item total'),
+        caseConfig: z
+          .number()
+          .optional()
+          .describe('Number of bottles per case (e.g., 6 from "6x75cl", 12 from "12x75cl")'),
+        bottleSize: z
+          .number()
+          .optional()
+          .describe('Bottle size in milliliters (e.g., 750 from "75cl", 1500 from "150cl")'),
       }),
     )
     .optional()
@@ -90,8 +98,11 @@ export const extractDocumentJob = task({
           messages: [
             {
               role: 'system',
-              content: `You are an expert at extracting structured data from invoice images.
+              content: `You are an expert at extracting structured data from wine invoice images.
 Extract all relevant information from the invoice image provided.
+For each line item, also extract:
+- caseConfig: Number of bottles per case - IMPORTANT: Look for patterns like "6x75cl", "12x75cl", "6x750ml" in the product name or description. Extract the first number (e.g., 6 from "6x75cl", 12 from "12x75cl"). If not found, leave empty.
+- bottleSize: Bottle size in milliliters - IMPORTANT: Look for patterns like "75cl", "750ml", "150cl", "1.5L" in the product name. Convert to ml (e.g., 75cl = 750ml, 150cl = 1500ml, 1.5L = 1500ml). If not found, leave empty.
 For dates, use ISO 8601 format (YYYY-MM-DD).
 For currency, use standard currency codes (AED, USD, EUR, GBP, etc.).
 Be precise with numbers and amounts.`,
@@ -125,8 +136,11 @@ Be precise with numbers and amounts.`,
           messages: [
             {
               role: 'system',
-              content: `You are an expert at extracting structured data from invoice PDFs.
+              content: `You are an expert at extracting structured data from wine invoice PDFs.
 Extract all relevant information from the invoice PDF provided.
+For each line item, also extract:
+- caseConfig: Number of bottles per case - IMPORTANT: Look for patterns like "6x75cl", "12x75cl", "6x750ml" in the product name or description. Extract the first number (e.g., 6 from "6x75cl", 12 from "12x75cl"). If not found, leave empty.
+- bottleSize: Bottle size in milliliters - IMPORTANT: Look for patterns like "75cl", "750ml", "150cl", "1.5L" in the product name. Convert to ml (e.g., 75cl = 750ml, 150cl = 1500ml, 1.5L = 1500ml). If not found, leave empty.
 For dates, use ISO 8601 format (YYYY-MM-DD).
 For currency, use standard currency codes (AED, USD, EUR, GBP, etc.).
 Be precise with numbers and amounts.`,
