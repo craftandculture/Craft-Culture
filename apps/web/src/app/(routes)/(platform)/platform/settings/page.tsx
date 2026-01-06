@@ -10,6 +10,7 @@ import api from '@/lib/trpc/server';
 
 import CompanyProfileSection from './components/CompanyProfileSection';
 import PersonalDetailsSection from './components/PersonalDetailsSection';
+import SecuritySection from './components/SecuritySection';
 
 /**
  * Settings page for managing user profile and company information
@@ -34,6 +35,11 @@ const SettingsPage = async () => {
 
             {/* Company Profile Section */}
             <CompanyProfileSection />
+
+            <Divider />
+
+            {/* Security Section (Passkeys, 2FA) */}
+            <SecuritySection />
 
             <Divider />
 
