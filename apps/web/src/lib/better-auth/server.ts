@@ -17,6 +17,16 @@ import loops from '../loops/client';
 
 const isVercelProduction = process.env.VERCEL_ENV === 'production';
 
+// Debug logging for passkey configuration
+console.log('[Better Auth] Config initialized:', {
+  isVercelProduction,
+  VERCEL_ENV: process.env.VERCEL_ENV,
+  passkeyRpID: isVercelProduction ? 'craftculture.xyz' : 'localhost',
+  passkeyOrigin: isVercelProduction
+    ? 'https://wine.craftculture.xyz'
+    : 'http://localhost:3000',
+});
+
 const authServerClient = betterAuth({
   baseURL: isVercelProduction
     ? 'https://wine.craftculture.xyz'
