@@ -5,9 +5,10 @@ import {
   IconChevronRight,
   IconPlus,
   IconSearch,
+  IconTrash,
   IconUsers,
 } from '@tabler/icons-react';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { formatDistanceToNow } from 'date-fns';
 import Link from 'next/link';
 import { useState } from 'react';
@@ -28,6 +29,7 @@ type RfqStatus = (typeof sourceRfqStatus.enumValues)[number];
  */
 const SourcePage = () => {
   const api = useTRPC();
+  const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<RfqStatus | 'all'>('all');
 
@@ -38,6 +40,25 @@ const SourcePage = () => {
       status: statusFilter === 'all' ? undefined : statusFilter,
     }),
   });
+
+  const { mutate: deleteRfq } = useMutation(
+    api.source.admin.delete.mutationOptions({
+      onSuccess: () => {
+        void queryClient.invalidateQueries({ queryKey: api.source.admin.getMany.queryKey() });
+      },
+      onError: (error) => {
+        alert(`Failed to delete: ${error.message}`);
+      },
+    }),
+  );
+
+  const handleDelete = (e: React.MouseEvent, rfqId: string, rfqName: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (confirm(`Delete RFQ "${rfqName}"? This cannot be undone.`)) {
+      deleteRfq({ rfqId });
+    }
+  };
 
   const rfqs = data?.data ?? [];
 
@@ -179,6 +200,16 @@ const SourcePage = () => {
                         <div className="text-right text-text-muted text-xs hidden md:block">
                           {formatDistanceToNow(new Date(rfq.createdAt), { addSuffix: true })}
                         </div>
+
+                        {rfq.status === 'draft' && (
+                          <button
+                            onClick={(e) => handleDelete(e, rfq.id, rfq.name)}
+                            className="p-1.5 rounded hover:bg-fill-danger/10 text-text-muted hover:text-text-danger transition-colors"
+                            title="Delete RFQ"
+                          >
+                            <IconTrash className="h-4 w-4" />
+                          </button>
+                        )}
 
                         <IconChevronRight className="h-5 w-5 text-text-muted" />
                       </div>
