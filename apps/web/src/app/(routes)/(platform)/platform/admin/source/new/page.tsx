@@ -12,7 +12,6 @@ import { useMutation } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import * as XLSX from 'xlsx';
 
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
@@ -95,10 +94,12 @@ const NewRfqPage = () => {
     const isExcel = file.name.endsWith('.xlsx') || file.name.endsWith('.xls');
 
     if (isExcel) {
-      // Parse Excel file with xlsx library
+      // Parse Excel file with dynamically imported xlsx library
       const reader = new FileReader();
-      reader.onload = (event) => {
+      reader.onload = async (event) => {
         try {
+          // Dynamic import to ensure it works in browser
+          const XLSX = await import('xlsx');
           const data = event.target?.result;
           const workbook = XLSX.read(data, { type: 'array' });
           const firstSheetName = workbook.SheetNames[0];
@@ -114,7 +115,7 @@ const NewRfqPage = () => {
           setInputContent(csv);
         } catch (error) {
           console.error('Failed to parse Excel file:', error);
-          alert('Failed to parse Excel file. Please try a CSV file instead.');
+          alert(`Failed to parse Excel file: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
       };
       reader.readAsArrayBuffer(file);
