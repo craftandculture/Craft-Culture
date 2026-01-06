@@ -40,6 +40,7 @@ export const mockUser: User = {
   approvedAt: new Date(),
   approvedBy: null,
   termsAcceptedAt: null,
+  partnerId: null,
 };
 
 /**
