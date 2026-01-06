@@ -3,7 +3,8 @@
 import {
   IconArrowLeft,
   IconCheck,
-  IconDownload,
+  IconFileSpreadsheet,
+  IconFileTypePdf,
   IconSend,
 } from '@tabler/icons-react';
 import { useMutation, useQuery } from '@tanstack/react-query';
@@ -12,6 +13,8 @@ import { useParams } from 'next/navigation';
 import { useState } from 'react';
 
 import RfqStatusBadge from '@/app/_source/components/RfqStatusBadge';
+import exportRfqToExcel from '@/app/_source/utils/exportRfqToExcel';
+import exportRfqToPDF from '@/app/_source/utils/exportRfqToPDF';
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
 import Card from '@/app/_ui/components/Card/Card';
@@ -68,16 +71,22 @@ const RfqDetailPage = () => {
     }),
   );
 
-  // Generate final quote mutation
+  // Generate final quote mutation (exports to PDF)
   const { mutate: generateFinalQuote, isPending: isGenerating } = useMutation(
     api.source.admin.generateFinalQuote.mutationOptions({
-      onSuccess: (data) => {
-        // For now, log the data. Later we'll export to PDF/Excel
-        console.log('Final quote generated:', data);
+      onSuccess: async (data) => {
+        // Export to PDF
+        await exportRfqToPDF(data.rfq, data.lineItems, data.summary, data.unquotedItems);
         void refetch();
       },
     }),
   );
+
+  // Export comparison to Excel
+  const handleExportExcel = () => {
+    if (!rfq) return;
+    exportRfqToExcel(rfq);
+  };
 
   if (isLoading) {
     return (
@@ -170,6 +179,14 @@ const RfqDetailPage = () => {
                 <ButtonContent iconLeft={IconSend}>Send to Partners</ButtonContent>
               </Button>
             )}
+            {rfq.items.length > 0 && (
+              <Button
+                variant="outline"
+                onClick={handleExportExcel}
+              >
+                <ButtonContent iconLeft={IconFileSpreadsheet}>Export Excel</ButtonContent>
+              </Button>
+            )}
             {canGenerateQuote && (
               <Button
                 variant="default"
@@ -177,8 +194,8 @@ const RfqDetailPage = () => {
                 onClick={() => generateFinalQuote({ rfqId })}
                 isDisabled={isGenerating}
               >
-                <ButtonContent iconLeft={IconDownload}>
-                  {isGenerating ? 'Generating...' : 'Generate Quote'}
+                <ButtonContent iconLeft={IconFileTypePdf}>
+                  {isGenerating ? 'Generating...' : 'Export PDF'}
                 </ButtonContent>
               </Button>
             )}
