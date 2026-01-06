@@ -52,8 +52,9 @@ export const adminProcedure = protectedProcedure.use(async ({ ctx, next }) => {
  * Wine Partner procedure
  *
  * Accessible to users linked to a wine partner (wine company) via:
- * 1. Direct link (partners.userId) - owner access
- * 2. Member link (partnerMembers table) - staff access
+ * 1. User's partnerId field (assigned via admin user management)
+ * 2. Direct link (partners.userId) - owner access
+ * 3. Member link (partnerMembers table) - staff access
  *
  * Users must be explicitly linked to a wine partner by an admin.
  * Injects the partnerId into the context for data isolation.
@@ -63,16 +64,39 @@ export const winePartnerProcedure = protectedProcedure.use(
     const { eq, and } = await import('drizzle-orm');
     const { partners, partnerMembers } = await import('@/database/schema');
 
-    // First, check direct partner link (owner) - must be wine_partner type
-    const directPartnerResult = await db
-      .select()
-      .from(partners)
-      .where(
-        and(eq(partners.userId, ctx.user.id), eq(partners.type, 'wine_partner')),
-      )
-      .limit(1);
+    let partner;
 
-    let partner = directPartnerResult[0];
+    // First, check user's partnerId field (assigned via admin)
+    if (ctx.user.partnerId) {
+      const userPartnerResult = await db
+        .select()
+        .from(partners)
+        .where(
+          and(
+            eq(partners.id, ctx.user.partnerId),
+            eq(partners.type, 'wine_partner'),
+          ),
+        )
+        .limit(1);
+
+      partner = userPartnerResult[0];
+    }
+
+    // If no user-assigned partner, check direct partner link (owner)
+    if (!partner) {
+      const directPartnerResult = await db
+        .select()
+        .from(partners)
+        .where(
+          and(
+            eq(partners.userId, ctx.user.id),
+            eq(partners.type, 'wine_partner'),
+          ),
+        )
+        .limit(1);
+
+      partner = directPartnerResult[0];
+    }
 
     // If no direct link, check partnerMembers table for wine partner membership
     if (!partner) {
@@ -122,8 +146,9 @@ export const winePartnerProcedure = protectedProcedure.use(
  * Distributor procedure
  *
  * Accessible to users linked to a distributor (CD or TBS) via:
- * 1. Direct link (partners.userId) - owner access
- * 2. Member link (partnerMembers table) - staff access
+ * 1. User's partnerId field (assigned via admin user management)
+ * 2. Direct link (partners.userId) - owner access
+ * 3. Member link (partnerMembers table) - staff access
  *
  * Users must be explicitly linked to a distributor by an admin.
  * Injects the partnerId into the context for data isolation.
@@ -133,16 +158,39 @@ export const distributorProcedure = protectedProcedure.use(
     const { eq, and } = await import('drizzle-orm');
     const { partners, partnerMembers } = await import('@/database/schema');
 
-    // First, check direct partner link (owner) - must be distributor type
-    const directPartnerResult = await db
-      .select()
-      .from(partners)
-      .where(
-        and(eq(partners.userId, ctx.user.id), eq(partners.type, 'distributor')),
-      )
-      .limit(1);
+    let partner;
 
-    let partner = directPartnerResult[0];
+    // First, check user's partnerId field (assigned via admin)
+    if (ctx.user.partnerId) {
+      const userPartnerResult = await db
+        .select()
+        .from(partners)
+        .where(
+          and(
+            eq(partners.id, ctx.user.partnerId),
+            eq(partners.type, 'distributor'),
+          ),
+        )
+        .limit(1);
+
+      partner = userPartnerResult[0];
+    }
+
+    // If no user-assigned partner, check direct partner link (owner)
+    if (!partner) {
+      const directPartnerResult = await db
+        .select()
+        .from(partners)
+        .where(
+          and(
+            eq(partners.userId, ctx.user.id),
+            eq(partners.type, 'distributor'),
+          ),
+        )
+        .limit(1);
+
+      partner = directPartnerResult[0];
+    }
 
     // If no direct link, check partnerMembers table for distributor membership
     if (!partner) {
