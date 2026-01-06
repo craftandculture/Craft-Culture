@@ -243,7 +243,7 @@ const AdminPrivateOrderDetailPage = () => {
   // Confirm distributor payment received (distributor paid C&C)
   const { mutate: confirmDistributorPayment, isPending: isConfirmingDistributorPayment } = useMutation({
     mutationFn: ({ reference }: { reference?: string }) =>
-      trpcClient.privateClientOrders.paymentsConfirm.mutate({
+      trpcClient.privateClientOrders.confirmPayment.mutate({
         orderId,
         paymentStage: 'distributor',
         reference,

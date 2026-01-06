@@ -146,7 +146,8 @@ export const users = pgTable('users', {
   partnerId: uuid('partner_id'),
 
   ...timestamps,
-}).enableRLS();
+});
+// Note: No RLS on users - managed by Better Auth
 
 export type User = typeof users.$inferSelect;
 
@@ -165,7 +166,8 @@ export const sessions = pgTable('sessions', {
   /** If set, this session is an impersonation - the admin who started it */
   impersonatedBy: uuid('impersonated_by').references(() => users.id),
   ...timestamps,
-}).enableRLS();
+});
+// Note: No RLS on sessions - managed by Better Auth
 
 export type Session = typeof sessions.$inferSelect;
 
@@ -190,7 +192,8 @@ export const accounts = pgTable('accounts', {
   idToken: text('id_token'),
   password: text('password'),
   ...timestamps,
-}).enableRLS();
+});
+// Note: No RLS on accounts - managed by Better Auth
 
 export const verifications = pgTable('verifications', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -201,7 +204,8 @@ export const verifications = pgTable('verifications', {
     withTimezone: true,
   }).notNull(),
   ...timestamps,
-}).enableRLS();
+});
+// Note: No RLS on verifications - managed by Better Auth
 
 export const passkeys = pgTable('passkeys', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -216,7 +220,8 @@ export const passkeys = pgTable('passkeys', {
   backedUp: boolean('backed_up').notNull(),
   transports: text('transports').notNull(),
   ...timestamps,
-}).enableRLS();
+});
+// Note: No RLS on passkeys - managed by Better Auth
 
 export const products = pgTable(
   'products',
