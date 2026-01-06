@@ -1,9 +1,10 @@
 import { TRPCError } from '@trpc/server';
-import { asc, eq } from 'drizzle-orm';
+import { asc, desc, eq } from 'drizzle-orm';
 
 import db from '@/database/client';
 import {
   partners,
+  sourceRfqActivityLogs,
   sourceRfqItems,
   sourceRfqPartners,
   sourceRfqQuotes,
@@ -98,6 +99,27 @@ const adminGetOneRfq = adminProcedure
       quotes: quotesByItem.get(item.id) || [],
     }));
 
+    // Get activity logs with user/partner info
+    const activityLogs = await db
+      .select({
+        log: sourceRfqActivityLogs,
+        user: {
+          id: users.id,
+          name: users.name,
+          email: users.email,
+        },
+        partner: {
+          id: partners.id,
+          businessName: partners.businessName,
+        },
+      })
+      .from(sourceRfqActivityLogs)
+      .leftJoin(users, eq(sourceRfqActivityLogs.userId, users.id))
+      .leftJoin(partners, eq(sourceRfqActivityLogs.partnerId, partners.id))
+      .where(eq(sourceRfqActivityLogs.rfqId, rfqId))
+      .orderBy(desc(sourceRfqActivityLogs.createdAt))
+      .limit(50);
+
     return {
       ...rfqResult.rfq,
       createdByUser: rfqResult.createdByUser,
@@ -105,6 +127,11 @@ const adminGetOneRfq = adminProcedure
       partners: rfqPartners.map((rp) => ({
         ...rp.rfqPartner,
         partner: rp.partner,
+      })),
+      activityLogs: activityLogs.map((al) => ({
+        ...al.log,
+        user: al.user,
+        partner: al.partner,
       })),
     };
   });

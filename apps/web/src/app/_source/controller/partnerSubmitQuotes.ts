@@ -36,6 +36,7 @@ const partnerSubmitQuotes = winePartnerProcedure
       .select({
         assignment: sourceRfqPartners,
         rfqStatus: sourceRfqs.status,
+        responseDeadline: sourceRfqs.responseDeadline,
       })
       .from(sourceRfqPartners)
       .innerJoin(sourceRfqs, eq(sourceRfqPartners.rfqId, sourceRfqs.id))
@@ -59,6 +60,20 @@ const partnerSubmitQuotes = winePartnerProcedure
       throw new TRPCError({
         code: 'BAD_REQUEST',
         message: 'RFQ is no longer accepting quotes',
+      });
+    }
+
+    // Check if deadline has passed
+    if (assignment.responseDeadline && new Date() > assignment.responseDeadline) {
+      // Update partner status to expired
+      await db
+        .update(sourceRfqPartners)
+        .set({ status: 'expired' })
+        .where(eq(sourceRfqPartners.id, assignment.assignment.id));
+
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'The deadline for this RFQ has passed. Quotes can no longer be submitted.',
       });
     }
 

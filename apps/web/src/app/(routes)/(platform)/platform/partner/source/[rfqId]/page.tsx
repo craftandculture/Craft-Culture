@@ -1,6 +1,7 @@
 'use client';
 
 import {
+  IconAlertTriangle,
   IconArrowLeft,
   IconCalendar,
   IconCheck,
@@ -102,7 +103,13 @@ const PartnerRfqDetailPage = () => {
     );
   }
 
-  const canSubmit = rfq.partnerStatus !== 'submitted' && rfq.partnerStatus !== 'declined';
+  // Check if deadline has passed
+  const isDeadlinePassed =
+    rfq.responseDeadline && new Date() > new Date(rfq.responseDeadline);
+  const canSubmit =
+    rfq.partnerStatus !== 'submitted' &&
+    rfq.partnerStatus !== 'declined' &&
+    !isDeadlinePassed;
 
   const handleQuoteChange = (
     itemId: string,
@@ -219,6 +226,18 @@ const PartnerRfqDetailPage = () => {
               <IconX className="h-5 w-5 text-text-danger" />
               <Typography variant="bodyMd" className="text-text-danger">
                 You have declined this RFQ.
+              </Typography>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Deadline passed warning */}
+        {isDeadlinePassed && rfq.partnerStatus !== 'submitted' && rfq.partnerStatus !== 'declined' && (
+          <Card className="border-border-warning bg-fill-warning/5">
+            <CardContent className="p-4 flex items-center gap-3">
+              <IconAlertTriangle className="h-5 w-5 text-text-warning" />
+              <Typography variant="bodyMd" className="text-text-warning">
+                The deadline for this RFQ has passed. Quotes can no longer be submitted.
               </Typography>
             </CardContent>
           </Card>
