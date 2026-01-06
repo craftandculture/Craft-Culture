@@ -133,6 +133,7 @@ const AdminPrivateOrderDetailPage = () => {
   const [showDeliveryPhoto, setShowDeliveryPhoto] = useState(false);
   const [activityFilter, setActivityFilter] = useState<'all' | 'partner' | 'distributor' | 'admin'>('all');
   const [partnerPaymentRef, setPartnerPaymentRef] = useState('');
+  const [distributorPaymentRef, setDistributorPaymentRef] = useState('');
   const [isCompletionExpanded, setIsCompletionExpanded] = useState(true);
 
   // Fetch order details
@@ -236,6 +237,25 @@ const AdminPrivateOrderDetailPage = () => {
     },
     onError: (error) => {
       toast.error(error.message || 'Failed to delete order');
+    },
+  });
+
+  // Confirm distributor payment received (distributor paid C&C)
+  const { mutate: confirmDistributorPayment, isPending: isConfirmingDistributorPayment } = useMutation({
+    mutationFn: ({ reference }: { reference?: string }) =>
+      trpcClient.privateClientOrders.paymentsConfirm.mutate({
+        orderId,
+        paymentStage: 'distributor',
+        reference,
+      }),
+    onSuccess: () => {
+      toast.success('Distributor payment confirmed');
+      setDistributorPaymentRef('');
+      void refetch();
+      void queryClient.invalidateQueries({ queryKey: ['privateClientOrders'] });
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to confirm payment');
     },
   });
 
@@ -938,6 +958,11 @@ const AdminPrivateOrderDetailPage = () => {
                     Order Completion
                   </Typography>
                   <div className="flex flex-wrap items-center gap-2 text-xs text-text-muted">
+                    {order.distributorPaidAt && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-fill-success/20 px-2 py-0.5 text-fill-success">
+                        <IconCheck size={12} /> Distributor Paid
+                      </span>
+                    )}
                     {order.partnerPaidAt && (
                       <span className="inline-flex items-center gap-1 rounded-full bg-fill-success/20 px-2 py-0.5 text-fill-success">
                         <IconCheck size={12} /> C&C Paid
@@ -965,6 +990,55 @@ const AdminPrivateOrderDetailPage = () => {
             {isCompletionExpanded && (
               <div className="border-t border-fill-success/20 p-4 pt-4">
                 <div className="space-y-4">
+                  {/* Distributor Payment to C&C */}
+                  <div className="flex flex-col gap-3 rounded-lg bg-background-primary/50 p-4 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="flex items-start gap-3">
+                      <div className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full ${
+                        order.distributorPaidAt ? 'bg-fill-success/20' : 'bg-fill-muted'
+                      }`}>
+                        <Icon
+                          icon={order.distributorPaidAt ? IconCheck : IconCurrencyDollar}
+                          size="sm"
+                          className={order.distributorPaidAt ? 'text-fill-success' : 'text-text-muted'}
+                        />
+                      </div>
+                      <div>
+                        <Typography variant="labelMd" className="mb-0.5">
+                          Distributor Payment to C&C
+                        </Typography>
+                        <Typography variant="bodyXs" colorRole="muted">
+                          {order.distributorPaidAt
+                            ? `Received on ${formatDate(order.distributorPaidAt)}${order.distributorPaymentReference ? ` • Ref: ${order.distributorPaymentReference}` : ''}`
+                            : 'Confirm when distributor has paid C&C for the order'}
+                        </Typography>
+                      </div>
+                    </div>
+
+                    {!order.distributorPaidAt && (
+                      <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center">
+                        <Input
+                          placeholder="Reference (optional)"
+                          value={distributorPaymentRef}
+                          onChange={(e) => setDistributorPaymentRef(e.target.value)}
+                          className="w-full text-xs sm:w-[160px]"
+                        />
+                        <Button
+                          onClick={() => confirmDistributorPayment({ reference: distributorPaymentRef || undefined })}
+                          disabled={isConfirmingDistributorPayment}
+                          colorRole="brand"
+                          size="sm"
+                        >
+                          <Icon
+                            icon={isConfirmingDistributorPayment ? IconLoader2 : IconCurrencyDollar}
+                            size="xs"
+                            className={isConfirmingDistributorPayment ? 'animate-spin' : ''}
+                          />
+                          <span className="ml-1.5">{isConfirmingDistributorPayment ? 'Confirming...' : 'Confirm Received'}</span>
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+
                   {/* C&C Payment to Partner */}
                   <div className="flex flex-col gap-3 rounded-lg bg-background-primary/50 p-4 sm:flex-row sm:items-start sm:justify-between">
                     <div className="flex items-start gap-3">
