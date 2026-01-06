@@ -4,8 +4,10 @@ import { eq, sql } from 'drizzle-orm';
 import db from '@/database/client';
 import { partners, sourceRfqPartners, sourceRfqs } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
+import logger from '@/utils/logger';
 
 import sendToPartnersSchema from '../schemas/sendToPartnersSchema';
+import notifyPartnerOfRfq from '../utils/notifyPartnerOfRfq';
 
 /**
  * Send SOURCE RFQ to selected wine partners
@@ -88,8 +90,17 @@ const adminSendToPartners = adminProcedure
       })
       .where(eq(sourceRfqs.id, rfqId));
 
-    // TODO: Send email notifications to partners via Loops
-    // This will be implemented in the notifications phase
+    // Send notifications to all partners (non-blocking)
+    void Promise.allSettled(
+      partnerIds.map((partnerId) =>
+        notifyPartnerOfRfq({ rfqId, partnerId }),
+      ),
+    ).then((results) => {
+      const failed = results.filter((r) => r.status === 'rejected');
+      if (failed.length > 0) {
+        logger.error('Some partner notifications failed', { failedCount: failed.length });
+      }
+    });
 
     return {
       success: true,

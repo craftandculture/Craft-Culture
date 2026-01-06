@@ -11,6 +11,7 @@ import {
 import { winePartnerProcedure } from '@/lib/trpc/procedures';
 
 import submitQuotesSchema from '../schemas/submitQuotesSchema';
+import notifyAdminOfPartnerResponse from '../utils/notifyAdminOfPartnerResponse';
 
 /**
  * Submit quotes for SOURCE RFQ items
@@ -155,6 +156,13 @@ const partnerSubmitQuotes = winePartnerProcedure
           sql`${sourceRfqItems.id} IN ${itemIds}`,
         ),
       );
+
+    // Notify admins of the response (non-blocking)
+    void notifyAdminOfPartnerResponse({
+      rfqId,
+      partnerId,
+      quoteCount: quotes.length,
+    });
 
     return {
       success: true,
