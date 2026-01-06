@@ -30,7 +30,7 @@ const CommissionDetailsDialog = ({ isOpen, onClose }: CommissionDetailsDialogPro
   const { data, isLoading } = useQuery({
     ...api.commissions.getDetails.queryOptions({ limit: 50 }),
     enabled: isOpen,
-    staleTime: 30000,
+    staleTime: 5000,
   });
 
   const formatDate = (date: Date | null | undefined) => {

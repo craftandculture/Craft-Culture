@@ -21,7 +21,7 @@ const LiveStatus = () => {
   const api = useTRPC();
   const { data: lastUpdate } = useQuery({
     ...api.products.getLastUpdate.queryOptions(),
-    refetchInterval: 60000, // Refetch every minute
+    refetchInterval: 5000, // Refetch every minute
   });
 
   return (

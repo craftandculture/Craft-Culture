@@ -830,7 +830,7 @@ const UserManagementPage = () => {
       search: searchQuery || undefined,
       limit: 50,
     }),
-    refetchInterval: 10000, // Refresh every 10 seconds
+    refetchInterval: 5000, // Refresh every 10 seconds
   });
 
   // Fetch distributors for assignment dropdown

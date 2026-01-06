@@ -39,7 +39,7 @@ const CommissionsPage = () => {
   // Fetch pending commissions
   const { data, isLoading, refetch } = useQuery({
     ...api.commissions.getPending.queryOptions({ limit: 100 }),
-    staleTime: 30000,
+    staleTime: 5000,
   });
 
   // Mark as paid mutation
