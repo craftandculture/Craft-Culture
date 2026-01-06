@@ -86,7 +86,6 @@ const DistributorOrderDetailPage = () => {
   });
 
   const hasDistributorInvoice = documents?.some((doc) => doc.documentType === 'distributor_invoice');
-  const partnerAcknowledgedInvoice = !!order?.partnerInvoiceAcknowledgedAt;
 
   const updateStatus = useMutation({
     mutationFn: (status: string) =>
@@ -425,7 +424,7 @@ const DistributorOrderDetailPage = () => {
               <Button
                 colorRole="brand"
                 onClick={() => updateStatus.mutate(nextAction.status)}
-                disabled={updateStatus.isPending || (nextAction.status === 'client_paid' && (!hasDistributorInvoice || !partnerAcknowledgedInvoice))}
+                disabled={updateStatus.isPending}
               >
                 <ButtonContent iconLeft={nextAction.icon} isLoading={updateStatus.isPending}>
                   {nextAction.label}
@@ -519,9 +518,9 @@ const DistributorOrderDetailPage = () => {
           </Card>
         )}
 
-        {/* Invoice Status - shown when awaiting client payment */}
-        {order.status === 'awaiting_client_payment' && (
-          <Card className={`border-2 ${hasDistributorInvoice && partnerAcknowledgedInvoice ? 'border-fill-success/50 bg-fill-success/5' : 'border-fill-warning/50 bg-fill-warning/5'}`}>
+        {/* Invoice Status - shown when awaiting client payment and no invoice uploaded */}
+        {order.status === 'awaiting_client_payment' && !hasDistributorInvoice && (
+          <Card className="border-2 border-fill-warning/50 bg-fill-warning/5">
             <CardContent className="p-6">
               {/* Hidden file input for invoice upload */}
               <input
@@ -532,53 +531,26 @@ const DistributorOrderDetailPage = () => {
                 onChange={handleInvoiceFileSelect}
               />
               <div className="flex flex-col items-center gap-4 text-center sm:flex-row sm:text-left">
-                <div className={`flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full ${hasDistributorInvoice && partnerAcknowledgedInvoice ? 'bg-fill-success/20' : 'bg-fill-warning/20'}`}>
-                  <Icon
-                    icon={hasDistributorInvoice && partnerAcknowledgedInvoice ? IconCheck : IconFileInvoice}
-                    size="lg"
-                    className={hasDistributorInvoice && partnerAcknowledgedInvoice ? 'text-fill-success' : 'text-fill-warning'}
-                  />
+                <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-fill-warning/20">
+                  <Icon icon={IconFileInvoice} size="lg" className="text-fill-warning" />
                 </div>
                 <div className="flex-1">
                   <Typography variant="headingSm" className="mb-1">
-                    {hasDistributorInvoice && partnerAcknowledgedInvoice
-                      ? 'Ready for Payment Confirmation'
-                      : 'Invoice Required Before Payment Confirmation'}
+                    Upload Invoice (Optional)
                   </Typography>
                   <Typography variant="bodySm" colorRole="muted">
-                    {!hasDistributorInvoice ? (
-                      <>Upload your invoice to send to the partner for client payment.</>
-                    ) : !partnerAcknowledgedInvoice ? (
-                      <>Invoice uploaded. Waiting for partner to acknowledge receipt before you can confirm payment.</>
-                    ) : (
-                      <>Partner has acknowledged the invoice. You can now confirm payment once received from the client.</>
-                    )}
+                    Upload your invoice to send to the partner for their records.
                   </Typography>
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {hasDistributorInvoice && (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-fill-success/20 px-2 py-0.5 text-xs text-fill-success">
-                        <IconCheck className="h-3 w-3" />
-                        Invoice Uploaded
-                      </span>
-                    )}
-                    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs ${partnerAcknowledgedInvoice ? 'bg-fill-success/20 text-fill-success' : 'bg-surface-muted text-text-muted'}`}>
-                      {partnerAcknowledgedInvoice ? <IconCheck className="h-3 w-3" /> : <IconFileInvoice className="h-3 w-3" />}
-                      {partnerAcknowledgedInvoice ? 'Partner Acknowledged' : 'Awaiting Partner'}
-                    </span>
-                  </div>
                 </div>
-                {/* Upload button */}
-                {!hasDistributorInvoice && (
-                  <Button
-                    onClick={() => invoiceInputRef.current?.click()}
-                    disabled={isUploadingInvoice}
-                    variant="default"
-                  >
-                    <ButtonContent iconLeft={isUploadingInvoice ? IconLoader2 : IconCloudUpload} isLoading={isUploadingInvoice}>
-                      {isUploadingInvoice ? 'Uploading...' : 'Upload Invoice'}
-                    </ButtonContent>
-                  </Button>
-                )}
+                <Button
+                  onClick={() => invoiceInputRef.current?.click()}
+                  disabled={isUploadingInvoice}
+                  variant="default"
+                >
+                  <ButtonContent iconLeft={isUploadingInvoice ? IconLoader2 : IconCloudUpload} isLoading={isUploadingInvoice}>
+                    {isUploadingInvoice ? 'Uploading...' : 'Upload Invoice'}
+                  </ButtonContent>
+                </Button>
               </div>
             </CardContent>
           </Card>
