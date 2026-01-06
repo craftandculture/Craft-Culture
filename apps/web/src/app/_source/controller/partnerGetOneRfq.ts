@@ -9,6 +9,7 @@ import {
   sourceRfqs,
 } from '@/database/schema';
 import { winePartnerProcedure } from '@/lib/trpc/procedures';
+import logger from '@/utils/logger';
 
 import getOneRfqSchema from '../schemas/getOneRfqSchema';
 
@@ -24,6 +25,8 @@ const partnerGetOneRfq = winePartnerProcedure
   .input(getOneRfqSchema)
   .query(async ({ input, ctx: { partnerId } }) => {
     const { rfqId } = input;
+
+    logger.info('[SOURCE] Partner getOne - looking up RFQ', { rfqId, partnerId });
 
     // Verify RFQ is assigned to this partner
     const [assignment] = await db
@@ -41,11 +44,32 @@ const partnerGetOneRfq = winePartnerProcedure
       );
 
     if (!assignment) {
+      // Debug: check what assignments exist for this RFQ
+      const allAssignments = await db
+        .select({
+          partnerId: sourceRfqPartners.partnerId,
+          status: sourceRfqPartners.status,
+        })
+        .from(sourceRfqPartners)
+        .where(eq(sourceRfqPartners.rfqId, rfqId));
+
+      logger.warn('[SOURCE] Partner getOne - RFQ not found for partner', {
+        rfqId,
+        requestingPartnerId: partnerId,
+        existingAssignments: allAssignments,
+      });
+
       throw new TRPCError({
         code: 'NOT_FOUND',
         message: 'RFQ not found or not assigned to your organization',
       });
     }
+
+    logger.info('[SOURCE] Partner getOne - found assignment', {
+      rfqId,
+      partnerId,
+      status: assignment.assignment.status,
+    });
 
     // Mark as viewed if first time viewing
     if (!assignment.assignment.viewedAt) {
