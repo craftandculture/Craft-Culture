@@ -33,6 +33,12 @@ const authServerClient = betterAuth({
     : serverConfig.appUrl.toString(),
   basePath: '/api/auth',
   secret: serverConfig.betterAuthSecret,
+  logger: {
+    level: 'debug',
+    log: (level, message, ...args) => {
+      console.log(`[Better Auth ${level}]`, message, ...args);
+    },
+  },
   plugins: [
     admin({
       impersonationSessionDuration: 60 * 60, // 1 hour
