@@ -47,7 +47,7 @@ const PartnerDashboard = () => {
   const { data, isLoading } = useQuery({
     queryKey: ['privateClientOrders.partnerDashboard'],
     queryFn: () => trpcClient.privateClientOrders.partnerDashboard.query(),
-    refetchInterval: 30000,
+    refetchInterval: 5000,
   });
 
   /**

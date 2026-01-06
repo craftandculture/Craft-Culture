@@ -75,14 +75,14 @@ const DistributorOrderDetailPage = () => {
   const { data: order, isLoading, refetch } = useQuery({
     ...api.privateClientOrders.distributorGetOne.queryOptions({ id: orderId }),
     enabled: !!orderId,
-    refetchInterval: 10000, // Auto-refresh every 10 seconds
+    refetchInterval: 5000, // Auto-refresh every 10 seconds
   });
 
   // Fetch documents to check for invoice status
   const { data: documents, refetch: refetchDocuments } = useQuery({
     ...api.privateClientOrders.getDocuments.queryOptions({ orderId }),
     enabled: !!orderId,
-    refetchInterval: 10000, // Auto-refresh every 10 seconds
+    refetchInterval: 5000, // Auto-refresh every 10 seconds
   });
 
   const hasDistributorInvoice = documents?.some((doc) => doc.documentType === 'distributor_invoice');

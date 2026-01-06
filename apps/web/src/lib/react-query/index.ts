@@ -10,7 +10,7 @@ const createQueryClient = () => {
   return new QueryClient({
     defaultOptions: {
       queries: {
-        staleTime: 30 * 1000,
+        staleTime: 5 * 1000,
       },
       dehydrate: {
         serializeData: serialize,

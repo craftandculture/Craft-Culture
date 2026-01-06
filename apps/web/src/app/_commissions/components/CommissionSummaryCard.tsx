@@ -24,7 +24,7 @@ const CommissionSummaryCard = () => {
 
   const { data, isLoading, error } = useQuery({
     ...api.commissions.getSummary.queryOptions(),
-    staleTime: 30000,
+    staleTime: 5000,
   });
 
   // Don't render while loading or on error
