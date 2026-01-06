@@ -219,6 +219,7 @@ export const passkeys = pgTable('passkeys', {
   deviceType: text('device_type').notNull(),
   backedUp: boolean('backed_up').notNull(),
   transports: text('transports').notNull(),
+  aaguid: text('aaguid'),
   ...timestamps,
 });
 // Note: No RLS on passkeys - managed by Better Auth

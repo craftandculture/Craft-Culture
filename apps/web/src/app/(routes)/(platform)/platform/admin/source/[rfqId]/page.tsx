@@ -3,14 +3,16 @@
 import {
   IconArrowLeft,
   IconCheck,
+  IconEdit,
   IconFileSpreadsheet,
   IconFileTypePdf,
+  IconRefresh,
   IconSend,
 } from '@tabler/icons-react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import RfqStatusBadge from '@/app/_source/components/RfqStatusBadge';
 import exportRfqToExcel from '@/app/_source/utils/exportRfqToExcel';
@@ -37,6 +39,11 @@ const RfqDetailPage = () => {
 
   const [isSelectPartnersOpen, setIsSelectPartnersOpen] = useState(false);
   const [selectedPartnerIds, setSelectedPartnerIds] = useState<string[]>([]);
+
+  // State for editing prices
+  const [editingItemId, setEditingItemId] = useState<string | null>(null);
+  const [editingPrice, setEditingPrice] = useState<string>('');
+  const priceInputRef = useRef<HTMLInputElement>(null);
 
   // Fetch RFQ data
   const { data: rfq, isLoading, refetch } = useQuery({
@@ -81,6 +88,24 @@ const RfqDetailPage = () => {
       },
     }),
   );
+
+  // Update item mutation (for price adjustment)
+  const { mutate: updateItem, isPending: isUpdatingItem } = useMutation(
+    api.source.admin.updateItem.mutationOptions({
+      onSuccess: () => {
+        void refetch();
+        setEditingItemId(null);
+      },
+    }),
+  );
+
+  // Focus input when editing starts
+  useEffect(() => {
+    if (editingItemId && priceInputRef.current) {
+      priceInputRef.current.focus();
+      priceInputRef.current.select();
+    }
+  }, [editingItemId]);
 
   // Export comparison to Excel
   const handleExportExcel = () => {
@@ -139,6 +164,32 @@ const RfqDetailPage = () => {
 
   const handleSelectQuote = (itemId: string, quoteId: string) => {
     selectQuote({ itemId, quoteId });
+  };
+
+  // Start editing price for an item
+  const handleStartEditPrice = (itemId: string, currentPrice: number) => {
+    setEditingItemId(itemId);
+    setEditingPrice(currentPrice.toFixed(2));
+  };
+
+  // Save edited price
+  const handleSavePrice = (itemId: string) => {
+    const price = parseFloat(editingPrice);
+    if (isNaN(price) || price <= 0) {
+      return;
+    }
+    updateItem({ itemId, finalPriceUsd: price });
+  };
+
+  // Reset price to cost price
+  const handleResetPrice = (itemId: string) => {
+    updateItem({ itemId, finalPriceUsd: null });
+  };
+
+  // Cancel editing
+  const handleCancelEdit = () => {
+    setEditingItemId(null);
+    setEditingPrice('');
   };
 
   return (
@@ -325,6 +376,14 @@ const RfqDetailPage = () => {
                     {rfq.items.map((item) => {
                       const selectedQuote = item.quotes.find((q) => q.quote.isSelected);
 
+                      // Calculate min/max prices for color coding
+                      const quotePrices = item.quotes
+                        .map((q) => q.quote.costPricePerCaseUsd)
+                        .filter((p) => p > 0);
+                      const minPrice = quotePrices.length > 0 ? Math.min(...quotePrices) : null;
+                      const maxPrice =
+                        quotePrices.length > 1 ? Math.max(...quotePrices) : null;
+
                       return (
                         <tr key={item.id} className="hover:bg-fill-muted/50">
                           <td className="px-4 py-3">
@@ -357,6 +416,10 @@ const RfqDetailPage = () => {
 
                             const isSelected = quote.quote.isSelected;
                             const isAlternative = quote.quote.quoteType === 'alternative';
+                            const price = quote.quote.costPricePerCaseUsd;
+                            const isBestPrice = minPrice !== null && price === minPrice;
+                            const isHighestPrice =
+                              maxPrice !== null && price === maxPrice && maxPrice !== minPrice;
 
                             return (
                               <td key={p.partnerId} className="px-4 py-3">
@@ -366,12 +429,24 @@ const RfqDetailPage = () => {
                                   className={`p-2 rounded-lg text-left w-full transition-colors ${
                                     isSelected
                                       ? 'bg-fill-brand/10 border-2 border-border-brand'
-                                      : 'bg-fill-muted hover:bg-fill-muted/80 border-2 border-transparent'
+                                      : isBestPrice
+                                        ? 'bg-fill-success/10 hover:bg-fill-success/20 border-2 border-transparent'
+                                        : isHighestPrice
+                                          ? 'bg-fill-danger/10 hover:bg-fill-danger/20 border-2 border-transparent'
+                                          : 'bg-fill-muted hover:bg-fill-muted/80 border-2 border-transparent'
                                   } ${!canSelectQuotes ? 'cursor-default' : 'cursor-pointer'}`}
                                 >
                                   <div className="flex items-center justify-between">
-                                    <span className="font-medium text-sm">
-                                      ${quote.quote.costPricePerCaseUsd.toFixed(2)}
+                                    <span
+                                      className={`font-medium text-sm ${
+                                        isBestPrice
+                                          ? 'text-text-success'
+                                          : isHighestPrice
+                                            ? 'text-text-danger'
+                                            : ''
+                                      }`}
+                                    >
+                                      ${price.toFixed(2)}
                                     </span>
                                     {isSelected && (
                                       <IconCheck className="h-4 w-4 text-text-brand" />
@@ -395,12 +470,80 @@ const RfqDetailPage = () => {
                           <td className="px-4 py-3">
                             {selectedQuote ? (
                               <div className="text-sm">
-                                <div className="font-medium text-text-success">
-                                  ${item.finalPriceUsd?.toFixed(2) || selectedQuote.quote.costPricePerCaseUsd.toFixed(2)}
-                                </div>
-                                <div className="text-xs text-text-muted">
-                                  {selectedQuote.partner.businessName}
-                                </div>
+                                {editingItemId === item.id ? (
+                                  // Editing mode
+                                  <div className="flex items-center gap-1">
+                                    <span className="text-text-muted">$</span>
+                                    <input
+                                      ref={priceInputRef}
+                                      type="number"
+                                      step="0.01"
+                                      min="0"
+                                      value={editingPrice}
+                                      onChange={(e) => setEditingPrice(e.target.value)}
+                                      onKeyDown={(e) => {
+                                        if (e.key === 'Enter') handleSavePrice(item.id);
+                                        if (e.key === 'Escape') handleCancelEdit();
+                                      }}
+                                      className="w-20 px-1 py-0.5 text-sm border border-border-brand rounded bg-surface-primary focus:outline-none focus:ring-1 focus:ring-fill-brand"
+                                    />
+                                    <button
+                                      onClick={() => handleSavePrice(item.id)}
+                                      disabled={isUpdatingItem}
+                                      className="p-1 text-text-success hover:bg-fill-success/10 rounded"
+                                    >
+                                      <IconCheck className="h-3.5 w-3.5" />
+                                    </button>
+                                  </div>
+                                ) : (
+                                  // Display mode
+                                  <div className="flex items-center gap-2">
+                                    <div>
+                                      <div
+                                        className={`font-medium ${
+                                          item.priceAdjustedBy
+                                            ? 'text-fill-brand'
+                                            : 'text-text-success'
+                                        }`}
+                                      >
+                                        ${item.finalPriceUsd?.toFixed(2) || selectedQuote.quote.costPricePerCaseUsd.toFixed(2)}
+                                        {item.priceAdjustedBy && (
+                                          <span className="ml-1 text-xs text-text-muted">(adj)</span>
+                                        )}
+                                      </div>
+                                      <div className="text-xs text-text-muted">
+                                        {selectedQuote.partner.businessName}
+                                      </div>
+                                    </div>
+                                    {canSelectQuotes && (
+                                      <div className="flex items-center gap-0.5">
+                                        <button
+                                          onClick={() =>
+                                            handleStartEditPrice(
+                                              item.id,
+                                              item.finalPriceUsd ||
+                                                selectedQuote.quote.costPricePerCaseUsd,
+                                            )
+                                          }
+                                          className="p-1 text-text-muted hover:text-text-primary hover:bg-fill-muted rounded"
+                                          title="Edit price"
+                                        >
+                                          <IconEdit className="h-3.5 w-3.5" />
+                                        </button>
+                                        {item.priceAdjustedBy && (
+                                          <button
+                                            onClick={() => handleResetPrice(item.id)}
+                                            disabled={isUpdatingItem}
+                                            className="p-1 text-text-muted hover:text-text-warning hover:bg-fill-warning/10 rounded"
+                                            title="Reset to cost price"
+                                          >
+                                            <IconRefresh className="h-3.5 w-3.5" />
+                                          </button>
+                                        )}
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
                               </div>
                             ) : (
                               <span className="text-sm text-text-muted">-</span>
