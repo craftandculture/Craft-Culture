@@ -65,7 +65,7 @@ interface StatusConfig {
 const statusConfig: Record<StockStatus, StatusConfig> = {
   pending: { label: 'Sourcing', shortLabel: 'Sourcing', icon: IconSearch },
   confirmed: { label: 'Confirmed', shortLabel: 'Confirmed', icon: IconCheck },
-  in_transit_to_cc: { label: 'In Air to Dubai', shortLabel: 'In Air', icon: IconPlane },
+  in_transit_to_cc: { label: 'In Air to UAE', shortLabel: 'In Air', icon: IconPlane },
   at_cc_bonded: { label: 'At C&C Warehouse', shortLabel: 'At C&C', icon: IconBox },
   in_transit_to_distributor: { label: 'To Distributor', shortLabel: 'To Dist.', icon: IconTruck },
   at_distributor: { label: 'Ready for Delivery', shortLabel: 'Ready', icon: IconCheck },

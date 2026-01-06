@@ -70,7 +70,7 @@ const stockStatusOptions: { value: StockStatus; label: string; icon: React.React
 
 const bulkStatusOptions: { value: StockStatus; label: string; description: string }[] = [
   { value: 'confirmed', label: 'Confirmed', description: 'Supplier confirmed stock' },
-  { value: 'in_transit_to_cc', label: 'In Air', description: 'Shipment in transit to Dubai' },
+  { value: 'in_transit_to_cc', label: 'In Air', description: 'Shipment in transit to UAE' },
   { value: 'at_cc_bonded', label: 'At C&C', description: 'Arrived at C&C warehouse' },
   { value: 'in_transit_to_distributor', label: 'To Distributor', description: 'In transit to distributor' },
   { value: 'at_distributor', label: 'Ready', description: 'Ready for delivery' },
