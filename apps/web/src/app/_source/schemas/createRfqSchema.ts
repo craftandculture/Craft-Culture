@@ -7,7 +7,10 @@ const createRfqSchema = z.object({
   sourceFileName: z.string().optional(),
   rawInputText: z.string().optional(),
   distributorName: z.string().optional(),
-  distributorEmail: z.string().email().optional().or(z.literal('')),
+  distributorEmail: z
+    .string()
+    .transform((val) => (val === '' ? undefined : val))
+    .pipe(z.string().email().optional()),
   distributorCompany: z.string().optional(),
   distributorNotes: z.string().optional(),
   responseDeadline: z.date().optional(),
