@@ -1,6 +1,7 @@
 import getAppUrl from './utils/getAppUrl';
 
-const isVercelProduction = process.env.VERCEL_ENV === 'production';
+// Use NEXT_PUBLIC_VERCEL_ENV for client-side code (VERCEL_ENV is server-only)
+const isVercelProduction = process.env.NEXT_PUBLIC_VERCEL_ENV === 'production';
 
 const clientConfig = {
   appUrl: isVercelProduction
