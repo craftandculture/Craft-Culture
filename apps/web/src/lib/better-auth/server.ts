@@ -69,6 +69,9 @@ const authServerClient = betterAuth({
       origin: isVercelProduction
         ? 'https://wine.craftculture.xyz'
         : 'http://localhost:3000',
+      advanced: {
+        webAuthnChallengeCookie: 'craft-culture.passkey-challenge',
+      },
     }),
     nextCookies(),
   ],
