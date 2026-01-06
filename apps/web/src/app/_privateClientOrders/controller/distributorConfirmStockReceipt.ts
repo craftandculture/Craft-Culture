@@ -71,6 +71,17 @@ const distributorConfirmStockReceipt = distributorProcedure
       });
     }
 
+    // Validate stock status - items must be at C&C or in transit before distributor can confirm receipt
+    const validStatuses = ['at_cc_bonded', 'in_transit_to_distributor'];
+    const itemsNotReady = items.filter((item) => !validStatuses.includes(item.stockStatus ?? ''));
+    if (itemsNotReady.length > 0) {
+      const itemNames = itemsNotReady.map((i) => i.productName).join(', ');
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: `Cannot confirm receipt: ${itemNames} - stock must be at C&C warehouse first`,
+      });
+    }
+
     const now = new Date();
 
     // Update all items to at_distributor
