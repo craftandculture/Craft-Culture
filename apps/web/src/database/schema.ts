@@ -142,6 +142,8 @@ export const users = pgTable('users', {
   approvedAt: timestamp('approved_at', { mode: 'date' }),
   approvedBy: uuid('approved_by'),
   termsAcceptedAt: timestamp('terms_accepted_at', { mode: 'date' }),
+  // Partner ID for wine partner users (private_clients customer type)
+  partnerId: uuid('partner_id'),
 
   ...timestamps,
 }).enableRLS();
