@@ -6,11 +6,13 @@ import {
   IconMail,
   IconSparkles,
   IconUpload,
+  IconX,
 } from '@tabler/icons-react';
 import { useMutation } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+import * as XLSX from 'xlsx';
 
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
@@ -88,14 +90,42 @@ const NewRfqPage = () => {
     if (!file) return;
 
     setFileName(file.name);
+    const isExcel = file.name.endsWith('.xlsx') || file.name.endsWith('.xls');
 
-    // Read file as text (for CSV/Excel text representation)
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const content = event.target?.result as string;
-      setInputContent(content);
-    };
-    reader.readAsText(file);
+    if (isExcel) {
+      // Parse Excel file with xlsx library
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        try {
+          const data = event.target?.result;
+          const workbook = XLSX.read(data, { type: 'array' });
+          const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+          // Convert to CSV for easier parsing
+          const csv = XLSX.utils.sheet_to_csv(firstSheet);
+          setInputContent(csv);
+        } catch (error) {
+          console.error('Failed to parse Excel file:', error);
+          alert('Failed to parse Excel file. Please try a CSV file instead.');
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    } else {
+      // Read CSV/text files as text
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const content = event.target?.result as string;
+        setInputContent(content);
+      };
+      reader.readAsText(file);
+    }
+  };
+
+  const handleClearFile = () => {
+    setFileName('');
+    setInputContent('');
+    // Reset the file input
+    const fileInput = document.getElementById('file-upload') as HTMLInputElement;
+    if (fileInput) fileInput.value = '';
   };
 
   const handleCreateRfq = () => {
@@ -249,19 +279,32 @@ const NewRfqPage = () => {
                         </label>
                       </div>
                       {fileName && (
-                        <div className="flex items-center gap-2 p-3 bg-fill-muted rounded-lg">
-                          <IconFileSpreadsheet className="h-5 w-5 text-text-brand" />
-                          <Typography variant="bodySm">{fileName}</Typography>
+                        <div className="flex items-center justify-between gap-2 p-3 bg-fill-muted rounded-lg">
+                          <div className="flex items-center gap-2">
+                            <IconFileSpreadsheet className="h-5 w-5 text-text-brand" />
+                            <Typography variant="bodySm">{fileName}</Typography>
+                          </div>
+                          <button
+                            onClick={handleClearFile}
+                            className="p-1 hover:bg-fill-primary rounded"
+                            title="Remove file"
+                          >
+                            <IconX className="h-4 w-4 text-text-muted" />
+                          </button>
                         </div>
                       )}
                       {inputContent && (
-                        <textarea
-                          value={inputContent}
-                          onChange={(e) => setInputContent(e.target.value)}
-                          placeholder="File content will appear here..."
-                          rows={8}
-                          className="w-full rounded-lg border border-border-primary bg-background-primary px-4 py-3 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
+                        <div className="space-y-2">
+                          <Typography variant="bodyXs" colorRole="muted">
+                            Preview (read-only):
+                          </Typography>
+                          <textarea
+                            value={inputContent}
+                            readOnly
+                            rows={8}
+                            className="w-full rounded-lg border border-border-primary bg-fill-muted px-4 py-3 text-sm font-mono cursor-default"
+                          />
+                        </div>
                       )}
                     </div>
                   )}
