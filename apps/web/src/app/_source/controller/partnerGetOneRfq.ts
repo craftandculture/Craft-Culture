@@ -26,7 +26,7 @@ const partnerGetOneRfq = winePartnerProcedure
   .query(async ({ input, ctx: { partnerId } }) => {
     const { rfqId } = input;
 
-    logger.info('[SOURCE] Partner getOne - looking up RFQ', { rfqId, partnerId });
+    logger.dev('[SOURCE] Partner getOne - looking up RFQ', { rfqId, partnerId });
 
     // Verify RFQ is assigned to this partner
     const [assignment] = await db
@@ -65,7 +65,7 @@ const partnerGetOneRfq = winePartnerProcedure
       });
     }
 
-    logger.info('[SOURCE] Partner getOne - found assignment', {
+    logger.dev('[SOURCE] Partner getOne - found assignment', {
       rfqId,
       partnerId,
       status: assignment.assignment.status,
