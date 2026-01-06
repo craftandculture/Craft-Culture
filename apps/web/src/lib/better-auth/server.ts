@@ -15,11 +15,12 @@ import logUserActivity from '@/utils/logUserActivity';
 import encrypt from '../encryption/encrypt';
 import loops from '../loops/client';
 
+const isVercelProduction = process.env.VERCEL_ENV === 'production';
+
 const authServerClient = betterAuth({
-  baseURL:
-    serverConfig.env === 'production'
-      ? 'https://wine.craftculture.xyz'
-      : serverConfig.appUrl.toString(),
+  baseURL: isVercelProduction
+    ? 'https://wine.craftculture.xyz'
+    : serverConfig.appUrl.toString(),
   basePath: '/api/auth',
   secret: serverConfig.betterAuthSecret,
   plugins: [
@@ -48,12 +49,10 @@ const authServerClient = betterAuth({
     }),
     passkey({
       rpName: 'Craft & Culture',
-      rpID:
-        serverConfig.env === 'production' ? 'craftculture.xyz' : 'localhost',
-      origin:
-        serverConfig.env === 'production'
-          ? 'https://wine.craftculture.xyz'
-          : 'http://localhost:3000',
+      rpID: isVercelProduction ? 'craftculture.xyz' : 'localhost',
+      origin: isVercelProduction
+        ? 'https://wine.craftculture.xyz'
+        : 'http://localhost:3000',
     }),
     nextCookies(),
   ],
