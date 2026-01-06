@@ -138,6 +138,13 @@ const PrivateOrderForm = () => {
   const [extractionError, setExtractionError] = useState<string | null>(null);
   const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
 
+  // Store uploaded file data for saving after order creation
+  const [uploadedFileData, setUploadedFileData] = useState<{
+    base64: string;
+    filename: string;
+    fileType: 'application/pdf' | 'image/png' | 'image/jpeg' | 'image/jpg';
+  } | null>(null);
+
   // Submission state
   const [submitAfterCreate, setSubmitAfterCreate] = useState(false);
 
@@ -218,6 +225,19 @@ const PrivateOrderForm = () => {
     },
   });
 
+  // Upload document mutation
+  const uploadDocument = useMutation({
+    mutationFn: async (data: {
+      orderId: string;
+      documentType: 'partner_invoice' | 'cc_invoice' | 'distributor_invoice' | 'payment_proof';
+      file: string;
+      filename: string;
+      fileType: 'application/pdf' | 'image/png' | 'image/jpeg' | 'image/jpg';
+    }) => {
+      return trpcClient.privateClientOrders.uploadDocument.mutate(data);
+    },
+  });
+
   // Handle file drop for document extraction
   const onDrop = useCallback(
     async (acceptedFiles: File[]) => {
@@ -230,6 +250,7 @@ const PrivateOrderForm = () => {
       setMatchResults(null);
       setMatchSummary(null);
       setUploadedFileName(file.name);
+      setUploadedFileData(null);
 
       try {
         // Convert file to base64 data URL
@@ -241,10 +262,18 @@ const PrivateOrderForm = () => {
         reader.readAsDataURL(file);
         const base64Data = await base64Promise;
 
+        // Store file data for saving after order creation
+        const fileType = file.type as 'application/pdf' | 'image/png' | 'image/jpeg' | 'image/jpg';
+        setUploadedFileData({
+          base64: base64Data,
+          filename: file.name,
+          fileType,
+        });
+
         // Call extraction API
         const result = await trpcClient.privateClientOrders.extractDocumentInline.mutate({
           file: base64Data,
-          fileType: file.type as 'application/pdf' | 'image/png' | 'image/jpeg' | 'image/jpg',
+          fileType,
         });
 
         if (result.success && result.data) {
@@ -381,6 +410,7 @@ const PrivateOrderForm = () => {
     setMatchSummary(null);
     setExtractionError(null);
     setUploadedFileName(null);
+    setUploadedFileData(null);
   };
 
   const handleAddLineItem = () => {
@@ -469,6 +499,23 @@ const PrivateOrderForm = () => {
         });
       }
 
+      // Upload invoice document if we have one from extraction
+      if (uploadedFileData) {
+        try {
+          await uploadDocument.mutateAsync({
+            orderId: order.id,
+            documentType: 'partner_invoice',
+            file: uploadedFileData.base64,
+            filename: uploadedFileData.filename,
+            fileType: uploadedFileData.fileType,
+          });
+        } catch (uploadError) {
+          // Log but don't fail order creation if document upload fails
+          console.error('Failed to upload invoice document:', uploadError);
+          toast.warning('Order created but invoice upload failed. You can upload it later.');
+        }
+      }
+
       // Submit if requested
       if (shouldSubmit) {
         await submitOrder.mutateAsync(order.id);
@@ -496,7 +543,8 @@ const PrivateOrderForm = () => {
   // Get product IDs already in the order to exclude from search
   const usedProductIds = lineItems.filter((item) => item.productId).map((item) => item.productId!);
 
-  const isSubmitting = createOrder.isPending || addLineItem.isPending || submitOrder.isPending;
+  const isSubmitting =
+    createOrder.isPending || addLineItem.isPending || submitOrder.isPending || uploadDocument.isPending;
 
   return (
     <form onSubmit={(e) => handleSubmit(e, false)} className="flex flex-col gap-4">
