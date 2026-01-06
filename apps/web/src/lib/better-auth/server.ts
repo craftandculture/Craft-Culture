@@ -21,7 +21,7 @@ const isVercelProduction = process.env.VERCEL_ENV === 'production';
 console.log('[Better Auth] Config initialized:', {
   isVercelProduction,
   VERCEL_ENV: process.env.VERCEL_ENV,
-  passkeyRpID: isVercelProduction ? 'wine.craftculture.xyz' : 'localhost',
+  passkeyRpID: isVercelProduction ? 'craftculture.xyz' : 'localhost',
   passkeyOrigin: isVercelProduction
     ? 'https://wine.craftculture.xyz'
     : 'http://localhost:3000',
@@ -59,7 +59,7 @@ const authServerClient = betterAuth({
     }),
     passkey({
       rpName: 'Craft & Culture',
-      rpID: isVercelProduction ? 'wine.craftculture.xyz' : 'localhost',
+      rpID: isVercelProduction ? 'craftculture.xyz' : 'localhost',
       origin: isVercelProduction
         ? 'https://wine.craftculture.xyz'
         : 'http://localhost:3000',
@@ -72,7 +72,15 @@ const authServerClient = betterAuth({
       generateId: () => crypto.randomUUID(),
     },
     cookiePrefix: clientConfig.cookiePrefix,
+    defaultCookieAttributes: {
+      sameSite: 'lax',
+      secure: isVercelProduction,
+      httpOnly: true,
+    },
   },
+  trustedOrigins: isVercelProduction
+    ? ['https://wine.craftculture.xyz']
+    : ['http://localhost:3000'],
   database: drizzleAdapter(db, {
     provider: 'pg',
     usePlural: true,
