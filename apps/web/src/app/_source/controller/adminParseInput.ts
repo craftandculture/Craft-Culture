@@ -7,8 +7,129 @@ import { z } from 'zod';
 import db from '@/database/client';
 import { sourceRfqItems, sourceRfqs } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
+import logger from '@/utils/logger';
 
 import parseInputSchema from '../schemas/parseInputSchema';
+
+interface ParsedItem {
+  productName: string;
+  producer?: string;
+  vintage?: string;
+  region?: string;
+  country?: string;
+  bottleSize?: string;
+  caseConfig?: number;
+  lwin?: string;
+  quantity: number;
+  originalText: string;
+  confidence: number;
+}
+
+/**
+ * Parse CSV line handling quoted values with commas
+ */
+const parseCSVLine = (line: string): string[] => {
+  const result: string[] = [];
+  let current = '';
+  let inQuotes = false;
+
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+    if (char === '"') {
+      inQuotes = !inQuotes;
+    } else if (char === ',' && !inQuotes) {
+      result.push(current.trim());
+      current = '';
+    } else {
+      current += char;
+    }
+  }
+  result.push(current.trim());
+  return result;
+};
+
+/**
+ * Try to parse structured CSV directly (for Excel exports with known columns)
+ */
+const tryParseStructuredCSV = (content: string): ParsedItem[] | null => {
+  const lines = content.split('\n').filter((line) => line.trim());
+  if (lines.length < 2) return null;
+
+  const headers = parseCSVLine(lines[0]).map((h) => h.toLowerCase().trim());
+
+  // Map common column names to our fields
+  const columnMap: Record<string, string> = {};
+  headers.forEach((header, index) => {
+    const h = header.replace(/[:\s]+/g, ' ').trim();
+    if (h.includes('description') || h.includes('product') || h.includes('wine') || h.includes('name')) {
+      columnMap['productName'] = String(index);
+    } else if (h.includes('quantity') && h.includes('case')) {
+      columnMap['quantity'] = String(index);
+    } else if (h === 'cases' || h === 'qty' || h === 'quantity') {
+      columnMap['quantity'] = columnMap['quantity'] || String(index);
+    } else if (h.includes('year') || h.includes('vintage')) {
+      columnMap['vintage'] = String(index);
+    } else if (h.includes('bottles') && h.includes('case')) {
+      columnMap['caseConfig'] = String(index);
+    } else if (h.includes('bottle') && h.includes('size')) {
+      columnMap['bottleSize'] = String(index);
+    } else if (h.includes('country')) {
+      columnMap['country'] = String(index);
+    } else if (h.includes('region') && !h.includes('sub')) {
+      columnMap['region'] = String(index);
+    } else if (h.includes('sub') && h.includes('region')) {
+      columnMap['subRegion'] = String(index);
+    } else if (h.includes('lwin')) {
+      columnMap['lwin'] = String(index);
+    } else if (h.includes('producer') || h.includes('winery')) {
+      columnMap['producer'] = String(index);
+    }
+  });
+
+  // Must have at least product name to proceed
+  if (!columnMap['productName']) {
+    logger.dev('CSV parsing: No product name column found');
+    return null;
+  }
+
+  const items: ParsedItem[] = [];
+
+  for (let i = 1; i < lines.length; i++) {
+    const values = parseCSVLine(lines[i]);
+    const productName = values[Number(columnMap['productName'])]?.trim();
+
+    if (!productName) continue;
+
+    const quantityStr = columnMap['quantity'] ? values[Number(columnMap['quantity'])] : '';
+    const quantity = parseInt(quantityStr, 10) || 1;
+
+    const region = columnMap['region'] ? values[Number(columnMap['region'])]?.trim() : undefined;
+    const subRegion = columnMap['subRegion'] ? values[Number(columnMap['subRegion'])]?.trim() : undefined;
+    const fullRegion = [region, subRegion].filter(Boolean).join(', ') || undefined;
+
+    const caseConfigStr = columnMap['caseConfig'] ? values[Number(columnMap['caseConfig'])] : '';
+    const caseConfig = parseInt(caseConfigStr, 10) || undefined;
+
+    const bottleSizeStr = columnMap['bottleSize'] ? values[Number(columnMap['bottleSize'])]?.trim() : '';
+    const bottleSize = bottleSizeStr ? `${bottleSizeStr}cl` : undefined;
+
+    items.push({
+      productName,
+      producer: columnMap['producer'] ? values[Number(columnMap['producer'])]?.trim() : undefined,
+      vintage: columnMap['vintage'] ? values[Number(columnMap['vintage'])]?.trim() : undefined,
+      region: fullRegion,
+      country: columnMap['country'] ? values[Number(columnMap['country'])]?.trim() : undefined,
+      bottleSize,
+      caseConfig,
+      lwin: columnMap['lwin'] ? values[Number(columnMap['lwin'])]?.trim() : undefined,
+      quantity,
+      originalText: lines[i],
+      confidence: 0.95, // High confidence for structured data
+    });
+  }
+
+  return items.length > 0 ? items : null;
+};
 
 /**
  * Schema for AI-extracted wine items
@@ -103,10 +224,64 @@ const adminParseInput = adminProcedure
       })
       .where(eq(sourceRfqs.id, rfqId));
 
-    // Check for OpenAI key
+    // For Excel/CSV files, try direct parsing first (faster and more reliable)
+    if (inputType === 'excel') {
+      logger.dev('Attempting direct CSV parsing for Excel file');
+      const directParsedItems = tryParseStructuredCSV(content);
+
+      if (directParsedItems && directParsedItems.length > 0) {
+        logger.dev(`Direct CSV parsing successful: ${directParsedItems.length} items found`);
+
+        // Insert parsed items into database
+        const itemValues = directParsedItems.map((item, index) => ({
+          rfqId,
+          productName: item.productName,
+          producer: item.producer,
+          vintage: item.vintage,
+          region: item.region,
+          country: item.country,
+          bottleSize: item.bottleSize,
+          caseConfig: item.caseConfig,
+          lwin: item.lwin,
+          quantity: item.quantity,
+          originalText: item.originalText,
+          parseConfidence: item.confidence,
+          sortOrder: index,
+        }));
+
+        await db.insert(sourceRfqItems).values(itemValues);
+
+        // Update RFQ with item count and mark as ready
+        await db
+          .update(sourceRfqs)
+          .set({
+            status: 'ready_to_send',
+            itemCount: directParsedItems.length,
+            parsedAt: new Date(),
+            parsingError: null,
+          })
+          .where(eq(sourceRfqs.id, rfqId));
+
+        return {
+          success: true,
+          message: `Successfully parsed ${directParsedItems.length} items from spreadsheet`,
+          items: directParsedItems,
+        };
+      }
+
+      logger.dev('Direct CSV parsing failed, falling back to AI');
+    }
+
+    // Fall back to AI parsing for unstructured content or when direct parsing fails
     const openaiKey = process.env.OPENAI_API_KEY;
 
     if (!openaiKey) {
+      // Reset status if AI not available
+      await db
+        .update(sourceRfqs)
+        .set({ status: 'draft', parsingError: 'AI parsing is not configured' })
+        .where(eq(sourceRfqs.id, rfqId));
+
       throw new TRPCError({
         code: 'INTERNAL_SERVER_ERROR',
         message: 'AI parsing is not configured. OPENAI_API_KEY is not set.',
