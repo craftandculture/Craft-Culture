@@ -2,6 +2,8 @@
  * Feature flags for authentication methods.
  * These allow instant rollback if any auth feature causes issues.
  * Magic link is always enabled as the fallback - no kill switch needed.
+ *
+ * Set via environment variables in Vercel dashboard.
  */
 const features = {
   /** Enable passkey/WebAuthn authentication */
