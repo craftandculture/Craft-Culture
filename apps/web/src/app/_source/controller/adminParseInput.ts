@@ -55,7 +55,10 @@ const tryParseStructuredCSV = (content: string): ParsedItem[] | null => {
   const lines = content.split('\n').filter((line) => line.trim());
   if (lines.length < 2) return null;
 
-  const headers = parseCSVLine(lines[0]).map((h) => h.toLowerCase().trim());
+  const headerLine = lines[0];
+  if (!headerLine) return null;
+
+  const headers = parseCSVLine(headerLine).map((h) => h.toLowerCase().trim());
 
   // Map common column names to our fields
   const columnMap: Record<string, string> = {};
@@ -95,22 +98,25 @@ const tryParseStructuredCSV = (content: string): ParsedItem[] | null => {
   const items: ParsedItem[] = [];
 
   for (let i = 1; i < lines.length; i++) {
-    const values = parseCSVLine(lines[i]);
+    const line = lines[i];
+    if (!line) continue;
+
+    const values = parseCSVLine(line);
     const productName = values[Number(columnMap['productName'])]?.trim();
 
     if (!productName) continue;
 
-    const quantityStr = columnMap['quantity'] ? values[Number(columnMap['quantity'])] : '';
+    const quantityStr = columnMap['quantity'] ? values[Number(columnMap['quantity'])] ?? '' : '';
     const quantity = parseInt(quantityStr, 10) || 1;
 
     const region = columnMap['region'] ? values[Number(columnMap['region'])]?.trim() : undefined;
     const subRegion = columnMap['subRegion'] ? values[Number(columnMap['subRegion'])]?.trim() : undefined;
     const fullRegion = [region, subRegion].filter(Boolean).join(', ') || undefined;
 
-    const caseConfigStr = columnMap['caseConfig'] ? values[Number(columnMap['caseConfig'])] : '';
+    const caseConfigStr = columnMap['caseConfig'] ? values[Number(columnMap['caseConfig'])] ?? '' : '';
     const caseConfig = parseInt(caseConfigStr, 10) || undefined;
 
-    const bottleSizeStr = columnMap['bottleSize'] ? values[Number(columnMap['bottleSize'])]?.trim() : '';
+    const bottleSizeStr = columnMap['bottleSize'] ? values[Number(columnMap['bottleSize'])]?.trim() ?? '' : '';
     const bottleSize = bottleSizeStr ? `${bottleSizeStr}cl` : undefined;
 
     items.push({
@@ -123,7 +129,7 @@ const tryParseStructuredCSV = (content: string): ParsedItem[] | null => {
       caseConfig,
       lwin: columnMap['lwin'] ? values[Number(columnMap['lwin'])]?.trim() : undefined,
       quantity,
-      originalText: lines[i],
+      originalText: line,
       confidence: 0.95, // High confidence for structured data
     });
   }
@@ -197,16 +203,17 @@ const adminParseInput = adminProcedure
     if (content.length > MAX_CONTENT_LENGTH) {
       // For CSV/Excel, try to keep header + as many rows as possible
       const lines = content.split('\n');
-      const header = lines[0];
+      const header = lines[0] ?? '';
       const truncatedLines = [header];
       let currentLength = header.length;
 
       for (let i = 1; i < lines.length; i++) {
-        if (currentLength + lines[i].length + 1 > MAX_CONTENT_LENGTH) {
+        const line = lines[i];
+        if (!line || currentLength + line.length + 1 > MAX_CONTENT_LENGTH) {
           break;
         }
-        truncatedLines.push(lines[i]);
-        currentLength += lines[i].length + 1;
+        truncatedLines.push(line);
+        currentLength += line.length + 1;
       }
 
       processedContent = truncatedLines.join('\n');
