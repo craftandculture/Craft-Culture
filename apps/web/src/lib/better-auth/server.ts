@@ -21,7 +21,7 @@ const isVercelProduction = process.env.VERCEL_ENV === 'production';
 console.log('[Better Auth] Config initialized:', {
   isVercelProduction,
   VERCEL_ENV: process.env.VERCEL_ENV,
-  passkeyRpID: isVercelProduction ? 'craftculture.xyz' : 'localhost',
+  passkeyRpID: isVercelProduction ? 'wine.craftculture.xyz' : 'localhost',
   passkeyOrigin: isVercelProduction
     ? 'https://wine.craftculture.xyz'
     : 'http://localhost:3000',
@@ -59,7 +59,7 @@ const authServerClient = betterAuth({
     }),
     passkey({
       rpName: 'Craft & Culture',
-      rpID: isVercelProduction ? 'craftculture.xyz' : 'localhost',
+      rpID: isVercelProduction ? 'wine.craftculture.xyz' : 'localhost',
       origin: isVercelProduction
         ? 'https://wine.craftculture.xyz'
         : 'http://localhost:3000',
