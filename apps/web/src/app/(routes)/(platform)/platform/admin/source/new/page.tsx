@@ -55,9 +55,11 @@ const NewRfqPage = () => {
   const { mutate: parseInput, isPending: isParsing } = useMutation(
     api.source.admin.parseInput.mutationOptions({
       onSuccess: (result) => {
-        if (result.success && result.items) {
+        if (result.success && result.items && result.items.length > 0) {
           setParsedItems(result.items);
           setStep('review');
+        } else {
+          alert(result.message || 'No wine products found in the input. Please check your data or try manual entry.');
         }
       },
       onError: (error) => {
