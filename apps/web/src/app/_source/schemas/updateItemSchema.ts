@@ -12,7 +12,8 @@ const updateItemSchema = z.object({
   lwin: z.string().optional(),
   quantity: z.number().int().positive().optional(),
   adminNotes: z.string().optional(),
-  finalPriceUsd: z.number().positive().optional(),
+  // Allow null to reset price to cost price
+  finalPriceUsd: z.number().positive().nullable().optional(),
 });
 
 export default updateItemSchema;

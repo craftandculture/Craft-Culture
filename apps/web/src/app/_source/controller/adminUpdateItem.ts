@@ -56,8 +56,14 @@ const adminUpdateItem = adminProcedure
 
     // Handle final price adjustment (track who adjusted)
     if (updateData.finalPriceUsd !== undefined) {
-      updates.finalPriceUsd = updateData.finalPriceUsd;
-      updates.priceAdjustedBy = user.id;
+      if (updateData.finalPriceUsd === null) {
+        // Reset to cost price
+        updates.finalPriceUsd = null;
+        updates.priceAdjustedBy = null;
+      } else {
+        updates.finalPriceUsd = updateData.finalPriceUsd;
+        updates.priceAdjustedBy = user.id;
+      }
     }
 
     if (Object.keys(updates).length === 0) {
