@@ -99,7 +99,11 @@ const NewRfqPage = () => {
         try {
           const data = event.target?.result;
           const workbook = XLSX.read(data, { type: 'array' });
-          const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+          const firstSheetName = workbook.SheetNames[0];
+          if (!firstSheetName) {
+            throw new Error('No sheets found in workbook');
+          }
+          const firstSheet = workbook.Sheets[firstSheetName];
           // Convert to CSV for easier parsing
           const csv = XLSX.utils.sheet_to_csv(firstSheet);
           setInputContent(csv);
