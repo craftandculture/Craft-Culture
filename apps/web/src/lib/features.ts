@@ -7,7 +7,7 @@
  */
 const features = {
   /** Enable passkey/WebAuthn authentication */
-  passkeys: process.env.NEXT_PUBLIC_FEATURE_PASSKEYS === 'true',
+  passkeys: true, // Hardcoded for testing - TODO: revert to env var
 
   /** Enable OAuth providers (Google, Microsoft, Apple) */
   oauth: process.env.NEXT_PUBLIC_FEATURE_OAUTH === 'true',
