@@ -106,6 +106,9 @@ const NewRfqPage = () => {
             throw new Error('No sheets found in workbook');
           }
           const firstSheet = workbook.Sheets[firstSheetName];
+          if (!firstSheet) {
+            throw new Error('Sheet not found in workbook');
+          }
           // Convert to CSV for easier parsing
           const csv = XLSX.utils.sheet_to_csv(firstSheet);
           setInputContent(csv);
