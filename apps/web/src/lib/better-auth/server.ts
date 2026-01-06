@@ -2,6 +2,7 @@ import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { nextCookies } from 'better-auth/next-js';
 import { admin, magicLink } from 'better-auth/plugins';
+import { passkey } from 'better-auth/plugins/passkey';
 
 import notifyAdminsOfNewUser from '@/app/_auth/utils/notifyAdminsOfNewUser';
 import clientConfig from '@/client.config';
@@ -41,6 +42,12 @@ const authServerClient = betterAuth({
           },
         });
       },
+    }),
+    passkey({
+      rpName: 'Craft & Culture',
+      rpID:
+        serverConfig.env === 'production' ? 'craftculture.co' : 'localhost',
+      origin: serverConfig.appUrl.toString().replace(/\/$/, ''),
     }),
     nextCookies(),
   ],
