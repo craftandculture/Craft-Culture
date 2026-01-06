@@ -5,7 +5,10 @@ const createRfqSchema = z.object({
   description: z.string().optional(),
   sourceType: z.enum(['excel', 'email_text', 'manual']),
   sourceFileName: z.string().optional(),
-  rawInputText: z.string().optional(),
+  rawInputText: z
+    .string()
+    .transform((val) => val?.replace(/\x00/g, ''))
+    .optional(),
   distributorName: z.string().optional(),
   distributorEmail: z
     .string()
