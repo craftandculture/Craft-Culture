@@ -10,8 +10,16 @@ import clientConfig from '@/client.config';
 
 import type authServerClient from './server';
 
+// Use current origin in browser, fall back to config for SSR
+const getBaseURL = () => {
+  if (typeof window !== 'undefined') {
+    return window.location.origin;
+  }
+  return clientConfig.appUrl.toString();
+};
+
 const authBrowserClient = createAuthClient({
-  baseURL: clientConfig.appUrl.toString(),
+  baseURL: getBaseURL(),
   basePath: '/api/auth',
   plugins: [
     adminClient(),
