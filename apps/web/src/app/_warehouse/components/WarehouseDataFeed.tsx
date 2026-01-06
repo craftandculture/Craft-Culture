@@ -7,7 +7,6 @@ import {
   IconWind,
 } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
-import { useEffect } from 'react';
 
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Typography from '@/app/_ui/components/Typography/Typography';
@@ -70,16 +69,11 @@ const getSensorDisplayName = (sensorId: string, sensorType: string) => {
  */
 const WarehouseDataFeed = () => {
   const api = useTRPC();
-  const { data, refetch } = useQuery({
+  const { data } = useQuery({
     ...api.warehouse.getLatestReadings.queryOptions(),
-    refetchInterval: 5000, // Refresh every 5 seconds
-    refetchIntervalInBackground: true,
+    refetchInterval: 30000, // Refresh every 30 seconds
+    refetchOnWindowFocus: true,
   });
-
-  // Force refetch on mount
-  useEffect(() => {
-    void refetch();
-  }, [refetch]);
 
   if (!data || data.readings.length === 0) {
     return null;

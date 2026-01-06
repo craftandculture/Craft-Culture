@@ -22,7 +22,8 @@ const PendingUsersBell = () => {
   // Get pending users count
   const { data: pendingData } = useQuery({
     ...api.users.getPendingCount.queryOptions(),
-    refetchInterval: 5000, // Refresh every 10 seconds
+    refetchInterval: 30000, // Refresh every 30 seconds
+    refetchOnWindowFocus: true,
   });
 
   const pendingCount = pendingData?.count ?? 0;
