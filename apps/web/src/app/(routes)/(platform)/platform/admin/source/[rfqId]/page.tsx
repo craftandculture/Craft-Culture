@@ -559,6 +559,63 @@ const RfqDetailPage = () => {
           </CardContent>
         </Card>
 
+        {/* Activity Log */}
+        {rfq.activityLogs && rfq.activityLogs.length > 0 && (
+          <Card>
+            <CardContent className="p-0">
+              <div className="p-4 border-b border-border-muted">
+                <Typography variant="headingSm">Activity Log</Typography>
+              </div>
+              <div className="p-4 space-y-3 max-h-80 overflow-y-auto">
+                {rfq.activityLogs.map((log) => (
+                  <div
+                    key={log.id}
+                    className="flex items-start gap-3 text-sm"
+                  >
+                    <div className="w-2 h-2 rounded-full bg-fill-muted mt-1.5 shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-medium">
+                          {log.action.replace(/_/g, ' ')}
+                        </span>
+                        {log.user && (
+                          <span className="text-text-muted">
+                            by {log.user.name || log.user.email}
+                          </span>
+                        )}
+                        {log.partner && (
+                          <span className="text-text-muted">
+                            by {log.partner.businessName}
+                          </span>
+                        )}
+                      </div>
+                      {log.previousStatus && log.newStatus && (
+                        <div className="text-xs text-text-muted mt-0.5">
+                          Status: {log.previousStatus} → {log.newStatus}
+                        </div>
+                      )}
+                      {log.notes && (
+                        <div className="text-xs text-text-muted mt-0.5">
+                          {log.notes}
+                        </div>
+                      )}
+                      <div className="text-xs text-text-muted mt-1">
+                        {new Date(log.createdAt).toLocaleString('en-GB', {
+                          day: '2-digit',
+                          month: 'short',
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Select Partners Dialog */}
         <Dialog open={isSelectPartnersOpen} onOpenChange={setIsSelectPartnersOpen}>
           <DialogContent className="sm:max-w-lg">
