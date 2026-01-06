@@ -464,6 +464,172 @@ const AdminPrivateOrderDetailPage = () => {
         {/* Workflow Stepper */}
         <WorkflowStepper order={order} />
 
+        {/* Order Completion - Shown prominently for delivered orders */}
+        {order.status === 'delivered' && (
+          <Card className="border-2 border-fill-success/50 bg-fill-success/5">
+            <CardContent className="p-4">
+              <div className="mb-4 flex items-center gap-3">
+                <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-fill-success/20">
+                  <Icon icon={IconCheck} size="md" className="text-fill-success" />
+                </div>
+                <div>
+                  <Typography variant="headingSm" className="mb-0.5">
+                    Order Completion Actions
+                  </Typography>
+                  <Typography variant="bodyXs" colorRole="muted">
+                    Complete pending actions below to finalize this order
+                  </Typography>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                {/* Distributor Payment to C&C */}
+                <div className="flex flex-col gap-3 rounded-lg bg-background-primary/50 p-4 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="flex items-start gap-3">
+                    <div className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full ${
+                      order.distributorPaidAt ? 'bg-fill-success/20' : 'bg-fill-warning/20'
+                    }`}>
+                      <Icon
+                        icon={order.distributorPaidAt ? IconCheck : IconCurrencyDollar}
+                        size="sm"
+                        className={order.distributorPaidAt ? 'text-fill-success' : 'text-fill-warning'}
+                      />
+                    </div>
+                    <div>
+                      <Typography variant="labelMd" className="mb-0.5">
+                        Distributor Payment to C&C
+                      </Typography>
+                      <Typography variant="bodyXs" colorRole="muted">
+                        {order.distributorPaidAt
+                          ? `Received on ${formatDate(order.distributorPaidAt)}${order.distributorPaymentReference ? ` • Ref: ${order.distributorPaymentReference}` : ''}`
+                          : 'Confirm when distributor has paid C&C for the order'}
+                      </Typography>
+                    </div>
+                  </div>
+
+                  {!order.distributorPaidAt && (
+                    <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center">
+                      <Input
+                        placeholder="Reference (optional)"
+                        value={distributorPaymentRef}
+                        onChange={(e) => setDistributorPaymentRef(e.target.value)}
+                        className="w-full text-xs sm:w-[160px]"
+                      />
+                      <Button
+                        onClick={() => confirmDistributorPayment({ reference: distributorPaymentRef || undefined })}
+                        disabled={isConfirmingDistributorPayment}
+                        colorRole="brand"
+                        size="sm"
+                      >
+                        <Icon
+                          icon={isConfirmingDistributorPayment ? IconLoader2 : IconCurrencyDollar}
+                          size="xs"
+                          className={isConfirmingDistributorPayment ? 'animate-spin' : ''}
+                        />
+                        <span className="ml-1.5">{isConfirmingDistributorPayment ? 'Confirming...' : 'Confirm Received'}</span>
+                      </Button>
+                    </div>
+                  )}
+                </div>
+
+                {/* C&C Payment to Partner */}
+                <div className="flex flex-col gap-3 rounded-lg bg-background-primary/50 p-4 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="flex items-start gap-3">
+                    <div className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full ${
+                      order.partnerPaidAt ? 'bg-fill-success/20' : 'bg-fill-warning/20'
+                    }`}>
+                      <Icon
+                        icon={order.partnerPaidAt ? IconCheck : IconCurrencyDollar}
+                        size="sm"
+                        className={order.partnerPaidAt ? 'text-fill-success' : 'text-fill-warning'}
+                      />
+                    </div>
+                    <div>
+                      <Typography variant="labelMd" className="mb-0.5">
+                        C&C Payment to Partner
+                      </Typography>
+                      <Typography variant="bodyXs" colorRole="muted">
+                        {order.partnerPaidAt
+                          ? `Paid on ${formatDate(order.partnerPaidAt)}${order.partnerPaymentReference ? ` • Ref: ${order.partnerPaymentReference}` : ''}`
+                          : 'Record when C&C has paid the wine partner for stock'}
+                      </Typography>
+                    </div>
+                  </div>
+
+                  {!order.partnerPaidAt && (
+                    <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center">
+                      <Input
+                        placeholder="Reference (optional)"
+                        value={partnerPaymentRef}
+                        onChange={(e) => setPartnerPaymentRef(e.target.value)}
+                        className="w-full text-xs sm:w-[160px]"
+                      />
+                      <Button
+                        onClick={() => markPartnerPaid({ reference: partnerPaymentRef || undefined })}
+                        disabled={isMarkingPartnerPaid}
+                        colorRole="brand"
+                        size="sm"
+                      >
+                        <Icon
+                          icon={isMarkingPartnerPaid ? IconLoader2 : IconCurrencyDollar}
+                          size="xs"
+                          className={isMarkingPartnerPaid ? 'animate-spin' : ''}
+                        />
+                        <span className="ml-1.5">{isMarkingPartnerPaid ? 'Recording...' : 'Mark Paid'}</span>
+                      </Button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Proof of Delivery */}
+                <div className="flex flex-col gap-3 rounded-lg bg-background-primary/50 p-4 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="flex items-start gap-3">
+                    <div className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full ${
+                      order.deliveryPhoto ? 'bg-fill-success/20' : 'bg-fill-warning/20'
+                    }`}>
+                      <Icon
+                        icon={order.deliveryPhoto ? IconCheck : IconPhoto}
+                        size="sm"
+                        className={order.deliveryPhoto ? 'text-fill-success' : 'text-fill-warning'}
+                      />
+                    </div>
+                    <div>
+                      <Typography variant="labelMd" className="mb-0.5">
+                        Proof of Delivery
+                      </Typography>
+                      <Typography variant="bodyXs" colorRole="muted">
+                        {order.deliveryPhoto
+                          ? 'Photo uploaded by distributor'
+                          : 'Awaiting delivery confirmation from distributor'}
+                      </Typography>
+                    </div>
+                  </div>
+
+                  {order.deliveryPhoto && (
+                    <button
+                      type="button"
+                      onClick={() => setShowDeliveryPhoto(true)}
+                      className="group relative overflow-hidden rounded-lg border border-border-muted"
+                    >
+                      <Image
+                        src={order.deliveryPhoto}
+                        alt="Proof of delivery"
+                        width={120}
+                        height={80}
+                        className="h-[80px] w-[120px] object-cover transition-transform group-hover:scale-105"
+                        unoptimized
+                      />
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover:bg-black/30">
+                        <IconPhoto className="h-5 w-5 text-white opacity-0 transition-opacity group-hover:opacity-100" />
+                      </div>
+                    </button>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Stock Identification for Approval */}
         {['submitted', 'under_cc_review'].includes(order.status) && (
           <StockIdentificationSection
@@ -940,7 +1106,8 @@ const AdminPrivateOrderDetailPage = () => {
           </div>
         )}
 
-        {/* Order Completion - Unified C&C Payment & Proof of Delivery */}
+        {/* Order Completion - Unified C&C Payment & Proof of Delivery (for non-delivered orders) */}
+        {order.status !== 'delivered' && (
         <Card className="border-2 border-fill-success/50 bg-fill-success/5">
           <CardContent className="p-0">
             {/* Collapsible Header */}
@@ -1137,6 +1304,7 @@ const AdminPrivateOrderDetailPage = () => {
             )}
           </CardContent>
         </Card>
+        )}
 
         {/* Notes - if present */}
         {(order.partnerNotes || order.deliveryNotes) && (
