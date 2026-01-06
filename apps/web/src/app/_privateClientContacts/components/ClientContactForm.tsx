@@ -162,24 +162,13 @@ const ClientContactForm = ({ contact, mode }: ClientContactFormProps) => {
           </div>
           <div className="space-y-2">
             <Typography variant="labelSm" asChild>
-              <label htmlFor="stateProvince">State/Province</label>
+              <label htmlFor="stateProvince">Community</label>
             </Typography>
             <Input
               id="stateProvince"
               value={formData.stateProvince}
               onChange={(e) => setFormData({ ...formData, stateProvince: e.target.value })}
-              placeholder="Dubai"
-            />
-          </div>
-          <div className="space-y-2">
-            <Typography variant="labelSm" asChild>
-              <label htmlFor="postalCode">Postal Code</label>
-            </Typography>
-            <Input
-              id="postalCode"
-              value={formData.postalCode}
-              onChange={(e) => setFormData({ ...formData, postalCode: e.target.value })}
-              placeholder="00000"
+              placeholder="Dubai Marina"
             />
           </div>
           <div className="space-y-2">
