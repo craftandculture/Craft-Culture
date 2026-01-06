@@ -98,11 +98,6 @@ const SecuritySection = () => {
       });
 
       if (!response || 'error' in response) {
-        // Log full error for debugging
-        console.error('[Passkey] Add passkey failed:', {
-          response,
-          error: response && 'error' in response ? response.error : 'No response',
-        });
         const errorMessage =
           response && 'error' in response && response.error
             ? response.error.message
