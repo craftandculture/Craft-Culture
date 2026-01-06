@@ -68,6 +68,30 @@ const adminParseInput = adminProcedure
       });
     }
 
+    // Truncate content if too large (GPT-4o has token limits and Vercel has timeout limits)
+    const MAX_CONTENT_LENGTH = 25000; // ~6,000 tokens
+    let processedContent = content;
+    let wasTruncated = false;
+
+    if (content.length > MAX_CONTENT_LENGTH) {
+      // For CSV/Excel, try to keep header + as many rows as possible
+      const lines = content.split('\n');
+      const header = lines[0];
+      const truncatedLines = [header];
+      let currentLength = header.length;
+
+      for (let i = 1; i < lines.length; i++) {
+        if (currentLength + lines[i].length + 1 > MAX_CONTENT_LENGTH) {
+          break;
+        }
+        truncatedLines.push(lines[i]);
+        currentLength += lines[i].length + 1;
+      }
+
+      processedContent = truncatedLines.join('\n');
+      wasTruncated = true;
+    }
+
     // Update RFQ status to parsing
     await db
       .update(sourceRfqs)
@@ -75,7 +99,7 @@ const adminParseInput = adminProcedure
         status: 'parsing',
         sourceType: inputType,
         sourceFileName: fileName,
-        rawInputText: content,
+        rawInputText: content, // Store full content
       })
       .where(eq(sourceRfqs.id, rfqId));
 
@@ -117,9 +141,13 @@ Handle various formats:
 If you cannot confidently identify quantity, default to 1.
 If vintage is unclear, leave it empty or use "NV".`;
 
+      const truncationNote = wasTruncated
+        ? '\n\nNOTE: This data has been truncated due to size. Extract all wine products from the visible rows.\n\n'
+        : '\n\n';
+
       const userPrompt = inputType === 'excel'
-        ? `Parse the following Excel/spreadsheet data and extract all wine products:\n\n${content}`
-        : `Parse the following email text and extract all wine products:\n\n${content}`;
+        ? `Parse the following Excel/spreadsheet data and extract all wine products:${truncationNote}${processedContent}`
+        : `Parse the following email text and extract all wine products:${truncationNote}${processedContent}`;
 
       const result = await generateObject({
         model: openai('gpt-4o'),
