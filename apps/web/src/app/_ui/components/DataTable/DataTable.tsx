@@ -131,7 +131,7 @@ const DataTable = <TData, TValue>({
         </div>
       </div>
     );
-  }, [state, data, table, columns.length]);
+  }, [state, data, table, columns]);
 };
 
 export default DataTable;
