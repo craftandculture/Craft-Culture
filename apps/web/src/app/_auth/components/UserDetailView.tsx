@@ -52,6 +52,8 @@ import Typography from '@/app/_ui/components/Typography/Typography';
 import authBrowserClient from '@/lib/better-auth/browser';
 import useTRPC from '@/lib/trpc/browser';
 
+import customerTypeOptions, { getCustomerTypeLabel } from '../constants/customerTypeOptions';
+
 interface UserDetailViewProps {
   userId: string;
 }
@@ -236,19 +238,6 @@ const UserDetailView = ({ userId }: UserDetailViewProps) => {
       );
     }
     return null;
-  };
-
-  const getCustomerTypeLabel = (type: string) => {
-    switch (type) {
-      case 'b2b':
-        return 'Distributor Staff';
-      case 'b2c':
-        return 'Sales Rep';
-      case 'private_clients':
-        return 'Partner Staff';
-      default:
-        return type;
-    }
   };
 
   const formatDate = (date: Date | string | null) => {
@@ -494,9 +483,11 @@ const UserDetailView = ({ userId }: UserDetailViewProps) => {
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="b2b">Distributor Staff</SelectItem>
-                          <SelectItem value="b2c">Sales Rep</SelectItem>
-                          <SelectItem value="private_clients">Partner Staff</SelectItem>
+                          {customerTypeOptions.map((opt) => (
+                            <SelectItem key={opt.value} value={opt.value}>
+                              {opt.label}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     ) : (

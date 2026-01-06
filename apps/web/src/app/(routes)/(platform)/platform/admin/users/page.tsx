@@ -16,6 +16,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
+import customerTypeOptions from '@/app/_auth/constants/customerTypeOptions';
 import AlertDialog from '@/app/_ui/components/AlertDialog/AlertDialog';
 import AlertDialogAction from '@/app/_ui/components/AlertDialog/AlertDialogAction';
 import AlertDialogCancel from '@/app/_ui/components/AlertDialog/AlertDialogCancel';
@@ -235,9 +236,11 @@ const UserEditDialog = ({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="b2b">Distributor Staff</SelectItem>
-                <SelectItem value="b2c">Sales Rep</SelectItem>
-                <SelectItem value="private_clients">Partner Staff</SelectItem>
+                {customerTypeOptions.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -435,9 +438,11 @@ const UserCreateDialog = ({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="b2b">Distributor Staff</SelectItem>
-                <SelectItem value="b2c">Sales Rep</SelectItem>
-                <SelectItem value="private_clients">Partner Staff</SelectItem>
+                {customerTypeOptions.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
