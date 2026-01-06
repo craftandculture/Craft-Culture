@@ -95,13 +95,22 @@ const StockManagementSection = ({
   const [editingNotes, setEditingNotes] = useState<Record<string, string>>({});
   const [editingETA, setEditingETA] = useState<Record<string, string>>({});
 
-  // Filter out excluded statuses
-  const filteredStatusOptions = stockStatusOptions.filter(
-    (opt) => !excludeStatuses.includes(opt.value),
-  );
+  // Filter out excluded statuses from bulk options only
+  // For individual item selects, we need to include the current status even if excluded
   const filteredBulkOptions = bulkStatusOptions.filter(
     (opt) => !excludeStatuses.includes(opt.value),
   );
+
+  /**
+   * Get status options for a specific item
+   * Always includes the current status even if it's in excludeStatuses
+   * This prevents empty dropdowns when an item has an excluded status
+   */
+  const getStatusOptionsForItem = (currentStatus: StockStatus) => {
+    return stockStatusOptions.filter(
+      (opt) => !excludeStatuses.includes(opt.value) || opt.value === currentStatus,
+    );
+  };
 
   // Update single item stock status (admin only)
   const updateStockStatusMutation = useMutation(
@@ -307,7 +316,7 @@ const StockManagementSection = ({
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            {filteredStatusOptions.map((opt) => (
+                            {getStatusOptionsForItem(currentStatus).map((opt) => (
                               <SelectItem key={opt.value} value={opt.value}>
                                 <div className="flex items-center gap-2">
                                   {opt.icon}
