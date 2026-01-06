@@ -48,7 +48,8 @@ const AdminDashboard = () => {
   const { data, isLoading } = useQuery({
     queryKey: ['privateClientOrders.adminDashboard'],
     queryFn: () => trpcClient.privateClientOrders.adminDashboard.query(),
-    refetchInterval: 5000, // Refresh every 10 seconds
+    refetchInterval: 30000, // Refresh every 30 seconds
+    refetchOnWindowFocus: true,
   });
 
   /**

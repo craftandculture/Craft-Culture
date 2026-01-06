@@ -149,13 +149,13 @@ const NotificationBell = () => {
     previousCountRef.current = newCount;
   }, [queryClient]);
 
-  // Fetch unread count - poll every 5 seconds for more responsive updates
+  // Fetch unread count - poll every 10 seconds (responsive for demos, lighter than 5s)
   const { data: unreadData } = useQuery({
     queryKey: ['notifications-unread-count'],
     queryFn: () => trpcClient.notifications.getUnreadCount.query(),
-    refetchInterval: 5000, // Poll every 5 seconds for faster notification awareness
+    refetchInterval: 10000, // Poll every 10 seconds
     refetchOnWindowFocus: true, // Refresh when user returns to tab
-    staleTime: 3000, // Consider data fresh for 3 seconds
+    staleTime: 5000, // Consider data fresh for 5 seconds
   });
 
   // Play sound when unread count changes
