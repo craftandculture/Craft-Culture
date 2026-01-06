@@ -125,6 +125,17 @@ const PlatformLayout = async ({ children }: React.PropsWithChildren) => {
                       Clients
                     </Link>
                   </div>
+                  <div className="flex items-center rounded-lg border border-border-muted/50 bg-surface-secondary/40 px-1.5 py-1">
+                    <span className="border-r border-border-muted/50 pr-2 text-[10px] font-medium uppercase tracking-wider text-text-muted">
+                      Source
+                    </span>
+                    <Link
+                      href="/platform/partner/source"
+                      className="text-text-primary hover:bg-fill-muted ml-1 rounded-md px-2.5 py-1 text-sm font-medium transition-all duration-200 hover:shadow-sm active:scale-[0.98]"
+                    >
+                      RFQs
+                    </Link>
+                  </div>
                 </>
               )}
               {/* Distributor section - for B2B users and distributor partners (not admins - they have their own section) */}
