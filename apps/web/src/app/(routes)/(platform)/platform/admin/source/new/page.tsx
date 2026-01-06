@@ -76,6 +76,10 @@ const NewRfqPage = () => {
           router.push(`/platform/admin/source/${rfq.id}`);
         }
       },
+      onError: (error) => {
+        console.error('Failed to create RFQ:', error);
+        alert(`Failed to create RFQ: ${error.message}`);
+      },
     }),
   );
 
