@@ -16,7 +16,10 @@ import encrypt from '../encryption/encrypt';
 import loops from '../loops/client';
 
 const authServerClient = betterAuth({
-  baseURL: serverConfig.appUrl.toString(),
+  baseURL:
+    serverConfig.env === 'production'
+      ? 'https://wine.craftculture.xyz'
+      : serverConfig.appUrl.toString(),
   basePath: '/api/auth',
   secret: serverConfig.betterAuthSecret,
   plugins: [
