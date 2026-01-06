@@ -46,7 +46,7 @@ const authServerClient = betterAuth({
     passkey({
       rpName: 'Craft & Culture',
       rpID:
-        serverConfig.env === 'production' ? 'craftculture.co' : 'localhost',
+        serverConfig.env === 'production' ? 'craftculture.xyz' : 'localhost',
       origin: serverConfig.appUrl.toString().replace(/\/$/, ''),
     }),
     nextCookies(),
