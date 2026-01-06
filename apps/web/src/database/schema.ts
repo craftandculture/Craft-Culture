@@ -643,6 +643,11 @@ export const notificationType = pgEnum('notification_type', [
   'action_required',
   'po_assigned',
   'status_update',
+  // SOURCE RFQ notifications
+  'rfq_received',
+  'rfq_response_submitted',
+  'rfq_deadline_reminder',
+  'rfq_quotes_selected',
 ]);
 
 /**

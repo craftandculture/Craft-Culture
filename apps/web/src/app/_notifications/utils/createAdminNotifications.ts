@@ -12,7 +12,8 @@ interface CreateAdminNotificationsParams {
     | 'po_confirmed'
     | 'payment_received'
     | 'payment_proof_submitted'
-    | 'order_delivered';
+    | 'order_delivered'
+    | 'rfq_response_submitted';
   title: string;
   message: string;
   entityType?: string;
