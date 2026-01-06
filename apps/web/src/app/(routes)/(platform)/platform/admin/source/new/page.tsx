@@ -62,7 +62,7 @@ const NewRfqPage = () => {
       },
       onError: (error) => {
         console.error('Parse error:', error);
-        alert('Failed to parse input. Please try again or enter items manually.');
+        alert(`Failed to parse input: ${error.message}`);
       },
     }),
   );
