@@ -21,6 +21,78 @@ import Icon from '@/app/_ui/components/Icon/Icon';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import { useTRPCClient } from '@/lib/trpc/browser';
 
+const MAX_FILE_SIZE = 3 * 1024 * 1024; // 3MB
+const MAX_DIMENSION = 2048; // Max width/height for resizing
+
+/**
+ * Compress an image file to fit under the max file size
+ */
+const compressImage = async (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const img = new window.Image();
+    img.onload = () => {
+      // Calculate new dimensions while maintaining aspect ratio
+      let { width, height } = img;
+      if (width > MAX_DIMENSION || height > MAX_DIMENSION) {
+        if (width > height) {
+          height = (height / width) * MAX_DIMENSION;
+          width = MAX_DIMENSION;
+        } else {
+          width = (width / height) * MAX_DIMENSION;
+          height = MAX_DIMENSION;
+        }
+      }
+
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        reject(new Error('Failed to get canvas context'));
+        return;
+      }
+
+      ctx.drawImage(img, 0, 0, width, height);
+
+      // Try different quality levels to get under max size
+      const qualities = [0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3];
+      for (const quality of qualities) {
+        const dataUrl = canvas.toDataURL('image/jpeg', quality);
+        // Estimate size from base64 (remove data URL prefix, calculate)
+        const base64Length = dataUrl.split(',')[1]?.length ?? 0;
+        const sizeInBytes = (base64Length * 3) / 4;
+
+        if (sizeInBytes <= MAX_FILE_SIZE) {
+          resolve(dataUrl);
+          return;
+        }
+      }
+
+      // If still too large, reduce dimensions further
+      const smallerCanvas = document.createElement('canvas');
+      smallerCanvas.width = width / 2;
+      smallerCanvas.height = height / 2;
+      const smallerCtx = smallerCanvas.getContext('2d');
+      if (!smallerCtx) {
+        reject(new Error('Failed to get canvas context'));
+        return;
+      }
+      smallerCtx.drawImage(canvas, 0, 0, width / 2, height / 2);
+      resolve(smallerCanvas.toDataURL('image/jpeg', 0.7));
+    };
+
+    img.onerror = () => reject(new Error('Failed to load image'));
+
+    // Load image from file
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      img.src = e.target?.result as string;
+    };
+    reader.onerror = () => reject(new Error('Failed to read file'));
+    reader.readAsDataURL(file);
+  });
+};
+
 export interface DeliveryPhotoUploadProps {
   orderId: string;
   existingPhotoUrl?: string | null;
@@ -79,33 +151,37 @@ const DeliveryPhotoUpload = ({
         return;
       }
 
-      // Validate file size (max 3MB to stay under Vercel body limit)
-      if (file.size > 3 * 1024 * 1024) {
-        toast.error('File size must be less than 3MB');
-        return;
-      }
-
-      // Convert to base64
-      const reader = new FileReader();
-      const base64Promise = new Promise<string>((resolve, reject) => {
-        reader.onload = () => resolve(reader.result as string);
-        reader.onerror = () => reject(new Error('Failed to read file'));
-      });
-      reader.readAsDataURL(file);
-
       try {
-        const base64 = await base64Promise;
+        let base64: string;
+
+        // Compress if file is larger than max size
+        if (file.size > MAX_FILE_SIZE) {
+          toast.info('Compressing image...');
+          base64 = await compressImage(file);
+        } else {
+          // Read file directly if small enough
+          base64 = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result as string);
+            reader.onerror = () => reject(new Error('Failed to read file'));
+            reader.readAsDataURL(file);
+          });
+        }
+
         setPreviewUrl(base64);
 
-        // Upload immediately
+        // Upload immediately (always use JPEG for compressed images)
+        const isCompressed = file.size > MAX_FILE_SIZE;
         uploadPhoto({
           file: base64,
-          filename: file.name,
-          fileType: file.type,
+          filename: isCompressed
+            ? file.name.replace(/\.[^.]+$/, '.jpg')
+            : file.name,
+          fileType: isCompressed ? 'image/jpeg' : file.type,
         });
       } catch (err) {
-        console.error('Error reading file:', err);
-        toast.error('Failed to read file');
+        console.error('Error processing file:', err);
+        toast.error('Failed to process image');
       }
 
       // Reset input
