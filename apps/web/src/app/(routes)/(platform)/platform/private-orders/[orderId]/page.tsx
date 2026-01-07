@@ -652,8 +652,8 @@ const PrivateOrderDetailPage = () => {
           </Card>
         )}
 
-        {/* Delivered - shown when order has been delivered */}
-        {order.status === 'delivered' && (
+        {/* Delivered - shown when order has been delivered or distributor has paid */}
+        {['delivered', 'distributor_paid'].includes(order.status) && (
           <Card className="border-2 border-fill-success/50 bg-fill-success/5">
             <CardContent className="p-0">
               {/* Collapsible Header */}
