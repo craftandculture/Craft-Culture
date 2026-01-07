@@ -13,7 +13,7 @@ import PersonalDetailsSection from './components/PersonalDetailsSection';
 import SecuritySection from './components/SecuritySection';
 
 /**
- * Settings page for managing user profile and company information
+ * Settings page for managing user profile and company information.
  */
 const SettingsPage = async () => {
   const queryClient = getQueryClient();
