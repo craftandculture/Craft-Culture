@@ -8,8 +8,6 @@ const protectedRoutes = [
   /(?:^|\/)([\w-]+\/)?welcome/,
 ];
 
-const authRoutes = [/(?:^|\/)([\w-]+\/)?sign-in/];
-
 export const middleware = async (request: NextRequest) => {
   const { pathname } = request.nextUrl;
 
@@ -22,10 +20,6 @@ export const middleware = async (request: NextRequest) => {
     return NextResponse.redirect(
       new URL(`/sign-in?next=${pathname}`, request.url),
     );
-  }
-
-  if (authRoutes.some((route) => route.test(pathname)) && hasSession) {
-    return NextResponse.redirect(new URL(`/platform`, request.url));
   }
 
   return NextResponse.next();
