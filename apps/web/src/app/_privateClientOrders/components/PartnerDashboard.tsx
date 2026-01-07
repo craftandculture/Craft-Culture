@@ -111,7 +111,7 @@ const PartnerDashboard = () => {
         </Typography>
         <Button
           size="sm"
-          colorRole="secondary"
+          colorRole="muted"
           onClick={() => refetch()}
           isDisabled={isRefetching}
         >
