@@ -79,9 +79,9 @@ const DeliveryPhotoUpload = ({
         return;
       }
 
-      // Validate file size (max 10MB)
-      if (file.size > 10 * 1024 * 1024) {
-        toast.error('File size must be less than 10MB');
+      // Validate file size (max 3MB to stay under Vercel body limit)
+      if (file.size > 3 * 1024 * 1024) {
+        toast.error('File size must be less than 3MB');
         return;
       }
 
