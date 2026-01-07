@@ -9,6 +9,7 @@ import getQueryClient from '@/lib/react-query';
 import api from '@/lib/trpc/server';
 
 import CompanyProfileSection from './components/CompanyProfileSection';
+import NotificationPreferencesSection from './components/NotificationPreferencesSection';
 import PersonalDetailsSection from './components/PersonalDetailsSection';
 import SecuritySection from './components/SecuritySection';
 
@@ -40,6 +41,11 @@ const SettingsPage = async () => {
 
             {/* Security Section (Passkeys, 2FA) */}
             <SecuritySection />
+
+            <Divider />
+
+            {/* Notification Preferences Section */}
+            <NotificationPreferencesSection />
 
             <Divider />
 

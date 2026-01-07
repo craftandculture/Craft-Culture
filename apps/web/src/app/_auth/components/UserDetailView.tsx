@@ -2,6 +2,7 @@
 
 import {
   IconArrowLeft,
+  IconBell,
   IconBuilding,
   IconBuildingBank,
   IconCheck,
@@ -52,6 +53,7 @@ import Typography from '@/app/_ui/components/Typography/Typography';
 import authBrowserClient from '@/lib/better-auth/browser';
 import useTRPC from '@/lib/trpc/browser';
 
+import NotificationPreferencesTab from './NotificationPreferencesTab';
 import customerTypeOptions, { getCustomerTypeLabel } from '../constants/customerTypeOptions';
 
 interface UserDetailViewProps {
@@ -363,6 +365,10 @@ const UserDetailView = ({ userId }: UserDetailViewProps) => {
           <TabsTrigger value="activity">
             <Icon icon={IconClock} size="sm" className="mr-2" />
             Activity
+          </TabsTrigger>
+          <TabsTrigger value="notifications">
+            <Icon icon={IconBell} size="sm" className="mr-2" />
+            Notifications
           </TabsTrigger>
         </TabsList>
 
@@ -912,6 +918,11 @@ const UserDetailView = ({ userId }: UserDetailViewProps) => {
               </CardContent>
             </Card>
           </div>
+        </TabsContent>
+
+        {/* Notifications Tab */}
+        <TabsContent value="notifications" className="mt-6">
+          <NotificationPreferencesTab userId={userId} />
         </TabsContent>
       </Tabs>
     </div>
