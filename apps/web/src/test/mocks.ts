@@ -41,6 +41,7 @@ export const mockUser: User = {
   approvedBy: null,
   termsAcceptedAt: null,
   partnerId: null,
+  notificationPreferences: null,
 };
 
 /**

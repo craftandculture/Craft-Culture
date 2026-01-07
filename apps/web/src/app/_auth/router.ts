@@ -7,9 +7,11 @@ import signOutController from './controllers/signOut';
 import usersActivateTestUser from './controllers/usersActivateTestUser';
 import usersAdminChangeEmail from './controllers/usersAdminChangeEmail';
 import usersAdminCreate from './controllers/usersAdminCreate';
+import usersAdminGetNotificationPreferences from './controllers/usersAdminGetNotificationPreferences';
 import usersAdminGetOne from './controllers/usersAdminGetOne';
 import usersAdminImpersonate from './controllers/usersAdminImpersonate';
 import usersAdminUpdate from './controllers/usersAdminUpdate';
+import usersAdminUpdateNotificationPreferences from './controllers/usersAdminUpdateNotificationPreferences';
 import usersApprove from './controllers/usersApprove';
 import usersAssignPartner from './controllers/usersAssignPartner';
 import usersDelete from './controllers/usersDelete';
@@ -28,6 +30,8 @@ const usersRouter = createTRPCRouter({
   adminUpdate: usersAdminUpdate,
   adminChangeEmail: usersAdminChangeEmail,
   adminGetOne: usersAdminGetOne,
+  adminGetNotificationPreferences: usersAdminGetNotificationPreferences,
+  adminUpdateNotificationPreferences: usersAdminUpdateNotificationPreferences,
   activateTestUser: usersActivateTestUser,
   signOut: protectedProcedure.mutation(async ({ ctx }) => {
     return await signOutController({ user: ctx.user });
