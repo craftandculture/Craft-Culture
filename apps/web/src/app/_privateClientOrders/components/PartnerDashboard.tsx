@@ -44,12 +44,13 @@ const PartnerDashboard = () => {
   const trpcClient = useTRPCClient();
   const [currency, setCurrency] = useState<Currency>('USD');
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch, isRefetching } = useQuery({
     queryKey: ['privateClientOrders.partnerDashboard'],
     queryFn: () => trpcClient.privateClientOrders.partnerDashboard.query(),
     refetchInterval: 30000,
-    retry: 3,
-    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000),
+    retry: 5,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 8000),
+    staleTime: 0,
   });
 
   /**
@@ -101,13 +102,21 @@ const PartnerDashboard = () => {
     );
   }
 
-  if (!data) {
+  if (isError || !data) {
     return (
       <div className="flex flex-col items-center justify-center gap-4 py-12">
         <Icon icon={IconPackage} size="xl" className="text-text-muted" />
         <Typography variant="bodySm" colorRole="muted">
           Unable to load dashboard data
         </Typography>
+        <Button
+          size="sm"
+          colorRole="secondary"
+          onClick={() => refetch()}
+          isDisabled={isRefetching}
+        >
+          {isRefetching ? 'Loading...' : 'Try Again'}
+        </Button>
       </div>
     );
   }
