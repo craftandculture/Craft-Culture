@@ -61,9 +61,7 @@ const NotificationPreferencesSection = () => {
       for (const type of category.types) {
         // Use pending change if exists, otherwise use server state
         state[type.type] =
-          type.type in pendingChanges
-            ? pendingChanges[type.type]
-            : type.enabled;
+          pendingChanges[type.type] ?? type.enabled;
       }
     }
     return state;
