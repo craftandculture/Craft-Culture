@@ -95,9 +95,18 @@ const stockStages = [
   },
   {
     key: 'at_distributor',
-    label: 'Ready',
-    shortLabel: 'Ready',
+    label: 'At Distributor',
+    shortLabel: 'At Dist.',
     description: 'Ready for delivery',
+    icon: IconPackage,
+    color: 'text-orange-600 dark:text-orange-400',
+    bgColor: 'bg-orange-500',
+  },
+  {
+    key: 'delivered',
+    label: 'Delivered',
+    shortLabel: 'Delivered',
+    description: 'Delivered to client',
     icon: IconCheck,
     color: 'text-green-600 dark:text-green-400',
     bgColor: 'bg-green-500',
@@ -128,9 +137,8 @@ const StockStatusSection = ({ items, className }: StockStatusSectionProps) => {
     at_cc_bonded: items.filter((i) => i.stockStatus === 'at_cc_bonded').length,
     in_transit_to_distributor: items.filter((i) => i.stockStatus === 'in_transit_to_distributor')
       .length,
-    at_distributor: items.filter(
-      (i) => i.stockStatus === 'at_distributor' || i.stockStatus === 'delivered',
-    ).length,
+    at_distributor: items.filter((i) => i.stockStatus === 'at_distributor').length,
+    delivered: items.filter((i) => i.stockStatus === 'delivered').length,
   };
 
   // Find the furthest stage any item has reached (for highlighting current stage)
@@ -157,8 +165,8 @@ const StockStatusSection = ({ items, className }: StockStatusSectionProps) => {
     .sort((a, b) => b.getTime() - a.getTime());
   const latestETA = pendingETAs[0];
 
-  // Check if all items are ready
-  const allReady = stageCounts['at_distributor'] === totalItems;
+  // Check if all items are delivered to client
+  const allDelivered = stageCounts['delivered'] === totalItems;
 
   // Sort items by status for detail view
   const statusOrder: Record<string, number> = {
@@ -181,7 +189,7 @@ const StockStatusSection = ({ items, className }: StockStatusSectionProps) => {
       {/* Main container */}
       <div
         className={`rounded-lg border ${
-          allReady
+          allDelivered
             ? 'border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-900/20'
             : 'border-border-muted bg-surface-secondary'
         }`}
@@ -191,10 +199,10 @@ const StockStatusSection = ({ items, className }: StockStatusSectionProps) => {
           <div className="flex items-center gap-3">
             <div
               className={`flex h-8 w-8 items-center justify-center rounded-full ${
-                allReady ? 'bg-green-500' : 'bg-fill-muted'
+                allDelivered ? 'bg-green-500' : 'bg-fill-muted'
               }`}
             >
-              {allReady ? (
+              {allDelivered ? (
                 <IconCheck size={16} className="text-white" />
               ) : (
                 <IconPackage size={16} className="text-text-muted" />
@@ -203,15 +211,15 @@ const StockStatusSection = ({ items, className }: StockStatusSectionProps) => {
             <div>
               <Typography variant="labelMd">Stock Tracking</Typography>
               <Typography variant="bodyXs" colorRole="muted">
-                {allReady
-                  ? `All ${totalItems} items ready for delivery`
+                {allDelivered
+                  ? `All ${totalItems} items delivered to client`
                   : `Tracking ${totalItems} items through the supply chain`}
               </Typography>
             </div>
           </div>
 
           {/* ETA indicator */}
-          {latestETA && !allReady && (
+          {latestETA && !allDelivered && (
             <div className="flex items-center gap-1.5 rounded-full bg-fill-muted/50 px-2.5 py-1">
               <IconClock size={12} className="text-text-muted" />
               <Typography variant="bodyXs" colorRole="muted">
@@ -228,7 +236,7 @@ const StockStatusSection = ({ items, className }: StockStatusSectionProps) => {
               const count = stageCounts[stage.key] ?? 0;
               const isActive = count > 0;
               const isPast = index < currentStageIndex;
-              const isCurrent = index === currentStageIndex && !allReady;
+              const isCurrent = index === currentStageIndex && !allDelivered;
               const isLast = index === stockStages.length - 1;
 
               return (

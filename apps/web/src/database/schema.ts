@@ -144,6 +144,11 @@ export const users = pgTable('users', {
   termsAcceptedAt: timestamp('terms_accepted_at', { mode: 'date' }),
   // Partner ID for wine partner users (private_clients customer type)
   partnerId: uuid('partner_id'),
+  // Notification preferences - which notification types user/admin has disabled
+  notificationPreferences: jsonb('notification_preferences').$type<{
+    disabledTypes?: string[];
+    adminDisabledTypes?: string[];
+  }>(),
 
   ...timestamps,
 });
