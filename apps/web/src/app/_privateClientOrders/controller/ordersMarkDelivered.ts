@@ -60,8 +60,8 @@ const ordersMarkDelivered = distributorProcedure
         deliveredAt: now,
         deliveredConfirmedBy: user.id,
         deliveryNotes: notes ?? order.deliveryNotes,
-        deliverySignature: signature,
-        deliveryPhoto: photo,
+        deliverySignature: signature ?? order.deliverySignature,
+        deliveryPhoto: photo ?? order.deliveryPhoto,
         updatedAt: now,
       })
       .where(eq(privateClientOrders.id, orderId))
