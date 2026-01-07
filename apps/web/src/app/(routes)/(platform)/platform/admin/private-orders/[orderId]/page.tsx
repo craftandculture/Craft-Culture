@@ -464,8 +464,8 @@ const AdminPrivateOrderDetailPage = () => {
         {/* Workflow Stepper */}
         <WorkflowStepper order={order} />
 
-        {/* Order Completion - Shown prominently for delivered orders */}
-        {order.status === 'delivered' && (
+        {/* Order Completion - Shown prominently for delivered/distributor_paid orders */}
+        {['delivered', 'distributor_paid'].includes(order.status) && (
           <Card className="border-2 border-fill-success/50 bg-fill-success/5">
             <CardContent className="p-4">
               <div className="mb-4 flex items-center gap-3">
@@ -1107,7 +1107,7 @@ const AdminPrivateOrderDetailPage = () => {
         )}
 
         {/* Order Completion - Unified C&C Payment & Proof of Delivery (for non-delivered orders) */}
-        {order.status !== 'delivered' && (
+        {!['delivered', 'distributor_paid'].includes(order.status) && (
         <Card className="border-2 border-fill-success/50 bg-fill-success/5">
           <CardContent className="p-0">
             {/* Collapsible Header */}
