@@ -3,6 +3,7 @@ import { and, desc, eq, ilike, or, sql } from 'drizzle-orm';
 import db from '@/database/client';
 import { sourceRfqPartners, sourceRfqs, users } from '@/database/schema';
 import { winePartnerProcedure } from '@/lib/trpc/procedures';
+import logger from '@/utils/logger';
 
 import getManyRfqsSchema from '../schemas/getManyRfqsSchema';
 
@@ -19,6 +20,24 @@ const partnerGetManyRfqs = winePartnerProcedure
   .input(getManyRfqsSchema)
   .query(async ({ input, ctx: { partnerId } }) => {
     const { limit, cursor, search, status } = input;
+
+    logger.warn('[SOURCE] Partner getMany - querying RFQs', { partnerId });
+
+    // Debug: Check all RFQ partner assignments in the system
+    const allAssignments = await db
+      .select({
+        rfqId: sourceRfqPartners.rfqId,
+        partnerId: sourceRfqPartners.partnerId,
+        status: sourceRfqPartners.status,
+      })
+      .from(sourceRfqPartners)
+      .limit(20);
+
+    logger.warn('[SOURCE] Partner getMany - all assignments in system', {
+      requestingPartnerId: partnerId,
+      totalAssignments: allAssignments.length,
+      assignments: allAssignments,
+    });
 
     // Build where conditions - only RFQs assigned to this partner
     const conditions = [eq(sourceRfqPartners.partnerId, partnerId)];
