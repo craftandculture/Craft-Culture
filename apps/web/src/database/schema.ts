@@ -461,6 +461,32 @@ export const partnerMembers = pgTable(
 
 export type PartnerMember = typeof partnerMembers.$inferSelect;
 
+/**
+ * Partner contacts - named contacts at a partner company for RFQ notifications
+ * Allows sending RFQs to specific people instead of the company's general email
+ */
+export const partnerContacts = pgTable(
+  'partner_contacts',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    partnerId: uuid('partner_id')
+      .references(() => partners.id, { onDelete: 'cascade' })
+      .notNull(),
+    name: text('name').notNull(),
+    email: text('email').notNull(),
+    role: text('role'), // e.g., "Buyer", "Operations Manager"
+    phone: text('phone'),
+    isPrimary: boolean('is_primary').notNull().default(false),
+    ...timestamps,
+  },
+  (table) => [
+    index('partner_contacts_partner_id_idx').on(table.partnerId),
+    index('partner_contacts_email_idx').on(table.email),
+  ],
+).enableRLS();
+
+export type PartnerContact = typeof partnerContacts.$inferSelect;
+
 export const quotes = pgTable(
   'quotes',
   {
@@ -1675,6 +1701,30 @@ export const sourceRfqPartners = pgTable(
 ).enableRLS();
 
 export type SourceRfqPartner = typeof sourceRfqPartners.$inferSelect;
+
+/**
+ * SOURCE RFQ Partner Contacts - tracks which contacts were notified for an RFQ
+ */
+export const sourceRfqPartnerContacts = pgTable(
+  'source_rfq_partner_contacts',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    rfqPartnerId: uuid('rfq_partner_id')
+      .references(() => sourceRfqPartners.id, { onDelete: 'cascade' })
+      .notNull(),
+    contactId: uuid('contact_id')
+      .references(() => partnerContacts.id, { onDelete: 'cascade' })
+      .notNull(),
+    notifiedAt: timestamp('notified_at', { mode: 'date' }),
+    ...timestamps,
+  },
+  (table) => [
+    index('source_rfq_partner_contacts_rfq_partner_id_idx').on(table.rfqPartnerId),
+    index('source_rfq_partner_contacts_contact_id_idx').on(table.contactId),
+  ],
+).enableRLS();
+
+export type SourceRfqPartnerContact = typeof sourceRfqPartnerContacts.$inferSelect;
 
 /**
  * SOURCE RFQ Quotes - partner quotes for individual items

@@ -39,6 +39,8 @@ import DialogTrigger from '@/app/_ui/components/Dialog/DialogTrigger';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import useTRPC from '@/lib/trpc/browser';
 
+import PartnerContactsSection from './PartnerContactsSection';
+
 type PartnerStatus = 'active' | 'inactive' | 'suspended';
 
 /**
@@ -639,6 +641,9 @@ const WinePartnersPage = () => {
                     />
                   </div>
                 </div>
+
+                {/* Contacts Section */}
+                <PartnerContactsSection partnerId={editingPartner.id} />
 
                 {/* Actions */}
                 <div className="flex justify-end gap-2 pt-2">
