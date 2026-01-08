@@ -15,17 +15,13 @@ import { useParams } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 
 import RfqStatusBadge from '@/app/_source/components/RfqStatusBadge';
+import SendToPartnersDialog from '@/app/_source/components/SendToPartnersDialog';
 import exportRfqToExcel from '@/app/_source/utils/exportRfqToExcel';
 import exportRfqToPDF from '@/app/_source/utils/exportRfqToPDF';
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
 import Card from '@/app/_ui/components/Card/Card';
 import CardContent from '@/app/_ui/components/Card/CardContent';
-import Dialog from '@/app/_ui/components/Dialog/Dialog';
-import DialogContent from '@/app/_ui/components/Dialog/DialogContent';
-import DialogDescription from '@/app/_ui/components/Dialog/DialogDescription';
-import DialogHeader from '@/app/_ui/components/Dialog/DialogHeader';
-import DialogTitle from '@/app/_ui/components/Dialog/DialogTitle';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import useTRPC from '@/lib/trpc/browser';
 
@@ -38,7 +34,6 @@ const RfqDetailPage = () => {
   const api = useTRPC();
 
   const [isSelectPartnersOpen, setIsSelectPartnersOpen] = useState(false);
-  const [selectedPartnerIds, setSelectedPartnerIds] = useState<string[]>([]);
 
   // State for editing prices
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
@@ -49,25 +44,6 @@ const RfqDetailPage = () => {
   const { data: rfq, isLoading, refetch } = useQuery({
     ...api.source.admin.getOne.queryOptions({ rfqId }),
   });
-
-  // Fetch available wine partners
-  const { data: availablePartners } = useQuery({
-    ...api.partners.getMany.queryOptions({
-      type: 'wine_partner',
-      status: 'active',
-    }),
-  });
-
-  // Send to partners mutation
-  const { mutate: sendToPartners, isPending: isSending } = useMutation(
-    api.source.admin.sendToPartners.mutationOptions({
-      onSuccess: () => {
-        void refetch();
-        setIsSelectPartnersOpen(false);
-        setSelectedPartnerIds([]);
-      },
-    }),
-  );
 
   // Select quote mutation
   const { mutate: selectQuote, isPending: isSelectingQuote } = useMutation(
@@ -142,25 +118,6 @@ const RfqDetailPage = () => {
   const uniquePartners = Array.from(new Set(rfq.partners.map((p) => p.partnerId))).map(
     (id) => partnerMap.get(id)!,
   );
-
-  const handleTogglePartner = (partnerId: string) => {
-    setSelectedPartnerIds((prev) =>
-      prev.includes(partnerId)
-        ? prev.filter((id) => id !== partnerId)
-        : [...prev, partnerId],
-    );
-  };
-
-  const handleSendToPartners = () => {
-    if (selectedPartnerIds.length === 0) {
-      alert('Please select at least one partner');
-      return;
-    }
-    sendToPartners({
-      rfqId,
-      partnerIds: selectedPartnerIds,
-    });
-  };
 
   const handleSelectQuote = (itemId: string, quoteId: string) => {
     selectQuote({ itemId, quoteId });
@@ -617,67 +574,12 @@ const RfqDetailPage = () => {
         )}
 
         {/* Select Partners Dialog */}
-        <Dialog open={isSelectPartnersOpen} onOpenChange={setIsSelectPartnersOpen}>
-          <DialogContent className="sm:max-w-lg">
-            <DialogHeader>
-              <DialogTitle>Send RFQ to Partners</DialogTitle>
-              <DialogDescription>
-                Select wine partners to send this RFQ to for quoting
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="space-y-3 my-4 max-h-96 overflow-y-auto">
-              {availablePartners?.map((partner) => (
-                <label
-                  key={partner.id}
-                  className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
-                    selectedPartnerIds.includes(partner.id)
-                      ? 'border-border-brand bg-fill-brand/5'
-                      : 'border-border-muted hover:border-border-primary'
-                  }`}
-                >
-                  <input
-                    type="checkbox"
-                    checked={selectedPartnerIds.includes(partner.id)}
-                    onChange={() => handleTogglePartner(partner.id)}
-                    className="w-4 h-4 rounded border-border-primary"
-                  />
-                  <div>
-                    <Typography variant="bodySm" className="font-medium">
-                      {partner.businessName}
-                    </Typography>
-                    {partner.businessEmail && (
-                      <Typography variant="bodyXs" colorRole="muted">
-                        {partner.businessEmail}
-                      </Typography>
-                    )}
-                  </div>
-                </label>
-              ))}
-            </div>
-
-            <div className="flex justify-between items-center">
-              <Typography variant="bodySm" colorRole="muted">
-                {selectedPartnerIds.length} selected
-              </Typography>
-              <div className="flex gap-2">
-                <Button variant="outline" onClick={() => setIsSelectPartnersOpen(false)}>
-                  <ButtonContent>Cancel</ButtonContent>
-                </Button>
-                <Button
-                  variant="default"
-                  colorRole="brand"
-                  onClick={handleSendToPartners}
-                  isDisabled={selectedPartnerIds.length === 0 || isSending}
-                >
-                  <ButtonContent iconLeft={IconSend}>
-                    {isSending ? 'Sending...' : 'Send RFQ'}
-                  </ButtonContent>
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
+        <SendToPartnersDialog
+          rfqId={rfqId}
+          open={isSelectPartnersOpen}
+          onOpenChange={setIsSelectPartnersOpen}
+          onSuccess={() => void refetch()}
+        />
       </div>
     </div>
   );
