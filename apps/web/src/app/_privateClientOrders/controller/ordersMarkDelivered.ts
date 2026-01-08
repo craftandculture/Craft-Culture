@@ -7,6 +7,7 @@ import db from '@/database/client';
 import {
   partnerMembers,
   privateClientOrderActivityLogs,
+  privateClientOrderItems,
   privateClientOrders,
 } from '@/database/schema';
 import { distributorProcedure } from '@/lib/trpc/procedures';
@@ -66,6 +67,15 @@ const ordersMarkDelivered = distributorProcedure
       })
       .where(eq(privateClientOrders.id, orderId))
       .returning();
+
+    // Update all line items stock status to delivered
+    await db
+      .update(privateClientOrderItems)
+      .set({
+        stockStatus: 'delivered',
+        updatedAt: now,
+      })
+      .where(eq(privateClientOrderItems.orderId, orderId));
 
     // Log the activity
     await db.insert(privateClientOrderActivityLogs).values({
