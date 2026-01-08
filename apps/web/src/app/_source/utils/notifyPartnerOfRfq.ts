@@ -7,19 +7,31 @@ import loops from '@/lib/loops/client';
 import serverConfig from '@/server.config';
 import logger from '@/utils/logger';
 
+interface ContactEmail {
+  email: string;
+  name: string;
+}
+
 interface NotifyPartnerOfRfqParams {
   rfqId: string;
   partnerId: string;
+  contactEmails?: ContactEmail[];
 }
 
 /**
  * Notify a wine partner when they receive a new SOURCE RFQ
  *
- * Creates an in-app notification and sends an email via Loops.
+ * Creates an in-app notification and sends emails via Loops.
+ * If specific contact emails are provided, sends to those contacts.
+ * Otherwise falls back to partner's user email or business email.
  *
- * @param params - The RFQ ID and partner ID
+ * @param params - The RFQ ID, partner ID, and optional contact emails
  */
-const notifyPartnerOfRfq = async ({ rfqId, partnerId }: NotifyPartnerOfRfqParams) => {
+const notifyPartnerOfRfq = async ({
+  rfqId,
+  partnerId,
+  contactEmails,
+}: NotifyPartnerOfRfqParams) => {
   try {
     // Get RFQ details
     const [rfq] = await db
@@ -71,15 +83,6 @@ const notifyPartnerOfRfq = async ({ rfqId, partnerId }: NotifyPartnerOfRfqParams
       }
     }
 
-    // Use user email if available, otherwise fall back to business email
-    const notificationEmail = userEmail || partner.businessEmail;
-    const recipientName = userName || partner.businessName;
-
-    if (!notificationEmail) {
-      logger.error('No email found for partner notification', { partnerId });
-      return;
-    }
-
     const rfqUrl = `${serverConfig.appUrl}/platform/partner/source/${rfqId}`;
 
     // Format deadline for display
@@ -110,25 +113,46 @@ const notifyPartnerOfRfq = async ({ rfqId, partnerId }: NotifyPartnerOfRfqParams
       });
     }
 
-    // Send email notification via Loops
-    try {
-      // TODO: Create template in Loops with ID 'source-rfq-received'
-      await loops.sendTransactionalEmail({
-        transactionalId: 'source-rfq-received',
-        email: notificationEmail,
-        dataVariables: {
-          partnerName: recipientName,
-          rfqNumber: rfq.rfqNumber,
-          rfqName: rfq.name,
-          itemCount: String(rfq.itemCount),
-          responseDeadline: deadlineStr,
-          rfqUrl,
-        },
-      });
+    // Determine email recipients
+    // If specific contacts were selected, use those
+    // Otherwise fall back to user email or business email
+    let recipients: ContactEmail[] = [];
 
-      logger.dev(`Sent RFQ notification to partner: ${notificationEmail}`);
-    } catch (error) {
-      logger.error(`Failed to send RFQ email notification to ${notificationEmail}:`, error);
+    if (contactEmails && contactEmails.length > 0) {
+      recipients = contactEmails;
+    } else {
+      const fallbackEmail = userEmail || partner.businessEmail;
+      const fallbackName = userName || partner.businessName;
+      if (fallbackEmail) {
+        recipients = [{ email: fallbackEmail, name: fallbackName }];
+      }
+    }
+
+    if (recipients.length === 0) {
+      logger.error('No email recipients found for partner notification', { partnerId });
+      return;
+    }
+
+    // Send email notification via Loops to all recipients
+    for (const recipient of recipients) {
+      try {
+        await loops.sendTransactionalEmail({
+          transactionalId: 'source-rfq-received',
+          email: recipient.email,
+          dataVariables: {
+            partnerName: recipient.name,
+            rfqNumber: rfq.rfqNumber,
+            rfqName: rfq.name,
+            itemCount: String(rfq.itemCount),
+            responseDeadline: deadlineStr,
+            rfqUrl,
+          },
+        });
+
+        logger.dev(`Sent RFQ notification to: ${recipient.email}`);
+      } catch (error) {
+        logger.error(`Failed to send RFQ email notification to ${recipient.email}:`, error);
+      }
     }
   } catch (error) {
     logger.error('Failed to notify partner of RFQ:', error);

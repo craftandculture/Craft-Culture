@@ -2,7 +2,13 @@ import { TRPCError } from '@trpc/server';
 import { eq, sql } from 'drizzle-orm';
 
 import db from '@/database/client';
-import { partners, sourceRfqPartners, sourceRfqs } from '@/database/schema';
+import {
+  partnerContacts,
+  partners,
+  sourceRfqPartnerContacts,
+  sourceRfqPartners,
+  sourceRfqs,
+} from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
 import logger from '@/utils/logger';
 
@@ -22,7 +28,7 @@ import notifyPartnerOfRfq from '../utils/notifyPartnerOfRfq';
 const adminSendToPartners = adminProcedure
   .input(sendToPartnersSchema)
   .mutation(async ({ input, ctx: { user } }) => {
-    const { rfqId, partnerIds, responseDeadline } = input;
+    const { rfqId, partnerIds, contactIds, responseDeadline } = input;
 
     // Verify RFQ exists and is ready to send
     const [rfq] = await db
@@ -76,7 +82,54 @@ const adminSendToPartners = adminProcedure
       notifiedAt: now,
     }));
 
-    await db.insert(sourceRfqPartners).values(rfqPartnerValues);
+    const insertedRfqPartners = await db
+      .insert(sourceRfqPartners)
+      .values(rfqPartnerValues)
+      .returning({ id: sourceRfqPartners.id, partnerId: sourceRfqPartners.partnerId });
+
+    // If contact IDs were provided, store them and get contact details
+    const contactsByPartner = new Map<string, { id: string; email: string; name: string }[]>();
+
+    if (contactIds && contactIds.length > 0) {
+      // Get contact details with their partner IDs
+      const contacts = await db
+        .select({
+          id: partnerContacts.id,
+          partnerId: partnerContacts.partnerId,
+          email: partnerContacts.email,
+          name: partnerContacts.name,
+        })
+        .from(partnerContacts)
+        .where(sql`${partnerContacts.id} IN ${contactIds}`);
+
+      // Group contacts by partner
+      for (const contact of contacts) {
+        const existing = contactsByPartner.get(contact.partnerId) || [];
+        existing.push({ id: contact.id, email: contact.email, name: contact.name });
+        contactsByPartner.set(contact.partnerId, existing);
+      }
+
+      // Create junction table entries
+      const rfqPartnerContactValues: { rfqPartnerId: string; contactId: string; notifiedAt: Date }[] = [];
+
+      for (const rfqPartner of insertedRfqPartners) {
+        const partnerContactIds = contacts
+          .filter((c) => c.partnerId === rfqPartner.partnerId)
+          .map((c) => c.id);
+
+        for (const contactId of partnerContactIds) {
+          rfqPartnerContactValues.push({
+            rfqPartnerId: rfqPartner.id,
+            contactId,
+            notifiedAt: now,
+          });
+        }
+      }
+
+      if (rfqPartnerContactValues.length > 0) {
+        await db.insert(sourceRfqPartnerContacts).values(rfqPartnerContactValues);
+      }
+    }
 
     // Update RFQ status and metadata
     await db
@@ -91,10 +144,19 @@ const adminSendToPartners = adminProcedure
       .where(eq(sourceRfqs.id, rfqId));
 
     // Send notifications to all partners (non-blocking)
+    // Pass contact emails if specific contacts were selected
     void Promise.allSettled(
-      partnerIds.map((partnerId) =>
-        notifyPartnerOfRfq({ rfqId, partnerId }),
-      ),
+      partnerIds.map((partnerId) => {
+        const partnerContactList = contactsByPartner.get(partnerId);
+        return notifyPartnerOfRfq({
+          rfqId,
+          partnerId,
+          contactEmails: partnerContactList?.map((c) => ({
+            email: c.email,
+            name: c.name,
+          })),
+        });
+      }),
     ).then((results) => {
       const failed = results.filter((r) => r.status === 'rejected');
       if (failed.length > 0) {
