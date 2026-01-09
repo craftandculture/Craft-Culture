@@ -566,7 +566,9 @@ const RfqDetailPage = () => {
                           {/* Quantity */}
                           <td className="px-2 py-2 text-center">
                             <span className="text-xs font-semibold">{item.quantity}</span>
-                            <span className="text-[10px] text-text-muted ml-0.5">cs</span>
+                            <span className="text-[10px] text-text-muted ml-0.5">
+                              {item.quantityUnit === 'bottles' ? 'btl' : 'cs'}
+                            </span>
                           </td>
 
                           {/* Partner Quote Cells - With Details */}

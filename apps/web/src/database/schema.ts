@@ -1625,6 +1625,7 @@ export const sourceRfqItems = pgTable(
 
     // Requested quantity
     quantity: integer('quantity').notNull().default(1),
+    quantityUnit: text('quantity_unit').notNull().default('cases'), // 'cases' | 'bottles'
 
     // Original text from source (for reference)
     originalText: text('original_text'),

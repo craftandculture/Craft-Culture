@@ -39,6 +39,7 @@ const NewRfqPage = () => {
     vintage?: string;
     region?: string;
     quantity: number;
+    quantityUnit: 'cases' | 'bottles';
     confidence: number;
   }>>([]);
 
@@ -489,10 +490,25 @@ const NewRfqPage = () => {
                             .join(' - ')}
                         </Typography>
                       </div>
-                      <div className="flex items-center gap-4">
-                        <span className="text-sm font-medium">
-                          {item.quantity} cases
-                        </span>
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-sm font-semibold">{item.quantity}</span>
+                          <select
+                            value={item.quantityUnit || 'cases'}
+                            onChange={(e) => {
+                              const newItems = [...parsedItems];
+                              newItems[index] = {
+                                ...newItems[index],
+                                quantityUnit: e.target.value as 'cases' | 'bottles',
+                              };
+                              setParsedItems(newItems);
+                            }}
+                            className="text-xs border border-border-muted rounded px-1.5 py-0.5 bg-surface-primary"
+                          >
+                            <option value="cases">cases</option>
+                            <option value="bottles">bottles</option>
+                          </select>
+                        </div>
                         <span
                           className={`text-xs px-2 py-0.5 rounded ${
                             item.confidence > 0.8
@@ -502,7 +518,7 @@ const NewRfqPage = () => {
                                 : 'bg-fill-danger/10 text-text-danger'
                           }`}
                         >
-                          {Math.round(item.confidence * 100)}% match
+                          {Math.round(item.confidence * 100)}%
                         </span>
                       </div>
                     </div>
