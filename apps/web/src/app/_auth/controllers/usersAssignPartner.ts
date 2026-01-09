@@ -3,7 +3,7 @@ import { and, eq, inArray } from 'drizzle-orm';
 import { z } from 'zod';
 
 import db from '@/database/client';
-import { partnerMembers, partners } from '@/database/schema';
+import { partnerMembers, partners, users } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
 const inputSchema = z.object({
@@ -70,6 +70,15 @@ const usersAssignPartner = adminProcedure
         addedBy: ctx.user.id,
       })
       .returning();
+
+    // Clear legacy user.partnerId field if assigning to a wine partner
+    // This ensures partnerMembers is the single source of truth for partner resolution
+    if (partner.type === 'wine_partner') {
+      await db
+        .update(users)
+        .set({ partnerId: null })
+        .where(eq(users.id, userId));
+    }
 
     return {
       membership,
