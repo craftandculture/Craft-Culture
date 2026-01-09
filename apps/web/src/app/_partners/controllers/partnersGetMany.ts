@@ -45,6 +45,18 @@ const partnersGetMany = adminProcedure
       );
     }
 
+    // Filter out user-based entries that have no company info
+    // Only show actual company partners with at least one business field set
+    whereConditions.push(
+      or(
+        sql`${partners.businessAddress} IS NOT NULL AND ${partners.businessAddress} != ''`,
+        sql`${partners.businessEmail} IS NOT NULL AND ${partners.businessEmail} != ''`,
+        sql`${partners.businessPhone} IS NOT NULL AND ${partners.businessPhone} != ''`,
+        sql`${partners.taxId} IS NOT NULL AND ${partners.taxId} != ''`,
+        sql`${partners.logoUrl} IS NOT NULL AND ${partners.logoUrl} != ''`,
+      ),
+    );
+
     const whereClause =
       whereConditions.length > 0
         ? sql`${sql.join(whereConditions, sql` AND `)}`
