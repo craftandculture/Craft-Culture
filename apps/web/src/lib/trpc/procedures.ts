@@ -52,9 +52,9 @@ export const adminProcedure = protectedProcedure.use(async ({ ctx, next }) => {
  * Wine Partner procedure
  *
  * Accessible to users linked to a wine partner (wine company) via:
- * 1. User's partnerId field (assigned via admin user management)
+ * 1. Member link (partnerMembers table) - PRIMARY source of truth
  * 2. Direct link (partners.userId) - owner access
- * 3. Member link (partnerMembers table) - staff access
+ * 3. User's partnerId field - LEGACY fallback only
  *
  * Users must be explicitly linked to a wine partner by an admin.
  * Injects the partnerId into the context for data isolation.
@@ -66,23 +66,24 @@ export const winePartnerProcedure = protectedProcedure.use(
 
     let partner;
 
-    // First, check user's partnerId field (assigned via admin)
-    if (ctx.user.partnerId) {
-      const userPartnerResult = await db
-        .select()
-        .from(partners)
-        .where(
-          and(
-            eq(partners.id, ctx.user.partnerId),
-            eq(partners.type, 'wine_partner'),
-          ),
-        )
-        .limit(1);
+    // PRIMARY: Check partnerMembers table first (admin-assigned memberships)
+    const membership = await db
+      .select({ partner: partners })
+      .from(partnerMembers)
+      .innerJoin(partners, eq(partnerMembers.partnerId, partners.id))
+      .where(
+        and(
+          eq(partnerMembers.userId, ctx.user.id),
+          eq(partners.type, 'wine_partner'),
+        ),
+      )
+      .limit(1);
 
-      partner = userPartnerResult[0];
+    if (membership.length > 0 && membership[0]) {
+      partner = membership[0].partner;
     }
 
-    // If no user-assigned partner, check direct partner link (owner)
+    // FALLBACK 1: Check direct partner link (owner)
     if (!partner) {
       const directPartnerResult = await db
         .select()
@@ -98,23 +99,20 @@ export const winePartnerProcedure = protectedProcedure.use(
       partner = directPartnerResult[0];
     }
 
-    // If no direct link, check partnerMembers table for wine partner membership
-    if (!partner) {
-      const membership = await db
-        .select({ partner: partners })
-        .from(partnerMembers)
-        .innerJoin(partners, eq(partnerMembers.partnerId, partners.id))
+    // FALLBACK 2: Check legacy user.partnerId field (deprecated)
+    if (!partner && ctx.user.partnerId) {
+      const userPartnerResult = await db
+        .select()
+        .from(partners)
         .where(
           and(
-            eq(partnerMembers.userId, ctx.user.id),
+            eq(partners.id, ctx.user.partnerId),
             eq(partners.type, 'wine_partner'),
           ),
         )
         .limit(1);
 
-      if (membership.length > 0 && membership[0]) {
-        partner = membership[0].partner;
-      }
+      partner = userPartnerResult[0];
     }
 
     if (!partner) {
@@ -146,9 +144,9 @@ export const winePartnerProcedure = protectedProcedure.use(
  * Distributor procedure
  *
  * Accessible to users linked to a distributor (CD or TBS) via:
- * 1. User's partnerId field (assigned via admin user management)
+ * 1. Member link (partnerMembers table) - PRIMARY source of truth
  * 2. Direct link (partners.userId) - owner access
- * 3. Member link (partnerMembers table) - staff access
+ * 3. User's partnerId field - LEGACY fallback only
  *
  * Users must be explicitly linked to a distributor by an admin.
  * Injects the partnerId into the context for data isolation.
@@ -160,23 +158,24 @@ export const distributorProcedure = protectedProcedure.use(
 
     let partner;
 
-    // First, check user's partnerId field (assigned via admin)
-    if (ctx.user.partnerId) {
-      const userPartnerResult = await db
-        .select()
-        .from(partners)
-        .where(
-          and(
-            eq(partners.id, ctx.user.partnerId),
-            eq(partners.type, 'distributor'),
-          ),
-        )
-        .limit(1);
+    // PRIMARY: Check partnerMembers table first (admin-assigned memberships)
+    const membership = await db
+      .select({ partner: partners })
+      .from(partnerMembers)
+      .innerJoin(partners, eq(partnerMembers.partnerId, partners.id))
+      .where(
+        and(
+          eq(partnerMembers.userId, ctx.user.id),
+          eq(partners.type, 'distributor'),
+        ),
+      )
+      .limit(1);
 
-      partner = userPartnerResult[0];
+    if (membership.length > 0 && membership[0]) {
+      partner = membership[0].partner;
     }
 
-    // If no user-assigned partner, check direct partner link (owner)
+    // FALLBACK 1: Check direct partner link (owner)
     if (!partner) {
       const directPartnerResult = await db
         .select()
@@ -192,23 +191,20 @@ export const distributorProcedure = protectedProcedure.use(
       partner = directPartnerResult[0];
     }
 
-    // If no direct link, check partnerMembers table for distributor membership
-    if (!partner) {
-      const membership = await db
-        .select({ partner: partners })
-        .from(partnerMembers)
-        .innerJoin(partners, eq(partnerMembers.partnerId, partners.id))
+    // FALLBACK 2: Check legacy user.partnerId field (deprecated)
+    if (!partner && ctx.user.partnerId) {
+      const userPartnerResult = await db
+        .select()
+        .from(partners)
         .where(
           and(
-            eq(partnerMembers.userId, ctx.user.id),
+            eq(partners.id, ctx.user.partnerId),
             eq(partners.type, 'distributor'),
           ),
         )
         .limit(1);
 
-      if (membership.length > 0 && membership[0]) {
-        partner = membership[0].partner;
-      }
+      partner = userPartnerResult[0];
     }
 
     if (!partner) {
