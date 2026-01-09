@@ -333,10 +333,10 @@ const RfqDetailPage = () => {
                     {rfq.items.map((item) => {
                       const selectedQuote = item.quotes.find((q) => q.quote.isSelected);
 
-                      // Calculate min/max prices for color coding
+                      // Calculate min/max prices for color coding (exclude N/A quotes)
                       const quotePrices = item.quotes
                         .map((q) => q.quote.costPricePerCaseUsd)
-                        .filter((p) => p > 0);
+                        .filter((p): p is number => p !== null && p > 0);
                       const minPrice = quotePrices.length > 0 ? Math.min(...quotePrices) : null;
                       const maxPrice =
                         quotePrices.length > 1 ? Math.max(...quotePrices) : null;
@@ -373,10 +373,27 @@ const RfqDetailPage = () => {
 
                             const isSelected = quote.quote.isSelected;
                             const isAlternative = quote.quote.quoteType === 'alternative';
+                            const isNotAvailable = quote.quote.quoteType === 'not_available';
                             const price = quote.quote.costPricePerCaseUsd;
                             const isBestPrice = minPrice !== null && price === minPrice;
                             const isHighestPrice =
                               maxPrice !== null && price === maxPrice && maxPrice !== minPrice;
+
+                            // N/A quotes - show reason without price
+                            if (isNotAvailable || price === null) {
+                              return (
+                                <td key={p.partnerId} className="px-4 py-3">
+                                  <div className="p-2 rounded-lg bg-fill-danger/10 text-center">
+                                    <span className="font-medium text-sm text-text-danger">N/A</span>
+                                    {quote.quote.notAvailableReason && (
+                                      <span className="text-xs text-text-muted block">
+                                        {quote.quote.notAvailableReason}
+                                      </span>
+                                    )}
+                                  </div>
+                                </td>
+                              );
+                            }
 
                             return (
                               <td key={p.partnerId} className="px-4 py-3">
@@ -463,7 +480,7 @@ const RfqDetailPage = () => {
                                             : 'text-text-success'
                                         }`}
                                       >
-                                        ${item.finalPriceUsd?.toFixed(2) || selectedQuote.quote.costPricePerCaseUsd.toFixed(2)}
+                                        ${item.finalPriceUsd?.toFixed(2) || (selectedQuote.quote.costPricePerCaseUsd ?? 0).toFixed(2)}
                                         {item.priceAdjustedBy && (
                                           <span className="ml-1 text-xs text-text-muted">(adj)</span>
                                         )}
@@ -479,7 +496,7 @@ const RfqDetailPage = () => {
                                             handleStartEditPrice(
                                               item.id,
                                               item.finalPriceUsd ||
-                                                selectedQuote.quote.costPricePerCaseUsd,
+                                                selectedQuote.quote.costPricePerCaseUsd || 0,
                                             )
                                           }
                                           className="p-1 text-text-muted hover:text-text-primary hover:bg-fill-muted rounded"
