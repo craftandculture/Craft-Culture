@@ -468,10 +468,10 @@ const PartnerRfqDetailPage = () => {
                           )}
                         </div>
 
-                        {item.notes && (
+                        {item.adminNotes && (
                           <div className="mt-2 ml-9 p-2 bg-fill-warning/10 rounded border border-border-warning">
                             <Typography variant="bodyXs" className="text-text-warning">
-                              <span className="font-semibold">Note:</span> {item.notes}
+                              <span className="font-semibold">Note:</span> {item.adminNotes}
                             </Typography>
                           </div>
                         )}

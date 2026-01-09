@@ -15,11 +15,12 @@ interface RfqItem {
     quote: {
       id: string;
       partnerId: string;
-      costPricePerCaseUsd: number;
+      costPricePerCaseUsd: number | null;
       quoteType: string;
       alternativeProductName?: string | null;
       leadTimeDays?: number | null;
       stockLocation?: string | null;
+      notAvailableReason?: string | null;
       isSelected: boolean;
     };
     partner: {
@@ -102,14 +103,20 @@ const exportRfqToExcel = (rfq: RfqData) => {
     for (const partner of uniquePartners) {
       const quote = item.quotes.find((q) => q.quote.partnerId === partner.id);
       if (quote) {
-        let cellValue = `$${quote.quote.costPricePerCaseUsd.toFixed(2)}`;
-        if (quote.quote.quoteType === 'alternative') {
-          cellValue += ` (Alt: ${quote.quote.alternativeProductName || 'alternative'})`;
+        // Handle N/A quotes (null price)
+        if (quote.quote.quoteType === 'not_available' || quote.quote.costPricePerCaseUsd === null) {
+          const reason = quote.quote.notAvailableReason || 'N/A';
+          row.push(`N/A: ${reason}`);
+        } else {
+          let cellValue = `$${quote.quote.costPricePerCaseUsd.toFixed(2)}`;
+          if (quote.quote.quoteType === 'alternative') {
+            cellValue += ` (Alt: ${quote.quote.alternativeProductName || 'alternative'})`;
+          }
+          if (quote.quote.leadTimeDays) {
+            cellValue += ` [${quote.quote.leadTimeDays}d]`;
+          }
+          row.push(cellValue);
         }
-        if (quote.quote.leadTimeDays) {
-          cellValue += ` [${quote.quote.leadTimeDays}d]`;
-        }
-        row.push(cellValue);
       } else {
         row.push('-');
       }
@@ -117,7 +124,7 @@ const exportRfqToExcel = (rfq: RfqData) => {
 
     // Selected quote info
     const selectedQuote = item.quotes.find((q) => q.quote.isSelected);
-    if (selectedQuote) {
+    if (selectedQuote && selectedQuote.quote.costPricePerCaseUsd !== null) {
       row.push(selectedQuote.partner.businessName);
       row.push(item.finalPriceUsd || selectedQuote.quote.costPricePerCaseUsd);
     } else {
@@ -168,7 +175,8 @@ const exportRfqToExcel = (rfq: RfqData) => {
 
   for (const item of rfq.items) {
     const selectedQuote = item.quotes.find((q) => q.quote.isSelected);
-    if (selectedQuote) {
+    // Skip N/A quotes (no price)
+    if (selectedQuote && selectedQuote.quote.costPricePerCaseUsd !== null) {
       const quantity = item.quantity || 1;
       const costPerCase = selectedQuote.quote.costPricePerCaseUsd;
       const finalPerCase = item.finalPriceUsd || costPerCase;
