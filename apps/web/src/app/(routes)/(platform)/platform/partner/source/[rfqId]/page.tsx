@@ -311,25 +311,25 @@ const PartnerRfqDetailPage = () => {
         {canSubmit && (
           <Card className="border-border-brand bg-fill-brand/5">
             <CardContent className="p-4">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <div className="flex items-center gap-3">
-                  <IconInfoCircle className="h-5 w-5 text-text-brand" />
+                  <IconInfoCircle className="h-5 w-5 text-text-brand flex-shrink-0" />
                   <Typography variant="bodyMd">
                     <span className="font-semibold">{completedCount}</span> of{' '}
                     <span className="font-semibold">{rfq.items.length}</span> items quoted
                   </Typography>
                 </div>
-                <div className="flex items-center gap-4 text-sm">
-                  <span className="flex items-center gap-1">
-                    <span className="w-3 h-3 rounded-full bg-green-500" />
+                <div className="flex items-center gap-3 sm:gap-4 text-xs sm:text-sm ml-8 sm:ml-0">
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-green-500" />
                     Complete
                   </span>
-                  <span className="flex items-center gap-1">
-                    <span className="w-3 h-3 rounded-full bg-red-500" />
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-red-500" />
                     N/A
                   </span>
-                  <span className="flex items-center gap-1">
-                    <span className="w-3 h-3 rounded-full bg-gray-300" />
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-gray-300" />
                     Pending
                   </span>
                 </div>
@@ -400,18 +400,27 @@ const PartnerRfqDetailPage = () => {
                 <CardContent className="p-0">
                   {/* Item Header - Request Details */}
                   <div
-                    className="p-4 cursor-pointer hover:bg-fill-muted/50 transition-colors"
+                    className="p-3 sm:p-4 cursor-pointer hover:bg-fill-muted/50 transition-colors"
                     onClick={() => canSubmit && toggleItemExpanded(item.id)}
                   >
-                    <div className="flex items-start justify-between gap-4">
+                    <div className="flex items-start gap-3">
+                      {/* Item Number */}
+                      <span className="flex-shrink-0 w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-fill-brand text-text-inverse text-xs sm:text-sm font-bold flex items-center justify-center">
+                        {index + 1}
+                      </span>
+
+                      {/* Main Content */}
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-3 mb-2">
-                          <span className="flex-shrink-0 w-6 h-6 rounded-full bg-fill-brand text-text-inverse text-xs font-bold flex items-center justify-center">
-                            {index + 1}
-                          </span>
+                        {/* Product Name + Vintage + Status */}
+                        <div className="flex flex-wrap items-center gap-2 mb-2">
                           <Typography variant="bodyMd" className="font-semibold">
                             {item.productName}
                           </Typography>
+                          {item.vintage && (
+                            <span className="text-sm font-semibold text-text-brand bg-fill-brand/10 px-2 py-0.5 rounded">
+                              {item.vintage}
+                            </span>
+                          )}
                           {status === 'complete' && (
                             <span className="flex-shrink-0 w-5 h-5 rounded-full bg-green-500 flex items-center justify-center">
                               <IconCheck className="h-3 w-3 text-white" />
@@ -424,52 +433,55 @@ const PartnerRfqDetailPage = () => {
                           )}
                         </div>
 
-                        {/* Request details grid */}
-                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-x-4 gap-y-2 text-sm ml-9">
+                        {/* Wine Details - Compact Responsive Grid */}
+                        <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs sm:text-sm">
                           {item.producer && (
-                            <div>
-                              <span className="text-text-muted">Producer:</span>{' '}
+                            <div className="flex items-center gap-1">
+                              <span className="text-text-muted">Producer:</span>
                               <span className="font-medium">{item.producer}</span>
                             </div>
                           )}
-                          {item.vintage && (
-                            <div>
-                              <span className="text-text-muted">Vintage:</span>{' '}
-                              <span className="font-medium">{item.vintage}</span>
-                            </div>
-                          )}
                           {item.region && (
-                            <div>
-                              <span className="text-text-muted">Region:</span>{' '}
+                            <div className="flex items-center gap-1">
+                              <span className="text-text-muted">Region:</span>
                               <span className="font-medium">{item.region}</span>
                             </div>
                           )}
                           {item.country && (
-                            <div>
-                              <span className="text-text-muted">Country:</span>{' '}
+                            <div className="flex items-center gap-1">
+                              <span className="text-text-muted">Country:</span>
                               <span className="font-medium">{item.country}</span>
                             </div>
                           )}
-                          <div>
-                            <span className="text-text-muted">Qty:</span>{' '}
-                            <span className="font-bold text-text-brand">{item.quantity} cases</span>
+                        </div>
+
+                        {/* Format & Quantity - Highlight Box */}
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          <div className="inline-flex items-center gap-2 px-2.5 py-1.5 bg-fill-muted rounded-lg text-xs sm:text-sm">
+                            <span className="font-semibold text-text-brand">{item.quantity} cases</span>
+                            {item.caseConfig && (
+                              <>
+                                <span className="text-text-muted">·</span>
+                                <span className="text-text-muted">{item.caseConfig}pk</span>
+                              </>
+                            )}
+                            {item.bottleSize && (
+                              <>
+                                <span className="text-text-muted">·</span>
+                                <span className="text-text-muted">{item.bottleSize}</span>
+                              </>
+                            )}
                           </div>
-                          {item.bottleSize && (
-                            <div>
-                              <span className="text-text-muted">Bottle:</span>{' '}
-                              <span className="font-medium">{item.bottleSize}</span>
-                            </div>
-                          )}
-                          {item.caseConfig && (
-                            <div>
-                              <span className="text-text-muted">Config:</span>{' '}
-                              <span className="font-medium">{item.caseConfig} bottles/case</span>
+                          {/* Quick quote entry on mobile */}
+                          {quote?.costPricePerCaseUsd && (
+                            <div className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-green-100 text-green-700 rounded-lg text-xs sm:text-sm font-medium">
+                              ${quote.costPricePerCaseUsd.toFixed(2)}/case
                             </div>
                           )}
                         </div>
 
                         {item.adminNotes && (
-                          <div className="mt-2 ml-9 p-2 bg-fill-warning/10 rounded border border-border-warning">
+                          <div className="mt-2 p-2 bg-fill-warning/10 rounded border border-border-warning">
                             <Typography variant="bodyXs" className="text-text-warning">
                               <span className="font-semibold">Note:</span> {item.adminNotes}
                             </Typography>
@@ -477,8 +489,9 @@ const PartnerRfqDetailPage = () => {
                         )}
                       </div>
 
+                      {/* Expand Button */}
                       {canSubmit && (
-                        <button type="button" className="flex-shrink-0 p-1 hover:bg-fill-muted rounded">
+                        <button type="button" className="flex-shrink-0 p-1.5 hover:bg-fill-muted rounded-lg">
                           {isExpanded ? (
                             <IconChevronUp className="h-5 w-5 text-text-muted" />
                           ) : (
@@ -491,29 +504,30 @@ const PartnerRfqDetailPage = () => {
 
                   {/* Quote Input Section - Expanded */}
                   {canSubmit && isExpanded && (
-                    <div className="border-t border-border-muted bg-fill-secondary/30 p-4 space-y-4">
+                    <div className="border-t border-border-muted bg-fill-secondary/30 p-3 sm:p-4 space-y-4">
                       {/* Response Type Selection */}
                       <div>
-                        <label className="block text-sm font-semibold text-text-primary mb-2">
+                        <label className="block text-xs sm:text-sm font-semibold text-text-primary mb-2">
                           Response Type
                         </label>
-                        <div className="flex flex-wrap gap-2">
+                        <div className="grid grid-cols-3 gap-2">
                           {[
-                            { value: 'exact', label: 'Exact Match', color: 'bg-green-100 border-green-300 text-green-800' },
-                            { value: 'alternative', label: 'Alternative Product', color: 'bg-amber-100 border-amber-300 text-amber-800' },
-                            { value: 'not_available', label: 'Not Available', color: 'bg-red-100 border-red-300 text-red-800' },
+                            { value: 'exact', label: 'Exact', labelFull: 'Exact Match', color: 'bg-green-100 border-green-300 text-green-800' },
+                            { value: 'alternative', label: 'Alt', labelFull: 'Alternative', color: 'bg-amber-100 border-amber-300 text-amber-800' },
+                            { value: 'not_available', label: 'N/A', labelFull: 'Not Available', color: 'bg-red-100 border-red-300 text-red-800' },
                           ].map((option) => (
                             <button
                               key={option.value}
                               type="button"
                               onClick={() => handleQuoteChange(item.id, 'quoteType', option.value as QuoteType)}
-                              className={`px-4 py-2 rounded-lg border-2 text-sm font-medium transition-all ${
+                              className={`px-2 sm:px-4 py-2 rounded-lg border-2 text-xs sm:text-sm font-medium transition-all ${
                                 quote?.quoteType === option.value
                                   ? option.color
                                   : 'bg-white border-border-muted text-text-muted hover:border-border-primary'
                               }`}
                             >
-                              {option.label}
+                              <span className="sm:hidden">{option.label}</span>
+                              <span className="hidden sm:inline">{option.labelFull}</span>
                             </button>
                           ))}
                         </div>
@@ -566,13 +580,13 @@ const PartnerRfqDetailPage = () => {
                       {!isNA && (
                         <>
                           {/* Pricing Section */}
-                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                            <div>
-                              <label className="block text-sm font-semibold text-text-primary mb-1">
+                          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                            <div className="col-span-2 sm:col-span-1">
+                              <label className="block text-xs sm:text-sm font-semibold text-text-primary mb-1">
                                 Cost Price (USD) <span className="text-red-500">*</span>
                               </label>
                               <div className="relative">
-                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted">$</span>
+                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted text-sm">$</span>
                                 <input
                                   type="number"
                                   step="0.01"
@@ -582,101 +596,88 @@ const PartnerRfqDetailPage = () => {
                                   onChange={(e) =>
                                     handleQuoteChange(item.id, 'costPricePerCaseUsd', parseFloat(e.target.value) || 0)
                                   }
-                                  className="w-full rounded-lg border border-border-primary bg-white pl-7 pr-12 py-2 text-sm text-right"
+                                  className="w-full rounded-lg border border-border-primary bg-white pl-7 pr-12 py-2 text-sm text-right font-medium"
                                 />
-                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted text-sm">
+                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted text-xs">
                                   /case
                                 </span>
                               </div>
                             </div>
 
                             <div>
-                              <label className="block text-sm font-semibold text-text-primary mb-1">
-                                Case Configuration
+                              <label className="block text-xs sm:text-sm font-semibold text-text-primary mb-1">
+                                Case Config
                               </label>
-                              <div className="flex gap-2">
-                                <select
-                                  value={
-                                    quote?.caseConfig && !CASE_CONFIGS.some((c) => c.value === quote.caseConfig)
-                                      ? 'custom'
-                                      : quote?.caseConfig || ''
+                              <select
+                                value={
+                                  quote?.caseConfig && !CASE_CONFIGS.some((c) => c.value === quote.caseConfig)
+                                    ? 'custom'
+                                    : quote?.caseConfig || ''
+                                }
+                                onChange={(e) => {
+                                  if (e.target.value === 'custom') {
+                                    handleQuoteChange(item.id, 'caseConfig', '');
+                                  } else {
+                                    handleQuoteChange(item.id, 'caseConfig', e.target.value);
                                   }
-                                  onChange={(e) => {
-                                    if (e.target.value === 'custom') {
-                                      handleQuoteChange(item.id, 'caseConfig', '');
-                                    } else {
-                                      handleQuoteChange(item.id, 'caseConfig', e.target.value);
-                                    }
-                                  }}
-                                  className="flex-1 rounded-lg border border-border-primary bg-white px-3 py-2 text-sm"
-                                >
-                                  <option value="">Select...</option>
-                                  {CASE_CONFIGS.map((config) => (
-                                    <option key={config.value} value={config.value}>
-                                      {config.label}
-                                    </option>
-                                  ))}
-                                </select>
-                                {(quote?.caseConfig === '' ||
-                                  (quote?.caseConfig &&
-                                    !CASE_CONFIGS.some((c) => c.value === quote.caseConfig && c.value !== 'custom'))) && (
-                                  <input
-                                    type="text"
-                                    placeholder="e.g., 6x75cl"
-                                    value={quote?.caseConfig || ''}
-                                    onChange={(e) => handleQuoteChange(item.id, 'caseConfig', e.target.value)}
-                                    className="w-28 rounded-lg border border-border-primary bg-white px-3 py-2 text-sm"
-                                  />
-                                )}
-                              </div>
+                                }}
+                                className="w-full rounded-lg border border-border-primary bg-white px-2 sm:px-3 py-2 text-sm"
+                              >
+                                <option value="">Select...</option>
+                                {CASE_CONFIGS.map((config) => (
+                                  <option key={config.value} value={config.value}>
+                                    {config.label}
+                                  </option>
+                                ))}
+                              </select>
                             </div>
 
                             <div>
-                              <label className="block text-sm font-semibold text-text-primary mb-1">
-                                Available Quantity
+                              <label className="block text-xs sm:text-sm font-semibold text-text-primary mb-1">
+                                Avail Qty
                               </label>
                               <div className="relative">
                                 <input
                                   type="number"
                                   min="0"
-                                  placeholder="Qty available"
+                                  placeholder="Qty"
                                   value={quote?.availableQuantity || ''}
                                   onChange={(e) =>
                                     handleQuoteChange(item.id, 'availableQuantity', parseInt(e.target.value) || 0)
                                   }
-                                  className="w-full rounded-lg border border-border-primary bg-white px-3 pr-12 py-2 text-sm"
+                                  className="w-full rounded-lg border border-border-primary bg-white px-2 sm:px-3 pr-8 sm:pr-12 py-2 text-sm"
                                 />
-                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted text-sm">
-                                  cases
+                                <span className="absolute right-2 sm:right-3 top-1/2 -translate-y-1/2 text-text-muted text-xs">
+                                  cs
                                 </span>
                               </div>
                             </div>
 
                             <div>
-                              <label className="block text-sm font-semibold text-text-primary mb-1">
-                                MOQ (Min Order)
+                              <label className="block text-xs sm:text-sm font-semibold text-text-primary mb-1">
+                                MOQ
                               </label>
                               <div className="relative">
                                 <input
                                   type="number"
                                   min="0"
-                                  placeholder="Minimum"
+                                  placeholder="Min"
                                   value={quote?.moq || ''}
                                   onChange={(e) => handleQuoteChange(item.id, 'moq', parseInt(e.target.value) || 0)}
-                                  className="w-full rounded-lg border border-border-primary bg-white px-3 pr-12 py-2 text-sm"
+                                  className="w-full rounded-lg border border-border-primary bg-white px-2 sm:px-3 pr-8 sm:pr-12 py-2 text-sm"
                                 />
-                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted text-sm">
-                                  cases
+                                <span className="absolute right-2 sm:right-3 top-1/2 -translate-y-1/2 text-text-muted text-xs">
+                                  cs
                                 </span>
                               </div>
                             </div>
                           </div>
 
                           {/* Stock & Delivery Section */}
-                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                             <div>
-                              <label className="block text-sm font-semibold text-text-primary mb-1">
-                                Stock Location
+                              <label className="block text-xs sm:text-sm font-semibold text-text-primary mb-1">
+                                Location
                               </label>
                               <select
                                 value={
@@ -691,38 +692,27 @@ const PartnerRfqDetailPage = () => {
                                     handleQuoteChange(item.id, 'stockLocation', e.target.value);
                                   }
                                 }}
-                                className="w-full rounded-lg border border-border-primary bg-white px-3 py-2 text-sm"
+                                className="w-full rounded-lg border border-border-primary bg-white px-2 sm:px-3 py-2 text-sm"
                               >
-                                <option value="">Select location...</option>
+                                <option value="">Select...</option>
                                 {STOCK_LOCATIONS.map((loc) => (
                                   <option key={loc.value} value={loc.value}>
                                     {loc.label}
                                   </option>
                                 ))}
                               </select>
-                              {(quote?.stockLocation === '' ||
-                                (quote?.stockLocation &&
-                                  !STOCK_LOCATIONS.some((l) => l.value === quote.stockLocation && l.value !== 'custom'))) && (
-                                <input
-                                  type="text"
-                                  placeholder="Enter location..."
-                                  value={quote?.stockLocation || ''}
-                                  onChange={(e) => handleQuoteChange(item.id, 'stockLocation', e.target.value)}
-                                  className="w-full mt-2 rounded-lg border border-border-primary bg-white px-3 py-2 text-sm"
-                                />
-                              )}
                             </div>
 
                             <div>
-                              <label className="block text-sm font-semibold text-text-primary mb-1">
-                                Stock Condition
+                              <label className="block text-xs sm:text-sm font-semibold text-text-primary mb-1">
+                                Condition
                               </label>
                               <select
                                 value={quote?.stockCondition || ''}
                                 onChange={(e) => handleQuoteChange(item.id, 'stockCondition', e.target.value)}
-                                className="w-full rounded-lg border border-border-primary bg-white px-3 py-2 text-sm"
+                                className="w-full rounded-lg border border-border-primary bg-white px-2 sm:px-3 py-2 text-sm"
                               >
-                                <option value="">Select condition...</option>
+                                <option value="">Select...</option>
                                 {STOCK_CONDITIONS.map((cond) => (
                                   <option key={cond.value} value={cond.value}>
                                     {cond.label}
@@ -732,29 +722,29 @@ const PartnerRfqDetailPage = () => {
                             </div>
 
                             <div>
-                              <label className="block text-sm font-semibold text-text-primary mb-1">
+                              <label className="block text-xs sm:text-sm font-semibold text-text-primary mb-1">
                                 Lead Time
                               </label>
                               <div className="relative">
                                 <input
                                   type="number"
                                   min="0"
-                                  placeholder="Delivery time"
+                                  placeholder="Days"
                                   value={quote?.leadTimeDays || ''}
                                   onChange={(e) =>
                                     handleQuoteChange(item.id, 'leadTimeDays', parseInt(e.target.value) || 0)
                                   }
-                                  className="w-full rounded-lg border border-border-primary bg-white px-3 pr-12 py-2 text-sm"
+                                  className="w-full rounded-lg border border-border-primary bg-white px-2 sm:px-3 pr-10 py-2 text-sm"
                                 />
-                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted text-sm">
+                                <span className="absolute right-2 sm:right-3 top-1/2 -translate-y-1/2 text-text-muted text-xs">
                                   days
                                 </span>
                               </div>
                             </div>
 
                             <div>
-                              <label className="block text-sm font-semibold text-text-primary mb-1">
-                                Quote Valid Until
+                              <label className="block text-xs sm:text-sm font-semibold text-text-primary mb-1">
+                                Valid Until
                               </label>
                               <input
                                 type="date"
@@ -766,18 +756,18 @@ const PartnerRfqDetailPage = () => {
                                     e.target.value ? new Date(e.target.value) : undefined,
                                   )
                                 }
-                                className="w-full rounded-lg border border-border-primary bg-white px-3 py-2 text-sm"
+                                className="w-full rounded-lg border border-border-primary bg-white px-2 sm:px-3 py-2 text-sm"
                               />
                             </div>
                           </div>
 
                           {/* Alternative Product Details */}
                           {isAlternative && (
-                            <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg space-y-4">
+                            <div className="p-3 sm:p-4 bg-amber-50 border border-amber-200 rounded-lg space-y-3 sm:space-y-4">
                               <Typography variant="bodySm" className="font-semibold text-amber-800">
                                 Alternative Product Details
                               </Typography>
-                              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                              <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                                 <div>
                                   <label className="block text-xs font-medium text-amber-700 mb-1">
                                     Product Name <span className="text-red-500">*</span>
