@@ -56,7 +56,11 @@ const NewRfqPage = () => {
     api.source.admin.parseInput.mutationOptions({
       onSuccess: (result) => {
         if (result.success && result.items && result.items.length > 0) {
-          setParsedItems(result.items);
+          // Add default quantityUnit to each parsed item
+          setParsedItems(result.items.map(item => ({
+            ...item,
+            quantityUnit: 'cases' as const,
+          })));
           setStep('review');
         } else {
           alert(result.message || 'No wine products found in the input. Please check your data or try manual entry.');
