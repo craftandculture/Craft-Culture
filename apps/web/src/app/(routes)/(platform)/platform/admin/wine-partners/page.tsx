@@ -496,7 +496,7 @@ const WinePartnersPage = () => {
                         <Button
                           size="sm"
                           variant="outline"
-                          colorRole="success"
+                          colorRole="brand"
                           onClick={() => updatePartner({ partnerId: partner.id, status: 'active' })}
                           isDisabled={isUpdating}
                           title="Activate partner"
