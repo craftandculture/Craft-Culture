@@ -6,13 +6,17 @@ import {
   IconEdit,
   IconFileSpreadsheet,
   IconFileTypePdf,
-  IconRefresh,
+  IconFilter,
+  IconFilterOff,
+  IconSelectAll,
   IconSend,
+  IconSparkles,
+  IconX,
 } from '@tabler/icons-react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import RfqStatusBadge from '@/app/_source/components/RfqStatusBadge';
 import SendToPartnersDialog from '@/app/_source/components/SendToPartnersDialog';
@@ -34,6 +38,7 @@ const RfqDetailPage = () => {
   const api = useTRPC();
 
   const [isSelectPartnersOpen, setIsSelectPartnersOpen] = useState(false);
+  const [showUnselectedOnly, setShowUnselectedOnly] = useState(false);
 
   // State for editing prices
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
@@ -75,6 +80,15 @@ const RfqDetailPage = () => {
     }),
   );
 
+  // Bulk select mutation
+  const { mutate: bulkSelectQuotes, isPending: isBulkSelecting } = useMutation(
+    api.source.admin.bulkSelectQuotes.mutationOptions({
+      onSuccess: () => {
+        void refetch();
+      },
+    }),
+  );
+
   // Focus input when editing starts
   useEffect(() => {
     if (editingItemId && priceInputRef.current) {
@@ -88,6 +102,20 @@ const RfqDetailPage = () => {
     if (!rfq) return;
     exportRfqToExcel(rfq);
   };
+
+  // Filtered items based on selection status (must be before early returns)
+  const filteredItems = useMemo(() => {
+    if (!rfq) return [];
+    if (showUnselectedOnly) {
+      return rfq.items.filter((i) => !i.selectedQuoteId);
+    }
+    return rfq.items;
+  }, [rfq, showUnselectedOnly]);
+
+  // Progress tracking (must be before early returns)
+  const selectedCount = rfq?.items.filter((i) => i.selectedQuoteId).length ?? 0;
+  const totalItems = rfq?.items.length ?? 0;
+  const progressPercent = totalItems > 0 ? (selectedCount / totalItems) * 100 : 0;
 
   if (isLoading) {
     return (
@@ -138,15 +166,73 @@ const RfqDetailPage = () => {
     updateItem({ itemId, finalPriceUsd: price });
   };
 
-  // Reset price to cost price
-  const handleResetPrice = (itemId: string) => {
-    updateItem({ itemId, finalPriceUsd: null });
-  };
-
   // Cancel editing
   const handleCancelEdit = () => {
     setEditingItemId(null);
     setEditingPrice('');
+  };
+
+  // Auto-select best prices for all items
+  const handleAutoSelectBest = () => {
+    if (!rfq) return;
+
+    const selections: { itemId: string; quoteId: string }[] = [];
+
+    for (const item of rfq.items) {
+      // Skip already selected items
+      if (item.selectedQuoteId) continue;
+
+      // Find best price (lowest non-null price)
+      const validQuotes = item.quotes.filter(
+        (q) =>
+          q.quote.quoteType !== 'not_available' &&
+          q.quote.costPricePerCaseUsd !== null &&
+          q.quote.costPricePerCaseUsd > 0,
+      );
+
+      if (validQuotes.length > 0) {
+        const bestQuote = validQuotes.reduce((best, current) =>
+          (current.quote.costPricePerCaseUsd ?? Infinity) <
+          (best.quote.costPricePerCaseUsd ?? Infinity)
+            ? current
+            : best,
+        );
+        selections.push({ itemId: item.id, quoteId: bestQuote.quote.id });
+      }
+    }
+
+    if (selections.length > 0) {
+      bulkSelectQuotes({ rfqId, selections });
+    }
+  };
+
+  // Clear all selections
+  const handleClearAll = () => {
+    if (!rfq) return;
+    bulkSelectQuotes({ rfqId, selections: [], clearAll: true });
+  };
+
+  // Select all from one partner
+  const handleSelectAllFromPartner = (partnerId: string) => {
+    if (!rfq) return;
+
+    const selections: { itemId: string; quoteId: string }[] = [];
+
+    for (const item of rfq.items) {
+      const partnerQuote = item.quotes.find(
+        (q) =>
+          q.quote.partnerId === partnerId &&
+          q.quote.quoteType !== 'not_available' &&
+          q.quote.costPricePerCaseUsd !== null,
+      );
+      if (partnerQuote) {
+        selections.push({ itemId: item.id, quoteId: partnerQuote.quote.id });
+      }
+    }
+
+    if (selections.length > 0) {
+      bulkSelectQuotes({ rfqId, selections });
+    }
   };
 
   return (
@@ -292,11 +378,77 @@ const RfqDetailPage = () => {
           </Card>
         )}
 
-        {/* Items & Comparison Table */}
+        {/* Compact Comparison Table */}
         <Card>
           <CardContent className="p-0">
-            <div className="p-4 border-b border-border-muted">
-              <Typography variant="headingSm">Items & Quotes</Typography>
+            {/* Header with Progress and Bulk Actions */}
+            <div className="p-3 border-b border-border-muted flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div className="flex items-center gap-4">
+                <Typography variant="headingSm">Quotes</Typography>
+                {/* Progress Indicator */}
+                <div className="flex items-center gap-2">
+                  <div className="w-24 h-1.5 bg-fill-muted rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-fill-brand rounded-full transition-all duration-300"
+                      style={{ width: `${progressPercent}%` }}
+                    />
+                  </div>
+                  <span className="text-xs text-text-muted whitespace-nowrap">
+                    {selectedCount}/{totalItems}
+                  </span>
+                </div>
+              </div>
+
+              {/* Bulk Actions */}
+              {canSelectQuotes && (
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleAutoSelectBest}
+                    isDisabled={isBulkSelecting}
+                  >
+                    <ButtonContent iconLeft={IconSparkles}>Auto-Select Best</ButtonContent>
+                  </Button>
+                  {uniquePartners.length > 0 && (
+                    <div className="relative group">
+                      <Button variant="ghost" size="sm">
+                        <ButtonContent iconLeft={IconSelectAll}>Select All From</ButtonContent>
+                      </Button>
+                      <div className="absolute right-0 top-full mt-1 bg-surface-primary border border-border-muted rounded-lg shadow-lg py-1 hidden group-hover:block z-10 min-w-40">
+                        {uniquePartners.map((p) => (
+                          <button
+                            key={p.partnerId}
+                            onClick={() => handleSelectAllFromPartner(p.partnerId)}
+                            className="w-full px-3 py-1.5 text-left text-sm hover:bg-fill-muted"
+                          >
+                            {p.partner.businessName}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleClearAll}
+                    isDisabled={isBulkSelecting || selectedCount === 0}
+                  >
+                    <ButtonContent iconLeft={IconX}>Clear</ButtonContent>
+                  </Button>
+                  <div className="w-px h-5 bg-border-muted mx-1" />
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowUnselectedOnly(!showUnselectedOnly)}
+                    className={showUnselectedOnly ? 'bg-fill-brand/10' : ''}
+                  >
+                    <ButtonContent iconLeft={showUnselectedOnly ? IconFilterOff : IconFilter}>
+                      {showUnselectedOnly ? 'Show All' : 'Unselected'}
+                    </ButtonContent>
+                  </Button>
+                </div>
+              )}
             </div>
 
             {rfq.items.length === 0 ? (
@@ -307,30 +459,35 @@ const RfqDetailPage = () => {
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-fill-muted">
+                <table className="w-full border-collapse">
+                  {/* Sticky Header */}
+                  <thead className="bg-fill-muted sticky top-0 z-10">
                     <tr>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-text-muted uppercase">
+                      <th className="px-2 py-2 text-left text-[10px] font-semibold text-text-muted uppercase tracking-wide w-[280px] min-w-[200px]">
                         Product
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-text-muted uppercase">
+                      <th className="px-2 py-2 text-center text-[10px] font-semibold text-text-muted uppercase tracking-wide w-12">
                         Qty
                       </th>
                       {uniquePartners.map((p) => (
                         <th
                           key={p.partnerId}
-                          className="px-4 py-3 text-left text-xs font-medium text-text-muted uppercase"
+                          className="px-2 py-2 text-center text-[10px] font-semibold text-text-muted uppercase tracking-wide w-24"
                         >
-                          {p.partner.businessName}
+                          <span className="truncate block max-w-20" title={p.partner.businessName}>
+                            {p.partner.businessName.length > 12
+                              ? `${p.partner.businessName.slice(0, 10)}...`
+                              : p.partner.businessName}
+                          </span>
                         </th>
                       ))}
-                      <th className="px-4 py-3 text-left text-xs font-medium text-text-muted uppercase">
-                        Selected
+                      <th className="px-2 py-2 text-center text-[10px] font-semibold text-text-muted uppercase tracking-wide w-24">
+                        Final
                       </th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-border-muted">
-                    {rfq.items.map((item) => {
+                  <tbody>
+                    {filteredItems.map((item, idx) => {
                       const selectedQuote = item.quotes.find((q) => q.quote.isSelected);
 
                       // Calculate min/max prices for color coding (exclude N/A quotes)
@@ -342,22 +499,36 @@ const RfqDetailPage = () => {
                         quotePrices.length > 1 ? Math.max(...quotePrices) : null;
 
                       return (
-                        <tr key={item.id} className="hover:bg-fill-muted/50">
-                          <td className="px-4 py-3">
-                            <div>
-                              <Typography variant="bodySm" className="font-medium">
+                        <tr
+                          key={item.id}
+                          className={`border-b border-border-muted/50 hover:bg-fill-muted/30 ${
+                            idx % 2 === 0 ? 'bg-surface-primary' : 'bg-fill-muted/10'
+                          }`}
+                        >
+                          {/* Compact Product Cell - Single Line */}
+                          <td className="px-2 py-1.5">
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <span
+                                className="text-xs font-medium truncate"
+                                title={item.productName || ''}
+                              >
                                 {item.productName}
-                              </Typography>
-                              <Typography variant="bodyXs" colorRole="muted">
-                                {[item.producer, item.vintage, item.region]
-                                  .filter(Boolean)
-                                  .join(' - ')}
-                              </Typography>
+                              </span>
+                              {(item.producer || item.vintage) && (
+                                <span className="text-[10px] text-text-muted shrink-0">
+                                  {[item.producer, item.vintage].filter(Boolean).join(' ')}
+                                </span>
+                              )}
                             </div>
                           </td>
-                          <td className="px-4 py-3 text-sm">{item.quantity}</td>
 
-                          {/* Partner quote cells */}
+                          {/* Quantity */}
+                          <td className="px-2 py-1.5 text-center">
+                            <span className="text-xs font-medium">{item.quantity}</span>
+                            <span className="text-[10px] text-text-muted ml-0.5">cs</span>
+                          </td>
+
+                          {/* Partner Quote Cells - Compact */}
                           {uniquePartners.map((p) => {
                             const quote = item.quotes.find(
                               (q) => q.quote.partnerId === p.partnerId,
@@ -365,8 +536,11 @@ const RfqDetailPage = () => {
 
                             if (!quote) {
                               return (
-                                <td key={p.partnerId} className="px-4 py-3 text-sm text-text-muted">
-                                  -
+                                <td
+                                  key={p.partnerId}
+                                  className="px-1 py-1.5 text-center text-[10px] text-text-muted"
+                                >
+                                  —
                                 </td>
                               );
                             }
@@ -379,75 +553,60 @@ const RfqDetailPage = () => {
                             const isHighestPrice =
                               maxPrice !== null && price === maxPrice && maxPrice !== minPrice;
 
-                            // N/A quotes - show reason without price
+                            // N/A quotes - compact display
                             if (isNotAvailable || price === null) {
                               return (
-                                <td key={p.partnerId} className="px-4 py-3">
-                                  <div className="p-2 rounded-lg bg-fill-danger/10 text-center">
-                                    <span className="font-medium text-sm text-text-danger">N/A</span>
-                                    {quote.quote.notAvailableReason && (
-                                      <span className="text-xs text-text-muted block">
-                                        {quote.quote.notAvailableReason}
-                                      </span>
-                                    )}
-                                  </div>
+                                <td key={p.partnerId} className="px-1 py-1.5 text-center">
+                                  <span
+                                    className="text-[10px] text-text-danger bg-fill-danger/10 px-1.5 py-0.5 rounded"
+                                    title={quote.quote.notAvailableReason || 'Not available'}
+                                  >
+                                    N/A
+                                  </span>
                                 </td>
                               );
                             }
 
                             return (
-                              <td key={p.partnerId} className="px-4 py-3">
+                              <td key={p.partnerId} className="px-1 py-1.5">
                                 <button
                                   onClick={() => handleSelectQuote(item.id, quote.quote.id)}
                                   disabled={!canSelectQuotes || isSelectingQuote}
-                                  className={`p-2 rounded-lg text-left w-full transition-colors ${
+                                  className={`w-full px-1.5 py-1 rounded text-center transition-all ${
                                     isSelected
-                                      ? 'bg-fill-brand/10 border-2 border-border-brand'
+                                      ? 'bg-fill-brand text-text-on-brand ring-2 ring-border-brand'
                                       : isBestPrice
-                                        ? 'bg-fill-success/10 hover:bg-fill-success/20 border-2 border-transparent'
+                                        ? 'bg-green-50 text-green-700 hover:bg-green-100'
                                         : isHighestPrice
-                                          ? 'bg-fill-danger/10 hover:bg-fill-danger/20 border-2 border-transparent'
-                                          : 'bg-fill-muted hover:bg-fill-muted/80 border-2 border-transparent'
+                                          ? 'bg-red-50 text-red-600 hover:bg-red-100'
+                                          : 'bg-fill-muted/50 hover:bg-fill-muted'
                                   } ${!canSelectQuotes ? 'cursor-default' : 'cursor-pointer'}`}
+                                  title={
+                                    isAlternative
+                                      ? `Alt: ${quote.quote.alternativeProductName}`
+                                      : undefined
+                                  }
                                 >
-                                  <div className="flex items-center justify-between">
-                                    <span
-                                      className={`font-medium text-sm ${
-                                        isBestPrice
-                                          ? 'text-text-success'
-                                          : isHighestPrice
-                                            ? 'text-text-danger'
-                                            : ''
-                                      }`}
-                                    >
-                                      ${price.toFixed(2)}
-                                    </span>
-                                    {isSelected && (
-                                      <IconCheck className="h-4 w-4 text-text-brand" />
-                                    )}
-                                  </div>
-                                  {isAlternative && (
-                                    <span className="text-xs text-text-warning">
-                                      Alt: {quote.quote.alternativeProductName}
-                                    </span>
+                                  <span className="text-xs font-medium">
+                                    ${price.toFixed(0)}
+                                  </span>
+                                  {isSelected && (
+                                    <IconCheck className="inline-block h-3 w-3 ml-0.5" />
                                   )}
-                                  {quote.quote.leadTimeDays && (
-                                    <span className="text-xs text-text-muted block">
-                                      {quote.quote.leadTimeDays} days
-                                    </span>
+                                  {isAlternative && !isSelected && (
+                                    <span className="text-[8px] block text-text-warning">ALT</span>
                                   )}
                                 </button>
                               </td>
                             );
                           })}
 
-                          <td className="px-4 py-3">
+                          {/* Final Price Cell - Compact */}
+                          <td className="px-2 py-1.5">
                             {selectedQuote ? (
-                              <div className="text-sm">
+                              <div className="text-center">
                                 {editingItemId === item.id ? (
-                                  // Editing mode
-                                  <div className="flex items-center gap-1">
-                                    <span className="text-text-muted">$</span>
+                                  <div className="flex items-center justify-center gap-0.5">
                                     <input
                                       ref={priceInputRef}
                                       type="number"
@@ -459,68 +618,48 @@ const RfqDetailPage = () => {
                                         if (e.key === 'Enter') handleSavePrice(item.id);
                                         if (e.key === 'Escape') handleCancelEdit();
                                       }}
-                                      className="w-20 px-1 py-0.5 text-sm border border-border-brand rounded bg-surface-primary focus:outline-none focus:ring-1 focus:ring-fill-brand"
+                                      className="w-16 px-1 py-0.5 text-xs border border-border-brand rounded bg-surface-primary focus:outline-none"
                                     />
                                     <button
                                       onClick={() => handleSavePrice(item.id)}
                                       disabled={isUpdatingItem}
-                                      className="p-1 text-text-success hover:bg-fill-success/10 rounded"
+                                      className="p-0.5 text-text-success hover:bg-fill-success/10 rounded"
                                     >
-                                      <IconCheck className="h-3.5 w-3.5" />
+                                      <IconCheck className="h-3 w-3" />
                                     </button>
                                   </div>
                                 ) : (
-                                  // Display mode
-                                  <div className="flex items-center gap-2">
-                                    <div>
-                                      <div
-                                        className={`font-medium ${
-                                          item.priceAdjustedBy
-                                            ? 'text-fill-brand'
-                                            : 'text-text-success'
-                                        }`}
-                                      >
-                                        ${item.finalPriceUsd?.toFixed(2) || (selectedQuote.quote.costPricePerCaseUsd ?? 0).toFixed(2)}
-                                        {item.priceAdjustedBy && (
-                                          <span className="ml-1 text-xs text-text-muted">(adj)</span>
-                                        )}
-                                      </div>
-                                      <div className="text-xs text-text-muted">
-                                        {selectedQuote.partner.businessName}
-                                      </div>
-                                    </div>
-                                    {canSelectQuotes && (
-                                      <div className="flex items-center gap-0.5">
-                                        <button
-                                          onClick={() =>
-                                            handleStartEditPrice(
-                                              item.id,
-                                              item.finalPriceUsd ||
-                                                selectedQuote.quote.costPricePerCaseUsd || 0,
-                                            )
-                                          }
-                                          className="p-1 text-text-muted hover:text-text-primary hover:bg-fill-muted rounded"
-                                          title="Edit price"
-                                        >
-                                          <IconEdit className="h-3.5 w-3.5" />
-                                        </button>
-                                        {item.priceAdjustedBy && (
-                                          <button
-                                            onClick={() => handleResetPrice(item.id)}
-                                            disabled={isUpdatingItem}
-                                            className="p-1 text-text-muted hover:text-text-warning hover:bg-fill-warning/10 rounded"
-                                            title="Reset to cost price"
-                                          >
-                                            <IconRefresh className="h-3.5 w-3.5" />
-                                          </button>
-                                        )}
-                                      </div>
+                                  <button
+                                    onClick={() =>
+                                      canSelectQuotes &&
+                                      handleStartEditPrice(
+                                        item.id,
+                                        item.finalPriceUsd ||
+                                          selectedQuote.quote.costPricePerCaseUsd ||
+                                          0,
+                                      )
+                                    }
+                                    className={`text-xs font-semibold ${
+                                      item.priceAdjustedBy
+                                        ? 'text-fill-brand'
+                                        : 'text-text-success'
+                                    } ${canSelectQuotes ? 'hover:underline cursor-pointer' : ''}`}
+                                    title={canSelectQuotes ? 'Click to edit' : undefined}
+                                  >
+                                    $
+                                    {(
+                                      item.finalPriceUsd ||
+                                      selectedQuote.quote.costPricePerCaseUsd ||
+                                      0
+                                    ).toFixed(0)}
+                                    {item.priceAdjustedBy && (
+                                      <IconEdit className="inline-block h-2.5 w-2.5 ml-0.5 opacity-50" />
                                     )}
-                                  </div>
+                                  </button>
                                 )}
                               </div>
                             ) : (
-                              <span className="text-sm text-text-muted">-</span>
+                              <span className="text-[10px] text-text-muted block text-center">—</span>
                             )}
                           </td>
                         </tr>
@@ -528,6 +667,37 @@ const RfqDetailPage = () => {
                     })}
                   </tbody>
                 </table>
+              </div>
+            )}
+
+            {/* Footer Summary */}
+            {rfq.items.length > 0 && (
+              <div className="p-3 border-t border-border-muted bg-fill-muted/30 flex items-center justify-between">
+                <span className="text-xs text-text-muted">
+                  {filteredItems.length === rfq.items.length
+                    ? `${rfq.items.length} items`
+                    : `Showing ${filteredItems.length} of ${rfq.items.length} items`}
+                </span>
+                {selectedCount > 0 && (
+                  <span className="text-xs font-medium">
+                    Total:{' '}
+                    <span className="text-text-success">
+                      $
+                      {rfq.items
+                        .reduce((sum, item) => {
+                          const selected = item.quotes.find((q) => q.quote.isSelected);
+                          if (!selected || selected.quote.costPricePerCaseUsd === null) return sum;
+                          const price =
+                            item.finalPriceUsd || selected.quote.costPricePerCaseUsd;
+                          return sum + price * (item.quantity || 1);
+                        }, 0)
+                        .toLocaleString(undefined, {
+                          minimumFractionDigits: 0,
+                          maximumFractionDigits: 0,
+                        })}
+                    </span>
+                  </span>
+                )}
               </div>
             )}
           </CardContent>
