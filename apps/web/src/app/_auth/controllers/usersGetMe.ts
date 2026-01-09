@@ -15,17 +15,20 @@ interface UserWithPartner extends CurrentUser {
 /**
  * Get the current user's profile with partner information
  *
- * For private_clients users, this checks both:
- * 1. Direct owner link (partners.userId)
- * 2. Member link (partnerMembers table)
+ * For private_clients users, partner is resolved in this priority:
+ * 1. Member link (partnerMembers table) - PRIMARY source of truth
+ * 2. Direct owner link (partners.userId) - FALLBACK
+ *
+ * This matches the priority order in winePartnerProcedure.
  */
 const usersGetMe = protectedProcedure.query(async ({ ctx }): Promise<UserWithPartner> => {
   // Get partner info if user has one
   let partner: PartnerInfo | null = null;
 
   if (ctx.user.customerType === 'private_clients') {
-    // First check direct owner link
-    const directPartnerResult = await db
+    // PRIMARY: Check partnerMembers table first (admin-assigned memberships)
+    // This matches the priority order in winePartnerProcedure
+    const membershipResult = await db
       .select({
         id: partners.id,
         type: partners.type,
@@ -33,17 +36,21 @@ const usersGetMe = protectedProcedure.query(async ({ ctx }): Promise<UserWithPar
         logoUrl: partners.logoUrl,
         brandColor: partners.brandColor,
       })
-      .from(partners)
+      .from(partnerMembers)
+      .innerJoin(partners, eq(partnerMembers.partnerId, partners.id))
       .where(
-        and(eq(partners.userId, ctx.user.id), eq(partners.type, 'wine_partner')),
+        and(
+          eq(partnerMembers.userId, ctx.user.id),
+          eq(partners.type, 'wine_partner'),
+        ),
       )
       .limit(1);
 
-    if (directPartnerResult[0]) {
-      partner = directPartnerResult[0];
+    if (membershipResult[0]) {
+      partner = membershipResult[0];
     } else {
-      // Check partnerMembers table for wine partner membership
-      const membershipResult = await db
+      // FALLBACK: Check direct owner link (partners.userId)
+      const directPartnerResult = await db
         .select({
           id: partners.id,
           type: partners.type,
@@ -51,17 +58,13 @@ const usersGetMe = protectedProcedure.query(async ({ ctx }): Promise<UserWithPar
           logoUrl: partners.logoUrl,
           brandColor: partners.brandColor,
         })
-        .from(partnerMembers)
-        .innerJoin(partners, eq(partnerMembers.partnerId, partners.id))
+        .from(partners)
         .where(
-          and(
-            eq(partnerMembers.userId, ctx.user.id),
-            eq(partners.type, 'wine_partner'),
-          ),
+          and(eq(partners.userId, ctx.user.id), eq(partners.type, 'wine_partner')),
         )
         .limit(1);
 
-      partner = membershipResult[0] ?? null;
+      partner = directPartnerResult[0] ?? null;
     }
   }
 
