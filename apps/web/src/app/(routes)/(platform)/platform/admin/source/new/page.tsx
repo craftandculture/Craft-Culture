@@ -478,6 +478,35 @@ const NewRfqPage = () => {
                   </Typography>
                 </div>
 
+                {/* Bulk actions */}
+                <div className="flex items-center gap-3 mb-4 pb-4 border-b border-border-muted">
+                  <Typography variant="bodyXs" colorRole="muted">
+                    Set all units:
+                  </Typography>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setParsedItems(
+                        parsedItems.map((item) => ({ ...item, quantityUnit: 'cases' }))
+                      );
+                    }}
+                    className="text-xs px-2.5 py-1 rounded border border-border-muted hover:bg-fill-muted transition-colors"
+                  >
+                    All Cases
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setParsedItems(
+                        parsedItems.map((item) => ({ ...item, quantityUnit: 'bottles' }))
+                      );
+                    }}
+                    className="text-xs px-2.5 py-1 rounded border border-border-muted hover:bg-fill-muted transition-colors"
+                  >
+                    All Bottles
+                  </button>
+                </div>
+
                 <div className="space-y-3">
                   {parsedItems.map((item, index) => (
                     <div
