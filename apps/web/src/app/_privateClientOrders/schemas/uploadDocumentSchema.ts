@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-const documentTypes = ['partner_invoice', 'cc_invoice', 'distributor_invoice', 'payment_proof'] as const;
+const documentTypes = ['partner_invoice', 'cc_invoice', 'distributor_invoice', 'payment_proof', 'proof_of_delivery'] as const;
 const mimeTypes = ['application/pdf', 'image/png', 'image/jpeg', 'image/jpg'] as const;
 
 /**

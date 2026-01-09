@@ -25,7 +25,7 @@ import SelectValue from '@/app/_ui/components/Select/SelectValue';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import { useTRPCClient } from '@/lib/trpc/browser';
 
-type DocumentType = 'partner_invoice' | 'cc_invoice' | 'distributor_invoice' | 'payment_proof';
+type DocumentType = 'partner_invoice' | 'cc_invoice' | 'distributor_invoice' | 'payment_proof' | 'proof_of_delivery';
 
 interface DocumentUploadProps {
   orderId: string;
@@ -37,7 +37,11 @@ const documentTypeLabels: Record<DocumentType, string> = {
   cc_invoice: 'C&C Invoice',
   distributor_invoice: 'Distributor Invoice',
   payment_proof: 'Payment Proof',
+  proof_of_delivery: 'Proof of Delivery',
 };
+
+// Document types that have AI extraction enabled
+const extractableTypes: DocumentType[] = ['partner_invoice', 'cc_invoice', 'distributor_invoice'];
 
 const extractionStatusConfig: Record<string, { label: string; colorRole: 'muted' | 'warning' | 'success' | 'danger' }> = {
   pending: { label: 'Pending', colorRole: 'muted' },
@@ -54,7 +58,7 @@ const extractionStatusConfig: Record<string, { label: string; colorRole: 'muted'
  */
 const DocumentUpload = ({
   orderId,
-  allowedTypes = ['partner_invoice', 'cc_invoice', 'distributor_invoice', 'payment_proof'],
+  allowedTypes = ['partner_invoice', 'cc_invoice', 'distributor_invoice', 'payment_proof', 'proof_of_delivery'],
 }: DocumentUploadProps) => {
   const trpcClient = useTRPCClient();
   const queryClient = useQueryClient();
@@ -267,14 +271,16 @@ const DocumentUpload = ({
                     <Typography variant="bodyXs" colorRole="muted">
                       {formatFileSize(doc.fileSize)}
                     </Typography>
-                    {doc.extractionStatus && (
-                      <Badge
-                        size="sm"
-                        colorRole={extractionStatusConfig[doc.extractionStatus]?.colorRole || 'muted'}
-                      >
-                        {extractionStatusConfig[doc.extractionStatus]?.label || doc.extractionStatus}
-                      </Badge>
-                    )}
+                    {/* Only show extraction status for invoice types */}
+                    {doc.extractionStatus &&
+                      extractableTypes.includes(doc.documentType as DocumentType) && (
+                        <Badge
+                          size="sm"
+                          colorRole={extractionStatusConfig[doc.extractionStatus]?.colorRole || 'muted'}
+                        >
+                          {extractionStatusConfig[doc.extractionStatus]?.label || doc.extractionStatus}
+                        </Badge>
+                      )}
                   </div>
                 </div>
 

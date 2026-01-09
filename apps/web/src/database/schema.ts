@@ -953,6 +953,7 @@ export const privateClientDocumentType = pgEnum('private_client_document_type', 
   'cc_invoice',
   'distributor_invoice',
   'payment_proof',
+  'proof_of_delivery',
 ]);
 
 export const documentExtractionStatus = pgEnum('document_extraction_status', [
