@@ -1541,6 +1541,7 @@ export const sourceRfqPartnerResponseStatus = pgEnum(
 export const sourceRfqQuoteType = pgEnum('source_rfq_quote_type', [
   'exact',
   'alternative',
+  'not_available',
 ]);
 
 /**
@@ -1754,20 +1755,26 @@ export const sourceRfqQuotes = pgTable(
     alternativeProducer: text('alternative_producer'),
     alternativeVintage: text('alternative_vintage'),
     alternativeRegion: text('alternative_region'),
+    alternativeCountry: text('alternative_country'),
     alternativeBottleSize: text('alternative_bottle_size'),
     alternativeCaseConfig: integer('alternative_case_config'),
     alternativeLwin: text('alternative_lwin'),
     alternativeReason: text('alternative_reason'),
 
-    // Partner's cost price (what they charge C&C)
-    costPricePerCaseUsd: doublePrecision('cost_price_per_case_usd').notNull(),
+    // For N/A quotes
+    notAvailableReason: text('not_available_reason'),
+
+    // Partner's cost price (what they charge C&C) - nullable for N/A quotes
+    costPricePerCaseUsd: doublePrecision('cost_price_per_case_usd'),
     currency: text('currency').notNull().default('USD'),
+    caseConfig: text('case_config'),
     moq: integer('moq'),
 
     // Availability
     availableQuantity: integer('available_quantity'),
     leadTimeDays: integer('lead_time_days'),
     stockLocation: text('stock_location'),
+    stockCondition: text('stock_condition'),
 
     // Validity
     validUntil: timestamp('valid_until', { mode: 'date' }),
