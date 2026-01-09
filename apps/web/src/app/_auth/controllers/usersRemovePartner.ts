@@ -2,7 +2,7 @@ import { and, eq, inArray } from 'drizzle-orm';
 import { z } from 'zod';
 
 import db from '@/database/client';
-import { partnerMembers, partners } from '@/database/schema';
+import { partnerMembers, partners, users } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
 const inputSchema = z.object({
@@ -39,6 +39,14 @@ const usersRemovePartner = adminProcedure
             inArray(partnerMembers.partnerId, partnerIds),
           ),
         );
+    }
+
+    // Also clear legacy user.partnerId field when removing wine partner assignment
+    if (partnerType === 'wine_partner') {
+      await db
+        .update(users)
+        .set({ partnerId: null })
+        .where(eq(users.id, userId));
     }
 
     return { success: true };
