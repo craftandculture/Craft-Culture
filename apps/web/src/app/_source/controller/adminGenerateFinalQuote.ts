@@ -57,9 +57,13 @@ const adminGenerateFinalQuote = adminProcedure
       .leftJoin(partners, eq(sourceRfqQuotes.partnerId, partners.id))
       .where(eq(sourceRfqItems.rfqId, rfqId));
 
-    // Check if any items are missing quotes
-    const itemsWithoutQuotes = items.filter((i) => !i.selectedQuote);
-    const itemsWithQuotes = items.filter((i) => i.selectedQuote);
+    // Check if any items are missing quotes or have N/A quotes (no price)
+    const itemsWithoutQuotes = items.filter(
+      (i) => !i.selectedQuote || i.selectedQuote.costPricePerCaseUsd === null,
+    );
+    const itemsWithQuotes = items.filter(
+      (i) => i.selectedQuote && i.selectedQuote.costPricePerCaseUsd !== null,
+    );
 
     // Calculate totals
     let totalCostUsd = 0;
@@ -70,7 +74,8 @@ const adminGenerateFinalQuote = adminProcedure
       const quote = row.selectedQuote!;
       const quantity = item.quantity || 1;
 
-      const costPerCase = quote.costPricePerCaseUsd;
+      // costPricePerCaseUsd is guaranteed non-null by the filter above
+      const costPerCase = quote.costPricePerCaseUsd ?? 0;
       const finalPerCase = item.finalPriceUsd || costPerCase;
       const lineTotal = finalPerCase * quantity;
 
