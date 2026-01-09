@@ -501,11 +501,14 @@ const NewRfqPage = () => {
                             value={item.quantityUnit || 'cases'}
                             onChange={(e) => {
                               const newItems = [...parsedItems];
-                              newItems[index] = {
-                                ...newItems[index],
-                                quantityUnit: e.target.value as 'cases' | 'bottles',
-                              };
-                              setParsedItems(newItems);
+                              const currentItem = newItems[index];
+                              if (currentItem) {
+                                newItems[index] = {
+                                  ...currentItem,
+                                  quantityUnit: e.target.value as 'cases' | 'bottles',
+                                };
+                                setParsedItems(newItems);
+                              }
                             }}
                             className="text-xs border border-border-muted rounded px-1.5 py-0.5 bg-surface-primary"
                           >
