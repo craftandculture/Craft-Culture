@@ -458,7 +458,9 @@ const PartnerRfqDetailPage = () => {
                         {/* Format & Quantity - Highlight Box */}
                         <div className="mt-2 flex flex-wrap gap-2">
                           <div className="inline-flex items-center gap-2 px-2.5 py-1.5 bg-fill-muted rounded-lg text-xs sm:text-sm">
-                            <span className="font-semibold text-text-brand">{item.quantity} cases</span>
+                            <span className="font-semibold text-text-brand">
+                              {item.quantity} {item.quantityUnit === 'bottles' ? 'bottles' : 'cases'}
+                            </span>
                             {item.caseConfig && (
                               <>
                                 <span className="text-text-muted">·</span>
