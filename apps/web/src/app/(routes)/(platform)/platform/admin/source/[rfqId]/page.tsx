@@ -383,11 +383,11 @@ const RfqDetailPage = () => {
           <CardContent className="p-0">
             {/* Header with Progress and Bulk Actions */}
             <div className="p-3 border-b border-border-muted flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-3 sm:gap-4">
                 <Typography variant="headingSm">Quotes</Typography>
                 {/* Progress Indicator */}
                 <div className="flex items-center gap-2">
-                  <div className="w-24 h-1.5 bg-fill-muted rounded-full overflow-hidden">
+                  <div className="w-16 sm:w-24 h-1.5 bg-fill-muted rounded-full overflow-hidden">
                     <div
                       className="h-full bg-fill-brand rounded-full transition-all duration-300"
                       style={{ width: `${progressPercent}%` }}
@@ -401,19 +401,25 @@ const RfqDetailPage = () => {
 
               {/* Bulk Actions */}
               {canSelectQuotes && (
-                <div className="flex items-center gap-1.5 flex-wrap">
+                <div className="flex items-center gap-1 sm:gap-1.5 flex-wrap">
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={handleAutoSelectBest}
                     isDisabled={isBulkSelecting}
                   >
-                    <ButtonContent iconLeft={IconSparkles}>Auto-Select Best</ButtonContent>
+                    <ButtonContent iconLeft={IconSparkles}>
+                      <span className="hidden sm:inline">Auto-Select Best</span>
+                      <span className="sm:hidden">Auto</span>
+                    </ButtonContent>
                   </Button>
                   {uniquePartners.length > 0 && (
                     <div className="relative group">
                       <Button variant="ghost" size="sm">
-                        <ButtonContent iconLeft={IconSelectAll}>Select All From</ButtonContent>
+                        <ButtonContent iconLeft={IconSelectAll}>
+                          <span className="hidden sm:inline">Select All From</span>
+                          <span className="sm:hidden">From</span>
+                        </ButtonContent>
                       </Button>
                       <div className="absolute right-0 top-full mt-1 bg-surface-primary border border-border-muted rounded-lg shadow-lg py-1 hidden group-hover:block z-10 min-w-40">
                         {uniquePartners.map((p) => (
@@ -436,7 +442,7 @@ const RfqDetailPage = () => {
                   >
                     <ButtonContent iconLeft={IconX}>Clear</ButtonContent>
                   </Button>
-                  <div className="w-px h-5 bg-border-muted mx-1" />
+                  <div className="hidden sm:block w-px h-5 bg-border-muted mx-1" />
                   <Button
                     variant="ghost"
                     size="sm"
@@ -444,7 +450,7 @@ const RfqDetailPage = () => {
                     className={showUnselectedOnly ? 'bg-fill-brand/10' : ''}
                   >
                     <ButtonContent iconLeft={showUnselectedOnly ? IconFilterOff : IconFilter}>
-                      {showUnselectedOnly ? 'Show All' : 'Unselected'}
+                      <span className="hidden sm:inline">{showUnselectedOnly ? 'Show All' : 'Unselected'}</span>
                     </ButtonContent>
                   </Button>
                 </div>
@@ -463,8 +469,11 @@ const RfqDetailPage = () => {
                   {/* Sticky Header */}
                   <thead className="bg-fill-muted sticky top-0 z-10">
                     <tr>
-                      <th className="px-2 py-2 text-left text-[10px] font-semibold text-text-muted uppercase tracking-wide w-[280px] min-w-[200px]">
+                      <th className="px-2 py-2 text-left text-[10px] font-semibold text-text-muted uppercase tracking-wide min-w-[280px]">
                         Product
+                      </th>
+                      <th className="px-2 py-2 text-center text-[10px] font-semibold text-text-muted uppercase tracking-wide w-16">
+                        Format
                       </th>
                       <th className="px-2 py-2 text-center text-[10px] font-semibold text-text-muted uppercase tracking-wide w-12">
                         Qty
@@ -472,11 +481,11 @@ const RfqDetailPage = () => {
                       {uniquePartners.map((p) => (
                         <th
                           key={p.partnerId}
-                          className="px-2 py-2 text-center text-[10px] font-semibold text-text-muted uppercase tracking-wide w-24"
+                          className="px-2 py-2 text-center text-[10px] font-semibold text-text-muted uppercase tracking-wide min-w-[120px]"
                         >
-                          <span className="truncate block max-w-20" title={p.partner.businessName}>
-                            {p.partner.businessName.length > 12
-                              ? `${p.partner.businessName.slice(0, 10)}...`
+                          <span className="truncate block" title={p.partner.businessName}>
+                            {p.partner.businessName.length > 14
+                              ? `${p.partner.businessName.slice(0, 12)}...`
                               : p.partner.businessName}
                           </span>
                         </th>
@@ -505,30 +514,62 @@ const RfqDetailPage = () => {
                             idx % 2 === 0 ? 'bg-surface-primary' : 'bg-fill-muted/10'
                           }`}
                         >
-                          {/* Compact Product Cell - Single Line */}
-                          <td className="px-2 py-1.5">
-                            <div className="flex items-center gap-1.5 min-w-0">
-                              <span
-                                className="text-xs font-medium truncate"
-                                title={item.productName || ''}
-                              >
-                                {item.productName}
-                              </span>
-                              {(item.producer || item.vintage) && (
-                                <span className="text-[10px] text-text-muted shrink-0">
-                                  {[item.producer, item.vintage].filter(Boolean).join(' ')}
+                          {/* Product Cell - Name, Producer, Vintage, Region */}
+                          <td className="px-2 py-2">
+                            <div className="min-w-0">
+                              <div className="flex items-baseline gap-1.5">
+                                <span
+                                  className="text-xs font-semibold truncate"
+                                  title={item.productName || ''}
+                                >
+                                  {item.productName}
                                 </span>
+                                {item.vintage && (
+                                  <span className="text-xs text-text-brand font-medium shrink-0">
+                                    {item.vintage}
+                                  </span>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-2 mt-0.5 text-[10px] text-text-muted">
+                                {item.producer && <span>{item.producer}</span>}
+                                {item.region && (
+                                  <>
+                                    {item.producer && <span>·</span>}
+                                    <span>{item.region}</span>
+                                  </>
+                                )}
+                                {item.country && !item.region && (
+                                  <>
+                                    {item.producer && <span>·</span>}
+                                    <span>{item.country}</span>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                          </td>
+
+                          {/* Format Cell - Bottle Size & Case Config */}
+                          <td className="px-2 py-2 text-center">
+                            <div className="text-[10px]">
+                              {item.bottleSize && (
+                                <div className="font-medium">{item.bottleSize}</div>
+                              )}
+                              {item.caseConfig && (
+                                <div className="text-text-muted">{item.caseConfig}pk</div>
+                              )}
+                              {!item.bottleSize && !item.caseConfig && (
+                                <span className="text-text-muted">—</span>
                               )}
                             </div>
                           </td>
 
                           {/* Quantity */}
-                          <td className="px-2 py-1.5 text-center">
-                            <span className="text-xs font-medium">{item.quantity}</span>
+                          <td className="px-2 py-2 text-center">
+                            <span className="text-xs font-semibold">{item.quantity}</span>
                             <span className="text-[10px] text-text-muted ml-0.5">cs</span>
                           </td>
 
-                          {/* Partner Quote Cells - Compact */}
+                          {/* Partner Quote Cells - With Details */}
                           {uniquePartners.map((p) => {
                             const quote = item.quotes.find(
                               (q) => q.quote.partnerId === p.partnerId,
@@ -538,7 +579,7 @@ const RfqDetailPage = () => {
                               return (
                                 <td
                                   key={p.partnerId}
-                                  className="px-1 py-1.5 text-center text-[10px] text-text-muted"
+                                  className="px-1 py-2 text-center text-[10px] text-text-muted"
                                 >
                                   —
                                 </td>
@@ -556,7 +597,7 @@ const RfqDetailPage = () => {
                             // N/A quotes - compact display
                             if (isNotAvailable || price === null) {
                               return (
-                                <td key={p.partnerId} className="px-1 py-1.5 text-center">
+                                <td key={p.partnerId} className="px-1 py-2 text-center">
                                   <span
                                     className="text-[10px] text-text-danger bg-fill-danger/10 px-1.5 py-0.5 rounded"
                                     title={quote.quote.notAvailableReason || 'Not available'}
@@ -567,12 +608,23 @@ const RfqDetailPage = () => {
                               );
                             }
 
+                            // Build tooltip with all quote details
+                            const tooltipParts = [];
+                            if (quote.quote.caseConfig) tooltipParts.push(`Config: ${quote.quote.caseConfig}`);
+                            if (quote.quote.availableQuantity) tooltipParts.push(`Avail: ${quote.quote.availableQuantity} cs`);
+                            if (quote.quote.stockLocation) tooltipParts.push(`Location: ${quote.quote.stockLocation}`);
+                            if (quote.quote.stockCondition) tooltipParts.push(`Condition: ${quote.quote.stockCondition}`);
+                            if (quote.quote.leadTimeDays) tooltipParts.push(`Lead: ${quote.quote.leadTimeDays}d`);
+                            if (quote.quote.moq) tooltipParts.push(`MOQ: ${quote.quote.moq} cs`);
+                            if (isAlternative) tooltipParts.unshift(`ALT: ${quote.quote.alternativeProductName}`);
+                            const tooltip = tooltipParts.join('\n');
+
                             return (
-                              <td key={p.partnerId} className="px-1 py-1.5">
+                              <td key={p.partnerId} className="px-1 py-2">
                                 <button
                                   onClick={() => handleSelectQuote(item.id, quote.quote.id)}
                                   disabled={!canSelectQuotes || isSelectingQuote}
-                                  className={`w-full px-1.5 py-1 rounded text-center transition-all ${
+                                  className={`w-full px-1.5 py-1.5 rounded text-center transition-all ${
                                     isSelected
                                       ? 'bg-fill-brand text-text-on-brand ring-2 ring-border-brand'
                                       : isBestPrice
@@ -581,20 +633,29 @@ const RfqDetailPage = () => {
                                           ? 'bg-red-50 text-red-600 hover:bg-red-100'
                                           : 'bg-fill-muted/50 hover:bg-fill-muted'
                                   } ${!canSelectQuotes ? 'cursor-default' : 'cursor-pointer'}`}
-                                  title={
-                                    isAlternative
-                                      ? `Alt: ${quote.quote.alternativeProductName}`
-                                      : undefined
-                                  }
+                                  title={tooltip || undefined}
                                 >
-                                  <span className="text-xs font-medium">
+                                  {/* Price */}
+                                  <div className="text-xs font-semibold">
                                     ${price.toFixed(0)}
-                                  </span>
-                                  {isSelected && (
-                                    <IconCheck className="inline-block h-3 w-3 ml-0.5" />
-                                  )}
-                                  {isAlternative && !isSelected && (
-                                    <span className="text-[8px] block text-text-warning">ALT</span>
+                                    {isSelected && (
+                                      <IconCheck className="inline-block h-3 w-3 ml-0.5" />
+                                    )}
+                                  </div>
+                                  {/* Quick Details */}
+                                  <div className={`text-[9px] mt-0.5 ${isSelected ? 'text-text-on-brand/80' : 'text-text-muted'}`}>
+                                    {quote.quote.caseConfig && (
+                                      <span>{quote.quote.caseConfig}</span>
+                                    )}
+                                    {quote.quote.stockLocation && (
+                                      <span className="ml-1">{quote.quote.stockLocation.replace('_bonded', '').replace('_', ' ').toUpperCase()}</span>
+                                    )}
+                                  </div>
+                                  {/* Alternative indicator */}
+                                  {isAlternative && (
+                                    <span className={`text-[8px] block ${isSelected ? 'text-amber-200' : 'text-text-warning'}`}>
+                                      ALT
+                                    </span>
                                   )}
                                 </button>
                               </td>
