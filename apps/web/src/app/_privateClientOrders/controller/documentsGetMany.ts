@@ -60,21 +60,21 @@ const documentsGetMany = protectedProcedure.input(getDocumentsSchema).query(asyn
 
   // Determine which document types the user can see based on their role
   // - Admin: all documents (full visibility)
-  // - Partner: partner_invoice (their own), distributor_invoice (to pay), payment_proof
-  // - Distributor: distributor_invoice (their own), payment_proof only
+  // - Partner: partner_invoice (their own), distributor_invoice (to pay), payment_proof, proof_of_delivery
+  // - Distributor: distributor_invoice (their own), payment_proof, proof_of_delivery only
   // CRITICAL: Partner invoices should NEVER be visible to distributors (reveals partner costs/margins)
-  let allowedDocTypes: ('partner_invoice' | 'cc_invoice' | 'distributor_invoice' | 'payment_proof')[];
+  let allowedDocTypes: ('partner_invoice' | 'cc_invoice' | 'distributor_invoice' | 'payment_proof' | 'proof_of_delivery')[];
 
   if (isAdmin) {
     // Admin sees everything
-    allowedDocTypes = ['partner_invoice', 'cc_invoice', 'distributor_invoice', 'payment_proof'];
+    allowedDocTypes = ['partner_invoice', 'cc_invoice', 'distributor_invoice', 'payment_proof', 'proof_of_delivery'];
   } else if (isPartner) {
-    // Partner sees their invoice, distributor invoice (to pay), and payment proofs
-    allowedDocTypes = ['partner_invoice', 'distributor_invoice', 'payment_proof'];
+    // Partner sees their invoice, distributor invoice (to pay), payment proofs, and proof of delivery
+    allowedDocTypes = ['partner_invoice', 'distributor_invoice', 'payment_proof', 'proof_of_delivery'];
   } else {
-    // Distributor - can only see their own invoice and payment proofs
+    // Distributor - can only see their own invoice, payment proofs, and proof of delivery
     // NEVER show partner_invoice (protects partner pricing/margins)
-    allowedDocTypes = ['distributor_invoice', 'payment_proof'];
+    allowedDocTypes = ['distributor_invoice', 'payment_proof', 'proof_of_delivery'];
   }
 
   // Get documents with uploader info, filtered by allowed document types
