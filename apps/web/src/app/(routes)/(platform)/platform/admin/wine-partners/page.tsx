@@ -3,6 +3,7 @@
 import {
   IconBottle,
   IconBuilding,
+  IconCheck,
   IconEdit,
   IconMail,
   IconMapPin,
@@ -12,6 +13,7 @@ import {
   IconReceipt,
   IconSearch,
   IconTrash,
+  IconX,
 } from '@tabler/icons-react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import Image from 'next/image';
@@ -479,6 +481,29 @@ const WinePartnersPage = () => {
 
                     {/* Actions Section */}
                     <div className="flex-shrink-0 flex gap-2">
+                      {partner.status === 'active' ? (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          colorRole="danger"
+                          onClick={() => updatePartner({ partnerId: partner.id, status: 'inactive' })}
+                          isDisabled={isUpdating}
+                          title="Deactivate partner"
+                        >
+                          <ButtonContent iconLeft={IconX}>Deactivate</ButtonContent>
+                        </Button>
+                      ) : (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          colorRole="success"
+                          onClick={() => updatePartner({ partnerId: partner.id, status: 'active' })}
+                          isDisabled={isUpdating}
+                          title="Activate partner"
+                        >
+                          <ButtonContent iconLeft={IconCheck}>Activate</ButtonContent>
+                        </Button>
+                      )}
                       <Button
                         size="sm"
                         variant="outline"
