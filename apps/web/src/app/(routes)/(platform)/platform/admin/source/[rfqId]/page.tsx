@@ -756,7 +756,7 @@ const RfqDetailPage = () => {
                                           : 'bg-fill-muted/50 hover:bg-fill-muted'
                                   } ${!canSelectQuotes ? 'cursor-default' : 'cursor-pointer'}`}
                                   title={tooltip || undefined}
-                                  aria-label={`Select quote: $${price.toFixed(0)} from ${p.partnerName}${isAlternative ? ' (alternative)' : ''}`}
+                                  aria-label={`Select quote: $${price.toFixed(0)} from ${p.partner.businessName}${isAlternative ? ' (alternative)' : ''}`}
                                 >
                                   {/* Price */}
                                   <div className="text-xs font-semibold">
