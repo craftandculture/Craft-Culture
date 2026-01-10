@@ -17,7 +17,7 @@ interface ParsedQuote {
   itemId: string;
   lineNumber: number;
   productName: string;
-  quoteType: 'exact' | 'alternative' | 'not_available';
+  quoteType: 'exact' | 'alt_vintage' | 'alternative' | 'not_available';
   // Which specific vintage the partner is quoting on
   // (needed when RFQ item has multiple vintages like "2018, 2016, 2013")
   quotedVintage?: string;
