@@ -10,6 +10,7 @@ import { adminProcedure } from '@/lib/trpc/procedures';
 import logger from '@/utils/logger';
 
 import parseInputSchema from '../schemas/parseInputSchema';
+import matchLwinWines from '../utils/matchLwinWines';
 
 interface ParsedItem {
   productName: string;
@@ -239,8 +240,13 @@ const adminParseInput = adminProcedure
       if (directParsedItems && directParsedItems.length > 0) {
         logger.dev(`Direct CSV parsing successful: ${directParsedItems.length} items found`);
 
+        // Match items to LWIN database
+        const matchedItems = await matchLwinWines(directParsedItems);
+        const lwinMatchCount = matchedItems.filter((item) => item.lwin).length;
+        logger.dev(`LWIN matching: ${lwinMatchCount}/${matchedItems.length} items matched`);
+
         // Insert parsed items into database
-        const itemValues = directParsedItems.map((item, index) => ({
+        const itemValues = matchedItems.map((item, index) => ({
           rfqId,
           productName: item.productName,
           producer: item.producer,
@@ -263,7 +269,7 @@ const adminParseInput = adminProcedure
           .update(sourceRfqs)
           .set({
             status: 'ready_to_send',
-            itemCount: directParsedItems.length,
+            itemCount: matchedItems.length,
             parsedAt: new Date(),
             parsingError: null,
           })
@@ -271,8 +277,8 @@ const adminParseInput = adminProcedure
 
         return {
           success: true,
-          message: `Successfully parsed ${directParsedItems.length} items from spreadsheet`,
-          items: directParsedItems,
+          message: `Successfully parsed ${matchedItems.length} items from spreadsheet (${lwinMatchCount} matched to LWIN)`,
+          items: matchedItems,
         };
       }
 
@@ -358,8 +364,13 @@ If vintage is unclear, leave it empty or use "NV".`;
         };
       }
 
+      // Match items to LWIN database
+      const matchedItems = await matchLwinWines(extractedItems);
+      const lwinMatchCount = matchedItems.filter((item) => item.lwin).length;
+      logger.dev(`LWIN matching: ${lwinMatchCount}/${matchedItems.length} items matched`);
+
       // Insert parsed items into database
-      const itemValues = extractedItems.map((item, index) => ({
+      const itemValues = matchedItems.map((item, index) => ({
         rfqId,
         productName: item.productName,
         producer: item.producer,
@@ -382,7 +393,7 @@ If vintage is unclear, leave it empty or use "NV".`;
         .update(sourceRfqs)
         .set({
           status: 'ready_to_send',
-          itemCount: extractedItems.length,
+          itemCount: matchedItems.length,
           parsedAt: new Date(),
           parsingError: null,
         })
@@ -390,8 +401,8 @@ If vintage is unclear, leave it empty or use "NV".`;
 
       return {
         success: true,
-        message: `Successfully parsed ${extractedItems.length} items`,
-        items: extractedItems,
+        message: `Successfully parsed ${matchedItems.length} items (${lwinMatchCount} matched to LWIN)`,
+        items: matchedItems,
       };
     } catch (error) {
       console.error('AI parsing failed:', error);
