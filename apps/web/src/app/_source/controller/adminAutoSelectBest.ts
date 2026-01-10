@@ -104,7 +104,7 @@ const adminAutoSelectBest = adminProcedure
         const itemQuotes = quotesByItem.get(quote.itemId) || [];
         itemQuotes.push({
           id: quote.id,
-          price: quote.costPricePerCaseUsd!,
+          price: String(quote.costPricePerCaseUsd!),
         });
         quotesByItem.set(quote.itemId, itemQuotes);
       }
@@ -134,7 +134,7 @@ const adminAutoSelectBest = adminProcedure
         selections.push({
           itemId: quote.itemId,
           quoteId: quote.id,
-          price: quote.costPricePerCaseUsd!,
+          price: String(quote.costPricePerCaseUsd!),
         });
       }
     }
