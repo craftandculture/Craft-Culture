@@ -127,10 +127,10 @@ const PurchaseOrderCard = ({ po, onSend, isSending }: PurchaseOrderCardProps) =>
 
           {/* PO number and partner */}
           <div>
-            <Typography variant="body1" className="font-medium">
+            <Typography variant="bodyMd" className="font-medium">
               {po.poNumber}
             </Typography>
-            <Typography variant="body2" className="text-text-muted">
+            <Typography variant="bodySm" className="text-text-muted">
               {partnerDisplayName}
             </Typography>
           </div>
@@ -139,10 +139,10 @@ const PurchaseOrderCard = ({ po, onSend, isSending }: PurchaseOrderCardProps) =>
         <div className="flex items-center gap-4">
           {/* Total */}
           <div className="text-right">
-            <Typography variant="body1" className="font-semibold">
+            <Typography variant="bodyMd" className="font-semibold">
               {formatPrice(po.totalAmountUsd ?? 0, 'USD')}
             </Typography>
-            <Typography variant="body2" className="text-text-muted">
+            <Typography variant="bodySm" className="text-text-muted">
               {po.items.length} item{po.items.length !== 1 ? 's' : ''}
             </Typography>
           </div>

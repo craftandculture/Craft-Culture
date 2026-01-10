@@ -64,10 +64,10 @@ const PurchaseOrderSection = ({
       <Card className="p-6">
         <div className="flex items-center justify-between">
           <div>
-            <Typography variant="h3" className="text-lg font-semibold">
+            <Typography variant="headingSm" className="text-lg font-semibold">
               Purchase Orders
             </Typography>
-            <Typography variant="body2" className="text-text-muted mt-1">
+            <Typography variant="bodySm" className="text-text-muted mt-1">
               Generate purchase orders for each partner with selected quotes
             </Typography>
           </div>
@@ -86,7 +86,7 @@ const PurchaseOrderSection = ({
   if (isLoading) {
     return (
       <Card className="p-6">
-        <Typography variant="body2" className="text-text-muted">
+        <Typography variant="bodySm" className="text-text-muted">
           Loading purchase orders...
         </Typography>
       </Card>
@@ -105,10 +105,10 @@ const PurchaseOrderSection = ({
       {/* Header with summary */}
       <div className="flex items-center justify-between">
         <div>
-          <Typography variant="h3" className="text-lg font-semibold">
+          <Typography variant="headingSm" className="text-lg font-semibold">
             Purchase Orders ({summary.totalPOs})
           </Typography>
-          <Typography variant="body2" className="text-text-muted">
+          <Typography variant="bodySm" className="text-text-muted">
             Total: {formatPrice(summary.grandTotalUsd, 'USD')}
           </Typography>
         </div>
