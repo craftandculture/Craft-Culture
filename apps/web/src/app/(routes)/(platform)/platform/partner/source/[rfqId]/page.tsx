@@ -708,7 +708,8 @@ const PartnerRfqDetailPage = () => {
               const isExpanded = expandedItems.has(item.id);
               const status = getQuoteStatus(item.id);
               const isNA = quote?.quoteType === 'not_available';
-              const isAlternative = quote?.quoteType === 'alternative';
+              const isAltVintage = quote?.quoteType === 'alt_vintage';
+              const isAltProduct = quote?.quoteType === 'alternative';
 
               return (
                 <div
@@ -895,27 +896,34 @@ const PartnerRfqDetailPage = () => {
                   {/* Quote Input Section - Expanded (compact) */}
                   {canSubmit && isExpanded && (
                     <div className="border-t border-border-muted bg-fill-secondary/30 px-3 py-3 space-y-3">
-                      {/* Response Type + Quick Actions Row */}
+                      {/* Response Type Selection - Improved UX */}
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-xs font-semibold text-text-muted">Type:</span>
-                        {[
-                          { value: 'exact', label: 'Exact', color: 'bg-green-100 border-green-300 text-green-800' },
-                          { value: 'alternative', label: 'Alt', color: 'bg-amber-100 border-amber-300 text-amber-800' },
-                          { value: 'not_available', label: 'N/A', color: 'bg-red-100 border-red-300 text-red-800' },
-                        ].map((option) => (
-                          <button
-                            key={option.value}
-                            type="button"
-                            onClick={() => handleQuoteChange(item.id, 'quoteType', option.value as QuoteType)}
-                            className={`px-2 py-1 rounded border text-xs font-medium transition-all ${
-                              quote?.quoteType === option.value
-                                ? option.color
-                                : 'bg-white border-border-muted text-text-muted hover:border-border-primary'
-                            }`}
-                          >
-                            {option.label}
-                          </button>
-                        ))}
+                        <span className="text-xs font-semibold text-text-muted shrink-0">Response:</span>
+                        <div className="flex rounded-lg border border-border-muted overflow-hidden">
+                          {[
+                            { value: 'exact', label: 'Exact Match', shortLabel: 'Exact', color: 'bg-green-500 text-white border-green-500' },
+                            { value: 'alt_vintage', label: 'Different Vintage', shortLabel: 'Alt Vintage', color: 'bg-blue-500 text-white border-blue-500' },
+                            { value: 'alternative', label: 'Alternative Product', shortLabel: 'Alt Product', color: 'bg-amber-500 text-white border-amber-500' },
+                            { value: 'not_available', label: 'Not Available', shortLabel: 'N/A', color: 'bg-red-500 text-white border-red-500' },
+                          ].map((option, idx) => (
+                            <button
+                              key={option.value}
+                              type="button"
+                              onClick={() => handleQuoteChange(item.id, 'quoteType', option.value as QuoteType)}
+                              className={`px-2 sm:px-3 py-1.5 text-xs font-medium transition-all ${
+                                idx > 0 ? 'border-l border-border-muted' : ''
+                              } ${
+                                quote?.quoteType === option.value
+                                  ? option.color
+                                  : 'bg-white text-text-muted hover:bg-fill-muted'
+                              }`}
+                              title={option.label}
+                            >
+                              <span className="hidden sm:inline">{option.shortLabel}</span>
+                              <span className="sm:hidden">{option.value === 'not_available' ? 'N/A' : option.value === 'exact' ? 'Exact' : option.value === 'alt_vintage' ? 'Vint.' : 'Alt'}</span>
+                            </button>
+                          ))}
+                        </div>
                         {status === 'complete' && (
                           <button
                             type="button"
@@ -924,7 +932,7 @@ const PartnerRfqDetailPage = () => {
                             title="Copy settings to unquoted items"
                           >
                             <IconCopy className="h-3 w-3" />
-                            Copy to all
+                            <span className="hidden sm:inline">Copy to all</span>
                           </button>
                         )}
                       </div>
@@ -1055,107 +1063,153 @@ const PartnerRfqDetailPage = () => {
                             </div>
                           </div>
 
-                          {/* Alternative Product Details - Compact */}
-                          {isAlternative && (
-                            <div className="p-2 bg-amber-50 border border-amber-200 rounded space-y-2">
-                              <span className="text-xs font-semibold text-amber-800">Alternative Product</span>
-                              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                                <div>
-                                  <label className="block text-[10px] font-medium text-amber-700 mb-0.5">Name*</label>
-                                  <input
-                                    type="text"
-                                    placeholder="Product name"
-                                    value={quote?.alternativeProductName || ''}
-                                    onChange={(e) => handleQuoteChange(item.id, 'alternativeProductName', e.target.value)}
-                                    className="w-full rounded border border-amber-300 bg-white px-1.5 py-1 text-xs"
-                                  />
-                                </div>
-                                <div>
-                                  <label className="block text-[10px] font-medium text-amber-700 mb-0.5">Producer</label>
-                                  <input
-                                    type="text"
-                                    placeholder="Producer"
-                                    value={quote?.alternativeProducer || ''}
-                                    onChange={(e) => handleQuoteChange(item.id, 'alternativeProducer', e.target.value)}
-                                    className="w-full rounded border border-amber-300 bg-white px-1.5 py-1 text-xs"
-                                  />
-                                </div>
-                                <div>
-                                  <label className="block text-[10px] font-medium text-amber-700 mb-0.5">Vintage</label>
-                                  <input
-                                    type="text"
-                                    placeholder="2020"
-                                    value={quote?.alternativeVintage || ''}
-                                    onChange={(e) => handleQuoteChange(item.id, 'alternativeVintage', e.target.value)}
-                                    className="w-full rounded border border-amber-300 bg-white px-1.5 py-1 text-xs"
-                                  />
-                                </div>
-                                <div>
-                                  <label className="block text-[10px] font-medium text-amber-700 mb-0.5">Region</label>
-                                  <input
-                                    type="text"
-                                    placeholder="Region"
-                                    value={quote?.alternativeRegion || ''}
-                                    onChange={(e) => handleQuoteChange(item.id, 'alternativeRegion', e.target.value)}
-                                    className="w-full rounded border border-amber-300 bg-white px-1.5 py-1 text-xs"
-                                  />
-                                </div>
-                              </div>
-                              <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
-                                <div>
-                                  <label className="block text-[10px] font-medium text-amber-700 mb-0.5">Country</label>
-                                  <input
-                                    type="text"
-                                    placeholder="Country"
-                                    value={quote?.alternativeCountry || ''}
-                                    onChange={(e) => handleQuoteChange(item.id, 'alternativeCountry', e.target.value)}
-                                    className="w-full rounded border border-amber-300 bg-white px-1.5 py-1 text-xs"
-                                  />
-                                </div>
-                                <div>
-                                  <label className="block text-[10px] font-medium text-amber-700 mb-0.5">Size</label>
-                                  <select
-                                    value={quote?.alternativeBottleSize || ''}
-                                    onChange={(e) => handleQuoteChange(item.id, 'alternativeBottleSize', e.target.value)}
-                                    className="w-full rounded border border-amber-300 bg-white px-1 py-1 text-xs"
-                                  >
-                                    <option value="">-</option>
-                                    {BOTTLE_SIZES.map((s) => (
-                                      <option key={s.value} value={s.value}>{s.value}</option>
-                                    ))}
-                                  </select>
-                                </div>
-                                <div>
-                                  <label className="block text-[10px] font-medium text-amber-700 mb-0.5">Config</label>
-                                  <input
-                                    type="number"
-                                    min="1"
-                                    placeholder="6"
-                                    value={quote?.alternativeCaseConfig || ''}
-                                    onChange={(e) => handleQuoteChange(item.id, 'alternativeCaseConfig', parseInt(e.target.value) || 0)}
-                                    className="w-full rounded border border-amber-300 bg-white px-1.5 py-1 text-xs"
-                                  />
-                                </div>
-                                <div className="col-span-2">
-                                  <label className="block text-[10px] font-medium text-amber-700 mb-0.5">LWIN</label>
-                                  <input
-                                    type="text"
-                                    placeholder="Optional"
-                                    value={quote?.alternativeLwin || ''}
-                                    onChange={(e) => handleQuoteChange(item.id, 'alternativeLwin', e.target.value)}
-                                    className="w-full rounded border border-amber-300 bg-white px-1.5 py-1 text-xs"
-                                  />
-                                </div>
-                              </div>
-                              <div>
-                                <label className="block text-[10px] font-medium text-amber-700 mb-0.5">Reason*</label>
+                          {/* Alt Vintage - Simple inline section */}
+                          {isAltVintage && (
+                            <div className="flex items-center gap-3 p-2.5 bg-blue-50 border border-blue-200 rounded-lg">
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs font-semibold text-blue-700">Offering vintage:</span>
                                 <input
                                   type="text"
-                                  placeholder="Why offering alternative"
+                                  placeholder="e.g. 2019"
+                                  maxLength={4}
+                                  value={quote?.alternativeVintage || ''}
+                                  onChange={(e) => handleQuoteChange(item.id, 'alternativeVintage', e.target.value)}
+                                  className="w-20 rounded border border-blue-300 bg-white px-2 py-1 text-sm font-medium text-center"
+                                />
+                                <span className="text-xs text-blue-600">(requested: {item.vintage || 'any'})</span>
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <input
+                                  type="text"
+                                  placeholder="Reason for different vintage (optional)"
                                   value={quote?.alternativeReason || ''}
                                   onChange={(e) => handleQuoteChange(item.id, 'alternativeReason', e.target.value)}
-                                  className="w-full rounded border border-amber-300 bg-white px-1.5 py-1 text-xs"
+                                  className="w-full rounded border border-blue-200 bg-white px-2 py-1 text-xs"
                                 />
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Alternative Product - Full form with improved visual hierarchy */}
+                          {isAltProduct && (
+                            <div className="rounded-lg border-2 border-amber-300 overflow-hidden">
+                              {/* Header */}
+                              <div className="bg-amber-500 px-3 py-2 flex items-center gap-2">
+                                <IconAlertTriangle className="h-4 w-4 text-white" />
+                                <span className="text-sm font-semibold text-white">Alternative Product</span>
+                                <span className="ml-auto text-xs text-amber-100">Different wine than requested</span>
+                              </div>
+
+                              {/* Form content */}
+                              <div className="bg-amber-50 p-3 space-y-3">
+                                {/* Primary info row */}
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                                  <div className="sm:col-span-2">
+                                    <label className="block text-xs font-semibold text-amber-800 mb-1">Wine Name *</label>
+                                    <input
+                                      type="text"
+                                      placeholder="e.g. Château Margaux"
+                                      value={quote?.alternativeProductName || ''}
+                                      onChange={(e) => handleQuoteChange(item.id, 'alternativeProductName', e.target.value)}
+                                      className="w-full rounded-lg border-2 border-amber-300 bg-white px-3 py-2 text-sm font-medium focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="block text-xs font-semibold text-amber-800 mb-1">Vintage</label>
+                                    <input
+                                      type="text"
+                                      placeholder="2020"
+                                      maxLength={4}
+                                      value={quote?.alternativeVintage || ''}
+                                      onChange={(e) => handleQuoteChange(item.id, 'alternativeVintage', e.target.value)}
+                                      className="w-full rounded-lg border-2 border-amber-300 bg-white px-3 py-2 text-sm font-medium text-center focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
+                                    />
+                                  </div>
+                                </div>
+
+                                {/* Secondary info row */}
+                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                                  <div>
+                                    <label className="block text-[10px] font-medium text-amber-700 mb-0.5">Producer</label>
+                                    <input
+                                      type="text"
+                                      placeholder="Producer"
+                                      value={quote?.alternativeProducer || ''}
+                                      onChange={(e) => handleQuoteChange(item.id, 'alternativeProducer', e.target.value)}
+                                      className="w-full rounded border border-amber-300 bg-white px-2 py-1.5 text-xs"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="block text-[10px] font-medium text-amber-700 mb-0.5">Region</label>
+                                    <input
+                                      type="text"
+                                      placeholder="Region"
+                                      value={quote?.alternativeRegion || ''}
+                                      onChange={(e) => handleQuoteChange(item.id, 'alternativeRegion', e.target.value)}
+                                      className="w-full rounded border border-amber-300 bg-white px-2 py-1.5 text-xs"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="block text-[10px] font-medium text-amber-700 mb-0.5">Country</label>
+                                    <input
+                                      type="text"
+                                      placeholder="Country"
+                                      value={quote?.alternativeCountry || ''}
+                                      onChange={(e) => handleQuoteChange(item.id, 'alternativeCountry', e.target.value)}
+                                      className="w-full rounded border border-amber-300 bg-white px-2 py-1.5 text-xs"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="block text-[10px] font-medium text-amber-700 mb-0.5">Bottle Size</label>
+                                    <select
+                                      value={quote?.alternativeBottleSize || ''}
+                                      onChange={(e) => handleQuoteChange(item.id, 'alternativeBottleSize', e.target.value)}
+                                      className="w-full rounded border border-amber-300 bg-white px-2 py-1.5 text-xs"
+                                    >
+                                      <option value="">Standard</option>
+                                      {BOTTLE_SIZES.map((s) => (
+                                        <option key={s.value} value={s.value}>{s.label}</option>
+                                      ))}
+                                    </select>
+                                  </div>
+                                </div>
+
+                                {/* Tertiary info row */}
+                                <div className="grid grid-cols-3 gap-2">
+                                  <div>
+                                    <label className="block text-[10px] font-medium text-amber-700 mb-0.5">Case Config</label>
+                                    <input
+                                      type="number"
+                                      min="1"
+                                      placeholder="6"
+                                      value={quote?.alternativeCaseConfig || ''}
+                                      onChange={(e) => handleQuoteChange(item.id, 'alternativeCaseConfig', parseInt(e.target.value) || 0)}
+                                      className="w-full rounded border border-amber-300 bg-white px-2 py-1.5 text-xs"
+                                    />
+                                  </div>
+                                  <div className="col-span-2">
+                                    <label className="block text-[10px] font-medium text-amber-700 mb-0.5">LWIN (optional)</label>
+                                    <input
+                                      type="text"
+                                      placeholder="e.g. 1234567890123456"
+                                      value={quote?.alternativeLwin || ''}
+                                      onChange={(e) => handleQuoteChange(item.id, 'alternativeLwin', e.target.value)}
+                                      className="w-full rounded border border-amber-300 bg-white px-2 py-1.5 text-xs"
+                                    />
+                                  </div>
+                                </div>
+
+                                {/* Reason - Prominent */}
+                                <div className="pt-2 border-t border-amber-200">
+                                  <label className="block text-xs font-semibold text-amber-800 mb-1">Why this alternative? *</label>
+                                  <input
+                                    type="text"
+                                    placeholder="e.g. Requested vintage sold out, offering better value vintage"
+                                    value={quote?.alternativeReason || ''}
+                                    onChange={(e) => handleQuoteChange(item.id, 'alternativeReason', e.target.value)}
+                                    className="w-full rounded-lg border-2 border-amber-300 bg-white px-3 py-2 text-sm focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
+                                  />
+                                </div>
                               </div>
                             </div>
                           )}
@@ -1184,6 +1238,9 @@ const PartnerRfqDetailPage = () => {
                           <span className="text-text-muted">Quote:</span>{' '}
                           <span className="font-semibold">${existingQuote.costPricePerCaseUsd?.toFixed(2)}/cs</span>
                         </span>
+                        {existingQuote.quoteType === 'alt_vintage' && existingQuote.alternativeVintage && (
+                          <span className="text-blue-600">Vintage: {existingQuote.alternativeVintage}</span>
+                        )}
                         {existingQuote.quoteType === 'alternative' && existingQuote.alternativeProductName && (
                           <span className="text-amber-600">Alt: {existingQuote.alternativeProductName}</span>
                         )}

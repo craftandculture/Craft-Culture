@@ -1548,7 +1548,8 @@ export const sourceRfqPartnerResponseStatus = pgEnum(
 
 export const sourceRfqQuoteType = pgEnum('source_rfq_quote_type', [
   'exact',
-  'alternative',
+  'alt_vintage', // Same wine, different vintage only
+  'alternative', // Completely different product
   'not_available',
 ]);
 
