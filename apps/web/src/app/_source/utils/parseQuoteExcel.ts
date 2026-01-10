@@ -201,7 +201,9 @@ const tryParseStructuredQuoteCSV = (
         statusStr === 'x'
       ) {
         quoteType = 'not_available';
-        notAvailableReason = values[columnMap['notes']]?.trim();
+        const notesIdx = columnMap['notes'];
+        notAvailableReason =
+          notesIdx !== undefined ? values[notesIdx]?.trim() : undefined;
       } else if (statusStr.includes('alt') || statusStr.includes('substitute')) {
         quoteType = 'alternative';
       }
