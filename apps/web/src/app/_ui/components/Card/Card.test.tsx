@@ -22,7 +22,7 @@ describe('Card', () => {
       const card = screen.getByText('Default Card');
       expect(card).toHaveClass('bg-surface-primary'); // default colorRole: primary
       expect(card).toHaveClass('border'); // default variant: outline
-      expect(card).toHaveClass('rounded-lg'); // base styles
+      expect(card).toHaveClass('rounded-xl'); // base styles
     });
 
     it('should apply custom className', () => {
@@ -131,7 +131,7 @@ describe('Card', () => {
       );
       const div = screen.getByText('Styled Div');
       expect(div).toHaveClass('bg-fill-brand');
-      expect(div).toHaveClass('rounded-lg');
+      expect(div).toHaveClass('rounded-xl');
     });
 
     it('should render child link with card styles', () => {
@@ -196,7 +196,7 @@ describe('Card', () => {
       expect(card).toHaveClass('bg-fill-brand'); // colorRole
       expect(card).toHaveClass('border'); // variant
       expect(card).toHaveClass('extra-class'); // custom className
-      expect(card).toHaveClass('rounded-lg'); // base styles
+      expect(card).toHaveClass('rounded-xl'); // base styles
     });
 
     it('should handle empty string children', () => {
@@ -225,7 +225,7 @@ describe('Card', () => {
       const card = screen.getByText('Base Styles');
       expect(card).toHaveClass('relative');
       expect(card).toHaveClass('overflow-hidden');
-      expect(card).toHaveClass('rounded-lg');
+      expect(card).toHaveClass('rounded-xl');
     });
 
     it('should maintain className order with custom classes', () => {
@@ -237,7 +237,7 @@ describe('Card', () => {
       const card = screen.getByText('Custom Classes');
       expect(card).toHaveClass('z-10');
       expect(card).toHaveClass('hover:shadow-xl');
-      expect(card).toHaveClass('rounded-lg'); // base classes still present
+      expect(card).toHaveClass('rounded-xl'); // base classes still present
     });
   });
 });

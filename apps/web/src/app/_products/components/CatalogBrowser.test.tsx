@@ -136,7 +136,7 @@ describe('CatalogBrowser', () => {
         />
       );
 
-      expect(screen.getByText('Browse Full Inventory')).toBeInTheDocument();
+      expect(screen.getByText('Browse Inventory')).toBeInTheDocument();
       expect(screen.getByText('2 products available')).toBeInTheDocument();
     });
 
@@ -327,7 +327,7 @@ describe('CatalogBrowser', () => {
       await user.type(searchInput, 'nonexistent');
 
       await waitFor(() => {
-        expect(screen.getByText('No products found matching your search')).toBeInTheDocument();
+        expect(screen.getByText('No products found')).toBeInTheDocument();
       });
     });
   });
