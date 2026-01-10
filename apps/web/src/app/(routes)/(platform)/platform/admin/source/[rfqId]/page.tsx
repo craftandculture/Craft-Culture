@@ -3,6 +3,7 @@
 import {
   IconAlertTriangle,
   IconArrowLeft,
+  IconBan,
   IconCheck,
   IconEdit,
   IconFileSpreadsheet,
@@ -14,12 +15,13 @@ import {
   IconSelectAll,
   IconSend,
   IconSparkles,
+  IconTrash,
   IconUpload,
   IconX,
 } from '@tabler/icons-react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import AddItemModal from '@/app/_source/components/AddItemModal';
@@ -49,6 +51,7 @@ import useTRPC from '@/lib/trpc/browser';
  */
 const RfqDetailPage = () => {
   const params = useParams();
+  const router = useRouter();
   const rfqId = params.rfqId as string;
   const api = useTRPC();
 
@@ -82,6 +85,10 @@ const RfqDetailPage = () => {
     itemCount: number;
     totalAmountUsd: number;
   }> | null>(null);
+
+  // State for cancel/delete dialogs
+  const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   // Fetch RFQ data
   const { data: rfq, isLoading, refetch } = useQuery({
@@ -162,6 +169,25 @@ const RfqDetailPage = () => {
     }),
   );
 
+  // Cancel RFQ mutation
+  const { mutate: cancelRfq, isPending: isCancelling } = useMutation(
+    api.source.admin.cancel.mutationOptions({
+      onSuccess: () => {
+        void refetch();
+        setIsCancelDialogOpen(false);
+      },
+    }),
+  );
+
+  // Delete RFQ mutation
+  const { mutate: deleteRfq, isPending: isDeleting } = useMutation(
+    api.source.admin.delete.mutationOptions({
+      onSuccess: () => {
+        router.push('/platform/admin/source');
+      },
+    }),
+  );
+
   // Focus input when editing starts
   useEffect(() => {
     if (editingItemId && priceInputRef.current) {
@@ -215,6 +241,9 @@ const RfqDetailPage = () => {
   const canGenerateQuote = rfq.status === 'selecting' || rfq.items.some((i) => i.selectedQuoteId);
   const canGeneratePOs = rfq.status === 'finalized';
   const hasGeneratedPOs = rfq.status === 'po_generated' || rfq.status === 'completed';
+  const canDelete = ['draft', 'parsing', 'ready_to_send'].includes(rfq.status);
+  const canCancel = ['sent', 'collecting', 'comparing', 'selecting', 'finalized', 'po_generated', 'quote_generated'].includes(rfq.status);
+  const isCancelled = rfq.status === 'cancelled';
 
   // Build comparison data
   const partnerMap = new Map(rfq.partners.map((p) => [p.partnerId, p]));
@@ -406,6 +435,33 @@ const RfqDetailPage = () => {
                   <ButtonContent iconLeft={IconPackageExport}>View POs</ButtonContent>
                 </Button>
               </Link>
+            )}
+            {canCancel && (
+              <Button
+                variant="outline"
+                colorRole="danger"
+                onClick={() => setIsCancelDialogOpen(true)}
+              >
+                <ButtonContent iconLeft={IconBan}>Cancel</ButtonContent>
+              </Button>
+            )}
+            {canDelete && (
+              <Button
+                variant="outline"
+                colorRole="danger"
+                onClick={() => setIsDeleteDialogOpen(true)}
+              >
+                <ButtonContent iconLeft={IconTrash}>Delete</ButtonContent>
+              </Button>
+            )}
+            {isCancelled && (
+              <Button
+                variant="outline"
+                colorRole="danger"
+                onClick={() => setIsDeleteDialogOpen(true)}
+              >
+                <ButtonContent iconLeft={IconTrash}>Delete</ButtonContent>
+              </Button>
             )}
           </div>
         </div>
@@ -1302,6 +1358,72 @@ const RfqDetailPage = () => {
                 </div>
               </div>
             )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Cancel RFQ Dialog */}
+        <Dialog open={isCancelDialogOpen} onOpenChange={setIsCancelDialogOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Cancel RFQ</DialogTitle>
+              <DialogDescription>
+                Are you sure you want to cancel this RFQ? This will stop the sourcing process
+                and partners will no longer be able to submit quotes.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="flex items-center gap-3 mt-4">
+              <Button
+                variant="outline"
+                onClick={() => setIsCancelDialogOpen(false)}
+                className="flex-1"
+              >
+                Keep Open
+              </Button>
+              <Button
+                variant="default"
+                colorRole="danger"
+                onClick={() => cancelRfq({ rfqId })}
+                isDisabled={isCancelling}
+                className="flex-1"
+              >
+                <ButtonContent iconLeft={IconBan}>
+                  {isCancelling ? 'Cancelling...' : 'Cancel RFQ'}
+                </ButtonContent>
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Delete RFQ Dialog */}
+        <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Delete RFQ</DialogTitle>
+              <DialogDescription>
+                Are you sure you want to delete this RFQ? This action cannot be undone and will
+                permanently remove the RFQ and all associated items.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="flex items-center gap-3 mt-4">
+              <Button
+                variant="outline"
+                onClick={() => setIsDeleteDialogOpen(false)}
+                className="flex-1"
+              >
+                Keep RFQ
+              </Button>
+              <Button
+                variant="default"
+                colorRole="danger"
+                onClick={() => deleteRfq({ rfqId })}
+                isDisabled={isDeleting}
+                className="flex-1"
+              >
+                <ButtonContent iconLeft={IconTrash}>
+                  {isDeleting ? 'Deleting...' : 'Delete RFQ'}
+                </ButtonContent>
+              </Button>
+            </div>
           </DialogContent>
         </Dialog>
       </div>
