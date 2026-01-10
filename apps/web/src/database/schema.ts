@@ -1759,6 +1759,10 @@ export const sourceRfqQuotes = pgTable(
     // Quote type
     quoteType: sourceRfqQuoteType('quote_type').notNull().default('exact'),
 
+    // Quoted vintage - which specific vintage the partner is quoting on
+    // (needed when RFQ item has multiple vintages like "2018, 2016, 2013")
+    quotedVintage: text('quoted_vintage'),
+
     // For alternatives: product details
     alternativeProductName: text('alternative_product_name'),
     alternativeProducer: text('alternative_producer'),

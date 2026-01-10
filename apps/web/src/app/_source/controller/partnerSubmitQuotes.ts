@@ -111,6 +111,8 @@ const partnerSubmitQuotes = winePartnerProcedure
       rfqPartnerId: assignment.assignment.id,
       partnerId,
       quoteType: quote.quoteType,
+      // Which specific vintage the partner is quoting on
+      quotedVintage: quote.quotedVintage,
       // N/A quotes don't have a price
       costPricePerCaseUsd:
         quote.quoteType === 'not_available' ? null : quote.costPricePerCaseUsd,

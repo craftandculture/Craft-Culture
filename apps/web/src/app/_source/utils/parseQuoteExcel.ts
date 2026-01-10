@@ -18,6 +18,9 @@ interface ParsedQuote {
   lineNumber: number;
   productName: string;
   quoteType: 'exact' | 'alternative' | 'not_available';
+  // Which specific vintage the partner is quoting on
+  // (needed when RFQ item has multiple vintages like "2018, 2016, 2013")
+  quotedVintage?: string;
   costPricePerCaseUsd?: number;
   caseConfig?: string;
   availableQuantity?: number;
@@ -126,6 +129,16 @@ const tryParseStructuredQuoteCSV = (
     // Alternative product
     else if (h.includes('alt') && h.includes('product')) {
       columnMap['altProduct'] = index;
+    }
+    // Quoted vintage (which vintage they're actually providing)
+    else if (
+      (h.includes('quoted') && h.includes('vintage')) ||
+      h === 'vintage quoted' ||
+      h === 'vintage offered' ||
+      h === 'your vintage' ||
+      (h === 'vintage' && !h.includes('alt'))
+    ) {
+      columnMap['quotedVintage'] = index;
     }
     // Alternative vintage
     else if (h.includes('alt') && h.includes('vintage')) {
@@ -251,6 +264,12 @@ const tryParseStructuredQuoteCSV = (
         ? values[columnMap['notes']]?.trim() || undefined
         : undefined;
 
+    // Quoted vintage (which vintage they're providing)
+    const quotedVintage =
+      columnMap['quotedVintage'] !== undefined
+        ? values[columnMap['quotedVintage']]?.trim() || undefined
+        : undefined;
+
     // Alternative fields
     const alternativeProductName =
       columnMap['altProduct'] !== undefined
@@ -286,6 +305,7 @@ const tryParseStructuredQuoteCSV = (
       lineNumber,
       productName,
       quoteType,
+      quotedVintage,
       costPricePerCaseUsd: price,
       caseConfig,
       availableQuantity,
@@ -315,6 +335,12 @@ const extractedQuotesSchema = z.object({
       quoteType: z
         .enum(['exact', 'alternative', 'not_available'])
         .describe('Type of quote response'),
+      quotedVintage: z
+        .string()
+        .optional()
+        .describe(
+          'Which specific vintage the partner is quoting on (e.g., if RFQ asks for "2018, 2016, 2013" and partner quotes "2018")'
+        ),
       costPricePerCaseUsd: z
         .number()
         .optional()
@@ -413,6 +439,7 @@ For each item extract:
 - lineNumber: Match to the RFQ line number (1-based)
 - productName: For verification
 - quoteType: 'exact' if they can supply the exact product, 'alternative' if proposing substitute, 'not_available' if they cannot supply
+- quotedVintage: IMPORTANT - if the RFQ item has multiple vintages (e.g., "2018, 2016, 2013"), extract which specific vintage the partner is actually quoting on
 - costPricePerCaseUsd: Price per case in USD (extract just the number, e.g., "$150.00/case" -> 150)
 - caseConfig: Case configuration (e.g., "6", "12", "6x75cl") - bottles per case
 - availableQuantity: How many cases they have available
@@ -474,6 +501,7 @@ ${content}`;
       lineNumber: quote.lineNumber,
       productName: quote.productName,
       quoteType: quote.quoteType,
+      quotedVintage: quote.quotedVintage,
       costPricePerCaseUsd: quote.costPricePerCaseUsd,
       caseConfig: quote.caseConfig,
       availableQuantity: quote.availableQuantity,

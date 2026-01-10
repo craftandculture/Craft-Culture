@@ -784,9 +784,11 @@ const RfqDetailPage = () => {
                                       {quote.quote.alternativeVintage || 'ALT'}
                                     </span>
                                   ) : (
-                                    item.vintage && (
+                                    // Show the specific vintage the partner quoted on
+                                    // (quotedVintage takes precedence over item.vintage)
+                                    (quote.quote.quotedVintage || item.vintage) && (
                                       <span className={`text-[9px] block ${isSelected ? 'text-text-on-brand/70' : 'text-text-muted'}`}>
-                                        {item.vintage}
+                                        {quote.quote.quotedVintage || item.vintage}
                                       </span>
                                     )
                                   )}
