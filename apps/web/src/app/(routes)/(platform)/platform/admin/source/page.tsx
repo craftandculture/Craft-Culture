@@ -12,6 +12,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { formatDistanceToNow } from 'date-fns';
 import Link from 'next/link';
 import { useState } from 'react';
+import { toast } from 'sonner';
 
 import RfqStatusBadge from '@/app/_source/components/RfqStatusBadge';
 import Button from '@/app/_ui/components/Button/Button';
@@ -45,9 +46,10 @@ const SourcePage = () => {
     api.source.admin.delete.mutationOptions({
       onSuccess: () => {
         void queryClient.invalidateQueries({ queryKey: api.source.admin.getMany.queryKey() });
+        toast.success('RFQ deleted successfully');
       },
       onError: (error) => {
-        alert(`Failed to delete: ${error.message}`);
+        toast.error(`Failed to delete: ${error.message}`);
       },
     }),
   );

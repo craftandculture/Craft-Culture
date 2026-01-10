@@ -8,6 +8,7 @@ import {
   IconChevronDown,
   IconChevronUp,
   IconCopy,
+  IconEdit,
   IconFilter,
   IconInfoCircle,
   IconSend,
@@ -19,6 +20,7 @@ import { format, formatDistanceToNow } from 'date-fns';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
+import { toast } from 'sonner';
 
 import QuoteExcelUpload from '@/app/_source/components/QuoteExcelUpload';
 import RfqStatusBadge from '@/app/_source/components/RfqStatusBadge';
@@ -200,10 +202,17 @@ const PartnerRfqDetailPage = () => {
   // Submit quotes mutation
   const { mutate: submitQuotes, isPending: isSubmitting } = useMutation(
     api.source.partner.submitQuotes.mutationOptions({
-      onSuccess: () => {
+      onSuccess: (data) => {
         void refetch();
         clearDraft();
-        alert('Quotes submitted successfully!');
+        toast.success(
+          data.isUpdate
+            ? `${data.quoteCount} quote${data.quoteCount !== 1 ? 's' : ''} updated successfully!`
+            : `${data.quoteCount} quote${data.quoteCount !== 1 ? 's' : ''} submitted successfully!`,
+        );
+      },
+      onError: (error) => {
+        toast.error(error.message || 'Failed to submit quotes');
       },
     }),
   );
@@ -212,7 +221,11 @@ const PartnerRfqDetailPage = () => {
   const { mutate: declineRfq, isPending: isDeclining } = useMutation(
     api.source.partner.decline.mutationOptions({
       onSuccess: () => {
+        toast.success('RFQ declined');
         router.push('/platform/partner/source');
+      },
+      onError: (error) => {
+        toast.error(error.message || 'Failed to decline RFQ');
       },
     }),
   );
@@ -240,10 +253,12 @@ const PartnerRfqDetailPage = () => {
   // Check if deadline has passed
   const isDeadlinePassed =
     rfq.responseDeadline && new Date() > new Date(rfq.responseDeadline);
+  // Partners can submit or update quotes before deadline
   const canSubmit =
-    rfq.partnerStatus !== 'submitted' &&
     rfq.partnerStatus !== 'declined' &&
     !isDeadlinePassed;
+  // Check if this is an update (already submitted before)
+  const isUpdating = rfq.partnerStatus === 'submitted';
 
   const toggleItemExpanded = (itemId: string) => {
     const newExpanded = new Set(expandedItems);
@@ -285,7 +300,7 @@ const PartnerRfqDetailPage = () => {
     });
 
     if (quotesToSubmit.length === 0) {
-      alert('Please enter at least one quote');
+      toast.warning('Please enter at least one quote before submitting');
       return;
     }
 
@@ -448,8 +463,11 @@ const PartnerRfqDetailPage = () => {
                 onClick={handleSubmitQuotes}
                 isDisabled={isSubmitting || completedCount === 0}
               >
-                <ButtonContent iconLeft={IconSend}>
-                  {isSubmitting ? 'Submitting...' : `Submit ${completedCount} Quote${completedCount !== 1 ? 's' : ''}`}
+                <ButtonContent iconLeft={isUpdating ? IconEdit : IconSend}>
+                  {isSubmitting
+                    ? (isUpdating ? 'Updating...' : 'Submitting...')
+                    : `${isUpdating ? 'Update' : 'Submit'} ${completedCount} Quote${completedCount !== 1 ? 's' : ''}`
+                  }
                 </ButtonContent>
               </Button>
             </div>
@@ -549,7 +567,27 @@ const PartnerRfqDetailPage = () => {
         )}
 
         {/* Status banners */}
-        {rfq.partnerStatus === 'submitted' && (
+        {rfq.partnerStatus === 'submitted' && !isDeadlinePassed && (
+          <Card className="border-border-success bg-fill-success/5">
+            <CardContent className="p-4 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <IconCheck className="h-5 w-5 text-text-success flex-shrink-0" />
+                <Typography variant="bodyMd" className="text-text-success">
+                  You have submitted {rfq.quoteCount} quotes. You can update them before the deadline.
+                </Typography>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setExpandedItems(new Set(rfq.items.map((i) => i.id)))}
+              >
+                <ButtonContent iconLeft={IconEdit}>Edit</ButtonContent>
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+
+        {rfq.partnerStatus === 'submitted' && isDeadlinePassed && (
           <Card className="border-border-success bg-fill-success/5">
             <CardContent className="p-4 flex items-center gap-3">
               <IconCheck className="h-5 w-5 text-text-success" />
@@ -1242,14 +1280,14 @@ const PartnerRfqDetailPage = () => {
               onClick={handleSubmitQuotes}
               isDisabled={isSubmitting || completedCount === 0}
               className="flex-1 min-h-[44px]"
-              aria-label={isSubmitting ? 'Submitting quotes' : `Submit ${completedCount} quotes`}
+              aria-label={isSubmitting ? (isUpdating ? 'Updating quotes' : 'Submitting quotes') : `${isUpdating ? 'Update' : 'Submit'} ${completedCount} quotes`}
             >
-              <ButtonContent iconLeft={IconSend}>
+              <ButtonContent iconLeft={isUpdating ? IconEdit : IconSend}>
                 {isSubmitting
-                  ? 'Submitting...'
+                  ? (isUpdating ? 'Updating...' : 'Submitting...')
                   : completedCount === 0
                     ? 'Quote items to submit'
-                    : `Submit ${completedCount} Quote${completedCount !== 1 ? 's' : ''}`
+                    : `${isUpdating ? 'Update' : 'Submit'} ${completedCount} Quote${completedCount !== 1 ? 's' : ''}`
                 }
               </ButtonContent>
             </Button>

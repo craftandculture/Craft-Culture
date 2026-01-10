@@ -48,6 +48,14 @@ const adminSelectQuote = adminProcedure
       });
     }
 
+    // Prevent selecting N/A quotes (they have no price)
+    if (quote.quote.quoteType === 'not_available' || quote.quote.costPricePerCaseUsd === null) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'Cannot select a quote that is marked as not available',
+      });
+    }
+
     // Check RFQ is in a state where selection is allowed
     const selectableStatuses = ['sent', 'collecting', 'comparing', 'selecting'];
     if (!selectableStatuses.includes(quote.rfqStatus)) {

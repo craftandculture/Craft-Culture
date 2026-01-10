@@ -77,13 +77,8 @@ const partnerSubmitQuotes = winePartnerProcedure
       });
     }
 
-    // Check partner hasn't already submitted
-    if (assignment.assignment.status === 'submitted') {
-      throw new TRPCError({
-        code: 'BAD_REQUEST',
-        message: 'Quotes have already been submitted for this RFQ',
-      });
-    }
+    // Allow updating quotes if already submitted (before deadline)
+    // Note: We no longer block re-submission - partners can update their quotes
 
     // Verify all item IDs belong to this RFQ
     const itemIds = quotes.map((q) => q.itemId);
@@ -153,6 +148,7 @@ const partnerSubmitQuotes = winePartnerProcedure
       await tx.insert(sourceRfqQuotes).values(quoteValues);
 
       // Update partner assignment
+      const isFirstSubmission = assignment.assignment.status !== 'submitted';
       await tx
         .update(sourceRfqPartners)
         .set({
@@ -163,14 +159,16 @@ const partnerSubmitQuotes = winePartnerProcedure
         })
         .where(eq(sourceRfqPartners.id, assignment.assignment.id));
 
-      // Update RFQ response count and status
-      await tx
-        .update(sourceRfqs)
-        .set({
-          responseCount: sql`${sourceRfqs.responseCount} + 1`,
-          status: 'collecting',
-        })
-        .where(eq(sourceRfqs.id, rfqId));
+      // Update RFQ response count only on first submission
+      if (isFirstSubmission) {
+        await tx
+          .update(sourceRfqs)
+          .set({
+            responseCount: sql`${sourceRfqs.responseCount} + 1`,
+            status: 'collecting',
+          })
+          .where(eq(sourceRfqs.id, rfqId));
+      }
 
       // Update item statuses to quoted
       await tx
@@ -191,9 +189,13 @@ const partnerSubmitQuotes = winePartnerProcedure
       quoteCount: quotes.length,
     });
 
+    // Track whether this was first submission for the return value
+    const wasFirstSubmission = assignment.assignment.status !== 'submitted';
+
     return {
       success: true,
       quoteCount: quotes.length,
+      isUpdate: !wasFirstSubmission,
     };
   });
 

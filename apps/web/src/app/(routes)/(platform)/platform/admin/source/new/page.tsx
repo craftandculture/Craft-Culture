@@ -12,6 +12,7 @@ import { useMutation } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+import { toast } from 'sonner';
 
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
@@ -62,13 +63,14 @@ const NewRfqPage = () => {
             quantityUnit: 'cases' as const,
           })));
           setStep('review');
+          toast.success(`Parsed ${result.items.length} items from input`);
         } else {
-          alert(result.message || 'No wine products found in the input. Please check your data or try manual entry.');
+          toast.warning(result.message || 'No wine products found in the input. Please check your data or try manual entry.');
         }
       },
       onError: (error) => {
         console.error('Parse error:', error);
-        alert(`Failed to parse input: ${error.message}`);
+        toast.error(`Failed to parse input: ${error.message}`);
       },
     }),
   );
@@ -81,12 +83,13 @@ const NewRfqPage = () => {
           // Parse the input
           parseInput({ rfqId: rfq.id, inputType, content: inputContent, fileName });
         } else {
+          toast.success('RFQ created successfully');
           router.push(`/platform/admin/source/${rfq.id}`);
         }
       },
       onError: (error) => {
         console.error('Failed to create RFQ:', error);
-        alert(`Failed to create RFQ: ${error.message}`);
+        toast.error(`Failed to create RFQ: ${error.message}`);
       },
     }),
   );
@@ -120,7 +123,7 @@ const NewRfqPage = () => {
           setInputContent(csv);
         } catch (error) {
           console.error('Failed to parse Excel file:', error);
-          alert(`Failed to parse Excel file: ${error instanceof Error ? error.message : 'Unknown error'}`);
+          toast.error(`Failed to parse Excel file: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
       };
       reader.readAsArrayBuffer(file);
@@ -145,7 +148,7 @@ const NewRfqPage = () => {
 
   const handleCreateRfq = () => {
     if (!rfqName.trim()) {
-      alert('Please enter an RFQ name');
+      toast.warning('Please enter an RFQ name');
       return;
     }
 
@@ -164,7 +167,7 @@ const NewRfqPage = () => {
 
   const handleProceedToDetails = () => {
     if (!inputContent.trim() && inputType !== 'manual') {
-      alert('Please enter some content to parse');
+      toast.warning('Please enter some content to parse');
       return;
     }
     setStep('details');
