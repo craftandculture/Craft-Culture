@@ -1,5 +1,7 @@
 import * as XLSX from 'xlsx';
 
+import formatLwin18, { formatCaseConfig } from './formatLwin18';
+
 interface RfqItem {
   id: string;
   productName: string | null;
@@ -8,6 +10,7 @@ interface RfqItem {
   region?: string | null;
   bottleSize?: string | null;
   caseConfig?: number | null;
+  lwin?: string | null;
   quantity?: number | null;
   selectedQuoteId?: string | null;
   finalPriceUsd?: number | null;
@@ -17,7 +20,12 @@ interface RfqItem {
       partnerId: string;
       costPricePerCaseUsd: number | null;
       quoteType: string;
+      quotedVintage?: string | null;
+      caseConfig?: string | null;
       alternativeProductName?: string | null;
+      alternativeVintage?: string | null;
+      alternativeBottleSize?: string | null;
+      alternativeCaseConfig?: string | null;
       leadTimeDays?: number | null;
       stockLocation?: string | null;
       notAvailableReason?: string | null;
@@ -82,6 +90,8 @@ const exportRfqToExcel = (rfq: RfqData) => {
       'Producer',
       'Vintage',
       'Region',
+      'LWIN-18',
+      'Case Config',
       'Qty',
       ...uniquePartners.map((p) => p.businessName),
       'Selected',
@@ -91,11 +101,45 @@ const exportRfqToExcel = (rfq: RfqData) => {
 
   // Add item rows
   for (const item of rfq.items) {
+    // Get selected quote for determining effective values
+    const selectedQuote = item.quotes.find((q) => q.quote.isSelected);
+
+    // Determine effective values based on selected quote
+    const effectiveVintage = selectedQuote
+      ? (selectedQuote.quote.quoteType === 'alternative'
+          ? selectedQuote.quote.alternativeVintage
+          : selectedQuote.quote.quotedVintage) || item.vintage
+      : item.vintage;
+    const effectiveBottleSize = selectedQuote?.quote.quoteType === 'alternative'
+      ? selectedQuote.quote.alternativeBottleSize || item.bottleSize
+      : item.bottleSize;
+    const effectiveCaseConfig = selectedQuote
+      ? (selectedQuote.quote.quoteType === 'alternative'
+          ? selectedQuote.quote.alternativeCaseConfig
+          : selectedQuote.quote.caseConfig) || item.caseConfig
+      : item.caseConfig;
+
+    // Format LWIN-18 with selected quote data
+    const lwin18 = formatLwin18({
+      lwin: item.lwin,
+      vintage: effectiveVintage,
+      bottleSize: effectiveBottleSize,
+      caseConfig: effectiveCaseConfig,
+    });
+
+    // Format case config for display
+    const caseConfigDisplay = formatCaseConfig({
+      caseConfig: effectiveCaseConfig,
+      bottleSize: effectiveBottleSize,
+    });
+
     const row: (string | number)[] = [
       item.productName || '',
       item.producer || '',
       item.vintage || '',
       item.region || '',
+      lwin18 || '',
+      caseConfigDisplay || '',
       item.quantity || 0,
     ];
 
@@ -122,8 +166,7 @@ const exportRfqToExcel = (rfq: RfqData) => {
       }
     }
 
-    // Selected quote info
-    const selectedQuote = item.quotes.find((q) => q.quote.isSelected);
+    // Selected quote info (using selectedQuote from above)
     if (selectedQuote && selectedQuote.quote.costPricePerCaseUsd !== null) {
       row.push(selectedQuote.partner.businessName);
       row.push(item.finalPriceUsd || selectedQuote.quote.costPricePerCaseUsd);
@@ -143,6 +186,8 @@ const exportRfqToExcel = (rfq: RfqData) => {
     { wch: 20 }, // Producer
     { wch: 10 }, // Vintage
     { wch: 15 }, // Region
+    { wch: 20 }, // LWIN-18
+    { wch: 12 }, // Case Config
     { wch: 8 }, // Qty
     ...uniquePartners.map(() => ({ wch: 22 })), // Partner columns
     { wch: 15 }, // Selected
@@ -161,6 +206,8 @@ const exportRfqToExcel = (rfq: RfqData) => {
       'Product',
       'Producer',
       'Vintage',
+      'LWIN-18',
+      'Case Config',
       'Qty',
       'Supplier',
       'Cost/Case',
@@ -185,12 +232,37 @@ const exportRfqToExcel = (rfq: RfqData) => {
       totalCost += costPerCase * quantity;
       totalFinal += lineTotal;
 
+      // Determine effective values for LWIN-18
+      const effectiveVintage = selectedQuote.quote.quoteType === 'alternative'
+        ? selectedQuote.quote.alternativeVintage || item.vintage
+        : selectedQuote.quote.quotedVintage || item.vintage;
+      const effectiveBottleSize = selectedQuote.quote.quoteType === 'alternative'
+        ? selectedQuote.quote.alternativeBottleSize || item.bottleSize
+        : item.bottleSize;
+      const effectiveCaseConfig = selectedQuote.quote.quoteType === 'alternative'
+        ? selectedQuote.quote.alternativeCaseConfig || item.caseConfig
+        : selectedQuote.quote.caseConfig || item.caseConfig;
+
+      // Format LWIN-18 and case config
+      const lwin18 = formatLwin18({
+        lwin: item.lwin,
+        vintage: effectiveVintage,
+        bottleSize: effectiveBottleSize,
+        caseConfig: effectiveCaseConfig,
+      });
+      const caseConfigDisplay = formatCaseConfig({
+        caseConfig: effectiveCaseConfig,
+        bottleSize: effectiveBottleSize,
+      });
+
       selectedData.push([
         selectedQuote.quote.quoteType === 'alternative'
           ? selectedQuote.quote.alternativeProductName || item.productName || ''
           : item.productName || '',
         item.producer || '',
         item.vintage || '',
+        lwin18 || '',
+        caseConfigDisplay || '',
         quantity,
         selectedQuote.partner.businessName,
         costPerCase,
@@ -208,6 +280,8 @@ const exportRfqToExcel = (rfq: RfqData) => {
     '',
     '',
     '',
+    '',
+    '',
     'TOTALS',
     totalCost,
     totalFinal,
@@ -217,7 +291,7 @@ const exportRfqToExcel = (rfq: RfqData) => {
 
   // Add margin calculation
   const margin = totalFinal > 0 ? ((totalFinal - totalCost) / totalFinal) * 100 : 0;
-  selectedData.push(['', '', '', '', 'Margin', '', '', `${margin.toFixed(1)}%`, '']);
+  selectedData.push(['', '', '', '', '', '', 'Margin', '', '', `${margin.toFixed(1)}%`, '']);
 
   const ws2 = XLSX.utils.aoa_to_sheet(selectedData);
 
@@ -226,6 +300,8 @@ const exportRfqToExcel = (rfq: RfqData) => {
     { wch: 35 }, // Product
     { wch: 20 }, // Producer
     { wch: 10 }, // Vintage
+    { wch: 20 }, // LWIN-18
+    { wch: 12 }, // Case Config
     { wch: 8 }, // Qty
     { wch: 18 }, // Supplier
     { wch: 12 }, // Cost/Case
