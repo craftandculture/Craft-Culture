@@ -19,6 +19,7 @@ interface ParsedQuote {
   productName: string;
   quoteType: 'exact' | 'alternative' | 'not_available';
   costPricePerCaseUsd?: number;
+  caseConfig?: string;
   availableQuantity?: number;
   leadTimeDays?: number;
   stockLocation?: string;
@@ -27,6 +28,7 @@ interface ParsedQuote {
   alternativeProductName?: string;
   alternativeProducer?: string;
   alternativeVintage?: string;
+  alternativeCaseConfig?: number;
   alternativeReason?: string;
   confidence: number;
 }
@@ -132,6 +134,20 @@ const tryParseStructuredQuoteCSV = (
     // Alternative reason
     else if (h.includes('alt') && h.includes('reason')) {
       columnMap['altReason'] = index;
+    }
+    // Case config (bottles per case)
+    else if (
+      h.includes('case config') ||
+      h.includes('caseconfig') ||
+      h.includes('case size') ||
+      h.includes('pack size') ||
+      h.includes('bottles per case')
+    ) {
+      columnMap['caseConfig'] = index;
+    }
+    // Alternative case config
+    else if (h.includes('alt') && (h.includes('case') || h.includes('config'))) {
+      columnMap['altCaseConfig'] = index;
     }
   });
 
@@ -251,12 +267,27 @@ const tryParseStructuredQuoteCSV = (
         ? values[columnMap['altReason']]?.trim() || undefined
         : undefined;
 
+    // Case config fields
+    const caseConfig =
+      columnMap['caseConfig'] !== undefined
+        ? values[columnMap['caseConfig']]?.trim() || undefined
+        : undefined;
+
+    const altCaseConfigStr =
+      columnMap['altCaseConfig'] !== undefined
+        ? values[columnMap['altCaseConfig']]?.trim()
+        : undefined;
+    const alternativeCaseConfig = altCaseConfigStr
+      ? parseInt(altCaseConfigStr, 10) || undefined
+      : undefined;
+
     quotes.push({
       itemId,
       lineNumber,
       productName,
       quoteType,
       costPricePerCaseUsd: price,
+      caseConfig,
       availableQuantity,
       leadTimeDays,
       stockLocation,
@@ -264,6 +295,7 @@ const tryParseStructuredQuoteCSV = (
       notAvailableReason,
       alternativeProductName,
       alternativeVintage,
+      alternativeCaseConfig,
       alternativeReason,
       confidence: 0.9,
     });
@@ -287,6 +319,10 @@ const extractedQuotesSchema = z.object({
         .number()
         .optional()
         .describe('Price per case in USD (extract number only)'),
+      caseConfig: z
+        .string()
+        .optional()
+        .describe('Case configuration (e.g., "6", "12", "6x75cl")'),
       availableQuantity: z.number().optional().describe('Available quantity in cases'),
       leadTimeDays: z.number().optional().describe('Lead time in days'),
       stockLocation: z.string().optional().describe('Stock location/warehouse'),
@@ -307,6 +343,10 @@ const extractedQuotesSchema = z.object({
         .string()
         .optional()
         .describe('Alternative vintage if proposing substitute'),
+      alternativeCaseConfig: z
+        .number()
+        .optional()
+        .describe('Alternative case configuration (bottles per case)'),
       alternativeReason: z
         .string()
         .optional()
@@ -374,12 +414,13 @@ For each item extract:
 - productName: For verification
 - quoteType: 'exact' if they can supply the exact product, 'alternative' if proposing substitute, 'not_available' if they cannot supply
 - costPricePerCaseUsd: Price per case in USD (extract just the number, e.g., "$150.00/case" -> 150)
+- caseConfig: Case configuration (e.g., "6", "12", "6x75cl") - bottles per case
 - availableQuantity: How many cases they have available
 - leadTimeDays: Delivery time in days
 - stockLocation: Where the stock is located
 - notes: Any additional notes
 - notAvailableReason: Why they can't supply (if not_available)
-- alternativeProductName/Producer/Vintage/Reason: If proposing alternative
+- alternativeProductName/Producer/Vintage/CaseConfig/Reason: If proposing alternative
 - confidence: Your confidence in the extraction (0-1)
 
 Handle various formats:
@@ -434,6 +475,7 @@ ${content}`;
       productName: quote.productName,
       quoteType: quote.quoteType,
       costPricePerCaseUsd: quote.costPricePerCaseUsd,
+      caseConfig: quote.caseConfig,
       availableQuantity: quote.availableQuantity,
       leadTimeDays: quote.leadTimeDays,
       stockLocation: quote.stockLocation,
@@ -442,6 +484,7 @@ ${content}`;
       alternativeProductName: quote.alternativeProductName,
       alternativeProducer: quote.alternativeProducer,
       alternativeVintage: quote.alternativeVintage,
+      alternativeCaseConfig: quote.alternativeCaseConfig,
       alternativeReason: quote.alternativeReason,
       confidence: quote.confidence,
     };
