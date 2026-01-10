@@ -256,7 +256,7 @@ export interface RfqPDFTemplateProps {
     vintage?: string | null;
     region?: string | null;
     bottleSize?: string | null;
-    caseConfig?: number | null;
+    caseConfig?: string | number | null;
     quantity: number;
     pricePerCase: number;
     lineTotal: number;
@@ -379,6 +379,11 @@ const RfqPDFTemplate = ({
                   <Text style={styles.productMeta}>
                     {[item.producer, item.region, item.vintage].filter(Boolean).join(' • ')}
                   </Text>
+                  {(item.bottleSize || item.caseConfig) && (
+                    <Text style={styles.productMeta}>
+                      {[item.bottleSize, item.caseConfig].filter(Boolean).join(' • ')}
+                    </Text>
+                  )}
                   {item.isAlternative && (
                     <Text style={styles.alternativeBadge}>
                       ALTERNATIVE
