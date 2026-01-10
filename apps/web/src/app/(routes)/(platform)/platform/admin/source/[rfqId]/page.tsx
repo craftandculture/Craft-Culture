@@ -13,6 +13,7 @@ import {
   IconSelectAll,
   IconSend,
   IconSparkles,
+  IconUpload,
   IconX,
 } from '@tabler/icons-react';
 import { useMutation, useQuery } from '@tanstack/react-query';
@@ -23,14 +24,21 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import AddItemModal from '@/app/_source/components/AddItemModal';
 import ItemEditorModal from '@/app/_source/components/ItemEditorModal';
 import type { ItemData } from '@/app/_source/components/ItemEditorModal';
+import QuoteExcelUpload from '@/app/_source/components/QuoteExcelUpload';
 import RfqStatusBadge from '@/app/_source/components/RfqStatusBadge';
 import SendToPartnersDialog from '@/app/_source/components/SendToPartnersDialog';
 import exportRfqToExcel from '@/app/_source/utils/exportRfqToExcel';
 import exportRfqToPDF from '@/app/_source/utils/exportRfqToPDF';
+import type { ParsedQuote } from '@/app/_source/utils/parseQuoteExcel';
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
 import Card from '@/app/_ui/components/Card/Card';
 import CardContent from '@/app/_ui/components/Card/CardContent';
+import Dialog from '@/app/_ui/components/Dialog/Dialog';
+import DialogContent from '@/app/_ui/components/Dialog/DialogContent';
+import DialogDescription from '@/app/_ui/components/Dialog/DialogDescription';
+import DialogHeader from '@/app/_ui/components/Dialog/DialogHeader';
+import DialogTitle from '@/app/_ui/components/Dialog/DialogTitle';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import useTRPC from '@/lib/trpc/browser';
 
@@ -54,6 +62,11 @@ const RfqDetailPage = () => {
   const [isAddItemOpen, setIsAddItemOpen] = useState(false);
   const [isItemEditorOpen, setIsItemEditorOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<ItemData | null>(null);
+
+  // State for partner response upload
+  const [isUploadPartnerResponseOpen, setIsUploadPartnerResponseOpen] = useState(false);
+  const [selectedPartnerId, setSelectedPartnerId] = useState<string>('');
+  const [parsedPartnerQuotes, setParsedPartnerQuotes] = useState<ParsedQuote[] | null>(null);
 
   // Fetch RFQ data
   const { data: rfq, isLoading, refetch } = useQuery({
@@ -104,6 +117,18 @@ const RfqDetailPage = () => {
     api.source.admin.autoSelectBest.mutationOptions({
       onSuccess: () => {
         void refetch();
+      },
+    }),
+  );
+
+  // Submit quotes on behalf of partner mutation
+  const { mutate: submitQuotesOnBehalf, isPending: isSubmittingOnBehalf } = useMutation(
+    api.source.admin.submitQuotesOnBehalf.mutationOptions({
+      onSuccess: () => {
+        void refetch();
+        setIsUploadPartnerResponseOpen(false);
+        setSelectedPartnerId('');
+        setParsedPartnerQuotes(null);
       },
     }),
   );
@@ -229,6 +254,44 @@ const RfqDetailPage = () => {
     autoSelectBest({ rfqId, strategy: 'single_partner', partnerId });
   };
 
+  // Handle parsed quotes from Excel upload for partner
+  const handlePartnerQuotesParsed = (quotes: ParsedQuote[]) => {
+    setParsedPartnerQuotes(quotes);
+  };
+
+  // Submit parsed quotes on behalf of partner
+  const handleSubmitOnBehalf = () => {
+    if (!parsedPartnerQuotes || !selectedPartnerId) return;
+
+    submitQuotesOnBehalf({
+      rfqId,
+      partnerId: selectedPartnerId,
+      quotes: parsedPartnerQuotes.map((q) => ({
+        itemId: q.itemId,
+        quoteType: q.quoteType,
+        costPricePerCaseUsd: q.costPricePerCaseUsd,
+        currency: 'USD',
+        availableQuantity: q.availableQuantity,
+        leadTimeDays: q.leadTimeDays,
+        stockLocation: q.stockLocation,
+        notes: q.notes,
+        notAvailableReason: q.notAvailableReason,
+        alternativeProductName: q.alternativeProductName,
+        alternativeProducer: q.alternativeProducer,
+        alternativeVintage: q.alternativeVintage,
+        alternativeReason: q.alternativeReason,
+      })),
+      partnerNotes: 'Uploaded via admin on behalf of partner',
+    });
+  };
+
+  // Reset upload dialog state
+  const handleCloseUploadDialog = () => {
+    setIsUploadPartnerResponseOpen(false);
+    setSelectedPartnerId('');
+    setParsedPartnerQuotes(null);
+  };
+
   return (
     <div className="container mx-auto max-w-7xl px-4 sm:px-6 py-6 sm:py-8">
       <div className="space-y-6">
@@ -340,9 +403,22 @@ const RfqDetailPage = () => {
         {rfq.partners.length > 0 && (
           <Card>
             <CardContent className="p-4">
-              <Typography variant="headingSm" className="mb-4">
-                Partner Responses
-              </Typography>
+              <div className="flex items-center justify-between mb-4">
+                <Typography variant="headingSm">
+                  Partner Responses
+                </Typography>
+                {canSelectQuotes && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIsUploadPartnerResponseOpen(true)}
+                  >
+                    <ButtonContent iconLeft={IconUpload}>
+                      Upload Response
+                    </ButtonContent>
+                  </Button>
+                )}
+              </div>
               <div className="flex flex-wrap gap-3">
                 {rfq.partners.map((rp) => (
                   <div
@@ -893,6 +969,124 @@ const RfqDetailPage = () => {
           canDelete={canSendToPartners}
           onSuccess={() => void refetch()}
         />
+
+        {/* Upload Partner Response Dialog */}
+        <Dialog open={isUploadPartnerResponseOpen} onOpenChange={handleCloseUploadDialog}>
+          <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Upload Partner Response</DialogTitle>
+              <DialogDescription>
+                Upload an Excel file with a partner&apos;s quote response that was received via email.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4 py-4">
+              {/* Partner Selection */}
+              {!parsedPartnerQuotes && (
+                <div>
+                  <label className="block text-sm font-medium text-text-primary mb-2">
+                    Select Partner
+                  </label>
+                  <select
+                    value={selectedPartnerId}
+                    onChange={(e) => setSelectedPartnerId(e.target.value)}
+                    className="w-full rounded-lg border border-border-primary bg-surface-primary px-3 py-2 text-sm"
+                  >
+                    <option value="">Choose a partner...</option>
+                    {rfq.partners.map((rp) => (
+                      <option key={rp.partnerId} value={rp.partnerId}>
+                        {rp.partner.businessName}
+                        {rp.status === 'submitted' ? ' (Already submitted)' : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {/* Show selected partner info when quotes are parsed */}
+              {parsedPartnerQuotes && selectedPartnerId && (
+                <div className="p-3 bg-fill-brand/5 border border-border-brand rounded-lg">
+                  <Typography variant="bodyMd" className="font-medium">
+                    Submitting for: {rfq.partners.find((p) => p.partnerId === selectedPartnerId)?.partner.businessName}
+                  </Typography>
+                  <Typography variant="bodyXs" colorRole="muted">
+                    {parsedPartnerQuotes.length} quotes ready to submit
+                  </Typography>
+                </div>
+              )}
+
+              {/* Excel Upload Component */}
+              {selectedPartnerId && !parsedPartnerQuotes && (
+                <QuoteExcelUpload
+                  rfqId={rfqId}
+                  partnerId={selectedPartnerId}
+                  items={rfq.items.map((item, idx) => ({
+                    id: item.id,
+                    productName: item.productName,
+                    producer: item.producer,
+                    vintage: item.vintage,
+                    quantity: item.quantity,
+                    sortOrder: idx,
+                  }))}
+                  onQuotesParsed={handlePartnerQuotesParsed}
+                  onCancel={handleCloseUploadDialog}
+                  showDownloadTemplate={false}
+                />
+              )}
+
+              {/* Parsed Quotes Summary & Submit Button */}
+              {parsedPartnerQuotes && (
+                <div className="space-y-4">
+                  <div className="border border-border-muted rounded-lg divide-y divide-border-muted max-h-[300px] overflow-y-auto">
+                    {parsedPartnerQuotes.map((quote) => {
+                      const item = rfq.items.find((i) => i.id === quote.itemId);
+                      return (
+                        <div key={quote.itemId} className="p-3 text-sm">
+                          <div className="flex items-center justify-between">
+                            <span className="font-medium">{item?.productName || quote.productName}</span>
+                            <span className={`px-2 py-0.5 rounded text-xs ${
+                              quote.quoteType === 'exact'
+                                ? 'bg-green-100 text-green-800'
+                                : quote.quoteType === 'alternative'
+                                  ? 'bg-amber-100 text-amber-800'
+                                  : 'bg-red-100 text-red-800'
+                            }`}>
+                              {quote.quoteType === 'exact' ? 'Exact' : quote.quoteType === 'alternative' ? 'Alt' : 'N/A'}
+                            </span>
+                          </div>
+                          {quote.costPricePerCaseUsd && (
+                            <span className="text-text-muted">
+                              ${quote.costPricePerCaseUsd.toFixed(2)}/case
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  <div className="flex items-center justify-end gap-2 pt-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => setParsedPartnerQuotes(null)}
+                    >
+                      <ButtonContent iconLeft={IconX}>Back</ButtonContent>
+                    </Button>
+                    <Button
+                      variant="default"
+                      colorRole="brand"
+                      onClick={handleSubmitOnBehalf}
+                      isDisabled={isSubmittingOnBehalf}
+                    >
+                      <ButtonContent iconLeft={IconCheck}>
+                        {isSubmittingOnBehalf ? 'Submitting...' : `Submit ${parsedPartnerQuotes.length} Quotes`}
+                      </ButtonContent>
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );

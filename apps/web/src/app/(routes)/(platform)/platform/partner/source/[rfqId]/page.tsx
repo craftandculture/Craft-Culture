@@ -11,6 +11,7 @@ import {
   IconFilter,
   IconInfoCircle,
   IconSend,
+  IconUpload,
   IconX,
 } from '@tabler/icons-react';
 import { useMutation, useQuery } from '@tanstack/react-query';
@@ -19,7 +20,9 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 
+import QuoteExcelUpload from '@/app/_source/components/QuoteExcelUpload';
 import RfqStatusBadge from '@/app/_source/components/RfqStatusBadge';
+import type { ParsedQuote } from '@/app/_source/utils/parseQuoteExcel';
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
 import Card from '@/app/_ui/components/Card/Card';
@@ -125,6 +128,7 @@ const PartnerRfqDetailPage = () => {
   const [declineReason, setDeclineReason] = useState('');
   const [showUnquotedOnly, setShowUnquotedOnly] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
+  const [entryMode, setEntryMode] = useState<'manual' | 'excel'>('manual');
 
   // Auto-save key for localStorage
   const storageKey = `source-rfq-draft-${rfqId}`;
@@ -324,6 +328,35 @@ const PartnerRfqDetailPage = () => {
         return !quote.costPricePerCaseUsd || quote.costPricePerCaseUsd <= 0;
       })
     : rfq.items;
+
+  // Handle parsed quotes from Excel upload
+  const handleExcelQuotesParsed = (parsedQuotes: ParsedQuote[]) => {
+    const newQuotes = new Map<string, QuoteEntry>();
+
+    for (const parsed of parsedQuotes) {
+      const quoteEntry: QuoteEntry = {
+        itemId: parsed.itemId,
+        quoteType: parsed.quoteType,
+        costPricePerCaseUsd: parsed.costPricePerCaseUsd,
+        currency: 'USD',
+        availableQuantity: parsed.availableQuantity,
+        leadTimeDays: parsed.leadTimeDays,
+        stockLocation: parsed.stockLocation,
+        notes: parsed.notes,
+        notAvailableReason: parsed.notAvailableReason,
+        alternativeProductName: parsed.alternativeProductName,
+        alternativeProducer: parsed.alternativeProducer,
+        alternativeVintage: parsed.alternativeVintage,
+        alternativeReason: parsed.alternativeReason,
+      };
+      newQuotes.set(parsed.itemId, quoteEntry);
+    }
+
+    setQuotes(newQuotes);
+    setEntryMode('manual'); // Switch back to manual to review/edit
+    // Expand all items so user can review
+    setExpandedItems(new Set(parsedQuotes.map((q) => q.itemId)));
+  };
 
   // Copy quote template from one item to others
   const handleCopyQuoteToAll = (sourceItemId: string) => {
@@ -546,7 +579,59 @@ const PartnerRfqDetailPage = () => {
           </Card>
         )}
 
+        {/* Entry Mode Toggle */}
+        {canSubmit && (
+          <div className="flex items-center gap-2 border-b border-border-muted pb-2">
+            <button
+              type="button"
+              onClick={() => setEntryMode('manual')}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                entryMode === 'manual'
+                  ? 'bg-fill-brand text-text-on-brand'
+                  : 'bg-fill-muted text-text-muted hover:bg-fill-muted/80'
+              }`}
+            >
+              Manual Entry
+            </button>
+            <button
+              type="button"
+              onClick={() => setEntryMode('excel')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                entryMode === 'excel'
+                  ? 'bg-fill-brand text-text-on-brand'
+                  : 'bg-fill-muted text-text-muted hover:bg-fill-muted/80'
+              }`}
+            >
+              <IconUpload className="h-4 w-4" />
+              Upload Excel
+            </button>
+          </div>
+        )}
+
+        {/* Excel Upload Section */}
+        {canSubmit && entryMode === 'excel' && (
+          <Card>
+            <CardContent className="p-4">
+              <QuoteExcelUpload
+                rfqId={rfqId}
+                items={rfq.items.map((item) => ({
+                  id: item.id,
+                  productName: item.productName,
+                  producer: item.producer,
+                  vintage: item.vintage,
+                  quantity: item.quantity,
+                  sortOrder: rfq.items.indexOf(item),
+                }))}
+                onQuotesParsed={handleExcelQuotesParsed}
+                onCancel={() => setEntryMode('manual')}
+                showDownloadTemplate={true}
+              />
+            </CardContent>
+          </Card>
+        )}
+
         {/* Items to quote - Compact table-like layout */}
+        {entryMode === 'manual' && (
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <Typography variant="headingSm">
@@ -1072,6 +1157,7 @@ const PartnerRfqDetailPage = () => {
           })}
         </div>
         </div>
+        )}
 
         {/* Overall Partner Notes */}
         {canSubmit && (

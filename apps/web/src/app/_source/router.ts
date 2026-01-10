@@ -13,18 +13,22 @@ import adminGetManyRfqs from './controller/adminGetManyRfqs';
 import adminGetOneRfq from './controller/adminGetOneRfq';
 import adminGetPurchaseOrders from './controller/adminGetPurchaseOrders';
 import adminParseInput from './controller/adminParseInput';
+import adminParseQuoteExcel from './controller/adminParseQuoteExcel';
 import adminSearchLwin from './controller/adminSearchLwin';
 import adminSelectQuote from './controller/adminSelectQuote';
 import adminSendPurchaseOrder from './controller/adminSendPurchaseOrder';
 import adminSendToPartners from './controller/adminSendToPartners';
+import adminSubmitQuotesOnBehalf from './controller/adminSubmitQuotesOnBehalf';
 import adminUpdateItem from './controller/adminUpdateItem';
 import adminUpdateRfq from './controller/adminUpdateRfq';
 import partnerConfirmPurchaseOrder from './controller/partnerConfirmPurchaseOrder';
 import partnerDeclineRfq from './controller/partnerDeclineRfq';
+import partnerDownloadQuoteTemplate from './controller/partnerDownloadQuoteTemplate';
 import partnerGetManyRfqs from './controller/partnerGetManyRfqs';
 import partnerGetOnePurchaseOrder from './controller/partnerGetOnePurchaseOrder';
 import partnerGetOneRfq from './controller/partnerGetOneRfq';
 import partnerGetPurchaseOrders from './controller/partnerGetPurchaseOrders';
+import partnerParseQuoteExcel from './controller/partnerParseQuoteExcel';
 import partnerSubmitQuotes from './controller/partnerSubmitQuotes';
 import partnerUpdateDeliveryStatus from './controller/partnerUpdateDeliveryStatus';
 
@@ -49,6 +53,9 @@ const adminRouter = createTRPCRouter({
   generatePurchaseOrders: adminGeneratePurchaseOrders,
   sendPurchaseOrder: adminSendPurchaseOrder,
   getPurchaseOrders: adminGetPurchaseOrders,
+  // Excel quote upload endpoints
+  parseQuoteExcel: adminParseQuoteExcel,
+  submitQuotesOnBehalf: adminSubmitQuotesOnBehalf,
 });
 
 const partnerRouter = createTRPCRouter({
@@ -56,6 +63,9 @@ const partnerRouter = createTRPCRouter({
   getOne: partnerGetOneRfq,
   submitQuotes: partnerSubmitQuotes,
   decline: partnerDeclineRfq,
+  // Excel quote upload endpoints
+  downloadQuoteTemplate: partnerDownloadQuoteTemplate,
+  parseQuoteExcel: partnerParseQuoteExcel,
   // Purchase Order endpoints
   getPurchaseOrders: partnerGetPurchaseOrders,
   getOnePurchaseOrder: partnerGetOnePurchaseOrder,
