@@ -93,59 +93,75 @@ const adminBulkSelectQuotes = adminProcedure
       return { updated: itemIds.length, cleared: true };
     }
 
-    // Process selections
+    // Process selections with batch operations
     const now = new Date();
-    let updatedCount = 0;
+    const selectionQuoteIds = selections.map((s) => s.quoteId);
 
-    for (const selection of selections) {
-      const { itemId, quoteId } = selection;
+    // Verify all quotes exist and match items in one query
+    const validQuotes = await db
+      .select({
+        id: sourceRfqQuotes.id,
+        itemId: sourceRfqQuotes.itemId,
+        costPricePerCaseUsd: sourceRfqQuotes.costPricePerCaseUsd,
+      })
+      .from(sourceRfqQuotes)
+      .where(inArray(sourceRfqQuotes.id, selectionQuoteIds));
 
-      // Verify quote exists and belongs to this item
-      const [quote] = await db
-        .select()
-        .from(sourceRfqQuotes)
-        .where(eq(sourceRfqQuotes.id, quoteId));
+    // Build map for quick lookup
+    const quoteMap = new Map(validQuotes.map((q) => [q.id, q]));
 
-      if (!quote || quote.itemId !== itemId) {
-        continue; // Skip invalid selections
-      }
+    // Filter to valid selections only
+    const validSelections = selections.filter((s) => {
+      const quote = quoteMap.get(s.quoteId);
+      return quote && quote.itemId === s.itemId;
+    });
 
-      // Unselect any previously selected quote for this item
-      await db
-        .update(sourceRfqQuotes)
-        .set({ isSelected: false })
-        .where(eq(sourceRfqQuotes.itemId, itemId));
-
-      // Select the new quote
-      await db
-        .update(sourceRfqQuotes)
-        .set({ isSelected: true })
-        .where(eq(sourceRfqQuotes.id, quoteId));
-
-      // Update the item with selection info
-      await db
-        .update(sourceRfqItems)
-        .set({
-          selectedQuoteId: quoteId,
-          selectedAt: now,
-          selectedBy: user.id,
-          status: 'selected',
-          calculatedPriceUsd: quote.costPricePerCaseUsd,
-          finalPriceUsd: quote.costPricePerCaseUsd,
-          priceAdjustedBy: null,
-        })
-        .where(eq(sourceRfqItems.id, itemId));
-
-      updatedCount++;
+    if (validSelections.length === 0) {
+      return { updated: 0 };
     }
 
-    // Update RFQ status to selecting
-    await db
-      .update(sourceRfqs)
-      .set({ status: 'selecting' })
-      .where(eq(sourceRfqs.id, rfqId));
+    const validItemIds = validSelections.map((s) => s.itemId);
+    const validQuoteIds = validSelections.map((s) => s.quoteId);
 
-    return { updated: updatedCount };
+    // Use transaction for atomicity
+    await db.transaction(async (tx) => {
+      // 1. Unselect all existing quotes for these items in one query
+      await tx
+        .update(sourceRfqQuotes)
+        .set({ isSelected: false })
+        .where(inArray(sourceRfqQuotes.itemId, validItemIds));
+
+      // 2. Select new quotes in one query
+      await tx
+        .update(sourceRfqQuotes)
+        .set({ isSelected: true })
+        .where(inArray(sourceRfqQuotes.id, validQuoteIds));
+
+      // 3. Update items with CASE statement for prices
+      for (const selection of validSelections) {
+        const quote = quoteMap.get(selection.quoteId)!;
+        await tx
+          .update(sourceRfqItems)
+          .set({
+            selectedQuoteId: selection.quoteId,
+            selectedAt: now,
+            selectedBy: user.id,
+            status: 'selected',
+            calculatedPriceUsd: quote.costPricePerCaseUsd,
+            finalPriceUsd: quote.costPricePerCaseUsd,
+            priceAdjustedBy: null,
+          })
+          .where(eq(sourceRfqItems.id, selection.itemId));
+      }
+
+      // 4. Update RFQ status to selecting
+      await tx
+        .update(sourceRfqs)
+        .set({ status: 'selecting' })
+        .where(eq(sourceRfqs.id, rfqId));
+    });
+
+    return { updated: validSelections.length };
   });
 
 export default adminBulkSelectQuotes;

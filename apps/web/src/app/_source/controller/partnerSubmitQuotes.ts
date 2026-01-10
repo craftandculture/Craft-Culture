@@ -104,17 +104,7 @@ const partnerSubmitQuotes = winePartnerProcedure
       });
     }
 
-    // Delete any existing quotes from this partner for this RFQ
-    await db
-      .delete(sourceRfqQuotes)
-      .where(
-        and(
-          eq(sourceRfqQuotes.rfqId, rfqId),
-          eq(sourceRfqQuotes.partnerId, partnerId),
-        ),
-      );
-
-    // Insert new quotes
+    // Prepare quote values
     const quoteValues = quotes.map((quote) => ({
       rfqId,
       itemId: quote.itemId,
@@ -145,40 +135,54 @@ const partnerSubmitQuotes = winePartnerProcedure
       alternativeReason: quote.alternativeReason,
     }));
 
-    await db.insert(sourceRfqQuotes).values(quoteValues);
+    // Use transaction to ensure atomicity of all database operations
+    await db.transaction(async (tx) => {
+      // Delete any existing quotes from this partner for this RFQ
+      await tx
+        .delete(sourceRfqQuotes)
+        .where(
+          and(
+            eq(sourceRfqQuotes.rfqId, rfqId),
+            eq(sourceRfqQuotes.partnerId, partnerId),
+          ),
+        );
 
-    // Update partner assignment
-    await db
-      .update(sourceRfqPartners)
-      .set({
-        status: 'submitted',
-        submittedAt: new Date(),
-        partnerNotes,
-        quoteCount: quotes.length,
-      })
-      .where(eq(sourceRfqPartners.id, assignment.assignment.id));
+      // Insert new quotes
+      await tx.insert(sourceRfqQuotes).values(quoteValues);
 
-    // Update RFQ response count and status
-    await db
-      .update(sourceRfqs)
-      .set({
-        responseCount: sql`${sourceRfqs.responseCount} + 1`,
-        status: 'collecting',
-      })
-      .where(eq(sourceRfqs.id, rfqId));
+      // Update partner assignment
+      await tx
+        .update(sourceRfqPartners)
+        .set({
+          status: 'submitted',
+          submittedAt: new Date(),
+          partnerNotes,
+          quoteCount: quotes.length,
+        })
+        .where(eq(sourceRfqPartners.id, assignment.assignment.id));
 
-    // Update item statuses to quoted
-    await db
-      .update(sourceRfqItems)
-      .set({ status: 'quoted' })
-      .where(
-        and(
-          eq(sourceRfqItems.rfqId, rfqId),
-          sql`${sourceRfqItems.id} IN ${itemIds}`,
-        ),
-      );
+      // Update RFQ response count and status
+      await tx
+        .update(sourceRfqs)
+        .set({
+          responseCount: sql`${sourceRfqs.responseCount} + 1`,
+          status: 'collecting',
+        })
+        .where(eq(sourceRfqs.id, rfqId));
 
-    // Notify admins of the response (non-blocking)
+      // Update item statuses to quoted
+      await tx
+        .update(sourceRfqItems)
+        .set({ status: 'quoted' })
+        .where(
+          and(
+            eq(sourceRfqItems.rfqId, rfqId),
+            sql`${sourceRfqItems.id} IN ${itemIds}`,
+          ),
+        );
+    });
+
+    // Notify admins of the response (non-blocking, outside transaction)
     void notifyAdminOfPartnerResponse({
       rfqId,
       partnerId,

@@ -1,6 +1,7 @@
 'use client';
 
 import {
+  IconAlertTriangle,
   IconArrowLeft,
   IconCheck,
   IconEdit,
@@ -92,6 +93,15 @@ const RfqDetailPage = () => {
   // Bulk select mutation
   const { mutate: bulkSelectQuotes, isPending: isBulkSelecting } = useMutation(
     api.source.admin.bulkSelectQuotes.mutationOptions({
+      onSuccess: () => {
+        void refetch();
+      },
+    }),
+  );
+
+  // Auto-select best mutation (server-side for better performance)
+  const { mutate: autoSelectBest, isPending: isAutoSelecting } = useMutation(
+    api.source.admin.autoSelectBest.mutationOptions({
       onSuccess: () => {
         void refetch();
       },
@@ -201,38 +211,10 @@ const RfqDetailPage = () => {
     setIsItemEditorOpen(true);
   };
 
-  // Auto-select best prices for all items
+  // Auto-select best prices for all items (server-side)
   const handleAutoSelectBest = () => {
     if (!rfq) return;
-
-    const selections: { itemId: string; quoteId: string }[] = [];
-
-    for (const item of rfq.items) {
-      // Skip already selected items
-      if (item.selectedQuoteId) continue;
-
-      // Find best price (lowest non-null price)
-      const validQuotes = item.quotes.filter(
-        (q) =>
-          q.quote.quoteType !== 'not_available' &&
-          q.quote.costPricePerCaseUsd !== null &&
-          q.quote.costPricePerCaseUsd > 0,
-      );
-
-      if (validQuotes.length > 0) {
-        const bestQuote = validQuotes.reduce((best, current) =>
-          (current.quote.costPricePerCaseUsd ?? Infinity) <
-          (best.quote.costPricePerCaseUsd ?? Infinity)
-            ? current
-            : best,
-        );
-        selections.push({ itemId: item.id, quoteId: bestQuote.quote.id });
-      }
-    }
-
-    if (selections.length > 0) {
-      bulkSelectQuotes({ rfqId, selections });
-    }
+    autoSelectBest({ rfqId, strategy: 'lowest_price' });
   };
 
   // Clear all selections
@@ -241,27 +223,10 @@ const RfqDetailPage = () => {
     bulkSelectQuotes({ rfqId, selections: [], clearAll: true });
   };
 
-  // Select all from one partner
+  // Select all from one partner (server-side)
   const handleSelectAllFromPartner = (partnerId: string) => {
     if (!rfq) return;
-
-    const selections: { itemId: string; quoteId: string }[] = [];
-
-    for (const item of rfq.items) {
-      const partnerQuote = item.quotes.find(
-        (q) =>
-          q.quote.partnerId === partnerId &&
-          q.quote.quoteType !== 'not_available' &&
-          q.quote.costPricePerCaseUsd !== null,
-      );
-      if (partnerQuote) {
-        selections.push({ itemId: item.id, quoteId: partnerQuote.quote.id });
-      }
-    }
-
-    if (selections.length > 0) {
-      bulkSelectQuotes({ rfqId, selections });
-    }
+    autoSelectBest({ rfqId, strategy: 'single_partner', partnerId });
   };
 
   return (
@@ -443,11 +408,11 @@ const RfqDetailPage = () => {
                     variant="outline"
                     size="sm"
                     onClick={handleAutoSelectBest}
-                    isDisabled={isBulkSelecting}
+                    isDisabled={isBulkSelecting || isAutoSelecting}
                   >
                     <ButtonContent iconLeft={IconSparkles}>
-                      <span className="hidden sm:inline">Auto-Select Best</span>
-                      <span className="sm:hidden">Auto</span>
+                      <span className="hidden sm:inline">{isAutoSelecting ? 'Selecting...' : 'Auto-Select Best'}</span>
+                      <span className="sm:hidden">{isAutoSelecting ? '...' : 'Auto'}</span>
                     </ButtonContent>
                   </Button>
                   {uniquePartners.length > 0 && (
@@ -577,6 +542,15 @@ const RfqDetailPage = () => {
                               disabled={!canSendToPartners && !canSelectQuotes}
                             >
                               <div className="flex items-baseline gap-1.5">
+                                {/* Low confidence warning */}
+                                {item.parseConfidence !== null && item.parseConfidence < 0.7 && (
+                                  <span
+                                    className="shrink-0"
+                                    title={`Low parse confidence: ${Math.round(item.parseConfidence * 100)}% - click to review`}
+                                  >
+                                    <IconAlertTriangle className="h-3 w-3 text-text-warning" />
+                                  </span>
+                                )}
                                 <span
                                   className="text-xs font-semibold truncate group-hover:text-text-brand transition-colors"
                                   title={item.productName || ''}
@@ -597,6 +571,9 @@ const RfqDetailPage = () => {
                                   <span className="font-mono bg-fill-muted px-1 rounded">
                                     {item.lwin}
                                   </span>
+                                )}
+                                {!item.lwin && item.parseConfidence !== null && item.parseConfidence >= 0.7 && (
+                                  <span className="text-text-warning text-[9px]">No LWIN</span>
                                 )}
                                 {item.producer && <span>{item.producer}</span>}
                                 {item.region && (
