@@ -687,6 +687,8 @@ export const notificationType = pgEnum('notification_type', [
   'rfq_response_submitted',
   'rfq_deadline_reminder',
   'rfq_quotes_selected',
+  // SOURCE PO notifications
+  'po_received',
 ]);
 
 /**
