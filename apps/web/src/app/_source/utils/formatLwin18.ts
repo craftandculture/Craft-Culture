@@ -53,41 +53,76 @@ const parseCaseConfigToQty = (caseConfig: number | string | null | undefined): n
 };
 
 /**
+ * Parse bottle size string to milliliters
+ *
+ * @example
+ *   parseBottleSizeToMl('750ml'); // returns 750
+ *   parseBottleSizeToMl('1.5L'); // returns 1500
+ *   parseBottleSizeToMl('75cl'); // returns 750
+ */
+const parseBottleSizeToMl = (bottleSize: string | null | undefined): number | null => {
+  if (!bottleSize) return null;
+
+  const normalized = bottleSize.toLowerCase().trim();
+
+  // Handle ml format (e.g., "750ml", "750 ml")
+  const mlMatch = normalized.match(/^(\d+(?:\.\d+)?)\s*ml$/);
+  if (mlMatch && mlMatch[1]) {
+    return Math.round(parseFloat(mlMatch[1]));
+  }
+
+  // Handle cl format (e.g., "75cl", "75 cl")
+  const clMatch = normalized.match(/^(\d+(?:\.\d+)?)\s*cl$/);
+  if (clMatch && clMatch[1]) {
+    return Math.round(parseFloat(clMatch[1]) * 10);
+  }
+
+  // Handle L format (e.g., "1.5L", "1.5 L", "1L")
+  const lMatch = normalized.match(/^(\d+(?:\.\d+)?)\s*l$/);
+  if (lMatch && lMatch[1]) {
+    return Math.round(parseFloat(lMatch[1]) * 1000);
+  }
+
+  return null;
+};
+
+/**
  * Format LWIN-18 from component parts
  *
  * LWIN-18 structure:
  * - Digits 1-7: Base LWIN (wine identifier)
  * - Digits 8-11: Vintage year (1000 for NV)
- * - Digits 12-15: Bottle size in centiliters (e.g., 0075 for 75cl/750ml)
- * - Digits 16-18: Pack quantity (e.g., 006 for 6-pack)
+ * - Digits 12-13: Pack quantity (e.g., 12 for 12-pack)
+ * - Digits 14-18: Bottle size in milliliters (e.g., 00750 for 750ml)
  *
  * This function always returns a full 18-digit LWIN when a base LWIN is provided.
  * Missing data uses standard defaults:
  * - Vintage: 1000 (NV - non-vintage indicator)
- * - Bottle size: 0075 (75cl / 750ml - standard wine bottle)
- * - Pack quantity: 001 (single bottle)
+ * - Pack quantity: 06 (standard 6-pack)
+ * - Bottle size: 00750 (750ml - standard wine bottle)
+ *
+ * @example
+ *   formatLwin18({
+ *     lwin: '1012361',
+ *     vintage: '2009',
+ *     bottleSize: '750ml',
+ *     caseConfig: 12,
+ *   });
+ *   // returns '101236120091200750'
  *
  * @example
  *   formatLwin18({
  *     lwin: '1234567',
  *     vintage: '2018',
- *     bottleSize: '750ml',
  *     caseConfig: 6,
  *   });
- *   // returns '123456720180075006'
- *
- * @example
- *   formatLwin18({
- *     lwin: '1234567',
- *     vintage: '2018',
- *   });
- *   // returns '123456720180075001' (uses defaults for bottle/pack)
+ *   // returns '123456720180600750' (uses default for bottle)
  *
  * @example
  *   formatLwin18({
  *     lwin: '1234567',
  *   });
- *   // returns '123456710000075001' (NV with defaults)
+ *   // returns '123456710000600750' (NV with defaults)
  */
 const formatLwin18 = ({
   lwin,
@@ -114,15 +149,15 @@ const formatLwin18 = ({
     }
   }
 
-  // Parse bottle size, default to 75cl (standard 750ml bottle)
-  const bottleCl = parseBottleSizeToCl(bottleSize) ?? 75;
-  const bottleCode = bottleCl.toString().padStart(4, '0');
+  // Parse pack quantity, default to 6 (standard case)
+  const packQty = parseCaseConfigToQty(caseConfig) ?? 6;
+  const packCode = packQty.toString().padStart(2, '0').slice(0, 2);
 
-  // Parse pack quantity, default to 1
-  const packQty = parseCaseConfigToQty(caseConfig) ?? 1;
-  const packCode = packQty.toString().padStart(3, '0');
+  // Parse bottle size in ml, default to 750ml (standard wine bottle)
+  const bottleMl = parseBottleSizeToMl(bottleSize) ?? 750;
+  const bottleCode = bottleMl.toString().padStart(5, '0');
 
-  return baseLwin + vintageCode + bottleCode + packCode;
+  return baseLwin + vintageCode + packCode + bottleCode;
 };
 
 /**
