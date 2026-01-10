@@ -11,6 +11,8 @@ import {
 } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
+import notifyPartnerOfQuoteSelection from '../utils/notifyPartnerOfQuoteSelection';
+
 const finalizeRfqSchema = z.object({
   rfqId: z.string().uuid(),
 });
@@ -165,6 +167,16 @@ const adminFinalizeRfq = adminProcedure
     // 7. Return partner groupings for PO preview
     const partnerSelections = Array.from(partnerSelectionsMap.values());
     const grandTotalUsd = partnerSelections.reduce((sum, ps) => sum + ps.totalUsd, 0);
+
+    // 8. Notify partners that their quotes were selected (fire and forget)
+    for (const partnerSelection of partnerSelections) {
+      void notifyPartnerOfQuoteSelection({
+        rfqId,
+        partnerId: partnerSelection.partnerId,
+        selectedItemCount: partnerSelection.items.length,
+        totalAmountUsd: partnerSelection.totalUsd,
+      });
+    }
 
     return {
       rfqId,
