@@ -105,6 +105,8 @@ const adminGenerateFinalQuote = adminProcedure
         caseConfig: quote.quoteType === 'alternative'
           ? quote.alternativeCaseConfig || item.caseConfig
           : quote.caseConfig || item.caseConfig,
+        // Include LWIN for PDF/Excel export
+        lwin: item.lwin,
         quantity,
         pricePerCase: finalPerCase,
         lineTotal,

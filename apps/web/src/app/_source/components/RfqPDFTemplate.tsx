@@ -2,6 +2,8 @@
 
 import { Document, Font, Page, StyleSheet, Text, View } from '@react-pdf/renderer';
 
+import formatLwin18, { formatCaseConfig } from '../utils/formatLwin18';
+
 // Register fonts
 Font.register({
   family: 'Roboto',
@@ -257,6 +259,7 @@ export interface RfqPDFTemplateProps {
     region?: string | null;
     bottleSize?: string | null;
     caseConfig?: string | number | null;
+    lwin?: string | null;
     quantity: number;
     pricePerCase: number;
     lineTotal: number;
@@ -368,40 +371,54 @@ const RfqPDFTemplate = ({
               <Text style={styles.colSupplier}>Supplier</Text>
             </View>
 
-            {lineItems.map((item, index) => (
-              <View
-                key={index}
-                style={index % 2 === 1 ? [styles.tableRow, styles.tableRowAlt] : styles.tableRow}
-                wrap={false}
-              >
-                <View style={styles.colProduct}>
-                  <Text style={styles.productName}>{item.productName}</Text>
-                  <Text style={styles.productMeta}>
-                    {[item.producer, item.region, item.vintage].filter(Boolean).join(' • ')}
-                  </Text>
-                  {(item.bottleSize || item.caseConfig) && (
+            {lineItems.map((item, index) => {
+              // Generate LWIN-18 and case config display
+              const lwin18 = formatLwin18({
+                lwin: item.lwin,
+                vintage: item.vintage,
+                bottleSize: item.bottleSize,
+                caseConfig: item.caseConfig,
+              });
+              const caseConfigDisplay = formatCaseConfig({
+                caseConfig: item.caseConfig,
+                bottleSize: item.bottleSize,
+              });
+
+              return (
+                <View
+                  key={index}
+                  style={index % 2 === 1 ? [styles.tableRow, styles.tableRowAlt] : styles.tableRow}
+                  wrap={false}
+                >
+                  <View style={styles.colProduct}>
+                    <Text style={styles.productName}>{item.productName}</Text>
                     <Text style={styles.productMeta}>
-                      {[item.bottleSize, item.caseConfig].filter(Boolean).join(' • ')}
+                      {[item.producer, item.region, item.vintage].filter(Boolean).join(' • ')}
                     </Text>
-                  )}
-                  {item.isAlternative && (
-                    <Text style={styles.alternativeBadge}>
-                      ALTERNATIVE
-                      {item.alternativeReason && `: ${item.alternativeReason}`}
-                    </Text>
-                  )}
-                  {item.leadTimeDays && (
-                    <Text style={styles.productMeta}>{item.leadTimeDays} days lead time</Text>
-                  )}
+                    {(lwin18 || caseConfigDisplay) && (
+                      <Text style={styles.productMeta}>
+                        {[lwin18, caseConfigDisplay].filter(Boolean).join(' | ')}
+                      </Text>
+                    )}
+                    {item.isAlternative && (
+                      <Text style={styles.alternativeBadge}>
+                        ALTERNATIVE
+                        {item.alternativeReason && `: ${item.alternativeReason}`}
+                      </Text>
+                    )}
+                    {item.leadTimeDays && (
+                      <Text style={styles.productMeta}>{item.leadTimeDays} days lead time</Text>
+                    )}
+                  </View>
+                  <Text style={styles.colQuantity}>
+                    {item.quantity} {item.quantity === 1 ? 'cs' : 'cs'}
+                  </Text>
+                  <Text style={styles.colPrice}>{formatPrice(item.pricePerCase)}</Text>
+                  <Text style={styles.colTotal}>{formatPrice(item.lineTotal)}</Text>
+                  <Text style={styles.colSupplier}>{item.supplierName || '-'}</Text>
                 </View>
-                <Text style={styles.colQuantity}>
-                  {item.quantity} {item.quantity === 1 ? 'cs' : 'cs'}
-                </Text>
-                <Text style={styles.colPrice}>{formatPrice(item.pricePerCase)}</Text>
-                <Text style={styles.colTotal}>{formatPrice(item.lineTotal)}</Text>
-                <Text style={styles.colSupplier}>{item.supplierName || '-'}</Text>
-              </View>
-            ))}
+              );
+            })}
           </View>
         </View>
 
