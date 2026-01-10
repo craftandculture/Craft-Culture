@@ -24,9 +24,16 @@ vi.mock('next/image', () => ({
   ),
 }));
 
-// Mock ProductDetailsTooltip to simplify testing
-vi.mock('./ProductDetailsTooltip', () => ({
+// Mock ProductDetailsPopover to simplify testing
+vi.mock('./ProductDetailsPopover', () => ({
   default: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}));
+
+// Mock LeadTimeBadge to avoid tRPC dependency
+vi.mock('./LeadTimeBadge', () => ({
+  default: ({ source }: { source: string }) => (
+    <span data-testid="lead-time-badge">{source}</span>
+  ),
 }));
 
 describe('ProductCard', () => {
@@ -133,8 +140,8 @@ describe('ProductCard', () => {
 
       render(<ProductCard product={product} onAdd={handleAdd} />);
 
-      // Price: 100 USD * 3.67 = 367 AED (rounded, no currency symbol for AED)
-      expect(screen.getByText('367')).toBeInTheDocument();
+      // Price: 100 USD * 3.67 = 367 AED (with AED prefix)
+      expect(screen.getByText('AED 367')).toBeInTheDocument();
     });
 
     it('should display price in USD when displayCurrency is USD', () => {
@@ -187,8 +194,8 @@ describe('ProductCard', () => {
 
       render(<ProductCard product={product} onAdd={handleAdd} />);
 
-      // Price: 0 * 3.67 = 0 (rounded, no decimals)
-      expect(screen.getByText('0')).toBeInTheDocument();
+      // Price: 0 * 3.67 = 0 (with AED prefix)
+      expect(screen.getByText('AED 0')).toBeInTheDocument();
     });
   });
 
@@ -377,8 +384,8 @@ describe('ProductCard', () => {
 
       // Should still render the card
       expect(screen.getByText('Château Test 2020')).toBeInTheDocument();
-      // Price should default to 0 (no decimals)
-      expect(screen.getByText('0')).toBeInTheDocument();
+      // Price should default to 0 (with AED prefix)
+      expect(screen.getByText('AED 0')).toBeInTheDocument();
     });
 
     it('should handle very long product name', () => {

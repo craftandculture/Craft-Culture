@@ -31,7 +31,7 @@ describe('CommissionBreakdown', () => {
       );
 
       expect(
-        screen.getByRole('button', { name: /your commission breakdown/i }),
+        screen.getByRole('button', { name: /your earnings/i }),
       ).toBeInTheDocument();
 
       // Breakdown should not be visible initially
@@ -62,7 +62,7 @@ describe('CommissionBreakdown', () => {
 
       // Check for info icon (IconInfoCircle is rendered)
       const infoIcon = screen.getByRole('button', {
-        name: /your commission breakdown/i,
+        name: /your earnings/i,
       }).parentElement;
       expect(infoIcon).toBeInTheDocument();
     });
@@ -76,7 +76,7 @@ describe('CommissionBreakdown', () => {
         />,
       );
 
-      const button = screen.getByRole('button', { name: /your commission breakdown/i });
+      const button = screen.getByRole('button', { name: /your earnings/i });
       const chevronIcon = button.querySelector('[class*="transition-transform"]');
       expect(chevronIcon).toBeInTheDocument();
       expect(chevronIcon).not.toHaveClass('rotate-180');
@@ -94,11 +94,11 @@ describe('CommissionBreakdown', () => {
         />,
       );
 
-      const button = screen.getByRole('button', { name: /your commission breakdown/i });
+      const button = screen.getByRole('button', { name: /your earnings/i });
       await user.click(button);
 
-      // Breakdown should now be visible
-      expect(screen.getByText('By product')).toBeInTheDocument();
+      // Breakdown should now be visible - check for total earnings text
+      expect(screen.getByText('Total Earnings')).toBeInTheDocument();
     });
 
     it('should collapse accordion when clicked again', async () => {
@@ -111,16 +111,16 @@ describe('CommissionBreakdown', () => {
         />,
       );
 
-      const button = screen.getByRole('button', { name: /your commission breakdown/i });
+      const button = screen.getByRole('button', { name: /your earnings/i });
 
       // Expand
       await user.click(button);
-      expect(screen.getByText('By product')).toBeInTheDocument();
+      expect(screen.getByText('Total Earnings')).toBeInTheDocument();
 
       // Collapse
       await user.click(button);
       expect(
-        screen.queryByText('By product'),
+        screen.queryByText('Total Earnings'),
       ).not.toBeInTheDocument();
     });
 
@@ -134,7 +134,7 @@ describe('CommissionBreakdown', () => {
         />,
       );
 
-      const button = screen.getByRole('button', { name: /your commission breakdown/i });
+      const button = screen.getByRole('button', { name: /your earnings/i });
       const chevronIcon = button.querySelector('[class*="transition-transform"]');
 
       await user.click(button);
@@ -154,7 +154,7 @@ describe('CommissionBreakdown', () => {
         />,
       );
 
-      const button = screen.getByRole('button', { name: /your commission breakdown/i });
+      const button = screen.getByRole('button', { name: /your earnings/i });
       await user.click(button);
 
       // Check both product names are displayed
@@ -172,19 +172,18 @@ describe('CommissionBreakdown', () => {
         />,
       );
 
-      const button = screen.getByRole('button', { name: /your commission breakdown/i });
+      const button = screen.getByRole('button', { name: /your earnings/i });
       await user.click(button);
 
-      // Check calculation display: "2 cases × $100"
-      expect(screen.getByText(/2 cases/i)).toBeInTheDocument();
+      // Check calculation display: "2× $100"
+      expect(screen.getByText(/2× \$100/)).toBeInTheDocument();
       expect(screen.getByText('$200')).toBeInTheDocument();
 
-      // Check second item: "1 case × $84"
-      expect(screen.getByText(/1 case/i)).toBeInTheDocument();
-      expect(screen.getByText('$84')).toBeInTheDocument();
+      // Check second item: "1× $84"
+      expect(screen.getByText(/1× \$84/)).toBeInTheDocument();
     });
 
-    it('should pluralize "case" correctly', async () => {
+    it('should display quantity with multiplier format', async () => {
       const user = userEvent.setup();
       const singleCaseItems = [
         {
@@ -209,13 +208,12 @@ describe('CommissionBreakdown', () => {
         />,
       );
 
-      const button = screen.getByRole('button', { name: /your commission breakdown/i });
+      const button = screen.getByRole('button', { name: /your earnings/i });
       await user.click(button);
 
-      // Check singular "case"
-      expect(screen.getByText(/1 case/i)).toBeInTheDocument();
-      // Check plural "cases"
-      expect(screen.getByText(/3 cases/i)).toBeInTheDocument();
+      // Check quantity format "N× $X"
+      expect(screen.getByText(/1× \$50/)).toBeInTheDocument();
+      expect(screen.getByText(/3× \$30/)).toBeInTheDocument();
     });
 
     it('should display total commission in breakdown footer', async () => {
@@ -228,7 +226,7 @@ describe('CommissionBreakdown', () => {
         />,
       );
 
-      const button = screen.getByRole('button', { name: /your commission breakdown/i });
+      const button = screen.getByRole('button', { name: /your earnings/i });
       await user.click(button);
 
       // Check footer total (should appear twice: once in header, once in footer)
@@ -248,7 +246,7 @@ describe('CommissionBreakdown', () => {
         />,
       );
 
-      await user.click(screen.getByRole('button', { name: /your commission breakdown/i }));
+      await user.click(screen.getByRole('button', { name: /your earnings/i }));
 
       // formatPrice rounds to whole numbers
       // Each value appears twice: once in "per case" breakdown and once as line total
@@ -275,7 +273,7 @@ describe('CommissionBreakdown', () => {
         />,
       );
 
-      await user.click(screen.getByRole('button', { name: /your commission breakdown/i }));
+      await user.click(screen.getByRole('button', { name: /your earnings/i }));
 
       // For AED, formatPrice only shows the number (no symbol)
       // Check that both the commission per case and total are displayed
@@ -302,7 +300,7 @@ describe('CommissionBreakdown', () => {
         />,
       );
 
-      await user.click(screen.getByRole('button', { name: /your commission breakdown/i }));
+      await user.click(screen.getByRole('button', { name: /your earnings/i }));
 
       // formatPrice rounds to whole numbers: 33.33 → 33, 99.99 → 100
       // Each value appears twice: once in "per case" breakdown and once as line total
@@ -322,7 +320,7 @@ describe('CommissionBreakdown', () => {
       );
 
       expect(
-        screen.getByRole('button', { name: /your commission breakdown/i }),
+        screen.getByRole('button', { name: /your earnings/i }),
       ).toBeInTheDocument();
       expect(screen.getByText('$0')).toBeInTheDocument();
     });
@@ -346,10 +344,10 @@ describe('CommissionBreakdown', () => {
         />,
       );
 
-      await user.click(screen.getByRole('button', { name: /your commission breakdown/i }));
+      await user.click(screen.getByRole('button', { name: /your earnings/i }));
 
       expect(screen.getByText('Single Wine')).toBeInTheDocument();
-      expect(screen.getByText(/5 cases/i)).toBeInTheDocument();
+      expect(screen.getByText(/5× \$20/)).toBeInTheDocument();
     });
 
     it('should handle zero commission', () => {
@@ -392,7 +390,7 @@ describe('CommissionBreakdown', () => {
         />,
       );
 
-      await user.click(screen.getByRole('button', { name: /your commission breakdown/i }));
+      await user.click(screen.getByRole('button', { name: /your earnings/i }));
 
       // formatPrice uses comma separators and no decimals
       // Each value appears twice: once in "per case" breakdown and once as line total
@@ -420,7 +418,7 @@ describe('CommissionBreakdown', () => {
         />,
       );
 
-      await user.click(screen.getByRole('button', { name: /your commission breakdown/i }));
+      await user.click(screen.getByRole('button', { name: /your earnings/i }));
 
       expect(
         screen.getByText(
@@ -448,9 +446,9 @@ describe('CommissionBreakdown', () => {
         />,
       );
 
-      await user.click(screen.getByRole('button', { name: /your commission breakdown/i }));
+      await user.click(screen.getByRole('button', { name: /your earnings/i }));
 
-      expect(screen.getByText(/2.5 cases/i)).toBeInTheDocument();
+      expect(screen.getByText(/2.5× \$40/)).toBeInTheDocument();
     });
   });
 
@@ -464,7 +462,7 @@ describe('CommissionBreakdown', () => {
         />,
       );
 
-      const button = screen.getByRole('button', { name: /your commission breakdown/i });
+      const button = screen.getByRole('button', { name: /your earnings/i });
       expect(button).toHaveAttribute('type', 'button');
     });
 
@@ -478,11 +476,11 @@ describe('CommissionBreakdown', () => {
         />,
       );
 
-      const button = screen.getByRole('button', { name: /your commission breakdown/i });
+      const button = screen.getByRole('button', { name: /your earnings/i });
       button.focus();
       await user.keyboard('{Enter}');
 
-      expect(screen.getByText('By product')).toBeInTheDocument();
+      expect(screen.getByText('Total Earnings')).toBeInTheDocument();
     });
 
     it('should toggle with Space key', async () => {
@@ -495,11 +493,11 @@ describe('CommissionBreakdown', () => {
         />,
       );
 
-      const button = screen.getByRole('button', { name: /your commission breakdown/i });
+      const button = screen.getByRole('button', { name: /your earnings/i });
       button.focus();
       await user.keyboard(' ');
 
-      expect(screen.getByText('By product')).toBeInTheDocument();
+      expect(screen.getByText('Total Earnings')).toBeInTheDocument();
     });
   });
 
@@ -514,9 +512,9 @@ describe('CommissionBreakdown', () => {
       );
 
       const container = screen
-        .getByRole('button', { name: /your commission breakdown/i })
+        .getByRole('button', { name: /your earnings/i })
         .closest('div');
-      expect(container).toHaveClass('rounded-lg');
+      expect(container).toHaveClass('rounded-xl');
       expect(container).toHaveClass('border');
     });
 
@@ -529,8 +527,8 @@ describe('CommissionBreakdown', () => {
         />,
       );
 
-      const button = screen.getByRole('button', { name: /your commission breakdown/i });
-      expect(button).toHaveClass('hover:bg-fill-muted');
+      const button = screen.getByRole('button', { name: /your earnings/i });
+      expect(button).toHaveClass('hover:bg-emerald-100/50');
     });
   });
 });

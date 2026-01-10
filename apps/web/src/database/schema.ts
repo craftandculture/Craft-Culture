@@ -1522,7 +1522,10 @@ export const sourceRfqStatus = pgEnum('source_rfq_status', [
   'collecting',
   'comparing',
   'selecting',
+  'finalized',
+  'po_generated',
   'quote_generated',
+  'completed',
   'closed',
   'cancelled',
 ]);
@@ -1531,6 +1534,8 @@ export const sourceRfqItemStatus = pgEnum('source_rfq_item_status', [
   'pending',
   'quoted',
   'selected',
+  'self_sourced',
+  'unsourceable',
   'no_response',
 ]);
 
@@ -1927,3 +1932,308 @@ export const lwinWines = pgTable(
 ).enableRLS();
 
 export type LwinWine = typeof lwinWines.$inferSelect;
+
+// ============================================================================
+// SOURCE Module - Purchase Orders (Post-Selection Workflow)
+// ============================================================================
+
+export const sourcePurchaseOrderStatus = pgEnum('source_purchase_order_status', [
+  'draft',
+  'sent',
+  'confirmed',
+  'shipped',
+  'delivered',
+  'cancelled',
+]);
+
+/**
+ * SOURCE Purchase Orders - one per partner with selected quotes
+ * Generated after admin finalizes RFQ selections
+ */
+export const sourcePurchaseOrders = pgTable(
+  'source_purchase_orders',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    rfqId: uuid('rfq_id')
+      .references(() => sourceRfqs.id, { onDelete: 'cascade' })
+      .notNull(),
+    partnerId: uuid('partner_id')
+      .references(() => partners.id, { onDelete: 'restrict' })
+      .notNull(),
+
+    // PO identification
+    poNumber: text('po_number').notNull().unique(),
+    status: sourcePurchaseOrderStatus('status').notNull().default('draft'),
+
+    // Pricing
+    totalAmountUsd: doublePrecision('total_amount_usd'),
+    currency: text('currency').notNull().default('USD'),
+
+    // Delivery
+    deliveryDate: timestamp('delivery_date', { mode: 'date' }),
+    deliveryAddress: text('delivery_address'),
+    deliveryInstructions: text('delivery_instructions'),
+
+    // Terms
+    paymentTerms: text('payment_terms'),
+    notes: text('notes'),
+
+    // PDF
+    pdfUrl: text('pdf_url'),
+
+    // Workflow timestamps
+    sentAt: timestamp('sent_at', { mode: 'date' }),
+    sentBy: uuid('sent_by').references(() => users.id, { onDelete: 'set null' }),
+    confirmedAt: timestamp('confirmed_at', { mode: 'date' }),
+    confirmedBy: uuid('confirmed_by'), // Partner user - no FK as might be external
+    confirmationNotes: text('confirmation_notes'),
+    estimatedDeliveryDate: timestamp('estimated_delivery_date', { mode: 'date' }),
+    shippedAt: timestamp('shipped_at', { mode: 'date' }),
+    trackingNumber: text('tracking_number'),
+    shippingNotes: text('shipping_notes'),
+    deliveredAt: timestamp('delivered_at', { mode: 'date' }),
+    deliveryNotes: text('delivery_notes'),
+    cancelledAt: timestamp('cancelled_at', { mode: 'date' }),
+    cancelledBy: uuid('cancelled_by').references(() => users.id, { onDelete: 'set null' }),
+    cancellationReason: text('cancellation_reason'),
+
+    // Audit
+    createdAt: timestamp('created_at', { mode: 'date' }).notNull().defaultNow(),
+    createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
+  },
+  (table) => [
+    index('source_purchase_orders_rfq_id_idx').on(table.rfqId),
+    index('source_purchase_orders_partner_id_idx').on(table.partnerId),
+    index('source_purchase_orders_status_idx').on(table.status),
+    index('source_purchase_orders_po_number_idx').on(table.poNumber),
+  ],
+).enableRLS();
+
+export type SourcePurchaseOrder = typeof sourcePurchaseOrders.$inferSelect;
+
+/**
+ * SOURCE Purchase Order Items - line items from selected quotes
+ */
+export const sourcePurchaseOrderItems = pgTable(
+  'source_purchase_order_items',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    poId: uuid('po_id')
+      .references(() => sourcePurchaseOrders.id, { onDelete: 'cascade' })
+      .notNull(),
+    rfqItemId: uuid('rfq_item_id')
+      .references(() => sourceRfqItems.id, { onDelete: 'restrict' })
+      .notNull(),
+    quoteId: uuid('quote_id')
+      .references(() => sourceRfqQuotes.id, { onDelete: 'restrict' })
+      .notNull(),
+
+    // Product details (denormalized for PO)
+    productName: text('product_name').notNull(),
+    producer: text('producer'),
+    vintage: text('vintage'),
+    lwin: text('lwin'),
+
+    // Quantity and pricing
+    quantity: integer('quantity').notNull(),
+    unitType: text('unit_type').notNull().default('case'), // 'case' | 'bottle'
+    caseConfig: integer('case_config'),
+    unitPriceUsd: doublePrecision('unit_price_usd').notNull(),
+    lineTotalUsd: doublePrecision('line_total_usd').notNull(),
+
+    // Notes
+    notes: text('notes'),
+
+    ...timestamps,
+  },
+  (table) => [
+    index('source_purchase_order_items_po_id_idx').on(table.poId),
+    index('source_purchase_order_items_rfq_item_id_idx').on(table.rfqItemId),
+  ],
+).enableRLS();
+
+export type SourcePurchaseOrderItem = typeof sourcePurchaseOrderItems.$inferSelect;
+
+// ============================================================================
+// SOURCE Module - Market Intelligence (Price Comparison)
+// ============================================================================
+
+/**
+ * SOURCE Market Prices - historical quote data for market intelligence
+ * Updated after quote selections to track market pricing trends
+ */
+export const sourceMarketPrices = pgTable(
+  'source_market_prices',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    lwin: text('lwin').notNull().unique(),
+
+    // Price statistics
+    avgPriceUsd: doublePrecision('avg_price_usd'),
+    minPriceUsd: doublePrecision('min_price_usd'),
+    maxPriceUsd: doublePrecision('max_price_usd'),
+    quoteCount: integer('quote_count').notNull().default(0),
+
+    // Last quote details
+    lastQuotedAt: timestamp('last_quoted_at', { mode: 'date' }),
+    lastQuotedBy: uuid('last_quoted_by').references(() => partners.id, {
+      onDelete: 'set null',
+    }),
+    lastQuotePrice: doublePrecision('last_quote_price'),
+
+    ...timestamps,
+  },
+  (table) => [
+    index('source_market_prices_lwin_idx').on(table.lwin),
+  ],
+).enableRLS();
+
+export type SourceMarketPrice = typeof sourceMarketPrices.$inferSelect;
+
+/**
+ * SOURCE Partner Metrics - performance tracking for wine partners
+ */
+export const sourcePartnerMetrics = pgTable(
+  'source_partner_metrics',
+  {
+    partnerId: uuid('partner_id')
+      .primaryKey()
+      .references(() => partners.id, { onDelete: 'cascade' }),
+
+    // Response stats
+    totalRfqsReceived: integer('total_rfqs_received').notNull().default(0),
+    totalRfqsResponded: integer('total_rfqs_responded').notNull().default(0),
+    avgResponseTimeHours: doublePrecision('avg_response_time_hours'),
+
+    // Quote stats
+    totalQuotesSubmitted: integer('total_quotes_submitted').notNull().default(0),
+    totalQuotesWon: integer('total_quotes_won').notNull().default(0),
+    totalValueWonUsd: doublePrecision('total_value_won_usd').notNull().default(0),
+
+    // Performance metrics
+    responseRate: doublePrecision('response_rate'), // % of RFQs responded to
+    winRate: doublePrecision('win_rate'), // % of quotes that were selected
+    bestPriceRate: doublePrecision('best_price_rate'), // % of time they had the best price
+
+    // Trends
+    lastRfqReceivedAt: timestamp('last_rfq_received_at', { mode: 'date' }),
+    lastResponseAt: timestamp('last_response_at', { mode: 'date' }),
+    lastWinAt: timestamp('last_win_at', { mode: 'date' }),
+
+    ...timestamps,
+  },
+  (table) => [
+    index('source_partner_metrics_response_rate_idx').on(table.responseRate),
+    index('source_partner_metrics_win_rate_idx').on(table.winRate),
+  ],
+).enableRLS();
+
+export type SourcePartnerMetric = typeof sourcePartnerMetrics.$inferSelect;
+
+// ============================================================================
+// SOURCE Module - Wine Synonyms (AI Matching Enhancement)
+// ============================================================================
+
+export const wineSynonymType = pgEnum('wine_synonym_type', [
+  'producer',
+  'grape',
+  'region',
+  'abbreviation',
+]);
+
+/**
+ * Wine Synonyms - for enhanced AI matching
+ * Maps abbreviations and alternative names to canonical forms
+ */
+export const wineSynonyms = pgTable(
+  'wine_synonyms',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    canonical: text('canonical').notNull(), // e.g., "Domaine de la Romanée-Conti"
+    synonym: text('synonym').notNull(), // e.g., "DRC"
+    type: wineSynonymType('type').notNull(),
+    confidence: doublePrecision('confidence').notNull().default(1.0),
+    isVerified: boolean('is_verified').notNull().default(false),
+    ...timestamps,
+  },
+  (table) => [
+    index('wine_synonyms_synonym_idx').on(table.synonym),
+    index('wine_synonyms_canonical_idx').on(table.canonical),
+    index('wine_synonyms_type_idx').on(table.type),
+    index('wine_synonyms_synonym_trigram_idx').using(
+      'gin',
+      sql`${table.synonym} gin_trgm_ops`,
+    ),
+  ],
+).enableRLS();
+
+export type WineSynonym = typeof wineSynonyms.$inferSelect;
+
+// ============================================================================
+// SOURCE Module - Self-Sourcing Workflow
+// ============================================================================
+
+export const sourceSelfSourcingStatus = pgEnum('source_self_sourcing_status', [
+  'pending',
+  'available',
+  'ordered',
+  'received',
+  'cancelled',
+]);
+
+export const sourceSelfSourcingSource = pgEnum('source_self_sourcing_source', [
+  'inventory',
+  'exchange',
+  'direct',
+  'other',
+]);
+
+/**
+ * SOURCE Self-Sourcing - tracks C&C self-sourcing for unfulfilled items
+ * Used when no partner can supply an item
+ */
+export const sourceSelfSourcing = pgTable(
+  'source_self_sourcing',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    rfqItemId: uuid('rfq_item_id')
+      .references(() => sourceRfqItems.id, { onDelete: 'cascade' })
+      .notNull(),
+
+    // Sourcing details
+    source: sourceSelfSourcingSource('source').notNull(),
+    sourceDetails: text('source_details'), // e.g., "Liv-ex", "Direct from producer"
+    sourceReference: text('source_reference'), // Order/reference number
+
+    // Pricing
+    costPriceUsd: doublePrecision('cost_price_usd'),
+    quantity: integer('quantity'),
+
+    // Status
+    status: sourceSelfSourcingStatus('status').notNull().default('pending'),
+    notes: text('notes'),
+
+    // Timestamps
+    orderedAt: timestamp('ordered_at', { mode: 'date' }),
+    expectedAt: timestamp('expected_at', { mode: 'date' }),
+    receivedAt: timestamp('received_at', { mode: 'date' }),
+    cancelledAt: timestamp('cancelled_at', { mode: 'date' }),
+
+    // Audit
+    createdAt: timestamp('created_at', { mode: 'date' }).notNull().defaultNow(),
+    createdBy: uuid('created_by')
+      .references(() => users.id, { onDelete: 'set null' })
+      .notNull(),
+    updatedAt: timestamp('updated_at', { mode: 'date' })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => [
+    index('source_self_sourcing_rfq_item_id_idx').on(table.rfqItemId),
+    index('source_self_sourcing_status_idx').on(table.status),
+    index('source_self_sourcing_source_idx').on(table.source),
+  ],
+).enableRLS();
+
+export type SourceSelfSourcing = typeof sourceSelfSourcing.$inferSelect;

@@ -30,6 +30,19 @@ vi.mock('@/lib/trpc/browser', () => ({
         },
       },
     },
+    pricing: {
+      getSharedDefaults: {
+        queryOptions: vi.fn(() => ({
+          queryKey: ['pricing.getSharedDefaults'],
+          queryFn: () =>
+            Promise.resolve({
+              importDutyPercent: 20,
+              transferCostUsd: 200,
+              vatPercent: 5,
+            }),
+        })),
+      },
+    },
   }),
 }));
 
@@ -252,7 +265,7 @@ describe('B2BCalculator', () => {
       await user.click(currencyToggle);
 
       // Should now show AED (5000 * 3.67 = 18350) - multiple instances
-      expect(screen.getAllByText('18,350')[0]).toBeInTheDocument();
+      expect(screen.getAllByText('AED 18,350')[0]).toBeInTheDocument();
     });
 
     it('should convert all prices when currency is toggled', async () => {
@@ -271,8 +284,8 @@ describe('B2BCalculator', () => {
       // With new formula: customerQuotePrice = 7658.82 USD
       // In bond: 5000 * 3.67 = 18,350
       // Total in AED: 7658.82 * 3.67 = 28,108
-      expect(screen.getAllByText('18,350')[0]).toBeInTheDocument(); // In bond (multiple instances)
-      expect(screen.getAllByText('28,108')[0]).toBeInTheDocument(); // Total (multiple instances)
+      expect(screen.getAllByText('AED 18,350')[0]).toBeInTheDocument(); // In bond (multiple instances)
+      expect(screen.getAllByText('AED 28,108')[0]).toBeInTheDocument(); // Total (multiple instances)
     });
   });
 
