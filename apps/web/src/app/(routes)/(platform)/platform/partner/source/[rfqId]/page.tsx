@@ -7,6 +7,8 @@ import {
   IconCheck,
   IconChevronDown,
   IconChevronUp,
+  IconCopy,
+  IconFilter,
   IconInfoCircle,
   IconSend,
   IconX,
@@ -15,7 +17,7 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { format, formatDistanceToNow } from 'date-fns';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 import RfqStatusBadge from '@/app/_source/components/RfqStatusBadge';
 import Button from '@/app/_ui/components/Button/Button';
@@ -121,6 +123,65 @@ const PartnerRfqDetailPage = () => {
   const [partnerNotes, setPartnerNotes] = useState('');
   const [isDeclineDialogOpen, setIsDeclineDialogOpen] = useState(false);
   const [declineReason, setDeclineReason] = useState('');
+  const [showUnquotedOnly, setShowUnquotedOnly] = useState(false);
+  const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
+
+  // Auto-save key for localStorage
+  const storageKey = `source-rfq-draft-${rfqId}`;
+
+  // Load draft from localStorage on mount
+  useEffect(() => {
+    try {
+      const savedDraft = localStorage.getItem(storageKey);
+      if (savedDraft) {
+        const parsed = JSON.parse(savedDraft) as {
+          quotes: [string, QuoteEntry][];
+          partnerNotes: string;
+          savedAt: string;
+        };
+        setQuotes(new Map(parsed.quotes));
+        setPartnerNotes(parsed.partnerNotes || '');
+        setLastSavedAt(new Date(parsed.savedAt));
+      }
+    } catch {
+      // Ignore parse errors
+    }
+  }, [storageKey]);
+
+  // Auto-save draft to localStorage
+  const saveDraft = useCallback(() => {
+    try {
+      const draft = {
+        quotes: Array.from(quotes.entries()),
+        partnerNotes,
+        savedAt: new Date().toISOString(),
+      };
+      localStorage.setItem(storageKey, JSON.stringify(draft));
+      setLastSavedAt(new Date());
+    } catch {
+      // Ignore storage errors
+    }
+  }, [quotes, partnerNotes, storageKey]);
+
+  // Auto-save when quotes or notes change
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (quotes.size > 0 || partnerNotes) {
+        saveDraft();
+      }
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [quotes, partnerNotes, saveDraft]);
+
+  // Clear draft on successful submission
+  const clearDraft = () => {
+    try {
+      localStorage.removeItem(storageKey);
+      setLastSavedAt(null);
+    } catch {
+      // Ignore storage errors
+    }
+  };
 
   // Fetch RFQ data
   const {
@@ -136,6 +197,7 @@ const PartnerRfqDetailPage = () => {
     api.source.partner.submitQuotes.mutationOptions({
       onSuccess: () => {
         void refetch();
+        clearDraft();
         alert('Quotes submitted successfully!');
       },
     }),
@@ -253,6 +315,39 @@ const PartnerRfqDetailPage = () => {
     return q.costPricePerCaseUsd && q.costPricePerCaseUsd > 0;
   }).length;
 
+  // Filter items
+  const filteredItems = showUnquotedOnly
+    ? rfq.items.filter((item) => {
+        const quote = quotes.get(item.id);
+        if (!quote) return true;
+        if (quote.quoteType === 'not_available') return false;
+        return !quote.costPricePerCaseUsd || quote.costPricePerCaseUsd <= 0;
+      })
+    : rfq.items;
+
+  // Copy quote template from one item to others
+  const handleCopyQuoteToAll = (sourceItemId: string) => {
+    const sourceQuote = quotes.get(sourceItemId);
+    if (!sourceQuote) return;
+
+    const newQuotes = new Map(quotes);
+    for (const item of rfq.items) {
+      if (item.id !== sourceItemId && !quotes.has(item.id)) {
+        newQuotes.set(item.id, {
+          itemId: item.id,
+          quoteType: sourceQuote.quoteType,
+          currency: sourceQuote.currency,
+          caseConfig: sourceQuote.caseConfig,
+          stockLocation: sourceQuote.stockLocation,
+          stockCondition: sourceQuote.stockCondition,
+          leadTimeDays: sourceQuote.leadTimeDays,
+          validUntil: sourceQuote.validUntil,
+        });
+      }
+    }
+    setQuotes(newQuotes);
+  };
+
   return (
     <div className="container mx-auto max-w-4xl px-4 py-4 sm:py-8 pb-28 sm:pb-8">
       <div className="space-y-4 sm:space-y-6">
@@ -337,8 +432,26 @@ const PartnerRfqDetailPage = () => {
                       <span className="font-semibold">{completedCount}</span> of{' '}
                       <span className="font-semibold">{rfq.items.length}</span> items quoted
                     </Typography>
+                    {lastSavedAt && (
+                      <span className="text-xs text-green-600 ml-2">
+                        Draft saved {formatDistanceToNow(lastSavedAt, { addSuffix: true })}
+                      </span>
+                    )}
                   </div>
                   <div className="flex items-center gap-4 text-sm">
+                    <button
+                      type="button"
+                      onClick={() => setShowUnquotedOnly(!showUnquotedOnly)}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                        showUnquotedOnly
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-white/50 text-text-primary hover:bg-white'
+                      }`}
+                    >
+                      <IconFilter className="h-3.5 w-3.5" />
+                      {showUnquotedOnly ? 'Show All' : 'Unquoted Only'}
+                    </button>
+                    <div className="w-px h-4 bg-border-muted" />
                     <span className="flex items-center gap-1.5">
                       <span className="w-3 h-3 rounded-full bg-green-500" />
                       Quoted
@@ -360,19 +473,41 @@ const PartnerRfqDetailPage = () => {
 
         {/* Mobile progress summary */}
         {canSubmit && (
-          <div className="sm:hidden flex items-center justify-between px-1 text-sm">
-            <span className="text-text-muted">
-              <span className="font-semibold text-text-primary">{completedCount}</span>/{rfq.items.length} quoted
-            </span>
-            <div className="flex items-center gap-3 text-xs">
-              <span className="flex items-center gap-1">
-                <span className="w-2 h-2 rounded-full bg-green-500" />
-                {Array.from(quotes.values()).filter((q) => q.quoteType !== 'not_available' && q.costPricePerCaseUsd && q.costPricePerCaseUsd > 0).length}
+          <div className="sm:hidden space-y-2">
+            <div className="flex items-center justify-between px-1 text-sm">
+              <span className="text-text-muted">
+                <span className="font-semibold text-text-primary">{completedCount}</span>/{rfq.items.length} quoted
               </span>
-              <span className="flex items-center gap-1">
-                <span className="w-2 h-2 rounded-full bg-red-500" />
-                {Array.from(quotes.values()).filter((q) => q.quoteType === 'not_available').length}
-              </span>
+              <div className="flex items-center gap-3 text-xs">
+                <span className="flex items-center gap-1">
+                  <span className="w-2 h-2 rounded-full bg-green-500" />
+                  {Array.from(quotes.values()).filter((q) => q.quoteType !== 'not_available' && q.costPricePerCaseUsd && q.costPricePerCaseUsd > 0).length}
+                </span>
+                <span className="flex items-center gap-1">
+                  <span className="w-2 h-2 rounded-full bg-red-500" />
+                  {Array.from(quotes.values()).filter((q) => q.quoteType === 'not_available').length}
+                </span>
+              </div>
+            </div>
+            {/* Filter + Auto-save indicator */}
+            <div className="flex items-center justify-between px-1">
+              <button
+                type="button"
+                onClick={() => setShowUnquotedOnly(!showUnquotedOnly)}
+                className={`flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium transition-colors ${
+                  showUnquotedOnly
+                    ? 'bg-blue-100 text-blue-700'
+                    : 'bg-fill-muted text-text-muted'
+                }`}
+              >
+                <IconFilter className="h-3 w-3" />
+                {showUnquotedOnly ? 'Show All' : 'Unquoted Only'}
+              </button>
+              {lastSavedAt && (
+                <span className="text-[10px] text-green-600">
+                  Draft saved {formatDistanceToNow(lastSavedAt, { addSuffix: true })}
+                </span>
+              )}
             </div>
           </div>
         )}
@@ -413,11 +548,24 @@ const PartnerRfqDetailPage = () => {
 
         {/* Items to quote */}
         <div className="space-y-4">
-          <Typography variant="headingSm">
-            Items to Quote ({rfq.items.length})
-          </Typography>
+          <div className="flex items-center justify-between">
+            <Typography variant="headingSm">
+              {showUnquotedOnly
+                ? `Remaining Items (${filteredItems.length})`
+                : `Items to Quote (${rfq.items.length})`}
+            </Typography>
+            {showUnquotedOnly && filteredItems.length === 0 && (
+              <button
+                type="button"
+                onClick={() => setShowUnquotedOnly(false)}
+                className="text-sm text-blue-600 hover:underline"
+              >
+                Show all items
+              </button>
+            )}
+          </div>
 
-          {rfq.items.map((item, index) => {
+          {filteredItems.map((item, index) => {
             const quote = getQuoteForItem(item.id);
             const existingQuote = item.myQuote;
             const isExpanded = expandedItems.has(item.id);
@@ -513,8 +661,46 @@ const PartnerRfqDetailPage = () => {
                               </>
                             )}
                           </div>
-                          {/* Quick quote entry on mobile */}
-                          {quote?.costPricePerCaseUsd && (
+                          {/* Quick inline price input */}
+                          {canSubmit && !isNA && (
+                            <div
+                              className="inline-flex items-center gap-1"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <span className="text-xs text-text-muted">$</span>
+                              <input
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                placeholder="Price"
+                                value={quote?.costPricePerCaseUsd || ''}
+                                onChange={(e) => {
+                                  handleQuoteChange(item.id, 'costPricePerCaseUsd', parseFloat(e.target.value) || 0);
+                                }}
+                                className={`w-20 px-2 py-1 rounded border text-xs sm:text-sm font-medium ${
+                                  status === 'complete'
+                                    ? 'border-green-300 bg-green-50 text-green-700'
+                                    : 'border-border-primary bg-white'
+                                }`}
+                              />
+                              <span className="text-xs text-text-muted">/case</span>
+                              {status === 'complete' && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleCopyQuoteToAll(item.id);
+                                  }}
+                                  className="ml-1 p-1 rounded hover:bg-fill-muted text-text-muted hover:text-text-primary"
+                                  title="Copy settings to other items"
+                                >
+                                  <IconCopy className="h-3.5 w-3.5" />
+                                </button>
+                              )}
+                            </div>
+                          )}
+                          {/* Show price badge when N/A or submitted */}
+                          {(!canSubmit || isNA) && quote?.costPricePerCaseUsd && quote.costPricePerCaseUsd > 0 && (
                             <div className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-green-100 text-green-700 rounded-lg text-xs sm:text-sm font-medium">
                               ${quote.costPricePerCaseUsd.toFixed(2)}/case
                             </div>

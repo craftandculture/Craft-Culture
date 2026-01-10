@@ -9,6 +9,7 @@ import adminGenerateFinalQuote from './controller/adminGenerateFinalQuote';
 import adminGetManyRfqs from './controller/adminGetManyRfqs';
 import adminGetOneRfq from './controller/adminGetOneRfq';
 import adminParseInput from './controller/adminParseInput';
+import adminSearchLwin from './controller/adminSearchLwin';
 import adminSelectQuote from './controller/adminSelectQuote';
 import adminSendToPartners from './controller/adminSendToPartners';
 import adminUpdateItem from './controller/adminUpdateItem';
@@ -32,6 +33,7 @@ const adminRouter = createTRPCRouter({
   bulkSelectQuotes: adminBulkSelectQuotes,
   generateFinalQuote: adminGenerateFinalQuote,
   parseInput: adminParseInput,
+  searchLwin: adminSearchLwin,
 });
 
 const partnerRouter = createTRPCRouter({
