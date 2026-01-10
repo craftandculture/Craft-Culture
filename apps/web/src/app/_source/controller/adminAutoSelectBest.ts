@@ -90,30 +90,28 @@ const adminAutoSelectBest = adminProcedure
     const selections: Array<{
       itemId: string;
       quoteId: string;
-      price: string;
+      price: number;
     }> = [];
 
     if (strategy === 'lowest_price') {
       // Group quotes by item
       const quotesByItem = new Map<
         string,
-        Array<{ id: string; price: string }>
+        Array<{ id: string; price: number }>
       >();
 
       for (const quote of validQuotes) {
         const itemQuotes = quotesByItem.get(quote.itemId) || [];
         itemQuotes.push({
           id: quote.id,
-          price: String(quote.costPricePerCaseUsd!),
+          price: Number(quote.costPricePerCaseUsd!),
         });
         quotesByItem.set(quote.itemId, itemQuotes);
       }
 
       // Select lowest price for each item
       for (const [itemId, quotes] of quotesByItem) {
-        const sorted = quotes.sort(
-          (a, b) => parseFloat(a.price) - parseFloat(b.price),
-        );
+        const sorted = quotes.sort((a, b) => a.price - b.price);
         const best = sorted[0];
         if (best) {
           selections.push({ itemId, quoteId: best.id, price: best.price });
@@ -134,7 +132,7 @@ const adminAutoSelectBest = adminProcedure
         selections.push({
           itemId: quote.itemId,
           quoteId: quote.id,
-          price: String(quote.costPricePerCaseUsd!),
+          price: Number(quote.costPricePerCaseUsd!),
         });
       }
     }
@@ -185,10 +183,7 @@ const adminAutoSelectBest = adminProcedure
     });
 
     // Calculate total value
-    const totalValue = selections.reduce(
-      (sum, s) => sum + parseFloat(s.price),
-      0,
-    );
+    const totalValue = selections.reduce((sum, s) => sum + s.price, 0);
 
     return {
       updated: selections.length,
