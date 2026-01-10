@@ -546,8 +546,8 @@ const PartnerRfqDetailPage = () => {
           </Card>
         )}
 
-        {/* Items to quote */}
-        <div className="space-y-4">
+        {/* Items to quote - Compact table-like layout */}
+        <div className="space-y-2">
           <div className="flex items-center justify-between">
             <Typography variant="headingSm">
               {showUnquotedOnly
@@ -565,587 +565,484 @@ const PartnerRfqDetailPage = () => {
             )}
           </div>
 
-          {filteredItems.map((item, index) => {
-            const quote = getQuoteForItem(item.id);
-            const existingQuote = item.myQuote;
-            const isExpanded = expandedItems.has(item.id);
-            const status = getQuoteStatus(item.id);
-            const isNA = quote?.quoteType === 'not_available';
-            const isAlternative = quote?.quoteType === 'alternative';
+          {/* Table header for desktop */}
+          <div className="hidden lg:grid lg:grid-cols-[auto_1fr_100px_100px_120px_80px] gap-2 px-3 py-2 bg-fill-muted rounded-t-lg text-xs font-semibold text-text-muted border-b border-border-muted">
+            <span className="w-8">#</span>
+            <span>Product</span>
+            <span className="text-center">Qty</span>
+            <span className="text-center">Region</span>
+            <span className="text-right">Price/case</span>
+            <span className="text-center">Status</span>
+          </div>
 
-            return (
-              <Card
-                key={item.id}
-                className={`transition-all ${
-                  status === 'complete'
-                    ? 'border-green-300 bg-green-50/30'
-                    : status === 'na'
-                      ? 'border-red-300 bg-red-50/30'
-                      : 'border-border-muted'
-                }`}
-              >
-                <CardContent className="p-0">
-                  {/* Item Header - Request Details */}
+          <div className="divide-y divide-border-muted border border-border-muted rounded-lg lg:rounded-t-none overflow-hidden">
+            {filteredItems.map((item, index) => {
+              const quote = getQuoteForItem(item.id);
+              const existingQuote = item.myQuote;
+              const isExpanded = expandedItems.has(item.id);
+              const status = getQuoteStatus(item.id);
+              const isNA = quote?.quoteType === 'not_available';
+              const isAlternative = quote?.quoteType === 'alternative';
+
+              return (
+                <div
+                  key={item.id}
+                  className={`transition-all ${
+                    status === 'complete'
+                      ? 'bg-green-50/50'
+                      : status === 'na'
+                        ? 'bg-red-50/50'
+                        : 'bg-white'
+                  }`}
+                >
+                  {/* Compact row - always visible */}
                   <div
-                    className="p-3 sm:p-4 cursor-pointer hover:bg-fill-muted/50 transition-colors"
+                    className="px-2 sm:px-3 py-2 cursor-pointer hover:bg-fill-muted/30 transition-colors"
                     onClick={() => canSubmit && toggleItemExpanded(item.id)}
                   >
-                    <div className="flex items-start gap-3">
+                    {/* Desktop: Table row layout */}
+                    <div className="hidden lg:grid lg:grid-cols-[auto_1fr_100px_100px_120px_80px] gap-2 items-center">
                       {/* Item Number */}
-                      <span className="flex-shrink-0 w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-fill-brand text-text-inverse text-xs sm:text-sm font-bold flex items-center justify-center">
+                      <span className="w-8 h-6 rounded bg-fill-brand/10 text-text-brand text-xs font-bold flex items-center justify-center">
+                        {index + 1}
+                      </span>
+
+                      {/* Product Name + Vintage */}
+                      <div className="min-w-0 flex items-center gap-2">
+                        <span className="font-medium text-sm truncate">
+                          {item.productName}
+                        </span>
+                        {item.vintage && (
+                          <span className="flex-shrink-0 text-xs font-semibold text-text-brand bg-fill-brand/10 px-1.5 py-0.5 rounded">
+                            {item.vintage}
+                          </span>
+                        )}
+                        {item.adminNotes && (
+                          <IconInfoCircle className="h-3.5 w-3.5 text-amber-500 flex-shrink-0" title={item.adminNotes} />
+                        )}
+                      </div>
+
+                      {/* Quantity */}
+                      <span className="text-xs text-center font-medium">
+                        {item.quantity} {item.quantityUnit === 'bottles' ? 'btl' : 'cs'}
+                      </span>
+
+                      {/* Region */}
+                      <span className="text-xs text-center text-text-muted truncate" title={item.region || ''}>
+                        {item.region || '-'}
+                      </span>
+
+                      {/* Price Input */}
+                      <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
+                        {canSubmit && !isNA ? (
+                          <>
+                            <span className="text-xs text-text-muted">$</span>
+                            <input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              placeholder="0.00"
+                              value={quote?.costPricePerCaseUsd || ''}
+                              onChange={(e) => handleQuoteChange(item.id, 'costPricePerCaseUsd', parseFloat(e.target.value) || 0)}
+                              className={`w-20 px-2 py-1 rounded border text-xs text-right font-medium ${
+                                status === 'complete'
+                                  ? 'border-green-300 bg-green-100 text-green-700'
+                                  : 'border-border-primary bg-white'
+                              }`}
+                            />
+                          </>
+                        ) : (
+                          <span className="text-xs font-medium text-text-muted">
+                            {existingQuote?.costPricePerCaseUsd ? `$${existingQuote.costPricePerCaseUsd.toFixed(2)}` : '-'}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Status + Actions */}
+                      <div className="flex items-center justify-center gap-1" onClick={(e) => e.stopPropagation()}>
+                        {status === 'complete' && (
+                          <span className="w-5 h-5 rounded-full bg-green-500 flex items-center justify-center">
+                            <IconCheck className="h-3 w-3 text-white" />
+                          </span>
+                        )}
+                        {status === 'na' && (
+                          <span className="px-1.5 py-0.5 rounded bg-red-500 text-white text-[10px] font-medium">
+                            N/A
+                          </span>
+                        )}
+                        {canSubmit && status !== 'na' && status !== 'complete' && (
+                          <button
+                            type="button"
+                            onClick={() => handleQuoteChange(item.id, 'quoteType', 'not_available')}
+                            className="px-1.5 py-0.5 rounded border border-red-200 text-red-600 text-[10px] font-medium hover:bg-red-50"
+                            title="Mark as Not Available"
+                          >
+                            N/A
+                          </button>
+                        )}
+                        {canSubmit && (
+                          <button type="button" className="p-0.5 hover:bg-fill-muted rounded">
+                            {isExpanded ? (
+                              <IconChevronUp className="h-4 w-4 text-text-muted" />
+                            ) : (
+                              <IconChevronDown className="h-4 w-4 text-text-muted" />
+                            )}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Mobile: Compact card layout */}
+                    <div className="lg:hidden flex items-start gap-2">
+                      {/* Item Number */}
+                      <span className="flex-shrink-0 w-6 h-6 rounded bg-fill-brand/10 text-text-brand text-xs font-bold flex items-center justify-center">
                         {index + 1}
                       </span>
 
                       {/* Main Content */}
                       <div className="flex-1 min-w-0">
-                        {/* Product Name + Vintage + Status */}
-                        <div className="flex flex-wrap items-center gap-2 mb-2">
-                          <Typography variant="bodyMd" className="font-semibold">
-                            {item.productName}
-                          </Typography>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="font-medium text-sm">{item.productName}</span>
                           {item.vintage && (
-                            <span className="text-sm font-semibold text-text-brand bg-fill-brand/10 px-2 py-0.5 rounded">
+                            <span className="text-xs font-semibold text-text-brand bg-fill-brand/10 px-1 py-0.5 rounded">
                               {item.vintage}
                             </span>
                           )}
                           {status === 'complete' && (
-                            <span className="flex-shrink-0 w-5 h-5 rounded-full bg-green-500 flex items-center justify-center">
-                              <IconCheck className="h-3 w-3 text-white" />
+                            <span className="w-4 h-4 rounded-full bg-green-500 flex items-center justify-center">
+                              <IconCheck className="h-2.5 w-2.5 text-white" />
                             </span>
                           )}
                           {status === 'na' && (
-                            <span className="flex-shrink-0 px-2 py-0.5 rounded bg-red-500 text-white text-xs font-medium">
-                              N/A
-                            </span>
+                            <span className="px-1 py-0.5 rounded bg-red-500 text-white text-[10px] font-medium">N/A</span>
                           )}
                         </div>
-
-                        {/* Wine Details - Compact Responsive Grid */}
-                        <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs sm:text-sm">
-                          {item.producer && (
-                            <div className="flex items-center gap-1">
-                              <span className="text-text-muted">Producer:</span>
-                              <span className="font-medium">{item.producer}</span>
-                            </div>
-                          )}
+                        <div className="flex items-center gap-2 mt-1 text-xs text-text-muted">
+                          <span className="font-medium text-text-primary">
+                            {item.quantity} {item.quantityUnit === 'bottles' ? 'btl' : 'cs'}
+                          </span>
                           {item.region && (
-                            <div className="flex items-center gap-1">
-                              <span className="text-text-muted">Region:</span>
-                              <span className="font-medium">{item.region}</span>
-                            </div>
-                          )}
-                          {item.country && (
-                            <div className="flex items-center gap-1">
-                              <span className="text-text-muted">Country:</span>
-                              <span className="font-medium">{item.country}</span>
-                            </div>
+                            <>
+                              <span>·</span>
+                              <span>{item.region}</span>
+                            </>
                           )}
                         </div>
-
-                        {/* Format & Quantity - Highlight Box */}
-                        <div className="mt-2 flex flex-wrap gap-2">
-                          <div className="inline-flex items-center gap-2 px-2.5 py-1.5 bg-fill-muted rounded-lg text-xs sm:text-sm">
-                            <span className="font-semibold text-text-brand">
-                              {item.quantity} {item.quantityUnit === 'bottles' ? 'bottles' : 'cases'}
-                            </span>
-                            {item.caseConfig && (
-                              <>
-                                <span className="text-text-muted">·</span>
-                                <span className="text-text-muted">{item.caseConfig}pk</span>
-                              </>
-                            )}
-                            {item.bottleSize && (
-                              <>
-                                <span className="text-text-muted">·</span>
-                                <span className="text-text-muted">{item.bottleSize}</span>
-                              </>
-                            )}
-                          </div>
-                          {/* Quick inline price input */}
-                          {canSubmit && !isNA && (
-                            <div
-                              className="inline-flex items-center gap-1"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <span className="text-xs text-text-muted">$</span>
-                              <input
-                                type="number"
-                                step="0.01"
-                                min="0"
-                                placeholder="Price"
-                                value={quote?.costPricePerCaseUsd || ''}
-                                onChange={(e) => {
-                                  handleQuoteChange(item.id, 'costPricePerCaseUsd', parseFloat(e.target.value) || 0);
-                                }}
-                                className={`w-20 px-2 py-1 rounded border text-xs sm:text-sm font-medium ${
-                                  status === 'complete'
-                                    ? 'border-green-300 bg-green-50 text-green-700'
-                                    : 'border-border-primary bg-white'
-                                }`}
-                              />
-                              <span className="text-xs text-text-muted">/case</span>
-                              {status === 'complete' && (
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleCopyQuoteToAll(item.id);
-                                  }}
-                                  className="ml-1 p-1 rounded hover:bg-fill-muted text-text-muted hover:text-text-primary"
-                                  title="Copy settings to other items"
-                                >
-                                  <IconCopy className="h-3.5 w-3.5" />
-                                </button>
-                              )}
-                            </div>
-                          )}
-                          {/* Show price badge when N/A or submitted */}
-                          {(!canSubmit || isNA) && quote?.costPricePerCaseUsd && quote.costPricePerCaseUsd > 0 && (
-                            <div className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-green-100 text-green-700 rounded-lg text-xs sm:text-sm font-medium">
-                              ${quote.costPricePerCaseUsd.toFixed(2)}/case
-                            </div>
-                          )}
-                        </div>
-
-                        {item.adminNotes && (
-                          <div className="mt-2 p-2 bg-fill-warning/10 rounded border border-border-warning">
-                            <Typography variant="bodyXs" className="text-text-warning">
-                              <span className="font-semibold">Note:</span> {item.adminNotes}
-                            </Typography>
-                          </div>
-                        )}
                       </div>
 
-                      {/* Expand Button */}
+                      {/* Price Input - Mobile */}
+                      <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                        {canSubmit && !isNA ? (
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            placeholder="$"
+                            value={quote?.costPricePerCaseUsd || ''}
+                            onChange={(e) => handleQuoteChange(item.id, 'costPricePerCaseUsd', parseFloat(e.target.value) || 0)}
+                            className={`w-16 px-1.5 py-1 rounded border text-xs text-right font-medium ${
+                              status === 'complete'
+                                ? 'border-green-300 bg-green-100 text-green-700'
+                                : 'border-border-primary bg-white'
+                            }`}
+                          />
+                        ) : existingQuote?.costPricePerCaseUsd ? (
+                          <span className="text-xs font-medium text-green-700">
+                            ${existingQuote.costPricePerCaseUsd.toFixed(0)}
+                          </span>
+                        ) : null}
+                      </div>
+
+                      {/* Expand Button - Mobile */}
                       {canSubmit && (
-                        <button type="button" className="flex-shrink-0 p-1.5 hover:bg-fill-muted rounded-lg">
+                        <button type="button" className="flex-shrink-0 p-1 hover:bg-fill-muted rounded">
                           {isExpanded ? (
-                            <IconChevronUp className="h-5 w-5 text-text-muted" />
+                            <IconChevronUp className="h-4 w-4 text-text-muted" />
                           ) : (
-                            <IconChevronDown className="h-5 w-5 text-text-muted" />
+                            <IconChevronDown className="h-4 w-4 text-text-muted" />
                           )}
                         </button>
                       )}
                     </div>
                   </div>
 
-                  {/* Quote Input Section - Expanded */}
+                  {/* Quote Input Section - Expanded (compact) */}
                   {canSubmit && isExpanded && (
-                    <div className="border-t border-border-muted bg-fill-secondary/30 p-3 sm:p-4 space-y-4">
-                      {/* Response Type Selection */}
-                      <div>
-                        <label className="block text-xs sm:text-sm font-semibold text-text-primary mb-2">
-                          Response Type
-                        </label>
-                        <div className="grid grid-cols-3 gap-2">
-                          {[
-                            { value: 'exact', label: 'Exact', labelFull: 'Exact Match', color: 'bg-green-100 border-green-300 text-green-800' },
-                            { value: 'alternative', label: 'Alt', labelFull: 'Alternative', color: 'bg-amber-100 border-amber-300 text-amber-800' },
-                            { value: 'not_available', label: 'N/A', labelFull: 'Not Available', color: 'bg-red-100 border-red-300 text-red-800' },
-                          ].map((option) => (
-                            <button
-                              key={option.value}
-                              type="button"
-                              onClick={() => handleQuoteChange(item.id, 'quoteType', option.value as QuoteType)}
-                              className={`px-2 sm:px-4 py-2 rounded-lg border-2 text-xs sm:text-sm font-medium transition-all ${
-                                quote?.quoteType === option.value
-                                  ? option.color
-                                  : 'bg-white border-border-muted text-text-muted hover:border-border-primary'
-                              }`}
-                            >
-                              <span className="sm:hidden">{option.label}</span>
-                              <span className="hidden sm:inline">{option.labelFull}</span>
-                            </button>
-                          ))}
-                        </div>
+                    <div className="border-t border-border-muted bg-fill-secondary/30 px-3 py-3 space-y-3">
+                      {/* Response Type + Quick Actions Row */}
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-xs font-semibold text-text-muted">Type:</span>
+                        {[
+                          { value: 'exact', label: 'Exact', color: 'bg-green-100 border-green-300 text-green-800' },
+                          { value: 'alternative', label: 'Alt', color: 'bg-amber-100 border-amber-300 text-amber-800' },
+                          { value: 'not_available', label: 'N/A', color: 'bg-red-100 border-red-300 text-red-800' },
+                        ].map((option) => (
+                          <button
+                            key={option.value}
+                            type="button"
+                            onClick={() => handleQuoteChange(item.id, 'quoteType', option.value as QuoteType)}
+                            className={`px-2 py-1 rounded border text-xs font-medium transition-all ${
+                              quote?.quoteType === option.value
+                                ? option.color
+                                : 'bg-white border-border-muted text-text-muted hover:border-border-primary'
+                            }`}
+                          >
+                            {option.label}
+                          </button>
+                        ))}
+                        {status === 'complete' && (
+                          <button
+                            type="button"
+                            onClick={() => handleCopyQuoteToAll(item.id)}
+                            className="ml-auto flex items-center gap-1 px-2 py-1 rounded border border-border-muted text-xs text-text-muted hover:bg-fill-muted"
+                            title="Copy settings to unquoted items"
+                          >
+                            <IconCopy className="h-3 w-3" />
+                            Copy to all
+                          </button>
+                        )}
                       </div>
 
-                      {/* N/A Reason - Only for N/A quotes */}
+                      {/* N/A Reason - Compact */}
                       {isNA && (
-                        <div className="p-4 bg-red-50 border border-red-200 rounded-lg space-y-3">
-                          <label className="block text-sm font-semibold text-red-800">
-                            Reason Not Available
-                          </label>
-                          <div className="flex flex-wrap gap-2">
-                            {NA_REASONS.map((reason) => (
+                        <div className="p-2 bg-red-50 border border-red-200 rounded space-y-2">
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <span className="text-xs font-medium text-red-700">Reason:</span>
+                            {NA_REASONS.slice(0, 4).map((reason) => (
                               <button
                                 key={reason.value}
                                 type="button"
-                                onClick={() => {
-                                  if (reason.value === 'custom') {
-                                    handleQuoteChange(item.id, 'notAvailableReason', '');
-                                  } else {
-                                    handleQuoteChange(item.id, 'notAvailableReason', reason.label);
-                                  }
-                                }}
-                                className={`px-3 py-1.5 rounded border text-sm transition-all ${
-                                  quote?.notAvailableReason === reason.label ||
-                                  (reason.value === 'custom' && quote?.notAvailableReason && !NA_REASONS.some((r) => r.label === quote.notAvailableReason && r.value !== 'custom'))
-                                    ? 'bg-red-600 border-red-600 text-white'
-                                    : 'bg-white border-red-300 text-red-700 hover:bg-red-100'
+                                onClick={() => handleQuoteChange(item.id, 'notAvailableReason', reason.label)}
+                                className={`px-2 py-0.5 rounded text-xs transition-all ${
+                                  quote?.notAvailableReason === reason.label
+                                    ? 'bg-red-600 text-white'
+                                    : 'bg-white border border-red-200 text-red-700 hover:bg-red-100'
                                 }`}
                               >
                                 {reason.label}
                               </button>
                             ))}
-                          </div>
-                          {(quote?.notAvailableReason === '' ||
-                            (quote?.notAvailableReason &&
-                              !NA_REASONS.some((r) => r.label === quote.notAvailableReason && r.value !== 'custom'))) && (
                             <input
                               type="text"
-                              placeholder="Enter custom reason..."
-                              value={quote?.notAvailableReason || ''}
+                              placeholder="Other..."
+                              value={NA_REASONS.some((r) => r.label === quote?.notAvailableReason) ? '' : quote?.notAvailableReason || ''}
                               onChange={(e) => handleQuoteChange(item.id, 'notAvailableReason', e.target.value)}
-                              className="w-full rounded-lg border border-red-300 bg-white px-3 py-2 text-sm"
+                              className="flex-1 min-w-[100px] px-2 py-0.5 rounded border border-red-200 bg-white text-xs"
                             />
-                          )}
+                          </div>
                         </div>
                       )}
 
-                      {/* Pricing & Availability - Only for exact/alternative */}
+                      {/* Pricing & Stock - Compact single row */}
                       {!isNA && (
                         <>
-                          {/* Pricing Section */}
-                          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-                            <div className="col-span-2 sm:col-span-1">
-                              <label className="block text-xs sm:text-sm font-semibold text-text-primary mb-1">
-                                Cost Price (USD) <span className="text-red-500">*</span>
-                              </label>
+                          <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+                            {/* Price */}
+                            <div>
+                              <label className="block text-[10px] font-medium text-text-muted mb-0.5">Price*</label>
                               <div className="relative">
-                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted text-sm">$</span>
+                                <span className="absolute left-1.5 top-1/2 -translate-y-1/2 text-text-muted text-xs">$</span>
                                 <input
                                   type="number"
                                   step="0.01"
                                   min="0"
                                   placeholder="0.00"
                                   value={quote?.costPricePerCaseUsd || ''}
-                                  onChange={(e) =>
-                                    handleQuoteChange(item.id, 'costPricePerCaseUsd', parseFloat(e.target.value) || 0)
-                                  }
-                                  className="w-full rounded-lg border border-border-primary bg-white pl-7 pr-12 py-2 text-sm text-right font-medium"
+                                  onChange={(e) => handleQuoteChange(item.id, 'costPricePerCaseUsd', parseFloat(e.target.value) || 0)}
+                                  className="w-full rounded border border-border-primary bg-white pl-5 pr-1 py-1.5 text-xs text-right font-medium"
                                 />
-                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted text-xs">
-                                  /case
-                                </span>
                               </div>
                             </div>
 
+                            {/* Case Config */}
                             <div>
-                              <label className="block text-xs sm:text-sm font-semibold text-text-primary mb-1">
-                                Case Config
-                              </label>
+                              <label className="block text-[10px] font-medium text-text-muted mb-0.5">Config</label>
                               <select
-                                value={
-                                  quote?.caseConfig && !CASE_CONFIGS.some((c) => c.value === quote.caseConfig)
-                                    ? 'custom'
-                                    : quote?.caseConfig || ''
-                                }
-                                onChange={(e) => {
-                                  if (e.target.value === 'custom') {
-                                    handleQuoteChange(item.id, 'caseConfig', '');
-                                  } else {
-                                    handleQuoteChange(item.id, 'caseConfig', e.target.value);
-                                  }
-                                }}
-                                className="w-full rounded-lg border border-border-primary bg-white px-2 sm:px-3 py-2 text-sm"
+                                value={quote?.caseConfig || ''}
+                                onChange={(e) => handleQuoteChange(item.id, 'caseConfig', e.target.value)}
+                                className="w-full rounded border border-border-primary bg-white px-1 py-1.5 text-xs"
                               >
-                                <option value="">Select...</option>
-                                {CASE_CONFIGS.map((config) => (
-                                  <option key={config.value} value={config.value}>
-                                    {config.label}
-                                  </option>
+                                <option value="">-</option>
+                                {CASE_CONFIGS.slice(0, 4).map((c) => (
+                                  <option key={c.value} value={c.value}>{c.value}pk</option>
                                 ))}
                               </select>
                             </div>
 
+                            {/* Available Qty */}
                             <div>
-                              <label className="block text-xs sm:text-sm font-semibold text-text-primary mb-1">
-                                Avail Qty
-                              </label>
-                              <div className="relative">
-                                <input
-                                  type="number"
-                                  min="0"
-                                  placeholder="Qty"
-                                  value={quote?.availableQuantity || ''}
-                                  onChange={(e) =>
-                                    handleQuoteChange(item.id, 'availableQuantity', parseInt(e.target.value) || 0)
-                                  }
-                                  className="w-full rounded-lg border border-border-primary bg-white px-2 sm:px-3 pr-8 sm:pr-12 py-2 text-sm"
-                                />
-                                <span className="absolute right-2 sm:right-3 top-1/2 -translate-y-1/2 text-text-muted text-xs">
-                                  cs
-                                </span>
-                              </div>
+                              <label className="block text-[10px] font-medium text-text-muted mb-0.5">Avail</label>
+                              <input
+                                type="number"
+                                min="0"
+                                placeholder="qty"
+                                value={quote?.availableQuantity || ''}
+                                onChange={(e) => handleQuoteChange(item.id, 'availableQuantity', parseInt(e.target.value) || 0)}
+                                className="w-full rounded border border-border-primary bg-white px-1.5 py-1.5 text-xs"
+                              />
                             </div>
 
+                            {/* Location */}
                             <div>
-                              <label className="block text-xs sm:text-sm font-semibold text-text-primary mb-1">
-                                MOQ
-                              </label>
-                              <div className="relative">
-                                <input
-                                  type="number"
-                                  min="0"
-                                  placeholder="Min"
-                                  value={quote?.moq || ''}
-                                  onChange={(e) => handleQuoteChange(item.id, 'moq', parseInt(e.target.value) || 0)}
-                                  className="w-full rounded-lg border border-border-primary bg-white px-2 sm:px-3 pr-8 sm:pr-12 py-2 text-sm"
-                                />
-                                <span className="absolute right-2 sm:right-3 top-1/2 -translate-y-1/2 text-text-muted text-xs">
-                                  cs
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Stock & Delivery Section */}
-                          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-                            <div>
-                              <label className="block text-xs sm:text-sm font-semibold text-text-primary mb-1">
-                                Location
-                              </label>
+                              <label className="block text-[10px] font-medium text-text-muted mb-0.5">Location</label>
                               <select
-                                value={
-                                  quote?.stockLocation && !STOCK_LOCATIONS.some((l) => l.value === quote.stockLocation)
-                                    ? 'custom'
-                                    : quote?.stockLocation || ''
-                                }
-                                onChange={(e) => {
-                                  if (e.target.value === 'custom') {
-                                    handleQuoteChange(item.id, 'stockLocation', '');
-                                  } else {
-                                    handleQuoteChange(item.id, 'stockLocation', e.target.value);
-                                  }
-                                }}
-                                className="w-full rounded-lg border border-border-primary bg-white px-2 sm:px-3 py-2 text-sm"
+                                value={quote?.stockLocation || ''}
+                                onChange={(e) => handleQuoteChange(item.id, 'stockLocation', e.target.value)}
+                                className="w-full rounded border border-border-primary bg-white px-1 py-1.5 text-xs"
                               >
-                                <option value="">Select...</option>
-                                {STOCK_LOCATIONS.map((loc) => (
-                                  <option key={loc.value} value={loc.value}>
-                                    {loc.label}
-                                  </option>
+                                <option value="">-</option>
+                                {STOCK_LOCATIONS.slice(0, 5).map((l) => (
+                                  <option key={l.value} value={l.value}>{l.label.replace(' (Bonded)', '')}</option>
                                 ))}
                               </select>
                             </div>
 
+                            {/* Condition */}
                             <div>
-                              <label className="block text-xs sm:text-sm font-semibold text-text-primary mb-1">
-                                Condition
-                              </label>
+                              <label className="block text-[10px] font-medium text-text-muted mb-0.5">Cond.</label>
                               <select
                                 value={quote?.stockCondition || ''}
                                 onChange={(e) => handleQuoteChange(item.id, 'stockCondition', e.target.value)}
-                                className="w-full rounded-lg border border-border-primary bg-white px-2 sm:px-3 py-2 text-sm"
+                                className="w-full rounded border border-border-primary bg-white px-1 py-1.5 text-xs"
                               >
-                                <option value="">Select...</option>
-                                {STOCK_CONDITIONS.map((cond) => (
-                                  <option key={cond.value} value={cond.value}>
-                                    {cond.label}
-                                  </option>
+                                <option value="">-</option>
+                                {STOCK_CONDITIONS.map((c) => (
+                                  <option key={c.value} value={c.value}>{c.label}</option>
                                 ))}
                               </select>
                             </div>
 
+                            {/* Lead Time */}
                             <div>
-                              <label className="block text-xs sm:text-sm font-semibold text-text-primary mb-1">
-                                Lead Time
-                              </label>
+                              <label className="block text-[10px] font-medium text-text-muted mb-0.5">Lead</label>
                               <div className="relative">
                                 <input
                                   type="number"
                                   min="0"
-                                  placeholder="Days"
+                                  placeholder="days"
                                   value={quote?.leadTimeDays || ''}
-                                  onChange={(e) =>
-                                    handleQuoteChange(item.id, 'leadTimeDays', parseInt(e.target.value) || 0)
-                                  }
-                                  className="w-full rounded-lg border border-border-primary bg-white px-2 sm:px-3 pr-10 py-2 text-sm"
+                                  onChange={(e) => handleQuoteChange(item.id, 'leadTimeDays', parseInt(e.target.value) || 0)}
+                                  className="w-full rounded border border-border-primary bg-white px-1.5 pr-5 py-1.5 text-xs"
                                 />
-                                <span className="absolute right-2 sm:right-3 top-1/2 -translate-y-1/2 text-text-muted text-xs">
-                                  days
-                                </span>
+                                <span className="absolute right-1 top-1/2 -translate-y-1/2 text-[10px] text-text-muted">d</span>
                               </div>
-                            </div>
-
-                            <div>
-                              <label className="block text-xs sm:text-sm font-semibold text-text-primary mb-1">
-                                Valid Until
-                              </label>
-                              <input
-                                type="date"
-                                value={quote?.validUntil ? format(quote.validUntil, 'yyyy-MM-dd') : ''}
-                                onChange={(e) =>
-                                  handleQuoteChange(
-                                    item.id,
-                                    'validUntil',
-                                    e.target.value ? new Date(e.target.value) : undefined,
-                                  )
-                                }
-                                className="w-full rounded-lg border border-border-primary bg-white px-2 sm:px-3 py-2 text-sm"
-                              />
                             </div>
                           </div>
 
-                          {/* Alternative Product Details */}
+                          {/* Alternative Product Details - Compact */}
                           {isAlternative && (
-                            <div className="p-3 sm:p-4 bg-amber-50 border border-amber-200 rounded-lg space-y-3 sm:space-y-4">
-                              <Typography variant="bodySm" className="font-semibold text-amber-800">
-                                Alternative Product Details
-                              </Typography>
-                              <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+                            <div className="p-2 bg-amber-50 border border-amber-200 rounded space-y-2">
+                              <span className="text-xs font-semibold text-amber-800">Alternative Product</span>
+                              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                                 <div>
-                                  <label className="block text-xs font-medium text-amber-700 mb-1">
-                                    Product Name <span className="text-red-500">*</span>
-                                  </label>
+                                  <label className="block text-[10px] font-medium text-amber-700 mb-0.5">Name*</label>
                                   <input
                                     type="text"
-                                    placeholder="Alternative product name"
+                                    placeholder="Product name"
                                     value={quote?.alternativeProductName || ''}
-                                    onChange={(e) =>
-                                      handleQuoteChange(item.id, 'alternativeProductName', e.target.value)
-                                    }
-                                    className="w-full rounded-lg border border-amber-300 bg-white px-3 py-2 text-sm"
+                                    onChange={(e) => handleQuoteChange(item.id, 'alternativeProductName', e.target.value)}
+                                    className="w-full rounded border border-amber-300 bg-white px-1.5 py-1 text-xs"
                                   />
                                 </div>
                                 <div>
-                                  <label className="block text-xs font-medium text-amber-700 mb-1">
-                                    Producer
-                                  </label>
+                                  <label className="block text-[10px] font-medium text-amber-700 mb-0.5">Producer</label>
                                   <input
                                     type="text"
-                                    placeholder="Producer name"
+                                    placeholder="Producer"
                                     value={quote?.alternativeProducer || ''}
-                                    onChange={(e) =>
-                                      handleQuoteChange(item.id, 'alternativeProducer', e.target.value)
-                                    }
-                                    className="w-full rounded-lg border border-amber-300 bg-white px-3 py-2 text-sm"
+                                    onChange={(e) => handleQuoteChange(item.id, 'alternativeProducer', e.target.value)}
+                                    className="w-full rounded border border-amber-300 bg-white px-1.5 py-1 text-xs"
                                   />
                                 </div>
                                 <div>
-                                  <label className="block text-xs font-medium text-amber-700 mb-1">
-                                    Vintage
-                                  </label>
+                                  <label className="block text-[10px] font-medium text-amber-700 mb-0.5">Vintage</label>
                                   <input
                                     type="text"
-                                    placeholder="e.g., 2020"
+                                    placeholder="2020"
                                     value={quote?.alternativeVintage || ''}
-                                    onChange={(e) =>
-                                      handleQuoteChange(item.id, 'alternativeVintage', e.target.value)
-                                    }
-                                    className="w-full rounded-lg border border-amber-300 bg-white px-3 py-2 text-sm"
+                                    onChange={(e) => handleQuoteChange(item.id, 'alternativeVintage', e.target.value)}
+                                    className="w-full rounded border border-amber-300 bg-white px-1.5 py-1 text-xs"
                                   />
                                 </div>
                                 <div>
-                                  <label className="block text-xs font-medium text-amber-700 mb-1">
-                                    Region
-                                  </label>
+                                  <label className="block text-[10px] font-medium text-amber-700 mb-0.5">Region</label>
                                   <input
                                     type="text"
-                                    placeholder="e.g., Burgundy"
+                                    placeholder="Region"
                                     value={quote?.alternativeRegion || ''}
-                                    onChange={(e) =>
-                                      handleQuoteChange(item.id, 'alternativeRegion', e.target.value)
-                                    }
-                                    className="w-full rounded-lg border border-amber-300 bg-white px-3 py-2 text-sm"
+                                    onChange={(e) => handleQuoteChange(item.id, 'alternativeRegion', e.target.value)}
+                                    className="w-full rounded border border-amber-300 bg-white px-1.5 py-1 text-xs"
                                   />
                                 </div>
+                              </div>
+                              <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
                                 <div>
-                                  <label className="block text-xs font-medium text-amber-700 mb-1">
-                                    Country
-                                  </label>
+                                  <label className="block text-[10px] font-medium text-amber-700 mb-0.5">Country</label>
                                   <input
                                     type="text"
-                                    placeholder="e.g., France"
+                                    placeholder="Country"
                                     value={quote?.alternativeCountry || ''}
-                                    onChange={(e) =>
-                                      handleQuoteChange(item.id, 'alternativeCountry', e.target.value)
-                                    }
-                                    className="w-full rounded-lg border border-amber-300 bg-white px-3 py-2 text-sm"
+                                    onChange={(e) => handleQuoteChange(item.id, 'alternativeCountry', e.target.value)}
+                                    className="w-full rounded border border-amber-300 bg-white px-1.5 py-1 text-xs"
                                   />
                                 </div>
                                 <div>
-                                  <label className="block text-xs font-medium text-amber-700 mb-1">
-                                    Bottle Size
-                                  </label>
+                                  <label className="block text-[10px] font-medium text-amber-700 mb-0.5">Size</label>
                                   <select
                                     value={quote?.alternativeBottleSize || ''}
-                                    onChange={(e) =>
-                                      handleQuoteChange(item.id, 'alternativeBottleSize', e.target.value)
-                                    }
-                                    className="w-full rounded-lg border border-amber-300 bg-white px-3 py-2 text-sm"
+                                    onChange={(e) => handleQuoteChange(item.id, 'alternativeBottleSize', e.target.value)}
+                                    className="w-full rounded border border-amber-300 bg-white px-1 py-1 text-xs"
                                   >
-                                    <option value="">Select size...</option>
-                                    {BOTTLE_SIZES.map((size) => (
-                                      <option key={size.value} value={size.value}>
-                                        {size.label}
-                                      </option>
+                                    <option value="">-</option>
+                                    {BOTTLE_SIZES.map((s) => (
+                                      <option key={s.value} value={s.value}>{s.value}</option>
                                     ))}
                                   </select>
                                 </div>
                                 <div>
-                                  <label className="block text-xs font-medium text-amber-700 mb-1">
-                                    Case Config (bottles)
-                                  </label>
+                                  <label className="block text-[10px] font-medium text-amber-700 mb-0.5">Config</label>
                                   <input
                                     type="number"
                                     min="1"
-                                    placeholder="e.g., 6"
+                                    placeholder="6"
                                     value={quote?.alternativeCaseConfig || ''}
-                                    onChange={(e) =>
-                                      handleQuoteChange(
-                                        item.id,
-                                        'alternativeCaseConfig',
-                                        parseInt(e.target.value) || 0,
-                                      )
-                                    }
-                                    className="w-full rounded-lg border border-amber-300 bg-white px-3 py-2 text-sm"
+                                    onChange={(e) => handleQuoteChange(item.id, 'alternativeCaseConfig', parseInt(e.target.value) || 0)}
+                                    className="w-full rounded border border-amber-300 bg-white px-1.5 py-1 text-xs"
                                   />
                                 </div>
-                                <div>
-                                  <label className="block text-xs font-medium text-amber-700 mb-1">
-                                    LWIN (if known)
-                                  </label>
+                                <div className="col-span-2">
+                                  <label className="block text-[10px] font-medium text-amber-700 mb-0.5">LWIN</label>
                                   <input
                                     type="text"
-                                    placeholder="LWIN code"
+                                    placeholder="Optional"
                                     value={quote?.alternativeLwin || ''}
-                                    onChange={(e) =>
-                                      handleQuoteChange(item.id, 'alternativeLwin', e.target.value)
-                                    }
-                                    className="w-full rounded-lg border border-amber-300 bg-white px-3 py-2 text-sm"
+                                    onChange={(e) => handleQuoteChange(item.id, 'alternativeLwin', e.target.value)}
+                                    className="w-full rounded border border-amber-300 bg-white px-1.5 py-1 text-xs"
                                   />
                                 </div>
                               </div>
                               <div>
-                                <label className="block text-xs font-medium text-amber-700 mb-1">
-                                  Reason for Alternative <span className="text-red-500">*</span>
-                                </label>
-                                <textarea
-                                  placeholder="Explain why you're offering an alternative (e.g., original vintage sold out, similar quality at better price)"
+                                <label className="block text-[10px] font-medium text-amber-700 mb-0.5">Reason*</label>
+                                <input
+                                  type="text"
+                                  placeholder="Why offering alternative"
                                   value={quote?.alternativeReason || ''}
-                                  onChange={(e) =>
-                                    handleQuoteChange(item.id, 'alternativeReason', e.target.value)
-                                  }
-                                  rows={2}
-                                  className="w-full rounded-lg border border-amber-300 bg-white px-3 py-2 text-sm"
+                                  onChange={(e) => handleQuoteChange(item.id, 'alternativeReason', e.target.value)}
+                                  className="w-full rounded border border-amber-300 bg-white px-1.5 py-1 text-xs"
                                 />
                               </div>
                             </div>
                           )}
 
-                          {/* Item Notes */}
-                          <div>
-                            <label className="block text-sm font-semibold text-text-primary mb-1">
-                              Notes for this Item
-                            </label>
-                            <textarea
-                              placeholder="Any specific notes about this item (packaging, condition, delivery, etc.)"
+                          {/* Item Notes - Compact */}
+                          <div className="flex items-center gap-2">
+                            <label className="text-[10px] font-medium text-text-muted whitespace-nowrap">Notes:</label>
+                            <input
+                              type="text"
+                              placeholder="Item notes (packaging, condition, etc.)"
                               value={quote?.notes || ''}
                               onChange={(e) => handleQuoteChange(item.id, 'notes', e.target.value)}
-                              rows={2}
-                              className="w-full rounded-lg border border-border-primary bg-white px-3 py-2 text-sm"
+                              className="flex-1 rounded border border-border-primary bg-white px-2 py-1 text-xs"
                             />
                           </div>
                         </>
@@ -1155,35 +1052,25 @@ const PartnerRfqDetailPage = () => {
 
                   {/* Existing quote display (for already submitted) */}
                   {!canSubmit && existingQuote && (
-                    <div className="border-t border-border-muted p-4 bg-fill-muted/30">
-                      <div className="flex flex-wrap items-center gap-4">
-                        <div>
-                          <span className="text-xs text-text-muted">Your Quote:</span>
-                          <Typography variant="bodyMd" className="font-semibold">
-                            ${existingQuote.costPricePerCaseUsd?.toFixed(2)}/case
-                          </Typography>
-                        </div>
+                    <div className="border-t border-border-muted px-3 py-2 bg-fill-muted/30">
+                      <div className="flex flex-wrap items-center gap-3 text-xs">
+                        <span>
+                          <span className="text-text-muted">Quote:</span>{' '}
+                          <span className="font-semibold">${existingQuote.costPricePerCaseUsd?.toFixed(2)}/cs</span>
+                        </span>
                         {existingQuote.quoteType === 'alternative' && existingQuote.alternativeProductName && (
-                          <div>
-                            <span className="text-xs text-text-muted">Alternative:</span>
-                            <Typography variant="bodySm" className="text-text-warning">
-                              {existingQuote.alternativeProductName}
-                            </Typography>
-                          </div>
+                          <span className="text-amber-600">Alt: {existingQuote.alternativeProductName}</span>
                         )}
                         {existingQuote.leadTimeDays && (
-                          <div>
-                            <span className="text-xs text-text-muted">Lead Time:</span>
-                            <Typography variant="bodySm">{existingQuote.leadTimeDays} days</Typography>
-                          </div>
+                          <span className="text-text-muted">{existingQuote.leadTimeDays}d lead</span>
                         )}
                       </div>
                     </div>
                   )}
-                </CardContent>
-              </Card>
+                </div>
             );
           })}
+        </div>
         </div>
 
         {/* Overall Partner Notes */}
