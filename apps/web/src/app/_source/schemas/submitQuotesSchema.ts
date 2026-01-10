@@ -6,6 +6,9 @@ const quoteItemSchema = z
   .object({
     itemId: z.string().uuid(),
     quoteType: z.enum(sourceRfqQuoteType.enumValues),
+    // Quoted vintage - which specific vintage the partner is quoting on
+    // (needed when RFQ item has multiple vintages like "2018, 2016, 2013")
+    quotedVintage: z.string().optional(),
     // Price is optional for N/A quotes
     costPricePerCaseUsd: z.number().nonnegative().optional(),
     currency: z.string().default('USD'),

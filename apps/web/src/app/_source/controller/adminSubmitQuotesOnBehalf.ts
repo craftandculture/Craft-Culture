@@ -118,6 +118,8 @@ const adminSubmitQuotesOnBehalf = adminProcedure
       rfqPartnerId: assignment.id,
       partnerId,
       quoteType: quote.quoteType,
+      // Which specific vintage the partner is quoting on
+      quotedVintage: quote.quotedVintage,
       costPricePerCaseUsd:
         quote.quoteType === 'not_available' ? null : quote.costPricePerCaseUsd,
       currency: quote.currency || 'USD',
