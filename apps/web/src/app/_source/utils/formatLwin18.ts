@@ -33,13 +33,39 @@ const parseBottleSizeToCl = (bottleSize: string | null | undefined): number | nu
 };
 
 /**
+ * Parse case config to extract pack quantity
+ * Handles formats like: 6, "6", "6x75cl", "12 x 750ml"
+ */
+const parseCaseConfigToQty = (caseConfig: number | string | null | undefined): number | null => {
+  if (caseConfig === null || caseConfig === undefined) return null;
+
+  if (typeof caseConfig === 'number') {
+    return caseConfig;
+  }
+
+  // Try to extract the quantity from strings like "6x75cl", "12 x 750ml"
+  const match = caseConfig.match(/^(\d+)/);
+  if (match && match[1]) {
+    return parseInt(match[1], 10);
+  }
+
+  return null;
+};
+
+/**
  * Format LWIN-18 from component parts
  *
  * LWIN-18 structure:
  * - Digits 1-7: Base LWIN (wine identifier)
- * - Digits 8-11: Vintage year
+ * - Digits 8-11: Vintage year (1000 for NV)
  * - Digits 12-15: Bottle size in centiliters (e.g., 0075 for 75cl/750ml)
  * - Digits 16-18: Pack quantity (e.g., 006 for 6-pack)
+ *
+ * This function always returns a full 18-digit LWIN when a base LWIN is provided.
+ * Missing data uses standard defaults:
+ * - Vintage: 1000 (NV - non-vintage indicator)
+ * - Bottle size: 0075 (75cl / 750ml - standard wine bottle)
+ * - Pack quantity: 001 (single bottle)
  *
  * @example
  *   formatLwin18({
@@ -55,7 +81,13 @@ const parseBottleSizeToCl = (bottleSize: string | null | undefined): number | nu
  *     lwin: '1234567',
  *     vintage: '2018',
  *   });
- *   // returns '12345672018' (LWIN-11 if no package info)
+ *   // returns '123456720180075001' (uses defaults for bottle/pack)
+ *
+ * @example
+ *   formatLwin18({
+ *     lwin: '1234567',
+ *   });
+ *   // returns '123456710000075001' (NV with defaults)
  */
 const formatLwin18 = ({
   lwin,
@@ -70,31 +102,63 @@ const formatLwin18 = ({
 }): string | null => {
   if (!lwin) return null;
 
-  // Start with base LWIN-7
-  let result = lwin;
+  // Ensure LWIN base is padded to 7 digits
+  const baseLwin = lwin.padStart(7, '0').slice(0, 7);
 
-  // Extract 4-digit year from vintage (handles "2018", "2018/2019", etc.)
+  // Extract 4-digit year from vintage, default to 1000 (NV) if not available
+  let vintageCode = '1000';
   if (vintage) {
     const yearMatch = vintage.match(/\b(19|20)\d{2}\b/);
     if (yearMatch && yearMatch[0]) {
-      result += yearMatch[0];
+      vintageCode = yearMatch[0];
     }
   }
 
-  // If we have package info, add the 7-digit package code
-  const bottleCl = parseBottleSizeToCl(bottleSize);
-  const packQty = typeof caseConfig === 'string'
-    ? parseInt(caseConfig, 10)
-    : caseConfig;
+  // Parse bottle size, default to 75cl (standard 750ml bottle)
+  const bottleCl = parseBottleSizeToCl(bottleSize) ?? 75;
+  const bottleCode = bottleCl.toString().padStart(4, '0');
 
-  if (bottleCl !== null && packQty && !isNaN(packQty)) {
-    // Format: 4-digit bottle size (cl) + 3-digit pack quantity
-    const bottleCode = bottleCl.toString().padStart(4, '0');
-    const packCode = packQty.toString().padStart(3, '0');
-    result += bottleCode + packCode;
+  // Parse pack quantity, default to 1
+  const packQty = parseCaseConfigToQty(caseConfig) ?? 1;
+  const packCode = packQty.toString().padStart(3, '0');
+
+  return baseLwin + vintageCode + bottleCode + packCode;
+};
+
+/**
+ * Format case configuration for human-readable display
+ *
+ * @example
+ *   formatCaseConfig({ caseConfig: 6, bottleSize: '750ml' }); // returns '6x75cl'
+ *   formatCaseConfig({ caseConfig: 12, bottleSize: '375ml' }); // returns '12x37.5cl'
+ *   formatCaseConfig({ caseConfig: 1, bottleSize: '1.5L' }); // returns '1x150cl'
+ *   formatCaseConfig({ caseConfig: '6x75cl' }); // returns '6x75cl' (passthrough)
+ */
+export const formatCaseConfig = ({
+  caseConfig,
+  bottleSize,
+}: {
+  caseConfig?: number | string | null;
+  bottleSize?: string | null;
+}): string | null => {
+  // If caseConfig is already formatted (e.g., "6x75cl"), return as-is
+  if (typeof caseConfig === 'string' && caseConfig.includes('x')) {
+    return caseConfig;
   }
 
-  return result;
+  const packQty = parseCaseConfigToQty(caseConfig);
+  if (!packQty) return null;
+
+  const bottleCl = parseBottleSizeToCl(bottleSize);
+  if (!bottleCl) {
+    // Just return the quantity if we don't have bottle size
+    return `${packQty}x`;
+  }
+
+  // Format with decimal for non-whole centiliter values
+  const clDisplay = bottleCl % 1 === 0 ? bottleCl.toString() : bottleCl.toFixed(1);
+
+  return `${packQty}x${clDisplay}cl`;
 };
 
 export default formatLwin18;

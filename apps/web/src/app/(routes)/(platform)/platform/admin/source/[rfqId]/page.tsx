@@ -30,7 +30,7 @@ import RfqStatusBadge from '@/app/_source/components/RfqStatusBadge';
 import SendToPartnersDialog from '@/app/_source/components/SendToPartnersDialog';
 import exportRfqToExcel from '@/app/_source/utils/exportRfqToExcel';
 import exportRfqToPDF from '@/app/_source/utils/exportRfqToPDF';
-import formatLwin18 from '@/app/_source/utils/formatLwin18';
+import formatLwin18, { formatCaseConfig } from '@/app/_source/utils/formatLwin18';
 import type { ParsedQuote } from '@/app/_source/utils/parseQuoteExcel';
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
@@ -692,27 +692,42 @@ const RfqDetailPage = () => {
                                 )}
                               </div>
                               <div className="flex items-center gap-2 mt-0.5 text-[10px] text-text-muted">
-                                {item.lwin && (
-                                  <span className="font-mono bg-fill-muted px-1 rounded">
-                                    {formatLwin18({
-                                      lwin: item.lwin,
-                                      // Use the selected quote's vintage if available, otherwise fall back to item vintage
-                                      vintage: selectedQuote
-                                        ? (selectedQuote.quote.quoteType === 'alternative'
-                                            ? selectedQuote.quote.alternativeVintage
-                                            : selectedQuote.quote.quotedVintage) || item.vintage
-                                        : item.vintage,
-                                      bottleSize: selectedQuote?.quote.quoteType === 'alternative'
-                                        ? selectedQuote.quote.alternativeBottleSize || item.bottleSize
-                                        : item.bottleSize,
-                                      caseConfig: selectedQuote
-                                        ? (selectedQuote.quote.quoteType === 'alternative'
-                                            ? selectedQuote.quote.alternativeCaseConfig
-                                            : selectedQuote.quote.caseConfig) || item.caseConfig
-                                        : item.caseConfig,
-                                    }) || item.lwin}
-                                  </span>
-                                )}
+                                {item.lwin && (() => {
+                                  const effectiveBottleSize = selectedQuote?.quote.quoteType === 'alternative'
+                                    ? selectedQuote.quote.alternativeBottleSize || item.bottleSize
+                                    : item.bottleSize;
+                                  const effectiveCaseConfig = selectedQuote
+                                    ? (selectedQuote.quote.quoteType === 'alternative'
+                                        ? selectedQuote.quote.alternativeCaseConfig
+                                        : selectedQuote.quote.caseConfig) || item.caseConfig
+                                    : item.caseConfig;
+                                  const caseConfigDisplay = formatCaseConfig({
+                                    caseConfig: effectiveCaseConfig,
+                                    bottleSize: effectiveBottleSize,
+                                  });
+                                  return (
+                                    <span className="font-mono bg-fill-muted px-1 rounded flex items-center gap-1.5">
+                                      <span>
+                                        {formatLwin18({
+                                          lwin: item.lwin,
+                                          vintage: selectedQuote
+                                            ? (selectedQuote.quote.quoteType === 'alternative'
+                                                ? selectedQuote.quote.alternativeVintage
+                                                : selectedQuote.quote.quotedVintage) || item.vintage
+                                            : item.vintage,
+                                          bottleSize: effectiveBottleSize,
+                                          caseConfig: effectiveCaseConfig,
+                                        })}
+                                      </span>
+                                      {caseConfigDisplay && (
+                                        <>
+                                          <span className="text-text-muted/50">|</span>
+                                          <span className="text-text-primary font-semibold">{caseConfigDisplay}</span>
+                                        </>
+                                      )}
+                                    </span>
+                                  );
+                                })()}
                                 {!item.lwin && item.parseConfidence !== null && item.parseConfidence >= 0.7 && (
                                   <span className="text-text-warning text-[9px]">No LWIN</span>
                                 )}
