@@ -771,25 +771,22 @@ const RfqDetailPage = () => {
                                       <IconCheck className="inline-block h-3 w-3 ml-0.5" />
                                     )}
                                   </div>
-                                  {/* Quick Details */}
-                                  <div className={`text-[9px] mt-0.5 ${isSelected ? 'text-text-on-brand/80' : 'text-text-muted'}`}>
+                                  {/* Case config and vintage */}
+                                  <div className={`text-[10px] mt-0.5 ${isSelected ? 'text-text-on-brand/80' : 'text-text-muted'}`}>
                                     {quote.quote.caseConfig && (
-                                      <span>{quote.quote.caseConfig}</span>
-                                    )}
-                                    {quote.quote.stockLocation && (
-                                      <span className="ml-1">{quote.quote.stockLocation.replace('_bonded', '').replace('_', ' ').toUpperCase()}</span>
+                                      <span className="font-medium">{quote.quote.caseConfig}</span>
                                     )}
                                   </div>
                                   {/* Vintage indicator - show what vintage was quoted */}
                                   {isAlternative ? (
-                                    <span className={`text-[9px] block font-medium ${isSelected ? 'text-amber-200' : 'text-text-warning'}`}>
+                                    <span className={`text-[10px] block font-medium ${isSelected ? 'text-amber-200' : 'text-text-warning'}`}>
                                       {quote.quote.alternativeVintage || 'ALT'}
                                     </span>
                                   ) : (
                                     // Show the specific vintage the partner quoted on
                                     // (quotedVintage takes precedence over item.vintage)
                                     (quote.quote.quotedVintage || item.vintage) && (
-                                      <span className={`text-[9px] block ${isSelected ? 'text-text-on-brand/70' : 'text-text-muted'}`}>
+                                      <span className={`text-[10px] block font-medium ${isSelected ? 'text-text-on-brand/70' : 'text-text-muted'}`}>
                                         {quote.quote.quotedVintage || item.vintage}
                                       </span>
                                     )

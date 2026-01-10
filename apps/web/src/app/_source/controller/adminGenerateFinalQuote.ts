@@ -89,18 +89,22 @@ const adminGenerateFinalQuote = adminProcedure
         producer: quote.quoteType === 'alternative'
           ? quote.alternativeProducer || item.producer
           : item.producer,
+        // Use quotedVintage from the quote (the specific vintage being supplied)
+        // Falls back to item.vintage for alternatives or if quotedVintage not set
         vintage: quote.quoteType === 'alternative'
           ? quote.alternativeVintage || item.vintage
-          : item.vintage,
+          : quote.quotedVintage || item.vintage,
         region: quote.quoteType === 'alternative'
           ? quote.alternativeRegion || item.region
           : item.region,
         bottleSize: quote.quoteType === 'alternative'
           ? quote.alternativeBottleSize || item.bottleSize
           : item.bottleSize,
+        // Use caseConfig from the quote (e.g., "3x75cl", "6x75cl")
+        // Falls back to item.caseConfig if quote doesn't have it
         caseConfig: quote.quoteType === 'alternative'
           ? quote.alternativeCaseConfig || item.caseConfig
-          : item.caseConfig,
+          : quote.caseConfig || item.caseConfig,
         quantity,
         pricePerCase: finalPerCase,
         lineTotal,
