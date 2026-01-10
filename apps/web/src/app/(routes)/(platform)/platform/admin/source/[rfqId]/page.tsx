@@ -696,9 +696,20 @@ const RfqDetailPage = () => {
                                   <span className="font-mono bg-fill-muted px-1 rounded">
                                     {formatLwin18({
                                       lwin: item.lwin,
-                                      vintage: item.vintage,
-                                      bottleSize: item.bottleSize,
-                                      caseConfig: item.caseConfig,
+                                      // Use the selected quote's vintage if available, otherwise fall back to item vintage
+                                      vintage: selectedQuote
+                                        ? (selectedQuote.quote.quoteType === 'alternative'
+                                            ? selectedQuote.quote.alternativeVintage
+                                            : selectedQuote.quote.quotedVintage) || item.vintage
+                                        : item.vintage,
+                                      bottleSize: selectedQuote?.quote.quoteType === 'alternative'
+                                        ? selectedQuote.quote.alternativeBottleSize || item.bottleSize
+                                        : item.bottleSize,
+                                      caseConfig: selectedQuote
+                                        ? (selectedQuote.quote.quoteType === 'alternative'
+                                            ? selectedQuote.quote.alternativeCaseConfig
+                                            : selectedQuote.quote.caseConfig) || item.caseConfig
+                                        : item.caseConfig,
                                     }) || item.lwin}
                                   </span>
                                 )}
