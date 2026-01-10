@@ -299,7 +299,7 @@ const RfqDetailPage = () => {
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
           <div className="flex items-start gap-4">
             <Link href="/platform/admin/source">
-              <Button variant="ghost" size="sm">
+              <Button variant="ghost" size="sm" aria-label="Back to RFQ list">
                 <ButtonContent iconLeft={IconArrowLeft} />
               </Button>
             </Link>
@@ -746,7 +746,7 @@ const RfqDetailPage = () => {
                                 <button
                                   onClick={() => handleSelectQuote(item.id, quote.quote.id)}
                                   disabled={!canSelectQuotes || isSelectingQuote}
-                                  className={`w-full px-1.5 py-1.5 rounded text-center transition-all ${
+                                  className={`w-full px-2 py-2.5 sm:px-1.5 sm:py-1.5 min-h-[44px] sm:min-h-0 rounded text-center transition-all ${
                                     isSelected
                                       ? 'bg-fill-brand text-text-on-brand ring-2 ring-border-brand'
                                       : isBestPrice
@@ -756,6 +756,7 @@ const RfqDetailPage = () => {
                                           : 'bg-fill-muted/50 hover:bg-fill-muted'
                                   } ${!canSelectQuotes ? 'cursor-default' : 'cursor-pointer'}`}
                                   title={tooltip || undefined}
+                                  aria-label={`Select quote: $${price.toFixed(0)} from ${p.partnerName}${isAlternative ? ' (alternative)' : ''}`}
                                 >
                                   {/* Price */}
                                   <div className="text-xs font-semibold">

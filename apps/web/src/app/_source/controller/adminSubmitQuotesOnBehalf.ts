@@ -1,5 +1,5 @@
 import { TRPCError } from '@trpc/server';
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import { z } from 'zod';
 
 import db from '@/database/client';
@@ -100,7 +100,7 @@ const adminSubmitQuotesOnBehalf = adminProcedure
       .where(
         and(
           eq(sourceRfqItems.rfqId, rfqId),
-          sql`${sourceRfqItems.id} IN ${itemIds}`
+          inArray(sourceRfqItems.id, itemIds)
         )
       );
 
@@ -192,7 +192,7 @@ const adminSubmitQuotesOnBehalf = adminProcedure
         .where(
           and(
             eq(sourceRfqItems.rfqId, rfqId),
-            sql`${sourceRfqItems.id} IN ${itemIds}`
+            inArray(sourceRfqItems.id, itemIds)
           )
         );
     });

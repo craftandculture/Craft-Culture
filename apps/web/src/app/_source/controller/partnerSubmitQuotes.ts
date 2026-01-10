@@ -1,5 +1,5 @@
 import { TRPCError } from '@trpc/server';
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 
 import db from '@/database/client';
 import {
@@ -93,7 +93,7 @@ const partnerSubmitQuotes = winePartnerProcedure
       .where(
         and(
           eq(sourceRfqItems.rfqId, rfqId),
-          sql`${sourceRfqItems.id} IN ${itemIds}`,
+          inArray(sourceRfqItems.id, itemIds),
         ),
       );
 
@@ -177,7 +177,7 @@ const partnerSubmitQuotes = winePartnerProcedure
         .where(
           and(
             eq(sourceRfqItems.rfqId, rfqId),
-            sql`${sourceRfqItems.id} IN ${itemIds}`,
+            inArray(sourceRfqItems.id, itemIds),
           ),
         );
     });
