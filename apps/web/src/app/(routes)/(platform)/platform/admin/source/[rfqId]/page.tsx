@@ -394,7 +394,7 @@ const RfqDetailPage = () => {
             {canGeneratePOs && (
               <Button
                 variant="default"
-                colorRole="success"
+                colorRole="brand"
                 onClick={() => setIsGeneratePOsOpen(true)}
               >
                 <ButtonContent iconLeft={IconPackageExport}>Generate POs</ButtonContent>
