@@ -29,6 +29,7 @@ import RfqStatusBadge from '@/app/_source/components/RfqStatusBadge';
 import SendToPartnersDialog from '@/app/_source/components/SendToPartnersDialog';
 import exportRfqToExcel from '@/app/_source/utils/exportRfqToExcel';
 import exportRfqToPDF from '@/app/_source/utils/exportRfqToPDF';
+import formatLwin18 from '@/app/_source/utils/formatLwin18';
 import type { ParsedQuote } from '@/app/_source/utils/parseQuoteExcel';
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
@@ -647,7 +648,12 @@ const RfqDetailPage = () => {
                               <div className="flex items-center gap-2 mt-0.5 text-[10px] text-text-muted">
                                 {item.lwin && (
                                   <span className="font-mono bg-fill-muted px-1 rounded">
-                                    {item.lwin}
+                                    {formatLwin18({
+                                      lwin: item.lwin,
+                                      vintage: item.vintage,
+                                      bottleSize: item.bottleSize,
+                                      caseConfig: item.caseConfig,
+                                    }) || item.lwin}
                                   </span>
                                 )}
                                 {!item.lwin && item.parseConfidence !== null && item.parseConfidence >= 0.7 && (
