@@ -25,7 +25,7 @@ interface RfqItem {
       alternativeProductName?: string | null;
       alternativeVintage?: string | null;
       alternativeBottleSize?: string | null;
-      alternativeCaseConfig?: string | null;
+      alternativeCaseConfig?: number | string | null;
       leadTimeDays?: number | null;
       stockLocation?: string | null;
       notAvailableReason?: string | null;
