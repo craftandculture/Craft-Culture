@@ -33,12 +33,12 @@ const adminDeleteRfq = adminProcedure
       });
     }
 
-    // Prevent deletion of RFQs that have been sent (business rule)
-    const nonDeletableStatuses = ['sent', 'collecting', 'comparing', 'selecting'];
+    // Prevent deletion of RFQs that are in progress (must cancel first)
+    const nonDeletableStatuses = ['sent', 'collecting', 'comparing', 'selecting', 'finalized', 'po_generated', 'quote_generated'];
     if (nonDeletableStatuses.includes(existing.status)) {
       throw new TRPCError({
         code: 'BAD_REQUEST',
-        message: 'Cannot delete RFQ that has been sent to partners. Cancel it instead.',
+        message: 'Cannot delete RFQ that is in progress. Cancel it first.',
       });
     }
 
