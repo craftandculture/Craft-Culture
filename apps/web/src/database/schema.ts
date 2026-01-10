@@ -1832,3 +1832,98 @@ export const sourceRfqActivityLogs = pgTable(
 ).enableRLS();
 
 export type SourceRfqActivityLog = typeof sourceRfqActivityLogs.$inferSelect;
+
+// ============================================================================
+// LWIN (Liv-ex Wine Identification Number) Reference Database
+// ============================================================================
+
+/**
+ * LWIN status enum - whether the LWIN is actively used
+ */
+export const lwinStatus = pgEnum('lwin_status', ['live', 'obsolete']);
+
+/**
+ * LWIN wine colour enum
+ */
+export const lwinColour = pgEnum('lwin_colour', [
+  'red',
+  'white',
+  'rose',
+  'amber',
+  'orange',
+  'mixed',
+]);
+
+/**
+ * LWIN wine type enum
+ */
+export const lwinType = pgEnum('lwin_type', [
+  'wine',
+  'fortified',
+  'spirit',
+  'beer',
+  'cider',
+  'sake',
+  'other',
+]);
+
+/**
+ * LWIN wines reference table - industry standard wine identifiers
+ * Data sourced from Liv-ex LWIN database (~208,000 wines)
+ */
+export const lwinWines = pgTable(
+  'lwin_wines',
+  {
+    // LWIN is the primary key - 7-digit unique identifier
+    lwin: text('lwin').primaryKey(),
+
+    // Status
+    status: lwinStatus('status').notNull().default('live'),
+
+    // Wine identification
+    displayName: text('display_name').notNull(),
+    producerTitle: text('producer_title'),
+    producerName: text('producer_name'),
+    wine: text('wine'),
+
+    // Geography
+    country: text('country'),
+    region: text('region'),
+    subRegion: text('sub_region'),
+    site: text('site'),
+    parcel: text('parcel'),
+
+    // Wine characteristics
+    colour: lwinColour('colour'),
+    type: lwinType('type'),
+    subType: text('sub_type'),
+
+    // Classification
+    designation: text('designation'),
+    classification: text('classification'),
+
+    // Vintage info
+    vintageConfig: text('vintage_config'),
+    firstVintage: text('first_vintage'),
+    finalVintage: text('final_vintage'),
+
+    // Metadata
+    reference: text('reference'),
+    dateAdded: timestamp('date_added', { mode: 'date' }),
+    dateUpdated: timestamp('date_updated', { mode: 'date' }),
+
+    ...timestamps,
+  },
+  (table) => [
+    // Full-text search index for matching
+    index('lwin_wines_display_name_idx').on(table.displayName),
+    index('lwin_wines_producer_name_idx').on(table.producerName),
+    index('lwin_wines_wine_idx').on(table.wine),
+    index('lwin_wines_country_idx').on(table.country),
+    index('lwin_wines_region_idx').on(table.region),
+    index('lwin_wines_colour_idx').on(table.colour),
+    index('lwin_wines_status_idx').on(table.status),
+  ],
+).enableRLS();
+
+export type LwinWine = typeof lwinWines.$inferSelect;

@@ -168,6 +168,7 @@
     "repomix": "^1.4.2",
     "tailwindcss": "^4.1.8",
     "trigger.dev": "^4.0.4",
+    "tsx": "^4.21.0",
     "typescript": "^5",
     "typescript-eslint": "^8.45.0",
     "vite-tsconfig-paths": "^5.1.4",

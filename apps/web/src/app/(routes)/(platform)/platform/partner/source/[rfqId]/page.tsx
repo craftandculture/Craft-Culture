@@ -254,44 +254,62 @@ const PartnerRfqDetailPage = () => {
   }).length;
 
   return (
-    <div className="container mx-auto max-w-7xl px-4 sm:px-6 py-6 sm:py-8">
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-          <div className="flex items-start gap-4">
+    <div className="container mx-auto max-w-4xl px-4 py-4 sm:py-8 pb-28 sm:pb-8">
+      <div className="space-y-4 sm:space-y-6">
+        {/* Header - Compact for mobile */}
+        <div className="space-y-3">
+          {/* Back + RFQ number */}
+          <div className="flex items-center gap-3">
             <Link href="/platform/partner/source">
-              <Button variant="ghost" size="sm">
+              <Button variant="ghost" size="sm" className="p-1.5">
                 <ButtonContent iconLeft={IconArrowLeft} />
               </Button>
             </Link>
-            <div>
-              <div className="flex items-center gap-3 mb-1">
-                <Typography variant="bodyXs" className="font-mono text-text-muted">
-                  {rfq.rfqNumber}
-                </Typography>
-                <RfqStatusBadge status={rfq.status} />
-              </div>
-              <Typography variant="headingLg">{rfq.name}</Typography>
-              {rfq.responseDeadline && (
-                <div className="flex items-center gap-2 mt-1 text-text-muted">
-                  <IconCalendar className="h-4 w-4" />
-                  <Typography variant="bodySm">
-                    Due {format(new Date(rfq.responseDeadline), 'PPP')} (
-                    {formatDistanceToNow(new Date(rfq.responseDeadline), { addSuffix: true })})
-                  </Typography>
-                </div>
-              )}
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="font-mono text-xs text-text-muted">
+                {rfq.rfqNumber}
+              </span>
+              <RfqStatusBadge status={rfq.status} />
             </div>
           </div>
 
+          {/* Title + Deadline */}
+          <div>
+            <Typography variant="headingLg" className="text-lg sm:text-xl">
+              {rfq.name}
+            </Typography>
+            {rfq.responseDeadline && (
+              <div className={`flex items-center gap-1.5 mt-1 text-sm ${
+                isDeadlinePassed
+                  ? 'text-red-600'
+                  : new Date(rfq.responseDeadline) < new Date(Date.now() + 24 * 60 * 60 * 1000)
+                    ? 'text-amber-600'
+                    : 'text-text-muted'
+              }`}>
+                <IconCalendar className="h-4 w-4" />
+                <span>
+                  {isDeadlinePassed
+                    ? 'Deadline passed'
+                    : `Due ${formatDistanceToNow(new Date(rfq.responseDeadline), { addSuffix: true })}`
+                  }
+                </span>
+                <span className="hidden sm:inline text-text-muted">
+                  ({format(new Date(rfq.responseDeadline), 'MMM d, yyyy')})
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* Desktop action buttons */}
           {canSubmit && (
-            <div className="flex items-center gap-2">
+            <div className="hidden sm:flex items-center gap-2">
               <Button
                 variant="outline"
                 colorRole="danger"
+                size="sm"
                 onClick={() => setIsDeclineDialogOpen(true)}
               >
-                <ButtonContent iconLeft={IconX}>Decline</ButtonContent>
+                <ButtonContent iconLeft={IconX}>Decline RFQ</ButtonContent>
               </Button>
               <Button
                 variant="default"
@@ -307,35 +325,56 @@ const PartnerRfqDetailPage = () => {
           )}
         </div>
 
-        {/* Progress indicator */}
+        {/* Progress indicator - Desktop only, mobile uses sticky bar */}
         {canSubmit && (
-          <Card className="border-border-brand bg-fill-brand/5">
-            <CardContent className="p-4">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <IconInfoCircle className="h-5 w-5 text-text-brand flex-shrink-0" />
-                  <Typography variant="bodyMd">
-                    <span className="font-semibold">{completedCount}</span> of{' '}
-                    <span className="font-semibold">{rfq.items.length}</span> items quoted
-                  </Typography>
+          <div className="hidden sm:block">
+            <Card className="border-border-brand bg-fill-brand/5">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <IconInfoCircle className="h-5 w-5 text-text-brand flex-shrink-0" />
+                    <Typography variant="bodyMd">
+                      <span className="font-semibold">{completedCount}</span> of{' '}
+                      <span className="font-semibold">{rfq.items.length}</span> items quoted
+                    </Typography>
+                  </div>
+                  <div className="flex items-center gap-4 text-sm">
+                    <span className="flex items-center gap-1.5">
+                      <span className="w-3 h-3 rounded-full bg-green-500" />
+                      Quoted
+                    </span>
+                    <span className="flex items-center gap-1.5">
+                      <span className="w-3 h-3 rounded-full bg-red-500" />
+                      N/A
+                    </span>
+                    <span className="flex items-center gap-1.5">
+                      <span className="w-3 h-3 rounded-full bg-gray-300" />
+                      Pending
+                    </span>
+                  </div>
                 </div>
-                <div className="flex items-center gap-3 sm:gap-4 text-xs sm:text-sm ml-8 sm:ml-0">
-                  <span className="flex items-center gap-1.5">
-                    <span className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-green-500" />
-                    Complete
-                  </span>
-                  <span className="flex items-center gap-1.5">
-                    <span className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-red-500" />
-                    N/A
-                  </span>
-                  <span className="flex items-center gap-1.5">
-                    <span className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-gray-300" />
-                    Pending
-                  </span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* Mobile progress summary */}
+        {canSubmit && (
+          <div className="sm:hidden flex items-center justify-between px-1 text-sm">
+            <span className="text-text-muted">
+              <span className="font-semibold text-text-primary">{completedCount}</span>/{rfq.items.length} quoted
+            </span>
+            <div className="flex items-center gap-3 text-xs">
+              <span className="flex items-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-green-500" />
+                {Array.from(quotes.values()).filter((q) => q.quoteType !== 'not_available' && q.costPricePerCaseUsd && q.costPricePerCaseUsd > 0).length}
+              </span>
+              <span className="flex items-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-red-500" />
+                {Array.from(quotes.values()).filter((q) => q.quoteType === 'not_available').length}
+              </span>
+            </div>
+          </div>
         )}
 
         {/* Status banners */}
@@ -1022,6 +1061,45 @@ const PartnerRfqDetailPage = () => {
           </DialogContent>
         </Dialog>
       </div>
+
+      {/* Mobile sticky action bar */}
+      {canSubmit && (
+        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-border-primary p-3 sm:hidden safe-area-inset-bottom z-50">
+          <div className="flex items-center gap-2 max-w-4xl mx-auto">
+            <button
+              type="button"
+              onClick={() => setIsDeclineDialogOpen(true)}
+              className="p-2.5 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 transition-colors"
+              aria-label="Decline RFQ"
+            >
+              <IconX className="h-5 w-5" />
+            </button>
+            <Button
+              variant="default"
+              colorRole="brand"
+              onClick={handleSubmitQuotes}
+              isDisabled={isSubmitting || completedCount === 0}
+              className="flex-1"
+            >
+              <ButtonContent iconLeft={IconSend}>
+                {isSubmitting
+                  ? 'Submitting...'
+                  : completedCount === 0
+                    ? 'Quote items to submit'
+                    : `Submit ${completedCount} Quote${completedCount !== 1 ? 's' : ''}`
+                }
+              </ButtonContent>
+            </Button>
+          </div>
+          {/* Progress bar */}
+          <div className="mt-2 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-blue-500 transition-all duration-300"
+              style={{ width: `${(completedCount / rfq.items.length) * 100}%` }}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 };
