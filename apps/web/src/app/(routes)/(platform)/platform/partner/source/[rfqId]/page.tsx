@@ -41,6 +41,7 @@ type QuoteType = (typeof sourceRfqQuoteType.enumValues)[number];
 interface QuoteEntry {
   itemId: string;
   quoteType: QuoteType;
+  quotedVintage?: string;
   costPricePerCaseUsd?: number;
   currency: string;
   caseConfig?: string;
@@ -337,8 +338,10 @@ const PartnerRfqDetailPage = () => {
       const quoteEntry: QuoteEntry = {
         itemId: parsed.itemId,
         quoteType: parsed.quoteType,
+        quotedVintage: parsed.quotedVintage,
         costPricePerCaseUsd: parsed.costPricePerCaseUsd,
         currency: 'USD',
+        caseConfig: parsed.caseConfig,
         availableQuantity: parsed.availableQuantity,
         leadTimeDays: parsed.leadTimeDays,
         stockLocation: parsed.stockLocation,

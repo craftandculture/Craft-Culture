@@ -269,8 +269,10 @@ const RfqDetailPage = () => {
       quotes: parsedPartnerQuotes.map((q) => ({
         itemId: q.itemId,
         quoteType: q.quoteType,
+        quotedVintage: q.quotedVintage,
         costPricePerCaseUsd: q.costPricePerCaseUsd,
         currency: 'USD',
+        caseConfig: q.caseConfig,
         availableQuantity: q.availableQuantity,
         leadTimeDays: q.leadTimeDays,
         stockLocation: q.stockLocation,
