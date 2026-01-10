@@ -9,6 +9,7 @@ import {
   IconFileTypePdf,
   IconFilter,
   IconFilterOff,
+  IconPackageExport,
   IconPlus,
   IconSelectAll,
   IconSend,
@@ -68,6 +69,19 @@ const RfqDetailPage = () => {
   const [isUploadPartnerResponseOpen, setIsUploadPartnerResponseOpen] = useState(false);
   const [selectedPartnerId, setSelectedPartnerId] = useState<string>('');
   const [parsedPartnerQuotes, setParsedPartnerQuotes] = useState<ParsedQuote[] | null>(null);
+
+  // State for PO generation
+  const [isGeneratePOsOpen, setIsGeneratePOsOpen] = useState(false);
+  const [poDeliveryAddress, setPoDeliveryAddress] = useState('');
+  const [poPaymentTerms, setPoPaymentTerms] = useState('');
+  const [poNotes, setPoNotes] = useState('');
+  const [generatedPOs, setGeneratedPOs] = useState<Array<{
+    id: string;
+    poNumber: string;
+    partnerName: string;
+    itemCount: number;
+    totalAmountUsd: number;
+  }> | null>(null);
 
   // Fetch RFQ data
   const { data: rfq, isLoading, refetch } = useQuery({
@@ -134,6 +148,20 @@ const RfqDetailPage = () => {
     }),
   );
 
+  // Generate Purchase Orders mutation
+  const { mutate: generatePurchaseOrders, isPending: isGeneratingPOs } = useMutation(
+    api.source.admin.generatePurchaseOrders.mutationOptions({
+      onSuccess: (data) => {
+        void refetch();
+        setGeneratedPOs(data.purchaseOrders);
+        // Clear form fields
+        setPoDeliveryAddress('');
+        setPoPaymentTerms('');
+        setPoNotes('');
+      },
+    }),
+  );
+
   // Focus input when editing starts
   useEffect(() => {
     if (editingItemId && priceInputRef.current) {
@@ -185,6 +213,8 @@ const RfqDetailPage = () => {
   const canSendToPartners = ['draft', 'parsing', 'ready_to_send'].includes(rfq.status);
   const canSelectQuotes = ['sent', 'collecting', 'comparing', 'selecting'].includes(rfq.status);
   const canGenerateQuote = rfq.status === 'selecting' || rfq.items.some((i) => i.selectedQuoteId);
+  const canGeneratePOs = rfq.status === 'finalized';
+  const hasGeneratedPOs = rfq.status === 'po_generated' || rfq.status === 'completed';
 
   // Build comparison data
   const partnerMap = new Map(rfq.partners.map((p) => [p.partnerId, p]));
@@ -360,6 +390,22 @@ const RfqDetailPage = () => {
                   {isGenerating ? 'Generating...' : 'Export PDF'}
                 </ButtonContent>
               </Button>
+            )}
+            {canGeneratePOs && (
+              <Button
+                variant="default"
+                colorRole="success"
+                onClick={() => setIsGeneratePOsOpen(true)}
+              >
+                <ButtonContent iconLeft={IconPackageExport}>Generate POs</ButtonContent>
+              </Button>
+            )}
+            {hasGeneratedPOs && (
+              <Link href={`/platform/admin/source/${rfqId}/purchase-orders`}>
+                <Button variant="outline">
+                  <ButtonContent iconLeft={IconPackageExport}>View POs</ButtonContent>
+                </Button>
+              </Link>
             )}
           </div>
         </div>
@@ -1103,6 +1149,133 @@ const RfqDetailPage = () => {
                 </div>
               )}
             </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Generate Purchase Orders Dialog */}
+        <Dialog open={isGeneratePOsOpen} onOpenChange={(open) => {
+          setIsGeneratePOsOpen(open);
+          if (!open) {
+            setGeneratedPOs(null);
+          }
+        }}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle>
+                {generatedPOs ? 'Purchase Orders Generated' : 'Generate Purchase Orders'}
+              </DialogTitle>
+              <DialogDescription>
+                {generatedPOs
+                  ? `Successfully created ${generatedPOs.length} purchase order(s)`
+                  : 'Create purchase orders for each partner with selected quotes'}
+              </DialogDescription>
+            </DialogHeader>
+
+            {generatedPOs ? (
+              // Success state - show generated POs
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  {generatedPOs.map((po) => (
+                    <div
+                      key={po.id}
+                      className="flex items-center justify-between p-3 bg-fill-success/10 border border-border-success rounded-lg"
+                    >
+                      <div>
+                        <Typography variant="bodyMd" className="font-medium">
+                          {po.poNumber}
+                        </Typography>
+                        <Typography variant="bodySm" colorRole="muted">
+                          {po.partnerName} · {po.itemCount} items
+                        </Typography>
+                      </div>
+                      <Typography variant="bodyMd" className="font-medium">
+                        ${po.totalAmountUsd.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                      </Typography>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="flex justify-end gap-2 pt-4 border-t">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setIsGeneratePOsOpen(false);
+                      setGeneratedPOs(null);
+                    }}
+                  >
+                    Close
+                  </Button>
+                  <Link href={`/platform/admin/source/${rfqId}/purchase-orders`}>
+                    <Button variant="default" colorRole="brand">
+                      <ButtonContent iconLeft={IconPackageExport}>View All POs</ButtonContent>
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+            ) : (
+              // Form state - enter delivery details
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Delivery Address (optional)</label>
+                  <textarea
+                    className="w-full px-3 py-2 border rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-brand"
+                    rows={2}
+                    placeholder="Enter delivery address..."
+                    value={poDeliveryAddress}
+                    onChange={(e) => setPoDeliveryAddress(e.target.value)}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Payment Terms (optional)</label>
+                  <input
+                    type="text"
+                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand"
+                    placeholder="e.g., Net 30, COD"
+                    value={poPaymentTerms}
+                    onChange={(e) => setPoPaymentTerms(e.target.value)}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Notes (optional)</label>
+                  <textarea
+                    className="w-full px-3 py-2 border rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-brand"
+                    rows={2}
+                    placeholder="Additional notes for all POs..."
+                    value={poNotes}
+                    onChange={(e) => setPoNotes(e.target.value)}
+                  />
+                </div>
+
+                <div className="flex justify-end gap-2 pt-4 border-t">
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsGeneratePOsOpen(false)}
+                    isDisabled={isGeneratingPOs}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="default"
+                    colorRole="success"
+                    onClick={() => {
+                      generatePurchaseOrders({
+                        rfqId,
+                        deliveryAddress: poDeliveryAddress || undefined,
+                        paymentTerms: poPaymentTerms || undefined,
+                        notes: poNotes || undefined,
+                      });
+                    }}
+                    isDisabled={isGeneratingPOs}
+                  >
+                    <ButtonContent iconLeft={IconPackageExport}>
+                      {isGeneratingPOs ? 'Generating...' : 'Generate POs'}
+                    </ButtonContent>
+                  </Button>
+                </div>
+              </div>
+            )}
           </DialogContent>
         </Dialog>
       </div>
