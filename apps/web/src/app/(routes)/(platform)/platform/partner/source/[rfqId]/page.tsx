@@ -1223,13 +1223,13 @@ const PartnerRfqDetailPage = () => {
 
       {/* Mobile sticky action bar */}
       {canSubmit && (
-        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-border-primary p-3 sm:hidden safe-area-inset-bottom z-50">
+        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-border-primary p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] sm:hidden z-50">
           <div className="flex items-center gap-2 max-w-4xl mx-auto">
             <button
               type="button"
               onClick={() => setIsDeclineDialogOpen(true)}
-              className="p-2.5 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 transition-colors"
-              aria-label="Decline RFQ"
+              className="p-2.5 min-w-[44px] min-h-[44px] rounded-lg border border-red-200 text-red-600 hover:bg-red-50 transition-colors flex items-center justify-center"
+              aria-label="Decline this RFQ"
             >
               <IconX className="h-5 w-5" />
             </button>
@@ -1238,7 +1238,8 @@ const PartnerRfqDetailPage = () => {
               colorRole="brand"
               onClick={handleSubmitQuotes}
               isDisabled={isSubmitting || completedCount === 0}
-              className="flex-1"
+              className="flex-1 min-h-[44px]"
+              aria-label={isSubmitting ? 'Submitting quotes' : `Submit ${completedCount} quotes`}
             >
               <ButtonContent iconLeft={IconSend}>
                 {isSubmitting
@@ -1251,7 +1252,7 @@ const PartnerRfqDetailPage = () => {
             </Button>
           </div>
           {/* Progress bar */}
-          <div className="mt-2 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+          <div className="mt-2 h-1.5 bg-gray-200 rounded-full overflow-hidden" role="progressbar" aria-valuenow={completedCount} aria-valuemax={rfq.items.length} aria-label="Quote completion progress">
             <div
               className="h-full bg-blue-500 transition-all duration-300"
               style={{ width: `${(completedCount / rfq.items.length) * 100}%` }}

@@ -44,19 +44,9 @@ const partnerGetOneRfq = winePartnerProcedure
       );
 
     if (!assignment) {
-      // Debug: check what assignments exist for this RFQ
-      const allAssignments = await db
-        .select({
-          partnerId: sourceRfqPartners.partnerId,
-          status: sourceRfqPartners.status,
-        })
-        .from(sourceRfqPartners)
-        .where(eq(sourceRfqPartners.rfqId, rfqId));
-
-      logger.warn('[SOURCE] Partner getOne - RFQ not found for partner', {
+      logger.warn('[SOURCE] Partner getOne - unauthorized access attempt', {
         rfqId,
         requestingPartnerId: partnerId,
-        existingAssignments: allAssignments,
       });
 
       throw new TRPCError({
