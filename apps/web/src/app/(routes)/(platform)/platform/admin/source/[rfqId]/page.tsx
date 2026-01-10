@@ -738,7 +738,11 @@ const RfqDetailPage = () => {
                             if (quote.quote.stockCondition) tooltipParts.push(`Condition: ${quote.quote.stockCondition}`);
                             if (quote.quote.leadTimeDays) tooltipParts.push(`Lead: ${quote.quote.leadTimeDays}d`);
                             if (quote.quote.moq) tooltipParts.push(`MOQ: ${quote.quote.moq} cs`);
-                            if (isAlternative) tooltipParts.unshift(`ALT: ${quote.quote.alternativeProductName}`);
+                            if (isAlternative) {
+                              const altDetails = [quote.quote.alternativeProductName, quote.quote.alternativeVintage].filter(Boolean).join(' ');
+                              tooltipParts.unshift(`Alternative: ${altDetails}`);
+                              if (quote.quote.alternativeReason) tooltipParts.push(`Reason: ${quote.quote.alternativeReason}`);
+                            }
                             const tooltip = tooltipParts.join('\n');
 
                             return (
@@ -774,11 +778,17 @@ const RfqDetailPage = () => {
                                       <span className="ml-1">{quote.quote.stockLocation.replace('_bonded', '').replace('_', ' ').toUpperCase()}</span>
                                     )}
                                   </div>
-                                  {/* Alternative indicator */}
-                                  {isAlternative && (
-                                    <span className={`text-[8px] block ${isSelected ? 'text-amber-200' : 'text-text-warning'}`}>
-                                      ALT
+                                  {/* Vintage indicator - show what vintage was quoted */}
+                                  {isAlternative ? (
+                                    <span className={`text-[9px] block font-medium ${isSelected ? 'text-amber-200' : 'text-text-warning'}`}>
+                                      {quote.quote.alternativeVintage || 'ALT'}
                                     </span>
+                                  ) : (
+                                    item.vintage && (
+                                      <span className={`text-[9px] block ${isSelected ? 'text-text-on-brand/70' : 'text-text-muted'}`}>
+                                        {item.vintage}
+                                      </span>
+                                    )
                                   )}
                                 </button>
                               </td>
