@@ -1269,7 +1269,7 @@ const RfqDetailPage = () => {
                   </Button>
                   <Button
                     variant="default"
-                    colorRole="success"
+                    colorRole="brand"
                     onClick={() => {
                       generatePurchaseOrders({
                         rfqId,
