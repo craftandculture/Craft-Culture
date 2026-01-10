@@ -8,6 +8,7 @@ import {
   IconFileTypePdf,
   IconFilter,
   IconFilterOff,
+  IconPlus,
   IconSelectAll,
   IconSend,
   IconSparkles,
@@ -18,6 +19,9 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
+import AddItemModal from '@/app/_source/components/AddItemModal';
+import ItemEditorModal from '@/app/_source/components/ItemEditorModal';
+import type { ItemData } from '@/app/_source/components/ItemEditorModal';
 import RfqStatusBadge from '@/app/_source/components/RfqStatusBadge';
 import SendToPartnersDialog from '@/app/_source/components/SendToPartnersDialog';
 import exportRfqToExcel from '@/app/_source/utils/exportRfqToExcel';
@@ -44,6 +48,11 @@ const RfqDetailPage = () => {
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [editingPrice, setEditingPrice] = useState<string>('');
   const priceInputRef = useRef<HTMLInputElement>(null);
+
+  // State for item modals
+  const [isAddItemOpen, setIsAddItemOpen] = useState(false);
+  const [isItemEditorOpen, setIsItemEditorOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<ItemData | null>(null);
 
   // Fetch RFQ data
   const { data: rfq, isLoading, refetch } = useQuery({
@@ -172,6 +181,26 @@ const RfqDetailPage = () => {
     setEditingPrice('');
   };
 
+  // Open item editor modal
+  const handleOpenItemEditor = (item: typeof rfq.items[number]) => {
+    if (!rfq) return;
+    setEditingItem({
+      id: item.id,
+      productName: item.productName,
+      producer: item.producer,
+      vintage: item.vintage,
+      region: item.region,
+      country: item.country,
+      bottleSize: item.bottleSize,
+      caseConfig: item.caseConfig,
+      lwin: item.lwin,
+      quantity: item.quantity,
+      adminNotes: item.adminNotes,
+      originalText: item.originalText,
+    });
+    setIsItemEditorOpen(true);
+  };
+
   // Auto-select best prices for all items
   const handleAutoSelectBest = () => {
     if (!rfq) return;
@@ -263,7 +292,15 @@ const RfqDetailPage = () => {
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            {canSendToPartners && (
+              <Button
+                variant="outline"
+                onClick={() => setIsAddItemOpen(true)}
+              >
+                <ButtonContent iconLeft={IconPlus}>Add Item</ButtonContent>
+              </Button>
+            )}
             {canSendToPartners && rfq.itemCount > 0 && (
               <Button
                 variant="default"
@@ -458,10 +495,25 @@ const RfqDetailPage = () => {
             </div>
 
             {rfq.items.length === 0 ? (
-              <div className="p-6 text-center">
-                <Typography variant="bodyMd" colorRole="muted">
-                  No items yet. Add items to this RFQ.
+              <div className="p-8 text-center">
+                <div className="w-12 h-12 rounded-full bg-fill-brand/10 flex items-center justify-center mx-auto mb-4">
+                  <IconPlus className="h-6 w-6 text-text-brand" />
+                </div>
+                <Typography variant="headingSm" className="mb-2">
+                  No items yet
                 </Typography>
+                <Typography variant="bodySm" colorRole="muted" className="mb-4">
+                  Add items manually or upload a spreadsheet to get started
+                </Typography>
+                {canSendToPartners && (
+                  <Button
+                    variant="default"
+                    colorRole="brand"
+                    onClick={() => setIsAddItemOpen(true)}
+                  >
+                    <ButtonContent iconLeft={IconPlus}>Add First Item</ButtonContent>
+                  </Button>
+                )}
               </div>
             ) : (
               <div className="overflow-x-auto">
@@ -514,12 +566,19 @@ const RfqDetailPage = () => {
                             idx % 2 === 0 ? 'bg-surface-primary' : 'bg-fill-muted/10'
                           }`}
                         >
-                          {/* Product Cell - Name, Producer, Vintage, Region */}
+                          {/* Product Cell - Name, Producer, Vintage, Region - Clickable to Edit */}
                           <td className="px-2 py-2">
-                            <div className="min-w-0">
+                            <button
+                              type="button"
+                              onClick={() => handleOpenItemEditor(item)}
+                              className={`w-full text-left min-w-0 group ${
+                                canSendToPartners ? 'cursor-pointer hover:bg-fill-brand/5 rounded px-1 -mx-1' : ''
+                              }`}
+                              disabled={!canSendToPartners && !canSelectQuotes}
+                            >
                               <div className="flex items-baseline gap-1.5">
                                 <span
-                                  className="text-xs font-semibold truncate"
+                                  className="text-xs font-semibold truncate group-hover:text-text-brand transition-colors"
                                   title={item.productName || ''}
                                 >
                                   {item.productName}
@@ -529,23 +588,31 @@ const RfqDetailPage = () => {
                                     {item.vintage}
                                   </span>
                                 )}
+                                {canSendToPartners && (
+                                  <IconEdit className="h-3 w-3 text-text-muted opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
+                                )}
                               </div>
                               <div className="flex items-center gap-2 mt-0.5 text-[10px] text-text-muted">
+                                {item.lwin && (
+                                  <span className="font-mono bg-fill-muted px-1 rounded">
+                                    {item.lwin}
+                                  </span>
+                                )}
                                 {item.producer && <span>{item.producer}</span>}
                                 {item.region && (
                                   <>
-                                    {item.producer && <span>·</span>}
+                                    {(item.producer || item.lwin) && <span>·</span>}
                                     <span>{item.region}</span>
                                   </>
                                 )}
                                 {item.country && !item.region && (
                                   <>
-                                    {item.producer && <span>·</span>}
+                                    {(item.producer || item.lwin) && <span>·</span>}
                                     <span>{item.country}</span>
                                   </>
                                 )}
                               </div>
-                            </div>
+                            </button>
                           </td>
 
                           {/* Format Cell - Bottle Size & Case Config */}
@@ -828,6 +895,25 @@ const RfqDetailPage = () => {
           rfqId={rfqId}
           open={isSelectPartnersOpen}
           onOpenChange={setIsSelectPartnersOpen}
+          onSuccess={() => void refetch()}
+        />
+
+        {/* Add Item Modal */}
+        <AddItemModal
+          open={isAddItemOpen}
+          onOpenChange={setIsAddItemOpen}
+          rfqId={rfqId}
+          onSuccess={() => void refetch()}
+        />
+
+        {/* Item Editor Modal */}
+        <ItemEditorModal
+          open={isItemEditorOpen}
+          onOpenChange={setIsItemEditorOpen}
+          item={editingItem}
+          rfqId={rfqId}
+          canEdit={canSendToPartners}
+          canDelete={canSendToPartners}
           onSuccess={() => void refetch()}
         />
       </div>
