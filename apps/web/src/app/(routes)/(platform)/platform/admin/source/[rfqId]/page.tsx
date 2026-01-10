@@ -749,9 +749,11 @@ const RfqDetailPage = () => {
                               </div>
                               <div className="flex items-center gap-2 mt-0.5 text-[10px] text-text-muted">
                                 {item.lwin && (() => {
+                                  // For alt_product, use alternative bottle size; otherwise use item's
                                   const effectiveBottleSize = selectedQuote?.quote.quoteType === 'alternative'
                                     ? selectedQuote.quote.alternativeBottleSize || item.bottleSize
                                     : item.bottleSize;
+                                  // For alt_product, use alternative case config; otherwise use quote's case config
                                   const effectiveCaseConfig = selectedQuote
                                     ? (selectedQuote.quote.quoteType === 'alternative'
                                         ? selectedQuote.quote.alternativeCaseConfig
@@ -761,16 +763,19 @@ const RfqDetailPage = () => {
                                     caseConfig: effectiveCaseConfig,
                                     bottleSize: effectiveBottleSize,
                                   });
+                                  // For vintage: alt_vintage uses alternativeVintage, alt_product uses alternativeVintage,
+                                  // exact uses quotedVintage, fallback to item.vintage
+                                  const effectiveVintage = selectedQuote
+                                    ? (selectedQuote.quote.quoteType === 'alternative' || selectedQuote.quote.quoteType === 'alt_vintage'
+                                        ? selectedQuote.quote.alternativeVintage
+                                        : selectedQuote.quote.quotedVintage) || item.vintage
+                                    : item.vintage;
                                   return (
                                     <span className="font-mono bg-fill-muted px-1 rounded flex items-center gap-1.5">
                                       <span>
                                         {formatLwin18({
                                           lwin: item.lwin,
-                                          vintage: selectedQuote
-                                            ? (selectedQuote.quote.quoteType === 'alternative'
-                                                ? selectedQuote.quote.alternativeVintage
-                                                : selectedQuote.quote.quotedVintage) || item.vintage
-                                            : item.vintage,
+                                          vintage: effectiveVintage,
                                           bottleSize: effectiveBottleSize,
                                           caseConfig: effectiveCaseConfig,
                                         })}
@@ -845,7 +850,8 @@ const RfqDetailPage = () => {
                             }
 
                             const isSelected = quote.quote.isSelected;
-                            const isAlternative = quote.quote.quoteType === 'alternative';
+                            const isAltVintage = quote.quote.quoteType === 'alt_vintage';
+                            const isAltProduct = quote.quote.quoteType === 'alternative';
                             const isNotAvailable = quote.quote.quoteType === 'not_available';
                             const price = quote.quote.costPricePerCaseUsd;
                             const isBestPrice = minPrice !== null && price === minPrice;
@@ -874,7 +880,11 @@ const RfqDetailPage = () => {
                             if (quote.quote.stockCondition) tooltipParts.push(`Condition: ${quote.quote.stockCondition}`);
                             if (quote.quote.leadTimeDays) tooltipParts.push(`Lead: ${quote.quote.leadTimeDays}d`);
                             if (quote.quote.moq) tooltipParts.push(`MOQ: ${quote.quote.moq} cs`);
-                            if (isAlternative) {
+                            if (isAltVintage) {
+                              tooltipParts.unshift(`Alt Vintage: ${quote.quote.alternativeVintage || 'Not specified'}`);
+                              if (quote.quote.alternativeReason) tooltipParts.push(`Reason: ${quote.quote.alternativeReason}`);
+                            }
+                            if (isAltProduct) {
                               const altDetails = [quote.quote.alternativeProductName, quote.quote.alternativeVintage].filter(Boolean).join(' ');
                               tooltipParts.unshift(`Alternative: ${altDetails}`);
                               if (quote.quote.alternativeReason) tooltipParts.push(`Reason: ${quote.quote.alternativeReason}`);
@@ -896,7 +906,7 @@ const RfqDetailPage = () => {
                                           : 'bg-fill-muted/50 hover:bg-fill-muted'
                                   } ${!canSelectQuotes ? 'cursor-default' : 'cursor-pointer'}`}
                                   title={tooltip || undefined}
-                                  aria-label={`Select quote: $${price.toFixed(0)} from ${p.partner.businessName}${isAlternative ? ' (alternative)' : ''}`}
+                                  aria-label={`Select quote: $${price.toFixed(0)} from ${p.partner.businessName}${isAltVintage ? ' (alt vintage)' : isAltProduct ? ' (alt product)' : ''}`}
                                 >
                                   {/* Price */}
                                   <div className="text-xs font-semibold">
@@ -912,7 +922,11 @@ const RfqDetailPage = () => {
                                     )}
                                   </div>
                                   {/* Vintage indicator - show what vintage was quoted */}
-                                  {isAlternative ? (
+                                  {isAltVintage ? (
+                                    <span className={`text-[10px] block font-medium ${isSelected ? 'text-blue-200' : 'text-blue-600'}`}>
+                                      {quote.quote.alternativeVintage || item.vintage}
+                                    </span>
+                                  ) : isAltProduct ? (
                                     <span className={`text-[10px] block font-medium ${isSelected ? 'text-amber-200' : 'text-text-warning'}`}>
                                       {quote.quote.alternativeVintage || 'ALT'}
                                     </span>
@@ -1193,11 +1207,13 @@ const RfqDetailPage = () => {
                             <span className={`px-2 py-0.5 rounded text-xs ${
                               quote.quoteType === 'exact'
                                 ? 'bg-green-100 text-green-800'
-                                : quote.quoteType === 'alternative'
-                                  ? 'bg-amber-100 text-amber-800'
-                                  : 'bg-red-100 text-red-800'
+                                : quote.quoteType === 'alt_vintage'
+                                  ? 'bg-blue-100 text-blue-800'
+                                  : quote.quoteType === 'alternative'
+                                    ? 'bg-amber-100 text-amber-800'
+                                    : 'bg-red-100 text-red-800'
                             }`}>
-                              {quote.quoteType === 'exact' ? 'Exact' : quote.quoteType === 'alternative' ? 'Alt' : 'N/A'}
+                              {quote.quoteType === 'exact' ? 'Exact' : quote.quoteType === 'alt_vintage' ? 'Alt Vintage' : quote.quoteType === 'alternative' ? 'Alt Product' : 'N/A'}
                             </span>
                           </div>
                           {quote.costPricePerCaseUsd && (
