@@ -84,15 +84,15 @@ const CASE_CONFIGS = [
   { value: 'custom', label: 'Custom...' },
 ];
 
-// Common bottle sizes
+// Common bottle sizes (standardised on centilitres)
 const BOTTLE_SIZES = [
-  { value: '750ml', label: '750ml' },
-  { value: '375ml', label: '375ml' },
-  { value: '1.5L', label: '1.5L (Magnum)' },
-  { value: '3L', label: '3L (Double Mag)' },
-  { value: '6L', label: '6L (Imperial)' },
-  { value: '500ml', label: '500ml' },
-  { value: '187ml', label: '187ml' },
+  { value: '75cl', label: '75cl' },
+  { value: '37.5cl', label: '37.5cl' },
+  { value: '150cl', label: '150cl (Magnum)' },
+  { value: '300cl', label: '300cl (Double Mag)' },
+  { value: '600cl', label: '600cl (Imperial)' },
+  { value: '50cl', label: '50cl' },
+  { value: '18.7cl', label: '18.7cl' },
 ];
 
 // Common stock locations
