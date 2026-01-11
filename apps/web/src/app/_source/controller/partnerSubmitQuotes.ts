@@ -114,6 +114,7 @@ const partnerSubmitQuotes = winePartnerProcedure
         quote.quoteType === 'not_available' ? null : quote.costPricePerCaseUsd,
       currency: quote.currency || 'USD',
       caseConfig: quote.caseConfig,
+      bottleSize: quote.bottleSize,
       availableQuantity: quote.availableQuantity,
       leadTimeDays: quote.leadTimeDays,
       stockLocation: quote.stockLocation,

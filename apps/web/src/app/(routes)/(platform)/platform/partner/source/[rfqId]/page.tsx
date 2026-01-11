@@ -50,6 +50,7 @@ interface QuoteEntry {
   costPricePerCaseUsd?: number;
   currency: string;
   caseConfig?: string;
+  bottleSize?: string;
   availableQuantity?: number;
   leadTimeDays?: number;
   stockLocation?: string;
@@ -81,6 +82,17 @@ const CASE_CONFIGS = [
   { value: '1', label: '1 bottle' },
   { value: '24', label: '24 bottles' },
   { value: 'custom', label: 'Custom...' },
+];
+
+// Common bottle sizes
+const BOTTLE_SIZES = [
+  { value: '750ml', label: '750ml' },
+  { value: '375ml', label: '375ml' },
+  { value: '1.5L', label: '1.5L (Magnum)' },
+  { value: '3L', label: '3L (Double Mag)' },
+  { value: '6L', label: '6L (Imperial)' },
+  { value: '500ml', label: '500ml' },
+  { value: '187ml', label: '187ml' },
 ];
 
 // Common stock locations
@@ -1152,7 +1164,7 @@ const PartnerRfqDetailPage = () => {
                             </div>
 
                             {/* Pricing & Stock Grid */}
-                            <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+                            <div className="grid grid-cols-4 sm:grid-cols-7 gap-2">
                               <div>
                                 <label className="block text-[10px] font-medium text-text-muted mb-0.5">Price/cs *</label>
                                 <div className="relative">
@@ -1178,6 +1190,19 @@ const PartnerRfqDetailPage = () => {
                                   <option value="">-</option>
                                   {CASE_CONFIGS.slice(0, 4).map((c) => (
                                     <option key={c.value} value={c.value}>{c.value}pk</option>
+                                  ))}
+                                </select>
+                              </div>
+                              <div>
+                                <label className="block text-[10px] font-medium text-text-muted mb-0.5">Bottle</label>
+                                <select
+                                  value={quote.bottleSize || ''}
+                                  onChange={(e) => handleQuoteChange(item.id, quote.id, 'bottleSize', e.target.value)}
+                                  className="w-full rounded border border-border-primary bg-white px-1 py-1.5 text-xs"
+                                >
+                                  <option value="">-</option>
+                                  {BOTTLE_SIZES.map((b) => (
+                                    <option key={b.value} value={b.value}>{b.value}</option>
                                   ))}
                                 </select>
                               </div>
