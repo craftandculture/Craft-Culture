@@ -31,7 +31,7 @@ interface PurchaseOrderItem {
 interface PurchaseOrder {
   id: string;
   poNumber: string;
-  status: 'draft' | 'sent' | 'confirmed' | 'shipped' | 'delivered' | 'cancelled';
+  status: 'draft' | 'sent' | 'confirmed' | 'partially_confirmed' | 'shipped' | 'delivered' | 'cancelled';
   totalAmountUsd: number | null;
   partnerId: string;
   partnerName: string | null;
@@ -69,6 +69,12 @@ const statusConfig = {
     bg: 'bg-fill-success/10',
     text: 'text-text-success',
     label: 'Confirmed',
+  },
+  partially_confirmed: {
+    icon: IconCheck,
+    bg: 'bg-fill-warning/10',
+    text: 'text-text-warning',
+    label: 'Partial',
   },
   shipped: {
     icon: IconTruck,
