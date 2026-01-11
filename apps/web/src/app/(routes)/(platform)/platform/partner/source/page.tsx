@@ -1,6 +1,7 @@
 'use client';
 
 import {
+  IconAlertCircle,
   IconCalendar,
   IconCheck,
   IconChevronRight,
@@ -37,6 +38,13 @@ const PartnerSourcePage = () => {
       search: searchQuery || undefined,
     }),
   });
+
+  // Fetch pending confirmation requests
+  const { data: confirmationData } = useQuery({
+    ...api.source.partner.getConfirmationRequests.queryOptions(),
+  });
+
+  const pendingConfirmations = confirmationData?.pendingCount ?? 0;
 
   // Filter RFQs by partner status
   const allRfqs = data?.data ?? [];
@@ -118,6 +126,37 @@ const PartnerSourcePage = () => {
             </div>
           )}
         </div>
+
+        {/* Pending confirmations banner */}
+        {pendingConfirmations > 0 && (
+          <Link href="/platform/partner/source/confirmations">
+            <Card className="border-amber-300 bg-amber-50 hover:border-amber-400 hover:bg-amber-100/80 transition-all cursor-pointer">
+              <CardContent className="p-4 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="relative">
+                    <IconAlertCircle className="h-6 w-6 text-amber-600" />
+                    <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-amber-600 text-[10px] font-bold text-white">
+                      {pendingConfirmations}
+                    </span>
+                  </div>
+                  <div>
+                    <Typography variant="bodyMd" className="font-semibold text-amber-900">
+                      {pendingConfirmations} quote{pendingConfirmations !== 1 ? 's' : ''} awaiting confirmation
+                    </Typography>
+                    <Typography variant="bodySm" className="text-amber-700">
+                      Your quotes were selected! Please confirm availability.
+                    </Typography>
+                  </div>
+                </div>
+                <Button variant="default" size="sm" className="bg-amber-600 hover:bg-amber-700 flex-shrink-0">
+                  <ButtonContent iconRight={IconChevronRight}>
+                    Confirm Now
+                  </ButtonContent>
+                </Button>
+              </CardContent>
+            </Card>
+          </Link>
+        )}
 
         {/* Status Filters + Search */}
         <div className="space-y-3">
