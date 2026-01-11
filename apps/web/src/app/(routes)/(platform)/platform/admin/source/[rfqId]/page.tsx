@@ -241,7 +241,7 @@ const RfqDetailPage = () => {
   const canSendToPartners = ['draft', 'parsing', 'ready_to_send'].includes(rfq.status);
   const canSelectQuotes = ['sent', 'collecting', 'comparing', 'selecting'].includes(rfq.status);
   const canGenerateQuote = rfq.status === 'selecting' || rfq.items.some((i) => i.selectedQuoteId);
-  const canGeneratePOs = rfq.status === 'finalized';
+  const canGeneratePOs = rfq.status === 'finalized' || rfq.status === 'quote_generated';
   const hasGeneratedPOs = rfq.status === 'po_generated' || rfq.status === 'completed';
   const canDelete = ['draft', 'parsing', 'ready_to_send'].includes(rfq.status);
   const canCancel = ['sent', 'collecting', 'comparing', 'selecting', 'finalized', 'po_generated', 'quote_generated'].includes(rfq.status);
@@ -596,13 +596,13 @@ const RfqDetailPage = () => {
                   {/* Step 2: Finalize */}
                   <div className="flex items-center gap-2">
                     <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                      rfq.status === 'finalized'
+                      rfq.status === 'finalized' || rfq.status === 'quote_generated' || hasGeneratedPOs
                         ? 'bg-fill-success text-white'
                         : selectedCount > 0
                           ? 'bg-fill-brand/20 text-fill-brand border-2 border-fill-brand'
                           : 'bg-fill-muted text-text-muted'
                     }`}>
-                      {rfq.status === 'finalized' ? (
+                      {rfq.status === 'finalized' || rfq.status === 'quote_generated' || hasGeneratedPOs ? (
                         <IconCircleCheck className="w-5 h-5" />
                       ) : (
                         <span className="text-sm font-bold">2</span>
@@ -623,7 +623,7 @@ const RfqDetailPage = () => {
                     <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
                       hasGeneratedPOs
                         ? 'bg-fill-success text-white'
-                        : rfq.status === 'finalized'
+                        : canGeneratePOs
                           ? 'bg-fill-brand/20 text-fill-brand border-2 border-fill-brand'
                           : 'bg-fill-muted text-text-muted'
                     }`}>
@@ -668,11 +668,11 @@ const RfqDetailPage = () => {
                       </Button>
                     </>
                   )}
-                  {rfq.status === 'finalized' && !hasGeneratedPOs && (
+                  {canGeneratePOs && !hasGeneratedPOs && (
                     <>
                       <div className="text-right hidden sm:block">
                         <Typography variant="bodySm" className="font-medium text-text-success">
-                          Quotes finalized!
+                          Quote exported!
                         </Typography>
                         <Typography variant="bodyXs" colorRole="muted">
                           Ready to generate purchase orders
