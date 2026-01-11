@@ -46,29 +46,29 @@ const RfqStatusBadge = ({ status }: RfqStatusBadgeProps) => {
       text: 'text-text-brand',
       label: 'Selecting',
     },
-    finalized: {
-      bg: 'bg-fill-brand/10',
-      text: 'text-text-brand',
-      label: 'Finalized',
+    client_review: {
+      bg: 'bg-fill-warning/10',
+      text: 'text-text-warning',
+      label: 'Client Review',
     },
-    po_generated: {
+    awaiting_confirmation: {
       bg: 'bg-fill-info/10',
       text: 'text-text-info',
-      label: 'POs Generated',
+      label: 'Awaiting Confirmation',
+    },
+    confirmed: {
+      bg: 'bg-fill-success/10',
+      text: 'text-text-success',
+      label: 'Confirmed',
     },
     quote_generated: {
       bg: 'bg-fill-success/10',
       text: 'text-text-success',
-      label: 'Quoted',
-    },
-    completed: {
-      bg: 'bg-fill-success/10',
-      text: 'text-text-success',
-      label: 'Completed',
+      label: 'Quote Generated',
     },
     closed: {
-      bg: 'bg-fill-success/10',
-      text: 'text-text-success',
+      bg: 'bg-fill-muted',
+      text: 'text-text-muted',
       label: 'Closed',
     },
     cancelled: {

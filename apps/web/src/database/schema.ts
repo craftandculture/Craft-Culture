@@ -1524,10 +1524,10 @@ export const sourceRfqStatus = pgEnum('source_rfq_status', [
   'collecting',
   'comparing',
   'selecting',
-  'finalized',
-  'po_generated',
+  'client_review', // Admin validating selections with client
+  'awaiting_confirmation', // Waiting for partner confirmations
+  'confirmed', // All partners have confirmed their quotes
   'quote_generated',
-  'completed',
   'closed',
   'cancelled',
 ]);
@@ -1552,6 +1552,17 @@ export const sourceRfqQuoteType = pgEnum('source_rfq_quote_type', [
   'alternative', // Completely different product
   'not_available',
 ]);
+
+export const sourceRfqQuoteConfirmationStatus = pgEnum(
+  'source_rfq_quote_confirmation_status',
+  [
+    'pending', // Confirmation requested, awaiting response
+    'confirmed', // Partner confirmed the quote as-is
+    'updated', // Partner updated the quote (price/availability changed)
+    'rejected', // Partner rejected/can no longer fulfill
+    'expired', // Confirmation request expired
+  ],
+);
 
 /**
  * SOURCE RFQs - main request for quote record
@@ -1598,6 +1609,20 @@ export const sourceRfqs = pgTable(
     sentBy: uuid('sent_by').references(() => users.id, { onDelete: 'set null' }),
     closedAt: timestamp('closed_at', { mode: 'date' }),
     closedBy: uuid('closed_by').references(() => users.id, { onDelete: 'set null' }),
+
+    // Client approval tracking
+    clientApprovedAt: timestamp('client_approved_at', { mode: 'date' }),
+    clientApprovedBy: uuid('client_approved_by').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+    clientApprovalNotes: text('client_approval_notes'),
+
+    // Partner confirmation tracking
+    confirmationRequestedAt: timestamp('confirmation_requested_at', { mode: 'date' }),
+    confirmationRequestedBy: uuid('confirmation_requested_by').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+    allConfirmedAt: timestamp('all_confirmed_at', { mode: 'date' }),
 
     ...timestamps,
   },
@@ -1800,6 +1825,16 @@ export const sourceRfqQuotes = pgTable(
     // Selection
     isSelected: boolean('is_selected').notNull().default(false),
 
+    // Confirmation (for selected quotes awaiting partner confirmation)
+    confirmationStatus: sourceRfqQuoteConfirmationStatus('confirmation_status'),
+    confirmationRequestedAt: timestamp('confirmation_requested_at', { mode: 'date' }),
+    confirmedAt: timestamp('confirmed_at', { mode: 'date' }),
+    confirmationNotes: text('confirmation_notes'),
+    // If partner updates their quote during confirmation
+    updatedPriceUsd: doublePrecision('updated_price_usd'),
+    updatedAvailableQty: integer('updated_available_qty'),
+    updateReason: text('update_reason'),
+
     ...timestamps,
   },
   (table) => [
@@ -1807,6 +1842,7 @@ export const sourceRfqQuotes = pgTable(
     index('source_rfq_quotes_item_id_idx').on(table.itemId),
     index('source_rfq_quotes_partner_id_idx').on(table.partnerId),
     index('source_rfq_quotes_is_selected_idx').on(table.isSelected),
+    index('source_rfq_quotes_confirmation_status_idx').on(table.confirmationStatus),
   ],
 ).enableRLS();
 

@@ -12,7 +12,6 @@ import {
   IconFileTypePdf,
   IconFilter,
   IconFilterOff,
-  IconPackageExport,
   IconPlus,
   IconSelectAll,
   IconSend,
@@ -74,19 +73,6 @@ const RfqDetailPage = () => {
   const [isUploadPartnerResponseOpen, setIsUploadPartnerResponseOpen] = useState(false);
   const [selectedPartnerId, setSelectedPartnerId] = useState<string>('');
   const [parsedPartnerQuotes, setParsedPartnerQuotes] = useState<ParsedQuote[] | null>(null);
-
-  // State for PO generation
-  const [isGeneratePOsOpen, setIsGeneratePOsOpen] = useState(false);
-  const [poDeliveryAddress, setPoDeliveryAddress] = useState('');
-  const [poPaymentTerms, setPoPaymentTerms] = useState('');
-  const [poNotes, setPoNotes] = useState('');
-  const [generatedPOs, setGeneratedPOs] = useState<Array<{
-    id: string;
-    poNumber: string;
-    partnerName: string;
-    itemCount: number;
-    totalAmountUsd: number;
-  }> | null>(null);
 
   // State for cancel/delete dialogs
   const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
@@ -153,20 +139,6 @@ const RfqDetailPage = () => {
         setIsUploadPartnerResponseOpen(false);
         setSelectedPartnerId('');
         setParsedPartnerQuotes(null);
-      },
-    }),
-  );
-
-  // Generate Purchase Orders mutation
-  const { mutate: generatePurchaseOrders, isPending: isGeneratingPOs } = useMutation(
-    api.source.admin.generatePurchaseOrders.mutationOptions({
-      onSuccess: (data) => {
-        void refetch();
-        setGeneratedPOs(data.purchaseOrders);
-        // Clear form fields
-        setPoDeliveryAddress('');
-        setPoPaymentTerms('');
-        setPoNotes('');
       },
     }),
   );
@@ -241,11 +213,10 @@ const RfqDetailPage = () => {
   const canSendToPartners = ['draft', 'parsing', 'ready_to_send'].includes(rfq.status);
   const canSelectQuotes = ['sent', 'collecting', 'comparing', 'selecting'].includes(rfq.status);
   const canGenerateQuote = rfq.status === 'selecting' || rfq.items.some((i) => i.selectedQuoteId);
-  const canGeneratePOs = rfq.status === 'finalized' || rfq.status === 'quote_generated';
-  const hasGeneratedPOs = rfq.status === 'po_generated' || rfq.status === 'completed';
   const canDelete = ['draft', 'parsing', 'ready_to_send'].includes(rfq.status);
-  const canCancel = ['sent', 'collecting', 'comparing', 'selecting', 'finalized', 'po_generated', 'quote_generated'].includes(rfq.status);
+  const canCancel = ['sent', 'collecting', 'comparing', 'selecting', 'quote_generated', 'client_review', 'awaiting_confirmation', 'confirmed'].includes(rfq.status);
   const isCancelled = rfq.status === 'cancelled';
+  const isFinalized = ['quote_generated', 'confirmed', 'closed'].includes(rfq.status);
 
   // Build comparison data
   const partnerMap = new Map(rfq.partners.map((p) => [p.partnerId, p]));
@@ -422,22 +393,6 @@ const RfqDetailPage = () => {
                 </ButtonContent>
               </Button>
             )}
-            {canGeneratePOs && (
-              <Button
-                variant="default"
-                colorRole="brand"
-                onClick={() => setIsGeneratePOsOpen(true)}
-              >
-                <ButtonContent iconLeft={IconPackageExport}>Generate POs</ButtonContent>
-              </Button>
-            )}
-            {hasGeneratedPOs && (
-              <Link href={`/platform/admin/source/${rfqId}/purchase-orders`}>
-                <Button variant="outline">
-                  <ButtonContent iconLeft={IconPackageExport}>View POs</ButtonContent>
-                </Button>
-              </Link>
-            )}
             {canCancel && (
               <Button
                 variant="outline"
@@ -593,50 +548,25 @@ const RfqDetailPage = () => {
 
                   <IconArrowRight className="w-4 h-4 text-text-muted mx-1" />
 
-                  {/* Step 2: Finalize */}
+                  {/* Step 2: Export Quote */}
                   <div className="flex items-center gap-2">
                     <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                      rfq.status === 'finalized' || rfq.status === 'quote_generated' || hasGeneratedPOs
+                      isFinalized
                         ? 'bg-fill-success text-white'
                         : selectedCount > 0
                           ? 'bg-fill-brand/20 text-fill-brand border-2 border-fill-brand'
                           : 'bg-fill-muted text-text-muted'
                     }`}>
-                      {rfq.status === 'finalized' || rfq.status === 'quote_generated' || hasGeneratedPOs ? (
+                      {isFinalized ? (
                         <IconCircleCheck className="w-5 h-5" />
                       ) : (
                         <span className="text-sm font-bold">2</span>
                       )}
                     </div>
                     <div className="hidden sm:block">
-                      <Typography variant="bodySm" className="font-semibold">Finalize & Export</Typography>
+                      <Typography variant="bodySm" className="font-semibold">Export Quote</Typography>
                       <Typography variant="bodyXs" colorRole="muted">
                         Generate client quote
-                      </Typography>
-                    </div>
-                  </div>
-
-                  <IconArrowRight className="w-4 h-4 text-text-muted mx-1" />
-
-                  {/* Step 3: Generate POs */}
-                  <div className="flex items-center gap-2">
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                      hasGeneratedPOs
-                        ? 'bg-fill-success text-white'
-                        : canGeneratePOs
-                          ? 'bg-fill-brand/20 text-fill-brand border-2 border-fill-brand'
-                          : 'bg-fill-muted text-text-muted'
-                    }`}>
-                      {hasGeneratedPOs ? (
-                        <IconCircleCheck className="w-5 h-5" />
-                      ) : (
-                        <span className="text-sm font-bold">3</span>
-                      )}
-                    </div>
-                    <div className="hidden sm:block">
-                      <Typography variant="bodySm" className="font-semibold">Generate POs</Typography>
-                      <Typography variant="bodyXs" colorRole="muted">
-                        Order from partners
                       </Typography>
                     </div>
                   </div>
@@ -644,7 +574,7 @@ const RfqDetailPage = () => {
 
                 {/* Action Button */}
                 <div className="flex items-center gap-3">
-                  {rfq.status !== 'finalized' && !hasGeneratedPOs && (
+                  {!isFinalized && (
                     <>
                       <div className="text-right hidden sm:block">
                         <Typography variant="bodySm" className="font-medium text-text-brand">
@@ -668,41 +598,15 @@ const RfqDetailPage = () => {
                       </Button>
                     </>
                   )}
-                  {canGeneratePOs && !hasGeneratedPOs && (
-                    <>
-                      <div className="text-right hidden sm:block">
-                        <Typography variant="bodySm" className="font-medium text-text-success">
-                          Quote exported!
-                        </Typography>
-                        <Typography variant="bodyXs" colorRole="muted">
-                          Ready to generate purchase orders
-                        </Typography>
-                      </div>
-                      <Button
-                        variant="default"
-                        colorRole="brand"
-                        onClick={() => setIsGeneratePOsOpen(true)}
-                      >
-                        <ButtonContent iconLeft={IconPackageExport}>Generate POs</ButtonContent>
-                      </Button>
-                    </>
-                  )}
-                  {hasGeneratedPOs && (
-                    <>
-                      <div className="text-right hidden sm:block">
-                        <Typography variant="bodySm" className="font-medium text-text-success">
-                          POs generated!
-                        </Typography>
-                        <Typography variant="bodyXs" colorRole="muted">
-                          View and manage purchase orders
-                        </Typography>
-                      </div>
-                      <Link href={`/platform/admin/source/${rfqId}/purchase-orders`}>
-                        <Button variant="default" colorRole="brand">
-                          <ButtonContent iconLeft={IconPackageExport}>View POs</ButtonContent>
-                        </Button>
-                      </Link>
-                    </>
+                  {isFinalized && (
+                    <div className="text-right hidden sm:block">
+                      <Typography variant="bodySm" className="font-medium text-text-success">
+                        Quote exported!
+                      </Typography>
+                      <Typography variant="bodyXs" colorRole="muted">
+                        RFQ complete
+                      </Typography>
+                    </div>
                   )}
                 </div>
               </div>
@@ -1439,133 +1343,6 @@ const RfqDetailPage = () => {
                 </div>
               )}
             </div>
-          </DialogContent>
-        </Dialog>
-
-        {/* Generate Purchase Orders Dialog */}
-        <Dialog open={isGeneratePOsOpen} onOpenChange={(open) => {
-          setIsGeneratePOsOpen(open);
-          if (!open) {
-            setGeneratedPOs(null);
-          }
-        }}>
-          <DialogContent className="max-w-lg">
-            <DialogHeader>
-              <DialogTitle>
-                {generatedPOs ? 'Purchase Orders Generated' : 'Generate Purchase Orders'}
-              </DialogTitle>
-              <DialogDescription>
-                {generatedPOs
-                  ? `Successfully created ${generatedPOs.length} purchase order(s)`
-                  : 'Create purchase orders for each partner with selected quotes'}
-              </DialogDescription>
-            </DialogHeader>
-
-            {generatedPOs ? (
-              // Success state - show generated POs
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  {generatedPOs.map((po) => (
-                    <div
-                      key={po.id}
-                      className="flex items-center justify-between p-3 bg-fill-success/10 border border-border-success rounded-lg"
-                    >
-                      <div>
-                        <Typography variant="bodyMd" className="font-medium">
-                          {po.poNumber}
-                        </Typography>
-                        <Typography variant="bodySm" colorRole="muted">
-                          {po.partnerName} · {po.itemCount} items
-                        </Typography>
-                      </div>
-                      <Typography variant="bodyMd" className="font-medium">
-                        ${po.totalAmountUsd.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                      </Typography>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="flex justify-end gap-2 pt-4 border-t">
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setIsGeneratePOsOpen(false);
-                      setGeneratedPOs(null);
-                    }}
-                  >
-                    Close
-                  </Button>
-                  <Link href={`/platform/admin/source/${rfqId}/purchase-orders`}>
-                    <Button variant="default" colorRole="brand">
-                      <ButtonContent iconLeft={IconPackageExport}>View All POs</ButtonContent>
-                    </Button>
-                  </Link>
-                </div>
-              </div>
-            ) : (
-              // Form state - enter delivery details
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Delivery Address (optional)</label>
-                  <textarea
-                    className="w-full px-3 py-2 border rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-brand"
-                    rows={2}
-                    placeholder="Enter delivery address..."
-                    value={poDeliveryAddress}
-                    onChange={(e) => setPoDeliveryAddress(e.target.value)}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Payment Terms (optional)</label>
-                  <input
-                    type="text"
-                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand"
-                    placeholder="e.g., Net 30, COD"
-                    value={poPaymentTerms}
-                    onChange={(e) => setPoPaymentTerms(e.target.value)}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Notes (optional)</label>
-                  <textarea
-                    className="w-full px-3 py-2 border rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-brand"
-                    rows={2}
-                    placeholder="Additional notes for all POs..."
-                    value={poNotes}
-                    onChange={(e) => setPoNotes(e.target.value)}
-                  />
-                </div>
-
-                <div className="flex justify-end gap-2 pt-4 border-t">
-                  <Button
-                    variant="outline"
-                    onClick={() => setIsGeneratePOsOpen(false)}
-                    isDisabled={isGeneratingPOs}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    variant="default"
-                    colorRole="brand"
-                    onClick={() => {
-                      generatePurchaseOrders({
-                        rfqId,
-                        deliveryAddress: poDeliveryAddress || undefined,
-                        paymentTerms: poPaymentTerms || undefined,
-                        notes: poNotes || undefined,
-                      });
-                    }}
-                    isDisabled={isGeneratingPOs}
-                  >
-                    <ButtonContent iconLeft={IconPackageExport}>
-                      {isGeneratingPOs ? 'Generating...' : 'Generate POs'}
-                    </ButtonContent>
-                  </Button>
-                </div>
-              </div>
-            )}
           </DialogContent>
         </Dialog>
 

@@ -41,8 +41,9 @@ const adminCancelRfq = adminProcedure
       'collecting',
       'comparing',
       'selecting',
-      'finalized',
-      'po_generated',
+      'client_review',
+      'awaiting_confirmation',
+      'confirmed',
       'quote_generated',
     ];
 
@@ -52,8 +53,8 @@ const adminCancelRfq = adminProcedure
         message:
           existing.status === 'cancelled'
             ? 'RFQ is already cancelled'
-            : existing.status === 'completed' || existing.status === 'closed'
-              ? 'Cannot cancel a completed or closed RFQ'
+            : existing.status === 'closed'
+              ? 'Cannot cancel a closed RFQ'
               : 'Use delete for draft RFQs that have not been sent',
       });
     }
