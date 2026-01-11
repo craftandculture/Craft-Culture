@@ -14,6 +14,8 @@ const quoteItemSchema = z
     currency: z.string().default('USD'),
     // Case configuration (e.g., "6", "12", "6x75cl")
     caseConfig: z.string().optional(),
+    // Bottle size (e.g., "750ml", "1.5L", "375ml")
+    bottleSize: z.string().optional(),
     // Availability
     availableQuantity: z.number().int().positive().optional(),
     leadTimeDays: z.number().int().nonnegative().optional(),

@@ -1782,6 +1782,7 @@ export const sourceRfqQuotes = pgTable(
     costPricePerCaseUsd: doublePrecision('cost_price_per_case_usd'),
     currency: text('currency').notNull().default('USD'),
     caseConfig: text('case_config'),
+    bottleSize: text('bottle_size'), // e.g., "750ml", "1.5L", "375ml"
     moq: integer('moq'),
 
     // Availability
