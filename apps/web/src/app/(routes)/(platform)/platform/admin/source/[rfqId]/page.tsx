@@ -3,8 +3,10 @@
 import {
   IconAlertTriangle,
   IconArrowLeft,
+  IconArrowRight,
   IconBan,
   IconCheck,
+  IconCircleCheck,
   IconEdit,
   IconFileSpreadsheet,
   IconFileTypePdf,
@@ -556,6 +558,153 @@ const RfqDetailPage = () => {
                     </span>
                   </div>
                 ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Next Steps Workflow Panel - Shows when quotes can be selected */}
+        {canSelectQuotes && selectedCount > 0 && (
+          <Card className="border-border-brand bg-gradient-to-r from-fill-brand/5 to-fill-brand/10">
+            <CardContent className="p-4">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                {/* Progress Steps */}
+                <div className="flex items-center gap-2">
+                  {/* Step 1: Select */}
+                  <div className="flex items-center gap-2">
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                      selectedCount === totalItems
+                        ? 'bg-fill-success text-white'
+                        : 'bg-fill-brand text-white'
+                    }`}>
+                      {selectedCount === totalItems ? (
+                        <IconCircleCheck className="w-5 h-5" />
+                      ) : (
+                        <span className="text-sm font-bold">1</span>
+                      )}
+                    </div>
+                    <div className="hidden sm:block">
+                      <Typography variant="bodySm" className="font-semibold">Select Quotes</Typography>
+                      <Typography variant="bodyXs" colorRole="muted">
+                        {selectedCount}/{totalItems} selected
+                      </Typography>
+                    </div>
+                  </div>
+
+                  <IconArrowRight className="w-4 h-4 text-text-muted mx-1" />
+
+                  {/* Step 2: Finalize */}
+                  <div className="flex items-center gap-2">
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                      rfq.status === 'finalized'
+                        ? 'bg-fill-success text-white'
+                        : selectedCount > 0
+                          ? 'bg-fill-brand/20 text-fill-brand border-2 border-fill-brand'
+                          : 'bg-fill-muted text-text-muted'
+                    }`}>
+                      {rfq.status === 'finalized' ? (
+                        <IconCircleCheck className="w-5 h-5" />
+                      ) : (
+                        <span className="text-sm font-bold">2</span>
+                      )}
+                    </div>
+                    <div className="hidden sm:block">
+                      <Typography variant="bodySm" className="font-semibold">Finalize & Export</Typography>
+                      <Typography variant="bodyXs" colorRole="muted">
+                        Generate client quote
+                      </Typography>
+                    </div>
+                  </div>
+
+                  <IconArrowRight className="w-4 h-4 text-text-muted mx-1" />
+
+                  {/* Step 3: Generate POs */}
+                  <div className="flex items-center gap-2">
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                      hasGeneratedPOs
+                        ? 'bg-fill-success text-white'
+                        : rfq.status === 'finalized'
+                          ? 'bg-fill-brand/20 text-fill-brand border-2 border-fill-brand'
+                          : 'bg-fill-muted text-text-muted'
+                    }`}>
+                      {hasGeneratedPOs ? (
+                        <IconCircleCheck className="w-5 h-5" />
+                      ) : (
+                        <span className="text-sm font-bold">3</span>
+                      )}
+                    </div>
+                    <div className="hidden sm:block">
+                      <Typography variant="bodySm" className="font-semibold">Generate POs</Typography>
+                      <Typography variant="bodyXs" colorRole="muted">
+                        Order from partners
+                      </Typography>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Action Button */}
+                <div className="flex items-center gap-3">
+                  {rfq.status !== 'finalized' && !hasGeneratedPOs && (
+                    <>
+                      <div className="text-right hidden sm:block">
+                        <Typography variant="bodySm" className="font-medium text-text-brand">
+                          Ready to finalize?
+                        </Typography>
+                        <Typography variant="bodyXs" colorRole="muted">
+                          {selectedCount < totalItems
+                            ? `${totalItems - selectedCount} items still unselected`
+                            : 'All items have quotes selected'}
+                        </Typography>
+                      </div>
+                      <Button
+                        variant="default"
+                        colorRole="brand"
+                        onClick={() => generateFinalQuote({ rfqId })}
+                        isDisabled={isGenerating}
+                      >
+                        <ButtonContent iconLeft={IconFileTypePdf}>
+                          {isGenerating ? 'Finalizing...' : 'Finalize & Export PDF'}
+                        </ButtonContent>
+                      </Button>
+                    </>
+                  )}
+                  {rfq.status === 'finalized' && !hasGeneratedPOs && (
+                    <>
+                      <div className="text-right hidden sm:block">
+                        <Typography variant="bodySm" className="font-medium text-text-success">
+                          Quotes finalized!
+                        </Typography>
+                        <Typography variant="bodyXs" colorRole="muted">
+                          Ready to generate purchase orders
+                        </Typography>
+                      </div>
+                      <Button
+                        variant="default"
+                        colorRole="brand"
+                        onClick={() => setIsGeneratePOsOpen(true)}
+                      >
+                        <ButtonContent iconLeft={IconPackageExport}>Generate POs</ButtonContent>
+                      </Button>
+                    </>
+                  )}
+                  {hasGeneratedPOs && (
+                    <>
+                      <div className="text-right hidden sm:block">
+                        <Typography variant="bodySm" className="font-medium text-text-success">
+                          POs generated!
+                        </Typography>
+                        <Typography variant="bodyXs" colorRole="muted">
+                          View and manage purchase orders
+                        </Typography>
+                      </div>
+                      <Link href={`/platform/admin/source/${rfqId}/purchase-orders`}>
+                        <Button variant="default" colorRole="brand">
+                          <ButtonContent iconLeft={IconPackageExport}>View POs</ButtonContent>
+                        </Button>
+                      </Link>
+                    </>
+                  )}
+                </div>
               </div>
             </CardContent>
           </Card>
