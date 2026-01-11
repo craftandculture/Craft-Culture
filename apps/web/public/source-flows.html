@@ -1,0 +1,867 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SOURCE Module - Flow Diagrams</title>
+  <style>
+    :root {
+      --bg-primary: #0a0a0a;
+      --bg-secondary: #141414;
+      --bg-card: #1a1a1a;
+      --border: #2a2a2a;
+      --text-primary: #fafafa;
+      --text-secondary: #a1a1aa;
+      --accent-blue: #3b82f6;
+      --accent-green: #22c55e;
+      --accent-yellow: #eab308;
+      --accent-red: #ef4444;
+      --accent-purple: #a855f7;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.6;
+      padding: 2rem;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 3rem;
+      padding-bottom: 2rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    header h1 {
+      font-size: 2.5rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+      background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    header p {
+      color: var(--text-secondary);
+      font-size: 1.1rem;
+    }
+
+    .nav-tabs {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 2rem;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .nav-tab {
+      padding: 0.75rem 1.5rem;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+
+    .nav-tab:hover {
+      border-color: var(--accent-blue);
+      color: var(--text-primary);
+    }
+
+    .nav-tab.active {
+      background: var(--accent-blue);
+      border-color: var(--accent-blue);
+      color: white;
+    }
+
+    .flow-section {
+      display: none;
+      animation: fadeIn 0.3s ease;
+    }
+
+    .flow-section.active {
+      display: block;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .flow-container {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 2rem;
+      overflow-x: auto;
+    }
+
+    .flow-title {
+      font-size: 1.5rem;
+      font-weight: 600;
+      margin-bottom: 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .flow-title .icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+    }
+
+    .flow-title .icon.admin { background: var(--accent-blue); }
+    .flow-title .icon.partner { background: var(--accent-green); }
+    .flow-title .icon.status { background: var(--accent-purple); }
+
+    /* Flow Diagram Styles */
+    .flow {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.5rem;
+      min-width: 800px;
+    }
+
+    .flow-row {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .flow-node {
+      background: var(--bg-secondary);
+      border: 2px solid var(--border);
+      border-radius: 12px;
+      padding: 1rem 1.5rem;
+      text-align: center;
+      min-width: 180px;
+      transition: all 0.2s;
+      position: relative;
+    }
+
+    .flow-node:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+    }
+
+    .flow-node.highlight {
+      border-color: var(--accent-blue);
+      background: rgba(59, 130, 246, 0.1);
+    }
+
+    .flow-node.new-flow {
+      border-color: var(--accent-green);
+      background: rgba(34, 197, 94, 0.1);
+    }
+
+    .flow-node .title {
+      font-weight: 600;
+      font-size: 0.95rem;
+      margin-bottom: 0.25rem;
+    }
+
+    .flow-node .status {
+      font-size: 0.75rem;
+      color: var(--accent-purple);
+      font-family: monospace;
+      background: rgba(168, 85, 247, 0.15);
+      padding: 0.15rem 0.5rem;
+      border-radius: 4px;
+      display: inline-block;
+      margin-top: 0.25rem;
+    }
+
+    .flow-node .description {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      margin-top: 0.5rem;
+    }
+
+    .arrow {
+      color: var(--text-secondary);
+      font-size: 1.5rem;
+    }
+
+    .arrow.down {
+      transform: rotate(90deg);
+    }
+
+    .branch-container {
+      display: flex;
+      gap: 1rem;
+      padding: 1rem;
+      background: rgba(255,255,255,0.02);
+      border-radius: 12px;
+      border: 1px dashed var(--border);
+    }
+
+    .branch-label {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.5rem;
+      text-align: center;
+    }
+
+    /* Confirmation Options */
+    .options-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+
+    .option-card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1rem;
+      text-align: center;
+    }
+
+    .option-card.confirm { border-color: var(--accent-green); }
+    .option-card.update { border-color: var(--accent-yellow); }
+    .option-card.reject { border-color: var(--accent-red); }
+
+    .option-card .option-title {
+      font-weight: 600;
+      font-size: 0.9rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .option-card .option-desc {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+    }
+
+    /* Status Flow */
+    .status-flow {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .status-badge {
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      font-family: monospace;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+    }
+
+    .status-badge.active {
+      background: var(--accent-blue);
+      border-color: var(--accent-blue);
+      color: white;
+    }
+
+    .status-badge.new {
+      background: rgba(34, 197, 94, 0.2);
+      border-color: var(--accent-green);
+      color: var(--accent-green);
+    }
+
+    .status-arrow {
+      color: var(--text-secondary);
+    }
+
+    /* Legend */
+    .legend {
+      display: flex;
+      gap: 2rem;
+      margin-top: 2rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid var(--border);
+      flex-wrap: wrap;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+    }
+
+    .legend-color {
+      width: 12px;
+      height: 12px;
+      border-radius: 3px;
+    }
+
+    .legend-color.standard { background: var(--border); }
+    .legend-color.highlight { background: var(--accent-blue); }
+    .legend-color.new { background: var(--accent-green); }
+
+    /* Section divider */
+    .section-divider {
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .section-divider::before {
+      content: '';
+      width: 2px;
+      height: 100%;
+      background: linear-gradient(to bottom, var(--border), var(--accent-green));
+    }
+
+    /* Notification callout */
+    .notification-callout {
+      background: rgba(59, 130, 246, 0.1);
+      border: 1px solid var(--accent-blue);
+      border-radius: 8px;
+      padding: 0.75rem 1rem;
+      font-size: 0.85rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-left: 2rem;
+    }
+
+    /* Summary cards */
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 1.5rem;
+      margin-top: 2rem;
+    }
+
+    .summary-card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+    }
+
+    .summary-card h3 {
+      font-size: 1rem;
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .summary-card ul {
+      list-style: none;
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+    }
+
+    .summary-card li {
+      padding: 0.5rem 0;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: flex-start;
+      gap: 0.5rem;
+    }
+
+    .summary-card li:last-child {
+      border-bottom: none;
+    }
+
+    .summary-card li::before {
+      content: '→';
+      color: var(--accent-blue);
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      body {
+        padding: 1rem;
+      }
+
+      header h1 {
+        font-size: 1.75rem;
+      }
+
+      .flow-container {
+        padding: 1rem;
+      }
+
+      .options-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>SOURCE Module</h1>
+      <p>RFQ System with Quote-Based Confirmation Flow</p>
+    </header>
+
+    <nav class="nav-tabs">
+      <div class="nav-tab active" onclick="showSection('admin')">Admin Flow</div>
+      <div class="nav-tab" onclick="showSection('partner')">Partner Flow</div>
+      <div class="nav-tab" onclick="showSection('status')">Status Transitions</div>
+      <div class="nav-tab" onclick="showSection('summary')">Summary</div>
+    </nav>
+
+    <!-- Admin Flow -->
+    <section id="admin" class="flow-section active">
+      <div class="flow-container">
+        <h2 class="flow-title">
+          <span class="icon admin">👤</span>
+          Admin Workflow
+        </h2>
+
+        <div class="flow">
+          <!-- Create RFQ -->
+          <div class="flow-node">
+            <div class="title">Create RFQ</div>
+            <div class="status">draft</div>
+            <div class="description">Upload Excel / Paste Email / Manual</div>
+          </div>
+
+          <div class="arrow down">→</div>
+
+          <!-- AI Parsing -->
+          <div class="flow-node">
+            <div class="title">AI Parsing</div>
+            <div class="status">parsing</div>
+            <div class="description">GPT-4o extracts wine details</div>
+          </div>
+
+          <div class="arrow down">→</div>
+
+          <!-- Review Items -->
+          <div class="flow-node">
+            <div class="title">Review & Edit Items</div>
+            <div class="status">ready_to_send</div>
+            <div class="description">Correct parsed items, adjust quantities</div>
+          </div>
+
+          <div class="arrow down">→</div>
+
+          <!-- Select Partners -->
+          <div class="flow-row">
+            <div class="flow-node">
+              <div class="title">Select Partners & Send</div>
+              <div class="status">sent</div>
+              <div class="description">Choose wine partners, set deadline</div>
+            </div>
+            <div class="notification-callout">
+              📧 Partners notified via email + in-app
+            </div>
+          </div>
+
+          <div class="arrow down">→</div>
+
+          <!-- Collect Responses -->
+          <div class="flow-node">
+            <div class="title">Collect Responses</div>
+            <div class="status">collecting</div>
+            <div class="description">Monitor which partners responded</div>
+          </div>
+
+          <div class="arrow down">→</div>
+
+          <!-- Compare -->
+          <div class="flow-node">
+            <div class="title">Compare Quotes</div>
+            <div class="status">comparing</div>
+            <div class="description">Side-by-side comparison table</div>
+          </div>
+
+          <div class="arrow down">→</div>
+
+          <!-- Select Winners -->
+          <div class="flow-node">
+            <div class="title">Select Winning Quotes</div>
+            <div class="status">selecting</div>
+            <div class="description">Radio button per item, running total</div>
+          </div>
+
+          <div class="section-divider"></div>
+
+          <!-- NEW: Client Review -->
+          <div class="flow-node new-flow">
+            <div class="title">📋 Client Review</div>
+            <div class="status">client_review</div>
+            <div class="description">Validate selections with client (offline)</div>
+          </div>
+
+          <div class="arrow down">→</div>
+
+          <!-- NEW: Request Confirmations -->
+          <div class="flow-row">
+            <div class="flow-node new-flow">
+              <div class="title">🔔 Request Confirmations</div>
+              <div class="status">awaiting_confirmation</div>
+              <div class="description">Send requests to partners with selected quotes</div>
+            </div>
+            <div class="notification-callout">
+              📧 Partners with selected quotes notified
+            </div>
+          </div>
+
+          <div class="arrow down">→</div>
+
+          <!-- NEW: All Confirmed -->
+          <div class="flow-node new-flow">
+            <div class="title">✅ All Confirmed</div>
+            <div class="status">confirmed</div>
+            <div class="description">All partners confirmed/updated/rejected</div>
+          </div>
+
+          <div class="section-divider"></div>
+
+          <!-- Generate Quote -->
+          <div class="flow-node">
+            <div class="title">Generate Final Quote</div>
+            <div class="status">quote_generated</div>
+            <div class="description">Apply pricing overlay, adjust line-by-line</div>
+          </div>
+
+          <div class="arrow down">→</div>
+
+          <!-- Export -->
+          <div class="flow-node">
+            <div class="title">Export & Close</div>
+            <div class="status">closed</div>
+            <div class="description">PDF (client) / Excel (comparison)</div>
+          </div>
+        </div>
+
+        <div class="legend">
+          <div class="legend-item">
+            <div class="legend-color standard"></div>
+            <span>Standard Flow</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-color new"></div>
+            <span>New Confirmation Flow</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Partner Flow -->
+    <section id="partner" class="flow-section">
+      <div class="flow-container">
+        <h2 class="flow-title">
+          <span class="icon partner">🏢</span>
+          Partner Workflow
+        </h2>
+
+        <div class="flow">
+          <!-- Notification -->
+          <div class="flow-row">
+            <div class="flow-node">
+              <div class="title">📧 New RFQ Notification</div>
+              <div class="description">Email + In-app alert</div>
+            </div>
+          </div>
+
+          <div class="arrow down">→</div>
+
+          <!-- RFQ Inbox -->
+          <div class="flow-node">
+            <div class="title">RFQ Inbox</div>
+            <div class="description">View all incoming RFQs with deadlines</div>
+          </div>
+
+          <div class="arrow down">→</div>
+
+          <!-- View Detail -->
+          <div class="flow-node">
+            <div class="title">View RFQ Detail</div>
+            <div class="description">See all requested items & requirements</div>
+          </div>
+
+          <div class="arrow down">→</div>
+
+          <!-- Response Options -->
+          <div class="branch-container">
+            <div>
+              <div class="branch-label">Option 1</div>
+              <div class="flow-node">
+                <div class="title">Manual Entry</div>
+                <div class="description">Quote items one by one</div>
+              </div>
+            </div>
+            <div>
+              <div class="branch-label">Option 2</div>
+              <div class="flow-node">
+                <div class="title">Upload Excel</div>
+                <div class="description">AI parses your file</div>
+              </div>
+            </div>
+            <div>
+              <div class="branch-label">Option 3</div>
+              <div class="flow-node">
+                <div class="title">Decline RFQ</div>
+                <div class="description">Can't fulfill this request</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="arrow down">→</div>
+
+          <!-- Quote Items -->
+          <div class="flow-node" style="min-width: 400px;">
+            <div class="title">Quote Each Line Item</div>
+            <div class="description">For each item: Exact Match / Alternative / Cannot Quote</div>
+          </div>
+
+          <div class="arrow down">→</div>
+
+          <!-- Submit -->
+          <div class="flow-node">
+            <div class="title">Submit Quotes</div>
+            <div class="description">Admin notified of your response</div>
+          </div>
+
+          <div class="arrow down">→</div>
+
+          <div style="text-align: center; color: var(--text-secondary); padding: 1rem;">
+            ⏳ Wait for admin selection + client approval
+          </div>
+
+          <div class="section-divider"></div>
+
+          <!-- If Selected -->
+          <div class="flow-node new-flow" style="min-width: 350px;">
+            <div class="title">🎉 Your Quote Was Selected!</div>
+            <div class="description">Notification: Confirmation request received</div>
+          </div>
+
+          <div class="arrow down">→</div>
+
+          <!-- View Confirmation Request -->
+          <div class="flow-node new-flow">
+            <div class="title">View Confirmation Request</div>
+            <div class="description">See your original quote & what client approved</div>
+          </div>
+
+          <div class="arrow down">→</div>
+
+          <!-- Confirmation Options -->
+          <div class="branch-label" style="margin-top: 1rem;">Choose Response</div>
+          <div class="options-grid">
+            <div class="option-card confirm">
+              <div class="option-title">✅ Confirm As-Is</div>
+              <div class="option-desc">Quote still valid as submitted</div>
+            </div>
+            <div class="option-card update">
+              <div class="option-title">📝 Update Price</div>
+              <div class="option-desc">Price changed (reason required)</div>
+            </div>
+            <div class="option-card update">
+              <div class="option-title">📦 Update Quantity</div>
+              <div class="option-desc">Availability changed (reason required)</div>
+            </div>
+            <div class="option-card reject">
+              <div class="option-title">❌ Reject</div>
+              <div class="option-desc">No longer available (reason required)</div>
+            </div>
+          </div>
+
+          <div class="arrow down" style="margin-top: 1rem;">→</div>
+
+          <!-- Submit Confirmation -->
+          <div class="flow-node new-flow">
+            <div class="title">Submit Confirmation</div>
+            <div class="description">Admin notified of your response</div>
+          </div>
+        </div>
+
+        <div class="legend">
+          <div class="legend-item">
+            <div class="legend-color standard"></div>
+            <span>Quote Submission</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-color new"></div>
+            <span>New Confirmation Flow (if selected)</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Status Transitions -->
+    <section id="status" class="flow-section">
+      <div class="flow-container">
+        <h2 class="flow-title">
+          <span class="icon status">🔄</span>
+          RFQ Status Transitions
+        </h2>
+
+        <h3 style="margin: 1.5rem 0 1rem; color: var(--text-secondary);">Main Flow</h3>
+        <div class="status-flow">
+          <span class="status-badge">draft</span>
+          <span class="status-arrow">→</span>
+          <span class="status-badge">parsing</span>
+          <span class="status-arrow">→</span>
+          <span class="status-badge">ready_to_send</span>
+          <span class="status-arrow">→</span>
+          <span class="status-badge">sent</span>
+          <span class="status-arrow">→</span>
+          <span class="status-badge">collecting</span>
+          <span class="status-arrow">→</span>
+          <span class="status-badge">comparing</span>
+          <span class="status-arrow">→</span>
+          <span class="status-badge">selecting</span>
+        </div>
+
+        <h3 style="margin: 2rem 0 1rem; color: var(--accent-green);">New Confirmation Flow</h3>
+        <div class="status-flow">
+          <span class="status-badge">selecting</span>
+          <span class="status-arrow">→</span>
+          <span class="status-badge new">client_review</span>
+          <span class="status-arrow">→</span>
+          <span class="status-badge new">awaiting_confirmation</span>
+          <span class="status-arrow">→</span>
+          <span class="status-badge new">confirmed</span>
+        </div>
+
+        <h3 style="margin: 2rem 0 1rem; color: var(--text-secondary);">Final Steps</h3>
+        <div class="status-flow">
+          <span class="status-badge">confirmed</span>
+          <span class="status-arrow">→</span>
+          <span class="status-badge">quote_generated</span>
+          <span class="status-arrow">→</span>
+          <span class="status-badge">closed</span>
+        </div>
+
+        <h3 style="margin: 2.5rem 0 1rem; color: var(--text-secondary);">Quote Confirmation Status</h3>
+        <p style="color: var(--text-secondary); margin-bottom: 1rem; font-size: 0.9rem;">
+          Applied to individual quotes when selected and confirmation requested
+        </p>
+        <div class="status-flow">
+          <span class="status-badge">null</span>
+          <span class="status-arrow">→</span>
+          <span class="status-badge new">pending</span>
+          <span class="status-arrow">→</span>
+          <div class="branch-container" style="padding: 0.5rem 1rem;">
+            <span class="status-badge" style="background: rgba(34, 197, 94, 0.2); border-color: var(--accent-green); color: var(--accent-green);">confirmed</span>
+            <span class="status-badge" style="background: rgba(234, 179, 8, 0.2); border-color: var(--accent-yellow); color: var(--accent-yellow);">updated</span>
+            <span class="status-badge" style="background: rgba(239, 68, 68, 0.2); border-color: var(--accent-red); color: var(--accent-red);">rejected</span>
+            <span class="status-badge" style="background: rgba(161, 161, 170, 0.2); border-color: var(--text-secondary); color: var(--text-secondary);">expired</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Summary -->
+    <section id="summary" class="flow-section">
+      <div class="flow-container">
+        <h2 class="flow-title">
+          <span class="icon status">📋</span>
+          Flow Summary
+        </h2>
+
+        <div class="summary-grid">
+          <div class="summary-card">
+            <h3>🔵 Admin Actions</h3>
+            <ul>
+              <li>Create RFQ from Excel, email text, or manual entry</li>
+              <li>Review AI-parsed items and correct if needed</li>
+              <li>Select wine partners and set response deadline</li>
+              <li>Send RFQ to selected partners</li>
+              <li>Monitor partner responses</li>
+              <li>Compare quotes side-by-side</li>
+              <li>Select winning quotes per line item</li>
+              <li>Validate selections with client (offline)</li>
+              <li>Mark as "Client Approved"</li>
+              <li>Request partner confirmations</li>
+              <li>Monitor confirmation responses</li>
+              <li>Generate final quote with pricing overlay</li>
+              <li>Export PDF/Excel</li>
+            </ul>
+          </div>
+
+          <div class="summary-card">
+            <h3>🟢 Partner Actions</h3>
+            <ul>
+              <li>Receive RFQ notification (email + in-app)</li>
+              <li>View RFQ inbox with deadlines</li>
+              <li>Open RFQ to see requested items</li>
+              <li>Submit quotes (manual or Excel upload)</li>
+              <li>Propose alternatives if exact match unavailable</li>
+              <li>Decline RFQ if unable to fulfill</li>
+              <li>Receive notification if quote selected</li>
+              <li>Confirm quote as-is OR update price/quantity OR reject</li>
+              <li>Provide reason for any changes</li>
+            </ul>
+          </div>
+
+          <div class="summary-card">
+            <h3>🟣 New Confirmation Flow</h3>
+            <ul>
+              <li><strong>Why:</strong> Time passes between quote submission and client approval</li>
+              <li><strong>What:</strong> Partners confirm availability/pricing still valid</li>
+              <li><strong>When:</strong> After client approves selected quotes</li>
+              <li><strong>Options:</strong> Confirm / Update Price / Update Qty / Reject</li>
+              <li><strong>Requirement:</strong> Reason required for updates and rejections</li>
+              <li><strong>Outcome:</strong> Admin handles any changes before final quote</li>
+            </ul>
+          </div>
+
+          <div class="summary-card">
+            <h3>🔴 Key Decision Points</h3>
+            <ul>
+              <li><strong>Quote Selection:</strong> Admin picks best quote per item</li>
+              <li><strong>Client Validation:</strong> Admin confirms with client offline</li>
+              <li><strong>Partner Confirmation:</strong> Partners verify quotes still valid</li>
+              <li><strong>Handle Updates:</strong> Price increase may need re-validation</li>
+              <li><strong>Handle Rejections:</strong> Select alternative quote if available</li>
+              <li><strong>Final Pricing:</strong> Admin applies margin before generating quote</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    function showSection(sectionId) {
+      // Hide all sections
+      document.querySelectorAll('.flow-section').forEach(section => {
+        section.classList.remove('active');
+      });
+
+      // Remove active from all tabs
+      document.querySelectorAll('.nav-tab').forEach(tab => {
+        tab.classList.remove('active');
+      });
+
+      // Show selected section
+      document.getElementById(sectionId).classList.add('active');
+
+      // Mark tab as active
+      event.target.classList.add('active');
+    }
+  </script>
+</body>
+</html>
