@@ -1949,9 +1949,16 @@ export const sourcePurchaseOrderStatus = pgEnum('source_purchase_order_status', 
   'draft',
   'sent',
   'confirmed',
+  'partially_confirmed',
   'shipped',
   'delivered',
   'cancelled',
+]);
+
+export const sourcePurchaseOrderItemStatus = pgEnum('source_purchase_order_item_status', [
+  'pending',
+  'confirmed',
+  'rejected',
 ]);
 
 /**
@@ -2049,6 +2056,11 @@ export const sourcePurchaseOrderItems = pgTable(
     unitPriceUsd: doublePrecision('unit_price_usd').notNull(),
     lineTotalUsd: doublePrecision('line_total_usd').notNull(),
 
+    // Item-level confirmation status
+    status: sourcePurchaseOrderItemStatus('status').notNull().default('pending'),
+    confirmedAt: timestamp('confirmed_at', { mode: 'date' }),
+    rejectionReason: text('rejection_reason'),
+
     // Notes
     notes: text('notes'),
 
@@ -2057,6 +2069,7 @@ export const sourcePurchaseOrderItems = pgTable(
   (table) => [
     index('source_purchase_order_items_po_id_idx').on(table.poId),
     index('source_purchase_order_items_rfq_item_id_idx').on(table.rfqItemId),
+    index('source_purchase_order_items_status_idx').on(table.status),
   ],
 ).enableRLS();
 

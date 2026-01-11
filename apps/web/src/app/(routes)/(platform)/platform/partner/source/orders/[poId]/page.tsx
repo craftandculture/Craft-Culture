@@ -2,14 +2,13 @@
 
 import {
   IconArrowLeft,
-  IconCalendar,
   IconCheck,
   IconClock,
   IconMapPin,
   IconPackage,
   IconReceipt,
   IconSend,
-  IconTruck,
+  IconX,
 } from '@tabler/icons-react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
@@ -20,65 +19,101 @@ import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
 import Card from '@/app/_ui/components/Card/Card';
 import CardContent from '@/app/_ui/components/Card/CardContent';
-import Dialog from '@/app/_ui/components/Dialog/Dialog';
-import DialogContent from '@/app/_ui/components/Dialog/DialogContent';
-import DialogDescription from '@/app/_ui/components/Dialog/DialogDescription';
-import DialogHeader from '@/app/_ui/components/Dialog/DialogHeader';
-import DialogTitle from '@/app/_ui/components/Dialog/DialogTitle';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import useTRPC from '@/lib/trpc/browser';
 import formatPrice from '@/utils/formatPrice';
 
+interface ItemConfirmation {
+  itemId: string;
+  confirmed: boolean;
+  rejectionReason?: string;
+}
+
 /**
- * Partner Purchase Order detail page
+ * Partner Purchase Order detail page with per-item confirmation
  */
 const PartnerOrderDetailPage = () => {
   const params = useParams();
   const poId = params.poId as string;
   const api = useTRPC();
 
-  // Dialog states
-  const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
-  const [isShipDialogOpen, setIsShipDialogOpen] = useState(false);
-  const [isDeliverDialogOpen, setIsDeliverDialogOpen] = useState(false);
-
-  // Form states
-  const [estimatedDeliveryDate, setEstimatedDeliveryDate] = useState('');
-  const [confirmationNotes, setConfirmationNotes] = useState('');
-  const [trackingNumber, setTrackingNumber] = useState('');
-  const [shippingNotes, setShippingNotes] = useState('');
-  const [deliveryNotes, setDeliveryNotes] = useState('');
+  // Per-item confirmation state
+  const [itemConfirmations, setItemConfirmations] = useState<Map<string, ItemConfirmation>>(
+    new Map()
+  );
+  const [generalNotes, setGeneralNotes] = useState('');
 
   // Fetch PO
   const { data: po, isLoading, refetch } = useQuery({
     ...api.source.partner.getOnePurchaseOrder.queryOptions({ poId }),
   });
 
+  // Initialize item confirmations when PO loads
+  const initializeConfirmations = () => {
+    if (po && po.status === 'sent' && itemConfirmations.size === 0) {
+      const newConfirmations = new Map<string, ItemConfirmation>();
+      po.items.forEach((item) => {
+        newConfirmations.set(item.id, {
+          itemId: item.id,
+          confirmed: true, // Default to confirmed
+          rejectionReason: undefined,
+        });
+      });
+      setItemConfirmations(newConfirmations);
+    }
+  };
+
+  // Call initialization
+  if (po && po.status === 'sent' && itemConfirmations.size === 0) {
+    initializeConfirmations();
+  }
+
   // Confirm PO mutation
   const { mutate: confirmPo, isPending: isConfirming } = useMutation(
     api.source.partner.confirmPurchaseOrder.mutationOptions({
       onSuccess: () => {
-        setIsConfirmDialogOpen(false);
-        setEstimatedDeliveryDate('');
-        setConfirmationNotes('');
         void refetch();
       },
     })
   );
 
-  // Update delivery status mutation
-  const { mutate: updateDeliveryStatus, isPending: isUpdating } = useMutation(
-    api.source.partner.updateDeliveryStatus.mutationOptions({
-      onSuccess: () => {
-        setIsShipDialogOpen(false);
-        setIsDeliverDialogOpen(false);
-        setTrackingNumber('');
-        setShippingNotes('');
-        setDeliveryNotes('');
-        void refetch();
-      },
-    })
-  );
+  const toggleItemConfirmation = (itemId: string) => {
+    setItemConfirmations((prev) => {
+      const newMap = new Map(prev);
+      const current = newMap.get(itemId);
+      if (current) {
+        newMap.set(itemId, {
+          ...current,
+          confirmed: !current.confirmed,
+          rejectionReason: current.confirmed ? '' : undefined,
+        });
+      }
+      return newMap;
+    });
+  };
+
+  const setItemRejectionReason = (itemId: string, reason: string) => {
+    setItemConfirmations((prev) => {
+      const newMap = new Map(prev);
+      const current = newMap.get(itemId);
+      if (current) {
+        newMap.set(itemId, {
+          ...current,
+          rejectionReason: reason,
+        });
+      }
+      return newMap;
+    });
+  };
+
+  const handleSubmitConfirmation = () => {
+    const items = Array.from(itemConfirmations.values());
+    confirmPo({
+      poId,
+      items,
+      notes: generalNotes || undefined,
+    });
+  };
 
   const formatDate = (date: Date | string | null) => {
     if (!date) return null;
@@ -105,19 +140,19 @@ const PartnerOrderDetailPage = () => {
           text: 'text-green-700',
           label: 'Confirmed',
         };
-      case 'shipped':
-        return {
-          icon: IconTruck,
-          bg: 'bg-blue-100',
-          text: 'text-blue-700',
-          label: 'Shipped',
-        };
-      case 'delivered':
+      case 'partially_confirmed':
         return {
           icon: IconCheck,
-          bg: 'bg-emerald-100',
-          text: 'text-emerald-700',
-          label: 'Delivered',
+          bg: 'bg-yellow-100',
+          text: 'text-yellow-700',
+          label: 'Partially Confirmed',
+        };
+      case 'cancelled':
+        return {
+          icon: IconX,
+          bg: 'bg-red-100',
+          text: 'text-red-700',
+          label: 'Cancelled',
         };
       default:
         return {
@@ -126,6 +161,32 @@ const PartnerOrderDetailPage = () => {
           text: 'text-gray-700',
           label: status,
         };
+    }
+  };
+
+  const getItemStatusBadge = (status: string) => {
+    switch (status) {
+      case 'confirmed':
+        return (
+          <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium bg-green-100 text-green-700">
+            <IconCheck className="h-3 w-3" />
+            Confirmed
+          </span>
+        );
+      case 'rejected':
+        return (
+          <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium bg-red-100 text-red-700">
+            <IconX className="h-3 w-3" />
+            Rejected
+          </span>
+        );
+      default:
+        return (
+          <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium bg-gray-100 text-gray-600">
+            <IconClock className="h-3 w-3" />
+            Pending
+          </span>
+        );
     }
   };
 
@@ -151,6 +212,8 @@ const PartnerOrderDetailPage = () => {
 
   const statusConfig = getStatusConfig(po.status);
   const StatusIcon = statusConfig.icon;
+  const confirmedCount = Array.from(itemConfirmations.values()).filter((i) => i.confirmed).length;
+  const rejectedCount = po.items.length - confirmedCount;
 
   return (
     <div className="container mx-auto max-w-4xl px-4 py-4 sm:py-8">
@@ -180,37 +243,6 @@ const PartnerOrderDetailPage = () => {
                 </Typography>
               )}
             </div>
-          </div>
-
-          {/* Action Buttons */}
-          <div className="flex items-center gap-2">
-            {po.status === 'sent' && (
-              <Button
-                variant="default"
-                colorRole="brand"
-                onClick={() => setIsConfirmDialogOpen(true)}
-              >
-                <ButtonContent iconLeft={IconCheck}>Confirm Order</ButtonContent>
-              </Button>
-            )}
-            {po.status === 'confirmed' && (
-              <Button
-                variant="default"
-                colorRole="brand"
-                onClick={() => setIsShipDialogOpen(true)}
-              >
-                <ButtonContent iconLeft={IconTruck}>Mark as Shipped</ButtonContent>
-              </Button>
-            )}
-            {po.status === 'shipped' && (
-              <Button
-                variant="default"
-                colorRole="brand"
-                onClick={() => setIsDeliverDialogOpen(true)}
-              >
-                <ButtonContent iconLeft={IconCheck}>Mark as Delivered</ButtonContent>
-              </Button>
-            )}
           </div>
         </div>
 
@@ -262,62 +294,20 @@ const PartnerOrderDetailPage = () => {
               )}
               {po.confirmedAt && (
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center">
-                    <IconCheck className="h-4 w-4 text-green-600" />
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                    po.status === 'partially_confirmed' ? 'bg-yellow-100' : 'bg-green-100'
+                  }`}>
+                    <IconCheck className={`h-4 w-4 ${
+                      po.status === 'partially_confirmed' ? 'text-yellow-600' : 'text-green-600'
+                    }`} />
                   </div>
                   <div>
                     <Typography variant="bodyMd" className="font-medium">
-                      Confirmed
+                      {po.status === 'partially_confirmed' ? 'Partially Confirmed' : 'Confirmed'}
                     </Typography>
                     <Typography variant="bodySm" colorRole="muted">
                       {formatDate(po.confirmedAt)}
                       {po.confirmationNotes && ` - ${po.confirmationNotes}`}
-                    </Typography>
-                  </div>
-                </div>
-              )}
-              {po.estimatedDeliveryDate && (
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center">
-                    <IconCalendar className="h-4 w-4 text-amber-600" />
-                  </div>
-                  <div>
-                    <Typography variant="bodyMd" className="font-medium">
-                      Estimated Delivery
-                    </Typography>
-                    <Typography variant="bodySm" colorRole="muted">
-                      {formatDate(po.estimatedDeliveryDate)}
-                    </Typography>
-                  </div>
-                </div>
-              )}
-              {po.shippedAt && (
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
-                    <IconTruck className="h-4 w-4 text-blue-600" />
-                  </div>
-                  <div>
-                    <Typography variant="bodyMd" className="font-medium">
-                      Shipped
-                    </Typography>
-                    <Typography variant="bodySm" colorRole="muted">
-                      {formatDate(po.shippedAt)}
-                      {po.trackingNumber && ` - Tracking: ${po.trackingNumber}`}
-                    </Typography>
-                  </div>
-                </div>
-              )}
-              {po.deliveredAt && (
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center">
-                    <IconCheck className="h-4 w-4 text-emerald-600" />
-                  </div>
-                  <div>
-                    <Typography variant="bodyMd" className="font-medium">
-                      Delivered
-                    </Typography>
-                    <Typography variant="bodySm" colorRole="muted">
-                      {formatDate(po.deliveredAt)}
                     </Typography>
                   </div>
                 </div>
@@ -331,7 +321,7 @@ const PartnerOrderDetailPage = () => {
           <Card>
             <CardContent className="p-4">
               <Typography variant="headingSm" className="mb-4">
-                Delivery Details
+                Order Details
               </Typography>
               <div className="space-y-4">
                 {po.deliveryAddress && (
@@ -378,68 +368,162 @@ const PartnerOrderDetailPage = () => {
           </Card>
         )}
 
-        {/* Order Items */}
+        {/* Order Items - With Confirmation Controls */}
         <Card>
           <CardContent className="p-0">
             <div className="p-4 border-b border-border-muted">
-              <Typography variant="headingSm">Order Items</Typography>
+              <Typography variant="headingSm">
+                {po.status === 'sent' ? 'Confirm Order Items' : 'Order Items'}
+              </Typography>
+              {po.status === 'sent' && (
+                <Typography variant="bodySm" colorRole="muted" className="mt-1">
+                  Review each item and confirm or reject. You must respond to all items.
+                </Typography>
+              )}
             </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-fill-muted">
-                  <tr>
-                    <th className="px-4 py-3 text-left font-medium text-text-muted">Product</th>
-                    <th className="px-4 py-3 text-right font-medium text-text-muted">Qty</th>
-                    <th className="px-4 py-3 text-right font-medium text-text-muted">Unit Price</th>
-                    <th className="px-4 py-3 text-right font-medium text-text-muted">Total</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {po.items.map((item) => (
-                    <tr key={item.id} className="border-b border-border-muted last:border-0">
-                      <td className="px-4 py-3">
-                        <div>
-                          <Typography variant="bodyMd" className="font-medium">
+
+            <div className="divide-y divide-border-muted">
+              {po.items.map((item) => {
+                const confirmation = itemConfirmations.get(item.id);
+                const isConfirmed = confirmation?.confirmed ?? true;
+
+                return (
+                  <div key={item.id} className="p-4">
+                    <div className="flex items-start justify-between gap-4">
+                      {/* Product Info */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <Typography variant="bodyMd" className="font-semibold">
                             {item.productName}
                           </Typography>
-                          <div className="flex items-center gap-2 text-text-muted text-xs">
-                            {item.producer && <span>{item.producer}</span>}
-                            {item.vintage && <span>{item.vintage}</span>}
-                            {item.lwin && (
-                              <span className="font-mono bg-fill-muted px-1 rounded">
-                                {item.lwin}
-                              </span>
-                            )}
+                          {po.status !== 'sent' && getItemStatusBadge(item.status)}
+                        </div>
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-text-muted">
+                          {item.producer && <span>{item.producer}</span>}
+                          {item.vintage && (
+                            <span className="px-1.5 py-0.5 bg-emerald-100 text-emerald-700 rounded font-medium">
+                              {item.vintage}
+                            </span>
+                          )}
+                          {item.lwin && (
+                            <span className="font-mono bg-fill-muted px-1.5 py-0.5 rounded">
+                              {item.lwin}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-4 mt-2 text-sm">
+                          <span>
+                            <span className="text-text-muted">Qty:</span>{' '}
+                            <span className="font-medium">{item.quantity} {item.unitType}{item.quantity !== 1 ? 's' : ''}</span>
+                          </span>
+                          <span>
+                            <span className="text-text-muted">Price:</span>{' '}
+                            <span className="font-medium">{formatPrice(item.unitPriceUsd ?? 0, 'USD')}</span>
+                          </span>
+                          <span>
+                            <span className="text-text-muted">Total:</span>{' '}
+                            <span className="font-semibold text-text-brand">{formatPrice(item.lineTotalUsd ?? 0, 'USD')}</span>
+                          </span>
+                        </div>
+
+                        {/* Show rejection reason for already processed items */}
+                        {item.status === 'rejected' && item.rejectionReason && (
+                          <div className="mt-2 p-2 bg-red-50 rounded-lg text-sm text-red-700">
+                            <span className="font-medium">Reason:</span> {item.rejectionReason}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Confirmation Toggle (only for sent status) */}
+                      {po.status === 'sent' && (
+                        <div className="flex flex-col items-end gap-2">
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => toggleItemConfirmation(item.id)}
+                              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                                isConfirmed ? 'bg-green-500' : 'bg-red-500'
+                              }`}
+                            >
+                              <span
+                                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                                  isConfirmed ? 'translate-x-6' : 'translate-x-1'
+                                }`}
+                              />
+                            </button>
+                            <span className={`text-sm font-medium ${isConfirmed ? 'text-green-600' : 'text-red-600'}`}>
+                              {isConfirmed ? 'Confirm' : 'Reject'}
+                            </span>
                           </div>
                         </div>
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        {item.quantity} {item.unitType}
-                        {item.quantity !== 1 ? 's' : ''}
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        {formatPrice(item.unitPriceUsd ?? 0, 'USD')}
-                      </td>
-                      <td className="px-4 py-3 text-right font-medium">
-                        {formatPrice(item.lineTotalUsd ?? 0, 'USD')}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-                <tfoot className="bg-fill-muted/50">
-                  <tr>
-                    <td colSpan={3} className="px-4 py-3 text-right font-semibold">
-                      Total:
-                    </td>
-                    <td className="px-4 py-3 text-right font-semibold text-text-brand">
-                      {formatPrice(po.totalAmountUsd ?? 0, 'USD')}
-                    </td>
-                  </tr>
-                </tfoot>
-              </table>
+                      )}
+                    </div>
+
+                    {/* Rejection reason input (only for sent status and rejected items) */}
+                    {po.status === 'sent' && !isConfirmed && (
+                      <div className="mt-3 pl-0 sm:pl-4">
+                        <input
+                          type="text"
+                          placeholder="Reason for rejection (optional)"
+                          value={confirmation?.rejectionReason || ''}
+                          onChange={(e) => setItemRejectionReason(item.id, e.target.value)}
+                          className="w-full px-3 py-2 text-sm border border-red-200 rounded-lg bg-red-50 placeholder:text-red-400 focus:outline-none focus:ring-2 focus:ring-red-300"
+                        />
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Total Row */}
+            <div className="p-4 bg-fill-muted/50 flex items-center justify-between">
+              <Typography variant="bodyMd" className="font-semibold">
+                Total:
+              </Typography>
+              <Typography variant="headingSm" className="text-text-brand">
+                {formatPrice(po.totalAmountUsd ?? 0, 'USD')}
+              </Typography>
             </div>
           </CardContent>
         </Card>
+
+        {/* Confirmation Actions (only for sent status) */}
+        {po.status === 'sent' && (
+          <Card className="border-amber-200 bg-amber-50/50">
+            <CardContent className="p-4">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                <div className="flex-1">
+                  <Typography variant="headingSm">Ready to Submit?</Typography>
+                  <Typography variant="bodySm" colorRole="muted">
+                    {confirmedCount === po.items.length
+                      ? `All ${confirmedCount} items will be confirmed`
+                      : `${confirmedCount} confirmed, ${rejectedCount} rejected`}
+                  </Typography>
+                </div>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="text"
+                    placeholder="Notes (optional)"
+                    value={generalNotes}
+                    onChange={(e) => setGeneralNotes(e.target.value)}
+                    className="px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand w-full sm:w-48"
+                  />
+                  <Button
+                    variant="default"
+                    colorRole="brand"
+                    onClick={handleSubmitConfirmation}
+                    isDisabled={isConfirming}
+                  >
+                    <ButtonContent iconLeft={IconCheck}>
+                      {isConfirming ? 'Submitting...' : 'Submit Response'}
+                    </ButtonContent>
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Notes */}
         {po.notes && (
@@ -455,175 +539,6 @@ const PartnerOrderDetailPage = () => {
           </Card>
         )}
       </div>
-
-      {/* Confirm Order Dialog */}
-      <Dialog open={isConfirmDialogOpen} onOpenChange={setIsConfirmDialogOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Confirm Order</DialogTitle>
-            <DialogDescription>
-              Confirm that you can fulfill this purchase order.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Estimated Delivery Date (optional)</label>
-              <input
-                type="date"
-                value={estimatedDeliveryDate}
-                onChange={(e) => setEstimatedDeliveryDate(e.target.value)}
-                className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand"
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Notes (optional)</label>
-              <textarea
-                value={confirmationNotes}
-                onChange={(e) => setConfirmationNotes(e.target.value)}
-                placeholder="Any notes about the order..."
-                className="w-full px-3 py-2 border rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-brand"
-                rows={3}
-              />
-            </div>
-          </div>
-          <div className="flex justify-end gap-2">
-            <Button
-              variant="outline"
-              onClick={() => setIsConfirmDialogOpen(false)}
-              isDisabled={isConfirming}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="default"
-              colorRole="brand"
-              onClick={() => {
-                confirmPo({
-                  poId,
-                  estimatedDeliveryDate: estimatedDeliveryDate
-                    ? new Date(estimatedDeliveryDate)
-                    : undefined,
-                  confirmationNotes: confirmationNotes || undefined,
-                });
-              }}
-              isDisabled={isConfirming}
-            >
-              <ButtonContent iconLeft={IconCheck}>
-                {isConfirming ? 'Confirming...' : 'Confirm Order'}
-              </ButtonContent>
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Ship Order Dialog */}
-      <Dialog open={isShipDialogOpen} onOpenChange={setIsShipDialogOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Mark as Shipped</DialogTitle>
-            <DialogDescription>
-              Record shipping details for this order.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Tracking Number (optional)</label>
-              <input
-                type="text"
-                value={trackingNumber}
-                onChange={(e) => setTrackingNumber(e.target.value)}
-                placeholder="e.g., DHL-123456789"
-                className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand"
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Shipping Notes (optional)</label>
-              <textarea
-                value={shippingNotes}
-                onChange={(e) => setShippingNotes(e.target.value)}
-                placeholder="e.g., 2 pallets, fragile handling required..."
-                className="w-full px-3 py-2 border rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-brand"
-                rows={3}
-              />
-            </div>
-          </div>
-          <div className="flex justify-end gap-2">
-            <Button
-              variant="outline"
-              onClick={() => setIsShipDialogOpen(false)}
-              isDisabled={isUpdating}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="default"
-              colorRole="brand"
-              onClick={() => {
-                updateDeliveryStatus({
-                  poId,
-                  action: 'ship',
-                  trackingNumber: trackingNumber || undefined,
-                  shippingNotes: shippingNotes || undefined,
-                });
-              }}
-              isDisabled={isUpdating}
-            >
-              <ButtonContent iconLeft={IconTruck}>
-                {isUpdating ? 'Updating...' : 'Mark as Shipped'}
-              </ButtonContent>
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Deliver Order Dialog */}
-      <Dialog open={isDeliverDialogOpen} onOpenChange={setIsDeliverDialogOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Mark as Delivered</DialogTitle>
-            <DialogDescription>
-              Confirm that this order has been delivered.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Delivery Notes (optional)</label>
-              <textarea
-                value={deliveryNotes}
-                onChange={(e) => setDeliveryNotes(e.target.value)}
-                placeholder="e.g., Signed by warehouse manager, all items received..."
-                className="w-full px-3 py-2 border rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-brand"
-                rows={3}
-              />
-            </div>
-          </div>
-          <div className="flex justify-end gap-2">
-            <Button
-              variant="outline"
-              onClick={() => setIsDeliverDialogOpen(false)}
-              isDisabled={isUpdating}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="default"
-              colorRole="brand"
-              onClick={() => {
-                updateDeliveryStatus({
-                  poId,
-                  action: 'deliver',
-                  deliveryNotes: deliveryNotes || undefined,
-                });
-              }}
-              isDisabled={isUpdating}
-            >
-              <ButtonContent iconLeft={IconCheck}>
-                {isUpdating ? 'Updating...' : 'Mark as Delivered'}
-              </ButtonContent>
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };

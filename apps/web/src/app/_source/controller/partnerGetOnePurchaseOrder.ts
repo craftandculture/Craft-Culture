@@ -93,6 +93,9 @@ const partnerGetOnePurchaseOrder = winePartnerProcedure
         caseConfig: sourcePurchaseOrderItems.caseConfig,
         unitPriceUsd: sourcePurchaseOrderItems.unitPriceUsd,
         lineTotalUsd: sourcePurchaseOrderItems.lineTotalUsd,
+        status: sourcePurchaseOrderItems.status,
+        confirmedAt: sourcePurchaseOrderItems.confirmedAt,
+        rejectionReason: sourcePurchaseOrderItems.rejectionReason,
       })
       .from(sourcePurchaseOrderItems)
       .where(eq(sourcePurchaseOrderItems.poId, poId));
