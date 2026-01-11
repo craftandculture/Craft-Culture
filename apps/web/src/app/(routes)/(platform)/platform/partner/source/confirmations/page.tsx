@@ -3,11 +3,16 @@
 import {
   IconAlertTriangle,
   IconArrowLeft,
+  IconBottle,
+  IconBox,
   IconCheck,
   IconChevronDown,
   IconChevronUp,
   IconClock,
   IconInbox,
+  IconMapPin,
+  IconPackage,
+  IconReplace,
   IconX,
 } from '@tabler/icons-react';
 import { useMutation, useQuery } from '@tanstack/react-query';
@@ -279,37 +284,125 @@ const PartnerConfirmationsPage = () => {
                                 : 'border-border-muted'
                         }`}
                       >
+                        {/* Quote type badge */}
+                        {quote.quoteType === 'alternative' && (
+                          <div className="flex items-center gap-2 mb-3 p-2 bg-purple-50 rounded-lg border border-purple-200">
+                            <IconReplace className="h-4 w-4 text-purple-600" />
+                            <span className="text-xs font-medium text-purple-700">Alternative Product</span>
+                            {quote.alternativeReason && (
+                              <span className="text-xs text-purple-600 ml-auto">{quote.alternativeReason}</span>
+                            )}
+                          </div>
+                        )}
+
                         {/* Quote info */}
-                        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 mb-4">
-                          <div className="space-y-1">
+                        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 mb-3">
+                          <div className="space-y-1.5">
+                            {/* Product name - show alternative if applicable */}
                             <Typography variant="bodyMd" className="font-semibold">
-                              {quote.productName}
+                              {quote.quoteType === 'alternative' && quote.alternativeProductName
+                                ? quote.alternativeProductName
+                                : quote.productName}
                             </Typography>
+
+                            {/* Producer and vintage */}
                             <div className="flex flex-wrap items-center gap-2 text-sm text-text-muted">
-                              {quote.producer && <span>{quote.producer}</span>}
-                              {quote.vintage && (
-                                <span className="px-1.5 py-0.5 bg-fill-brand/10 text-text-brand rounded text-xs font-medium">
-                                  {quote.vintage}
+                              {(quote.quoteType === 'alternative' && quote.alternativeProducer
+                                ? quote.alternativeProducer
+                                : quote.producer) && (
+                                <span className="font-medium text-text-secondary">
+                                  {quote.quoteType === 'alternative' && quote.alternativeProducer
+                                    ? quote.alternativeProducer
+                                    : quote.producer}
                                 </span>
                               )}
-                              <span>·</span>
-                              <span>{quote.quantity} {quote.quantityUnit === 'bottles' ? 'btl' : 'cs'}</span>
+                              {(quote.quotedVintage || quote.alternativeVintage || quote.vintage) && (
+                                <span className="px-1.5 py-0.5 bg-fill-brand/10 text-text-brand rounded text-xs font-medium">
+                                  {quote.quoteType === 'alternative' && quote.alternativeVintage
+                                    ? quote.alternativeVintage
+                                    : quote.quotedVintage || quote.vintage}
+                                </span>
+                              )}
+                            </div>
+
+                            {/* Original request context */}
+                            {quote.quoteType === 'alternative' && (
+                              <div className="text-xs text-text-muted bg-fill-muted/50 px-2 py-1 rounded inline-block">
+                                Originally requested: {quote.productName} {quote.vintage}
+                              </div>
+                            )}
+
+                            {/* Requested quantity */}
+                            <div className="text-xs text-text-muted">
+                              Client requested: {quote.quantity} {quote.quantityUnit === 'bottles' ? 'bottles' : 'cases'}
                             </div>
                           </div>
-                          <div className="text-right">
-                            <div className="text-lg font-bold text-text-primary">
-                              ${quote.costPricePerCaseUsd?.toFixed(2)}/cs
+
+                          {/* Price highlight */}
+                          <div className="bg-fill-brand/5 border border-border-brand/30 rounded-lg p-3 text-right min-w-[140px]">
+                            <div className="text-xl font-bold text-text-brand">
+                              ${quote.costPricePerCaseUsd?.toFixed(2)}
                             </div>
-                            <div className="text-xs text-text-muted">
-                              {quote.availableQuantity} available · {quote.leadTimeDays || '?'}d lead
-                            </div>
+                            <div className="text-xs text-text-muted">per case</div>
                             {quote.createdAt && (
                               <div className="text-xs text-text-muted mt-1">
-                                Quoted {format(new Date(quote.createdAt), 'MMM d, yyyy')}
+                                Quoted {format(new Date(quote.createdAt), 'MMM d')}
                               </div>
                             )}
                           </div>
                         </div>
+
+                        {/* Quote details grid */}
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4 p-3 bg-fill-muted/30 rounded-lg">
+                          <div className="flex items-center gap-2">
+                            <IconPackage className="h-4 w-4 text-text-muted" />
+                            <div>
+                              <div className="text-xs text-text-muted">Available</div>
+                              <div className="text-sm font-medium">{quote.availableQuantity || '—'} cs</div>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <IconClock className="h-4 w-4 text-text-muted" />
+                            <div>
+                              <div className="text-xs text-text-muted">Lead Time</div>
+                              <div className="text-sm font-medium">{quote.leadTimeDays || '—'} days</div>
+                            </div>
+                          </div>
+                          {quote.bottleSize && (
+                            <div className="flex items-center gap-2">
+                              <IconBottle className="h-4 w-4 text-text-muted" />
+                              <div>
+                                <div className="text-xs text-text-muted">Bottle Size</div>
+                                <div className="text-sm font-medium">{quote.bottleSize}</div>
+                              </div>
+                            </div>
+                          )}
+                          {quote.caseConfig && (
+                            <div className="flex items-center gap-2">
+                              <IconBox className="h-4 w-4 text-text-muted" />
+                              <div>
+                                <div className="text-xs text-text-muted">Case Config</div>
+                                <div className="text-sm font-medium">{quote.caseConfig}</div>
+                              </div>
+                            </div>
+                          )}
+                          {quote.stockLocation && (
+                            <div className="flex items-center gap-2">
+                              <IconMapPin className="h-4 w-4 text-text-muted" />
+                              <div>
+                                <div className="text-xs text-text-muted">Location</div>
+                                <div className="text-sm font-medium">{quote.stockLocation}</div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Original quote notes */}
+                        {quote.notes && (
+                          <div className="text-xs text-text-muted bg-fill-muted/50 p-2 rounded mb-4">
+                            <span className="font-medium">Notes:</span> {quote.notes}
+                          </div>
+                        )}
 
                         {/* Action buttons */}
                         <div className="space-y-3">
