@@ -981,13 +981,14 @@ const RfqDetailPage = () => {
                             </span>
                           </td>
 
-                          {/* Partner Quote Cells - With Details */}
+                          {/* Partner Quote Cells - With Multiple Vintage Support */}
                           {uniquePartners.map((p) => {
-                            const quote = item.quotes.find(
+                            // Get ALL quotes from this partner for this item (multi-vintage support)
+                            const partnerQuotes = item.quotes.filter(
                               (q) => q.quote.partnerId === p.partnerId,
                             );
 
-                            if (!quote) {
+                            if (partnerQuotes.length === 0) {
                               return (
                                 <td
                                   key={p.partnerId}
@@ -998,22 +999,14 @@ const RfqDetailPage = () => {
                               );
                             }
 
-                            const isSelected = quote.quote.isSelected;
-                            const isAltVintage = quote.quote.quoteType === 'alt_vintage';
-                            const isAltProduct = quote.quote.quoteType === 'alternative';
-                            const isNotAvailable = quote.quote.quoteType === 'not_available';
-                            const price = quote.quote.costPricePerCaseUsd;
-                            const isBestPrice = minPrice !== null && price === minPrice;
-                            const isHighestPrice =
-                              maxPrice !== null && price === maxPrice && maxPrice !== minPrice;
-
-                            // N/A quotes - compact display
-                            if (isNotAvailable || price === null) {
+                            // Check if any quotes are N/A (typically there would be just one N/A quote)
+                            const naQuote = partnerQuotes.find((q) => q.quote.quoteType === 'not_available');
+                            if (naQuote) {
                               return (
                                 <td key={p.partnerId} className="px-1 py-2 text-center">
                                   <span
                                     className="text-[10px] text-text-danger bg-fill-danger/10 px-1.5 py-0.5 rounded"
-                                    title={quote.quote.notAvailableReason || 'Not available'}
+                                    title={naQuote.quote.notAvailableReason || 'Not available'}
                                   >
                                     N/A
                                   </span>
@@ -1021,74 +1014,124 @@ const RfqDetailPage = () => {
                               );
                             }
 
-                            // Build tooltip with all quote details
-                            const tooltipParts = [];
-                            if (quote.quote.caseConfig) tooltipParts.push(`Config: ${quote.quote.caseConfig}`);
-                            if (quote.quote.availableQuantity) tooltipParts.push(`Avail: ${quote.quote.availableQuantity} cs`);
-                            if (quote.quote.stockLocation) tooltipParts.push(`Location: ${quote.quote.stockLocation}`);
-                            if (quote.quote.stockCondition) tooltipParts.push(`Condition: ${quote.quote.stockCondition}`);
-                            if (quote.quote.leadTimeDays) tooltipParts.push(`Lead: ${quote.quote.leadTimeDays}d`);
-                            if (quote.quote.moq) tooltipParts.push(`MOQ: ${quote.quote.moq} cs`);
-                            if (isAltVintage) {
-                              tooltipParts.unshift(`Alt Vintage: ${quote.quote.alternativeVintage || 'Not specified'}`);
-                              if (quote.quote.alternativeReason) tooltipParts.push(`Reason: ${quote.quote.alternativeReason}`);
-                            }
-                            if (isAltProduct) {
-                              const altDetails = [quote.quote.alternativeProductName, quote.quote.alternativeVintage].filter(Boolean).join(' ');
-                              tooltipParts.unshift(`Alternative: ${altDetails}`);
-                              if (quote.quote.alternativeReason) tooltipParts.push(`Reason: ${quote.quote.alternativeReason}`);
-                            }
-                            const tooltip = tooltipParts.join('\n');
+                            // Filter to quotes with valid prices
+                            const validQuotes = partnerQuotes.filter(
+                              (q) => q.quote.costPricePerCaseUsd !== null && q.quote.costPricePerCaseUsd > 0,
+                            );
 
-                            return (
-                              <td key={p.partnerId} className="px-1 py-2">
-                                <button
-                                  onClick={() => handleSelectQuote(item.id, quote.quote.id)}
-                                  disabled={!canSelectQuotes || isSelectingQuote}
-                                  className={`w-full px-2 py-2.5 sm:px-1.5 sm:py-1.5 min-h-[44px] sm:min-h-0 rounded text-center transition-all ${
-                                    isSelected
-                                      ? 'bg-fill-brand text-text-on-brand ring-2 ring-border-brand'
-                                      : isBestPrice
-                                        ? 'bg-green-50 text-green-700 hover:bg-green-100'
-                                        : isHighestPrice
-                                          ? 'bg-red-50 text-red-600 hover:bg-red-100'
-                                          : 'bg-fill-muted/50 hover:bg-fill-muted'
-                                  } ${!canSelectQuotes ? 'cursor-default' : 'cursor-pointer'}`}
-                                  title={tooltip || undefined}
-                                  aria-label={`Select quote: $${price.toFixed(0)} from ${p.partner.businessName}${isAltVintage ? ' (alt vintage)' : isAltProduct ? ' (alt product)' : ''}`}
+                            if (validQuotes.length === 0) {
+                              return (
+                                <td
+                                  key={p.partnerId}
+                                  className="px-1 py-2 text-center text-[10px] text-text-muted"
                                 >
-                                  {/* Price */}
-                                  <div className="text-xs font-semibold">
-                                    ${price.toFixed(0)}
-                                    {isSelected && (
-                                      <IconCheck className="inline-block h-3 w-3 ml-0.5" />
-                                    )}
-                                  </div>
-                                  {/* Case config and vintage */}
-                                  <div className={`text-[10px] mt-0.5 ${isSelected ? 'text-text-on-brand/80' : 'text-text-muted'}`}>
-                                    {quote.quote.caseConfig && (
-                                      <span className="font-medium">{quote.quote.caseConfig}</span>
-                                    )}
-                                  </div>
-                                  {/* Vintage indicator - show what vintage was quoted */}
-                                  {isAltVintage ? (
-                                    <span className={`text-[10px] block font-medium ${isSelected ? 'text-blue-200' : 'text-blue-600'}`}>
-                                      {quote.quote.alternativeVintage || item.vintage}
-                                    </span>
-                                  ) : isAltProduct ? (
-                                    <span className={`text-[10px] block font-medium ${isSelected ? 'text-amber-200' : 'text-text-warning'}`}>
-                                      {quote.quote.alternativeVintage || 'ALT'}
-                                    </span>
-                                  ) : (
-                                    // Show the specific vintage the partner quoted on
-                                    // (quotedVintage takes precedence over item.vintage)
-                                    (quote.quote.quotedVintage || item.vintage) && (
-                                      <span className={`text-[10px] block font-medium ${isSelected ? 'text-text-on-brand/70' : 'text-text-muted'}`}>
-                                        {quote.quote.quotedVintage || item.vintage}
-                                      </span>
-                                    )
-                                  )}
-                                </button>
+                                  —
+                                </td>
+                              );
+                            }
+
+                            // Render multiple vintage options stacked vertically
+                            return (
+                              <td key={p.partnerId} className="px-1 py-1">
+                                <div className={`flex flex-col gap-1 ${validQuotes.length > 1 ? 'max-h-24 overflow-y-auto' : ''}`}>
+                                  {validQuotes.map((quoteItem) => {
+                                    const quote = quoteItem.quote;
+                                    const isSelected = quote.isSelected;
+                                    const isAltVintage = quote.quoteType === 'alt_vintage';
+                                    const isAltProduct = quote.quoteType === 'alternative';
+                                    const price = quote.costPricePerCaseUsd!;
+                                    const isBestPrice = minPrice !== null && price === minPrice;
+                                    const isHighestPrice =
+                                      maxPrice !== null && price === maxPrice && maxPrice !== minPrice;
+
+                                    // Build tooltip with all quote details
+                                    const tooltipParts = [];
+                                    if (quote.caseConfig) tooltipParts.push(`Config: ${quote.caseConfig}`);
+                                    if (quote.availableQuantity) tooltipParts.push(`Avail: ${quote.availableQuantity} cs`);
+                                    if (quote.stockLocation) tooltipParts.push(`Location: ${quote.stockLocation}`);
+                                    if (quote.stockCondition) tooltipParts.push(`Condition: ${quote.stockCondition}`);
+                                    if (quote.leadTimeDays) tooltipParts.push(`Lead: ${quote.leadTimeDays}d`);
+                                    if (quote.moq) tooltipParts.push(`MOQ: ${quote.moq} cs`);
+                                    if (isAltVintage) {
+                                      tooltipParts.unshift(`Alt Vintage: ${quote.alternativeVintage || 'Not specified'}`);
+                                      if (quote.alternativeReason) tooltipParts.push(`Reason: ${quote.alternativeReason}`);
+                                    }
+                                    if (isAltProduct) {
+                                      const altDetails = [quote.alternativeProductName, quote.alternativeVintage].filter(Boolean).join(' ');
+                                      tooltipParts.unshift(`Alternative: ${altDetails}`);
+                                      if (quote.alternativeReason) tooltipParts.push(`Reason: ${quote.alternativeReason}`);
+                                    }
+                                    const tooltip = tooltipParts.join('\n');
+
+                                    // Get display vintage
+                                    const displayVintage = isAltVintage || isAltProduct
+                                      ? quote.alternativeVintage
+                                      : quote.quotedVintage || item.vintage;
+
+                                    return (
+                                      <button
+                                        key={quote.id}
+                                        onClick={() => handleSelectQuote(item.id, quote.id)}
+                                        disabled={!canSelectQuotes || isSelectingQuote}
+                                        className={`w-full px-1.5 py-1 rounded text-center transition-all ${
+                                          isSelected
+                                            ? 'bg-fill-brand text-text-on-brand ring-2 ring-border-brand'
+                                            : isBestPrice
+                                              ? 'bg-green-50 text-green-700 hover:bg-green-100'
+                                              : isHighestPrice
+                                                ? 'bg-red-50 text-red-600 hover:bg-red-100'
+                                                : 'bg-fill-muted/50 hover:bg-fill-muted'
+                                        } ${!canSelectQuotes ? 'cursor-default' : 'cursor-pointer'}`}
+                                        title={tooltip || undefined}
+                                        aria-label={`Select quote: $${price.toFixed(0)} ${displayVintage ? `(${displayVintage})` : ''} from ${p.partner.businessName}`}
+                                      >
+                                        <div className="flex items-center justify-center gap-1">
+                                          {/* Vintage badge for multi-vintage visibility */}
+                                          {displayVintage && validQuotes.length > 1 && (
+                                            <span className={`text-[9px] font-bold px-1 rounded ${
+                                              isSelected
+                                                ? 'bg-white/20'
+                                                : isAltVintage
+                                                  ? 'bg-blue-100 text-blue-700'
+                                                  : isAltProduct
+                                                    ? 'bg-amber-100 text-amber-700'
+                                                    : 'bg-slate-100 text-slate-600'
+                                            }`}>
+                                              {displayVintage}
+                                            </span>
+                                          )}
+                                          {/* Price */}
+                                          <span className="text-xs font-semibold">
+                                            ${price.toFixed(0)}
+                                            {isSelected && (
+                                              <IconCheck className="inline-block h-3 w-3 ml-0.5" />
+                                            )}
+                                          </span>
+                                        </div>
+                                        {/* Show vintage on separate line if single quote */}
+                                        {validQuotes.length === 1 && displayVintage && (
+                                          <span className={`text-[10px] block ${
+                                            isSelected
+                                              ? 'text-text-on-brand/70'
+                                              : isAltVintage
+                                                ? 'text-blue-600'
+                                                : isAltProduct
+                                                  ? 'text-amber-600'
+                                                  : 'text-text-muted'
+                                          }`}>
+                                            {displayVintage}
+                                          </span>
+                                        )}
+                                        {/* Case config */}
+                                        {quote.caseConfig && (
+                                          <span className={`text-[9px] block ${isSelected ? 'text-text-on-brand/60' : 'text-text-muted'}`}>
+                                            {quote.caseConfig}pk
+                                          </span>
+                                        )}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
                               </td>
                             );
                           })}
