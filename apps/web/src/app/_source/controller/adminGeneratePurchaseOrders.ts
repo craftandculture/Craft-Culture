@@ -63,7 +63,9 @@ const adminGeneratePurchaseOrders = adminProcedure
       });
     }
 
-    if (rfq.status !== 'finalized') {
+    // Allow PO generation from finalized or quote_generated status
+    const allowedStatuses = ['finalized', 'quote_generated'];
+    if (!allowedStatuses.includes(rfq.status)) {
       throw new TRPCError({
         code: 'BAD_REQUEST',
         message: `RFQ must be finalized before generating POs. Current status: '${rfq.status}'`,
