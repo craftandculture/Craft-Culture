@@ -11,7 +11,9 @@ import {
   IconEdit,
   IconFilter,
   IconInfoCircle,
+  IconPlus,
   IconSend,
+  IconTrash,
   IconUpload,
   IconX,
 } from '@tabler/icons-react';
@@ -41,6 +43,7 @@ import useTRPC from '@/lib/trpc/browser';
 type QuoteType = (typeof sourceRfqQuoteType.enumValues)[number];
 
 interface QuoteEntry {
+  id: string; // Unique ID for this quote entry (for UI tracking)
   itemId: string;
   quoteType: QuoteType;
   quotedVintage?: string;
@@ -65,6 +68,10 @@ interface QuoteEntry {
   alternativeLwin?: string;
   alternativeReason?: string;
 }
+
+// Generate unique ID for quote entries
+let quoteIdCounter = 0;
+const generateQuoteId = () => `quote-${++quoteIdCounter}-${Date.now()}`;
 
 // Common case configurations
 const CASE_CONFIGS = [
@@ -96,15 +103,6 @@ const STOCK_CONDITIONS = [
   { value: 'free_trade', label: 'Free Trade Zone' },
 ];
 
-// Common bottle sizes
-const BOTTLE_SIZES = [
-  { value: '750ml', label: '750ml (Standard)' },
-  { value: '375ml', label: '375ml (Half)' },
-  { value: '1.5L', label: '1.5L (Magnum)' },
-  { value: '3L', label: '3L (Jeroboam)' },
-  { value: '6L', label: '6L (Imperial)' },
-];
-
 // N/A Reasons
 const NA_REASONS = [
   { value: 'out_of_stock', label: 'Out of Stock' },
@@ -124,7 +122,8 @@ const PartnerRfqDetailPage = () => {
   const rfqId = params.rfqId as string;
   const api = useTRPC();
 
-  const [quotes, setQuotes] = useState<Map<string, QuoteEntry>>(new Map());
+  // Multi-vintage quotes: Map from itemId to array of quote entries
+  const [quotes, setQuotes] = useState<Map<string, QuoteEntry[]>>(new Map());
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
   const [partnerNotes, setPartnerNotes] = useState('');
   const [isDeclineDialogOpen, setIsDeclineDialogOpen] = useState(false);
@@ -134,7 +133,7 @@ const PartnerRfqDetailPage = () => {
   const [entryMode, setEntryMode] = useState<'manual' | 'excel'>('manual');
 
   // Auto-save key for localStorage
-  const storageKey = `source-rfq-draft-${rfqId}`;
+  const storageKey = `source-rfq-draft-v2-${rfqId}`;
 
   // Load draft from localStorage on mount
   useEffect(() => {
@@ -142,7 +141,7 @@ const PartnerRfqDetailPage = () => {
       const savedDraft = localStorage.getItem(storageKey);
       if (savedDraft) {
         const parsed = JSON.parse(savedDraft) as {
-          quotes: [string, QuoteEntry][];
+          quotes: [string, QuoteEntry[]][];
           partnerNotes: string;
           savedAt: string;
         };
@@ -270,18 +269,63 @@ const PartnerRfqDetailPage = () => {
     setExpandedItems(newExpanded);
   };
 
+  // Add a new vintage quote for an item
+  const handleAddVintageQuote = (itemId: string, vintage?: string) => {
+    const existingQuotes = quotes.get(itemId) || [];
+    const newQuote: QuoteEntry = {
+      id: generateQuoteId(),
+      itemId,
+      quoteType: 'exact',
+      quotedVintage: vintage || '',
+      currency: 'USD',
+    };
+    setQuotes(new Map(quotes.set(itemId, [...existingQuotes, newQuote])));
+
+    // Auto-expand when adding a quote
+    if (!expandedItems.has(itemId)) {
+      setExpandedItems(new Set(expandedItems).add(itemId));
+    }
+  };
+
+  // Remove a vintage quote
+  const handleRemoveVintageQuote = (itemId: string, quoteId: string) => {
+    const existingQuotes = quotes.get(itemId) || [];
+    const updatedQuotes = existingQuotes.filter((q) => q.id !== quoteId);
+    if (updatedQuotes.length === 0) {
+      const newQuotes = new Map(quotes);
+      newQuotes.delete(itemId);
+      setQuotes(newQuotes);
+    } else {
+      setQuotes(new Map(quotes.set(itemId, updatedQuotes)));
+    }
+  };
+
+  // Mark item as not available (replaces all quotes for that item)
+  const handleMarkNotAvailable = (itemId: string) => {
+    const naQuote: QuoteEntry = {
+      id: generateQuoteId(),
+      itemId,
+      quoteType: 'not_available',
+      currency: 'USD',
+    };
+    setQuotes(new Map(quotes.set(itemId, [naQuote])));
+  };
+
+  // Update a specific quote entry
   const handleQuoteChange = (
     itemId: string,
+    quoteId: string,
     field: keyof QuoteEntry,
     value: string | number | Date | undefined,
   ) => {
-    const currentQuote = quotes.get(itemId) || {
-      itemId,
-      quoteType: 'exact' as QuoteType,
-      currency: 'USD',
-    };
-
-    setQuotes(new Map(quotes.set(itemId, { ...currentQuote, [field]: value })));
+    const existingQuotes = quotes.get(itemId) || [];
+    const updatedQuotes = existingQuotes.map((q) => {
+      if (q.id === quoteId) {
+        return { ...q, [field]: value };
+      }
+      return q;
+    });
+    setQuotes(new Map(quotes.set(itemId, updatedQuotes)));
 
     // Auto-expand when user starts filling in data
     if (!expandedItems.has(itemId)) {
@@ -290,7 +334,9 @@ const PartnerRfqDetailPage = () => {
   };
 
   const handleSubmitQuotes = () => {
-    const quotesToSubmit = Array.from(quotes.values()).filter((q) => {
+    // Flatten all quotes from all items
+    const allQuotes = Array.from(quotes.values()).flat();
+    const quotesToSubmit = allQuotes.filter((q) => {
       // N/A quotes are valid without a price
       if (q.quoteType === 'not_available') {
         return true;
@@ -318,19 +364,27 @@ const PartnerRfqDetailPage = () => {
     });
   };
 
-  const getQuoteForItem = (itemId: string): QuoteEntry | undefined => {
-    return quotes.get(itemId);
+  const getQuotesForItem = (itemId: string): QuoteEntry[] => {
+    return quotes.get(itemId) || [];
   };
 
   const getQuoteStatus = (itemId: string): 'empty' | 'complete' | 'partial' | 'na' => {
-    const quote = quotes.get(itemId);
-    if (!quote) return 'empty';
-    if (quote.quoteType === 'not_available') return 'na';
-    if (quote.costPricePerCaseUsd && quote.costPricePerCaseUsd > 0) return 'complete';
+    const itemQuotes = quotes.get(itemId);
+    if (!itemQuotes || itemQuotes.length === 0) return 'empty';
+    if (itemQuotes.some((q) => q.quoteType === 'not_available')) return 'na';
+    const hasCompleteQuote = itemQuotes.some((q) => q.costPricePerCaseUsd && q.costPricePerCaseUsd > 0);
+    if (hasCompleteQuote) return 'complete';
     return 'partial';
   };
 
-  const completedCount = Array.from(quotes.values()).filter((q) => {
+  // Count total completed quotes (items with at least one valid quote)
+  const completedItemCount = Array.from(quotes.entries()).filter(([, itemQuotes]) => {
+    if (itemQuotes.some((q) => q.quoteType === 'not_available')) return true;
+    return itemQuotes.some((q) => q.costPricePerCaseUsd && q.costPricePerCaseUsd > 0);
+  }).length;
+
+  // Count total vintage quotes submitted
+  const totalVintageQuotes = Array.from(quotes.values()).flat().filter((q) => {
     if (q.quoteType === 'not_available') return true;
     return q.costPricePerCaseUsd && q.costPricePerCaseUsd > 0;
   }).length;
@@ -338,19 +392,20 @@ const PartnerRfqDetailPage = () => {
   // Filter items
   const filteredItems = showUnquotedOnly
     ? rfq.items.filter((item) => {
-        const quote = quotes.get(item.id);
-        if (!quote) return true;
-        if (quote.quoteType === 'not_available') return false;
-        return !quote.costPricePerCaseUsd || quote.costPricePerCaseUsd <= 0;
+        const itemQuotes = quotes.get(item.id);
+        if (!itemQuotes || itemQuotes.length === 0) return true;
+        if (itemQuotes.some((q) => q.quoteType === 'not_available')) return false;
+        return !itemQuotes.some((q) => q.costPricePerCaseUsd && q.costPricePerCaseUsd > 0);
       })
     : rfq.items;
 
   // Handle parsed quotes from Excel upload
   const handleExcelQuotesParsed = (parsedQuotes: ParsedQuote[]) => {
-    const newQuotes = new Map<string, QuoteEntry>();
+    const newQuotes = new Map<string, QuoteEntry[]>();
 
     for (const parsed of parsedQuotes) {
       const quoteEntry: QuoteEntry = {
+        id: generateQuoteId(),
         itemId: parsed.itemId,
         quoteType: parsed.quoteType,
         quotedVintage: parsed.quotedVintage,
@@ -367,7 +422,9 @@ const PartnerRfqDetailPage = () => {
         alternativeVintage: parsed.alternativeVintage,
         alternativeReason: parsed.alternativeReason,
       };
-      newQuotes.set(parsed.itemId, quoteEntry);
+      // Group quotes by itemId
+      const existing = newQuotes.get(parsed.itemId) || [];
+      newQuotes.set(parsed.itemId, [...existing, quoteEntry]);
     }
 
     setQuotes(newQuotes);
@@ -376,27 +433,36 @@ const PartnerRfqDetailPage = () => {
     setExpandedItems(new Set(parsedQuotes.map((q) => q.itemId)));
   };
 
-  // Copy quote template from one item to others
-  const handleCopyQuoteToAll = (sourceItemId: string) => {
-    const sourceQuote = quotes.get(sourceItemId);
+  // Copy quote template settings to all unquoted items
+  const handleCopySettingsToAll = (sourceItemId: string) => {
+    const sourceQuotes = quotes.get(sourceItemId);
+    if (!sourceQuotes || sourceQuotes.length === 0) return;
+    const sourceQuote = sourceQuotes[0];
     if (!sourceQuote) return;
 
     const newQuotes = new Map(quotes);
     for (const item of rfq.items) {
-      if (item.id !== sourceItemId && !quotes.has(item.id)) {
-        newQuotes.set(item.id, {
+      if (item.id !== sourceItemId && (!quotes.has(item.id) || quotes.get(item.id)?.length === 0)) {
+        newQuotes.set(item.id, [{
+          id: generateQuoteId(),
           itemId: item.id,
-          quoteType: sourceQuote.quoteType,
+          quoteType: 'exact',
           currency: sourceQuote.currency,
           caseConfig: sourceQuote.caseConfig,
           stockLocation: sourceQuote.stockLocation,
           stockCondition: sourceQuote.stockCondition,
           leadTimeDays: sourceQuote.leadTimeDays,
           validUntil: sourceQuote.validUntil,
-        });
+        }]);
       }
     }
     setQuotes(newQuotes);
+  };
+
+  // Parse vintage string to array (e.g., "2019, 2020, 2021" -> ["2019", "2020", "2021"])
+  const parseVintages = (vintage: string | null | undefined): string[] => {
+    if (!vintage) return [];
+    return vintage.split(/[,\/;]/).map((v) => v.trim()).filter(Boolean);
   };
 
   return (
@@ -462,12 +528,12 @@ const PartnerRfqDetailPage = () => {
                   variant="default"
                   colorRole="brand"
                   onClick={handleSubmitQuotes}
-                  isDisabled={isSubmitting || completedCount === 0}
+                  isDisabled={isSubmitting || completedItemCount === 0}
                 >
                   <ButtonContent iconLeft={isUpdating ? IconEdit : IconSend}>
                     {isSubmitting
                       ? (isUpdating ? 'Updating...' : 'Submitting...')
-                      : `${isUpdating ? 'Update' : 'Submit'} ${completedCount} Quote${completedCount !== 1 ? 's' : ''}`
+                      : `${isUpdating ? 'Update' : 'Submit'} ${totalVintageQuotes} Quote${totalVintageQuotes !== 1 ? 's' : ''}`
                     }
                   </ButtonContent>
                 </Button>
@@ -497,16 +563,16 @@ const PartnerRfqDetailPage = () => {
                           fill="none"
                           stroke="#10b981"
                           strokeWidth="3"
-                          strokeDasharray={`${(completedCount / rfq.items.length) * 100}, 100`}
+                          strokeDasharray={`${(completedItemCount / rfq.items.length) * 100}, 100`}
                         />
                       </svg>
                       <span className="absolute inset-0 flex items-center justify-center text-sm font-bold text-slate-700 dark:text-slate-200">
-                        {completedCount}
+                        {completedItemCount}
                       </span>
                     </div>
                     <div>
                       <Typography variant="bodyMd" className="font-semibold">
-                        {completedCount} of {rfq.items.length} items quoted
+                        {completedItemCount} of {rfq.items.length} items · {totalVintageQuotes} vintage{totalVintageQuotes !== 1 ? 's' : ''}
                       </Typography>
                       {lastSavedAt && (
                         <span className="text-xs text-green-600 flex items-center gap-1 mt-0.5">
@@ -556,16 +622,16 @@ const PartnerRfqDetailPage = () => {
           <div className="sm:hidden space-y-2">
             <div className="flex items-center justify-between px-1 text-sm">
               <span className="text-text-muted">
-                <span className="font-semibold text-text-primary">{completedCount}</span>/{rfq.items.length} quoted
+                <span className="font-semibold text-text-primary">{completedItemCount}</span>/{rfq.items.length} · {totalVintageQuotes} vintage{totalVintageQuotes !== 1 ? 's' : ''}
               </span>
               <div className="flex items-center gap-3 text-xs">
                 <span className="flex items-center gap-1">
                   <span className="w-2 h-2 rounded-full bg-green-500" />
-                  {Array.from(quotes.values()).filter((q) => q.quoteType !== 'not_available' && q.costPricePerCaseUsd && q.costPricePerCaseUsd > 0).length}
+                  {Array.from(quotes.values()).flat().filter((q) => q.quoteType !== 'not_available' && q.costPricePerCaseUsd && q.costPricePerCaseUsd > 0).length}
                 </span>
                 <span className="flex items-center gap-1">
                   <span className="w-2 h-2 rounded-full bg-red-500" />
-                  {Array.from(quotes.values()).filter((q) => q.quoteType === 'not_available').length}
+                  {Array.from(quotes.values()).flat().filter((q) => q.quoteType === 'not_available').length}
                 </span>
               </div>
             </div>
@@ -729,13 +795,14 @@ const PartnerRfqDetailPage = () => {
 
           <div className="divide-y divide-border-muted border border-border-muted rounded-lg lg:rounded-t-none overflow-hidden">
             {filteredItems.map((item, index) => {
-              const quote = getQuoteForItem(item.id);
+              const itemQuotes = getQuotesForItem(item.id);
+              const firstQuote = itemQuotes[0];
               const existingQuote = item.myQuote;
               const isExpanded = expandedItems.has(item.id);
               const status = getQuoteStatus(item.id);
-              const isNA = quote?.quoteType === 'not_available';
-              const isAltVintage = quote?.quoteType === 'alt_vintage';
-              const isAltProduct = quote?.quoteType === 'alternative';
+              const isNA = firstQuote?.quoteType === 'not_available';
+              const requestedVintages = parseVintages(item.vintage);
+              const hasMultipleVintages = requestedVintages.length > 1;
 
               return (
                 <div
@@ -766,8 +833,22 @@ const PartnerRfqDetailPage = () => {
                           {item.productName}
                         </span>
                         {item.vintage && (
-                          <span className="flex-shrink-0 text-xs font-semibold text-emerald-700 bg-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400 px-2 py-0.5 rounded">
+                          <span className={`flex-shrink-0 text-xs font-semibold px-2 py-0.5 rounded ${
+                            hasMultipleVintages
+                              ? 'text-purple-700 bg-purple-100 dark:bg-purple-900/30 dark:text-purple-400'
+                              : 'text-emerald-700 bg-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400'
+                          }`}>
                             {item.vintage}
+                          </span>
+                        )}
+                        {hasMultipleVintages && (
+                          <span className="text-[10px] text-purple-600 font-medium">
+                            ({requestedVintages.length} vintages)
+                          </span>
+                        )}
+                        {itemQuotes.length > 1 && (
+                          <span className="flex-shrink-0 text-[10px] font-bold text-blue-700 bg-blue-100 px-1.5 py-0.5 rounded">
+                            {itemQuotes.length} quotes
                           </span>
                         )}
                         {item.adminNotes && (
@@ -785,29 +866,21 @@ const PartnerRfqDetailPage = () => {
                         {item.region || '-'}
                       </span>
 
-                      {/* Price Input */}
+                      {/* Price Summary */}
                       <div className="flex items-center justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
-                        {canSubmit && !isNA ? (
-                          <div className="relative">
-                            <span className="absolute left-2 top-1/2 -translate-y-1/2 text-sm text-text-muted">$</span>
-                            <input
-                              type="number"
-                              step="0.01"
-                              min="0"
-                              placeholder="0.00"
-                              value={quote?.costPricePerCaseUsd || ''}
-                              onChange={(e) => handleQuoteChange(item.id, 'costPricePerCaseUsd', parseFloat(e.target.value) || 0)}
-                              className={`w-24 pl-6 pr-2 py-1.5 rounded-lg border text-sm text-right font-medium transition-colors ${
-                                status === 'complete'
-                                  ? 'border-green-400 bg-green-50 text-green-700 ring-1 ring-green-200'
-                                  : 'border-slate-300 bg-white hover:border-slate-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-200'
-                              }`}
-                            />
-                          </div>
-                        ) : (
-                          <span className="text-sm font-medium text-text-muted">
-                            {existingQuote?.costPricePerCaseUsd ? `$${existingQuote.costPricePerCaseUsd.toFixed(2)}` : '-'}
+                        {isNA ? (
+                          <span className="text-sm font-medium text-red-600">N/A</span>
+                        ) : itemQuotes.length > 0 ? (
+                          <span className="text-sm font-medium text-green-700">
+                            {itemQuotes.filter((q) => q.costPricePerCaseUsd).length > 0 && (
+                              <>
+                                ${Math.min(...itemQuotes.filter((q) => q.costPricePerCaseUsd).map((q) => q.costPricePerCaseUsd!)).toFixed(0)}
+                                {itemQuotes.length > 1 && '+'}
+                              </>
+                            )}
                           </span>
+                        ) : (
+                          <span className="text-sm text-text-muted">-</span>
                         )}
                       </div>
 
@@ -826,7 +899,7 @@ const PartnerRfqDetailPage = () => {
                         {canSubmit && status !== 'na' && status !== 'complete' && (
                           <button
                             type="button"
-                            onClick={() => handleQuoteChange(item.id, 'quoteType', 'not_available')}
+                            onClick={() => handleMarkNotAvailable(item.id)}
                             className="px-2 py-1 rounded-md border border-red-300 text-red-600 text-xs font-medium hover:bg-red-50 transition-colors"
                             title="Mark as Not Available"
                           >
@@ -857,8 +930,17 @@ const PartnerRfqDetailPage = () => {
                         <div className="flex items-center gap-1.5 flex-wrap">
                           <span className="font-medium text-sm">{item.productName}</span>
                           {item.vintage && (
-                            <span className="text-xs font-semibold text-text-brand bg-fill-brand/10 px-1 py-0.5 rounded">
+                            <span className={`text-xs font-semibold px-1 py-0.5 rounded ${
+                              hasMultipleVintages
+                                ? 'text-purple-700 bg-purple-100'
+                                : 'text-text-brand bg-fill-brand/10'
+                            }`}>
                               {item.vintage}
+                            </span>
+                          )}
+                          {itemQuotes.length > 1 && (
+                            <span className="text-[10px] font-bold text-blue-700 bg-blue-100 px-1 py-0.5 rounded">
+                              {itemQuotes.length}
                             </span>
                           )}
                           {status === 'complete' && (
@@ -883,27 +965,13 @@ const PartnerRfqDetailPage = () => {
                         </div>
                       </div>
 
-                      {/* Price Input - Mobile */}
+                      {/* Price Summary - Mobile */}
                       <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-                        {canSubmit && !isNA ? (
-                          <input
-                            type="number"
-                            step="0.01"
-                            min="0"
-                            placeholder="$"
-                            value={quote?.costPricePerCaseUsd || ''}
-                            onChange={(e) => handleQuoteChange(item.id, 'costPricePerCaseUsd', parseFloat(e.target.value) || 0)}
-                            className={`w-16 px-1.5 py-1 rounded border text-xs text-right font-medium ${
-                              status === 'complete'
-                                ? 'border-green-300 bg-green-100 text-green-700'
-                                : 'border-border-primary bg-white'
-                            }`}
-                          />
-                        ) : existingQuote?.costPricePerCaseUsd ? (
+                        {!isNA && itemQuotes.length > 0 && itemQuotes.some((q) => q.costPricePerCaseUsd) && (
                           <span className="text-xs font-medium text-green-700">
-                            ${existingQuote.costPricePerCaseUsd.toFixed(0)}
+                            ${Math.min(...itemQuotes.filter((q) => q.costPricePerCaseUsd).map((q) => q.costPricePerCaseUsd!)).toFixed(0)}
                           </span>
-                        ) : null}
+                        )}
                       </div>
 
                       {/* Expand Button - Mobile */}
@@ -919,52 +987,76 @@ const PartnerRfqDetailPage = () => {
                     </div>
                   </div>
 
-                  {/* Quote Input Section - Expanded (compact) */}
+                  {/* Multi-Vintage Quote Entry Section - Expanded */}
                   {canSubmit && isExpanded && (
                     <div className="border-t border-border-muted bg-fill-secondary/30 px-3 py-3 space-y-3">
-                      {/* Response Type Selection - Improved UX */}
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-xs font-semibold text-text-muted shrink-0">Response:</span>
-                        <div className="flex rounded-lg border border-border-muted overflow-hidden">
-                          {[
-                            { value: 'exact', label: 'Exact Match', shortLabel: 'Exact', color: 'bg-green-500 text-white border-green-500' },
-                            { value: 'alt_vintage', label: 'Different Vintage', shortLabel: 'Alt Vintage', color: 'bg-blue-500 text-white border-blue-500' },
-                            { value: 'alternative', label: 'Alternative Product', shortLabel: 'Alt Product', color: 'bg-amber-500 text-white border-amber-500' },
-                            { value: 'not_available', label: 'Not Available', shortLabel: 'N/A', color: 'bg-red-500 text-white border-red-500' },
-                          ].map((option, idx) => (
-                            <button
-                              key={option.value}
-                              type="button"
-                              onClick={() => handleQuoteChange(item.id, 'quoteType', option.value as QuoteType)}
-                              className={`px-2 sm:px-3 py-1.5 text-xs font-medium transition-all ${
-                                idx > 0 ? 'border-l border-border-muted' : ''
-                              } ${
-                                quote?.quoteType === option.value
-                                  ? option.color
-                                  : 'bg-white text-text-muted hover:bg-fill-muted'
-                              }`}
-                              title={option.label}
-                            >
-                              <span className="hidden sm:inline">{option.shortLabel}</span>
-                              <span className="sm:hidden">{option.value === 'not_available' ? 'N/A' : option.value === 'exact' ? 'Exact' : option.value === 'alt_vintage' ? 'Vint.' : 'Alt'}</span>
-                            </button>
-                          ))}
+                      {/* Header with quick actions */}
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-semibold text-text-muted">Quotes:</span>
+                          {itemQuotes.length === 0 && (
+                            <span className="text-xs text-text-muted italic">No quotes yet</span>
+                          )}
+                          {itemQuotes.length > 0 && !isNA && (
+                            <span className="text-xs text-green-600 font-medium">
+                              {itemQuotes.length} vintage{itemQuotes.length !== 1 ? 's' : ''} quoted
+                            </span>
+                          )}
                         </div>
-                        {status === 'complete' && (
+                        <div className="flex items-center gap-2">
+                          {!isNA && (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => handleAddVintageQuote(item.id)}
+                                className="flex items-center gap-1 px-2 py-1 rounded-md bg-blue-600 text-white text-xs font-medium hover:bg-blue-700 transition-colors"
+                              >
+                                <IconPlus className="h-3 w-3" />
+                                Add Vintage
+                              </button>
+                              {hasMultipleVintages && itemQuotes.length === 0 && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    for (const v of requestedVintages) {
+                                      handleAddVintageQuote(item.id, v);
+                                    }
+                                  }}
+                                  className="flex items-center gap-1 px-2 py-1 rounded-md border border-purple-300 text-purple-700 text-xs font-medium hover:bg-purple-50 transition-colors"
+                                >
+                                  <IconPlus className="h-3 w-3" />
+                                  Add All {requestedVintages.length}
+                                </button>
+                              )}
+                            </>
+                          )}
                           <button
                             type="button"
-                            onClick={() => handleCopyQuoteToAll(item.id)}
-                            className="ml-auto flex items-center gap-1 px-2 py-1 rounded border border-border-muted text-xs text-text-muted hover:bg-fill-muted"
-                            title="Copy settings to unquoted items"
+                            onClick={() => handleMarkNotAvailable(item.id)}
+                            className={`px-2 py-1 rounded-md text-xs font-medium transition-colors ${
+                              isNA
+                                ? 'bg-red-500 text-white'
+                                : 'border border-red-300 text-red-600 hover:bg-red-50'
+                            }`}
                           >
-                            <IconCopy className="h-3 w-3" />
-                            <span className="hidden sm:inline">Copy to all</span>
+                            N/A
                           </button>
-                        )}
+                          {status === 'complete' && (
+                            <button
+                              type="button"
+                              onClick={() => handleCopySettingsToAll(item.id)}
+                              className="flex items-center gap-1 px-2 py-1 rounded border border-border-muted text-xs text-text-muted hover:bg-fill-muted"
+                              title="Copy settings to unquoted items"
+                            >
+                              <IconCopy className="h-3 w-3" />
+                              <span className="hidden sm:inline">Copy to all</span>
+                            </button>
+                          )}
+                        </div>
                       </div>
 
-                      {/* N/A Reason - Compact */}
-                      {isNA && (
+                      {/* N/A Reason */}
+                      {isNA && firstQuote && (
                         <div className="p-2 bg-red-50 border border-red-200 rounded space-y-2">
                           <div className="flex flex-wrap items-center gap-1.5">
                             <span className="text-xs font-medium text-red-700">Reason:</span>
@@ -972,9 +1064,9 @@ const PartnerRfqDetailPage = () => {
                               <button
                                 key={reason.value}
                                 type="button"
-                                onClick={() => handleQuoteChange(item.id, 'notAvailableReason', reason.label)}
+                                onClick={() => handleQuoteChange(item.id, firstQuote.id, 'notAvailableReason', reason.label)}
                                 className={`px-2 py-0.5 rounded text-xs transition-all ${
-                                  quote?.notAvailableReason === reason.label
+                                  firstQuote.notAvailableReason === reason.label
                                     ? 'bg-red-600 text-white'
                                     : 'bg-white border border-red-200 text-red-700 hover:bg-red-100'
                                 }`}
@@ -985,273 +1077,276 @@ const PartnerRfqDetailPage = () => {
                             <input
                               type="text"
                               placeholder="Other..."
-                              value={NA_REASONS.some((r) => r.label === quote?.notAvailableReason) ? '' : quote?.notAvailableReason || ''}
-                              onChange={(e) => handleQuoteChange(item.id, 'notAvailableReason', e.target.value)}
+                              value={NA_REASONS.some((r) => r.label === firstQuote.notAvailableReason) ? '' : firstQuote.notAvailableReason || ''}
+                              onChange={(e) => handleQuoteChange(item.id, firstQuote.id, 'notAvailableReason', e.target.value)}
                               className="flex-1 min-w-[100px] px-2 py-0.5 rounded border border-red-200 bg-white text-xs"
                             />
                           </div>
                         </div>
                       )}
 
-                      {/* Pricing & Stock - Compact single row */}
-                      {!isNA && (
-                        <>
-                          <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
-                            {/* Price */}
-                            <div>
-                              <label className="block text-[10px] font-medium text-text-muted mb-0.5">Price*</label>
-                              <div className="relative">
-                                <span className="absolute left-1.5 top-1/2 -translate-y-1/2 text-text-muted text-xs">$</span>
-                                <input
-                                  type="number"
-                                  step="0.01"
-                                  min="0"
-                                  placeholder="0.00"
-                                  value={quote?.costPricePerCaseUsd || ''}
-                                  onChange={(e) => handleQuoteChange(item.id, 'costPricePerCaseUsd', parseFloat(e.target.value) || 0)}
-                                  className="w-full rounded border border-border-primary bg-white pl-5 pr-1 py-1.5 text-xs text-right font-medium"
-                                />
-                              </div>
-                            </div>
-
-                            {/* Case Config */}
-                            <div>
-                              <label className="block text-[10px] font-medium text-text-muted mb-0.5">Config</label>
-                              <select
-                                value={quote?.caseConfig || ''}
-                                onChange={(e) => handleQuoteChange(item.id, 'caseConfig', e.target.value)}
-                                className="w-full rounded border border-border-primary bg-white px-1 py-1.5 text-xs"
-                              >
-                                <option value="">-</option>
-                                {CASE_CONFIGS.slice(0, 4).map((c) => (
-                                  <option key={c.value} value={c.value}>{c.value}pk</option>
-                                ))}
-                              </select>
-                            </div>
-
-                            {/* Available Qty */}
-                            <div>
-                              <label className="block text-[10px] font-medium text-text-muted mb-0.5">Avail</label>
-                              <input
-                                type="number"
-                                min="0"
-                                placeholder="qty"
-                                value={quote?.availableQuantity || ''}
-                                onChange={(e) => handleQuoteChange(item.id, 'availableQuantity', parseInt(e.target.value) || 0)}
-                                className="w-full rounded border border-border-primary bg-white px-1.5 py-1.5 text-xs"
-                              />
-                            </div>
-
-                            {/* Location */}
-                            <div>
-                              <label className="block text-[10px] font-medium text-text-muted mb-0.5">Location</label>
-                              <select
-                                value={quote?.stockLocation || ''}
-                                onChange={(e) => handleQuoteChange(item.id, 'stockLocation', e.target.value)}
-                                className="w-full rounded border border-border-primary bg-white px-1 py-1.5 text-xs"
-                              >
-                                <option value="">-</option>
-                                {STOCK_LOCATIONS.slice(0, 5).map((l) => (
-                                  <option key={l.value} value={l.value}>{l.label.replace(' (Bonded)', '')}</option>
-                                ))}
-                              </select>
-                            </div>
-
-                            {/* Condition */}
-                            <div>
-                              <label className="block text-[10px] font-medium text-text-muted mb-0.5">Cond.</label>
-                              <select
-                                value={quote?.stockCondition || ''}
-                                onChange={(e) => handleQuoteChange(item.id, 'stockCondition', e.target.value)}
-                                className="w-full rounded border border-border-primary bg-white px-1 py-1.5 text-xs"
-                              >
-                                <option value="">-</option>
-                                {STOCK_CONDITIONS.map((c) => (
-                                  <option key={c.value} value={c.value}>{c.label}</option>
-                                ))}
-                              </select>
-                            </div>
-
-                            {/* Lead Time */}
-                            <div>
-                              <label className="block text-[10px] font-medium text-text-muted mb-0.5">Lead</label>
-                              <div className="relative">
-                                <input
-                                  type="number"
-                                  min="0"
-                                  placeholder="days"
-                                  value={quote?.leadTimeDays || ''}
-                                  onChange={(e) => handleQuoteChange(item.id, 'leadTimeDays', parseInt(e.target.value) || 0)}
-                                  className="w-full rounded border border-border-primary bg-white px-1.5 pr-5 py-1.5 text-xs"
-                                />
-                                <span className="absolute right-1 top-1/2 -translate-y-1/2 text-[10px] text-text-muted">d</span>
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Alt Vintage - Simple inline section */}
-                          {isAltVintage && (
-                            <div className="flex items-center gap-3 p-2.5 bg-blue-50 border border-blue-200 rounded-lg">
-                              <div className="flex items-center gap-2">
-                                <span className="text-xs font-semibold text-blue-700">Offering vintage:</span>
+                      {/* Individual Vintage Quote Cards */}
+                      {!isNA && itemQuotes.map((quote, quoteIndex) => (
+                        <div
+                          key={quote.id}
+                          className="rounded-lg border border-slate-200 bg-white overflow-hidden"
+                        >
+                          {/* Quote Header */}
+                          <div className="flex items-center justify-between gap-2 px-3 py-2 bg-slate-50 border-b border-slate-200">
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-bold text-slate-500">#{quoteIndex + 1}</span>
+                              <div className="flex items-center gap-1.5">
+                                <label className="text-xs font-medium text-slate-600">Vintage:</label>
                                 <input
                                   type="text"
                                   placeholder="e.g. 2019"
                                   maxLength={4}
-                                  value={quote?.alternativeVintage || ''}
-                                  onChange={(e) => handleQuoteChange(item.id, 'alternativeVintage', e.target.value)}
-                                  className="w-20 rounded border border-blue-300 bg-white px-2 py-1 text-sm font-medium text-center"
+                                  value={quote.quotedVintage || ''}
+                                  onChange={(e) => handleQuoteChange(item.id, quote.id, 'quotedVintage', e.target.value)}
+                                  className="w-16 rounded border border-slate-300 bg-white px-2 py-1 text-sm font-semibold text-center focus:border-blue-500 focus:ring-1 focus:ring-blue-200"
                                 />
-                                <span className="text-xs text-blue-600">(requested: {item.vintage || 'any'})</span>
                               </div>
-                              <div className="flex-1 min-w-0">
-                                <input
-                                  type="text"
-                                  placeholder="Reason for different vintage (optional)"
-                                  value={quote?.alternativeReason || ''}
-                                  onChange={(e) => handleQuoteChange(item.id, 'alternativeReason', e.target.value)}
-                                  className="w-full rounded border border-blue-200 bg-white px-2 py-1 text-xs"
-                                />
+                              {quote.costPricePerCaseUsd && quote.costPricePerCaseUsd > 0 && (
+                                <span className="text-xs font-semibold text-green-600">
+                                  ${quote.costPricePerCaseUsd.toFixed(2)}/cs
+                                </span>
+                              )}
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveVintageQuote(item.id, quote.id)}
+                              className="p-1 rounded hover:bg-red-100 text-red-500 hover:text-red-700 transition-colors"
+                              title="Remove this quote"
+                            >
+                              <IconTrash className="h-4 w-4" />
+                            </button>
+                          </div>
+
+                          {/* Quote Form */}
+                          <div className="p-3 space-y-2">
+                            {/* Response Type */}
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="text-[10px] font-semibold text-text-muted shrink-0">Type:</span>
+                              <div className="flex rounded-md border border-border-muted overflow-hidden">
+                                {[
+                                  { value: 'exact', label: 'Exact', color: 'bg-green-500 text-white' },
+                                  { value: 'alt_vintage', label: 'Alt Vintage', color: 'bg-blue-500 text-white' },
+                                  { value: 'alternative', label: 'Alt Product', color: 'bg-amber-500 text-white' },
+                                ].map((option, idx) => (
+                                  <button
+                                    key={option.value}
+                                    type="button"
+                                    onClick={() => handleQuoteChange(item.id, quote.id, 'quoteType', option.value as QuoteType)}
+                                    className={`px-2 py-1 text-[10px] font-medium transition-all ${
+                                      idx > 0 ? 'border-l border-border-muted' : ''
+                                    } ${
+                                      quote.quoteType === option.value
+                                        ? option.color
+                                        : 'bg-white text-text-muted hover:bg-fill-muted'
+                                    }`}
+                                  >
+                                    {option.label}
+                                  </button>
+                                ))}
                               </div>
                             </div>
-                          )}
 
-                          {/* Alternative Product - Full form with improved visual hierarchy */}
-                          {isAltProduct && (
-                            <div className="rounded-lg border-2 border-amber-300 overflow-hidden">
-                              {/* Header */}
-                              <div className="bg-amber-500 px-3 py-2 flex items-center gap-2">
-                                <IconAlertTriangle className="h-4 w-4 text-white" />
-                                <span className="text-sm font-semibold text-white">Alternative Product</span>
-                                <span className="ml-auto text-xs text-amber-100">Different wine than requested</span>
+                            {/* Pricing & Stock Grid */}
+                            <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+                              <div>
+                                <label className="block text-[10px] font-medium text-text-muted mb-0.5">Price/cs *</label>
+                                <div className="relative">
+                                  <span className="absolute left-1.5 top-1/2 -translate-y-1/2 text-text-muted text-xs">$</span>
+                                  <input
+                                    type="number"
+                                    step="0.01"
+                                    min="0"
+                                    placeholder="0.00"
+                                    value={quote.costPricePerCaseUsd || ''}
+                                    onChange={(e) => handleQuoteChange(item.id, quote.id, 'costPricePerCaseUsd', parseFloat(e.target.value) || 0)}
+                                    className="w-full rounded border border-border-primary bg-white pl-5 pr-1 py-1.5 text-xs text-right font-medium"
+                                  />
+                                </div>
                               </div>
+                              <div>
+                                <label className="block text-[10px] font-medium text-text-muted mb-0.5">Config</label>
+                                <select
+                                  value={quote.caseConfig || ''}
+                                  onChange={(e) => handleQuoteChange(item.id, quote.id, 'caseConfig', e.target.value)}
+                                  className="w-full rounded border border-border-primary bg-white px-1 py-1.5 text-xs"
+                                >
+                                  <option value="">-</option>
+                                  {CASE_CONFIGS.slice(0, 4).map((c) => (
+                                    <option key={c.value} value={c.value}>{c.value}pk</option>
+                                  ))}
+                                </select>
+                              </div>
+                              <div>
+                                <label className="block text-[10px] font-medium text-text-muted mb-0.5">Avail</label>
+                                <input
+                                  type="number"
+                                  min="0"
+                                  placeholder="qty"
+                                  value={quote.availableQuantity || ''}
+                                  onChange={(e) => handleQuoteChange(item.id, quote.id, 'availableQuantity', parseInt(e.target.value) || 0)}
+                                  className="w-full rounded border border-border-primary bg-white px-1.5 py-1.5 text-xs"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-[10px] font-medium text-text-muted mb-0.5">Location</label>
+                                <select
+                                  value={quote.stockLocation || ''}
+                                  onChange={(e) => handleQuoteChange(item.id, quote.id, 'stockLocation', e.target.value)}
+                                  className="w-full rounded border border-border-primary bg-white px-1 py-1.5 text-xs"
+                                >
+                                  <option value="">-</option>
+                                  {STOCK_LOCATIONS.slice(0, 5).map((l) => (
+                                    <option key={l.value} value={l.value}>{l.label.replace(' (Bonded)', '')}</option>
+                                  ))}
+                                </select>
+                              </div>
+                              <div>
+                                <label className="block text-[10px] font-medium text-text-muted mb-0.5">Cond.</label>
+                                <select
+                                  value={quote.stockCondition || ''}
+                                  onChange={(e) => handleQuoteChange(item.id, quote.id, 'stockCondition', e.target.value)}
+                                  className="w-full rounded border border-border-primary bg-white px-1 py-1.5 text-xs"
+                                >
+                                  <option value="">-</option>
+                                  {STOCK_CONDITIONS.map((c) => (
+                                    <option key={c.value} value={c.value}>{c.label}</option>
+                                  ))}
+                                </select>
+                              </div>
+                              <div>
+                                <label className="block text-[10px] font-medium text-text-muted mb-0.5">Lead</label>
+                                <div className="relative">
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    placeholder="days"
+                                    value={quote.leadTimeDays || ''}
+                                    onChange={(e) => handleQuoteChange(item.id, quote.id, 'leadTimeDays', parseInt(e.target.value) || 0)}
+                                    className="w-full rounded border border-border-primary bg-white px-1.5 pr-5 py-1.5 text-xs"
+                                  />
+                                  <span className="absolute right-1 top-1/2 -translate-y-1/2 text-[10px] text-text-muted">d</span>
+                                </div>
+                              </div>
+                            </div>
 
-                              {/* Form content */}
-                              <div className="bg-amber-50 p-3 space-y-3">
-                                {/* Primary info row */}
-                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                                  <div className="sm:col-span-2">
-                                    <label className="block text-xs font-semibold text-amber-800 mb-1">Wine Name *</label>
+                            {/* Alt Vintage Info */}
+                            {quote.quoteType === 'alt_vintage' && (
+                              <div className="flex items-center gap-2 p-2 bg-blue-50 border border-blue-200 rounded">
+                                <span className="text-xs font-medium text-blue-700">Different vintage than requested</span>
+                                <input
+                                  type="text"
+                                  placeholder="Reason (optional)"
+                                  value={quote.alternativeReason || ''}
+                                  onChange={(e) => handleQuoteChange(item.id, quote.id, 'alternativeReason', e.target.value)}
+                                  className="flex-1 rounded border border-blue-200 bg-white px-2 py-1 text-xs"
+                                />
+                              </div>
+                            )}
+
+                            {/* Alternative Product Fields */}
+                            {quote.quoteType === 'alternative' && (
+                              <div className="p-2 bg-amber-50 border border-amber-200 rounded space-y-2">
+                                <div className="flex items-center gap-2">
+                                  <IconAlertTriangle className="h-4 w-4 text-amber-600" />
+                                  <span className="text-xs font-semibold text-amber-700">Alternative Product</span>
+                                </div>
+                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                                  <div className="col-span-2">
+                                    <label className="block text-[10px] font-medium text-amber-700 mb-0.5">Wine Name *</label>
                                     <input
                                       type="text"
                                       placeholder="e.g. Château Margaux"
-                                      value={quote?.alternativeProductName || ''}
-                                      onChange={(e) => handleQuoteChange(item.id, 'alternativeProductName', e.target.value)}
-                                      className="w-full rounded-lg border-2 border-amber-300 bg-white px-3 py-2 text-sm font-medium focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
+                                      value={quote.alternativeProductName || ''}
+                                      onChange={(e) => handleQuoteChange(item.id, quote.id, 'alternativeProductName', e.target.value)}
+                                      className="w-full rounded border border-amber-300 bg-white px-2 py-1.5 text-xs"
                                     />
                                   </div>
                                   <div>
-                                    <label className="block text-xs font-semibold text-amber-800 mb-1">Vintage</label>
+                                    <label className="block text-[10px] font-medium text-amber-700 mb-0.5">Vintage</label>
                                     <input
                                       type="text"
                                       placeholder="2020"
                                       maxLength={4}
-                                      value={quote?.alternativeVintage || ''}
-                                      onChange={(e) => handleQuoteChange(item.id, 'alternativeVintage', e.target.value)}
-                                      className="w-full rounded-lg border-2 border-amber-300 bg-white px-3 py-2 text-sm font-medium text-center focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
+                                      value={quote.alternativeVintage || ''}
+                                      onChange={(e) => handleQuoteChange(item.id, quote.id, 'alternativeVintage', e.target.value)}
+                                      className="w-full rounded border border-amber-300 bg-white px-2 py-1.5 text-xs text-center"
                                     />
                                   </div>
-                                </div>
-
-                                {/* Secondary info row */}
-                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                                   <div>
                                     <label className="block text-[10px] font-medium text-amber-700 mb-0.5">Producer</label>
                                     <input
                                       type="text"
                                       placeholder="Producer"
-                                      value={quote?.alternativeProducer || ''}
-                                      onChange={(e) => handleQuoteChange(item.id, 'alternativeProducer', e.target.value)}
-                                      className="w-full rounded border border-amber-300 bg-white px-2 py-1.5 text-xs"
-                                    />
-                                  </div>
-                                  <div>
-                                    <label className="block text-[10px] font-medium text-amber-700 mb-0.5">Region</label>
-                                    <input
-                                      type="text"
-                                      placeholder="Region"
-                                      value={quote?.alternativeRegion || ''}
-                                      onChange={(e) => handleQuoteChange(item.id, 'alternativeRegion', e.target.value)}
-                                      className="w-full rounded border border-amber-300 bg-white px-2 py-1.5 text-xs"
-                                    />
-                                  </div>
-                                  <div>
-                                    <label className="block text-[10px] font-medium text-amber-700 mb-0.5">Country</label>
-                                    <input
-                                      type="text"
-                                      placeholder="Country"
-                                      value={quote?.alternativeCountry || ''}
-                                      onChange={(e) => handleQuoteChange(item.id, 'alternativeCountry', e.target.value)}
-                                      className="w-full rounded border border-amber-300 bg-white px-2 py-1.5 text-xs"
-                                    />
-                                  </div>
-                                  <div>
-                                    <label className="block text-[10px] font-medium text-amber-700 mb-0.5">Bottle Size</label>
-                                    <select
-                                      value={quote?.alternativeBottleSize || ''}
-                                      onChange={(e) => handleQuoteChange(item.id, 'alternativeBottleSize', e.target.value)}
-                                      className="w-full rounded border border-amber-300 bg-white px-2 py-1.5 text-xs"
-                                    >
-                                      <option value="">Standard</option>
-                                      {BOTTLE_SIZES.map((s) => (
-                                        <option key={s.value} value={s.value}>{s.label}</option>
-                                      ))}
-                                    </select>
-                                  </div>
-                                </div>
-
-                                {/* Tertiary info row */}
-                                <div className="grid grid-cols-3 gap-2">
-                                  <div>
-                                    <label className="block text-[10px] font-medium text-amber-700 mb-0.5">Case Config</label>
-                                    <input
-                                      type="number"
-                                      min="1"
-                                      placeholder="6"
-                                      value={quote?.alternativeCaseConfig || ''}
-                                      onChange={(e) => handleQuoteChange(item.id, 'alternativeCaseConfig', parseInt(e.target.value) || 0)}
-                                      className="w-full rounded border border-amber-300 bg-white px-2 py-1.5 text-xs"
-                                    />
-                                  </div>
-                                  <div className="col-span-2">
-                                    <label className="block text-[10px] font-medium text-amber-700 mb-0.5">LWIN (optional)</label>
-                                    <input
-                                      type="text"
-                                      placeholder="e.g. 1234567890123456"
-                                      value={quote?.alternativeLwin || ''}
-                                      onChange={(e) => handleQuoteChange(item.id, 'alternativeLwin', e.target.value)}
+                                      value={quote.alternativeProducer || ''}
+                                      onChange={(e) => handleQuoteChange(item.id, quote.id, 'alternativeProducer', e.target.value)}
                                       className="w-full rounded border border-amber-300 bg-white px-2 py-1.5 text-xs"
                                     />
                                   </div>
                                 </div>
-
-                                {/* Reason - Prominent */}
-                                <div className="pt-2 border-t border-amber-200">
-                                  <label className="block text-xs font-semibold text-amber-800 mb-1">Why this alternative? *</label>
+                                <div>
+                                  <label className="block text-[10px] font-medium text-amber-700 mb-0.5">Reason for alternative *</label>
                                   <input
                                     type="text"
-                                    placeholder="e.g. Requested vintage sold out, offering better value vintage"
-                                    value={quote?.alternativeReason || ''}
-                                    onChange={(e) => handleQuoteChange(item.id, 'alternativeReason', e.target.value)}
-                                    className="w-full rounded-lg border-2 border-amber-300 bg-white px-3 py-2 text-sm focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
+                                    placeholder="e.g. Requested vintage sold out"
+                                    value={quote.alternativeReason || ''}
+                                    onChange={(e) => handleQuoteChange(item.id, quote.id, 'alternativeReason', e.target.value)}
+                                    className="w-full rounded border border-amber-300 bg-white px-2 py-1.5 text-xs"
                                   />
                                 </div>
                               </div>
-                            </div>
-                          )}
+                            )}
 
-                          {/* Item Notes - Compact */}
-                          <div className="flex items-center gap-2">
-                            <label className="text-[10px] font-medium text-text-muted whitespace-nowrap">Notes:</label>
-                            <input
-                              type="text"
-                              placeholder="Item notes (packaging, condition, etc.)"
-                              value={quote?.notes || ''}
-                              onChange={(e) => handleQuoteChange(item.id, 'notes', e.target.value)}
-                              className="flex-1 rounded border border-border-primary bg-white px-2 py-1 text-xs"
-                            />
+                            {/* Notes */}
+                            <div className="flex items-center gap-2">
+                              <label className="text-[10px] font-medium text-text-muted whitespace-nowrap">Notes:</label>
+                              <input
+                                type="text"
+                                placeholder="Item notes (packaging, condition, etc.)"
+                                value={quote.notes || ''}
+                                onChange={(e) => handleQuoteChange(item.id, quote.id, 'notes', e.target.value)}
+                                className="flex-1 rounded border border-border-primary bg-white px-2 py-1 text-xs"
+                              />
+                            </div>
                           </div>
-                        </>
+                        </div>
+                      ))}
+
+                      {/* Empty state - prompt to add quotes */}
+                      {!isNA && itemQuotes.length === 0 && (
+                        <div className="py-4 text-center">
+                          <Typography variant="bodySm" colorRole="muted" className="mb-2">
+                            No quotes added for this item yet
+                          </Typography>
+                          <div className="flex items-center justify-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handleAddVintageQuote(item.id, requestedVintages[0])}
+                              className="flex items-center gap-1 px-3 py-1.5 rounded-md bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors"
+                            >
+                              <IconPlus className="h-4 w-4" />
+                              Add Quote
+                            </button>
+                            {hasMultipleVintages && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  for (const v of requestedVintages) {
+                                    handleAddVintageQuote(item.id, v);
+                                  }
+                                }}
+                                className="flex items-center gap-1 px-3 py-1.5 rounded-md border border-purple-400 text-purple-700 text-sm font-medium hover:bg-purple-50 transition-colors"
+                              >
+                                <IconPlus className="h-4 w-4" />
+                                Quote All {requestedVintages.length} Vintages
+                              </button>
+                            )}
+                          </div>
+                        </div>
                       )}
                     </div>
                   )}
@@ -1361,25 +1456,25 @@ const PartnerRfqDetailPage = () => {
               variant="default"
               colorRole="brand"
               onClick={handleSubmitQuotes}
-              isDisabled={isSubmitting || completedCount === 0}
+              isDisabled={isSubmitting || completedItemCount === 0}
               className="flex-1 min-h-[44px]"
-              aria-label={isSubmitting ? (isUpdating ? 'Updating quotes' : 'Submitting quotes') : `${isUpdating ? 'Update' : 'Submit'} ${completedCount} quotes`}
+              aria-label={isSubmitting ? (isUpdating ? 'Updating quotes' : 'Submitting quotes') : `${isUpdating ? 'Update' : 'Submit'} ${totalVintageQuotes} quotes`}
             >
               <ButtonContent iconLeft={isUpdating ? IconEdit : IconSend}>
                 {isSubmitting
                   ? (isUpdating ? 'Updating...' : 'Submitting...')
-                  : completedCount === 0
+                  : completedItemCount === 0
                     ? 'Quote items to submit'
-                    : `${isUpdating ? 'Update' : 'Submit'} ${completedCount} Quote${completedCount !== 1 ? 's' : ''}`
+                    : `${isUpdating ? 'Update' : 'Submit'} ${totalVintageQuotes} Quote${totalVintageQuotes !== 1 ? 's' : ''}`
                 }
               </ButtonContent>
             </Button>
           </div>
           {/* Progress bar */}
-          <div className="mt-2 h-1.5 bg-gray-200 rounded-full overflow-hidden" role="progressbar" aria-valuenow={completedCount} aria-valuemax={rfq.items.length} aria-label="Quote completion progress">
+          <div className="mt-2 h-1.5 bg-gray-200 rounded-full overflow-hidden" role="progressbar" aria-valuenow={completedItemCount} aria-valuemax={rfq.items.length} aria-label="Quote completion progress">
             <div
               className="h-full bg-blue-500 transition-all duration-300"
-              style={{ width: `${(completedCount / rfq.items.length) * 100}%` }}
+              style={{ width: `${(completedItemCount / rfq.items.length) * 100}%` }}
             />
           </div>
         </div>

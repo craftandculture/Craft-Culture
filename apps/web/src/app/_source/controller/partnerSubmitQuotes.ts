@@ -81,18 +81,19 @@ const partnerSubmitQuotes = winePartnerProcedure
     // Note: We no longer block re-submission - partners can update their quotes
 
     // Verify all item IDs belong to this RFQ
-    const itemIds = quotes.map((q) => q.itemId);
+    // Note: Multiple quotes per item are allowed (e.g., different vintages)
+    const uniqueItemIds = [...new Set(quotes.map((q) => q.itemId))];
     const validItems = await db
       .select({ id: sourceRfqItems.id })
       .from(sourceRfqItems)
       .where(
         and(
           eq(sourceRfqItems.rfqId, rfqId),
-          inArray(sourceRfqItems.id, itemIds),
+          inArray(sourceRfqItems.id, uniqueItemIds),
         ),
       );
 
-    if (validItems.length !== itemIds.length) {
+    if (validItems.length !== uniqueItemIds.length) {
       throw new TRPCError({
         code: 'BAD_REQUEST',
         message: 'One or more item IDs are invalid',
