@@ -158,13 +158,13 @@ const adminFinalizeRfq = adminProcedure
       partnerSelection.totalUsd += lineTotalUsd;
     }
 
-    // 6. Update RFQ status to 'finalized'
+    // 6. Update RFQ status to 'client_review' (pending client approval)
     await db
       .update(sourceRfqs)
-      .set({ status: 'finalized' })
+      .set({ status: 'client_review' })
       .where(eq(sourceRfqs.id, rfqId));
 
-    // 7. Return partner groupings for PO preview
+    // 7. Return partner groupings for review
     const partnerSelections = Array.from(partnerSelectionsMap.values());
     const grandTotalUsd = partnerSelections.reduce((sum, ps) => sum + ps.totalUsd, 0);
 
@@ -180,7 +180,7 @@ const adminFinalizeRfq = adminProcedure
 
     return {
       rfqId,
-      status: 'finalized',
+      status: 'client_review',
       partnerSelections,
       summary: {
         totalPartners: partnerSelections.length,

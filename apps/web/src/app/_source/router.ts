@@ -9,29 +9,26 @@ import adminDeleteItem from './controller/adminDeleteItem';
 import adminDeleteRfq from './controller/adminDeleteRfq';
 import adminFinalizeRfq from './controller/adminFinalizeRfq';
 import adminGenerateFinalQuote from './controller/adminGenerateFinalQuote';
-import adminGeneratePurchaseOrders from './controller/adminGeneratePurchaseOrders';
 import adminGetManyRfqs from './controller/adminGetManyRfqs';
 import adminGetOneRfq from './controller/adminGetOneRfq';
-import adminGetPurchaseOrders from './controller/adminGetPurchaseOrders';
+import adminMarkClientApproved from './controller/adminMarkClientApproved';
 import adminParseInput from './controller/adminParseInput';
 import adminParseQuoteExcel from './controller/adminParseQuoteExcel';
+import adminRequestConfirmations from './controller/adminRequestConfirmations';
 import adminSearchLwin from './controller/adminSearchLwin';
 import adminSelectQuote from './controller/adminSelectQuote';
-import adminSendPurchaseOrder from './controller/adminSendPurchaseOrder';
 import adminSendToPartners from './controller/adminSendToPartners';
 import adminSubmitQuotesOnBehalf from './controller/adminSubmitQuotesOnBehalf';
 import adminUpdateItem from './controller/adminUpdateItem';
 import adminUpdateRfq from './controller/adminUpdateRfq';
-import partnerConfirmPurchaseOrder from './controller/partnerConfirmPurchaseOrder';
+import partnerConfirmQuote from './controller/partnerConfirmQuote';
 import partnerDeclineRfq from './controller/partnerDeclineRfq';
 import partnerDownloadQuoteTemplate from './controller/partnerDownloadQuoteTemplate';
+import partnerGetConfirmationRequests from './controller/partnerGetConfirmationRequests';
 import partnerGetManyRfqs from './controller/partnerGetManyRfqs';
-import partnerGetOnePurchaseOrder from './controller/partnerGetOnePurchaseOrder';
 import partnerGetOneRfq from './controller/partnerGetOneRfq';
-import partnerGetPurchaseOrders from './controller/partnerGetPurchaseOrders';
 import partnerParseQuoteExcel from './controller/partnerParseQuoteExcel';
 import partnerSubmitQuotes from './controller/partnerSubmitQuotes';
-import partnerUpdateDeliveryStatus from './controller/partnerUpdateDeliveryStatus';
 
 const adminRouter = createTRPCRouter({
   create: adminCreateRfq,
@@ -50,14 +47,13 @@ const adminRouter = createTRPCRouter({
   generateFinalQuote: adminGenerateFinalQuote,
   parseInput: adminParseInput,
   searchLwin: adminSearchLwin,
-  // Purchase Order endpoints
   finalize: adminFinalizeRfq,
-  generatePurchaseOrders: adminGeneratePurchaseOrders,
-  sendPurchaseOrder: adminSendPurchaseOrder,
-  getPurchaseOrders: adminGetPurchaseOrders,
   // Excel quote upload endpoints
   parseQuoteExcel: adminParseQuoteExcel,
   submitQuotesOnBehalf: adminSubmitQuotesOnBehalf,
+  // Client approval and partner confirmation
+  markClientApproved: adminMarkClientApproved,
+  requestConfirmations: adminRequestConfirmations,
 });
 
 const partnerRouter = createTRPCRouter({
@@ -68,11 +64,9 @@ const partnerRouter = createTRPCRouter({
   // Excel quote upload endpoints
   downloadQuoteTemplate: partnerDownloadQuoteTemplate,
   parseQuoteExcel: partnerParseQuoteExcel,
-  // Purchase Order endpoints
-  getPurchaseOrders: partnerGetPurchaseOrders,
-  getOnePurchaseOrder: partnerGetOnePurchaseOrder,
-  confirmPurchaseOrder: partnerConfirmPurchaseOrder,
-  updateDeliveryStatus: partnerUpdateDeliveryStatus,
+  // Quote confirmation
+  getConfirmationRequests: partnerGetConfirmationRequests,
+  confirmQuotes: partnerConfirmQuote,
 });
 
 const sourceRouter = createTRPCRouter({
