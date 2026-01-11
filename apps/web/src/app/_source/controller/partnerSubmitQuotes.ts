@@ -178,7 +178,7 @@ const partnerSubmitQuotes = winePartnerProcedure
         .where(
           and(
             eq(sourceRfqItems.rfqId, rfqId),
-            inArray(sourceRfqItems.id, itemIds),
+            inArray(sourceRfqItems.id, uniqueItemIds),
           ),
         );
     });
