@@ -2,15 +2,15 @@
 
 import {
   IconCheck,
+  IconCopy,
   IconLoader2,
-  IconPackage,
   IconSearch,
   IconTrash,
-  IconUser,
   IconX,
 } from '@tabler/icons-react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
 
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
@@ -22,34 +22,9 @@ import DialogTitle from '@/app/_ui/components/Dialog/DialogTitle';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import useTRPC from '@/lib/trpc/browser';
 
-/**
- * Display field component for view mode - shows label and value in a clean format
- */
-const DisplayField = ({
-  label,
-  value,
-  mono = false,
-  className = '',
-}: {
-  label: string;
-  value: string | number | null | undefined;
-  mono?: boolean;
-  className?: string;
-}) => (
-  <div className={className}>
-    <Typography variant="bodySm" className="text-text-muted mb-0.5">
-      {label}
-    </Typography>
-    <Typography
-      variant="bodyMd"
-      className={`text-text-primary ${mono ? 'font-mono' : ''} ${!value ? 'text-text-muted italic' : ''}`}
-    >
-      {value || '—'}
-    </Typography>
-  </div>
-);
+import formatLwin18, { formatCaseConfig as formatCaseConfigDisplay } from '../utils/formatLwin18';
 
-// Common bottle sizes
+// Common bottle sizes for edit mode select
 const BOTTLE_SIZES = [
   { value: '750ml', label: '750ml (Standard)' },
   { value: '375ml', label: '375ml (Half)' },
@@ -58,7 +33,7 @@ const BOTTLE_SIZES = [
   { value: '6L', label: '6L (Imperial)' },
 ];
 
-// Common case configurations
+// Common case configurations for edit mode select
 const CASE_CONFIGS = [
   { value: 1, label: '1 bottle' },
   { value: 3, label: '3 bottles' },
@@ -66,24 +41,6 @@ const CASE_CONFIGS = [
   { value: 12, label: '12 bottles' },
   { value: 24, label: '24 bottles' },
 ];
-
-/**
- * Format bottle size for display
- */
-const formatBottleSize = (size: string | null | undefined) => {
-  if (!size) return null;
-  const found = BOTTLE_SIZES.find((s) => s.value === size);
-  return found ? found.label : size;
-};
-
-/**
- * Format case config for display
- */
-const formatCaseConfig = (config: number | null | undefined) => {
-  if (!config) return null;
-  const found = CASE_CONFIGS.find((c) => c.value === config);
-  return found ? found.label : `${config} bottles`;
-};
 
 export interface ItemData {
   id: string;
@@ -231,126 +188,141 @@ const ItemEditorModal = ({
 
   if (!item) return null;
 
+  // Compute LWIN-18 and case config display for view mode
+  const lwin18 = formatLwin18({
+    lwin: item.lwin,
+    vintage: item.vintage,
+    bottleSize: item.bottleSize,
+    caseConfig: item.caseConfig,
+  });
+
+  const caseConfigStr = formatCaseConfigDisplay({
+    caseConfig: item.caseConfig,
+    bottleSize: item.bottleSize,
+  });
+
+  const handleCopyLwin = () => {
+    if (lwin18) {
+      void navigator.clipboard.writeText(lwin18);
+      toast.success('LWIN copied to clipboard');
+    }
+  };
+
   // VIEW MODE - Clean, readable display
   if (!canEdit) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-xl">
-          <DialogHeader>
-            <DialogTitle>Item Details</DialogTitle>
-            <DialogDescription>
-              RFQ line item information
-            </DialogDescription>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader className="pb-0">
+            <DialogTitle className="text-lg">Item Details</DialogTitle>
           </DialogHeader>
 
-          <div className="py-4 space-y-5">
-            {/* Product Header */}
-            <div className="pb-4 border-b border-border-muted">
-              <Typography variant="headingSm" className="text-text-primary mb-1">
+          <div className="py-2 space-y-4">
+            {/* Product Name - Hero Section */}
+            <div className="bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 rounded-xl p-4">
+              <Typography variant="headingSm" className="text-text-primary leading-tight">
                 {item.productName || 'Unnamed Product'}
               </Typography>
-              {item.lwin && (
-                <Typography variant="bodySm" className="text-text-muted font-mono">
-                  LWIN: {item.lwin}
-                </Typography>
+
+              {/* LWIN Row */}
+              {lwin18 && (
+                <div className="mt-3 flex items-center gap-2">
+                  <div className="flex items-center gap-2 bg-white dark:bg-slate-950 rounded-lg px-3 py-1.5 border border-border-muted">
+                    <span className="text-xs text-text-muted font-medium">LWIN-18</span>
+                    <span className="font-mono text-sm text-text-primary tracking-wide">
+                      {lwin18}
+                    </span>
+                  </div>
+                  <button
+                    onClick={handleCopyLwin}
+                    className="p-1.5 rounded-md hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+                    title="Copy LWIN"
+                  >
+                    <IconCopy className="h-4 w-4 text-text-muted" />
+                  </button>
+                  {caseConfigStr && (
+                    <span className="text-sm text-text-muted font-medium px-2 py-1 bg-slate-200 dark:bg-slate-700 rounded">
+                      {caseConfigStr}
+                    </span>
+                  )}
+                </div>
               )}
             </div>
 
-            {/* Key Info Grid */}
-            <div className="grid grid-cols-3 gap-4">
-              <div className="bg-fill-muted/50 rounded-lg p-3 text-center">
-                <Typography variant="bodyXs" className="text-text-muted uppercase tracking-wide mb-1">
-                  Quantity
-                </Typography>
-                <Typography variant="headingMd" className="text-text-primary">
+            {/* Key Metrics - Compact Row */}
+            <div className="grid grid-cols-3 gap-3">
+              <div className="text-center p-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-100 dark:border-blue-900">
+                <Typography variant="headingMd" className="text-blue-700 dark:text-blue-300">
                   {item.quantity || '—'}
                 </Typography>
-                <Typography variant="bodyXs" className="text-text-muted">
+                <Typography variant="bodyXs" className="text-blue-600 dark:text-blue-400 uppercase tracking-wide">
                   cases
                 </Typography>
               </div>
-              <div className="bg-fill-muted/50 rounded-lg p-3 text-center">
-                <Typography variant="bodyXs" className="text-text-muted uppercase tracking-wide mb-1">
-                  Vintage
-                </Typography>
-                <Typography variant="headingMd" className="text-text-primary">
+              <div className="text-center p-3 bg-purple-50 dark:bg-purple-950/30 rounded-lg border border-purple-100 dark:border-purple-900">
+                <Typography variant="headingMd" className="text-purple-700 dark:text-purple-300">
                   {item.vintage || 'NV'}
                 </Typography>
+                <Typography variant="bodyXs" className="text-purple-600 dark:text-purple-400 uppercase tracking-wide">
+                  vintage
+                </Typography>
               </div>
-              <div className="bg-fill-muted/50 rounded-lg p-3 text-center">
-                <Typography variant="bodyXs" className="text-text-muted uppercase tracking-wide mb-1">
-                  Format
+              <div className="text-center p-3 bg-emerald-50 dark:bg-emerald-950/30 rounded-lg border border-emerald-100 dark:border-emerald-900">
+                <Typography variant="headingMd" className="text-emerald-700 dark:text-emerald-300 text-sm">
+                  {caseConfigStr || '6x75cl'}
                 </Typography>
-                <Typography variant="headingMd" className="text-text-primary text-sm">
-                  {item.caseConfig ? `${item.caseConfig}x` : '—'}
-                </Typography>
-                <Typography variant="bodyXs" className="text-text-muted">
-                  {formatBottleSize(item.bottleSize) || '750ml'}
+                <Typography variant="bodyXs" className="text-emerald-600 dark:text-emerald-400 uppercase tracking-wide">
+                  format
                 </Typography>
               </div>
             </div>
 
-            {/* Producer & Origin Section */}
-            <div className="space-y-3">
-              <div className="flex items-center gap-2 text-text-muted">
-                <IconUser className="h-4 w-4" />
-                <Typography variant="bodySm" className="font-medium">
-                  Producer & Origin
-                </Typography>
+            {/* Details Grid */}
+            <div className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
+              <div>
+                <span className="text-text-muted text-xs uppercase tracking-wide">Producer</span>
+                <p className="text-text-primary mt-0.5">{item.producer || '—'}</p>
               </div>
-              <div className="grid grid-cols-2 gap-x-6 gap-y-3 pl-6">
-                <DisplayField label="Producer" value={item.producer} />
-                <DisplayField label="Country" value={item.country} />
-                <DisplayField label="Region" value={item.region} className="col-span-2" />
+              <div>
+                <span className="text-text-muted text-xs uppercase tracking-wide">Country</span>
+                <p className="text-text-primary mt-0.5">{item.country || '—'}</p>
               </div>
-            </div>
-
-            {/* Packaging Section */}
-            <div className="space-y-3">
-              <div className="flex items-center gap-2 text-text-muted">
-                <IconPackage className="h-4 w-4" />
-                <Typography variant="bodySm" className="font-medium">
-                  Packaging
-                </Typography>
-              </div>
-              <div className="grid grid-cols-2 gap-x-6 gap-y-3 pl-6">
-                <DisplayField label="Bottle Size" value={formatBottleSize(item.bottleSize)} />
-                <DisplayField label="Case Configuration" value={formatCaseConfig(item.caseConfig)} />
+              <div className="col-span-2">
+                <span className="text-text-muted text-xs uppercase tracking-wide">Region</span>
+                <p className="text-text-primary mt-0.5">{item.region || '—'}</p>
               </div>
             </div>
 
             {/* Admin Notes */}
             {item.adminNotes && (
-              <div className="space-y-2">
-                <Typography variant="bodySm" className="text-text-muted font-medium">
+              <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
+                <span className="text-xs text-amber-700 dark:text-amber-300 font-medium uppercase tracking-wide">
                   Admin Notes
-                </Typography>
-                <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
-                  <Typography variant="bodySm" className="text-amber-800 dark:text-amber-200">
-                    {item.adminNotes}
-                  </Typography>
-                </div>
+                </span>
+                <p className="text-sm text-amber-800 dark:text-amber-200 mt-1">
+                  {item.adminNotes}
+                </p>
               </div>
             )}
 
-            {/* Original Input */}
+            {/* Original Input - Collapsible feel */}
             {item.originalText && (
-              <div className="space-y-2 pt-2 border-t border-border-muted">
-                <Typography variant="bodyXs" className="text-text-muted uppercase tracking-wide">
+              <div className="border-t border-border-muted pt-3">
+                <span className="text-xs text-text-muted uppercase tracking-wide">
                   Original Input
-                </Typography>
-                <div className="bg-surface-secondary rounded-lg p-3">
-                  <Typography variant="bodySm" className="text-text-muted font-mono text-xs break-all">
+                </span>
+                <div className="mt-1.5 bg-slate-50 dark:bg-slate-900 rounded-lg px-3 py-2 border border-border-muted">
+                  <code className="text-xs text-text-muted break-all">
                     {item.originalText}
-                  </Typography>
+                  </code>
                 </div>
               </div>
             )}
           </div>
 
           {/* Actions */}
-          <div className="flex justify-end pt-4 border-t border-border-muted">
-            <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <div className="flex justify-end pt-3 border-t border-border-muted">
+            <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>
               <ButtonContent>Close</ButtonContent>
             </Button>
           </div>
