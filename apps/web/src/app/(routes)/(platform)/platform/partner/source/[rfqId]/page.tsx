@@ -400,10 +400,10 @@ const PartnerRfqDetailPage = () => {
   };
 
   return (
-    <div className="container mx-auto max-w-4xl px-4 py-4 sm:py-8 pb-28 sm:pb-8">
+    <div className="container mx-auto max-w-6xl px-4 py-4 sm:py-8 pb-28 sm:pb-8">
       <div className="space-y-4 sm:space-y-6">
-        {/* Header - Compact for mobile */}
-        <div className="space-y-3">
+        {/* Header - Clean and prominent */}
+        <div className="space-y-4">
           {/* Back + RFQ number */}
           <div className="flex items-center gap-3">
             <Link href="/platform/partner/source">
@@ -412,112 +412,138 @@ const PartnerRfqDetailPage = () => {
               </Button>
             </Link>
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="font-mono text-xs text-text-muted">
+              <span className="font-mono text-sm font-medium text-text-primary bg-fill-muted px-2 py-0.5 rounded">
                 {rfq.rfqNumber}
               </span>
               <RfqStatusBadge status={rfq.status} />
             </div>
           </div>
 
-          {/* Title + Deadline */}
-          <div>
-            <Typography variant="headingLg" className="text-lg sm:text-xl">
-              {rfq.name}
-            </Typography>
-            {rfq.responseDeadline && (
-              <div className={`flex items-center gap-1.5 mt-1 text-sm ${
-                isDeadlinePassed
-                  ? 'text-red-600'
-                  : new Date(rfq.responseDeadline) < new Date(Date.now() + 24 * 60 * 60 * 1000)
-                    ? 'text-amber-600'
-                    : 'text-text-muted'
-              }`}>
-                <IconCalendar className="h-4 w-4" />
-                <span>
-                  {isDeadlinePassed
-                    ? 'Deadline passed'
-                    : `Due ${formatDistanceToNow(new Date(rfq.responseDeadline), { addSuffix: true })}`
-                  }
-                </span>
-                <span className="hidden sm:inline text-text-muted">
-                  ({format(new Date(rfq.responseDeadline), 'MMM d, yyyy')})
-                </span>
+          {/* Title + Deadline + Actions row */}
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+            <div className="space-y-1">
+              <Typography variant="headingLg" className="text-xl sm:text-2xl">
+                {rfq.name}
+              </Typography>
+              {rfq.responseDeadline && (
+                <div className={`flex items-center gap-2 text-sm ${
+                  isDeadlinePassed
+                    ? 'text-red-600'
+                    : new Date(rfq.responseDeadline) < new Date(Date.now() + 24 * 60 * 60 * 1000)
+                      ? 'text-amber-600'
+                      : 'text-text-muted'
+                }`}>
+                  <IconCalendar className="h-4 w-4" />
+                  <span className="font-medium">
+                    {isDeadlinePassed
+                      ? 'Deadline passed'
+                      : `Due ${formatDistanceToNow(new Date(rfq.responseDeadline), { addSuffix: true })}`
+                    }
+                  </span>
+                  <span className="text-text-muted">
+                    ({format(new Date(rfq.responseDeadline), 'MMM d, yyyy')})
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* Desktop action buttons */}
+            {canSubmit && (
+              <div className="hidden sm:flex items-center gap-2 flex-shrink-0">
+                <Button
+                  variant="outline"
+                  colorRole="danger"
+                  size="sm"
+                  onClick={() => setIsDeclineDialogOpen(true)}
+                >
+                  <ButtonContent iconLeft={IconX}>Decline RFQ</ButtonContent>
+                </Button>
+                <Button
+                  variant="default"
+                  colorRole="brand"
+                  onClick={handleSubmitQuotes}
+                  isDisabled={isSubmitting || completedCount === 0}
+                >
+                  <ButtonContent iconLeft={isUpdating ? IconEdit : IconSend}>
+                    {isSubmitting
+                      ? (isUpdating ? 'Updating...' : 'Submitting...')
+                      : `${isUpdating ? 'Update' : 'Submit'} ${completedCount} Quote${completedCount !== 1 ? 's' : ''}`
+                    }
+                  </ButtonContent>
+                </Button>
               </div>
             )}
           </div>
-
-          {/* Desktop action buttons */}
-          {canSubmit && (
-            <div className="hidden sm:flex items-center gap-2">
-              <Button
-                variant="outline"
-                colorRole="danger"
-                size="sm"
-                onClick={() => setIsDeclineDialogOpen(true)}
-              >
-                <ButtonContent iconLeft={IconX}>Decline RFQ</ButtonContent>
-              </Button>
-              <Button
-                variant="default"
-                colorRole="brand"
-                onClick={handleSubmitQuotes}
-                isDisabled={isSubmitting || completedCount === 0}
-              >
-                <ButtonContent iconLeft={isUpdating ? IconEdit : IconSend}>
-                  {isSubmitting
-                    ? (isUpdating ? 'Updating...' : 'Submitting...')
-                    : `${isUpdating ? 'Update' : 'Submit'} ${completedCount} Quote${completedCount !== 1 ? 's' : ''}`
-                  }
-                </ButtonContent>
-              </Button>
-            </div>
-          )}
         </div>
 
         {/* Progress indicator - Desktop only, mobile uses sticky bar */}
         {canSubmit && (
           <div className="hidden sm:block">
-            <Card className="border-border-brand bg-fill-brand/5">
+            <Card className="border-slate-200 dark:border-slate-700 bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-900">
               <CardContent className="p-4">
-                <div className="flex items-center justify-between gap-4">
-                  <div className="flex items-center gap-3">
-                    <IconInfoCircle className="h-5 w-5 text-text-brand flex-shrink-0" />
-                    <Typography variant="bodyMd">
-                      <span className="font-semibold">{completedCount}</span> of{' '}
-                      <span className="font-semibold">{rfq.items.length}</span> items quoted
-                    </Typography>
-                    {lastSavedAt && (
-                      <span className="text-xs text-green-600 ml-2">
-                        Draft saved {formatDistanceToNow(lastSavedAt, { addSuffix: true })}
+                <div className="flex items-center justify-between gap-6">
+                  <div className="flex items-center gap-4">
+                    {/* Progress circle */}
+                    <div className="relative w-12 h-12">
+                      <svg className="w-12 h-12 -rotate-90" viewBox="0 0 36 36">
+                        <path
+                          d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                          fill="none"
+                          stroke="#e2e8f0"
+                          strokeWidth="3"
+                        />
+                        <path
+                          d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                          fill="none"
+                          stroke="#10b981"
+                          strokeWidth="3"
+                          strokeDasharray={`${(completedCount / rfq.items.length) * 100}, 100`}
+                        />
+                      </svg>
+                      <span className="absolute inset-0 flex items-center justify-center text-sm font-bold text-slate-700 dark:text-slate-200">
+                        {completedCount}
                       </span>
-                    )}
+                    </div>
+                    <div>
+                      <Typography variant="bodyMd" className="font-semibold">
+                        {completedCount} of {rfq.items.length} items quoted
+                      </Typography>
+                      {lastSavedAt && (
+                        <span className="text-xs text-green-600 flex items-center gap-1 mt-0.5">
+                          <IconCheck className="h-3 w-3" />
+                          Draft saved {formatDistanceToNow(lastSavedAt, { addSuffix: true })}
+                        </span>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex items-center gap-4 text-sm">
+                  <div className="flex items-center gap-4">
                     <button
                       type="button"
                       onClick={() => setShowUnquotedOnly(!showUnquotedOnly)}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                      className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
                         showUnquotedOnly
-                          ? 'bg-blue-600 text-white'
-                          : 'bg-white/50 text-text-primary hover:bg-white'
+                          ? 'bg-blue-600 text-white shadow-md'
+                          : 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-50 shadow-sm'
                       }`}
                     >
-                      <IconFilter className="h-3.5 w-3.5" />
+                      <IconFilter className="h-4 w-4" />
                       {showUnquotedOnly ? 'Show All' : 'Unquoted Only'}
                     </button>
-                    <div className="w-px h-4 bg-border-muted" />
-                    <span className="flex items-center gap-1.5">
-                      <span className="w-3 h-3 rounded-full bg-green-500" />
-                      Quoted
-                    </span>
-                    <span className="flex items-center gap-1.5">
-                      <span className="w-3 h-3 rounded-full bg-red-500" />
-                      N/A
-                    </span>
-                    <span className="flex items-center gap-1.5">
-                      <span className="w-3 h-3 rounded-full bg-gray-300" />
-                      Pending
-                    </span>
+                    <div className="h-8 w-px bg-slate-200 dark:bg-slate-600" />
+                    <div className="flex items-center gap-3 text-sm">
+                      <span className="flex items-center gap-1.5">
+                        <span className="w-3 h-3 rounded-full bg-green-500" />
+                        Quoted
+                      </span>
+                      <span className="flex items-center gap-1.5">
+                        <span className="w-3 h-3 rounded-full bg-red-500" />
+                        N/A
+                      </span>
+                      <span className="flex items-center gap-1.5">
+                        <span className="w-3 h-3 rounded-full bg-slate-300" />
+                        Pending
+                      </span>
+                    </div>
                   </div>
                 </div>
               </CardContent>
@@ -692,8 +718,8 @@ const PartnerRfqDetailPage = () => {
           </div>
 
           {/* Table header for desktop */}
-          <div className="hidden lg:grid lg:grid-cols-[auto_1fr_100px_100px_120px_80px] gap-2 px-3 py-2 bg-fill-muted rounded-t-lg text-xs font-semibold text-text-muted border-b border-border-muted">
-            <span className="w-8">#</span>
+          <div className="hidden lg:grid lg:grid-cols-[40px_minmax(300px,2fr)_80px_140px_120px_90px] gap-3 px-4 py-3 bg-slate-100 dark:bg-slate-800 rounded-t-lg text-xs font-semibold text-text-muted uppercase tracking-wide">
+            <span>#</span>
             <span>Product</span>
             <span className="text-center">Qty</span>
             <span className="text-center">Region</span>
@@ -724,46 +750,46 @@ const PartnerRfqDetailPage = () => {
                 >
                   {/* Compact row - always visible */}
                   <div
-                    className="px-2 sm:px-3 py-2 cursor-pointer hover:bg-fill-muted/30 transition-colors"
+                    className="px-3 sm:px-4 py-3 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
                     onClick={() => canSubmit && toggleItemExpanded(item.id)}
                   >
                     {/* Desktop: Table row layout */}
-                    <div className="hidden lg:grid lg:grid-cols-[auto_1fr_100px_100px_120px_80px] gap-2 items-center">
+                    <div className="hidden lg:grid lg:grid-cols-[40px_minmax(300px,2fr)_80px_140px_120px_90px] gap-3 items-center">
                       {/* Item Number */}
-                      <span className="w-8 h-6 rounded bg-fill-brand/10 text-text-brand text-xs font-bold flex items-center justify-center">
+                      <span className="w-8 h-7 rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-bold flex items-center justify-center">
                         {index + 1}
                       </span>
 
-                      {/* Product Name + Vintage */}
+                      {/* Product Name + Vintage - Full width display */}
                       <div className="min-w-0 flex items-center gap-2">
-                        <span className="font-medium text-sm truncate">
+                        <span className="font-medium text-sm">
                           {item.productName}
                         </span>
                         {item.vintage && (
-                          <span className="flex-shrink-0 text-xs font-semibold text-text-brand bg-fill-brand/10 px-1.5 py-0.5 rounded">
+                          <span className="flex-shrink-0 text-xs font-semibold text-emerald-700 bg-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400 px-2 py-0.5 rounded">
                             {item.vintage}
                           </span>
                         )}
                         {item.adminNotes && (
-                          <IconInfoCircle className="h-3.5 w-3.5 text-amber-500 flex-shrink-0" title={item.adminNotes} />
+                          <IconInfoCircle className="h-4 w-4 text-amber-500 flex-shrink-0" title={item.adminNotes} />
                         )}
                       </div>
 
                       {/* Quantity */}
-                      <span className="text-xs text-center font-medium">
+                      <span className="text-sm text-center font-medium">
                         {item.quantity} {item.quantityUnit === 'bottles' ? 'btl' : 'cs'}
                       </span>
 
                       {/* Region */}
-                      <span className="text-xs text-center text-text-muted truncate" title={item.region || ''}>
+                      <span className="text-sm text-center text-text-muted" title={item.region || ''}>
                         {item.region || '-'}
                       </span>
 
                       {/* Price Input */}
-                      <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
                         {canSubmit && !isNA ? (
-                          <>
-                            <span className="text-xs text-text-muted">$</span>
+                          <div className="relative">
+                            <span className="absolute left-2 top-1/2 -translate-y-1/2 text-sm text-text-muted">$</span>
                             <input
                               type="number"
                               step="0.01"
@@ -771,29 +797,29 @@ const PartnerRfqDetailPage = () => {
                               placeholder="0.00"
                               value={quote?.costPricePerCaseUsd || ''}
                               onChange={(e) => handleQuoteChange(item.id, 'costPricePerCaseUsd', parseFloat(e.target.value) || 0)}
-                              className={`w-20 px-2 py-1 rounded border text-xs text-right font-medium ${
+                              className={`w-24 pl-6 pr-2 py-1.5 rounded-lg border text-sm text-right font-medium transition-colors ${
                                 status === 'complete'
-                                  ? 'border-green-300 bg-green-100 text-green-700'
-                                  : 'border-border-primary bg-white'
+                                  ? 'border-green-400 bg-green-50 text-green-700 ring-1 ring-green-200'
+                                  : 'border-slate-300 bg-white hover:border-slate-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-200'
                               }`}
                             />
-                          </>
+                          </div>
                         ) : (
-                          <span className="text-xs font-medium text-text-muted">
+                          <span className="text-sm font-medium text-text-muted">
                             {existingQuote?.costPricePerCaseUsd ? `$${existingQuote.costPricePerCaseUsd.toFixed(2)}` : '-'}
                           </span>
                         )}
                       </div>
 
                       {/* Status + Actions */}
-                      <div className="flex items-center justify-center gap-1" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center justify-center gap-2" onClick={(e) => e.stopPropagation()}>
                         {status === 'complete' && (
-                          <span className="w-5 h-5 rounded-full bg-green-500 flex items-center justify-center">
-                            <IconCheck className="h-3 w-3 text-white" />
+                          <span className="w-6 h-6 rounded-full bg-green-500 flex items-center justify-center shadow-sm">
+                            <IconCheck className="h-3.5 w-3.5 text-white" />
                           </span>
                         )}
                         {status === 'na' && (
-                          <span className="px-1.5 py-0.5 rounded bg-red-500 text-white text-[10px] font-medium">
+                          <span className="px-2 py-1 rounded-md bg-red-500 text-white text-xs font-semibold">
                             N/A
                           </span>
                         )}
@@ -801,18 +827,18 @@ const PartnerRfqDetailPage = () => {
                           <button
                             type="button"
                             onClick={() => handleQuoteChange(item.id, 'quoteType', 'not_available')}
-                            className="px-1.5 py-0.5 rounded border border-red-200 text-red-600 text-[10px] font-medium hover:bg-red-50"
+                            className="px-2 py-1 rounded-md border border-red-300 text-red-600 text-xs font-medium hover:bg-red-50 transition-colors"
                             title="Mark as Not Available"
                           >
                             N/A
                           </button>
                         )}
                         {canSubmit && (
-                          <button type="button" className="p-0.5 hover:bg-fill-muted rounded">
+                          <button type="button" className="p-1 hover:bg-slate-100 rounded-lg transition-colors">
                             {isExpanded ? (
-                              <IconChevronUp className="h-4 w-4 text-text-muted" />
+                              <IconChevronUp className="h-4 w-4 text-slate-500" />
                             ) : (
-                              <IconChevronDown className="h-4 w-4 text-text-muted" />
+                              <IconChevronDown className="h-4 w-4 text-slate-500" />
                             )}
                           </button>
                         )}
