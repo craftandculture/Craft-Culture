@@ -379,15 +379,26 @@ const PartnerRfqDetailPage = () => {
     }
   };
 
-  // Mark item as not available (replaces all quotes for that item)
+  // Mark item as not available (toggle behavior - click again to clear)
   const handleMarkNotAvailable = (itemId: string) => {
-    const naQuote: QuoteEntry = {
-      id: generateQuoteId(),
-      itemId,
-      quoteType: 'not_available',
-      currency: 'USD',
-    };
-    setQuotes(new Map(quotes.set(itemId, [naQuote])));
+    const existingQuotes = quotes.get(itemId) || [];
+    const isCurrentlyNA = existingQuotes.some((q) => q.quoteType === 'not_available');
+
+    if (isCurrentlyNA) {
+      // Clear N/A - remove all quotes for this item
+      const newQuotes = new Map(quotes);
+      newQuotes.delete(itemId);
+      setQuotes(newQuotes);
+    } else {
+      // Set as N/A - replaces all quotes for that item
+      const naQuote: QuoteEntry = {
+        id: generateQuoteId(),
+        itemId,
+        quoteType: 'not_available',
+        currency: 'USD',
+      };
+      setQuotes(new Map(quotes.set(itemId, [naQuote])));
+    }
   };
 
   // Update a specific quote entry
@@ -970,7 +981,17 @@ const PartnerRfqDetailPage = () => {
                             <IconCheck className="h-3.5 w-3.5 text-white" />
                           </span>
                         )}
-                        {status === 'na' && (
+                        {status === 'na' && canSubmit && (
+                          <button
+                            type="button"
+                            onClick={() => handleMarkNotAvailable(item.id)}
+                            className="px-2 py-1 rounded-md bg-red-500 text-white text-xs font-semibold hover:bg-red-600 transition-colors"
+                            title="Click to clear N/A and quote this item"
+                          >
+                            Clear N/A
+                          </button>
+                        )}
+                        {status === 'na' && !canSubmit && (
                           <span className="px-2 py-1 rounded-md bg-red-500 text-white text-xs font-semibold">
                             N/A
                           </span>
@@ -1128,11 +1149,12 @@ const PartnerRfqDetailPage = () => {
                             onClick={() => handleMarkNotAvailable(item.id)}
                             className={`px-2 py-1 rounded-md text-xs font-medium transition-colors ${
                               isNA
-                                ? 'bg-red-500 text-white'
+                                ? 'bg-red-500 text-white hover:bg-red-600'
                                 : 'border border-red-300 text-red-600 hover:bg-red-50'
                             }`}
+                            title={isNA ? 'Click to clear N/A and quote this item' : 'Mark as not available'}
                           >
-                            N/A
+                            {isNA ? 'Clear N/A' : 'N/A'}
                           </button>
                           {status === 'complete' && (
                             <button
