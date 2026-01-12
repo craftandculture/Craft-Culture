@@ -8,7 +8,8 @@ import { adminProcedure } from '@/lib/trpc/procedures';
 import selectQuoteSchema from '../schemas/selectQuoteSchema';
 
 /**
- * Select a winning quote for an RFQ item
+ * Select or toggle a winning quote for an RFQ item
+ * If the quote is already selected, it will be unselected (toggle behavior)
  *
  * @example
  *   await trpcClient.source.admin.selectQuote.mutate({
@@ -28,6 +29,7 @@ const adminSelectQuote = adminProcedure
         quote: sourceRfqQuotes,
         rfqId: sourceRfqItems.rfqId,
         rfqStatus: sourceRfqs.status,
+        currentSelectedQuoteId: sourceRfqItems.selectedQuoteId,
       })
       .from(sourceRfqQuotes)
       .innerJoin(sourceRfqItems, eq(sourceRfqQuotes.itemId, sourceRfqItems.id))
@@ -48,20 +50,48 @@ const adminSelectQuote = adminProcedure
       });
     }
 
-    // Prevent selecting N/A quotes (they have no price)
-    if (quote.quote.quoteType === 'not_available' || quote.quote.costPricePerCaseUsd === null) {
-      throw new TRPCError({
-        code: 'BAD_REQUEST',
-        message: 'Cannot select a quote that is marked as not available',
-      });
-    }
-
     // Check RFQ is in a state where selection is allowed
     const selectableStatuses = ['sent', 'collecting', 'comparing', 'selecting'];
     if (!selectableStatuses.includes(quote.rfqStatus)) {
       throw new TRPCError({
         code: 'BAD_REQUEST',
         message: 'RFQ is not in a state where quotes can be selected',
+      });
+    }
+
+    // Toggle behavior: if clicking the same quote that's already selected, unselect it
+    const isCurrentlySelected = quote.currentSelectedQuoteId === quoteId;
+
+    if (isCurrentlySelected) {
+      // Unselect the quote
+      await db
+        .update(sourceRfqQuotes)
+        .set({ isSelected: false })
+        .where(eq(sourceRfqQuotes.id, quoteId));
+
+      // Clear the item selection
+      const [updatedItem] = await db
+        .update(sourceRfqItems)
+        .set({
+          selectedQuoteId: null,
+          selectedAt: null,
+          selectedBy: null,
+          status: 'quoted',
+          calculatedPriceUsd: null,
+          finalPriceUsd: null,
+          priceAdjustedBy: null,
+        })
+        .where(eq(sourceRfqItems.id, itemId))
+        .returning();
+
+      return updatedItem;
+    }
+
+    // Prevent selecting N/A quotes (they have no price)
+    if (quote.quote.quoteType === 'not_available' || quote.quote.costPricePerCaseUsd === null) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'Cannot select a quote that is marked as not available',
       });
     }
 
