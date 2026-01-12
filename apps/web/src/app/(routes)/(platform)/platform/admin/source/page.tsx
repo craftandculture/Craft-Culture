@@ -69,9 +69,10 @@ const SourcePage = () => {
     { label: 'Draft', value: 'draft' },
     { label: 'Sent', value: 'sent' },
     { label: 'Collecting', value: 'collecting' },
-    { label: 'Comparing', value: 'comparing' },
+    { label: 'Selecting', value: 'selecting' },
     { label: 'Quoted', value: 'quote_generated' },
     { label: 'Closed', value: 'closed' },
+    { label: 'Cancelled', value: 'cancelled' },
   ];
 
   return (
@@ -175,7 +176,15 @@ const SourcePage = () => {
                         )}
                       </div>
 
-                      <div className="flex items-center gap-6 text-sm">
+                      <div className="flex items-center gap-2 sm:gap-6 text-sm">
+                        {/* Mobile: Show compact stats */}
+                        <div className="flex sm:hidden items-center gap-2 text-text-muted text-xs">
+                          <span>{rfq.itemCount} items</span>
+                          <span>·</span>
+                          <span>{rfq.responseCount}/{rfq.partnerCount}</span>
+                        </div>
+
+                        {/* Desktop: Show full stats */}
                         <div className="hidden sm:flex items-center gap-4 text-text-muted">
                           <div className="flex items-center gap-1.5">
                             <IconSearch className="h-4 w-4" />
@@ -203,15 +212,18 @@ const SourcePage = () => {
                           {formatDistanceToNow(new Date(rfq.createdAt), { addSuffix: true })}
                         </div>
 
-                        <button
-                          onClick={(e) => handleDelete(e, rfq.id, rfq.name)}
-                          className="p-1.5 rounded hover:bg-fill-danger/10 text-text-muted hover:text-text-danger transition-colors"
-                          title="Delete RFQ"
-                        >
-                          <IconTrash className="h-4 w-4" />
-                        </button>
+                        {/* Only show delete for draft RFQs */}
+                        {['draft', 'parsing', 'ready_to_send', 'cancelled'].includes(rfq.status) && (
+                          <button
+                            onClick={(e) => handleDelete(e, rfq.id, rfq.name)}
+                            className="p-1.5 rounded hover:bg-fill-danger/10 text-text-muted hover:text-text-danger transition-colors"
+                            title="Delete RFQ"
+                          >
+                            <IconTrash className="h-4 w-4" />
+                          </button>
+                        )}
 
-                        <IconChevronRight className="h-5 w-5 text-text-muted" />
+                        <IconChevronRight className="h-5 w-5 text-text-muted shrink-0" />
                       </div>
                     </div>
                   </CardContent>

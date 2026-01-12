@@ -862,9 +862,18 @@ const RfqDetailPage = () => {
                             </button>
                           </td>
 
-                          {/* Format Cell - Bottle Size & Case Config */}
+                          {/* Format Cell - Bottle Size & Case Config - Clickable to Edit */}
                           <td className="px-2 py-2 text-center">
-                            <div className="text-[10px]">
+                            <button
+                              type="button"
+                              onClick={() => handleOpenItemEditor(item)}
+                              className={`w-full text-[10px] rounded px-1 py-0.5 transition-colors ${
+                                !item.bottleSize && !item.caseConfig
+                                  ? 'bg-amber-50 border border-amber-200 hover:bg-amber-100 text-amber-600'
+                                  : 'hover:bg-fill-muted'
+                              }`}
+                              title="Click to edit format"
+                            >
                               {item.bottleSize && (
                                 <div className="font-medium">{item.bottleSize}</div>
                               )}
@@ -872,9 +881,9 @@ const RfqDetailPage = () => {
                                 <div className="text-text-muted">{item.caseConfig}pk</div>
                               )}
                               {!item.bottleSize && !item.caseConfig && (
-                                <span className="text-text-muted">—</span>
+                                <span className="text-amber-600 font-medium">+ Add</span>
                               )}
-                            </div>
+                            </button>
                           </td>
 
                           {/* Quantity */}
