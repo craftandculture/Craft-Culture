@@ -115,6 +115,17 @@ const STOCK_CONDITIONS = [
   { value: 'free_trade', label: 'Free Trade Zone' },
 ];
 
+// Lead times
+const LEAD_TIMES = [
+  { value: 0, label: 'In Stock' },
+  { value: 7, label: '1 week' },
+  { value: 14, label: '2 weeks' },
+  { value: 21, label: '3 weeks' },
+  { value: 30, label: '1 month' },
+  { value: 60, label: '2 months' },
+  { value: 90, label: '3 months' },
+];
+
 // N/A Reasons
 const NA_REASONS = [
   { value: 'out_of_stock', label: 'Out of Stock' },
@@ -919,7 +930,14 @@ const PartnerRfqDetailPage = () => {
                           </button>
                         )}
                         {canSubmit && (
-                          <button type="button" className="p-1 hover:bg-slate-100 rounded-lg transition-colors">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleItemExpanded(item.id);
+                            }}
+                            className="p-1 hover:bg-slate-100 rounded-lg transition-colors"
+                          >
                             {isExpanded ? (
                               <IconChevronUp className="h-4 w-4 text-slate-500" />
                             ) : (
@@ -988,7 +1006,14 @@ const PartnerRfqDetailPage = () => {
 
                       {/* Expand Button - Mobile */}
                       {canSubmit && (
-                        <button type="button" className="flex-shrink-0 p-1 hover:bg-fill-muted rounded">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleItemExpanded(item.id);
+                          }}
+                          className="flex-shrink-0 p-1 hover:bg-fill-muted rounded"
+                        >
                           {isExpanded ? (
                             <IconChevronUp className="h-4 w-4 text-text-muted" />
                           ) : (
@@ -1245,17 +1270,16 @@ const PartnerRfqDetailPage = () => {
                               </div>
                               <div>
                                 <label className="block text-[10px] font-medium text-text-muted mb-0.5">Lead</label>
-                                <div className="relative">
-                                  <input
-                                    type="number"
-                                    min="0"
-                                    placeholder="days"
-                                    value={quote.leadTimeDays || ''}
-                                    onChange={(e) => handleQuoteChange(item.id, quote.id, 'leadTimeDays', parseInt(e.target.value) || 0)}
-                                    className="w-full rounded border border-border-primary bg-white px-1.5 pr-5 py-1.5 text-xs"
-                                  />
-                                  <span className="absolute right-1 top-1/2 -translate-y-1/2 text-[10px] text-text-muted">d</span>
-                                </div>
+                                <select
+                                  value={quote.leadTimeDays ?? ''}
+                                  onChange={(e) => handleQuoteChange(item.id, quote.id, 'leadTimeDays', e.target.value === '' ? undefined : parseInt(e.target.value))}
+                                  className="w-full rounded border border-border-primary bg-white px-1 py-1.5 text-xs"
+                                >
+                                  <option value="">-</option>
+                                  {LEAD_TIMES.map((lt) => (
+                                    <option key={lt.value} value={lt.value}>{lt.label}</option>
+                                  ))}
+                                </select>
                               </div>
                             </div>
 
@@ -1390,8 +1414,10 @@ const PartnerRfqDetailPage = () => {
                         {existingQuote.quoteType === 'alternative' && existingQuote.alternativeProductName && (
                           <span className="text-amber-600">Alt: {existingQuote.alternativeProductName}</span>
                         )}
-                        {existingQuote.leadTimeDays && (
-                          <span className="text-text-muted">{existingQuote.leadTimeDays}d lead</span>
+                        {existingQuote.leadTimeDays !== null && existingQuote.leadTimeDays !== undefined && (
+                          <span className="text-text-muted">
+                            {existingQuote.leadTimeDays === 0 ? 'In Stock' : `${existingQuote.leadTimeDays}d lead`}
+                          </span>
                         )}
                       </div>
                     </div>
