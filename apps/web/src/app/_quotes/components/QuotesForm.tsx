@@ -172,7 +172,6 @@ const QuotesForm = () => {
     'items',
     parseAsNativeArrayOf(
       parseAsJson<URLLineItem>((value) => {
-        console.log('Parsing URL item:', value);
         if (
           typeof value === 'object' &&
           value !== null &&
@@ -180,19 +179,12 @@ const QuotesForm = () => {
           'offerId' in value &&
           'quantity' in value
         ) {
-          console.log('Valid item found:', value);
           return value as URLLineItem;
         }
-        console.log('Invalid item, returning null');
         return null;
       }),
     ).withDefault([]),
   );
-
-  // Log urlLineItems whenever they change
-  useEffect(() => {
-    console.log('urlLineItems updated:', urlLineItems);
-  }, [urlLineItems]);
 
   // Fetch products for URL line items
   const productIds = useMemo(
@@ -517,23 +509,18 @@ const QuotesForm = () => {
   const [isDownloading, setIsDownloading] = useState(false);
 
   const handleDownloadInventory = async () => {
-    console.log('Download inventory button clicked');
     setIsDownloading(true);
 
     // Safety timeout - ensure button re-enables after 5 minutes max
     const safetyTimeout = setTimeout(() => {
-      console.error('Download timed out after 5 minutes - resetting state');
       setIsDownloading(false);
     }, 300000); // 5 minutes
 
     try {
       // Fetch all products on-demand (not upfront)
-      console.log('Fetching all products...');
       const allProductsData = await trpcClient.products.getMany.query({
         limit: 10000,
       });
-
-      console.log(`Fetched ${allProductsData.data.length} products`);
 
       if (allProductsData.data.length === 0) {
         alert('No products available to download.');
@@ -545,8 +532,6 @@ const QuotesForm = () => {
         (product) => product.productOffers && product.productOffers.length > 0,
       );
 
-      console.log('Products with offers:', productsWithOffers.length);
-
       // Create line items for pricing calculation (1 case per product)
       const lineItemsForQuote = productsWithOffers.map((product) => ({
         productId: product.id,
@@ -557,15 +542,9 @@ const QuotesForm = () => {
       // Process in smaller batches (20 items) sequentially to avoid timeout
       const batchSize = 20;
       const priceMap = new Map<string, number>();
-      const totalBatches = Math.ceil(lineItemsForQuote.length / batchSize);
-
-      console.log(`Processing ${lineItemsForQuote.length} products in ${totalBatches} batches`);
 
       for (let i = 0; i < lineItemsForQuote.length; i += batchSize) {
         const batch = lineItemsForQuote.slice(i, i + batchSize);
-        const batchNumber = Math.floor(i / batchSize) + 1;
-
-        console.log(`Processing batch ${batchNumber}/${totalBatches} (${batch.length} items)`);
 
         try {
           const quoteData = await trpcClient.quotes.get.query({
@@ -577,19 +556,14 @@ const QuotesForm = () => {
             priceMap.set(lineItem.productId, lineItem.lineItemTotalUsd);
           }
 
-          console.log(`Batch ${batchNumber} complete, ${priceMap.size} prices calculated so far`);
-
           // Small delay between batches to avoid overwhelming server
           if (i + batchSize < lineItemsForQuote.length) {
             await new Promise((resolve) => setTimeout(resolve, 100));
           }
-        } catch (batchError) {
-          console.error(`Error processing batch ${batchNumber}:`, batchError);
+        } catch {
           // Continue with next batch even if one fails
         }
       }
-
-      console.log(`All batches complete. Total prices calculated: ${priceMap.size}`);
 
       // Prepare inventory items with calculated prices
       const inventoryItems = productsWithOffers.map((product) => {
@@ -616,18 +590,14 @@ const QuotesForm = () => {
         };
       });
 
-      console.log(`Exporting ${inventoryItems.length} items to Excel`);
       exportInventoryToExcel(inventoryItems);
-      console.log('Export complete!');
     } catch (error) {
-      console.error('Error downloading inventory:', error);
       alert(
         `Failed to download inventory: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again or contact support if the issue persists.`,
       );
     } finally {
       clearTimeout(safetyTimeout);
       setIsDownloading(false);
-      console.log('Download state reset - button should be enabled again');
     }
   };
 
@@ -1157,8 +1127,7 @@ const QuotesForm = () => {
         customerType={customerType}
         marginConfig={marginConfig}
         outOfCatalogueItems={customerType === 'b2c' ? outOfCatalogueItems : undefined}
-        onSaveSuccess={(quoteId) => {
-          console.log('Quote saved successfully:', quoteId);
+        onSaveSuccess={() => {
           // Clear out-of-catalogue items after successful save
           setOutOfCatalogueItems([]);
           void queryClient.invalidateQueries({ queryKey: ['quotes.getMany'] });

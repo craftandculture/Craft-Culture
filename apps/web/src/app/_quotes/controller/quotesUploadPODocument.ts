@@ -66,13 +66,6 @@ const quotesUploadPODocument = protectedProcedure
         url: blob.url,
       };
     } catch (error) {
-      console.error('Error uploading PO document:', {
-        error,
-        userId: user.id,
-        errorMessage: error instanceof Error ? error.message : 'Unknown error',
-        errorStack: error instanceof Error ? error.stack : undefined,
-      });
-
       // If it's already a TRPCError, rethrow it
       if (error instanceof TRPCError) {
         throw error;
@@ -80,7 +73,7 @@ const quotesUploadPODocument = protectedProcedure
 
       throw new TRPCError({
         code: 'INTERNAL_SERVER_ERROR',
-        message: `Failed to upload PO document: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        message: 'Failed to upload PO document. Please try again.',
       });
     }
   });

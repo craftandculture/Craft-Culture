@@ -22,6 +22,20 @@ const logoUpload = protectedProcedure
       throw new Error('File size must be less than 2MB');
     }
 
+    // Validate actual image format using sharp metadata
+    const allowedFormats = ['jpeg', 'png', 'webp', 'gif', 'svg'];
+    try {
+      const metadata = await sharp(buffer).metadata();
+      if (!metadata.format || !allowedFormats.includes(metadata.format)) {
+        throw new Error('Invalid image format. Allowed: JPEG, PNG, WebP, GIF, SVG');
+      }
+    } catch (error) {
+      if (error instanceof Error && error.message.includes('Invalid image format')) {
+        throw error;
+      }
+      throw new Error('Invalid or corrupted image file');
+    }
+
     // Optimize and resize image using sharp
     const optimizedImage = await sharp(buffer)
       .resize(400, 400, {
