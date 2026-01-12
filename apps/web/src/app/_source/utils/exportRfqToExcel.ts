@@ -72,8 +72,8 @@ interface RfqData {
   distributorCompany?: string | null;
   distributorName?: string | null;
   distributorEmail?: string | null;
-  responseDeadline?: string | null;
-  createdAt?: string | null;
+  responseDeadline?: Date | string | null;
+  createdAt?: Date | string | null;
   items: RfqItem[];
   partners: RfqPartner[];
 }
