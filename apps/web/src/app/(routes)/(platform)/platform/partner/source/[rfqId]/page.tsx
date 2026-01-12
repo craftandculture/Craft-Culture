@@ -623,7 +623,7 @@ const PartnerRfqDetailPage = () => {
                   <ButtonContent iconLeft={isUpdating ? IconEdit : IconSend}>
                     {isSubmitting
                       ? (isUpdating ? 'Updating...' : 'Submitting...')
-                      : `${isUpdating ? 'Update' : 'Submit'} ${totalVintageQuotes} Quote${totalVintageQuotes !== 1 ? 's' : ''}`
+                      : `${isUpdating ? 'Update' : 'Submit'} Response`
                     }
                   </ButtonContent>
                 </Button>
@@ -956,19 +956,31 @@ const PartnerRfqDetailPage = () => {
                         {item.region || '-'}
                       </span>
 
-                      {/* Price Summary */}
-                      <div className="flex items-center justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
+                      {/* Price Summary with Config & Lead Time */}
+                      <div className="flex flex-col items-end gap-0.5" onClick={(e) => e.stopPropagation()}>
                         {isNA ? (
                           <span className="text-sm font-medium text-red-600">N/A</span>
                         ) : itemQuotes.length > 0 ? (
-                          <span className="text-sm font-medium text-green-700">
-                            {itemQuotes.filter((q) => q.costPricePerCaseUsd).length > 0 && (
-                              <>
-                                ${Math.min(...itemQuotes.filter((q) => q.costPricePerCaseUsd).map((q) => q.costPricePerCaseUsd!)).toFixed(0)}
-                                {itemQuotes.length > 1 && '+'}
-                              </>
+                          <>
+                            <span className="text-sm font-medium text-green-700">
+                              {itemQuotes.filter((q) => q.costPricePerCaseUsd).length > 0 && (
+                                <>
+                                  ${Math.min(...itemQuotes.filter((q) => q.costPricePerCaseUsd).map((q) => q.costPricePerCaseUsd!)).toFixed(0)}
+                                  {itemQuotes.length > 1 && '+'}
+                                </>
+                              )}
+                            </span>
+                            {/* Show config & lead time from first quote */}
+                            {itemQuotes[0] && (itemQuotes[0].caseConfig || itemQuotes[0].leadTimeDays !== undefined) && (
+                              <span className="text-[10px] text-text-muted">
+                                {itemQuotes[0].caseConfig && `${itemQuotes[0].caseConfig}pk`}
+                                {itemQuotes[0].caseConfig && itemQuotes[0].leadTimeDays !== undefined && ' · '}
+                                {itemQuotes[0].leadTimeDays !== undefined && (
+                                  itemQuotes[0].leadTimeDays === 0 ? 'In Stock' : `${itemQuotes[0].leadTimeDays}d`
+                                )}
+                              </span>
                             )}
-                          </span>
+                          </>
                         ) : (
                           <span className="text-sm text-text-muted">-</span>
                         )}
@@ -1587,14 +1599,14 @@ const PartnerRfqDetailPage = () => {
               onClick={handleSubmitQuotes}
               isDisabled={isSubmitting || completedItemCount === 0}
               className="flex-1 min-h-[44px]"
-              aria-label={isSubmitting ? (isUpdating ? 'Updating quotes' : 'Submitting quotes') : `${isUpdating ? 'Update' : 'Submit'} ${totalVintageQuotes} quotes`}
+              aria-label={isSubmitting ? (isUpdating ? 'Updating response' : 'Submitting response') : `${isUpdating ? 'Update' : 'Submit'} response`}
             >
               <ButtonContent iconLeft={isUpdating ? IconEdit : IconSend}>
                 {isSubmitting
                   ? (isUpdating ? 'Updating...' : 'Submitting...')
                   : completedItemCount === 0
                     ? 'Quote items to submit'
-                    : `${isUpdating ? 'Update' : 'Submit'} ${totalVintageQuotes} Quote${totalVintageQuotes !== 1 ? 's' : ''}`
+                    : `${isUpdating ? 'Update' : 'Submit'} Response`
                 }
               </ButtonContent>
             </Button>
