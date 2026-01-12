@@ -33,7 +33,6 @@ import RfqStatusBadge from '@/app/_source/components/RfqStatusBadge';
 import SendToPartnersDialog from '@/app/_source/components/SendToPartnersDialog';
 import exportRfqToExcel from '@/app/_source/utils/exportRfqToExcel';
 import exportRfqToPDF from '@/app/_source/utils/exportRfqToPDF';
-import formatLwin18, { formatCaseConfig } from '@/app/_source/utils/formatLwin18';
 import type { ParsedQuote } from '@/app/_source/utils/parseQuoteExcel';
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
@@ -721,28 +720,28 @@ const RfqDetailPage = () => {
                   {/* Sticky Header */}
                   <thead className="bg-fill-muted sticky top-0 z-10">
                     <tr>
-                      <th className="px-2 py-2 text-left text-[10px] font-semibold text-text-muted uppercase tracking-wide w-[300px] min-w-[200px]">
+                      <th className="px-2 py-1.5 text-left text-[10px] font-semibold text-text-muted uppercase tracking-wide w-[280px] min-w-[200px]">
                         Product
                       </th>
-                      <th className="px-2 py-2 text-center text-[10px] font-semibold text-text-muted uppercase tracking-wide w-14">
+                      <th className="px-1 py-1.5 text-center text-[10px] font-semibold text-text-muted uppercase tracking-wide w-16">
                         Format
                       </th>
-                      <th className="px-2 py-2 text-center text-[10px] font-semibold text-text-muted uppercase tracking-wide w-12">
+                      <th className="px-1 py-1.5 text-center text-[10px] font-semibold text-text-muted uppercase tracking-wide w-10">
                         Qty
                       </th>
                       {uniquePartners.map((p) => (
                         <th
                           key={p.partnerId}
-                          className="px-2 py-2 text-center text-[10px] font-semibold text-text-muted uppercase tracking-wide"
+                          className="px-1 py-1.5 text-center text-[10px] font-semibold text-text-muted uppercase tracking-wide"
                         >
                           <span className="truncate block" title={p.partner.businessName}>
-                            {p.partner.businessName.length > 14
-                              ? `${p.partner.businessName.slice(0, 12)}...`
+                            {p.partner.businessName.length > 12
+                              ? `${p.partner.businessName.slice(0, 10)}...`
                               : p.partner.businessName}
                           </span>
                         </th>
                       ))}
-                      <th className="px-2 py-2 text-center text-[10px] font-semibold text-text-muted uppercase tracking-wide w-20">
+                      <th className="px-1 py-1.5 text-center text-[10px] font-semibold text-text-muted uppercase tracking-wide w-14">
                         Final
                       </th>
                     </tr>
@@ -766,8 +765,8 @@ const RfqDetailPage = () => {
                             idx % 2 === 0 ? 'bg-surface-primary' : 'bg-fill-muted/10'
                           }`}
                         >
-                          {/* Product Cell - Name, Producer, Vintage, Region - Clickable to Edit */}
-                          <td className="px-2 py-2 w-[300px] min-w-[200px]">
+                          {/* Product Cell - Name, Vintage, LWIN, Region - Clickable to Edit */}
+                          <td className="px-2 py-1 w-[280px] min-w-[200px]">
                             <button
                               type="button"
                               onClick={() => handleOpenItemEditor(item)}
@@ -801,61 +800,24 @@ const RfqDetailPage = () => {
                                   <IconEdit className="h-3 w-3 text-text-muted opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
                                 )}
                               </div>
-                              <div className="flex items-center gap-2 mt-0.5 text-[10px] text-text-muted">
-                                {item.lwin && (() => {
-                                  // For alt_product, use alternative bottle size; otherwise use item's
-                                  const effectiveBottleSize = selectedQuote?.quote.quoteType === 'alternative'
-                                    ? selectedQuote.quote.alternativeBottleSize || item.bottleSize
-                                    : item.bottleSize;
-                                  // For alt_product, use alternative case config; otherwise use quote's case config
-                                  const effectiveCaseConfig = selectedQuote
-                                    ? (selectedQuote.quote.quoteType === 'alternative'
-                                        ? selectedQuote.quote.alternativeCaseConfig
-                                        : selectedQuote.quote.caseConfig) || item.caseConfig
-                                    : item.caseConfig;
-                                  const caseConfigDisplay = formatCaseConfig({
-                                    caseConfig: effectiveCaseConfig,
-                                    bottleSize: effectiveBottleSize,
-                                  });
-                                  // For vintage: alt_vintage uses alternativeVintage, alt_product uses alternativeVintage,
-                                  // exact uses quotedVintage, fallback to item.vintage
-                                  const effectiveVintage = selectedQuote
-                                    ? (selectedQuote.quote.quoteType === 'alternative' || selectedQuote.quote.quoteType === 'alt_vintage'
-                                        ? selectedQuote.quote.alternativeVintage
-                                        : selectedQuote.quote.quotedVintage) || item.vintage
-                                    : item.vintage;
-                                  return (
-                                    <span className="font-mono bg-fill-muted px-1 rounded flex items-center gap-1.5">
-                                      <span>
-                                        {formatLwin18({
-                                          lwin: item.lwin,
-                                          vintage: effectiveVintage,
-                                          bottleSize: effectiveBottleSize,
-                                          caseConfig: effectiveCaseConfig,
-                                        })}
-                                      </span>
-                                      {caseConfigDisplay && (
-                                        <>
-                                          <span className="text-text-muted/50">|</span>
-                                          <span className="text-text-primary font-semibold">{caseConfigDisplay}</span>
-                                        </>
-                                      )}
-                                    </span>
-                                  );
-                                })()}
-                                {!item.lwin && item.parseConfidence !== null && item.parseConfidence >= 0.7 && (
-                                  <span className="text-text-warning text-[9px]">No LWIN</span>
+                              <div className="flex items-center gap-1.5 mt-0.5 text-[9px] text-text-muted truncate">
+                                {item.lwin && (
+                                  <span className="font-mono opacity-60" title={`LWIN: ${item.lwin}`}>
+                                    {item.lwin}
+                                  </span>
                                 )}
-                                {item.producer && <span>{item.producer}</span>}
+                                {!item.lwin && item.parseConfidence !== null && item.parseConfidence >= 0.7 && (
+                                  <span className="text-text-warning">No LWIN</span>
+                                )}
                                 {item.region && (
                                   <>
-                                    {(item.producer || item.lwin) && <span>·</span>}
+                                    {item.lwin && <span className="opacity-40">·</span>}
                                     <span>{item.region}</span>
                                   </>
                                 )}
                                 {item.country && !item.region && (
                                   <>
-                                    {(item.producer || item.lwin) && <span>·</span>}
+                                    {item.lwin && <span className="opacity-40">·</span>}
                                     <span>{item.country}</span>
                                   </>
                                 )}
@@ -876,43 +838,35 @@ const RfqDetailPage = () => {
                             const isFromQuote = !hasItemFormat && (displayBottleSize || displayCaseConfig);
 
                             return (
-                              <td className="px-2 py-2 text-center">
+                              <td className="px-1 py-1 text-center">
                                 <button
                                   type="button"
                                   onClick={() => handleOpenItemEditor(item)}
-                                  className={`w-full text-[10px] rounded px-1 py-0.5 transition-colors ${
+                                  className={`text-[10px] rounded px-1.5 py-0.5 transition-colors whitespace-nowrap ${
                                     !displayBottleSize && !displayCaseConfig
                                       ? 'bg-amber-50 border border-amber-200 hover:bg-amber-100 text-amber-600'
                                       : isFromQuote
-                                        ? 'bg-blue-50 border border-blue-200 hover:bg-blue-100'
+                                        ? 'bg-blue-50 border border-blue-200 hover:bg-blue-100 text-blue-600'
                                         : 'hover:bg-fill-muted'
                                   }`}
                                   title={isFromQuote ? 'Format from partner quote (click to set)' : 'Click to edit format'}
                                 >
-                                  {displayBottleSize && (
-                                    <div className={`font-medium ${isFromQuote ? 'text-blue-600' : ''}`}>
-                                      {displayBottleSize}
-                                    </div>
-                                  )}
-                                  {displayCaseConfig && (
-                                    <div className={isFromQuote ? 'text-blue-500' : 'text-text-muted'}>
-                                      {displayCaseConfig}pk
-                                    </div>
-                                  )}
-                                  {!displayBottleSize && !displayCaseConfig && (
-                                    <span className="text-amber-600 font-medium">+ Add</span>
+                                  {(displayBottleSize || displayCaseConfig) ? (
+                                    <span>
+                                      {displayBottleSize}{displayBottleSize && displayCaseConfig && '·'}{displayCaseConfig && `${displayCaseConfig}pk`}
+                                    </span>
+                                  ) : (
+                                    <span>+ Add</span>
                                   )}
                                 </button>
                               </td>
                             );
                           })()}
 
-                          {/* Quantity */}
-                          <td className="px-2 py-2 text-center">
+                          {/* Quantity - compact */}
+                          <td className="px-1 py-1 text-center">
                             <span className="text-xs font-semibold">{item.quantity}</span>
-                            <span className="text-[10px] text-text-muted ml-0.5">
-                              {item.quantityUnit === 'bottles' ? 'btl' : 'cs'}
-                            </span>
+                            <span className="text-[10px] text-text-muted ml-0.5">{item.quantityUnit === 'bottles' ? 'btl' : 'cs'}</span>
                           </td>
 
                           {/* Partner Quote Cells - With Multiple Vintage Support */}
@@ -1004,12 +958,15 @@ const RfqDetailPage = () => {
                                       ? quote.alternativeVintage
                                       : quote.quotedVintage || item.vintage;
 
+                                    // Only show vintage if different from item's vintage
+                                    const showVintage = displayVintage && displayVintage !== item.vintage;
+
                                     return (
                                       <button
                                         key={quote.id}
                                         onClick={() => handleSelectQuote(item.id, quote.id)}
                                         disabled={!canSelectQuotes || isSelectingQuote}
-                                        className={`px-2 py-1 rounded text-center transition-all ${
+                                        className={`px-2 py-0.5 rounded text-center transition-all ${
                                           isSelected
                                             ? 'bg-fill-brand text-text-on-brand ring-2 ring-border-brand'
                                             : isBestPrice
@@ -1021,45 +978,39 @@ const RfqDetailPage = () => {
                                         title={tooltip || undefined}
                                         aria-label={`Select quote: $${price.toFixed(0)} ${displayVintage ? `(${displayVintage})` : ''} from ${p.partner.businessName}`}
                                       >
-                                        {/* Price - Case + Per Bottle */}
+                                        {/* Price with checkmark */}
                                         <div className="flex items-center justify-center gap-0.5">
-                                          <span className="text-xs font-semibold">
+                                          <span className="text-sm font-bold">
                                             ${price.toFixed(0)}
                                           </span>
                                           {isSelected && (
-                                            <IconCheck className="h-3 w-3" />
+                                            <IconCheck className="h-3.5 w-3.5" />
                                           )}
                                         </div>
-                                        {/* Per-bottle price */}
+                                        {/* Per-bottle price - always useful for comparison */}
                                         {quote.caseConfig && Number(quote.caseConfig) > 0 && (
-                                          <span className={`text-[9px] block ${isSelected ? 'text-text-on-brand/70' : 'text-text-muted'}`}>
+                                          <span className={`text-[10px] block ${isSelected ? 'text-text-on-brand/70' : 'text-text-muted'}`}>
                                             ${(price / Number(quote.caseConfig)).toFixed(2)}/btl
                                           </span>
                                         )}
-                                        {/* Always show vintage for clarity */}
-                                        {displayVintage && (
-                                          <span className={`text-[10px] block ${
+                                        {/* Vintage only when different from item - highlighted */}
+                                        {showVintage && (
+                                          <span className={`text-[10px] font-semibold block ${
                                             isSelected
-                                              ? 'text-text-on-brand/70'
+                                              ? 'text-text-on-brand'
                                               : isAltVintage
-                                                ? 'text-blue-600 font-medium'
+                                                ? 'text-blue-600'
                                                 : isAltProduct
-                                                  ? 'text-amber-600 font-medium'
-                                                  : 'text-text-muted'
+                                                  ? 'text-amber-600'
+                                                  : 'text-text-brand'
                                           }`}>
                                             {displayVintage}
                                           </span>
                                         )}
-                                        {/* Bottle size + Case config + Lead time */}
-                                        {(quote.bottleSize || quote.caseConfig || quote.leadTimeDays !== null) && (
+                                        {/* Lead time indicator - compact */}
+                                        {quote.leadTimeDays !== null && quote.leadTimeDays > 0 && (
                                           <span className={`text-[9px] block ${isSelected ? 'text-text-on-brand/60' : 'text-text-muted'}`}>
-                                            {quote.bottleSize && `${quote.bottleSize}`}
-                                            {quote.bottleSize && quote.caseConfig && ' · '}
-                                            {quote.caseConfig && `${quote.caseConfig}pk`}
-                                            {(quote.bottleSize || quote.caseConfig) && quote.leadTimeDays !== null && ' · '}
-                                            {quote.leadTimeDays !== null && (
-                                              quote.leadTimeDays === 0 ? 'In Stock' : `${quote.leadTimeDays}d`
-                                            )}
+                                            {quote.leadTimeDays}d
                                           </span>
                                         )}
                                       </button>
