@@ -1050,11 +1050,13 @@ const RfqDetailPage = () => {
                                             {displayVintage}
                                           </span>
                                         )}
-                                        {/* Case config + Lead time */}
-                                        {(quote.caseConfig || quote.leadTimeDays !== null) && (
+                                        {/* Bottle size + Case config + Lead time */}
+                                        {(quote.bottleSize || quote.caseConfig || quote.leadTimeDays !== null) && (
                                           <span className={`text-[9px] block ${isSelected ? 'text-text-on-brand/60' : 'text-text-muted'}`}>
+                                            {quote.bottleSize && `${quote.bottleSize}`}
+                                            {quote.bottleSize && quote.caseConfig && ' · '}
                                             {quote.caseConfig && `${quote.caseConfig}pk`}
-                                            {quote.caseConfig && quote.leadTimeDays !== null && ' · '}
+                                            {(quote.bottleSize || quote.caseConfig) && quote.leadTimeDays !== null && ' · '}
                                             {quote.leadTimeDays !== null && (
                                               quote.leadTimeDays === 0 ? 'In Stock' : `${quote.leadTimeDays}d`
                                             )}
