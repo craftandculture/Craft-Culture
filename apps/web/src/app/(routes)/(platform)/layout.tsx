@@ -57,9 +57,12 @@ const PlatformLayout = async ({ children }: React.PropsWithChildren) => {
               {/* Quotes section - hidden for wine partners */}
               {!(user.customerType === 'private_clients' && user.partner?.type === 'wine_partner') && (
                 <div className="flex items-center rounded-lg border border-border-muted/50 px-1.5 py-1">
-                  <span className="border-r border-border-muted/50 pr-2 text-[10px] font-medium uppercase tracking-wider text-text-muted">
+                  <Link
+                    href="/platform/quotes"
+                    className="border-r border-border-muted/50 pr-2 text-[10px] font-medium uppercase tracking-wider text-text-muted hover:text-text-primary transition-colors"
+                  >
                     Quotes
-                  </span>
+                  </Link>
                   <Link
                     href="/platform/quotes"
                     className="text-text-primary hover:bg-fill-muted ml-1 rounded-md px-2.5 py-1 text-sm font-medium transition-all duration-200 hover:shadow-sm active:scale-[0.98]"
@@ -89,9 +92,12 @@ const PlatformLayout = async ({ children }: React.PropsWithChildren) => {
               {/* Local Stock section - for Wine Partners */}
               {user.customerType === 'private_clients' && user.partner?.type === 'wine_partner' && (
                 <div className="flex items-center rounded-lg border border-border-muted/50 px-1.5 py-1">
-                  <span className="border-r border-border-muted/50 pr-2 text-[10px] font-medium uppercase tracking-wider text-text-muted">
+                  <Link
+                    href="/platform/local-stock"
+                    className="border-r border-border-muted/50 pr-2 text-[10px] font-medium uppercase tracking-wider text-text-muted hover:text-text-primary transition-colors"
+                  >
                     Inventory
-                  </span>
+                  </Link>
                   <Link
                     href="/platform/local-stock"
                     className="text-text-primary hover:bg-fill-muted ml-1 rounded-md px-2.5 py-1 text-sm font-medium transition-all duration-200 hover:shadow-sm active:scale-[0.98]"
@@ -104,9 +110,12 @@ const PlatformLayout = async ({ children }: React.PropsWithChildren) => {
               {user.customerType === 'private_clients' && user.partner?.type === 'wine_partner' && (
                 <>
                   <div className="flex items-center rounded-lg border border-border-muted/50 bg-surface-secondary/40 px-1.5 py-1">
-                    <span className="border-r border-border-muted/50 pr-2 text-[10px] font-medium uppercase tracking-wider text-text-muted">
+                    <Link
+                      href="/platform/private-orders"
+                      className="border-r border-border-muted/50 pr-2 text-[10px] font-medium uppercase tracking-wider text-text-muted hover:text-text-primary transition-colors"
+                    >
                       Private Clients
-                    </span>
+                    </Link>
                     <Link
                       href="/platform/private-orders"
                       className="text-text-primary hover:bg-fill-muted ml-1 rounded-md px-2.5 py-1 text-sm font-medium transition-all duration-200 hover:shadow-sm active:scale-[0.98]"
@@ -115,9 +124,12 @@ const PlatformLayout = async ({ children }: React.PropsWithChildren) => {
                     </Link>
                   </div>
                   <div className="flex items-center rounded-lg border border-border-muted/50 bg-surface-secondary/40 px-1.5 py-1">
-                    <span className="border-r border-border-muted/50 pr-2 text-[10px] font-medium uppercase tracking-wider text-text-muted">
+                    <Link
+                      href="/platform/clients"
+                      className="border-r border-border-muted/50 pr-2 text-[10px] font-medium uppercase tracking-wider text-text-muted hover:text-text-primary transition-colors"
+                    >
                       CRM
-                    </span>
+                    </Link>
                     <Link
                       href="/platform/clients"
                       className="text-text-primary hover:bg-fill-muted ml-1 rounded-md px-2.5 py-1 text-sm font-medium transition-all duration-200 hover:shadow-sm active:scale-[0.98]"
@@ -126,9 +138,12 @@ const PlatformLayout = async ({ children }: React.PropsWithChildren) => {
                     </Link>
                   </div>
                   <div className="flex items-center rounded-lg border border-border-muted/50 bg-surface-secondary/40 px-1.5 py-1">
-                    <span className="border-r border-border-muted/50 pr-2 text-[10px] font-medium uppercase tracking-wider text-text-muted">
+                    <Link
+                      href="/platform/partner/source"
+                      className="border-r border-border-muted/50 pr-2 text-[10px] font-medium uppercase tracking-wider text-text-muted hover:text-text-primary transition-colors"
+                    >
                       Source
-                    </span>
+                    </Link>
                     <Link
                       href="/platform/partner/source"
                       className="text-text-primary hover:bg-fill-muted ml-1 rounded-md px-2.5 py-1 text-sm font-medium transition-all duration-200 hover:shadow-sm active:scale-[0.98]"
@@ -141,9 +156,12 @@ const PlatformLayout = async ({ children }: React.PropsWithChildren) => {
               {/* Distributor section - for B2B users and distributor partners (not admins - they have their own section) */}
               {(user.customerType === 'b2b' || user.partner?.type === 'distributor') && user.role !== 'admin' && (
                 <div className="flex items-center rounded-lg border border-border-muted/50 bg-surface-secondary/40 px-1.5 py-1">
-                  <span className="border-r border-border-muted/50 pr-2 text-[10px] font-medium uppercase tracking-wider text-text-muted">
+                  <Link
+                    href="/platform/distributor"
+                    className="border-r border-border-muted/50 pr-2 text-[10px] font-medium uppercase tracking-wider text-text-muted hover:text-text-primary transition-colors"
+                  >
                     Private Clients
-                  </span>
+                  </Link>
                   <Link
                     href="/platform/distributor"
                     className="text-text-primary hover:bg-fill-muted ml-1 rounded-md px-2.5 py-1 text-sm font-medium transition-all duration-200 hover:shadow-sm active:scale-[0.98]"
@@ -164,9 +182,12 @@ const PlatformLayout = async ({ children }: React.PropsWithChildren) => {
                 <>
                   {/* Private Orders - admin management */}
                   <div className="flex items-center rounded-lg border border-border-muted/50 bg-surface-secondary/40 px-1.5 py-1">
-                    <span className="border-r border-border-muted/50 pr-2 text-[10px] font-medium uppercase tracking-wider text-text-muted">
+                    <Link
+                      href="/platform/admin"
+                      className="border-r border-border-muted/50 pr-2 text-[10px] font-medium uppercase tracking-wider text-text-muted hover:text-text-primary transition-colors"
+                    >
                       Private Orders
-                    </span>
+                    </Link>
                     <Link
                       href="/platform/admin"
                       className="text-text-primary hover:bg-fill-muted ml-1 rounded-md px-2.5 py-1 text-sm font-medium transition-all duration-200 hover:shadow-sm active:scale-[0.98]"
@@ -183,9 +204,12 @@ const PlatformLayout = async ({ children }: React.PropsWithChildren) => {
                   </div>
                   {/* Pricing section */}
                   <div className="flex items-center rounded-lg border border-border-muted/50 bg-surface-secondary/40 px-1.5 py-1">
-                    <span className="border-r border-border-muted/50 pr-2 text-[10px] font-medium uppercase tracking-wider text-text-muted">
+                    <Link
+                      href="/platform/admin/pricing-calculator"
+                      className="border-r border-border-muted/50 pr-2 text-[10px] font-medium uppercase tracking-wider text-text-muted hover:text-text-primary transition-colors"
+                    >
                       Pricing
-                    </span>
+                    </Link>
                     <Link
                       href="/platform/admin/pricing-calculator"
                       className="text-text-primary hover:bg-fill-muted ml-1 rounded-md px-2.5 py-1 text-sm font-medium transition-all duration-200 hover:shadow-sm active:scale-[0.98]"
