@@ -59,8 +59,7 @@ const adminCreateRfq = adminProcedure
 
       throw new TRPCError({
         code: 'INTERNAL_SERVER_ERROR',
-        message: error instanceof Error ? error.message : 'Failed to create RFQ',
-        cause: error,
+        message: 'Failed to create RFQ. Please try again.',
       });
     }
   });

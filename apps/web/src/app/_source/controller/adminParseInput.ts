@@ -418,7 +418,7 @@ If vintage is unclear, leave it empty or use "NV".`;
 
       throw new TRPCError({
         code: 'INTERNAL_SERVER_ERROR',
-        message: `Failed to parse input: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        message: 'Failed to parse input. Please try again or contact support.',
       });
     }
   });
