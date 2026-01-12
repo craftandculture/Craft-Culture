@@ -68,7 +68,9 @@ const partnerParseQuoteExcel = winePartnerProcedure
     }
 
     // Check RFQ is still accepting quotes
-    const quotableStatuses = ['sent', 'collecting'];
+    // Allow quotes during sent, collecting, comparing, and selecting phases
+    // Only block once RFQ moves to client_review or beyond
+    const quotableStatuses = ['sent', 'collecting', 'comparing', 'selecting'];
     if (!quotableStatuses.includes(assignment.rfq.status)) {
       throw new TRPCError({
         code: 'BAD_REQUEST',
