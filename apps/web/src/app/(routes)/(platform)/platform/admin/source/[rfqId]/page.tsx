@@ -961,6 +961,21 @@ const RfqDetailPage = () => {
                                     // Only show vintage if different from item's vintage
                                     const showVintage = displayVintage && displayVintage !== item.vintage;
 
+                                    // Calculate pricing based on what customer requested
+                                    const caseConfig = quote.caseConfig ? Number(quote.caseConfig) : 0;
+                                    const pricePerBottle = caseConfig > 0 ? price / caseConfig : null;
+                                    const requestedInBottles = item.quantityUnit === 'bottles';
+
+                                    // Calculate total to fulfill request
+                                    let totalCost: number | null = null;
+                                    if (requestedInBottles && pricePerBottle !== null) {
+                                      // Customer wants X bottles, calculate cost
+                                      totalCost = pricePerBottle * item.quantity;
+                                    } else if (!requestedInBottles) {
+                                      // Customer wants X cases
+                                      totalCost = price * item.quantity;
+                                    }
+
                                     return (
                                       <button
                                         key={quote.id}
@@ -978,19 +993,47 @@ const RfqDetailPage = () => {
                                         title={tooltip || undefined}
                                         aria-label={`Select quote: $${price.toFixed(0)} ${displayVintage ? `(${displayVintage})` : ''} from ${p.partner.businessName}`}
                                       >
-                                        {/* Price with checkmark */}
-                                        <div className="flex items-center justify-center gap-0.5">
-                                          <span className="text-sm font-bold">
-                                            ${price.toFixed(0)}
-                                          </span>
-                                          {isSelected && (
-                                            <IconCheck className="h-3.5 w-3.5" />
-                                          )}
-                                        </div>
-                                        {/* Per-bottle price - always useful for comparison */}
-                                        {quote.caseConfig && Number(quote.caseConfig) > 0 && (
-                                          <span className={`text-[10px] block ${isSelected ? 'text-text-on-brand/70' : 'text-text-muted'}`}>
-                                            ${(price / Number(quote.caseConfig)).toFixed(2)}/btl
+                                        {requestedInBottles && pricePerBottle !== null ? (
+                                          <>
+                                            {/* When customer requested bottles: show per-bottle prominently */}
+                                            <div className="flex items-center justify-center gap-0.5">
+                                              <span className="text-sm font-bold">
+                                                ${pricePerBottle.toFixed(2)}
+                                              </span>
+                                              <span className={`text-[9px] ${isSelected ? 'text-text-on-brand/70' : 'text-text-muted'}`}>/btl</span>
+                                              {isSelected && (
+                                                <IconCheck className="h-3.5 w-3.5" />
+                                              )}
+                                            </div>
+                                            {/* Show case price as secondary */}
+                                            <span className={`text-[10px] block ${isSelected ? 'text-text-on-brand/70' : 'text-text-muted'}`}>
+                                              ${price.toFixed(0)}/cs
+                                            </span>
+                                          </>
+                                        ) : (
+                                          <>
+                                            {/* When customer requested cases: show per-case prominently */}
+                                            <div className="flex items-center justify-center gap-0.5">
+                                              <span className="text-sm font-bold">
+                                                ${price.toFixed(0)}
+                                              </span>
+                                              <span className={`text-[9px] ${isSelected ? 'text-text-on-brand/70' : 'text-text-muted'}`}>/cs</span>
+                                              {isSelected && (
+                                                <IconCheck className="h-3.5 w-3.5" />
+                                              )}
+                                            </div>
+                                            {/* Show per-bottle as secondary */}
+                                            {pricePerBottle !== null && (
+                                              <span className={`text-[10px] block ${isSelected ? 'text-text-on-brand/70' : 'text-text-muted'}`}>
+                                                ${pricePerBottle.toFixed(2)}/btl
+                                              </span>
+                                            )}
+                                          </>
+                                        )}
+                                        {/* Show total cost to fulfill request */}
+                                        {totalCost !== null && item.quantity > 1 && (
+                                          <span className={`text-[9px] block font-medium ${isSelected ? 'text-text-on-brand/80' : 'text-text-primary'}`}>
+                                            = ${totalCost.toFixed(0)}
                                           </span>
                                         )}
                                         {/* Vintage only when different from item - highlighted */}
