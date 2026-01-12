@@ -57,7 +57,7 @@ interface RfqPartner {
   partnerId: string;
   status: string;
   quoteCount: number;
-  submittedAt?: string | null;
+  submittedAt?: Date | string | null;
   partnerNotes?: string | null;
   partner: {
     id: string;
