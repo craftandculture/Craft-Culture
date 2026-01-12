@@ -1031,9 +1031,9 @@ const RfqDetailPage = () => {
                                           )}
                                         </div>
                                         {/* Per-bottle price */}
-                                        {quote.caseConfig && quote.caseConfig > 0 && (
+                                        {quote.caseConfig && Number(quote.caseConfig) > 0 && (
                                           <span className={`text-[9px] block ${isSelected ? 'text-text-on-brand/70' : 'text-text-muted'}`}>
-                                            ${(price / quote.caseConfig).toFixed(2)}/btl
+                                            ${(price / Number(quote.caseConfig)).toFixed(2)}/btl
                                           </span>
                                         )}
                                         {/* Always show vintage for clarity */}
