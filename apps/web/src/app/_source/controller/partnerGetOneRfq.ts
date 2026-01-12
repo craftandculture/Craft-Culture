@@ -90,16 +90,24 @@ const partnerGetOneRfq = winePartnerProcedure
         ),
       );
 
-    // Map quotes to items
-    const quotesByItem = new Map<string, typeof quotes[0]>();
+    // Map quotes to items - support multiple quotes per item (multiple vintages)
+    const quotesByItem = new Map<string, (typeof quotes[0] & { isMyQuote: boolean })[]>();
     for (const quote of quotes) {
-      quotesByItem.set(quote.itemId, quote);
+      const existing = quotesByItem.get(quote.itemId) || [];
+      existing.push({ ...quote, isMyQuote: true });
+      quotesByItem.set(quote.itemId, existing);
     }
 
-    const itemsWithQuotes = items.map((item) => ({
-      ...item,
-      myQuote: quotesByItem.get(item.id) || null,
-    }));
+    const itemsWithQuotes = items.map((item) => {
+      const itemQuotes = quotesByItem.get(item.id) || [];
+      return {
+        ...item,
+        // Keep myQuote for backwards compatibility (first quote)
+        myQuote: itemQuotes[0] || null,
+        // Add quotes array for multi-vintage support
+        quotes: itemQuotes,
+      };
+    });
 
     return {
       ...assignment.rfq,

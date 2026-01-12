@@ -158,6 +158,9 @@ const PartnerRfqDetailPage = () => {
   // Auto-save key for localStorage
   const storageKey = `source-rfq-draft-v2-${rfqId}`;
 
+  // Track if we've initialized quotes from existing submission
+  const [hasInitializedFromSubmission, setHasInitializedFromSubmission] = useState(false);
+
   // Load draft from localStorage on mount
   useEffect(() => {
     try {
@@ -220,6 +223,59 @@ const PartnerRfqDetailPage = () => {
   } = useQuery({
     ...api.source.partner.getOne.queryOptions({ rfqId }),
   });
+
+  // Pre-populate quotes from existing submission when partner has already submitted
+  useEffect(() => {
+    if (!rfq || hasInitializedFromSubmission) return;
+
+    // Only pre-populate if partner has submitted and local quotes state is empty
+    if (rfq.partnerStatus === 'submitted' && quotes.size === 0) {
+      const existingQuotes = new Map<string, QuoteEntry[]>();
+
+      for (const item of rfq.items) {
+        // Get all quotes this partner submitted for this item
+        const itemQuotes = item.quotes?.filter((q) => q.isMyQuote) || [];
+        if (itemQuotes.length > 0) {
+          existingQuotes.set(
+            item.id,
+            itemQuotes.map((q) => ({
+              id: generateQuoteId(),
+              itemId: item.id,
+              quoteType: q.quoteType as QuoteType,
+              quotedVintage: q.quotedVintage || undefined,
+              costPricePerCaseUsd: q.costPricePerCaseUsd || undefined,
+              currency: q.currency || 'USD',
+              caseConfig: q.caseConfig || undefined,
+              bottleSize: q.bottleSize || undefined,
+              availableQuantity: q.availableQuantity || undefined,
+              leadTimeDays: q.leadTimeDays ?? undefined,
+              stockLocation: q.stockLocation || undefined,
+              stockCondition: q.stockCondition || undefined,
+              moq: q.moq || undefined,
+              validUntil: q.validUntil ? new Date(q.validUntil) : undefined,
+              notes: q.notes || undefined,
+              notAvailableReason: q.notAvailableReason || undefined,
+              alternativeProductName: q.alternativeProductName || undefined,
+              alternativeProducer: q.alternativeProducer || undefined,
+              alternativeVintage: q.alternativeVintage || undefined,
+              alternativeRegion: q.alternativeRegion || undefined,
+              alternativeCountry: q.alternativeCountry || undefined,
+              alternativeBottleSize: q.alternativeBottleSize || undefined,
+              alternativeCaseConfig: q.alternativeCaseConfig || undefined,
+              alternativeLwin: q.alternativeLwin || undefined,
+              alternativeReason: q.alternativeReason || undefined,
+            })),
+          );
+        }
+      }
+
+      if (existingQuotes.size > 0) {
+        setQuotes(existingQuotes);
+        setPartnerNotes(rfq.partnerNotes || '');
+      }
+      setHasInitializedFromSubmission(true);
+    }
+  }, [rfq, quotes.size, hasInitializedFromSubmission]);
 
   // Submit quotes mutation
   const { mutate: submitQuotes, isPending: isSubmitting } = useMutation(
