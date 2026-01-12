@@ -212,6 +212,7 @@ const RfqDetailPage = () => {
 
   const canSendToPartners = ['draft', 'parsing', 'ready_to_send'].includes(rfq.status);
   const canSelectQuotes = ['sent', 'collecting', 'comparing', 'selecting'].includes(rfq.status);
+  const canAddItems = ['draft', 'parsing', 'ready_to_send', 'sent', 'collecting', 'comparing', 'selecting'].includes(rfq.status);
   const canGenerateQuote = rfq.status === 'selecting' || rfq.items.some((i) => i.selectedQuoteId);
   const canDelete = ['draft', 'parsing', 'ready_to_send'].includes(rfq.status);
   const canCancel = ['sent', 'collecting', 'comparing', 'selecting', 'quote_generated', 'client_review', 'awaiting_confirmation', 'confirmed'].includes(rfq.status);
@@ -356,7 +357,7 @@ const RfqDetailPage = () => {
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">
-            {canSendToPartners && (
+            {canAddItems && (
               <Button
                 variant="outline"
                 onClick={() => setIsAddItemOpen(true)}
@@ -1222,7 +1223,7 @@ const RfqDetailPage = () => {
           onOpenChange={setIsItemEditorOpen}
           item={editingItem}
           rfqId={rfqId}
-          canEdit={canSendToPartners}
+          canEdit={canAddItems}
           canDelete={canSendToPartners}
           onSuccess={() => void refetch()}
         />

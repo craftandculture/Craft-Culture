@@ -37,11 +37,13 @@ const adminAddItem = adminProcedure
       });
     }
 
-    const editableStatuses = ['draft', 'parsing', 'ready_to_send'];
+    // Allow adding items until quote is finalized
+    // Admin may need to add last-minute items from client requests
+    const editableStatuses = ['draft', 'parsing', 'ready_to_send', 'sent', 'collecting', 'comparing', 'selecting'];
     if (!editableStatuses.includes(rfq.status)) {
       throw new TRPCError({
         code: 'BAD_REQUEST',
-        message: 'Cannot add items to RFQ that has been sent',
+        message: 'Cannot add items to RFQ that has been finalized or cancelled',
       });
     }
 
