@@ -1,5 +1,5 @@
 import { TRPCError } from '@trpc/server';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { sourceRfqItems, sourceRfqQuotes, sourceRfqs } from '@/database/schema';
@@ -8,8 +8,8 @@ import { adminProcedure } from '@/lib/trpc/procedures';
 import selectQuoteSchema from '../schemas/selectQuoteSchema';
 
 /**
- * Select or toggle a winning quote for an RFQ item
- * If the quote is already selected, it will be unselected (toggle behavior)
+ * Toggle quote selection for an RFQ item
+ * Supports multi-selection - can select multiple quotes per item (e.g., different vintages)
  *
  * @example
  *   await trpcClient.source.admin.selectQuote.mutate({
@@ -21,29 +21,28 @@ import selectQuoteSchema from '../schemas/selectQuoteSchema';
 const adminSelectQuote = adminProcedure
   .input(selectQuoteSchema)
   .mutation(async ({ input, ctx: { user } }) => {
-    const { itemId, quoteId, finalPriceUsd } = input;
+    const { itemId, quoteId } = input;
 
     // Verify quote exists and belongs to this item
-    const [quote] = await db
+    const [quoteResult] = await db
       .select({
         quote: sourceRfqQuotes,
         rfqId: sourceRfqItems.rfqId,
         rfqStatus: sourceRfqs.status,
-        currentSelectedQuoteId: sourceRfqItems.selectedQuoteId,
       })
       .from(sourceRfqQuotes)
       .innerJoin(sourceRfqItems, eq(sourceRfqQuotes.itemId, sourceRfqItems.id))
       .innerJoin(sourceRfqs, eq(sourceRfqItems.rfqId, sourceRfqs.id))
       .where(eq(sourceRfqQuotes.id, quoteId));
 
-    if (!quote) {
+    if (!quoteResult) {
       throw new TRPCError({
         code: 'NOT_FOUND',
         message: 'Quote not found',
       });
     }
 
-    if (quote.quote.itemId !== itemId) {
+    if (quoteResult.quote.itemId !== itemId) {
       throw new TRPCError({
         code: 'BAD_REQUEST',
         message: 'Quote does not belong to this item',
@@ -52,74 +51,70 @@ const adminSelectQuote = adminProcedure
 
     // Check RFQ is in a state where selection is allowed
     const selectableStatuses = ['sent', 'collecting', 'comparing', 'selecting'];
-    if (!selectableStatuses.includes(quote.rfqStatus)) {
+    if (!selectableStatuses.includes(quoteResult.rfqStatus)) {
       throw new TRPCError({
         code: 'BAD_REQUEST',
         message: 'RFQ is not in a state where quotes can be selected',
       });
     }
 
-    // Toggle behavior: if clicking the same quote that's already selected, unselect it
-    const isCurrentlySelected = quote.currentSelectedQuoteId === quoteId;
+    // Toggle behavior: if already selected, unselect; otherwise select
+    const isCurrentlySelected = quoteResult.quote.isSelected;
 
     if (isCurrentlySelected) {
-      // Unselect the quote
+      // Unselect this quote
       await db
         .update(sourceRfqQuotes)
         .set({ isSelected: false })
         .where(eq(sourceRfqQuotes.id, quoteId));
+    } else {
+      // Prevent selecting N/A quotes (they have no price)
+      if (quoteResult.quote.quoteType === 'not_available' || quoteResult.quote.costPricePerCaseUsd === null) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Cannot select a quote that is marked as not available',
+        });
+      }
 
-      // Clear the item selection
-      const [updatedItem] = await db
-        .update(sourceRfqItems)
-        .set({
-          selectedQuoteId: null,
-          selectedAt: null,
-          selectedBy: null,
-          status: 'quoted',
-          calculatedPriceUsd: null,
-          finalPriceUsd: null,
-          priceAdjustedBy: null,
-        })
-        .where(eq(sourceRfqItems.id, itemId))
-        .returning();
-
-      return updatedItem;
+      // Select this quote (don't unselect others - allow multi-selection)
+      await db
+        .update(sourceRfqQuotes)
+        .set({ isSelected: true })
+        .where(eq(sourceRfqQuotes.id, quoteId));
     }
 
-    // Prevent selecting N/A quotes (they have no price)
-    if (quote.quote.quoteType === 'not_available' || quote.quote.costPricePerCaseUsd === null) {
-      throw new TRPCError({
-        code: 'BAD_REQUEST',
-        message: 'Cannot select a quote that is marked as not available',
-      });
-    }
+    // Get all selected quotes for this item to calculate totals
+    const selectedQuotes = await db
+      .select()
+      .from(sourceRfqQuotes)
+      .where(
+        and(
+          eq(sourceRfqQuotes.itemId, itemId),
+          eq(sourceRfqQuotes.isSelected, true)
+        )
+      );
 
-    // Unselect any previously selected quote for this item
-    await db
-      .update(sourceRfqQuotes)
-      .set({ isSelected: false })
-      .where(eq(sourceRfqQuotes.itemId, itemId));
+    // Calculate total price from all selected quotes
+    const totalPrice = selectedQuotes.reduce(
+      (sum, q) => sum + (q.costPricePerCaseUsd ?? 0),
+      0
+    );
 
-    // Select the new quote
-    await db
-      .update(sourceRfqQuotes)
-      .set({ isSelected: true })
-      .where(eq(sourceRfqQuotes.id, quoteId));
-
-    // Update the item with selection info
+    // Update item status based on selections
     const now = new Date();
+    const hasSelections = selectedQuotes.length > 0;
+    const primaryQuoteId = selectedQuotes[0]?.id ?? null;
+
     const [updatedItem] = await db
       .update(sourceRfqItems)
       .set({
-        selectedQuoteId: quoteId,
-        selectedAt: now,
-        selectedBy: user.id,
-        status: 'selected',
-        // Store calculated price from quote, use override if provided
-        calculatedPriceUsd: quote.quote.costPricePerCaseUsd,
-        finalPriceUsd: finalPriceUsd ?? quote.quote.costPricePerCaseUsd,
-        priceAdjustedBy: finalPriceUsd ? user.id : null,
+        selectedQuoteId: primaryQuoteId, // Keep first selection as primary for backwards compat
+        selectedAt: hasSelections ? now : null,
+        selectedBy: hasSelections ? user.id : null,
+        status: hasSelections ? 'selected' : 'quoted',
+        calculatedPriceUsd: hasSelections ? totalPrice : null,
+        finalPriceUsd: hasSelections ? totalPrice : null,
+        priceAdjustedBy: null,
       })
       .where(eq(sourceRfqItems.id, itemId))
       .returning();
@@ -128,9 +123,12 @@ const adminSelectQuote = adminProcedure
     await db
       .update(sourceRfqs)
       .set({ status: 'selecting' })
-      .where(eq(sourceRfqs.id, quote.rfqId));
+      .where(eq(sourceRfqs.id, quoteResult.rfqId));
 
-    return updatedItem;
+    return {
+      ...updatedItem,
+      selectedCount: selectedQuotes.length,
+    };
   });
 
 export default adminSelectQuote;
