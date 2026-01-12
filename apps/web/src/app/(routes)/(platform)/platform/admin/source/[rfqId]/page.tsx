@@ -721,7 +721,7 @@ const RfqDetailPage = () => {
                   {/* Sticky Header */}
                   <thead className="bg-fill-muted sticky top-0 z-10">
                     <tr>
-                      <th className="px-2 py-2 text-left text-[10px] font-semibold text-text-muted uppercase tracking-wide w-[200px] max-w-[200px]">
+                      <th className="px-2 py-2 text-left text-[10px] font-semibold text-text-muted uppercase tracking-wide w-[300px] min-w-[200px]">
                         Product
                       </th>
                       <th className="px-2 py-2 text-center text-[10px] font-semibold text-text-muted uppercase tracking-wide w-14">
@@ -767,7 +767,7 @@ const RfqDetailPage = () => {
                           }`}
                         >
                           {/* Product Cell - Name, Producer, Vintage, Region - Clickable to Edit */}
-                          <td className="px-2 py-2 w-[200px] max-w-[200px]">
+                          <td className="px-2 py-2 w-[300px] min-w-[200px]">
                             <button
                               type="button"
                               onClick={() => handleOpenItemEditor(item)}
@@ -1009,7 +1009,7 @@ const RfqDetailPage = () => {
                                         key={quote.id}
                                         onClick={() => handleSelectQuote(item.id, quote.id)}
                                         disabled={!canSelectQuotes || isSelectingQuote}
-                                        className={`w-full px-1.5 py-1 rounded text-center transition-all ${
+                                        className={`px-2 py-1 rounded text-center transition-all ${
                                           isSelected
                                             ? 'bg-fill-brand text-text-on-brand ring-2 ring-border-brand'
                                             : isBestPrice
