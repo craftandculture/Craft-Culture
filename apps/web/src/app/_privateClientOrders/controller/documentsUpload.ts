@@ -146,7 +146,7 @@ const documentsUpload = protectedProcedure.input(uploadDocumentSchema).mutation(
 
     throw new TRPCError({
       code: 'INTERNAL_SERVER_ERROR',
-      message: `Failed to upload document: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      message: 'Failed to upload document. Please try again.',
     });
   }
 });

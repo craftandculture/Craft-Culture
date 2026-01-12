@@ -8,7 +8,8 @@ import { protectedProcedure } from '@/lib/trpc/procedures';
 /**
  * Get public display info for a partner
  *
- * Used by clients to display partner branding on quotes
+ * Used by clients to display partner branding on quotes.
+ * Only returns non-sensitive information suitable for public display.
  */
 const partnersGetPublicInfo = protectedProcedure
   .input(z.object({ partnerId: z.string().uuid() }))
@@ -19,10 +20,6 @@ const partnersGetPublicInfo = protectedProcedure
       .select({
         id: partners.id,
         businessName: partners.businessName,
-        businessAddress: partners.businessAddress,
-        businessEmail: partners.businessEmail,
-        businessPhone: partners.businessPhone,
-        taxId: partners.taxId,
         logoUrl: partners.logoUrl,
       })
       .from(partners)

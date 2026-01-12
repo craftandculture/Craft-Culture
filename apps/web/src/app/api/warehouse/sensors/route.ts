@@ -1,3 +1,5 @@
+import crypto from 'crypto';
+
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
@@ -44,7 +46,15 @@ export const POST = async (request: NextRequest) => {
     }
 
     const token = authHeader.substring(7);
-    if (token !== apiKey) {
+
+    // Use constant-time comparison to prevent timing attacks
+    const tokenBuffer = Buffer.from(token);
+    const apiKeyBuffer = Buffer.from(apiKey);
+    const isValidKey =
+      tokenBuffer.length === apiKeyBuffer.length &&
+      crypto.timingSafeEqual(tokenBuffer, apiKeyBuffer);
+
+    if (!isValidKey) {
       return NextResponse.json({ error: 'Invalid API key' }, { status: 401 });
     }
 
