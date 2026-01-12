@@ -463,7 +463,7 @@
 <body>
   <div class="container">
     <h1>C&C Logistics Module</h1>
-    <p><strong>Compliance-First Implementation Plan</strong> | January 2026 | v2.1</p>
+    <p><strong>Compliance-First Implementation Plan</strong> | January 2026 | v2.2</p>
 
     <div class="toc">
       <h3>Contents</h3>
@@ -473,7 +473,7 @@
         <li><a href="#achieve">How We Achieve Each Priority</a></li>
         <li><a href="#notifications">Notification System</a></li>
         <li><a href="#currency">Multi-Currency Support</a></li>
-        <li><a href="#carrier-rates">Carrier Rate Dashboard (NEW)</a></li>
+        <li><a href="#carrier-rates">Carrier Rate Dashboard</a></li>
         <li><a href="#cost-analysis">Cost Analysis & Arbitrage</a></li>
         <li><a href="#customs-deposits">Customs Deposits (FZ to FZ)</a></li>
         <li><a href="#users">Users & Access</a></li>
@@ -481,6 +481,7 @@
         <li><a href="#database">Database Schema</a></li>
         <li><a href="#workflows">Process Workflows</a></li>
         <li><a href="#wireframes">Wireframes (19 screens)</a></li>
+        <li><a href="#import-docs">Import Document Types (NEW)</a></li>
         <li><a href="#integrations">Integrations</a></li>
         <li><a href="#phases">Implementation Phases</a></li>
       </ol>
@@ -1947,6 +1948,377 @@ ANNUAL Tracking:
 |  +---------------------------------------------------------------+|
 +-------------------------------------------------------------------+</div>
 
+    <!-- IMPORT DOCUMENT TYPES -->
+    <h2 id="import-docs">Import Document Types (AI Extraction)</h2>
+
+    <div class="highlight">
+      <h3>Know What to Extract From Every Document</h3>
+      <p style="color:white;margin:0">Based on real import shipments into RAK FTZ. AI extracts these fields automatically from uploaded documents.</p>
+    </div>
+
+    <p>A typical air freight import generates <strong>8-12 documents</strong>. Here's what each contains and what the AI should extract.</p>
+
+    <h3>1. Air Waybill (AWB)</h3>
+    <div class="card">
+      <p><strong>Source:</strong> Emirates SkyCargo, Cargolux, Qatar Airways Cargo</p>
+      <p><strong>Format:</strong> PDF (standard IATA format)</p>
+      <table class="schema-table">
+        <thead><tr><th>Field</th><th>Example</th><th>Use</th></tr></thead>
+        <tbody>
+          <tr><td>AWB Number</td><td>176-18479274</td><td>Primary tracking reference</td></tr>
+          <tr><td>Origin Airport</td><td>MCO (Orlando)</td><td>Route tracking</td></tr>
+          <tr><td>Destination Airport</td><td>RKT (Ras Al Khaimah)</td><td>Route tracking</td></tr>
+          <tr><td>Transit Point</td><td>DXB (Dubai)</td><td>Multi-leg routing</td></tr>
+          <tr><td>Shipper Name</td><td>THE POINT DISTILLERY LLC</td><td>Partner identification</td></tr>
+          <tr><td>Consignee</td><td>CRAFT AND CULTURE FZE</td><td>Verification</td></tr>
+          <tr><td>Pieces</td><td>20</td><td>Quantity verification</td></tr>
+          <tr><td>Gross Weight</td><td>223.0 KGS</td><td>Freight calculation</td></tr>
+          <tr><td>Chargeable Weight</td><td>223.0 KGS</td><td>Cost allocation</td></tr>
+          <tr><td>Commodity</td><td>SPIRITS - RUM</td><td>HS code validation</td></tr>
+          <tr><td>Nature of Goods</td><td>120X750ML RUM 40% ALC VOL</td><td>Product details</td></tr>
+          <tr><td>Flight Number</td><td>EK803/29OCT</td><td>Tracking</td></tr>
+          <tr><td>Declared Value</td><td>NVD (No Value Declared)</td><td>Insurance</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>2. Commercial Invoice</h3>
+    <div class="card">
+      <p><strong>Source:</strong> Wine producer/supplier</p>
+      <p><strong>Format:</strong> PDF</p>
+      <table class="schema-table">
+        <thead><tr><th>Field</th><th>Example</th><th>Use</th></tr></thead>
+        <tbody>
+          <tr><td>Invoice Number</td><td>TPDRUMINV001</td><td>Reference, deduplication</td></tr>
+          <tr><td>Invoice Date</td><td>22 October 2025</td><td>Timeline tracking</td></tr>
+          <tr><td>Seller</td><td>The Point Distillery LLC</td><td>Partner record</td></tr>
+          <tr><td>Seller Address</td><td>Casselberry, FL 32707, USA</td><td>Origin verification</td></tr>
+          <tr><td>Buyer</td><td>Craft & Culture FZE</td><td>Verification</td></tr>
+          <tr><td>Product Description</td><td>Crossfire Hurricane Rum</td><td>Product matching</td></tr>
+          <tr><td>Quantity</td><td>20 cases</td><td>Verification</td></tr>
+          <tr><td>Unit Price</td><td>$96.00 per case</td><td>Ex-cellar cost</td></tr>
+          <tr><td>Total Value</td><td>$1,920.00 USD</td><td>Customs value</td></tr>
+          <tr><td>Incoterms</td><td>EXW</td><td>Cost allocation</td></tr>
+          <tr><td>Country of Origin</td><td>USA</td><td>COO verification</td></tr>
+          <tr><td>HS Code</td><td>2208.40 (Rum)</td><td>Tariff classification</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>3. UAE Customs Declaration (Import)</h3>
+    <div class="card">
+      <p><strong>Source:</strong> UAE Customs / RAK Customs</p>
+      <p><strong>Format:</strong> PDF (official government form)</p>
+      <p><strong>Types:</strong> Import Declaration, Re-Export Declaration, Transit Declaration</p>
+      <table class="schema-table">
+        <thead><tr><th>Field</th><th>Example</th><th>Use</th></tr></thead>
+        <tbody>
+          <tr><td>DEC NO</td><td>20250503001283</td><td>Official reference</td></tr>
+          <tr><td>DEC TYPE</td><td>Re-Export / Import</td><td>Declaration type</td></tr>
+          <tr><td>DEC DATE</td><td>29-10-2025</td><td>Clearance date</td></tr>
+          <tr><td>Port Type</td><td>Sea/RAK Seaport Custom</td><td>Entry point</td></tr>
+          <tr><td>Importer Code</td><td>30898</td><td>Company ID</td></tr>
+          <tr><td>Importer Name</td><td>CRAFT AND CULTURE FZE</td><td>Verification</td></tr>
+          <tr><td>Intercessor</td><td>A98 GULF AGENCY COMPANY</td><td>Clearing agent</td></tr>
+          <tr><td>AWB/BOL Number</td><td>176-18479274</td><td>Link to transport doc</td></tr>
+          <tr><td>Net Weight</td><td>223 Kgs</td><td>Weight verification</td></tr>
+          <tr><td>Packages</td><td>20 CSE</td><td>Quantity verification</td></tr>
+          <tr><td>Origin Country</td><td>USA</td><td>COO verification</td></tr>
+          <tr><td>HS Code</td><td>220890900000</td><td>Tariff (full 12-digit)</td></tr>
+          <tr><td>Goods Description</td><td>OTHER - SPIRIT</td><td>Product type</td></tr>
+          <tr><td>CIF Local Value</td><td>7,052 DHS</td><td>AED customs value</td></tr>
+          <tr><td>CIF Foreign Value</td><td>$7,052 USD</td><td>USD customs value</td></tr>
+          <tr><td>Duty Amount</td><td>0 (FZ exempt)</td><td>Duty paid</td></tr>
+          <tr><td>Other Charges</td><td>195 DHS</td><td>Government fees</td></tr>
+          <tr><td>Delivery Order No</td><td>1822738</td><td>Warehouse link</td></tr>
+          <tr><td>Customs Status</td><td>GREEN (Released)</td><td>Clearance status</td></tr>
+          <tr><td>Clearing Agent Code</td><td>CE3707</td><td>Agent reference</td></tr>
+        </tbody>
+      </table>
+      <div class="warning-box">
+        <strong>Important:</strong> HS codes expand from 6-digit (2208.40) to 12-digit (220840000000) for UAE customs. Store both.
+      </div>
+    </div>
+
+    <h3>4. Clearing Agent Invoice (GAC)</h3>
+    <div class="card">
+      <p><strong>Source:</strong> Gulf Agency Company (GAC), other clearing agents</p>
+      <p><strong>Format:</strong> PDF tax invoice</p>
+      <table class="schema-table">
+        <thead><tr><th>Field</th><th>Example</th><th>Use</th></tr></thead>
+        <tbody>
+          <tr><td>Invoice Number</td><td>CCF/20255006/1043</td><td>Payment reference</td></tr>
+          <tr><td>Invoice Date</td><td>31-Oct-2025</td><td>Payment timeline</td></tr>
+          <tr><td>TRN (Tax Reg No)</td><td>100058366400003</td><td>VAT verification</td></tr>
+          <tr><td>Customer Name</td><td>CRAFT AND CULTURE FZE</td><td>Verification</td></tr>
+          <tr><td>AWB Reference</td><td>176-18479274</td><td>Shipment linking</td></tr>
+          <tr><td>BOE Number</td><td>202511042500048</td><td>Bill of Entry ref</td></tr>
+          <tr><td>Service Type</td><td>Bill of Entry charges</td><td>Cost categorization</td></tr>
+          <tr><td>Base Amount</td><td>350.00 AED</td><td>Pre-tax amount</td></tr>
+          <tr><td>VAT (5%)</td><td>17.50 AED</td><td>Tax amount</td></tr>
+          <tr><td>Total Amount</td><td>367.50 AED</td><td>Payment amount</td></tr>
+        </tbody>
+      </table>
+      <h4>Common GAC Charge Types:</h4>
+      <ul>
+        <li><strong>Bill of Entry:</strong> Import declaration processing (AED 350-500)</li>
+        <li><strong>Export Bill:</strong> Re-export declaration (AED 100-200)</li>
+        <li><strong>Pre-Clearance:</strong> Customs pre-clearance fees (AED 150-250)</li>
+        <li><strong>Amendment:</strong> Declaration corrections (AED 50-100)</li>
+        <li><strong>Delivery Order:</strong> Warehouse release (AED 100-150)</li>
+      </ul>
+    </div>
+
+    <h3>5. RAK Airport Handling Charges</h3>
+    <div class="card">
+      <p><strong>Source:</strong> RAK Airport / Warehouse operator</p>
+      <p><strong>Format:</strong> PDF invoice</p>
+      <table class="schema-table">
+        <thead><tr><th>Field</th><th>Example</th><th>Use</th></tr></thead>
+        <tbody>
+          <tr><td>Invoice Number</td><td>RAKTIA/2025-10/01234</td><td>Payment reference</td></tr>
+          <tr><td>AWB Number</td><td>176-18479274</td><td>Shipment linking</td></tr>
+          <tr><td>Cargo Weight</td><td>223 KGS</td><td>Verification</td></tr>
+          <tr><td>Storage Days</td><td>2 days</td><td>Duration</td></tr>
+          <tr><td>Handling Fee</td><td>AED 200.00</td><td>Base handling</td></tr>
+          <tr><td>Storage Fee</td><td>AED 50.00</td><td>Per day charge</td></tr>
+          <tr><td>X-Ray Fee</td><td>AED 75.00</td><td>Security scan</td></tr>
+          <tr><td>Total Amount</td><td>AED 325.00</td><td>Payment amount</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>6. Pre-Clearance Debit Note (Customs)</h3>
+    <div class="card">
+      <p><strong>Source:</strong> RAK Customs / Ras Al Khaimah Port Customs</p>
+      <p><strong>Format:</strong> PDF (official government debit note)</p>
+      <table class="schema-table">
+        <thead><tr><th>Field</th><th>Example</th><th>Use</th></tr></thead>
+        <tbody>
+          <tr><td>Note Number</td><td>4130044599</td><td>Payment reference</td></tr>
+          <tr><td>Date</td><td>29-10-2025</td><td>Transaction date</td></tr>
+          <tr><td>Importer</td><td>GULF AGENCY COMPANY RAK LLC</td><td>Payer (agent)</td></tr>
+          <tr><td>Operation Type</td><td>Pre-Clearance Operation</td><td>Service type</td></tr>
+          <tr><td>Declaration No</td><td>1283</td><td>Link to customs dec</td></tr>
+          <tr><td>Declaration Type</td><td>Re-Export</td><td>Import/Export/Transit</td></tr>
+          <tr><td>Amount</td><td>195 DHS</td><td>Government fee</td></tr>
+          <tr><td>Due Date</td><td>22-01-2026</td><td>Payment deadline</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>7. Packing List</h3>
+    <div class="card">
+      <p><strong>Source:</strong> Wine producer/supplier</p>
+      <p><strong>Format:</strong> PDF or Excel</p>
+      <table class="schema-table">
+        <thead><tr><th>Field</th><th>Example</th><th>Use</th></tr></thead>
+        <tbody>
+          <tr><td>Packing List No</td><td>PL-TPDRUM-001</td><td>Reference</td></tr>
+          <tr><td>Date</td><td>22-Oct-2025</td><td>Timeline</td></tr>
+          <tr><td>Total Cases</td><td>20</td><td>Quantity</td></tr>
+          <tr><td>Bottles per Case</td><td>6</td><td>Unit calculation</td></tr>
+          <tr><td>Total Bottles</td><td>120</td><td>Total units</td></tr>
+          <tr><td>Bottle Size</td><td>750ml</td><td>Product spec</td></tr>
+          <tr><td>Case Dimensions</td><td>33x22x32 cm</td><td>Volume calc</td></tr>
+          <tr><td>Gross Weight/Case</td><td>11.15 kg</td><td>Weight calc</td></tr>
+          <tr><td>Net Weight/Case</td><td>9.8 kg</td><td>Product weight</td></tr>
+          <tr><td>Total Gross Weight</td><td>223 kg</td><td>Freight</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Landed Cost Calculation Example</h3>
+    <div class="calculation-box">
+REAL EXAMPLE: Cross Fire Rum (Air Freight USA → RAK)
+═══════════════════════════════════════════════════════
+PRODUCT COST
+  20 cases × $96/case                         $1,920.00 USD
+
+FREIGHT & INSURANCE
+  Air freight (Orlando → RAK via DXB)         $1,800.00 USD (est)
+  Insurance                                      $50.00 USD
+
+ORIGIN CHARGES
+  US export handling                            $150.00 USD
+
+DESTINATION CHARGES (AED → USD @ 3.67)
+  Clearing agent - Bill of Entry    545 AED    $148.50 USD
+  Clearing agent - Export Bill      178 AED     $48.50 USD
+  Customs pre-clearance fees        195 AED     $53.15 USD
+  Airport handling                  325 AED     $88.55 USD
+  Delivery to warehouse             100 AED     $27.25 USD
+───────────────────────────────────────────────────────
+<span class="total">TOTAL LANDED COST                           $4,285.95 USD</span>
+
+÷ 120 bottles
+───────────────────────────────────────────────────────
+<span class="total">= LANDED COST PER BOTTLE                      $35.72 USD</span>
+
+Notes:
+• Ex-cellar cost: $16.00/bottle ($96/case ÷ 6 bottles)
+• Total logistics adds: $19.72/bottle (123% of product cost!)
+• Air freight is expensive but fast (4-5 days vs 4-6 weeks sea)
+    </div>
+
+    <h3>Document Checklist by Shipment Type</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Document</th>
+          <th>Air Import</th>
+          <th>Sea Import</th>
+          <th>Re-Export</th>
+          <th>FZ Transfer</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Air Waybill (AWB)</td>
+          <td>✅ Required</td>
+          <td>—</td>
+          <td>✅ If air</td>
+          <td>—</td>
+        </tr>
+        <tr>
+          <td>Bill of Lading (BOL)</td>
+          <td>—</td>
+          <td>✅ Required</td>
+          <td>✅ If sea</td>
+          <td>—</td>
+        </tr>
+        <tr>
+          <td>Commercial Invoice</td>
+          <td>✅ Required</td>
+          <td>✅ Required</td>
+          <td>✅ Required</td>
+          <td>✅ Required</td>
+        </tr>
+        <tr>
+          <td>Packing List</td>
+          <td>✅ Required</td>
+          <td>✅ Required</td>
+          <td>✅ Required</td>
+          <td>✅ Required</td>
+        </tr>
+        <tr>
+          <td>Certificate of Origin</td>
+          <td>✅ Required</td>
+          <td>✅ Required</td>
+          <td>✅ Required</td>
+          <td>—</td>
+        </tr>
+        <tr>
+          <td>Import Declaration</td>
+          <td>✅ Required</td>
+          <td>✅ Required</td>
+          <td>—</td>
+          <td>—</td>
+        </tr>
+        <tr>
+          <td>Re-Export Declaration</td>
+          <td>—</td>
+          <td>—</td>
+          <td>✅ Required</td>
+          <td>—</td>
+        </tr>
+        <tr>
+          <td>Transit Declaration</td>
+          <td>—</td>
+          <td>—</td>
+          <td>—</td>
+          <td>✅ Required</td>
+        </tr>
+        <tr>
+          <td>Clearing Agent Invoice</td>
+          <td>✅ Required</td>
+          <td>✅ Required</td>
+          <td>✅ Required</td>
+          <td>✅ Required</td>
+        </tr>
+        <tr>
+          <td>Handling Charges</td>
+          <td>✅ Required</td>
+          <td>✅ Required</td>
+          <td>✅ If applicable</td>
+          <td>—</td>
+        </tr>
+        <tr>
+          <td>Delivery Order</td>
+          <td>✅ Required</td>
+          <td>✅ Required</td>
+          <td>✅ Required</td>
+          <td>—</td>
+        </tr>
+        <tr>
+          <td>Deposit Receipt</td>
+          <td>—</td>
+          <td>—</td>
+          <td>—</td>
+          <td>✅ Required</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>HS Code Reference (Alcohol)</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Product</th>
+          <th>6-Digit Code</th>
+          <th>UAE 12-Digit</th>
+          <th>Duty Rate (Non-FZ)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Still Wine (≤2L)</td>
+          <td>2204.21</td>
+          <td>220421500000</td>
+          <td>50%</td>
+        </tr>
+        <tr>
+          <td>Sparkling Wine</td>
+          <td>2204.10</td>
+          <td>220410000000</td>
+          <td>50%</td>
+        </tr>
+        <tr>
+          <td>Whisky</td>
+          <td>2208.30</td>
+          <td>220830000000</td>
+          <td>50%</td>
+        </tr>
+        <tr>
+          <td>Rum</td>
+          <td>2208.40</td>
+          <td>220840000000</td>
+          <td>50%</td>
+        </tr>
+        <tr>
+          <td>Gin</td>
+          <td>2208.50</td>
+          <td>220850000000</td>
+          <td>50%</td>
+        </tr>
+        <tr>
+          <td>Vodka</td>
+          <td>2208.60</td>
+          <td>220860000000</td>
+          <td>50%</td>
+        </tr>
+        <tr>
+          <td>Other Spirits</td>
+          <td>2208.90</td>
+          <td>220890900000</td>
+          <td>50%</td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="solution-box">
+      <strong>Free Zone Benefit:</strong> Goods in RAK FTZ, JAFZA, and other UAE Free Zones are duty-exempt. Duty only applies when goods enter UAE mainland for local consumption.
+    </div>
+
     <!-- INTEGRATIONS -->
     <h2 id="integrations">Integrations</h2>
 
@@ -2102,7 +2474,7 @@ ANNUAL Tracking:
     </div>
 
     <div class="footer">
-      <p>C&C Logistics Module - Compliance-First Implementation Plan | v2.1 | January 2026</p>
+      <p>C&C Logistics Module - Compliance-First Implementation Plan | v2.2 | January 2026</p>
       <p>Craft & Culture | RAK Port, UAE</p>
     </div>
   </div>
