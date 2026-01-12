@@ -11,6 +11,7 @@ import adminFinalizeRfq from './controller/adminFinalizeRfq';
 import adminGenerateFinalQuote from './controller/adminGenerateFinalQuote';
 import adminGetManyRfqs from './controller/adminGetManyRfqs';
 import adminGetOneRfq from './controller/adminGetOneRfq';
+import adminImportLwinWines from './controller/adminImportLwinWines';
 import adminMarkClientApproved from './controller/adminMarkClientApproved';
 import adminParseInput from './controller/adminParseInput';
 import adminParseQuoteExcel from './controller/adminParseQuoteExcel';
@@ -47,6 +48,7 @@ const adminRouter = createTRPCRouter({
   generateFinalQuote: adminGenerateFinalQuote,
   parseInput: adminParseInput,
   searchLwin: adminSearchLwin,
+  importLwinWines: adminImportLwinWines,
   finalize: adminFinalizeRfq,
   // Excel quote upload endpoints
   parseQuoteExcel: adminParseQuoteExcel,

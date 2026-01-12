@@ -1964,14 +1964,35 @@ export const lwinWines = pgTable(
     ...timestamps,
   },
   (table) => [
-    // Full-text search index for matching
-    index('lwin_wines_display_name_idx').on(table.displayName),
-    index('lwin_wines_producer_name_idx').on(table.producerName),
-    index('lwin_wines_wine_idx').on(table.wine),
+    // Regular indexes
     index('lwin_wines_country_idx').on(table.country),
     index('lwin_wines_region_idx').on(table.region),
     index('lwin_wines_colour_idx').on(table.colour),
     index('lwin_wines_status_idx').on(table.status),
+    // Trigram indexes for fuzzy matching
+    index('lwin_wines_display_name_trigram_idx').using(
+      'gin',
+      sql`${table.displayName} gin_trgm_ops`,
+    ),
+    index('lwin_wines_producer_name_trigram_idx').using(
+      'gin',
+      sql`${table.producerName} gin_trgm_ops`,
+    ),
+    index('lwin_wines_wine_trigram_idx').using(
+      'gin',
+      sql`${table.wine} gin_trgm_ops`,
+    ),
+    // Full-text search index for keyword matching
+    index('lwin_wines_fts_idx').using(
+      'gin',
+      sql`(
+        setweight(to_tsvector('english', coalesce(${table.displayName}, '')), 'A') ||
+        setweight(to_tsvector('english', coalesce(${table.producerName}, '')), 'A') ||
+        setweight(to_tsvector('english', coalesce(${table.wine}, '')), 'A') ||
+        setweight(to_tsvector('english', coalesce(${table.region}, '')), 'B') ||
+        setweight(to_tsvector('english', coalesce(${table.country}, '')), 'C')
+      )`,
+    ),
   ],
 ).enableRLS();
 
