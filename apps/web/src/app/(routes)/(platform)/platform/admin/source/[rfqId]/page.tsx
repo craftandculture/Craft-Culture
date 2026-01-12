@@ -721,10 +721,10 @@ const RfqDetailPage = () => {
                   {/* Sticky Header */}
                   <thead className="bg-fill-muted sticky top-0 z-10">
                     <tr>
-                      <th className="px-2 py-2 text-left text-[10px] font-semibold text-text-muted uppercase tracking-wide min-w-[280px]">
+                      <th className="px-2 py-2 text-left text-[10px] font-semibold text-text-muted uppercase tracking-wide w-[200px] max-w-[200px]">
                         Product
                       </th>
-                      <th className="px-2 py-2 text-center text-[10px] font-semibold text-text-muted uppercase tracking-wide w-16">
+                      <th className="px-2 py-2 text-center text-[10px] font-semibold text-text-muted uppercase tracking-wide w-14">
                         Format
                       </th>
                       <th className="px-2 py-2 text-center text-[10px] font-semibold text-text-muted uppercase tracking-wide w-12">
@@ -733,7 +733,7 @@ const RfqDetailPage = () => {
                       {uniquePartners.map((p) => (
                         <th
                           key={p.partnerId}
-                          className="px-2 py-2 text-center text-[10px] font-semibold text-text-muted uppercase tracking-wide min-w-[120px]"
+                          className="px-2 py-2 text-center text-[10px] font-semibold text-text-muted uppercase tracking-wide"
                         >
                           <span className="truncate block" title={p.partner.businessName}>
                             {p.partner.businessName.length > 14
@@ -742,7 +742,7 @@ const RfqDetailPage = () => {
                           </span>
                         </th>
                       ))}
-                      <th className="px-2 py-2 text-center text-[10px] font-semibold text-text-muted uppercase tracking-wide w-24">
+                      <th className="px-2 py-2 text-center text-[10px] font-semibold text-text-muted uppercase tracking-wide w-20">
                         Final
                       </th>
                     </tr>
@@ -767,11 +767,11 @@ const RfqDetailPage = () => {
                           }`}
                         >
                           {/* Product Cell - Name, Producer, Vintage, Region - Clickable to Edit */}
-                          <td className="px-2 py-2">
+                          <td className="px-2 py-2 w-[200px] max-w-[200px]">
                             <button
                               type="button"
                               onClick={() => handleOpenItemEditor(item)}
-                              className={`w-full text-left min-w-0 group ${
+                              className={`w-full text-left min-w-0 group overflow-hidden ${
                                 canSendToPartners ? 'cursor-pointer hover:bg-fill-brand/5 rounded px-1 -mx-1' : ''
                               }`}
                               disabled={!canSendToPartners && !canSelectQuotes}
@@ -964,10 +964,10 @@ const RfqDetailPage = () => {
                               );
                             }
 
-                            // Render multiple vintage options stacked vertically
+                            // Render quotes horizontally for quick comparison
                             return (
                               <td key={p.partnerId} className="px-1 py-1">
-                                <div className={`flex flex-col gap-1 ${validQuotes.length > 1 ? 'max-h-24 overflow-y-auto' : ''}`}>
+                                <div className="flex flex-row flex-wrap gap-1 justify-center">
                                   {validQuotes.map((quoteItem) => {
                                     const quote = quoteItem.quote;
                                     const isSelected = quote.isSelected;
