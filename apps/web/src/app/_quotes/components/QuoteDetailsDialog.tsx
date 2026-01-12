@@ -669,9 +669,6 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
         pdfFulfilledOocItems.length > 0 ? pdfFulfilledOocItems : undefined,
         partnerInfo ? {
           businessName: partnerInfo.businessName,
-          businessAddress: partnerInfo.businessAddress,
-          businessPhone: partnerInfo.businessPhone,
-          businessEmail: partnerInfo.businessEmail,
           logoUrl: partnerInfo.logoUrl,
         } : undefined,
         {

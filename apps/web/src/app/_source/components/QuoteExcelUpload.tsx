@@ -13,7 +13,6 @@ import {
 } from '@tabler/icons-react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useCallback, useState } from 'react';
-import * as XLSX from 'xlsx';
 
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
@@ -106,6 +105,16 @@ const QuoteExcelUpload = ({
 
   const isParsing = isParsingPartner || isParsingAdmin;
 
+  // Convert ArrayBuffer to base64
+  const arrayBufferToBase64 = (buffer: ArrayBuffer): string => {
+    let binary = '';
+    const bytes = new Uint8Array(buffer);
+    for (let i = 0; i < bytes.byteLength; i++) {
+      binary += String.fromCharCode(bytes[i]!);
+    }
+    return btoa(binary);
+  };
+
   // Process uploaded file
   const processFile = useCallback(
     async (file: File) => {
@@ -117,32 +126,28 @@ const QuoteExcelUpload = ({
         // Read file as ArrayBuffer
         const arrayBuffer = await file.arrayBuffer();
 
-        // Parse Excel to CSV using xlsx
-        const workbook = XLSX.read(arrayBuffer, { type: 'array' });
-        const firstSheetName = workbook.SheetNames[0];
-        if (!firstSheetName) {
-          throw new Error('Excel file has no sheets');
+        // Validate file size (max 10MB)
+        if (arrayBuffer.byteLength > 10 * 1024 * 1024) {
+          throw new Error('File size must be less than 10MB');
         }
 
-        const worksheet = workbook.Sheets[firstSheetName];
-        if (!worksheet) {
-          throw new Error('Could not read worksheet');
-        }
+        // Convert to base64 and send to server for secure parsing
+        const base64Content = arrayBufferToBase64(arrayBuffer);
 
-        const csvContent = XLSX.utils.sheet_to_csv(worksheet);
-
-        // Call appropriate parse endpoint
+        // Call appropriate parse endpoint with base64-encoded Excel data
         if (isAdminMode && partnerId) {
           parseAdmin({
             rfqId,
             partnerId,
-            content: csvContent,
+            content: base64Content,
+            isBase64Excel: true,
             fileName: file.name,
           });
         } else {
           parsePartner({
             rfqId,
-            content: csvContent,
+            content: base64Content,
+            isBase64Excel: true,
             fileName: file.name,
           });
         }
