@@ -1,9 +1,17 @@
 import { TRPCError } from '@trpc/server';
 import { put } from '@vercel/blob';
+import { fileTypeFromBuffer } from 'file-type';
 
 import { protectedProcedure } from '@/lib/trpc/procedures';
 
 import uploadPaymentProofSchema from '../schemas/uploadPaymentProofSchema';
+
+const ALLOWED_IMAGE_TYPES = [
+  'image/jpeg',
+  'image/png',
+  'image/gif',
+  'image/webp',
+];
 
 /**
  * Upload a payment proof screenshot to Vercel Blob storage
@@ -18,11 +26,10 @@ import uploadPaymentProofSchema from '../schemas/uploadPaymentProofSchema';
 const quotesUploadPaymentProof = protectedProcedure
   .input(uploadPaymentProofSchema)
   .mutation(async ({ input, ctx: { user } }) => {
-    const { file, filename, fileType } = input;
+    const { file, filename } = input;
 
     // Check if Blob token is configured
     if (!process.env.BLOB_READ_WRITE_TOKEN) {
-      console.error('BLOB_READ_WRITE_TOKEN environment variable is not set');
       throw new TRPCError({
         code: 'INTERNAL_SERVER_ERROR',
         message: 'File storage is not configured. Please contact support.',
@@ -42,6 +49,15 @@ const quotesUploadPaymentProof = protectedProcedure
       // Convert base64 to buffer
       const buffer = Buffer.from(base64Data, 'base64');
 
+      // Validate actual file content type
+      const detectedType = await fileTypeFromBuffer(buffer);
+      if (!detectedType || !ALLOWED_IMAGE_TYPES.includes(detectedType.mime)) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Invalid file type. Allowed: JPEG, PNG, GIF, WebP',
+        });
+      }
+
       // Validate file size (max 5MB)
       const maxSizeBytes = 5 * 1024 * 1024;
       if (buffer.length > maxSizeBytes) {
@@ -56,10 +72,10 @@ const quotesUploadPaymentProof = protectedProcedure
       const sanitizedFilename = filename.replace(/[^a-zA-Z0-9.-]/g, '_');
       const blobFilename = `payment-proofs/${user.id}/${timestamp}-${sanitizedFilename}`;
 
-      // Upload to Vercel Blob
+      // Upload to Vercel Blob using detected content type
       const blob = await put(blobFilename, buffer, {
         access: 'public',
-        contentType: fileType,
+        contentType: detectedType.mime,
       });
 
       return {

@@ -2,6 +2,7 @@ import { tasks } from '@trigger.dev/sdk/v3';
 import { TRPCError } from '@trpc/server';
 import { put } from '@vercel/blob';
 import { eq } from 'drizzle-orm';
+import { fileTypeFromBuffer } from 'file-type';
 
 import db from '@/database/client';
 import { partnerMembers, privateClientOrderDocuments } from '@/database/schema';
@@ -10,6 +11,14 @@ import { extractDocumentJob } from '@/trigger/jobs/extract-document/extractDocum
 
 import uploadDocumentSchema from '../schemas/uploadDocumentSchema';
 
+const ALLOWED_DOCUMENT_TYPES = [
+  'application/pdf',
+  'image/jpeg',
+  'image/png',
+  'image/gif',
+  'image/webp',
+];
+
 /**
  * Upload a document to a private client order
  *
@@ -17,7 +26,7 @@ import uploadDocumentSchema from '../schemas/uploadDocumentSchema';
  * Supports partner invoices, C&C invoices, distributor invoices, and payment proofs.
  */
 const documentsUpload = protectedProcedure.input(uploadDocumentSchema).mutation(async ({ input, ctx }) => {
-  const { orderId, documentType, file, filename, fileType } = input;
+  const { orderId, documentType, file, filename } = input;
   const { user } = ctx;
 
   // Check if Blob token is configured
@@ -74,6 +83,15 @@ const documentsUpload = protectedProcedure.input(uploadDocumentSchema).mutation(
     // Convert base64 to buffer
     const buffer = Buffer.from(base64Data, 'base64');
 
+    // Validate actual file content type
+    const detectedType = await fileTypeFromBuffer(buffer);
+    if (!detectedType || !ALLOWED_DOCUMENT_TYPES.includes(detectedType.mime)) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'Invalid file type. Allowed: PDF, JPEG, PNG, GIF, WebP',
+      });
+    }
+
     // Validate file size (max 10MB)
     const maxSizeBytes = 10 * 1024 * 1024;
     if (buffer.length > maxSizeBytes) {
@@ -88,10 +106,10 @@ const documentsUpload = protectedProcedure.input(uploadDocumentSchema).mutation(
     const sanitizedFilename = filename.replace(/[^a-zA-Z0-9.-]/g, '_');
     const blobFilename = `private-orders/${orderId}/${documentType}/${timestamp}-${sanitizedFilename}`;
 
-    // Upload to Vercel Blob
+    // Upload to Vercel Blob using detected content type
     const blob = await put(blobFilename, buffer, {
       access: 'public',
-      contentType: fileType,
+      contentType: detectedType.mime,
     });
 
     // Create database record
@@ -103,7 +121,7 @@ const documentsUpload = protectedProcedure.input(uploadDocumentSchema).mutation(
         fileUrl: blob.url,
         fileName: filename,
         fileSize: buffer.length,
-        mimeType: fileType,
+        mimeType: detectedType.mime,
         uploadedBy: user.id,
         extractionStatus: 'pending',
       })
@@ -132,14 +150,6 @@ const documentsUpload = protectedProcedure.input(uploadDocumentSchema).mutation(
 
     return document;
   } catch (error) {
-    console.error('Error uploading document:', {
-      error,
-      userId: user.id,
-      orderId,
-      documentType,
-      errorMessage: error instanceof Error ? error.message : 'Unknown error',
-    });
-
     if (error instanceof TRPCError) {
       throw error;
     }
