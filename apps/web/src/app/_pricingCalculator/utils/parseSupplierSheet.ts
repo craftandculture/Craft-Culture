@@ -1,4 +1,5 @@
-import * as XLSX from 'xlsx';
+import type { Workbook } from 'exceljs';
+import ExcelJS from 'exceljs';
 
 interface ParsedSheetData {
   headers: string[];
@@ -7,9 +8,37 @@ interface ParsedSheetData {
 }
 
 /**
+ * Get cell value handling various exceljs cell types
+ */
+const getCellValue = (cell: ExcelJS.Cell): unknown => {
+  const value = cell.value;
+
+  if (value === null || value === undefined) {
+    return '';
+  }
+
+  // Handle formula cells
+  if (typeof value === 'object' && 'result' in value) {
+    return value.result ?? '';
+  }
+
+  // Handle rich text cells
+  if (typeof value === 'object' && 'richText' in value) {
+    return (value.richText as { text: string }[]).map((r) => r.text).join('');
+  }
+
+  // Handle date cells
+  if (value instanceof Date) {
+    return value.toISOString();
+  }
+
+  return value;
+};
+
+/**
  * Parse an Excel file into raw data with detected headers
  *
- * Uses xlsx (SheetJS) library which works in browser environments
+ * Uses exceljs library for secure server-side Excel parsing
  *
  * @example
  *   const { headers, rows } = await parseSupplierSheet(buffer);
@@ -18,22 +47,47 @@ interface ParsedSheetData {
  * @returns Parsed headers and rows
  */
 const parseSupplierSheet = async (buffer: ArrayBuffer): Promise<ParsedSheetData> => {
-  const data = new Uint8Array(buffer);
-  const workbook = XLSX.read(data, { type: 'array' });
+  const workbook: Workbook = new ExcelJS.Workbook();
 
-  const sheetName = workbook.SheetNames[0];
-  if (!sheetName) {
-    throw new Error('No worksheet found in the file');
+  // Ensure we have a proper Buffer for exceljs
+  const nodeBuffer = Buffer.isBuffer(buffer)
+    ? (buffer as Buffer)
+    : Buffer.from(buffer);
+
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await workbook.xlsx.load(nodeBuffer as any);
+  } catch {
+    // If XLSX fails, try parsing the buffer as CSV text
+    try {
+      const csvText = nodeBuffer.toString('utf-8');
+      const lines = csvText.split('\n');
+      const ws = workbook.addWorksheet('Sheet1');
+      lines.forEach((line, rowIndex) => {
+        const cells = line.split(',').map((cell) => cell.trim().replace(/^"|"$/g, ''));
+        cells.forEach((cell, colIndex) => {
+          ws.getCell(rowIndex + 1, colIndex + 1).value = cell;
+        });
+      });
+    } catch {
+      throw new Error('Unable to parse file. Please ensure it is a valid Excel or CSV file.');
+    }
   }
 
-  const worksheet = workbook.Sheets[sheetName];
+  const worksheet = workbook.worksheets[0];
   if (!worksheet) {
     throw new Error('No worksheet found in the file');
   }
 
-  // Convert to array of arrays (first row is headers)
-  // Use defval to ensure dense arrays (xlsx can return sparse arrays for empty cells)
-  const rawData = XLSX.utils.sheet_to_json<unknown[]>(worksheet, { header: 1, defval: '' });
+  // Convert worksheet to array of arrays
+  const rawData: unknown[][] = [];
+  worksheet.eachRow({ includeEmpty: true }, (row) => {
+    const rowData: unknown[] = [];
+    row.eachCell({ includeEmpty: true }, (cell) => {
+      rowData.push(getCellValue(cell));
+    });
+    rawData.push(rowData);
+  });
 
   if (rawData.length === 0) {
     throw new Error('No data found in the file');

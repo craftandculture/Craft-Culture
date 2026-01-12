@@ -12,8 +12,15 @@ const loadMarkdown = async <TSchema extends z.Schema>(
   filename: string,
   schema?: TSchema,
 ) => {
+  /** Validate path to prevent directory traversal attacks */
+  const cwd = process.cwd();
+  const resolvedPath = path.resolve(cwd, filename);
+  if (!resolvedPath.startsWith(cwd)) {
+    throw new Error('Invalid file path');
+  }
+
   /** Read the file content */
-  const content = await readFile(path.join(process.cwd(), filename), 'utf-8');
+  const content = await readFile(resolvedPath, 'utf-8');
 
   /** Parse the front matter */
   const { data: frontMatter } = matter(content);

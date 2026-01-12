@@ -11,15 +11,19 @@ import {
 } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
+import excelToCSV from '../utils/excelToCSV';
 import parseQuoteExcel from '../utils/parseQuoteExcel';
 
 const adminParseQuoteExcelSchema = z.object({
   rfqId: z.string().uuid(),
   partnerId: z.string().uuid(),
+  /** Base64-encoded Excel file data OR plain CSV string */
   content: z
     .string()
     .transform((val) => val.replace(/\x00/g, ''))
     .pipe(z.string().min(1, 'Content is required')),
+  /** Whether the content is base64-encoded Excel (true) or plain CSV (false) */
+  isBase64Excel: z.boolean().default(false),
   fileName: z.string().optional(),
 });
 
@@ -40,7 +44,7 @@ const adminParseQuoteExcelSchema = z.object({
 const adminParseQuoteExcel = adminProcedure
   .input(adminParseQuoteExcelSchema)
   .mutation(async ({ input }) => {
-    const { rfqId, partnerId, content, fileName } = input;
+    const { rfqId, partnerId, content, isBase64Excel, fileName } = input;
 
     // Verify RFQ exists
     const [rfq] = await db
@@ -112,8 +116,15 @@ const adminParseQuoteExcel = adminProcedure
     }
 
     try {
-      // Parse the Excel content
-      const result = await parseQuoteExcel(content, items);
+      // Convert Excel to CSV if needed (server-side parsing with exceljs for security)
+      let csvContent = content;
+      if (isBase64Excel) {
+        const buffer = Buffer.from(content, 'base64');
+        csvContent = await excelToCSV(buffer);
+      }
+
+      // Parse the CSV content
+      const result = await parseQuoteExcel(csvContent, items);
 
       // Calculate stats
       const exactCount = result.quotes.filter(
@@ -150,10 +161,14 @@ const adminParseQuoteExcel = adminProcedure
         rfqItemCount: items.length,
       };
     } catch (error) {
-      console.error('Admin quote Excel parsing failed:', error);
+      console.error('Admin quote Excel parsing failed:', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        rfqId,
+        partnerId,
+      });
       throw new TRPCError({
         code: 'INTERNAL_SERVER_ERROR',
-        message: `Failed to parse quote file: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        message: 'Failed to parse quote file. Please ensure the file is a valid Excel or CSV format.',
       });
     }
   });
