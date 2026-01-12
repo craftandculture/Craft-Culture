@@ -1026,10 +1026,14 @@ const RfqDetailPage = () => {
                                             {displayVintage}
                                           </span>
                                         )}
-                                        {/* Case config */}
-                                        {quote.caseConfig && (
+                                        {/* Case config + Lead time */}
+                                        {(quote.caseConfig || quote.leadTimeDays !== null) && (
                                           <span className={`text-[9px] block ${isSelected ? 'text-text-on-brand/60' : 'text-text-muted'}`}>
-                                            {quote.caseConfig}pk
+                                            {quote.caseConfig && `${quote.caseConfig}pk`}
+                                            {quote.caseConfig && quote.leadTimeDays !== null && ' · '}
+                                            {quote.leadTimeDays !== null && (
+                                              quote.leadTimeDays === 0 ? 'In Stock' : `${quote.leadTimeDays}d`
+                                            )}
                                           </span>
                                         )}
                                       </button>
