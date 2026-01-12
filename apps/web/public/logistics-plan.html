@@ -463,7 +463,7 @@
 <body>
   <div class="container">
     <h1>C&C Logistics Module</h1>
-    <p><strong>Compliance-First Implementation Plan</strong> | January 2026 | v2.0</p>
+    <p><strong>Compliance-First Implementation Plan</strong> | January 2026 | v2.1</p>
 
     <div class="toc">
       <h3>Contents</h3>
@@ -473,13 +473,14 @@
         <li><a href="#achieve">How We Achieve Each Priority</a></li>
         <li><a href="#notifications">Notification System</a></li>
         <li><a href="#currency">Multi-Currency Support</a></li>
+        <li><a href="#carrier-rates">Carrier Rate Dashboard (NEW)</a></li>
         <li><a href="#cost-analysis">Cost Analysis & Arbitrage</a></li>
         <li><a href="#customs-deposits">Customs Deposits (FZ to FZ)</a></li>
         <li><a href="#users">Users & Access</a></li>
         <li><a href="#features">Features Overview</a></li>
         <li><a href="#database">Database Schema</a></li>
         <li><a href="#workflows">Process Workflows</a></li>
-        <li><a href="#wireframes">Wireframes (16 screens)</a></li>
+        <li><a href="#wireframes">Wireframes (19 screens)</a></li>
         <li><a href="#integrations">Integrations</a></li>
         <li><a href="#phases">Implementation Phases</a></li>
       </ol>
@@ -832,6 +833,193 @@
       <li><strong>Reports:</strong> Consolidate to USD or display in selected currency</li>
     </ul>
 
+    <!-- CARRIER RATE DASHBOARD -->
+    <h2 id="carrier-rates">Carrier Rate Dashboard</h2>
+
+    <div class="highlight">
+      <h3>One Window for All Carrier Prices</h3>
+      <p style="color:white;margin:0">Compare rates across carriers instantly. Upload quotes and AI extracts the data automatically.</p>
+    </div>
+
+    <div class="problem-box">Problem: Carrier quotes arrive in different formats (PDF, Excel, email). Manual comparison is slow and error-prone. Historical rates not tracked.</div>
+
+    <h3>What This Dashboard Does</h3>
+    <div class="grid-2">
+      <div class="card">
+        <h4>Route Comparison View</h4>
+        <p>Primary view - see all carrier prices for one route at a glance</p>
+        <ul>
+          <li>Select route: Beaune → RAK</li>
+          <li>See Hillebrand, Emirates, Hapag-Lloyd rates</li>
+          <li>Compare air vs sea vs road</li>
+          <li>Sort by price, transit time, validity</li>
+          <li>Flag expired or expiring quotes</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h4>AI Quote Upload</h4>
+        <p>Drop a PDF/Excel/email and AI extracts everything</p>
+        <ul>
+          <li>Supports: PDF, Excel (.xlsx), email text</li>
+          <li>Auto-detects carrier (Hillebrand, etc.)</li>
+          <li>Extracts: route, rates, validity, terms</li>
+          <li>Compares to historical rates</li>
+          <li>Flags if higher/lower than usual</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3>AI-Extracted Fields (from Hillebrand Quote)</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Field</th>
+          <th>Example Value</th>
+          <th>Notes</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Quote Number</td>
+          <td>SAED040436 Rev1</td>
+          <td>For reference/dedup</td>
+        </tr>
+        <tr>
+          <td>Carrier</td>
+          <td>Hillebrand GORI</td>
+          <td>Auto-detected from logo/header</td>
+        </tr>
+        <tr>
+          <td>Transport Mode</td>
+          <td>Airfreight</td>
+          <td>Air / Sea FCL / Sea LCL / Road</td>
+        </tr>
+        <tr>
+          <td>Origin</td>
+          <td>21200 Beaune, France</td>
+          <td>Pickup location</td>
+        </tr>
+        <tr>
+          <td>Origin Port</td>
+          <td>CDG Paris</td>
+          <td>Port/airport of loading</td>
+        </tr>
+        <tr>
+          <td>Destination</td>
+          <td>RAS AL KHAIMA (RKT)</td>
+          <td>Delivery location</td>
+        </tr>
+        <tr>
+          <td>Service</td>
+          <td>Emirates Sky Fresh</td>
+          <td>Carrier service type</td>
+        </tr>
+        <tr>
+          <td>Transit Time</td>
+          <td>4-5 days</td>
+          <td>Estimated transit</td>
+        </tr>
+        <tr>
+          <td>Weight Basis</td>
+          <td>700 kg</td>
+          <td>Quote basis weight</td>
+        </tr>
+        <tr>
+          <td>Valid From</td>
+          <td>4-Dec-25</td>
+          <td>Start of validity</td>
+        </tr>
+        <tr>
+          <td>Valid To</td>
+          <td>15-Dec-25</td>
+          <td>End of validity</td>
+        </tr>
+        <tr>
+          <td>Freight Cost</td>
+          <td>EUR 3,592.00</td>
+          <td>Main freight charge</td>
+        </tr>
+        <tr>
+          <td>Handling/Extras</td>
+          <td>EUR 95.00 (Vinliner)</td>
+          <td>Additional charges</td>
+        </tr>
+        <tr>
+          <td>Total</td>
+          <td>EUR 3,687.00</td>
+          <td>Total quote amount</td>
+        </tr>
+        <tr>
+          <td>Per-kg Rate</td>
+          <td>EUR 5.13/kg</td>
+          <td>Calculated for comparison</td>
+        </tr>
+        <tr>
+          <td>Incoterms</td>
+          <td>EXW</td>
+          <td>Shipping terms</td>
+        </tr>
+        <tr>
+          <td>Insurance Rate</td>
+          <td>0.45% + 0.35%</td>
+          <td>Optional coverage rates</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>Historical Rate Comparison</h3>
+    <div class="solution-box">
+      <h4>When a new quote is uploaded, AI compares to history:</h4>
+      <ul>
+        <li><span class="badge badge-green">Lower</span> New rate is 10%+ below average → "Good deal"</li>
+        <li><span class="badge badge-blue">Normal</span> Rate within 10% of average → "Market rate"</li>
+        <li><span class="badge badge-amber">Higher</span> Rate is 10-20% above average → "Above market"</li>
+        <li><span class="badge badge-red">Much Higher</span> Rate is 20%+ above average → "Negotiate or find alternative"</li>
+      </ul>
+    </div>
+
+    <h3>Rate Card Auto-Update</h3>
+    <div class="flow-diagram">
++---------------+      +----------------+      +----------------+      +----------------+
+|   UPLOAD      |      |   AI EXTRACT   |      |    COMPARE     |      |   RATE CARD    |
+|   Quote PDF   | ---> |   All Fields   | ---> |   to History   | ---> |   Updated      |
++---------------+      +----------------+      +----------------+      +----------------+
+       |                      |                      |                      |
+       v                      v                      v                      v
+  Drop file or         GPT-4o extracts        Shows if rate is       Rate card reflects
+  paste email          route, rates,          higher/lower than      current valid rates
+                       validity, terms        previous quotes        for this route
+    </div>
+
+    <h3>Database: carrier_quotes</h3>
+    <table class="schema-table">
+      <thead><tr><th>Column</th><th>Type</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td>id</td><td>uuid</td><td>Primary key</td></tr>
+        <tr><td>quoteNumber</td><td>text</td><td>"SAED040436 Rev1"</td></tr>
+        <tr><td>carrierId</td><td>uuid FK</td><td>Link to carrier</td></tr>
+        <tr><td>transportMode</td><td>enum</td><td>air, sea_fcl, sea_lcl, road</td></tr>
+        <tr><td>originCountry / originCity</td><td>text</td><td>Pickup location</td></tr>
+        <tr><td>originPort</td><td>text</td><td>Airport/port code</td></tr>
+        <tr><td>destinationCountry / destinationCity</td><td>text</td><td>Delivery location</td></tr>
+        <tr><td>destinationPort</td><td>text</td><td>Airport/port code</td></tr>
+        <tr><td>serviceName</td><td>text</td><td>"Emirates Sky Fresh"</td></tr>
+        <tr><td>transitDays</td><td>text</td><td>"4-5 days"</td></tr>
+        <tr><td>weightBasisKg</td><td>decimal</td><td>Quote basis weight</td></tr>
+        <tr><td>freightAmount / freightCurrency</td><td>decimal/text</td><td>Main freight charge</td></tr>
+        <tr><td>extrasAmount / extrasDescription</td><td>decimal/text</td><td>Additional charges</td></tr>
+        <tr><td>totalAmount / totalCurrency</td><td>decimal/text</td><td>Total quote</td></tr>
+        <tr><td>perKgRate</td><td>decimal</td><td>Calculated rate per kg</td></tr>
+        <tr><td>incoterms</td><td>text</td><td>EXW, FOB, CIF, DDP</td></tr>
+        <tr><td>validFrom / validTo</td><td>date</td><td>Quote validity period</td></tr>
+        <tr><td>insuranceRate</td><td>decimal</td><td>Optional insurance %</td></tr>
+        <tr><td>sourceFileUrl</td><td>text</td><td>Original PDF/file</td></tr>
+        <tr><td>extractedByAi</td><td>boolean</td><td>AI vs manual entry</td></tr>
+        <tr><td>comparisonToHistory</td><td>text</td><td>lower, normal, higher, much_higher</td></tr>
+        <tr><td>createdAt / updatedAt</td><td>timestamp</td><td>Timestamps</td></tr>
+      </tbody>
+    </table>
+
     <!-- COST ANALYSIS -->
     <h2 id="cost-analysis">Cost Analysis & Arbitrage</h2>
 
@@ -1046,6 +1234,18 @@ This is the TRUE cost to have 1 bottle sitting in RAK Port warehouse.
           <li>Export to Excel/CSV</li>
         </ul>
       </div>
+
+      <div class="card">
+        <h4>9. Carrier Rate Dashboard</h4>
+        <ul>
+          <li>Route comparison view</li>
+          <li>AI quote upload (PDF/Excel/email)</li>
+          <li>Auto-extract rates and terms</li>
+          <li>Historical rate comparison</li>
+          <li>Rate trend charts</li>
+          <li>Per-bottle cost calculator</li>
+        </ul>
+      </div>
     </div>
 
     <!-- DATABASE SCHEMA -->
@@ -1228,7 +1428,7 @@ ANNUAL Tracking:
     </div>
 
     <!-- WIREFRAMES -->
-    <h2 id="wireframes">Wireframes (16 Screens)</h2>
+    <h2 id="wireframes">Wireframes (19 Screens)</h2>
 
     <div class="wireframe-title">1. Admin Dashboard</div>
     <div class="wireframe">+-------------------------------------------------------------------+
@@ -1641,6 +1841,112 @@ ANNUAL Tracking:
 |  Your Cost: $2,334.20 USD                                         |
 +-------------------------------------------------------------------+</div>
 
+    <div class="wireframe-title">17. Carrier Rate Dashboard - Route Comparison</div>
+    <div class="wireframe">+-------------------------------------------------------------------+
+|  CARRIER RATES                            [+ Upload Quote]        |
++-------------------------------------------------------------------+
+|  Route: [Beaune, France v] --> [RAK, UAE v]    [Search Routes]    |
+|                                                                   |
+|  Current Valid Rates                          Last updated: Today |
+|  +---------------------------------------------------------------+|
+|  | Carrier      | Mode | Rate/kg  | Transit | Valid To  | Status ||
+|  +---------------------------------------------------------------+|
+|  | Hillebrand   | Air  | EUR 5.13 | 4-5 days| Jan 15    |[G] Best||
+|  | Hillebrand   | Sea  | EUR 1.85 | 28 days | Jan 31    |[B] Valid|
+|  | Emirates     | Air  | EUR 5.90 | 3-4 days| Jan 20    |[Y] +15%||
+|  | Hapag-Lloyd  | Sea  | EUR 1.72 | 32 days | Feb 15    |[G] Best||
+|  +---------------------------------------------------------------+|
+|                                                                   |
+|  Rate Comparison (700kg shipment)                                 |
+|  +---------------------------------------------------------------+|
+|  | Option           | Total Cost | Transit | Per Bottle (56 cs)  ||
+|  +---------------------------------------------------------------+|
+|  | Hillebrand Air   | EUR 3,687  | 4-5 days| EUR 5.48/btl        ||
+|  | Emirates Air     | EUR 4,225  | 3-4 days| EUR 6.28/btl        ||
+|  | Hillebrand Sea   | EUR 1,390  | 28 days | EUR 2.07/btl        ||
+|  | Hapag-Lloyd Sea  | EUR 1,298  | 32 days | EUR 1.93/btl [BEST] ||
+|  +---------------------------------------------------------------+|
+|                                                                   |
+|  [Export Comparison]  [Request New Quote]  [View Historical]      |
++-------------------------------------------------------------------+</div>
+
+    <div class="wireframe-title">18. AI Quote Upload</div>
+    <div class="wireframe">+-------------------------------------------------------------------+
+|  UPLOAD CARRIER QUOTE                                  [X] Close  |
++-------------------------------------------------------------------+
+|                                                                   |
+|  +---------------------------------------------------------------+|
+|  |                                                               ||
+|  |     +------------------+                                      ||
+|  |     |   [PDF icon]     |   Drop PDF, Excel, or paste email    ||
+|  |     |                  |   text here                          ||
+|  |     +------------------+                                      ||
+|  |                                                               ||
+|  |     [Browse Files]  or  [Paste Email Text]                    ||
+|  |                                                               ||
+|  +---------------------------------------------------------------+|
+|                                                                   |
+|  AI Extraction Preview                            [!] Review data |
+|  +---------------------------------------------------------------+|
+|  | Carrier:        Hillebrand GORI            [G] Detected       ||
+|  | Quote #:        SAED040436 Rev1                               ||
+|  | Route:          Beaune, FR -> RAK, UAE                        ||
+|  | Mode:           Airfreight (Emirates Sky Fresh)               ||
+|  | Weight Basis:   700 kg                                        ||
+|  | Freight:        EUR 3,592.00                                  ||
+|  | Extras:         EUR 95.00 (Vinliner)                          ||
+|  | Total:          EUR 3,687.00                                  ||
+|  | Per-kg Rate:    EUR 5.13/kg                                   ||
+|  | Valid:          4-Dec-25 to 15-Dec-25                         ||
+|  | Incoterms:      EXW                                           ||
+|  +---------------------------------------------------------------+|
+|                                                                   |
+|  Historical Comparison                                            |
+|  +---------------------------------------------------------------+|
+|  | [B] NORMAL - Rate is within 5% of historical average          ||
+|  | Previous quotes for this route: EUR 4.95 - 5.35/kg            ||
+|  | This quote: EUR 5.13/kg (avg: EUR 5.15/kg)                    ||
+|  +---------------------------------------------------------------+|
+|                                                                   |
+|  [Cancel]                              [Save to Rate Card]        |
++-------------------------------------------------------------------+</div>
+
+    <div class="wireframe-title">19. Rate History & Trends</div>
+    <div class="wireframe">+-------------------------------------------------------------------+
+|  RATE HISTORY                              Route: Beaune -> RAK   |
++-------------------------------------------------------------------+
+|  Time Period: [Last 12 months v]    Mode: [All v]    [Export CSV] |
+|                                                                   |
+|  Rate Trend (EUR/kg)                                              |
+|  +---------------------------------------------------------------+|
+|  |  6.00 |                                    *                  ||
+|  |  5.50 |        *           *      *    *     *                ||
+|  |  5.00 |   *        *   *       *                  *   *  <now ||
+|  |  4.50 |                                                       ||
+|  |  4.00 |--------------------------------------------------------||
+|  |       | Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec Jan   ||
+|  +---------------------------------------------------------------+|
+|  AIR: Avg EUR 5.15/kg | Low: 4.85 | High: 5.90 | Current: 5.13   |
+|                                                                   |
+|  +---------------------------------------------------------------+|
+|  |  2.50 |                                                       ||
+|  |  2.00 |   *   *   *   *   *   *   *   *   *   *   *   *  <now ||
+|  |  1.50 |--------------------------------------------------------||
+|  |       | Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec Jan   ||
+|  +---------------------------------------------------------------+|
+|  SEA: Avg EUR 1.82/kg | Low: 1.65 | High: 2.10 | Current: 1.85   |
+|                                                                   |
+|  All Quotes (47 total)                                            |
+|  +---------------------------------------------------------------+|
+|  | Date     | Carrier    | Mode | Rate   | vs Avg | Status       ||
+|  +---------------------------------------------------------------+|
+|  | Jan 12   | Hillebrand | Air  | 5.13   | -0.4%  | [G] Current  ||
+|  | Dec 28   | Emirates   | Air  | 5.90   | +14.6% | [R] Expired  ||
+|  | Dec 15   | Hillebrand | Air  | 4.95   | -3.9%  | [R] Expired  ||
+|  | Dec 01   | Hapag-Lloyd| Sea  | 1.72   | -5.5%  | [G] Current  ||
+|  +---------------------------------------------------------------+|
++-------------------------------------------------------------------+</div>
+
     <!-- INTEGRATIONS -->
     <h2 id="integrations">Integrations</h2>
 
@@ -1796,7 +2102,7 @@ ANNUAL Tracking:
     </div>
 
     <div class="footer">
-      <p>C&C Logistics Module - Compliance-First Implementation Plan | v2.0 | January 2026</p>
+      <p>C&C Logistics Module - Compliance-First Implementation Plan | v2.1 | January 2026</p>
       <p>Craft & Culture | RAK Port, UAE</p>
     </div>
   </div>
