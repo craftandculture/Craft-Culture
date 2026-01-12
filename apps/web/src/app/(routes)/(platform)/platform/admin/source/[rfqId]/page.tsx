@@ -864,28 +864,48 @@ const RfqDetailPage = () => {
                           </td>
 
                           {/* Format Cell - Bottle Size & Case Config - Clickable to Edit */}
-                          <td className="px-2 py-2 text-center">
-                            <button
-                              type="button"
-                              onClick={() => handleOpenItemEditor(item)}
-                              className={`w-full text-[10px] rounded px-1 py-0.5 transition-colors ${
-                                !item.bottleSize && !item.caseConfig
-                                  ? 'bg-amber-50 border border-amber-200 hover:bg-amber-100 text-amber-600'
-                                  : 'hover:bg-fill-muted'
-                              }`}
-                              title="Click to edit format"
-                            >
-                              {item.bottleSize && (
-                                <div className="font-medium">{item.bottleSize}</div>
-                              )}
-                              {item.caseConfig && (
-                                <div className="text-text-muted">{item.caseConfig}pk</div>
-                              )}
-                              {!item.bottleSize && !item.caseConfig && (
-                                <span className="text-amber-600 font-medium">+ Add</span>
-                              )}
-                            </button>
-                          </td>
+                          {(() => {
+                            // Get format from item, or fall back to first available quote
+                            const hasItemFormat = item.bottleSize || item.caseConfig;
+                            const availableQuotes = item.quotes.filter(
+                              (q) => q.quote.quoteType !== 'not_available' && q.quote.caseConfig
+                            );
+                            const quoteFormat = availableQuotes[0]?.quote;
+                            const displayBottleSize = item.bottleSize || quoteFormat?.bottleSize;
+                            const displayCaseConfig = item.caseConfig || quoteFormat?.caseConfig;
+                            const isFromQuote = !hasItemFormat && (displayBottleSize || displayCaseConfig);
+
+                            return (
+                              <td className="px-2 py-2 text-center">
+                                <button
+                                  type="button"
+                                  onClick={() => handleOpenItemEditor(item)}
+                                  className={`w-full text-[10px] rounded px-1 py-0.5 transition-colors ${
+                                    !displayBottleSize && !displayCaseConfig
+                                      ? 'bg-amber-50 border border-amber-200 hover:bg-amber-100 text-amber-600'
+                                      : isFromQuote
+                                        ? 'bg-blue-50 border border-blue-200 hover:bg-blue-100'
+                                        : 'hover:bg-fill-muted'
+                                  }`}
+                                  title={isFromQuote ? 'Format from partner quote (click to set)' : 'Click to edit format'}
+                                >
+                                  {displayBottleSize && (
+                                    <div className={`font-medium ${isFromQuote ? 'text-blue-600' : ''}`}>
+                                      {displayBottleSize}
+                                    </div>
+                                  )}
+                                  {displayCaseConfig && (
+                                    <div className={isFromQuote ? 'text-blue-500' : 'text-text-muted'}>
+                                      {displayCaseConfig}pk
+                                    </div>
+                                  )}
+                                  {!displayBottleSize && !displayCaseConfig && (
+                                    <span className="text-amber-600 font-medium">+ Add</span>
+                                  )}
+                                </button>
+                              </td>
+                            );
+                          })()}
 
                           {/* Quantity */}
                           <td className="px-2 py-2 text-center">
@@ -1001,7 +1021,7 @@ const RfqDetailPage = () => {
                                         title={tooltip || undefined}
                                         aria-label={`Select quote: $${price.toFixed(0)} ${displayVintage ? `(${displayVintage})` : ''} from ${p.partner.businessName}`}
                                       >
-                                        {/* Price */}
+                                        {/* Price - Case + Per Bottle */}
                                         <div className="flex items-center justify-center gap-0.5">
                                           <span className="text-xs font-semibold">
                                             ${price.toFixed(0)}
@@ -1010,6 +1030,12 @@ const RfqDetailPage = () => {
                                             <IconCheck className="h-3 w-3" />
                                           )}
                                         </div>
+                                        {/* Per-bottle price */}
+                                        {quote.caseConfig && quote.caseConfig > 0 && (
+                                          <span className={`text-[9px] block ${isSelected ? 'text-text-on-brand/70' : 'text-text-muted'}`}>
+                                            ${(price / quote.caseConfig).toFixed(2)}/btl
+                                          </span>
+                                        )}
                                         {/* Always show vintage for clarity */}
                                         {displayVintage && (
                                           <span className={`text-[10px] block ${
