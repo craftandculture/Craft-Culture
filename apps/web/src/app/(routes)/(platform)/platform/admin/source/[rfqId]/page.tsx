@@ -33,6 +33,7 @@ import RfqStatusBadge from '@/app/_source/components/RfqStatusBadge';
 import SendToPartnersDialog from '@/app/_source/components/SendToPartnersDialog';
 import exportRfqToExcel from '@/app/_source/utils/exportRfqToExcel';
 import exportRfqToPDF from '@/app/_source/utils/exportRfqToPDF';
+import formatLwin18 from '@/app/_source/utils/formatLwin18';
 import type { ParsedQuote } from '@/app/_source/utils/parseQuoteExcel';
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
@@ -732,7 +733,7 @@ const RfqDetailPage = () => {
                       {uniquePartners.map((p) => (
                         <th
                           key={p.partnerId}
-                          className="px-1 py-1.5 text-center text-[10px] font-semibold text-text-muted uppercase tracking-wide"
+                          className="px-1 py-1.5 text-center text-[10px] font-semibold text-text-muted uppercase tracking-wide min-w-[120px]"
                         >
                           <span className="truncate block" title={p.partner.businessName}>
                             {p.partner.businessName.length > 12
@@ -801,11 +802,19 @@ const RfqDetailPage = () => {
                                 )}
                               </div>
                               <div className="flex items-center gap-1.5 mt-0.5 text-[9px] text-text-muted truncate">
-                                {item.lwin && (
-                                  <span className="font-mono opacity-60" title={`LWIN: ${item.lwin}`}>
-                                    {item.lwin}
-                                  </span>
-                                )}
+                                {item.lwin && (() => {
+                                  const lwin18 = formatLwin18({
+                                    lwin: item.lwin,
+                                    vintage: item.vintage,
+                                    bottleSize: item.bottleSize,
+                                    caseConfig: item.caseConfig,
+                                  });
+                                  return (
+                                    <span className="font-mono opacity-60" title={`LWIN-18: ${lwin18 || item.lwin}`}>
+                                      {lwin18 || item.lwin}
+                                    </span>
+                                  );
+                                })()}
                                 {!item.lwin && item.parseConfidence !== null && item.parseConfidence >= 0.7 && (
                                   <span className="text-text-warning">No LWIN</span>
                                 )}
@@ -844,9 +853,9 @@ const RfqDetailPage = () => {
                                   onClick={() => handleOpenItemEditor(item)}
                                   className={`text-[10px] rounded px-1.5 py-0.5 transition-colors whitespace-nowrap ${
                                     !displayBottleSize && !displayCaseConfig
-                                      ? 'bg-amber-50 border border-amber-200 hover:bg-amber-100 text-amber-600'
+                                      ? 'bg-fill-warning/10 border border-border-warning hover:bg-fill-warning/20 text-text-warning'
                                       : isFromQuote
-                                        ? 'bg-blue-50 border border-blue-200 hover:bg-blue-100 text-blue-600'
+                                        ? 'bg-fill-brand/10 border border-border-brand hover:bg-fill-brand/20 text-text-brand'
                                         : 'hover:bg-fill-muted'
                                   }`}
                                   title={isFromQuote ? 'Format from partner quote (click to set)' : 'Click to edit format'}
@@ -981,13 +990,13 @@ const RfqDetailPage = () => {
                                         key={quote.id}
                                         onClick={() => handleSelectQuote(item.id, quote.id)}
                                         disabled={!canSelectQuotes || isSelectingQuote}
-                                        className={`px-2 py-0.5 rounded text-center transition-all ${
+                                        className={`px-3 py-1 rounded text-center transition-all min-w-[90px] ${
                                           isSelected
                                             ? 'bg-fill-brand text-text-on-brand ring-2 ring-border-brand'
                                             : isBestPrice
-                                              ? 'bg-green-50 text-green-700 hover:bg-green-100'
+                                              ? 'bg-fill-success/10 text-text-success hover:bg-fill-success/20 dark:bg-fill-success/20 dark:hover:bg-fill-success/30'
                                               : isHighestPrice
-                                                ? 'bg-red-50 text-red-600 hover:bg-red-100'
+                                                ? 'bg-fill-danger/10 text-text-danger hover:bg-fill-danger/20 dark:bg-fill-danger/20 dark:hover:bg-fill-danger/30'
                                                 : 'bg-fill-muted/50 hover:bg-fill-muted'
                                         } ${!canSelectQuotes ? 'cursor-default' : 'cursor-pointer'}`}
                                         title={tooltip || undefined}
@@ -1042,9 +1051,9 @@ const RfqDetailPage = () => {
                                             isSelected
                                               ? 'text-text-on-brand'
                                               : isAltVintage
-                                                ? 'text-blue-600'
+                                                ? 'text-text-brand'
                                                 : isAltProduct
-                                                  ? 'text-amber-600'
+                                                  ? 'text-text-warning'
                                                   : 'text-text-brand'
                                           }`}>
                                             {displayVintage}
@@ -1326,12 +1335,12 @@ const RfqDetailPage = () => {
                             <span className="font-medium">{item?.productName || quote.productName}</span>
                             <span className={`px-2 py-0.5 rounded text-xs ${
                               quote.quoteType === 'exact'
-                                ? 'bg-green-100 text-green-800'
+                                ? 'bg-fill-success/20 text-text-success'
                                 : quote.quoteType === 'alt_vintage'
-                                  ? 'bg-blue-100 text-blue-800'
+                                  ? 'bg-fill-brand/20 text-text-brand'
                                   : quote.quoteType === 'alternative'
-                                    ? 'bg-amber-100 text-amber-800'
-                                    : 'bg-red-100 text-red-800'
+                                    ? 'bg-fill-warning/20 text-text-warning'
+                                    : 'bg-fill-danger/20 text-text-danger'
                             }`}>
                               {quote.quoteType === 'exact' ? 'Exact' : quote.quoteType === 'alt_vintage' ? 'Alt Vintage' : quote.quoteType === 'alternative' ? 'Alt Product' : 'N/A'}
                             </span>
