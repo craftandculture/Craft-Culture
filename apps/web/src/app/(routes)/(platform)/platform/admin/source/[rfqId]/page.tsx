@@ -977,7 +977,9 @@ const RfqDetailPage = () => {
                                     const tooltip = tooltipParts.join('\n');
 
                                     // Get display vintage
-                                    const displayVintage = isAltVintage || isAltProduct
+                                    // For exact/alt_vintage: use quotedVintage (what partner is actually quoting)
+                                    // For alternative product: use alternativeVintage
+                                    const displayVintage = isAltProduct
                                       ? quote.alternativeVintage
                                       : quote.quotedVintage || item.vintage;
 
@@ -998,38 +1000,24 @@ const RfqDetailPage = () => {
                                         title={tooltip || undefined}
                                         aria-label={`Select quote: $${price.toFixed(0)} ${displayVintage ? `(${displayVintage})` : ''} from ${p.partner.businessName}`}
                                       >
-                                        <div className="flex items-center justify-center gap-1">
-                                          {/* Vintage badge for multi-vintage visibility */}
-                                          {displayVintage && validQuotes.length > 1 && (
-                                            <span className={`text-[9px] font-bold px-1 rounded ${
-                                              isSelected
-                                                ? 'bg-white/20'
-                                                : isAltVintage
-                                                  ? 'bg-blue-100 text-blue-700'
-                                                  : isAltProduct
-                                                    ? 'bg-amber-100 text-amber-700'
-                                                    : 'bg-slate-100 text-slate-600'
-                                            }`}>
-                                              {displayVintage}
-                                            </span>
-                                          )}
-                                          {/* Price */}
+                                        {/* Price */}
+                                        <div className="flex items-center justify-center gap-0.5">
                                           <span className="text-xs font-semibold">
                                             ${price.toFixed(0)}
-                                            {isSelected && (
-                                              <IconCheck className="inline-block h-3 w-3 ml-0.5" />
-                                            )}
                                           </span>
+                                          {isSelected && (
+                                            <IconCheck className="h-3 w-3" />
+                                          )}
                                         </div>
-                                        {/* Show vintage on separate line if single quote */}
-                                        {validQuotes.length === 1 && displayVintage && (
+                                        {/* Always show vintage for clarity */}
+                                        {displayVintage && (
                                           <span className={`text-[10px] block ${
                                             isSelected
                                               ? 'text-text-on-brand/70'
                                               : isAltVintage
-                                                ? 'text-blue-600'
+                                                ? 'text-blue-600 font-medium'
                                                 : isAltProduct
-                                                  ? 'text-amber-600'
+                                                  ? 'text-amber-600 font-medium'
                                                   : 'text-text-muted'
                                           }`}>
                                             {displayVintage}
