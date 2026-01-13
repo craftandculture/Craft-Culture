@@ -4,7 +4,7 @@ import { z } from 'zod';
 
 import db from '@/database/client';
 import { sourceSupplierOrders } from '@/database/schema';
-import { partnerProcedure } from '@/lib/trpc/procedures';
+import { winePartnerProcedure } from '@/lib/trpc/procedures';
 
 /**
  * Download a Supplier Order Excel file
@@ -14,9 +14,9 @@ import { partnerProcedure } from '@/lib/trpc/procedures';
  *     id: "uuid-here",
  *   });
  */
-const partnerDownloadSupplierOrderExcel = partnerProcedure
+const partnerDownloadSupplierOrderExcel = winePartnerProcedure
   .input(z.object({ id: z.string().uuid() }))
-  .query(async ({ input, ctx: { user } }) => {
+  .query(async ({ input, ctx: { partnerId } }) => {
     const { id } = input;
 
     // Get supplier order - ensure it belongs to this partner
@@ -30,7 +30,7 @@ const partnerDownloadSupplierOrderExcel = partnerProcedure
       .where(
         and(
           eq(sourceSupplierOrders.id, id),
-          eq(sourceSupplierOrders.partnerId, user.partnerId),
+          eq(sourceSupplierOrders.partnerId, partnerId),
         ),
       )
       .limit(1);

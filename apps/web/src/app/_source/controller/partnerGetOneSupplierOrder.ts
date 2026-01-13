@@ -8,7 +8,7 @@ import {
   sourceSupplierOrderItems,
   sourceSupplierOrders,
 } from '@/database/schema';
-import { partnerProcedure } from '@/lib/trpc/procedures';
+import { winePartnerProcedure } from '@/lib/trpc/procedures';
 
 /**
  * Get a single Supplier Order for the authenticated partner
@@ -18,9 +18,9 @@ import { partnerProcedure } from '@/lib/trpc/procedures';
  *     id: "uuid-here",
  *   });
  */
-const partnerGetOneSupplierOrder = partnerProcedure
+const partnerGetOneSupplierOrder = winePartnerProcedure
   .input(z.object({ id: z.string().uuid() }))
-  .query(async ({ input, ctx: { user } }) => {
+  .query(async ({ input, ctx: { partnerId } }) => {
     const { id } = input;
 
     // Get supplier order - ensure it belongs to this partner
@@ -44,7 +44,7 @@ const partnerGetOneSupplierOrder = partnerProcedure
       .where(
         and(
           eq(sourceSupplierOrders.id, id),
-          eq(sourceSupplierOrders.partnerId, user.partnerId),
+          eq(sourceSupplierOrders.partnerId, partnerId),
         ),
       )
       .limit(1);

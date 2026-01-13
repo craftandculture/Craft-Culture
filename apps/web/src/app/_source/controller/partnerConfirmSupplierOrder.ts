@@ -8,7 +8,7 @@ import {
   sourceSupplierOrderItems,
   sourceSupplierOrders,
 } from '@/database/schema';
-import { partnerProcedure } from '@/lib/trpc/procedures';
+import { winePartnerProcedure } from '@/lib/trpc/procedures';
 import logger from '@/utils/logger';
 
 import confirmSupplierOrderSchema from '../schemas/confirmSupplierOrderSchema';
@@ -26,9 +26,9 @@ import confirmSupplierOrderSchema from '../schemas/confirmSupplierOrderSchema';
  *     ],
  *   });
  */
-const partnerConfirmSupplierOrder = partnerProcedure
+const partnerConfirmSupplierOrder = winePartnerProcedure
   .input(confirmSupplierOrderSchema)
-  .mutation(async ({ input, ctx: { user } }) => {
+  .mutation(async ({ input, ctx: { partnerId } }) => {
     try {
       const { supplierOrderId, items, partnerNotes } = input;
 
@@ -39,7 +39,7 @@ const partnerConfirmSupplierOrder = partnerProcedure
         .where(
           and(
             eq(sourceSupplierOrders.id, supplierOrderId),
-            eq(sourceSupplierOrders.partnerId, user.partnerId),
+            eq(sourceSupplierOrders.partnerId, partnerId),
           ),
         )
         .limit(1);
