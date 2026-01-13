@@ -346,7 +346,7 @@ const adminImportLwinWines = adminProcedure
               vintageConfig: wine.vintageConfig || null,
               firstVintage: wine.firstVintage || null,
               finalVintage: wine.finalVintage || null,
-              status: wine.status?.toLowerCase() === 'obsolete' ? 'obsolete' : 'live',
+              status: (wine.status?.toLowerCase() === 'obsolete' ? 'obsolete' : 'live') as 'live' | 'obsolete',
               reference: wine.reference || null,
               dateAdded: wine.dateAdded ? parseDate(wine.dateAdded) : null,
               dateUpdated: wine.dateUpdated ? parseDate(wine.dateUpdated) : null,
