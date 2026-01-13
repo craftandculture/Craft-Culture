@@ -463,7 +463,7 @@
 <body>
   <div class="container">
     <h1>C&C Logistics Module</h1>
-    <p><strong>Compliance-First Implementation Plan</strong> | January 2026 | v2.2</p>
+    <p><strong>Compliance-First Implementation Plan</strong> | January 2026 | v2.3</p>
 
     <div class="toc">
       <h3>Contents</h3>
@@ -481,7 +481,9 @@
         <li><a href="#database">Database Schema</a></li>
         <li><a href="#workflows">Process Workflows</a></li>
         <li><a href="#wireframes">Wireframes (19 screens)</a></li>
-        <li><a href="#import-docs">Import Document Types (NEW)</a></li>
+        <li><a href="#import-docs">Import Document Types - Air Freight</a></li>
+        <li><a href="#sea-freight-docs">Sea Freight Document Types (NEW)</a></li>
+        <li><a href="#rate-cards">RAK Port Rate Cards (NEW)</a></li>
         <li><a href="#integrations">Integrations</a></li>
         <li><a href="#phases">Implementation Phases</a></li>
       </ol>
@@ -1948,12 +1950,12 @@ ANNUAL Tracking:
 |  +---------------------------------------------------------------+|
 +-------------------------------------------------------------------+</div>
 
-    <!-- IMPORT DOCUMENT TYPES -->
-    <h2 id="import-docs">Import Document Types (AI Extraction)</h2>
+    <!-- IMPORT DOCUMENT TYPES - AIR FREIGHT -->
+    <h2 id="import-docs">Air Freight Document Types (AI Extraction)</h2>
 
     <div class="highlight">
       <h3>Know What to Extract From Every Document</h3>
-      <p style="color:white;margin:0">Based on real import shipments into RAK FTZ. AI extracts these fields automatically from uploaded documents.</p>
+      <p style="color:white;margin:0">Based on real air freight shipments into RAK FTZ (Cross Fire Rum, ROEBUCK). AI extracts these fields automatically.</p>
     </div>
 
     <p>A typical air freight import generates <strong>8-12 documents</strong>. Here's what each contains and what the AI should extract.</p>
@@ -2319,6 +2321,560 @@ Notes:
       <strong>Free Zone Benefit:</strong> Goods in RAK FTZ, JAFZA, and other UAE Free Zones are duty-exempt. Duty only applies when goods enter UAE mainland for local consumption.
     </div>
 
+    <!-- SEA FREIGHT DOCUMENT TYPES -->
+    <h2 id="sea-freight-docs">Sea Freight Document Types (AI Extraction)</h2>
+
+    <div class="highlight">
+      <h3>Sea Freight Specific Documents</h3>
+      <p style="color:white;margin:0">Based on real sea freight shipment: FUNKIN Cocktails (UK → RAK, 3,100 cases, 1x20' FCL container).</p>
+    </div>
+
+    <p>Sea freight adds several container-specific documents not present in air freight. Total document count: <strong>12-15 documents</strong>.</p>
+
+    <h3>1. House Bill of Lading (HBL)</h3>
+    <div class="card">
+      <p><strong>Source:</strong> Freight Forwarder / NVOCC (e.g., Albatrans London)</p>
+      <p><strong>Format:</strong> PDF (standard format)</p>
+      <p><strong>Type:</strong> Express House Bill of Lading</p>
+      <table class="schema-table">
+        <thead><tr><th>Field</th><th>Example</th><th>Use</th></tr></thead>
+        <tbody>
+          <tr><td>HBL Number</td><td>ABTAYS001237</td><td>Primary reference for forwarder</td></tr>
+          <tr><td>Master BOL</td><td>MEDUFL194711</td><td>Link to carrier's BOL</td></tr>
+          <tr><td>NVOCC Registration</td><td>016651</td><td>Forwarder identification</td></tr>
+          <tr><td>Shipper</td><td>FUNKIN LIMITED, 122 Arlington Road, London</td><td>Origin party</td></tr>
+          <tr><td>Consignee</td><td>CRAFT AND CULTURE FZE, Fujairah</td><td>Receiving party</td></tr>
+          <tr><td>Notify Party</td><td>Savino Del Bene Global Forwarding UAE LLC</td><td>Delivery contact</td></tr>
+          <tr><td>Vessel/Voyage</td><td>ESTELLE MAERSK 502E</td><td>Ship identification</td></tr>
+          <tr><td>Export Carrier</td><td>MEDITERRANEAN SHIPPING CO.</td><td>Shipping line</td></tr>
+          <tr><td>Port of Loading</td><td>LONDON GATEWAY PORT</td><td>Origin port</td></tr>
+          <tr><td>Port of Discharge</td><td>RAS AL KHAIMAH</td><td>Destination port</td></tr>
+          <tr><td>Sailing Date</td><td>26/01/2025</td><td>Departure date</td></tr>
+          <tr><td>ETA</td><td>26/02/2025</td><td>Expected arrival</td></tr>
+          <tr><td>Container Number</td><td>MSDU1638366</td><td>Container tracking</td></tr>
+          <tr><td>Container Type</td><td>20DR FCL (20' Dry Van)</td><td>Container specification</td></tr>
+          <tr><td>Seal Number</td><td>GBAB21233</td><td>Security verification</td></tr>
+          <tr><td>Packages</td><td>10 pallets, 3100 cases</td><td>Quantity verification</td></tr>
+          <tr><td>Gross Weight</td><td>8,370.00 kg</td><td>Weight verification</td></tr>
+          <tr><td>Freight Terms</td><td>FREIGHT COLLECT</td><td>Payment terms</td></tr>
+          <tr><td>Folder Reference</td><td>D91009</td><td>Forwarder file reference</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>2. Sea Waybill (Master BOL)</h3>
+    <div class="card">
+      <p><strong>Source:</strong> Shipping Line (e.g., MSC, Maersk, Hapag-Lloyd)</p>
+      <p><strong>Format:</strong> PDF (carrier's standard format)</p>
+      <p><strong>Type:</strong> NOT NEGOTIABLE - COPY</p>
+      <table class="schema-table">
+        <thead><tr><th>Field</th><th>Example</th><th>Use</th></tr></thead>
+        <tbody>
+          <tr><td>Sea Waybill Number</td><td>MEDUFL194711</td><td>Carrier's primary reference</td></tr>
+          <tr><td>SCAC Code</td><td>MEDU</td><td>Standard carrier code</td></tr>
+          <tr><td>Shipper</td><td>ALBATRANS LONDON (UK) LTD</td><td>Booking party</td></tr>
+          <tr><td>Consignee</td><td>Savino Del Bene Global Forwarding UAE LLC</td><td>Delivery agent</td></tr>
+          <tr><td>Port of Loading</td><td>London Gateway Port</td><td>Origin port</td></tr>
+          <tr><td>Port of Discharge</td><td>Ras Al Khaimah, UAE</td><td>Destination port</td></tr>
+          <tr><td>Vessel Name</td><td>ESTELLE MAERSK</td><td>Ship name</td></tr>
+          <tr><td>Voyage Number</td><td>502E</td><td>Voyage identification</td></tr>
+          <tr><td>Container Number</td><td>MSDU1638366</td><td>Container tracking</td></tr>
+          <tr><td>Container Size</td><td>20' DRY VAN</td><td>Container type</td></tr>
+          <tr><td>Seal Number</td><td>GBAB21233</td><td>Security seal</td></tr>
+          <tr><td>Tare Weight</td><td>2,220 kg</td><td>Empty container weight</td></tr>
+          <tr><td>Gross Cargo Weight</td><td>8,370.000 kg</td><td>Total cargo weight</td></tr>
+          <tr><td>Description</td><td>3100 Case(s) of PRE MIXED COCKTAILS</td><td>Cargo description</td></tr>
+          <tr><td>Shipped on Board</td><td>25-Jan-2025</td><td>Actual loading date</td></tr>
+          <tr><td>Place of Issue</td><td>MSC (U.K.) LTD - IPSWICH</td><td>Issue location</td></tr>
+          <tr><td>Issue Date</td><td>11-Mar-2025</td><td>Document date</td></tr>
+          <tr><td>Booking Reference</td><td>EBKGQ00090ED</td><td>Carrier booking ref</td></tr>
+          <tr><td>Freight Status</td><td>Prepaid / Collect</td><td>Payment terms</td></tr>
+        </tbody>
+      </table>
+      <div class="warning-box">
+        <strong>Negotiable vs Non-Negotiable:</strong> Sea Waybills are non-negotiable (goods released to named consignee). Original Bills of Lading are negotiable and require surrender of originals for cargo release.
+      </div>
+    </div>
+
+    <h3>3. Certificate of Origin (COO) - Arab-British Chamber</h3>
+    <div class="card">
+      <p><strong>Source:</strong> Arab-British Chamber of Commerce (for UK exports)</p>
+      <p><strong>Format:</strong> PDF (official stamped certificate)</p>
+      <table class="schema-table">
+        <thead><tr><th>Field</th><th>Example</th><th>Use</th></tr></thead>
+        <tbody>
+          <tr><td>Certificate Number</td><td>355508</td><td>Unique certificate ID</td></tr>
+          <tr><td>Certificate Type</td><td>M (Merchandise)</td><td>Document classification</td></tr>
+          <tr><td>Consignor Reference</td><td>FX000423</td><td>Exporter's invoice ref</td></tr>
+          <tr><td>EORI Number</td><td>257193563KS</td><td>UK exporter registration</td></tr>
+          <tr><td>Consignor</td><td>FUNKIN LIMITED, 122 Arlington Road, London</td><td>Exporter</td></tr>
+          <tr><td>Consignee</td><td>Craft And Culture FZE, PO Box 50635, Fujairah</td><td>Importer</td></tr>
+          <tr><td>Country of Origin</td><td>NETHERLANDS</td><td>Where goods manufactured</td></tr>
+          <tr><td>Transport Method</td><td>By Sea Freight</td><td>Mode of transport</td></tr>
+          <tr><td>Goods Description</td><td>12x 200ml Nitro cocktail cans 5% ABV</td><td>Product details</td></tr>
+          <tr><td>Invoice Reference</td><td>FX000423 dated 03.01.2025</td><td>Link to commercial invoice</td></tr>
+          <tr><td>Manufacturer</td><td>Refresco Benelux b.v., 6026 BX Maarheeze, Nederland</td><td>Production facility</td></tr>
+          <tr><td>Packages</td><td>10 HT pallets</td><td>Packaging details</td></tr>
+          <tr><td>Gross Weight</td><td>8370 KG</td><td>Total weight</td></tr>
+          <tr><td>Net Weight</td><td>7843 KG</td><td>Product weight</td></tr>
+          <tr><td>Certification Date</td><td>28-Jan-2025 / 29-Jan-2025</td><td>When certified</td></tr>
+          <tr><td>Authorised Signatory</td><td>Mr Mashary Osman</td><td>Chamber official</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>4. Terminal Handling Invoice (Hutchison Ports RAK)</h3>
+    <div class="card">
+      <p><strong>Source:</strong> Port terminal operator (Hutchison Ports RAK Limited)</p>
+      <p><strong>Format:</strong> PDF tax invoice</p>
+      <table class="schema-table">
+        <thead><tr><th>Field</th><th>Example</th><th>Use</th></tr></thead>
+        <tbody>
+          <tr><td>Invoice Number</td><td>INSC250300081</td><td>Payment reference</td></tr>
+          <tr><td>Invoice Date</td><td>20/03/2025</td><td>Transaction date</td></tr>
+          <tr><td>Bill of Lading</td><td>MEDUFL194711, 2532800410</td><td>Shipment link</td></tr>
+          <tr><td>Type</td><td>Import Full</td><td>Import/Export/Transship</td></tr>
+          <tr><td>Transport Mode</td><td>SEA</td><td>Mode of transport</td></tr>
+          <tr><td>Vessel/Barge</td><td>MSC MOON F</td><td>Feeder vessel name</td></tr>
+          <tr><td>Voyage Number</td><td>JC510A</td><td>Voyage identification</td></tr>
+          <tr><td>Discharge Date</td><td>07-03-2025</td><td>Unloading date</td></tr>
+          <tr><td>Container Size</td><td>01X20' IF</td><td>Container specification</td></tr>
+        </tbody>
+      </table>
+      <h4>Terminal Charge Types:</h4>
+      <table>
+        <thead><tr><th>Charge</th><th>Description</th><th>Net (AED)</th><th>VAT</th></tr></thead>
+        <tbody>
+          <tr><td>Lift Off Charge</td><td>Crane unloading from vessel</td><td>75.00</td><td>—</td></tr>
+          <tr><td>Lift On Charge</td><td>Loading onto truck</td><td>75.00</td><td>—</td></tr>
+          <tr><td>Seal Cutting</td><td>Container seal removal</td><td>25.00</td><td>—</td></tr>
+          <tr><td>Shifting Charges</td><td>Moving container in yard</td><td>100.00</td><td>—</td></tr>
+          <tr><td>Documentation</td><td>Paperwork processing</td><td>50.00</td><td>5%</td></tr>
+          <tr><td>Lift On/Off Combined</td><td>Combined handling</td><td>314.00</td><td>—</td></tr>
+          <tr><td>Waiver (if applicable)</td><td>Discounts applied</td><td>(varies)</td><td>—</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>5. Container Release Letter</h3>
+    <div class="card">
+      <p><strong>Source:</strong> Consignee (Craft & Culture FZE) to Freight Forwarder</p>
+      <p><strong>Purpose:</strong> Request delivery order issuance for cargo release</p>
+      <table class="schema-table">
+        <thead><tr><th>Field</th><th>Example</th><th>Use</th></tr></thead>
+        <tbody>
+          <tr><td>Date</td><td>12-Mar-2025</td><td>Request date</td></tr>
+          <tr><td>To</td><td>Savino Del Bene Global Forwarding UAE LLC</td><td>Forwarder</td></tr>
+          <tr><td>BL Reference</td><td>ABTAYS001237</td><td>House BL number</td></tr>
+          <tr><td>POL/POD</td><td>London / Ras Al Khaimah</td><td>Route</td></tr>
+          <tr><td>BL Type</td><td>Seaway Bill of Lading</td><td>Document type</td></tr>
+          <tr><td>Release To</td><td>RAK PORTS SUPPLY CHAIN SOLUTIONS LLC</td><td>Delivery company</td></tr>
+          <tr><td>Import Code</td><td>24076</td><td>Customs importer code</td></tr>
+          <tr><td>Indemnity Clause</td><td>Yes</td><td>Liability acceptance</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>6. Container Guarantee Letter</h3>
+    <div class="card">
+      <p><strong>Source:</strong> Consignee (Craft & Culture FZE) to Shipping Line</p>
+      <p><strong>Purpose:</strong> Guarantee container return and payment of charges</p>
+      <table class="schema-table">
+        <thead><tr><th>Field</th><th>Example</th><th>Use</th></tr></thead>
+        <tbody>
+          <tr><td>Date</td><td>26th Feb 2025</td><td>Issue date</td></tr>
+          <tr><td>To</td><td>M/s. MSC (Mediterranean Shipping Company)</td><td>Shipping line</td></tr>
+          <tr><td>Bill of Lading</td><td>MEDUFL194711</td><td>Reference</td></tr>
+          <tr><td>Container Number</td><td>MSDU1638366/20 DRY VAN</td><td>Container ID</td></tr>
+          <tr><td>Vessel Name</td><td>ESTELLE MAERSK - 502E</td><td>Ship identification</td></tr>
+          <tr><td>Covered Charges</td><td>Detention, damage, cleaning</td><td>Guaranteed items</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>7. Shipping Line Payment Receipt</h3>
+    <div class="card">
+      <p><strong>Source:</strong> Shipping Line (MSC)</p>
+      <p><strong>Purpose:</strong> Proof of payment for freight/demurrage</p>
+      <table class="schema-table">
+        <thead><tr><th>Field</th><th>Example</th><th>Use</th></tr></thead>
+        <tbody>
+          <tr><td>Receipt Date</td><td>12.03.2025</td><td>Payment date</td></tr>
+          <tr><td>Payment ID</td><td>1400669123</td><td>Transaction reference</td></tr>
+          <tr><td>Payment Reference</td><td>E40102272571690</td><td>Bank reference</td></tr>
+          <tr><td>Customer Account</td><td>1001477785</td><td>MSC customer ID</td></tr>
+          <tr><td>Company</td><td>Savino Del Bene Global Forwarding LLC</td><td>Payer</td></tr>
+          <tr><td>Invoice Number</td><td>AERKTPM250000188</td><td>Original invoice</td></tr>
+          <tr><td>Bill of Lading</td><td>MEDUFL194711</td><td>Shipment reference</td></tr>
+          <tr><td>Amount</td><td>300.00 AED</td><td>Amount paid</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Sea vs Air Freight Document Comparison</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Aspect</th>
+          <th>Sea Freight</th>
+          <th>Air Freight</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Primary Transport Document</td>
+          <td>Bill of Lading (BOL)</td>
+          <td>Air Waybill (AWB)</td>
+        </tr>
+        <tr>
+          <td>Negotiability</td>
+          <td>Can be negotiable or non-negotiable</td>
+          <td>Always non-negotiable</td>
+        </tr>
+        <tr>
+          <td>Container Tracking</td>
+          <td>Container # + Seal #</td>
+          <td>N/A</td>
+        </tr>
+        <tr>
+          <td>Terminal Charges</td>
+          <td>Port handling (lift on/off, shifting)</td>
+          <td>Airport handling (ground handling)</td>
+        </tr>
+        <tr>
+          <td>Release Process</td>
+          <td>Delivery Order (DO) request letter</td>
+          <td>Cargo release note</td>
+        </tr>
+        <tr>
+          <td>Additional Documents</td>
+          <td>Container guarantee, release letters</td>
+          <td>N/A</td>
+        </tr>
+        <tr>
+          <td>Transit Time</td>
+          <td>4-6 weeks</td>
+          <td>3-5 days</td>
+        </tr>
+        <tr>
+          <td>Typical Local Costs (20' FCL vs 200kg air)</td>
+          <td>~10,000 AED</td>
+          <td>~2,500 AED</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>Sea Freight Landed Cost Example (FUNKIN)</h3>
+    <div class="calculation-box">
+REAL EXAMPLE: FUNKIN Cocktails (Sea Freight UK → RAK)
+═══════════════════════════════════════════════════════
+SHIPMENT: 3,100 cases (10 pallets) | 1x20' FCL Container
+
+PRODUCT COST
+  3,100 cases × $12/case                      $37,200.00 USD
+
+FREIGHT & INSURANCE
+  Sea freight (London Gateway → RAK)           $3,500.00 USD (est)
+  Insurance (0.5%)                               $185.00 USD
+
+DESTINATION CHARGES (AED → USD @ 3.67)
+  Terminal (Hutchison Ports)         516 AED     $140.60 USD
+  Clearing agent (GAC)             2,237 AED     $609.50 USD
+  Pre-clear fees (Transit+Re-Export) 430 AED     $117.15 USD
+  Shipping line payment              300 AED      $81.75 USD
+  Delivery to warehouse            1,050 AED     $286.10 USD
+  Destuffing (20' container)         670 AED     $182.55 USD
+  Pallet wrapping (10 pallets)       550 AED     $149.85 USD
+  Non-Duty Levy (3,100 × 1.60)     4,960 AED   $1,351.50 USD
+───────────────────────────────────────────────────────
+<span class="total">TOTAL LANDED COST                          $43,804.00 USD</span>
+
+÷ 37,200 bottles (3,100 cases × 12 bottles)
+───────────────────────────────────────────────────────
+<span class="total">= LANDED COST PER BOTTLE                       $1.18 USD</span>
+
+Notes:
+• Ex-cellar cost: $1.00/bottle ($12/case ÷ 12 bottles)
+• Total logistics adds: $0.18/bottle (18% of product cost)
+• Sea freight much more economical than air for volume
+• Non-Duty Levy is significant: $1,351 for 3,100 cases
+    </div>
+
+    <!-- RAK PORT RATE CARDS -->
+    <h2 id="rate-cards">RAK Port Rate Cards</h2>
+
+    <div class="highlight-green">
+      <h3>Standard Rate Cards for Cost Estimation</h3>
+      <p style="color:white;margin:0">Use these rates for automated quote generation and landed cost calculations. Rates effective 2026.</p>
+    </div>
+
+    <h3>RAK Port Warehouse Tariff - Effective 2026</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Service</th>
+          <th>Currency</th>
+          <th>20' GP (AED)</th>
+          <th>40' GP (AED)</th>
+          <th>Unit Basis</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>Container Destuffing</td>
+          <td>AED</td>
+          <td>670</td>
+          <td>875</td>
+          <td>Per container</td>
+        </tr>
+        <tr>
+          <td>2</td>
+          <td>Forklift</td>
+          <td>AED</td>
+          <td colspan="2">135</td>
+          <td>Per half hour</td>
+        </tr>
+        <tr>
+          <td>3</td>
+          <td>Handling</td>
+          <td>AED</td>
+          <td colspan="2">45</td>
+          <td>Per person per hour</td>
+        </tr>
+        <tr>
+          <td>4</td>
+          <td>Pallet + Wrapping</td>
+          <td>AED</td>
+          <td colspan="2">55</td>
+          <td>Per pallet (if required)</td>
+        </tr>
+        <tr>
+          <td>5</td>
+          <td>Storage (Variable)</td>
+          <td>AED</td>
+          <td colspan="2">35</td>
+          <td>Per sq. mtr. per month (min)</td>
+        </tr>
+        <tr>
+          <td>6</td>
+          <td><strong>Non-Duty Levy</strong></td>
+          <td>AED</td>
+          <td colspan="2"><strong>1.60</strong></td>
+          <td><strong>Per case</strong> (bond transfers)</td>
+        </tr>
+        <tr>
+          <td>7</td>
+          <td>Dunnage / Waste Management</td>
+          <td>AED</td>
+          <td colspan="2">25</td>
+          <td>Per 10 kg of waste</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="warning-box">
+      <strong>Non-Duty Levy Explained:</strong> The 1.60 AED/case charge applies to bonded movements and non-dutiable cargo transfers (FZ to FZ). This covers documentation processing, system administration, and customs coordination required for duty-free transfers.
+    </div>
+
+    <h3>Delivery to Warehouse (via Transport Partner)</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Service</th>
+          <th>Base (AED)</th>
+          <th>VAT 5%</th>
+          <th>Total (AED)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Airport → RAK Port Warehouse</td>
+          <td>600</td>
+          <td>30</td>
+          <td><strong>630</strong></td>
+        </tr>
+        <tr>
+          <td>Seaport → RAK Port Warehouse (container)</td>
+          <td>1,000</td>
+          <td>50</td>
+          <td><strong>1,050</strong></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>Complete Cost Structure Reference</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Cost Category</th>
+          <th>Sea (20' FCL)</th>
+          <th>Air</th>
+          <th>Notes</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Freight</td>
+          <td>Variable</td>
+          <td>Variable</td>
+          <td>Carrier dependent</td>
+        </tr>
+        <tr>
+          <td>Terminal/Airport Handling</td>
+          <td>~516 AED</td>
+          <td>~245 AED</td>
+          <td>Hutchison / RAK Airport</td>
+        </tr>
+        <tr>
+          <td>Clearing Agent (GAC)</td>
+          <td>~2,237 AED</td>
+          <td>~1,606 AED</td>
+          <td>Includes BOE, export bill, service charges</td>
+        </tr>
+        <tr>
+          <td>Pre-Clear Gov Fees</td>
+          <td>~430 AED</td>
+          <td>~320 AED</td>
+          <td>Transit + Re-Export declarations</td>
+        </tr>
+        <tr>
+          <td>Delivery to Warehouse</td>
+          <td>1,050 AED</td>
+          <td>630 AED</td>
+          <td>Transport partner</td>
+        </tr>
+        <tr>
+          <td>Destuffing</td>
+          <td>670 AED (20') / 875 AED (40')</td>
+          <td>N/A</td>
+          <td>Container unloading</td>
+        </tr>
+        <tr>
+          <td>Pallet Wrapping</td>
+          <td>55 AED/pallet</td>
+          <td>55 AED/pallet</td>
+          <td>If required</td>
+        </tr>
+        <tr>
+          <td>Non-Duty Levy</td>
+          <td>1.60 AED/case</td>
+          <td>1.60 AED/case</td>
+          <td>Bonded transfers</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>GAC Clearing Agent Standard Charges</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Service</th>
+          <th>Typical Rate (AED)</th>
+          <th>VAT</th>
+          <th>Category</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Bill of Entry (Import)</td>
+          <td>185 - 350</td>
+          <td>ZR</td>
+          <td>Government fee pass-through</td>
+        </tr>
+        <tr>
+          <td>Export Bill (Re-Export)</td>
+          <td>245</td>
+          <td>ZR</td>
+          <td>Government fee pass-through</td>
+        </tr>
+        <tr>
+          <td>Customs Seal</td>
+          <td>20</td>
+          <td>ZR</td>
+          <td>Government fee</td>
+        </tr>
+        <tr>
+          <td>Document Processing</td>
+          <td>50</td>
+          <td>5% SR</td>
+          <td>Agent service fee</td>
+        </tr>
+        <tr>
+          <td>Truck Loading/Unloading</td>
+          <td>439</td>
+          <td>ZR</td>
+          <td>Handling</td>
+        </tr>
+        <tr>
+          <td>Seal Cutting</td>
+          <td>25</td>
+          <td>ZR</td>
+          <td>Container operation</td>
+        </tr>
+        <tr>
+          <td>DO Collection Fee</td>
+          <td>250</td>
+          <td>5% SR</td>
+          <td>Agent service fee</td>
+        </tr>
+        <tr>
+          <td>GAC Service Charge (per port)</td>
+          <td>250 - 275</td>
+          <td>5% SR</td>
+          <td>Agent service fee</td>
+        </tr>
+        <tr>
+          <td>Inspection Attendance</td>
+          <td>150</td>
+          <td>5% SR</td>
+          <td>Agent service fee</td>
+        </tr>
+        <tr>
+          <td>Container Demurrage</td>
+          <td>300+</td>
+          <td>NR</td>
+          <td>Shipping line charge</td>
+        </tr>
+      </tbody>
+    </table>
+    <p><strong>VAT Categories:</strong> ZR = Zero Rate (government fees), SR = Standard Rate 5% (service charges), NR = Not Reportable (port authority)</p>
+
+    <h3>Quick Cost Calculator Examples</h3>
+    <div class="grid-2">
+      <div class="card">
+        <h4>Air Freight (120 bottles, 20 cases)</h4>
+        <table class="schema-table">
+          <tbody>
+            <tr><td>Clearing (GAC)</td><td>~1,606 AED</td></tr>
+            <tr><td>Airport Handling</td><td>~245 AED</td></tr>
+            <tr><td>Delivery</td><td>630 AED</td></tr>
+            <tr><td>Non-Duty Levy (20 cases)</td><td>32 AED</td></tr>
+            <tr><td><strong>Total Local Costs</strong></td><td><strong>~2,513 AED</strong></td></tr>
+            <tr><td><strong>Per bottle</strong></td><td><strong>~20.94 AED</strong></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="card">
+        <h4>Sea Freight (3,100 cases, 20' FCL)</h4>
+        <table class="schema-table">
+          <tbody>
+            <tr><td>Terminal (Hutchison)</td><td>516 AED</td></tr>
+            <tr><td>Clearing (GAC)</td><td>2,237 AED</td></tr>
+            <tr><td>Pre-Clear Fees</td><td>430 AED</td></tr>
+            <tr><td>Shipping Line</td><td>300 AED</td></tr>
+            <tr><td>Delivery</td><td>1,050 AED</td></tr>
+            <tr><td>Destuffing</td><td>670 AED</td></tr>
+            <tr><td>Pallet Wrap (10)</td><td>550 AED</td></tr>
+            <tr><td>Non-Duty Levy</td><td>4,960 AED</td></tr>
+            <tr><td><strong>Total Local Costs</strong></td><td><strong>~10,713 AED</strong></td></tr>
+            <tr><td><strong>Per case</strong></td><td><strong>~3.46 AED</strong></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
     <!-- INTEGRATIONS -->
     <h2 id="integrations">Integrations</h2>
 
@@ -2474,7 +3030,7 @@ Notes:
     </div>
 
     <div class="footer">
-      <p>C&C Logistics Module - Compliance-First Implementation Plan | v2.2 | January 2026</p>
+      <p>C&C Logistics Module - Compliance-First Implementation Plan | v2.3 | January 2026</p>
       <p>Craft & Culture | RAK Port, UAE</p>
     </div>
   </div>
