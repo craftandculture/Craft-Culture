@@ -5,6 +5,7 @@ import logAdminActivity from '@/app/_admin/utils/logAdminActivity';
 import db from '@/database/client';
 import { quotes } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
+import logger from '@/utils/logger';
 
 import markAsPaidSchema from '../schemas/markAsPaidSchema';
 import notifyUserOfPayment from '../utils/notifyUserOfPayment';
@@ -83,7 +84,7 @@ const quotesMarkAsPaid = adminProcedure
 
       return updatedQuote;
     } catch (error) {
-      console.error('Error marking quote as paid:', { error, quoteId, adminId: user.id });
+      logger.error('Error marking quote as paid', { error, quoteId, adminId: user.id });
       throw new TRPCError({
         code: 'INTERNAL_SERVER_ERROR',
         message: 'Failed to mark quote as paid',

@@ -29,6 +29,13 @@ const logger = {
   },
 
   /**
+   * Log informational messages (always logged)
+   */
+  info: (...args: unknown[]) => {
+    console.log(...args);
+  },
+
+  /**
    * Log errors (always logged)
    */
   error: (...args: unknown[]) => {

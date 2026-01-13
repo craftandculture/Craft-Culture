@@ -1,9 +1,18 @@
 import { TRPCError } from '@trpc/server';
 import { put } from '@vercel/blob';
+import { fileTypeFromBuffer } from 'file-type';
 
+import logger from '@/lib/logger';
 import { protectedProcedure } from '@/lib/trpc/procedures';
 
 import uploadPODocumentSchema from '../schemas/uploadPODocumentSchema';
+
+/** Allowed MIME types for PO documents */
+const ALLOWED_MIME_TYPES = [
+  'application/pdf',
+  'image/jpeg',
+  'image/png',
+] as const;
 
 /**
  * Upload a PO document to Vercel Blob storage
@@ -18,11 +27,11 @@ import uploadPODocumentSchema from '../schemas/uploadPODocumentSchema';
 const quotesUploadPODocument = protectedProcedure
   .input(uploadPODocumentSchema)
   .mutation(async ({ input, ctx: { user } }) => {
-    const { file, filename, fileType } = input;
+    const { file, filename } = input;
 
     // Check if Blob token is configured
     if (!process.env.BLOB_READ_WRITE_TOKEN) {
-      console.error('BLOB_READ_WRITE_TOKEN environment variable is not set');
+      logger.error('BLOB_READ_WRITE_TOKEN environment variable is not set');
       throw new TRPCError({
         code: 'INTERNAL_SERVER_ERROR',
         message: 'File storage is not configured. Please contact support.',
@@ -51,15 +60,26 @@ const quotesUploadPODocument = protectedProcedure
         });
       }
 
+      // Runtime file type validation - verify actual file content
+      const detectedType = await fileTypeFromBuffer(buffer);
+      const mimeType = detectedType?.mime;
+
+      if (!mimeType || !ALLOWED_MIME_TYPES.includes(mimeType as typeof ALLOWED_MIME_TYPES[number])) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Invalid file type. Only PDF, JPEG, and PNG files are allowed.',
+        });
+      }
+
       // Generate unique filename
       const timestamp = Date.now();
       const sanitizedFilename = filename.replace(/[^a-zA-Z0-9.-]/g, '_');
       const blobFilename = `po-documents/${user.id}/${timestamp}-${sanitizedFilename}`;
 
-      // Upload to Vercel Blob
+      // Upload to Vercel Blob with validated mime type
       const blob = await put(blobFilename, buffer, {
         access: 'public',
-        contentType: fileType,
+        contentType: mimeType,
       });
 
       return {

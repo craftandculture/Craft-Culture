@@ -4,6 +4,7 @@ import settingsGetController from '@/app/_admin/controllers/settingsGetControlle
 import db from '@/database/client';
 import { productOffers, products } from '@/database/schema';
 import conflictUpdateSet from '@/database/utils/conflictUpdateSet';
+import logger from '@/lib/logger';
 import downloadGoogleSheet from '@/utils/downloadGoogleSheet';
 import splitArrayBatches from '@/utils/splitArrayBatches';
 
@@ -77,7 +78,7 @@ const localInventorySyncController = async () => {
     const processedExternalIds: string[] = [];
 
     for (const [index, batch] of batches.entries()) {
-      console.log(`Processing batch ${index + 1} of ${batches.length}`);
+      logger.info(`Processing batch ${index + 1} of ${batches.length}`);
 
       try {
         // Create unique products for each row (use LWIN18 + rowNumber)
@@ -151,7 +152,7 @@ const localInventorySyncController = async () => {
         stats.offersCreated += batch.length;
       } catch (error) {
         const errorMessage = `Error processing batch ${index + 1}: ${error instanceof Error ? error.message : 'Unknown error'}`;
-        console.error(errorMessage);
+        logger.error(errorMessage, { error, batchIndex: index });
         stats.errors.push(errorMessage);
       }
     }
@@ -178,7 +179,7 @@ const localInventorySyncController = async () => {
       stats.offersDeleted = offersToDelete.length;
     }
 
-    console.log('Local inventory sync completed', stats);
+    logger.info('Local inventory sync completed', { stats });
     return stats;
   } catch (error) {
     const errorMessage =

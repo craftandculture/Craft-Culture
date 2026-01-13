@@ -4,6 +4,7 @@ import { and, eq } from 'drizzle-orm';
 import db from '@/database/client';
 import { quotes } from '@/database/schema';
 import { protectedProcedure } from '@/lib/trpc/procedures';
+import logger from '@/utils/logger';
 import logUserActivity from '@/utils/logUserActivity';
 
 import submitBuyRequestSchema from '../schemas/submitBuyRequestSchema';
@@ -85,12 +86,12 @@ const quotesSubmitBuyRequest = protectedProcedure
         '../utils/notifyAdminsOfBuyRequest'
       );
       notifyAdminsOfBuyRequest(updatedQuote).catch((error) =>
-        console.error('Failed to send buy request notification:', error),
+        logger.error('Failed to send buy request notification', { error }),
       );
 
       return updatedQuote;
     } catch (error) {
-      console.error('Error submitting buy request:', { error, quoteId, userId: user.id });
+      logger.error('Error submitting buy request', { error, quoteId, userId: user.id });
       throw new TRPCError({
         code: 'INTERNAL_SERVER_ERROR',
         message: 'Failed to submit buy request',

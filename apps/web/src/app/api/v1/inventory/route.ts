@@ -4,6 +4,7 @@ import type { NextRequest } from 'next/server';
 
 import db from '@/database/client';
 import { productOffers, products } from '@/database/schema';
+import logger from '@/utils/logger';
 
 import type { InventoryItem, InventoryListResponse } from './schema';
 import { inventoryQuerySchema } from './schema';
@@ -214,7 +215,7 @@ export const GET = async (request: NextRequest) => {
 
     return NextResponse.json(response);
   } catch (error) {
-    console.error('Error fetching inventory:', error);
+    logger.error('Error fetching inventory:', error);
     const responseTimeMs = Date.now() - startTime;
     void logApiRequest({
       request,

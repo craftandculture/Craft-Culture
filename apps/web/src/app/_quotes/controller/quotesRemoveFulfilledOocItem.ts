@@ -5,6 +5,7 @@ import { z } from 'zod';
 import db from '@/database/client';
 import { quotes } from '@/database/schema';
 import { protectedProcedure } from '@/lib/trpc/procedures';
+import logger from '@/utils/logger';
 
 const removeFulfilledOocItemSchema = z.object({
   quoteId: z.string().uuid(),
@@ -135,7 +136,7 @@ const quotesRemoveFulfilledOocItem = protectedProcedure
 
       return updatedQuote;
     } catch (error) {
-      console.error('Error removing fulfilled OOC item:', { error, quoteId, requestId });
+      logger.error('Error removing fulfilled OOC item', { error, quoteId, requestId });
 
       if (error instanceof TRPCError) {
         throw error;

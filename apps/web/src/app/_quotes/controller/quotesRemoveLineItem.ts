@@ -5,6 +5,7 @@ import { z } from 'zod';
 import db from '@/database/client';
 import { quotes } from '@/database/schema';
 import { protectedProcedure } from '@/lib/trpc/procedures';
+import logger from '@/utils/logger';
 
 const removeLineItemSchema = z.object({
   quoteId: z.string().uuid(),
@@ -142,7 +143,7 @@ const quotesRemoveLineItem = protectedProcedure
 
       return updatedQuote;
     } catch (error) {
-      console.error('Error removing line item:', { error, quoteId, productId });
+      logger.error('Error removing line item', { error, quoteId, productId });
 
       if (error instanceof TRPCError) {
         throw error;

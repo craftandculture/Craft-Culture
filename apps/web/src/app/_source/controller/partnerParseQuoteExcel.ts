@@ -9,6 +9,7 @@ import {
   sourceRfqs,
 } from '@/database/schema';
 import { winePartnerProcedure } from '@/lib/trpc/procedures';
+import logger from '@/utils/logger';
 
 import excelToCSV from '../utils/excelToCSV';
 import parseQuoteExcel from '../utils/parseQuoteExcel';
@@ -154,7 +155,7 @@ const partnerParseQuoteExcel = winePartnerProcedure
         rfqItemCount: items.length,
       };
     } catch (error) {
-      console.error('Quote Excel parsing failed:', {
+      logger.error('Quote Excel parsing failed:', {
         error: error instanceof Error ? error.message : 'Unknown error',
         rfqId,
       });

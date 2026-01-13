@@ -5,6 +5,7 @@ import type { NextRequest } from 'next/server';
 
 import db from '@/database/client';
 import { warehouseSensorReadings } from '@/database/schema';
+import logger from '@/utils/logger';
 
 import { sensorDataSchema } from './schema';
 
@@ -93,7 +94,7 @@ export const POST = async (request: NextRequest) => {
       readings: insertedReadings,
     });
   } catch (error) {
-    console.error('Error processing sensor data:', { error });
+    logger.error('Error processing sensor data:', { error });
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 },

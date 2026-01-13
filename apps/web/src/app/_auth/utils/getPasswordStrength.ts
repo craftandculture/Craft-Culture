@@ -1,5 +1,11 @@
 import { passwordStrength } from 'check-password-strength';
 
+/**
+ * Calculate password strength based on complexity rules
+ *
+ * @param password - The password to evaluate
+ * @returns Strength level from 0 (Too weak) to 4 (Very strong)
+ */
 const getPasswordStrength = (password: string) => {
   return passwordStrength(password, [
     {

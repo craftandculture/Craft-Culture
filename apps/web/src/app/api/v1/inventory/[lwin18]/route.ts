@@ -4,6 +4,7 @@ import type { NextRequest } from 'next/server';
 
 import db from '@/database/client';
 import { productOffers, products } from '@/database/schema';
+import logger from '@/utils/logger';
 
 import checkRateLimit from '../../_middleware/checkRateLimit';
 import validateApiKey from '../../_middleware/validateApiKey';
@@ -158,7 +159,7 @@ export const GET = async (request: NextRequest, { params }: RouteParams) => {
 
     return NextResponse.json({ data: inventoryItem });
   } catch (error) {
-    console.error('Error fetching product:', error);
+    logger.error('Error fetching product:', error);
     const responseTimeMs = Date.now() - startTime;
     void logApiRequest({
       request,

@@ -1,5 +1,6 @@
 import db from '@/database/client';
 import { notifications } from '@/database/schema';
+import logger from '@/utils/logger';
 
 interface CreateAdminNotificationsParams {
   type:
@@ -39,7 +40,7 @@ const createAdminNotifications = async (params: CreateAdminNotificationsParams) 
   });
 
   if (adminUsers.length === 0) {
-    console.warn('No admin users found to notify');
+    logger.warn('No admin users found to notify');
     return [];
   }
 

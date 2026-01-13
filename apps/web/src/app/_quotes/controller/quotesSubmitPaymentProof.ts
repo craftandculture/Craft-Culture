@@ -4,6 +4,7 @@ import { eq } from 'drizzle-orm';
 import db from '@/database/client';
 import { quotes } from '@/database/schema';
 import { protectedProcedure } from '@/lib/trpc/procedures';
+import logger from '@/utils/logger';
 import logUserActivity from '@/utils/logUserActivity';
 
 import submitPaymentProofSchema from '../schemas/submitPaymentProofSchema';
@@ -75,7 +76,7 @@ const quotesSubmitPaymentProof = protectedProcedure
         '../utils/notifyAdminsOfPaymentProof'
       );
       notifyAdminsOfPaymentProof(updatedQuote).catch((error) =>
-        console.error('Failed to send payment proof notification:', error),
+        logger.error('Failed to send payment proof notification', { error }),
       );
 
       // Log user activity
@@ -92,7 +93,7 @@ const quotesSubmitPaymentProof = protectedProcedure
 
       return updatedQuote;
     } catch (error) {
-      console.error('Error submitting payment proof:', { error, quoteId, userId: user.id });
+      logger.error('Error submitting payment proof', { error, quoteId, userId: user.id });
 
       if (error instanceof TRPCError) {
         throw error;

@@ -5,6 +5,7 @@ import logAdminActivity from '@/app/_admin/utils/logAdminActivity';
 import db from '@/database/client';
 import { quotes } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
+import logger from '@/utils/logger';
 
 import requestRevisionSchema from '../schemas/requestRevisionSchema';
 
@@ -95,7 +96,7 @@ const quotesRequestRevision = adminProcedure
         '../utils/notifyUserOfRevisionRequest'
       );
       notifyUserOfRevisionRequest(updatedQuote).catch((error) =>
-        console.error('Failed to send revision request notification:', error),
+        logger.error('Failed to send revision request notification', { error }),
       );
 
       // Log admin activity
@@ -113,7 +114,7 @@ const quotesRequestRevision = adminProcedure
 
       return updatedQuote;
     } catch (error) {
-      console.error('Error requesting revision:', { error, quoteId, adminId: user.id });
+      logger.error('Error requesting revision', { error, quoteId, adminId: user.id });
       throw new TRPCError({
         code: 'INTERNAL_SERVER_ERROR',
         message: 'Failed to request revision',

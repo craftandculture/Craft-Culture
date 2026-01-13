@@ -4,6 +4,7 @@ import { eq } from 'drizzle-orm';
 import db from '@/database/client';
 import { quotes } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
+import logger from '@/utils/logger';
 
 import getQuoteByIdSchema from '../schemas/getQuoteByIdSchema';
 
@@ -39,7 +40,7 @@ const quotesDeleteAdmin = adminProcedure
 
       return { success: true, deletedQuoteId: id };
     } catch (error) {
-      console.error('Error deleting quote (admin):', { error, quoteId: id });
+      logger.error('Error deleting quote (admin)', { error, quoteId: id });
       throw new TRPCError({
         code: 'INTERNAL_SERVER_ERROR',
         message: 'Failed to delete quote',

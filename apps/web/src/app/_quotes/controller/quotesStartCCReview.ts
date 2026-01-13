@@ -4,6 +4,7 @@ import { eq } from 'drizzle-orm';
 import db from '@/database/client';
 import { quotes } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
+import logger from '@/utils/logger';
 
 import startCCReviewSchema from '../schemas/startCCReviewSchema';
 
@@ -69,14 +70,14 @@ const quotesStartCCReview = adminProcedure
         '../utils/notifyUserOfReviewStart'
       );
       notifyUserOfReviewStart(updatedQuote).catch((error) =>
-        console.error('Failed to send review start notification:', error),
+        logger.error('Failed to send review start notification', { error }),
       );
 
       // TODO: Log admin activity
 
       return updatedQuote;
     } catch (error) {
-      console.error('Error starting C&C review:', { error, quoteId, adminId: user.id });
+      logger.error('Error starting C&C review', { error, quoteId, adminId: user.id });
       throw new TRPCError({
         code: 'INTERNAL_SERVER_ERROR',
         message: 'Failed to start C&C review',
