@@ -3,1036 +3,526 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>C&C Logistics Module - Complete Implementation Plan</title>
+  <title>C&C Logistics Module - Implementation Plan</title>
   <style>
+    :root {
+      --bg-primary: #0a0a0a;
+      --bg-secondary: #141414;
+      --bg-tertiary: #1a1a1a;
+      --border-color: #2a2a2a;
+      --text-primary: #f5f5f5;
+      --text-secondary: #a0a0a0;
+      --text-muted: #666;
+      --accent-blue: #3b82f6;
+      --accent-green: #22c55e;
+      --accent-yellow: #eab308;
+      --accent-red: #ef4444;
+      --accent-purple: #a855f7;
+    }
+
     * {
-      box-sizing: border-box;
       margin: 0;
       padding: 0;
+      box-sizing: border-box;
     }
 
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
       line-height: 1.6;
-      color: #1a1a2e;
-      background: #f8f9fa;
-      padding: 20px;
     }
 
     .container {
-      max-width: 1400px;
+      max-width: 1200px;
       margin: 0 auto;
-      background: white;
-      border-radius: 12px;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-      padding: 40px 60px;
+      padding: 2rem;
     }
 
-    h1 {
+    header {
+      text-align: center;
+      padding: 3rem 0;
+      border-bottom: 1px solid var(--border-color);
+      margin-bottom: 3rem;
+    }
+
+    header h1 {
       font-size: 2.5rem;
-      color: #1a1a2e;
-      border-bottom: 4px solid #7c3aed;
-      padding-bottom: 15px;
-      margin-bottom: 30px;
+      margin-bottom: 0.5rem;
+      background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
     }
 
-    h2 {
-      font-size: 1.5rem;
-      color: #7c3aed;
-      margin-top: 50px;
-      margin-bottom: 20px;
-      padding-bottom: 10px;
-      border-bottom: 2px solid #e5e7eb;
-    }
-
-    h3 {
-      font-size: 1.2rem;
-      color: #374151;
-      margin-top: 25px;
-      margin-bottom: 15px;
-    }
-
-    h4 {
-      font-size: 1rem;
-      color: #4b5563;
-      margin-top: 20px;
-      margin-bottom: 10px;
-    }
-
-    p {
-      margin-bottom: 15px;
-      color: #4b5563;
-    }
-
-    .highlight {
-      background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%);
-      color: white;
-      padding: 20px 30px;
-      border-radius: 10px;
-      margin: 20px 0;
-    }
-
-    .highlight h3 {
-      color: white;
-      margin-top: 0;
-    }
-
-    .highlight-red {
-      background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%);
-      color: white;
-      padding: 20px 30px;
-      border-radius: 10px;
-      margin: 20px 0;
-    }
-
-    .highlight-green {
-      background: linear-gradient(135deg, #059669 0%, #10b981 100%);
-      color: white;
-      padding: 20px 30px;
-      border-radius: 10px;
-      margin: 20px 0;
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin: 20px 0;
-      font-size: 0.9rem;
-    }
-
-    th {
-      background: #7c3aed;
-      color: white;
-      padding: 12px 15px;
-      text-align: left;
-      font-weight: 600;
-    }
-
-    td {
-      padding: 10px 15px;
-      border-bottom: 1px solid #e5e7eb;
-    }
-
-    tr:hover {
-      background: #f9fafb;
-    }
-
-    .priority-table td:first-child {
-      font-weight: 600;
-      color: #7c3aed;
-    }
-
-    .wireframe {
-      background: #1a1a2e;
-      color: #10b981;
-      font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-      font-size: 11px;
-      padding: 20px;
-      border-radius: 0 0 10px 10px;
-      overflow-x: auto;
-      margin: 0 0 30px 0;
-      white-space: pre;
-      line-height: 1.4;
-    }
-
-    .wireframe-title {
-      background: #374151;
-      color: white;
-      padding: 10px 20px;
-      border-radius: 10px 10px 0 0;
-      font-weight: 600;
-      margin-top: 20px;
-    }
-
-    .solution-box {
-      background: #f0fdf4;
-      border-left: 4px solid #10b981;
-      padding: 20px;
-      margin: 15px 0;
-      border-radius: 0 8px 8px 0;
-    }
-
-    .problem-box {
-      background: #fef2f2;
-      border-left: 4px solid #ef4444;
-      padding: 15px 20px;
-      margin: 15px 0;
-      border-radius: 0 8px 8px 0;
-      color: #991b1b;
-      font-weight: 500;
-    }
-
-    .warning-box {
-      background: #fffbeb;
-      border-left: 4px solid #f59e0b;
-      padding: 15px 20px;
-      margin: 15px 0;
-      border-radius: 0 8px 8px 0;
-      color: #92400e;
-    }
-
-    .calculation-box {
-      background: #fffbeb;
-      border: 2px solid #f59e0b;
-      padding: 20px;
-      margin: 20px 0;
-      border-radius: 10px;
-      font-family: 'Monaco', 'Menlo', monospace;
-      font-size: 13px;
-    }
-
-    .calculation-box .total {
-      font-weight: bold;
-      color: #7c3aed;
-      font-size: 16px;
-    }
-
-    ul {
-      margin: 15px 0;
-      padding-left: 25px;
-    }
-
-    li {
-      margin-bottom: 8px;
-      color: #4b5563;
-    }
-
-    .phase {
-      background: #f3f4f6;
-      padding: 20px;
-      border-radius: 10px;
-      margin: 15px 0;
-    }
-
-    .phase h4 {
-      color: #7c3aed;
-      margin-bottom: 10px;
-      margin-top: 0;
-    }
-
-    .phase ul {
-      margin: 0;
-    }
-
-    .badge {
-      display: inline-block;
-      padding: 4px 12px;
-      border-radius: 20px;
-      font-size: 0.8rem;
-      font-weight: 600;
-    }
-
-    .badge-purple {
-      background: #ede9fe;
-      color: #7c3aed;
-    }
-
-    .badge-green {
-      background: #d1fae5;
-      color: #059669;
-    }
-
-    .badge-blue {
-      background: #dbeafe;
-      color: #2563eb;
-    }
-
-    .badge-red {
-      background: #fee2e2;
-      color: #dc2626;
-    }
-
-    .badge-amber {
-      background: #fef3c7;
-      color: #d97706;
-    }
-
-    .grid-2 {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 20px;
-      margin: 20px 0;
-    }
-
-    .grid-3 {
-      display: grid;
-      grid-template-columns: 1fr 1fr 1fr;
-      gap: 20px;
-      margin: 20px 0;
-    }
-
-    .card {
-      background: #f9fafb;
-      padding: 20px;
-      border-radius: 10px;
-      border: 1px solid #e5e7eb;
-    }
-
-    .card h4 {
-      color: #7c3aed;
-      margin-bottom: 10px;
-      margin-top: 0;
-    }
-
-    .tree {
-      font-family: 'Monaco', 'Menlo', monospace;
-      font-size: 12px;
-      background: #f9fafb;
-      padding: 15px 20px;
-      border-radius: 8px;
-      color: #374151;
-      white-space: pre;
-      overflow-x: auto;
-      margin: 15px 0;
-    }
-
-    .flow-diagram {
-      font-family: 'Monaco', 'Menlo', monospace;
-      font-size: 12px;
-      background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-      padding: 25px;
-      border-radius: 10px;
-      border: 2px solid #e2e8f0;
-      white-space: pre;
-      overflow-x: auto;
-      margin: 20px 0;
-      line-height: 1.5;
+    header p {
+      color: var(--text-secondary);
+      font-size: 1.1rem;
     }
 
     .toc {
-      background: #f3f4f6;
-      padding: 25px 30px;
-      border-radius: 10px;
-      margin: 20px 0;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 2rem;
+      margin-bottom: 3rem;
     }
 
-    .toc h3 {
-      margin-top: 0;
-      margin-bottom: 15px;
+    .toc h2 {
+      font-size: 1.3rem;
+      margin-bottom: 1rem;
+      color: var(--accent-blue);
     }
 
-    .toc ol {
-      columns: 2;
-      column-gap: 40px;
-    }
-
-    .toc li {
-      margin-bottom: 8px;
+    .toc-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 0.5rem;
     }
 
     .toc a {
-      color: #7c3aed;
+      color: var(--text-secondary);
       text-decoration: none;
+      padding: 0.3rem 0;
+      transition: color 0.2s;
     }
 
     .toc a:hover {
-      text-decoration: underline;
+      color: var(--accent-blue);
+    }
+
+    section {
+      margin-bottom: 4rem;
+    }
+
+    h2 {
+      font-size: 1.8rem;
+      margin-bottom: 1.5rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 2px solid var(--accent-blue);
+    }
+
+    h3 {
+      font-size: 1.3rem;
+      margin: 2rem 0 1rem;
+      color: var(--accent-purple);
+    }
+
+    h4 {
+      font-size: 1.1rem;
+      margin: 1.5rem 0 0.75rem;
+      color: var(--text-secondary);
+    }
+
+    p {
+      margin-bottom: 1rem;
+      color: var(--text-secondary);
+    }
+
+    ul, ol {
+      margin-bottom: 1rem;
+      padding-left: 2rem;
+      color: var(--text-secondary);
+    }
+
+    li {
+      margin-bottom: 0.5rem;
+    }
+
+    .priority-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 2rem;
+    }
+
+    .priority-table th,
+    .priority-table td {
+      padding: 1rem;
+      text-align: left;
+      border: 1px solid var(--border-color);
+    }
+
+    .priority-table th {
+      background: var(--bg-tertiary);
+      color: var(--accent-blue);
+    }
+
+    .priority-table td:first-child {
+      font-weight: bold;
+      color: var(--accent-yellow);
+    }
+
+    .code-block {
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 1.5rem;
+      margin: 1rem 0;
+      overflow-x: auto;
+      font-family: 'Monaco', 'Menlo', monospace;
+      font-size: 0.9rem;
+      white-space: pre;
+      color: var(--text-secondary);
+    }
+
+    .wireframe {
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 1.5rem;
+      margin: 1rem 0;
+      overflow-x: auto;
+      font-family: 'Monaco', 'Menlo', monospace;
+      font-size: 0.75rem;
+      white-space: pre;
+      color: var(--accent-green);
+    }
+
+    .card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .card h3 {
+      margin-top: 0;
+      color: var(--accent-blue);
+    }
+
+    .user-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 2rem;
+    }
+
+    .user-table th,
+    .user-table td {
+      padding: 1rem;
+      text-align: left;
+      border: 1px solid var(--border-color);
+    }
+
+    .user-table th {
+      background: var(--bg-tertiary);
+      color: var(--accent-purple);
     }
 
     .schema-table {
-      font-size: 0.85rem;
-    }
-
-    .schema-table td:first-child {
-      font-family: 'Monaco', 'Menlo', monospace;
-      color: #7c3aed;
-    }
-
-    .schema-table td:nth-child(2) {
-      font-family: 'Monaco', 'Menlo', monospace;
-      color: #059669;
-    }
-
-    .footer {
-      margin-top: 50px;
-      padding-top: 20px;
-      border-top: 2px solid #e5e7eb;
-      text-align: center;
-      color: #9ca3af;
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 2rem;
       font-size: 0.9rem;
     }
 
-    .status-pipeline {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      margin: 15px 0;
+    .schema-table th,
+    .schema-table td {
+      padding: 0.75rem;
+      text-align: left;
+      border: 1px solid var(--border-color);
     }
 
-    .status-item {
-      background: #e5e7eb;
-      padding: 8px 16px;
-      border-radius: 20px;
+    .schema-table th {
+      background: var(--bg-tertiary);
+      color: var(--accent-green);
+    }
+
+    .schema-table code {
+      background: var(--bg-primary);
+      padding: 0.2rem 0.4rem;
+      border-radius: 4px;
       font-size: 0.85rem;
+    }
+
+    .phase-card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 2rem;
+      margin-bottom: 2rem;
+    }
+
+    .phase-card h3 {
+      margin-top: 0;
+      color: var(--accent-yellow);
+      font-size: 1.4rem;
+    }
+
+    .phase-card h4 {
+      color: var(--accent-blue);
+      margin-top: 1.5rem;
+    }
+
+    .task-list {
+      list-style: none;
+      margin: 1rem 0;
+      padding-left: 0;
+    }
+
+    .task-list li {
+      padding: 0.5rem 0;
+      padding-left: 2rem;
       position: relative;
+      color: var(--text-secondary);
     }
 
-    .status-item::after {
-      content: ' > ';
+    .task-list li::before {
+      content: '[ ]';
       position: absolute;
-      right: -15px;
-      color: #9ca3af;
+      left: 0;
+      color: var(--text-muted);
+      font-family: monospace;
     }
 
-    .status-item:last-child::after {
-      content: '';
+    .highlight-box {
+      background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(168, 85, 247, 0.1));
+      border: 1px solid var(--accent-blue);
+      border-radius: 8px;
+      padding: 1.5rem;
+      margin: 1.5rem 0;
     }
 
-    .comparison-table {
-      margin: 20px 0;
+    .highlight-box strong {
+      color: var(--accent-blue);
     }
 
-    .comparison-table td:first-child {
-      width: 50%;
-      background: #fef2f2;
+    .warning-box {
+      background: rgba(234, 179, 8, 0.1);
+      border: 1px solid var(--accent-yellow);
+      border-radius: 8px;
+      padding: 1.5rem;
+      margin: 1.5rem 0;
     }
 
-    .comparison-table td:last-child {
-      width: 50%;
-      background: #f0fdf4;
+    .warning-box strong {
+      color: var(--accent-yellow);
     }
 
-    .comparison-table th:first-child {
-      background: #dc2626;
+    .pre-work-card {
+      background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(234, 179, 8, 0.1));
+      border: 2px solid var(--accent-red);
+      border-radius: 12px;
+      padding: 2rem;
+      margin-bottom: 2rem;
     }
 
-    .comparison-table th:last-child {
-      background: #059669;
+    .pre-work-card h3 {
+      margin-top: 0;
+      color: var(--accent-red);
+      font-size: 1.4rem;
     }
 
-    .metric-grid {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 15px;
-      margin: 20px 0;
+    .nav-redesign {
+      background: var(--bg-tertiary);
+      border: 2px solid var(--accent-purple);
+      border-radius: 8px;
+      padding: 1.5rem;
+      margin: 1rem 0;
+      font-family: 'Monaco', 'Menlo', monospace;
+      font-size: 0.8rem;
+      white-space: pre;
+      color: var(--accent-purple);
     }
 
-    .metric-card {
-      background: #f9fafb;
-      padding: 20px;
-      border-radius: 10px;
-      text-align: center;
-      border: 1px solid #e5e7eb;
-    }
-
-    .metric-card .number {
-      font-size: 2rem;
-      font-weight: bold;
-      color: #7c3aed;
-    }
-
-    .metric-card .label {
+    .reference-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 2rem;
       font-size: 0.85rem;
-      color: #6b7280;
-      margin-top: 5px;
     }
 
-    @media print {
-      body {
-        background: white;
-        padding: 0;
-      }
-      .container {
-        box-shadow: none;
-        padding: 20px;
-      }
-      .wireframe {
-        font-size: 9px;
-      }
-      h2 {
-        page-break-before: always;
-      }
+    .reference-table th,
+    .reference-table td {
+      padding: 0.75rem;
+      text-align: left;
+      border: 1px solid var(--border-color);
+    }
+
+    .reference-table th {
+      background: var(--bg-tertiary);
+      color: var(--accent-blue);
+    }
+
+    .reference-table code {
+      background: var(--bg-primary);
+      padding: 0.2rem 0.4rem;
+      border-radius: 4px;
+      color: var(--accent-green);
+    }
+
+    footer {
+      text-align: center;
+      padding: 2rem;
+      border-top: 1px solid var(--border-color);
+      color: var(--text-muted);
+      margin-top: 4rem;
     }
 
     @media (max-width: 768px) {
-      .grid-2, .grid-3 {
-        grid-template-columns: 1fr;
-      }
-      .toc ol {
-        columns: 1;
-      }
       .container {
-        padding: 20px;
+        padding: 1rem;
       }
-      .metric-grid {
-        grid-template-columns: repeat(2, 1fr);
+
+      header h1 {
+        font-size: 1.8rem;
+      }
+
+      .wireframe, .code-block {
+        font-size: 0.65rem;
       }
     }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1>C&C Logistics Module</h1>
-    <p><strong>Compliance-First Implementation Plan</strong> | January 2026 | v2.3</p>
+    <header>
+      <h1>C&C Logistics Module</h1>
+      <p>Comprehensive implementation plan for document tracking, shipment management, and landed cost calculation</p>
+      <p style="margin-top: 1rem; color: var(--accent-yellow);">Main warehouse: RAK Port, UAE</p>
+    </header>
 
-    <div class="toc">
-      <h3>Contents</h3>
-      <ol>
-        <li><a href="#why">Why This System (Business Case)</a></li>
-        <li><a href="#purpose">Core Purpose & Priorities</a></li>
-        <li><a href="#achieve">How We Achieve Each Priority</a></li>
-        <li><a href="#notifications">Notification System</a></li>
-        <li><a href="#currency">Multi-Currency Support</a></li>
-        <li><a href="#carrier-rates">Carrier Rate Dashboard</a></li>
-        <li><a href="#cost-analysis">Cost Analysis & Arbitrage</a></li>
-        <li><a href="#customs-deposits">Customs Deposits (FZ to FZ)</a></li>
-        <li><a href="#users">Users & Access</a></li>
-        <li><a href="#features">Features Overview</a></li>
-        <li><a href="#database">Database Schema</a></li>
-        <li><a href="#workflows">Process Workflows</a></li>
-        <li><a href="#wireframes">Wireframes (19 screens)</a></li>
-        <li><a href="#import-docs">Import Document Types - Air Freight</a></li>
-        <li><a href="#sea-freight-docs">Sea Freight Document Types (NEW)</a></li>
-        <li><a href="#rate-cards">RAK Port Rate Cards (NEW)</a></li>
-        <li><a href="#integrations">Integrations</a></li>
-        <li><a href="#phases">Implementation Phases</a></li>
-      </ol>
-    </div>
-
-    <!-- WHY THIS SYSTEM -->
-    <h2 id="why">Why This System</h2>
-
-    <div class="highlight-red">
-      <h3>The Problem Today</h3>
-      <p style="color:white;margin:0">If customs asked for all documents on a shipment right now, it would take <strong>HOURS</strong> - digging through emails, shared drives, and hoping nothing was lost.</p>
-    </div>
-
-    <h3>Compliance Risks We Face</h3>
-    <div class="grid-2">
-      <div class="problem-box">
-        <strong>Audit Failure</strong><br>
-        Can't produce documents when customs or authorities ask
+    <nav class="toc">
+      <h2>Table of Contents</h2>
+      <div class="toc-grid">
+        <a href="#priorities">Core Priorities</a>
+        <a href="#how-we-achieve">How We Achieve Each Priority</a>
+        <a href="#users">Users</a>
+        <a href="#features">Features</a>
+        <a href="#database">Database Schema</a>
+        <a href="#workflows">Workflows</a>
+        <a href="#wireframes">Wireframes</a>
+        <a href="#integrations">Integrations</a>
+        <a href="#pre-work">Pre-Work: Fix Local Inventory</a>
+        <a href="#phases">Implementation Phases</a>
+        <a href="#admin-tools">Admin Tools</a>
+        <a href="#files">Key Files to Create</a>
+        <a href="#verification">Verification Checklist</a>
       </div>
-      <div class="problem-box">
-        <strong>Expired Permits</strong><br>
-        Trading with expired licenses without knowing
-      </div>
-      <div class="problem-box">
-        <strong>Missing Docs at Customs</strong><br>
-        Shipments delayed due to incomplete paperwork
-      </div>
-      <div class="problem-box">
-        <strong>No Audit Trail</strong><br>
-        Can't prove who did what, when, or why
-      </div>
-    </div>
+    </nav>
 
-    <h3>Current State vs Target State</h3>
-    <table class="comparison-table">
-      <thead>
-        <tr>
-          <th>Today (Hours)</th>
-          <th>Target (Seconds)</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td>Documents scattered in emails and drives</td>
-          <td>All docs centralized, linked to shipment</td>
-        </tr>
-        <tr>
-          <td>Manual tracking in spreadsheets</td>
-          <td>Structured database with status pipelines</td>
-        </tr>
-        <tr>
-          <td>No expiry alerts - discover late</td>
-          <td>90/60/30 day automated alerts</td>
-        </tr>
-        <tr>
-          <td>Can't prove compliance history</td>
-          <td>Full audit trail with timestamps</td>
-        </tr>
-        <tr>
-          <td>Partner docs arrive by email</td>
-          <td>Direct upload to platform</td>
-        </tr>
-      </tbody>
-    </table>
+    <section id="priorities">
+      <h2>Core Priorities</h2>
+      <table class="priority-table">
+        <thead>
+          <tr>
+            <th>Priority</th>
+            <th>Goal</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>1. Document Tracking</td>
+            <td>Centralized storage, easy search, never lose a document</td>
+          </tr>
+          <tr>
+            <td>2. Scalability</td>
+            <td>Structured processes that work at 10x volume</td>
+          </tr>
+          <tr>
+            <td>3. Accuracy</td>
+            <td>Correct workflows, validated documents, no errors</td>
+          </tr>
+          <tr>
+            <td>4. Traceability</td>
+            <td>Full audit trail - who did what, when, why</td>
+          </tr>
+          <tr>
+            <td>5. Compliance</td>
+            <td>Expiry alerts, required doc checklists, regulatory adherence</td>
+          </tr>
+          <tr>
+            <td>6. Quotations</td>
+            <td>Accurate quotes with proper review/approval process</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
 
-    <div class="highlight-green">
-      <h3>The Goal: Audit-Ready in One Click</h3>
-      <ul style="color:white;margin:0">
-        <li><strong>One-click export:</strong> All docs for a shipment in one ZIP/PDF</li>
-        <li><strong>Searchable archive:</strong> Find any doc by shipment, date, type, partner</li>
-        <li><strong>Compliance dashboard:</strong> See all risks and gaps at a glance</li>
-        <li><strong>Shared team accountability:</strong> Multiple admins, clear ownership</li>
-      </ul>
-    </div>
+    <section id="how-we-achieve">
+      <h2>How We Achieve Each Priority</h2>
 
-    <h3>Scale Goals (Next 2 Years)</h3>
-    <div class="metric-grid">
-      <div class="metric-card">
-        <div class="number">10x</div>
-        <div class="label">Shipment Volume</div>
-      </div>
-      <div class="metric-card">
-        <div class="number">3+</div>
-        <div class="label">GCC Markets</div>
-      </div>
-      <div class="metric-card">
-        <div class="number">50+</div>
-        <div class="label">Wine Partners</div>
-      </div>
-      <div class="metric-card">
-        <div class="number">100%</div>
-        <div class="label">Audit Ready</div>
-      </div>
-    </div>
-
-    <!-- CORE PURPOSE -->
-    <h2 id="purpose">Core Purpose</h2>
-
-    <p><strong>Build a compliant, scalable logistics business</strong> - document tracking is the foundation that enables compliance, traceability, and growth.</p>
-
-    <div class="highlight">
-      <h3>Main Warehouse: RAK Port, UAE</h3>
-      <p style="color:white;margin:0">Primary market: UAE | Future expansion: Saudi Arabia, Qatar</p>
-    </div>
-
-    <table class="priority-table">
-      <thead>
-        <tr>
-          <th>Priority</th>
-          <th>Goal</th>
-          <th>Why It Matters</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td>1. Document Tracking</td>
-          <td>Centralized storage, easy search, never lose a document</td>
-          <td>Foundation for compliance</td>
-        </tr>
-        <tr>
-          <td>2. Compliance</td>
-          <td>Expiry alerts, required doc checklists, regulatory adherence</td>
-          <td>Avoid audit failures</td>
-        </tr>
-        <tr>
-          <td>3. Traceability</td>
-          <td>Full audit trail - who did what, when, why</td>
-          <td>Prove compliance history</td>
-        </tr>
-        <tr>
-          <td>4. Scalability</td>
-          <td>Structured processes that work at 10x volume</td>
-          <td>Enable growth</td>
-        </tr>
-        <tr>
-          <td>5. Accuracy</td>
-          <td>Correct workflows, validated documents, no errors</td>
-          <td>Prevent customs delays</td>
-        </tr>
-        <tr>
-          <td>6. Quotations</td>
-          <td>Accurate quotes with single-approver workflow</td>
-          <td>Control pricing</td>
-        </tr>
-        <tr>
-          <td>7. Cost Analysis</td>
-          <td>True landed cost per bottle, margin visibility</td>
-          <td>Profitability insights</td>
-        </tr>
-        <tr>
-          <td>8. Customs Deposits</td>
-          <td>Track FZ to FZ transfer deposits, reclaim paperwork</td>
-          <td>Cash flow management</td>
-        </tr>
-      </tbody>
-    </table>
-
-    <!-- HOW WE ACHIEVE EACH -->
-    <h2 id="achieve">How We Achieve Each Priority</h2>
-
-    <div class="grid-2">
       <div class="card">
-        <h4>1. Document Tracking</h4>
-        <div class="problem-box">Problem: Documents scattered in emails, drives, lost</div>
-        <ul>
-          <li>Centralized storage (Vercel Blob)</li>
-          <li>Linked to shipment (never orphaned)</li>
-          <li>Typed & tagged (BOL, invoice, permit, COO)</li>
-          <li>Searchable by type, date, shipment, partner</li>
-          <li>Version history (re-upload keeps old)</li>
-          <li>AI extraction (auto-extract key fields)</li>
-          <li><strong>One-click export (ZIP/PDF)</strong></li>
-        </ul>
+        <h3>1. Document Tracking</h3>
+        <p><strong>Problem:</strong> Documents scattered in emails, drives, lost</p>
+        <div class="code-block">Solution:
+├── Centralized storage (Vercel Blob)
+├── Linked to shipment (never orphaned)
+├── Typed & tagged (BOL, invoice, permit, etc.)
+├── Searchable by type, date, shipment, client
+├── Version history (re-upload doesn't delete old)
+└── AI extraction (auto-extract key fields)</div>
       </div>
 
       <div class="card">
-        <h4>2. Compliance</h4>
-        <div class="problem-box">Problem: Licenses expire, docs missing at customs</div>
-        <ul>
-          <li>Expiry tracking (90/60/30 day alerts)</li>
-          <li>Annual trade license tracking</li>
-          <li>Required documents per shipment type:
-            <ul>
-              <li>Commercial Invoice</li>
-              <li>Certificate of Origin</li>
-              <li>Packing List</li>
-            </ul>
-          </li>
-          <li>Compliance dashboard (see all risks)</li>
-          <li>UAE-focused (expand to Saudi later)</li>
-        </ul>
+        <h3>2. Scalability</h3>
+        <p><strong>Problem:</strong> Manual processes break at volume</p>
+        <div class="code-block">Solution:
+├── Structured data (not spreadsheets)
+├── Status pipelines (clear next steps)
+├── Batch operations (process many at once)
+├── API integrations (auto-sync with carriers)
+├── Templates (reuse common configurations)
+└── Dashboard views (see everything at a glance)</div>
       </div>
 
       <div class="card">
-        <h4>3. Traceability</h4>
-        <div class="problem-box">Problem: "Who changed this? When? Why?"</div>
-        <ul>
-          <li>Activity log per shipment</li>
-          <li>Document upload history (who, when)</li>
-          <li>Status change history (from/to)</li>
-          <li>Edit history (what changed)</li>
-          <li>User attribution (every action tracked)</li>
-          <li>Timestamps on everything</li>
-          <li><strong>Exportable audit logs</strong></li>
-        </ul>
+        <h3>3. Accuracy</h3>
+        <p><strong>Problem:</strong> Errors in documents, wrong data entry</p>
+        <div class="code-block">Solution:
+├── Required fields (can't skip important data)
+├── Document checklists (required docs per shipment type)
+├── Validation rules (HS codes, dates, formats)
+├── Status blocks (can't advance without docs)
+├── Admin verification (sign-off on documents)
+└── Calculated fields (auto-compute totals, weights)</div>
       </div>
 
       <div class="card">
-        <h4>4. Scalability</h4>
-        <div class="problem-box">Problem: Manual processes break at volume</div>
-        <ul>
-          <li>Structured data (not spreadsheets)</li>
-          <li>Status pipelines (clear next steps)</li>
-          <li>Batch operations (process many at once)</li>
-          <li>API integrations (auto-sync with carriers)</li>
-          <li>Templates (reuse common configurations)</li>
-          <li>Dashboard views (see everything at glance)</li>
-        </ul>
+        <h3>4. Traceability</h3>
+        <p><strong>Problem:</strong> "Who changed this? When? Why?"</p>
+        <div class="code-block">Solution:
+├── Activity log per shipment
+├── Document upload history (who, when)
+├── Status change history (who, when, from/to)
+├── Edit history (what changed)
+├── User attribution (every action tracked)
+└── Timestamps on everything</div>
       </div>
 
       <div class="card">
-        <h4>5. Accuracy</h4>
-        <div class="problem-box">Problem: Errors in documents, wrong data entry</div>
-        <ul>
-          <li>Required fields (can't skip important data)</li>
-          <li>Document checklists (required docs per type)</li>
-          <li>Validation rules (HS codes, dates, formats)</li>
-          <li>Status blocks (can't advance without docs)</li>
-          <li>Admin verification (sign-off on documents)</li>
-          <li>Calculated fields (auto-compute totals)</li>
-        </ul>
+        <h3>5. Compliance</h3>
+        <p><strong>Problem:</strong> Licenses expire, docs missing at customs</p>
+        <div class="code-block">Solution:
+├── Expiry tracking (90/60/30 day alerts)
+├── Required document checklists per shipment type
+├── Market-specific requirements (UAE vs Saudi vs Qatar)
+├── Renewal status tracking
+├── Compliance dashboard (see all risks at once)
+└── Audit-ready export (all docs for a shipment)</div>
       </div>
 
       <div class="card">
-        <h4>6. Quotations</h4>
-        <div class="problem-box">Problem: Quotes inaccurate, no review process</div>
-        <ul>
-          <li>Rate cards (predefined pricing by route)</li>
-          <li>Carrier API rates (live Hillebrand pricing)</li>
-          <li>Cost breakdown (freight, handling, margin)</li>
-          <li><strong>Single approver required</strong> before sending</li>
-          <li>Quote status: draft > pending approval > approved > sent</li>
-          <li>Convert accepted quote to shipment</li>
-        </ul>
+        <h3>6. Quotations</h3>
+        <p><strong>Problem:</strong> Quotes inaccurate, no review process</p>
+        <div class="code-block">Solution:
+├── Rate cards (predefined pricing by route)
+├── Carrier API rates (live Hillebrand pricing)
+├── Cost breakdown (freight, handling, margin visible)
+├── Quote review status (draft → review → sent)
+├── Approval workflow (admin approves before send)
+├── Quote history (track win/loss, revisions)
+└── Convert to shipment (accepted quote → shipment)</div>
       </div>
-    </div>
 
-    <!-- NOTIFICATION SYSTEM -->
-    <h2 id="notifications">Notification System</h2>
-
-    <p>Automated alerts keep the team informed and prompt action before issues become problems.</p>
-
-    <h3>Notification Triggers</h3>
-    <table>
-      <thead>
-        <tr>
-          <th>Trigger</th>
-          <th>Recipients</th>
-          <th>Channel</th>
-          <th>Example</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td><span class="badge badge-blue">Status Change</span></td>
-          <td>Admin team</td>
-          <td>Email + In-app</td>
-          <td>"SHP-0042 is now In Transit"</td>
-        </tr>
-        <tr>
-          <td><span class="badge badge-amber">Document Alert</span></td>
-          <td>Admin team</td>
-          <td>Email + In-app</td>
-          <td>"Import permit expires in 30 days"</td>
-        </tr>
-        <tr>
-          <td><span class="badge badge-red">Missing Document</span></td>
-          <td>Admin + Partner</td>
-          <td>Email</td>
-          <td>"SHP-0042: Certificate of Origin required"</td>
-        </tr>
-        <tr>
-          <td><span class="badge badge-purple">Partner Action</span></td>
-          <td>Partner</td>
-          <td>Email</td>
-          <td>"Please upload docs for SHP-0042"</td>
-        </tr>
-        <tr>
-          <td><span class="badge badge-green">Quote Approved</span></td>
-          <td>Quote creator</td>
-          <td>Email + In-app</td>
-          <td>"Quote LGQ-0015 approved, ready to send"</td>
-        </tr>
-      </tbody>
-    </table>
-
-    <h3>Notification Channels</h3>
-    <div class="grid-2">
       <div class="card">
-        <h4>Phase 1: Email</h4>
-        <ul>
-          <li>Works for all users immediately</li>
-          <li>Reliable delivery</li>
-          <li>Can include action links</li>
-          <li>Templates for each trigger type</li>
-        </ul>
-      </div>
-      <div class="card">
-        <h4>Phase 2: In-App Notification Center</h4>
-        <ul>
-          <li>Bell icon with unread count</li>
-          <li>List of recent notifications</li>
-          <li>Mark as read/unread</li>
-          <li>Quick actions from notification</li>
-        </ul>
-      </div>
-    </div>
-
-    <!-- MULTI-CURRENCY -->
-    <h2 id="currency">Multi-Currency Support</h2>
-
-    <p>All costs tracked in multiple currencies with live exchange rate conversion.</p>
-
-    <h3>Supported Currencies</h3>
-    <div class="metric-grid">
-      <div class="metric-card">
-        <div class="number">USD</div>
-        <div class="label">Base Currency</div>
-      </div>
-      <div class="metric-card">
-        <div class="number">AED</div>
-        <div class="label">UAE Dirham</div>
-      </div>
-      <div class="metric-card">
-        <div class="number">EUR</div>
-        <div class="label">Euro</div>
-      </div>
-      <div class="metric-card">
-        <div class="number">GBP</div>
-        <div class="label">British Pound</div>
-      </div>
-    </div>
-
-    <h3>How It Works</h3>
-    <ul>
-      <li><strong>Entry currency:</strong> Enter costs in original currency (EUR for French wine, GBP for UK)</li>
-      <li><strong>Storage:</strong> Store original amount + currency + USD equivalent at time of entry</li>
-      <li><strong>Display:</strong> Admin can toggle display currency preference</li>
-      <li><strong>Exchange rates:</strong> Daily rates from Open Exchange Rates API</li>
-      <li><strong>Reports:</strong> Consolidate to USD or display in selected currency</li>
-    </ul>
-
-    <!-- CARRIER RATE DASHBOARD -->
-    <h2 id="carrier-rates">Carrier Rate Dashboard</h2>
-
-    <div class="highlight">
-      <h3>One Window for All Carrier Prices</h3>
-      <p style="color:white;margin:0">Compare rates across carriers instantly. Upload quotes and AI extracts the data automatically.</p>
-    </div>
-
-    <div class="problem-box">Problem: Carrier quotes arrive in different formats (PDF, Excel, email). Manual comparison is slow and error-prone. Historical rates not tracked.</div>
-
-    <h3>What This Dashboard Does</h3>
-    <div class="grid-2">
-      <div class="card">
-        <h4>Route Comparison View</h4>
-        <p>Primary view - see all carrier prices for one route at a glance</p>
-        <ul>
-          <li>Select route: Beaune → RAK</li>
-          <li>See Hillebrand, Emirates, Hapag-Lloyd rates</li>
-          <li>Compare air vs sea vs road</li>
-          <li>Sort by price, transit time, validity</li>
-          <li>Flag expired or expiring quotes</li>
-        </ul>
-      </div>
-      <div class="card">
-        <h4>AI Quote Upload</h4>
-        <p>Drop a PDF/Excel/email and AI extracts everything</p>
-        <ul>
-          <li>Supports: PDF, Excel (.xlsx), email text</li>
-          <li>Auto-detects carrier (Hillebrand, etc.)</li>
-          <li>Extracts: route, rates, validity, terms</li>
-          <li>Compares to historical rates</li>
-          <li>Flags if higher/lower than usual</li>
-        </ul>
-      </div>
-    </div>
-
-    <h3>AI-Extracted Fields (from Hillebrand Quote)</h3>
-    <table>
-      <thead>
-        <tr>
-          <th>Field</th>
-          <th>Example Value</th>
-          <th>Notes</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td>Quote Number</td>
-          <td>SAED040436 Rev1</td>
-          <td>For reference/dedup</td>
-        </tr>
-        <tr>
-          <td>Carrier</td>
-          <td>Hillebrand GORI</td>
-          <td>Auto-detected from logo/header</td>
-        </tr>
-        <tr>
-          <td>Transport Mode</td>
-          <td>Airfreight</td>
-          <td>Air / Sea FCL / Sea LCL / Road</td>
-        </tr>
-        <tr>
-          <td>Origin</td>
-          <td>21200 Beaune, France</td>
-          <td>Pickup location</td>
-        </tr>
-        <tr>
-          <td>Origin Port</td>
-          <td>CDG Paris</td>
-          <td>Port/airport of loading</td>
-        </tr>
-        <tr>
-          <td>Destination</td>
-          <td>RAS AL KHAIMA (RKT)</td>
-          <td>Delivery location</td>
-        </tr>
-        <tr>
-          <td>Service</td>
-          <td>Emirates Sky Fresh</td>
-          <td>Carrier service type</td>
-        </tr>
-        <tr>
-          <td>Transit Time</td>
-          <td>4-5 days</td>
-          <td>Estimated transit</td>
-        </tr>
-        <tr>
-          <td>Weight Basis</td>
-          <td>700 kg</td>
-          <td>Quote basis weight</td>
-        </tr>
-        <tr>
-          <td>Valid From</td>
-          <td>4-Dec-25</td>
-          <td>Start of validity</td>
-        </tr>
-        <tr>
-          <td>Valid To</td>
-          <td>15-Dec-25</td>
-          <td>End of validity</td>
-        </tr>
-        <tr>
-          <td>Freight Cost</td>
-          <td>EUR 3,592.00</td>
-          <td>Main freight charge</td>
-        </tr>
-        <tr>
-          <td>Handling/Extras</td>
-          <td>EUR 95.00 (Vinliner)</td>
-          <td>Additional charges</td>
-        </tr>
-        <tr>
-          <td>Total</td>
-          <td>EUR 3,687.00</td>
-          <td>Total quote amount</td>
-        </tr>
-        <tr>
-          <td>Per-kg Rate</td>
-          <td>EUR 5.13/kg</td>
-          <td>Calculated for comparison</td>
-        </tr>
-        <tr>
-          <td>Incoterms</td>
-          <td>EXW</td>
-          <td>Shipping terms</td>
-        </tr>
-        <tr>
-          <td>Insurance Rate</td>
-          <td>0.45% + 0.35%</td>
-          <td>Optional coverage rates</td>
-        </tr>
-      </tbody>
-    </table>
-
-    <h3>Historical Rate Comparison</h3>
-    <div class="solution-box">
-      <h4>When a new quote is uploaded, AI compares to history:</h4>
-      <ul>
-        <li><span class="badge badge-green">Lower</span> New rate is 10%+ below average → "Good deal"</li>
-        <li><span class="badge badge-blue">Normal</span> Rate within 10% of average → "Market rate"</li>
-        <li><span class="badge badge-amber">Higher</span> Rate is 10-20% above average → "Above market"</li>
-        <li><span class="badge badge-red">Much Higher</span> Rate is 20%+ above average → "Negotiate or find alternative"</li>
-      </ul>
-    </div>
-
-    <h3>Rate Card Auto-Update</h3>
-    <div class="flow-diagram">
-+---------------+      +----------------+      +----------------+      +----------------+
-|   UPLOAD      |      |   AI EXTRACT   |      |    COMPARE     |      |   RATE CARD    |
-|   Quote PDF   | ---> |   All Fields   | ---> |   to History   | ---> |   Updated      |
-+---------------+      +----------------+      +----------------+      +----------------+
-       |                      |                      |                      |
-       v                      v                      v                      v
-  Drop file or         GPT-4o extracts        Shows if rate is       Rate card reflects
-  paste email          route, rates,          higher/lower than      current valid rates
-                       validity, terms        previous quotes        for this route
-    </div>
-
-    <h3>Database: carrier_quotes</h3>
-    <table class="schema-table">
-      <thead><tr><th>Column</th><th>Type</th><th>Description</th></tr></thead>
-      <tbody>
-        <tr><td>id</td><td>uuid</td><td>Primary key</td></tr>
-        <tr><td>quoteNumber</td><td>text</td><td>"SAED040436 Rev1"</td></tr>
-        <tr><td>carrierId</td><td>uuid FK</td><td>Link to carrier</td></tr>
-        <tr><td>transportMode</td><td>enum</td><td>air, sea_fcl, sea_lcl, road</td></tr>
-        <tr><td>originCountry / originCity</td><td>text</td><td>Pickup location</td></tr>
-        <tr><td>originPort</td><td>text</td><td>Airport/port code</td></tr>
-        <tr><td>destinationCountry / destinationCity</td><td>text</td><td>Delivery location</td></tr>
-        <tr><td>destinationPort</td><td>text</td><td>Airport/port code</td></tr>
-        <tr><td>serviceName</td><td>text</td><td>"Emirates Sky Fresh"</td></tr>
-        <tr><td>transitDays</td><td>text</td><td>"4-5 days"</td></tr>
-        <tr><td>weightBasisKg</td><td>decimal</td><td>Quote basis weight</td></tr>
-        <tr><td>freightAmount / freightCurrency</td><td>decimal/text</td><td>Main freight charge</td></tr>
-        <tr><td>extrasAmount / extrasDescription</td><td>decimal/text</td><td>Additional charges</td></tr>
-        <tr><td>totalAmount / totalCurrency</td><td>decimal/text</td><td>Total quote</td></tr>
-        <tr><td>perKgRate</td><td>decimal</td><td>Calculated rate per kg</td></tr>
-        <tr><td>incoterms</td><td>text</td><td>EXW, FOB, CIF, DDP</td></tr>
-        <tr><td>validFrom / validTo</td><td>date</td><td>Quote validity period</td></tr>
-        <tr><td>insuranceRate</td><td>decimal</td><td>Optional insurance %</td></tr>
-        <tr><td>sourceFileUrl</td><td>text</td><td>Original PDF/file</td></tr>
-        <tr><td>extractedByAi</td><td>boolean</td><td>AI vs manual entry</td></tr>
-        <tr><td>comparisonToHistory</td><td>text</td><td>lower, normal, higher, much_higher</td></tr>
-        <tr><td>createdAt / updatedAt</td><td>timestamp</td><td>Timestamps</td></tr>
-      </tbody>
-    </table>
-
-    <!-- COST ANALYSIS -->
-    <h2 id="cost-analysis">Cost Analysis & Arbitrage</h2>
-
-    <div class="problem-box">Problem: Don't know true cost per bottle, miss arbitrage opportunities</div>
-
-    <h3>Landed Cost = ALL costs to get product into warehouse</h3>
-
-    <div class="calculation-box">
-EXAMPLE CALCULATION (per shipment):
-----------------------------------------
+        <h3>7. Cost Analysis & Arbitrage</h3>
+        <p><strong>Problem:</strong> Don't know true cost per bottle, miss arbitrage opportunities</p>
+        <div class="highlight-box">
+          <strong>LANDED COST = ALL costs to get product into warehouse</strong>
+        </div>
+        <div class="code-block">EXAMPLE CALCULATION (per shipment):
+────────────────────────────────────
 Product Cost (ex-cellar):    $5,760  (480 bottles x $12)
 Freight (origin to UAE):     $2,400
 Insurance:                     $120
@@ -1041,400 +531,402 @@ Destination handling:          $200
 Customs clearance:             $180
 Government fees:               $150
 Delivery to warehouse:         $100
-----------------------------------------
+────────────────────────────────────
 TOTAL LANDED COST:           $9,060
 
 / Total Bottles:               480
-----------------------------------------
-<span class="total">= LANDED COST PER BOTTLE:    $18.88</span>
+────────────────────────────────────
+= LANDED COST PER BOTTLE:    $18.88
 
-This is the TRUE cost to have 1 bottle sitting in RAK Port warehouse.
-    </div>
+This is the TRUE cost to have 1 bottle sitting in RAK Port warehouse.</div>
 
-    <h3>Allocation Methods (for multi-product shipments)</h3>
-    <ul>
-      <li><strong>By bottle count</strong> (simple split) - default</li>
-      <li><strong>By weight</strong> (kg per item / total kg)</li>
-      <li><strong>By value</strong> (item value / total value)</li>
-      <li>Admin selects method per shipment</li>
-    </ul>
+        <div class="code-block">ALLOCATION METHOD (for multi-product shipments):
+├── By bottle count (simple split) - default
+├── By weight (kg per item / total kg)
+├── By value (item value / total value)
+└── Admin selects method per shipment
 
-    <div class="solution-box">
-      <h4>What This Enables:</h4>
-      <ul>
-        <li>Auto-calculate landed cost per bottle</li>
-        <li>Compare to target selling price</li>
-        <li>Show margin per bottle and %</li>
-        <li>Flag low/negative margins</li>
-        <li>Identify arbitrage opportunities (high-margin products)</li>
-      </ul>
-    </div>
+Solution:
+├── Auto-calculate landed cost per bottle
+├── Shows TRUE cost in warehouse
+├── Compare to target selling price
+├── Show margin per bottle and %
+├── Flag low/negative margins
+│
+├── Arbitrage tracking
+│   ├── Compare landed cost vs market prices
+│   ├── Compare across markets (UAE vs Qatar vs Saudi)
+│   ├── Flag high-margin opportunities
+│   └── Historical price trends
+│
+└── Reports
+    ├── Full cost breakdown by shipment
+    ├── Landed cost per bottle by product
+    ├── Margin analysis
+    └── Arbitrage opportunities</div>
+      </div>
 
-    <!-- CUSTOMS DEPOSITS -->
-    <h2 id="customs-deposits">Customs Deposits (FZ to FZ Transfers)</h2>
-
-    <div class="problem-box">Problem: Cash tied up in customs deposits, manual tracking, delayed reclaims</div>
-
-    <h3>What Are Customs Deposits?</h3>
-    <ul>
-      <li>Required for bonded road transfers within UAE</li>
-      <li>FZ to FZ (Free Zone to Free Zone) movements</li>
-      <li>Example: RAK Port to JAFZA or RAK to DWC</li>
-      <li>Cash held by customs until paperwork complete</li>
-      <li>Must stamp documents to reclaim deposit</li>
-    </ul>
-
-    <h3>Deposit Process Flow</h3>
-    <div class="flow-diagram">
-+----------------+      +----------------+      +----------------+      +----------------+
-|    DEPOSIT     |      |    TRANSFER    |      |   PAPERWORK    |      |    DEPOSIT     |
-|     PAID       | ---> |    COMPLETE    | ---> |   SUBMITTED    | ---> |   RECLAIMED    |
-+----------------+      +----------------+      +----------------+      +----------------+
-        |                      |                      |                      |
-        v                      v                      v                      v
-  Pay deposit to       Goods arrive at        Submit stamped         Customs returns
-  customs based        destination FZ,        docs to customs        deposit, record
-  on cargo value       receive stamps         office                 date received
-
-  Status: pending      Status: transferred    Status: submitted      Status: reclaimed
-    </div>
-
-    <div class="solution-box">
-      <h4>What We Track:</h4>
-      <ul>
-        <li>Total deposits outstanding (cash flow visibility)</li>
-        <li>Age of deposits (flag overdue reclaims)</li>
-        <li>Reclaim success rate</li>
-        <li>Average days to reclaim</li>
-        <li>Transfer type (FZ to FZ vs FZ to mainland)</li>
-        <li>Origin and destination free zones</li>
-      </ul>
-    </div>
-
-    <!-- USERS -->
-    <h2 id="users">Users & Access</h2>
-
-    <div class="warning-box">
-      <strong>Launch Strategy:</strong> Admin only first. Partner and Client portals added in later phase.
-    </div>
-
-    <table>
-      <thead>
-        <tr>
-          <th>User Type</th>
-          <th>What They Do</th>
-          <th>Access Level</th>
-          <th>Phase</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td><span class="badge badge-purple">Admin</span></td>
-          <td>Manage all shipments, quotes, documents, invoicing, compliance</td>
-          <td>Full read/write access</td>
-          <td><span class="badge badge-green">Phase 1</span></td>
-        </tr>
-        <tr>
-          <td><span class="badge badge-green">Partner</span></td>
-          <td>View their inbound shipments, upload documents, track status</td>
-          <td>Own shipments only, upload docs</td>
-          <td><span class="badge badge-blue">Phase 3</span></td>
-        </tr>
-        <tr>
-          <td><span class="badge badge-blue">Client</span></td>
-          <td>View their outbound shipments, download documents</td>
-          <td>Own shipments only, download docs</td>
-          <td><span class="badge badge-blue">Phase 3</span></td>
-        </tr>
-      </tbody>
-    </table>
-
-    <h3>Compliance Accountability</h3>
-    <p><strong>Shared by admin team</strong> - multiple admins can manage compliance, with clear activity logs showing who did what.</p>
-
-    <!-- FEATURES -->
-    <h2 id="features">Features Overview</h2>
-
-    <div class="grid-3">
       <div class="card">
-        <h4>1. Shipments</h4>
+        <h3>8. Customs Deposits (FZ to FZ Transfers)</h3>
+        <p><strong>Problem:</strong> Cash tied up in customs deposits, manual tracking, delayed reclaims</p>
+        <div class="code-block">WHAT ARE CUSTOMS DEPOSITS?
+├── Required for bonded road transfers within UAE
+├── FZ to FZ (Free Zone to Free Zone) movements
+├── Example: RAK Port → JAFZA or RAK → DWC
+├── Cash held by customs until paperwork complete
+└── Must stamp documents to reclaim deposit
+
+PROCESS:
+1. DEPOSIT PAID
+   ├── Pay deposit to customs
+   ├── Amount based on cargo value
+   └── Status: pending
+
+2. TRANSFER COMPLETE
+   ├── Goods arrive at destination FZ
+   ├── Receive stamped documents
+   └── Status: transferred
+
+3. PAPERWORK SUBMITTED
+   ├── Submit stamped docs to customs
+   └── Status: submitted
+
+4. DEPOSIT RECLAIMED
+   ├── Customs returns deposit
+   ├── Record date received
+   └── Status: reclaimed
+
+TRACKING:
+├── Total deposits outstanding (cash flow)
+├── Age of deposits (flag overdue)
+├── Reclaim success rate
+├── Average days to reclaim
+└── Blocked shipments (deposit issues)</div>
+      </div>
+    </section>
+
+    <section id="users">
+      <h2>Users</h2>
+      <table class="user-table">
+        <thead>
+          <tr>
+            <th>User</th>
+            <th>What They Do</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Admin</strong></td>
+            <td>Manage all shipments, quotes, documents, invoicing</td>
+          </tr>
+          <tr>
+            <td><strong>Partner</strong></td>
+            <td>View their inbound shipments, upload documents</td>
+          </tr>
+          <tr>
+            <td><strong>Client</strong></td>
+            <td>View their outbound shipments, download documents</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="features">
+      <h2>Features</h2>
+
+      <div class="card">
+        <h3>1. Shipments</h3>
         <ul>
-          <li>Create inbound/outbound/re-export</li>
-          <li>Track via carrier APIs</li>
-          <li>Status pipeline management</li>
-          <li>Link documents to shipments</li>
+          <li>Create inbound/outbound/re-export shipments</li>
+          <li>Track via carrier APIs (Hillebrand, Hapag-Lloyd)</li>
+          <li>Status: draft → booked → in transit → customs → delivered</li>
         </ul>
       </div>
 
       <div class="card">
-        <h4>2. Documents</h4>
+        <h3>2. Documents</h3>
         <ul>
-          <li>Upload BOL, AWB, invoices, COO</li>
-          <li>Expiry alerts (90/60/30 days)</li>
+          <li>Upload BOL, AWB, invoices, certificates, permits</li>
+          <li>Expiry alerts at 90/60/30 days</li>
           <li>AI extraction of key fields</li>
-          <li>Version history</li>
-          <li><strong>One-click audit export</strong></li>
         </ul>
       </div>
 
       <div class="card">
-        <h4>3. Quotes</h4>
+        <h3>3. Quotes</h3>
         <ul>
-          <li>Generate logistics quotes</li>
-          <li>Pull rates from Hillebrand API</li>
-          <li>Single approver workflow</li>
-          <li>Convert to shipments</li>
+          <li>Generate logistics quotes for clients</li>
+          <li>Pull rates from Hillebrand API or manual entry</li>
+          <li>Convert accepted quotes to shipments</li>
         </ul>
       </div>
 
       <div class="card">
-        <h4>4. Compliance</h4>
+        <h3>4. Compliance</h3>
         <ul>
-          <li>Track license expiry</li>
-          <li>Annual trade license tracking</li>
-          <li>Document checklists</li>
-          <li><strong>Compliance dashboard</strong></li>
+          <li>Track license expiry by client/product/market</li>
+          <li>Renewal status tracking</li>
+          <li>Document checklists per shipment</li>
         </ul>
       </div>
 
       <div class="card">
-        <h4>5. Payments</h4>
+        <h3>5. Payments</h3>
         <ul>
-          <li>Track freight costs</li>
-          <li>Track government charges</li>
-          <li>Invoice clients</li>
-          <li>Sync to Zoho Books</li>
-          <li>Multi-currency support</li>
+          <li>Track freight costs (what C&C pays)</li>
+          <li>Track government charges/fees (not duty - just admin fees)</li>
+          <li>Invoice clients, sync to Zoho Books</li>
         </ul>
       </div>
 
       <div class="card">
-        <h4>6. Cost Analysis</h4>
+        <h3>6. Customs Deposits (FZ to FZ Transfers)</h3>
         <ul>
-          <li>Landed cost per bottle</li>
-          <li>Track margins by product</li>
-          <li>Arbitrage opportunities</li>
-          <li>Export reports</li>
+          <li>Track cash deposits held for bonded road transfers</li>
+          <li>FZ to FZ (Free Zone) transfers within UAE mainland</li>
+          <li>Paperwork stamping process to reclaim deposit</li>
+          <li>Deposit status: pending → stamped → reclaimed</li>
+          <li>Cash flow visibility (deposits outstanding)</li>
         </ul>
+      </div>
+    </section>
+
+    <section id="database">
+      <h2>Database Schema</h2>
+
+      <h3>Enums</h3>
+      <div class="code-block">// Shipment direction
+logisticsShipmentType = ['inbound', 'outbound', 're_export']
+
+// Transport mode
+logisticsTransportMode = ['sea_fcl', 'sea_lcl', 'air', 'road']
+
+// Shipment status pipeline
+logisticsShipmentStatus = [
+  'draft',              // Initial creation
+  'booked',             // Carrier booking confirmed
+  'picked_up',          // Cargo collected
+  'in_transit',         // On the way
+  'arrived_port',       // Arrived at destination port
+  'customs_clearance',  // Going through customs
+  'cleared',            // Customs cleared
+  'at_warehouse',       // At RAK Port warehouse
+  'dispatched',         // Sent out for delivery
+  'delivered',          // Final delivery
+  'cancelled'           // Cancelled
+]
+
+// Document types
+logisticsDocumentType = [
+  'bill_of_lading', 'airway_bill', 'commercial_invoice', 'packing_list',
+  'certificate_of_origin', 'customs_declaration', 'import_permit',
+  'export_permit', 'delivery_note', 'health_certificate', 'other'
+]
+
+// Quote status
+logisticsQuoteStatus = ['draft', 'sent', 'accepted', 'rejected', 'expired', 'converted']</div>
+
+      <h3>Tables</h3>
+
+      <h4>logistics_shipments</h4>
+      <table class="schema-table">
+        <thead>
+          <tr><th>Column</th><th>Type</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>id</code></td><td>uuid</td><td>PK</td></tr>
+          <tr><td><code>shipmentNumber</code></td><td>text</td><td>"SHP-2026-0001"</td></tr>
+          <tr><td><code>type</code></td><td>enum</td><td>inbound, outbound, re_export</td></tr>
+          <tr><td><code>transportMode</code></td><td>enum</td><td>sea_fcl, sea_lcl, air, road</td></tr>
+          <tr><td><code>status</code></td><td>enum</td><td>Current pipeline status</td></tr>
+          <tr><td><code>partnerId</code></td><td>uuid FK</td><td>Wine partner (inbound)</td></tr>
+          <tr><td><code>clientContactId</code></td><td>uuid FK</td><td>Client (outbound)</td></tr>
+          <tr><td><code>originCountry</code></td><td>text</td><td>e.g., "France"</td></tr>
+          <tr><td><code>originCity</code></td><td>text</td><td>e.g., "Bordeaux"</td></tr>
+          <tr><td><code>destinationCountry</code></td><td>text</td><td>e.g., "UAE"</td></tr>
+          <tr><td><code>destinationCity</code></td><td>text</td><td>e.g., "Dubai"</td></tr>
+          <tr><td><code>carrierId</code></td><td>uuid FK</td><td>Shipping carrier</td></tr>
+          <tr><td><code>carrierBookingRef</code></td><td>text</td><td>Carrier's reference</td></tr>
+          <tr><td><code>containerNumber</code></td><td>text</td><td>For sea freight</td></tr>
+          <tr><td><code>blNumber</code></td><td>text</td><td>Bill of Lading #</td></tr>
+          <tr><td><code>awbNumber</code></td><td>text</td><td>Airway Bill #</td></tr>
+          <tr><td><code>etd</code></td><td>timestamp</td><td>Estimated departure</td></tr>
+          <tr><td><code>atd</code></td><td>timestamp</td><td>Actual departure</td></tr>
+          <tr><td><code>eta</code></td><td>timestamp</td><td>Estimated arrival</td></tr>
+          <tr><td><code>ata</code></td><td>timestamp</td><td>Actual arrival</td></tr>
+          <tr><td><code>deliveredAt</code></td><td>timestamp</td><td>Final delivery</td></tr>
+          <tr><td><code>totalCases</code></td><td>integer</td><td>Number of cases</td></tr>
+          <tr><td><code>totalWeightKg</code></td><td>decimal</td><td>Total weight</td></tr>
+          <tr><td><code>freightCostUsd</code></td><td>decimal</td><td>C&C cost</td></tr>
+          <tr><td><code>notes</code></td><td>text</td><td>Internal notes</td></tr>
+          <tr><td><code>createdAt</code></td><td>timestamp</td><td></td></tr>
+          <tr><td><code>updatedAt</code></td><td>timestamp</td><td></td></tr>
+        </tbody>
+      </table>
+
+      <h4>logistics_shipment_items</h4>
+      <table class="schema-table">
+        <thead>
+          <tr><th>Column</th><th>Type</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>id</code></td><td>uuid</td><td>PK</td></tr>
+          <tr><td><code>shipmentId</code></td><td>uuid FK</td><td>Parent shipment</td></tr>
+          <tr><td><code>productId</code></td><td>uuid FK</td><td>Product (optional)</td></tr>
+          <tr><td><code>productName</code></td><td>text</td><td>Fallback name</td></tr>
+          <tr><td><code>producer</code></td><td>text</td><td>Wine producer</td></tr>
+          <tr><td><code>vintage</code></td><td>integer</td><td>Year</td></tr>
+          <tr><td><code>hsCode</code></td><td>text</td><td>"2204.21"</td></tr>
+          <tr><td><code>countryOfOrigin</code></td><td>text</td><td>COO</td></tr>
+          <tr><td><code>cases</code></td><td>integer</td><td>Number of cases</td></tr>
+          <tr><td><code>bottlesPerCase</code></td><td>integer</td><td>e.g., 12</td></tr>
+          <tr><td><code>bottleSizeMl</code></td><td>integer</td><td>e.g., 750</td></tr>
+          <tr><td><code>grossWeightKg</code></td><td>decimal</td><td>Weight</td></tr>
+          <tr><td><code>declaredValueUsd</code></td><td>decimal</td><td>Customs value</td></tr>
+          <tr><td colspan="3" style="background: var(--bg-primary); color: var(--accent-yellow);">-- Cost Tracking --</td></tr>
+          <tr><td><code>productCostPerBottle</code></td><td>decimal</td><td>Ex-cellar cost</td></tr>
+          <tr><td><code>freightAllocated</code></td><td>decimal</td><td>Freight portion for this item</td></tr>
+          <tr><td><code>handlingAllocated</code></td><td>decimal</td><td>Handling portion</td></tr>
+          <tr><td><code>govFeesAllocated</code></td><td>decimal</td><td>Gov fees portion</td></tr>
+          <tr><td><code>landedCostTotal</code></td><td>decimal</td><td>Total landed cost (calculated)</td></tr>
+          <tr><td><code>landedCostPerBottle</code></td><td>decimal</td><td>Per bottle (calculated)</td></tr>
+          <tr><td><code>targetSellingPrice</code></td><td>decimal</td><td>Expected sell price</td></tr>
+          <tr><td><code>marginPerBottle</code></td><td>decimal</td><td>Profit per bottle (calculated)</td></tr>
+          <tr><td><code>marginPercent</code></td><td>decimal</td><td>Margin % (calculated)</td></tr>
+        </tbody>
+      </table>
+
+      <h4>logistics_documents</h4>
+      <table class="schema-table">
+        <thead>
+          <tr><th>Column</th><th>Type</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>id</code></td><td>uuid</td><td>PK</td></tr>
+          <tr><td><code>shipmentId</code></td><td>uuid FK</td><td>Parent shipment</td></tr>
+          <tr><td><code>documentType</code></td><td>enum</td><td>BOL, AWB, invoice, etc.</td></tr>
+          <tr><td><code>documentNumber</code></td><td>text</td><td>Reference #</td></tr>
+          <tr><td><code>fileUrl</code></td><td>text</td><td>Vercel Blob URL</td></tr>
+          <tr><td><code>fileName</code></td><td>text</td><td>Original name</td></tr>
+          <tr><td><code>fileSize</code></td><td>integer</td><td>Bytes</td></tr>
+          <tr><td><code>mimeType</code></td><td>text</td><td>PDF, image, etc.</td></tr>
+          <tr><td><code>issueDate</code></td><td>date</td><td>When issued</td></tr>
+          <tr><td><code>expiryDate</code></td><td>date</td><td>For alerts</td></tr>
+          <tr><td><code>isRequired</code></td><td>boolean</td><td>Blocks status change</td></tr>
+          <tr><td><code>isVerified</code></td><td>boolean</td><td>Admin verified</td></tr>
+          <tr><td><code>verifiedBy</code></td><td>uuid FK</td><td>Admin user</td></tr>
+          <tr><td><code>verifiedAt</code></td><td>timestamp</td><td></td></tr>
+          <tr><td><code>uploadedBy</code></td><td>uuid FK</td><td>Who uploaded</td></tr>
+          <tr><td><code>uploadedAt</code></td><td>timestamp</td><td></td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="workflows">
+      <h2>Workflows</h2>
+
+      <div class="card">
+        <h3>Inbound Shipment (Partner to UAE)</h3>
+        <div class="code-block">1. ADMIN CREATES SHIPMENT
+   ├── Select partner
+   ├── Enter origin (country, city)
+   ├── Set transport mode (sea/air)
+   └── Status: draft
+
+2. PARTNER NOTIFIED
+   ├── Partner sees shipment in their portal
+   └── Partner uploads: commercial invoice, packing list, COO
+
+3. BOOKING CONFIRMED
+   ├── Admin enters carrier booking ref
+   ├── Add container # or AWB #
+   ├── Set ETD/ETA
+   └── Status: booked
+
+4. IN TRANSIT
+   ├── Auto-track via carrier API (if enabled)
+   ├── Manual milestone updates
+   └── Status: in_transit
+
+5. ARRIVED AT PORT
+   ├── Shipment arrives at UAE port
+   └── Status: arrived_port
+
+6. CUSTOMS CLEARANCE
+   ├── Upload customs declaration
+   ├── Pay government fees
+   └── Status: customs_clearance → cleared
+
+7. AT WAREHOUSE
+   ├── Goods received at RAK Port
+   ├── Verify quantities
+   └── Status: at_warehouse
+
+8. COMPLETE
+   └── Ready for storage or re-export</div>
       </div>
 
       <div class="card">
-        <h4>7. Notifications</h4>
-        <ul>
-          <li>Email alerts (Phase 1)</li>
-          <li>In-app notifications (Phase 2)</li>
-          <li>Partner action reminders</li>
-          <li>Expiry warnings</li>
-        </ul>
+        <h3>Outbound Shipment (UAE to Client)</h3>
+        <div class="code-block">1. ADMIN CREATES SHIPMENT
+   ├── Select client
+   ├── Enter destination
+   ├── Add items from warehouse
+   └── Status: draft
+
+2. QUOTE SENT (optional)
+   ├── Generate quote with costs
+   ├── Client accepts/rejects
+   └── Quote converted to shipment
+
+3. BOOKING CONFIRMED
+   ├── Book with carrier
+   ├── Generate export permit
+   └── Status: booked
+
+4. DISPATCHED
+   ├── Goods leave warehouse
+   └── Status: dispatched
+
+5. IN TRANSIT
+   ├── Track via carrier
+   └── Status: in_transit
+
+6. DELIVERED
+   ├── Client confirms receipt
+   └── Status: delivered
+
+7. INVOICE
+   ├── Generate invoice
+   └── Sync to Zoho Books</div>
       </div>
 
       <div class="card">
-        <h4>8. Reports</h4>
-        <ul>
-          <li>Compliance status report</li>
-          <li>Financial summary</li>
-          <li>Shipment performance</li>
-          <li>Export to Excel/CSV</li>
-        </ul>
+        <h3>Document Compliance</h3>
+        <div class="code-block">INBOUND - Required Documents:
+├── Bill of Lading / Airway Bill  (before departure)
+├── Commercial Invoice            (before departure)
+├── Packing List                  (before departure)
+├── Certificate of Origin         (at customs)
+├── Import Permit                 (for alcohol)
+└── Customs Declaration           (at arrival)
+
+OUTBOUND - Required Documents:
+├── Export Permit                 (before dispatch)
+├── Commercial Invoice            (for client)
+├── Packing List                  (for client)
+└── Delivery Note                 (at delivery)
+
+STATUS BLOCKED IF:
+└── Required documents missing or unverified</div>
       </div>
+    </section>
 
-      <div class="card">
-        <h4>9. Carrier Rate Dashboard</h4>
-        <ul>
-          <li>Route comparison view</li>
-          <li>AI quote upload (PDF/Excel/email)</li>
-          <li>Auto-extract rates and terms</li>
-          <li>Historical rate comparison</li>
-          <li>Rate trend charts</li>
-          <li>Per-bottle cost calculator</li>
-        </ul>
-      </div>
-    </div>
+    <section id="wireframes">
+      <h2>Wireframes</h2>
 
-    <!-- DATABASE SCHEMA -->
-    <h2 id="database">Database Schema</h2>
-
-    <h3>Enums</h3>
-    <div class="tree">
-Shipment Type:    inbound | outbound | re_export
-Transport Mode:   sea_fcl | sea_lcl | air | road
-Document Type:    bill_of_lading | airway_bill | commercial_invoice | packing_list |
-                  certificate_of_origin | customs_declaration | import_permit |
-                  export_permit | delivery_note | health_certificate | other
-Quote Status:     draft | pending_approval | approved | sent | accepted | rejected | expired | converted
-Deposit Status:   pending | transferred | submitted | reclaimed
-Currency:         USD | AED | EUR | GBP
-    </div>
-
-    <h3>Shipment Status Pipeline</h3>
-    <div class="status-pipeline">
-      <span class="status-item">draft</span>
-      <span class="status-item">booked</span>
-      <span class="status-item">picked_up</span>
-      <span class="status-item">in_transit</span>
-      <span class="status-item">arrived_port</span>
-      <span class="status-item">customs_clearance</span>
-      <span class="status-item">cleared</span>
-      <span class="status-item">at_warehouse</span>
-      <span class="status-item">dispatched</span>
-      <span class="status-item">delivered</span>
-    </div>
-
-    <h3>Key Tables (16 total)</h3>
-
-    <h4>logistics_shipments</h4>
-    <table class="schema-table">
-      <thead><tr><th>Column</th><th>Type</th><th>Description</th></tr></thead>
-      <tbody>
-        <tr><td>id</td><td>uuid</td><td>Primary key</td></tr>
-        <tr><td>shipmentNumber</td><td>text</td><td>"SHP-2026-0001"</td></tr>
-        <tr><td>type</td><td>enum</td><td>inbound, outbound, re_export</td></tr>
-        <tr><td>transportMode</td><td>enum</td><td>sea_fcl, sea_lcl, air, road</td></tr>
-        <tr><td>status</td><td>enum</td><td>Current pipeline status</td></tr>
-        <tr><td>partnerId</td><td>uuid FK</td><td>Wine partner (inbound)</td></tr>
-        <tr><td>clientContactId</td><td>uuid FK</td><td>Client (outbound)</td></tr>
-        <tr><td>originCountry / originCity</td><td>text</td><td>Origin location</td></tr>
-        <tr><td>destinationCountry / destinationCity</td><td>text</td><td>Destination</td></tr>
-        <tr><td>carrierId</td><td>uuid FK</td><td>Shipping carrier</td></tr>
-        <tr><td>carrierBookingRef</td><td>text</td><td>Carrier's reference</td></tr>
-        <tr><td>containerNumber / blNumber / awbNumber</td><td>text</td><td>Tracking references</td></tr>
-        <tr><td>etd / atd / eta / ata</td><td>timestamp</td><td>Departure/Arrival times</td></tr>
-        <tr><td>totalCases / totalWeightKg</td><td>number</td><td>Cargo metrics</td></tr>
-        <tr><td>freightCostAmount / freightCostCurrency</td><td>decimal/text</td><td>Cost in original currency</td></tr>
-        <tr><td>freightCostUsd</td><td>decimal</td><td>Cost converted to USD</td></tr>
-      </tbody>
-    </table>
-
-    <h4>logistics_quotes (with Approval)</h4>
-    <table class="schema-table">
-      <thead><tr><th>Column</th><th>Type</th><th>Description</th></tr></thead>
-      <tbody>
-        <tr><td>id</td><td>uuid</td><td>Primary key</td></tr>
-        <tr><td>quoteNumber</td><td>text</td><td>"LGQ-2026-0001"</td></tr>
-        <tr><td>status</td><td>enum</td><td>draft, pending_approval, approved, sent, etc.</td></tr>
-        <tr><td>createdBy</td><td>uuid FK</td><td>Who created the quote</td></tr>
-        <tr><td>approvedBy</td><td>uuid FK</td><td>Who approved (single approver)</td></tr>
-        <tr><td>approvedAt</td><td>timestamp</td><td>When approved</td></tr>
-        <tr><td>clientContactId</td><td>uuid FK</td><td>Client</td></tr>
-        <tr><td>originCountry / destinationCountry</td><td>text</td><td>Route</td></tr>
-        <tr><td>transportMode / incoterms</td><td>text</td><td>Shipping terms</td></tr>
-        <tr><td>freightCostUsd / handlingCostUsd</td><td>decimal</td><td>Cost breakdown</td></tr>
-        <tr><td>marginUsd / totalCostUsd</td><td>decimal</td><td>Margin and total</td></tr>
-        <tr><td>validUntil</td><td>date</td><td>Quote expiry</td></tr>
-      </tbody>
-    </table>
-
-    <h4>notifications</h4>
-    <table class="schema-table">
-      <thead><tr><th>Column</th><th>Type</th><th>Description</th></tr></thead>
-      <tbody>
-        <tr><td>id</td><td>uuid</td><td>Primary key</td></tr>
-        <tr><td>userId</td><td>uuid FK</td><td>Recipient</td></tr>
-        <tr><td>type</td><td>text</td><td>status_change, document_alert, etc.</td></tr>
-        <tr><td>title</td><td>text</td><td>Short title</td></tr>
-        <tr><td>message</td><td>text</td><td>Full message</td></tr>
-        <tr><td>shipmentId</td><td>uuid FK</td><td>Related shipment (optional)</td></tr>
-        <tr><td>quoteId</td><td>uuid FK</td><td>Related quote (optional)</td></tr>
-        <tr><td>isRead</td><td>boolean</td><td>Read status</td></tr>
-        <tr><td>emailSent</td><td>boolean</td><td>Email delivery status</td></tr>
-        <tr><td>createdAt</td><td>timestamp</td><td>When created</td></tr>
-      </tbody>
-    </table>
-
-    <h4>Other Tables</h4>
-    <table>
-      <thead><tr><th>Table</th><th>Purpose</th></tr></thead>
-      <tbody>
-        <tr><td>logistics_shipment_items</td><td>Line items with cost tracking per bottle</td></tr>
-        <tr><td>logistics_documents</td><td>All uploaded documents with expiry</td></tr>
-        <tr><td>logistics_document_versions</td><td>Version history for re-uploads</td></tr>
-        <tr><td>logistics_carriers</td><td>Carrier reference (Hillebrand, Hapag-Lloyd, Emirates)</td></tr>
-        <tr><td>logistics_rates</td><td>Rate cards by route</td></tr>
-        <tr><td>logistics_tracking_events</td><td>Shipment milestones from APIs</td></tr>
-        <tr><td>logistics_activity_logs</td><td>Full audit trail (traceability)</td></tr>
-        <tr><td>logistics_payments</td><td>Payment tracking with multi-currency</td></tr>
-        <tr><td>logistics_invoices</td><td>Client invoices (sync to Zoho)</td></tr>
-        <tr><td>logistics_customs_deposits</td><td>FZ to FZ deposit tracking</td></tr>
-        <tr><td>compliance_licenses</td><td>Annual trade license tracking</td></tr>
-        <tr><td>compliance_alerts</td><td>Scheduled expiry alerts</td></tr>
-      </tbody>
-    </table>
-
-    <!-- WORKFLOWS -->
-    <h2 id="workflows">Process Workflows</h2>
-
-    <h3>Inbound Shipment Flow (Partner to UAE)</h3>
-    <div class="flow-diagram">
-+------------------------------------------------------------------------------+
-|                           INBOUND SHIPMENT WORKFLOW                          |
-+------------------------------------------------------------------------------+
-
-  +----------+    +----------+    +----------+    +----------+    +----------+
-  |  DRAFT   |--->|  BOOKED  |--->|IN TRANSIT|--->|  CUSTOMS |--->|WAREHOUSE |
-  +----------+    +----------+    +----------+    +----------+    +----------+
-       |               |               |               |               |
-       v               v               v               v               v
-
-  Admin creates    Carrier         Auto-track      Upload customs   Goods received
-  shipment,        booking         via API,        declaration,     at RAK Port,
-  selects partner  confirmed,      milestone       pay gov fees,    verify quantities,
-                   ETD/ETA set     updates         clear customs    calculate landed
-                                                                    cost per bottle
-
-  Notification:    Notification:   Notification:   Notification:    Notification:
-  Partner alerted  Status change   Status change   Docs needed      Shipment complete
-    </div>
-
-    <h3>Quote Approval Flow (Single Approver)</h3>
-    <div class="flow-diagram">
-+------------------------------------------------------------------------------+
-|                       QUOTE APPROVAL WORKFLOW (Single Approver)              |
-+------------------------------------------------------------------------------+
-
-  +----------+    +----------+    +----------+    +----------+    +----------+
-  |  DRAFT   |--->| PENDING  |--->| APPROVED |--->|   SENT   |--->| RESPONSE |
-  |          |    | APPROVAL |    |          |    |          |    |          |
-  +----------+    +----------+    +----------+    +----------+    +----------+
-       |               |               |               |               |
-       v               v               v               v               v
-
-  Any admin       Submit for      Single          Generate PDF,         +--> ACCEPTED
-  creates quote,  approval        approver        email to client  -----|    Convert to
-  enters costs                    reviews and                           |    shipment
-                                  approves                              |
-                  Notification:   Notification:                         +--> REJECTED
-                  Approval        Ready to send                              Log reason
-                  requested
-    </div>
-
-    <h3>Document Compliance</h3>
-    <div class="tree">
-REQUIRED DOCUMENTS (C&C responsibility):
-
-INBOUND Shipments:
-+-- Commercial Invoice            (from partner, before departure)
-+-- Certificate of Origin         (from partner, for customs)
-+-- Packing List                  (from partner, before departure)
-+-- Bill of Lading / Airway Bill  (from carrier)
-+-- Import Permit                 (C&C obtains for alcohol)
-+-- Customs Declaration           (at UAE arrival)
-
-OUTBOUND Shipments:
-+-- Export Permit                 (C&C obtains before dispatch)
-+-- Commercial Invoice            (C&C generates for client)
-+-- Packing List                  (C&C generates)
-+-- Delivery Note                 (at delivery)
-
-ANNUAL Tracking:
-+-- Trade licenses (per partner/client)
-+-- 90/60/30 day expiry alerts
-    </div>
-
-    <!-- WIREFRAMES -->
-    <h2 id="wireframes">Wireframes (19 Screens)</h2>
-
-    <div class="wireframe-title">1. Admin Dashboard</div>
-    <div class="wireframe">+-------------------------------------------------------------------+
+      <h3>1. Dashboard</h3>
+      <div class="wireframe">+-------------------------------------------------------------------+
 |  LOGISTICS                                     [+ New Shipment]   |
 +-------------------------------------------------------------------+
 |  +----------+ +----------+ +----------+ +----------+              |
@@ -1444,1595 +936,532 @@ ANNUAL Tracking:
 |                                                                   |
 |  Active Shipments                              [Filter] [Search]  |
 |  +---------------------------------------------------------------+|
-|  | SHP-2026-0042 | Inbound | Sea | Bordeaux -> Dubai             ||
-|  | Hapag-Lloyd   | 40 cases | ETA: Jan 18 | [Y] In Transit       ||
+|  | SHP-2026-0042 | Inbound | Sea | Bordeaux to Dubai             ||
+|  | Hapag-Lloyd   | 40 cases | ETA: Jan 18 | In Transit           ||
 |  +---------------------------------------------------------------+|
-|  | SHP-2026-0041 | Outbound | Air | Dubai -> Riyadh              ||
-|  | Emirates      | 12 cases | ETD: Jan 14 | [G] Booked           ||
+|  | SHP-2026-0041 | Outbound | Air | Dubai to Riyadh              ||
+|  | Emirates      | 12 cases | ETD: Jan 14 | Booked               ||
 |  +---------------------------------------------------------------+|
 |                                                                   |
-|  Compliance Alerts                             [View All ->]      |
-|  [!] SHP-0042: Missing Certificate of Origin                      |
-|  [!] Partner ABC: Trade license expires in 28 days                |
-|  [!] SHP-0038: Import permit expires in 7 days                    |
-|                                                                   |
-|  Customs Deposits Outstanding: AED 85,000 (4 pending)             |
+|  Document Alerts                                                  |
+|  ! SHP-0042: Missing Certificate of Origin                       |
+|  ! SHP-0038: Import permit expires in 7 days                     |
 +-------------------------------------------------------------------+</div>
 
-    <div class="wireframe-title">2. Compliance Dashboard (KEY FEATURE)</div>
-    <div class="wireframe">+-------------------------------------------------------------------+
-|  COMPLIANCE DASHBOARD                              [Export PDF]   |
-+-------------------------------------------------------------------+
-|  +--------------+ +--------------+ +--------------+ +------------+|
-|  |      3       | |      5       | |      2       | |     12     ||
-|  |   CRITICAL   | |   WARNING    | |   EXPIRING   | |     OK     ||
-|  | Missing Docs | | Expiring<30d | | Expiring<90d | |  Complete  ||
-|  +--------------+ +--------------+ +--------------+ +------------+|
-|                                                                   |
-|  Critical Issues (Action Required)                                |
-|  +---------------------------------------------------------------+|
-|  | [!] SHP-0042 | Missing: Certificate of Origin                 ||
-|  |              | Partner: Bordeaux Direct | Due: ASAP           ||
-|  |              | [Request from Partner] [Upload Manually]       ||
-|  +---------------------------------------------------------------+|
-|  | [!] SHP-0045 | Missing: Commercial Invoice, Packing List      ||
-|  |              | Partner: Napa Wines | Due: Before customs      ||
-|  +---------------------------------------------------------------+|
-|                                                                   |
-|  Expiring Licenses (Next 90 Days)                                 |
-|  +---------------------------------------------------------------+|
-|  | Partner ABC        | Trade License    | Expires: Feb 15 (34d)||
-|  | Client XYZ         | Import Permit    | Expires: Mar 01 (48d)||
-|  | Bordeaux Direct    | Trade License    | Expires: Apr 10 (89d)||
-|  +---------------------------------------------------------------+|
-|                                                                   |
-|  [Export Compliance Report]  [Send Reminders]                     |
-+-------------------------------------------------------------------+</div>
-
-    <div class="wireframe-title">3. Financial Summary Report</div>
-    <div class="wireframe">+-------------------------------------------------------------------+
-|  FINANCIAL SUMMARY                    Period: [Jan 2026 v]        |
-+-------------------------------------------------------------------+
-|  +--------------+ +--------------+ +--------------+ +------------+|
-|  |   $45,200    | |   $38,400    | |    $6,800    | |    15%     ||
-|  |   Revenue    | | Total Costs  | |    Profit    | |   Margin   ||
-|  +--------------+ +--------------+ +--------------+ +------------+|
-|                                                                   |
-|  Cost Breakdown                                                   |
-|  +---------------------------------------------------------------+|
-|  | Freight Costs          | $28,500 | ################           ||
-|  | Handling Fees          |  $4,200 | #####                      ||
-|  | Government Charges     |  $3,100 | ####                       ||
-|  | Insurance              |  $1,400 | ##                         ||
-|  | Other                  |  $1,200 | ##                         ||
-|  +---------------------------------------------------------------+|
-|                                                                   |
-|  By Partner                               By Transport Mode       |
-|  +-----------------------------+    +---------------------------+|
-|  | Bordeaux Direct  | $18,200  |    | Sea (FCL)      | $32,100  ||
-|  | Champagne House  | $12,400  |    | Air            |  $8,500  ||
-|  | Napa Wines       |  $8,100  |    | Road           |  $2,000  ||
-|  +-----------------------------+    +---------------------------+|
-|                                                                   |
-|  [Export to Excel]  [View by Quarter]  [Compare Periods]          |
-+-------------------------------------------------------------------+</div>
-
-    <div class="wireframe-title">4. Shipment List</div>
-    <div class="wireframe">+-------------------------------------------------------------------+
-|  SHIPMENTS                                     [+ New Shipment]   |
-+-------------------------------------------------------------------+
-|  Filters: [All v] [Inbound v] [Sea v] [This Month v]  [Search]    |
-|                                                                   |
-|  +---------------------------------------------------------------+|
-|  | # | Type    | Route           | Cases | ETA      | Status     ||
-|  +---------------------------------------------------------------+|
-|  | 42| Inbound | Bordeaux->Dubai |   40  | Jan 18   |[Y]Transit  ||
-|  | 41| Outbound| Dubai->Riyadh   |   12  | Jan 14   |[G]Booked   ||
-|  | 40| Inbound | Napa->Dubai     |   24  | Jan 12   |[B]Cleared  ||
-|  | 39| Re-export| Dubai->Doha    |    8  | Jan 10   |[+]Delivered||
-|  +---------------------------------------------------------------+|
-|                                                                   |
-|  Showing 1-20 of 156                           [< 1 2 3 ... >]    |
-+-------------------------------------------------------------------+</div>
-
-    <div class="wireframe-title">5. Shipment Detail - Overview Tab</div>
-    <div class="wireframe">+-------------------------------------------------------------------+
-|  <- Back                                                          |
-|  SHP-2026-0042                                 [Y] In Transit      |
+      <h3>2. Shipment Detail</h3>
+      <div class="wireframe">+-------------------------------------------------------------------+
+|  &lt; Back                                                          |
+|  SHP-2026-0042                                    In Transit      |
 |  Inbound Sea Freight (FCL)                                        |
 +-------------------------------------------------------------------+
-|  [Overview] [Items] [Documents] [Tracking] [Costs] [Activity]     |
+|  [Overview] [Items] [Documents] [Tracking] [Payments]             |
 |                                                                   |
 |  +---------------------------------------------------------------+|
 |  |  ROUTE                                                        ||
 |  |  Bordeaux, France  ------------------>  Dubai, UAE            ||
-|  |  Departed: Jan 5        ######..   ETA: Jan 18                ||
+|  |  Departed: Jan 5        ######--   ETA: Jan 18                ||
 |  +---------------------------------------------------------------+|
 |                                                                   |
 |  Partner                        Carrier                           |
-|  -------------                  -------------                     |
+|  -----------                    -----------                       |
 |  Bordeaux Direct                Hapag-Lloyd                       |
 |  contact@bordeaux.fr            Container: HLCU1234567            |
 |                                 BOL: HLCU2026001234               |
 |                                 [Track on Hapag-Lloyd ->]         |
 |                                                                   |
-|  Documents (4/6)                [!] 2 missing - action required   |
+|  Documents (4/6)                                                  |
 |  ---------------------------------------------------------------- |
-|  [+] Bill of Lading           [+] Commercial Invoice              |
-|  [+] Packing List             [!] Certificate of Origin           |
-|  [!] Import Permit            [ ] Customs Declaration             |
+|  [x] Bill of Lading           [x] Commercial Invoice              |
+|  [x] Packing List             [ ] Certificate of Origin           |
+|  [ ] Import Permit            [ ] Customs Declaration             |
 |                                                                   |
-|  [Upload Document]  [Request from Partner]  [Export All Docs]     |
+|  [Upload Document]  [Update Status v]  [Edit Shipment]            |
 +-------------------------------------------------------------------+</div>
 
-    <div class="wireframe-title">6. Documents Tab (with One-Click Export)</div>
-    <div class="wireframe">+-------------------------------------------------------------------+
-|  [Overview] [Items] [Documents] [Tracking] [Costs] [Activity]     |
-+-------------------------------------------------------------------+
-|  DOCUMENTS                    [Upload] [Request from Partner]     |
-|                                                                   |
-|  [Export All as ZIP]  [Export All as PDF]  <- ONE-CLICK AUDIT     |
-|                                                                   |
-|  Required Documents                                               |
-|  +---------------------------------------------------------------+|
-|  | Type                | Status    | Uploaded    | Verified      ||
-|  +---------------------------------------------------------------+|
-|  | Bill of Lading      | [+] Done  | Jan 5       | [+] Yes       ||
-|  | Commercial Invoice  | [+] Done  | Jan 4       | [+] Yes       ||
-|  | Packing List        | [+] Done  | Jan 4       | [+] Yes       ||
-|  | Certificate of Origin| [!] Missing|            | [Request]    ||
-|  | Import Permit       | [!] Missing|            | [Upload]     ||
-|  | Customs Declaration | [ ] Pending| Not yet    |              ||
-|  +---------------------------------------------------------------+|
-|                                                                   |
-|  Document History                                                 |
-|  +---------------------------------------------------------------+|
-|  | BOL-2026-0042.pdf | v2 | Jan 5 | kevin@cc | [View] [Download]||
-|  | INV-2026-0042.pdf | v1 | Jan 4 | partner  | [View] [Download]||
-|  +---------------------------------------------------------------+|
-+-------------------------------------------------------------------+</div>
-
-    <div class="wireframe-title">7. Cost Breakdown Tab</div>
-    <div class="wireframe">+-------------------------------------------------------------------+
-|  [Overview] [Items] [Documents] [Tracking] [Costs] [Activity]     |
+      <h3>3. Shipment Cost Breakdown (Admin)</h3>
+      <div class="wireframe">+-------------------------------------------------------------------+
+|  [Overview] [Items] [Documents] [Tracking] [Costs]                |
 +-------------------------------------------------------------------+
 |  COST BREAKDOWN                         Allocation: [Bottles v]   |
-|                               Display Currency: [USD v] [AED] [EUR]|
 |                                                                   |
 |  Shipment Costs                                                   |
 |  +---------------------------------------------------------------+|
-|  | Product Cost (ex-cellar)       EUR 5,200  |        $5,760.00  ||
-|  | Freight (Bordeaux -> Dubai)    USD 2,400  |        $2,400.00  ||
-|  | Insurance (0.5%)               USD 120    |          $120.00  ||
-|  | Origin handling                EUR 140    |          $150.00  ||
-|  | Destination handling           AED 735    |          $200.00  ||
-|  | Customs clearance              AED 660    |          $180.00  ||
-|  | Government fees                AED 550    |          $150.00  ||
-|  | Delivery to RAK Port           AED 367    |          $100.00  ||
-|  | -----------------------------------------------------------   ||
-|  | TOTAL LANDED COST                                  $9,060.00  ||
+|  | Product Cost (ex-cellar)                        $5,760.00     ||
+|  | Freight (Bordeaux to Dubai)                     $2,400.00     ||
+|  | Insurance (0.5%)                                  $120.00     ||
+|  | Origin handling                                   $150.00     ||
+|  | Destination handling                              $200.00     ||
+|  | Customs clearance                                 $180.00     ||
+|  | Government fees                                   $150.00     ||
+|  | Delivery to RAK Port                              $100.00     ||
+|  | ----------------------------------------------------------    ||
+|  | TOTAL LANDED COST                               $9,060.00     ||
 |  | / 480 bottles                                                 ||
-|  | = COST PER BOTTLE                                     $18.88  ||
+|  | = COST PER BOTTLE                                  $18.88     ||
+|  +---------------------------------------------------------------+|
+|                                                                   |
+|  Per-Item Breakdown                                               |
+|  +---------------------------------------------------------------+|
+|  | Product           |Bottles| Landed |Per Btl|Target|Margin     ||
+|  +---------------------------------------------------------------+|
+|  | Margaux 2018      |  144  | $2,718 |$18.88 |$35.00| 85%       ||
+|  | Latour 2019       |  240  | $4,531 |$18.88 |$28.00| 48%       ||
+|  | Dom Perignon 2012 |   96  | $1,811 |$18.88 |$45.00|138%       ||
 |  +---------------------------------------------------------------+|
 |                                                                   |
 |  [Export to Excel]  [Update Costs]                                |
 +-------------------------------------------------------------------+</div>
+    </section>
 
-    <div class="wireframe-title">8. Activity Log Tab (Audit Trail)</div>
-    <div class="wireframe">+-------------------------------------------------------------------+
-|  [Overview] [Items] [Documents] [Tracking] [Costs] [Activity]     |
-+-------------------------------------------------------------------+
-|  ACTIVITY LOG                     [Export Full Audit Trail]       |
-|                                                                   |
-|  o Status changed to "in_transit"              Jan 6, 09:15       |
-|  | By: kevin@craftculture.ae                                      |
-|  | From: booked -> in_transit                                     |
-|  |                                                                |
-|  o Document uploaded: Bill of Lading           Jan 5, 16:30       |
-|  | By: partner@bordeaux.fr                                        |
-|  | File: BOL-2026-0042.pdf (verified by kevin@cc)                 |
-|  |                                                                |
-|  o Document verified                           Jan 5, 17:00       |
-|  | By: kevin@craftculture.ae                                      |
-|  | Document: Bill of Lading                                       |
-|  |                                                                |
-|  o Carrier booking confirmed                   Jan 4, 11:20       |
-|  | By: kevin@craftculture.ae                                      |
-|  | Carrier: Hapag-Lloyd, Ref: HLCU2026001234                      |
-|  |                                                                |
-|  o Shipment created                            Jan 3, 14:00       |
-|  | By: kevin@craftculture.ae                                      |
-|  | Partner: Bordeaux Direct                                       |
-|                                                                   |
-|  Showing all 12 events                                            |
-+-------------------------------------------------------------------+</div>
+    <section id="integrations">
+      <h2>Integrations</h2>
 
-    <div class="wireframe-title">9. Quote Builder (with Approval)</div>
-    <div class="wireframe">+-------------------------------------------------------------------+
-|  Create Logistics Quote                           [Save Draft]    |
-+-------------------------------------------------------------------+
-|  Client: [Select client...]                                       |
-|                                                                   |
-|  Route & Transport                                                |
-|  +--------------------+    +--------------------+                 |
-|  | From: Dubai, UAE   | -> | To: Riyadh, KSA    |                 |
-|  +--------------------+    +--------------------+                 |
-|                                                                   |
-|  Mode: [Air v]     Incoterms: [DDP v]                             |
-|                                                                   |
-|  Cargo                                                            |
-|  Cases: [18]   Bottles: [216]   Weight: [270 kg]                  |
-|                                                                   |
-|  Cost Breakdown                   [Fetch Hillebrand Rate]         |
-|  +---------------------------------------------------------------+|
-|  | Freight (Air)                                   $1,620.00     ||
-|  | Insurance (0.5%)                                  $102.00     ||
-|  | Export Handling                                   $150.00     ||
-|  | Government Charges                                $250.00     ||
-|  | C&C Margin (10%)                                  $212.20     ||
-|  | -----------------------------------------------------------   ||
-|  | TOTAL (USD)                                     $2,334.20     ||
-|  +---------------------------------------------------------------+|
-|                                                                   |
-|  Valid Until: [Jan 25, 2026]                                      |
-|                                                                   |
-|  [Cancel]      [Save Draft]      [Submit for Approval]            |
-|                                                                   |
-|  Note: Quotes require approval before sending to client           |
-+-------------------------------------------------------------------+</div>
-
-    <div class="wireframe-title">10. Quote Approval View</div>
-    <div class="wireframe">+-------------------------------------------------------------------+
-|  QUOTES PENDING APPROVAL                                          |
-+-------------------------------------------------------------------+
-|  +---------------------------------------------------------------+|
-|  | LGQ-2026-0015 | Dubai -> Riyadh | Air | $2,334.20            ||
-|  | Client: ABC Dist | Created by: sarah@cc | Jan 12, 10:30      ||
-|  |                                                               ||
-|  | Cost Breakdown:                                               ||
-|  | Freight: $1,620 | Handling: $150 | Gov: $250 | Margin: $212   ||
-|  |                                                               ||
-|  | [View Details]        [Approve]        [Reject with Note]     ||
-|  +---------------------------------------------------------------+|
-|  | LGQ-2026-0014 | Dubai -> Doha | Road | $890.00               ||
-|  | Client: XYZ Trading | Created by: kevin@cc | Jan 11, 15:45   ||
-|  |                                                               ||
-|  | [View Details]        [Approve]        [Reject with Note]     ||
-|  +---------------------------------------------------------------+|
-+-------------------------------------------------------------------+</div>
-
-    <div class="wireframe-title">11. Notification Center (Phase 2)</div>
-    <div class="wireframe">+-------------------------------------------------------------------+
-|  NOTIFICATIONS                              [Mark All as Read]    |
-+-------------------------------------------------------------------+
-|  Today                                                            |
-|  +---------------------------------------------------------------+|
-|  | [!] Document Alert                              10:30 AM      ||
-|  | SHP-0042: Certificate of Origin still missing                 ||
-|  | [View Shipment] [Request from Partner]                        ||
-|  +---------------------------------------------------------------+|
-|  | [+] Status Changed                              09:15 AM      ||
-|  | SHP-0042 is now In Transit                                    ||
-|  | [View Shipment]                                               ||
-|  +---------------------------------------------------------------+|
-|                                                                   |
-|  Yesterday                                                        |
-|  +---------------------------------------------------------------+|
-|  | [G] Quote Approved                              04:30 PM      ||
-|  | LGQ-0015 approved by kevin@cc - ready to send                 ||
-|  | [Send to Client]                                              ||
-|  +---------------------------------------------------------------+|
-|  | [!] License Expiring                            02:00 PM      ||
-|  | Partner ABC trade license expires in 30 days                  ||
-|  | [View License] [Send Reminder]                                ||
-|  +---------------------------------------------------------------+|
-+-------------------------------------------------------------------+</div>
-
-    <div class="wireframe-title">12. Create Shipment</div>
-    <div class="wireframe">+-------------------------------------------------------------------+
-|  Create Shipment                                                  |
-+-------------------------------------------------------------------+
-|                                                                   |
-|  Type: ( ) Inbound  ( ) Outbound  ( ) Re-export                   |
-|                                                                   |
-|  Partner/Client: [Select...]                                      |
-|                                                                   |
-|  +---------------------+    +---------------------+               |
-|  | ORIGIN              | -> | DESTINATION         |               |
-|  | Country: [France v] |    | Country: [UAE v]    |               |
-|  | City: [Bordeaux   ] |    | City: [Dubai     ]  |               |
-|  +---------------------+    +---------------------+               |
-|                                                                   |
-|  Transport Mode: ( ) Sea (FCL)  ( ) Sea (LCL)  ( ) Air  ( ) Road  |
-|                                                                   |
-|  Carrier: [Select carrier...]                                     |
-|  Booking Ref: [                    ]                              |
-|  Container/AWB #: [                ]                              |
-|                                                                   |
-|  ETD: [Jan 15, 2026]     ETA: [Jan 28, 2026]                      |
-|                                                                   |
-|  Notes: [                                                       ] |
-|                                                                   |
-|  [Cancel]                                    [Create Shipment]    |
-+-------------------------------------------------------------------+</div>
-
-    <div class="wireframe-title">13. Landed Cost Report</div>
-    <div class="wireframe">+-------------------------------------------------------------------+
-|  LANDED COST ANALYSIS                              [Export CSV]   |
-+-------------------------------------------------------------------+
-|  Filter: [All Products v] [All Partners v] [2026 v]  [Search]     |
-|                                                                   |
-|  +---------------------------------------------------------------+|
-|  | Product            | Partner    |Landed/Btl|Target|Margin     ||
-|  +---------------------------------------------------------------+|
-|  | Dom Perignon 2012  | Champagne  |  $18.88  |$45.00| 138%      ||
-|  | Margaux 2018       | Bordeaux   |  $18.88  |$35.00|  85%      ||
-|  | Opus One 2019      | Napa       |  $22.45  |$55.00| 145%      ||
-|  | Latour 2019        | Bordeaux   |  $18.88  |$28.00|  48%      ||
-|  | [!] Grange 2017    | Penfolds   |  $35.20  |$32.00|  -9%      ||
-|  +---------------------------------------------------------------+|
-|                                                                   |
-|  [!] 1 product with negative margin                               |
-|  [*] 3 products with margin > 100% (arbitrage opportunity)        |
-+-------------------------------------------------------------------+</div>
-
-    <div class="wireframe-title">14. Customs Deposits Dashboard</div>
-    <div class="wireframe">+-------------------------------------------------------------------+
-|  CUSTOMS DEPOSITS                                 [+ New Deposit] |
-+-------------------------------------------------------------------+
-|  +--------------+ +--------------+ +--------------+               |
-|  |  AED 85,000  | |      4       | |   12 days    |               |
-|  | Outstanding  | |   Pending    | |  Avg Reclaim |               |
-|  +--------------+ +--------------+ +--------------+               |
-|                                                                   |
-|  Active Deposits                               [Filter] [Search]  |
-|  +---------------------------------------------------------------+|
-|  | # | Transfer          | Amount   | Days | Status              ||
-|  +---------------------------------------------------------------+|
-|  | 1 | RAK -> JAFZA      | AED 25K  |   3  | [Y] Pending         ||
-|  | 2 | RAK -> DWC        | AED 18K  |   8  | [B] Transferred     ||
-|  | 3 | RAK -> JAFZA      | AED 32K  |  15  | [!] Submitted       ||
-|  | 4 | RAK -> KIZAD      | AED 10K  |  22  | [R] Overdue         ||
-|  +---------------------------------------------------------------+|
-|                                                                   |
-|  Alerts                                                           |
-|  [!] DEP-004: Overdue - 22 days without reclaim                   |
-|  [!] DEP-003: Paperwork submitted 7 days ago, follow up           |
-+-------------------------------------------------------------------+</div>
-
-    <div class="wireframe-title">15. Partner Portal - My Shipments (Phase 3)</div>
-    <div class="wireframe">+-------------------------------------------------------------------+
-|  MY SHIPMENTS                                                     |
-+-------------------------------------------------------------------+
-|  +----------+ +----------+ +----------+                           |
-|  |     3    | |     1    | |    12    |                           |
-|  | In Transit| | At C&C   | | Completed|                           |
-|  +----------+ +----------+ +----------+                           |
-|                                                                   |
-|  Active Shipments                                                 |
-|  +---------------------------------------------------------------+|
-|  | SHP-2026-0042 | 40 cases | Bordeaux -> Dubai                  ||
-|  | ETA: Jan 18   | [Y] In Transit | Docs: 3/5 [!]                ||
-|  | [View Details]  [Upload Documents]                            ||
-|  +---------------------------------------------------------------+|
-|                                                                   |
-|  Documents Needed                                                 |
-|  [!] SHP-0042: Upload Certificate of Origin                       |
-|  [!] SHP-0042: Upload Import Permit                               |
-+-------------------------------------------------------------------+</div>
-
-    <div class="wireframe-title">16. Client Portal - Track Shipment (Phase 3)</div>
-    <div class="wireframe">+-------------------------------------------------------------------+
-|  MY SHIPMENTS                                                     |
-+-------------------------------------------------------------------+
-|  SHP-2026-0041                                 [G] Booked         |
-|  Dubai -> Riyadh | Air | 12 cases                                 |
-+-------------------------------------------------------------------+
-|                                                                   |
-|  Timeline                                                         |
-|  ---------------------------------------------------------------- |
-|  [+] Order confirmed                             Jan 10           |
-|  [+] Shipment booked                             Jan 12           |
-|  [ ] Dispatched from Dubai                       Jan 14 (est.)    |
-|  [ ] Delivered to Riyadh                         Jan 15 (est.)    |
-|                                                                   |
-|  Documents                                                        |
-|  ---------------------------------------------------------------- |
-|  [PDF] Commercial Invoice    [Download]                           |
-|  [PDF] Packing List          [Download]                           |
-|                                                                   |
-|  Your Cost: $2,334.20 USD                                         |
-+-------------------------------------------------------------------+</div>
-
-    <div class="wireframe-title">17. Carrier Rate Dashboard - Route Comparison</div>
-    <div class="wireframe">+-------------------------------------------------------------------+
-|  CARRIER RATES                            [+ Upload Quote]        |
-+-------------------------------------------------------------------+
-|  Route: [Beaune, France v] --> [RAK, UAE v]    [Search Routes]    |
-|                                                                   |
-|  Current Valid Rates                          Last updated: Today |
-|  +---------------------------------------------------------------+|
-|  | Carrier      | Mode | Rate/kg  | Transit | Valid To  | Status ||
-|  +---------------------------------------------------------------+|
-|  | Hillebrand   | Air  | EUR 5.13 | 4-5 days| Jan 15    |[G] Best||
-|  | Hillebrand   | Sea  | EUR 1.85 | 28 days | Jan 31    |[B] Valid|
-|  | Emirates     | Air  | EUR 5.90 | 3-4 days| Jan 20    |[Y] +15%||
-|  | Hapag-Lloyd  | Sea  | EUR 1.72 | 32 days | Feb 15    |[G] Best||
-|  +---------------------------------------------------------------+|
-|                                                                   |
-|  Rate Comparison (700kg shipment)                                 |
-|  +---------------------------------------------------------------+|
-|  | Option           | Total Cost | Transit | Per Bottle (56 cs)  ||
-|  +---------------------------------------------------------------+|
-|  | Hillebrand Air   | EUR 3,687  | 4-5 days| EUR 5.48/btl        ||
-|  | Emirates Air     | EUR 4,225  | 3-4 days| EUR 6.28/btl        ||
-|  | Hillebrand Sea   | EUR 1,390  | 28 days | EUR 2.07/btl        ||
-|  | Hapag-Lloyd Sea  | EUR 1,298  | 32 days | EUR 1.93/btl [BEST] ||
-|  +---------------------------------------------------------------+|
-|                                                                   |
-|  [Export Comparison]  [Request New Quote]  [View Historical]      |
-+-------------------------------------------------------------------+</div>
-
-    <div class="wireframe-title">18. AI Quote Upload</div>
-    <div class="wireframe">+-------------------------------------------------------------------+
-|  UPLOAD CARRIER QUOTE                                  [X] Close  |
-+-------------------------------------------------------------------+
-|                                                                   |
-|  +---------------------------------------------------------------+|
-|  |                                                               ||
-|  |     +------------------+                                      ||
-|  |     |   [PDF icon]     |   Drop PDF, Excel, or paste email    ||
-|  |     |                  |   text here                          ||
-|  |     +------------------+                                      ||
-|  |                                                               ||
-|  |     [Browse Files]  or  [Paste Email Text]                    ||
-|  |                                                               ||
-|  +---------------------------------------------------------------+|
-|                                                                   |
-|  AI Extraction Preview                            [!] Review data |
-|  +---------------------------------------------------------------+|
-|  | Carrier:        Hillebrand GORI            [G] Detected       ||
-|  | Quote #:        SAED040436 Rev1                               ||
-|  | Route:          Beaune, FR -> RAK, UAE                        ||
-|  | Mode:           Airfreight (Emirates Sky Fresh)               ||
-|  | Weight Basis:   700 kg                                        ||
-|  | Freight:        EUR 3,592.00                                  ||
-|  | Extras:         EUR 95.00 (Vinliner)                          ||
-|  | Total:          EUR 3,687.00                                  ||
-|  | Per-kg Rate:    EUR 5.13/kg                                   ||
-|  | Valid:          4-Dec-25 to 15-Dec-25                         ||
-|  | Incoterms:      EXW                                           ||
-|  +---------------------------------------------------------------+|
-|                                                                   |
-|  Historical Comparison                                            |
-|  +---------------------------------------------------------------+|
-|  | [B] NORMAL - Rate is within 5% of historical average          ||
-|  | Previous quotes for this route: EUR 4.95 - 5.35/kg            ||
-|  | This quote: EUR 5.13/kg (avg: EUR 5.15/kg)                    ||
-|  +---------------------------------------------------------------+|
-|                                                                   |
-|  [Cancel]                              [Save to Rate Card]        |
-+-------------------------------------------------------------------+</div>
-
-    <div class="wireframe-title">19. Rate History & Trends</div>
-    <div class="wireframe">+-------------------------------------------------------------------+
-|  RATE HISTORY                              Route: Beaune -> RAK   |
-+-------------------------------------------------------------------+
-|  Time Period: [Last 12 months v]    Mode: [All v]    [Export CSV] |
-|                                                                   |
-|  Rate Trend (EUR/kg)                                              |
-|  +---------------------------------------------------------------+|
-|  |  6.00 |                                    *                  ||
-|  |  5.50 |        *           *      *    *     *                ||
-|  |  5.00 |   *        *   *       *                  *   *  <now ||
-|  |  4.50 |                                                       ||
-|  |  4.00 |--------------------------------------------------------||
-|  |       | Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec Jan   ||
-|  +---------------------------------------------------------------+|
-|  AIR: Avg EUR 5.15/kg | Low: 4.85 | High: 5.90 | Current: 5.13   |
-|                                                                   |
-|  +---------------------------------------------------------------+|
-|  |  2.50 |                                                       ||
-|  |  2.00 |   *   *   *   *   *   *   *   *   *   *   *   *  <now ||
-|  |  1.50 |--------------------------------------------------------||
-|  |       | Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec Jan   ||
-|  +---------------------------------------------------------------+|
-|  SEA: Avg EUR 1.82/kg | Low: 1.65 | High: 2.10 | Current: 1.85   |
-|                                                                   |
-|  All Quotes (47 total)                                            |
-|  +---------------------------------------------------------------+|
-|  | Date     | Carrier    | Mode | Rate   | vs Avg | Status       ||
-|  +---------------------------------------------------------------+|
-|  | Jan 12   | Hillebrand | Air  | 5.13   | -0.4%  | [G] Current  ||
-|  | Dec 28   | Emirates   | Air  | 5.90   | +14.6% | [R] Expired  ||
-|  | Dec 15   | Hillebrand | Air  | 4.95   | -3.9%  | [R] Expired  ||
-|  | Dec 01   | Hapag-Lloyd| Sea  | 1.72   | -5.5%  | [G] Current  ||
-|  +---------------------------------------------------------------+|
-+-------------------------------------------------------------------+</div>
-
-    <!-- IMPORT DOCUMENT TYPES - AIR FREIGHT -->
-    <h2 id="import-docs">Air Freight Document Types (AI Extraction)</h2>
-
-    <div class="highlight">
-      <h3>Know What to Extract From Every Document</h3>
-      <p style="color:white;margin:0">Based on real air freight shipments into RAK FTZ (Cross Fire Rum, ROEBUCK). AI extracts these fields automatically.</p>
-    </div>
-
-    <p>A typical air freight import generates <strong>8-12 documents</strong>. Here's what each contains and what the AI should extract.</p>
-
-    <h3>1. Air Waybill (AWB)</h3>
-    <div class="card">
-      <p><strong>Source:</strong> Emirates SkyCargo, Cargolux, Qatar Airways Cargo</p>
-      <p><strong>Format:</strong> PDF (standard IATA format)</p>
-      <table class="schema-table">
-        <thead><tr><th>Field</th><th>Example</th><th>Use</th></tr></thead>
-        <tbody>
-          <tr><td>AWB Number</td><td>176-18479274</td><td>Primary tracking reference</td></tr>
-          <tr><td>Origin Airport</td><td>MCO (Orlando)</td><td>Route tracking</td></tr>
-          <tr><td>Destination Airport</td><td>RKT (Ras Al Khaimah)</td><td>Route tracking</td></tr>
-          <tr><td>Transit Point</td><td>DXB (Dubai)</td><td>Multi-leg routing</td></tr>
-          <tr><td>Shipper Name</td><td>THE POINT DISTILLERY LLC</td><td>Partner identification</td></tr>
-          <tr><td>Consignee</td><td>CRAFT AND CULTURE FZE</td><td>Verification</td></tr>
-          <tr><td>Pieces</td><td>20</td><td>Quantity verification</td></tr>
-          <tr><td>Gross Weight</td><td>223.0 KGS</td><td>Freight calculation</td></tr>
-          <tr><td>Chargeable Weight</td><td>223.0 KGS</td><td>Cost allocation</td></tr>
-          <tr><td>Commodity</td><td>SPIRITS - RUM</td><td>HS code validation</td></tr>
-          <tr><td>Nature of Goods</td><td>120X750ML RUM 40% ALC VOL</td><td>Product details</td></tr>
-          <tr><td>Flight Number</td><td>EK803/29OCT</td><td>Tracking</td></tr>
-          <tr><td>Declared Value</td><td>NVD (No Value Declared)</td><td>Insurance</td></tr>
-        </tbody>
-      </table>
-    </div>
-
-    <h3>2. Commercial Invoice</h3>
-    <div class="card">
-      <p><strong>Source:</strong> Wine producer/supplier</p>
-      <p><strong>Format:</strong> PDF</p>
-      <table class="schema-table">
-        <thead><tr><th>Field</th><th>Example</th><th>Use</th></tr></thead>
-        <tbody>
-          <tr><td>Invoice Number</td><td>TPDRUMINV001</td><td>Reference, deduplication</td></tr>
-          <tr><td>Invoice Date</td><td>22 October 2025</td><td>Timeline tracking</td></tr>
-          <tr><td>Seller</td><td>The Point Distillery LLC</td><td>Partner record</td></tr>
-          <tr><td>Seller Address</td><td>Casselberry, FL 32707, USA</td><td>Origin verification</td></tr>
-          <tr><td>Buyer</td><td>Craft & Culture FZE</td><td>Verification</td></tr>
-          <tr><td>Product Description</td><td>Crossfire Hurricane Rum</td><td>Product matching</td></tr>
-          <tr><td>Quantity</td><td>20 cases</td><td>Verification</td></tr>
-          <tr><td>Unit Price</td><td>$96.00 per case</td><td>Ex-cellar cost</td></tr>
-          <tr><td>Total Value</td><td>$1,920.00 USD</td><td>Customs value</td></tr>
-          <tr><td>Incoterms</td><td>EXW</td><td>Cost allocation</td></tr>
-          <tr><td>Country of Origin</td><td>USA</td><td>COO verification</td></tr>
-          <tr><td>HS Code</td><td>2208.40 (Rum)</td><td>Tariff classification</td></tr>
-        </tbody>
-      </table>
-    </div>
-
-    <h3>3. UAE Customs Declaration (Import)</h3>
-    <div class="card">
-      <p><strong>Source:</strong> UAE Customs / RAK Customs</p>
-      <p><strong>Format:</strong> PDF (official government form)</p>
-      <p><strong>Types:</strong> Import Declaration, Re-Export Declaration, Transit Declaration</p>
-      <table class="schema-table">
-        <thead><tr><th>Field</th><th>Example</th><th>Use</th></tr></thead>
-        <tbody>
-          <tr><td>DEC NO</td><td>20250503001283</td><td>Official reference</td></tr>
-          <tr><td>DEC TYPE</td><td>Re-Export / Import</td><td>Declaration type</td></tr>
-          <tr><td>DEC DATE</td><td>29-10-2025</td><td>Clearance date</td></tr>
-          <tr><td>Port Type</td><td>Sea/RAK Seaport Custom</td><td>Entry point</td></tr>
-          <tr><td>Importer Code</td><td>30898</td><td>Company ID</td></tr>
-          <tr><td>Importer Name</td><td>CRAFT AND CULTURE FZE</td><td>Verification</td></tr>
-          <tr><td>Intercessor</td><td>A98 GULF AGENCY COMPANY</td><td>Clearing agent</td></tr>
-          <tr><td>AWB/BOL Number</td><td>176-18479274</td><td>Link to transport doc</td></tr>
-          <tr><td>Net Weight</td><td>223 Kgs</td><td>Weight verification</td></tr>
-          <tr><td>Packages</td><td>20 CSE</td><td>Quantity verification</td></tr>
-          <tr><td>Origin Country</td><td>USA</td><td>COO verification</td></tr>
-          <tr><td>HS Code</td><td>220890900000</td><td>Tariff (full 12-digit)</td></tr>
-          <tr><td>Goods Description</td><td>OTHER - SPIRIT</td><td>Product type</td></tr>
-          <tr><td>CIF Local Value</td><td>7,052 DHS</td><td>AED customs value</td></tr>
-          <tr><td>CIF Foreign Value</td><td>$7,052 USD</td><td>USD customs value</td></tr>
-          <tr><td>Duty Amount</td><td>0 (FZ exempt)</td><td>Duty paid</td></tr>
-          <tr><td>Other Charges</td><td>195 DHS</td><td>Government fees</td></tr>
-          <tr><td>Delivery Order No</td><td>1822738</td><td>Warehouse link</td></tr>
-          <tr><td>Customs Status</td><td>GREEN (Released)</td><td>Clearance status</td></tr>
-          <tr><td>Clearing Agent Code</td><td>CE3707</td><td>Agent reference</td></tr>
-        </tbody>
-      </table>
-      <div class="warning-box">
-        <strong>Important:</strong> HS codes expand from 6-digit (2208.40) to 12-digit (220840000000) for UAE customs. Store both.
-      </div>
-    </div>
-
-    <h3>4. Clearing Agent Invoice (GAC)</h3>
-    <div class="card">
-      <p><strong>Source:</strong> Gulf Agency Company (GAC), other clearing agents</p>
-      <p><strong>Format:</strong> PDF tax invoice</p>
-      <table class="schema-table">
-        <thead><tr><th>Field</th><th>Example</th><th>Use</th></tr></thead>
-        <tbody>
-          <tr><td>Invoice Number</td><td>CCF/20255006/1043</td><td>Payment reference</td></tr>
-          <tr><td>Invoice Date</td><td>31-Oct-2025</td><td>Payment timeline</td></tr>
-          <tr><td>TRN (Tax Reg No)</td><td>100058366400003</td><td>VAT verification</td></tr>
-          <tr><td>Customer Name</td><td>CRAFT AND CULTURE FZE</td><td>Verification</td></tr>
-          <tr><td>AWB Reference</td><td>176-18479274</td><td>Shipment linking</td></tr>
-          <tr><td>BOE Number</td><td>202511042500048</td><td>Bill of Entry ref</td></tr>
-          <tr><td>Service Type</td><td>Bill of Entry charges</td><td>Cost categorization</td></tr>
-          <tr><td>Base Amount</td><td>350.00 AED</td><td>Pre-tax amount</td></tr>
-          <tr><td>VAT (5%)</td><td>17.50 AED</td><td>Tax amount</td></tr>
-          <tr><td>Total Amount</td><td>367.50 AED</td><td>Payment amount</td></tr>
-        </tbody>
-      </table>
-      <h4>Common GAC Charge Types:</h4>
-      <ul>
-        <li><strong>Bill of Entry:</strong> Import declaration processing (AED 350-500)</li>
-        <li><strong>Export Bill:</strong> Re-export declaration (AED 100-200)</li>
-        <li><strong>Pre-Clearance:</strong> Customs pre-clearance fees (AED 150-250)</li>
-        <li><strong>Amendment:</strong> Declaration corrections (AED 50-100)</li>
-        <li><strong>Delivery Order:</strong> Warehouse release (AED 100-150)</li>
-      </ul>
-    </div>
-
-    <h3>5. RAK Airport Handling Charges</h3>
-    <div class="card">
-      <p><strong>Source:</strong> RAK Airport / Warehouse operator</p>
-      <p><strong>Format:</strong> PDF invoice</p>
-      <table class="schema-table">
-        <thead><tr><th>Field</th><th>Example</th><th>Use</th></tr></thead>
-        <tbody>
-          <tr><td>Invoice Number</td><td>RAKTIA/2025-10/01234</td><td>Payment reference</td></tr>
-          <tr><td>AWB Number</td><td>176-18479274</td><td>Shipment linking</td></tr>
-          <tr><td>Cargo Weight</td><td>223 KGS</td><td>Verification</td></tr>
-          <tr><td>Storage Days</td><td>2 days</td><td>Duration</td></tr>
-          <tr><td>Handling Fee</td><td>AED 200.00</td><td>Base handling</td></tr>
-          <tr><td>Storage Fee</td><td>AED 50.00</td><td>Per day charge</td></tr>
-          <tr><td>X-Ray Fee</td><td>AED 75.00</td><td>Security scan</td></tr>
-          <tr><td>Total Amount</td><td>AED 325.00</td><td>Payment amount</td></tr>
-        </tbody>
-      </table>
-    </div>
-
-    <h3>6. Pre-Clearance Debit Note (Customs)</h3>
-    <div class="card">
-      <p><strong>Source:</strong> RAK Customs / Ras Al Khaimah Port Customs</p>
-      <p><strong>Format:</strong> PDF (official government debit note)</p>
-      <table class="schema-table">
-        <thead><tr><th>Field</th><th>Example</th><th>Use</th></tr></thead>
-        <tbody>
-          <tr><td>Note Number</td><td>4130044599</td><td>Payment reference</td></tr>
-          <tr><td>Date</td><td>29-10-2025</td><td>Transaction date</td></tr>
-          <tr><td>Importer</td><td>GULF AGENCY COMPANY RAK LLC</td><td>Payer (agent)</td></tr>
-          <tr><td>Operation Type</td><td>Pre-Clearance Operation</td><td>Service type</td></tr>
-          <tr><td>Declaration No</td><td>1283</td><td>Link to customs dec</td></tr>
-          <tr><td>Declaration Type</td><td>Re-Export</td><td>Import/Export/Transit</td></tr>
-          <tr><td>Amount</td><td>195 DHS</td><td>Government fee</td></tr>
-          <tr><td>Due Date</td><td>22-01-2026</td><td>Payment deadline</td></tr>
-        </tbody>
-      </table>
-    </div>
-
-    <h3>7. Packing List</h3>
-    <div class="card">
-      <p><strong>Source:</strong> Wine producer/supplier</p>
-      <p><strong>Format:</strong> PDF or Excel</p>
-      <table class="schema-table">
-        <thead><tr><th>Field</th><th>Example</th><th>Use</th></tr></thead>
-        <tbody>
-          <tr><td>Packing List No</td><td>PL-TPDRUM-001</td><td>Reference</td></tr>
-          <tr><td>Date</td><td>22-Oct-2025</td><td>Timeline</td></tr>
-          <tr><td>Total Cases</td><td>20</td><td>Quantity</td></tr>
-          <tr><td>Bottles per Case</td><td>6</td><td>Unit calculation</td></tr>
-          <tr><td>Total Bottles</td><td>120</td><td>Total units</td></tr>
-          <tr><td>Bottle Size</td><td>750ml</td><td>Product spec</td></tr>
-          <tr><td>Case Dimensions</td><td>33x22x32 cm</td><td>Volume calc</td></tr>
-          <tr><td>Gross Weight/Case</td><td>11.15 kg</td><td>Weight calc</td></tr>
-          <tr><td>Net Weight/Case</td><td>9.8 kg</td><td>Product weight</td></tr>
-          <tr><td>Total Gross Weight</td><td>223 kg</td><td>Freight</td></tr>
-        </tbody>
-      </table>
-    </div>
-
-    <h3>Landed Cost Calculation Example</h3>
-    <div class="calculation-box">
-REAL EXAMPLE: Cross Fire Rum (Air Freight USA → RAK)
-═══════════════════════════════════════════════════════
-PRODUCT COST
-  20 cases × $96/case                         $1,920.00 USD
-
-FREIGHT & INSURANCE
-  Air freight (Orlando → RAK via DXB)         $1,800.00 USD (est)
-  Insurance                                      $50.00 USD
-
-ORIGIN CHARGES
-  US export handling                            $150.00 USD
-
-DESTINATION CHARGES (AED → USD @ 3.67)
-  Clearing agent - Bill of Entry    545 AED    $148.50 USD
-  Clearing agent - Export Bill      178 AED     $48.50 USD
-  Customs pre-clearance fees        195 AED     $53.15 USD
-  Airport handling                  325 AED     $88.55 USD
-  Delivery to warehouse             100 AED     $27.25 USD
-───────────────────────────────────────────────────────
-<span class="total">TOTAL LANDED COST                           $4,285.95 USD</span>
-
-÷ 120 bottles
-───────────────────────────────────────────────────────
-<span class="total">= LANDED COST PER BOTTLE                      $35.72 USD</span>
-
-Notes:
-• Ex-cellar cost: $16.00/bottle ($96/case ÷ 6 bottles)
-• Total logistics adds: $19.72/bottle (123% of product cost!)
-• Air freight is expensive but fast (4-5 days vs 4-6 weeks sea)
-    </div>
-
-    <h3>Document Checklist by Shipment Type</h3>
-    <table>
-      <thead>
-        <tr>
-          <th>Document</th>
-          <th>Air Import</th>
-          <th>Sea Import</th>
-          <th>Re-Export</th>
-          <th>FZ Transfer</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td>Air Waybill (AWB)</td>
-          <td>✅ Required</td>
-          <td>—</td>
-          <td>✅ If air</td>
-          <td>—</td>
-        </tr>
-        <tr>
-          <td>Bill of Lading (BOL)</td>
-          <td>—</td>
-          <td>✅ Required</td>
-          <td>✅ If sea</td>
-          <td>—</td>
-        </tr>
-        <tr>
-          <td>Commercial Invoice</td>
-          <td>✅ Required</td>
-          <td>✅ Required</td>
-          <td>✅ Required</td>
-          <td>✅ Required</td>
-        </tr>
-        <tr>
-          <td>Packing List</td>
-          <td>✅ Required</td>
-          <td>✅ Required</td>
-          <td>✅ Required</td>
-          <td>✅ Required</td>
-        </tr>
-        <tr>
-          <td>Certificate of Origin</td>
-          <td>✅ Required</td>
-          <td>✅ Required</td>
-          <td>✅ Required</td>
-          <td>—</td>
-        </tr>
-        <tr>
-          <td>Import Declaration</td>
-          <td>✅ Required</td>
-          <td>✅ Required</td>
-          <td>—</td>
-          <td>—</td>
-        </tr>
-        <tr>
-          <td>Re-Export Declaration</td>
-          <td>—</td>
-          <td>—</td>
-          <td>✅ Required</td>
-          <td>—</td>
-        </tr>
-        <tr>
-          <td>Transit Declaration</td>
-          <td>—</td>
-          <td>—</td>
-          <td>—</td>
-          <td>✅ Required</td>
-        </tr>
-        <tr>
-          <td>Clearing Agent Invoice</td>
-          <td>✅ Required</td>
-          <td>✅ Required</td>
-          <td>✅ Required</td>
-          <td>✅ Required</td>
-        </tr>
-        <tr>
-          <td>Handling Charges</td>
-          <td>✅ Required</td>
-          <td>✅ Required</td>
-          <td>✅ If applicable</td>
-          <td>—</td>
-        </tr>
-        <tr>
-          <td>Delivery Order</td>
-          <td>✅ Required</td>
-          <td>✅ Required</td>
-          <td>✅ Required</td>
-          <td>—</td>
-        </tr>
-        <tr>
-          <td>Deposit Receipt</td>
-          <td>—</td>
-          <td>—</td>
-          <td>—</td>
-          <td>✅ Required</td>
-        </tr>
-      </tbody>
-    </table>
-
-    <h3>HS Code Reference (Alcohol)</h3>
-    <table>
-      <thead>
-        <tr>
-          <th>Product</th>
-          <th>6-Digit Code</th>
-          <th>UAE 12-Digit</th>
-          <th>Duty Rate (Non-FZ)</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td>Still Wine (≤2L)</td>
-          <td>2204.21</td>
-          <td>220421500000</td>
-          <td>50%</td>
-        </tr>
-        <tr>
-          <td>Sparkling Wine</td>
-          <td>2204.10</td>
-          <td>220410000000</td>
-          <td>50%</td>
-        </tr>
-        <tr>
-          <td>Whisky</td>
-          <td>2208.30</td>
-          <td>220830000000</td>
-          <td>50%</td>
-        </tr>
-        <tr>
-          <td>Rum</td>
-          <td>2208.40</td>
-          <td>220840000000</td>
-          <td>50%</td>
-        </tr>
-        <tr>
-          <td>Gin</td>
-          <td>2208.50</td>
-          <td>220850000000</td>
-          <td>50%</td>
-        </tr>
-        <tr>
-          <td>Vodka</td>
-          <td>2208.60</td>
-          <td>220860000000</td>
-          <td>50%</td>
-        </tr>
-        <tr>
-          <td>Other Spirits</td>
-          <td>2208.90</td>
-          <td>220890900000</td>
-          <td>50%</td>
-        </tr>
-      </tbody>
-    </table>
-    <div class="solution-box">
-      <strong>Free Zone Benefit:</strong> Goods in RAK FTZ, JAFZA, and other UAE Free Zones are duty-exempt. Duty only applies when goods enter UAE mainland for local consumption.
-    </div>
-
-    <!-- SEA FREIGHT DOCUMENT TYPES -->
-    <h2 id="sea-freight-docs">Sea Freight Document Types (AI Extraction)</h2>
-
-    <div class="highlight">
-      <h3>Sea Freight Specific Documents</h3>
-      <p style="color:white;margin:0">Based on real sea freight shipment: FUNKIN Cocktails (UK → RAK, 3,100 cases, 1x20' FCL container).</p>
-    </div>
-
-    <p>Sea freight adds several container-specific documents not present in air freight. Total document count: <strong>12-15 documents</strong>.</p>
-
-    <h3>1. House Bill of Lading (HBL)</h3>
-    <div class="card">
-      <p><strong>Source:</strong> Freight Forwarder / NVOCC (e.g., Albatrans London)</p>
-      <p><strong>Format:</strong> PDF (standard format)</p>
-      <p><strong>Type:</strong> Express House Bill of Lading</p>
-      <table class="schema-table">
-        <thead><tr><th>Field</th><th>Example</th><th>Use</th></tr></thead>
-        <tbody>
-          <tr><td>HBL Number</td><td>ABTAYS001237</td><td>Primary reference for forwarder</td></tr>
-          <tr><td>Master BOL</td><td>MEDUFL194711</td><td>Link to carrier's BOL</td></tr>
-          <tr><td>NVOCC Registration</td><td>016651</td><td>Forwarder identification</td></tr>
-          <tr><td>Shipper</td><td>FUNKIN LIMITED, 122 Arlington Road, London</td><td>Origin party</td></tr>
-          <tr><td>Consignee</td><td>CRAFT AND CULTURE FZE, Fujairah</td><td>Receiving party</td></tr>
-          <tr><td>Notify Party</td><td>Savino Del Bene Global Forwarding UAE LLC</td><td>Delivery contact</td></tr>
-          <tr><td>Vessel/Voyage</td><td>ESTELLE MAERSK 502E</td><td>Ship identification</td></tr>
-          <tr><td>Export Carrier</td><td>MEDITERRANEAN SHIPPING CO.</td><td>Shipping line</td></tr>
-          <tr><td>Port of Loading</td><td>LONDON GATEWAY PORT</td><td>Origin port</td></tr>
-          <tr><td>Port of Discharge</td><td>RAS AL KHAIMAH</td><td>Destination port</td></tr>
-          <tr><td>Sailing Date</td><td>26/01/2025</td><td>Departure date</td></tr>
-          <tr><td>ETA</td><td>26/02/2025</td><td>Expected arrival</td></tr>
-          <tr><td>Container Number</td><td>MSDU1638366</td><td>Container tracking</td></tr>
-          <tr><td>Container Type</td><td>20DR FCL (20' Dry Van)</td><td>Container specification</td></tr>
-          <tr><td>Seal Number</td><td>GBAB21233</td><td>Security verification</td></tr>
-          <tr><td>Packages</td><td>10 pallets, 3100 cases</td><td>Quantity verification</td></tr>
-          <tr><td>Gross Weight</td><td>8,370.00 kg</td><td>Weight verification</td></tr>
-          <tr><td>Freight Terms</td><td>FREIGHT COLLECT</td><td>Payment terms</td></tr>
-          <tr><td>Folder Reference</td><td>D91009</td><td>Forwarder file reference</td></tr>
-        </tbody>
-      </table>
-    </div>
-
-    <h3>2. Sea Waybill (Master BOL)</h3>
-    <div class="card">
-      <p><strong>Source:</strong> Shipping Line (e.g., MSC, Maersk, Hapag-Lloyd)</p>
-      <p><strong>Format:</strong> PDF (carrier's standard format)</p>
-      <p><strong>Type:</strong> NOT NEGOTIABLE - COPY</p>
-      <table class="schema-table">
-        <thead><tr><th>Field</th><th>Example</th><th>Use</th></tr></thead>
-        <tbody>
-          <tr><td>Sea Waybill Number</td><td>MEDUFL194711</td><td>Carrier's primary reference</td></tr>
-          <tr><td>SCAC Code</td><td>MEDU</td><td>Standard carrier code</td></tr>
-          <tr><td>Shipper</td><td>ALBATRANS LONDON (UK) LTD</td><td>Booking party</td></tr>
-          <tr><td>Consignee</td><td>Savino Del Bene Global Forwarding UAE LLC</td><td>Delivery agent</td></tr>
-          <tr><td>Port of Loading</td><td>London Gateway Port</td><td>Origin port</td></tr>
-          <tr><td>Port of Discharge</td><td>Ras Al Khaimah, UAE</td><td>Destination port</td></tr>
-          <tr><td>Vessel Name</td><td>ESTELLE MAERSK</td><td>Ship name</td></tr>
-          <tr><td>Voyage Number</td><td>502E</td><td>Voyage identification</td></tr>
-          <tr><td>Container Number</td><td>MSDU1638366</td><td>Container tracking</td></tr>
-          <tr><td>Container Size</td><td>20' DRY VAN</td><td>Container type</td></tr>
-          <tr><td>Seal Number</td><td>GBAB21233</td><td>Security seal</td></tr>
-          <tr><td>Tare Weight</td><td>2,220 kg</td><td>Empty container weight</td></tr>
-          <tr><td>Gross Cargo Weight</td><td>8,370.000 kg</td><td>Total cargo weight</td></tr>
-          <tr><td>Description</td><td>3100 Case(s) of PRE MIXED COCKTAILS</td><td>Cargo description</td></tr>
-          <tr><td>Shipped on Board</td><td>25-Jan-2025</td><td>Actual loading date</td></tr>
-          <tr><td>Place of Issue</td><td>MSC (U.K.) LTD - IPSWICH</td><td>Issue location</td></tr>
-          <tr><td>Issue Date</td><td>11-Mar-2025</td><td>Document date</td></tr>
-          <tr><td>Booking Reference</td><td>EBKGQ00090ED</td><td>Carrier booking ref</td></tr>
-          <tr><td>Freight Status</td><td>Prepaid / Collect</td><td>Payment terms</td></tr>
-        </tbody>
-      </table>
-      <div class="warning-box">
-        <strong>Negotiable vs Non-Negotiable:</strong> Sea Waybills are non-negotiable (goods released to named consignee). Original Bills of Lading are negotiable and require surrender of originals for cargo release.
-      </div>
-    </div>
-
-    <h3>3. Certificate of Origin (COO) - Arab-British Chamber</h3>
-    <div class="card">
-      <p><strong>Source:</strong> Arab-British Chamber of Commerce (for UK exports)</p>
-      <p><strong>Format:</strong> PDF (official stamped certificate)</p>
-      <table class="schema-table">
-        <thead><tr><th>Field</th><th>Example</th><th>Use</th></tr></thead>
-        <tbody>
-          <tr><td>Certificate Number</td><td>355508</td><td>Unique certificate ID</td></tr>
-          <tr><td>Certificate Type</td><td>M (Merchandise)</td><td>Document classification</td></tr>
-          <tr><td>Consignor Reference</td><td>FX000423</td><td>Exporter's invoice ref</td></tr>
-          <tr><td>EORI Number</td><td>257193563KS</td><td>UK exporter registration</td></tr>
-          <tr><td>Consignor</td><td>FUNKIN LIMITED, 122 Arlington Road, London</td><td>Exporter</td></tr>
-          <tr><td>Consignee</td><td>Craft And Culture FZE, PO Box 50635, Fujairah</td><td>Importer</td></tr>
-          <tr><td>Country of Origin</td><td>NETHERLANDS</td><td>Where goods manufactured</td></tr>
-          <tr><td>Transport Method</td><td>By Sea Freight</td><td>Mode of transport</td></tr>
-          <tr><td>Goods Description</td><td>12x 200ml Nitro cocktail cans 5% ABV</td><td>Product details</td></tr>
-          <tr><td>Invoice Reference</td><td>FX000423 dated 03.01.2025</td><td>Link to commercial invoice</td></tr>
-          <tr><td>Manufacturer</td><td>Refresco Benelux b.v., 6026 BX Maarheeze, Nederland</td><td>Production facility</td></tr>
-          <tr><td>Packages</td><td>10 HT pallets</td><td>Packaging details</td></tr>
-          <tr><td>Gross Weight</td><td>8370 KG</td><td>Total weight</td></tr>
-          <tr><td>Net Weight</td><td>7843 KG</td><td>Product weight</td></tr>
-          <tr><td>Certification Date</td><td>28-Jan-2025 / 29-Jan-2025</td><td>When certified</td></tr>
-          <tr><td>Authorised Signatory</td><td>Mr Mashary Osman</td><td>Chamber official</td></tr>
-        </tbody>
-      </table>
-    </div>
-
-    <h3>4. Terminal Handling Invoice (Hutchison Ports RAK)</h3>
-    <div class="card">
-      <p><strong>Source:</strong> Port terminal operator (Hutchison Ports RAK Limited)</p>
-      <p><strong>Format:</strong> PDF tax invoice</p>
-      <table class="schema-table">
-        <thead><tr><th>Field</th><th>Example</th><th>Use</th></tr></thead>
-        <tbody>
-          <tr><td>Invoice Number</td><td>INSC250300081</td><td>Payment reference</td></tr>
-          <tr><td>Invoice Date</td><td>20/03/2025</td><td>Transaction date</td></tr>
-          <tr><td>Bill of Lading</td><td>MEDUFL194711, 2532800410</td><td>Shipment link</td></tr>
-          <tr><td>Type</td><td>Import Full</td><td>Import/Export/Transship</td></tr>
-          <tr><td>Transport Mode</td><td>SEA</td><td>Mode of transport</td></tr>
-          <tr><td>Vessel/Barge</td><td>MSC MOON F</td><td>Feeder vessel name</td></tr>
-          <tr><td>Voyage Number</td><td>JC510A</td><td>Voyage identification</td></tr>
-          <tr><td>Discharge Date</td><td>07-03-2025</td><td>Unloading date</td></tr>
-          <tr><td>Container Size</td><td>01X20' IF</td><td>Container specification</td></tr>
-        </tbody>
-      </table>
-      <h4>Terminal Charge Types:</h4>
-      <table>
-        <thead><tr><th>Charge</th><th>Description</th><th>Net (AED)</th><th>VAT</th></tr></thead>
-        <tbody>
-          <tr><td>Lift Off Charge</td><td>Crane unloading from vessel</td><td>75.00</td><td>—</td></tr>
-          <tr><td>Lift On Charge</td><td>Loading onto truck</td><td>75.00</td><td>—</td></tr>
-          <tr><td>Seal Cutting</td><td>Container seal removal</td><td>25.00</td><td>—</td></tr>
-          <tr><td>Shifting Charges</td><td>Moving container in yard</td><td>100.00</td><td>—</td></tr>
-          <tr><td>Documentation</td><td>Paperwork processing</td><td>50.00</td><td>5%</td></tr>
-          <tr><td>Lift On/Off Combined</td><td>Combined handling</td><td>314.00</td><td>—</td></tr>
-          <tr><td>Waiver (if applicable)</td><td>Discounts applied</td><td>(varies)</td><td>—</td></tr>
-        </tbody>
-      </table>
-    </div>
-
-    <h3>5. Container Release Letter</h3>
-    <div class="card">
-      <p><strong>Source:</strong> Consignee (Craft & Culture FZE) to Freight Forwarder</p>
-      <p><strong>Purpose:</strong> Request delivery order issuance for cargo release</p>
-      <table class="schema-table">
-        <thead><tr><th>Field</th><th>Example</th><th>Use</th></tr></thead>
-        <tbody>
-          <tr><td>Date</td><td>12-Mar-2025</td><td>Request date</td></tr>
-          <tr><td>To</td><td>Savino Del Bene Global Forwarding UAE LLC</td><td>Forwarder</td></tr>
-          <tr><td>BL Reference</td><td>ABTAYS001237</td><td>House BL number</td></tr>
-          <tr><td>POL/POD</td><td>London / Ras Al Khaimah</td><td>Route</td></tr>
-          <tr><td>BL Type</td><td>Seaway Bill of Lading</td><td>Document type</td></tr>
-          <tr><td>Release To</td><td>RAK PORTS SUPPLY CHAIN SOLUTIONS LLC</td><td>Delivery company</td></tr>
-          <tr><td>Import Code</td><td>24076</td><td>Customs importer code</td></tr>
-          <tr><td>Indemnity Clause</td><td>Yes</td><td>Liability acceptance</td></tr>
-        </tbody>
-      </table>
-    </div>
-
-    <h3>6. Container Guarantee Letter</h3>
-    <div class="card">
-      <p><strong>Source:</strong> Consignee (Craft & Culture FZE) to Shipping Line</p>
-      <p><strong>Purpose:</strong> Guarantee container return and payment of charges</p>
-      <table class="schema-table">
-        <thead><tr><th>Field</th><th>Example</th><th>Use</th></tr></thead>
-        <tbody>
-          <tr><td>Date</td><td>26th Feb 2025</td><td>Issue date</td></tr>
-          <tr><td>To</td><td>M/s. MSC (Mediterranean Shipping Company)</td><td>Shipping line</td></tr>
-          <tr><td>Bill of Lading</td><td>MEDUFL194711</td><td>Reference</td></tr>
-          <tr><td>Container Number</td><td>MSDU1638366/20 DRY VAN</td><td>Container ID</td></tr>
-          <tr><td>Vessel Name</td><td>ESTELLE MAERSK - 502E</td><td>Ship identification</td></tr>
-          <tr><td>Covered Charges</td><td>Detention, damage, cleaning</td><td>Guaranteed items</td></tr>
-        </tbody>
-      </table>
-    </div>
-
-    <h3>7. Shipping Line Payment Receipt</h3>
-    <div class="card">
-      <p><strong>Source:</strong> Shipping Line (MSC)</p>
-      <p><strong>Purpose:</strong> Proof of payment for freight/demurrage</p>
-      <table class="schema-table">
-        <thead><tr><th>Field</th><th>Example</th><th>Use</th></tr></thead>
-        <tbody>
-          <tr><td>Receipt Date</td><td>12.03.2025</td><td>Payment date</td></tr>
-          <tr><td>Payment ID</td><td>1400669123</td><td>Transaction reference</td></tr>
-          <tr><td>Payment Reference</td><td>E40102272571690</td><td>Bank reference</td></tr>
-          <tr><td>Customer Account</td><td>1001477785</td><td>MSC customer ID</td></tr>
-          <tr><td>Company</td><td>Savino Del Bene Global Forwarding LLC</td><td>Payer</td></tr>
-          <tr><td>Invoice Number</td><td>AERKTPM250000188</td><td>Original invoice</td></tr>
-          <tr><td>Bill of Lading</td><td>MEDUFL194711</td><td>Shipment reference</td></tr>
-          <tr><td>Amount</td><td>300.00 AED</td><td>Amount paid</td></tr>
-        </tbody>
-      </table>
-    </div>
-
-    <h3>Sea vs Air Freight Document Comparison</h3>
-    <table>
-      <thead>
-        <tr>
-          <th>Aspect</th>
-          <th>Sea Freight</th>
-          <th>Air Freight</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td>Primary Transport Document</td>
-          <td>Bill of Lading (BOL)</td>
-          <td>Air Waybill (AWB)</td>
-        </tr>
-        <tr>
-          <td>Negotiability</td>
-          <td>Can be negotiable or non-negotiable</td>
-          <td>Always non-negotiable</td>
-        </tr>
-        <tr>
-          <td>Container Tracking</td>
-          <td>Container # + Seal #</td>
-          <td>N/A</td>
-        </tr>
-        <tr>
-          <td>Terminal Charges</td>
-          <td>Port handling (lift on/off, shifting)</td>
-          <td>Airport handling (ground handling)</td>
-        </tr>
-        <tr>
-          <td>Release Process</td>
-          <td>Delivery Order (DO) request letter</td>
-          <td>Cargo release note</td>
-        </tr>
-        <tr>
-          <td>Additional Documents</td>
-          <td>Container guarantee, release letters</td>
-          <td>N/A</td>
-        </tr>
-        <tr>
-          <td>Transit Time</td>
-          <td>4-6 weeks</td>
-          <td>3-5 days</td>
-        </tr>
-        <tr>
-          <td>Typical Local Costs (20' FCL vs 200kg air)</td>
-          <td>~10,000 AED</td>
-          <td>~2,500 AED</td>
-        </tr>
-      </tbody>
-    </table>
-
-    <h3>Sea Freight Landed Cost Example (FUNKIN)</h3>
-    <div class="calculation-box">
-REAL EXAMPLE: FUNKIN Cocktails (Sea Freight UK → RAK)
-═══════════════════════════════════════════════════════
-SHIPMENT: 3,100 cases (10 pallets) | 1x20' FCL Container
-
-PRODUCT COST
-  3,100 cases × $12/case                      $37,200.00 USD
-
-FREIGHT & INSURANCE
-  Sea freight (London Gateway → RAK)           $3,500.00 USD (est)
-  Insurance (0.5%)                               $185.00 USD
-
-DESTINATION CHARGES (AED → USD @ 3.67)
-  Terminal (Hutchison Ports)         516 AED     $140.60 USD
-  Clearing agent (GAC)             2,237 AED     $609.50 USD
-  Pre-clear fees (Transit+Re-Export) 430 AED     $117.15 USD
-  Shipping line payment              300 AED      $81.75 USD
-  Delivery to warehouse            1,050 AED     $286.10 USD
-  Destuffing (20' container)         670 AED     $182.55 USD
-  Pallet wrapping (10 pallets)       550 AED     $149.85 USD
-  Non-Duty Levy (3,100 × 1.60)     4,960 AED   $1,351.50 USD
-───────────────────────────────────────────────────────
-<span class="total">TOTAL LANDED COST                          $43,804.00 USD</span>
-
-÷ 37,200 bottles (3,100 cases × 12 bottles)
-───────────────────────────────────────────────────────
-<span class="total">= LANDED COST PER BOTTLE                       $1.18 USD</span>
-
-Notes:
-• Ex-cellar cost: $1.00/bottle ($12/case ÷ 12 bottles)
-• Total logistics adds: $0.18/bottle (18% of product cost)
-• Sea freight much more economical than air for volume
-• Non-Duty Levy is significant: $1,351 for 3,100 cases
-    </div>
-
-    <!-- RAK PORT RATE CARDS -->
-    <h2 id="rate-cards">RAK Port Rate Cards</h2>
-
-    <div class="highlight-green">
-      <h3>Standard Rate Cards for Cost Estimation</h3>
-      <p style="color:white;margin:0">Use these rates for automated quote generation and landed cost calculations. Rates effective 2026.</p>
-    </div>
-
-    <h3>RAK Port Warehouse Tariff - Effective 2026</h3>
-    <table>
-      <thead>
-        <tr>
-          <th>#</th>
-          <th>Service</th>
-          <th>Currency</th>
-          <th>20' GP (AED)</th>
-          <th>40' GP (AED)</th>
-          <th>Unit Basis</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td>1</td>
-          <td>Container Destuffing</td>
-          <td>AED</td>
-          <td>670</td>
-          <td>875</td>
-          <td>Per container</td>
-        </tr>
-        <tr>
-          <td>2</td>
-          <td>Forklift</td>
-          <td>AED</td>
-          <td colspan="2">135</td>
-          <td>Per half hour</td>
-        </tr>
-        <tr>
-          <td>3</td>
-          <td>Handling</td>
-          <td>AED</td>
-          <td colspan="2">45</td>
-          <td>Per person per hour</td>
-        </tr>
-        <tr>
-          <td>4</td>
-          <td>Pallet + Wrapping</td>
-          <td>AED</td>
-          <td colspan="2">55</td>
-          <td>Per pallet (if required)</td>
-        </tr>
-        <tr>
-          <td>5</td>
-          <td>Storage (Variable)</td>
-          <td>AED</td>
-          <td colspan="2">35</td>
-          <td>Per sq. mtr. per month (min)</td>
-        </tr>
-        <tr>
-          <td>6</td>
-          <td><strong>Non-Duty Levy</strong></td>
-          <td>AED</td>
-          <td colspan="2"><strong>1.60</strong></td>
-          <td><strong>Per case</strong> (bond transfers)</td>
-        </tr>
-        <tr>
-          <td>7</td>
-          <td>Dunnage / Waste Management</td>
-          <td>AED</td>
-          <td colspan="2">25</td>
-          <td>Per 10 kg of waste</td>
-        </tr>
-      </tbody>
-    </table>
-
-    <div class="warning-box">
-      <strong>Non-Duty Levy Explained:</strong> The 1.60 AED/case charge applies to bonded movements and non-dutiable cargo transfers (FZ to FZ). This covers documentation processing, system administration, and customs coordination required for duty-free transfers.
-    </div>
-
-    <h3>Delivery to Warehouse (via Transport Partner)</h3>
-    <table>
-      <thead>
-        <tr>
-          <th>Service</th>
-          <th>Base (AED)</th>
-          <th>VAT 5%</th>
-          <th>Total (AED)</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td>Airport → RAK Port Warehouse</td>
-          <td>600</td>
-          <td>30</td>
-          <td><strong>630</strong></td>
-        </tr>
-        <tr>
-          <td>Seaport → RAK Port Warehouse (container)</td>
-          <td>1,000</td>
-          <td>50</td>
-          <td><strong>1,050</strong></td>
-        </tr>
-      </tbody>
-    </table>
-
-    <h3>Complete Cost Structure Reference</h3>
-    <table>
-      <thead>
-        <tr>
-          <th>Cost Category</th>
-          <th>Sea (20' FCL)</th>
-          <th>Air</th>
-          <th>Notes</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td>Freight</td>
-          <td>Variable</td>
-          <td>Variable</td>
-          <td>Carrier dependent</td>
-        </tr>
-        <tr>
-          <td>Terminal/Airport Handling</td>
-          <td>~516 AED</td>
-          <td>~245 AED</td>
-          <td>Hutchison / RAK Airport</td>
-        </tr>
-        <tr>
-          <td>Clearing Agent (GAC)</td>
-          <td>~2,237 AED</td>
-          <td>~1,606 AED</td>
-          <td>Includes BOE, export bill, service charges</td>
-        </tr>
-        <tr>
-          <td>Pre-Clear Gov Fees</td>
-          <td>~430 AED</td>
-          <td>~320 AED</td>
-          <td>Transit + Re-Export declarations</td>
-        </tr>
-        <tr>
-          <td>Delivery to Warehouse</td>
-          <td>1,050 AED</td>
-          <td>630 AED</td>
-          <td>Transport partner</td>
-        </tr>
-        <tr>
-          <td>Destuffing</td>
-          <td>670 AED (20') / 875 AED (40')</td>
-          <td>N/A</td>
-          <td>Container unloading</td>
-        </tr>
-        <tr>
-          <td>Pallet Wrapping</td>
-          <td>55 AED/pallet</td>
-          <td>55 AED/pallet</td>
-          <td>If required</td>
-        </tr>
-        <tr>
-          <td>Non-Duty Levy</td>
-          <td>1.60 AED/case</td>
-          <td>1.60 AED/case</td>
-          <td>Bonded transfers</td>
-        </tr>
-      </tbody>
-    </table>
-
-    <h3>GAC Clearing Agent Standard Charges</h3>
-    <table>
-      <thead>
-        <tr>
-          <th>Service</th>
-          <th>Typical Rate (AED)</th>
-          <th>VAT</th>
-          <th>Category</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td>Bill of Entry (Import)</td>
-          <td>185 - 350</td>
-          <td>ZR</td>
-          <td>Government fee pass-through</td>
-        </tr>
-        <tr>
-          <td>Export Bill (Re-Export)</td>
-          <td>245</td>
-          <td>ZR</td>
-          <td>Government fee pass-through</td>
-        </tr>
-        <tr>
-          <td>Customs Seal</td>
-          <td>20</td>
-          <td>ZR</td>
-          <td>Government fee</td>
-        </tr>
-        <tr>
-          <td>Document Processing</td>
-          <td>50</td>
-          <td>5% SR</td>
-          <td>Agent service fee</td>
-        </tr>
-        <tr>
-          <td>Truck Loading/Unloading</td>
-          <td>439</td>
-          <td>ZR</td>
-          <td>Handling</td>
-        </tr>
-        <tr>
-          <td>Seal Cutting</td>
-          <td>25</td>
-          <td>ZR</td>
-          <td>Container operation</td>
-        </tr>
-        <tr>
-          <td>DO Collection Fee</td>
-          <td>250</td>
-          <td>5% SR</td>
-          <td>Agent service fee</td>
-        </tr>
-        <tr>
-          <td>GAC Service Charge (per port)</td>
-          <td>250 - 275</td>
-          <td>5% SR</td>
-          <td>Agent service fee</td>
-        </tr>
-        <tr>
-          <td>Inspection Attendance</td>
-          <td>150</td>
-          <td>5% SR</td>
-          <td>Agent service fee</td>
-        </tr>
-        <tr>
-          <td>Container Demurrage</td>
-          <td>300+</td>
-          <td>NR</td>
-          <td>Shipping line charge</td>
-        </tr>
-      </tbody>
-    </table>
-    <p><strong>VAT Categories:</strong> ZR = Zero Rate (government fees), SR = Standard Rate 5% (service charges), NR = Not Reportable (port authority)</p>
-
-    <h3>Quick Cost Calculator Examples</h3>
-    <div class="grid-2">
       <div class="card">
-        <h4>Air Freight (120 bottles, 20 cases)</h4>
-        <table class="schema-table">
-          <tbody>
-            <tr><td>Clearing (GAC)</td><td>~1,606 AED</td></tr>
-            <tr><td>Airport Handling</td><td>~245 AED</td></tr>
-            <tr><td>Delivery</td><td>630 AED</td></tr>
-            <tr><td>Non-Duty Levy (20 cases)</td><td>32 AED</td></tr>
-            <tr><td><strong>Total Local Costs</strong></td><td><strong>~2,513 AED</strong></td></tr>
-            <tr><td><strong>Per bottle</strong></td><td><strong>~20.94 AED</strong></td></tr>
-          </tbody>
-        </table>
-      </div>
-      <div class="card">
-        <h4>Sea Freight (3,100 cases, 20' FCL)</h4>
-        <table class="schema-table">
-          <tbody>
-            <tr><td>Terminal (Hutchison)</td><td>516 AED</td></tr>
-            <tr><td>Clearing (GAC)</td><td>2,237 AED</td></tr>
-            <tr><td>Pre-Clear Fees</td><td>430 AED</td></tr>
-            <tr><td>Shipping Line</td><td>300 AED</td></tr>
-            <tr><td>Delivery</td><td>1,050 AED</td></tr>
-            <tr><td>Destuffing</td><td>670 AED</td></tr>
-            <tr><td>Pallet Wrap (10)</td><td>550 AED</td></tr>
-            <tr><td>Non-Duty Levy</td><td>4,960 AED</td></tr>
-            <tr><td><strong>Total Local Costs</strong></td><td><strong>~10,713 AED</strong></td></tr>
-            <tr><td><strong>Per case</strong></td><td><strong>~3.46 AED</strong></td></tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-    <!-- INTEGRATIONS -->
-    <h2 id="integrations">Integrations</h2>
-
-    <div class="grid-2">
-      <div class="card">
-        <h4>Hillebrand API (Primary)</h4>
+        <h3>Hillebrand API (Primary)</h3>
         <p><strong>Purpose:</strong> Get quotes, book shipments, track shipments</p>
-        <ul>
-          <li>OAuth2 authentication (2hr token refresh)</li>
-          <li>GET /api/shipment/get-rates - shipping quotes</li>
-          <li>POST /api/shipment/create - book shipment</li>
-          <li>GET /api/shipment/{id}/status - tracking</li>
-          <li>Webhooks for status updates</li>
-        </ul>
-        <p><strong>Rate limit:</strong> 100 calls/minute</p>
+        <div class="code-block">API Details (from OpenAPI spec):
+Base URL: https://api.hillebrandgori.com/
+Auth: OAuth2 password grant
+Token URL: https://login.hillebrand.com/oauth2/aus95hq7r8iIqp14M0i7/v1/token
+Token expiry: 2 hours
+Rate limit: 100 calls/minute
+
+Available Endpoints:
+| Endpoint                   | Method | Purpose                    |
+|----------------------------|--------|----------------------------|
+| /v6/shipments              | GET    | List shipments with filters|
+| /v6/shipments/{id}         | GET    | Get shipment details       |
+| /v6/invoices               | GET    | Get invoice data           |
+| /v1/webhooks/me            | CRUD   | Manage webhook subscriptions|
+| /v1/webhooks/me/eventTypes | GET    | List available event types |
+
+Webhook Events (real-time push):
+Ship from:       shprdy (ready), shpsupdeppln/cnf (departure)
+Consolidation:   shpexharrpln/cnf, shpexhdeppln/cnf
+Port loading:    shppolarrcnf, shpprtdeppln/cnf
+Transshipment:   shppoxarrpln/cnf, shppoxdeppln/cnf
+Port arrival:    shpprtarrpln/cnf, shppoddepcnf
+Customs:         shpimpcsmclr (cleared)
+Deconsolidation: shpimharrpln/cnf, shpimhdeppln/cnf
+Ship to:         shpcusarrpln/cnf (final delivery)</div>
       </div>
 
       <div class="card">
-        <h4>Hapag-Lloyd API</h4>
-        <p><strong>Purpose:</strong> Container tracking for sea freight</p>
-        <ul>
-          <li>DCSA Track & Trace v2.2 (FREE)</li>
-          <li>GET /v2/events?equipmentReference={container}</li>
-          <li>Returns tracking events with timestamps</li>
-          <li>Synced every 4 hours via Trigger.dev</li>
-        </ul>
+        <h3>Hapag-Lloyd API (Secondary)</h3>
+        <p><strong>Purpose:</strong> Track sea freight containers</p>
+        <div class="code-block">API: DCSA Track & Trace v2.2 (FREE)
+
+// Track container
+GET https://api.hlag.com/v2/events?equipmentReference={containerNumber}
+Headers: { 'API-Key': process.env.HAPAG_LLOYD_API_KEY }
+
+Returns: array of tracking events
+{
+  eventType: 'ARRI',
+  eventDateTime: '2026-01-18T08:30:00Z',
+  location: { name: 'Jebel Ali Port', UNLocationCode: 'AEJEA' }
+}</div>
       </div>
 
       <div class="card">
-        <h4>Emirates SkyCargo</h4>
-        <p><strong>Purpose:</strong> Air freight tracking</p>
+        <h3>Zoho Books API</h3>
+        <p><strong>Purpose:</strong> Sync invoices and payments</p>
+        <div class="code-block">Authentication: OAuth2
+
+// Sync invoice to Zoho
+POST https://books.zoho.com/api/v3/invoices
+{
+  customer_id: zohoContactId,
+  invoice_number: 'LGI-2026-0001',
+  date: '2026-01-15',
+  due_date: '2026-02-15',
+  line_items: [
+    { description: 'Freight - Dubai to Riyadh', amount: 1620 },
+    { description: 'Handling', amount: 150 },
+    { description: 'C&C Margin', amount: 212 }
+  ]
+}</div>
+      </div>
+    </section>
+
+    <section id="pre-work">
+      <h2>Pre-Work: Fix Local Inventory Sync</h2>
+
+      <div class="pre-work-card">
+        <h3>Problem: Only 212 of ~300 SKUs importing from Google Sheet</h3>
+
+        <p><strong>Root Cause:</strong> Current sync skips rows with missing/invalid data instead of matching to LWIN database</p>
+
+        <h4>Current Flow (broken)</h4>
+        <div class="code-block">Sheet Row -> Validate fields -> Skip if invalid -> Create product from raw data</div>
+
+        <h4>New Flow (like Source module)</h4>
+        <div class="code-block">Sheet Row
+    |
+Has LWIN18? --Yes--> Lookup lwinWines by LWIN18
+    |                      |
+    No              Found? --Yes--> Use LWIN data --> Create/update product
+    |                      |
+Fuzzy match by             No
+Description                |
+    |                 Log warning: "Invalid LWIN18: {value}"
+Found? --Yes--> Use LWIN data --> Create/update product
+    |
+    No
+    |
+Flag for manual review (don't skip silently)</div>
+
+        <h4>Files to Modify</h4>
         <ul>
-          <li><strong>Phase 1:</strong> Manual AWB tracking (store AWB, link to carrier site)</li>
-          <li><strong>Phase 2:</strong> Apply for API access</li>
-          <li>Track status updates when API available</li>
+          <li><code>apps/web/src/app/_products/utils/parseLocalInventorySheet.ts</code> - Add LWIN lookup/matching</li>
+          <li><code>apps/web/src/app/_products/controller/localInventorySyncController.ts</code> - Handle unmatched items</li>
         </ul>
-        <p><span class="badge badge-amber">API access pending</span></p>
+
+        <h4>Changes</h4>
+        <ol>
+          <li>Import <code>matchLwinWines</code> utility from <code>_source/utils/</code></li>
+          <li>If LWIN18 present: Query <code>lwinWines</code> table by LWIN18</li>
+          <li>If LWIN18 missing: Fuzzy match by Description using trigram similarity</li>
+          <li>Use LWIN data (displayName, producer, region) instead of raw sheet data</li>
+          <li>Log/flag unmatched rows instead of silently skipping</li>
+          <li>Return match statistics: <code>{ matched: X, unmatched: Y, total: Z }</code></li>
+        </ol>
+
+        <h4>Benefits</h4>
+        <ul>
+          <li>All ~300 rows processed (not 212)</li>
+          <li>Validated product data from LWIN database</li>
+          <li>Consistent with Source module pattern</li>
+          <li>Visibility into unmatched items</li>
+        </ul>
+      </div>
+    </section>
+
+    <section id="phases">
+      <h2>Implementation Phases</h2>
+
+      <div class="phase-card">
+        <h3>Phase 1: Foundation (START HERE)</h3>
+        <p><strong>Goal:</strong> Core database schema + basic shipment CRUD + document upload</p>
+
+        <h4>Database Tasks</h4>
+        <ul class="task-list">
+          <li>Add 5 enums to <code>schema.ts</code>: <code>shipmentType</code>, <code>transportMode</code>, <code>shipmentStatus</code>, <code>logisticsDocumentType</code>, <code>portLocation</code></li>
+          <li>Add <code>shipments</code> table (follows <code>privateClientOrders</code> pattern)</li>
+          <li>Add <code>shipmentItems</code> table (follows <code>privateClientOrderItems</code> pattern)</li>
+          <li>Add <code>logisticsDocuments</code> table (follows <code>privateClientOrderDocuments</code> pattern exactly)</li>
+          <li>Add <code>shipmentActivityLogs</code> table (follows <code>privateClientOrderActivityLogs</code> pattern)</li>
+          <li>Add <code>logisticsRateCards</code> table (for RAK Port rates)</li>
+          <li>Add relations in <code>relations.ts</code></li>
+          <li>Run <code>pnpm drizzle-kit generate && pnpm drizzle-kit migrate</code></li>
+        </ul>
+
+        <h4>API Tasks</h4>
+        <ul class="task-list">
+          <li>Create <code>_logistics/router.ts</code> with admin/partner/client sub-routers</li>
+          <li>Create <code>_logistics/utils/generateShipmentNumber.ts</code> (follow <code>generateRfqNumber.ts</code>)</li>
+          <li>Create <code>_logistics/schemas/createShipmentSchema.ts</code></li>
+          <li>Create admin controllers: <code>adminCreate.ts</code>, <code>adminGetMany.ts</code>, <code>adminGetOne.ts</code>, <code>adminUpdate.ts</code>, <code>adminUpdateStatus.ts</code></li>
+          <li>Create <code>adminUploadDocument.ts</code> (copy from <code>_privateClientOrders/controller/documentsUpload.ts</code>)</li>
+          <li>Register router in <code>lib/trpc/root.ts</code></li>
+        </ul>
+      </div>
+
+      <div class="phase-card">
+        <h3>Phase 2: Landed Cost Calculator</h3>
+        <p><strong>Goal:</strong> Calculate true cost per bottle using RAK Port rates</p>
+
+        <ul class="task-list">
+          <li>Create <code>_logistics/utils/calculateLandedCost.ts</code> with formula</li>
+          <li>Seed RAK Port rate card: destuffing (670/875 AED), non-duty levy (1.60/case), delivery (600/1000 AED)</li>
+          <li>Add <code>adminCalculateLandedCost.ts</code> controller</li>
+          <li>Auto-recalculate on item/cost changes</li>
+          <li>Add cost allocation method selector (by bottles, weight, value)</li>
+        </ul>
+      </div>
+
+      <div class="phase-card">
+        <h3>Phase 3: AI Document Extraction</h3>
+        <p><strong>Goal:</strong> Auto-extract fields from BOL, AWB, commercial invoices</p>
+
+        <ul class="task-list">
+          <li>Create <code>trigger/jobs/extract-logistics-document/extractLogisticsDocumentJob.ts</code></li>
+          <li>Follow <code>extractDocumentJob.ts</code> pattern exactly (OpenAI Vision gpt-4o)</li>
+          <li>Extract fields by document type (BOL/AWB, Invoice, Packing List)</li>
+          <li>Auto-populate shipment fields from extracted data</li>
+          <li>Update extraction status: pending to processing to completed/failed</li>
+        </ul>
+      </div>
+
+      <div class="phase-card">
+        <h3>Phase 4: Admin UI</h3>
+        <p><strong>Goal:</strong> Full admin interface for managing shipments</p>
+
+        <h4>Navigation Redesign: Two-Row Header</h4>
+        <div class="nav-redesign">Current (crowded single row):
+QUOTES: Create | My Quotes | Approvals   PRIVATE ORDERS: Dashboard | Manage   PRICING: Calculator
+
+New design (two rows):
++-------------------------------------------------------------------+
+| [C&C INDEX]         Quotes    Orders    Logistics    Pricing      |  &lt;- Primary nav (modules)
++-------------------------------------------------------------------+
+| Shipments    Documents    Tools    Costs                          |  &lt;- Secondary nav (context-aware)
++-------------------------------------------------------------------+
+
+Secondary nav changes per module:
+| Module    | Secondary Nav Items               |
+|-----------|-----------------------------------|
+| Quotes    | Create, My Quotes, Approvals      |
+| Orders    | Dashboard, Manage                 |
+| Logistics | Shipments, Documents, Tools, Costs|
+| Pricing   | Calculator                        |</div>
+
+        <h4>Pages</h4>
+        <ul class="task-list">
+          <li><code>/platform/admin/logistics/page.tsx</code> - Dashboard with status counts</li>
+          <li><code>/platform/admin/logistics/shipments/page.tsx</code> - Shipment list with filters</li>
+          <li><code>/platform/admin/logistics/shipments/new/page.tsx</code> - Create shipment form</li>
+          <li><code>/platform/admin/logistics/shipments/[id]/page.tsx</code> - Shipment detail with tabs</li>
+          <li><code>/platform/admin/logistics/tools/page.tsx</code> - Admin tools index</li>
+          <li><code>/platform/admin/logistics/tools/pdf-extract/page.tsx</code> - PDF to Excel tool</li>
+        </ul>
+      </div>
+
+      <div class="phase-card">
+        <h3>Phase 5: Partner & Client Portals</h3>
+        <p><strong>Goal:</strong> Role-based views for partners and clients</p>
+
+        <h4>Partner Portal</h4>
+        <ul class="task-list">
+          <li><code>partnerGetMany.ts</code> - Filter by <code>partnerId</code> from context</li>
+          <li><code>partnerGetOne.ts</code> - Verify partner access</li>
+          <li><code>partnerUploadDocument.ts</code> - Partners can upload docs for their shipments</li>
+          <li><code>/platform/partner/logistics/page.tsx</code> - Partner shipment list</li>
+        </ul>
+
+        <h4>Client Portal</h4>
+        <ul class="task-list">
+          <li><code>clientGetMany.ts</code> - Filter by linked orders</li>
+          <li><code>clientTrackShipment.ts</code> - Read-only tracking view</li>
+          <li><code>/platform/client/logistics/page.tsx</code> - Client tracking view</li>
+        </ul>
+      </div>
+
+      <div class="phase-card">
+        <h3>Phase 6: Hillebrand API Integration</h3>
+        <p><strong>Goal:</strong> Live tracking from Hillebrand (API credentials available)</p>
+
+        <ul class="task-list">
+          <li>Store credentials in env: <code>HILLEBRAND_API_KEY</code>, <code>HILLEBRAND_API_SECRET</code>, <code>HILLEBRAND_USERNAME</code>, <code>HILLEBRAND_PASSWORD</code></li>
+          <li>Create <code>_logistics/integrations/hillebrand/client.ts</code> - OAuth2 token management</li>
+          <li>Create <code>_logistics/integrations/hillebrand/getShipments.ts</code> - List shipments</li>
+          <li>Create <code>_logistics/integrations/hillebrand/getShipment.ts</code> - Get details</li>
+          <li>Create <code>api/webhooks/hillebrand/route.ts</code> - Webhook receiver</li>
+          <li>Create Trigger.dev job for periodic sync (backup to webhooks)</li>
+          <li>Map Hillebrand status to our shipmentStatus enum</li>
+        </ul>
+      </div>
+
+      <div class="phase-card">
+        <h3>Phase 7: Quotes & Invoicing (DEFERRED)</h3>
+        <p><strong>Goal:</strong> Generate logistics quotes, sync invoices to Zoho</p>
+
+        <ul class="task-list">
+          <li>Logistics quotes table and CRUD</li>
+          <li>Quote builder with rate calculation</li>
+          <li>Invoice generation from shipment costs</li>
+          <li>Zoho Books sync</li>
+        </ul>
+      </div>
+    </section>
+
+    <section id="admin-tools">
+      <h2>Admin Tools</h2>
+
+      <div class="card">
+        <h3>1. PDF to Excel Extraction Tool</h3>
+        <p><strong>Purpose:</strong> Upload any PDF (invoice, packing list, BOL) and extract structured data to Excel</p>
+        <p><strong>Location:</strong> <code>/platform/admin/logistics/tools/pdf-extract</code></p>
+
+        <div class="code-block">How it works:
+1. Admin uploads PDF
+2. AI (OpenAI Vision gpt-4o) extracts structured data
+3. Preview extracted data in table format
+4. Download as Excel (.xlsx)
+
+Extraction Focus: Line items only (not headers/totals)
+
+Commercial Invoice - Line Items:
+| Field            | Description           | Example            |
+|------------------|-----------------------|--------------------|
+| Product Name     | Wine/spirit name      | "Chateau Margaux"  |
+| Vintage          | Year                  | 2018               |
+| Producer         | Winery/distillery     | "Chateau Margaux"  |
+| Region           | Wine region           | "Bordeaux"         |
+| Country of Origin| COO                   | "France"           |
+| HS Code          | Customs code          | "2204.21.00"       |
+| Cases            | Quantity in cases     | 20                 |
+| Case Config      | Bottles per case      | 12                 |
+| Bottle Size      | ml                    | 750                |
+| Unit Price       | Per case              | $240.00            |
+| Total            | Line total            | $4,800.00          |
+| Currency         |                       | USD                |
+
+Use Case:
+Supplier PDF (invoice/packing list)
+        |
+   AI Extraction
+        |
+   Excel Download
+        |
+   Send to Clearing Agent
+        |
+   Agent uploads to Customs System</div>
       </div>
 
       <div class="card">
-        <h4>Zoho Books API</h4>
-        <p><strong>Purpose:</strong> Invoice sync and accounting</p>
-        <ul>
-          <li>POST /api/v3/invoices - create invoice</li>
-          <li>POST /api/v3/customerpayments - record payment</li>
-          <li>Contact sync</li>
-          <li>Multi-currency support</li>
-        </ul>
+        <h3>2. Document Version Management</h3>
+        <p><strong>Purpose:</strong> Store original, final, and extracted versions side-by-side for each document</p>
+
+        <div class="code-block">Three Versions Per Document:
+| Version         | Description                      | When Created       |
+|-----------------|----------------------------------|--------------------|
+| Original Draft  | First uploaded PDF from supplier | On initial upload  |
+| Final Signed    | Signed/stamped version after customs | After clearance |
+| Excel Extract   | AI-extracted line items as .xlsx | After AI extraction|
+
+Workflow:
+1. Upload Invoice PDF -> Stored as "Original Draft"
+                      -> AI extracts line items
+                      -> Excel generated & stored as "Excel Extract"
+
+2. Customs clears shipment
+
+3. Upload signed copy -> Stored as "Final Signed"
+                      -> All 3 versions now available side-by-side</div>
+      </div>
+    </section>
+
+    <section id="files">
+      <h2>Key Files to Create</h2>
+      <div class="code-block">apps/web/src/
+├── database/
+│   ├── schema.ts                   -> Add 5 enums, 5 tables
+│   └── relations.ts                -> Add logistics relations
+├── lib/trpc/root.ts                -> Register logisticsRouter
+└── app/
+    ├── _logistics/
+    │   ├── router.ts               -> Main router (admin/partner/client)
+    │   ├── controller/
+    │   │   ├── adminCreate.ts
+    │   │   ├── adminGetMany.ts
+    │   │   ├── adminGetOne.ts
+    │   │   ├── adminUpdate.ts
+    │   │   ├── adminUpdateStatus.ts
+    │   │   ├── adminUploadDocument.ts
+    │   │   ├── adminDeleteDocument.ts
+    │   │   ├── adminAddItem.ts
+    │   │   ├── adminCalculateLandedCost.ts
+    │   │   ├── partnerGetMany.ts
+    │   │   ├── partnerGetOne.ts
+    │   │   ├── partnerUploadDocument.ts
+    │   │   ├── clientGetMany.ts
+    │   │   └── clientTrackShipment.ts
+    │   ├── schemas/
+    │   │   ├── createShipmentSchema.ts
+    │   │   ├── updateShipmentSchema.ts
+    │   │   ├── getShipmentsSchema.ts
+    │   │   ├── uploadDocumentSchema.ts
+    │   │   └── addItemSchema.ts
+    │   └── utils/
+    │       ├── generateShipmentNumber.ts
+    │       ├── calculateLandedCost.ts
+    │       └── validateStatusTransition.ts
+    │
+    └── (routes)/platform/
+        ├── admin/logistics/
+        │   ├── page.tsx            -> Dashboard
+        │   └── shipments/
+        │       ├── page.tsx        -> Shipment list
+        │       ├── new/page.tsx    -> Create form
+        │       └── [id]/page.tsx   -> Detail (tabbed)
+        ├── partner/logistics/
+        │   └── page.tsx            -> Partner view
+        └── client/logistics/
+            └── page.tsx            -> Client tracking
+
+apps/web/src/trigger/jobs/
+└── extract-logistics-document/
+    └── extractLogisticsDocumentJob.ts</div>
+
+      <h3>Critical Reference Files (Copy Patterns From)</h3>
+      <table class="reference-table">
+        <thead>
+          <tr><th>New File</th><th>Copy Pattern From</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>_logistics/router.ts</code></td><td><code>_source/router.ts</code> - hierarchical router structure</td></tr>
+          <tr><td><code>adminCreate.ts</code></td><td><code>_source/controller/adminCreateRfq.ts</code> - admin procedure pattern</td></tr>
+          <tr><td><code>adminGetMany.ts</code></td><td><code>_source/controller/adminGetManyRfqs.ts</code> - pagination/filtering</td></tr>
+          <tr><td><code>adminUploadDocument.ts</code></td><td><code>_privateClientOrders/controller/documentsUpload.ts</code> - <strong>exact copy</strong></td></tr>
+          <tr><td><code>generateShipmentNumber.ts</code></td><td><code>_source/utils/generateRfqNumber.ts</code> - number generation</td></tr>
+          <tr><td><code>extractLogisticsDocumentJob.ts</code></td><td><code>trigger/jobs/extract-document/extractDocumentJob.ts</code> - AI extraction</td></tr>
+          <tr><td><code>shipments</code> table</td><td><code>privateClientOrders</code> table - similar structure</td></tr>
+          <tr><td><code>logisticsDocuments</code> table</td><td><code>privateClientOrderDocuments</code> table - <strong>exact pattern</strong></td></tr>
+          <tr><td><code>shipmentActivityLogs</code> table</td><td><code>privateClientOrderActivityLogs</code> table - audit pattern</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="verification">
+      <h2>Verification Checklist</h2>
+
+      <div class="card">
+        <h3>Phase 1 Verification</h3>
+        <div class="code-block"># 1. Database migration
+cd apps/web
+pnpm drizzle-kit generate
+pnpm drizzle-kit migrate
+# Check tables in Neon dashboard
+
+# 2. Dev server
+pnpm dev
+
+# 3. API tests (use tRPC devtools or curl)
+# - Create shipment: logistics.admin.create
+# - List shipments: logistics.admin.getMany
+# - Get one: logistics.admin.getOne
+# - Update status: logistics.admin.updateStatus
+# - Upload document: logistics.admin.uploadDocument
+
+# 4. Verify in Neon
+# - shipments table has records
+# - shipment_activity_logs has status change entries
+# - logistics_documents has uploaded file record
+
+# 5. Verify Vercel Blob
+# - Document URL accessible
+# - File content correct</div>
       </div>
 
       <div class="card">
-        <h4>Open Exchange Rates</h4>
-        <p><strong>Purpose:</strong> Currency conversion</p>
-        <ul>
-          <li>Daily exchange rate updates</li>
-          <li>USD, AED, EUR, GBP support</li>
-          <li>Historical rates for reporting</li>
-        </ul>
+        <h3>End-to-End Test Scenario</h3>
+        <ol>
+          <li>Create shipment: Inbound, Sea FCL, from UK Bonded to RAK Port</li>
+          <li>Add items: 20 cases Chateau Margaux 2018</li>
+          <li>Upload BOL document (PDF)</li>
+          <li>Verify AI extraction triggered (check Trigger.dev dashboard)</li>
+          <li>Update status: draft to booked to in_transit</li>
+          <li>Check activity log shows all transitions</li>
+          <li>Calculate landed cost with RAK Port rates</li>
+        </ol>
       </div>
+    </section>
 
-      <div class="card">
-        <h4>Internal Services</h4>
-        <p><strong>Purpose:</strong> C&C platform integration</p>
-        <ul>
-          <li>Vercel Blob (document storage)</li>
-          <li>Trigger.dev (background jobs, notifications)</li>
-          <li>Resend (email delivery)</li>
-          <li>OpenAI GPT-4o (document field extraction)</li>
-        </ul>
-      </div>
-    </div>
-
-    <!-- IMPLEMENTATION PHASES -->
-    <h2 id="phases">Implementation Phases</h2>
-
-    <div class="warning-box">
-      <strong>Launch Strategy:</strong> Admin-only MVP focused on compliance foundation. Partner/Client portals added after core is solid.
-    </div>
-
-    <div class="phase">
-      <h4>Phase 1: Compliance Foundation (Priority)</h4>
-      <ul>
-        <li>Database schema (16 tables) with Drizzle ORM</li>
-        <li>Document upload to Vercel Blob</li>
-        <li>Document linking to shipments</li>
-        <li>Required document checklists per shipment type</li>
-        <li>One-click export (ZIP/PDF) for audit</li>
-        <li>Activity logging (full audit trail)</li>
-        <li>Basic shipment CRUD</li>
-        <li>Admin dashboard with compliance alerts</li>
-      </ul>
-    </div>
-
-    <div class="phase">
-      <h4>Phase 2: Notifications & Tracking</h4>
-      <ul>
-        <li>Email notifications (status changes, document alerts)</li>
-        <li>Expiry tracking (90/60/30 day alerts)</li>
-        <li>Annual license tracking</li>
-        <li>In-app notification center</li>
-        <li>Compliance dashboard</li>
-        <li>Carrier tracking integration (Hapag-Lloyd)</li>
-        <li>Manual Emirates SkyCargo tracking</li>
-      </ul>
-    </div>
-
-    <div class="phase">
-      <h4>Phase 3: Partner Portals & Quotes</h4>
-      <ul>
-        <li>Partner portal (view shipments, upload docs)</li>
-        <li>Quote builder with Hillebrand API rates</li>
-        <li>Single-approver workflow for quotes</li>
-        <li>Quote to shipment conversion</li>
-        <li>Client portal (basic tracking, doc download)</li>
-        <li>Partner action reminder emails</li>
-      </ul>
-    </div>
-
-    <div class="phase">
-      <h4>Phase 4: Cost Analysis & Currency</h4>
-      <ul>
-        <li>Multi-currency support (USD, AED, EUR, GBP)</li>
-        <li>Exchange rate integration</li>
-        <li>Landed cost per bottle calculation</li>
-        <li>Cost allocation methods</li>
-        <li>Margin tracking and alerts</li>
-        <li>Landed cost report</li>
-        <li>Financial summary report</li>
-      </ul>
-    </div>
-
-    <div class="phase">
-      <h4>Phase 5: Advanced Features</h4>
-      <ul>
-        <li>Customs deposits tracking</li>
-        <li>Deposit reclaim workflow</li>
-        <li>AI document field extraction</li>
-        <li>Hillebrand booking integration</li>
-        <li>Emirates SkyCargo API (when available)</li>
-        <li>Advanced reporting and analytics</li>
-      </ul>
-    </div>
-
-    <div class="phase">
-      <h4>Phase 6: Invoicing & Accounting</h4>
-      <ul>
-        <li>Payment tracking (multi-currency)</li>
-        <li>Invoice generation</li>
-        <li>Invoice PDF generation</li>
-        <li>Zoho Books sync</li>
-        <li>Export reports (Excel/CSV)</li>
-      </ul>
-    </div>
-
-    <div class="footer">
-      <p>C&C Logistics Module - Compliance-First Implementation Plan | v2.3 | January 2026</p>
-      <p>Craft & Culture | RAK Port, UAE</p>
-    </div>
+    <footer>
+      <p>C&C Logistics Module Implementation Plan</p>
+      <p>Last updated: January 2026</p>
+    </footer>
   </div>
 </body>
 </html>
