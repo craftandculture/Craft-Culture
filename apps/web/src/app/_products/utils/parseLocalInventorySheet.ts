@@ -1,9 +1,6 @@
-import { eq, sql } from 'drizzle-orm';
 import type { Workbook } from 'exceljs';
 import ExcelJS from 'exceljs';
 
-import db from '@/database/client';
-import { lwinWines } from '@/database/schema';
 import logger from '@/utils/logger';
 
 interface LocalInventoryItem {
@@ -100,88 +97,7 @@ const formatBottleSize = (value: unknown) => {
 };
 
 /**
- * Lookup LWIN wine by LWIN code (direct match)
- */
-const lookupLwinDirect = async (lwin18: string) => {
-  // Extract LWIN11 (first 11 digits) from LWIN18 for matching
-  const lwin11 = lwin18.slice(0, 11);
-
-  const results = await db
-    .select({
-      lwin: lwinWines.lwin,
-      displayName: lwinWines.displayName,
-      producerName: lwinWines.producerName,
-      country: lwinWines.country,
-      region: lwinWines.region,
-    })
-    .from(lwinWines)
-    .where(eq(lwinWines.lwin, lwin11))
-    .limit(1);
-
-  return results[0] || null;
-};
-
-/**
- * Fuzzy match LWIN wine by product name using trigram similarity
- */
-const lookupLwinFuzzy = async (productName: string) => {
-  try {
-    // Remove vintage from product name for better matching
-    const nameWithoutVintage = productName
-      .replace(/\b(19|20)\d{2}\b/g, '')
-      .trim();
-
-    const results = await db
-      .select({
-        lwin: lwinWines.lwin,
-        displayName: lwinWines.displayName,
-        producerName: lwinWines.producerName,
-        country: lwinWines.country,
-        region: lwinWines.region,
-        similarity: sql<number>`similarity(${lwinWines.displayName}, ${nameWithoutVintage})`,
-      })
-      .from(lwinWines)
-      .where(sql`similarity(${lwinWines.displayName}, ${nameWithoutVintage}) > 0.3`)
-      .orderBy(sql`similarity(${lwinWines.displayName}, ${nameWithoutVintage}) DESC`)
-      .limit(1);
-
-    if (results.length > 0 && results[0]) {
-      return {
-        ...results[0],
-        similarity: results[0].similarity,
-      };
-    }
-
-    return null;
-  } catch {
-    // If trigram extension not available, fall back to ILIKE
-    const searchPattern = `%${productName.replace(/\s+/g, '%')}%`;
-
-    const results = await db
-      .select({
-        lwin: lwinWines.lwin,
-        displayName: lwinWines.displayName,
-        producerName: lwinWines.producerName,
-        country: lwinWines.country,
-        region: lwinWines.region,
-      })
-      .from(lwinWines)
-      .where(sql`${lwinWines.displayName} ILIKE ${searchPattern}`)
-      .limit(1);
-
-    if (results.length > 0 && results[0]) {
-      return {
-        ...results[0],
-        similarity: 0.5,
-      };
-    }
-
-    return null;
-  }
-};
-
-/**
- * Parse local inventory Google Sheet into structured data with LWIN matching
+ * Parse local inventory Google Sheet into structured data
  *
  * Expected columns:
  * - Quantity Cases → Available quantity
@@ -196,7 +112,7 @@ const lookupLwinFuzzy = async (productName: string) => {
  *
  * @example
  *   const result = await parseLocalInventorySheet(buffer);
- *   console.log(result.stats); // { matched: 280, unmatched: 20, total: 300 }
+ *   console.log(result.stats); // { matched: 0, unmatched: 300, total: 300 }
  *
  * @param buffer - XLSX file buffer from Google Sheets
  * @returns ParseResult with items, skipped rows, and match statistics
@@ -244,29 +160,18 @@ const parseLocalInventorySheet = async (
     'UAE IB Price EXW',
   ];
 
-  // LWIN18 is optional - we can fuzzy match if missing
+  // LWIN18 is optional
   for (const col of requiredColumns) {
     if (!columnIndexes[col]) {
       throw new Error(`Required column "${col}" not found in sheet`);
     }
   }
 
-  // Collect all rows first (eachRow is synchronous, but we need async for LWIN lookup)
-  const rows: Array<{
-    rowNumber: number;
-    lwin18Raw: unknown;
-    productName: string;
-    year: number;
-    region: string;
-    country: string;
-    bottlesPerCase: number;
-    bottleSize: string;
-    price: number;
-    availableQuantity: number;
-  }> = [];
-
+  // Process rows synchronously (no async DB lookups)
   worksheet.eachRow((row, rowNumber) => {
     if (rowNumber === 1) return; // Skip header
+
+    stats.total++;
 
     const lwin18Raw = columnIndexes['LWIN18']
       ? row.getCell(columnIndexes['LWIN18']!).value
@@ -277,9 +182,7 @@ const parseLocalInventorySheet = async (
     const yearRaw = row.getCell(columnIndexes['Year']!).value;
     const yearNum = Number(yearRaw);
     const year = !isNaN(yearNum) ? yearNum : 0;
-    const region = String(
-      row.getCell(columnIndexes['Region']!).value || '',
-    );
+    const region = String(row.getCell(columnIndexes['Region']!).value || '');
     const country = String(
       row.getCell(columnIndexes['Country of Origin']!).value || '',
     );
@@ -298,38 +201,7 @@ const parseLocalInventorySheet = async (
       ? availableQuantityNum
       : 0;
 
-    rows.push({
-      rowNumber,
-      lwin18Raw,
-      productName,
-      year,
-      region,
-      country,
-      bottlesPerCase,
-      bottleSize,
-      price,
-      availableQuantity,
-    });
-  });
-
-  stats.total = rows.length;
-
-  // Process each row with LWIN lookup
-  for (const row of rows) {
-    const {
-      rowNumber,
-      lwin18Raw,
-      productName,
-      year,
-      region,
-      country,
-      bottlesPerCase,
-      bottleSize,
-      price,
-      availableQuantity,
-    } = row;
-
-    // Skip rows with invalid price or quantity (required for inventory)
+    // Skip rows with invalid price (required for inventory)
     if (isNaN(price) || price <= 0) {
       skipped.push({
         rowNumber,
@@ -337,17 +209,18 @@ const parseLocalInventorySheet = async (
         rawData: { productName, price, quantity: availableQuantity },
       });
       stats.skipped++;
-      continue;
+      return;
     }
 
-    if (availableQuantity <= 0) {
+    // Skip if quantity is explicitly negative (allow 0 for out-of-stock items)
+    if (availableQuantity < 0) {
       skipped.push({
         rowNumber,
-        reason: 'Zero or negative quantity',
+        reason: 'Negative quantity',
         rawData: { productName, price, quantity: availableQuantity },
       });
       stats.skipped++;
-      continue;
+      return;
     }
 
     if (!productName) {
@@ -357,87 +230,37 @@ const parseLocalInventorySheet = async (
         rawData: { price, quantity: availableQuantity },
       });
       stats.skipped++;
-      continue;
+      return;
     }
 
-    let lwin18 = lwin18Raw ? convertLwin18(lwin18Raw) : '';
-    let matchSource: 'lwin_direct' | 'lwin_fuzzy' | 'sheet_only' = 'sheet_only';
-    let matchConfidence = 0;
-    let finalProductName = productName;
-    let finalRegion = region;
-    let finalCountry = country;
+    // Use LWIN18 from sheet if available, otherwise use row number as identifier
+    const lwin18 = lwin18Raw ? convertLwin18(lwin18Raw) : `sheet:row${rowNumber}`;
 
-    // Try direct LWIN lookup if LWIN18 is present
-    if (lwin18) {
-      const directMatch = await lookupLwinDirect(lwin18);
-      if (directMatch) {
-        matchSource = 'lwin_direct';
-        matchConfidence = 1.0;
-        finalProductName = directMatch.displayName || productName;
-        finalRegion = directMatch.region || region;
-        finalCountry = directMatch.country || country;
-        stats.lwinDirect++;
-        stats.matched++;
-        logger.dev(
-          `LWIN direct match: Row ${rowNumber} - ${productName} → ${directMatch.displayName}`,
-        );
-      } else {
-        // LWIN18 provided but not found in database - try fuzzy match
-        logger.dev(
-          `LWIN18 not found in database: ${lwin18} for "${productName}"`,
-        );
-      }
-    }
+    // Track as unmatched (no DB lookup for now - can add batch matching later)
+    stats.unmatched++;
 
-    // If no direct match, try fuzzy matching by product name
-    if (matchSource === 'sheet_only') {
-      const fuzzyMatch = await lookupLwinFuzzy(productName);
-      if (fuzzyMatch && fuzzyMatch.similarity >= 0.4) {
-        matchSource = 'lwin_fuzzy';
-        matchConfidence = fuzzyMatch.similarity;
-        lwin18 = fuzzyMatch.lwin;
-        finalProductName = fuzzyMatch.displayName || productName;
-        finalRegion = fuzzyMatch.region || region;
-        finalCountry = fuzzyMatch.country || country;
-        stats.lwinFuzzy++;
-        stats.matched++;
-        logger.dev(
-          `LWIN fuzzy match: Row ${rowNumber} - "${productName}" → ${fuzzyMatch.displayName} (${(fuzzyMatch.similarity * 100).toFixed(0)}%)`,
-        );
-      } else {
-        // No match found - still include item but flag as unmatched
-        stats.unmatched++;
-        logger.dev(
-          `No LWIN match for row ${rowNumber}: "${productName}"`,
-        );
-      }
-    }
-
-    // Always include the item (don't skip silently)
     items.push({
-      lwin18: lwin18 || `unmatched:row${rowNumber}`,
-      productName: finalProductName,
+      lwin18,
+      productName,
       year,
-      region: finalRegion,
-      country: finalCountry,
+      region,
+      country,
       bottlesPerCase,
       bottleSize,
       price,
       currency: 'USD',
       availableQuantity,
       rowNumber,
-      matchSource,
-      matchConfidence,
+      matchSource: 'sheet_only',
+      matchConfidence: 0,
     });
-  }
+  });
 
   logger.info('Local inventory parsing complete', {
     total: stats.total,
     matched: stats.matched,
     unmatched: stats.unmatched,
     skipped: stats.skipped,
-    lwinDirect: stats.lwinDirect,
-    lwinFuzzy: stats.lwinFuzzy,
   });
 
   return { items, skipped, stats };
