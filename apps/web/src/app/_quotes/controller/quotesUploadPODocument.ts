@@ -2,8 +2,8 @@ import { TRPCError } from '@trpc/server';
 import { put } from '@vercel/blob';
 import { fileTypeFromBuffer } from 'file-type';
 
-import logger from '@/lib/logger';
 import { protectedProcedure } from '@/lib/trpc/procedures';
+import logger from '@/utils/logger';
 
 import uploadPODocumentSchema from '../schemas/uploadPODocumentSchema';
 

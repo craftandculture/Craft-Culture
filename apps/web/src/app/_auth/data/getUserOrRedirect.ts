@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 
-import logger from '@/lib/logger';
+import logger from '@/utils/logger';
 import tryCatch from '@/utils/tryCatch';
 
 import getCurrentUser from './getCurrentUser';

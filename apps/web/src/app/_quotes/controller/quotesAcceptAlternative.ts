@@ -3,8 +3,8 @@ import { eq } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { quotes } from '@/database/schema';
-import logger from '@/lib/logger';
 import { protectedProcedure } from '@/lib/trpc/procedures';
+import logger from '@/utils/logger';
 
 import acceptAlternativeSchema from '../schemas/acceptAlternativeSchema';
 

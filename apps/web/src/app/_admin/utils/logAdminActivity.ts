@@ -1,6 +1,6 @@
 import db from '@/database/client';
 import { adminActivityLogs } from '@/database/schema';
-import logger from '@/lib/logger';
+import logger from '@/utils/logger';
 
 export type AdminAction =
   | 'user.viewed'
