@@ -2,7 +2,7 @@ import { and, count, desc, eq } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { sourceCustomerPos, sourceSupplierOrders } from '@/database/schema';
-import { partnerProcedure } from '@/lib/trpc/procedures';
+import { winePartnerProcedure } from '@/lib/trpc/procedures';
 
 import getManySupplierOrdersSchema from '../schemas/getManySupplierOrdersSchema';
 
@@ -15,12 +15,12 @@ import getManySupplierOrdersSchema from '../schemas/getManySupplierOrdersSchema'
  *     status: 'sent',
  *   });
  */
-const partnerGetManySupplierOrders = partnerProcedure
+const partnerGetManySupplierOrders = winePartnerProcedure
   .input(getManySupplierOrdersSchema)
-  .query(async ({ input, ctx: { user } }) => {
+  .query(async ({ input, ctx: { partnerId } }) => {
     const { limit, cursor, status } = input;
 
-    const conditions = [eq(sourceSupplierOrders.partnerId, user.partnerId)];
+    const conditions = [eq(sourceSupplierOrders.partnerId, partnerId)];
 
     if (status) {
       conditions.push(eq(sourceSupplierOrders.status, status));
