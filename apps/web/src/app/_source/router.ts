@@ -1,6 +1,7 @@
 import { createTRPCRouter } from '@/lib/trpc/trpc';
 
 import adminAddItem from './controller/adminAddItem';
+import adminAddPartners from './controller/adminAddPartners';
 import adminAutoSelectBest from './controller/adminAutoSelectBest';
 import adminBulkSelectQuotes from './controller/adminBulkSelectQuotes';
 import adminCancelRfq from './controller/adminCancelRfq';
@@ -42,6 +43,7 @@ const adminRouter = createTRPCRouter({
   updateItem: adminUpdateItem,
   deleteItem: adminDeleteItem,
   sendToPartners: adminSendToPartners,
+  addPartners: adminAddPartners,
   selectQuote: adminSelectQuote,
   bulkSelectQuotes: adminBulkSelectQuotes,
   autoSelectBest: adminAutoSelectBest,

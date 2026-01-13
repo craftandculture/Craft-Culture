@@ -211,6 +211,7 @@ const RfqDetailPage = () => {
   }
 
   const canSendToPartners = ['draft', 'parsing', 'ready_to_send'].includes(rfq.status);
+  const canAddMorePartners = ['sent', 'collecting', 'comparing', 'selecting'].includes(rfq.status);
   const canSelectQuotes = ['sent', 'collecting', 'comparing', 'selecting'].includes(rfq.status);
   const canAddItems = ['draft', 'parsing', 'ready_to_send', 'sent', 'collecting', 'comparing', 'selecting'].includes(rfq.status);
   const canGenerateQuote = rfq.status === 'selecting' || rfq.items.some((i) => i.selectedQuoteId);
@@ -470,17 +471,30 @@ const RfqDetailPage = () => {
                 <Typography variant="headingSm">
                   Partner Responses
                 </Typography>
-                {canSelectQuotes && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setIsUploadPartnerResponseOpen(true)}
-                  >
-                    <ButtonContent iconLeft={IconUpload}>
-                      Upload Response
-                    </ButtonContent>
-                  </Button>
-                )}
+                <div className="flex gap-2">
+                  {canAddMorePartners && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setIsSelectPartnersOpen(true)}
+                    >
+                      <ButtonContent iconLeft={IconPlus}>
+                        Add Partners
+                      </ButtonContent>
+                    </Button>
+                  )}
+                  {canSelectQuotes && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setIsUploadPartnerResponseOpen(true)}
+                    >
+                      <ButtonContent iconLeft={IconUpload}>
+                        Upload Response
+                      </ButtonContent>
+                    </Button>
+                  )}
+                </div>
               </div>
               <div className="flex flex-wrap gap-3">
                 {rfq.partners.map((rp) => (
@@ -1238,6 +1252,8 @@ const RfqDetailPage = () => {
           open={isSelectPartnersOpen}
           onOpenChange={setIsSelectPartnersOpen}
           onSuccess={() => void refetch()}
+          isAddingPartners={canAddMorePartners}
+          existingPartnerIds={rfq.partners.map((p) => p.partnerId)}
         />
 
         {/* Add Item Modal */}

@@ -24,6 +24,10 @@ export interface SendToPartnersDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
+  /** When true, adds partners to an already-sent RFQ instead of initial send */
+  isAddingPartners?: boolean;
+  /** Partner IDs to exclude from selection (already assigned) */
+  existingPartnerIds?: string[];
 }
 
 /**
@@ -34,19 +38,26 @@ const SendToPartnersDialog = ({
   open,
   onOpenChange,
   onSuccess,
+  isAddingPartners = false,
+  existingPartnerIds = [],
 }: SendToPartnersDialogProps) => {
   const api = useTRPC();
   const [selectedPartners, setSelectedPartners] = useState<SelectedPartner[]>([]);
   const [expandedPartnerId, setExpandedPartnerId] = useState<string | null>(null);
 
   // Fetch available wine partners
-  const { data: availablePartners } = useQuery({
+  const { data: allPartners } = useQuery({
     ...api.partners.getMany.queryOptions({
       type: 'wine_partner',
       status: 'active',
     }),
     enabled: open,
   });
+
+  // Filter out partners that are already assigned when adding partners
+  const availablePartners = isAddingPartners
+    ? allPartners?.filter((p) => !existingPartnerIds.includes(p.id))
+    : allPartners;
 
   // Fetch contacts for expanded partner
   const { data: partnerContacts } = useQuery({
@@ -64,8 +75,8 @@ const SendToPartnersDialog = ({
     }
   }, [open]);
 
-  // Send to partners mutation
-  const { mutate: sendToPartners, isPending: isSending } = useMutation(
+  // Send to partners mutation (initial send)
+  const { mutate: sendToPartners, isPending: isSendingInitial } = useMutation(
     api.source.admin.sendToPartners.mutationOptions({
       onSuccess: () => {
         onSuccess();
@@ -73,6 +84,18 @@ const SendToPartnersDialog = ({
       },
     }),
   );
+
+  // Add partners mutation (for already-sent RFQs)
+  const { mutate: addPartners, isPending: isAddingPartnersLoading } = useMutation(
+    api.source.admin.addPartners.mutationOptions({
+      onSuccess: () => {
+        onSuccess();
+        onOpenChange(false);
+      },
+    }),
+  );
+
+  const isSending = isSendingInitial || isAddingPartnersLoading;
 
   const handleTogglePartner = (partnerId: string) => {
     const existing = selectedPartners.find((p) => p.partnerId === partnerId);
@@ -122,11 +145,17 @@ const SendToPartnersDialog = ({
       return;
     }
 
-    sendToPartners({
+    const payload = {
       rfqId,
       partnerIds,
       contactIds: contactIds.length > 0 ? contactIds : undefined,
-    });
+    };
+
+    if (isAddingPartners) {
+      addPartners(payload);
+    } else {
+      sendToPartners(payload);
+    }
   };
 
   const isPartnerSelected = (partnerId: string) =>
@@ -141,9 +170,13 @@ const SendToPartnersDialog = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Send RFQ to Partners</DialogTitle>
+          <DialogTitle>
+            {isAddingPartners ? 'Add Partners to RFQ' : 'Send RFQ to Partners'}
+          </DialogTitle>
           <DialogDescription>
-            Select wine partners to send this RFQ to for quoting
+            {isAddingPartners
+              ? 'Select additional wine partners to add to this RFQ'
+              : 'Select wine partners to send this RFQ to for quoting'}
           </DialogDescription>
         </DialogHeader>
 
@@ -288,7 +321,9 @@ const SendToPartnersDialog = ({
               isDisabled={selectedPartners.length === 0 || isSending}
             >
               <ButtonContent iconLeft={IconSend}>
-                {isSending ? 'Sending...' : 'Send RFQ'}
+                {isSending
+                  ? (isAddingPartners ? 'Adding...' : 'Sending...')
+                  : (isAddingPartners ? 'Add Partners' : 'Send RFQ')}
               </ButtonContent>
             </Button>
           </div>
