@@ -95,26 +95,26 @@ const adminUpdateCustomerPoItem = adminProcedure
         updateData.buyPricePerCaseUsd !== undefined
           ? updateData.buyPricePerCaseUsd
           : existingItem.buyPricePerCaseUsd;
-      const quantityCases =
-        updateData.quantityCases !== undefined
-          ? updateData.quantityCases
-          : existingItem.quantityCases;
+      const quantity =
+        updateData.quantity !== undefined
+          ? updateData.quantity
+          : existingItem.quantity;
 
       // Recalculate profit
       const profitCalc = calculateItemProfit({
         sellPricePerCaseUsd,
         buyPricePerCaseUsd,
-        quantityCases,
+        quantityCases: quantity,
       });
 
       // Calculate line totals
       const sellLineTotalUsd =
-        sellPricePerCaseUsd && quantityCases
-          ? sellPricePerCaseUsd * quantityCases
+        sellPricePerCaseUsd && quantity
+          ? sellPricePerCaseUsd * quantity
           : null;
       const buyLineTotalUsd =
-        buyPricePerCaseUsd && quantityCases
-          ? buyPricePerCaseUsd * quantityCases
+        buyPricePerCaseUsd && quantity
+          ? buyPricePerCaseUsd * quantity
           : null;
 
       // Determine status based on match

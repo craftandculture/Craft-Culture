@@ -63,7 +63,7 @@ const adminSendSupplierOrder = adminProcedure
         .select({
           id: partners.id,
           businessName: partners.businessName,
-          contactEmail: partners.contactEmail,
+          businessEmail: partners.businessEmail,
         })
         .from(partners)
         .where(eq(partners.id, supplierOrder.partnerId))
@@ -141,16 +141,16 @@ const adminSendSupplierOrder = adminProcedure
       // });
 
       // Send email if requested
-      if (sendEmail && partner.contactEmail) {
+      if (sendEmail && partner.businessEmail) {
         // TODO: Integrate with email service
         // await sendSupplierOrderEmail({
-        //   to: partner.contactEmail,
+        //   to: partner.businessEmail,
         //   orderNumber: supplierOrder.orderNumber,
         //   excelBase64: base64,
         //   filename,
         // });
         logger.info('Email would be sent to:', {
-          email: partner.contactEmail,
+          email: partner.businessEmail,
           filename,
         });
       }
@@ -178,7 +178,7 @@ const adminSendSupplierOrder = adminProcedure
         partnerName: partner.businessName,
         excelFilename: filename,
         excelBase64: base64,
-        emailSent: sendEmail && !!partner.contactEmail,
+        emailSent: sendEmail && !!partner.businessEmail,
       };
     } catch (error) {
       logger.error('Error sending supplier order:', error);

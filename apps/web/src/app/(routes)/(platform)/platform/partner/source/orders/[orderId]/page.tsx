@@ -18,7 +18,7 @@ import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
 import Card from '@/app/_ui/components/Card/Card';
 import CardContent from '@/app/_ui/components/Card/CardContent';
 import Typography from '@/app/_ui/components/Typography/Typography';
-import useTRPC from '@/lib/trpc/browser';
+import useTRPC, { useTRPCClient } from '@/lib/trpc/browser';
 
 type ItemConfirmation = {
   itemId: string;
@@ -34,6 +34,7 @@ const PartnerSupplierOrderDetailPage = () => {
   const params = useParams<{ orderId: string }>();
   const router = useRouter();
   const api = useTRPC();
+  const trpcClient = useTRPCClient();
   const queryClient = useQueryClient();
 
   const [itemConfirmations, setItemConfirmations] = useState<Map<string, ItemConfirmation>>(
@@ -101,7 +102,7 @@ const PartnerSupplierOrderDetailPage = () => {
   const handleDownloadExcel = async () => {
     if (!order) return;
     try {
-      const result = await api.source.partner.supplierOrders.downloadExcel.query({
+      const result = await trpcClient.source.partner.supplierOrders.downloadExcel.query({
         id: params.orderId,
       });
       // Download the file
@@ -226,7 +227,7 @@ const PartnerSupplierOrderDetailPage = () => {
                         <div className="flex items-center gap-2">
                           <Button
                             variant="outline"
-                            colorRole="success"
+                            colorRole="primary"
                             size="sm"
                             onClick={() => handleConfirmItem(item.id)}
                           >

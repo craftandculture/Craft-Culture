@@ -19,7 +19,7 @@ import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
 import Card from '@/app/_ui/components/Card/Card';
 import CardContent from '@/app/_ui/components/Card/CardContent';
 import Typography from '@/app/_ui/components/Typography/Typography';
-import useTRPC from '@/lib/trpc/browser';
+import useTRPC, { useTRPCClient } from '@/lib/trpc/browser';
 
 /**
  * Admin Customer PO detail page
@@ -27,6 +27,7 @@ import useTRPC from '@/lib/trpc/browser';
 const CustomerPoDetailPage = () => {
   const params = useParams<{ poId: string }>();
   const api = useTRPC();
+  const trpcClient = useTRPCClient();
   const queryClient = useQueryClient();
 
   const { data: customerPo, isLoading } = useQuery({
@@ -173,7 +174,7 @@ const CustomerPoDetailPage = () => {
               </Typography>
               <Typography variant="headingMd">
                 {customerPo.itemCount}
-                {customerPo.losingItemCount > 0 && (
+                {(customerPo.losingItemCount ?? 0) > 0 && (
                   <span className="text-text-danger text-sm ml-2">
                     ({customerPo.losingItemCount} losing)
                   </span>
@@ -222,7 +223,7 @@ const CustomerPoDetailPage = () => {
                       </td>
                       <td className="p-3 text-text-muted">{item.vintage || '-'}</td>
                       <td className="p-3 text-right">
-                        {item.quantityCases || '-'}
+                        {item.quantity || '-'}
                         {item.caseConfig && (
                           <span className="text-text-muted text-xs ml-1">
                             ({item.caseConfig})
@@ -331,7 +332,7 @@ const CustomerPoDetailPage = () => {
                         colorRole="primary"
                         size="sm"
                         onClick={async () => {
-                          const result = await api.source.admin.customerPo.exportSupplierOrderExcel.query({ id: order.id });
+                          const result = await trpcClient.source.admin.customerPo.exportSupplierOrderExcel.query({ id: order.id });
                           // Download the file
                           const link = document.createElement('a');
                           link.href = `data:${result.mimeType};base64,${result.base64}`;

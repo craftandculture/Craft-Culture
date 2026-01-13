@@ -33,7 +33,7 @@ const adminCreateCustomerPo = adminProcedure
           customerName: input.customerName,
           customerCompany: input.customerCompany || null,
           customerEmail: input.customerEmail || null,
-          notes: input.notes || null,
+          adminNotes: input.notes || null,
           status: 'draft',
           createdBy: user.id,
         })
