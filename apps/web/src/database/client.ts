@@ -5,7 +5,7 @@ import serverConfig from '@/server.config';
 
 import relations from './relations';
 
-export const client = postgres(serverConfig.dbUrl, {
+export const client = postgres(serverConfig.dbUrl || '', {
   prepare: false,
 });
 

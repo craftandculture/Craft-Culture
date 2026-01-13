@@ -110,7 +110,7 @@ const LocalStockPage = () => {
                 <tbody>
                   {products.map((product) => {
                     const offer = product.productOffers?.find(
-                      (o) => o.source === 'local_inventory',
+                      (o: { source: string }) => o.source === 'local_inventory',
                     );
                     const priceUsd = offer?.inBondPriceUsd ?? offer?.price ?? 0;
                     const priceAed = priceUsd * 3.67;
