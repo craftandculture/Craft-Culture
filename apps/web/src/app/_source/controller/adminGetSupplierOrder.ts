@@ -40,7 +40,7 @@ const adminGetSupplierOrder = adminProcedure
         confirmedAt: sourceSupplierOrders.confirmedAt,
         createdAt: sourceSupplierOrders.createdAt,
         partnerName: partners.businessName,
-        partnerEmail: partners.contactEmail,
+        partnerEmail: partners.businessEmail,
       })
       .from(sourceSupplierOrders)
       .leftJoin(partners, eq(sourceSupplierOrders.partnerId, partners.id))

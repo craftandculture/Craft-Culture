@@ -17,7 +17,7 @@ import { calculateItemProfit } from '../utils/calculateProfitAnalysis';
  *     customerPoId: "uuid-here",
  *     productName: "Chateau Margaux",
  *     vintage: "2019",
- *     quantityCases: 2,
+ *     quantity: 2,
  *     sellPricePerCaseUsd: 1500,
  *   });
  */
@@ -49,15 +49,15 @@ const adminAddCustomerPoItem = adminProcedure
 
       // Calculate line totals
       const sellLineTotalUsd =
-        input.sellPricePerCaseUsd && input.quantityCases
-          ? input.sellPricePerCaseUsd * input.quantityCases
+        input.sellPricePerCaseUsd && input.quantity
+          ? input.sellPricePerCaseUsd * input.quantity
           : null;
 
       // Calculate profit (no buy price yet, so just set sell side)
       const profitCalc = calculateItemProfit({
         sellPricePerCaseUsd: input.sellPricePerCaseUsd || null,
         buyPricePerCaseUsd: null,
-        quantityCases: input.quantityCases || null,
+        quantityCases: input.quantity || null,
       });
 
       const [item] = await db
@@ -68,10 +68,9 @@ const adminAddCustomerPoItem = adminProcedure
           producer: input.producer || null,
           vintage: input.vintage || null,
           region: input.region || null,
-          country: input.country || null,
           lwin: input.lwin || null,
-          quantityCases: input.quantityCases || null,
-          quantityBottles: input.quantityBottles || null,
+          quantity: input.quantity,
+          quantityUnit: input.quantityUnit,
           caseConfig: input.caseConfig || null,
           bottleSize: input.bottleSize || null,
           sellPricePerCaseUsd: input.sellPricePerCaseUsd || null,
@@ -79,7 +78,7 @@ const adminAddCustomerPoItem = adminProcedure
           sellLineTotalUsd,
           status: 'pending_match',
           matchSource: 'manual',
-          notes: input.notes || null,
+          adminNotes: input.notes || null,
           sortOrder,
           profitUsd: profitCalc.profitUsd,
           profitMarginPercent: profitCalc.profitMarginPercent,

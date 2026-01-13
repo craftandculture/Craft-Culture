@@ -66,10 +66,9 @@ const adminGetOneCustomerPo = adminProcedure
         producer: sourceCustomerPoItems.producer,
         vintage: sourceCustomerPoItems.vintage,
         region: sourceCustomerPoItems.region,
-        country: sourceCustomerPoItems.country,
         lwin: sourceCustomerPoItems.lwin,
-        quantityCases: sourceCustomerPoItems.quantityCases,
-        quantityBottles: sourceCustomerPoItems.quantityBottles,
+        quantity: sourceCustomerPoItems.quantity,
+        quantityUnit: sourceCustomerPoItems.quantityUnit,
         caseConfig: sourceCustomerPoItems.caseConfig,
         bottleSize: sourceCustomerPoItems.bottleSize,
         sellPricePerCaseUsd: sourceCustomerPoItems.sellPricePerCaseUsd,
@@ -84,7 +83,7 @@ const adminGetOneCustomerPo = adminProcedure
         isLosingItem: sourceCustomerPoItems.isLosingItem,
         status: sourceCustomerPoItems.status,
         matchSource: sourceCustomerPoItems.matchSource,
-        notes: sourceCustomerPoItems.notes,
+        adminNotes: sourceCustomerPoItems.adminNotes,
         sortOrder: sourceCustomerPoItems.sortOrder,
       })
       .from(sourceCustomerPoItems)

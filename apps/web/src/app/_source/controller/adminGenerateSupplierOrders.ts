@@ -136,7 +136,7 @@ const adminGenerateSupplierOrders = adminProcedure
         // Calculate totals
         let totalAmountUsd = 0;
         partnerItems.forEach(({ item, quote }) => {
-          const qty = item.quantityCases || 1;
+          const qty = item.quantity || 1;
           const price = quote.costPricePerCaseUsd || 0;
           totalAmountUsd += price * qty;
         });
@@ -159,12 +159,12 @@ const adminGenerateSupplierOrders = adminProcedure
 
         // Create supplier order items
         const orderItemsData = partnerItems.map(({ item, quote }, idx) => {
-          const qty = item.quantityCases || 1;
+          const qty = item.quantity || 1;
           const costPerCase = quote.costPricePerCaseUsd || 0;
-          const caseConfigNum = parseInt(
-            quote.caseConfig || item.caseConfig || '6',
-            10,
-          );
+          const caseConfigNum =
+            (quote.caseConfig ? parseInt(quote.caseConfig, 10) : null) ||
+            item.caseConfig ||
+            6;
           const costPerBottle =
             caseConfigNum > 0 ? costPerCase / caseConfigNum : 0;
           const quantityBottles = qty * caseConfigNum;
@@ -186,7 +186,7 @@ const adminGenerateSupplierOrders = adminProcedure
             vintage: quote.quotedVintage || item.vintage,
             lwin7: item.lwin,
             lwin18,
-            caseConfig: `${caseConfigNum}x75cl`,
+            caseConfig: caseConfigNum,
             quantityCases: qty,
             quantityBottles,
             costPerBottleUsd: Math.round(costPerBottle * 100) / 100,

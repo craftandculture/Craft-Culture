@@ -8,7 +8,7 @@ interface SupplierOrderItem {
   lwin18: string | null;
   quantityBottles: number | null;
   quantityCases: number | null;
-  caseConfig: string | null;
+  caseConfig: string | number | null;
   costPerBottleUsd: number | null;
   costPerCaseUsd: number | null;
   lineTotalUsd: number | null;
