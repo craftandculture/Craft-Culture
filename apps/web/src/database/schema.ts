@@ -689,6 +689,11 @@ export const notificationType = pgEnum('notification_type', [
   'rfq_quotes_selected',
   // SOURCE PO notifications
   'po_received',
+  // SOURCE Supplier Order notifications
+  'supplier_order_received',
+  'supplier_order_confirmed',
+  'supplier_order_updated',
+  'supplier_order_rejected',
 ]);
 
 /**
@@ -2315,3 +2320,301 @@ export const sourceSelfSourcing = pgTable(
 ).enableRLS();
 
 export type SourceSelfSourcing = typeof sourceSelfSourcing.$inferSelect;
+
+// ============================================================================
+// SOURCE Module - Customer Purchase Orders (Incoming POs from Customers)
+// ============================================================================
+
+export const sourceCustomerPoStatus = pgEnum('source_customer_po_status', [
+  'draft',
+  'parsing',
+  'matching',
+  'matched',
+  'reviewing',
+  'orders_generated',
+  'awaiting_confirmations',
+  'confirmed',
+  'closed',
+  'cancelled',
+]);
+
+export const sourceCustomerPoItemStatus = pgEnum('source_customer_po_item_status', [
+  'pending_match',
+  'matched',
+  'unmatched',
+  'new_item',
+  'ordered',
+  'confirmed',
+]);
+
+export const sourceCustomerPoItemMatchSource = pgEnum('source_customer_po_item_match_source', [
+  'auto',
+  'manual',
+  'new_item',
+]);
+
+export const sourceSupplierOrderStatus = pgEnum('source_supplier_order_status', [
+  'draft',
+  'sent',
+  'pending_confirmation',
+  'confirmed',
+  'partial',
+  'rejected',
+  'shipped',
+  'delivered',
+  'cancelled',
+]);
+
+export const sourceSupplierOrderItemConfirmationStatus = pgEnum(
+  'source_supplier_order_item_confirmation_status',
+  ['pending', 'confirmed', 'updated', 'rejected'],
+);
+
+/**
+ * SOURCE Customer POs - POs received from B2B customers
+ * Tracks customer orders, matches against RFQ quotes, calculates profit
+ */
+export const sourceCustomerPos = pgTable(
+  'source_customer_pos',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+
+    // Optional link to RFQ (can work standalone too)
+    rfqId: uuid('rfq_id').references(() => sourceRfqs.id, { onDelete: 'set null' }),
+
+    // PO identification
+    poNumber: text('po_number').notNull(), // Customer's PO number
+    ccPoNumber: text('cc_po_number').notNull().unique(), // Our internal reference (CPO-2026-0001)
+    status: sourceCustomerPoStatus('status').notNull().default('draft'),
+
+    // Customer info
+    customerName: text('customer_name').notNull(),
+    customerCompany: text('customer_company'),
+    customerEmail: text('customer_email'),
+    customerPhone: text('customer_phone'),
+
+    // Source document
+    sourceType: text('source_type'), // 'excel', 'pdf', 'manual'
+    sourceFileName: text('source_file_name'),
+    sourceFileUrl: text('source_file_url'),
+    rawContent: text('raw_content'), // For AI parsing reference
+
+    // Pricing summary (calculated)
+    totalSellPriceUsd: doublePrecision('total_sell_price_usd').default(0),
+    totalBuyPriceUsd: doublePrecision('total_buy_price_usd').default(0),
+    totalProfitUsd: doublePrecision('total_profit_usd').default(0),
+    profitMarginPercent: doublePrecision('profit_margin_percent').default(0),
+    itemCount: integer('item_count').default(0),
+    losingItemCount: integer('losing_item_count').default(0),
+
+    // Workflow timestamps
+    parsedAt: timestamp('parsed_at', { mode: 'date' }),
+    matchedAt: timestamp('matched_at', { mode: 'date' }),
+    ordersGeneratedAt: timestamp('orders_generated_at', { mode: 'date' }),
+    allConfirmedAt: timestamp('all_confirmed_at', { mode: 'date' }),
+
+    // Notes
+    adminNotes: text('admin_notes'),
+
+    // Audit
+    createdBy: uuid('created_by')
+      .references(() => users.id, { onDelete: 'set null' })
+      .notNull(),
+    ...timestamps,
+  },
+  (table) => [
+    index('source_customer_pos_status_idx').on(table.status),
+    index('source_customer_pos_rfq_id_idx').on(table.rfqId),
+    index('source_customer_pos_created_at_idx').on(table.createdAt),
+  ],
+).enableRLS();
+
+export type SourceCustomerPo = typeof sourceCustomerPos.$inferSelect;
+
+/**
+ * SOURCE Customer PO Items - line items parsed from customer PO
+ * Matched against RFQ quotes to calculate profit margins
+ */
+export const sourceCustomerPoItems = pgTable(
+  'source_customer_po_items',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    customerPoId: uuid('customer_po_id')
+      .references(() => sourceCustomerPos.id, { onDelete: 'cascade' })
+      .notNull(),
+
+    // Product info (parsed from PO)
+    productName: text('product_name').notNull(),
+    producer: text('producer'),
+    vintage: text('vintage'),
+    region: text('region'),
+    bottleSize: text('bottle_size'),
+    caseConfig: integer('case_config'),
+    lwin: text('lwin'),
+
+    // Quantity
+    quantity: integer('quantity').notNull(),
+    quantityUnit: text('quantity_unit').default('cases'), // 'cases' | 'bottles'
+
+    // Customer pricing (sell side - what customer pays us)
+    sellPricePerBottleUsd: doublePrecision('sell_price_per_bottle_usd'),
+    sellPricePerCaseUsd: doublePrecision('sell_price_per_case_usd'),
+    sellLineTotalUsd: doublePrecision('sell_line_total_usd'),
+
+    // Matched quote (buy side - our cost)
+    matchedRfqItemId: uuid('matched_rfq_item_id').references(() => sourceRfqItems.id, {
+      onDelete: 'set null',
+    }),
+    matchedQuoteId: uuid('matched_quote_id').references(() => sourceRfqQuotes.id, {
+      onDelete: 'set null',
+    }),
+    matchSource: sourceCustomerPoItemMatchSource('match_source'),
+    matchConfidence: doublePrecision('match_confidence'),
+
+    // Cost pricing (from matched quote or manual entry)
+    buyPricePerBottleUsd: doublePrecision('buy_price_per_bottle_usd'),
+    buyPricePerCaseUsd: doublePrecision('buy_price_per_case_usd'),
+    buyLineTotalUsd: doublePrecision('buy_line_total_usd'),
+
+    // Profit calculation
+    profitUsd: doublePrecision('profit_usd'),
+    profitMarginPercent: doublePrecision('profit_margin_percent'),
+    isLosingItem: boolean('is_losing_item').default(false), // buy > sell
+
+    // Status
+    status: sourceCustomerPoItemStatus('status').notNull().default('pending_match'),
+
+    // Notes
+    adminNotes: text('admin_notes'),
+    originalText: text('original_text'), // Original line from parsed document
+
+    // Sort order
+    sortOrder: integer('sort_order').default(0),
+
+    ...timestamps,
+  },
+  (table) => [
+    index('source_customer_po_items_customer_po_id_idx').on(table.customerPoId),
+    index('source_customer_po_items_status_idx').on(table.status),
+    index('source_customer_po_items_matched_quote_id_idx').on(table.matchedQuoteId),
+    index('source_customer_po_items_is_losing_item_idx').on(table.isLosingItem),
+  ],
+).enableRLS();
+
+export type SourceCustomerPoItem = typeof sourceCustomerPoItems.$inferSelect;
+
+/**
+ * SOURCE Supplier Orders - orders sent to suppliers/partners (one per partner per customer PO)
+ * Generated from customer PO items grouped by winning partner
+ */
+export const sourceSupplierOrders = pgTable(
+  'source_supplier_orders',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    customerPoId: uuid('customer_po_id')
+      .references(() => sourceCustomerPos.id, { onDelete: 'cascade' })
+      .notNull(),
+    partnerId: uuid('partner_id')
+      .references(() => partners.id, { onDelete: 'restrict' })
+      .notNull(),
+
+    // Order identification
+    orderNumber: text('order_number').notNull().unique(), // SO-2026-0001
+    status: sourceSupplierOrderStatus('status').notNull().default('draft'),
+
+    // Totals
+    itemCount: integer('item_count').default(0),
+    totalAmountUsd: doublePrecision('total_amount_usd').default(0),
+    confirmedAmountUsd: doublePrecision('confirmed_amount_usd'),
+
+    // Generated documents
+    excelFileUrl: text('excel_file_url'),
+    pdfFileUrl: text('pdf_file_url'),
+
+    // Workflow timestamps
+    sentAt: timestamp('sent_at', { mode: 'date' }),
+    sentBy: uuid('sent_by').references(() => users.id, { onDelete: 'set null' }),
+    notifiedAt: timestamp('notified_at', { mode: 'date' }),
+    viewedAt: timestamp('viewed_at', { mode: 'date' }),
+    confirmedAt: timestamp('confirmed_at', { mode: 'date' }),
+    confirmedBy: uuid('confirmed_by'), // Partner user (no FK as might be external)
+
+    // Shipping
+    shippedAt: timestamp('shipped_at', { mode: 'date' }),
+    trackingNumber: text('tracking_number'),
+    deliveredAt: timestamp('delivered_at', { mode: 'date' }),
+
+    // Notes
+    adminNotes: text('admin_notes'),
+    partnerNotes: text('partner_notes'),
+
+    // Audit
+    createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
+    ...timestamps,
+  },
+  (table) => [
+    index('source_supplier_orders_customer_po_id_idx').on(table.customerPoId),
+    index('source_supplier_orders_partner_id_idx').on(table.partnerId),
+    index('source_supplier_orders_status_idx').on(table.status),
+  ],
+).enableRLS();
+
+export type SourceSupplierOrder = typeof sourceSupplierOrders.$inferSelect;
+
+/**
+ * SOURCE Supplier Order Items - line items in orders to suppliers
+ * Includes confirmation status for partner response tracking
+ */
+export const sourceSupplierOrderItems = pgTable(
+  'source_supplier_order_items',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    supplierOrderId: uuid('supplier_order_id')
+      .references(() => sourceSupplierOrders.id, { onDelete: 'cascade' })
+      .notNull(),
+    customerPoItemId: uuid('customer_po_item_id')
+      .references(() => sourceCustomerPoItems.id, { onDelete: 'restrict' })
+      .notNull(),
+    quoteId: uuid('quote_id').references(() => sourceRfqQuotes.id, { onDelete: 'set null' }),
+
+    // Product details (denormalized for order document)
+    productName: text('product_name').notNull(),
+    producer: text('producer'),
+    vintage: text('vintage'),
+    region: text('region'),
+    lwin7: text('lwin7'),
+    lwin18: text('lwin18'),
+    bottleSize: text('bottle_size'),
+    caseConfig: integer('case_config'),
+
+    // Quantity and pricing
+    quantityCases: integer('quantity_cases').notNull(),
+    quantityBottles: integer('quantity_bottles'),
+    costPerBottleUsd: doublePrecision('cost_per_bottle_usd'),
+    costPerCaseUsd: doublePrecision('cost_per_case_usd').notNull(),
+    lineTotalUsd: doublePrecision('line_total_usd').notNull(),
+
+    // Partner confirmation
+    confirmationStatus: sourceSupplierOrderItemConfirmationStatus('confirmation_status')
+      .notNull()
+      .default('pending'),
+    confirmedAt: timestamp('confirmed_at', { mode: 'date' }),
+    updatedPriceUsd: doublePrecision('updated_price_usd'), // If partner updates price
+    updatedQuantity: integer('updated_quantity'), // If partner updates availability
+    updateReason: text('update_reason'),
+    rejectionReason: text('rejection_reason'),
+    partnerNotes: text('partner_notes'),
+
+    // Sort order
+    sortOrder: integer('sort_order').default(0),
+
+    ...timestamps,
+  },
+  (table) => [
+    index('source_supplier_order_items_supplier_order_id_idx').on(table.supplierOrderId),
+    index('source_supplier_order_items_customer_po_item_id_idx').on(table.customerPoItemId),
+    index('source_supplier_order_items_confirmation_status_idx').on(table.confirmationStatus),
+  ],
+).enableRLS();
+
+export type SourceSupplierOrderItem = typeof sourceSupplierOrderItems.$inferSelect;
