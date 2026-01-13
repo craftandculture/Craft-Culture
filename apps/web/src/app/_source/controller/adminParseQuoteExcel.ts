@@ -10,6 +10,7 @@ import {
   sourceRfqs,
 } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
+import logger from '@/utils/logger';
 
 import excelToCSV from '../utils/excelToCSV';
 import parseQuoteExcel from '../utils/parseQuoteExcel';
@@ -161,7 +162,7 @@ const adminParseQuoteExcel = adminProcedure
         rfqItemCount: items.length,
       };
     } catch (error) {
-      console.error('Admin quote Excel parsing failed:', {
+      logger.error('Admin quote Excel parsing failed:', {
         error: error instanceof Error ? error.message : 'Unknown error',
         rfqId,
         partnerId,

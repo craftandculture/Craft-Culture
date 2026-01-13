@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { quotes } from '@/database/schema';
+import logger from '@/lib/logger';
 import { protectedProcedure } from '@/lib/trpc/procedures';
 
 import acceptAlternativeSchema from '../schemas/acceptAlternativeSchema';
@@ -214,7 +215,7 @@ const quotesAcceptAlternative = protectedProcedure
 
       return updatedQuote;
     } catch (error) {
-      console.error('Error accepting alternative:', { error, quoteId, productId, alternativeIndex });
+      logger.error('Error accepting alternative', { error, quoteId, productId, alternativeIndex });
 
       if (error instanceof TRPCError) {
         throw error;

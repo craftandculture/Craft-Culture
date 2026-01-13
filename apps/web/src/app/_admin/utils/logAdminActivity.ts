@@ -1,5 +1,6 @@
 import db from '@/database/client';
 import { adminActivityLogs } from '@/database/schema';
+import logger from '@/lib/logger';
 
 export type AdminAction =
   | 'user.viewed'
@@ -67,7 +68,7 @@ const logAdminActivity = async (params: LogAdminActivityParams) => {
     });
   } catch (error) {
     // Log error but don't throw - we don't want activity logging to break the app
-    console.error('Failed to log admin activity:', error);
+    logger.error('Failed to log admin activity', { error });
   }
 };
 

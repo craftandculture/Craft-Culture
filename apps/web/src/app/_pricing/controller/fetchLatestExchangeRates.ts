@@ -4,6 +4,7 @@ import exchangeRateService from '@/lib/currency/exchangeRateService';
 import { DEFAULT_EXCHANGE_RATES } from '@/lib/pricing/defaults';
 import type { ExchangeRates } from '@/lib/pricing/types';
 import { adminProcedure } from '@/lib/trpc/procedures';
+import logger from '@/utils/logger';
 
 /**
  * Fetch latest exchange rates from ECB
@@ -32,7 +33,7 @@ const fetchLatestExchangeRates = adminProcedure.mutation(async () => {
       }
     }
   } catch (error) {
-    console.error('Failed to fetch GBP→USD rate from ECB', { error });
+    logger.error('Failed to fetch GBP→USD rate from ECB', { error });
   }
 
   try {
@@ -47,7 +48,7 @@ const fetchLatestExchangeRates = adminProcedure.mutation(async () => {
       }
     }
   } catch (error) {
-    console.error('Failed to fetch EUR→USD rate from ECB', { error });
+    logger.error('Failed to fetch EUR→USD rate from ECB', { error });
   }
 
   // AED is pegged to USD, so we use a fixed rate

@@ -4,6 +4,7 @@ import { eq } from 'drizzle-orm';
 import db from '@/database/client';
 import { quotes } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
+import logger from '@/utils/logger';
 
 import confirmPOSchema from '../schemas/confirmPOSchema';
 
@@ -70,14 +71,14 @@ const quotesConfirmPO = adminProcedure
         '../utils/notifyUserOfPOConfirmation'
       );
       notifyUserOfPOConfirmation(updatedQuote).catch((error) =>
-        console.error('Failed to send PO confirmation notification:', error),
+        logger.error('Failed to send PO confirmation notification', { error }),
       );
 
       // TODO: Log admin activity
 
       return updatedQuote;
     } catch (error) {
-      console.error('Error confirming PO:', { error, quoteId, adminId: user.id });
+      logger.error('Error confirming PO', { error, quoteId, adminId: user.id });
       throw new TRPCError({
         code: 'INTERNAL_SERVER_ERROR',
         message: 'Failed to confirm PO',

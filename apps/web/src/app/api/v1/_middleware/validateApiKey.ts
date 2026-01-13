@@ -5,6 +5,7 @@ import type { NextRequest } from 'next/server';
 import db from '@/database/client';
 import { partnerApiKeys, partners } from '@/database/schema';
 import validateApiKeyHash from '@/lib/apiKeys/validateApiKeyHash';
+import logger from '@/utils/logger';
 
 interface ValidatedApiKey {
   apiKeyId: string;
@@ -90,7 +91,7 @@ const validateApiKey = async (request: NextRequest): Promise<ValidationResult> =
     .set({ lastUsedAt: new Date() })
     .where(eq(partnerApiKeys.id, validKey.id))
     .then()
-    .catch((err) => console.error('Failed to update lastUsedAt:', err));
+    .catch((err) => logger.error('Failed to update lastUsedAt:', err));
 
   return {
     success: true,

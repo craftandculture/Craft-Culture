@@ -4,6 +4,7 @@ import { eq } from 'drizzle-orm';
 import db from '@/database/client';
 import { quotes } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
+import logger from '@/utils/logger';
 
 import markAsDeliveredSchema from '../schemas/markAsDeliveredSchema';
 import notifyUserOfDelivery from '../utils/notifyUserOfDelivery';
@@ -70,7 +71,7 @@ const quotesMarkAsDelivered = adminProcedure
 
       return updatedQuote;
     } catch (error) {
-      console.error('Error marking quote as delivered:', { error, quoteId, adminId: user.id });
+      logger.error('Error marking quote as delivered', { error, quoteId, adminId: user.id });
       throw new TRPCError({
         code: 'INTERNAL_SERVER_ERROR',
         message: 'Failed to mark quote as delivered',

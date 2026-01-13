@@ -405,7 +405,7 @@ If vintage is unclear, leave it empty or use "NV".`;
         items: matchedItems,
       };
     } catch (error) {
-      console.error('AI parsing failed:', error);
+      logger.error('AI parsing failed:', error);
 
       // Update RFQ with error
       await db

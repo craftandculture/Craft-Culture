@@ -2,6 +2,7 @@ import { TRPCError } from '@trpc/server';
 
 import db from '@/database/client';
 import { quotes } from '@/database/schema';
+import logger from '@/lib/logger';
 import { protectedProcedure } from '@/lib/trpc/procedures';
 import logUserActivity from '@/utils/logUserActivity';
 
@@ -63,14 +64,11 @@ const quotesSave = protectedProcedure
 
       return quote;
     } catch (error) {
-      console.error('Error saving quote:', error);
-
-      // Log detailed error information for debugging
-      if (error instanceof Error) {
-        console.error('Error name:', error.name);
-        console.error('Error message:', error.message);
-        console.error('Error stack:', error.stack);
-      }
+      logger.error('Error saving quote', {
+        error,
+        userId: user.id,
+        quoteName: input.name,
+      });
 
       // If it's already a TRPCError, re-throw it
       if (error instanceof TRPCError) {

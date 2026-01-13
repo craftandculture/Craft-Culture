@@ -3,6 +3,7 @@ import { TRPCError } from '@trpc/server';
 import db from '@/database/client';
 import { sourceRfqs } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
+import logger from '@/utils/logger';
 
 import createRfqSchema from '../schemas/createRfqSchema';
 import generateRfqNumber from '../utils/generateRfqNumber';
@@ -51,7 +52,7 @@ const adminCreateRfq = adminProcedure
 
       return rfq;
     } catch (error) {
-      console.error('Error creating RFQ:', error);
+      logger.error('Error creating RFQ:', error);
 
       if (error instanceof TRPCError) {
         throw error;

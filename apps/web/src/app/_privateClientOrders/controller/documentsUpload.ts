@@ -8,6 +8,7 @@ import db from '@/database/client';
 import { partnerMembers, privateClientOrderDocuments } from '@/database/schema';
 import { protectedProcedure } from '@/lib/trpc/procedures';
 import { extractDocumentJob } from '@/trigger/jobs/extract-document/extractDocumentJob';
+import logger from '@/utils/logger';
 
 import uploadDocumentSchema from '../schemas/uploadDocumentSchema';
 
@@ -31,7 +32,7 @@ const documentsUpload = protectedProcedure.input(uploadDocumentSchema).mutation(
 
   // Check if Blob token is configured
   if (!process.env.BLOB_READ_WRITE_TOKEN) {
-    console.error('BLOB_READ_WRITE_TOKEN environment variable is not set');
+    logger.error('BLOB_READ_WRITE_TOKEN environment variable is not set');
     throw new TRPCError({
       code: 'INTERNAL_SERVER_ERROR',
       message: 'File storage is not configured. Please contact support.',
@@ -142,7 +143,7 @@ const documentsUpload = protectedProcedure.input(uploadDocumentSchema).mutation(
       });
     } catch (extractionError) {
       // Log but don't fail the upload if extraction trigger fails
-      console.error('Failed to trigger document extraction:', {
+      logger.error('Failed to trigger document extraction:', {
         documentId: document.id,
         error: extractionError instanceof Error ? extractionError.message : 'Unknown error',
       });

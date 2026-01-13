@@ -1,6 +1,7 @@
 import db from '@/database/client';
 import type { Notification, User } from '@/database/schema';
 import { notifications } from '@/database/schema';
+import logger from '@/utils/logger';
 
 interface CreateNotificationParams {
   userId: string;
@@ -59,7 +60,7 @@ const createNotification = async (params: CreateNotificationParams) => {
   });
 
   if (!user) {
-    console.error('Cannot create notification: User not found', { userId });
+    logger.error('Cannot create notification: User not found', { userId });
     return null;
   }
 

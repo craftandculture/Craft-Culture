@@ -2,6 +2,7 @@ import type { NextRequest } from 'next/server';
 
 import db from '@/database/client';
 import { partnerApiRequestLogs } from '@/database/schema';
+import logger from '@/utils/logger';
 
 interface LogApiRequestParams {
   request: NextRequest;
@@ -40,7 +41,7 @@ const logApiRequest = async ({
       errorMessage: errorMessage ?? null,
     });
   } catch (error) {
-    console.error('Failed to log API request:', error);
+    logger.error('Failed to log API request:', error);
   }
 };
 

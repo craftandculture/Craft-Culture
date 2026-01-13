@@ -6,6 +6,7 @@ import { z } from 'zod';
 import db from '@/database/client';
 import { privateClientOrderDocuments } from '@/database/schema';
 import { protectedProcedure } from '@/lib/trpc/procedures';
+import logger from '@/utils/logger';
 
 const deleteDocumentSchema = z.object({
   documentId: z.string().uuid(),
@@ -67,7 +68,7 @@ const documentsDelete = protectedProcedure.input(deleteDocumentSchema).mutation(
 
     return { success: true };
   } catch (error) {
-    console.error('Error deleting document:', {
+    logger.error('Error deleting document:', {
       error,
       documentId,
       userId: user.id,

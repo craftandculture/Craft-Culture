@@ -4,6 +4,7 @@ import { and, eq } from 'drizzle-orm';
 import db from '@/database/client';
 import { quotes } from '@/database/schema';
 import { protectedProcedure } from '@/lib/trpc/procedures';
+import logger from '@/utils/logger';
 
 import updateQuoteSchema from '../schemas/updateQuoteSchema';
 
@@ -52,7 +53,7 @@ const quotesUpdate = protectedProcedure
 
       return updatedQuote;
     } catch (error) {
-      console.error('Error updating quote:', error);
+      logger.error('Error updating quote', { error });
       throw new TRPCError({
         code: 'INTERNAL_SERVER_ERROR',
         message: 'Failed to update quote',

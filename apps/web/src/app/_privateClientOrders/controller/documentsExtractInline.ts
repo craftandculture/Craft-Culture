@@ -4,6 +4,7 @@ import { generateObject } from 'ai';
 import { z } from 'zod';
 
 import { winePartnerProcedure } from '@/lib/trpc/procedures';
+import logger from '@/utils/logger';
 
 const extractInlineSchema = z.object({
   file: z.string().describe('Base64 encoded file data URL'),
@@ -56,7 +57,7 @@ const documentsExtractInline = winePartnerProcedure.input(extractInlineSchema).m
   const openaiKey = process.env.OPENAI_API_KEY;
 
   // Debug logging - will show in Vercel function logs
-  console.log('[DocumentExtraction] Runtime env check:', {
+  logger.info('[DocumentExtraction] Runtime env check:', {
     hasKey: !!openaiKey,
     keyLength: openaiKey?.length ?? 0,
     keyPrefix: openaiKey?.substring(0, 7) ?? 'none',
@@ -175,7 +176,7 @@ Be precise with numbers and amounts.`,
       data: extractedData,
     };
   } catch (error) {
-    console.error('Document extraction failed:', {
+    logger.error('Document extraction failed:', {
       error: error instanceof Error ? error.message : 'Unknown error',
     });
 

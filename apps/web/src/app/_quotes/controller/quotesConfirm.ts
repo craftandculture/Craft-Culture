@@ -5,6 +5,7 @@ import logAdminActivity from '@/app/_admin/utils/logAdminActivity';
 import db from '@/database/client';
 import { quotes, users } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
+import logger from '@/utils/logger';
 
 import confirmQuoteSchema from '../schemas/confirmQuoteSchema';
 
@@ -209,7 +210,7 @@ const quotesConfirm = adminProcedure
         '../utils/notifyUserOfQuoteConfirmation'
       );
       notifyUserOfQuoteConfirmation(updatedQuote).catch((error) =>
-        console.error('Failed to send quote confirmation notification:', error),
+        logger.error('Failed to send quote confirmation notification', { error }),
       );
 
       // Log admin activity
@@ -228,7 +229,7 @@ const quotesConfirm = adminProcedure
 
       return updatedQuote;
     } catch (error) {
-      console.error('Error confirming quote:', { error, quoteId, adminId: user.id });
+      logger.error('Error confirming quote', { error, quoteId, adminId: user.id });
       throw new TRPCError({
         code: 'INTERNAL_SERVER_ERROR',
         message: 'Failed to confirm quote',
