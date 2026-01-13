@@ -4,8 +4,8 @@ import settingsGetController from '@/app/_admin/controllers/settingsGetControlle
 import db from '@/database/client';
 import { productOffers, products } from '@/database/schema';
 import conflictUpdateSet from '@/database/utils/conflictUpdateSet';
-import logger from '@/lib/logger';
 import downloadGoogleSheet from '@/utils/downloadGoogleSheet';
+import logger from '@/utils/logger';
 import splitArrayBatches from '@/utils/splitArrayBatches';
 
 import parseLocalInventorySheet from '../utils/parseLocalInventorySheet';

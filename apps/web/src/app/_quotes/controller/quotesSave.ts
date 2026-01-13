@@ -2,8 +2,8 @@ import { TRPCError } from '@trpc/server';
 
 import db from '@/database/client';
 import { quotes } from '@/database/schema';
-import logger from '@/lib/logger';
 import { protectedProcedure } from '@/lib/trpc/procedures';
+import logger from '@/utils/logger';
 import logUserActivity from '@/utils/logUserActivity';
 
 import saveQuoteSchema from '../schemas/saveQuoteSchema';
