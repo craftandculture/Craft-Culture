@@ -32,9 +32,9 @@ interface LocalStockItem {
 
 const formatPrice = (price: number) => `$${Math.round(price).toLocaleString()}`;
 
-const formatCaseConfig = (unitCount: number, unitSize: string) => `${unitCount}x${unitSize}`;
+const _formatCaseConfig = (unitCount: number, unitSize: string) => `${unitCount}x${unitSize}`;
 
-const pricePerBottle = (price: number, unitCount: number) => Math.round(price / unitCount);
+const _pricePerBottle = (price: number, unitCount: number) => Math.round(price / unitCount);
 
 /**
  * Generate wine card HTML

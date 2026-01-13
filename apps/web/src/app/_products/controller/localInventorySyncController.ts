@@ -21,6 +21,18 @@ export interface SyncResult {
   offersDeleted: number;
   totalItems: number;
   errors: string[];
+  parseStats: {
+    total: number;
+    matched: number;
+    unmatched: number;
+    skipped: number;
+    lwinDirect: number;
+    lwinFuzzy: number;
+  };
+  skippedRows: Array<{
+    rowNumber: number;
+    reason: string;
+  }>;
 }
 
 /**
@@ -46,6 +58,15 @@ const localInventorySyncController = async () => {
     offersDeleted: 0,
     totalItems: 0,
     errors: [],
+    parseStats: {
+      total: 0,
+      matched: 0,
+      unmatched: 0,
+      skipped: 0,
+      lwinDirect: 0,
+      lwinFuzzy: 0,
+    },
+    skippedRows: [],
   };
 
   try {
@@ -63,8 +84,13 @@ const localInventorySyncController = async () => {
     // 2. Download the sheet
     const buffer = await downloadGoogleSheet(googleSheetId);
 
-    // 3. Parse the sheet
-    const items = await parseLocalInventorySheet(buffer);
+    // 3. Parse the sheet with LWIN matching
+    const parseResult = await parseLocalInventorySheet(buffer);
+    const { items, skipped, stats: parseStats } = parseResult;
+
+    // Update parse statistics
+    stats.parseStats = parseStats;
+    stats.skippedRows = skipped;
 
     if (items.length === 0) {
       throw new Error('No inventory items found in the sheet');
