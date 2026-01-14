@@ -115,7 +115,8 @@ const exportRfqToExcel = (rfq: RfqData) => {
       'Country',
       'Bottle Size',
       'Case Config',
-      'LWIN',
+      'LWIN7',
+      'LWIN18',
       'Qty Requested',
       'Qty Unit',
       'Original Text',
@@ -128,6 +129,10 @@ const exportRfqToExcel = (rfq: RfqData) => {
   rfq.items.forEach((item, idx) => {
     const hasQuotes = item.quotes.some((q) => q.quote.costPricePerCaseUsd !== null);
     const hasSelection = item.quotes.some((q) => q.quote.isSelected);
+    // Extract LWIN7 from LWIN (first 7 chars if it's a full LWIN18, or use as-is if shorter)
+    const lwin = item.lwin || '';
+    const lwin7 = lwin.length >= 7 ? lwin.substring(0, 7) : lwin;
+    const lwin18 = lwin.length >= 11 ? lwin : ''; // Only show as LWIN18 if it's long enough
 
     itemsData.push([
       idx + 1,
@@ -138,7 +143,8 @@ const exportRfqToExcel = (rfq: RfqData) => {
       item.country || '',
       item.bottleSize || '',
       item.caseConfig || '',
-      item.lwin || '',
+      lwin7,
+      lwin18,
       item.quantity || '',
       item.quantityUnit || 'cases',
       item.originalText || '',
@@ -158,7 +164,8 @@ const exportRfqToExcel = (rfq: RfqData) => {
     { wch: 12 }, // Country
     { wch: 10 }, // Bottle Size
     { wch: 10 }, // Case Config
-    { wch: 20 }, // LWIN
+    { wch: 10 }, // LWIN7
+    { wch: 20 }, // LWIN18
     { wch: 12 }, // Qty Requested
     { wch: 10 }, // Qty Unit
     { wch: 40 }, // Original Text
@@ -303,7 +310,8 @@ const exportRfqToExcel = (rfq: RfqData) => {
       'Country',
       'Bottle Size',
       'Case Config',
-      'LWIN',
+      'LWIN7',
+      'LWIN18',
       'Qty',
       'Unit',
       'Supplier',
@@ -372,6 +380,10 @@ const exportRfqToExcel = (rfq: RfqData) => {
       const effectiveLwin = quote.quoteType === 'alternative'
         ? quote.alternativeLwin || item.lwin
         : item.lwin;
+      // Extract LWIN7 and LWIN18 from effective LWIN
+      const lwin = effectiveLwin || '';
+      const effectiveLwin7 = lwin.length >= 7 ? lwin.substring(0, 7) : lwin;
+      const effectiveLwin18 = lwin.length >= 11 ? lwin : '';
 
       selectedData.push([
         idx + 1,
@@ -382,7 +394,8 @@ const exportRfqToExcel = (rfq: RfqData) => {
         effectiveCountry || '',
         effectiveBottleSize || '',
         effectiveCaseConfig || '',
-        effectiveLwin || '',
+        effectiveLwin7,
+        effectiveLwin18,
         quantity,
         item.quantityUnit || 'cases',
         q.partner.businessName,
@@ -401,6 +414,7 @@ const exportRfqToExcel = (rfq: RfqData) => {
   // Totals
   selectedData.push([]);
   selectedData.push([
+    '',
     '',
     '',
     '',
@@ -436,6 +450,7 @@ const exportRfqToExcel = (rfq: RfqData) => {
     '',
     '',
     '',
+    '',
     'MARGIN',
     '',
     '',
@@ -447,6 +462,7 @@ const exportRfqToExcel = (rfq: RfqData) => {
     '',
   ]);
   selectedData.push([
+    '',
     '',
     '',
     '',
@@ -479,7 +495,8 @@ const exportRfqToExcel = (rfq: RfqData) => {
     { wch: 10 }, // Country
     { wch: 10 }, // Bottle Size
     { wch: 10 }, // Case Config
-    { wch: 18 }, // LWIN
+    { wch: 10 }, // LWIN7
+    { wch: 20 }, // LWIN18
     { wch: 6 },  // Qty
     { wch: 8 },  // Unit
     { wch: 18 }, // Supplier
@@ -616,7 +633,8 @@ const exportRfqToExcel = (rfq: RfqData) => {
       'Country',
       'Bottle Size',
       'Case Config',
-      'LWIN',
+      'LWIN7',
+      'LWIN18',
       'Qty',
       'Unit',
       'N/A Reasons',
@@ -630,6 +648,11 @@ const exportRfqToExcel = (rfq: RfqData) => {
       .map((q) => `${q.partner.businessName}: ${q.quote.notAvailableReason}`)
       .join('; ');
 
+    // Extract LWIN7 and LWIN18
+    const lwin = item.lwin || '';
+    const lwin7 = lwin.length >= 7 ? lwin.substring(0, 7) : lwin;
+    const lwin18 = lwin.length >= 11 ? lwin : '';
+
     unquotedData.push([
       idx + 1,
       item.productName || '',
@@ -639,7 +662,8 @@ const exportRfqToExcel = (rfq: RfqData) => {
       item.country || '',
       item.bottleSize || '',
       item.caseConfig || '',
-      item.lwin || '',
+      lwin7,
+      lwin18,
       item.quantity || '',
       item.quantityUnit || 'cases',
       naReasons || 'No responses',
@@ -656,7 +680,8 @@ const exportRfqToExcel = (rfq: RfqData) => {
     { wch: 10 }, // Country
     { wch: 10 }, // Bottle Size
     { wch: 10 }, // Case Config
-    { wch: 18 }, // LWIN
+    { wch: 10 }, // LWIN7
+    { wch: 20 }, // LWIN18
     { wch: 6 },  // Qty
     { wch: 8 },  // Unit
     { wch: 50 }, // N/A Reasons
