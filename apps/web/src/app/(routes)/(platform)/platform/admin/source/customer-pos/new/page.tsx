@@ -31,11 +31,11 @@ const NewCustomerPoPage = () => {
   const [notes, setNotes] = useState('');
   const [selectedRfqId, setSelectedRfqId] = useState<string | null>(rfqIdParam);
 
-  // Get RFQs for linking
+  // Get RFQs for linking (show confirmed RFQs that can have customer POs linked)
   const { data: rfqsData } = useQuery({
     ...api.source.admin.getMany.queryOptions({
       limit: 50,
-      status: 'finalized',
+      status: 'confirmed',
     }),
   });
 
