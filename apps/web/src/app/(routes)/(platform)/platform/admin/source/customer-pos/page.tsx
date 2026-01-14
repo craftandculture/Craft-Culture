@@ -3,6 +3,7 @@
 import {
   IconChevronRight,
   IconCurrencyDollar,
+  IconFileText,
   IconPackage,
   IconPlus,
   IconSearch,
@@ -68,7 +69,7 @@ const CustomerPosPage = () => {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <Typography variant="headingLg" className="mb-2">
-              Customer POs
+              SOURCE
             </Typography>
             <Typography variant="bodyMd" colorRole="muted">
               Manage customer purchase orders and track profit margins
@@ -78,6 +79,24 @@ const CustomerPosPage = () => {
             <Button variant="default" colorRole="brand">
               <ButtonContent iconLeft={IconPlus}>New Customer PO</ButtonContent>
             </Button>
+          </Link>
+        </div>
+
+        {/* Sub-navigation */}
+        <div className="flex gap-1 border-b border-border-muted">
+          <Link
+            href="/platform/admin/source"
+            className="flex items-center gap-2 border-b-2 border-transparent px-4 py-2 text-sm font-medium text-text-muted hover:border-border-muted hover:text-text-primary"
+          >
+            <IconSearch className="h-4 w-4" />
+            RFQs
+          </Link>
+          <Link
+            href="/platform/admin/source/customer-pos"
+            className="flex items-center gap-2 border-b-2 border-border-brand px-4 py-2 text-sm font-medium text-text-brand"
+          >
+            <IconFileText className="h-4 w-4" />
+            Customer POs
           </Link>
         </div>
 

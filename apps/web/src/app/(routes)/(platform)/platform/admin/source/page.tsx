@@ -3,6 +3,7 @@
 import {
   IconCalendar,
   IconChevronRight,
+  IconFileText,
   IconPlus,
   IconSearch,
   IconTrash,
@@ -82,7 +83,7 @@ const SourcePage = () => {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <Typography variant="headingLg" className="mb-2">
-              SOURCE - RFQ Management
+              SOURCE
             </Typography>
             <Typography variant="bodyMd" colorRole="muted">
               Create and manage sourcing requests for out-of-stock items
@@ -92,6 +93,24 @@ const SourcePage = () => {
             <Button variant="default" colorRole="brand">
               <ButtonContent iconLeft={IconPlus}>New RFQ</ButtonContent>
             </Button>
+          </Link>
+        </div>
+
+        {/* Sub-navigation */}
+        <div className="flex gap-1 border-b border-border-muted">
+          <Link
+            href="/platform/admin/source"
+            className="flex items-center gap-2 border-b-2 border-border-brand px-4 py-2 text-sm font-medium text-text-brand"
+          >
+            <IconSearch className="h-4 w-4" />
+            RFQs
+          </Link>
+          <Link
+            href="/platform/admin/source/customer-pos"
+            className="flex items-center gap-2 border-b-2 border-transparent px-4 py-2 text-sm font-medium text-text-muted hover:border-border-muted hover:text-text-primary"
+          >
+            <IconFileText className="h-4 w-4" />
+            Customer POs
           </Link>
         </div>
 
