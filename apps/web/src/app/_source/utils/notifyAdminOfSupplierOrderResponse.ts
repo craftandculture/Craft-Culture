@@ -74,7 +74,7 @@ const notifyAdminOfSupplierOrderResponse = async ({
 
     // Determine notification message based on status
     let statusMessage: string;
-    let notificationType: string;
+    let notificationType: 'supplier_order_confirmed' | 'supplier_order_updated' | 'supplier_order_rejected';
 
     if (status === 'confirmed') {
       statusMessage = `confirmed all ${confirmedCount} items`;
