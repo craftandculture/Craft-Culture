@@ -54,9 +54,13 @@ const adminCreateCustomerPo = adminProcedure
         throw error;
       }
 
+      // Include actual error message for debugging
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+
       throw new TRPCError({
         code: 'INTERNAL_SERVER_ERROR',
-        message: 'Failed to create Customer PO. Please try again.',
+        message: `Failed to create Customer PO: ${errorMessage}`,
       });
     }
   });
