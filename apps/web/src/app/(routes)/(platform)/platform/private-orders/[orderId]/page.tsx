@@ -417,6 +417,7 @@ const PrivateOrderDetailPage = () => {
               <Button
                 onClick={handleSubmitOrder}
                 disabled={isSubmitting}
+                colorRole="brand"
               >
                 <ButtonContent iconLeft={IconCheck}>
                   {isSubmitting ? 'Submitting...' : 'Submit for Review'}
@@ -428,6 +429,7 @@ const PrivateOrderDetailPage = () => {
               <Button
                 onClick={handleApproveRevisions}
                 disabled={isApproving}
+                colorRole="brand"
               >
                 <ButtonContent iconLeft={IconCheck}>
                   {isApproving ? 'Approving...' : 'Approve Revisions'}
@@ -971,7 +973,8 @@ const PrivateOrderDetailPage = () => {
                 </Typography>
                 {canEditItems && !isAddingItem && (
                   <Button
-                    variant="outline"
+                    variant="default"
+                    colorRole="brand"
                     size="sm"
                     onClick={() => setIsAddingItem(true)}
                   >
@@ -1178,7 +1181,8 @@ const PrivateOrderDetailPage = () => {
                 </Typography>
                 {canEditItems && (
                   <Button
-                    variant="outline"
+                    variant="default"
+                    colorRole="brand"
                     size="sm"
                     onClick={() => setIsAddingItem(true)}
                     className="mt-2"
