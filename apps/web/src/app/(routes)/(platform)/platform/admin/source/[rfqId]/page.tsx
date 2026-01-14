@@ -764,7 +764,7 @@ const RfqDetailPage = () => {
                   {canReopen && (
                     <Button
                       variant="outline"
-                      colorRole="neutral"
+                      colorRole="muted"
                       onClick={() => reopenForChanges({ rfqId })}
                       isDisabled={isReopening}
                     >
