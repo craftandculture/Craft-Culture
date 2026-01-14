@@ -86,14 +86,12 @@ const adminParseCustomerPoDocument = adminProcedure
           vintage: item.vintage || null,
           region: item.region || null,
           quantity: item.quantity,
-          sellPricePerCaseUsd: item.sellPricePerCaseUsd
-            ? String(item.sellPricePerCaseUsd)
-            : null,
+          sellPricePerCaseUsd: item.sellPricePerCaseUsd ?? null,
           sellLineTotalUsd: item.sellPricePerCaseUsd
-            ? String(item.sellPricePerCaseUsd * item.quantity)
+            ? item.sellPricePerCaseUsd * item.quantity
             : null,
           bottleSize: item.bottleSize || null,
-          caseConfig: item.caseConfig || null,
+          caseConfig: item.caseConfig ? parseInt(item.caseConfig, 10) : null,
           lwin: item.lwin || null,
           notes: item.notes || null,
           sortOrder: index,
