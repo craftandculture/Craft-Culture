@@ -131,7 +131,7 @@ const adminAutoMatchCustomerPo = adminProcedure
       const quotes = await db
         .select({
           id: sourceRfqQuotes.id,
-          rfqItemId: sourceRfqQuotes.rfqItemId,
+          itemId: sourceRfqQuotes.itemId,
           partnerId: sourceRfqQuotes.partnerId,
           costPricePerCaseUsd: sourceRfqQuotes.costPricePerCaseUsd,
           lwin: sourceRfqQuotes.lwin,
@@ -143,7 +143,7 @@ const adminAutoMatchCustomerPo = adminProcedure
         .where(
           and(
             inArray(
-              sourceRfqQuotes.rfqItemId,
+              sourceRfqQuotes.itemId,
               rfqItems.map((i) => i.id)
             ),
             isNotNull(sourceRfqQuotes.costPricePerCaseUsd),
@@ -175,9 +175,9 @@ const adminAutoMatchCustomerPo = adminProcedure
         }
 
         // Group by RFQ item
-        const existing = quotesByRfqItem.get(quote.rfqItemId) || [];
+        const existing = quotesByRfqItem.get(quote.itemId) || [];
         existing.push(quote);
-        quotesByRfqItem.set(quote.rfqItemId, existing);
+        quotesByRfqItem.set(quote.itemId, existing);
       }
 
       // Match each PO item
@@ -203,7 +203,7 @@ const adminAutoMatchCustomerPo = adminProcedure
                 : best
             );
             matchSource = 'lwin';
-            matchedRfqItemId = matchedQuote.rfqItemId;
+            matchedRfqItemId = matchedQuote.itemId;
           }
         }
 
