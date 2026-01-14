@@ -228,9 +228,12 @@ const RfqDetailPage = () => {
   const canCancel = ['sent', 'collecting', 'comparing', 'selecting', 'quote_generated', 'client_review', 'awaiting_confirmation', 'confirmed'].includes(rfq.status);
   const isCancelled = rfq.status === 'cancelled';
   const isFinalized = ['quote_generated', 'client_review', 'awaiting_confirmation', 'confirmed', 'closed'].includes(rfq.status);
+  const isQuoteGenerated = rfq.status === 'quote_generated';
   const isClientReview = rfq.status === 'client_review';
+  const isPendingClientApproval = isQuoteGenerated || isClientReview;
   const isAwaitingConfirmation = rfq.status === 'awaiting_confirmation';
   const isConfirmed = rfq.status === 'confirmed' || rfq.status === 'closed';
+  const isClientApproved = isAwaitingConfirmation || isConfirmed;
 
   // Build comparison data
   const partnerMap = new Map(rfq.partners.map((p) => [p.partnerId, p]));
@@ -666,11 +669,11 @@ const RfqDetailPage = () => {
                   {/* Step 2: Client Approval */}
                   <div className="flex items-center gap-2">
                     <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                      isClientReview
-                        ? 'bg-fill-warning/20 text-fill-warning border-2 border-fill-warning'
+                      isPendingClientApproval
+                        ? 'bg-fill-brand/20 text-fill-brand border-2 border-fill-brand'
                         : 'bg-fill-success text-white'
                     }`}>
-                      {isClientReview ? (
+                      {isPendingClientApproval ? (
                         <span className="text-sm font-bold">2</span>
                       ) : (
                         <IconCircleCheck className="w-5 h-5" />
@@ -679,7 +682,7 @@ const RfqDetailPage = () => {
                     <div className="hidden sm:block">
                       <Typography variant="bodySm" className="font-semibold">Client Approval</Typography>
                       <Typography variant="bodyXs" colorRole="muted">
-                        {isClientReview ? 'Awaiting client PO' : 'Client approved'}
+                        {isPendingClientApproval ? 'Awaiting client PO' : 'Client approved'}
                       </Typography>
                     </div>
                   </div>
@@ -689,9 +692,9 @@ const RfqDetailPage = () => {
                   {/* Step 3: Create Customer PO */}
                   <div className="flex items-center gap-2">
                     <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                      isClientReview
+                      isPendingClientApproval
                         ? 'bg-fill-muted text-text-muted'
-                        : isAwaitingConfirmation || isConfirmed
+                        : isClientApproved
                           ? 'bg-fill-brand/20 text-fill-brand border-2 border-fill-brand'
                           : 'bg-fill-success text-white'
                     }`}>
@@ -721,8 +724,8 @@ const RfqDetailPage = () => {
                     </ButtonContent>
                   </Button>
 
-                  {/* Mark Client Approved - Only show in client_review status */}
-                  {isClientReview && (
+                  {/* Mark Client Approved - Show when awaiting client approval */}
+                  {isPendingClientApproval && (
                     <Button
                       variant="default"
                       colorRole="brand"
@@ -736,7 +739,7 @@ const RfqDetailPage = () => {
                   )}
 
                   {/* Create Customer PO - Show after client approval */}
-                  {(isAwaitingConfirmation || isConfirmed) && (
+                  {isClientApproved && (
                     <Link href={`/platform/admin/source/customer-pos/new?rfqId=${rfqId}`}>
                       <Button variant="default" colorRole="brand">
                         <ButtonContent iconLeft={IconPlus}>
@@ -749,7 +752,7 @@ const RfqDetailPage = () => {
               </div>
 
               {/* Status-specific message */}
-              {isClientReview && (
+              {isPendingClientApproval && (
                 <div className="mt-3 pt-3 border-t border-border-success/30">
                   <Typography variant="bodySm" colorRole="muted">
                     Waiting for the client to review the quote and send their purchase order.
