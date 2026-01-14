@@ -677,7 +677,7 @@ const RfqDetailPage = () => {
 
                   <IconArrowRight className="w-4 h-4 text-text-muted mx-1" />
 
-                  {/* Step 2: Client Approval */}
+                  {/* Step 2: Upload Customer PO */}
                   <div className="flex items-center gap-2">
                     <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
                       isPendingClientApproval
@@ -691,16 +691,16 @@ const RfqDetailPage = () => {
                       )}
                     </div>
                     <div className="hidden sm:block">
-                      <Typography variant="bodySm" className="font-semibold">Client Approval</Typography>
+                      <Typography variant="bodySm" className="font-semibold">Upload Client PO</Typography>
                       <Typography variant="bodyXs" colorRole="muted">
-                        {isPendingClientApproval ? 'Awaiting client PO' : 'Client approved'}
+                        {isPendingClientApproval ? 'Upload & auto-match' : 'PO uploaded'}
                       </Typography>
                     </div>
                   </div>
 
                   <IconArrowRight className="w-4 h-4 text-text-muted mx-1" />
 
-                  {/* Step 3: Create Customer PO */}
+                  {/* Step 3: Generate Supplier Orders */}
                   <div className="flex items-center gap-2">
                     <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
                       isPendingClientApproval
@@ -712,9 +712,9 @@ const RfqDetailPage = () => {
                       <span className="text-sm font-bold">3</span>
                     </div>
                     <div className="hidden sm:block">
-                      <Typography variant="bodySm" className="font-semibold">Create PO</Typography>
+                      <Typography variant="bodySm" className="font-semibold">Supplier Orders</Typography>
                       <Typography variant="bodyXs" colorRole="muted">
-                        Generate supplier orders
+                        Send to partners
                       </Typography>
                     </div>
                   </div>
@@ -722,10 +722,10 @@ const RfqDetailPage = () => {
 
                 {/* Action Buttons */}
                 <div className="flex items-center gap-3 flex-wrap">
-                  {/* Download PDF Button */}
+                  {/* Download PDF Button - Secondary action */}
                   <Button
                     variant="outline"
-                    colorRole="primary"
+                    colorRole="muted"
                     size="sm"
                     onClick={() => generateFinalQuote({ rfqId })}
                     isDisabled={isGenerating}
@@ -735,21 +735,18 @@ const RfqDetailPage = () => {
                     </ButtonContent>
                   </Button>
 
-                  {/* Mark Client Approved - Show when awaiting client approval */}
+                  {/* Upload Customer PO - Primary action after quote exported */}
                   {isPendingClientApproval && (
-                    <Button
-                      variant="default"
-                      colorRole="brand"
-                      onClick={() => markClientApproved({ rfqId })}
-                      isDisabled={isMarkingApproved}
-                    >
-                      <ButtonContent iconLeft={IconCheck}>
-                        {isMarkingApproved ? 'Marking...' : 'Mark Client Approved'}
-                      </ButtonContent>
-                    </Button>
+                    <Link href={`/platform/admin/source/customer-pos/new?rfqId=${rfqId}`}>
+                      <Button variant="default" colorRole="brand">
+                        <ButtonContent iconLeft={IconPlus}>
+                          Upload Customer PO
+                        </ButtonContent>
+                      </Button>
+                    </Link>
                   )}
 
-                  {/* Create Customer PO - Show after client approval */}
+                  {/* Continue to Customer PO - Show after already approved */}
                   {isClientApproved && (
                     <Link href={`/platform/admin/source/customer-pos/new?rfqId=${rfqId}`}>
                       <Button variant="default" colorRole="brand">
@@ -760,7 +757,7 @@ const RfqDetailPage = () => {
                     </Link>
                   )}
 
-                  {/* Reopen for Changes - Show when quote is finalized but not confirmed */}
+                  {/* Edit Selections - Secondary action */}
                   {canReopen && (
                     <Button
                       variant="outline"
@@ -780,15 +777,15 @@ const RfqDetailPage = () => {
               {isPendingClientApproval && (
                 <div className="mt-3 pt-3 border-t border-border-success/30">
                   <Typography variant="bodySm" colorRole="muted">
-                    Waiting for the client to review the quote and send their purchase order.
-                    Click &quot;Mark Client Approved&quot; once you receive their PO.
+                    Upload the client&apos;s purchase order to auto-match items to quotes and generate supplier orders.
+                    You can also download a PDF quote to send to the client first.
                   </Typography>
                 </div>
               )}
               {isAwaitingConfirmation && (
                 <div className="mt-3 pt-3 border-t border-border-success/30">
                   <Typography variant="bodySm" colorRole="muted">
-                    Client has approved. Create a Customer PO to generate supplier orders and request partner confirmations.
+                    Create a Customer PO to generate supplier orders and request partner confirmations.
                   </Typography>
                 </div>
               )}
