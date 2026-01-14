@@ -2,6 +2,7 @@
 
 import {
   IconAlertTriangle,
+  IconArrowBackUp,
   IconArrowLeft,
   IconArrowRight,
   IconBan,
@@ -171,6 +172,15 @@ const RfqDetailPage = () => {
     }),
   );
 
+  // Reopen for changes mutation
+  const { mutate: reopenForChanges, isPending: isReopening } = useMutation(
+    api.source.admin.reopenForChanges.mutationOptions({
+      onSuccess: () => {
+        void refetch();
+      },
+    }),
+  );
+
   // Focus input when editing starts
   useEffect(() => {
     if (editingItemId && priceInputRef.current) {
@@ -234,6 +244,7 @@ const RfqDetailPage = () => {
   const isAwaitingConfirmation = rfq.status === 'awaiting_confirmation';
   const isConfirmed = rfq.status === 'confirmed' || rfq.status === 'closed';
   const isClientApproved = isAwaitingConfirmation || isConfirmed;
+  const canReopen = ['quote_generated', 'client_review', 'awaiting_confirmation'].includes(rfq.status);
 
   // Build comparison data
   const partnerMap = new Map(rfq.partners.map((p) => [p.partnerId, p]));
@@ -747,6 +758,20 @@ const RfqDetailPage = () => {
                         </ButtonContent>
                       </Button>
                     </Link>
+                  )}
+
+                  {/* Reopen for Changes - Show when quote is finalized but not confirmed */}
+                  {canReopen && (
+                    <Button
+                      variant="outline"
+                      colorRole="neutral"
+                      onClick={() => reopenForChanges({ rfqId })}
+                      isDisabled={isReopening}
+                    >
+                      <ButtonContent iconLeft={IconArrowBackUp}>
+                        {isReopening ? 'Reopening...' : 'Edit Selections'}
+                      </ButtonContent>
+                    </Button>
                   )}
                 </div>
               </div>

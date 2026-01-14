@@ -26,6 +26,7 @@ import adminMarkClientApproved from './controller/adminMarkClientApproved';
 import adminParseCustomerPoDocument from './controller/adminParseCustomerPoDocument';
 import adminParseInput from './controller/adminParseInput';
 import adminParseQuoteExcel from './controller/adminParseQuoteExcel';
+import adminReopenRfqForChanges from './controller/adminReopenRfqForChanges';
 import adminRequestConfirmations from './controller/adminRequestConfirmations';
 import adminSearchLwin from './controller/adminSearchLwin';
 import adminSelectQuote from './controller/adminSelectQuote';
@@ -92,6 +93,7 @@ const adminRouter = createTRPCRouter({
   // Client approval and partner confirmation
   markClientApproved: adminMarkClientApproved,
   requestConfirmations: adminRequestConfirmations,
+  reopenForChanges: adminReopenRfqForChanges,
   // Customer PO management
   customerPo: customerPoRouter,
 });
