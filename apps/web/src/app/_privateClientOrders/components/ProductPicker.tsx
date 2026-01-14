@@ -38,13 +38,15 @@ interface ProductPickerProps {
   omitProductIds?: string[];
   onRemove?: () => void;
   index?: number;
+  /** Filter products by stock source (cultx or local_inventory) */
+  source?: 'cultx' | 'local_inventory';
 }
 
 /**
  * Product picker for private client orders.
  * Defaults to catalog search mode with option for manual entry.
  */
-const ProductPicker = ({ value, onChange, omitProductIds = [], onRemove, index }: ProductPickerProps) => {
+const ProductPicker = ({ value, onChange, omitProductIds = [], onRemove, index, source }: ProductPickerProps) => {
   // Default to search mode - only show manual if explicitly toggled or has manual data without productId
   const hasManualDataOnly = !value.productId && value.productName.trim().length > 0;
   const [mode, setMode] = useState<'search' | 'manual'>(hasManualDataOnly ? 'manual' : 'search');
@@ -196,6 +198,7 @@ const ProductPicker = ({ value, onChange, omitProductIds = [], onRemove, index }
               onSelect={handleProductSelect}
               placeholder="Search wines by name, producer, region..."
               omitProductIds={omitProductIds}
+              source={source}
             />
           )}
         </div>

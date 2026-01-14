@@ -12,7 +12,7 @@ import {
   IconSparkles,
   IconX,
 } from '@tabler/icons-react';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCallback, useState } from 'react';
@@ -29,7 +29,7 @@ import Icon from '@/app/_ui/components/Icon/Icon';
 import Input from '@/app/_ui/components/Input/Input';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import type { PrivateClientContact } from '@/database/schema';
-import { useTRPCClient } from '@/lib/trpc/browser';
+import useTRPC, { useTRPCClient } from '@/lib/trpc/browser';
 
 import ProductPicker from './ProductPicker';
 
@@ -108,6 +108,13 @@ interface MatchResult {
 const PrivateOrderForm = () => {
   const router = useRouter();
   const trpcClient = useTRPCClient();
+  const api = useTRPC();
+
+  // Get partner's allowed stock source (CULT wines → cultx, others → local_inventory)
+  const { data: stockSourceData } = useQuery(
+    api.privateClientOrders.partnerGetStockSource.queryOptions(),
+  );
+  const stockSource = stockSourceData?.stockSource;
 
   // Client selection state
   const [selectedClient, setSelectedClient] = useState<PrivateClientContact | null>(null);
@@ -833,6 +840,7 @@ const PrivateOrderForm = () => {
                   onChange={(updates) => handleUpdateLineItem(item.id, updates)}
                   onRemove={() => handleRemoveLineItem(item.id)}
                   omitProductIds={usedProductIds.filter((id) => id !== item.productId)}
+                  source={stockSource}
                 />
               ))}
             </div>
