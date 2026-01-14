@@ -163,15 +163,6 @@ const RfqDetailPage = () => {
     }),
   );
 
-  // Mark client approved mutation
-  const { mutate: markClientApproved, isPending: isMarkingApproved } = useMutation(
-    api.source.admin.markClientApproved.mutationOptions({
-      onSuccess: () => {
-        void refetch();
-      },
-    }),
-  );
-
   // Reopen for changes mutation
   const { mutate: reopenForChanges, isPending: isReopening } = useMutation(
     api.source.admin.reopenForChanges.mutationOptions({
