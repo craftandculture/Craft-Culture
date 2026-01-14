@@ -12,6 +12,7 @@ import { winePartnerProcedure } from '@/lib/trpc/procedures';
 import logger from '@/utils/logger';
 
 import confirmSupplierOrderSchema from '../schemas/confirmSupplierOrderSchema';
+import notifyAdminOfSupplierOrderResponse from '../utils/notifyAdminOfSupplierOrderResponse';
 
 /**
  * Confirm, update, or reject items in a supplier order
@@ -176,12 +177,15 @@ const partnerConfirmSupplierOrder = winePartnerProcedure
           .where(eq(sourceCustomerPos.id, supplierOrder.customerPoId));
       }
 
-      // TODO: Notify admin of partner response
-      // await notifyAdminOfOrderResponse({
-      //   orderId: supplierOrderId,
-      //   partnerId: user.partnerId,
-      //   status: newOrderStatus,
-      // });
+      // Notify admins of partner response
+      void notifyAdminOfSupplierOrderResponse({
+        supplierOrderId,
+        partnerId,
+        status: newOrderStatus,
+        confirmedCount,
+        updatedCount,
+        rejectedCount,
+      });
 
       return {
         success: true,
