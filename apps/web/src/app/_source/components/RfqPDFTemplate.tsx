@@ -124,10 +124,6 @@ const styles = StyleSheet.create({
     flex: 1.3,
     textAlign: 'right',
   },
-  colSupplier: {
-    flex: 1.5,
-    textAlign: 'left',
-  },
   productName: {
     fontWeight: 'bold',
     marginBottom: 3,
@@ -368,7 +364,6 @@ const RfqPDFTemplate = ({
               <Text style={styles.colQuantity}>Qty</Text>
               <Text style={styles.colPrice}>Per Case</Text>
               <Text style={styles.colTotal}>Total</Text>
-              <Text style={styles.colSupplier}>Supplier</Text>
             </View>
 
             {lineItems.map((item, index) => {
@@ -415,7 +410,6 @@ const RfqPDFTemplate = ({
                   </Text>
                   <Text style={styles.colPrice}>{formatPrice(item.pricePerCase)}</Text>
                   <Text style={styles.colTotal}>{formatPrice(item.lineTotal)}</Text>
-                  <Text style={styles.colSupplier}>{item.supplierName || '-'}</Text>
                 </View>
               );
             })}
