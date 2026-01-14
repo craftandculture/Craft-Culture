@@ -262,9 +262,7 @@ const adminAutoMatchCustomerPo = adminProcedure
         }
 
         // Calculate profit
-        const sellPrice = poItem.sellPricePerCaseUsd
-          ? parseFloat(poItem.sellPricePerCaseUsd)
-          : null;
+        const sellPrice = poItem.sellPricePerCaseUsd ?? null;
         const buyPrice = matchedQuote?.costPricePerCaseUsd ?? null;
 
         let profitUsd: number | null = null;
@@ -307,14 +305,13 @@ const adminAutoMatchCustomerPo = adminProcedure
           .set({
             matchedQuoteId: matchedQuote?.id || null,
             matchedRfqItemId: matchedRfqItemId || null,
-            buyPricePerCaseUsd: buyPrice ? String(buyPrice) : null,
+            buyPricePerCaseUsd: buyPrice,
             buyLineTotalUsd:
               buyPrice !== null
-                ? String(Math.round(buyPrice * poItem.quantity * 100) / 100)
+                ? Math.round(buyPrice * poItem.quantity * 100) / 100
                 : null,
-            profitUsd: profitUsd !== null ? String(profitUsd * poItem.quantity) : null,
-            profitMarginPercent:
-              profitMarginPercent !== null ? String(profitMarginPercent) : null,
+            profitUsd: profitUsd !== null ? profitUsd * poItem.quantity : null,
+            profitMarginPercent,
             isLosingItem,
             matchSource: matchSource || null,
             status: matchedQuote ? 'matched' : 'unmatched',
@@ -345,10 +342,10 @@ const adminAutoMatchCustomerPo = adminProcedure
         .set({
           status: 'matched',
           matchedAt: new Date(),
-          totalSellPriceUsd: String(Math.round(totalSell * 100) / 100),
-          totalBuyPriceUsd: String(Math.round(totalBuy * 100) / 100),
-          totalProfitUsd: String(Math.round(totalProfit * 100) / 100),
-          profitMarginPercent: String(Math.round(overallMargin * 100) / 100),
+          totalSellPriceUsd: Math.round(totalSell * 100) / 100,
+          totalBuyPriceUsd: Math.round(totalBuy * 100) / 100,
+          totalProfitUsd: Math.round(totalProfit * 100) / 100,
+          profitMarginPercent: Math.round(overallMargin * 100) / 100,
           losingItemCount: losingCount,
         })
         .where(eq(sourceCustomerPos.id, input.customerPoId));
