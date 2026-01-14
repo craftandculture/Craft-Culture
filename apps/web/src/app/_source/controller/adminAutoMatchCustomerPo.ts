@@ -146,8 +146,7 @@ const adminAutoMatchCustomerPo = adminProcedure
               sourceRfqQuotes.itemId,
               rfqItems.map((i) => i.id)
             ),
-            isNotNull(sourceRfqQuotes.costPricePerCaseUsd),
-            inArray(sourceRfqQuotes.status, ['submitted', 'confirmed'])
+            isNotNull(sourceRfqQuotes.costPricePerCaseUsd)
           )
         );
 
