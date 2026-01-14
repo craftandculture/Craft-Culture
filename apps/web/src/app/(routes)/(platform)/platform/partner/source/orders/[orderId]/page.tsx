@@ -41,6 +41,8 @@ const PartnerSupplierOrderDetailPage = () => {
     new Map(),
   );
   const [partnerNotes, setPartnerNotes] = useState('');
+  const [rejectingItemId, setRejectingItemId] = useState<string | null>(null);
+  const [rejectionReason, setRejectionReason] = useState('');
 
   const { data: order, isLoading } = useQuery({
     ...api.source.partner.supplierOrders.getOne.queryOptions({ id: params.orderId }),
@@ -223,7 +225,7 @@ const PartnerSupplierOrderDetailPage = () => {
                         )}
                       </div>
 
-                      {canConfirm && !confirmation && (
+                      {canConfirm && !confirmation && rejectingItemId !== item.id && (
                         <div className="flex items-center gap-2">
                           <Button
                             variant="outline"
@@ -238,14 +240,63 @@ const PartnerSupplierOrderDetailPage = () => {
                             colorRole="danger"
                             size="sm"
                             onClick={() => {
-                              const reason = prompt('Reason for rejection:');
-                              if (reason) {
-                                handleRejectItem(item.id, reason);
-                              }
+                              setRejectingItemId(item.id);
+                              setRejectionReason('');
                             }}
                           >
                             <ButtonContent iconLeft={IconX}>Reject</ButtonContent>
                           </Button>
+                        </div>
+                      )}
+
+                      {rejectingItemId === item.id && (
+                        <div className="flex flex-col gap-2 w-full sm:w-auto sm:min-w-[280px]">
+                          <input
+                            type="text"
+                            value={rejectionReason}
+                            onChange={(e) => setRejectionReason(e.target.value)}
+                            placeholder="Reason for rejection..."
+                            className="w-full rounded-lg border border-border-danger bg-background-primary px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
+                            autoFocus
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' && rejectionReason.trim()) {
+                                handleRejectItem(item.id, rejectionReason.trim());
+                                setRejectingItemId(null);
+                                setRejectionReason('');
+                              } else if (e.key === 'Escape') {
+                                setRejectingItemId(null);
+                                setRejectionReason('');
+                              }
+                            }}
+                          />
+                          <div className="flex gap-2">
+                            <Button
+                              variant="default"
+                              colorRole="danger"
+                              size="sm"
+                              onClick={() => {
+                                if (rejectionReason.trim()) {
+                                  handleRejectItem(item.id, rejectionReason.trim());
+                                  setRejectingItemId(null);
+                                  setRejectionReason('');
+                                } else {
+                                  toast.warning('Please enter a reason');
+                                }
+                              }}
+                            >
+                              <ButtonContent>Confirm Rejection</ButtonContent>
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setRejectingItemId(null);
+                                setRejectionReason('');
+                              }}
+                            >
+                              <ButtonContent>Cancel</ButtonContent>
+                            </Button>
+                          </div>
                         </div>
                       )}
 
