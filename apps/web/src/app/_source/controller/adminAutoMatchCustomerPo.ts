@@ -154,11 +154,11 @@ const adminAutoMatchCustomerPo = adminProcedure
       const partnerIds = [...new Set(quotes.map((q) => q.partnerId))];
       const partnerData = partnerIds.length > 0
         ? await db
-            .select({ id: partners.id, name: partners.name })
+            .select({ id: partners.id, businessName: partners.businessName })
             .from(partners)
             .where(inArray(partners.id, partnerIds))
         : [];
-      const partnerMap = new Map(partnerData.map((p) => [p.id, p.name]));
+      const partnerMap = new Map(partnerData.map((p) => [p.id, p.businessName]));
 
       // Build lookup maps
       const quotesByLwin = new Map<string, typeof quotes>();
