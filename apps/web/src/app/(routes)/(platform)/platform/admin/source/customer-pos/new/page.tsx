@@ -31,15 +31,27 @@ const NewCustomerPoPage = () => {
   const [notes, setNotes] = useState('');
   const [selectedRfqId, setSelectedRfqId] = useState<string | null>(rfqIdParam);
 
-  // Get RFQs for linking (show confirmed RFQs that can have customer POs linked)
+  // Get RFQs for linking (show RFQs at quote_generated or later stages)
+  // In PO-first flow, we link to RFQs that have received quotes
   const { data: rfqsData } = useQuery({
     ...api.source.admin.getMany.queryOptions({
       limit: 50,
-      status: 'confirmed',
     }),
   });
 
-  const rfqs = rfqsData?.data ?? [];
+  // Filter to only show RFQs that can have customer POs linked
+  // (quote_generated, client_review, awaiting_confirmation, confirmed, finalized)
+  const linkableStatuses = [
+    'quote_generated',
+    'client_review',
+    'awaiting_confirmation',
+    'confirmed',
+    'finalized',
+  ];
+
+  const rfqs = (rfqsData?.data ?? []).filter((rfq) =>
+    linkableStatuses.includes(rfq.status)
+  );
 
   // Get selected RFQ details
   const { data: selectedRfq } = useQuery({
