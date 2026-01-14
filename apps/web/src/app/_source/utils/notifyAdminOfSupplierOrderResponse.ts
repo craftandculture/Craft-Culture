@@ -88,7 +88,7 @@ const notifyAdminOfSupplierOrderResponse = async ({
       if (updatedCount > 0) parts.push(`${updatedCount} updated`);
       if (rejectedCount > 0) parts.push(`${rejectedCount} rejected`);
       statusMessage = parts.join(', ');
-      notificationType = 'supplier_order_partial';
+      notificationType = 'supplier_order_updated';
     }
 
     const totalFormatted = new Intl.NumberFormat('en-US', {

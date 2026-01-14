@@ -14,7 +14,10 @@ interface CreateAdminNotificationsParams {
     | 'payment_received'
     | 'payment_proof_submitted'
     | 'order_delivered'
-    | 'rfq_response_submitted';
+    | 'rfq_response_submitted'
+    | 'supplier_order_confirmed'
+    | 'supplier_order_updated'
+    | 'supplier_order_rejected';
   title: string;
   message: string;
   entityType?: string;
