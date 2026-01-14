@@ -39,11 +39,11 @@ const NewCustomerPoPage = () => {
     }),
   });
 
-  const rfqs = rfqsData?.items ?? [];
+  const rfqs = rfqsData?.data ?? [];
 
   // Get selected RFQ details
   const { data: selectedRfq } = useQuery({
-    ...api.source.admin.getOne.queryOptions({ id: selectedRfqId ?? '' }),
+    ...api.source.admin.getOne.queryOptions({ rfqId: selectedRfqId ?? '' }),
     enabled: !!selectedRfqId,
   });
 
@@ -91,8 +91,8 @@ const NewCustomerPoPage = () => {
     createCustomerPo({
       poNumber: poNumber.trim(),
       customerName: customerName.trim(),
+      customerEmail: customerEmail.trim(),
       customerCompany: customerCompany.trim() || undefined,
-      customerEmail: customerEmail.trim() || undefined,
       rfqId: selectedRfqId || undefined,
       notes: notes.trim() || undefined,
     });
