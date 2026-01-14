@@ -127,6 +127,9 @@ const adminAutoMatchCustomerPo = adminProcedure
         .from(sourceRfqItems)
         .where(eq(sourceRfqItems.rfqId, customerPo.rfqId));
 
+      // Build RFQ item lookup for LWIN matching
+      const rfqItemMap = new Map(rfqItems.map((i) => [i.id, i]));
+
       // Get all quotes for this RFQ with prices (only confirmed/submitted quotes)
       const quotes = await db
         .select({
@@ -134,10 +137,7 @@ const adminAutoMatchCustomerPo = adminProcedure
           itemId: sourceRfqQuotes.itemId,
           partnerId: sourceRfqQuotes.partnerId,
           costPricePerCaseUsd: sourceRfqQuotes.costPricePerCaseUsd,
-          lwin: sourceRfqQuotes.lwin,
-          productName: sourceRfqQuotes.productName,
-          vintage: sourceRfqQuotes.vintage,
-          status: sourceRfqQuotes.status,
+          quotedVintage: sourceRfqQuotes.quotedVintage,
         })
         .from(sourceRfqQuotes)
         .where(
@@ -166,9 +166,10 @@ const adminAutoMatchCustomerPo = adminProcedure
       const quotesByRfqItem = new Map<string, typeof quotes>();
 
       for (const quote of quotes) {
-        // Group by LWIN
-        if (quote.lwin) {
-          const lwinKey = quote.lwin.substring(0, 7); // Use LWIN7 for matching
+        // Group by LWIN (from the RFQ item)
+        const rfqItem = rfqItemMap.get(quote.itemId);
+        if (rfqItem?.lwin) {
+          const lwinKey = rfqItem.lwin.substring(0, 7); // Use LWIN7 for matching
           const existing = quotesByLwin.get(lwinKey) || [];
           existing.push(quote);
           quotesByLwin.set(lwinKey, existing);
@@ -197,8 +198,7 @@ const adminAutoMatchCustomerPo = adminProcedure
           if (lwinQuotes && lwinQuotes.length > 0) {
             // Get lowest price
             matchedQuote = lwinQuotes.reduce((best, curr) =>
-              parseFloat(curr.costPricePerCaseUsd || '0') <
-              parseFloat(best.costPricePerCaseUsd || '0')
+              (curr.costPricePerCaseUsd ?? 0) < (best.costPricePerCaseUsd ?? 0)
                 ? curr
                 : best
             );
@@ -221,16 +221,15 @@ const adminAutoMatchCustomerPo = adminProcedure
               if (itemQuotes && itemQuotes.length > 0) {
                 // Get lowest price
                 const bestQuote = itemQuotes.reduce((best, curr) =>
-                  parseFloat(curr.costPricePerCaseUsd || '0') <
-                  parseFloat(best.costPricePerCaseUsd || '0')
+                  (curr.costPricePerCaseUsd ?? 0) < (best.costPricePerCaseUsd ?? 0)
                     ? curr
                     : best
                 );
 
                 if (
                   !matchedQuote ||
-                  parseFloat(bestQuote.costPricePerCaseUsd || '0') <
-                    parseFloat(matchedQuote.costPricePerCaseUsd || '0')
+                  (bestQuote.costPricePerCaseUsd ?? 0) <
+                    (matchedQuote.costPricePerCaseUsd ?? 0)
                 ) {
                   matchedQuote = bestQuote;
                   matchSource = 'product_name';
@@ -250,8 +249,7 @@ const adminAutoMatchCustomerPo = adminProcedure
               const itemQuotes = quotesByRfqItem.get(rfqItem.id);
               if (itemQuotes && itemQuotes.length > 0) {
                 const bestQuote = itemQuotes.reduce((best, curr) =>
-                  parseFloat(curr.costPricePerCaseUsd || '0') <
-                  parseFloat(best.costPricePerCaseUsd || '0')
+                  (curr.costPricePerCaseUsd ?? 0) < (best.costPricePerCaseUsd ?? 0)
                     ? curr
                     : best
                 );
@@ -268,9 +266,7 @@ const adminAutoMatchCustomerPo = adminProcedure
         const sellPrice = poItem.sellPricePerCaseUsd
           ? parseFloat(poItem.sellPricePerCaseUsd)
           : null;
-        const buyPrice = matchedQuote?.costPricePerCaseUsd
-          ? parseFloat(matchedQuote.costPricePerCaseUsd)
-          : null;
+        const buyPrice = matchedQuote?.costPricePerCaseUsd ?? null;
 
         let profitUsd: number | null = null;
         let profitMarginPercent: number | null = null;
