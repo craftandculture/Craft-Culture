@@ -1098,13 +1098,24 @@ const PrivateOrderDetailPage = () => {
                               {formatCurrencyValue(getAmount(editingItem.quantity * editingItem.pricePerCaseUsd), currency)}
                             </td>
                             <td className="px-2 py-1.5 text-center">
-                              <div className="flex justify-center gap-1">
-                                <Button variant="ghost" size="xs" onClick={handleSaveItem} disabled={isUpdatingItem}>
-                                  <Icon icon={IconCheck} size="xs" colorRole="success" />
-                                </Button>
-                                <Button variant="ghost" size="xs" onClick={() => setEditingItem(null)}>
-                                  <Icon icon={IconX} size="xs" colorRole="muted" />
-                                </Button>
+                              <div className="flex justify-center gap-1.5">
+                                <button
+                                  type="button"
+                                  onClick={handleSaveItem}
+                                  disabled={isUpdatingItem}
+                                  className="flex h-6 w-6 items-center justify-center rounded-md bg-fill-success/15 text-fill-success transition-colors hover:bg-fill-success/25 disabled:opacity-50"
+                                  title="Save changes"
+                                >
+                                  <Icon icon={IconCheck} size="xs" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setEditingItem(null)}
+                                  className="flex h-6 w-6 items-center justify-center rounded-md bg-fill-muted/30 text-text-muted transition-colors hover:bg-fill-muted/50"
+                                  title="Cancel"
+                                >
+                                  <Icon icon={IconX} size="xs" />
+                                </button>
                               </div>
                             </td>
                           </tr>
@@ -1133,19 +1144,24 @@ const PrivateOrderDetailPage = () => {
                           </td>
                           {canEditItems && (
                             <td className="px-2 py-1.5 text-center">
-                              <div className="flex items-center justify-center gap-0.5">
-                                <Button variant="ghost" size="xs" onClick={() => handleEditItem(item)} className="h-5 w-5 p-0">
-                                  <Icon icon={IconEdit} size="xs" colorRole="muted" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="xs"
+                              <div className="flex items-center justify-center gap-1.5">
+                                <button
+                                  type="button"
+                                  onClick={() => handleEditItem(item)}
+                                  className="flex h-6 w-6 items-center justify-center rounded-md bg-fill-brand/10 text-text-brand transition-colors hover:bg-fill-brand/20"
+                                  title="Edit item"
+                                >
+                                  <Icon icon={IconEdit} size="xs" />
+                                </button>
+                                <button
+                                  type="button"
                                   onClick={() => handleRemoveItem(item.id)}
                                   disabled={isRemovingItem}
-                                  className="h-5 w-5 p-0"
+                                  className="flex h-6 w-6 items-center justify-center rounded-md bg-fill-danger/10 text-fill-danger transition-colors hover:bg-fill-danger/20 disabled:opacity-50"
+                                  title="Remove item"
                                 >
-                                  <Icon icon={IconTrash} size="xs" colorRole="danger" />
-                                </Button>
+                                  <Icon icon={IconTrash} size="xs" />
+                                </button>
                               </div>
                             </td>
                           )}
