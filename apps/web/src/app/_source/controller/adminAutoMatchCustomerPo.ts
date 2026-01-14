@@ -313,7 +313,7 @@ const adminAutoMatchCustomerPo = adminProcedure
             profitUsd: profitUsd !== null ? profitUsd * poItem.quantity : null,
             profitMarginPercent,
             isLosingItem,
-            matchSource: matchSource || null,
+            matchSource: matchSource ? 'auto' : null,
             status: matchedQuote ? 'matched' : 'unmatched',
           })
           .where(eq(sourceCustomerPoItems.id, poItem.id));
