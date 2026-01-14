@@ -46,11 +46,12 @@ const adminMarkClientApproved = adminProcedure
       });
     }
 
-    // Can only mark as client approved from 'client_review' status
-    if (existing.status !== 'client_review') {
+    // Can mark as client approved from 'quote_generated' or 'client_review' status
+    const allowedStatuses = ['quote_generated', 'client_review'];
+    if (!allowedStatuses.includes(existing.status)) {
       throw new TRPCError({
         code: 'BAD_REQUEST',
-        message: `RFQ must be in 'client_review' status to mark as client approved. Current status: ${existing.status}`,
+        message: `RFQ must be in 'quote_generated' or 'client_review' status to mark as client approved. Current status: ${existing.status}`,
       });
     }
 
