@@ -162,6 +162,15 @@ const RfqDetailPage = () => {
     }),
   );
 
+  // Mark client approved mutation
+  const { mutate: markClientApproved, isPending: isMarkingApproved } = useMutation(
+    api.source.admin.markClientApproved.mutationOptions({
+      onSuccess: () => {
+        void refetch();
+      },
+    }),
+  );
+
   // Focus input when editing starts
   useEffect(() => {
     if (editingItemId && priceInputRef.current) {
@@ -218,7 +227,10 @@ const RfqDetailPage = () => {
   const canDelete = ['draft', 'parsing', 'ready_to_send'].includes(rfq.status);
   const canCancel = ['sent', 'collecting', 'comparing', 'selecting', 'quote_generated', 'client_review', 'awaiting_confirmation', 'confirmed'].includes(rfq.status);
   const isCancelled = rfq.status === 'cancelled';
-  const isFinalized = ['quote_generated', 'confirmed', 'closed'].includes(rfq.status);
+  const isFinalized = ['quote_generated', 'client_review', 'awaiting_confirmation', 'confirmed', 'closed'].includes(rfq.status);
+  const isClientReview = rfq.status === 'client_review';
+  const isAwaitingConfirmation = rfq.status === 'awaiting_confirmation';
+  const isConfirmed = rfq.status === 'confirmed' || rfq.status === 'closed';
 
   // Build comparison data
   const partnerMap = new Map(rfq.partners.map((p) => [p.partnerId, p]));
@@ -619,12 +631,146 @@ const RfqDetailPage = () => {
                         Quote exported!
                       </Typography>
                       <Typography variant="bodyXs" colorRole="muted">
-                        RFQ complete
+                        See next steps below
                       </Typography>
                     </div>
                   )}
                 </div>
               </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Post-Finalize Workflow Panel - Shows after quote is exported */}
+        {isFinalized && (
+          <Card className="border-border-success bg-gradient-to-r from-fill-success/5 to-fill-success/10">
+            <CardContent className="p-4">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                {/* Progress Steps */}
+                <div className="flex items-center gap-2 flex-wrap">
+                  {/* Step 1: Quote Exported */}
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center bg-fill-success text-white">
+                      <IconCircleCheck className="w-5 h-5" />
+                    </div>
+                    <div className="hidden sm:block">
+                      <Typography variant="bodySm" className="font-semibold">Quote Exported</Typography>
+                      <Typography variant="bodyXs" colorRole="muted">
+                        PDF sent to client
+                      </Typography>
+                    </div>
+                  </div>
+
+                  <IconArrowRight className="w-4 h-4 text-text-muted mx-1" />
+
+                  {/* Step 2: Client Approval */}
+                  <div className="flex items-center gap-2">
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                      isClientReview
+                        ? 'bg-fill-warning/20 text-fill-warning border-2 border-fill-warning'
+                        : 'bg-fill-success text-white'
+                    }`}>
+                      {isClientReview ? (
+                        <span className="text-sm font-bold">2</span>
+                      ) : (
+                        <IconCircleCheck className="w-5 h-5" />
+                      )}
+                    </div>
+                    <div className="hidden sm:block">
+                      <Typography variant="bodySm" className="font-semibold">Client Approval</Typography>
+                      <Typography variant="bodyXs" colorRole="muted">
+                        {isClientReview ? 'Awaiting client PO' : 'Client approved'}
+                      </Typography>
+                    </div>
+                  </div>
+
+                  <IconArrowRight className="w-4 h-4 text-text-muted mx-1" />
+
+                  {/* Step 3: Create Customer PO */}
+                  <div className="flex items-center gap-2">
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                      isClientReview
+                        ? 'bg-fill-muted text-text-muted'
+                        : isAwaitingConfirmation || isConfirmed
+                          ? 'bg-fill-brand/20 text-fill-brand border-2 border-fill-brand'
+                          : 'bg-fill-success text-white'
+                    }`}>
+                      <span className="text-sm font-bold">3</span>
+                    </div>
+                    <div className="hidden sm:block">
+                      <Typography variant="bodySm" className="font-semibold">Create PO</Typography>
+                      <Typography variant="bodyXs" colorRole="muted">
+                        Generate supplier orders
+                      </Typography>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex items-center gap-3 flex-wrap">
+                  {/* Download PDF Button */}
+                  <Button
+                    variant="outline"
+                    colorRole="primary"
+                    size="sm"
+                    onClick={() => generateFinalQuote({ rfqId })}
+                    isDisabled={isGenerating}
+                  >
+                    <ButtonContent iconLeft={IconFileTypePdf}>
+                      {isGenerating ? 'Generating...' : 'Download PDF'}
+                    </ButtonContent>
+                  </Button>
+
+                  {/* Mark Client Approved - Only show in client_review status */}
+                  {isClientReview && (
+                    <Button
+                      variant="default"
+                      colorRole="brand"
+                      onClick={() => markClientApproved({ rfqId })}
+                      isDisabled={isMarkingApproved}
+                    >
+                      <ButtonContent iconLeft={IconCheck}>
+                        {isMarkingApproved ? 'Marking...' : 'Mark Client Approved'}
+                      </ButtonContent>
+                    </Button>
+                  )}
+
+                  {/* Create Customer PO - Show after client approval */}
+                  {(isAwaitingConfirmation || isConfirmed) && (
+                    <Link href={`/platform/admin/source/customer-pos/new?rfqId=${rfqId}`}>
+                      <Button variant="default" colorRole="brand">
+                        <ButtonContent iconLeft={IconPlus}>
+                          Create Customer PO
+                        </ButtonContent>
+                      </Button>
+                    </Link>
+                  )}
+                </div>
+              </div>
+
+              {/* Status-specific message */}
+              {isClientReview && (
+                <div className="mt-3 pt-3 border-t border-border-success/30">
+                  <Typography variant="bodySm" colorRole="muted">
+                    Waiting for the client to review the quote and send their purchase order.
+                    Click &quot;Mark Client Approved&quot; once you receive their PO.
+                  </Typography>
+                </div>
+              )}
+              {isAwaitingConfirmation && (
+                <div className="mt-3 pt-3 border-t border-border-success/30">
+                  <Typography variant="bodySm" colorRole="muted">
+                    Client has approved. Create a Customer PO to generate supplier orders and request partner confirmations.
+                  </Typography>
+                </div>
+              )}
+              {isConfirmed && (
+                <div className="mt-3 pt-3 border-t border-border-success/30">
+                  <Typography variant="bodySm" className="text-text-success">
+                    All partners have confirmed their orders. Ready to proceed with fulfillment.
+                  </Typography>
+                </div>
+              )}
             </CardContent>
           </Card>
         )}
