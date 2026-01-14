@@ -244,7 +244,7 @@ const CustomerPoDetailPage = () => {
               {customerPo.customerCompany || customerPo.customerName}
               {' • Customer PO: '}
               {customerPo.poNumber}
-              {customerPo.rfqNumber && ` • Linked RFQ: ${customerPo.rfqNumber}`}
+              {customerPo.rfq?.rfqNumber && ` • Linked RFQ: ${customerPo.rfq.rfqNumber}`}
             </Typography>
           </div>
           <div className="flex items-center gap-2">
