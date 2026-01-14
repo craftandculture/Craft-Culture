@@ -31,6 +31,7 @@ import { toast } from 'sonner';
 import ActivityTimeline from '@/app/_privateClientOrders/components/ActivityTimeline';
 import PaymentTracker from '@/app/_privateClientOrders/components/PaymentTracker';
 import PrivateOrderStatusBadge from '@/app/_privateClientOrders/components/PrivateOrderStatusBadge';
+import ProductPicker from '@/app/_privateClientOrders/components/ProductPicker';
 import StockStatusSection from '@/app/_privateClientOrders/components/StockStatusSection';
 import WorkflowStepper from '@/app/_privateClientOrders/components/WorkflowStepper';
 import Button from '@/app/_ui/components/Button/Button';
@@ -57,14 +58,21 @@ interface EditingItem {
   pricePerCaseUsd: number;
 }
 
+type StockSource = 'partner_local' | 'partner_airfreight' | 'cc_inventory' | 'manual';
+
 interface NewItem {
+  productId?: string;
+  productOfferId?: string;
   productName: string;
   producer: string;
   vintage: string;
+  region: string;
+  lwin: string;
   bottleSize: string;
   caseConfig: number;
   quantity: number;
   pricePerCaseUsd: number;
+  source: StockSource;
 }
 
 /** Format file size in human-readable format */
@@ -112,10 +120,13 @@ const PrivateOrderDetailPage = () => {
     productName: '',
     producer: '',
     vintage: '',
+    region: '',
+    lwin: '',
     bottleSize: '750ml',
     caseConfig: 12,
     quantity: 1,
     pricePerCaseUsd: 0,
+    source: 'manual',
   });
 
   // Fetch order details
@@ -133,6 +144,12 @@ const PrivateOrderDetailPage = () => {
   });
 
   const distributorInvoice = documents?.find((doc) => doc.documentType === 'distributor_invoice');
+
+  // Get partner's allowed stock source (CULT wines → cultx, others → local_inventory)
+  const { data: stockSourceData } = useQuery(
+    api.privateClientOrders.partnerGetStockSource.queryOptions(),
+  );
+  const stockSource = stockSourceData?.stockSource;
 
   // Submit order mutation (for draft orders)
   const { mutate: submitOrder, isPending: isSubmitting } = useMutation(
@@ -235,10 +252,13 @@ const PrivateOrderDetailPage = () => {
           productName: '',
           producer: '',
           vintage: '',
+          region: '',
+          lwin: '',
           bottleSize: '750ml',
           caseConfig: 12,
           quantity: 1,
           pricePerCaseUsd: 0,
+          source: 'manual',
         });
         void refetch();
       },
@@ -301,13 +321,18 @@ const PrivateOrderDetailPage = () => {
     }
     addItem({
       orderId,
+      productId: newItem.productId || undefined,
+      productOfferId: newItem.productOfferId || undefined,
       productName: newItem.productName,
       producer: newItem.producer || undefined,
       vintage: newItem.vintage || undefined,
+      region: newItem.region || undefined,
+      lwin: newItem.lwin || undefined,
       bottleSize: newItem.bottleSize || undefined,
       caseConfig: newItem.caseConfig,
       quantity: newItem.quantity,
       pricePerCaseUsd: newItem.pricePerCaseUsd,
+      source: newItem.source,
     });
   };
 
@@ -963,6 +988,65 @@ const PrivateOrderDetailPage = () => {
               </div>
             </div>
 
+            {/* Add Item Form - ProductPicker with stock search */}
+            {isAddingItem && (
+              <div className="mb-4 rounded-lg border-2 border-border-brand bg-fill-brand-muted/20 p-3">
+                <div className="mb-2 flex items-center justify-between">
+                  <Typography variant="labelMd">Add New Item</Typography>
+                  <Button variant="ghost" size="xs" onClick={() => setIsAddingItem(false)}>
+                    <Icon icon={IconX} size="sm" colorRole="muted" />
+                  </Button>
+                </div>
+                <ProductPicker
+                  value={{
+                    productId: newItem.productId,
+                    productOfferId: newItem.productOfferId,
+                    productName: newItem.productName,
+                    producer: newItem.producer,
+                    vintage: newItem.vintage,
+                    region: newItem.region,
+                    lwin: newItem.lwin,
+                    bottleSize: newItem.bottleSize,
+                    caseConfig: newItem.caseConfig,
+                    quantity: newItem.quantity,
+                    pricePerCaseUsd: newItem.pricePerCaseUsd,
+                    source: newItem.source,
+                  }}
+                  onChange={(data) => setNewItem({
+                    productId: data.productId,
+                    productOfferId: data.productOfferId,
+                    productName: data.productName,
+                    producer: data.producer,
+                    vintage: data.vintage,
+                    region: data.region,
+                    lwin: data.lwin,
+                    bottleSize: data.bottleSize,
+                    caseConfig: data.caseConfig,
+                    quantity: data.quantity,
+                    pricePerCaseUsd: data.pricePerCaseUsd,
+                    source: data.source,
+                  })}
+                  source={stockSource}
+                />
+                <div className="mt-3 flex justify-end gap-2">
+                  <Button variant="outline" size="sm" onClick={() => setIsAddingItem(false)}>
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="default"
+                    colorRole="brand"
+                    size="sm"
+                    onClick={handleAddItem}
+                    disabled={isAddingItemPending || !newItem.productName.trim()}
+                  >
+                    <ButtonContent iconLeft={isAddingItemPending ? IconLoader2 : IconPlus}>
+                      {isAddingItemPending ? 'Adding...' : 'Add to Order'}
+                    </ButtonContent>
+                  </Button>
+                </div>
+              </div>
+            )}
+
             {order.items && order.items.length > 0 ? (
               <div className="overflow-x-auto">
                 <table className="w-full text-xs">
@@ -979,89 +1063,6 @@ const PrivateOrderDetailPage = () => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border-muted/50">
-                    {/* Add new item row */}
-                    {isAddingItem && (
-                      <tr className="bg-surface-brand/10">
-                        <td className="px-2 py-1">
-                          <Input
-                            placeholder="Product name *"
-                            value={newItem.productName}
-                            onChange={(e) => setNewItem({ ...newItem, productName: e.target.value })}
-                            className="h-6 text-xs"
-                          />
-                        </td>
-                        <td className="px-2 py-1">
-                          <Input
-                            placeholder="Producer"
-                            value={newItem.producer}
-                            onChange={(e) => setNewItem({ ...newItem, producer: e.target.value })}
-                            className="h-6 text-xs"
-                          />
-                        </td>
-                        <td className="px-2 py-1">
-                          <Input
-                            placeholder="Year"
-                            value={newItem.vintage}
-                            onChange={(e) => setNewItem({ ...newItem, vintage: e.target.value })}
-                            className="h-6 w-14 text-center text-xs"
-                          />
-                        </td>
-                        <td className="px-2 py-1 text-center text-xs text-text-muted">
-                          <Input
-                            placeholder="12"
-                            type="number"
-                            min={1}
-                            value={newItem.caseConfig}
-                            onChange={(e) => setNewItem({ ...newItem, caseConfig: parseInt(e.target.value) || 12 })}
-                            className="h-6 w-12 text-center text-xs"
-                          />
-                        </td>
-                        <td className="px-2 py-1">
-                          <Input
-                            type="number"
-                            min={1}
-                            value={newItem.quantity}
-                            onChange={(e) => setNewItem({ ...newItem, quantity: parseInt(e.target.value) || 1 })}
-                            className="h-6 w-12 text-center text-xs"
-                          />
-                        </td>
-                        <td className="px-2 py-1">
-                          <Input
-                            type="number"
-                            min={0}
-                            step={0.01}
-                            placeholder="0.00"
-                            value={newItem.pricePerCaseUsd || ''}
-                            onChange={(e) => setNewItem({ ...newItem, pricePerCaseUsd: parseFloat(e.target.value) || 0 })}
-                            className="h-6 w-20 text-right text-xs"
-                          />
-                        </td>
-                        <td className="px-2 py-1 text-right text-xs font-medium">
-                          {formatCurrencyValue(newItem.quantity * newItem.pricePerCaseUsd, 'USD')}
-                        </td>
-                        <td className="px-2 py-1">
-                          <div className="flex items-center justify-center gap-0.5">
-                            <Button
-                              variant="ghost"
-                              size="xs"
-                              onClick={handleAddItem}
-                              disabled={isAddingItemPending}
-                              className="h-5 w-5 p-0"
-                            >
-                              <Icon icon={isAddingItemPending ? IconLoader2 : IconCheck} size="xs" colorRole="brand" className={isAddingItemPending ? 'animate-spin' : ''} />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="xs"
-                              onClick={() => setIsAddingItem(false)}
-                              className="h-5 w-5 p-0"
-                            >
-                              <Icon icon={IconX} size="xs" colorRole="muted" />
-                            </Button>
-                          </div>
-                        </td>
-                      </tr>
-                    )}
                     {order.items.map((item) => {
                       const isEditing = editingItem?.id === item.id;
 
