@@ -3,6 +3,7 @@ import { createTRPCRouter } from '@/lib/trpc/trpc';
 import adminAddCustomerPoItem from './controller/adminAddCustomerPoItem';
 import adminAddItem from './controller/adminAddItem';
 import adminAddPartners from './controller/adminAddPartners';
+import adminAutoMatchCustomerPo from './controller/adminAutoMatchCustomerPo';
 import adminAutoSelectBest from './controller/adminAutoSelectBest';
 import adminBulkSelectQuotes from './controller/adminBulkSelectQuotes';
 import adminCancelRfq from './controller/adminCancelRfq';
@@ -22,6 +23,7 @@ import adminGetOneRfq from './controller/adminGetOneRfq';
 import adminGetSupplierOrder from './controller/adminGetSupplierOrder';
 import adminImportLwinWines from './controller/adminImportLwinWines';
 import adminMarkClientApproved from './controller/adminMarkClientApproved';
+import adminParseCustomerPoDocument from './controller/adminParseCustomerPoDocument';
 import adminParseInput from './controller/adminParseInput';
 import adminParseQuoteExcel from './controller/adminParseQuoteExcel';
 import adminRequestConfirmations from './controller/adminRequestConfirmations';
@@ -54,6 +56,10 @@ const customerPoRouter = createTRPCRouter({
   addItem: adminAddCustomerPoItem,
   updateItem: adminUpdateCustomerPoItem,
   deleteItem: adminDeleteCustomerPoItem,
+  // AI parsing and auto-matching
+  parseDocument: adminParseCustomerPoDocument,
+  autoMatch: adminAutoMatchCustomerPo,
+  // Supplier order operations
   generateSupplierOrders: adminGenerateSupplierOrders,
   sendSupplierOrder: adminSendSupplierOrder,
   getSupplierOrder: adminGetSupplierOrder,

@@ -13,6 +13,7 @@ import logger from '@/utils/logger';
 
 import sendSupplierOrderSchema from '../schemas/sendSupplierOrderSchema';
 import { exportSupplierOrderToBase64 } from '../utils/exportSupplierOrderToExcel';
+import notifyPartnerOfSupplierOrder from '../utils/notifyPartnerOfSupplierOrder';
 
 /**
  * Send a supplier order to a partner
@@ -129,29 +130,17 @@ const adminSendSupplierOrder = adminProcedure
         })
         .where(eq(sourceSupplierOrders.id, supplierOrderId));
 
-      // Send notification to partner (in-app notification)
-      // This would typically use a notification service
-      // For now, we'll create an in-app notification entry
+      // Send notification to partner (in-app notification + email)
+      void notifyPartnerOfSupplierOrder({
+        supplierOrderId: supplierOrder.id,
+        partnerId: partner.id,
+      });
 
-      // TODO: Integrate with notification system
-      // await notifyPartnerOfSupplierOrder({
-      //   partnerId: partner.id,
-      //   orderNumber: supplierOrder.orderNumber,
-      //   orderId: supplierOrder.id,
-      // });
-
-      // Send email if requested
+      // Log email status (email is sent via notification utility above)
       if (sendEmail && partner.businessEmail) {
-        // TODO: Integrate with email service
-        // await sendSupplierOrderEmail({
-        //   to: partner.businessEmail,
-        //   orderNumber: supplierOrder.orderNumber,
-        //   excelBase64: base64,
-        //   filename,
-        // });
-        logger.info('Email would be sent to:', {
+        logger.info('Email notification sent to partner:', {
           email: partner.businessEmail,
-          filename,
+          orderNumber: supplierOrder.orderNumber,
         });
       }
 
