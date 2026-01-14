@@ -8,6 +8,7 @@ import {
   IconCheck,
   IconChevronDown,
   IconDownload,
+  IconEdit,
   IconExternalLink,
   IconFile,
   IconFileInvoice,
@@ -36,6 +37,7 @@ import Card from '@/app/_ui/components/Card/Card';
 import CardContent from '@/app/_ui/components/Card/CardContent';
 import Divider from '@/app/_ui/components/Divider/Divider';
 import Icon from '@/app/_ui/components/Icon/Icon';
+import Input from '@/app/_ui/components/Input/Input';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import useTRPC, { useTRPCClient } from '@/lib/trpc/browser';
 
@@ -43,6 +45,15 @@ type Currency = 'USD' | 'AED';
 
 /** Default UAE exchange rate for AED/USD conversion */
 const DEFAULT_EXCHANGE_RATE = 3.67;
+
+/** Statuses where partner can edit items */
+const EDITABLE_STATUSES = ['draft', 'revision_requested'];
+
+interface EditingItem {
+  id: string;
+  quantity: number;
+  pricePerCaseUsd: number;
+}
 
 /** Format file size in human-readable format */
 const formatBytes = (bytes: number | null | undefined) => {
@@ -83,6 +94,7 @@ const PrivateOrderDetailPage = () => {
   const queryClient = useQueryClient();
   const [currency, setCurrency] = useState<Currency>('USD');
   const [isDeliveredExpanded, setIsDeliveredExpanded] = useState(true);
+  const [editingItem, setEditingItem] = useState<EditingItem | null>(null);
 
   // Fetch order details
   const { data: order, isLoading, refetch } = useQuery({
@@ -99,6 +111,19 @@ const PrivateOrderDetailPage = () => {
   });
 
   const distributorInvoice = documents?.find((doc) => doc.documentType === 'distributor_invoice');
+
+  // Submit order mutation (for draft orders)
+  const { mutate: submitOrder, isPending: isSubmitting } = useMutation(
+    api.privateClientOrders.submit.mutationOptions({
+      onSuccess: () => {
+        toast.success('Order submitted for review!');
+        void refetch();
+      },
+      onError: (error) => {
+        toast.error(error.message || 'Failed to submit order');
+      },
+    }),
+  );
 
   // Approve revisions mutation
   const { mutate: approveRevisions, isPending: isApproving } = useMutation(
@@ -164,6 +189,24 @@ const PrivateOrderDetailPage = () => {
     },
   });
 
+  // Update item mutation (for editing items in draft/revision_requested orders)
+  const { mutate: updateItem, isPending: isUpdatingItem } = useMutation(
+    api.privateClientOrders.updateItem.mutationOptions({
+      onSuccess: () => {
+        toast.success('Item updated');
+        setEditingItem(null);
+        void refetch();
+      },
+      onError: (error) => {
+        toast.error(error.message || 'Failed to update item');
+      },
+    }),
+  );
+
+  const handleSubmitOrder = () => {
+    submitOrder({ orderId });
+  };
+
   const handleApproveRevisions = () => {
     approveRevisions({ orderId });
   };
@@ -171,6 +214,26 @@ const PrivateOrderDetailPage = () => {
   const handlePartnerVerification = (response: 'yes' | 'no' | 'dont_know') => {
     partnerVerification({ orderId, response });
   };
+
+  const handleEditItem = (item: { id: string; quantity: number; pricePerCaseUsd: number | string }) => {
+    setEditingItem({
+      id: item.id,
+      quantity: item.quantity,
+      pricePerCaseUsd: Number(item.pricePerCaseUsd),
+    });
+  };
+
+  const handleSaveItem = () => {
+    if (!editingItem) return;
+    updateItem({
+      itemId: editingItem.id,
+      quantity: editingItem.quantity,
+      pricePerCaseUsd: editingItem.pricePerCaseUsd,
+    });
+  };
+
+  // Check if order is editable
+  const canEditItems = order && EDITABLE_STATUSES.includes(order.status);
 
   const formatDate = (date: Date | null | undefined) => {
     if (!date) return '-';
@@ -239,6 +302,17 @@ const PrivateOrderDetailPage = () => {
             <PrivateOrderStatusBadge status={order.status} />
           </div>
           <div className="flex items-center gap-3">
+            {/* Submit for Review button - shown for draft orders */}
+            {order.status === 'draft' && (
+              <Button
+                onClick={handleSubmitOrder}
+                disabled={isSubmitting}
+              >
+                <ButtonContent iconLeft={IconCheck}>
+                  {isSubmitting ? 'Submitting...' : 'Submit for Review'}
+                </ButtonContent>
+              </Button>
+            )}
             {/* Approve Revisions button - shown when C&C has made changes and requested review */}
             {order.status === 'revision_requested' && (
               <Button
@@ -804,31 +878,88 @@ const PrivateOrderDetailPage = () => {
                       <th className="px-2 py-1.5 text-center text-[10px] font-medium uppercase tracking-wide text-text-muted">Qty</th>
                       <th className="px-2 py-1.5 text-right text-[10px] font-medium uppercase tracking-wide text-text-muted">{currency}/Case</th>
                       <th className="px-2 py-1.5 text-right text-[10px] font-medium uppercase tracking-wide text-text-muted">Total ({currency})</th>
+                      {canEditItems && <th className="px-2 py-1.5 text-center text-[10px] font-medium uppercase tracking-wide text-text-muted">Actions</th>}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border-muted/50">
-                    {order.items.map((item) => (
-                      <tr key={item.id} className="hover:bg-surface-muted/20">
-                        <td className="px-2 py-1.5">
-                          <span className="text-xs font-medium">{item.productName}</span>
-                          {item.lwin && (
-                            <span className="ml-1 text-[10px] text-text-muted">
-                              ({item.lwin})
-                            </span>
+                    {order.items.map((item) => {
+                      const isEditing = editingItem?.id === item.id;
+
+                      if (isEditing && editingItem) {
+                        return (
+                          <tr key={item.id} className="bg-fill-brand/5">
+                            <td className="px-2 py-1.5">
+                              <span className="text-xs font-medium">{item.productName}</span>
+                            </td>
+                            <td className="px-2 py-1.5 text-xs">{item.producer || '-'}</td>
+                            <td className="px-2 py-1.5 text-center text-xs">{item.vintage || '-'}</td>
+                            <td className="px-2 py-1.5 text-center text-xs text-text-muted">{item.caseConfig}×{item.bottleSize}</td>
+                            <td className="px-2 py-1.5 text-center">
+                              <Input
+                                type="number"
+                                min={1}
+                                value={editingItem.quantity}
+                                onChange={(e) => setEditingItem({ ...editingItem, quantity: parseInt(e.target.value) || 1 })}
+                                className="h-7 w-16 text-center text-xs"
+                              />
+                            </td>
+                            <td className="px-2 py-1.5 text-right">
+                              <Input
+                                type="number"
+                                min={0}
+                                step={0.01}
+                                value={editingItem.pricePerCaseUsd}
+                                onChange={(e) => setEditingItem({ ...editingItem, pricePerCaseUsd: parseFloat(e.target.value) || 0 })}
+                                className="h-7 w-24 text-right text-xs"
+                              />
+                            </td>
+                            <td className="px-2 py-1.5 text-right text-xs font-semibold">
+                              {formatCurrencyValue(getAmount(editingItem.quantity * editingItem.pricePerCaseUsd), currency)}
+                            </td>
+                            <td className="px-2 py-1.5 text-center">
+                              <div className="flex justify-center gap-1">
+                                <Button variant="ghost" size="xs" onClick={handleSaveItem} disabled={isUpdatingItem}>
+                                  <Icon icon={IconCheck} size="xs" colorRole="success" />
+                                </Button>
+                                <Button variant="ghost" size="xs" onClick={() => setEditingItem(null)}>
+                                  <Icon icon={IconX} size="xs" colorRole="muted" />
+                                </Button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      }
+
+                      return (
+                        <tr key={item.id} className="hover:bg-surface-muted/20">
+                          <td className="px-2 py-1.5">
+                            <span className="text-xs font-medium">{item.productName}</span>
+                            {item.lwin && (
+                              <span className="ml-1 text-[10px] text-text-muted">
+                                ({item.lwin})
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-2 py-1.5 text-xs">{item.producer || '-'}</td>
+                          <td className="px-2 py-1.5 text-center text-xs">{item.vintage || '-'}</td>
+                          <td className="px-2 py-1.5 text-center text-xs text-text-muted">{item.caseConfig}×{item.bottleSize}</td>
+                          <td className="px-2 py-1.5 text-center text-xs font-medium">{item.quantity}</td>
+                          <td className="px-2 py-1.5 text-right text-xs">
+                            {formatCurrencyValue(getAmount(item.pricePerCaseUsd), currency)}
+                          </td>
+                          <td className="px-2 py-1.5 text-right text-xs font-semibold">
+                            {formatCurrencyValue(getAmount(item.totalUsd), currency)}
+                          </td>
+                          {canEditItems && (
+                            <td className="px-2 py-1.5 text-center">
+                              <Button variant="ghost" size="xs" onClick={() => handleEditItem(item)}>
+                                <Icon icon={IconEdit} size="xs" colorRole="muted" />
+                              </Button>
+                            </td>
                           )}
-                        </td>
-                        <td className="px-2 py-1.5 text-xs">{item.producer || '-'}</td>
-                        <td className="px-2 py-1.5 text-center text-xs">{item.vintage || '-'}</td>
-                        <td className="px-2 py-1.5 text-center text-xs text-text-muted">{item.caseConfig}×{item.bottleSize}</td>
-                        <td className="px-2 py-1.5 text-center text-xs font-medium">{item.quantity}</td>
-                        <td className="px-2 py-1.5 text-right text-xs">
-                          {formatCurrencyValue(getAmount(item.pricePerCaseUsd), currency)}
-                        </td>
-                        <td className="px-2 py-1.5 text-right text-xs font-semibold">
-                          {formatCurrencyValue(getAmount(item.totalUsd), currency)}
-                        </td>
-                      </tr>
-                    ))}
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>

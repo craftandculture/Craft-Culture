@@ -49,6 +49,7 @@ import ordersRequestRevision from './controller/ordersRequestRevision';
 import ordersScheduleDelivery from './controller/ordersScheduleDelivery';
 import ordersSubmit from './controller/ordersSubmit';
 import partnerDashboard from './controller/partnerDashboard';
+import partnerGetStockSource from './controller/partnerGetStockSource';
 import paymentsConfirm from './controller/paymentsConfirm';
 
 const privateClientOrdersRouter = createTRPCRouter({
@@ -81,6 +82,7 @@ const privateClientOrdersRouter = createTRPCRouter({
 
   // Partner dashboard
   partnerDashboard,
+  partnerGetStockSource,
 
   // Admin procedures
   adminDashboard,

@@ -28,6 +28,8 @@ interface ProductsComboboxProps {
   value?: Product | null;
   placeholder?: string;
   omitProductIds?: string[];
+  /** Filter products by stock source (cultx or local_inventory) */
+  source?: 'cultx' | 'local_inventory';
 }
 
 const highlightText = (text: string | number | null, search: string) => {
@@ -70,6 +72,7 @@ const ProductsCombobox = ({
   value,
   placeholder = 'Search products...',
   omitProductIds = [],
+  source,
 }: ProductsComboboxProps) => {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
@@ -116,6 +119,7 @@ const ProductsCombobox = ({
       regions: filters.regions.length > 0 ? filters.regions : undefined,
       producers: filters.producers.length > 0 ? filters.producers : undefined,
       vintages: filters.vintages.length > 0 ? filters.vintages : undefined,
+      source,
     }),
     getNextPageParam: (lastPage) => lastPage.meta.nextCursor,
     initialPageParam: 0,
