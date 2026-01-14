@@ -5,8 +5,8 @@ const runMigrations = async () => {
   const dbUrl = process.env.DB_URL;
 
   if (!dbUrl) {
-    console.error('❌ DB_URL environment variable is not set');
-    process.exit(1);
+    console.log('⚠️ DB_URL not available, skipping migrations (this is expected during build)');
+    process.exit(0);
   }
 
   console.log('🔄 Adding local_inventory to product_source enum...');
