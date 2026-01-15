@@ -116,7 +116,7 @@ const adminBulkChangeSupplier = adminProcedure
         .from(sourceRfqQuotes)
         .where(
           and(
-            inArray(sourceRfqQuotes.rfqItemId, rfqItemIds),
+            inArray(sourceRfqQuotes.itemId, rfqItemIds),
             eq(sourceRfqQuotes.partnerId, partnerId),
             isNotNull(sourceRfqQuotes.costPricePerCaseUsd)
           )
@@ -146,7 +146,7 @@ const adminBulkChangeSupplier = adminProcedure
         // Find the partner's quote for any of these RFQ items
         let bestQuote = null;
         for (const rfqItem of matchingRfqItems) {
-          const quote = partnerQuotes.find((q) => q.rfqItemId === rfqItem.id);
+          const quote = partnerQuotes.find((q) => q.itemId === rfqItem.id);
           if (quote) {
             // Prefer exact vintage match
             if (
@@ -177,7 +177,7 @@ const adminBulkChangeSupplier = adminProcedure
             .update(sourceCustomerPoItems)
             .set({
               matchedQuoteId: bestQuote.id,
-              matchedRfqItemId: bestQuote.rfqItemId,
+              matchedRfqItemId: bestQuote.itemId,
               buyPricePerCaseUsd: bestQuote.costPricePerCaseUsd,
               buyLineTotalUsd,
               profitUsd: profitCalc.profitUsd,

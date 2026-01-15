@@ -87,7 +87,7 @@ const adminGetAvailableSuppliers = adminProcedure
     const quotes = await db
       .select({
         id: sourceRfqQuotes.id,
-        rfqItemId: sourceRfqQuotes.rfqItemId,
+        rfqItemId: sourceRfqQuotes.itemId,
         partnerId: sourceRfqQuotes.partnerId,
         costPricePerCaseUsd: sourceRfqQuotes.costPricePerCaseUsd,
         quotedVintage: sourceRfqQuotes.quotedVintage,
@@ -97,7 +97,7 @@ const adminGetAvailableSuppliers = adminProcedure
       .leftJoin(partners, eq(sourceRfqQuotes.partnerId, partners.id))
       .where(
         and(
-          inArray(sourceRfqQuotes.rfqItemId, rfqItemIds),
+          inArray(sourceRfqQuotes.itemId, rfqItemIds),
           isNotNull(sourceRfqQuotes.costPricePerCaseUsd)
         )
       );
