@@ -5,6 +5,7 @@ import adminAddItem from './controller/adminAddItem';
 import adminAddPartners from './controller/adminAddPartners';
 import adminAutoMatchCustomerPo from './controller/adminAutoMatchCustomerPo';
 import adminAutoSelectBest from './controller/adminAutoSelectBest';
+import adminBulkChangeSupplier from './controller/adminBulkChangeSupplier';
 import adminBulkSelectQuotes from './controller/adminBulkSelectQuotes';
 import adminCancelRfq from './controller/adminCancelRfq';
 import adminCreateCustomerPo from './controller/adminCreateCustomerPo';
@@ -16,6 +17,7 @@ import adminExportSupplierOrderExcel from './controller/adminExportSupplierOrder
 import adminFinalizeRfq from './controller/adminFinalizeRfq';
 import adminGenerateFinalQuote from './controller/adminGenerateFinalQuote';
 import adminGenerateSupplierOrders from './controller/adminGenerateSupplierOrders';
+import adminGetAvailableSuppliers from './controller/adminGetAvailableSuppliers';
 import adminGetManyCustomerPos from './controller/adminGetManyCustomerPos';
 import adminGetManyRfqs from './controller/adminGetManyRfqs';
 import adminGetOneCustomerPo from './controller/adminGetOneCustomerPo';
@@ -60,6 +62,9 @@ const customerPoRouter = createTRPCRouter({
   // AI parsing and auto-matching
   parseDocument: adminParseCustomerPoDocument,
   autoMatch: adminAutoMatchCustomerPo,
+  // Manual supplier override
+  getAvailableSuppliers: adminGetAvailableSuppliers,
+  bulkChangeSupplier: adminBulkChangeSupplier,
   // Supplier order operations
   generateSupplierOrders: adminGenerateSupplierOrders,
   sendSupplierOrder: adminSendSupplierOrder,
