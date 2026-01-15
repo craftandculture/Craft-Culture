@@ -13,22 +13,21 @@ import logger from '@/utils/logger';
  * @returns Extracted text content from all pages
  */
 const extractPdfText = async (buffer: Buffer): Promise<string> => {
-  // Dynamic import to avoid loading at startup
-  const { PDFParse } = await import('pdf-parse');
-  const parser = new PDFParse({ data: buffer });
-
   try {
-    const result = await parser.getText();
+    // Dynamic import to avoid loading at startup
+    // Using pdf-parse v1 which has better Node.js compatibility
+    const pdfParse = (await import('pdf-parse')).default;
+    const data = await pdfParse(buffer);
 
-    if (!result.text || result.text.trim().length === 0) {
+    if (!data.text || data.text.trim().length === 0) {
       throw new Error(
         'No text content could be extracted. The PDF may be scanned/image-based.'
       );
     }
 
-    logger.dev(`Extracted ${result.pages.length} pages from PDF`);
+    logger.dev(`Extracted ${data.numpages} pages from PDF`);
 
-    return result.text;
+    return data.text;
   } catch (error) {
     logger.error('PDF extraction error:', error);
 
@@ -37,8 +36,6 @@ const extractPdfText = async (buffer: Buffer): Promise<string> => {
     }
 
     throw new Error('Failed to extract text from PDF');
-  } finally {
-    await parser.destroy();
   }
 };
 
