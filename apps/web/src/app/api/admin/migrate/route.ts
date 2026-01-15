@@ -4,8 +4,8 @@ import { join } from 'path';
 import { sql } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 
+import getUserOrRedirect from '@/app/_auth/data/getUserOrRedirect';
 import db from '@/database/client';
-import { getUserOrRedirect } from '@/lib/auth/getUserOrRedirect';
 
 /**
  * Admin endpoint to run database migrations
