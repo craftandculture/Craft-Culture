@@ -17,7 +17,9 @@
     "push": "drizzle-kit push",
     "trigger:dev": "trigger dev",
     "trigger:deploy": "trigger deploy",
-    "cultx:generate-schema": "openapi-typescript ./src/lib/cultx/openapi.yaml -o ./src/lib/cultx/schema.d.ts"
+    "cultx:generate-schema": "openapi-typescript ./src/lib/cultx/openapi.yaml -o ./src/lib/cultx/schema.d.ts",
+    "deploy": "vercel build --prod && vercel deploy --prebuilt --prod --archive=tgz",
+    "deploy:preview": "vercel build && vercel deploy --prebuilt --archive=tgz"
   },
   "dependencies": {
     "@ai-sdk/google": "^2.0.11",
