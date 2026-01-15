@@ -275,6 +275,45 @@
       font-family: monospace;
     }
 
+    .task-list li.completed::before {
+      content: '[✓]';
+      color: var(--accent-green);
+    }
+
+    .task-list li.completed {
+      color: var(--accent-green);
+      text-decoration: line-through;
+      text-decoration-color: var(--text-muted);
+    }
+
+    .progress-card {
+      background: linear-gradient(135deg, rgba(34, 197, 94, 0.1), rgba(59, 130, 246, 0.1));
+      border: 2px solid var(--accent-green);
+      border-radius: 12px;
+      padding: 2rem;
+      margin-bottom: 2rem;
+    }
+
+    .progress-card h3 {
+      margin-top: 0;
+      color: var(--accent-green);
+      font-size: 1.4rem;
+    }
+
+    .next-steps-card {
+      background: linear-gradient(135deg, rgba(168, 85, 247, 0.1), rgba(59, 130, 246, 0.1));
+      border: 2px solid var(--accent-purple);
+      border-radius: 12px;
+      padding: 2rem;
+      margin-bottom: 2rem;
+    }
+
+    .next-steps-card h3 {
+      margin-top: 0;
+      color: var(--accent-purple);
+      font-size: 1.4rem;
+    }
+
     .highlight-box {
       background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(168, 85, 247, 0.1));
       border: 1px solid var(--accent-blue);
@@ -385,6 +424,8 @@
     <nav class="toc">
       <h2>Table of Contents</h2>
       <div class="toc-grid">
+        <a href="#progress" style="color: var(--accent-green);">✓ Progress (Phase 1 Complete)</a>
+        <a href="#next-steps" style="color: var(--accent-purple);">→ Next Steps</a>
         <a href="#priorities">Core Priorities</a>
         <a href="#how-we-achieve">How We Achieve Each Priority</a>
         <a href="#users">Users</a>
@@ -401,6 +442,137 @@
         <a href="#verification">Verification Checklist</a>
       </div>
     </nav>
+
+    <section id="progress">
+      <h2>✓ Progress Update</h2>
+
+      <div class="progress-card">
+        <h3>Phase 1 Complete - January 16, 2026</h3>
+        <p>Foundation layer is deployed and live. Database schema, relations, and admin CRUD API are ready.</p>
+
+        <h4>What Was Built</h4>
+        <div class="code-block">Database Schema (apps/web/src/database/schema.ts):
+├── 5 enums added:
+│   ├── logisticsShipmentType ('inbound', 'outbound', 're_export')
+│   ├── logisticsTransportMode ('sea_fcl', 'sea_lcl', 'air', 'road')
+│   ├── logisticsShipmentStatus (11 statuses from 'draft' to 'cancelled')
+│   ├── logisticsDocumentType (13 document types)
+│   └── logisticsCostAllocationMethod ('by_bottle', 'by_weight', 'by_value')
+│
+└── 5 tables added:
+    ├── logisticsShipments (main shipment tracking)
+    ├── logisticsShipmentItems (products in shipment)
+    ├── logisticsDocuments (BOL, AWB, invoices, permits)
+    ├── logisticsShipmentActivityLogs (audit trail)
+    └── logisticsRateCards (RAK Port rates)
+
+Relations (apps/web/src/database/relations.ts):
+└── All 5 tables connected with proper FK relations
+
+API Router (apps/web/src/app/_logistics/):
+├── router.ts - Main logistics router with admin sub-router
+├── controller/
+│   ├── adminCreate.ts - Create new shipment
+│   ├── adminGetMany.ts - List shipments with filters
+│   ├── adminGetOne.ts - Get shipment details
+│   ├── adminUpdate.ts - Update shipment fields
+│   └── adminUpdateStatus.ts - Change shipment status
+├── schemas/
+│   ├── createShipmentSchema.ts
+│   ├── updateShipmentSchema.ts
+│   └── getShipmentsSchema.ts
+└── utils/
+    └── generateShipmentNumber.ts - SHP-YYYY-NNNN format
+
+Registered in trpc-router.ts:
+└── logistics: logisticsRouter</div>
+
+        <h4>API Endpoints Available</h4>
+        <div class="code-block">logistics.admin.create     - Create shipment
+logistics.admin.getMany    - List with pagination/filters
+logistics.admin.getOne     - Get by ID with items/docs/logs
+logistics.admin.update     - Update shipment details
+logistics.admin.updateStatus - Change status with activity log</div>
+      </div>
+    </section>
+
+    <section id="next-steps">
+      <h2>→ Next Steps</h2>
+
+      <div class="next-steps-card">
+        <h3>Immediate: Phase 1.5 - Document Upload</h3>
+        <p>Enable document upload to shipments (copy existing pattern from privateClientOrders)</p>
+
+        <h4>Tasks</h4>
+        <ul class="task-list">
+          <li>Create <code>adminUploadDocument.ts</code> controller (copy from <code>_privateClientOrders/controller/documentsUpload.ts</code>)</li>
+          <li>Create <code>adminDeleteDocument.ts</code> controller</li>
+          <li>Create <code>uploadDocumentSchema.ts</code> schema</li>
+          <li>Add procedures to admin router</li>
+          <li>Test upload via tRPC devtools</li>
+        </ul>
+
+        <h4>Files to Create</h4>
+        <div class="code-block">apps/web/src/app/_logistics/
+├── controller/
+│   ├── adminUploadDocument.ts  (copy from privateClientOrders)
+│   └── adminDeleteDocument.ts
+└── schemas/
+    └── uploadDocumentSchema.ts</div>
+      </div>
+
+      <div class="next-steps-card">
+        <h3>Phase 2: Landed Cost Calculator</h3>
+        <p>Calculate true cost per bottle using RAK Port rates</p>
+
+        <h4>Key Formula</h4>
+        <div class="code-block">LANDED COST = Product Cost + Freight + Insurance + Handling + Customs + Gov Fees + Delivery
+
+Per Bottle = Total Landed Cost / Total Bottles
+
+Allocation Methods:
+- By bottles (default): Split costs by bottle count
+- By weight: Split costs by kg
+- By value: Split costs by declared value</div>
+
+        <h4>Tasks</h4>
+        <ul class="task-list">
+          <li>Create <code>calculateLandedCost.ts</code> utility</li>
+          <li>Seed RAK Port rate card data</li>
+          <li>Create <code>adminCalculateLandedCost.ts</code> controller</li>
+          <li>Add cost allocation method selector</li>
+          <li>Auto-recalculate on item/cost changes</li>
+        </ul>
+      </div>
+
+      <div class="next-steps-card">
+        <h3>Phase 3: Admin UI</h3>
+        <p>Build admin interface for managing shipments</p>
+
+        <h4>Pages to Create</h4>
+        <ul class="task-list">
+          <li><code>/platform/admin/logistics/page.tsx</code> - Dashboard with status counts</li>
+          <li><code>/platform/admin/logistics/shipments/page.tsx</code> - Shipment list</li>
+          <li><code>/platform/admin/logistics/shipments/new/page.tsx</code> - Create form</li>
+          <li><code>/platform/admin/logistics/shipments/[id]/page.tsx</code> - Detail view with tabs</li>
+        </ul>
+      </div>
+
+      <div class="next-steps-card">
+        <h3>Phase 4: Hillebrand Integration</h3>
+        <p style="color: var(--accent-green);">API credentials verified and working!</p>
+
+        <h4>Integration Tasks</h4>
+        <ul class="task-list">
+          <li>Add Hillebrand env vars to Vercel</li>
+          <li>Create OAuth2 client with 8hr token refresh</li>
+          <li>Create <code>getShipments.ts</code> - List shipments (12 available)</li>
+          <li>Create <code>getInvoices.ts</code> - Get invoices (13 available)</li>
+          <li>Create webhook receiver for real-time updates</li>
+          <li>Map Hillebrand status to our enum</li>
+        </ul>
+      </div>
+    </section>
 
     <section id="priorities">
       <h2>Core Priorities</h2>
@@ -1219,30 +1391,31 @@ Flag for manual review (don't skip silently)</div>
     <section id="phases">
       <h2>Implementation Phases</h2>
 
-      <div class="phase-card">
-        <h3>Phase 1: Foundation (START HERE)</h3>
+      <div class="phase-card" style="border-color: var(--accent-green);">
+        <h3 style="color: var(--accent-green);">Phase 1: Foundation ✓ COMPLETE</h3>
         <p><strong>Goal:</strong> Core database schema + basic shipment CRUD + document upload</p>
+        <p style="color: var(--accent-green);"><strong>Completed:</strong> January 16, 2026</p>
 
         <h4>Database Tasks</h4>
         <ul class="task-list">
-          <li>Add 5 enums to <code>schema.ts</code>: <code>shipmentType</code>, <code>transportMode</code>, <code>shipmentStatus</code>, <code>logisticsDocumentType</code>, <code>portLocation</code></li>
-          <li>Add <code>shipments</code> table (follows <code>privateClientOrders</code> pattern)</li>
-          <li>Add <code>shipmentItems</code> table (follows <code>privateClientOrderItems</code> pattern)</li>
-          <li>Add <code>logisticsDocuments</code> table (follows <code>privateClientOrderDocuments</code> pattern exactly)</li>
-          <li>Add <code>shipmentActivityLogs</code> table (follows <code>privateClientOrderActivityLogs</code> pattern)</li>
-          <li>Add <code>logisticsRateCards</code> table (for RAK Port rates)</li>
-          <li>Add relations in <code>relations.ts</code></li>
-          <li>Run <code>pnpm drizzle-kit generate && pnpm drizzle-kit migrate</code></li>
+          <li class="completed">Add 5 enums to <code>schema.ts</code>: <code>shipmentType</code>, <code>transportMode</code>, <code>shipmentStatus</code>, <code>logisticsDocumentType</code>, <code>costAllocationMethod</code></li>
+          <li class="completed">Add <code>logisticsShipments</code> table (follows <code>privateClientOrders</code> pattern)</li>
+          <li class="completed">Add <code>logisticsShipmentItems</code> table (follows <code>privateClientOrderItems</code> pattern)</li>
+          <li class="completed">Add <code>logisticsDocuments</code> table (follows <code>privateClientOrderDocuments</code> pattern exactly)</li>
+          <li class="completed">Add <code>logisticsShipmentActivityLogs</code> table (follows <code>privateClientOrderActivityLogs</code> pattern)</li>
+          <li class="completed">Add <code>logisticsRateCards</code> table (for RAK Port rates)</li>
+          <li class="completed">Add relations in <code>relations.ts</code></li>
+          <li class="completed">Run <code>pnpm drizzle-kit generate && pnpm drizzle-kit migrate</code></li>
         </ul>
 
         <h4>API Tasks</h4>
         <ul class="task-list">
-          <li>Create <code>_logistics/router.ts</code> with admin/partner/client sub-routers</li>
-          <li>Create <code>_logistics/utils/generateShipmentNumber.ts</code> (follow <code>generateRfqNumber.ts</code>)</li>
-          <li>Create <code>_logistics/schemas/createShipmentSchema.ts</code></li>
-          <li>Create admin controllers: <code>adminCreate.ts</code>, <code>adminGetMany.ts</code>, <code>adminGetOne.ts</code>, <code>adminUpdate.ts</code>, <code>adminUpdateStatus.ts</code></li>
-          <li>Create <code>adminUploadDocument.ts</code> (copy from <code>_privateClientOrders/controller/documentsUpload.ts</code>)</li>
-          <li>Register router in <code>lib/trpc/root.ts</code></li>
+          <li class="completed">Create <code>_logistics/router.ts</code> with admin sub-router</li>
+          <li class="completed">Create <code>_logistics/utils/generateShipmentNumber.ts</code></li>
+          <li class="completed">Create <code>_logistics/schemas/createShipmentSchema.ts</code></li>
+          <li class="completed">Create admin controllers: <code>adminCreate.ts</code>, <code>adminGetMany.ts</code>, <code>adminGetOne.ts</code>, <code>adminUpdate.ts</code>, <code>adminUpdateStatus.ts</code></li>
+          <li>Create <code>adminUploadDocument.ts</code> (next step - Phase 1.5)</li>
+          <li class="completed">Register router in <code>trpc-router.ts</code></li>
         </ul>
       </div>
 
@@ -1557,8 +1730,8 @@ pnpm dev
 
     <footer>
       <p>C&C Logistics Module Implementation Plan</p>
-      <p>Last updated: January 15, 2026</p>
-      <p style="color: var(--accent-green);">Hillebrand API verified and working</p>
+      <p>Last updated: January 16, 2026</p>
+      <p style="color: var(--accent-green);">Phase 1 Complete | Hillebrand API verified and working</p>
     </footer>
   </div>
 </body>
