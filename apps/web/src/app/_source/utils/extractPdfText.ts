@@ -1,9 +1,10 @@
-import { PDFParse } from 'pdf-parse';
-
 import logger from '@/utils/logger';
 
 /**
  * Extract text content from a PDF buffer
+ *
+ * Uses dynamic import to avoid loading pdf-parse at startup,
+ * which can cause issues in serverless environments.
  *
  * @example
  *   const text = await extractPdfText(pdfBuffer);
@@ -12,6 +13,8 @@ import logger from '@/utils/logger';
  * @returns Extracted text content from all pages
  */
 const extractPdfText = async (buffer: Buffer): Promise<string> => {
+  // Dynamic import to avoid loading at startup
+  const { PDFParse } = await import('pdf-parse');
   const parser = new PDFParse({ data: buffer });
 
   try {
