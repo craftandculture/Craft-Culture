@@ -2618,3 +2618,414 @@ export const sourceSupplierOrderItems = pgTable(
 ).enableRLS();
 
 export type SourceSupplierOrderItem = typeof sourceSupplierOrderItems.$inferSelect;
+
+// ============================================================================
+// Logistics Module
+// ============================================================================
+
+/**
+ * Shipment direction/type
+ */
+export const logisticsShipmentType = pgEnum('logistics_shipment_type', [
+  'inbound', // Partner to UAE warehouse
+  'outbound', // UAE warehouse to client
+  're_export', // UAE warehouse to another destination
+]);
+
+/**
+ * Transport mode
+ */
+export const logisticsTransportMode = pgEnum('logistics_transport_mode', [
+  'sea_fcl', // Full container load
+  'sea_lcl', // Less than container load
+  'air',
+  'road',
+]);
+
+/**
+ * Shipment status pipeline
+ */
+export const logisticsShipmentStatus = pgEnum('logistics_shipment_status', [
+  'draft', // Initial creation
+  'booked', // Carrier booking confirmed
+  'picked_up', // Cargo collected from origin
+  'in_transit', // On the way
+  'arrived_port', // Arrived at destination port
+  'customs_clearance', // Going through customs
+  'cleared', // Customs cleared
+  'at_warehouse', // At RAK Port warehouse
+  'dispatched', // Sent out for delivery (outbound)
+  'delivered', // Final delivery complete
+  'cancelled', // Cancelled
+]);
+
+/**
+ * Document types for logistics
+ */
+export const logisticsDocumentType = pgEnum('logistics_document_type', [
+  'bill_of_lading',
+  'airway_bill',
+  'commercial_invoice',
+  'packing_list',
+  'certificate_of_origin',
+  'customs_declaration',
+  'import_permit',
+  'export_permit',
+  'delivery_note',
+  'health_certificate',
+  'insurance_certificate',
+  'proof_of_delivery',
+  'other',
+]);
+
+/**
+ * Cost allocation method for landed cost calculation
+ */
+export const logisticsCostAllocationMethod = pgEnum('logistics_cost_allocation_method', [
+  'by_bottle', // Split costs by number of bottles
+  'by_weight', // Split costs by weight
+  'by_value', // Split costs by declared value
+]);
+
+/**
+ * Logistics shipments - main shipment tracking table
+ */
+export const logisticsShipments = pgTable(
+  'logistics_shipments',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    shipmentNumber: text('shipment_number').notNull().unique(),
+
+    // Shipment type and mode
+    type: logisticsShipmentType('type').notNull(),
+    transportMode: logisticsTransportMode('transport_mode').notNull(),
+    status: logisticsShipmentStatus('status').notNull().default('draft'),
+
+    // Partner (inbound) or Client (outbound)
+    partnerId: uuid('partner_id').references(() => partners.id, {
+      onDelete: 'restrict',
+    }),
+    clientContactId: uuid('client_contact_id').references(() => privateClientContacts.id, {
+      onDelete: 'set null',
+    }),
+
+    // Origin location
+    originCountry: text('origin_country'),
+    originCity: text('origin_city'),
+    originWarehouse: text('origin_warehouse'),
+
+    // Destination location
+    destinationCountry: text('destination_country'),
+    destinationCity: text('destination_city'),
+    destinationWarehouse: text('destination_warehouse').default('RAK Port'),
+
+    // Carrier info
+    carrierName: text('carrier_name'),
+    carrierBookingRef: text('carrier_booking_ref'),
+    containerNumber: text('container_number'), // For sea freight
+    blNumber: text('bl_number'), // Bill of Lading number
+    awbNumber: text('awb_number'), // Airway Bill number
+
+    // Hillebrand integration
+    hillebrandShipmentId: integer('hillebrand_shipment_id'),
+    hillebrandReference: text('hillebrand_reference'),
+    hillebrandLastSync: timestamp('hillebrand_last_sync', { mode: 'date' }),
+
+    // Timeline
+    etd: timestamp('etd', { mode: 'date' }), // Estimated Time of Departure
+    atd: timestamp('atd', { mode: 'date' }), // Actual Time of Departure
+    eta: timestamp('eta', { mode: 'date' }), // Estimated Time of Arrival
+    ata: timestamp('ata', { mode: 'date' }), // Actual Time of Arrival
+    deliveredAt: timestamp('delivered_at', { mode: 'date' }),
+
+    // Cargo details
+    totalCases: integer('total_cases').default(0),
+    totalBottles: integer('total_bottles').default(0),
+    totalWeightKg: doublePrecision('total_weight_kg'),
+    totalVolumeM3: doublePrecision('total_volume_m3'),
+
+    // Cost tracking (what C&C pays)
+    freightCostUsd: doublePrecision('freight_cost_usd'),
+    insuranceCostUsd: doublePrecision('insurance_cost_usd'),
+    originHandlingUsd: doublePrecision('origin_handling_usd'),
+    destinationHandlingUsd: doublePrecision('destination_handling_usd'),
+    customsClearanceUsd: doublePrecision('customs_clearance_usd'),
+    govFeesUsd: doublePrecision('gov_fees_usd'),
+    deliveryCostUsd: doublePrecision('delivery_cost_usd'),
+    otherCostsUsd: doublePrecision('other_costs_usd'),
+    totalLandedCostUsd: doublePrecision('total_landed_cost_usd'),
+
+    // Cost allocation method
+    costAllocationMethod: logisticsCostAllocationMethod('cost_allocation_method').default(
+      'by_bottle',
+    ),
+
+    // CO2 emissions (from Hillebrand)
+    co2EmissionsTonnes: doublePrecision('co2_emissions_tonnes'),
+
+    // Notes
+    internalNotes: text('internal_notes'),
+    partnerNotes: text('partner_notes'),
+
+    // Audit
+    createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
+    ...timestamps,
+  },
+  (table) => [
+    index('logistics_shipments_shipment_number_idx').on(table.shipmentNumber),
+    index('logistics_shipments_partner_id_idx').on(table.partnerId),
+    index('logistics_shipments_client_contact_id_idx').on(table.clientContactId),
+    index('logistics_shipments_status_idx').on(table.status),
+    index('logistics_shipments_type_idx').on(table.type),
+    index('logistics_shipments_hillebrand_id_idx').on(table.hillebrandShipmentId),
+  ],
+).enableRLS();
+
+export type LogisticsShipment = typeof logisticsShipments.$inferSelect;
+
+/**
+ * Logistics shipment items - products in a shipment
+ */
+export const logisticsShipmentItems = pgTable(
+  'logistics_shipment_items',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    shipmentId: uuid('shipment_id')
+      .references(() => logisticsShipments.id, { onDelete: 'cascade' })
+      .notNull(),
+
+    // Product reference (optional - can be unlinked)
+    productId: uuid('product_id').references(() => products.id, { onDelete: 'set null' }),
+
+    // Product details (denormalized for independence)
+    productName: text('product_name').notNull(),
+    producer: text('producer'),
+    vintage: integer('vintage'),
+    region: text('region'),
+    countryOfOrigin: text('country_of_origin'),
+
+    // Customs
+    hsCode: text('hs_code'),
+
+    // Quantity
+    cases: integer('cases').notNull(),
+    bottlesPerCase: integer('bottles_per_case').default(12),
+    bottleSizeMl: integer('bottle_size_ml').default(750),
+    totalBottles: integer('total_bottles'), // Calculated
+
+    // Weight/dimensions
+    grossWeightKg: doublePrecision('gross_weight_kg'),
+    netWeightKg: doublePrecision('net_weight_kg'),
+
+    // Value
+    declaredValueUsd: doublePrecision('declared_value_usd'),
+    productCostPerBottle: doublePrecision('product_cost_per_bottle'),
+
+    // Landed cost allocation (calculated from shipment costs)
+    freightAllocated: doublePrecision('freight_allocated'),
+    handlingAllocated: doublePrecision('handling_allocated'),
+    govFeesAllocated: doublePrecision('gov_fees_allocated'),
+    insuranceAllocated: doublePrecision('insurance_allocated'),
+    landedCostTotal: doublePrecision('landed_cost_total'),
+    landedCostPerBottle: doublePrecision('landed_cost_per_bottle'),
+
+    // Margin analysis
+    targetSellingPrice: doublePrecision('target_selling_price'),
+    marginPerBottle: doublePrecision('margin_per_bottle'),
+    marginPercent: doublePrecision('margin_percent'),
+
+    // Notes
+    notes: text('notes'),
+
+    // Sort order
+    sortOrder: integer('sort_order').default(0),
+
+    ...timestamps,
+  },
+  (table) => [
+    index('logistics_shipment_items_shipment_id_idx').on(table.shipmentId),
+    index('logistics_shipment_items_product_id_idx').on(table.productId),
+  ],
+).enableRLS();
+
+export type LogisticsShipmentItem = typeof logisticsShipmentItems.$inferSelect;
+
+/**
+ * Logistics documents - files attached to shipments
+ */
+export const logisticsDocuments = pgTable(
+  'logistics_documents',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    shipmentId: uuid('shipment_id')
+      .references(() => logisticsShipments.id, { onDelete: 'cascade' })
+      .notNull(),
+
+    // Document type
+    documentType: logisticsDocumentType('document_type').notNull(),
+    documentNumber: text('document_number'), // Reference number on document
+
+    // File storage
+    fileUrl: text('file_url').notNull(),
+    fileName: text('file_name').notNull(),
+    fileSize: integer('file_size'),
+    mimeType: text('mime_type'),
+
+    // Document dates
+    issueDate: timestamp('issue_date', { mode: 'date' }),
+    expiryDate: timestamp('expiry_date', { mode: 'date' }),
+
+    // Requirements
+    isRequired: boolean('is_required').notNull().default(false),
+    isVerified: boolean('is_verified').notNull().default(false),
+    verifiedBy: uuid('verified_by').references(() => users.id, { onDelete: 'set null' }),
+    verifiedAt: timestamp('verified_at', { mode: 'date' }),
+
+    // Upload info
+    uploadedBy: uuid('uploaded_by')
+      .references(() => users.id, { onDelete: 'set null' })
+      .notNull(),
+    uploadedAt: timestamp('uploaded_at', { mode: 'date' }).notNull().defaultNow(),
+
+    // AI extraction
+    extractionStatus: documentExtractionStatus('extraction_status')
+      .notNull()
+      .default('pending'),
+    extractedData: jsonb('extracted_data').$type<{
+      // BOL/AWB fields
+      bolNumber?: string;
+      awbNumber?: string;
+      vesselName?: string;
+      voyageNumber?: string;
+      portOfLoading?: string;
+      portOfDischarge?: string;
+      // Invoice fields
+      invoiceNumber?: string;
+      invoiceDate?: string;
+      totalAmount?: number;
+      currency?: string;
+      // Line items
+      lineItems?: Array<{
+        productName?: string;
+        quantity?: number;
+        cases?: number;
+        unitPrice?: number;
+        total?: number;
+        hsCode?: string;
+      }>;
+      // Other
+      rawText?: string;
+    }>(),
+    extractionError: text('extraction_error'),
+    extractedAt: timestamp('extracted_at', { mode: 'date' }),
+
+    // Version tracking (for document updates)
+    version: integer('version').notNull().default(1),
+    previousVersionId: uuid('previous_version_id'),
+
+    // Notes
+    notes: text('notes'),
+
+    ...timestamps,
+  },
+  (table) => [
+    index('logistics_documents_shipment_id_idx').on(table.shipmentId),
+    index('logistics_documents_document_type_idx').on(table.documentType),
+    index('logistics_documents_extraction_status_idx').on(table.extractionStatus),
+    index('logistics_documents_expiry_date_idx').on(table.expiryDate),
+  ],
+).enableRLS();
+
+export type LogisticsDocument = typeof logisticsDocuments.$inferSelect;
+
+/**
+ * Logistics shipment activity logs - audit trail
+ */
+export const logisticsShipmentActivityLogs = pgTable(
+  'logistics_shipment_activity_logs',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    shipmentId: uuid('shipment_id')
+      .references(() => logisticsShipments.id, { onDelete: 'cascade' })
+      .notNull(),
+
+    // Who performed the action
+    userId: uuid('user_id').references(() => users.id, { onDelete: 'set null' }),
+    partnerId: uuid('partner_id').references(() => partners.id, { onDelete: 'set null' }),
+
+    // Action details
+    action: text('action').notNull(), // e.g., 'status_changed', 'document_uploaded', 'cost_updated'
+    previousStatus: logisticsShipmentStatus('previous_status'),
+    newStatus: logisticsShipmentStatus('new_status'),
+
+    // Additional context
+    metadata: jsonb('metadata').$type<{
+      documentId?: string;
+      documentType?: string;
+      costField?: string;
+      previousValue?: string | number;
+      newValue?: string | number;
+      hillebrandEvent?: string;
+      [key: string]: unknown;
+    }>(),
+    notes: text('notes'),
+
+    // Request info
+    ipAddress: text('ip_address'),
+    userAgent: text('user_agent'),
+
+    ...timestamps,
+  },
+  (table) => [
+    index('logistics_shipment_activity_logs_shipment_id_idx').on(table.shipmentId),
+    index('logistics_shipment_activity_logs_user_id_idx').on(table.userId),
+    index('logistics_shipment_activity_logs_created_at_idx').on(table.createdAt),
+    index('logistics_shipment_activity_logs_action_idx').on(table.action),
+  ],
+).enableRLS();
+
+export type LogisticsShipmentActivityLog = typeof logisticsShipmentActivityLogs.$inferSelect;
+
+/**
+ * Logistics rate cards - predefined rates for common routes (e.g., RAK Port fees)
+ */
+export const logisticsRateCards = pgTable(
+  'logistics_rate_cards',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+
+    // Rate identification
+    name: text('name').notNull(), // e.g., "RAK Port Destuffing FCL"
+    description: text('description'),
+
+    // Applicability
+    transportMode: logisticsTransportMode('transport_mode'),
+    originCountry: text('origin_country'),
+    destinationWarehouse: text('destination_warehouse'), // e.g., "RAK Port"
+
+    // Rate details
+    rateType: text('rate_type').notNull(), // 'per_container', 'per_case', 'per_kg', 'flat'
+    rateAmountAed: doublePrecision('rate_amount_aed').notNull(),
+    rateAmountUsd: doublePrecision('rate_amount_usd'),
+    currency: text('currency').notNull().default('AED'),
+
+    // Container size specifics (for per_container rates)
+    containerSize: text('container_size'), // '20', '40', '40HC'
+
+    // Validity
+    validFrom: timestamp('valid_from', { mode: 'date' }),
+    validTo: timestamp('valid_to', { mode: 'date' }),
+    isActive: boolean('is_active').notNull().default(true),
+
+    // Audit
+    createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
+    ...timestamps,
+  },
+  (table) => [
+    index('logistics_rate_cards_transport_mode_idx').on(table.transportMode),
+    index('logistics_rate_cards_destination_warehouse_idx').on(table.destinationWarehouse),
+    index('logistics_rate_cards_is_active_idx').on(table.isActive),
+  ],
+).enableRLS();
+
+export type LogisticsRateCard = typeof logisticsRateCards.$inferSelect;
