@@ -256,6 +256,91 @@ const relations = defineRelations(schema, (r) => ({
       optional: true,
     }),
   },
+  // ============================================================================
+  // Logistics Module Relations
+  // ============================================================================
+  logisticsShipments: {
+    partner: r.one.partners({
+      from: r.logisticsShipments.partnerId,
+      to: r.partners.id,
+      optional: true,
+    }),
+    clientContact: r.one.privateClientContacts({
+      from: r.logisticsShipments.clientContactId,
+      to: r.privateClientContacts.id,
+      optional: true,
+    }),
+    createdByUser: r.one.users({
+      from: r.logisticsShipments.createdBy,
+      to: r.users.id,
+      optional: true,
+    }),
+    items: r.many.logisticsShipmentItems({
+      from: r.logisticsShipments.id,
+      to: r.logisticsShipmentItems.shipmentId,
+    }),
+    documents: r.many.logisticsDocuments({
+      from: r.logisticsShipments.id,
+      to: r.logisticsDocuments.shipmentId,
+    }),
+    activityLogs: r.many.logisticsShipmentActivityLogs({
+      from: r.logisticsShipments.id,
+      to: r.logisticsShipmentActivityLogs.shipmentId,
+    }),
+  },
+  logisticsShipmentItems: {
+    shipment: r.one.logisticsShipments({
+      from: r.logisticsShipmentItems.shipmentId,
+      to: r.logisticsShipments.id,
+      optional: false,
+    }),
+    product: r.one.products({
+      from: r.logisticsShipmentItems.productId,
+      to: r.products.id,
+      optional: true,
+    }),
+  },
+  logisticsDocuments: {
+    shipment: r.one.logisticsShipments({
+      from: r.logisticsDocuments.shipmentId,
+      to: r.logisticsShipments.id,
+      optional: false,
+    }),
+    uploadedByUser: r.one.users({
+      from: r.logisticsDocuments.uploadedBy,
+      to: r.users.id,
+      optional: true,
+    }),
+    verifiedByUser: r.one.users({
+      from: r.logisticsDocuments.verifiedBy,
+      to: r.users.id,
+      optional: true,
+    }),
+  },
+  logisticsShipmentActivityLogs: {
+    shipment: r.one.logisticsShipments({
+      from: r.logisticsShipmentActivityLogs.shipmentId,
+      to: r.logisticsShipments.id,
+      optional: false,
+    }),
+    user: r.one.users({
+      from: r.logisticsShipmentActivityLogs.userId,
+      to: r.users.id,
+      optional: true,
+    }),
+    partner: r.one.partners({
+      from: r.logisticsShipmentActivityLogs.partnerId,
+      to: r.partners.id,
+      optional: true,
+    }),
+  },
+  logisticsRateCards: {
+    createdByUser: r.one.users({
+      from: r.logisticsRateCards.createdBy,
+      to: r.users.id,
+      optional: true,
+    }),
+  },
 }));
 
 export default relations;
