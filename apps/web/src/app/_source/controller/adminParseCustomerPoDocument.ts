@@ -8,14 +8,35 @@ import { adminProcedure } from '@/lib/trpc/procedures';
 import logger from '@/utils/logger';
 
 import excelToCSV from '../utils/excelToCSV';
+import extractPdfText from '../utils/extractPdfText';
 import parseCustomerPoExcel from '../utils/parseCustomerPoExcel';
 
 const parseDocumentSchema = z.object({
   customerPoId: z.string().uuid(),
-  fileContent: z.string().describe('Base64 encoded Excel/CSV content'),
+  fileContent: z.string().describe('Base64 encoded Excel/CSV/PDF content'),
   fileName: z.string().optional(),
   autoSave: z.boolean().default(true).describe('Automatically save parsed items to the PO'),
 });
+
+/**
+ * Check if file is a PDF based on magic bytes or extension
+ */
+const isPdfFile = (buffer: Buffer, fileName?: string): boolean => {
+  // Check magic bytes: PDF files start with %PDF-
+  if (buffer.length >= 5) {
+    const header = buffer.subarray(0, 5).toString('ascii');
+    if (header === '%PDF-') {
+      return true;
+    }
+  }
+
+  // Fall back to file extension check
+  if (fileName) {
+    return fileName.toLowerCase().endsWith('.pdf');
+  }
+
+  return false;
+};
 
 /**
  * Parse customer PO document and extract line items
@@ -48,17 +69,33 @@ const adminParseCustomerPoDocument = adminProcedure
       // Decode base64 content
       const buffer = Buffer.from(input.fileContent, 'base64');
 
-      // Convert Excel to CSV
-      let csvContent: string;
-      try {
-        csvContent = await excelToCSV(buffer);
-      } catch {
-        // Try treating as plain CSV
-        csvContent = buffer.toString('utf-8');
+      // Determine file type and extract text content
+      let textContent: string;
+
+      if (isPdfFile(buffer, input.fileName)) {
+        // Handle PDF files
+        logger.dev('Detected PDF file, extracting text...');
+        try {
+          textContent = await extractPdfText(buffer);
+        } catch (err) {
+          const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: `Failed to extract text from PDF: ${errorMessage}`,
+          });
+        }
+      } else {
+        // Handle Excel/CSV files
+        try {
+          textContent = await excelToCSV(buffer);
+        } catch {
+          // Try treating as plain CSV
+          textContent = buffer.toString('utf-8');
+        }
       }
 
-      // Parse the CSV content
-      const { items, message } = await parseCustomerPoExcel(csvContent);
+      // Parse the text content
+      const { items, message } = await parseCustomerPoExcel(textContent);
 
       if (items.length === 0) {
         throw new TRPCError({

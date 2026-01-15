@@ -176,6 +176,7 @@ const CustomerPoDetailPage = () => {
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
       'application/vnd.ms-excel': ['.xls'],
       'text/csv': ['.csv'],
+      'application/pdf': ['.pdf'],
     },
     maxFiles: 1,
     disabled: isUploading || isParsing,
@@ -290,7 +291,7 @@ const CustomerPoDetailPage = () => {
                   Upload Customer PO Document
                 </Typography>
                 <Typography variant="bodySm" colorRole="muted">
-                  Upload an Excel or CSV file and we&apos;ll automatically extract the line items
+                  Upload an Excel, CSV, or PDF file and we&apos;ll automatically extract the line items
                 </Typography>
               </div>
 
@@ -322,7 +323,7 @@ const CustomerPoDetailPage = () => {
                         {isDragActive ? 'Drop file here' : 'Drag & drop or click to upload'}
                       </Typography>
                       <Typography variant="bodyXs" colorRole="muted">
-                        Excel (.xlsx, .xls) or CSV (max 10MB)
+                        Excel, CSV, or PDF (max 10MB)
                       </Typography>
                     </div>
                   </div>
