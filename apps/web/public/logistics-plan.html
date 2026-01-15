@@ -393,6 +393,7 @@
         <a href="#workflows">Workflows</a>
         <a href="#wireframes">Wireframes</a>
         <a href="#integrations">Integrations</a>
+        <a href="#carrier-rates" style="color: var(--accent-green);">Carrier Rates (Verified)</a>
         <a href="#pre-work">Pre-Work: Fix Local Inventory</a>
         <a href="#phases">Implementation Phases</a>
         <a href="#admin-tools">Admin Tools</a>
@@ -1016,26 +1017,103 @@ STATUS BLOCKED IF:
     <section id="integrations">
       <h2>Integrations</h2>
 
-      <div class="card">
-        <h3>Hillebrand API (Primary)</h3>
+      <div class="card" id="carrier-rates">
+        <h3>Hillebrand API (Primary) - VERIFIED WORKING</h3>
         <p><strong>Purpose:</strong> Get quotes, book shipments, track shipments</p>
-        <div class="code-block">API Details (from OpenAPI spec):
+        <p style="color: var(--accent-green);"><strong>Status:</strong> API tested and confirmed working (Jan 15, 2026)</p>
+
+        <div class="highlight-box">
+          <strong>Test Results:</strong> 12 shipments, 13 invoices retrieved successfully
+        </div>
+
+        <div class="code-block">API Configuration:
 Base URL: https://api.hillebrandgori.com/
 Auth: OAuth2 password grant
 Token URL: https://login.hillebrand.com/oauth2/aus95hq7r8iIqp14M0i7/v1/token
-Token expiry: 2 hours
-Rate limit: 100 calls/minute
+Token Expiry: 8 hours (28800 seconds)
+Scope: offline_access (supports refresh tokens)
 
-Available Endpoints:
-| Endpoint                   | Method | Purpose                    |
-|----------------------------|--------|----------------------------|
-| /v6/shipments              | GET    | List shipments with filters|
-| /v6/shipments/{id}         | GET    | Get shipment details       |
-| /v6/invoices               | GET    | Get invoice data           |
-| /v1/webhooks/me            | CRUD   | Manage webhook subscriptions|
-| /v1/webhooks/me/eventTypes | GET    | List available event types |
+Environment Variables Required:
+HILLEBRAND_CLIENT_ID=0oaims26pltIrN1Ik0i7
+HILLEBRAND_CLIENT_SECRET=************
+HILLEBRAND_USERNAME=hg-api@craftculture.xyz
+HILLEBRAND_PASSWORD=************
 
-Webhook Events (real-time push):
+Token Response:
+{
+  "token_type": "Bearer",
+  "expires_in": 28800,
+  "access_token": "eyJ...",
+  "scope": "offline_access",
+  "refresh_token": "..."  // Use for token refresh
+}</div>
+
+        <div class="code-block">Verified Permissions (from JWT perm claim):
+READ:
+├── shipments.read          ✓ List/view shipments
+├── invoices.read           ✓ List/view invoices
+├── documents.read          ✓ Access shipment documents
+├── inventories.read        ✓ View inventory data
+├── parties.read            ✓ View party/contact info
+├── quotes.read             ✓ View quotes
+├── dashboards.read         ✓ Dashboard data
+├── events.read             ✓ Event history
+├── tasks.read              ✓ Task data
+├── shipmentReadiness.read  ✓ Readiness status
+├── billOfLadingReview.read ✓ BOL review status
+
+WRITE:
+├── shipments.write         ✓ Create/update shipments
+├── quotes.write            ✓ Create/update quotes
+├── transports.write        ✓ Transport equipment
+├── payments.write          ✓ Payment operations
+├── containerLoading.write  ✓ Container operations
+├── shipmentReadiness.write ✓ Update readiness
+└── billOfLadingReview.write ✓ BOL review operations</div>
+
+        <div class="code-block">Verified Endpoints (tested Jan 15, 2026):
+| Endpoint                   | Method | Status   | Notes                         |
+|----------------------------|--------|----------|-------------------------------|
+| /v6/shipments              | GET    | ✓ Works  | 12 shipments returned         |
+| /v6/shipments/{id}         | GET    | ✓ Works  | Full shipment details         |
+| /v6/shipments/{id}/events  | GET    | ✓ Works  | Tracking events               |
+| /v6/shipments/{id}/documents| GET   | ✓ Works  | Attached documents            |
+| /v6/shipments/{id}/legs    | GET    | ✓ Works  | Route legs                    |
+| /v6/shipments/{id}/locations| GET   | ✓ Works  | Location tracking             |
+| /v2/inventories            | GET    | ✓ Works  | 0 items (no HG warehousing)   |
+| /v1/invoices               | GET    | ✓ Works  | 13 invoices returned          |
+| /v1/invoices/{id}/lines    | GET    | ✓ Works  | Invoice line items            |
+| /v1/webhooks/me            | CRUD   | Available| Webhook subscriptions         |
+| /v1/webhooks/me/eventTypes | GET    | Available| List event types              |
+
+Sample Shipment Data Returned:
+{
+  "id": 14854137,
+  "status": "arrived",
+  "shipFromPartyName": "Matusalem Rum",
+  "shipFromLocation": { "cityName": "McCook", "countryCode": "US" },
+  "shipToPartyName": "Craft & Culture Fze",
+  "shipToLocation": { "cityName": "Ras al Khaimah", "countryCode": "AE" },
+  "mainModality": "air",
+  "references": [{ "reference": "DUBAI102025", "role": "serviceCustomer" }],
+  "equipment": { "number": "CMAU2343528", "type": "20'" },  // for maritime
+  "emission": { "value": 2.7, "unit": "tne", "type": "co2e" }
+}
+
+Sample Invoice Data Returned:
+{
+  "id": 4766908,
+  "invoiceNumber": "8812510006",
+  "invoiceStatus": "overdue",  // open, paid, overdue
+  "invoiceDate": "2025-12-26",
+  "paymentDueDate": "2026-01-10",
+  "currencyCode": "AED",
+  "totalAmount": 19251.88,
+  "openAmount": 19251.88,
+  "shipmentReferences": [{ "id": 14999626, "shipmentReference": "SAED040370" }]
+}</div>
+
+        <div class="code-block">Webhook Events (real-time push):
 Ship from:       shprdy (ready), shpsupdeppln/cnf (departure)
 Consolidation:   shpexharrpln/cnf, shpexhdeppln/cnf
 Port loading:    shppolarrcnf, shpprtdeppln/cnf
@@ -1043,7 +1121,8 @@ Transshipment:   shppoxarrpln/cnf, shppoxdeppln/cnf
 Port arrival:    shpprtarrpln/cnf, shppoddepcnf
 Customs:         shpimpcsmclr (cleared)
 Deconsolidation: shpimharrpln/cnf, shpimhdeppln/cnf
-Ship to:         shpcusarrpln/cnf (final delivery)</div>
+Ship to:         shpcusarrpln/cnf (final delivery)
+Air arrival:     shpairarrcnf (confirmed for air shipments)</div>
       </div>
 
       <div class="card">
@@ -1249,17 +1328,35 @@ Secondary nav changes per module:
 
       <div class="phase-card">
         <h3>Phase 6: Hillebrand API Integration</h3>
-        <p><strong>Goal:</strong> Live tracking from Hillebrand (API credentials available)</p>
+        <p><strong>Goal:</strong> Live tracking from Hillebrand</p>
+        <p style="color: var(--accent-green);"><strong>Status:</strong> API credentials verified and working (Jan 15, 2026)</p>
 
+        <h4>Environment Variables (add to .env.local)</h4>
+        <div class="code-block">HILLEBRAND_TOKEN_URL=https://login.hillebrand.com/oauth2/aus95hq7r8iIqp14M0i7/v1/token
+HILLEBRAND_API_URL=https://api.hillebrandgori.com
+HILLEBRAND_CLIENT_ID=0oaims26pltIrN1Ik0i7
+HILLEBRAND_CLIENT_SECRET=QSLmUeZZqA1SzkcKnIMUgGRPRB__om0r6_8u9bwo3qqQyH-Dg3k0Pv5e045shGuh
+HILLEBRAND_USERNAME=hg-api@craftculture.xyz
+HILLEBRAND_PASSWORD=Ya3dTH7aSZKHf34uJCAY-V@Wpn49d</div>
+
+        <h4>Implementation Tasks</h4>
         <ul class="task-list">
-          <li>Store credentials in env: <code>HILLEBRAND_API_KEY</code>, <code>HILLEBRAND_API_SECRET</code>, <code>HILLEBRAND_USERNAME</code>, <code>HILLEBRAND_PASSWORD</code></li>
-          <li>Create <code>_logistics/integrations/hillebrand/client.ts</code> - OAuth2 token management</li>
-          <li>Create <code>_logistics/integrations/hillebrand/getShipments.ts</code> - List shipments</li>
-          <li>Create <code>_logistics/integrations/hillebrand/getShipment.ts</code> - Get details</li>
-          <li>Create <code>api/webhooks/hillebrand/route.ts</code> - Webhook receiver</li>
+          <li>Create <code>_logistics/integrations/hillebrand/client.ts</code> - OAuth2 token management with 8hr refresh</li>
+          <li>Create <code>_logistics/integrations/hillebrand/getShipments.ts</code> - List shipments (12 available)</li>
+          <li>Create <code>_logistics/integrations/hillebrand/getShipment.ts</code> - Get shipment with events, docs, legs</li>
+          <li>Create <code>_logistics/integrations/hillebrand/getInvoices.ts</code> - Get invoices (13 available)</li>
+          <li>Create <code>api/webhooks/hillebrand/route.ts</code> - Webhook receiver for real-time updates</li>
           <li>Create Trigger.dev job for periodic sync (backup to webhooks)</li>
           <li>Map Hillebrand status to our shipmentStatus enum</li>
         </ul>
+
+        <h4>Status Mapping</h4>
+        <div class="code-block">Hillebrand Status     →  Our Status
+──────────────────────────────────────
+departed              →  in_transit
+arrived               →  arrived_port
+delivered             →  delivered
+shpimpcsmclr (event)  →  cleared</div>
       </div>
 
       <div class="phase-card">
@@ -1460,7 +1557,8 @@ pnpm dev
 
     <footer>
       <p>C&C Logistics Module Implementation Plan</p>
-      <p>Last updated: January 2026</p>
+      <p>Last updated: January 15, 2026</p>
+      <p style="color: var(--accent-green);">Hillebrand API verified and working</p>
     </footer>
   </div>
 </body>
