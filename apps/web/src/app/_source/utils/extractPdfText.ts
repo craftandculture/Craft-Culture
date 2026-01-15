@@ -1,4 +1,4 @@
-import pdf from 'pdf-parse';
+import { PDFParse } from 'pdf-parse';
 
 import logger from '@/utils/logger';
 
@@ -12,18 +12,20 @@ import logger from '@/utils/logger';
  * @returns Extracted text content from all pages
  */
 const extractPdfText = async (buffer: Buffer): Promise<string> => {
-  try {
-    const data = await pdf(buffer);
+  const parser = new PDFParse({ data: buffer });
 
-    if (!data.text || data.text.trim().length === 0) {
+  try {
+    const result = await parser.getText();
+
+    if (!result.text || result.text.trim().length === 0) {
       throw new Error(
         'No text content could be extracted. The PDF may be scanned/image-based.'
       );
     }
 
-    logger.dev(`Extracted ${data.numpages} pages from PDF`);
+    logger.dev(`Extracted ${result.pages.length} pages from PDF`);
 
-    return data.text;
+    return result.text;
   } catch (error) {
     logger.error('PDF extraction error:', error);
 
@@ -32,6 +34,8 @@ const extractPdfText = async (buffer: Buffer): Promise<string> => {
     }
 
     throw new Error('Failed to extract text from PDF');
+  } finally {
+    await parser.destroy();
   }
 };
 
