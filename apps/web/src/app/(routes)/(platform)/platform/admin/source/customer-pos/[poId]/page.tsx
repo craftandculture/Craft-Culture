@@ -1,5 +1,6 @@
 'use client';
 
+import * as Dialog from '@radix-ui/react-dialog';
 import {
   IconArrowLeft,
   IconCheck,
@@ -10,6 +11,7 @@ import {
   IconPackage,
   IconSend,
   IconSparkles,
+  IconSwitchHorizontal,
   IconWand,
   IconX,
 } from '@tabler/icons-react';
@@ -43,8 +45,21 @@ const CustomerPoDetailPage = () => {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
 
+  // Selection state
+  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
+  const [isSupplierDialogOpen, setIsSupplierDialogOpen] = useState(false);
+
   const { data: customerPo, isLoading } = useQuery({
     ...api.source.admin.customerPo.getOne.queryOptions({ id: params.poId }),
+  });
+
+  // Get available suppliers for selection
+  const { data: suppliersData } = useQuery({
+    ...api.source.admin.customerPo.getAvailableSuppliers.queryOptions({
+      customerPoId: params.poId,
+      itemIds: selectedItems.size > 0 ? Array.from(selectedItems) : undefined,
+    }),
+    enabled: isSupplierDialogOpen && selectedItems.size > 0,
   });
 
   // Parse document mutation
@@ -112,6 +127,49 @@ const CustomerPoDetailPage = () => {
       },
     })
   );
+
+  const { mutate: bulkChangeSupplier, isPending: isChangingSupplier } = useMutation(
+    api.source.admin.customerPo.bulkChangeSupplier.mutationOptions({
+      onSuccess: (result) => {
+        void queryClient.invalidateQueries({
+          queryKey: api.source.admin.customerPo.getOne.queryKey({ id: params.poId }),
+        });
+        setSelectedItems(new Set());
+        setIsSupplierDialogOpen(false);
+        toast.success(
+          `Changed ${result.matchedCount} items to ${result.partnerName}` +
+            (result.unmatchedCount > 0
+              ? ` (${result.unmatchedCount} could not be matched)`
+              : '')
+        );
+      },
+      onError: (error) => {
+        toast.error(`Failed to change supplier: ${error.message}`);
+      },
+    })
+  );
+
+  // Selection handlers
+  const toggleItemSelection = (itemId: string) => {
+    setSelectedItems((prev) => {
+      const next = new Set(prev);
+      if (next.has(itemId)) {
+        next.delete(itemId);
+      } else {
+        next.add(itemId);
+      }
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (!customerPo) return;
+    if (selectedItems.size === customerPo.items.length) {
+      setSelectedItems(new Set());
+    } else {
+      setSelectedItems(new Set(customerPo.items.map((i) => i.id)));
+    }
+  };
 
   // File upload handling
   const processFile = useCallback(
@@ -461,23 +519,44 @@ const CustomerPoDetailPage = () => {
             <CardContent className="p-0">
               <div className="p-4 border-b border-border-primary flex items-center justify-between">
                 <Typography variant="headingSm">Line Items</Typography>
-                {canAutoMatch && unmatchedItemCount > 0 && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => autoMatch({ customerPoId: customerPo.id })}
-                    disabled={isMatching}
-                  >
-                    <ButtonContent iconLeft={IconWand}>
-                      {isMatching ? 'Matching...' : `Match ${unmatchedItemCount} items`}
-                    </ButtonContent>
-                  </Button>
-                )}
+                <div className="flex items-center gap-2">
+                  {selectedItems.size > 0 && customerPo.rfqId && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setIsSupplierDialogOpen(true)}
+                    >
+                      <ButtonContent iconLeft={IconSwitchHorizontal}>
+                        Change Supplier ({selectedItems.size})
+                      </ButtonContent>
+                    </Button>
+                  )}
+                  {canAutoMatch && unmatchedItemCount > 0 && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => autoMatch({ customerPoId: customerPo.id })}
+                      disabled={isMatching}
+                    >
+                      <ButtonContent iconLeft={IconWand}>
+                        {isMatching ? 'Matching...' : `Match ${unmatchedItemCount} items`}
+                      </ButtonContent>
+                    </Button>
+                  )}
+                </div>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead className="bg-fill-secondary border-b border-border-primary">
                     <tr>
+                      <th className="w-10 p-3">
+                        <input
+                          type="checkbox"
+                          checked={selectedItems.size === customerPo.items.length && customerPo.items.length > 0}
+                          onChange={toggleSelectAll}
+                          className="h-4 w-4 rounded border-border-primary text-fill-brand focus:ring-fill-brand"
+                        />
+                      </th>
                       <th className="text-left p-3 font-medium text-text-muted">Product</th>
                       <th className="text-left p-3 font-medium text-text-muted">Vintage</th>
                       <th className="text-right p-3 font-medium text-text-muted">Qty</th>
@@ -504,8 +583,16 @@ const CustomerPoDetailPage = () => {
                           key={item.id}
                           className={`border-b border-border-primary hover:bg-fill-secondary/50 ${
                             item.isLosingItem ? 'bg-fill-danger/5' : ''
-                          }`}
+                          } ${selectedItems.has(item.id) ? 'bg-fill-brand/5' : ''}`}
                         >
+                          <td className="p-3">
+                            <input
+                              type="checkbox"
+                              checked={selectedItems.has(item.id)}
+                              onChange={() => toggleItemSelection(item.id)}
+                              className="h-4 w-4 rounded border-border-primary text-fill-brand focus:ring-fill-brand"
+                            />
+                          </td>
                           <td className="p-3">
                             <Typography variant="bodySm" className="font-medium">
                               {item.productName}
@@ -662,6 +749,69 @@ const CustomerPoDetailPage = () => {
             </CardContent>
           </Card>
         )}
+
+        {/* Change Supplier Dialog */}
+        <Dialog.Root open={isSupplierDialogOpen} onOpenChange={setIsSupplierDialogOpen}>
+          <Dialog.Portal>
+            <Dialog.Overlay className="fixed inset-0 bg-black/50 z-50" />
+            <Dialog.Content className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-fill-primary rounded-lg shadow-lg w-full max-w-md z-50 p-6">
+              <Dialog.Title asChild>
+                <Typography variant="headingSm" className="mb-2">
+                  Change Supplier
+                </Typography>
+              </Dialog.Title>
+              <Dialog.Description asChild>
+                <Typography variant="bodySm" colorRole="muted" className="mb-4">
+                  Select a supplier for {selectedItems.size} selected item{selectedItems.size !== 1 ? 's' : ''}.
+                  Items will be matched to this supplier&apos;s quotes.
+                </Typography>
+              </Dialog.Description>
+
+              <div className="space-y-2 max-h-64 overflow-y-auto">
+                {suppliersData?.suppliers && suppliersData.suppliers.length > 0 ? (
+                  suppliersData.suppliers.map((supplier) => (
+                    <button
+                      key={supplier.partnerId}
+                      onClick={() =>
+                        bulkChangeSupplier({
+                          customerPoId: customerPo.id,
+                          itemIds: Array.from(selectedItems),
+                          partnerId: supplier.partnerId,
+                        })
+                      }
+                      disabled={isChangingSupplier}
+                      className="w-full text-left p-3 rounded-lg border border-border-primary hover:border-border-brand hover:bg-fill-secondary/50 transition-colors disabled:opacity-50"
+                    >
+                      <div className="flex items-center justify-between">
+                        <Typography variant="bodySm" className="font-medium">
+                          {supplier.partnerName}
+                        </Typography>
+                        <span className="text-xs text-text-muted">
+                          {supplier.coverage}% coverage
+                        </span>
+                      </div>
+                      <Typography variant="bodyXs" colorRole="muted">
+                        Can match {supplier.matchableItems} of {supplier.totalItems} items
+                      </Typography>
+                    </button>
+                  ))
+                ) : (
+                  <Typography variant="bodySm" colorRole="muted" className="text-center py-4">
+                    No alternative suppliers available
+                  </Typography>
+                )}
+              </div>
+
+              <div className="flex justify-end gap-2 mt-4">
+                <Dialog.Close asChild>
+                  <Button variant="outline" size="sm">
+                    Cancel
+                  </Button>
+                </Dialog.Close>
+              </div>
+            </Dialog.Content>
+          </Dialog.Portal>
+        </Dialog.Root>
       </div>
     </div>
   );
