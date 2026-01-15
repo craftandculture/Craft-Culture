@@ -20,7 +20,7 @@ export async function POST() {
     }
 
     // Check if source_customer_pos table exists
-    const tableCheck = await db.execute(sql`
+    const tableCheck = await db.execute<{ exists: boolean }>(sql`
       SELECT EXISTS (
         SELECT FROM pg_tables
         WHERE schemaname = 'public'
@@ -28,7 +28,7 @@ export async function POST() {
       ) as exists
     `);
 
-    if (tableCheck.rows[0]?.exists) {
+    if (tableCheck[0]?.exists) {
       return NextResponse.json({
         success: true,
         message: 'Tables already exist, no migration needed',
@@ -47,7 +47,8 @@ export async function POST() {
       const trimmed = statement.trim();
       if (trimmed) {
         try {
-          await db.execute(sql.raw(trimmed));
+          // Use raw SQL execution
+          await db.execute(sql`${sql.raw(trimmed)}`);
           results.push(`✅ ${trimmed.substring(0, 60)}...`);
         } catch (err) {
           const error = err as Error;
