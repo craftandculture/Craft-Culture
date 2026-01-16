@@ -699,6 +699,10 @@ export const notificationType = pgEnum('notification_type', [
   'customer_po_received',
   'customer_po_orders_generated',
   'customer_po_ready',
+  // Logistics notifications
+  'shipment_status_changed',
+  'document_expired',
+  'document_expiring_soon',
 ]);
 
 /**
