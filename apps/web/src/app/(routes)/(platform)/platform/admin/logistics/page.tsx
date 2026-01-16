@@ -4,6 +4,7 @@ import {
   IconAnchor,
   IconBox,
   IconChevronRight,
+  IconCloudDownload,
   IconLoader2,
   IconPackageExport,
   IconPackageImport,
@@ -14,10 +15,11 @@ import {
   IconShip,
   IconTruck,
 } from '@tabler/icons-react';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { formatDistanceToNow } from 'date-fns';
 import Link from 'next/link';
 import { useState } from 'react';
+import { toast } from 'sonner';
 
 import ShipmentStatusBadge from '@/app/_logistics/components/ShipmentStatusBadge';
 import Button from '@/app/_ui/components/Button/Button';
@@ -80,6 +82,7 @@ const transportModeLabels: Record<TransportMode, string> = {
  */
 const LogisticsPage = () => {
   const api = useTRPC();
+  const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<ShipmentStatus | 'all'>('all');
   const [typeFilter, setTypeFilter] = useState<ShipmentType | 'all'>('all');
@@ -91,6 +94,18 @@ const LogisticsPage = () => {
       status: statusFilter === 'all' ? undefined : statusFilter,
       type: typeFilter === 'all' ? undefined : typeFilter,
     }),
+  });
+
+  // Hillebrand sync mutation
+  const { mutate: syncHillebrand, isPending: isSyncing } = useMutation({
+    ...api.logistics.admin.syncHillebrand.mutationOptions(),
+    onSuccess: (result) => {
+      toast.success(`Synced ${result.created} new, ${result.updated} updated shipments`);
+      void queryClient.invalidateQueries({ queryKey: [['logistics', 'admin', 'getMany']] });
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to sync with Hillebrand');
+    },
   });
 
   const shipments = data?.data ?? [];
@@ -130,6 +145,20 @@ const LogisticsPage = () => {
             </Typography>
           </div>
           <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => syncHillebrand()}
+              disabled={isSyncing}
+              title="Sync shipments from Hillebrand"
+            >
+              <Icon
+                icon={IconCloudDownload}
+                size="sm"
+                className={isSyncing ? 'animate-pulse' : ''}
+              />
+              <span className="hidden sm:inline ml-1">Hillebrand</span>
+            </Button>
             <Button
               variant="outline"
               size="sm"
