@@ -10,6 +10,9 @@ import adminRemoveItem from './controller/adminRemoveItem';
 import adminUpdate from './controller/adminUpdate';
 import adminUpdateStatus from './controller/adminUpdateStatus';
 import adminUploadDocument from './controller/adminUploadDocument';
+import partnerGetMany from './controller/partnerGetMany';
+import partnerGetOne from './controller/partnerGetOne';
+import partnerUploadDocument from './controller/partnerUploadDocument';
 
 const adminRouter = createTRPCRouter({
   // Shipment CRUD
@@ -31,8 +34,15 @@ const adminRouter = createTRPCRouter({
   calculateLandedCost: adminCalculateLandedCost,
 });
 
+const partnerRouter = createTRPCRouter({
+  getMany: partnerGetMany,
+  getOne: partnerGetOne,
+  uploadDocument: partnerUploadDocument,
+});
+
 const logisticsRouter = createTRPCRouter({
   admin: adminRouter,
+  partner: partnerRouter,
 });
 
 export default logisticsRouter;
