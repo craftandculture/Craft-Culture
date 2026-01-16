@@ -49,3 +49,5 @@ service-account.json
 dump*.sql
 dump*.csv
 repomix-output.xml
+.vercel
+.env*.local
