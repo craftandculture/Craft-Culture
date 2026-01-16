@@ -527,15 +527,16 @@ logistics.admin.deleteDocument   - Delete document
 logistics.admin.calculateLandedCost - Calculate landed cost</div>
       </div>
 
-      <div class="progress-card" style="border-color: var(--accent-yellow);">
-        <h3 style="color: var(--accent-yellow);">Phase 5 In Progress - Partner Portal</h3>
-        <p>Building partner-facing views for shipment tracking and document management.</p>
+      <div class="progress-card" style="border-color: var(--accent-green);">
+        <h3 style="color: var(--accent-green);">Phase 5 Complete - Partner Portal</h3>
+        <p>Partner-facing views for shipment tracking and document management deployed.</p>
 
         <h4>Completed</h4>
         <div class="code-block">Partner API (apps/web/src/app/_logistics/):
-├── controller/partnerGetMany.ts - List partner's shipments
-├── controller/partnerGetOne.ts - Get shipment details (with access check)
-└── router.ts - Partner router added
+├── controller/partnerGetMany.ts - List partner's shipments (with items)
+├── controller/partnerGetOne.ts - Get shipment details (items, docs, logs)
+├── controller/partnerUploadDocument.ts - Upload documents (drag-drop)
+└── router.ts - Partner router with all endpoints
 
 Partner Pages:
 ├── /platform/partner/logistics/page.tsx - Shipment list
@@ -547,14 +548,37 @@ Partner Pages:
 └── /platform/partner/logistics/[shipmentId]/page.tsx - Detail view
     ├── Overview tab - Shipment details, timeline, cargo summary
     ├── Items tab - Read-only item list
-    ├── Documents tab - View and download documents
-    └── Timeline tab - Activity history</div>
+    ├── Documents tab - Drag-drop upload + document list
+    └── Timeline tab - Activity history
 
-        <h4>Remaining</h4>
+Components:
+└── PartnerDocumentUpload.tsx - Partner-specific upload component
+    ├── Drag-drop with react-dropzone
+    ├── PDF, PNG, JPG support (max 10MB)
+    ├── 13 document types selectable
+    └── Auto-refresh on upload</div>
+
+        <h4>Deferred to Later</h4>
         <ul class="task-list">
-          <li>Partner document upload (partnerUploadDocument.ts)</li>
           <li>Email notifications for shipment updates</li>
           <li>Partner shipment status change notifications</li>
+        </ul>
+      </div>
+
+      <div class="progress-card" style="border-color: var(--accent-yellow);">
+        <h3 style="color: var(--accent-yellow);">Phase 6 In Progress - Hillebrand Sync</h3>
+        <p>Auto-import shipments and invoices from Hillebrand API.</p>
+        <p style="color: var(--accent-green);"><strong>API credentials verified and working!</strong></p>
+
+        <h4>Implementation Tasks</h4>
+        <ul class="task-list">
+          <li>Create <code>_logistics/integrations/hillebrand/client.ts</code> - OAuth2 token management</li>
+          <li>Create <code>syncShipments.ts</code> - Import shipments from Hillebrand</li>
+          <li>Create <code>syncInvoices.ts</code> - Import invoices from Hillebrand</li>
+          <li>Create Trigger.dev job for scheduled sync (every 4 hours)</li>
+          <li>Create webhook receiver for real-time updates</li>
+          <li>Map Hillebrand status to our shipmentStatus enum</li>
+          <li>Admin UI button to trigger manual sync</li>
         </ul>
       </div>
     </section>
@@ -562,21 +586,8 @@ Partner Pages:
     <section id="next-steps">
       <h2>→ Next Steps</h2>
 
-      <div class="next-steps-card">
-        <h3>Phase 5: Complete Partner Portal (In Progress)</h3>
-        <p>Finish partner-facing features for document management and notifications</p>
-
-        <h4>Remaining Tasks</h4>
-        <ul class="task-list">
-          <li>Create <code>partnerUploadDocument.ts</code> - Allow partners to upload docs for their shipments</li>
-          <li>Add LogisticsDocumentUpload component to partner detail page</li>
-          <li>Email notifications when shipment status changes</li>
-          <li>Email notifications when new documents are added</li>
-        </ul>
-      </div>
-
-      <div class="next-steps-card">
-        <h3>Phase 6: Hillebrand Sync - Auto-Import</h3>
+      <div class="next-steps-card" style="border-color: var(--accent-yellow);">
+        <h3>Phase 6: Hillebrand Sync - In Progress</h3>
         <p style="color: var(--accent-green);">API credentials verified and working!</p>
         <p>Auto-import shipments and invoices from Hillebrand API</p>
 
@@ -1501,8 +1512,8 @@ Flag for manual review (don't skip silently)</div>
         </ul>
       </div>
 
-      <div class="phase-card" style="border-color: var(--accent-yellow);">
-        <h3 style="color: var(--accent-yellow);">Phase 5: Partner Portal - IN PROGRESS</h3>
+      <div class="phase-card" style="border-color: var(--accent-green);">
+        <h3 style="color: var(--accent-green);">Phase 5: Partner Portal ✓ COMPLETE</h3>
         <p><strong>Goal:</strong> Role-based views for partners</p>
 
         <h4>Partner Portal</h4>
@@ -1511,7 +1522,12 @@ Flag for manual review (don't skip silently)</div>
           <li class="completed"><code>partnerGetOne.ts</code> - Verify partner access</li>
           <li class="completed"><code>/platform/partner/logistics/page.tsx</code> - Partner shipment list</li>
           <li class="completed"><code>/platform/partner/logistics/[shipmentId]/page.tsx</code> - Partner shipment detail</li>
-          <li><code>partnerUploadDocument.ts</code> - Partners can upload docs for their shipments</li>
+          <li class="completed"><code>partnerUploadDocument.ts</code> - Partners can upload docs for their shipments</li>
+          <li class="completed"><code>PartnerDocumentUpload.tsx</code> - Drag-drop upload component</li>
+        </ul>
+
+        <h4>Deferred</h4>
+        <ul class="task-list">
           <li>Email notifications for shipment updates</li>
         </ul>
       </div>
@@ -1748,7 +1764,7 @@ pnpm dev
     <footer>
       <p>C&C Logistics Module Implementation Plan</p>
       <p>Last updated: January 16, 2026</p>
-      <p style="color: var(--accent-green);">Phases 1-4 Complete | Phase 5 In Progress | Hillebrand API verified</p>
+      <p style="color: var(--accent-green);">Phases 1-5 Complete | Phase 6 (Hillebrand Sync) In Progress</p>
     </footer>
   </div>
 </body>
