@@ -4,6 +4,7 @@ import adminAddItem from './controller/adminAddItem';
 import adminCalculateLandedCost from './controller/adminCalculateLandedCost';
 import adminCreate from './controller/adminCreate';
 import adminDeleteDocument from './controller/adminDeleteDocument';
+import adminGetHillebrandEvents from './controller/adminGetHillebrandEvents';
 import adminGetMany from './controller/adminGetMany';
 import adminGetOne from './controller/adminGetOne';
 import adminRemoveItem from './controller/adminRemoveItem';
@@ -36,6 +37,7 @@ const adminRouter = createTRPCRouter({
 
   // Hillebrand sync
   syncHillebrand: adminSyncHillebrand,
+  getHillebrandEvents: adminGetHillebrandEvents,
 });
 
 const partnerRouter = createTRPCRouter({
