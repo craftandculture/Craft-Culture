@@ -13,13 +13,12 @@ import Card from '@/app/_ui/components/Card/Card';
 import CardContent from '@/app/_ui/components/Card/CardContent';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Input from '@/app/_ui/components/Input/Input';
-import Label from '@/app/_ui/components/Label/Label';
 import Select from '@/app/_ui/components/Select/Select';
 import SelectContent from '@/app/_ui/components/Select/SelectContent';
 import SelectItem from '@/app/_ui/components/Select/SelectItem';
 import SelectTrigger from '@/app/_ui/components/Select/SelectTrigger';
 import SelectValue from '@/app/_ui/components/Select/SelectValue';
-import Textarea from '@/app/_ui/components/Textarea/Textarea';
+import TextArea from '@/app/_ui/components/TextArea/TextArea';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import useTRPC from '@/lib/trpc/browser';
 
@@ -108,7 +107,7 @@ const NewShipmentPage = () => {
               {/* Type & Mode */}
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
-                  <Label>Shipment Type</Label>
+                  <label className="text-sm font-medium">Shipment Type</label>
                   <Select
                     value={formData.type}
                     onValueChange={(v) => updateField('type', v)}
@@ -124,7 +123,7 @@ const NewShipmentPage = () => {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label>Transport Mode</Label>
+                  <label className="text-sm font-medium">Transport Mode</label>
                   <Select
                     value={formData.transportMode}
                     onValueChange={(v) => updateField('transportMode', v)}
@@ -149,7 +148,7 @@ const NewShipmentPage = () => {
                 </Typography>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
-                    <Label>Country</Label>
+                    <label className="text-sm font-medium">Country</label>
                     <Input
                       placeholder="e.g. France"
                       value={formData.originCountry}
@@ -157,7 +156,7 @@ const NewShipmentPage = () => {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>City</Label>
+                    <label className="text-sm font-medium">City</label>
                     <Input
                       placeholder="e.g. Bordeaux"
                       value={formData.originCity}
@@ -174,7 +173,7 @@ const NewShipmentPage = () => {
                 </Typography>
                 <div className="grid gap-4 sm:grid-cols-3">
                   <div className="space-y-2">
-                    <Label>Country</Label>
+                    <label className="text-sm font-medium">Country</label>
                     <Input
                       placeholder="e.g. UAE"
                       value={formData.destinationCountry}
@@ -182,7 +181,7 @@ const NewShipmentPage = () => {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>City</Label>
+                    <label className="text-sm font-medium">City</label>
                     <Input
                       placeholder="e.g. Dubai"
                       value={formData.destinationCity}
@@ -190,7 +189,7 @@ const NewShipmentPage = () => {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>Warehouse</Label>
+                    <label className="text-sm font-medium">Warehouse</label>
                     <Input
                       placeholder="e.g. RAK Port"
                       value={formData.destinationWarehouse}
@@ -207,7 +206,7 @@ const NewShipmentPage = () => {
                 </Typography>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
-                    <Label>Carrier Name</Label>
+                    <label className="text-sm font-medium">Carrier Name</label>
                     <Input
                       placeholder="e.g. Hillebrand, Hapag-Lloyd"
                       value={formData.carrierName}
@@ -215,7 +214,7 @@ const NewShipmentPage = () => {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>Booking Reference</Label>
+                    <label className="text-sm font-medium">Booking Reference</label>
                     <Input
                       placeholder="Carrier booking number"
                       value={formData.carrierBookingRef}
@@ -227,7 +226,7 @@ const NewShipmentPage = () => {
                   {(formData.transportMode === 'sea_fcl' || formData.transportMode === 'sea_lcl') && (
                     <>
                       <div className="space-y-2">
-                        <Label>Container Number</Label>
+                        <label className="text-sm font-medium">Container Number</label>
                         <Input
                           placeholder="e.g. HLCU1234567"
                           value={formData.containerNumber}
@@ -235,7 +234,7 @@ const NewShipmentPage = () => {
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label>Bill of Lading #</Label>
+                        <label className="text-sm font-medium">Bill of Lading #</label>
                         <Input
                           placeholder="BOL number"
                           value={formData.blNumber}
@@ -246,7 +245,7 @@ const NewShipmentPage = () => {
                   )}
                   {formData.transportMode === 'air' && (
                     <div className="space-y-2">
-                      <Label>Airway Bill #</Label>
+                      <label className="text-sm font-medium">Airway Bill #</label>
                       <Input
                         placeholder="AWB number"
                         value={formData.awbNumber}
@@ -259,8 +258,8 @@ const NewShipmentPage = () => {
 
               {/* Notes */}
               <div className="space-y-2">
-                <Label>Internal Notes</Label>
-                <Textarea
+                <label className="text-sm font-medium">Internal Notes</label>
+                <TextArea
                   placeholder="Any internal notes about this shipment..."
                   value={formData.internalNotes}
                   onChange={(e) => updateField('internalNotes', e.target.value)}
