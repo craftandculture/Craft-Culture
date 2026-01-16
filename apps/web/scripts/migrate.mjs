@@ -57,6 +57,43 @@ const runMigrations = async () => {
       console.log('✅ SOURCE module tables already exist');
     }
 
+    // Check if logistics_shipments table exists
+    const logisticsCheck = await client`
+      SELECT EXISTS (
+        SELECT FROM pg_tables
+        WHERE schemaname = 'public'
+        AND tablename = 'logistics_shipments'
+      ) as exists
+    `;
+
+    if (!logisticsCheck[0].exists) {
+      console.log('🔄 Running LOGISTICS module migration (0016_mysterious_silhouette.sql)...');
+
+      const logisticsMigrationPath = join(__dirname, '../src/database/0016_mysterious_silhouette.sql');
+      const logisticsMigrationSql = readFileSync(logisticsMigrationPath, 'utf-8');
+
+      const logisticsStatements = logisticsMigrationSql.split('--> statement-breakpoint');
+
+      for (const statement of logisticsStatements) {
+        const trimmed = statement.trim();
+        if (trimmed) {
+          try {
+            await client.unsafe(trimmed);
+          } catch (err) {
+            // Ignore "already exists" errors for enums and tables
+            if (!err.message.includes('already exists') && !err.message.includes('duplicate key')) {
+              throw err;
+            }
+            console.log(`  ⏭️ Skipped (already exists): ${trimmed.substring(0, 50)}...`);
+          }
+        }
+      }
+
+      console.log('✅ LOGISTICS module tables created successfully');
+    } else {
+      console.log('✅ LOGISTICS module tables already exist');
+    }
+
     // Legacy migration: Add local_inventory enum value if needed
     const enumCheck = await client`
       SELECT EXISTS (
