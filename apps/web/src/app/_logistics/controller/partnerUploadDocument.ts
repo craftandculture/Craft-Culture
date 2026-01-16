@@ -5,7 +5,7 @@ import { fileTypeFromBuffer } from 'file-type';
 
 import db from '@/database/client';
 import { logisticsDocuments, logisticsShipments } from '@/database/schema';
-import { partnerProcedure } from '@/lib/trpc/procedures';
+import { winePartnerProcedure } from '@/lib/trpc/procedures';
 import logger from '@/utils/logger';
 
 import uploadDocumentSchema from '../schemas/uploadDocumentSchema';
@@ -24,7 +24,7 @@ const ALLOWED_DOCUMENT_TYPES = [
  * Verifies the partner has access to the shipment before allowing upload.
  * Stores the file in Vercel Blob and creates a database record.
  */
-const partnerUploadDocument = partnerProcedure.input(uploadDocumentSchema).mutation(async ({ input, ctx }) => {
+const partnerUploadDocument = winePartnerProcedure.input(uploadDocumentSchema).mutation(async ({ input, ctx }) => {
   const { shipmentId, documentType, documentNumber, issueDate, expiryDate, file, filename } = input;
   const { user, partner } = ctx;
 
