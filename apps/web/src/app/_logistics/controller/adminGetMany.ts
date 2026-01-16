@@ -43,6 +43,7 @@ const adminGetMany = adminProcedure.input(getShipmentsSchema).query(async ({ inp
     conditions.push(
       or(
         ilike(logisticsShipments.shipmentNumber, `%${search}%`),
+        ilike(logisticsShipments.hillebrandReference, `%${search}%`),
         ilike(logisticsShipments.carrierName, `%${search}%`),
         ilike(logisticsShipments.carrierBookingRef, `%${search}%`),
         ilike(logisticsShipments.containerNumber, `%${search}%`),

@@ -48,6 +48,8 @@ interface GetShipmentsOptions {
   page?: number;
   pageSize?: number;
   status?: string;
+  reference?: string;
+  modifiedSinceTimeStamp?: string;
 }
 
 /**
@@ -58,7 +60,7 @@ interface GetShipmentsOptions {
  *   console.log(shipments.length); // 12
  */
 const getHillebrandShipments = async (options: GetShipmentsOptions = {}) => {
-  const { page = 1, pageSize = 50, status } = options;
+  const { page = 1, pageSize = 50, status, reference, modifiedSinceTimeStamp } = options;
 
   const params = new URLSearchParams({
     page: page.toString(),
@@ -67,6 +69,14 @@ const getHillebrandShipments = async (options: GetShipmentsOptions = {}) => {
 
   if (status) {
     params.set('status', status);
+  }
+
+  if (reference) {
+    params.set('reference', reference);
+  }
+
+  if (modifiedSinceTimeStamp) {
+    params.set('modifiedSinceTimeStamp', modifiedSinceTimeStamp);
   }
 
   const endpoint = `/v6/shipments?${params.toString()}`;
@@ -79,10 +89,58 @@ const getHillebrandShipments = async (options: GetShipmentsOptions = {}) => {
     page: response.page,
     pageSize: response.pageSize,
     shipmentsCount: response.shipments?.length ?? 0,
-    rawResponse: JSON.stringify(response).slice(0, 500),
+    rawResponse: JSON.stringify(response).slice(0, 1000),
   });
 
   return response.shipments ?? [];
+};
+
+/**
+ * Get shipments with specific statuses from Hillebrand API
+ *
+ * Tries multiple status values to ensure we get all active shipments.
+ */
+const getHillebrandShipmentsByStatus = async (statuses: string[]) => {
+  const allShipments: HillebrandShipment[] = [];
+  const seenIds = new Set<number>();
+
+  for (const status of statuses) {
+    console.log(`Fetching Hillebrand shipments with status: ${status}`);
+    const shipments = await getHillebrandShipments({ status, pageSize: 100 });
+
+    for (const shipment of shipments) {
+      if (!seenIds.has(shipment.id)) {
+        seenIds.add(shipment.id);
+        allShipments.push(shipment);
+      }
+    }
+  }
+
+  return allShipments;
+};
+
+/**
+ * Get all shipments from Hillebrand API with pagination
+ *
+ * Fetches all pages of shipments until no more are available.
+ */
+const getAllHillebrandShipments = async (options: Omit<GetShipmentsOptions, 'page'> = {}) => {
+  const allShipments: HillebrandShipment[] = [];
+  let page = 1;
+  const pageSize = options.pageSize ?? 100;
+
+  while (true) {
+    const shipments = await getHillebrandShipments({ ...options, page, pageSize });
+    allShipments.push(...shipments);
+
+    if (shipments.length < pageSize) {
+      break;
+    }
+
+    page++;
+  }
+
+  return allShipments;
 };
 
 /**
@@ -107,10 +165,12 @@ const getHillebrandShipmentDocuments = async (shipmentId: number) => {
 };
 
 export {
+  getAllHillebrandShipments,
   getHillebrandShipment,
   getHillebrandShipmentDocuments,
   getHillebrandShipmentEvents,
   getHillebrandShipments,
+  getHillebrandShipmentsByStatus,
 };
 
 export type { HillebrandShipment };
