@@ -69,7 +69,18 @@ const getHillebrandShipments = async (options: GetShipmentsOptions = {}) => {
     params.set('status', status);
   }
 
-  const response = await hillebrandFetch<ShipmentsResponse>(`/v6/shipments?${params.toString()}`);
+  const endpoint = `/v6/shipments?${params.toString()}`;
+  console.log('Hillebrand API request:', endpoint);
+
+  const response = await hillebrandFetch<ShipmentsResponse>(endpoint);
+
+  console.log('Hillebrand API response:', {
+    total: response.total,
+    page: response.page,
+    pageSize: response.pageSize,
+    shipmentsCount: response.shipments?.length ?? 0,
+    rawResponse: JSON.stringify(response).slice(0, 500),
+  });
 
   return response.shipments ?? [];
 };
