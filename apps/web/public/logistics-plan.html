@@ -424,8 +424,8 @@
     <nav class="toc">
       <h2>Table of Contents</h2>
       <div class="toc-grid">
-        <a href="#progress" style="color: var(--accent-green);">✓ Progress (Phases 1-4 Complete)</a>
-        <a href="#next-steps" style="color: var(--accent-purple);">→ Next Steps (Phases 5-7)</a>
+        <a href="#progress" style="color: var(--accent-green);">✓ Progress (Phases 1-6 Complete)</a>
+        <a href="#next-steps" style="color: var(--accent-purple);">→ Next Steps (Phase 7)</a>
         <a href="#priorities">Core Priorities</a>
         <a href="#how-we-achieve">How We Achieve Each Priority</a>
         <a href="#users">Users</a>
@@ -447,8 +447,8 @@
       <h2>✓ Progress Update</h2>
 
       <div class="progress-card">
-        <h3>Phases 1-4 Complete - January 16, 2026</h3>
-        <p>Foundation, Document Upload, Landed Cost Calculator, and Admin UI are all deployed and live.</p>
+        <h3>Phases 1-6 Complete - January 16, 2026</h3>
+        <p>Foundation, Document Upload, Landed Cost Calculator, Admin UI, Partner Portal, and Hillebrand Sync are all deployed and live.</p>
 
         <h4>Phase 1: Foundation ✓</h4>
         <div class="code-block">Database Schema (apps/web/src/database/schema.ts):
@@ -565,51 +565,43 @@ Components:
         </ul>
       </div>
 
-      <div class="progress-card" style="border-color: var(--accent-yellow);">
-        <h3 style="color: var(--accent-yellow);">Phase 6 In Progress - Hillebrand Sync</h3>
-        <p>Auto-import shipments and invoices from Hillebrand API.</p>
+      <div class="progress-card" style="border-color: var(--accent-green);">
+        <h3 style="color: var(--accent-green);">Phase 6 Complete - Hillebrand Sync</h3>
+        <p>Auto-import shipments from Hillebrand API deployed.</p>
         <p style="color: var(--accent-green);"><strong>API credentials verified and working!</strong></p>
 
-        <h4>Implementation Tasks</h4>
+        <h4>Completed</h4>
+        <div class="code-block">Hillebrand Integration (apps/web/src/app/_logistics/integrations/hillebrand/):
+├── client.ts - OAuth2 token management with 8hr refresh
+├── getShipments.ts - List/get shipments from Hillebrand API
+├── getInvoices.ts - List/get invoices from Hillebrand API
+├── syncShipments.ts - Import shipments to our database
+│   ├── Maps Hillebrand status (departed/arrived/delivered) to our enum
+│   ├── Maps transport modality (air/maritime/road) to our enum
+│   ├── Creates or updates shipments based on hillebrandShipmentId
+│   └── Generates HB-YYYY-XXXX shipment numbers for imports
+└── index.ts - Barrel export
+
+Controller:
+└── adminSyncHillebrand.ts - Manual sync trigger endpoint
+
+Admin UI:
+└── Hillebrand sync button added to logistics dashboard
+    ├── Click to trigger manual sync
+    ├── Shows sync results (created/updated counts)
+    └── Auto-refreshes shipment list on success</div>
+
+        <h4>Deferred to Later</h4>
         <ul class="task-list">
-          <li>Create <code>_logistics/integrations/hillebrand/client.ts</code> - OAuth2 token management</li>
-          <li>Create <code>syncShipments.ts</code> - Import shipments from Hillebrand</li>
-          <li>Create <code>syncInvoices.ts</code> - Import invoices from Hillebrand</li>
           <li>Create Trigger.dev job for scheduled sync (every 4 hours)</li>
           <li>Create webhook receiver for real-time updates</li>
-          <li>Map Hillebrand status to our shipmentStatus enum</li>
-          <li>Admin UI button to trigger manual sync</li>
+          <li>Invoice sync to our database</li>
         </ul>
       </div>
     </section>
 
     <section id="next-steps">
       <h2>→ Next Steps</h2>
-
-      <div class="next-steps-card" style="border-color: var(--accent-yellow);">
-        <h3>Phase 6: Hillebrand Sync - In Progress</h3>
-        <p style="color: var(--accent-green);">API credentials verified and working!</p>
-        <p>Auto-import shipments and invoices from Hillebrand API</p>
-
-        <h4>Implementation Tasks</h4>
-        <ul class="task-list">
-          <li>Create <code>_logistics/integrations/hillebrand/client.ts</code> - OAuth2 token management</li>
-          <li>Create <code>syncShipments.ts</code> - Import shipments from Hillebrand</li>
-          <li>Create <code>syncInvoices.ts</code> - Import invoices from Hillebrand</li>
-          <li>Create Trigger.dev job for scheduled sync (every 4 hours)</li>
-          <li>Create webhook receiver for real-time updates</li>
-          <li>Map Hillebrand status to our shipmentStatus enum</li>
-          <li>Admin UI button to trigger manual sync</li>
-        </ul>
-
-        <h4>Status Mapping</h4>
-        <div class="code-block">Hillebrand Status     →  Our Status
-──────────────────────────────────────
-departed              →  in_transit
-arrived               →  arrived_port
-delivered             →  delivered
-shpimpcsmclr (event)  →  cleared</div>
-      </div>
 
       <div class="next-steps-card">
         <h3>Phase 7: Reporting & Analytics</h3>
@@ -623,6 +615,15 @@ shpimpcsmclr (event)  →  cleared</div>
           <li>Partner shipment history report</li>
           <li>Hillebrand invoice reconciliation report</li>
           <li>Export functionality (Excel, PDF)</li>
+        </ul>
+
+        <h4>Deferred Items from Earlier Phases</h4>
+        <ul class="task-list">
+          <li>Create Trigger.dev job for scheduled Hillebrand sync (every 4 hours)</li>
+          <li>Create webhook receiver for real-time Hillebrand updates</li>
+          <li>Invoice sync from Hillebrand to our database</li>
+          <li>Email notifications for shipment updates</li>
+          <li>Partner shipment status change notifications</li>
         </ul>
       </div>
     </section>
@@ -1532,28 +1533,35 @@ Flag for manual review (don't skip silently)</div>
         </ul>
       </div>
 
-      <div class="phase-card">
-        <h3>Phase 6: Hillebrand API Integration</h3>
+      <div class="phase-card" style="border-color: var(--accent-green);">
+        <h3 style="color: var(--accent-green);">Phase 6: Hillebrand API Integration ✓ COMPLETE</h3>
         <p><strong>Goal:</strong> Live tracking from Hillebrand</p>
-        <p style="color: var(--accent-green);"><strong>Status:</strong> API credentials verified and working (Jan 15, 2026)</p>
+        <p style="color: var(--accent-green);"><strong>Status:</strong> Deployed January 16, 2026</p>
 
-        <h4>Environment Variables (add to .env.local)</h4>
+        <h4>Environment Variables (in .env.local)</h4>
         <div class="code-block">HILLEBRAND_TOKEN_URL=https://login.hillebrand.com/oauth2/aus95hq7r8iIqp14M0i7/v1/token
 HILLEBRAND_API_URL=https://api.hillebrandgori.com
 HILLEBRAND_CLIENT_ID=0oaims26pltIrN1Ik0i7
-HILLEBRAND_CLIENT_SECRET=QSLmUeZZqA1SzkcKnIMUgGRPRB__om0r6_8u9bwo3qqQyH-Dg3k0Pv5e045shGuh
+HILLEBRAND_CLIENT_SECRET=************
 HILLEBRAND_USERNAME=hg-api@craftculture.xyz
-HILLEBRAND_PASSWORD=Ya3dTH7aSZKHf34uJCAY-V@Wpn49d</div>
+HILLEBRAND_PASSWORD=************</div>
 
-        <h4>Implementation Tasks</h4>
+        <h4>Completed Tasks</h4>
         <ul class="task-list">
-          <li>Create <code>_logistics/integrations/hillebrand/client.ts</code> - OAuth2 token management with 8hr refresh</li>
-          <li>Create <code>_logistics/integrations/hillebrand/getShipments.ts</code> - List shipments (12 available)</li>
-          <li>Create <code>_logistics/integrations/hillebrand/getShipment.ts</code> - Get shipment with events, docs, legs</li>
-          <li>Create <code>_logistics/integrations/hillebrand/getInvoices.ts</code> - Get invoices (13 available)</li>
+          <li class="completed">Create <code>_logistics/integrations/hillebrand/client.ts</code> - OAuth2 token management with 8hr refresh</li>
+          <li class="completed">Create <code>_logistics/integrations/hillebrand/getShipments.ts</code> - List shipments from API</li>
+          <li class="completed">Create <code>_logistics/integrations/hillebrand/getInvoices.ts</code> - Get invoices from API</li>
+          <li class="completed">Create <code>_logistics/integrations/hillebrand/syncShipments.ts</code> - Import shipments to database</li>
+          <li class="completed">Create <code>adminSyncHillebrand.ts</code> controller - Manual sync trigger</li>
+          <li class="completed">Add Hillebrand sync button to admin logistics dashboard</li>
+          <li class="completed">Map Hillebrand status to our shipmentStatus enum</li>
+        </ul>
+
+        <h4>Deferred Tasks</h4>
+        <ul class="task-list">
           <li>Create <code>api/webhooks/hillebrand/route.ts</code> - Webhook receiver for real-time updates</li>
           <li>Create Trigger.dev job for periodic sync (backup to webhooks)</li>
-          <li>Map Hillebrand status to our shipmentStatus enum</li>
+          <li>Invoice sync to database</li>
         </ul>
 
         <h4>Status Mapping</h4>
@@ -1764,7 +1772,7 @@ pnpm dev
     <footer>
       <p>C&C Logistics Module Implementation Plan</p>
       <p>Last updated: January 16, 2026</p>
-      <p style="color: var(--accent-green);">Phases 1-5 Complete | Phase 6 (Hillebrand Sync) In Progress</p>
+      <p style="color: var(--accent-green);">Phases 1-6 Complete | Phase 7 (Reporting & Analytics) Up Next</p>
     </footer>
   </div>
 </body>
