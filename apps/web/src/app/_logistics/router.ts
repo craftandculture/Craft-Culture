@@ -4,9 +4,12 @@ import adminAddItem from './controller/adminAddItem';
 import adminCalculateLandedCost from './controller/adminCalculateLandedCost';
 import adminCreate from './controller/adminCreate';
 import adminDeleteDocument from './controller/adminDeleteDocument';
+import adminGetDocumentCompliance from './controller/adminGetDocumentCompliance';
 import adminGetHillebrandEvents from './controller/adminGetHillebrandEvents';
+import adminGetLandedCostReport from './controller/adminGetLandedCostReport';
 import adminGetMany from './controller/adminGetMany';
 import adminGetOne from './controller/adminGetOne';
+import adminGetReportMetrics from './controller/adminGetReportMetrics';
 import adminRemoveItem from './controller/adminRemoveItem';
 import adminSyncHillebrand from './controller/adminSyncHillebrand';
 import adminSyncHillebrandDocuments from './controller/adminSyncHillebrandDocuments';
@@ -42,6 +45,11 @@ const adminRouter = createTRPCRouter({
   syncHillebrandInvoices: adminSyncHillebrandInvoices,
   syncHillebrandDocuments: adminSyncHillebrandDocuments,
   getHillebrandEvents: adminGetHillebrandEvents,
+
+  // Reports
+  getReportMetrics: adminGetReportMetrics,
+  getDocumentCompliance: adminGetDocumentCompliance,
+  getLandedCostReport: adminGetLandedCostReport,
 });
 
 const partnerRouter = createTRPCRouter({
