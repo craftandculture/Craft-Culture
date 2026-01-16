@@ -30,14 +30,38 @@ const HILLEBRAND_PASSWORD = process.env.HILLEBRAND_PASSWORD;
  * Get a new access token using password grant
  */
 const getNewAccessToken = async (): Promise<string> => {
+  // Debug: Log credential presence and lengths (not values)
+  logger.info('Hillebrand auth debug', {
+    hasClientId: !!HILLEBRAND_CLIENT_ID,
+    clientIdLength: HILLEBRAND_CLIENT_ID?.length,
+    clientIdTrimmed: HILLEBRAND_CLIENT_ID?.trim().length,
+    hasClientSecret: !!HILLEBRAND_CLIENT_SECRET,
+    clientSecretLength: HILLEBRAND_CLIENT_SECRET?.length,
+    clientSecretTrimmed: HILLEBRAND_CLIENT_SECRET?.trim().length,
+    hasUsername: !!HILLEBRAND_USERNAME,
+    usernameLength: HILLEBRAND_USERNAME?.length,
+    usernameTrimmed: HILLEBRAND_USERNAME?.trim().length,
+    usernameValue: HILLEBRAND_USERNAME?.trim(),
+    hasPassword: !!HILLEBRAND_PASSWORD,
+    passwordLength: HILLEBRAND_PASSWORD?.length,
+    passwordTrimmed: HILLEBRAND_PASSWORD?.trim().length,
+    tokenUrl: HILLEBRAND_TOKEN_URL,
+  });
+
   if (!HILLEBRAND_CLIENT_ID || !HILLEBRAND_CLIENT_SECRET || !HILLEBRAND_USERNAME || !HILLEBRAND_PASSWORD) {
     throw new Error('Hillebrand credentials not configured');
   }
 
+  // Use trimmed values to avoid whitespace issues
+  const clientId = HILLEBRAND_CLIENT_ID.trim();
+  const clientSecret = HILLEBRAND_CLIENT_SECRET.trim();
+  const username = HILLEBRAND_USERNAME.trim();
+  const password = HILLEBRAND_PASSWORD.trim();
+
   const params = new URLSearchParams({
     grant_type: 'password',
-    username: HILLEBRAND_USERNAME,
-    password: HILLEBRAND_PASSWORD,
+    username: username,
+    password: password,
     scope: 'offline_access',
   });
 
@@ -45,14 +69,14 @@ const getNewAccessToken = async (): Promise<string> => {
     method: 'POST',
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
-      Authorization: `Basic ${Buffer.from(`${HILLEBRAND_CLIENT_ID}:${HILLEBRAND_CLIENT_SECRET}`).toString('base64')}`,
+      Authorization: `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString('base64')}`,
     },
     body: params.toString(),
   });
 
   if (!response.ok) {
     const errorText = await response.text();
-    logger.error('Failed to get Hillebrand token', { status: response.status, error: errorText });
+    logger.error('Failed to get Hillebrand token', { status: response.status, error: errorText, tokenUrl: HILLEBRAND_TOKEN_URL });
     throw new Error(`Failed to authenticate with Hillebrand: ${response.status}`);
   }
 
