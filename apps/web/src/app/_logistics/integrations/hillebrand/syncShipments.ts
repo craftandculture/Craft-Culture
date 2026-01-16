@@ -4,8 +4,89 @@ import db from '@/database/client';
 import { logisticsShipments } from '@/database/schema';
 import logger from '@/utils/logger';
 
-import { getAllHillebrandShipments, getHillebrandShipments } from './getShipments';
+import {
+  getAllHillebrandShipments,
+  getHillebrandShipment,
+  getHillebrandShipments,
+} from './getShipments';
 import type { HillebrandShipment } from './getShipments';
+
+/**
+ * Parse a date string from Hillebrand API
+ */
+const parseHillebrandDate = (dateStr: string | undefined): Date | null => {
+  if (!dateStr) return null;
+  const date = new Date(dateStr);
+  return isNaN(date.getTime()) ? null : date;
+};
+
+/**
+ * Calculate total cases from cargo items
+ */
+const calculateCargoTotals = (shipment: HillebrandShipment) => {
+  const cargoItems = shipment.cargo || shipment.cargoItems || shipment.items || [];
+
+  let totalCases = 0;
+  let totalBottles = 0;
+  let totalWeightKg = 0;
+  let totalVolumeM3 = 0;
+
+  for (const item of cargoItems) {
+    // Try to get number of cases/packages
+    const packages = item.numberOfPackages || item.quantity || 0;
+    totalCases += packages;
+
+    // Estimate bottles (assuming 6 or 12 per case typically)
+    // This is rough - will be refined when syncing items
+    if (packages > 0) {
+      totalBottles += packages * 6; // Default assumption
+    }
+
+    // Weight in kg
+    if (item.grossWeight) {
+      const weight = item.grossWeight;
+      if (item.grossWeightUnit?.toLowerCase() === 'lb') {
+        totalWeightKg += weight * 0.453592;
+      } else {
+        totalWeightKg += weight; // Assume kg
+      }
+    }
+
+    // Volume in m3
+    if (item.volume) {
+      const volume = item.volume;
+      if (item.volumeUnit?.toLowerCase() === 'cbf' || item.volumeUnit?.toLowerCase() === 'ft3') {
+        totalVolumeM3 += volume * 0.0283168;
+      } else {
+        totalVolumeM3 += volume; // Assume m3
+      }
+    }
+  }
+
+  // If no cargo items but shipment has totals, use those
+  if (totalCases === 0 && shipment.numberOfPackages) {
+    totalCases = shipment.numberOfPackages;
+  }
+  if (totalCases === 0 && shipment.numberOfPieces) {
+    totalCases = shipment.numberOfPieces;
+  }
+  if (totalWeightKg === 0 && shipment.totalWeight) {
+    totalWeightKg = shipment.totalWeight;
+    if (shipment.totalWeightUnit?.toLowerCase() === 'lb') {
+      totalWeightKg *= 0.453592;
+    }
+  }
+  if (totalVolumeM3 === 0 && shipment.totalVolume) {
+    totalVolumeM3 = shipment.totalVolume;
+  }
+
+  return {
+    totalCases: totalCases > 0 ? totalCases : null,
+    totalBottles: totalBottles > 0 ? totalBottles : null,
+    totalWeightKg: totalWeightKg > 0 ? Math.round(totalWeightKg * 100) / 100 : null,
+    totalVolumeM3: totalVolumeM3 > 0 ? Math.round(totalVolumeM3 * 1000) / 1000 : null,
+  };
+};
 
 type OurShipmentStatus =
   | 'draft'
@@ -171,6 +252,18 @@ const syncHillebrandShipments = async (): Promise<SyncResult> => {
 
     for (const hShipment of hillebrandShipments) {
       try {
+        // Fetch detailed shipment info (has more data than list endpoint)
+        let detailedShipment: HillebrandShipment;
+        try {
+          detailedShipment = await getHillebrandShipment(hShipment.id);
+        } catch (detailError) {
+          logger.warn('Could not fetch shipment details, using list data', {
+            hillebrandId: hShipment.id,
+            error: detailError,
+          });
+          detailedShipment = hShipment;
+        }
+
         // Check if we already have this shipment
         const [existing] = await db
           .select({ id: logisticsShipments.id, shipmentNumber: logisticsShipments.shipmentNumber })
@@ -178,28 +271,82 @@ const syncHillebrandShipments = async (): Promise<SyncResult> => {
           .where(eq(logisticsShipments.hillebrandShipmentId, hShipment.id))
           .limit(1);
 
+        // Extract timeline dates (try multiple field names)
+        const etd = parseHillebrandDate(
+          detailedShipment.etd || detailedShipment.estimatedDepartureDate,
+        );
+        const atd = parseHillebrandDate(
+          detailedShipment.atd || detailedShipment.actualDepartureDate,
+        );
+        const eta = parseHillebrandDate(
+          detailedShipment.eta || detailedShipment.estimatedArrivalDate,
+        );
+        const ata = parseHillebrandDate(
+          detailedShipment.ata || detailedShipment.actualArrivalDate,
+        );
+        const deliveredAt = parseHillebrandDate(detailedShipment.deliveredDate);
+
+        // Calculate cargo totals
+        const cargoTotals = calculateCargoTotals(detailedShipment);
+
+        // Extract Bill of Lading number
+        const blNumber =
+          detailedShipment.billOfLadingNumber ||
+          detailedShipment.blNumber ||
+          detailedShipment.masterBillNumber ||
+          detailedShipment.houseBillNumber ||
+          null;
+
         const shipmentData = {
           type: 'inbound' as const,
-          transportMode: mapHillebrandModality(hShipment.mainModality),
-          status: mapHillebrandStatus(hShipment.status),
-          hillebrandShipmentId: hShipment.id,
-          hillebrandReference: getHillebrandReference(hShipment),
+          transportMode: mapHillebrandModality(detailedShipment.mainModality),
+          status: mapHillebrandStatus(detailedShipment.status),
+          hillebrandShipmentId: detailedShipment.id,
+          hillebrandReference: getHillebrandReference(detailedShipment),
           hillebrandLastSync: new Date(),
           // Origin
-          originCountry: hShipment.shipFromLocation?.countryName ?? hShipment.shipFromLocation?.countryCode,
-          originCity: hShipment.shipFromLocation?.cityName,
+          originCountry:
+            detailedShipment.shipFromLocation?.countryName ??
+            detailedShipment.shipFromLocation?.countryCode,
+          originCity: detailedShipment.shipFromLocation?.cityName,
           // Destination
-          destinationCountry: hShipment.shipToLocation?.countryName ?? hShipment.shipToLocation?.countryCode ?? 'UAE',
-          destinationCity: hShipment.shipToLocation?.cityName ?? 'Ras Al Khaimah',
+          destinationCountry:
+            detailedShipment.shipToLocation?.countryName ??
+            detailedShipment.shipToLocation?.countryCode ??
+            'UAE',
+          destinationCity: detailedShipment.shipToLocation?.cityName ?? 'Ras Al Khaimah',
           destinationWarehouse: 'RAK Port',
           // Carrier info
           carrierName: 'Hillebrand',
-          containerNumber: hShipment.equipment?.number,
+          containerNumber: detailedShipment.equipment?.number,
+          blNumber,
+          // Timeline
+          etd,
+          atd,
+          eta,
+          ata,
+          deliveredAt,
+          // Cargo
+          totalCases: cargoTotals.totalCases,
+          totalBottles: cargoTotals.totalBottles,
+          totalWeightKg: cargoTotals.totalWeightKg,
+          totalVolumeM3: cargoTotals.totalVolumeM3,
           // Emissions
-          co2EmissionsTonnes: hShipment.emission?.value,
+          co2EmissionsTonnes: detailedShipment.emission?.value,
           // Notes
-          partnerNotes: `Supplier: ${hShipment.shipFromPartyName ?? 'Unknown'}`,
+          partnerNotes: `Supplier: ${detailedShipment.shipFromPartyName ?? 'Unknown'}`,
         };
+
+        logger.info('Syncing shipment with detailed data', {
+          hillebrandId: detailedShipment.id,
+          etd,
+          eta,
+          atd,
+          ata,
+          totalCases: cargoTotals.totalCases,
+          totalWeightKg: cargoTotals.totalWeightKg,
+          blNumber,
+        });
 
         if (existing) {
           // Update existing shipment
@@ -213,7 +360,7 @@ const syncHillebrandShipments = async (): Promise<SyncResult> => {
 
           result.updated++;
           result.shipments.push({
-            hillebrandId: hShipment.id,
+            hillebrandId: detailedShipment.id,
             shipmentNumber: existing.shipmentNumber,
             action: 'updated',
           });
@@ -231,7 +378,7 @@ const syncHillebrandShipments = async (): Promise<SyncResult> => {
 
           result.created++;
           result.shipments.push({
-            hillebrandId: hShipment.id,
+            hillebrandId: detailedShipment.id,
             shipmentNumber: newShipment?.shipmentNumber ?? shipmentNumber,
             action: 'created',
           });

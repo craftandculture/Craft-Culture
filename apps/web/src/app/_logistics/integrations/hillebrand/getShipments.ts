@@ -4,6 +4,7 @@ interface HillebrandLocation {
   cityName?: string;
   countryCode?: string;
   countryName?: string;
+  unlocode?: string;
 }
 
 interface HillebrandReference {
@@ -14,12 +15,61 @@ interface HillebrandReference {
 interface HillebrandEquipment {
   number?: string;
   type?: string;
+  sealNumber?: string;
 }
 
 interface HillebrandEmission {
   value?: number;
   unit?: string;
   type?: string;
+}
+
+interface HillebrandCargoItem {
+  id?: number;
+  description?: string;
+  productName?: string;
+  quantity?: number;
+  quantityUnit?: string;
+  numberOfPackages?: number;
+  packageType?: string;
+  grossWeight?: number;
+  grossWeightUnit?: string;
+  netWeight?: number;
+  volume?: number;
+  volumeUnit?: string;
+  hsCode?: string;
+}
+
+interface HillebrandMilestone {
+  type: string;
+  status: 'planned' | 'actual' | 'estimated';
+  dateTime?: string;
+  location?: HillebrandLocation;
+  description?: string;
+}
+
+interface HillebrandEvent {
+  id?: number;
+  eventType: string;
+  eventDateTime: string;
+  location?: HillebrandLocation;
+  description?: string;
+  vessel?: {
+    name?: string;
+    imoNumber?: string;
+    voyageNumber?: string;
+  };
+}
+
+interface HillebrandDocument {
+  id: number;
+  documentType: string;
+  documentNumber?: string;
+  fileName?: string;
+  fileSize?: number;
+  mimeType?: string;
+  uploadedAt?: string;
+  downloadUrl?: string;
 }
 
 interface HillebrandShipment {
@@ -35,6 +85,45 @@ interface HillebrandShipment {
   emission?: HillebrandEmission;
   createdAt?: string;
   updatedAt?: string;
+  // Timeline dates
+  estimatedDepartureDate?: string;
+  actualDepartureDate?: string;
+  estimatedArrivalDate?: string;
+  actualArrivalDate?: string;
+  deliveredDate?: string;
+  // Alternative date field names
+  etd?: string;
+  atd?: string;
+  eta?: string;
+  ata?: string;
+  // Cargo summary
+  totalWeight?: number;
+  totalWeightUnit?: string;
+  totalVolume?: number;
+  totalVolumeUnit?: string;
+  numberOfPackages?: number;
+  numberOfPieces?: number;
+  // Detailed cargo
+  cargo?: HillebrandCargoItem[];
+  cargoItems?: HillebrandCargoItem[];
+  items?: HillebrandCargoItem[];
+  // Milestones and events
+  milestones?: HillebrandMilestone[];
+  events?: HillebrandEvent[];
+  // Documents
+  documents?: HillebrandDocument[];
+  // Vessel info
+  vessel?: {
+    name?: string;
+    imoNumber?: string;
+    voyageNumber?: string;
+    flag?: string;
+  };
+  // Bill of Lading
+  billOfLadingNumber?: string;
+  blNumber?: string;
+  masterBillNumber?: string;
+  houseBillNumber?: string;
 }
 
 interface ShipmentsResponse {
@@ -170,23 +259,86 @@ const getAllHillebrandShipments = async (options: Omit<GetShipmentsOptions, 'pag
 
 /**
  * Get a single shipment by ID with full details
+ *
+ * The detail endpoint returns more data than the list endpoint including
+ * cargo items, timeline dates, and tracking information.
  */
 const getHillebrandShipment = async (shipmentId: number) => {
-  return hillebrandFetch<HillebrandShipment>(`/v6/shipments/${shipmentId}`);
+  const response = await hillebrandFetch<HillebrandShipment>(`/v6/shipments/${shipmentId}`);
+
+  console.log('Hillebrand shipment detail:', {
+    id: shipmentId,
+    hasCargoItems: !!(response.cargo || response.cargoItems || response.items),
+    hasMilestones: !!response.milestones,
+    hasEvents: !!response.events,
+    hasVessel: !!response.vessel,
+    etd: response.etd || response.estimatedDepartureDate,
+    eta: response.eta || response.estimatedArrivalDate,
+    responseKeys: Object.keys(response),
+    rawResponse: JSON.stringify(response).slice(0, 3000),
+  });
+
+  return response;
 };
+
+interface EventsResponse {
+  events?: HillebrandEvent[];
+  data?: HillebrandEvent[];
+  items?: HillebrandEvent[];
+}
 
 /**
  * Get tracking events for a shipment
  */
 const getHillebrandShipmentEvents = async (shipmentId: number) => {
-  return hillebrandFetch<{ events: unknown[] }>(`/v6/shipments/${shipmentId}/events`);
+  const response = await hillebrandFetch<EventsResponse | HillebrandEvent[]>(
+    `/v6/shipments/${shipmentId}/events`,
+  );
+
+  let events: HillebrandEvent[] = [];
+  if (Array.isArray(response)) {
+    events = response;
+  } else {
+    events = response.events ?? response.data ?? response.items ?? [];
+  }
+
+  console.log('Hillebrand shipment events:', {
+    id: shipmentId,
+    eventsCount: events.length,
+    events: events.slice(0, 5),
+  });
+
+  return events;
 };
+
+interface DocumentsResponse {
+  documents?: HillebrandDocument[];
+  data?: HillebrandDocument[];
+  items?: HillebrandDocument[];
+}
 
 /**
  * Get documents attached to a shipment
  */
 const getHillebrandShipmentDocuments = async (shipmentId: number) => {
-  return hillebrandFetch<{ documents: unknown[] }>(`/v6/shipments/${shipmentId}/documents`);
+  const response = await hillebrandFetch<DocumentsResponse | HillebrandDocument[]>(
+    `/v6/shipments/${shipmentId}/documents`,
+  );
+
+  let documents: HillebrandDocument[] = [];
+  if (Array.isArray(response)) {
+    documents = response;
+  } else {
+    documents = response.documents ?? response.data ?? response.items ?? [];
+  }
+
+  console.log('Hillebrand shipment documents:', {
+    id: shipmentId,
+    documentsCount: documents.length,
+    documents: documents.slice(0, 5),
+  });
+
+  return documents;
 };
 
 export {
@@ -198,4 +350,10 @@ export {
   getHillebrandShipmentsByStatus,
 };
 
-export type { HillebrandShipment };
+export type {
+  HillebrandCargoItem,
+  HillebrandDocument,
+  HillebrandEvent,
+  HillebrandMilestone,
+  HillebrandShipment,
+};
