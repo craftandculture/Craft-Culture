@@ -2886,11 +2886,14 @@ export const logisticsDocuments = pgTable(
     verifiedBy: uuid('verified_by').references(() => users.id, { onDelete: 'set null' }),
     verifiedAt: timestamp('verified_at', { mode: 'date' }),
 
-    // Upload info
-    uploadedBy: uuid('uploaded_by')
-      .references(() => users.id, { onDelete: 'set null' })
-      .notNull(),
+    // Upload info (nullable for system-imported documents like Hillebrand sync)
+    uploadedBy: uuid('uploaded_by').references(() => users.id, { onDelete: 'set null' }),
     uploadedAt: timestamp('uploaded_at', { mode: 'date' }).notNull().defaultNow(),
+
+    // Hillebrand integration
+    hillebrandDocumentId: integer('hillebrand_document_id').unique(),
+    hillebrandDownloadUrl: text('hillebrand_download_url'),
+    hillebrandLastSync: timestamp('hillebrand_last_sync', { mode: 'date' }),
 
     // AI extraction
     extractionStatus: documentExtractionStatus('extraction_status')
