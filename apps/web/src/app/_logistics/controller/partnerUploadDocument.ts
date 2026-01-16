@@ -38,9 +38,10 @@ const partnerUploadDocument = winePartnerProcedure.input(uploadDocumentSchema).m
   }
 
   // Verify shipment exists and belongs to this partner
-  const shipment = await db.query.logisticsShipments.findFirst({
-    where: and(eq(logisticsShipments.id, shipmentId), eq(logisticsShipments.partnerId, partner.id)),
-  });
+  const [shipment] = await db
+    .select()
+    .from(logisticsShipments)
+    .where(and(eq(logisticsShipments.id, shipmentId), eq(logisticsShipments.partnerId, partner.id)));
 
   if (!shipment) {
     throw new TRPCError({

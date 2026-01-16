@@ -264,7 +264,7 @@ const PartnerShipmentDetailPage = () => {
                           <td className="py-3 pr-4 text-right">{item.cases}</td>
                           <td className="py-3 pr-4 text-right">{item.totalBottles ?? '-'}</td>
                           <td className="py-3 pr-4 text-right">
-                            {item.totalWeightKg?.toFixed(1) ?? '-'}
+                            {item.grossWeightKg?.toFixed(1) ?? '-'}
                           </td>
                         </tr>
                       ))}
