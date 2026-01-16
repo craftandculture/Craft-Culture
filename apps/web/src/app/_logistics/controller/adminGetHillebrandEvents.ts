@@ -32,8 +32,8 @@ const adminGetHillebrandEvents = adminProcedure.input(inputSchema).query(async (
   }
 
   try {
-    const response = await getHillebrandShipmentEvents(shipment.hillebrandShipmentId);
-    return { events: response.events ?? [] };
+    const events = await getHillebrandShipmentEvents(shipment.hillebrandShipmentId);
+    return { events };
   } catch (error) {
     logger.error('Failed to fetch Hillebrand events', { shipmentId, error });
     return { events: [] };
