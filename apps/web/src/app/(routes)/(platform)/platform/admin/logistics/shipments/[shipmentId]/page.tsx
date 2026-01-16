@@ -17,8 +17,11 @@ import { useParams } from 'next/navigation';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
+import ActivityLog from '@/app/_logistics/components/ActivityLog';
 import LogisticsDocumentUpload from '@/app/_logistics/components/DocumentUpload';
 import ShipmentStatusBadge from '@/app/_logistics/components/ShipmentStatusBadge';
+import ShipmentStatusStepper from '@/app/_logistics/components/ShipmentStatusStepper';
+import ShipmentTracker from '@/app/_logistics/components/ShipmentTracker';
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
 import Card from '@/app/_ui/components/Card/Card';
@@ -51,7 +54,7 @@ const statusOptions: { value: ShipmentStatus; label: string }[] = [
   { value: 'cancelled', label: 'Cancelled' },
 ];
 
-type TabType = 'overview' | 'items' | 'documents' | 'costs';
+type TabType = 'overview' | 'tracking' | 'items' | 'documents' | 'costs';
 
 /**
  * Shipment detail page with tabs
@@ -174,6 +177,7 @@ const ShipmentDetailPage = () => {
 
   const tabs: { id: TabType; label: string; icon: typeof IconPackage }[] = [
     { id: 'overview', label: 'Overview', icon: IconFileText },
+    { id: 'tracking', label: 'Tracking', icon: IconRefresh },
     { id: 'items', label: `Items (${shipment.items?.length ?? 0})`, icon: IconPackage },
     { id: 'documents', label: `Documents (${shipment.documents?.length ?? 0})`, icon: IconUpload },
     { id: 'costs', label: 'Costs', icon: IconCalculator },
@@ -219,6 +223,16 @@ const ShipmentDetailPage = () => {
             </Select>
           </div>
         </div>
+
+        {/* Status Stepper */}
+        <Card>
+          <CardContent className="p-4">
+            <ShipmentStatusStepper
+              currentStatus={shipment.status}
+              onStatusClick={handleStatusChange}
+            />
+          </CardContent>
+        </Card>
 
         {/* Tabs */}
         <div className="flex gap-1 border-b border-border-muted overflow-x-auto">
@@ -336,6 +350,44 @@ const ShipmentDetailPage = () => {
                     </Typography>
                   </div>
                 </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {activeTab === 'tracking' && (
+          <div className="space-y-6">
+            <ShipmentTracker
+              shipmentId={shipmentId}
+              hillebrandShipmentId={shipment.hillebrandShipmentId}
+              originCity={shipment.originCity}
+              originCountry={shipment.originCountry}
+              destinationCity={shipment.destinationCity}
+              destinationWarehouse={shipment.destinationWarehouse}
+              status={shipment.status}
+              etd={shipment.etd}
+              atd={shipment.atd}
+              eta={shipment.eta}
+              ata={shipment.ata}
+              deliveredAt={shipment.deliveredAt}
+            />
+
+            {/* Activity Log */}
+            <Card>
+              <CardContent className="p-6">
+                <Typography variant="headingSm" className="mb-4">
+                  Activity Log
+                </Typography>
+                <ActivityLog
+                  activities={(shipment.activityLogs ?? []).map((log) => ({
+                    id: log.id,
+                    type: log.action,
+                    description: log.notes ?? log.action,
+                    createdAt: log.createdAt,
+                    createdBy: log.user?.name ?? log.user?.email ?? null,
+                    metadata: null,
+                  }))}
+                />
               </CardContent>
             </Card>
           </div>
