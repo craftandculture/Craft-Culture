@@ -38,10 +38,15 @@ interface HillebrandShipment {
 }
 
 interface ShipmentsResponse {
-  shipments: HillebrandShipment[];
+  shipments?: HillebrandShipment[];
+  data?: HillebrandShipment[];
+  items?: HillebrandShipment[];
+  content?: HillebrandShipment[];
   total?: number;
+  totalElements?: number;
   page?: number;
   pageSize?: number;
+  size?: number;
 }
 
 interface GetShipmentsOptions {
@@ -82,17 +87,37 @@ const getHillebrandShipments = async (options: GetShipmentsOptions = {}) => {
   const endpoint = `/v6/shipments?${params.toString()}`;
   console.log('Hillebrand API request:', endpoint);
 
-  const response = await hillebrandFetch<ShipmentsResponse>(endpoint);
+  const response = await hillebrandFetch<ShipmentsResponse | HillebrandShipment[]>(endpoint);
 
-  console.log('Hillebrand API response:', {
-    total: response.total,
-    page: response.page,
-    pageSize: response.pageSize,
-    shipmentsCount: response.shipments?.length ?? 0,
-    rawResponse: JSON.stringify(response).slice(0, 1000),
-  });
+  // Handle different response structures
+  let shipments: HillebrandShipment[] = [];
 
-  return response.shipments ?? [];
+  if (Array.isArray(response)) {
+    // Response is directly an array of shipments
+    shipments = response;
+    console.log('Hillebrand API response: direct array', {
+      shipmentsCount: shipments.length,
+    });
+  } else {
+    // Response is an object - try different property names
+    shipments =
+      response.shipments ??
+      response.data ??
+      response.items ??
+      response.content ??
+      [];
+
+    console.log('Hillebrand API response:', {
+      total: response.total ?? response.totalElements,
+      page: response.page,
+      pageSize: response.pageSize ?? response.size,
+      shipmentsCount: shipments.length,
+      responseKeys: Object.keys(response),
+      rawResponse: JSON.stringify(response).slice(0, 2000),
+    });
+  }
+
+  return shipments;
 };
 
 /**

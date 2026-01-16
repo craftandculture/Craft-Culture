@@ -13,6 +13,7 @@ import logger from '@/utils/logger';
 
 import confirmSupplierOrderSchema from '../schemas/confirmSupplierOrderSchema';
 import notifyAdminOfSupplierOrderResponse from '../utils/notifyAdminOfSupplierOrderResponse';
+import notifyDistributorOfAllConfirmed from '../utils/notifyDistributorOfAllConfirmed';
 
 /**
  * Confirm, update, or reject items in a supplier order
@@ -175,6 +176,11 @@ const partnerConfirmSupplierOrder = winePartnerProcedure
             updatedAt: new Date(),
           })
           .where(eq(sourceCustomerPos.id, supplierOrder.customerPoId));
+
+        // Notify distributor that all supplier orders are confirmed
+        void notifyDistributorOfAllConfirmed({
+          customerPoId: supplierOrder.customerPoId,
+        });
       }
 
       // Notify admins of partner response

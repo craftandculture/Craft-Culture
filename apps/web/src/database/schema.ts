@@ -694,6 +694,11 @@ export const notificationType = pgEnum('notification_type', [
   'supplier_order_confirmed',
   'supplier_order_updated',
   'supplier_order_rejected',
+  'supplier_order_reminder',
+  // SOURCE Customer PO notifications (for distributors)
+  'customer_po_received',
+  'customer_po_orders_generated',
+  'customer_po_ready',
 ]);
 
 /**
