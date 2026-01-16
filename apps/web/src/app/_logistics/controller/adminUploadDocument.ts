@@ -1,3 +1,4 @@
+import { tasks } from '@trigger.dev/sdk/v3';
 import { TRPCError } from '@trpc/server';
 import { put } from '@vercel/blob';
 import { fileTypeFromBuffer } from 'file-type';
@@ -5,6 +6,7 @@ import { fileTypeFromBuffer } from 'file-type';
 import db from '@/database/client';
 import { logisticsDocuments } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
+import { logisticsDocumentExtractionJob } from '@/trigger/jobs/logistics-document-extraction/logisticsDocumentExtractionJob';
 import logger from '@/utils/logger';
 
 import uploadDocumentSchema from '../schemas/uploadDocumentSchema';
@@ -114,6 +116,13 @@ const adminUploadDocument = adminProcedure.input(uploadDocumentSchema).mutation(
         message: 'Failed to create document record',
       });
     }
+
+    // Trigger AI extraction job (fire and forget)
+    tasks
+      .trigger(logisticsDocumentExtractionJob.id, { documentId: document.id })
+      .catch((err) => {
+        logger.error('Failed to trigger document extraction', { err, documentId: document.id });
+      });
 
     return document;
   } catch (error) {

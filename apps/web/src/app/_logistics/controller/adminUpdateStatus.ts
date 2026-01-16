@@ -1,3 +1,4 @@
+import { tasks } from '@trigger.dev/sdk/v3';
 import { TRPCError } from '@trpc/server';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
@@ -5,6 +6,7 @@ import { z } from 'zod';
 import db from '@/database/client';
 import { logisticsShipmentActivityLogs, logisticsShipments } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
+import { shipmentMilestoneNotificationJob } from '@/trigger/jobs/logistics-alerts/shipmentMilestoneNotificationJob';
 import logger from '@/utils/logger';
 
 const updateStatusSchema = z.object({
@@ -90,6 +92,18 @@ const adminUpdateStatus = adminProcedure
         newStatus: status,
         notes,
       });
+
+      // Trigger milestone notification job (fire and forget)
+      tasks
+        .trigger(shipmentMilestoneNotificationJob.id, {
+          shipmentId: id,
+          newStatus: status,
+          previousStatus,
+          triggeredBy: user.id,
+        })
+        .catch((err) => {
+          logger.error('Failed to trigger milestone notification', { err, shipmentId: id });
+        });
 
       return shipment;
     } catch (error) {
