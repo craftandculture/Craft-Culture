@@ -17,6 +17,7 @@ import { useParams } from 'next/navigation';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
+import LogisticsDocumentUpload from '@/app/_logistics/components/DocumentUpload';
 import ShipmentStatusBadge from '@/app/_logistics/components/ShipmentStatusBadge';
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
@@ -469,46 +470,14 @@ const ShipmentDetailPage = () => {
         {activeTab === 'documents' && (
           <Card>
             <CardContent className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <Typography variant="headingSm">Documents</Typography>
-                <Button size="sm" disabled>
-                  <ButtonContent iconLeft={IconUpload}>Upload</ButtonContent>
-                </Button>
-              </div>
-              {!shipment.documents?.length ? (
-                <Typography variant="bodyMd" colorRole="muted" className="text-center py-8">
-                  No documents uploaded yet
-                </Typography>
-              ) : (
-                <div className="space-y-2">
-                  {shipment.documents.map((doc) => (
-                    <div
-                      key={doc.id}
-                      className="flex items-center justify-between p-3 border border-border-muted rounded-lg"
-                    >
-                      <div className="flex items-center gap-3">
-                        <Icon icon={IconFileText} size="md" className="text-text-muted" />
-                        <div>
-                          <Typography variant="bodySm" className="font-medium">
-                            {doc.fileName}
-                          </Typography>
-                          <Typography variant="bodyXs" colorRole="muted" className="capitalize">
-                            {doc.documentType.replace(/_/g, ' ')}
-                          </Typography>
-                        </div>
-                      </div>
-                      <a
-                        href={doc.fileUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-sm text-text-brand hover:underline"
-                      >
-                        View
-                      </a>
-                    </div>
-                  ))}
-                </div>
-              )}
+              <Typography variant="headingSm" className="mb-4">
+                Documents
+              </Typography>
+              <LogisticsDocumentUpload
+                shipmentId={shipmentId}
+                documents={shipment.documents ?? []}
+                onUploadComplete={() => void refetch()}
+              />
             </CardContent>
           </Card>
         )}

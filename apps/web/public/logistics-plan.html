@@ -424,8 +424,8 @@
     <nav class="toc">
       <h2>Table of Contents</h2>
       <div class="toc-grid">
-        <a href="#progress" style="color: var(--accent-green);">✓ Progress (Phase 1 Complete)</a>
-        <a href="#next-steps" style="color: var(--accent-purple);">→ Next Steps</a>
+        <a href="#progress" style="color: var(--accent-green);">✓ Progress (Phases 1-4 Complete)</a>
+        <a href="#next-steps" style="color: var(--accent-purple);">→ Next Steps (Phases 5-7)</a>
         <a href="#priorities">Core Priorities</a>
         <a href="#how-we-achieve">How We Achieve Each Priority</a>
         <a href="#users">Users</a>
@@ -447,10 +447,10 @@
       <h2>✓ Progress Update</h2>
 
       <div class="progress-card">
-        <h3>Phase 1 Complete - January 16, 2026</h3>
-        <p>Foundation layer is deployed and live. Database schema, relations, and admin CRUD API are ready.</p>
+        <h3>Phases 1-4 Complete - January 16, 2026</h3>
+        <p>Foundation, Document Upload, Landed Cost Calculator, and Admin UI are all deployed and live.</p>
 
-        <h4>What Was Built</h4>
+        <h4>Phase 1: Foundation ✓</h4>
         <div class="code-block">Database Schema (apps/web/src/database/schema.ts):
 ├── 5 enums added:
 │   ├── logisticsShipmentType ('inbound', 'outbound', 're_export')
@@ -466,33 +466,96 @@
     ├── logisticsShipmentActivityLogs (audit trail)
     └── logisticsRateCards (RAK Port rates)
 
-Relations (apps/web/src/database/relations.ts):
-└── All 5 tables connected with proper FK relations
-
 API Router (apps/web/src/app/_logistics/):
-├── router.ts - Main logistics router with admin sub-router
+├── router.ts - Main logistics router with admin/partner sub-routers
 ├── controller/
 │   ├── adminCreate.ts - Create new shipment
 │   ├── adminGetMany.ts - List shipments with filters
 │   ├── adminGetOne.ts - Get shipment details
 │   ├── adminUpdate.ts - Update shipment fields
-│   └── adminUpdateStatus.ts - Change shipment status
-├── schemas/
-│   ├── createShipmentSchema.ts
-│   ├── updateShipmentSchema.ts
-│   └── getShipmentsSchema.ts
+│   ├── adminUpdateStatus.ts - Change shipment status
+│   ├── adminAddItem.ts - Add items to shipment
+│   ├── adminRemoveItem.ts - Remove items from shipment
+│   ├── adminUploadDocument.ts - Upload documents (drag-drop)
+│   ├── adminDeleteDocument.ts - Delete documents
+│   └── adminCalculateLandedCost.ts - Calculate landed cost
 └── utils/
-    └── generateShipmentNumber.ts - SHP-YYYY-NNNN format
+    └── generateShipmentNumber.ts - SHP-YYYY-NNNN format</div>
 
-Registered in trpc-router.ts:
-└── logistics: logisticsRouter</div>
+        <h4>Phase 2: Document Upload ✓</h4>
+        <div class="code-block">Drag-Drop Document Upload Component:
+├── LogisticsDocumentUpload.tsx - React dropzone component
+├── Supports PDF, PNG, JPG (max 10MB)
+├── 13 document types available
+├── Auto-upload on drop
+├── Delete functionality
+└── Integrated into admin shipment detail page</div>
+
+        <h4>Phase 3: Landed Cost Calculator ✓</h4>
+        <div class="code-block">Landed Cost Features:
+├── Calculate total landed cost per shipment
+├── Per-bottle cost calculation
+├── Three allocation methods: by_bottle, by_weight, by_value
+├── RAK Port rate cards seeded
+└── Auto-recalculation on item changes</div>
+
+        <h4>Phase 4: Admin UI ✓</h4>
+        <div class="code-block">Admin Pages Created:
+├── /platform/admin/logistics/page.tsx - Dashboard with status counts
+├── /platform/admin/logistics/shipments/page.tsx - Shipment list with filters
+├── /platform/admin/logistics/shipments/new/page.tsx - Create shipment form
+└── /platform/admin/logistics/shipments/[id]/page.tsx - Detail view with tabs
+    ├── Overview tab - Shipment details, timeline, cargo summary
+    ├── Items tab - Manage shipment items with LWIN search
+    ├── Documents tab - Drag-drop upload with document list
+    ├── Costs tab - Landed cost breakdown with allocation
+    └── Timeline tab - Activity log
+
+Admin Navigation:
+└── Logistics link added to AdminNav.tsx with IconShip</div>
 
         <h4>API Endpoints Available</h4>
-        <div class="code-block">logistics.admin.create     - Create shipment
-logistics.admin.getMany    - List with pagination/filters
-logistics.admin.getOne     - Get by ID with items/docs/logs
-logistics.admin.update     - Update shipment details
-logistics.admin.updateStatus - Change status with activity log</div>
+        <div class="code-block">logistics.admin.create           - Create shipment
+logistics.admin.getMany          - List with pagination/filters
+logistics.admin.getOne           - Get by ID with items/docs/logs
+logistics.admin.update           - Update shipment details
+logistics.admin.updateStatus     - Change status with activity log
+logistics.admin.addItem          - Add item to shipment
+logistics.admin.removeItem       - Remove item from shipment
+logistics.admin.uploadDocument   - Upload document (base64)
+logistics.admin.deleteDocument   - Delete document
+logistics.admin.calculateLandedCost - Calculate landed cost</div>
+      </div>
+
+      <div class="progress-card" style="border-color: var(--accent-yellow);">
+        <h3 style="color: var(--accent-yellow);">Phase 5 In Progress - Partner Portal</h3>
+        <p>Building partner-facing views for shipment tracking and document management.</p>
+
+        <h4>Completed</h4>
+        <div class="code-block">Partner API (apps/web/src/app/_logistics/):
+├── controller/partnerGetMany.ts - List partner's shipments
+├── controller/partnerGetOne.ts - Get shipment details (with access check)
+└── router.ts - Partner router added
+
+Partner Pages:
+├── /platform/partner/logistics/page.tsx - Shipment list
+│   ├── Transport mode icons (sea, air, road)
+│   ├── Status badges
+│   ├── Item and case counts
+│   └── ETA display
+│
+└── /platform/partner/logistics/[shipmentId]/page.tsx - Detail view
+    ├── Overview tab - Shipment details, timeline, cargo summary
+    ├── Items tab - Read-only item list
+    ├── Documents tab - View and download documents
+    └── Timeline tab - Activity history</div>
+
+        <h4>Remaining</h4>
+        <ul class="task-list">
+          <li>Partner document upload (partnerUploadDocument.ts)</li>
+          <li>Email notifications for shipment updates</li>
+          <li>Partner shipment status change notifications</li>
+        </ul>
       </div>
     </section>
 
@@ -500,76 +563,55 @@ logistics.admin.updateStatus - Change status with activity log</div>
       <h2>→ Next Steps</h2>
 
       <div class="next-steps-card">
-        <h3>Immediate: Phase 1.5 - Document Upload</h3>
-        <p>Enable document upload to shipments (copy existing pattern from privateClientOrders)</p>
+        <h3>Phase 5: Complete Partner Portal (In Progress)</h3>
+        <p>Finish partner-facing features for document management and notifications</p>
 
-        <h4>Tasks</h4>
+        <h4>Remaining Tasks</h4>
         <ul class="task-list">
-          <li>Create <code>adminUploadDocument.ts</code> controller (copy from <code>_privateClientOrders/controller/documentsUpload.ts</code>)</li>
-          <li>Create <code>adminDeleteDocument.ts</code> controller</li>
-          <li>Create <code>uploadDocumentSchema.ts</code> schema</li>
-          <li>Add procedures to admin router</li>
-          <li>Test upload via tRPC devtools</li>
-        </ul>
-
-        <h4>Files to Create</h4>
-        <div class="code-block">apps/web/src/app/_logistics/
-├── controller/
-│   ├── adminUploadDocument.ts  (copy from privateClientOrders)
-│   └── adminDeleteDocument.ts
-└── schemas/
-    └── uploadDocumentSchema.ts</div>
-      </div>
-
-      <div class="next-steps-card">
-        <h3>Phase 2: Landed Cost Calculator</h3>
-        <p>Calculate true cost per bottle using RAK Port rates</p>
-
-        <h4>Key Formula</h4>
-        <div class="code-block">LANDED COST = Product Cost + Freight + Insurance + Handling + Customs + Gov Fees + Delivery
-
-Per Bottle = Total Landed Cost / Total Bottles
-
-Allocation Methods:
-- By bottles (default): Split costs by bottle count
-- By weight: Split costs by kg
-- By value: Split costs by declared value</div>
-
-        <h4>Tasks</h4>
-        <ul class="task-list">
-          <li>Create <code>calculateLandedCost.ts</code> utility</li>
-          <li>Seed RAK Port rate card data</li>
-          <li>Create <code>adminCalculateLandedCost.ts</code> controller</li>
-          <li>Add cost allocation method selector</li>
-          <li>Auto-recalculate on item/cost changes</li>
+          <li>Create <code>partnerUploadDocument.ts</code> - Allow partners to upload docs for their shipments</li>
+          <li>Add LogisticsDocumentUpload component to partner detail page</li>
+          <li>Email notifications when shipment status changes</li>
+          <li>Email notifications when new documents are added</li>
         </ul>
       </div>
 
       <div class="next-steps-card">
-        <h3>Phase 3: Admin UI</h3>
-        <p>Build admin interface for managing shipments</p>
-
-        <h4>Pages to Create</h4>
-        <ul class="task-list">
-          <li><code>/platform/admin/logistics/page.tsx</code> - Dashboard with status counts</li>
-          <li><code>/platform/admin/logistics/shipments/page.tsx</code> - Shipment list</li>
-          <li><code>/platform/admin/logistics/shipments/new/page.tsx</code> - Create form</li>
-          <li><code>/platform/admin/logistics/shipments/[id]/page.tsx</code> - Detail view with tabs</li>
-        </ul>
-      </div>
-
-      <div class="next-steps-card">
-        <h3>Phase 4: Hillebrand Integration</h3>
+        <h3>Phase 6: Hillebrand Sync - Auto-Import</h3>
         <p style="color: var(--accent-green);">API credentials verified and working!</p>
+        <p>Auto-import shipments and invoices from Hillebrand API</p>
 
-        <h4>Integration Tasks</h4>
+        <h4>Implementation Tasks</h4>
         <ul class="task-list">
-          <li>Add Hillebrand env vars to Vercel</li>
-          <li>Create OAuth2 client with 8hr token refresh</li>
-          <li>Create <code>getShipments.ts</code> - List shipments (12 available)</li>
-          <li>Create <code>getInvoices.ts</code> - Get invoices (13 available)</li>
+          <li>Create <code>_logistics/integrations/hillebrand/client.ts</code> - OAuth2 token management</li>
+          <li>Create <code>syncShipments.ts</code> - Import shipments from Hillebrand</li>
+          <li>Create <code>syncInvoices.ts</code> - Import invoices from Hillebrand</li>
+          <li>Create Trigger.dev job for scheduled sync (every 4 hours)</li>
           <li>Create webhook receiver for real-time updates</li>
-          <li>Map Hillebrand status to our enum</li>
+          <li>Map Hillebrand status to our shipmentStatus enum</li>
+          <li>Admin UI button to trigger manual sync</li>
+        </ul>
+
+        <h4>Status Mapping</h4>
+        <div class="code-block">Hillebrand Status     →  Our Status
+──────────────────────────────────────
+departed              →  in_transit
+arrived               →  arrived_port
+delivered             →  delivered
+shpimpcsmclr (event)  →  cleared</div>
+      </div>
+
+      <div class="next-steps-card">
+        <h3>Phase 7: Reporting & Analytics</h3>
+        <p>Dashboards and reports for logistics operations</p>
+
+        <h4>Reports to Build</h4>
+        <ul class="task-list">
+          <li>Shipment summary dashboard (by status, transport mode, partner)</li>
+          <li>Landed cost analysis report (per product, per shipment)</li>
+          <li>Document compliance report (missing/expired documents)</li>
+          <li>Partner shipment history report</li>
+          <li>Hillebrand invoice reconciliation report</li>
+          <li>Export functionality (Excel, PDF)</li>
         </ul>
       </div>
     </section>
@@ -1419,83 +1461,58 @@ Flag for manual review (don't skip silently)</div>
         </ul>
       </div>
 
-      <div class="phase-card">
-        <h3>Phase 2: Landed Cost Calculator</h3>
+      <div class="phase-card" style="border-color: var(--accent-green);">
+        <h3 style="color: var(--accent-green);">Phase 2: Document Upload ✓ COMPLETE</h3>
+        <p><strong>Goal:</strong> Drag-drop document upload for shipments</p>
+
+        <ul class="task-list">
+          <li class="completed">Create <code>adminUploadDocument.ts</code> controller</li>
+          <li class="completed">Create <code>adminDeleteDocument.ts</code> controller</li>
+          <li class="completed">Create <code>LogisticsDocumentUpload.tsx</code> component with react-dropzone</li>
+          <li class="completed">Support PDF, PNG, JPG (max 10MB)</li>
+          <li class="completed">Integrate into admin shipment detail page</li>
+        </ul>
+      </div>
+
+      <div class="phase-card" style="border-color: var(--accent-green);">
+        <h3 style="color: var(--accent-green);">Phase 3: Landed Cost Calculator ✓ COMPLETE</h3>
         <p><strong>Goal:</strong> Calculate true cost per bottle using RAK Port rates</p>
 
         <ul class="task-list">
-          <li>Create <code>_logistics/utils/calculateLandedCost.ts</code> with formula</li>
-          <li>Seed RAK Port rate card: destuffing (670/875 AED), non-duty levy (1.60/case), delivery (600/1000 AED)</li>
-          <li>Add <code>adminCalculateLandedCost.ts</code> controller</li>
-          <li>Auto-recalculate on item/cost changes</li>
-          <li>Add cost allocation method selector (by bottles, weight, value)</li>
+          <li class="completed">Create <code>adminCalculateLandedCost.ts</code> controller</li>
+          <li class="completed">Seed RAK Port rate card: destuffing (670/875 AED), non-duty levy (1.60/case), delivery (600/1000 AED)</li>
+          <li class="completed">Add cost allocation method selector (by bottles, weight, value)</li>
+          <li class="completed">Auto-recalculate on item/cost changes</li>
+          <li class="completed">Display per-bottle cost breakdown in admin UI</li>
         </ul>
       </div>
 
-      <div class="phase-card">
-        <h3>Phase 3: AI Document Extraction</h3>
-        <p><strong>Goal:</strong> Auto-extract fields from BOL, AWB, commercial invoices</p>
-
-        <ul class="task-list">
-          <li>Create <code>trigger/jobs/extract-logistics-document/extractLogisticsDocumentJob.ts</code></li>
-          <li>Follow <code>extractDocumentJob.ts</code> pattern exactly (OpenAI Vision gpt-4o)</li>
-          <li>Extract fields by document type (BOL/AWB, Invoice, Packing List)</li>
-          <li>Auto-populate shipment fields from extracted data</li>
-          <li>Update extraction status: pending to processing to completed/failed</li>
-        </ul>
-      </div>
-
-      <div class="phase-card">
-        <h3>Phase 4: Admin UI</h3>
+      <div class="phase-card" style="border-color: var(--accent-green);">
+        <h3 style="color: var(--accent-green);">Phase 4: Admin UI ✓ COMPLETE</h3>
         <p><strong>Goal:</strong> Full admin interface for managing shipments</p>
-
-        <h4>Navigation Redesign: Two-Row Header</h4>
-        <div class="nav-redesign">Current (crowded single row):
-QUOTES: Create | My Quotes | Approvals   PRIVATE ORDERS: Dashboard | Manage   PRICING: Calculator
-
-New design (two rows):
-+-------------------------------------------------------------------+
-| [C&C INDEX]         Quotes    Orders    Logistics    Pricing      |  &lt;- Primary nav (modules)
-+-------------------------------------------------------------------+
-| Shipments    Documents    Tools    Costs                          |  &lt;- Secondary nav (context-aware)
-+-------------------------------------------------------------------+
-
-Secondary nav changes per module:
-| Module    | Secondary Nav Items               |
-|-----------|-----------------------------------|
-| Quotes    | Create, My Quotes, Approvals      |
-| Orders    | Dashboard, Manage                 |
-| Logistics | Shipments, Documents, Tools, Costs|
-| Pricing   | Calculator                        |</div>
 
         <h4>Pages</h4>
         <ul class="task-list">
-          <li><code>/platform/admin/logistics/page.tsx</code> - Dashboard with status counts</li>
-          <li><code>/platform/admin/logistics/shipments/page.tsx</code> - Shipment list with filters</li>
-          <li><code>/platform/admin/logistics/shipments/new/page.tsx</code> - Create shipment form</li>
-          <li><code>/platform/admin/logistics/shipments/[id]/page.tsx</code> - Shipment detail with tabs</li>
-          <li><code>/platform/admin/logistics/tools/page.tsx</code> - Admin tools index</li>
-          <li><code>/platform/admin/logistics/tools/pdf-extract/page.tsx</code> - PDF to Excel tool</li>
+          <li class="completed"><code>/platform/admin/logistics/page.tsx</code> - Dashboard with status counts</li>
+          <li class="completed"><code>/platform/admin/logistics/shipments/page.tsx</code> - Shipment list with filters</li>
+          <li class="completed"><code>/platform/admin/logistics/shipments/new/page.tsx</code> - Create shipment form</li>
+          <li class="completed"><code>/platform/admin/logistics/shipments/[id]/page.tsx</code> - Shipment detail with tabs</li>
+          <li class="completed">Logistics link added to AdminNav.tsx</li>
         </ul>
       </div>
 
-      <div class="phase-card">
-        <h3>Phase 5: Partner & Client Portals</h3>
-        <p><strong>Goal:</strong> Role-based views for partners and clients</p>
+      <div class="phase-card" style="border-color: var(--accent-yellow);">
+        <h3 style="color: var(--accent-yellow);">Phase 5: Partner Portal - IN PROGRESS</h3>
+        <p><strong>Goal:</strong> Role-based views for partners</p>
 
         <h4>Partner Portal</h4>
         <ul class="task-list">
-          <li><code>partnerGetMany.ts</code> - Filter by <code>partnerId</code> from context</li>
-          <li><code>partnerGetOne.ts</code> - Verify partner access</li>
+          <li class="completed"><code>partnerGetMany.ts</code> - Filter by <code>partnerId</code> from context</li>
+          <li class="completed"><code>partnerGetOne.ts</code> - Verify partner access</li>
+          <li class="completed"><code>/platform/partner/logistics/page.tsx</code> - Partner shipment list</li>
+          <li class="completed"><code>/platform/partner/logistics/[shipmentId]/page.tsx</code> - Partner shipment detail</li>
           <li><code>partnerUploadDocument.ts</code> - Partners can upload docs for their shipments</li>
-          <li><code>/platform/partner/logistics/page.tsx</code> - Partner shipment list</li>
-        </ul>
-
-        <h4>Client Portal</h4>
-        <ul class="task-list">
-          <li><code>clientGetMany.ts</code> - Filter by linked orders</li>
-          <li><code>clientTrackShipment.ts</code> - Read-only tracking view</li>
-          <li><code>/platform/client/logistics/page.tsx</code> - Client tracking view</li>
+          <li>Email notifications for shipment updates</li>
         </ul>
       </div>
 
@@ -1731,7 +1748,7 @@ pnpm dev
     <footer>
       <p>C&C Logistics Module Implementation Plan</p>
       <p>Last updated: January 16, 2026</p>
-      <p style="color: var(--accent-green);">Phase 1 Complete | Hillebrand API verified and working</p>
+      <p style="color: var(--accent-green);">Phases 1-4 Complete | Phase 5 In Progress | Hillebrand API verified</p>
     </footer>
   </div>
 </body>
