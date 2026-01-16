@@ -2944,6 +2944,87 @@ export const logisticsDocuments = pgTable(
 export type LogisticsDocument = typeof logisticsDocuments.$inferSelect;
 
 /**
+ * Invoice status for Hillebrand invoices
+ */
+export const logisticsInvoiceStatus = pgEnum('logistics_invoice_status', [
+  'open',
+  'paid',
+  'overdue',
+  'disputed',
+  'cancelled',
+]);
+
+/**
+ * Logistics invoices - invoices from Hillebrand
+ */
+export const logisticsInvoices = pgTable(
+  'logistics_invoices',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+
+    // Hillebrand integration
+    hillebrandInvoiceId: integer('hillebrand_invoice_id').unique(),
+    hillebrandLastSync: timestamp('hillebrand_last_sync', { mode: 'date' }),
+
+    // Invoice details
+    invoiceNumber: text('invoice_number').notNull(),
+    invoiceDate: timestamp('invoice_date', { mode: 'date' }).notNull(),
+    paymentDueDate: timestamp('payment_due_date', { mode: 'date' }),
+    status: logisticsInvoiceStatus('status').notNull().default('open'),
+
+    // Amounts
+    currencyCode: text('currency_code').notNull().default('USD'),
+    totalAmount: doublePrecision('total_amount').notNull(),
+    openAmount: doublePrecision('open_amount').notNull(),
+    paidAmount: doublePrecision('paid_amount').default(0),
+
+    // Payment tracking
+    paidAt: timestamp('paid_at', { mode: 'date' }),
+    paymentReference: text('payment_reference'),
+
+    // Notes
+    notes: text('notes'),
+
+    ...timestamps,
+  },
+  (table) => [
+    index('logistics_invoices_invoice_number_idx').on(table.invoiceNumber),
+    index('logistics_invoices_status_idx').on(table.status),
+    index('logistics_invoices_hillebrand_id_idx').on(table.hillebrandInvoiceId),
+    index('logistics_invoices_invoice_date_idx').on(table.invoiceDate),
+  ],
+).enableRLS();
+
+export type LogisticsInvoice = typeof logisticsInvoices.$inferSelect;
+
+/**
+ * Invoice to shipment linkage - one invoice can cover multiple shipments
+ */
+export const logisticsInvoiceShipments = pgTable(
+  'logistics_invoice_shipments',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    invoiceId: uuid('invoice_id')
+      .references(() => logisticsInvoices.id, { onDelete: 'cascade' })
+      .notNull(),
+    shipmentId: uuid('shipment_id')
+      .references(() => logisticsShipments.id, { onDelete: 'cascade' })
+      .notNull(),
+
+    // Optional: portion of invoice allocated to this shipment
+    allocatedAmount: doublePrecision('allocated_amount'),
+
+    ...timestamps,
+  },
+  (table) => [
+    index('logistics_invoice_shipments_invoice_id_idx').on(table.invoiceId),
+    index('logistics_invoice_shipments_shipment_id_idx').on(table.shipmentId),
+  ],
+).enableRLS();
+
+export type LogisticsInvoiceShipment = typeof logisticsInvoiceShipments.$inferSelect;
+
+/**
  * Logistics shipment activity logs - audit trail
  */
 export const logisticsShipmentActivityLogs = pgTable(

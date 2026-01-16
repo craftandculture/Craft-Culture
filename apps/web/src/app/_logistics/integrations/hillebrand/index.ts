@@ -10,4 +10,6 @@ export type { HillebrandShipment } from './getShipments';
 export { getHillebrandInvoice, getHillebrandInvoiceLines, getHillebrandInvoices } from './getInvoices';
 export type { HillebrandInvoice } from './getInvoices';
 export { default as syncHillebrandShipments } from './syncShipments';
-export type { SyncResult } from './syncShipments';
+export type { SyncResult as ShipmentSyncResult } from './syncShipments';
+export { default as syncHillebrandInvoices } from './syncInvoices';
+export type { InvoiceSyncResult } from './syncInvoices';
