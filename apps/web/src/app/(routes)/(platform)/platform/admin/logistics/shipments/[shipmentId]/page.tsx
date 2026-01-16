@@ -24,7 +24,6 @@ import Card from '@/app/_ui/components/Card/Card';
 import CardContent from '@/app/_ui/components/Card/CardContent';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Input from '@/app/_ui/components/Input/Input';
-import Label from '@/app/_ui/components/Label/Label';
 import Select from '@/app/_ui/components/Select/Select';
 import SelectContent from '@/app/_ui/components/Select/SelectContent';
 import SelectItem from '@/app/_ui/components/Select/SelectItem';
@@ -355,7 +354,7 @@ const ShipmentDetailPage = () => {
                 <div className="mb-6 p-4 border border-border-muted rounded-lg bg-surface-muted">
                   <div className="grid gap-4 sm:grid-cols-4">
                     <div className="space-y-2">
-                      <Label>Product Name</Label>
+                      <label className="text-sm font-medium">Product Name</label>
                       <Input
                         placeholder="e.g. Chateau Margaux 2018"
                         value={newItem.productName}
@@ -363,7 +362,7 @@ const ShipmentDetailPage = () => {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label>Cases</Label>
+                      <label className="text-sm font-medium">Cases</label>
                       <Input
                         type="number"
                         placeholder="20"
@@ -372,7 +371,7 @@ const ShipmentDetailPage = () => {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label>Bottles/Case</Label>
+                      <label className="text-sm font-medium">Bottles/Case</label>
                       <Input
                         type="number"
                         value={newItem.bottlesPerCase}
@@ -380,7 +379,7 @@ const ShipmentDetailPage = () => {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label>Cost/Bottle (USD)</Label>
+                      <label className="text-sm font-medium">Cost/Bottle (USD)</label>
                       <Input
                         type="number"
                         step="0.01"
