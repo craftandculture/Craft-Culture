@@ -136,18 +136,23 @@ const syncHillebrandShipments = async (): Promise<SyncResult> => {
     if (hillebrandShipments.length === 0) {
       logger.info('No shipments found without filter, trying with status filters');
 
-      const statusesToTry = ['shipped', 'departed', 'in_transit', 'arrived', 'delivered', 'active'];
+      // Valid Hillebrand API statuses (based on API documentation)
+      const statusesToTry = ['shipped', 'arrived', 'delivered'];
       const seenIds = new Set<number>();
 
       for (const status of statusesToTry) {
-        logger.info(`Trying Hillebrand status: ${status}`);
-        const shipments = await getHillebrandShipments({ status, pageSize: 100 });
+        try {
+          logger.info(`Trying Hillebrand status: ${status}`);
+          const shipments = await getHillebrandShipments({ status, pageSize: 100 });
 
-        for (const shipment of shipments) {
-          if (!seenIds.has(shipment.id)) {
-            seenIds.add(shipment.id);
-            hillebrandShipments.push(shipment);
+          for (const shipment of shipments) {
+            if (!seenIds.has(shipment.id)) {
+              seenIds.add(shipment.id);
+              hillebrandShipments.push(shipment);
+            }
           }
+        } catch (error) {
+          logger.warn(`Failed to fetch shipments with status ${status}`, { error });
         }
       }
     }
