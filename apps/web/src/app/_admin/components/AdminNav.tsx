@@ -9,6 +9,7 @@ import {
   IconPackage,
   IconSearch,
   IconSettings,
+  IconShip,
   IconUsers,
 } from '@tabler/icons-react';
 import Link from 'next/link';
@@ -54,6 +55,12 @@ const navItems: NavItem[] = [
     href: '/platform/admin/source',
     icon: IconSearch,
     description: 'RFQ sourcing',
+  },
+  {
+    label: 'Logistics',
+    href: '/platform/admin/logistics',
+    icon: IconShip,
+    description: 'Shipments',
   },
   {
     label: 'Commissions',
