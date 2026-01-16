@@ -13,6 +13,8 @@ import {
 import { adminProcedure } from '@/lib/trpc/procedures';
 import logger from '@/utils/logger';
 
+import notifyDistributorOfCustomerPoReceived from '../utils/notifyDistributorOfCustomerPoReceived';
+
 const autoMatchSchema = z.object({
   customerPoId: z.string().uuid(),
 });
@@ -349,6 +351,11 @@ const adminAutoMatchCustomerPo = adminProcedure
           losingItemCount: losingCount,
         })
         .where(eq(sourceCustomerPos.id, input.customerPoId));
+
+      // Notify distributor that their PO has been received and is being processed
+      void notifyDistributorOfCustomerPoReceived({
+        customerPoId: input.customerPoId,
+      });
 
       return {
         results,

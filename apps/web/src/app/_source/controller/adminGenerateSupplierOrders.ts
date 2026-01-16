@@ -16,6 +16,7 @@ import logger from '@/utils/logger';
 import generateSupplierOrdersSchema from '../schemas/generateSupplierOrdersSchema';
 import formatLwin18 from '../utils/formatLwin18';
 import generateSupplierOrderNumber from '../utils/generateSupplierOrderNumber';
+import notifyDistributorOfOrdersGenerated from '../utils/notifyDistributorOfOrdersGenerated';
 
 /**
  * Generate supplier orders from matched Customer PO items
@@ -225,6 +226,11 @@ const adminGenerateSupplierOrders = adminProcedure
           updatedAt: new Date(),
         })
         .where(eq(sourceCustomerPos.id, customerPoId));
+
+      // Notify distributor that supplier orders have been generated
+      void notifyDistributorOfOrdersGenerated({
+        customerPoId,
+      });
 
       return {
         success: true,

@@ -132,6 +132,16 @@ const syncHillebrandShipments = async (): Promise<SyncResult> => {
     logger.info('Fetching Hillebrand shipments (no status filter)');
     const hillebrandShipments = await getAllHillebrandShipments({ pageSize: 100 });
 
+    logger.info('Initial Hillebrand fetch result', {
+      count: hillebrandShipments.length,
+      sample: hillebrandShipments.slice(0, 2).map(s => ({
+        id: s.id,
+        status: s.status,
+        shipFrom: s.shipFromPartyName,
+        shipTo: s.shipToPartyName,
+      })),
+    });
+
     // If no results, try with specific status filters
     if (hillebrandShipments.length === 0) {
       logger.info('No shipments found without filter, trying with status filters');
