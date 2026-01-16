@@ -4,7 +4,7 @@ import db from '@/database/client';
 import { logisticsShipments } from '@/database/schema';
 import logger from '@/utils/logger';
 
-import { getHillebrandShipments } from './getShipments';
+import { getAllHillebrandShipments, getHillebrandShipments } from './getShipments';
 import type { HillebrandShipment } from './getShipments';
 
 type OurShipmentStatus =
@@ -25,14 +25,19 @@ type OurTransportMode = 'sea_fcl' | 'sea_lcl' | 'air' | 'road';
 /**
  * Map Hillebrand status to our shipment status enum
  *
- * Hillebrand statuses: departed, arrived, delivered
+ * Hillebrand statuses: shipped, departed, arrived, delivered, etc.
  */
 const mapHillebrandStatus = (status: string): OurShipmentStatus => {
   const statusMap: Record<string, OurShipmentStatus> = {
     // Active shipment statuses
+    shipped: 'in_transit',
     departed: 'in_transit',
+    'in transit': 'in_transit',
+    in_transit: 'in_transit',
     arrived: 'arrived_port',
     delivered: 'delivered',
+    collected: 'picked_up',
+    booked: 'booked',
     // Default to in_transit for unknown active statuses
   };
 
@@ -123,8 +128,29 @@ const syncHillebrandShipments = async (): Promise<SyncResult> => {
   };
 
   try {
-    // Fetch all shipments from Hillebrand
-    const hillebrandShipments = await getHillebrandShipments({ pageSize: 100 });
+    // First try without status filter to get all shipments
+    logger.info('Fetching Hillebrand shipments (no status filter)');
+    const hillebrandShipments = await getAllHillebrandShipments({ pageSize: 100 });
+
+    // If no results, try with specific status filters
+    if (hillebrandShipments.length === 0) {
+      logger.info('No shipments found without filter, trying with status filters');
+
+      const statusesToTry = ['shipped', 'departed', 'in_transit', 'arrived', 'delivered', 'active'];
+      const seenIds = new Set<number>();
+
+      for (const status of statusesToTry) {
+        logger.info(`Trying Hillebrand status: ${status}`);
+        const shipments = await getHillebrandShipments({ status, pageSize: 100 });
+
+        for (const shipment of shipments) {
+          if (!seenIds.has(shipment.id)) {
+            seenIds.add(shipment.id);
+            hillebrandShipments.push(shipment);
+          }
+        }
+      }
+    }
 
     logger.info('Syncing Hillebrand shipments', { count: hillebrandShipments.length });
 

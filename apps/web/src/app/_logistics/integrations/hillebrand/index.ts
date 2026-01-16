@@ -1,5 +1,6 @@
 export { getAccessToken, hillebrandFetch } from './client';
 export {
+  getAllHillebrandShipments,
   getHillebrandShipment,
   getHillebrandShipmentDocuments,
   getHillebrandShipmentEvents,
