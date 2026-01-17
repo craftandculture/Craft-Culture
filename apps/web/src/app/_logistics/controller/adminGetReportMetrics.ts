@@ -30,11 +30,11 @@ const adminGetReportMetrics = adminProcedure.query(async () => {
   // Shipment counts by type
   const shipmentsByType = await db
     .select({
-      shipmentType: logisticsShipments.shipmentType,
+      shipmentType: logisticsShipments.type,
       count: count(),
     })
     .from(logisticsShipments)
-    .groupBy(logisticsShipments.shipmentType);
+    .groupBy(logisticsShipments.type);
 
   // Shipment counts by transport mode
   const shipmentsByTransportMode = await db

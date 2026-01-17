@@ -61,7 +61,7 @@ const adminGetLandedCostReport = adminProcedure
       columns: {
         id: true,
         shipmentNumber: true,
-        shipmentType: true,
+        type: true,
         transportMode: true,
         originCountry: true,
         originCity: true,
@@ -140,7 +140,7 @@ const adminGetLandedCostReport = adminProcedure
       return {
         shipmentId: shipment.id,
         shipmentNumber: shipment.shipmentNumber,
-        shipmentType: shipment.shipmentType,
+        shipmentType: shipment.type,
         transportMode: shipment.transportMode,
         route: `${shipment.originCity || shipment.originCountry || 'Unknown'} → ${shipment.destinationCity || shipment.destinationCountry || 'Unknown'}`,
         partner: shipment.partner?.businessName || 'N/A',
