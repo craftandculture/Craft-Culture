@@ -4,6 +4,13 @@ import { withSentryConfig } from '@sentry/nextjs';
 import { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
+  // Skip type checking on Vercel - done in CI
+  typescript: {
+    ignoreBuildErrors: true,
+  },
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
   experimental: {
     reactCompiler: true,
     authInterrupts: true,
