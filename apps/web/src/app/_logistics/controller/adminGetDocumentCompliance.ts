@@ -48,7 +48,7 @@ const adminGetDocumentCompliance = adminProcedure
       columns: {
         id: true,
         shipmentNumber: true,
-        shipmentType: true,
+        type: true,
         status: true,
         originCountry: true,
         destinationCountry: true,
@@ -80,7 +80,7 @@ const adminGetDocumentCompliance = adminProcedure
     // Build compliance report for each shipment
     const complianceReport = shipments.map((shipment) => {
       const shipmentDocs = documents.filter((d) => d.shipmentId === shipment.id);
-      const requiredTypes = requiredDocsByType[shipment.shipmentType] || [];
+      const requiredTypes = requiredDocsByType[shipment.type] || [];
       const presentTypes = shipmentDocs.map((d) => d.documentType);
 
       // Check for missing documents
@@ -126,7 +126,7 @@ const adminGetDocumentCompliance = adminProcedure
       return {
         shipmentId: shipment.id,
         shipmentNumber: shipment.shipmentNumber,
-        shipmentType: shipment.shipmentType,
+        shipmentType: shipment.type,
         status: shipment.status,
         route: `${shipment.originCountry || 'Unknown'} → ${shipment.destinationCountry || 'Unknown'}`,
         eta: shipment.eta,
