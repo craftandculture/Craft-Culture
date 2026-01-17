@@ -1,3 +1,4 @@
+// Build trigger: 2026-01-17
 import createMDX from '@next/mdx';
 import { withSentryConfig } from '@sentry/nextjs';
 import { NextConfig } from 'next';
