@@ -99,3 +99,4 @@ export default process.env.NODE_ENV === 'development'
       // https://vercel.com/docs/cron-jobs
       automaticVercelMonitors: true,
     });
+
