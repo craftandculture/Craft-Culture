@@ -94,15 +94,15 @@ const adminGetReportMetrics = adminProcedure.query(async () => {
   // Cost summaries (from shipments)
   const costSummary = await db
     .select({
-      totalFreight: sum(logisticsShipments.freightCost),
-      totalInsurance: sum(logisticsShipments.insuranceCost),
+      totalFreight: sum(logisticsShipments.freightCostUsd),
+      totalInsurance: sum(logisticsShipments.insuranceCostUsd),
       totalHandling: sum(
-        sql`COALESCE(${logisticsShipments.originHandlingCost}, 0) + COALESCE(${logisticsShipments.destinationHandlingCost}, 0)`,
+        sql`COALESCE(${logisticsShipments.originHandlingUsd}, 0) + COALESCE(${logisticsShipments.destinationHandlingUsd}, 0)`,
       ),
-      totalCustoms: sum(logisticsShipments.customsClearanceCost),
-      totalGovFees: sum(logisticsShipments.governmentFees),
-      totalDelivery: sum(logisticsShipments.deliveryCost),
-      totalOther: sum(logisticsShipments.otherCosts),
+      totalCustoms: sum(logisticsShipments.customsClearanceUsd),
+      totalGovFees: sum(logisticsShipments.govFeesUsd),
+      totalDelivery: sum(logisticsShipments.deliveryCostUsd),
+      totalOther: sum(logisticsShipments.otherCostsUsd),
     })
     .from(logisticsShipments);
 

@@ -69,15 +69,15 @@ const adminGetLandedCostReport = adminProcedure
         destinationCity: true,
         totalCases: true,
         totalBottles: true,
-        totalGrossWeight: true,
-        freightCost: true,
-        insuranceCost: true,
-        originHandlingCost: true,
-        destinationHandlingCost: true,
-        customsClearanceCost: true,
-        governmentFees: true,
-        deliveryCost: true,
-        otherCosts: true,
+        totalWeightKg: true,
+        freightCostUsd: true,
+        insuranceCostUsd: true,
+        originHandlingUsd: true,
+        destinationHandlingUsd: true,
+        customsClearanceUsd: true,
+        govFeesUsd: true,
+        deliveryCostUsd: true,
+        otherCostsUsd: true,
         costAllocationMethod: true,
         deliveredAt: true,
       },
@@ -117,14 +117,14 @@ const adminGetLandedCostReport = adminProcedure
       const shipmentItems = items.filter((i) => i.shipmentId === shipment.id);
 
       const totalShipmentCost =
-        (shipment.freightCost || 0) +
-        (shipment.insuranceCost || 0) +
-        (shipment.originHandlingCost || 0) +
-        (shipment.destinationHandlingCost || 0) +
-        (shipment.customsClearanceCost || 0) +
-        (shipment.governmentFees || 0) +
-        (shipment.deliveryCost || 0) +
-        (shipment.otherCosts || 0);
+        (shipment.freightCostUsd || 0) +
+        (shipment.insuranceCostUsd || 0) +
+        (shipment.originHandlingUsd || 0) +
+        (shipment.destinationHandlingUsd || 0) +
+        (shipment.customsClearanceUsd || 0) +
+        (shipment.govFeesUsd || 0) +
+        (shipment.deliveryCostUsd || 0) +
+        (shipment.otherCostsUsd || 0);
 
       const totalProductCost = shipmentItems.reduce(
         (sum, item) => sum + (item.productCost || 0),
@@ -147,16 +147,16 @@ const adminGetLandedCostReport = adminProcedure
         deliveredAt: shipment.deliveredAt,
         cases: shipment.totalCases || 0,
         bottles: shipment.totalBottles || 0,
-        weight: shipment.totalGrossWeight || 0,
+        weight: shipment.totalWeightKg || 0,
         costs: {
           product: totalProductCost,
-          freight: shipment.freightCost || 0,
-          insurance: shipment.insuranceCost || 0,
-          handling: (shipment.originHandlingCost || 0) + (shipment.destinationHandlingCost || 0),
-          customs: shipment.customsClearanceCost || 0,
-          governmentFees: shipment.governmentFees || 0,
-          delivery: shipment.deliveryCost || 0,
-          other: shipment.otherCosts || 0,
+          freight: shipment.freightCostUsd || 0,
+          insurance: shipment.insuranceCostUsd || 0,
+          handling: (shipment.originHandlingUsd || 0) + (shipment.destinationHandlingUsd || 0),
+          customs: shipment.customsClearanceUsd || 0,
+          governmentFees: shipment.govFeesUsd || 0,
+          delivery: shipment.deliveryCostUsd || 0,
+          other: shipment.otherCostsUsd || 0,
           totalShipping: totalShipmentCost,
           totalLanded: totalLandedCost,
           perBottle: Math.round(costPerBottle * 100) / 100,
