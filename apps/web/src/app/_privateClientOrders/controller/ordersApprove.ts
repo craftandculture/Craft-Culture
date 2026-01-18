@@ -2,16 +2,16 @@ import { TRPCError } from '@trpc/server';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 
-import createNotification from '@/app/_notifications/utils/createNotification';
 import db from '@/database/client';
 import {
   orderPricingOverrides,
-  partnerMembers,
   privateClientOrderActivityLogs,
   privateClientOrderItems,
   privateClientOrders,
 } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
+
+import notifyPartnerOfOrderUpdate from '../utils/notifyPartnerOfOrderUpdate';
 
 const lineItemStockSchema = z.object({
   itemId: z.string().uuid(),
@@ -151,22 +151,13 @@ const ordersApprove = adminProcedure.input(approveOrderSchema).mutation(async ({
 
   // Notify partner that their order was approved
   if (order.partnerId) {
-    const partnerMembersList = await db
-      .select({ userId: partnerMembers.userId })
-      .from(partnerMembers)
-      .where(eq(partnerMembers.partnerId, order.partnerId));
-
-    for (const member of partnerMembersList) {
-      await createNotification({
-        userId: member.userId,
-        type: 'po_approved',
-        title: 'Order Approved',
-        message: `Order ${updatedOrder?.orderNumber ?? orderId} has been approved by C&C. A distributor will be assigned shortly.`,
-        entityType: 'private_client_order',
-        entityId: orderId,
-        actionUrl: `/platform/private-orders/${orderId}`,
-      });
-    }
+    await notifyPartnerOfOrderUpdate({
+      orderId,
+      orderNumber: updatedOrder?.orderNumber ?? order.orderNumber ?? orderId,
+      partnerId: order.partnerId,
+      type: 'approved',
+      totalAmount: order.totalUsd ?? undefined,
+    });
   }
 
   return updatedOrder;

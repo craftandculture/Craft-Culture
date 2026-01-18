@@ -2,10 +2,11 @@ import { TRPCError } from '@trpc/server';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 
-import createNotification from '@/app/_notifications/utils/createNotification';
 import db from '@/database/client';
-import { partnerMembers, privateClientOrderActivityLogs, privateClientOrders } from '@/database/schema';
+import { privateClientOrderActivityLogs, privateClientOrders } from '@/database/schema';
 import { winePartnerProcedure } from '@/lib/trpc/procedures';
+
+import notifyDistributorOfOrderUpdate from '../utils/notifyDistributorOfOrderUpdate';
 
 const reinitiateSchema = z.object({
   orderId: z.string().uuid(),
@@ -86,23 +87,16 @@ const ordersPartnerReinitiateVerification = winePartnerProcedure
       metadata: { reinitiatedBy: 'partner' },
     });
 
-    // Notify distributor to verify client
-    const distributorMembers = await db
-      .select({ userId: partnerMembers.userId })
-      .from(partnerMembers)
-      .where(eq(partnerMembers.partnerId, order.distributorId));
-
-    for (const member of distributorMembers) {
-      await createNotification({
-        userId: member.userId,
-        type: 'action_required',
-        title: 'Client Verification Required',
-        message: `Please verify client for order ${updatedOrder?.orderNumber ?? orderId}. Partner confirms client is now registered.`,
-        entityType: 'private_client_order',
-        entityId: orderId,
-        actionUrl: `/platform/distributor/orders/${orderId}`,
-      });
-    }
+    // Notify distributor to verify client (in-app + email)
+    await notifyDistributorOfOrderUpdate({
+      orderId,
+      orderNumber: updatedOrder?.orderNumber ?? order.orderNumber ?? orderId,
+      distributorId: order.distributorId,
+      type: 'verification_required',
+      clientName: order.clientName ?? undefined,
+      clientEmail: order.clientEmail ?? undefined,
+      clientPhone: order.clientPhone ?? undefined,
+    });
 
     return updatedOrder;
   });

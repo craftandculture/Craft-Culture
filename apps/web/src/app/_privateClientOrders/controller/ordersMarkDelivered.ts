@@ -2,15 +2,11 @@ import { TRPCError } from '@trpc/server';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 
-import createNotification from '@/app/_notifications/utils/createNotification';
 import db from '@/database/client';
-import {
-  partnerMembers,
-  privateClientOrderActivityLogs,
-  privateClientOrderItems,
-  privateClientOrders,
-} from '@/database/schema';
+import { privateClientOrderActivityLogs, privateClientOrderItems, privateClientOrders } from '@/database/schema';
 import { distributorProcedure } from '@/lib/trpc/procedures';
+
+import notifyPartnerOfOrderUpdate from '../utils/notifyPartnerOfOrderUpdate';
 
 const markDeliveredSchema = z.object({
   orderId: z.string().uuid(),
@@ -94,22 +90,13 @@ const ordersMarkDelivered = distributorProcedure
 
     // Notify partner about successful delivery
     if (order.partnerId) {
-      const partnerMembersList = await db
-        .select({ userId: partnerMembers.userId })
-        .from(partnerMembers)
-        .where(eq(partnerMembers.partnerId, order.partnerId));
-
-      for (const member of partnerMembersList) {
-        await createNotification({
-          userId: member.userId,
-          type: 'status_update',
-          title: 'Order Delivered',
-          message: `Order ${updatedOrder?.orderNumber ?? orderId} has been delivered to your client`,
-          entityType: 'private_client_order',
-          entityId: orderId,
-          actionUrl: `/platform/private-orders/${orderId}`,
-        });
-      }
+      await notifyPartnerOfOrderUpdate({
+        orderId,
+        orderNumber: updatedOrder?.orderNumber ?? order.orderNumber ?? orderId,
+        partnerId: order.partnerId,
+        type: 'delivered',
+        deliveryDate: now.toLocaleDateString('en-GB'),
+      });
     }
 
     return updatedOrder;
