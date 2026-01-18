@@ -3122,3 +3122,115 @@ export const logisticsRateCards = pgTable(
 ).enableRLS();
 
 export type LogisticsRateCard = typeof logisticsRateCards.$inferSelect;
+
+/**
+ * Freight quote status for tracking quote lifecycle
+ */
+export const logisticsQuoteStatus = pgEnum('logistics_quote_status', [
+  'draft',
+  'pending',
+  'accepted',
+  'rejected',
+  'expired',
+]);
+
+/**
+ * Logistics freight quotes - quotes from forwarders for shipments
+ */
+export const logisticsQuotes = pgTable(
+  'logistics_quotes',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+
+    // Reference number
+    quoteNumber: text('quote_number').notNull().unique(),
+
+    // Forwarder info
+    forwarderName: text('forwarder_name').notNull(),
+    forwarderContact: text('forwarder_contact'),
+    forwarderEmail: text('forwarder_email'),
+
+    // Optional link to shipment
+    shipmentId: uuid('shipment_id').references(() => logisticsShipments.id, {
+      onDelete: 'set null',
+    }),
+
+    // Route details (for standalone quotes)
+    originCountry: text('origin_country'),
+    originCity: text('origin_city'),
+    destinationCountry: text('destination_country'),
+    destinationCity: text('destination_city'),
+    transportMode: logisticsTransportMode('transport_mode'),
+
+    // Pricing
+    totalPrice: doublePrecision('total_price').notNull(),
+    currency: text('currency').notNull().default('USD'),
+
+    // Transit details
+    transitDays: integer('transit_days'),
+
+    // Validity
+    validFrom: timestamp('valid_from', { mode: 'date' }),
+    validUntil: timestamp('valid_until', { mode: 'date' }),
+
+    // Status
+    status: logisticsQuoteStatus('status').notNull().default('pending'),
+
+    // Decision tracking
+    acceptedAt: timestamp('accepted_at', { mode: 'date' }),
+    acceptedBy: uuid('accepted_by').references(() => users.id, { onDelete: 'set null' }),
+    rejectedAt: timestamp('rejected_at', { mode: 'date' }),
+    rejectedBy: uuid('rejected_by').references(() => users.id, { onDelete: 'set null' }),
+    rejectionReason: text('rejection_reason'),
+
+    // Notes
+    notes: text('notes'),
+    internalNotes: text('internal_notes'),
+
+    // Audit
+    createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
+    ...timestamps,
+  },
+  (table) => [
+    index('logistics_quotes_quote_number_idx').on(table.quoteNumber),
+    index('logistics_quotes_shipment_id_idx').on(table.shipmentId),
+    index('logistics_quotes_status_idx').on(table.status),
+    index('logistics_quotes_forwarder_idx').on(table.forwarderName),
+    index('logistics_quotes_valid_until_idx').on(table.validUntil),
+  ],
+).enableRLS();
+
+export type LogisticsQuote = typeof logisticsQuotes.$inferSelect;
+
+/**
+ * Logistics quote line items - detailed cost breakdown for quotes
+ */
+export const logisticsQuoteLineItems = pgTable(
+  'logistics_quote_line_items',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    quoteId: uuid('quote_id')
+      .references(() => logisticsQuotes.id, { onDelete: 'cascade' })
+      .notNull(),
+
+    // Cost category
+    category: text('category').notNull(), // 'freight', 'handling', 'customs', 'insurance', etc.
+    description: text('description').notNull(),
+
+    // Pricing
+    unitPrice: doublePrecision('unit_price'),
+    quantity: integer('quantity').default(1),
+    total: doublePrecision('total').notNull(),
+
+    // Currency (can override quote currency for specific items)
+    currency: text('currency'),
+
+    // Sort order
+    sortOrder: integer('sort_order').default(0),
+
+    ...timestamps,
+  },
+  (table) => [index('logistics_quote_line_items_quote_id_idx').on(table.quoteId)],
+).enableRLS();
+
+export type LogisticsQuoteLineItem = typeof logisticsQuoteLineItems.$inferSelect;
