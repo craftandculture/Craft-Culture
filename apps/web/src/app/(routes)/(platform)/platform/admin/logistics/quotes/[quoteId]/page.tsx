@@ -24,11 +24,9 @@ import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
 import Card from '@/app/_ui/components/Card/Card';
 import CardContent from '@/app/_ui/components/Card/CardContent';
-import CardHeader from '@/app/_ui/components/Card/CardHeader';
 import CardTitle from '@/app/_ui/components/Card/CardTitle';
 import Icon from '@/app/_ui/components/Icon/Icon';
-import Label from '@/app/_ui/components/Label/Label';
-import Textarea from '@/app/_ui/components/Textarea/Textarea';
+import TextArea from '@/app/_ui/components/TextArea/TextArea';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import type { logisticsQuoteStatus } from '@/database/schema';
 import useTRPC from '@/lib/trpc/browser';
@@ -238,13 +236,13 @@ const QuoteDetailPage = () => {
         {/* Reject Dialog */}
         {showRejectDialog && (
           <Card className="border-red-200 dark:border-red-800">
-            <CardHeader>
+            <div className="p-4 pb-0">
               <CardTitle>Reject Quote</CardTitle>
-            </CardHeader>
+            </div>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="rejectReason">Reason for rejection (optional)</Label>
-                <Textarea
+                <label className="text-sm font-medium" htmlFor="rejectReason">Reason for rejection (optional)</label>
+                <TextArea
                   id="rejectReason"
                   placeholder="Enter reason for rejecting this quote..."
                   value={rejectReason}
@@ -277,9 +275,9 @@ const QuoteDetailPage = () => {
         {/* Quote Summary */}
         <div className="grid gap-6 lg:grid-cols-3">
           <Card className="lg:col-span-2">
-            <CardHeader>
+            <div className="p-4 pb-0">
               <CardTitle>Quote Summary</CardTitle>
-            </CardHeader>
+            </div>
             <CardContent>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
@@ -339,9 +337,9 @@ const QuoteDetailPage = () => {
           </Card>
 
           <Card>
-            <CardHeader>
+            <div className="p-4 pb-0">
               <CardTitle>Total Price</CardTitle>
-            </CardHeader>
+            </div>
             <CardContent>
               <Typography variant="headingLg" className="text-text-brand">
                 {formatCurrency(quote.totalPrice, quote.currency)}
@@ -356,12 +354,12 @@ const QuoteDetailPage = () => {
         {/* Linked Shipment */}
         {quote.shipment && (
           <Card>
-            <CardHeader>
+            <div className="p-4 pb-0">
               <CardTitle className="flex items-center gap-2">
                 <Icon icon={IconShip} size="sm" colorRole="muted" />
                 Linked Shipment
               </CardTitle>
-            </CardHeader>
+            </div>
             <CardContent>
               <Link
                 href={`/platform/admin/logistics/shipments/${quote.shipment.id}`}
@@ -383,9 +381,9 @@ const QuoteDetailPage = () => {
 
         {/* Cost Breakdown */}
         <Card>
-          <CardHeader>
+          <div className="p-4 pb-0">
             <CardTitle>Cost Breakdown</CardTitle>
-          </CardHeader>
+          </div>
           <CardContent>
             {quote.lineItems.length === 0 ? (
               <Typography variant="bodySm" colorRole="muted">
@@ -463,9 +461,9 @@ const QuoteDetailPage = () => {
         {/* Notes */}
         {(quote.notes || quote.internalNotes) && (
           <Card>
-            <CardHeader>
+            <div className="p-4 pb-0">
               <CardTitle>Notes</CardTitle>
-            </CardHeader>
+            </div>
             <CardContent className="space-y-4">
               {quote.notes && (
                 <div>
