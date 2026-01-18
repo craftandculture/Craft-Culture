@@ -2,15 +2,11 @@ import { TRPCError } from '@trpc/server';
 import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
 
-import createNotification from '@/app/_notifications/utils/createNotification';
 import db from '@/database/client';
-import {
-  partnerMembers,
-  privateClientOrderActivityLogs,
-  privateClientOrderDocuments,
-  privateClientOrders,
-} from '@/database/schema';
+import { privateClientOrderActivityLogs, privateClientOrderDocuments, privateClientOrders } from '@/database/schema';
 import { winePartnerProcedure } from '@/lib/trpc/procedures';
+
+import notifyDistributorOfOrderUpdate from '../utils/notifyDistributorOfOrderUpdate';
 
 const acknowledgeSchema = z.object({
   orderId: z.string().uuid(),
@@ -101,22 +97,13 @@ const ordersPartnerAcknowledgeInvoice = winePartnerProcedure
 
     // Notify distributor that invoice was acknowledged
     if (order.distributorId) {
-      const distributorMembers = await db
-        .select({ userId: partnerMembers.userId })
-        .from(partnerMembers)
-        .where(eq(partnerMembers.partnerId, order.distributorId));
-
-      for (const member of distributorMembers) {
-        await createNotification({
-          userId: member.userId,
-          type: 'status_update',
-          title: 'Invoice Acknowledged',
-          message: `Partner has acknowledged the invoice for order ${updatedOrder?.orderNumber ?? orderId}. You can now confirm payment once received.`,
-          entityType: 'private_client_order',
-          entityId: orderId,
-          actionUrl: `/platform/distributor/orders/${orderId}`,
-        });
-      }
+      await notifyDistributorOfOrderUpdate({
+        orderId,
+        orderNumber: updatedOrder?.orderNumber ?? order.orderNumber ?? orderId,
+        distributorId: order.distributorId,
+        type: 'invoice_acknowledged',
+        paymentReference: order.paymentReference ?? undefined,
+      });
     }
 
     return updatedOrder;

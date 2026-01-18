@@ -1,15 +1,12 @@
 import { TRPCError } from '@trpc/server';
-import { eq, inArray } from 'drizzle-orm';
+import { inArray } from 'drizzle-orm';
 import { z } from 'zod';
 
-import createNotification from '@/app/_notifications/utils/createNotification';
 import db from '@/database/client';
-import {
-  partnerMembers,
-  privateClientOrderActivityLogs,
-  privateClientOrderItems,
-} from '@/database/schema';
+import { privateClientOrderActivityLogs, privateClientOrderItems } from '@/database/schema';
 import { distributorProcedure } from '@/lib/trpc/procedures';
+
+import notifyPartnerOfOrderUpdate from '../utils/notifyPartnerOfOrderUpdate';
 
 const confirmStockReceiptSchema = z.object({
   orderId: z.string().uuid(),
@@ -112,26 +109,15 @@ const distributorConfirmStockReceipt = distributorProcedure
       },
     });
 
-    // Notify partner that stock has arrived at distributor
+    // Notify partner that stock has arrived at distributor (in-app + email)
     if (order.partnerId) {
-      const partnerMembersList = await db
-        .select({ userId: partnerMembers.userId })
-        .from(partnerMembers)
-        .where(eq(partnerMembers.partnerId, order.partnerId));
-
-      const orderRef = order.orderNumber ?? orderId;
-
-      for (const member of partnerMembersList) {
-        await createNotification({
-          userId: member.userId,
-          type: 'status_update',
-          title: 'Stock Arrived at Distributor',
-          message: `${items.length} item(s) for order ${orderRef} confirmed at distributor warehouse`,
-          entityType: 'private_client_order',
-          entityId: orderId,
-          actionUrl: `/platform/private-orders/${orderId}`,
-        });
-      }
+      await notifyPartnerOfOrderUpdate({
+        orderId,
+        orderNumber: order.orderNumber ?? orderId,
+        partnerId: order.partnerId,
+        type: 'stock_received',
+        notes: `${items.length} item(s) confirmed at distributor warehouse`,
+      });
     }
 
     return {

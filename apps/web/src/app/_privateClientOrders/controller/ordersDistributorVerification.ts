@@ -2,16 +2,12 @@ import { TRPCError } from '@trpc/server';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 
-import createNotification from '@/app/_notifications/utils/createNotification';
 import db from '@/database/client';
 import type { PrivateClientOrder } from '@/database/schema';
-import {
-  partnerMembers,
-  privateClientContacts,
-  privateClientOrderActivityLogs,
-  privateClientOrders,
-} from '@/database/schema';
+import { privateClientContacts, privateClientOrderActivityLogs, privateClientOrders } from '@/database/schema';
 import { distributorProcedure } from '@/lib/trpc/procedures';
+
+import notifyPartnerOfOrderUpdate from '../utils/notifyPartnerOfOrderUpdate';
 
 const distributorVerificationSchema = z.object({
   orderId: z.string().uuid(),
@@ -117,37 +113,27 @@ const ordersDistributorVerification = distributorProcedure
 
     // Send notifications
     if (order.partnerId) {
-      const partnerMembersList = await db
-        .select({ userId: partnerMembers.userId })
-        .from(partnerMembers)
-        .where(eq(partnerMembers.partnerId, order.partnerId));
-
       if (response === 'verified') {
         // Notify partner that client is verified and payment can proceed
-        for (const member of partnerMembersList) {
-          await createNotification({
-            userId: member.userId,
-            type: 'status_update',
-            title: 'Client Verified',
-            message: `Client verified for order ${updatedOrder?.orderNumber ?? orderId}. Payment reference: ${paymentReference}. Awaiting client payment.`,
-            entityType: 'private_client_order',
-            entityId: orderId,
-            actionUrl: `/platform/private-orders/${orderId}`,
-          });
-        }
+        await notifyPartnerOfOrderUpdate({
+          orderId,
+          orderNumber: updatedOrder?.orderNumber ?? order.orderNumber ?? orderId,
+          partnerId: order.partnerId,
+          type: 'client_verified',
+          distributorName: distributor?.businessName ?? 'the distributor',
+          paymentReference: paymentReference ?? undefined,
+          totalAmount: order.totalUsd ?? undefined,
+        });
       } else {
         // Notify partner that verification failed - they need to resolve
-        for (const member of partnerMembersList) {
-          await createNotification({
-            userId: member.userId,
-            type: 'action_required',
-            title: 'Client Verification Failed',
-            message: `${distributor?.businessName ?? 'Distributor'} could not verify client for order ${updatedOrder?.orderNumber ?? orderId}. Please contact the client to resolve.`,
-            entityType: 'private_client_order',
-            entityId: orderId,
-            actionUrl: `/platform/private-orders/${orderId}`,
-          });
-        }
+        await notifyPartnerOfOrderUpdate({
+          orderId,
+          orderNumber: updatedOrder?.orderNumber ?? order.orderNumber ?? orderId,
+          partnerId: order.partnerId,
+          type: 'verification_failed',
+          distributorName: distributor?.businessName ?? 'the distributor',
+          verificationNotes: notes,
+        });
       }
     }
 

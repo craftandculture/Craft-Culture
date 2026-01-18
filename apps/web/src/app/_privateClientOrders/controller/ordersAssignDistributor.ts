@@ -2,11 +2,13 @@ import { TRPCError } from '@trpc/server';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 
-import createNotification from '@/app/_notifications/utils/createNotification';
 import db from '@/database/client';
 import type { PrivateClientOrder } from '@/database/schema';
-import { partnerMembers, privateClientOrderActivityLogs, privateClientOrders } from '@/database/schema';
+import { privateClientOrderActivityLogs, privateClientOrders } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
+
+import notifyDistributorOfOrderUpdate from '../utils/notifyDistributorOfOrderUpdate';
+import notifyPartnerOfOrderUpdate from '../utils/notifyPartnerOfOrderUpdate';
 
 const assignDistributorSchema = z.object({
   orderId: z.string().uuid(),
@@ -112,40 +114,24 @@ const ordersAssignDistributor = adminProcedure.input(assignDistributorSchema).mu
   // Send notifications based on the flow
   if (distributor.requiresClientVerification && order.partnerId) {
     // Notify partner to verify client with distributor
-    const partnerMembersList = await db
-      .select({ userId: partnerMembers.userId })
-      .from(partnerMembers)
-      .where(eq(partnerMembers.partnerId, order.partnerId));
-
-    for (const member of partnerMembersList) {
-      await createNotification({
-        userId: member.userId,
-        type: 'action_required',
-        title: 'Client Verification Required',
-        message: `Please confirm if your client is verified with ${distributor.businessName} for order ${updatedOrder?.orderNumber ?? orderId}.`,
-        entityType: 'private_client_order',
-        entityId: orderId,
-        actionUrl: `/platform/private-orders/${orderId}`,
-      });
-    }
+    await notifyPartnerOfOrderUpdate({
+      orderId,
+      orderNumber: updatedOrder?.orderNumber ?? order.orderNumber ?? orderId,
+      partnerId: order.partnerId,
+      type: 'verification_required',
+      distributorName: distributor.businessName ?? 'the distributor',
+    });
   } else {
     // Notify distributor members about the new order
-    const distributorMembersList = await db
-      .select({ userId: partnerMembers.userId })
-      .from(partnerMembers)
-      .where(eq(partnerMembers.partnerId, distributorId));
-
-    for (const member of distributorMembersList) {
-      await createNotification({
-        userId: member.userId,
-        type: 'po_assigned',
-        title: 'New Order Assigned',
-        message: `Order ${updatedOrder?.orderNumber ?? orderId} has been assigned to you. Payment reference: ${paymentReference}.`,
-        entityType: 'private_client_order',
-        entityId: orderId,
-        actionUrl: `/platform/distributor/orders/${orderId}`,
-      });
-    }
+    await notifyDistributorOfOrderUpdate({
+      orderId,
+      orderNumber: updatedOrder?.orderNumber ?? order.orderNumber ?? orderId,
+      distributorId,
+      type: 'order_assigned',
+      clientName: order.clientName ?? undefined,
+      paymentReference: paymentReference ?? undefined,
+      totalAmount: order.totalUsd ?? undefined,
+    });
   }
 
   return updatedOrder;

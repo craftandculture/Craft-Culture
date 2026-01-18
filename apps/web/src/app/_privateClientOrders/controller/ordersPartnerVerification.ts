@@ -2,14 +2,11 @@ import { TRPCError } from '@trpc/server';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 
-import createNotification from '@/app/_notifications/utils/createNotification';
 import db from '@/database/client';
-import {
-  partnerMembers,
-  privateClientOrderActivityLogs,
-  privateClientOrders,
-} from '@/database/schema';
+import { privateClientOrderActivityLogs, privateClientOrders } from '@/database/schema';
 import { winePartnerProcedure } from '@/lib/trpc/procedures';
+
+import notifyDistributorOfOrderUpdate from '../utils/notifyDistributorOfOrderUpdate';
 
 const partnerVerificationSchema = z.object({
   orderId: z.string().uuid(),
@@ -57,12 +54,6 @@ const ordersPartnerVerification = winePartnerProcedure
       });
     }
 
-    // Get distributor info
-    const distributor = await db.query.partners.findFirst({
-      where: { id: order.distributorId },
-      columns: { id: true, businessName: true, distributorCode: true },
-    });
-
     const previousStatus = order.status;
     const newStatus =
       response === 'yes'
@@ -100,45 +91,18 @@ const ordersPartnerVerification = winePartnerProcedure
     // Send notifications based on response
     if (response === 'yes') {
       // Notify distributor to verify client in their system
-      const distributorMembers = await db
-        .select({ userId: partnerMembers.userId })
-        .from(partnerMembers)
-        .where(eq(partnerMembers.partnerId, order.distributorId));
-
-      for (const member of distributorMembers) {
-        await createNotification({
-          userId: member.userId,
-          type: 'action_required',
-          title: 'Client Verification Required',
-          message: `Please verify client for order ${updatedOrder?.orderNumber ?? orderId} in your system.`,
-          entityType: 'private_client_order',
-          entityId: orderId,
-          actionUrl: `/platform/distributor/orders/${orderId}`,
-        });
-      }
-    } else {
-      // Order suspended - notify other partner members about the suspension
-      // Notify partner members about suspended order
-      const partnerMembersList = await db
-        .select({ userId: partnerMembers.userId })
-        .from(partnerMembers)
-        .where(eq(partnerMembers.partnerId, partnerId));
-
-      for (const member of partnerMembersList) {
-        if (member.userId !== user.id) {
-          // Don't notify the user who just took the action
-          await createNotification({
-            userId: member.userId,
-            type: 'status_update',
-            title: 'Order Verification Suspended',
-            message: `Order ${updatedOrder?.orderNumber ?? orderId} is suspended pending client verification with ${distributor?.businessName ?? 'distributor'}.`,
-            entityType: 'private_client_order',
-            entityId: orderId,
-            actionUrl: `/platform/private-orders/${orderId}`,
-          });
-        }
-      }
+      await notifyDistributorOfOrderUpdate({
+        orderId,
+        orderNumber: updatedOrder?.orderNumber ?? order.orderNumber ?? orderId,
+        distributorId: order.distributorId,
+        type: 'verification_required',
+        clientName: order.clientName ?? undefined,
+        clientEmail: order.clientEmail ?? undefined,
+        clientPhone: order.clientPhone ?? undefined,
+      });
     }
+    // Note: When response is 'no' or 'dont_know', order is suspended
+    // Partner members are already aware since their colleague initiated this
 
     return updatedOrder;
   });
