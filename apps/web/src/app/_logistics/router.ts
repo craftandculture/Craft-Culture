@@ -4,6 +4,8 @@ import adminAddItem from './controller/adminAddItem';
 import adminCalculateLandedCost from './controller/adminCalculateLandedCost';
 import adminCreate from './controller/adminCreate';
 import adminDeleteDocument from './controller/adminDeleteDocument';
+import adminExportCompliancePdf from './controller/adminExportCompliancePdf';
+import adminExportLandedCostExcel from './controller/adminExportLandedCostExcel';
 import adminGetDocumentCompliance from './controller/adminGetDocumentCompliance';
 import adminGetHillebrandEvents from './controller/adminGetHillebrandEvents';
 import adminGetLandedCostReport from './controller/adminGetLandedCostReport';
@@ -50,6 +52,10 @@ const adminRouter = createTRPCRouter({
   getReportMetrics: adminGetReportMetrics,
   getDocumentCompliance: adminGetDocumentCompliance,
   getLandedCostReport: adminGetLandedCostReport,
+
+  // Exports
+  exportLandedCostExcel: adminExportLandedCostExcel,
+  exportCompliancePdf: adminExportCompliancePdf,
 });
 
 const partnerRouter = createTRPCRouter({
