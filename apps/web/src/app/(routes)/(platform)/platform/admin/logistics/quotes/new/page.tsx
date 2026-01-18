@@ -16,17 +16,15 @@ import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
 import Card from '@/app/_ui/components/Card/Card';
 import CardContent from '@/app/_ui/components/Card/CardContent';
-import CardHeader from '@/app/_ui/components/Card/CardHeader';
 import CardTitle from '@/app/_ui/components/Card/CardTitle';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Input from '@/app/_ui/components/Input/Input';
-import Label from '@/app/_ui/components/Label/Label';
 import Select from '@/app/_ui/components/Select/Select';
 import SelectContent from '@/app/_ui/components/Select/SelectContent';
 import SelectItem from '@/app/_ui/components/Select/SelectItem';
 import SelectTrigger from '@/app/_ui/components/Select/SelectTrigger';
 import SelectValue from '@/app/_ui/components/Select/SelectValue';
-import Textarea from '@/app/_ui/components/Textarea/Textarea';
+import TextArea from '@/app/_ui/components/TextArea/TextArea';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import type { logisticsTransportMode } from '@/database/schema';
 import useTRPC from '@/lib/trpc/browser';
@@ -203,13 +201,13 @@ const NewQuotePage = () => {
 
         {/* Forwarder Details */}
         <Card>
-          <CardHeader>
+          <div className="p-4 pb-0">
             <CardTitle>Forwarder Details</CardTitle>
-          </CardHeader>
+          </div>
           <CardContent className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-3">
               <div className="space-y-2">
-                <Label htmlFor="forwarderName">Forwarder Name *</Label>
+                <label className="text-sm font-medium" htmlFor="forwarderName">Forwarder Name *</label>
                 <Input
                   id="forwarderName"
                   placeholder="e.g. DHL, Kuehne+Nagel"
@@ -219,7 +217,7 @@ const NewQuotePage = () => {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="forwarderContact">Contact Person</Label>
+                <label className="text-sm font-medium" htmlFor="forwarderContact">Contact Person</label>
                 <Input
                   id="forwarderContact"
                   placeholder="Contact name"
@@ -228,7 +226,7 @@ const NewQuotePage = () => {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="forwarderEmail">Email</Label>
+                <label className="text-sm font-medium" htmlFor="forwarderEmail">Email</label>
                 <Input
                   id="forwarderEmail"
                   type="email"
@@ -243,9 +241,9 @@ const NewQuotePage = () => {
 
         {/* Route & Transport */}
         <Card>
-          <CardHeader>
+          <div className="p-4 pb-0">
             <CardTitle>Route & Transport</CardTitle>
-          </CardHeader>
+          </div>
           <CardContent className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-4">
@@ -254,7 +252,7 @@ const NewQuotePage = () => {
                 </Typography>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
-                    <Label htmlFor="originCountry">Country</Label>
+                    <label className="text-sm font-medium" htmlFor="originCountry">Country</label>
                     <Input
                       id="originCountry"
                       placeholder="e.g. France"
@@ -263,7 +261,7 @@ const NewQuotePage = () => {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="originCity">City</Label>
+                    <label className="text-sm font-medium" htmlFor="originCity">City</label>
                     <Input
                       id="originCity"
                       placeholder="e.g. Bordeaux"
@@ -279,7 +277,7 @@ const NewQuotePage = () => {
                 </Typography>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
-                    <Label htmlFor="destinationCountry">Country</Label>
+                    <label className="text-sm font-medium" htmlFor="destinationCountry">Country</label>
                     <Input
                       id="destinationCountry"
                       placeholder="e.g. UAE"
@@ -288,7 +286,7 @@ const NewQuotePage = () => {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="destinationCity">City</Label>
+                    <label className="text-sm font-medium" htmlFor="destinationCity">City</label>
                     <Input
                       id="destinationCity"
                       placeholder="e.g. Dubai"
@@ -301,7 +299,7 @@ const NewQuotePage = () => {
             </div>
             <div className="grid gap-4 sm:grid-cols-3">
               <div className="space-y-2">
-                <Label htmlFor="transportMode">Transport Mode</Label>
+                <label className="text-sm font-medium" htmlFor="transportMode">Transport Mode</label>
                 <Select
                   value={transportMode}
                   onValueChange={(v) => setTransportMode(v as TransportMode)}
@@ -319,7 +317,7 @@ const NewQuotePage = () => {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="transitDays">Transit Days</Label>
+                <label className="text-sm font-medium" htmlFor="transitDays">Transit Days</label>
                 <Input
                   id="transitDays"
                   type="number"
@@ -330,7 +328,7 @@ const NewQuotePage = () => {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="currency">Currency</Label>
+                <label className="text-sm font-medium" htmlFor="currency">Currency</label>
                 <Select value={currency} onValueChange={setCurrency}>
                   <SelectTrigger id="currency">
                     <SelectValue />
@@ -349,13 +347,13 @@ const NewQuotePage = () => {
 
         {/* Validity Period */}
         <Card>
-          <CardHeader>
+          <div className="p-4 pb-0">
             <CardTitle>Validity Period</CardTitle>
-          </CardHeader>
+          </div>
           <CardContent>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="validFrom">Valid From</Label>
+                <label className="text-sm font-medium" htmlFor="validFrom">Valid From</label>
                 <Input
                   id="validFrom"
                   type="date"
@@ -364,7 +362,7 @@ const NewQuotePage = () => {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="validUntil">Valid Until</Label>
+                <label className="text-sm font-medium" htmlFor="validUntil">Valid Until</label>
                 <Input
                   id="validUntil"
                   type="date"
@@ -378,14 +376,14 @@ const NewQuotePage = () => {
 
         {/* Line Items */}
         <Card>
-          <CardHeader>
+          <div className="p-4 pb-0">
             <div className="flex items-center justify-between">
               <CardTitle>Cost Breakdown</CardTitle>
               <Button type="button" variant="outline" size="sm" onClick={addLineItem}>
                 <ButtonContent iconLeft={IconPlus}>Add Item</ButtonContent>
               </Button>
             </div>
-          </CardHeader>
+          </div>
           <CardContent className="space-y-4">
             {lineItems.map((item, index) => (
               <div
@@ -393,7 +391,7 @@ const NewQuotePage = () => {
                 className="grid gap-4 rounded-lg border border-border-primary p-4 sm:grid-cols-12"
               >
                 <div className="space-y-2 sm:col-span-2">
-                  <Label>Category</Label>
+                  <label className="text-sm font-medium">Category</label>
                   <Select
                     value={item.category}
                     onValueChange={(v) => updateLineItem(index, 'category', v)}
@@ -411,7 +409,7 @@ const NewQuotePage = () => {
                   </Select>
                 </div>
                 <div className="space-y-2 sm:col-span-4">
-                  <Label>Description</Label>
+                  <label className="text-sm font-medium">Description</label>
                   <Input
                     placeholder="Description of charge"
                     value={item.description}
@@ -419,7 +417,7 @@ const NewQuotePage = () => {
                   />
                 </div>
                 <div className="space-y-2 sm:col-span-2">
-                  <Label>Unit Price</Label>
+                  <label className="text-sm font-medium">Unit Price</label>
                   <Input
                     type="number"
                     step="0.01"
@@ -431,7 +429,7 @@ const NewQuotePage = () => {
                   />
                 </div>
                 <div className="space-y-2 sm:col-span-1">
-                  <Label>Qty</Label>
+                  <label className="text-sm font-medium">Qty</label>
                   <Input
                     type="number"
                     min="1"
@@ -440,7 +438,7 @@ const NewQuotePage = () => {
                   />
                 </div>
                 <div className="space-y-2 sm:col-span-2">
-                  <Label>Total</Label>
+                  <label className="text-sm font-medium">Total</label>
                   <Input
                     type="number"
                     step="0.01"
@@ -479,13 +477,13 @@ const NewQuotePage = () => {
 
         {/* Notes */}
         <Card>
-          <CardHeader>
+          <div className="p-4 pb-0">
             <CardTitle>Notes</CardTitle>
-          </CardHeader>
+          </div>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="notes">Quote Notes (visible to all)</Label>
-              <Textarea
+              <label className="text-sm font-medium" htmlFor="notes">Quote Notes (visible to all)</label>
+              <TextArea
                 id="notes"
                 placeholder="General notes about this quote..."
                 value={notes}
@@ -494,8 +492,8 @@ const NewQuotePage = () => {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="internalNotes">Internal Notes (admin only)</Label>
-              <Textarea
+              <label className="text-sm font-medium" htmlFor="internalNotes">Internal Notes (admin only)</label>
+              <TextArea
                 id="internalNotes"
                 placeholder="Internal notes for reference..."
                 value={internalNotes}

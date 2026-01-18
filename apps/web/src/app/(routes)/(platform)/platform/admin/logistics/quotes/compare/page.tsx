@@ -16,7 +16,6 @@ import Badge from '@/app/_ui/components/Badge/Badge';
 import Button from '@/app/_ui/components/Button/Button';
 import Card from '@/app/_ui/components/Card/Card';
 import CardContent from '@/app/_ui/components/Card/CardContent';
-import CardHeader from '@/app/_ui/components/Card/CardHeader';
 import CardTitle from '@/app/_ui/components/Card/CardTitle';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Typography from '@/app/_ui/components/Typography/Typography';
@@ -212,7 +211,7 @@ const QuoteComparePage = () => {
                     key={quote.id}
                     className={isLowestPrice ? 'border-green-500 ring-2 ring-green-500/20' : ''}
                   >
-                    <CardHeader className="pb-2">
+                    <div className="p-4 pb-2">
                       <div className="flex items-start justify-between gap-2">
                         <div>
                           <Typography variant="bodyXs" className="font-mono text-text-muted">
@@ -235,7 +234,7 @@ const QuoteComparePage = () => {
                           )}
                         </div>
                       </div>
-                    </CardHeader>
+                    </div>
                     <CardContent className="space-y-4">
                       {/* Price */}
                       <div className="rounded-lg bg-surface-secondary p-4 text-center">
@@ -314,9 +313,9 @@ const QuoteComparePage = () => {
         {/* Category Comparison */}
         {Object.keys(categoryComparison).length > 0 && (
           <Card>
-            <CardHeader>
+            <div className="p-4 pb-0">
               <CardTitle>Cost Breakdown by Category</CardTitle>
-            </CardHeader>
+            </div>
             <CardContent>
               <div className="overflow-x-auto">
                 <table className="w-full">

@@ -29,7 +29,6 @@ import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
 import Card from '@/app/_ui/components/Card/Card';
 import CardContent from '@/app/_ui/components/Card/CardContent';
-import CardHeader from '@/app/_ui/components/Card/CardHeader';
 import CardTitle from '@/app/_ui/components/Card/CardTitle';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Typography from '@/app/_ui/components/Typography/Typography';
@@ -225,7 +224,7 @@ const LogisticsDashboardPage = () => {
         <div className="grid gap-6 lg:grid-cols-3">
           {/* Document Compliance */}
           <Card>
-            <CardHeader className="pb-3">
+            <div className="p-4 pb-3">
               <div className="flex items-center justify-between">
                 <CardTitle className="flex items-center gap-2">
                   <Icon icon={IconFileText} size="sm" colorRole="muted" />
@@ -238,7 +237,7 @@ const LogisticsDashboardPage = () => {
                   View Details
                 </Link>
               </div>
-            </CardHeader>
+            </div>
             <CardContent className="pt-0">
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
@@ -296,7 +295,7 @@ const LogisticsDashboardPage = () => {
 
           {/* Cost Overview */}
           <Card>
-            <CardHeader className="pb-3">
+            <div className="p-4 pb-3">
               <div className="flex items-center justify-between">
                 <CardTitle className="flex items-center gap-2">
                   <Icon icon={IconCurrencyDollar} size="sm" colorRole="muted" />
@@ -309,7 +308,7 @@ const LogisticsDashboardPage = () => {
                   View Report
                 </Link>
               </div>
-            </CardHeader>
+            </div>
             <CardContent className="pt-0">
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
@@ -338,7 +337,7 @@ const LogisticsDashboardPage = () => {
 
           {/* Quotes Summary */}
           <Card>
-            <CardHeader className="pb-3">
+            <div className="p-4 pb-3">
               <div className="flex items-center justify-between">
                 <CardTitle className="flex items-center gap-2">
                   <Icon icon={IconFileInvoice} size="sm" colorRole="muted" />
@@ -351,7 +350,7 @@ const LogisticsDashboardPage = () => {
                   View All
                 </Link>
               </div>
-            </CardHeader>
+            </div>
             <CardContent className="pt-0">
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
@@ -382,7 +381,7 @@ const LogisticsDashboardPage = () => {
 
         {/* Recent Shipments */}
         <Card>
-          <CardHeader>
+          <div className="p-4 pb-0">
             <div className="flex items-center justify-between">
               <CardTitle>Recent Shipments</CardTitle>
               <Button variant="ghost" size="sm" asChild>
@@ -391,7 +390,7 @@ const LogisticsDashboardPage = () => {
                 </Link>
               </Button>
             </div>
-          </CardHeader>
+          </div>
           <CardContent className="p-0">
             {!metrics?.recentShipments || metrics.recentShipments.length === 0 ? (
               <div className="p-8 text-center">
