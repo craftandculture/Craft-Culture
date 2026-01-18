@@ -74,7 +74,7 @@ const ShipmentDetailPage = () => {
     productCostPerBottle: '',
   });
 
-  const { data: shipment, isLoading, refetch } = useQuery({
+  const { data: shipment, isLoading, isError, error, refetch } = useQuery({
     ...api.logistics.admin.getOne.queryOptions({ id: shipmentId }),
   });
 
@@ -163,12 +163,48 @@ const ShipmentDetailPage = () => {
     );
   }
 
+  if (isError) {
+    return (
+      <div className="container mx-auto max-w-5xl px-4 py-8">
+        <Card>
+          <CardContent className="p-12 text-center">
+            <Typography variant="headingSm" className="text-text-danger mb-2">
+              Error loading shipment
+            </Typography>
+            <Typography variant="bodySm" colorRole="muted">
+              {error?.message || 'An unexpected error occurred'}
+            </Typography>
+            <div className="mt-4">
+              <Link href="/platform/admin/logistics">
+                <Button variant="outline" size="sm">
+                  <Icon icon={IconArrowLeft} size="sm" className="mr-2" />
+                  Back to list
+                </Button>
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   if (!shipment) {
     return (
       <div className="container mx-auto max-w-5xl px-4 py-8">
         <Card>
           <CardContent className="p-12 text-center">
             <Typography variant="headingSm">Shipment not found</Typography>
+            <Typography variant="bodySm" colorRole="muted" className="mt-2">
+              The shipment with ID {shipmentId} does not exist.
+            </Typography>
+            <div className="mt-4">
+              <Link href="/platform/admin/logistics">
+                <Button variant="outline" size="sm">
+                  <Icon icon={IconArrowLeft} size="sm" className="mr-2" />
+                  Back to list
+                </Button>
+              </Link>
+            </div>
           </CardContent>
         </Card>
       </div>
