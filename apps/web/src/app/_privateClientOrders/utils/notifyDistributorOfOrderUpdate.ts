@@ -16,6 +16,11 @@ const DISTRIBUTOR_TEMPLATE_IDS = {
   invoice_acknowledged: 'cmkj8msvp08bw0i2f8dqys427',
 } as const;
 
+/**
+ * Loops template ID specifically for finance team proforma invoice
+ */
+const FINANCE_PROFORMA_TEMPLATE_ID = 'cmklmzgr612b40ixqdeluo8qb';
+
 type DistributorNotificationType = keyof typeof DISTRIBUTOR_TEMPLATE_IDS;
 
 interface NotifyDistributorParams {
@@ -237,53 +242,37 @@ const notifyDistributorOfOrderUpdate = async (params: NotifyDistributorParams) =
 
     // Send proforma invoice notification to finance email if configured (for order_assigned)
     if (distributor?.financeEmail && type === 'order_assigned') {
-      // Check if finance email is different from business email and member emails
-      const financeEmailMemberCheck = await Promise.all(
-        members.map(async (m) => {
-          const [u] = await db.select({ email: users.email }).from(users).where(eq(users.id, m.userId));
-          return u?.email;
-        }),
-      );
-      const allEmails = [...financeEmailMemberCheck, distributor.businessEmail].filter(Boolean);
+      try {
+        logger.info('PCO: Sending proforma invoice notification to finance email', {
+          templateId: FINANCE_PROFORMA_TEMPLATE_ID,
+          email: distributor.financeEmail,
+          pdfDownloadUrl,
+        });
 
-      if (!allEmails.includes(distributor.financeEmail)) {
-        try {
-          logger.info('PCO: Sending proforma invoice notification to finance email', {
-            templateId: DISTRIBUTOR_TEMPLATE_IDS[type],
-            type,
-            email: distributor.financeEmail,
+        const result = await loops.sendTransactionalEmail({
+          transactionalId: FINANCE_PROFORMA_TEMPLATE_ID,
+          email: distributor.financeEmail,
+          dataVariables: {
+            orderNumber,
+            orderUrl,
             pdfDownloadUrl,
-          });
+            clientName: params.clientName ?? '',
+            clientPhone: params.clientPhone ?? '',
+            paymentReference: params.paymentReference ?? params.orderNumber ?? '',
+            totalAmountUSD: totalFormatted ?? '',
+          },
+        });
 
-          const result = await loops.sendTransactionalEmail({
-            transactionalId: DISTRIBUTOR_TEMPLATE_IDS[type],
-            email: distributor.financeEmail,
-            dataVariables: {
-              distributorName: distributor.businessName ?? 'Distributor',
-              orderNumber,
-              orderUrl,
-              pdfDownloadUrl,
-              partnerName: params.partnerName ?? '',
-              clientName: params.clientName ?? '',
-              clientEmail: params.clientEmail ?? '',
-              clientPhone: params.clientPhone ?? '',
-              paymentReference: params.paymentReference ?? params.orderNumber ?? '',
-              totalAmount: totalFormatted ?? '',
-              totalAmountUSD: totalFormatted ?? '',
-            },
-          });
-
-          logger.info('PCO: Finance email result', {
-            email: distributor.financeEmail,
-            result: JSON.stringify(result),
-            success: result?.success,
-          });
-        } catch (error) {
-          logger.error('PCO: Failed to send proforma invoice notification to finance email', {
-            email: distributor.financeEmail,
-            error: error instanceof Error ? error.message : String(error),
-          });
-        }
+        logger.info('PCO: Finance email result', {
+          email: distributor.financeEmail,
+          result: JSON.stringify(result),
+          success: result?.success,
+        });
+      } catch (error) {
+        logger.error('PCO: Failed to send proforma invoice notification to finance email', {
+          email: distributor.financeEmail,
+          error: error instanceof Error ? error.message : String(error),
+        });
       }
     }
   } catch (error) {
