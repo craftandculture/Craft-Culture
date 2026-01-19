@@ -208,42 +208,74 @@ const adminExtractDocument = adminProcedure.input(extractDocumentSchema).mutatio
 
       extractedData = result.object;
     } else if (fileType === 'application/pdf') {
-      // Extract text from PDF using pdf-parse for reliable text extraction
+      // Try to extract text from PDF using pdf-parse first (works for digital PDFs)
       const pdfBuffer = Buffer.from(file, 'base64');
-      const pdfData = await pdfParse(pdfBuffer);
-      const pdfText = pdfData.text;
+      let pdfText = '';
 
-      logger.info('[LogisticsDocumentExtraction] PDF text extracted:', {
-        pages: pdfData.numpages,
-        textLength: pdfText.length,
-        textPreview: pdfText.substring(0, 500),
-      });
+      try {
+        const pdfData = await pdfParse(pdfBuffer);
+        pdfText = pdfData.text;
 
-      if (!pdfText || pdfText.trim().length < 50) {
-        throw new TRPCError({
-          code: 'BAD_REQUEST',
-          message:
-            'Could not extract text from PDF. The PDF may be scanned/image-based. Please try uploading a screenshot or image of the document instead.',
+        logger.info('[LogisticsDocumentExtraction] PDF text extracted:', {
+          pages: pdfData.numpages,
+          textLength: pdfText.length,
+          textPreview: pdfText.substring(0, 500),
+        });
+      } catch (parseError) {
+        logger.warn('[LogisticsDocumentExtraction] pdf-parse failed, will try direct PDF processing:', {
+          error: parseError instanceof Error ? parseError.message : 'Unknown error',
         });
       }
 
-      // Use GPT-4o to structure the extracted text
-      const result = await generateObject({
-        model: openai('gpt-4o'),
-        schema: extractedLogisticsDataSchema,
-        messages: [
-          {
-            role: 'system',
-            content: systemPrompt,
-          },
-          {
-            role: 'user',
-            content: `Please extract all logistics data from this ${documentType.replace('_', ' ')} document text. Extract all fields that are present in the document.\n\n--- DOCUMENT TEXT ---\n${pdfText}\n--- END DOCUMENT ---`,
-          },
-        ],
-      });
+      // If we got meaningful text, use text-based extraction
+      if (pdfText && pdfText.trim().length >= 50) {
+        const result = await generateObject({
+          model: openai('gpt-4o'),
+          schema: extractedLogisticsDataSchema,
+          messages: [
+            {
+              role: 'system',
+              content: systemPrompt,
+            },
+            {
+              role: 'user',
+              content: `Please extract all logistics data from this ${documentType.replace('_', ' ')} document text. Extract all fields that are present in the document.\n\n--- DOCUMENT TEXT ---\n${pdfText}\n--- END DOCUMENT ---`,
+            },
+          ],
+        });
 
-      extractedData = result.object;
+        extractedData = result.object;
+      } else {
+        // For scanned PDFs or PDFs with minimal text, send as file to GPT-4o
+        logger.info('[LogisticsDocumentExtraction] Using direct PDF file processing (scanned/image PDF)');
+
+        const result = await generateObject({
+          model: openai('gpt-4o'),
+          schema: extractedLogisticsDataSchema,
+          messages: [
+            {
+              role: 'system',
+              content: systemPrompt,
+            },
+            {
+              role: 'user',
+              content: [
+                {
+                  type: 'text',
+                  text: `Please extract all logistics data from this ${documentType.replace('_', ' ')} PDF document. Extract all fields that are visible in the document. Be precise with numbers, dates, and reference numbers.`,
+                },
+                {
+                  type: 'file',
+                  data: file,
+                  mimeType: 'application/pdf',
+                },
+              ],
+            },
+          ],
+        });
+
+        extractedData = result.object;
+      }
     } else {
       throw new TRPCError({
         code: 'BAD_REQUEST',
