@@ -168,16 +168,7 @@ const notifyPartnerOfOrderUpdate = async (params: NotifyPartnerParams) => {
 
       if (user?.email) {
         try {
-          logger.info('PCO: Sending partner email via Loops', {
-            templateId: PARTNER_TEMPLATE_IDS[type],
-            type,
-            email: user.email,
-            env: serverConfig.env,
-            hasLoopsApiKey: !!serverConfig.loopsApiKey,
-            loopsApiKeyLength: serverConfig.loopsApiKey?.length ?? 0,
-          });
-
-          const result = await loops.sendTransactionalEmail({
+          const emailPayload = {
             transactionalId: PARTNER_TEMPLATE_IDS[type],
             email: user.email,
             dataVariables: {
@@ -193,13 +184,15 @@ const notifyPartnerOfOrderUpdate = async (params: NotifyPartnerParams) => {
               clientName: params.clientName ?? '',
               itemCount: String(params.itemCount ?? ''),
             },
-          });
+          };
 
-          logger.info('PCO: Partner email result', {
-            email: user.email,
-            result: JSON.stringify(result),
-            success: result?.success,
-          });
+          // eslint-disable-next-line no-console
+          console.log('PCO_EMAIL_PAYLOAD:', JSON.stringify(emailPayload));
+
+          const result = await loops.sendTransactionalEmail(emailPayload);
+
+          // eslint-disable-next-line no-console
+          console.log('PCO_EMAIL_RESULT:', JSON.stringify({ email: user.email, type, result }));
         } catch (error) {
           logger.error('PCO: Failed to send partner email via Loops', {
             email: user.email,
