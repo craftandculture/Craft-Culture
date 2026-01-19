@@ -146,7 +146,13 @@ const notifyDistributorOfOrderUpdate = async (params: NotifyDistributorParams) =
 
       if (user?.email) {
         try {
-          await loops.sendTransactionalEmail({
+          logger.info('PCO: Sending distributor email via Loops', {
+            templateId: DISTRIBUTOR_TEMPLATE_IDS[type],
+            type,
+            email: user.email,
+          });
+
+          const result = await loops.sendTransactionalEmail({
             transactionalId: DISTRIBUTOR_TEMPLATE_IDS[type],
             email: user.email,
             dataVariables: {
@@ -161,9 +167,17 @@ const notifyDistributorOfOrderUpdate = async (params: NotifyDistributorParams) =
               totalAmount: totalFormatted ?? '',
             },
           });
-          logger.dev(`Sent PCO distributor email (${type}) to: ${user.email}`);
+
+          logger.info('PCO: Distributor email result', {
+            email: user.email,
+            result: JSON.stringify(result),
+            success: result?.success,
+          });
         } catch (error) {
-          logger.error(`Failed to send PCO distributor email to ${user.email}:`, error);
+          logger.error('PCO: Failed to send distributor email via Loops', {
+            email: user.email,
+            error: error instanceof Error ? error.message : String(error),
+          });
         }
       }
     }
@@ -179,7 +193,13 @@ const notifyDistributorOfOrderUpdate = async (params: NotifyDistributorParams) =
 
       if (!memberEmails.includes(distributor.businessEmail)) {
         try {
-          await loops.sendTransactionalEmail({
+          logger.info('PCO: Sending distributor business email via Loops', {
+            templateId: DISTRIBUTOR_TEMPLATE_IDS[type],
+            type,
+            email: distributor.businessEmail,
+          });
+
+          const result = await loops.sendTransactionalEmail({
             transactionalId: DISTRIBUTOR_TEMPLATE_IDS[type],
             email: distributor.businessEmail,
             dataVariables: {
@@ -194,9 +214,17 @@ const notifyDistributorOfOrderUpdate = async (params: NotifyDistributorParams) =
               totalAmount: totalFormatted ?? '',
             },
           });
-          logger.dev(`Sent PCO distributor email (${type}) to business: ${distributor.businessEmail}`);
+
+          logger.info('PCO: Distributor business email result', {
+            email: distributor.businessEmail,
+            result: JSON.stringify(result),
+            success: result?.success,
+          });
         } catch (error) {
-          logger.error(`Failed to send PCO distributor email to ${distributor.businessEmail}:`, error);
+          logger.error('PCO: Failed to send distributor business email via Loops', {
+            email: distributor.businessEmail,
+            error: error instanceof Error ? error.message : String(error),
+          });
         }
       }
     }

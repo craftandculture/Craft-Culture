@@ -168,7 +168,13 @@ const notifyPartnerOfOrderUpdate = async (params: NotifyPartnerParams) => {
 
       if (user?.email) {
         try {
-          await loops.sendTransactionalEmail({
+          logger.info('PCO: Sending partner email via Loops', {
+            templateId: PARTNER_TEMPLATE_IDS[type],
+            type,
+            email: user.email,
+          });
+
+          const result = await loops.sendTransactionalEmail({
             transactionalId: PARTNER_TEMPLATE_IDS[type],
             email: user.email,
             dataVariables: {
@@ -185,9 +191,17 @@ const notifyPartnerOfOrderUpdate = async (params: NotifyPartnerParams) => {
               itemCount: String(params.itemCount ?? ''),
             },
           });
-          logger.dev(`Sent PCO partner email (${type}) to: ${user.email}`);
+
+          logger.info('PCO: Partner email result', {
+            email: user.email,
+            result: JSON.stringify(result),
+            success: result?.success,
+          });
         } catch (error) {
-          logger.error(`Failed to send PCO partner email to ${user.email}:`, error);
+          logger.error('PCO: Failed to send partner email via Loops', {
+            email: user.email,
+            error: error instanceof Error ? error.message : String(error),
+          });
         }
       }
     }
@@ -203,7 +217,13 @@ const notifyPartnerOfOrderUpdate = async (params: NotifyPartnerParams) => {
 
       if (!memberEmails.includes(partner.businessEmail)) {
         try {
-          await loops.sendTransactionalEmail({
+          logger.info('PCO: Sending partner business email via Loops', {
+            templateId: PARTNER_TEMPLATE_IDS[type],
+            type,
+            email: partner.businessEmail,
+          });
+
+          const result = await loops.sendTransactionalEmail({
             transactionalId: PARTNER_TEMPLATE_IDS[type],
             email: partner.businessEmail,
             dataVariables: {
@@ -220,9 +240,17 @@ const notifyPartnerOfOrderUpdate = async (params: NotifyPartnerParams) => {
               itemCount: String(params.itemCount ?? ''),
             },
           });
-          logger.dev(`Sent PCO partner email (${type}) to business: ${partner.businessEmail}`);
+
+          logger.info('PCO: Partner business email result', {
+            email: partner.businessEmail,
+            result: JSON.stringify(result),
+            success: result?.success,
+          });
         } catch (error) {
-          logger.error(`Failed to send PCO partner email to ${partner.businessEmail}:`, error);
+          logger.error('PCO: Failed to send partner business email via Loops', {
+            email: partner.businessEmail,
+            error: error instanceof Error ? error.message : String(error),
+          });
         }
       }
     }

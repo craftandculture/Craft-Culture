@@ -1,6 +1,7 @@
 import { LoopsClient } from 'loops';
 
 import serverConfig from '@/server.config';
+import logger from '@/utils/logger';
 
 import createMockLoopsClient from './mockClient';
 
@@ -15,9 +16,19 @@ const getLoopsClient = (): LoopsClient => {
     return cachedClient;
   }
 
-  if (serverConfig.env === 'development' || !serverConfig.loopsApiKey) {
+  const useMock = serverConfig.env === 'development' || !serverConfig.loopsApiKey;
+
+  logger.info('Loops client initialization', {
+    env: serverConfig.env,
+    hasApiKey: !!serverConfig.loopsApiKey,
+    useMock,
+  });
+
+  if (useMock) {
+    logger.warn('Using MOCK Loops client - emails will NOT be sent');
     cachedClient = createMockLoopsClient() as unknown as LoopsClient;
   } else {
+    logger.info('Using REAL Loops client');
     cachedClient = new LoopsClient(serverConfig.loopsApiKey);
   }
 
