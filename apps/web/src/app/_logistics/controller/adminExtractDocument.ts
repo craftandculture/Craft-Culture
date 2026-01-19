@@ -1,6 +1,6 @@
 import { createOpenAI } from '@ai-sdk/openai';
 import { TRPCError } from '@trpc/server';
-import { generateObject } from 'ai';
+import { type CoreMessage, generateObject } from 'ai';
 import pdfParse from 'pdf-parse';
 import { z } from 'zod';
 
@@ -155,7 +155,7 @@ const adminExtractDocument = adminProcedure.input(extractDocumentSchema).mutatio
 
   // Strip data URL prefix if present (e.g., "data:application/pdf;base64,")
   // The AI SDK expects raw base64, not a data URL
-  const file = rawFile.includes(',') ? rawFile.split(',')[1] : rawFile;
+  const file = rawFile.includes(',') ? rawFile.split(',')[1] ?? rawFile : rawFile;
 
   const openaiKey = process.env.OPENAI_API_KEY;
 
@@ -182,25 +182,27 @@ const adminExtractDocument = adminProcedure.input(extractDocumentSchema).mutatio
     let extractedData: z.infer<typeof extractedLogisticsDataSchema>;
 
     if (fileType.startsWith('image/')) {
+      const messages: CoreMessage[] = [
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'text',
+              text: `Please extract all logistics data from this ${documentType.replace('_', ' ')} image. Extract all fields that are visible in the document.`,
+            },
+            {
+              type: 'image',
+              image: file,
+            },
+          ],
+        },
+      ];
+
       const result = await generateObject({
         model: openai('gpt-4o'),
         schema: extractedLogisticsDataSchema,
         system: systemPrompt,
-        messages: [
-          {
-            role: 'user',
-            content: [
-              {
-                type: 'text',
-                text: `Please extract all logistics data from this ${documentType.replace('_', ' ')} image. Extract all fields that are visible in the document.`,
-              },
-              {
-                type: 'image',
-                image: file,
-              },
-            ],
-          },
-        ],
+        messages,
       });
 
       extractedData = result.object;
@@ -238,26 +240,28 @@ const adminExtractDocument = adminProcedure.input(extractDocumentSchema).mutatio
         // For scanned PDFs or PDFs with minimal text, send as file to GPT-4o
         logger.info('[LogisticsDocumentExtraction] Using direct PDF file processing (scanned/image PDF)');
 
+        const pdfMessages: CoreMessage[] = [
+          {
+            role: 'user',
+            content: [
+              {
+                type: 'text',
+                text: `Please extract all logistics data from this ${documentType.replace('_', ' ')} PDF document. Extract all fields that are visible in the document. Be precise with numbers, dates, and reference numbers.`,
+              },
+              {
+                type: 'file',
+                data: file,
+                mediaType: 'application/pdf',
+              },
+            ],
+          },
+        ];
+
         const result = await generateObject({
           model: openai('gpt-4o'),
           schema: extractedLogisticsDataSchema,
           system: systemPrompt,
-          messages: [
-            {
-              role: 'user',
-              content: [
-                {
-                  type: 'text',
-                  text: `Please extract all logistics data from this ${documentType.replace('_', ' ')} PDF document. Extract all fields that are visible in the document. Be precise with numbers, dates, and reference numbers.`,
-                },
-                {
-                  type: 'file',
-                  data: file,
-                  mimeType: 'application/pdf',
-                },
-              ],
-            },
-          ],
+          messages: pdfMessages,
         });
 
         extractedData = result.object;
