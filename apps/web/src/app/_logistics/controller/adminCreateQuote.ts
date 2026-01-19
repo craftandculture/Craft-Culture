@@ -29,6 +29,7 @@ const adminCreateQuote = adminProcedure.input(createQuoteSchema).mutation(async 
         forwarderContact: quoteData.forwarderContact || null,
         forwarderEmail: quoteData.forwarderEmail || null,
         shipmentId: quoteData.shipmentId || null,
+        requestId: quoteData.requestId || null,
         originCountry: quoteData.originCountry || null,
         originCity: quoteData.originCity || null,
         destinationCountry: quoteData.destinationCountry || null,

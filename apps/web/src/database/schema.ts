@@ -3155,6 +3155,9 @@ export const logisticsQuotes = pgTable(
       onDelete: 'set null',
     }),
 
+    // Optional link to quote request (forward reference, relation defined separately)
+    requestId: uuid('request_id'),
+
     // Route details (for standalone quotes)
     originCountry: text('origin_country'),
     originCity: text('origin_city'),
@@ -3194,6 +3197,7 @@ export const logisticsQuotes = pgTable(
   (table) => [
     index('logistics_quotes_quote_number_idx').on(table.quoteNumber),
     index('logistics_quotes_shipment_id_idx').on(table.shipmentId),
+    index('logistics_quotes_request_id_idx').on(table.requestId),
     index('logistics_quotes_status_idx').on(table.status),
     index('logistics_quotes_forwarder_idx').on(table.forwarderName),
     index('logistics_quotes_valid_until_idx').on(table.validUntil),
@@ -3234,3 +3238,151 @@ export const logisticsQuoteLineItems = pgTable(
 ).enableRLS();
 
 export type LogisticsQuoteLineItem = typeof logisticsQuoteLineItems.$inferSelect;
+
+// ============================================================================
+// LOGISTICS QUOTE REQUESTS
+// ============================================================================
+
+/**
+ * Status for quote requests
+ */
+export const logisticsQuoteRequestStatus = pgEnum('logistics_quote_request_status', [
+  'pending', // Just created, awaiting logistics team
+  'in_progress', // Logistics team is working on it
+  'quoted', // Quote(s) have been submitted
+  'completed', // Request fulfilled and closed
+  'cancelled', // Cancelled by requester
+]);
+
+/**
+ * Priority levels for quote requests
+ */
+export const logisticsQuoteRequestPriority = pgEnum('logistics_quote_request_priority', [
+  'low',
+  'normal',
+  'high',
+  'urgent',
+]);
+
+/**
+ * Product types for quote requests
+ */
+export const logisticsProductType = pgEnum('logistics_product_type', [
+  'wine',
+  'spirits',
+  'beer',
+  'mixed',
+  'other',
+]);
+
+/**
+ * Logistics quote requests - sales team requests for freight quotes
+ *
+ * Workflow:
+ * 1. Sales creates a quote request with cargo details
+ * 2. Logistics team assigns themselves and works on it
+ * 3. Logistics team creates quotes (logisticsQuotes) linked to this request
+ * 4. Request is marked as quoted/completed
+ */
+export const logisticsQuoteRequests = pgTable(
+  'logistics_quote_requests',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+
+    // Reference number (QRQ-YYYY-XXXX)
+    requestNumber: text('request_number').notNull().unique(),
+
+    // Status & priority
+    status: logisticsQuoteRequestStatus('status').notNull().default('pending'),
+    priority: logisticsQuoteRequestPriority('priority').notNull().default('normal'),
+
+    // Requester info
+    requestedBy: uuid('requested_by')
+      .references(() => users.id, { onDelete: 'set null' })
+      .notNull(),
+    requestedAt: timestamp('requested_at', { mode: 'date' }).notNull().defaultNow(),
+
+    // Assignment
+    assignedTo: uuid('assigned_to').references(() => users.id, { onDelete: 'set null' }),
+    assignedAt: timestamp('assigned_at', { mode: 'date' }),
+
+    // Route details
+    originCountry: text('origin_country').notNull(),
+    originCity: text('origin_city'),
+    originWarehouse: text('origin_warehouse'),
+    destinationCountry: text('destination_country').notNull(),
+    destinationCity: text('destination_city'),
+    destinationWarehouse: text('destination_warehouse'),
+    transportMode: logisticsTransportMode('transport_mode'),
+
+    // Cargo details
+    productType: logisticsProductType('product_type').notNull().default('wine'),
+    productDescription: text('product_description'),
+    totalCases: integer('total_cases'),
+    totalPallets: integer('total_pallets'),
+    totalWeightKg: doublePrecision('total_weight_kg'),
+    totalVolumeM3: doublePrecision('total_volume_m3'),
+
+    // Special requirements
+    requiresThermalLiner: boolean('requires_thermal_liner').notNull().default(false),
+    requiresTracker: boolean('requires_tracker').notNull().default(false),
+    requiresInsurance: boolean('requires_insurance').notNull().default(false),
+    temperatureControlled: boolean('temperature_controlled').notNull().default(false),
+    minTemperature: doublePrecision('min_temperature'), // in Celsius
+    maxTemperature: doublePrecision('max_temperature'), // in Celsius
+
+    // Timing
+    targetPickupDate: timestamp('target_pickup_date', { mode: 'date' }),
+    targetDeliveryDate: timestamp('target_delivery_date', { mode: 'date' }),
+    isFlexibleDates: boolean('is_flexible_dates').notNull().default(true),
+
+    // Notes
+    notes: text('notes'),
+    internalNotes: text('internal_notes'),
+
+    // Completion
+    completedAt: timestamp('completed_at', { mode: 'date' }),
+    completedBy: uuid('completed_by').references(() => users.id, { onDelete: 'set null' }),
+    cancellationReason: text('cancellation_reason'),
+
+    ...timestamps,
+  },
+  (table) => [
+    index('logistics_quote_requests_request_number_idx').on(table.requestNumber),
+    index('logistics_quote_requests_status_idx').on(table.status),
+    index('logistics_quote_requests_requested_by_idx').on(table.requestedBy),
+    index('logistics_quote_requests_assigned_to_idx').on(table.assignedTo),
+    index('logistics_quote_requests_priority_idx').on(table.priority),
+  ],
+).enableRLS();
+
+export type LogisticsQuoteRequest = typeof logisticsQuoteRequests.$inferSelect;
+
+/**
+ * Attachments for quote requests - supporting PDFs and documents
+ */
+export const logisticsQuoteRequestAttachments = pgTable(
+  'logistics_quote_request_attachments',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    requestId: uuid('request_id')
+      .references(() => logisticsQuoteRequests.id, { onDelete: 'cascade' })
+      .notNull(),
+
+    // File details
+    fileName: text('file_name').notNull(),
+    fileUrl: text('file_url').notNull(),
+    fileSize: integer('file_size'),
+    mimeType: text('mime_type'),
+
+    // Metadata
+    description: text('description'),
+    uploadedBy: uuid('uploaded_by').references(() => users.id, { onDelete: 'set null' }),
+    uploadedAt: timestamp('uploaded_at', { mode: 'date' }).notNull().defaultNow(),
+
+    ...timestamps,
+  },
+  (table) => [index('logistics_quote_request_attachments_request_id_idx').on(table.requestId)],
+).enableRLS();
+
+export type LogisticsQuoteRequestAttachment = typeof logisticsQuoteRequestAttachments.$inferSelect;

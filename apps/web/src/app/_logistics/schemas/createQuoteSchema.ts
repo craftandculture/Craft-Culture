@@ -12,6 +12,9 @@ const createQuoteSchema = z.object({
   // Optional link to shipment
   shipmentId: z.string().uuid().optional(),
 
+  // Optional link to quote request
+  requestId: z.string().uuid().optional(),
+
   // Route details
   originCountry: z.string().optional(),
   originCity: z.string().optional(),

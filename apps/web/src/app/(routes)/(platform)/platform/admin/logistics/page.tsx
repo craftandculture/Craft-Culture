@@ -7,6 +7,7 @@ import {
   IconBox,
   IconChartBar,
   IconChevronRight,
+  IconClipboardList,
   IconCloudDownload,
   IconCurrencyDollar,
   IconFileInvoice,
@@ -220,8 +221,8 @@ const LogisticsDashboardPage = () => {
           </Card>
         </div>
 
-        {/* Middle Section - Documents, Costs, Quotes */}
-        <div className="grid gap-6 lg:grid-cols-3">
+        {/* Middle Section - Documents, Costs, Quotes, Requests */}
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
           {/* Document Compliance */}
           <Card>
             <div className="p-4 pb-3">
@@ -372,6 +373,49 @@ const LogisticsDashboardPage = () => {
                 <Button variant="outline" size="sm" className="w-full" asChild>
                   <Link href="/platform/admin/logistics/quotes/new">
                     <ButtonContent iconLeft={IconPlus}>New Quote</ButtonContent>
+                  </Link>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Quote Requests Summary */}
+          <Card>
+            <div className="p-4 pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <Icon icon={IconClipboardList} size="sm" colorRole="muted" />
+                  Quote Requests
+                </CardTitle>
+                <Link
+                  href="/platform/admin/logistics/requests"
+                  className="text-sm text-text-brand hover:underline"
+                >
+                  View All
+                </Link>
+              </div>
+            </div>
+            <CardContent className="pt-0">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <Typography variant="bodySm" colorRole="muted">
+                    Pending
+                  </Typography>
+                  <Typography variant="headingSm" className="text-orange-600">
+                    {metrics?.quoteRequests?.pendingCount ?? 0}
+                  </Typography>
+                </div>
+                <div className="flex items-center justify-between">
+                  <Typography variant="bodySm" colorRole="muted">
+                    In Progress
+                  </Typography>
+                  <Typography variant="headingSm" className="text-blue-600">
+                    {metrics?.quoteRequests?.inProgressCount ?? 0}
+                  </Typography>
+                </div>
+                <Button variant="outline" size="sm" className="w-full" asChild>
+                  <Link href="/platform/admin/logistics/requests/new">
+                    <ButtonContent iconLeft={IconPlus}>New Request</ButtonContent>
                   </Link>
                 </Button>
               </div>
