@@ -244,6 +244,29 @@ const styles = StyleSheet.create({
     marginTop: 6,
     textAlign: 'center',
   },
+  actionRequired: {
+    marginBottom: 24,
+    padding: 16,
+    backgroundColor: '#fef3c7',
+    borderRadius: 4,
+    borderLeft: '4px solid #f59e0b',
+  },
+  actionRequiredHeader: {
+    fontSize: 11,
+    fontWeight: 'bold',
+    color: '#92400e',
+    marginBottom: 8,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  actionRequiredText: {
+    fontSize: 10,
+    color: '#78350f',
+    lineHeight: 1.6,
+  },
+  actionRequiredBold: {
+    fontWeight: 'bold',
+  },
 });
 
 export interface ProformaInvoicePDFTemplateProps {
@@ -326,6 +349,16 @@ const ProformaInvoicePDFTemplate = ({
               <Text style={styles.paymentRef}>Ref: {order.paymentReference}</Text>
             )}
           </View>
+        </View>
+
+        {/* Action Required Box */}
+        <View style={styles.actionRequired}>
+          <Text style={styles.actionRequiredHeader}>⚠ Action Required</Text>
+          <Text style={styles.actionRequiredText}>
+            Please issue an invoice to{' '}
+            <Text style={styles.actionRequiredBold}>CD Private Client Team</Text>
+            {' '}based on the details below. Once generated, upload the invoice to the C&C system.
+          </Text>
         </View>
 
         {/* Client & Delivery Information */}
@@ -455,10 +488,7 @@ const ProformaInvoicePDFTemplate = ({
           <View style={styles.footerContent}>
             <View style={styles.footerLeft}>
               <Text style={styles.footerText}>
-                This is a proforma invoice for internal use.
-              </Text>
-              <Text style={styles.footerText}>
-                Please raise a client invoice based on these details.
+                Proforma for invoice generation - Issue to CD Private Client Team
               </Text>
             </View>
             <View style={styles.footerRight}>
