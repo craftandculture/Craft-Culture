@@ -172,6 +172,9 @@ const notifyPartnerOfOrderUpdate = async (params: NotifyPartnerParams) => {
             templateId: PARTNER_TEMPLATE_IDS[type],
             type,
             email: user.email,
+            env: serverConfig.env,
+            hasLoopsApiKey: !!serverConfig.loopsApiKey,
+            loopsApiKeyLength: serverConfig.loopsApiKey?.length ?? 0,
           });
 
           const result = await loops.sendTransactionalEmail({
