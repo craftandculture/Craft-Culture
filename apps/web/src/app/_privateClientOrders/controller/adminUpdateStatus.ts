@@ -103,7 +103,9 @@ const adminUpdateStatus = adminProcedure
           orderNumber: updated?.orderNumber ?? order.orderNumber ?? orderId,
           partnerId: order.partnerId,
           type: notificationType,
-          totalAmount: order.totalUsd ?? undefined,
+          totalAmount: order.totalUsd ?? 0,
+          clientName: order.clientName ?? 'Client',
+          revisionReason: notificationType === 'revision_requested' ? 'Please review and update the order details.' : undefined,
         });
         logger.info('PCO: Partner notification sent successfully', { orderId, notificationType });
       } catch (error) {
