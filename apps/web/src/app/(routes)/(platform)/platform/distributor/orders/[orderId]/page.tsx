@@ -6,6 +6,7 @@ import {
   IconCalendar,
   IconCheck,
   IconCloudUpload,
+  IconDownload,
   IconFile,
   IconFileInvoice,
   IconFileText,
@@ -433,6 +434,16 @@ const DistributorOrderDetailPage = () => {
                 AED
               </button>
             </div>
+
+            {/* Download PDF Button */}
+            <Button
+              variant="outline"
+              onClick={() => window.open(`/api/distributor/pco/proforma?orderId=${orderId}`, '_blank')}
+            >
+              <ButtonContent iconLeft={IconDownload}>
+                Download PDF
+              </ButtonContent>
+            </Button>
 
             {/* Send to Finance Button */}
             <Button

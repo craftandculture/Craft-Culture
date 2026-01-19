@@ -29,11 +29,6 @@ interface NotifyDistributorParams {
   clientPhone?: string;
   paymentReference?: string;
   totalAmount?: number;
-  /** PDF attachment for proforma invoice */
-  pdfAttachment?: {
-    filename: string;
-    data: string; // Base64 encoded
-  };
 }
 
 /**
@@ -107,6 +102,7 @@ const notifyDistributorOfOrderUpdate = async (params: NotifyDistributorParams) =
       .where(eq(partners.id, distributorId));
 
     const orderUrl = `${serverConfig.appUrl}/platform/distributor/orders/${orderId}`;
+    const pdfDownloadUrl = `${serverConfig.appUrl}/api/distributor/pco/proforma?orderId=${orderId}`;
     const title = getNotificationTitle(type);
     const message = getNotificationMessage(type, params);
     const inAppType = getInAppNotificationType(type);
@@ -165,6 +161,7 @@ const notifyDistributorOfOrderUpdate = async (params: NotifyDistributorParams) =
               distributorName: user.name ?? distributor?.businessName ?? 'Distributor',
               orderNumber,
               orderUrl,
+              pdfDownloadUrl,
               partnerName: params.partnerName ?? '',
               clientName: params.clientName ?? '',
               clientEmail: params.clientEmail ?? '',
@@ -173,15 +170,6 @@ const notifyDistributorOfOrderUpdate = async (params: NotifyDistributorParams) =
               totalAmount: totalFormatted ?? '',
               totalAmountUSD: totalFormatted ?? '',
             },
-            attachments: params.pdfAttachment
-              ? [
-                  {
-                    filename: params.pdfAttachment.filename,
-                    contentType: 'application/pdf',
-                    data: params.pdfAttachment.data,
-                  },
-                ]
-              : undefined,
           });
 
           logger.info('PCO: Distributor email result', {
@@ -222,6 +210,7 @@ const notifyDistributorOfOrderUpdate = async (params: NotifyDistributorParams) =
               distributorName: distributor.businessName ?? 'Distributor',
               orderNumber,
               orderUrl,
+              pdfDownloadUrl,
               partnerName: params.partnerName ?? '',
               clientName: params.clientName ?? '',
               clientEmail: params.clientEmail ?? '',
@@ -230,15 +219,6 @@ const notifyDistributorOfOrderUpdate = async (params: NotifyDistributorParams) =
               totalAmount: totalFormatted ?? '',
               totalAmountUSD: totalFormatted ?? '',
             },
-            attachments: params.pdfAttachment
-              ? [
-                  {
-                    filename: params.pdfAttachment.filename,
-                    contentType: 'application/pdf',
-                    data: params.pdfAttachment.data,
-                  },
-                ]
-              : undefined,
           });
 
           logger.info('PCO: Distributor business email result', {
@@ -255,24 +235,24 @@ const notifyDistributorOfOrderUpdate = async (params: NotifyDistributorParams) =
       }
     }
 
-    // Send proforma invoice to finance email if configured (for order_assigned with PDF)
-    if (distributor?.financeEmail && params.pdfAttachment && type === 'order_assigned') {
+    // Send proforma invoice notification to finance email if configured (for order_assigned)
+    if (distributor?.financeEmail && type === 'order_assigned') {
       // Check if finance email is different from business email and member emails
-      const memberEmails = await Promise.all(
+      const financeEmailMemberCheck = await Promise.all(
         members.map(async (m) => {
           const [u] = await db.select({ email: users.email }).from(users).where(eq(users.id, m.userId));
           return u?.email;
         }),
       );
-      const allEmails = [...memberEmails, distributor.businessEmail].filter(Boolean);
+      const allEmails = [...financeEmailMemberCheck, distributor.businessEmail].filter(Boolean);
 
       if (!allEmails.includes(distributor.financeEmail)) {
         try {
-          logger.info('PCO: Sending proforma invoice to finance email', {
+          logger.info('PCO: Sending proforma invoice notification to finance email', {
             templateId: DISTRIBUTOR_TEMPLATE_IDS[type],
             type,
             email: distributor.financeEmail,
-            hasAttachment: true,
+            pdfDownloadUrl,
           });
 
           const result = await loops.sendTransactionalEmail({
@@ -282,6 +262,7 @@ const notifyDistributorOfOrderUpdate = async (params: NotifyDistributorParams) =
               distributorName: distributor.businessName ?? 'Distributor',
               orderNumber,
               orderUrl,
+              pdfDownloadUrl,
               partnerName: params.partnerName ?? '',
               clientName: params.clientName ?? '',
               clientEmail: params.clientEmail ?? '',
@@ -290,13 +271,6 @@ const notifyDistributorOfOrderUpdate = async (params: NotifyDistributorParams) =
               totalAmount: totalFormatted ?? '',
               totalAmountUSD: totalFormatted ?? '',
             },
-            attachments: [
-              {
-                filename: params.pdfAttachment.filename,
-                contentType: 'application/pdf',
-                data: params.pdfAttachment.data,
-              },
-            ],
           });
 
           logger.info('PCO: Finance email result', {
@@ -305,7 +279,7 @@ const notifyDistributorOfOrderUpdate = async (params: NotifyDistributorParams) =
             success: result?.success,
           });
         } catch (error) {
-          logger.error('PCO: Failed to send proforma invoice to finance email', {
+          logger.error('PCO: Failed to send proforma invoice notification to finance email', {
             email: distributor.financeEmail,
             error: error instanceof Error ? error.message : String(error),
           });
