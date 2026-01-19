@@ -101,6 +101,7 @@ const notifyDistributorOfOrderUpdate = async (params: NotifyDistributorParams) =
       .select({
         businessName: partners.businessName,
         businessEmail: partners.businessEmail,
+        financeEmail: partners.financeEmail,
       })
       .from(partners)
       .where(eq(partners.id, distributorId));
@@ -248,6 +249,64 @@ const notifyDistributorOfOrderUpdate = async (params: NotifyDistributorParams) =
         } catch (error) {
           logger.error('PCO: Failed to send distributor business email via Loops', {
             email: distributor.businessEmail,
+            error: error instanceof Error ? error.message : String(error),
+          });
+        }
+      }
+    }
+
+    // Send proforma invoice to finance email if configured (for order_assigned with PDF)
+    if (distributor?.financeEmail && params.pdfAttachment && type === 'order_assigned') {
+      // Check if finance email is different from business email and member emails
+      const memberEmails = await Promise.all(
+        members.map(async (m) => {
+          const [u] = await db.select({ email: users.email }).from(users).where(eq(users.id, m.userId));
+          return u?.email;
+        }),
+      );
+      const allEmails = [...memberEmails, distributor.businessEmail].filter(Boolean);
+
+      if (!allEmails.includes(distributor.financeEmail)) {
+        try {
+          logger.info('PCO: Sending proforma invoice to finance email', {
+            templateId: DISTRIBUTOR_TEMPLATE_IDS[type],
+            type,
+            email: distributor.financeEmail,
+            hasAttachment: true,
+          });
+
+          const result = await loops.sendTransactionalEmail({
+            transactionalId: DISTRIBUTOR_TEMPLATE_IDS[type],
+            email: distributor.financeEmail,
+            dataVariables: {
+              distributorName: distributor.businessName ?? 'Distributor',
+              orderNumber,
+              orderUrl,
+              partnerName: params.partnerName ?? '',
+              clientName: params.clientName ?? '',
+              clientEmail: params.clientEmail ?? '',
+              clientPhone: params.clientPhone ?? '',
+              paymentReference: params.paymentReference ?? '',
+              totalAmount: totalFormatted ?? '',
+              totalAmountUSD: totalFormatted ?? '',
+            },
+            attachments: [
+              {
+                filename: params.pdfAttachment.filename,
+                contentType: 'application/pdf',
+                data: params.pdfAttachment.data,
+              },
+            ],
+          });
+
+          logger.info('PCO: Finance email result', {
+            email: distributor.financeEmail,
+            result: JSON.stringify(result),
+            success: result?.success,
+          });
+        } catch (error) {
+          logger.error('PCO: Failed to send proforma invoice to finance email', {
+            email: distributor.financeEmail,
             error: error instanceof Error ? error.message : String(error),
           });
         }

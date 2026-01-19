@@ -15,6 +15,7 @@ import distributorConfirmStockReceipt from './controller/distributorConfirmStock
 import distributorDashboard from './controller/distributorDashboard';
 import distributorGetMany from './controller/distributorGetMany';
 import distributorGetOne from './controller/distributorGetOne';
+import distributorResendProformaInvoice from './controller/distributorResendProformaInvoice';
 import distributorUpdateStatus from './controller/distributorUpdateStatus';
 import distributorUploadDeliveryPhoto from './controller/distributorUploadDeliveryPhoto';
 import documentsDelete from './controller/documentsDelete';
@@ -113,6 +114,7 @@ const privateClientOrdersRouter = createTRPCRouter({
   distributorUnlockSuspended: ordersDistributorUnlockSuspended,
   distributorConfirmStockReceipt,
   distributorUploadDeliveryPhoto,
+  distributorResendProformaInvoice,
 
   // Delivery workflow (distributor)
   logContactAttempt: ordersLogContactAttempt,

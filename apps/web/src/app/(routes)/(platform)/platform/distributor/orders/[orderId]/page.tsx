@@ -10,6 +10,7 @@ import {
   IconFileInvoice,
   IconFileText,
   IconLoader2,
+  IconMail,
   IconPackage,
   IconPhone,
   IconPhoneOff,
@@ -228,6 +229,20 @@ const DistributorOrderDetailPage = () => {
     },
   });
 
+  // Resend proforma invoice to finance
+  const { mutate: resendProformaInvoice, isPending: isResendingInvoice } = useMutation({
+    mutationFn: () =>
+      trpcClient.privateClientOrders.distributorResendProformaInvoice.mutate({
+        orderId,
+      }),
+    onSuccess: (data) => {
+      toast.success(`Proforma invoice sent to ${data.email}`);
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to send proforma invoice');
+    },
+  });
+
   // Invoice upload
   const invoiceInputRef = useRef<HTMLInputElement>(null);
   const [isUploadingInvoice, setIsUploadingInvoice] = useState(false);
@@ -418,6 +433,17 @@ const DistributorOrderDetailPage = () => {
                 AED
               </button>
             </div>
+
+            {/* Send to Finance Button */}
+            <Button
+              variant="outline"
+              onClick={() => resendProformaInvoice()}
+              disabled={isResendingInvoice}
+            >
+              <ButtonContent iconLeft={IconMail} isLoading={isResendingInvoice}>
+                Send to Finance
+              </ButtonContent>
+            </Button>
 
             {/* Next Action Button */}
             {nextAction && (

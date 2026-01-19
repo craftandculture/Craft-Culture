@@ -57,6 +57,8 @@ const partnersUpdate = adminProcedure
       updates.pcoDutyRate = updateData.pcoDutyRate;
     if (updateData.pcoVatRate !== undefined)
       updates.pcoVatRate = updateData.pcoVatRate;
+    if (updateData.financeEmail !== undefined)
+      updates.financeEmail = updateData.financeEmail || null;
 
     if (Object.keys(updates).length === 0) {
       throw new TRPCError({
