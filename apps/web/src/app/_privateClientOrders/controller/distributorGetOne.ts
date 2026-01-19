@@ -103,10 +103,21 @@ const distributorGetOne = distributorProcedure
       .where(eq(privateClientOrderActivityLogs.orderId, input.id))
       .orderBy(privateClientOrderActivityLogs.createdAt);
 
+    // Get distributor details (the current user's partner) for finance email
+    const [distributor] = await db
+      .select({
+        id: partners.id,
+        businessName: partners.businessName,
+        financeEmail: partners.financeEmail,
+      })
+      .from(partners)
+      .where(eq(partners.id, partnerId));
+
     return {
       ...orderResult.order,
       partner: orderResult.partner,
       client: orderResult.client,
+      distributor,
       items,
       activityLogs: activityLogs.map((row) => ({
         ...row.log,
