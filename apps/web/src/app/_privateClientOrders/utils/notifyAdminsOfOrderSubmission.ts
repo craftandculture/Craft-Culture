@@ -2,7 +2,7 @@ import { eq } from 'drizzle-orm';
 
 import createAdminNotifications from '@/app/_notifications/utils/createAdminNotifications';
 import db from '@/database/client';
-import { partners } from '@/database/schema';
+import { partners, users } from '@/database/schema';
 import loops from '@/lib/loops/client';
 import serverConfig from '@/server.config';
 import logger from '@/utils/logger';
@@ -71,16 +71,14 @@ const notifyAdminsOfOrderSubmission = async (params: NotifyAdminsParams) => {
     });
 
     // Get all admin users for email
-    const adminUsers = await db.query.users.findMany({
-      where: {
-        role: 'admin',
-      },
-      columns: {
-        id: true,
-        email: true,
-        name: true,
-      },
-    });
+    const adminUsers = await db
+      .select({
+        id: users.id,
+        email: users.email,
+        name: users.name,
+      })
+      .from(users)
+      .where(eq(users.role, 'admin'));
 
     logger.info('PCO: Found admin users for notification', {
       count: adminUsers.length,
