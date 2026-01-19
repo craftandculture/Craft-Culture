@@ -79,6 +79,16 @@ const adminUpdateStatus = adminProcedure
 
     // Send partner notification if applicable
     const notificationType = getPartnerNotificationType(status);
+
+    logger.info('PCO: adminUpdateStatus notification check', {
+      orderId,
+      status,
+      notificationType,
+      partnerId: order.partnerId,
+      hasPartnerId: !!order.partnerId,
+      hasNotificationType: !!notificationType,
+    });
+
     if (notificationType && order.partnerId) {
       logger.info('PCO: Sending partner notification from adminUpdateStatus', {
         orderId,
@@ -87,12 +97,27 @@ const adminUpdateStatus = adminProcedure
         partnerId: order.partnerId,
       });
 
-      await notifyPartnerOfOrderUpdate({
+      try {
+        await notifyPartnerOfOrderUpdate({
+          orderId,
+          orderNumber: updated?.orderNumber ?? order.orderNumber ?? orderId,
+          partnerId: order.partnerId,
+          type: notificationType,
+          totalAmount: order.totalUsd ?? undefined,
+        });
+        logger.info('PCO: Partner notification sent successfully', { orderId, notificationType });
+      } catch (error) {
+        logger.error('PCO: Failed to send partner notification', {
+          orderId,
+          notificationType,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    } else {
+      logger.warn('PCO: Skipping partner notification', {
         orderId,
-        orderNumber: updated?.orderNumber ?? order.orderNumber ?? orderId,
-        partnerId: order.partnerId,
-        type: notificationType,
-        totalAmount: order.totalUsd ?? undefined,
+        status,
+        reason: !notificationType ? 'no notification type for this status' : 'no partnerId on order',
       });
     }
 
