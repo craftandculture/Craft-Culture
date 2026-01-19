@@ -22,16 +22,127 @@ const adminGetDashboardMetrics = adminProcedure.query(async () => {
   const now = new Date();
   const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
   const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+  const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
-  // Shipment counts by status
-  const shipmentsByStatus = await db
-    .select({
-      status: logisticsShipments.status,
-      count: count(),
-    })
-    .from(logisticsShipments)
-    .groupBy(logisticsShipments.status);
+  // Run all queries in parallel for better performance
+  const [
+    shipmentsByStatus,
+    recentShipments,
+    requiredDocs,
+    verifiedDocs,
+    expiringDocs,
+    expiredDocs,
+    monthlyCosts,
+    pendingQuotes,
+    expiringQuotes,
+    recentActivity,
+  ] = await Promise.all([
+    // Shipment counts by status
+    db
+      .select({
+        status: logisticsShipments.status,
+        count: count(),
+      })
+      .from(logisticsShipments)
+      .groupBy(logisticsShipments.status),
 
+    // Recent shipments (top 10)
+    db.query.logisticsShipments.findMany({
+      orderBy: [desc(logisticsShipments.createdAt)],
+      limit: 10,
+      columns: {
+        id: true,
+        shipmentNumber: true,
+        status: true,
+        type: true,
+        transportMode: true,
+        originCity: true,
+        originCountry: true,
+        destinationCity: true,
+        destinationCountry: true,
+        destinationWarehouse: true,
+        carrierName: true,
+        eta: true,
+        totalCases: true,
+        createdAt: true,
+      },
+    }),
+
+    // Required docs count
+    db
+      .select({ count: count() })
+      .from(logisticsDocuments)
+      .where(eq(logisticsDocuments.isRequired, true)),
+
+    // Verified docs count
+    db
+      .select({ count: count() })
+      .from(logisticsDocuments)
+      .where(and(eq(logisticsDocuments.isRequired, true), eq(logisticsDocuments.isVerified, true))),
+
+    // Expiring docs count
+    db
+      .select({ count: count() })
+      .from(logisticsDocuments)
+      .where(
+        and(
+          isNotNull(logisticsDocuments.expiryDate),
+          lt(logisticsDocuments.expiryDate, sevenDaysFromNow),
+          gte(logisticsDocuments.expiryDate, now),
+        ),
+      ),
+
+    // Expired docs count
+    db
+      .select({ count: count() })
+      .from(logisticsDocuments)
+      .where(and(isNotNull(logisticsDocuments.expiryDate), lt(logisticsDocuments.expiryDate, now))),
+
+    // Monthly costs
+    db
+      .select({
+        totalFreight: sum(logisticsShipments.freightCostUsd),
+        totalLanded: sum(
+          sql`COALESCE(${logisticsShipments.freightCostUsd}, 0) +
+              COALESCE(${logisticsShipments.insuranceCostUsd}, 0) +
+              COALESCE(${logisticsShipments.originHandlingUsd}, 0) +
+              COALESCE(${logisticsShipments.destinationHandlingUsd}, 0) +
+              COALESCE(${logisticsShipments.customsClearanceUsd}, 0) +
+              COALESCE(${logisticsShipments.govFeesUsd}, 0) +
+              COALESCE(${logisticsShipments.deliveryCostUsd}, 0) +
+              COALESCE(${logisticsShipments.otherCostsUsd}, 0)`,
+        ),
+      })
+      .from(logisticsShipments)
+      .where(gte(logisticsShipments.createdAt, firstDayOfMonth)),
+
+    // Pending quotes count
+    db
+      .select({ count: count() })
+      .from(logisticsQuotes)
+      .where(eq(logisticsQuotes.status, 'pending')),
+
+    // Expiring quotes count
+    db
+      .select({ count: count() })
+      .from(logisticsQuotes)
+      .where(
+        and(
+          eq(logisticsQuotes.status, 'pending'),
+          isNotNull(logisticsQuotes.validUntil),
+          lt(logisticsQuotes.validUntil, sevenDaysFromNow),
+          gte(logisticsQuotes.validUntil, now),
+        ),
+      ),
+
+    // Recent activity count
+    db
+      .select({ count: count() })
+      .from(logisticsShipments)
+      .where(gte(logisticsShipments.createdAt, thirtyDaysAgo)),
+  ]);
+
+  // Process shipment status counts
   const statusCounts: Record<string, number> = {};
   for (const row of shipmentsByStatus) {
     statusCounts[row.status] = row.count;
@@ -49,105 +160,11 @@ const adminGetDashboardMetrics = adminProcedure.query(async () => {
     (statusCounts['at_warehouse'] || 0) +
     (statusCounts['dispatched'] || 0);
 
-  // Recent shipments (top 10)
-  const recentShipments = await db.query.logisticsShipments.findMany({
-    orderBy: [desc(logisticsShipments.createdAt)],
-    limit: 10,
-    columns: {
-      id: true,
-      shipmentNumber: true,
-      status: true,
-      type: true,
-      transportMode: true,
-      originCity: true,
-      originCountry: true,
-      destinationCity: true,
-      destinationCountry: true,
-      destinationWarehouse: true,
-      carrierName: true,
-      eta: true,
-      totalCases: true,
-      createdAt: true,
-    },
-  });
-
-  // Document compliance metrics
-  const requiredDocs = await db
-    .select({ count: count() })
-    .from(logisticsDocuments)
-    .where(eq(logisticsDocuments.isRequired, true));
-
-  const verifiedDocs = await db
-    .select({ count: count() })
-    .from(logisticsDocuments)
-    .where(and(eq(logisticsDocuments.isRequired, true), eq(logisticsDocuments.isVerified, true)));
-
-  const expiringDocs = await db
-    .select({ count: count() })
-    .from(logisticsDocuments)
-    .where(
-      and(
-        isNotNull(logisticsDocuments.expiryDate),
-        lt(logisticsDocuments.expiryDate, sevenDaysFromNow),
-        gte(logisticsDocuments.expiryDate, now),
-      ),
-    );
-
-  const expiredDocs = await db
-    .select({ count: count() })
-    .from(logisticsDocuments)
-    .where(and(isNotNull(logisticsDocuments.expiryDate), lt(logisticsDocuments.expiryDate, now)));
-
   // Document compliance rate
   const complianceRate =
     requiredDocs[0]?.count && requiredDocs[0].count > 0
       ? Math.round(((verifiedDocs[0]?.count || 0) / requiredDocs[0].count) * 100)
       : 100;
-
-  // Cost summary for this month
-  const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-
-  const monthlyCosts = await db
-    .select({
-      totalFreight: sum(logisticsShipments.freightCostUsd),
-      totalLanded: sum(
-        sql`COALESCE(${logisticsShipments.freightCostUsd}, 0) +
-            COALESCE(${logisticsShipments.insuranceCostUsd}, 0) +
-            COALESCE(${logisticsShipments.originHandlingUsd}, 0) +
-            COALESCE(${logisticsShipments.destinationHandlingUsd}, 0) +
-            COALESCE(${logisticsShipments.customsClearanceUsd}, 0) +
-            COALESCE(${logisticsShipments.govFeesUsd}, 0) +
-            COALESCE(${logisticsShipments.deliveryCostUsd}, 0) +
-            COALESCE(${logisticsShipments.otherCostsUsd}, 0)`,
-      ),
-    })
-    .from(logisticsShipments)
-    .where(gte(logisticsShipments.createdAt, firstDayOfMonth));
-
-  // Pending quotes count
-  const pendingQuotes = await db
-    .select({ count: count() })
-    .from(logisticsQuotes)
-    .where(eq(logisticsQuotes.status, 'pending'));
-
-  // Quotes needing attention (expiring within 7 days)
-  const expiringQuotes = await db
-    .select({ count: count() })
-    .from(logisticsQuotes)
-    .where(
-      and(
-        eq(logisticsQuotes.status, 'pending'),
-        isNotNull(logisticsQuotes.validUntil),
-        lt(logisticsQuotes.validUntil, sevenDaysFromNow),
-        gte(logisticsQuotes.validUntil, now),
-      ),
-    );
-
-  // Shipments created in last 30 days
-  const recentActivity = await db
-    .select({ count: count() })
-    .from(logisticsShipments)
-    .where(gte(logisticsShipments.createdAt, thirtyDaysAgo));
 
   return {
     shipments: {
