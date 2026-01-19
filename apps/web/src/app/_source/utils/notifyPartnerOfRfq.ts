@@ -98,6 +98,7 @@ const notifyPartnerOfRfq = async ({
     if (partner.userId) {
       await createNotification({
         userId: partner.userId,
+        partnerId,
         type: 'rfq_received',
         title: 'New RFQ Received',
         message: `You have received a new sourcing request: ${rfq.name} (${rfq.itemCount} items)`,

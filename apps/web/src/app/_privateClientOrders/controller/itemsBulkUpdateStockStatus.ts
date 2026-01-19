@@ -152,6 +152,7 @@ const itemsBulkUpdateStockStatus = adminProcedure
       for (const member of partnerMembersList) {
         await createNotification({
           userId: member.userId,
+          partnerId: order.partnerId,
           type: 'status_update',
           title: 'Stock Status Updated',
           message: `${items.length} items for order ${orderRef}: ${statusLabel}`,
@@ -184,6 +185,7 @@ const itemsBulkUpdateStockStatus = adminProcedure
       for (const member of distributorMembersList) {
         await createNotification({
           userId: member.userId,
+          partnerId: order.distributorId,
           type: 'status_update',
           title: notificationTitle,
           message: `${items.length} items for order ${orderRef}: ${statusLabel}`,

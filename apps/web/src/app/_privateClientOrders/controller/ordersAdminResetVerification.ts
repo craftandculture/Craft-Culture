@@ -128,6 +128,7 @@ const ordersAdminResetVerification = adminProcedure
       for (const member of partnerMembersList) {
         await createNotification({
           userId: member.userId,
+          partnerId: order.partnerId,
           type: 'action_required',
           title: 'Verification Reset',
           message: `Order ${updatedOrder?.orderNumber ?? orderId} has been reset by C&C. Please verify client with ${distributor?.businessName ?? 'distributor'}.`,
@@ -146,6 +147,7 @@ const ordersAdminResetVerification = adminProcedure
       for (const member of distributorMembers) {
         await createNotification({
           userId: member.userId,
+          partnerId: order.distributorId,
           type: 'action_required',
           title: 'Client Verification Required',
           message: `C&C has reset order ${updatedOrder?.orderNumber ?? orderId}. Please verify client in your system.`,
@@ -164,6 +166,7 @@ const ordersAdminResetVerification = adminProcedure
       for (const member of partnerMembersList) {
         await createNotification({
           userId: member.userId,
+          partnerId: order.partnerId,
           type: 'status_update',
           title: 'Order Unlocked by C&C',
           message: `Order ${updatedOrder?.orderNumber ?? orderId} has been unlocked by C&C. Payment reference: ${paymentReference}. Awaiting client payment.`,

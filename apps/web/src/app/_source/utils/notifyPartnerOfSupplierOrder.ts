@@ -98,6 +98,7 @@ const notifyPartnerOfSupplierOrder = async ({
     if (partner.userId) {
       await createNotification({
         userId: partner.userId,
+        partnerId,
         type: 'supplier_order_received',
         title: 'New Supplier Order',
         message: `You have received a new order: ${supplierOrder.orderNumber} (${supplierOrder.itemCount} items, ${totalFormatted})`,

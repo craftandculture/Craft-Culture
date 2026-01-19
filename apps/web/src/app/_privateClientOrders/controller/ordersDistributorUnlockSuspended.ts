@@ -93,6 +93,7 @@ const ordersDistributorUnlockSuspended = distributorProcedure
       for (const member of partnerMembersList) {
         await createNotification({
           userId: member.userId,
+          partnerId: order.partnerId,
           type: 'status_update',
           title: 'Order Unlocked',
           message: `Order ${updatedOrder?.orderNumber ?? orderId} has been unlocked by ${distributor?.businessName ?? 'distributor'}. Client verified. Payment reference: ${paymentReference}.`,

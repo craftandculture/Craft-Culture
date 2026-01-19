@@ -85,6 +85,7 @@ const ordersDistributorPaymentVerification = distributorProcedure
       for (const member of partnerMembersList) {
         await createNotification({
           userId: member.userId,
+          partnerId: order.partnerId,
           type: 'status_update',
           title: 'Payment Verified',
           message: `Payment verified for order ${updatedOrder?.orderNumber ?? orderId}. Delivery scheduling will begin.`,

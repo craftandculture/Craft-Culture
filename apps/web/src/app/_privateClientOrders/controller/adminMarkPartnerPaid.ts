@@ -95,6 +95,7 @@ const adminMarkPartnerPaid = adminProcedure
       for (const member of partnerMembersList) {
         await createNotification({
           userId: member.userId,
+          partnerId: order.partnerId,
           type: 'status_update',
           title: 'Payment Received from C&C',
           message: `C&C has processed payment for order ${orderRef}${reference ? ` (Ref: ${reference})` : ''}`,

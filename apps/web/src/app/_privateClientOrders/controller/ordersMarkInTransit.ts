@@ -103,6 +103,7 @@ const ordersMarkInTransit = distributorProcedure
       for (const member of partnerMembersList) {
         await createNotification({
           userId: member.userId,
+          partnerId: order.partnerId,
           type: 'status_update',
           title: 'Order In Transit',
           message: `Order ${updatedOrder?.orderNumber ?? orderId} is now out for delivery to your client`,

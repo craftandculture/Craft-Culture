@@ -174,6 +174,7 @@ const paymentsConfirm = protectedProcedure.input(confirmPaymentSchema).mutation(
       for (const member of distributorMembers) {
         await createNotification({
           userId: member.userId,
+          partnerId: order.distributorId,
           type: 'action_required',
           title: 'Payment Verification Required',
           message: `${partner?.businessName ?? 'Partner'} confirmed client payment for order ${updatedOrder.orderNumber}. Please verify and schedule delivery.`,

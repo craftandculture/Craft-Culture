@@ -715,6 +715,9 @@ export const notifications = pgTable(
     userId: uuid('user_id')
       .references(() => users.id, { onDelete: 'cascade' })
       .notNull(),
+    partnerId: uuid('partner_id').references(() => partners.id, {
+      onDelete: 'cascade',
+    }), // Partner context for filtering when user switches partners
     type: notificationType('type').notNull(),
     title: text('title').notNull(),
     message: text('message').notNull(),
@@ -730,6 +733,7 @@ export const notifications = pgTable(
     index('notifications_user_id_idx').on(table.userId),
     index('notifications_user_id_is_read_idx').on(table.userId, table.isRead),
     index('notifications_created_at_idx').on(table.createdAt),
+    index('notifications_partner_id_idx').on(table.partnerId),
   ],
 ).enableRLS();
 
