@@ -4,11 +4,13 @@ import { z } from 'zod';
 
 import db from '@/database/client';
 import type { PrivateClientOrder } from '@/database/schema';
-import { privateClientOrderActivityLogs, privateClientOrders } from '@/database/schema';
+import { partners, privateClientOrderActivityLogs, privateClientOrderItems, privateClientOrders } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
+import logger from '@/utils/logger';
 
 import notifyDistributorOfOrderUpdate from '../utils/notifyDistributorOfOrderUpdate';
 import notifyPartnerOfOrderUpdate from '../utils/notifyPartnerOfOrderUpdate';
+import renderProformaInvoicePDF from '../utils/renderProformaInvoicePDF';
 
 const assignDistributorSchema = z.object({
   orderId: z.string().uuid(),
@@ -122,6 +124,77 @@ const ordersAssignDistributor = adminProcedure.input(assignDistributorSchema).mu
       distributorName: distributor.businessName ?? 'the distributor',
     });
   } else {
+    // Fetch line items for PDF
+    const lineItems = await db
+      .select()
+      .from(privateClientOrderItems)
+      .where(eq(privateClientOrderItems.orderId, orderId));
+
+    // Fetch partner details if available
+    let partner: { businessName: string; businessEmail: string | null; businessPhone: string | null } | null = null;
+    if (order.partnerId) {
+      const [partnerResult] = await db
+        .select({
+          businessName: partners.businessName,
+          businessEmail: partners.businessEmail,
+          businessPhone: partners.businessPhone,
+        })
+        .from(partners)
+        .where(eq(partners.id, order.partnerId));
+      partner = partnerResult ?? null;
+    }
+
+    // Generate proforma invoice PDF
+    let pdfAttachment: { filename: string; data: string } | undefined;
+    try {
+      const pdfBuffer = await renderProformaInvoicePDF({
+        order: {
+          orderNumber: order.orderNumber ?? orderId,
+          createdAt: order.createdAt,
+          paymentReference,
+          clientName: order.clientName ?? 'Client',
+          clientEmail: order.clientEmail,
+          clientPhone: order.clientPhone,
+          clientAddress: order.clientAddress,
+          deliveryNotes: order.deliveryNotes,
+          subtotalUsd: order.subtotalUsd,
+          dutyUsd: order.dutyUsd,
+          vatUsd: order.vatUsd,
+          logisticsUsd: order.logisticsUsd,
+          totalUsd: order.totalUsd ?? 0,
+        },
+        lineItems: lineItems.map((item) => ({
+          productName: item.productName ?? 'Unknown Product',
+          producer: item.producer,
+          vintage: item.vintage,
+          region: item.region,
+          bottleSize: item.bottleSize,
+          quantity: item.quantity ?? 0,
+          pricePerCaseUsd: item.pricePerCaseUsd,
+          totalUsd: item.totalUsd,
+        })),
+        partner,
+        distributor: { businessName: distributor.businessName ?? 'Distributor' },
+      });
+
+      pdfAttachment = {
+        filename: `Proforma-Invoice-${order.orderNumber ?? orderId}.pdf`,
+        data: pdfBuffer.toString('base64'),
+      };
+
+      logger.info('PCO: Generated proforma invoice PDF', {
+        orderId,
+        orderNumber: order.orderNumber,
+        pdfSize: pdfBuffer.length,
+      });
+    } catch (pdfError) {
+      logger.error('PCO: Failed to generate proforma invoice PDF', {
+        orderId,
+        error: pdfError instanceof Error ? pdfError.message : String(pdfError),
+      });
+      // Continue without PDF attachment - don't fail the whole operation
+    }
+
     // Notify distributor members about the new order
     await notifyDistributorOfOrderUpdate({
       orderId,
@@ -131,6 +204,7 @@ const ordersAssignDistributor = adminProcedure.input(assignDistributorSchema).mu
       clientName: order.clientName ?? undefined,
       paymentReference: paymentReference ?? undefined,
       totalAmount: order.totalUsd ?? undefined,
+      pdfAttachment,
     });
   }
 
