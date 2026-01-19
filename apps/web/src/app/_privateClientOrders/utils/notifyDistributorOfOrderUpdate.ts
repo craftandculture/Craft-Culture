@@ -164,7 +164,7 @@ const notifyDistributorOfOrderUpdate = async (params: NotifyDistributorParams) =
               clientEmail: params.clientEmail ?? '',
               clientPhone: params.clientPhone ?? '',
               paymentReference: params.paymentReference ?? '',
-              totalAmount: totalFormatted ?? '',
+              totalAmountUSD: totalFormatted ?? '',
             },
           });
 
@@ -211,7 +211,7 @@ const notifyDistributorOfOrderUpdate = async (params: NotifyDistributorParams) =
               clientEmail: params.clientEmail ?? '',
               clientPhone: params.clientPhone ?? '',
               paymentReference: params.paymentReference ?? '',
-              totalAmount: totalFormatted ?? '',
+              totalAmountUSD: totalFormatted ?? '',
             },
           });
 
