@@ -29,6 +29,11 @@ interface NotifyDistributorParams {
   clientPhone?: string;
   paymentReference?: string;
   totalAmount?: number;
+  /** PDF attachment for proforma invoice */
+  pdfAttachment?: {
+    filename: string;
+    data: string; // Base64 encoded
+  };
 }
 
 /**
@@ -167,6 +172,15 @@ const notifyDistributorOfOrderUpdate = async (params: NotifyDistributorParams) =
               totalAmount: totalFormatted ?? '',
               totalAmountUSD: totalFormatted ?? '',
             },
+            attachments: params.pdfAttachment
+              ? [
+                  {
+                    filename: params.pdfAttachment.filename,
+                    contentType: 'application/pdf',
+                    data: params.pdfAttachment.data,
+                  },
+                ]
+              : undefined,
           });
 
           logger.info('PCO: Distributor email result', {
@@ -215,6 +229,15 @@ const notifyDistributorOfOrderUpdate = async (params: NotifyDistributorParams) =
               totalAmount: totalFormatted ?? '',
               totalAmountUSD: totalFormatted ?? '',
             },
+            attachments: params.pdfAttachment
+              ? [
+                  {
+                    filename: params.pdfAttachment.filename,
+                    contentType: 'application/pdf',
+                    data: params.pdfAttachment.data,
+                  },
+                ]
+              : undefined,
           });
 
           logger.info('PCO: Distributor business email result', {
