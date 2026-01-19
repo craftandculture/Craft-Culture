@@ -395,6 +395,8 @@ export const partners = pgTable(
       .default(false),
     // Distributor code for payment references (e.g., 'CD', 'TBS')
     distributorCode: text('distributor_code'),
+    // Finance department email for proforma invoices (distributors only)
+    financeEmail: text('finance_email'),
     // Private client pricing configuration
     marginPercentage: doublePrecision('margin_percentage').default(40.6),
     logisticsCostPerCase: doublePrecision('logistics_cost_per_case').default(60),

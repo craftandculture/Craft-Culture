@@ -82,6 +82,8 @@ const partnersGetMany = adminProcedure
         logisticsCostPerCase: partners.logisticsCostPerCase,
         pcoDutyRate: partners.pcoDutyRate,
         pcoVatRate: partners.pcoVatRate,
+        // Finance email for proforma invoices
+        financeEmail: partners.financeEmail,
         userName: users.name,
         userEmail: users.email,
       })
@@ -157,6 +159,8 @@ const partnersGetMany = adminProcedure
       logisticsCostPerCase: p.logisticsCostPerCase,
       pcoDutyRate: p.pcoDutyRate,
       pcoVatRate: p.pcoVatRate,
+      // Finance email for proforma invoices
+      financeEmail: p.financeEmail,
       // Optional linked user (for API access if applicable)
       linkedUser: p.userId
         ? {

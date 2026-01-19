@@ -112,6 +112,8 @@ const DistributorsPage = () => {
     pcoDutyRate: number;
     pcoVatRate: number;
     logisticsCostPerCase: number;
+    // Finance email for proforma invoices
+    financeEmail: string;
   } | null>(null);
 
   // Fetch distributors only (not wine partners)
@@ -259,6 +261,8 @@ const DistributorsPage = () => {
       pcoDutyRate: partner.pcoDutyRate ?? 0.05,
       pcoVatRate: partner.pcoVatRate ?? 0.05,
       logisticsCostPerCase: partner.logisticsCostPerCase ?? 60,
+      // Finance email
+      financeEmail: partner.financeEmail || '',
     });
     setIsEditDialogOpen(true);
   };
@@ -293,6 +297,8 @@ const DistributorsPage = () => {
       pcoDutyRate: editingPartner.pcoDutyRate,
       pcoVatRate: editingPartner.pcoVatRate,
       logisticsCostPerCase: editingPartner.logisticsCostPerCase,
+      // Finance email
+      financeEmail: editingPartner.financeEmail || undefined,
     });
   };
 
@@ -1176,6 +1182,36 @@ const DistributorsPage = () => {
                         Default: $60/case
                       </Typography>
                     </div>
+                  </div>
+                </div>
+
+                {/* Finance Email */}
+                <div className="space-y-4 border-t border-border-muted pt-4">
+                  <Typography variant="bodySm" className="font-semibold flex items-center gap-2">
+                    <IconReceipt className="h-4 w-4" />
+                    Finance Department
+                  </Typography>
+
+                  <Typography variant="bodyXs" colorRole="muted">
+                    Email address for proforma invoices when orders are assigned to this distributor
+                  </Typography>
+
+                  <div>
+                    <label className="block text-sm font-medium text-text-primary mb-1">
+                      Finance Email
+                    </label>
+                    <input
+                      type="email"
+                      value={editingPartner.financeEmail}
+                      onChange={(e) =>
+                        setEditingPartner({ ...editingPartner, financeEmail: e.target.value })
+                      }
+                      placeholder="finance@distributor.com"
+                      className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm"
+                    />
+                    <Typography variant="bodyXs" colorRole="muted" className="mt-1">
+                      Proforma invoices will be sent here when orders are assigned
+                    </Typography>
                   </div>
                 </div>
 

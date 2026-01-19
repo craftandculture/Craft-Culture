@@ -32,6 +32,8 @@ const updatePartnerSchema = z.object({
   logisticsCostPerCase: z.number().min(0).optional(),
   pcoDutyRate: z.number().min(0).max(1).optional(),
   pcoVatRate: z.number().min(0).max(1).optional(),
+  // Finance email for proforma invoices (distributors only)
+  financeEmail: z.string().email().optional().or(z.literal('')),
 });
 
 export type UpdatePartnerInput = z.infer<typeof updatePartnerSchema>;
