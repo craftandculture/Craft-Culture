@@ -1,4 +1,4 @@
-import { createOpenAI } from '@ai-sdk/openai';
+import { createAnthropic } from '@ai-sdk/anthropic';
 import { TRPCError } from '@trpc/server';
 import { type CoreMessage, generateObject } from 'ai';
 import pdfParse from 'pdf-parse';
@@ -164,23 +164,23 @@ const adminExtractDocument = adminProcedure.input(extractDocumentSchema).mutatio
   // The AI SDK expects raw base64, not a data URL
   const file = rawFile.includes(',') ? rawFile.split(',')[1] ?? rawFile : rawFile;
 
-  const openaiKey = process.env.OPENAI_API_KEY;
+  const anthropicKey = process.env.ANTHROPIC_API_KEY;
 
   logger.info('[LogisticsDocumentExtraction] Starting extraction:', {
-    hasKey: !!openaiKey,
+    hasKey: !!anthropicKey,
     documentType,
     fileType,
   });
 
-  if (!openaiKey) {
+  if (!anthropicKey) {
     throw new TRPCError({
       code: 'INTERNAL_SERVER_ERROR',
-      message: 'AI extraction is not configured. OPENAI_API_KEY environment variable is not set.',
+      message: 'AI extraction is not configured. ANTHROPIC_API_KEY environment variable is not set.',
     });
   }
 
-  const openai = createOpenAI({
-    apiKey: openaiKey,
+  const anthropic = createAnthropic({
+    apiKey: anthropicKey,
   });
 
   const systemPrompt = getSystemPrompt(documentType);
@@ -206,7 +206,7 @@ const adminExtractDocument = adminProcedure.input(extractDocumentSchema).mutatio
       ];
 
       const result = await generateObject({
-        model: openai('gpt-4o'),
+        model: anthropic('claude-sonnet-4-20250514'),
         schema: extractedLogisticsDataSchema,
         system: systemPrompt,
         messages,
@@ -236,9 +236,10 @@ const adminExtractDocument = adminProcedure.input(extractDocumentSchema).mutatio
       // If we got meaningful text, use text-based extraction
       if (pdfText && pdfText.trim().length >= 50) {
         const result = await generateObject({
-          model: openai('gpt-4o'),
+          model: anthropic('claude-sonnet-4-20250514'),
           schema: extractedLogisticsDataSchema,
           system: systemPrompt,
+          maxTokens: 16384,
           prompt: `Please extract ALL logistics data from this ${documentType.replace('_', ' ')} document text.
 
 CRITICAL: Extract EVERY SINGLE line item from the document - do not stop early or skip any items. Count the items to make sure you have them all.
@@ -273,7 +274,7 @@ ${pdfText}
         ];
 
         const result = await generateObject({
-          model: openai('gpt-4o'),
+          model: anthropic('claude-sonnet-4-20250514'),
           schema: extractedLogisticsDataSchema,
           system: systemPrompt,
           messages: pdfMessages,
