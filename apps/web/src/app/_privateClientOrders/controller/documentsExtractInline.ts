@@ -1,6 +1,7 @@
 import { createOpenAI } from '@ai-sdk/openai';
 import { TRPCError } from '@trpc/server';
 import { generateObject } from 'ai';
+import pdfParse from 'pdf-parse';
 import { z } from 'zod';
 
 import { winePartnerProcedure } from '@/lib/trpc/procedures';
@@ -126,14 +127,33 @@ Be precise with numbers and amounts.`,
 
       extractedData = result.object;
     } else if (fileType === 'application/pdf') {
-      // For PDFs, use file content
+      // Extract text from PDF using pdf-parse for reliable text extraction
+      const pdfBuffer = Buffer.from(file, 'base64');
+      const pdfData = await pdfParse(pdfBuffer);
+      const pdfText = pdfData.text;
+
+      logger.info('[DocumentExtraction] PDF text extracted:', {
+        pages: pdfData.numpages,
+        textLength: pdfText.length,
+        textPreview: pdfText.substring(0, 500),
+      });
+
+      if (!pdfText || pdfText.trim().length < 50) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message:
+            'Could not extract text from PDF. The PDF may be scanned/image-based. Please try uploading a screenshot or image of the document instead.',
+        });
+      }
+
+      // Use GPT-4o to structure the extracted text
       const result = await generateObject({
         model: openai('gpt-4o'),
         schema: extractedDataSchema,
         messages: [
           {
             role: 'system',
-            content: `You are an expert at extracting structured data from wine invoice PDFs.
+            content: `You are an expert at extracting structured data from wine invoice text.
 Extract all wine products from the invoice with their details.
 For each line item, extract:
 - productName: The full wine name (e.g., "Château Margaux 2018")
@@ -152,17 +172,7 @@ Be precise with numbers and amounts.`,
           },
           {
             role: 'user',
-            content: [
-              {
-                type: 'text',
-                text: 'Please extract all wine products from this invoice PDF. Focus on extracting each line item with product name, producer, vintage, quantity, and pricing.',
-              },
-              {
-                type: 'file',
-                data: file,
-                mediaType: 'application/pdf',
-              },
-            ],
+            content: `Please extract all wine products from this invoice document text. Focus on extracting each line item with product name, producer, vintage, quantity, and pricing.\n\n--- DOCUMENT TEXT ---\n${pdfText}\n--- END DOCUMENT ---`,
           },
         ],
       });
