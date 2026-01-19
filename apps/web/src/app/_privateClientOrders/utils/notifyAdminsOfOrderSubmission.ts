@@ -100,7 +100,7 @@ const notifyAdminsOfOrderSubmission = async (params: NotifyAdminsParams) => {
               orderUrl,
               partnerName,
               clientName: clientName ?? 'Not specified',
-              totalAmount: totalFormatted,
+              totalAmountUSD: totalFormatted,
               itemCount: String(itemCount ?? 0),
             },
           };
