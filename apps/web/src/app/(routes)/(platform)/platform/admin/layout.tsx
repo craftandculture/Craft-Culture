@@ -1,12 +1,15 @@
 import { redirect } from 'next/navigation';
 
-import AdminSidebarWrapper from '@/app/_admin/components/AdminSidebarWrapper';
 import getQueryClient from '@/lib/react-query';
 import api from '@/lib/trpc/server';
 import tryCatch from '@/utils/tryCatch';
 
 export const dynamic = 'force-dynamic';
 
+/**
+ * Admin layout - sidebar is now in the parent (platform) layout
+ * This layout only handles admin auth check
+ */
 const AdminLayout = async ({ children }: React.PropsWithChildren) => {
   const queryClient = getQueryClient();
 
@@ -16,12 +19,7 @@ const AdminLayout = async ({ children }: React.PropsWithChildren) => {
     redirect('/platform');
   }
 
-  return (
-    <div className="flex min-h-[calc(100vh-64px)] bg-fill-muted/20 dark:bg-background-primary">
-      <AdminSidebarWrapper />
-      <main className="flex-1 overflow-auto">{children}</main>
-    </div>
-  );
+  return <>{children}</>;
 };
 
 export default AdminLayout;

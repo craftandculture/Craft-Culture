@@ -11,15 +11,17 @@ const COOKIE_NAME = 'admin-sidebar-collapsed';
  * Persists state to cookies for consistency across page loads
  */
 const AdminSidebarWrapper = () => {
+  // Default to expanded (false = not collapsed)
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [mounted, setMounted] = useState(false);
 
-  // Load initial state from cookie on mount
+  // Load initial state from cookie on mount - default to expanded if no cookie
   useEffect(() => {
     const cookie = document.cookie.split('; ').find((row) => row.startsWith(`${COOKIE_NAME}=`));
     if (cookie) {
       setIsCollapsed(cookie.split('=')[1] === 'true');
     }
+    // If no cookie, stay expanded (default)
     setMounted(true);
   }, []);
 
