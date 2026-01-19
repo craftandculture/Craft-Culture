@@ -185,14 +185,16 @@ const distributorResendProformaInvoice = distributorProcedure
         email: distributor.financeEmail,
       };
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
       logger.error('PCO: Failed to resend proforma invoice', {
         email: distributor.financeEmail,
         orderId,
-        error: error instanceof Error ? error.message : String(error),
+        error: errorMessage,
+        stack: error instanceof Error ? error.stack : undefined,
       });
       throw new TRPCError({
         code: 'INTERNAL_SERVER_ERROR',
-        message: 'Failed to send email',
+        message: `Failed to send email: ${errorMessage}`,
       });
     }
   });
