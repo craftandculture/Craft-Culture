@@ -195,7 +195,7 @@ const adminExtractDocument = adminProcedure.input(extractDocumentSchema).mutatio
           content: [
             {
               type: 'text',
-              text: `Please extract all logistics data from this ${documentType.replace('_', ' ')} image. IMPORTANT: Only extract text that you can clearly read. For product names and descriptions, extract them EXACTLY as written - do not make up or guess any names. If text is unclear, use "UNCLEAR" or leave empty.`,
+              text: `Please extract ALL logistics data from this ${documentType.replace('_', ' ')} image. CRITICAL: Extract EVERY SINGLE line item - do not stop early or skip any items. Count the items to make sure you have them all. For product names and descriptions, extract them EXACTLY as written - do not make up or guess any names. If text is unclear, use "UNCLEAR" or leave empty.`,
             },
             {
               type: 'image',
@@ -239,7 +239,15 @@ const adminExtractDocument = adminProcedure.input(extractDocumentSchema).mutatio
           model: openai('gpt-4o'),
           schema: extractedLogisticsDataSchema,
           system: systemPrompt,
-          prompt: `Please extract all logistics data from this ${documentType.replace('_', ' ')} document text. IMPORTANT: Only extract text that is clearly present. For product names and descriptions, extract them EXACTLY as they appear in the text - do not make up, invent, or guess any names. If the text seems garbled or unclear, indicate that rather than guessing.\n\n--- DOCUMENT TEXT ---\n${pdfText}\n--- END DOCUMENT ---`,
+          prompt: `Please extract ALL logistics data from this ${documentType.replace('_', ' ')} document text.
+
+CRITICAL: Extract EVERY SINGLE line item from the document - do not stop early or skip any items. Count the items to make sure you have them all.
+
+IMPORTANT: Only extract text that is clearly present. For product names and descriptions, extract them EXACTLY as they appear in the text - do not make up, invent, or guess any names. If the text seems garbled or unclear, indicate that rather than guessing.
+
+--- DOCUMENT TEXT ---
+${pdfText}
+--- END DOCUMENT ---`,
         });
 
         extractedData = result.object;
@@ -253,7 +261,7 @@ const adminExtractDocument = adminProcedure.input(extractDocumentSchema).mutatio
             content: [
               {
                 type: 'text',
-                text: `Please extract all logistics data from this ${documentType.replace('_', ' ')} PDF document. IMPORTANT: Only extract text that you can clearly read. For product names and descriptions, extract them EXACTLY as written - do not make up or guess any names. If text is unclear, use "UNCLEAR" or leave empty. Be precise with numbers, dates, and reference numbers.`,
+                text: `Please extract ALL logistics data from this ${documentType.replace('_', ' ')} PDF document. CRITICAL: Extract EVERY SINGLE line item from ALL pages - do not stop early or skip any items. Count the items to make sure you have them all. For product names and descriptions, extract them EXACTLY as written - do not make up or guess any names. If text is unclear, use "UNCLEAR" or leave empty. Be precise with numbers, dates, and reference numbers.`,
               },
               {
                 type: 'file',
