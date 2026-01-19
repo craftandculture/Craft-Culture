@@ -1,6 +1,7 @@
 import { createOpenAI } from '@ai-sdk/openai';
 import { TRPCError } from '@trpc/server';
 import { generateObject } from 'ai';
+import pdfParse from 'pdf-parse';
 import { z } from 'zod';
 
 import { adminProcedure } from '@/lib/trpc/procedures';
@@ -207,6 +208,26 @@ const adminExtractDocument = adminProcedure.input(extractDocumentSchema).mutatio
 
       extractedData = result.object;
     } else if (fileType === 'application/pdf') {
+      // Extract text from PDF using pdf-parse for reliable text extraction
+      const pdfBuffer = Buffer.from(file, 'base64');
+      const pdfData = await pdfParse(pdfBuffer);
+      const pdfText = pdfData.text;
+
+      logger.info('[LogisticsDocumentExtraction] PDF text extracted:', {
+        pages: pdfData.numpages,
+        textLength: pdfText.length,
+        textPreview: pdfText.substring(0, 500),
+      });
+
+      if (!pdfText || pdfText.trim().length < 50) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message:
+            'Could not extract text from PDF. The PDF may be scanned/image-based. Please try uploading a screenshot or image of the document instead.',
+        });
+      }
+
+      // Use GPT-4o to structure the extracted text
       const result = await generateObject({
         model: openai('gpt-4o'),
         schema: extractedLogisticsDataSchema,
@@ -217,17 +238,7 @@ const adminExtractDocument = adminProcedure.input(extractDocumentSchema).mutatio
           },
           {
             role: 'user',
-            content: [
-              {
-                type: 'text',
-                text: `Please extract all logistics data from this ${documentType.replace('_', ' ')} PDF. Extract all fields that are visible in the document.`,
-              },
-              {
-                type: 'file',
-                data: file,
-                mediaType: 'application/pdf',
-              },
-            ],
+            content: `Please extract all logistics data from this ${documentType.replace('_', ' ')} document text. Extract all fields that are present in the document.\n\n--- DOCUMENT TEXT ---\n${pdfText}\n--- END DOCUMENT ---`,
           },
         ],
       });
