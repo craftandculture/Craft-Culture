@@ -86,15 +86,12 @@ const notifyAdminsOfOrderSubmission = async (params: NotifyAdminsParams) => {
     });
 
     // Send email to each admin
+    logger.info('PCO: About to send emails to admins', { adminCount: adminUsers.length });
+
     for (const admin of adminUsers) {
       if (admin.email) {
         try {
-          logger.info('PCO: Sending email via Loops', {
-            templateId: ADMIN_TEMPLATE_ID,
-            email: admin.email,
-          });
-
-          const result = await loops.sendTransactionalEmail({
+          const emailPayload = {
             transactionalId: ADMIN_TEMPLATE_ID,
             email: admin.email,
             dataVariables: {
@@ -106,13 +103,26 @@ const notifyAdminsOfOrderSubmission = async (params: NotifyAdminsParams) => {
               totalAmount: totalFormatted,
               itemCount: String(itemCount ?? 0),
             },
+          };
+
+          logger.info('PCO: Sending email via Loops', {
+            templateId: ADMIN_TEMPLATE_ID,
+            email: admin.email,
+            payload: JSON.stringify(emailPayload),
           });
 
-          logger.info('PCO: Loops email result', { email: admin.email, result });
+          const result = await loops.sendTransactionalEmail(emailPayload);
+
+          logger.info('PCO: Loops email result', {
+            email: admin.email,
+            result: JSON.stringify(result),
+            success: result?.success,
+          });
         } catch (error) {
           logger.error('PCO: Failed to send email via Loops', {
             email: admin.email,
             error: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined,
           });
         }
       }
