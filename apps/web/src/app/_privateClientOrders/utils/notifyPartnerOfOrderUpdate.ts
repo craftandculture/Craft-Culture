@@ -142,6 +142,7 @@ const notifyPartnerOfOrderUpdate = async (params: NotifyPartnerParams) => {
       // Create in-app notification
       await createNotification({
         userId: member.userId,
+        partnerId,
         type: inAppType,
         title,
         message,

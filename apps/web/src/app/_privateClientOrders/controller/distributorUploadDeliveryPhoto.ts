@@ -116,6 +116,7 @@ const distributorUploadDeliveryPhoto = distributorProcedure
       for (const member of partnerMembersList) {
         await createNotification({
           userId: member.userId,
+          partnerId: order.partnerId,
           type: 'status_update',
           title: 'Proof of Delivery Uploaded',
           message: `Proof of delivery uploaded for order ${orderRef}`,

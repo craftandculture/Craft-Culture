@@ -90,6 +90,7 @@ const notifyPartnerOfQuoteSelection = async ({
     if (partner.userId) {
       await createNotification({
         userId: partner.userId,
+        partnerId,
         type: 'rfq_quotes_selected',
         title: 'Quotes Selected',
         message: `${selectedItemCount} of your quotes were selected for ${rfq.name} (${totalFormatted} total)`,

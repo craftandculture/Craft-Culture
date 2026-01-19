@@ -96,6 +96,7 @@ const ordersLogContactAttempt = distributorProcedure
       for (const member of partnerMembersList) {
         await createNotification({
           userId: member.userId,
+          partnerId: order.partnerId,
           type: 'status_update',
           title: 'Delivery Contact Attempt',
           message: `Distributor attempted to contact client for order ${updatedOrder?.orderNumber ?? orderId}: "${notes}"`,

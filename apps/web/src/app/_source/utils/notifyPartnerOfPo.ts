@@ -93,6 +93,7 @@ const notifyPartnerOfPo = async ({ poId, partnerId }: NotifyPartnerOfPoParams) =
     if (partner.userId) {
       await createNotification({
         userId: partner.userId,
+        partnerId,
         type: 'po_received',
         title: 'New Purchase Order',
         message: `You have received a new purchase order: ${po.poNumber} (${totalFormatted})`,

@@ -120,6 +120,7 @@ const notifyDistributorOfOrderUpdate = async (params: NotifyDistributorParams) =
       // Create in-app notification
       await createNotification({
         userId: member.userId,
+        partnerId: distributorId,
         type: inAppType,
         title,
         message,

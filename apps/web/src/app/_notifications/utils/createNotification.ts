@@ -5,6 +5,7 @@ import logger from '@/utils/logger';
 
 interface CreateNotificationParams {
   userId: string;
+  partnerId?: string; // Partner context - used to filter notifications when user switches partners
   type: Notification['type'];
   title: string;
   message: string;
@@ -48,7 +49,7 @@ const isNotificationDisabled = (
  * @returns The created notification or null if user doesn't exist or notification is disabled
  */
 const createNotification = async (params: CreateNotificationParams) => {
-  const { userId, type, title, message, entityType, entityId, actionUrl, metadata } = params;
+  const { userId, partnerId, type, title, message, entityType, entityId, actionUrl, metadata } = params;
 
   // Verify user exists and get their notification preferences
   const user = await db.query.users.findFirst({
@@ -73,6 +74,7 @@ const createNotification = async (params: CreateNotificationParams) => {
     .insert(notifications)
     .values({
       userId,
+      partnerId,
       type,
       title,
       message,
