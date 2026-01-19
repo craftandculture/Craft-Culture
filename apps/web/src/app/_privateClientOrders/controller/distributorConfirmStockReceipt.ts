@@ -30,7 +30,7 @@ const distributorConfirmStockReceipt = distributorProcedure
     // Verify order belongs to this distributor
     const order = await db.query.privateClientOrders.findFirst({
       where: { id: orderId, distributorId: partnerId },
-      columns: { id: true, status: true, partnerId: true, orderNumber: true },
+      columns: { id: true, status: true, partnerId: true, orderNumber: true, totalUsd: true, clientName: true },
     });
 
     if (!order) {
@@ -116,7 +116,9 @@ const distributorConfirmStockReceipt = distributorProcedure
         orderNumber: order.orderNumber ?? orderId,
         partnerId: order.partnerId,
         type: 'stock_received',
-        notes: `${items.length} item(s) confirmed at distributor warehouse`,
+        totalAmount: order.totalUsd ?? 0,
+        clientName: order.clientName ?? 'Client',
+        itemCount: items.length,
       });
     }
 

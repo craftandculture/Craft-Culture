@@ -156,7 +156,8 @@ const ordersApprove = adminProcedure.input(approveOrderSchema).mutation(async ({
       orderNumber: updatedOrder?.orderNumber ?? order.orderNumber ?? orderId,
       partnerId: order.partnerId,
       type: 'approved',
-      totalAmount: order.totalUsd ?? undefined,
+      totalAmount: order.totalUsd ?? 0,
+      clientName: order.clientName ?? 'Client',
     });
   }
 

@@ -3,7 +3,7 @@ import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
 
 import db from '@/database/client';
-import { privateClientOrderActivityLogs, privateClientOrderDocuments, privateClientOrders } from '@/database/schema';
+import { partners, privateClientOrderActivityLogs, privateClientOrderDocuments, privateClientOrders } from '@/database/schema';
 import { winePartnerProcedure } from '@/lib/trpc/procedures';
 
 import notifyDistributorOfOrderUpdate from '../utils/notifyDistributorOfOrderUpdate';
@@ -97,11 +97,20 @@ const ordersPartnerAcknowledgeInvoice = winePartnerProcedure
 
     // Notify distributor that invoice was acknowledged
     if (order.distributorId) {
+      // Get partner name for notification
+      const [partner] = await db
+        .select({ businessName: partners.businessName })
+        .from(partners)
+        .where(eq(partners.id, partnerId));
+
       await notifyDistributorOfOrderUpdate({
         orderId,
         orderNumber: updatedOrder?.orderNumber ?? order.orderNumber ?? orderId,
         distributorId: order.distributorId,
         type: 'invoice_acknowledged',
+        partnerName: partner?.businessName ?? 'Partner',
+        clientName: order.clientName ?? 'Client',
+        totalAmount: order.totalUsd ?? 0,
         paymentReference: order.paymentReference ?? undefined,
       });
     }

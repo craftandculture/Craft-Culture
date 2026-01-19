@@ -187,15 +187,12 @@ const notifyPartnerOfOrderUpdate = async (params: NotifyPartnerParams) => {
             },
           };
 
-          // eslint-disable-next-line no-console
           console.log('PCO_EMAIL_PAYLOAD:', JSON.stringify(emailPayload));
 
           const result = await loops.sendTransactionalEmail(emailPayload);
 
-          // eslint-disable-next-line no-console
           console.log('PCO_EMAIL_RESULT:', JSON.stringify({ email: user.email, type, result }));
         } catch (error) {
-          // eslint-disable-next-line no-console
           console.log('PCO_EMAIL_ERROR:', JSON.stringify({
             email: user.email,
             type,
