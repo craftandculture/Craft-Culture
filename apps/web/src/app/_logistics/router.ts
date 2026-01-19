@@ -2,10 +2,12 @@ import { createTRPCRouter } from '@/lib/trpc/trpc';
 
 import adminAcceptQuote from './controller/adminAcceptQuote';
 import adminAddItem from './controller/adminAddItem';
+import adminAssignQuoteRequest from './controller/adminAssignQuoteRequest';
 import adminCalculateLandedCost from './controller/adminCalculateLandedCost';
 import adminCompareQuotes from './controller/adminCompareQuotes';
 import adminCreate from './controller/adminCreate';
 import adminCreateQuote from './controller/adminCreateQuote';
+import adminCreateQuoteRequest from './controller/adminCreateQuoteRequest';
 import adminDeleteDocument from './controller/adminDeleteDocument';
 import adminExportCompliancePdf from './controller/adminExportCompliancePdf';
 import adminExportLandedCostExcel from './controller/adminExportLandedCostExcel';
@@ -17,6 +19,8 @@ import adminGetLandedCostReport from './controller/adminGetLandedCostReport';
 import adminGetMany from './controller/adminGetMany';
 import adminGetOne from './controller/adminGetOne';
 import adminGetQuote from './controller/adminGetQuote';
+import adminGetQuoteRequest from './controller/adminGetQuoteRequest';
+import adminGetQuoteRequests from './controller/adminGetQuoteRequests';
 import adminGetQuotes from './controller/adminGetQuotes';
 import adminGetReportMetrics from './controller/adminGetReportMetrics';
 import adminRejectQuote from './controller/adminRejectQuote';
@@ -26,8 +30,10 @@ import adminSyncHillebrandDocuments from './controller/adminSyncHillebrandDocume
 import adminSyncHillebrandInvoices from './controller/adminSyncHillebrandInvoices';
 import adminUpdate from './controller/adminUpdate';
 import adminUpdateQuote from './controller/adminUpdateQuote';
+import adminUpdateQuoteRequest from './controller/adminUpdateQuoteRequest';
 import adminUpdateStatus from './controller/adminUpdateStatus';
 import adminUploadDocument from './controller/adminUploadDocument';
+import adminUploadQuoteRequestAttachment from './controller/adminUploadQuoteRequestAttachment';
 import partnerGetMany from './controller/partnerGetMany';
 import partnerGetOne from './controller/partnerGetOne';
 import partnerUploadDocument from './controller/partnerUploadDocument';
@@ -81,6 +87,16 @@ const adminRouter = createTRPCRouter({
     accept: adminAcceptQuote,
     reject: adminRejectQuote,
     compare: adminCompareQuotes,
+  }),
+
+  // Quote Requests
+  requests: createTRPCRouter({
+    create: adminCreateQuoteRequest,
+    update: adminUpdateQuoteRequest,
+    getMany: adminGetQuoteRequests,
+    getOne: adminGetQuoteRequest,
+    assign: adminAssignQuoteRequest,
+    uploadAttachment: adminUploadQuoteRequestAttachment,
   }),
 });
 

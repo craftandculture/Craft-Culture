@@ -97,7 +97,7 @@ const AdminSidebar = ({ isCollapsed, onToggleCollapse }: AdminSidebarProps) => {
         } ${collapsed ? 'justify-center' : ''}`}
         title={collapsed ? item.label : undefined}
       >
-        <Icon icon={item.icon} size={collapsed ? 'md' : 'sm'} className={isActive ? 'text-text-brand' : ''} />
+        <Icon icon={item.icon} size={collapsed ? 'lg' : 'sm'} className={isActive ? 'text-text-brand' : ''} />
         {!collapsed && <span>{item.label}</span>}
       </Link>
     );

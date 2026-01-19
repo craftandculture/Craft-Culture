@@ -3,6 +3,7 @@ import { and, count, desc, eq, gte, isNotNull, lt, sql, sum } from 'drizzle-orm'
 import db from '@/database/client';
 import {
   logisticsDocuments,
+  logisticsQuoteRequests,
   logisticsQuotes,
   logisticsShipments,
 } from '@/database/schema';
@@ -36,6 +37,8 @@ const adminGetDashboardMetrics = adminProcedure.query(async () => {
     pendingQuotes,
     expiringQuotes,
     recentActivity,
+    pendingQuoteRequests,
+    inProgressQuoteRequests,
   ] = await Promise.all([
     // Shipment counts by status
     db
@@ -140,6 +143,18 @@ const adminGetDashboardMetrics = adminProcedure.query(async () => {
       .select({ count: count() })
       .from(logisticsShipments)
       .where(gte(logisticsShipments.createdAt, thirtyDaysAgo)),
+
+    // Pending quote requests count
+    db
+      .select({ count: count() })
+      .from(logisticsQuoteRequests)
+      .where(eq(logisticsQuoteRequests.status, 'pending')),
+
+    // In-progress quote requests count
+    db
+      .select({ count: count() })
+      .from(logisticsQuoteRequests)
+      .where(eq(logisticsQuoteRequests.status, 'in_progress')),
   ]);
 
   // Process shipment status counts
@@ -191,6 +206,10 @@ const adminGetDashboardMetrics = adminProcedure.query(async () => {
     quotes: {
       pendingCount: pendingQuotes[0]?.count || 0,
       expiringCount: expiringQuotes[0]?.count || 0,
+    },
+    quoteRequests: {
+      pendingCount: pendingQuoteRequests[0]?.count || 0,
+      inProgressCount: inProgressQuoteRequests[0]?.count || 0,
     },
   };
 });
