@@ -29,6 +29,8 @@ interface NotifyAdminsParams {
 const notifyAdminsOfOrderSubmission = async (params: NotifyAdminsParams) => {
   const { orderId, orderNumber, partnerId, clientName, totalAmount, itemCount } = params;
 
+  logger.info('PCO: notifyAdminsOfOrderSubmission called', { orderId, orderNumber, partnerId });
+
   try {
     // Get partner details
     const [partner] = await db
@@ -80,11 +82,21 @@ const notifyAdminsOfOrderSubmission = async (params: NotifyAdminsParams) => {
       },
     });
 
+    logger.info('PCO: Found admin users for notification', {
+      count: adminUsers.length,
+      emails: adminUsers.map((a) => a.email),
+    });
+
     // Send email to each admin
     for (const admin of adminUsers) {
       if (admin.email) {
         try {
-          await loops.sendTransactionalEmail({
+          logger.info('PCO: Sending email via Loops', {
+            templateId: ADMIN_TEMPLATE_ID,
+            email: admin.email,
+          });
+
+          const result = await loops.sendTransactionalEmail({
             transactionalId: ADMIN_TEMPLATE_ID,
             email: admin.email,
             dataVariables: {
@@ -97,14 +109,20 @@ const notifyAdminsOfOrderSubmission = async (params: NotifyAdminsParams) => {
               itemCount: String(itemCount ?? 0),
             },
           });
-          logger.dev(`Sent PCO admin submission email to: ${admin.email}`);
+
+          logger.info('PCO: Loops email result', { email: admin.email, result });
         } catch (error) {
-          logger.error(`Failed to send PCO admin email to ${admin.email}:`, error);
+          logger.error('PCO: Failed to send email via Loops', {
+            email: admin.email,
+            error: error instanceof Error ? error.message : String(error),
+          });
         }
       }
     }
   } catch (error) {
-    logger.error('Failed to notify admins of order submission:', error);
+    logger.error('PCO: Failed to notify admins of order submission', {
+      error: error instanceof Error ? error.message : String(error),
+    });
   }
 };
 
