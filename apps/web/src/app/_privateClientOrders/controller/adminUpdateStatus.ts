@@ -3,10 +3,12 @@ import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 
 import db from '@/database/client';
-import { privateClientOrders } from '@/database/schema';
+import { privateClientOrderActivityLogs, privateClientOrders } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
+import logger from '@/utils/logger';
 
 import { privateClientOrderStatusEnum } from '../schemas/getOrdersSchema';
+import notifyPartnerOfOrderUpdate from '../utils/notifyPartnerOfOrderUpdate';
 
 const updateStatusSchema = z.object({
   orderId: z.string().uuid(),
@@ -14,27 +16,46 @@ const updateStatusSchema = z.object({
 });
 
 /**
+ * Map order status to partner notification type
+ */
+const getPartnerNotificationType = (status: string) => {
+  const statusToNotification: Record<string, 'approved' | 'revision_requested' | 'verification_required' | 'client_verified' | 'verification_failed' | 'delivery_scheduled' | 'delivered' | 'stock_received' | null> = {
+    cc_approved: 'approved',
+    revision_requested: 'revision_requested',
+    awaiting_client_verification: 'verification_required',
+    client_verified: 'client_verified',
+    verification_failed: 'verification_failed',
+    delivery_scheduled: 'delivery_scheduled',
+    delivered: 'delivered',
+  };
+  return statusToNotification[status] ?? null;
+};
+
+/**
  * Update the status of a private client order
  *
  * Admins can update the status of any order.
+ * Triggers appropriate notifications based on the new status.
  */
 const adminUpdateStatus = adminProcedure
   .input(updateStatusSchema)
-  .mutation(async ({ input }) => {
+  .mutation(async ({ input, ctx }) => {
     const { orderId, status } = input;
+    const { user } = ctx;
 
-    // Verify order exists
-    const [existing] = await db
-      .select({ id: privateClientOrders.id })
-      .from(privateClientOrders)
-      .where(eq(privateClientOrders.id, orderId));
+    // Fetch full order details
+    const order = await db.query.privateClientOrders.findFirst({
+      where: { id: orderId },
+    });
 
-    if (!existing) {
+    if (!order) {
       throw new TRPCError({
         code: 'NOT_FOUND',
         message: 'Order not found',
       });
     }
+
+    const previousStatus = order.status;
 
     // Update the order status
     const [updated] = await db
@@ -45,6 +66,35 @@ const adminUpdateStatus = adminProcedure
       })
       .where(eq(privateClientOrders.id, orderId))
       .returning();
+
+    // Log the activity
+    await db.insert(privateClientOrderActivityLogs).values({
+      orderId,
+      userId: user.id,
+      action: 'status_changed',
+      previousStatus,
+      newStatus: status,
+      notes: `Admin changed status from ${previousStatus} to ${status}`,
+    });
+
+    // Send partner notification if applicable
+    const notificationType = getPartnerNotificationType(status);
+    if (notificationType && order.partnerId) {
+      logger.info('PCO: Sending partner notification from adminUpdateStatus', {
+        orderId,
+        status,
+        notificationType,
+        partnerId: order.partnerId,
+      });
+
+      await notifyPartnerOfOrderUpdate({
+        orderId,
+        orderNumber: updated?.orderNumber ?? order.orderNumber ?? orderId,
+        partnerId: order.partnerId,
+        type: notificationType,
+        totalAmount: order.totalUsd ?? undefined,
+      });
+    }
 
     return updated;
   });
