@@ -95,10 +95,17 @@ const extractedLogisticsDataSchema = z.object({
  */
 const getSystemPrompt = (documentType: string) => {
   const baseInstructions = `You are an expert at extracting structured data from logistics documents.
-Be precise with numbers, dates, and reference numbers.
-For dates, use ISO 8601 format (YYYY-MM-DD).
-For currency, use standard codes (USD, EUR, AED, GBP, etc.).
-Extract all available information that matches the schema fields.`;
+
+CRITICAL RULES - YOU MUST FOLLOW THESE:
+1. ONLY extract text that you can clearly read in the document. NEVER make up, guess, or invent any data.
+2. For product names and descriptions: Extract them EXACTLY as written. If you cannot read a product name clearly, use "UNCLEAR" or leave it empty.
+3. DO NOT hallucinate or generate plausible-sounding data. If something is not visible in the document, leave the field empty.
+4. Be precise with numbers, dates, and reference numbers - only use values you can see.
+5. For dates, use ISO 8601 format (YYYY-MM-DD).
+6. For currency, use standard codes (USD, EUR, AED, GBP, etc.).
+7. If the document text is garbled or unreadable, indicate that clearly rather than guessing.
+
+Extract all available information that matches the schema fields, but ONLY what you can actually see.`;
 
   const typeSpecificInstructions: Record<string, string> = {
     freight_invoice: `Focus on extracting:
@@ -188,7 +195,7 @@ const adminExtractDocument = adminProcedure.input(extractDocumentSchema).mutatio
           content: [
             {
               type: 'text',
-              text: `Please extract all logistics data from this ${documentType.replace('_', ' ')} image. Extract all fields that are visible in the document.`,
+              text: `Please extract all logistics data from this ${documentType.replace('_', ' ')} image. IMPORTANT: Only extract text that you can clearly read. For product names and descriptions, extract them EXACTLY as written - do not make up or guess any names. If text is unclear, use "UNCLEAR" or leave empty.`,
             },
             {
               type: 'image',
@@ -232,7 +239,7 @@ const adminExtractDocument = adminProcedure.input(extractDocumentSchema).mutatio
           model: openai('gpt-4o'),
           schema: extractedLogisticsDataSchema,
           system: systemPrompt,
-          prompt: `Please extract all logistics data from this ${documentType.replace('_', ' ')} document text. Extract all fields that are present in the document.\n\n--- DOCUMENT TEXT ---\n${pdfText}\n--- END DOCUMENT ---`,
+          prompt: `Please extract all logistics data from this ${documentType.replace('_', ' ')} document text. IMPORTANT: Only extract text that is clearly present. For product names and descriptions, extract them EXACTLY as they appear in the text - do not make up, invent, or guess any names. If the text seems garbled or unclear, indicate that rather than guessing.\n\n--- DOCUMENT TEXT ---\n${pdfText}\n--- END DOCUMENT ---`,
         });
 
         extractedData = result.object;
@@ -246,7 +253,7 @@ const adminExtractDocument = adminProcedure.input(extractDocumentSchema).mutatio
             content: [
               {
                 type: 'text',
-                text: `Please extract all logistics data from this ${documentType.replace('_', ' ')} PDF document. Extract all fields that are visible in the document. Be precise with numbers, dates, and reference numbers.`,
+                text: `Please extract all logistics data from this ${documentType.replace('_', ' ')} PDF document. IMPORTANT: Only extract text that you can clearly read. For product names and descriptions, extract them EXACTLY as written - do not make up or guess any names. If text is unclear, use "UNCLEAR" or leave empty. Be precise with numbers, dates, and reference numbers.`,
               },
               {
                 type: 'file',
