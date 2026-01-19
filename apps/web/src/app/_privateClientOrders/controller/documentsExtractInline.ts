@@ -1,6 +1,6 @@
 import { createOpenAI } from '@ai-sdk/openai';
 import { TRPCError } from '@trpc/server';
-import { generateObject } from 'ai';
+import { type CoreMessage, generateObject } from 'ai';
 import pdfParse from 'pdf-parse';
 import { z } from 'zod';
 
@@ -55,7 +55,7 @@ const documentsExtractInline = winePartnerProcedure.input(extractInlineSchema).m
 
   // Strip data URL prefix if present (e.g., "data:application/pdf;base64,")
   // The AI SDK expects raw base64, not a data URL
-  const file = rawFile.includes(',') ? rawFile.split(',')[1] : rawFile;
+  const file = rawFile.includes(',') ? rawFile.split(',')[1] ?? rawFile : rawFile;
 
   // Read OpenAI key at runtime - MUST be read here, not from a module-level import
   // because env vars may not be available during build/module initialization
@@ -103,25 +103,27 @@ Be precise with numbers and amounts.`;
 
     if (fileType.startsWith('image/')) {
       // For images, use vision capabilities
+      const messages: CoreMessage[] = [
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'text',
+              text: 'Please extract all wine products from this invoice image. Focus on extracting each line item with product name, producer, vintage, quantity, and pricing.',
+            },
+            {
+              type: 'image',
+              image: file,
+            },
+          ],
+        },
+      ];
+
       const result = await generateObject({
         model: openai('gpt-4o'),
         schema: extractedDataSchema,
         system: systemPrompt,
-        messages: [
-          {
-            role: 'user',
-            content: [
-              {
-                type: 'text',
-                text: 'Please extract all wine products from this invoice image. Focus on extracting each line item with product name, producer, vintage, quantity, and pricing.',
-              },
-              {
-                type: 'image',
-                image: file,
-              },
-            ],
-          },
-        ],
+        messages,
       });
 
       extractedData = result.object;
