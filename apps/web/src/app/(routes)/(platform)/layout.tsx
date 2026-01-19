@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 
+import AdminSidebarWrapper from '@/app/_admin/components/AdminSidebarWrapper';
 import ImpersonationBanner from '@/app/_auth/components/ImpersonationBanner';
 import UserDropdown from '@/app/_auth/components/UserDropdown';
 import NotificationBell from '@/app/_notifications/components/NotificationBell';
@@ -228,7 +229,14 @@ const PlatformLayout = async ({ children }: React.PropsWithChildren) => {
           </div>
         </div>
       </header>
-      <div className="flex-1">{children}</div>
+      {user.role === 'admin' ? (
+        <div className="flex flex-1">
+          <AdminSidebarWrapper />
+          <div className="flex-1 overflow-auto">{children}</div>
+        </div>
+      ) : (
+        <div className="flex-1">{children}</div>
+      )}
       <BrandedFooter customerType={user.customerType} partnerType={user.partner?.type as 'wine_partner' | 'distributor' | undefined} />
     </div>
   );
