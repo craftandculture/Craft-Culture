@@ -84,15 +84,7 @@ const documentsExtractInline = winePartnerProcedure.input(extractInlineSchema).m
   try {
     let extractedData: z.infer<typeof extractedDataSchema>;
 
-    if (fileType.startsWith('image/')) {
-      // For images, use vision capabilities
-      const result = await generateObject({
-        model: openai('gpt-4o'),
-        schema: extractedDataSchema,
-        messages: [
-          {
-            role: 'system',
-            content: `You are an expert at extracting structured data from wine invoice images.
+    const systemPrompt = `You are an expert at extracting structured data from wine invoices.
 Extract all wine products from the invoice with their details.
 For each line item, extract:
 - productName: The full wine name (e.g., "Château Margaux 2018")
@@ -107,8 +99,15 @@ For each line item, extract:
 
 For dates, use ISO 8601 format (YYYY-MM-DD).
 For currency, use standard codes (GBP, USD, EUR, AED, etc.).
-Be precise with numbers and amounts.`,
-          },
+Be precise with numbers and amounts.`;
+
+    if (fileType.startsWith('image/')) {
+      // For images, use vision capabilities
+      const result = await generateObject({
+        model: openai('gpt-4o'),
+        schema: extractedDataSchema,
+        system: systemPrompt,
+        messages: [
           {
             role: 'user',
             content: [
@@ -150,31 +149,8 @@ Be precise with numbers and amounts.`,
       const result = await generateObject({
         model: openai('gpt-4o'),
         schema: extractedDataSchema,
-        messages: [
-          {
-            role: 'system',
-            content: `You are an expert at extracting structured data from wine invoice text.
-Extract all wine products from the invoice with their details.
-For each line item, extract:
-- productName: The full wine name (e.g., "Château Margaux 2018")
-- producer: The winery or producer name
-- vintage: The year (e.g., "2018")
-- region: The wine region (e.g., "Bordeaux", "Burgundy")
-- quantity: Number of cases ordered
-- unitPrice: Price per case
-- total: Line item total
-- caseConfig: Number of bottles per case - IMPORTANT: Look for patterns like "6x75cl", "12x75cl", "6x750ml" in the product name or description. Extract the first number (e.g., 6 from "6x75cl", 12 from "12x75cl"). If not found, leave empty.
-- bottleSize: Bottle size in milliliters - IMPORTANT: Look for patterns like "75cl", "750ml", "150cl", "1.5L" in the product name. Convert to ml (e.g., 75cl = 750ml, 150cl = 1500ml, 1.5L = 1500ml). If not found, leave empty.
-
-For dates, use ISO 8601 format (YYYY-MM-DD).
-For currency, use standard codes (GBP, USD, EUR, AED, etc.).
-Be precise with numbers and amounts.`,
-          },
-          {
-            role: 'user',
-            content: `Please extract all wine products from this invoice document text. Focus on extracting each line item with product name, producer, vintage, quantity, and pricing.\n\n--- DOCUMENT TEXT ---\n${pdfText}\n--- END DOCUMENT ---`,
-          },
-        ],
+        system: systemPrompt,
+        prompt: `Please extract all wine products from this invoice document text. Focus on extracting each line item with product name, producer, vintage, quantity, and pricing.\n\n--- DOCUMENT TEXT ---\n${pdfText}\n--- END DOCUMENT ---`,
       });
 
       extractedData = result.object;
