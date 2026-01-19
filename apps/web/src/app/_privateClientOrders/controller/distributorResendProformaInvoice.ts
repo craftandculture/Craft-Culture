@@ -90,6 +90,7 @@ const distributorResendProformaInvoice = distributorProcedure
         transactionalId: FINANCE_PROFORMA_TEMPLATE_ID,
         email: distributor.financeEmail,
         dataVariables: {
+          distributorName: distributor.businessName ?? 'Distributor',
           orderNumber: order.orderNumber ?? orderId,
           orderUrl,
           pdfDownloadUrl,

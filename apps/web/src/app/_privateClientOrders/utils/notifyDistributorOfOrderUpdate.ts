@@ -253,6 +253,7 @@ const notifyDistributorOfOrderUpdate = async (params: NotifyDistributorParams) =
           transactionalId: FINANCE_PROFORMA_TEMPLATE_ID,
           email: distributor.financeEmail,
           dataVariables: {
+            distributorName: distributor.businessName ?? 'Distributor',
             orderNumber,
             orderUrl,
             pdfDownloadUrl,
