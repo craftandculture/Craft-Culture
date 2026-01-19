@@ -194,6 +194,12 @@ const notifyPartnerOfOrderUpdate = async (params: NotifyPartnerParams) => {
           // eslint-disable-next-line no-console
           console.log('PCO_EMAIL_RESULT:', JSON.stringify({ email: user.email, type, result }));
         } catch (error) {
+          // eslint-disable-next-line no-console
+          console.log('PCO_EMAIL_ERROR:', JSON.stringify({
+            email: user.email,
+            type,
+            error: error instanceof Error ? error.message : String(error),
+          }));
           logger.error('PCO: Failed to send partner email via Loops', {
             email: user.email,
             error: error instanceof Error ? error.message : String(error),
