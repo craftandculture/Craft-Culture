@@ -150,7 +150,11 @@ Extract all available information that matches the schema fields.`;
  * Returns extracted data immediately for display and export.
  */
 const adminExtractDocument = adminProcedure.input(extractDocumentSchema).mutation(async ({ input }) => {
-  const { file, fileType, documentType } = input;
+  const { file: rawFile, fileType, documentType } = input;
+
+  // Strip data URL prefix if present (e.g., "data:application/pdf;base64,")
+  // The AI SDK expects raw base64, not a data URL
+  const file = rawFile.includes(',') ? rawFile.split(',')[1] : rawFile;
 
   const openaiKey = process.env.OPENAI_API_KEY;
 

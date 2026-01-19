@@ -50,7 +50,11 @@ const extractedDataSchema = z.object({
  * Returns extracted data immediately for form population.
  */
 const documentsExtractInline = winePartnerProcedure.input(extractInlineSchema).mutation(async ({ input }) => {
-  const { file, fileType } = input;
+  const { file: rawFile, fileType } = input;
+
+  // Strip data URL prefix if present (e.g., "data:application/pdf;base64,")
+  // The AI SDK expects raw base64, not a data URL
+  const file = rawFile.includes(',') ? rawFile.split(',')[1] : rawFile;
 
   // Read OpenAI key at runtime - MUST be read here, not from a module-level import
   // because env vars may not be available during build/module initialization
