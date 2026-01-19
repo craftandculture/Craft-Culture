@@ -1,7 +1,7 @@
 import { eq } from 'drizzle-orm';
 import { NextRequest, NextResponse } from 'next/server';
 
-import getUserOrRedirect from '@/app/_auth/data/getUserOrRedirect';
+import getCurrentUser from '@/app/_auth/data/getCurrentUser';
 import renderProformaInvoicePDF from '@/app/_privateClientOrders/utils/renderProformaInvoicePDF';
 import db from '@/database/client';
 import { partners, privateClientOrderItems } from '@/database/schema';
@@ -10,28 +10,30 @@ import { partners, privateClientOrderItems } from '@/database/schema';
  * Preview proforma invoice PDF for an order
  *
  * GET /api/admin/pco/proforma-preview?orderId={uuid}
+ * GET /api/admin/pco/proforma-preview?orderNumber={orderNumber}
  *
  * Returns the PDF directly for viewing in browser or download.
  */
 export async function GET(request: NextRequest) {
   try {
     // Verify admin user
-    const user = await getUserOrRedirect();
-    if (user.role !== 'admin') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+    const user = await getCurrentUser();
+    if (!user || user.role !== 'admin') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Get orderId from query params
+    // Get orderId or orderNumber from query params
     const { searchParams } = new URL(request.url);
     const orderId = searchParams.get('orderId');
+    const orderNumber = searchParams.get('orderNumber');
 
-    if (!orderId) {
-      return NextResponse.json({ error: 'orderId is required' }, { status: 400 });
+    if (!orderId && !orderNumber) {
+      return NextResponse.json({ error: 'orderId or orderNumber is required' }, { status: 400 });
     }
 
-    // Fetch the order
+    // Fetch the order by ID or order number
     const order = await db.query.privateClientOrders.findFirst({
-      where: { id: orderId },
+      where: orderId ? { id: orderId } : { orderNumber: orderNumber! },
     });
 
     if (!order) {
@@ -42,7 +44,7 @@ export async function GET(request: NextRequest) {
     const lineItems = await db
       .select()
       .from(privateClientOrderItems)
-      .where(eq(privateClientOrderItems.orderId, orderId));
+      .where(eq(privateClientOrderItems.orderId, order.id));
 
     // Fetch partner details if available
     let partner: { businessName: string; businessEmail: string | null; businessPhone: string | null } | null = null;
@@ -75,7 +77,7 @@ export async function GET(request: NextRequest) {
     // Generate PDF
     const pdfBuffer = await renderProformaInvoicePDF({
       order: {
-        orderNumber: order.orderNumber ?? orderId,
+        orderNumber: order.orderNumber ?? order.id,
         createdAt: order.createdAt,
         paymentReference: order.paymentReference,
         clientName: order.clientName ?? 'Client',
@@ -108,7 +110,7 @@ export async function GET(request: NextRequest) {
       status: 200,
       headers: {
         'Content-Type': 'application/pdf',
-        'Content-Disposition': `inline; filename="Proforma-Invoice-${order.orderNumber ?? orderId}.pdf"`,
+        'Content-Disposition': `inline; filename="Proforma-Invoice-${order.orderNumber ?? order.id}.pdf"`,
         'Content-Length': pdfBuffer.length.toString(),
       },
     });
