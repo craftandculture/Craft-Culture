@@ -110,7 +110,7 @@ const distributorResendProformaInvoice = distributorProcedure
           clientName: order.clientName ?? '',
           clientEmail: order.clientEmail ?? '',
           clientPhone: order.clientPhone ?? '',
-          paymentReference: order.paymentReference ?? '',
+          paymentReference: order.paymentReference ?? order.orderNumber ?? orderId,
           totalAmount: totalFormatted ?? '',
           totalAmountUSD: totalFormatted ?? '',
         },
