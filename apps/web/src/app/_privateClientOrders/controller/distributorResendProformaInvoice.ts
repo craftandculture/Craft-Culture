@@ -9,7 +9,7 @@ import { distributorProcedure } from '@/lib/trpc/procedures';
 import serverConfig from '@/server.config';
 import logger from '@/utils/logger';
 
-const DISTRIBUTOR_TEMPLATE_ID = 'cmkj88ybu0hm20izqhu21bqd5'; // order_assigned template
+const FINANCE_PROFORMA_TEMPLATE_ID = 'cmklmzgr612b40ixqdeluo8qb'; // finance proforma template
 
 /**
  * Resend proforma invoice notification to finance email
@@ -63,18 +63,6 @@ const distributorResendProformaInvoice = distributorProcedure
       });
     }
 
-    // Fetch partner details if available
-    let partnerName = '';
-    if (order.partnerId) {
-      const [partnerResult] = await db
-        .select({
-          businessName: partners.businessName,
-        })
-        .from(partners)
-        .where(eq(partners.id, order.partnerId));
-      partnerName = partnerResult?.businessName ?? '';
-    }
-
     // Format total for display
     const totalFormatted = order.totalUsd
       ? new Intl.NumberFormat('en-US', {
@@ -91,7 +79,7 @@ const distributorResendProformaInvoice = distributorProcedure
     // Send email via Loops with download link
     try {
       logger.info('PCO: Sending proforma invoice notification to finance', {
-        templateId: DISTRIBUTOR_TEMPLATE_ID,
+        templateId: FINANCE_PROFORMA_TEMPLATE_ID,
         email: distributor.financeEmail,
         orderId,
         orderNumber: order.orderNumber,
@@ -99,19 +87,15 @@ const distributorResendProformaInvoice = distributorProcedure
       });
 
       const result = await loops.sendTransactionalEmail({
-        transactionalId: DISTRIBUTOR_TEMPLATE_ID,
+        transactionalId: FINANCE_PROFORMA_TEMPLATE_ID,
         email: distributor.financeEmail,
         dataVariables: {
-          distributorName: distributor.businessName ?? 'Distributor',
           orderNumber: order.orderNumber ?? orderId,
           orderUrl,
           pdfDownloadUrl,
-          partnerName,
           clientName: order.clientName ?? '',
-          clientEmail: order.clientEmail ?? '',
           clientPhone: order.clientPhone ?? '',
           paymentReference: order.paymentReference ?? order.orderNumber ?? orderId,
-          totalAmount: totalFormatted ?? '',
           totalAmountUSD: totalFormatted ?? '',
         },
       });

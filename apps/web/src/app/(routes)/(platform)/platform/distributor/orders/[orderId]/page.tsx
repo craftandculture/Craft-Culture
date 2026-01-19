@@ -230,46 +230,19 @@ const DistributorOrderDetailPage = () => {
     },
   });
 
-  /**
-   * Generate mailto URL for sending proforma invoice to finance
-   */
-   const generateFinanceMailtoUrl = useCallback(() => {
-    if (!order) return '';
-
-    const financeEmail = order.distributor?.financeEmail || '';
-    const pdfUrl = `${window.location.origin}/api/distributor/pco/proforma?orderId=${orderId}`;
-
-    const subject = `Proforma Invoice - Order ${order.orderNumber}`;
-    const body = `Hi Finance Team,
-
-Please issue an invoice to CD Private Client Team for the following order:
-
-Order Number: ${order.orderNumber}
-Client: ${order.clientName || 'N/A'}
-Payment Reference: ${order.paymentReference || order.orderNumber}
-Total Amount: ${order.totalUsd ? `USD ${order.totalUsd.toLocaleString()}` : 'See PDF'}
-
-Download proforma PDF: ${pdfUrl}
-
-Please upload the invoice to the C&C system once generated.
-
-Thanks`;
-
-    const params = new URLSearchParams({
-      subject,
-      body,
-    });
-
-    return `mailto:${financeEmail}?${params.toString()}`;
-  }, [order, orderId]);
-
-  const handleSendToFinance = useCallback(() => {
-    const mailtoUrl = generateFinanceMailtoUrl();
-    if (mailtoUrl) {
-      window.location.href = mailtoUrl;
-      toast.success('Opening email client...');
-    }
-  }, [generateFinanceMailtoUrl]);
+  // Send proforma invoice to finance via Loops
+  const { mutate: sendToFinance, isPending: isSendingToFinance } = useMutation({
+    mutationFn: () =>
+      trpcClient.privateClientOrders.distributorResendProformaInvoice.mutate({
+        orderId,
+      }),
+    onSuccess: (data) => {
+      toast.success(`Proforma invoice sent to ${data.email}`);
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to send proforma invoice');
+    },
+  });
 
   // Invoice upload
   const invoiceInputRef = useRef<HTMLInputElement>(null);
@@ -475,10 +448,11 @@ Thanks`;
             {/* Send to Finance Button */}
             <Button
               variant="outline"
-              onClick={handleSendToFinance}
+              onClick={() => sendToFinance()}
+              disabled={isSendingToFinance}
             >
-              <ButtonContent iconLeft={IconMail}>
-                Email Finance
+              <ButtonContent iconLeft={IconMail} isLoading={isSendingToFinance}>
+                Send to Finance
               </ButtonContent>
             </Button>
 
