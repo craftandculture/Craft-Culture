@@ -93,8 +93,8 @@ const QuotesListPage = () => {
     }),
   });
 
-  const quotes = data?.data ?? [];
-  const totalCount = data?.meta.totalCount ?? 0;
+  const quotes = data?.quotes ?? [];
+  const totalCount = data?.totalCount ?? 0;
 
   const toggleQuoteSelection = (quoteId: string) => {
     setSelectedQuotes((prev) =>
