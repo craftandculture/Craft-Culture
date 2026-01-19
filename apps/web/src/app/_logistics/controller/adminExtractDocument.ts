@@ -185,11 +185,8 @@ const adminExtractDocument = adminProcedure.input(extractDocumentSchema).mutatio
       const result = await generateObject({
         model: openai('gpt-4o'),
         schema: extractedLogisticsDataSchema,
+        system: systemPrompt,
         messages: [
-          {
-            role: 'system',
-            content: systemPrompt,
-          },
           {
             role: 'user',
             content: [
@@ -232,16 +229,8 @@ const adminExtractDocument = adminProcedure.input(extractDocumentSchema).mutatio
         const result = await generateObject({
           model: openai('gpt-4o'),
           schema: extractedLogisticsDataSchema,
-          messages: [
-            {
-              role: 'system',
-              content: systemPrompt,
-            },
-            {
-              role: 'user',
-              content: `Please extract all logistics data from this ${documentType.replace('_', ' ')} document text. Extract all fields that are present in the document.\n\n--- DOCUMENT TEXT ---\n${pdfText}\n--- END DOCUMENT ---`,
-            },
-          ],
+          system: systemPrompt,
+          prompt: `Please extract all logistics data from this ${documentType.replace('_', ' ')} document text. Extract all fields that are present in the document.\n\n--- DOCUMENT TEXT ---\n${pdfText}\n--- END DOCUMENT ---`,
         });
 
         extractedData = result.object;
@@ -252,11 +241,8 @@ const adminExtractDocument = adminProcedure.input(extractDocumentSchema).mutatio
         const result = await generateObject({
           model: openai('gpt-4o'),
           schema: extractedLogisticsDataSchema,
+          system: systemPrompt,
           messages: [
-            {
-              role: 'system',
-              content: systemPrompt,
-            },
             {
               role: 'user',
               content: [
