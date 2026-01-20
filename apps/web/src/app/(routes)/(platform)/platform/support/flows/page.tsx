@@ -258,11 +258,11 @@ const OverviewTab = () => (
           <div className="mb-2 flex items-center gap-2">
             <Icon icon={IconBuilding} size="sm" className="text-violet-500" />
             <Typography variant="bodySm" className="font-semibold">
-              2. C&C → Distributor
+              2. Distributor → C&C
             </Typography>
           </div>
           <Typography variant="bodyXs" colorRole="muted">
-            C&C settles with the distributor for product cost and logistics after delivery.
+            Distributor settles with C&C for product cost and logistics after delivery.
           </Typography>
         </div>
 
