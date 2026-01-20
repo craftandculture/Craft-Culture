@@ -7,12 +7,12 @@ import {
   IconClock,
   IconCreditCard,
   IconFileInvoice,
+  IconGlassFull,
   IconPackage,
   IconTruck,
   IconUser,
   IconUserCheck,
   IconUsers,
-  IconWine,
 } from '@tabler/icons-react';
 import { useState } from 'react';
 
@@ -30,7 +30,7 @@ interface Tab {
 
 const tabs: Tab[] = [
   { id: 'overview', label: 'Overview', icon: IconUsers, color: 'bg-violet-500' },
-  { id: 'partner', label: 'Wine Partner', icon: IconWine, color: 'bg-emerald-500' },
+  { id: 'partner', label: 'Wine Partner', icon: IconGlassFull, color: 'bg-emerald-500' },
   { id: 'distributor', label: 'Distributor', icon: IconBuilding, color: 'bg-blue-500' },
   { id: 'admin', label: 'C&C Admin', icon: IconUserCheck, color: 'bg-amber-500' },
   { id: 'client', label: 'Client', icon: IconUser, color: 'bg-pink-500' },
@@ -125,7 +125,7 @@ const OverviewTab = () => (
           {/* Phase 1 */}
           <div className="flex flex-col items-center">
             <div className="rounded-lg border-2 border-emerald-500 bg-emerald-500/10 p-3">
-              <Icon icon={IconWine} size="lg" className="text-emerald-500" />
+              <Icon icon={IconGlassFull} size="lg" className="text-emerald-500" />
             </div>
             <span className="mt-2 text-xs font-medium text-emerald-500">Partner</span>
             <span className="text-xs text-text-muted">Creates Order</span>
@@ -267,7 +267,7 @@ const OverviewTab = () => (
 
         <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-4">
           <div className="mb-2 flex items-center gap-2">
-            <Icon icon={IconWine} size="sm" className="text-emerald-500" />
+            <Icon icon={IconGlassFull} size="sm" className="text-emerald-500" />
             <Typography variant="bodySm" className="font-semibold">
               3. C&C → Wine Partner
             </Typography>
@@ -288,7 +288,7 @@ const OverviewTab = () => (
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <div className="flex items-start gap-3">
           <div className="rounded-lg border-2 border-emerald-500 bg-emerald-500/10 p-2">
-            <Icon icon={IconWine} size="sm" className="text-emerald-500" />
+            <Icon icon={IconGlassFull} size="sm" className="text-emerald-500" />
           </div>
           <div>
             <Typography variant="bodySm" className="font-semibold">
