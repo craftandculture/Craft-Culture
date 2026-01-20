@@ -319,8 +319,8 @@ const ProformaInvoicePDFTemplate = ({
   distributor,
 }: ProformaInvoicePDFTemplateProps) => {
   const formatPrice = (amount: number | null | undefined) => {
-    if (amount === null || amount === undefined) return 'USD 0.00';
-    return `USD ${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    if (amount === null || amount === undefined) return 'AED 0.00';
+    return `AED ${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
   const formatDate = (date: Date) => {
@@ -338,7 +338,7 @@ const ProformaInvoicePDFTemplate = ({
         <View style={styles.header}>
           <View style={styles.headerLeft}>
             <Text style={styles.brandName}>Craft & Culture</Text>
-            <Text style={styles.brandTagline}>Wine & Spirits Distribution</Text>
+            <Text style={styles.brandTagline}>The bridge to the Middle East wine & spirits market</Text>
           </View>
           <View style={styles.headerRight}>
             <Text style={styles.title}>PROFORMA INVOICE</Text>
@@ -357,7 +357,7 @@ const ProformaInvoicePDFTemplate = ({
           <Text style={styles.actionRequiredText}>
             Please issue an invoice to{' '}
             <Text style={styles.actionRequiredBold}>CD Private Client Team</Text>
-            {' '}based on the details below. Once generated, upload the invoice to the C&C system.
+            {' '}based on the details below. Once generated the Private Client team will upload the invoice to the C&C system.
           </Text>
         </View>
 
