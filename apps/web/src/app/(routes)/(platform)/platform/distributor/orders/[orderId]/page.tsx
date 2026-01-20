@@ -1019,7 +1019,7 @@ const DistributorOrderDetailPage = () => {
               </Typography>
               {order.partner ? (
                 <div className="flex items-center gap-3">
-                  {order.partner.logoUrl ? (
+                  {order.partner.logoUrl && order.partner.logoUrl.startsWith('http') ? (
                     <Image
                       src={order.partner.logoUrl}
                       alt={order.partner.businessName}
