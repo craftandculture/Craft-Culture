@@ -51,6 +51,7 @@ const authServerClient = betterAuth({
           dataVariables: {
             token,
             url,
+            magicLink: url, // Template uses {{magicLink}}
           },
         });
 
