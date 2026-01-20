@@ -44,16 +44,22 @@ const documentsExtract = protectedProcedure.input(extractDocumentSchema).mutatio
     });
   }
 
-  // Check access - must be admin, partner, or distributor
+  // Check access - must be admin, partner member, or distributor member
   const isAdmin = user.role === 'admin';
 
-  const userPartner = await db.query.partners.findFirst({
-    where: { userId: user.id },
-    columns: { id: true },
-  });
+  // Check if user is a member of the partner who owns this order
+  const isPartner =
+    order.partnerId &&
+    (await db.query.partnerMembers.findFirst({
+      where: { userId: user.id, partnerId: order.partnerId },
+    }));
 
-  const isPartner = userPartner && order.partnerId === userPartner.id;
-  const isDistributor = userPartner && order.distributorId === userPartner.id;
+  // Check if user is a member of the distributor assigned to this order
+  const isDistributor =
+    order.distributorId &&
+    (await db.query.partnerMembers.findFirst({
+      where: { userId: user.id, partnerId: order.distributorId },
+    }));
 
   if (!isAdmin && !isPartner && !isDistributor) {
     throw new TRPCError({
