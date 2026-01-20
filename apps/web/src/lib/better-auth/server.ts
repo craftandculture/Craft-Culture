@@ -72,7 +72,16 @@ const authServerClient = betterAuth({
     },
   },
   trustedOrigins: isVercelProduction
-    ? ['https://wine.craftculture.xyz']
+    ? [
+        'https://wine.craftculture.xyz',
+        'https://www.wine.craftculture.xyz',
+        'https://craft-culture.vercel.app',
+        'https://warehouse.craftculture.xyz',
+        // Allow all craftculture.xyz subdomains
+        /^https:\/\/.*\.craftculture\.xyz$/,
+        // Allow all Vercel preview deployments
+        /^https:\/\/craft-culture.*\.vercel\.app$/,
+      ]
     : ['http://localhost:3000'],
   database: drizzleAdapter(db, {
     provider: 'pg',
