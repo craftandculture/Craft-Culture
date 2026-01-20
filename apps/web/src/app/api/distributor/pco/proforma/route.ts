@@ -87,6 +87,9 @@ export async function GET(request: NextRequest) {
       distributor = { businessName: distributorResult.businessName };
     }
 
+    // Get USD to AED exchange rate (default to 3.6725 if not set)
+    const usdToAedRate = order.usdToAedRate ?? 3.6725;
+
     // Generate PDF
     const pdfBuffer = await renderProformaInvoicePDF({
       order: {
@@ -103,6 +106,7 @@ export async function GET(request: NextRequest) {
         vatUsd: order.vatUsd,
         logisticsUsd: order.logisticsUsd,
         totalUsd: order.totalUsd ?? 0,
+        usdToAedRate,
       },
       lineItems: lineItems.map((item) => ({
         productName: item.productName ?? 'Unknown Product',
