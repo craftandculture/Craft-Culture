@@ -1,6 +1,7 @@
 'use client';
 
 import {
+  IconChartDots,
   IconCreditCard,
   IconHelp,
   IconMail,
@@ -73,6 +74,27 @@ const SupportPage = () => {
             Everything you need to know about using Pocket Cellar
           </Typography>
         </div>
+
+        {/* Flow Diagrams Link */}
+        <Link
+          href="/platform/support/flows"
+          className="mb-6 flex items-center justify-between rounded-xl border border-border-brand bg-fill-brand/5 p-4 transition-colors hover:bg-fill-brand/10"
+        >
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-fill-brand/10">
+              <Icon icon={IconChartDots} size="md" colorRole="brand" />
+            </div>
+            <div>
+              <Typography variant="bodySm" className="font-semibold">
+                Process Flow Diagrams
+              </Typography>
+              <Typography variant="bodyXs" colorRole="muted">
+                View visual guides for the order process
+              </Typography>
+            </div>
+          </div>
+          <Icon icon={IconChartDots} size="sm" colorRole="brand" />
+        </Link>
 
         {/* Navigation */}
         <HelpNavigation />
