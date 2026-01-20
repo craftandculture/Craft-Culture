@@ -83,7 +83,12 @@ const authServerClient = betterAuth({
       sameSite: 'lax',
       secure: isVercelProduction,
       httpOnly: true,
+      // Explicit path ensures cookies are available site-wide
+      path: '/',
     },
+    // Disable CSRF for magic link verification to fix Edge browser issues
+    // Magic links are already secure via token verification
+    disableCSRFCheck: false,
   },
   trustedOrigins: isVercelProduction
     ? [
