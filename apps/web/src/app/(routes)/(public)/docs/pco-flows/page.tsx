@@ -43,6 +43,7 @@ interface FlowStepProps {
   status?: string;
   actor: 'partner' | 'distributor' | 'admin' | 'client' | 'system';
   isLast?: boolean;
+  notification?: string;
 }
 
 const actorColors = {
@@ -69,7 +70,14 @@ const actorLabels = {
   system: 'System',
 };
 
-const FlowStep = ({ number, title, description, status, actor, isLast = false }: FlowStepProps) => (
+const NotificationBadge = ({ text }: { text: string }) => (
+  <div className="mt-2 inline-flex items-center gap-1.5 rounded-md bg-blue-500/10 px-2 py-1 text-xs text-blue-600 dark:text-blue-400">
+    <span>📧</span>
+    <span>{text}</span>
+  </div>
+);
+
+const FlowStep = ({ number, title, description, status, actor, isLast = false, notification }: FlowStepProps) => (
   <div className="flex gap-4">
     <div className="flex flex-col items-center">
       <div
@@ -97,6 +105,7 @@ const FlowStep = ({ number, title, description, status, actor, isLast = false }:
           <span className="text-xs font-medium text-text-secondary">{status}</span>
         </div>
       )}
+      {notification && <NotificationBadge text={notification} />}
     </div>
   </div>
 );
@@ -208,14 +217,6 @@ const OverviewTab = () => (
         <StatusBadge status="UNDER_CC_REVIEW" color="bg-amber-500/20 text-amber-600 dark:text-amber-400" />
         <Icon icon={IconArrowRight} size="sm" colorRole="muted" />
         <StatusBadge status="CC_APPROVED" color="bg-emerald-500/20 text-emerald-600 dark:text-emerald-400" />
-        <Icon icon={IconArrowRight} size="sm" colorRole="muted" />
-        <StatusBadge status="AWAITING_CLIENT_PAYMENT" color="bg-pink-500/20 text-pink-600 dark:text-pink-400" />
-        <Icon icon={IconArrowRight} size="sm" colorRole="muted" />
-        <StatusBadge status="CLIENT_PAID" color="bg-emerald-500/20 text-emerald-600 dark:text-emerald-400" />
-        <Icon icon={IconArrowRight} size="sm" colorRole="muted" />
-        <StatusBadge status="DELIVERY_SCHEDULED" color="bg-blue-500/20 text-blue-600 dark:text-blue-400" />
-        <Icon icon={IconArrowRight} size="sm" colorRole="muted" />
-        <StatusBadge status="DELIVERED" color="bg-emerald-500/20 text-emerald-600 dark:text-emerald-400" />
       </div>
 
       {/* Optional Verification Flow */}
@@ -227,9 +228,50 @@ const OverviewTab = () => (
           <StatusBadge status="AWAITING_PARTNER_VERIFICATION" color="bg-emerald-500/20 text-emerald-600 dark:text-emerald-400" />
           <Icon icon={IconArrowRight} size="sm" colorRole="muted" />
           <StatusBadge status="AWAITING_DISTRIBUTOR_VERIFICATION" color="bg-blue-500/20 text-blue-600 dark:text-blue-400" />
-          <Icon icon={IconArrowRight} size="sm" colorRole="muted" />
-          <StatusBadge status="AWAITING_CLIENT_PAYMENT" color="bg-pink-500/20 text-pink-600 dark:text-pink-400" />
         </div>
+      </div>
+
+      {/* Payment Flow */}
+      <div className="mt-4 flex flex-wrap gap-2">
+        <StatusBadge status="AWAITING_CLIENT_PAYMENT" color="bg-pink-500/20 text-pink-600 dark:text-pink-400" />
+        <Icon icon={IconArrowRight} size="sm" colorRole="muted" />
+        <StatusBadge status="AWAITING_PAYMENT_VERIFICATION" color="bg-amber-500/20 text-amber-600 dark:text-amber-400" />
+        <Icon icon={IconArrowRight} size="sm" colorRole="muted" />
+        <StatusBadge status="CLIENT_PAID" color="bg-emerald-500/20 text-emerald-600 dark:text-emerald-400" />
+      </div>
+
+      {/* Delivery Flow */}
+      <div className="mt-4 flex flex-wrap gap-2">
+        <StatusBadge status="SCHEDULING_DELIVERY" color="bg-blue-500/20 text-blue-600 dark:text-blue-400" />
+        <Icon icon={IconArrowRight} size="sm" colorRole="muted" />
+        <StatusBadge status="DELIVERY_SCHEDULED" color="bg-blue-500/20 text-blue-600 dark:text-blue-400" />
+        <Icon icon={IconArrowRight} size="sm" colorRole="muted" />
+        <StatusBadge status="OUT_FOR_DELIVERY" color="bg-amber-500/20 text-amber-600 dark:text-amber-400" />
+        <Icon icon={IconArrowRight} size="sm" colorRole="muted" />
+        <StatusBadge status="DELIVERED" color="bg-emerald-500/20 text-emerald-600 dark:text-emerald-400" />
+      </div>
+    </div>
+
+    {/* Stock Status Tracking */}
+    <div className="rounded-xl border border-border-primary bg-fill-primary p-6">
+      <Typography variant="headingSm" className="mb-4">
+        Stock Status Tracking (Per Item)
+      </Typography>
+
+      <div className="flex flex-wrap items-center gap-2">
+        <StatusBadge status="PENDING" color="bg-gray-500/20 text-gray-600 dark:text-gray-400" />
+        <Icon icon={IconArrowRight} size="sm" colorRole="muted" />
+        <StatusBadge status="CONFIRMED" color="bg-blue-500/20 text-blue-600 dark:text-blue-400" />
+        <Icon icon={IconArrowRight} size="sm" colorRole="muted" />
+        <StatusBadge status="IN_TRANSIT_TO_CC" color="bg-amber-500/20 text-amber-600 dark:text-amber-400" />
+        <Icon icon={IconArrowRight} size="sm" colorRole="muted" />
+        <StatusBadge status="AT_CC_BONDED" color="bg-violet-500/20 text-violet-600 dark:text-violet-400" />
+        <Icon icon={IconArrowRight} size="sm" colorRole="muted" />
+        <StatusBadge status="IN_TRANSIT_TO_DISTRIBUTOR" color="bg-amber-500/20 text-amber-600 dark:text-amber-400" />
+        <Icon icon={IconArrowRight} size="sm" colorRole="muted" />
+        <StatusBadge status="AT_DISTRIBUTOR" color="bg-blue-500/20 text-blue-600 dark:text-blue-400" />
+        <Icon icon={IconArrowRight} size="sm" colorRole="muted" />
+        <StatusBadge status="DELIVERED" color="bg-emerald-500/20 text-emerald-600 dark:text-emerald-400" />
       </div>
     </div>
 
@@ -385,6 +427,7 @@ const PartnerTab = () => (
         description="Once complete, submit the order to C&C for review. You'll receive an order number (e.g., PCO-2026-00001)."
         status="SUBMITTED"
         actor="partner"
+        notification="C&C Admin notified"
       />
 
       <FlowStep
@@ -393,6 +436,7 @@ const PartnerTab = () => (
         description="C&C reviews your order, confirms stock availability, and approves with pricing. You'll be notified when approved."
         status="CC_APPROVED"
         actor="admin"
+        notification="Partner notified of approval"
       />
 
       <FlowStep
@@ -497,17 +541,19 @@ const DistributorTab = () => (
 
       <FlowStep
         number={3}
-        title="Verify Payment Received"
-        description="Once the partner confirms client payment, verify the funds have been received in your account. Check the payment reference matches."
-        status="CLIENT_PAID"
+        title="Upload Invoice"
+        description="Upload the official invoice for the order to the platform. This provides the client with payment details. The partner will acknowledge receipt."
         actor="distributor"
+        notification="Partner notified of invoice"
       />
 
       <FlowStep
         number={4}
-        title="Upload Invoice"
-        description="Upload the official invoice for the order to the platform. The partner will acknowledge receipt."
+        title="Verify Payment Received"
+        description="Once the client pays (using details from the invoice), verify the funds have been received in your account. Check the payment reference matches."
+        status="CLIENT_PAID"
         actor="distributor"
+        notification="Partner notified payment verified"
       />
 
       <FlowStep
@@ -572,8 +618,8 @@ const DistributorTab = () => (
         {[
           { icon: IconFileInvoice, title: 'Review Proforma', desc: 'Check order details and payment reference' },
           { icon: IconUserCheck, title: 'Verify Client', desc: 'Confirm client is in your system' },
+          { icon: IconFileInvoice, title: 'Upload Invoice', desc: 'Provide client with payment details' },
           { icon: IconCreditCard, title: 'Verify Payment', desc: 'Confirm funds received' },
-          { icon: IconFileInvoice, title: 'Upload Invoice', desc: 'Upload official invoice' },
           { icon: IconPackage, title: 'Confirm Stock', desc: 'Mark items received at warehouse' },
           { icon: IconClock, title: 'Schedule Delivery', desc: 'Arrange date with client' },
           { icon: IconTruck, title: 'Dispatch', desc: 'Mark order in transit' },
@@ -897,6 +943,12 @@ const PcoFlowsPage = () => {
           <Typography variant="bodyXs" colorRole="muted" className="mt-2">
             © {new Date().getFullYear()} Craft & Culture. All rights reserved.
           </Typography>
+          <button
+            onClick={() => window.print()}
+            className="mt-4 inline-flex items-center gap-2 rounded-lg bg-fill-brand px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-fill-brand/90 print:hidden"
+          >
+            🖨️ Print / Save PDF
+          </button>
         </div>
       </div>
     </div>

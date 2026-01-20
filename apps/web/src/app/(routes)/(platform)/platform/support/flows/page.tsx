@@ -498,16 +498,16 @@ const DistributorTab = () => (
 
       <FlowStep
         number={3}
-        title="Verify Payment Received"
-        description="Once the partner confirms client payment, verify the funds have been received in your account. Check the payment reference matches."
-        status="CLIENT_PAID"
+        title="Upload Invoice"
+        description="Upload the official invoice for the order to the platform. This provides the client with payment details. The partner will acknowledge receipt."
         actor="distributor"
       />
 
       <FlowStep
         number={4}
-        title="Upload Invoice"
-        description="Upload the official invoice for the order to the platform. The partner will acknowledge receipt."
+        title="Verify Payment Received"
+        description="Once the client pays (using details from the invoice), verify the funds have been received in your account. Check the payment reference matches."
+        status="CLIENT_PAID"
         actor="distributor"
       />
 
@@ -573,8 +573,8 @@ const DistributorTab = () => (
         {[
           { icon: IconFileInvoice, title: 'Review Proforma', desc: 'Check order details and payment reference' },
           { icon: IconUserCheck, title: 'Verify Client', desc: 'Confirm client is in your system' },
+          { icon: IconFileInvoice, title: 'Upload Invoice', desc: 'Provide client with payment details' },
           { icon: IconCreditCard, title: 'Verify Payment', desc: 'Confirm funds received' },
-          { icon: IconFileInvoice, title: 'Upload Invoice', desc: 'Upload official invoice' },
           { icon: IconPackage, title: 'Confirm Stock', desc: 'Mark items received at warehouse' },
           { icon: IconClock, title: 'Schedule Delivery', desc: 'Arrange date with client' },
           { icon: IconTruck, title: 'Dispatch', desc: 'Mark order in transit' },
