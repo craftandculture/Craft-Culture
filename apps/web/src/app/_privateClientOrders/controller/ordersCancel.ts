@@ -48,15 +48,18 @@ const ordersCancel = protectedProcedure.input(cancelOrderSchema).mutation(async 
   let isOwningPartner = false;
   let partnerId: string | null = null;
 
-  if (!isAdmin) {
-    const partner = await db.query.partners.findFirst({
-      where: { userId: user.id },
-      columns: { id: true },
+  if (!isAdmin && order.partnerId) {
+    // Check if user is a member of the partner who owns this order
+    const membership = await db.query.partnerMembers.findFirst({
+      where: {
+        userId: user.id,
+        partnerId: order.partnerId,
+      },
     });
 
-    if (partner && partner.id === order.partnerId) {
+    if (membership) {
       isOwningPartner = true;
-      partnerId = partner.id;
+      partnerId = order.partnerId;
     }
   }
 

@@ -6,6 +6,7 @@ import db from '@/database/client';
 import { privateClientOrderItems, privateClientOrders } from '@/database/schema';
 import { DEFAULT_EXCHANGE_RATES } from '@/lib/pricing/defaults';
 import { calculatePCOAdmin } from '@/lib/pricing/pricingEngine';
+import logger from '@/utils/logger';
 
 /**
  * Recalculate order totals using the PCO pricing engine
@@ -22,68 +23,88 @@ import { calculatePCOAdmin } from '@/lib/pricing/pricingEngine';
  * 5. After Distributor = DPL ÷ (1 - Distributor Margin%)
  * 6. VAT = After Distributor × VAT%
  * 7. Final = After Distributor + VAT
+ *
+ * @throws Error if pricing variables cannot be loaded
  */
 const recalculateOrderTotals = async (orderId: string) => {
-  // Get global PCO variables (from database or defaults)
-  const globalVariables = await getPCOVariables();
+  try {
+    // Get global PCO variables (from database or defaults)
+    const globalVariables = await getPCOVariables();
 
-  // Get effective variables for this order (applies bespoke overrides if set)
-  const effectiveVariables = await getOrderPCOVariables(orderId, globalVariables);
+    if (!globalVariables) {
+      logger.error('Failed to load global PCO pricing variables', { orderId });
+      throw new Error('Failed to load pricing configuration');
+    }
 
-  // Get all line items for the order
-  const items = await db
-    .select({
-      id: privateClientOrderItems.id,
-      quantity: privateClientOrderItems.quantity,
-      pricePerCaseUsd: privateClientOrderItems.pricePerCaseUsd,
-    })
-    .from(privateClientOrderItems)
-    .where(eq(privateClientOrderItems.orderId, orderId));
+    // Get effective variables for this order (applies bespoke overrides if set)
+    const effectiveVariables = await getOrderPCOVariables(orderId, globalVariables);
 
-  // Calculate pricing for each line item and aggregate
-  let totalLandedDutyFree = 0;
-  let totalDuty = 0;
-  let totalTransfer = 0;
-  let totalVat = 0;
-  let totalFinal = 0;
-  let totalCases = 0;
+    if (!effectiveVariables) {
+      logger.error('Failed to load effective pricing variables for order', { orderId });
+      throw new Error('Failed to load order pricing configuration');
+    }
 
-  for (const item of items) {
-    // Calculate for total line item value (pricePerCase * quantity)
-    const lineTotal = item.pricePerCaseUsd * item.quantity;
-    const result = calculatePCOAdmin(lineTotal, effectiveVariables, DEFAULT_EXCHANGE_RATES);
+    // Get all line items for the order
+    const items = await db
+      .select({
+        id: privateClientOrderItems.id,
+        quantity: privateClientOrderItems.quantity,
+        pricePerCaseUsd: privateClientOrderItems.pricePerCaseUsd,
+      })
+      .from(privateClientOrderItems)
+      .where(eq(privateClientOrderItems.orderId, orderId));
 
-    totalLandedDutyFree += result.landedDutyFree;
-    totalDuty += result.importDutyAmount;
-    totalTransfer += result.transferCostAmount;
-    totalVat += result.vatAmount;
-    totalFinal += result.finalPriceUsd;
-    totalCases += item.quantity;
+    // Calculate pricing for each line item and aggregate
+    let totalLandedDutyFree = 0;
+    let totalDuty = 0;
+    let totalTransfer = 0;
+    let totalVat = 0;
+    let totalFinal = 0;
+    let totalCases = 0;
+
+    for (const item of items) {
+      // Calculate for total line item value (pricePerCase * quantity)
+      const lineTotal = item.pricePerCaseUsd * item.quantity;
+      const result = calculatePCOAdmin(lineTotal, effectiveVariables, DEFAULT_EXCHANGE_RATES);
+
+      totalLandedDutyFree += result.landedDutyFree;
+      totalDuty += result.importDutyAmount;
+      totalTransfer += result.transferCostAmount;
+      totalVat += result.vatAmount;
+      totalFinal += result.finalPriceUsd;
+      totalCases += item.quantity;
+    }
+
+    const itemCount = items.length;
+
+    // Round all values
+    const round2 = (v: number) => Math.round(v * 100) / 100;
+
+    // Update the order
+    // Note: "subtotalUsd" stores Landed Duty Free (after C&C margin)
+    // "logisticsUsd" stores transfer cost (not actual shipping logistics)
+    await db
+      .update(privateClientOrders)
+      .set({
+        itemCount,
+        caseCount: totalCases,
+        subtotalUsd: round2(totalLandedDutyFree),
+        dutyUsd: round2(totalDuty),
+        vatUsd: round2(totalVat),
+        logisticsUsd: round2(totalTransfer),
+        totalUsd: round2(totalFinal),
+        totalAed: round2(totalFinal * DEFAULT_EXCHANGE_RATES.usdToAed),
+        usdToAedRate: DEFAULT_EXCHANGE_RATES.usdToAed,
+        updatedAt: new Date(),
+      })
+      .where(eq(privateClientOrders.id, orderId));
+  } catch (error) {
+    logger.error('Failed to recalculate order totals', {
+      orderId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    throw error;
   }
-
-  const itemCount = items.length;
-
-  // Round all values
-  const round2 = (v: number) => Math.round(v * 100) / 100;
-
-  // Update the order
-  // Note: "subtotalUsd" stores Landed Duty Free (after C&C margin)
-  // "logisticsUsd" stores transfer cost (not actual shipping logistics)
-  await db
-    .update(privateClientOrders)
-    .set({
-      itemCount,
-      caseCount: totalCases,
-      subtotalUsd: round2(totalLandedDutyFree),
-      dutyUsd: round2(totalDuty),
-      vatUsd: round2(totalVat),
-      logisticsUsd: round2(totalTransfer),
-      totalUsd: round2(totalFinal),
-      totalAed: round2(totalFinal * DEFAULT_EXCHANGE_RATES.usdToAed),
-      usdToAedRate: DEFAULT_EXCHANGE_RATES.usdToAed,
-      updatedAt: new Date(),
-    })
-    .where(eq(privateClientOrders.id, orderId));
 };
 
 export default recalculateOrderTotals;

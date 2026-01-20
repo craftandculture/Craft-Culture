@@ -50,7 +50,6 @@ const paymentsConfirm = protectedProcedure.input(confirmPaymentSchema).mutation(
     .limit(1);
 
   const isPartner = userPartnerMembership && order.partnerId === userPartnerMembership.partnerId;
-  const _isDistributor = userPartnerMembership && order.distributorId === userPartnerMembership.partnerId;
 
   // Validate permissions based on payment stage
   if (paymentStage === 'client') {
