@@ -51,34 +51,36 @@ const adminGetQuote = adminProcedure
       return null;
     }
 
-    // Get line items
-    const lineItems = await db
-      .select()
-      .from(logisticsQuoteLineItems)
-      .where(eq(logisticsQuoteLineItems.quoteId, id))
-      .orderBy(logisticsQuoteLineItems.sortOrder);
+    // Run all secondary queries in parallel for better performance
+    const [lineItems, acceptedByResult, rejectedByResult] = await Promise.all([
+      // Get line items
+      db
+        .select()
+        .from(logisticsQuoteLineItems)
+        .where(eq(logisticsQuoteLineItems.quoteId, id))
+        .orderBy(logisticsQuoteLineItems.sortOrder),
 
-    // Get accepted/rejected by user info if applicable
-    let acceptedByUser = null;
-    let rejectedByUser = null;
+      // Get accepted by user info if applicable
+      result.quote.acceptedBy
+        ? db
+            .select({ id: users.id, name: users.name, email: users.email })
+            .from(users)
+            .where(eq(users.id, result.quote.acceptedBy))
+            .limit(1)
+        : Promise.resolve([]),
 
-    if (result.quote.acceptedBy) {
-      const [user] = await db
-        .select({ id: users.id, name: users.name, email: users.email })
-        .from(users)
-        .where(eq(users.id, result.quote.acceptedBy))
-        .limit(1);
-      acceptedByUser = user || null;
-    }
+      // Get rejected by user info if applicable
+      result.quote.rejectedBy
+        ? db
+            .select({ id: users.id, name: users.name, email: users.email })
+            .from(users)
+            .where(eq(users.id, result.quote.rejectedBy))
+            .limit(1)
+        : Promise.resolve([]),
+    ]);
 
-    if (result.quote.rejectedBy) {
-      const [user] = await db
-        .select({ id: users.id, name: users.name, email: users.email })
-        .from(users)
-        .where(eq(users.id, result.quote.rejectedBy))
-        .limit(1);
-      rejectedByUser = user || null;
-    }
+    const acceptedByUser = acceptedByResult[0] || null;
+    const rejectedByUser = rejectedByResult[0] || null;
 
     return {
       ...result.quote,
