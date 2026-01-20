@@ -1,4 +1,4 @@
-import { createOpenAI } from '@ai-sdk/openai';
+import { createAnthropic } from '@ai-sdk/anthropic';
 import { TRPCError } from '@trpc/server';
 import { type CoreMessage, generateObject } from 'ai';
 import pdfParse from 'pdf-parse';
@@ -94,18 +94,27 @@ const extractedLogisticsDataSchema = z.object({
  * Get the appropriate system prompt based on document type
  */
 const getSystemPrompt = (documentType: string) => {
-  const baseInstructions = `You are an expert at extracting structured data from logistics documents.
+  const baseInstructions = `You are a precise OCR system that extracts structured data from logistics documents.
 
-CRITICAL RULES - YOU MUST FOLLOW THESE:
-1. ONLY extract text that you can clearly read in the document. NEVER make up, guess, or invent any data.
-2. For product names and descriptions: Extract them EXACTLY as written. If you cannot read a product name clearly, use "UNCLEAR" or leave it empty.
-3. DO NOT hallucinate or generate plausible-sounding data. If something is not visible in the document, leave the field empty.
-4. Be precise with numbers, dates, and reference numbers - only use values you can see.
-5. For dates, use ISO 8601 format (YYYY-MM-DD).
-6. For currency, use standard codes (USD, EUR, AED, GBP, etc.).
-7. If the document text is garbled or unreadable, indicate that clearly rather than guessing.
+ABSOLUTE RULES - VIOLATION IS UNACCEPTABLE:
 
-Extract all available information that matches the schema fields, but ONLY what you can actually see.`;
+1. TRANSCRIBE ONLY - You are a transcription tool. Copy text EXACTLY as it appears character-by-character.
+
+2. ZERO INVENTION - NEVER generate, guess, or invent ANY text. If you cannot read something clearly, output "UNREADABLE" or leave empty.
+
+3. NO FAMOUS BRANDS - You are FORBIDDEN from outputting well-known brand names (Moet, Veuve Clicquot, Dom Perignon, Krug, etc.) unless those EXACT words appear in the document. Wine invoices often contain obscure producer names - transcribe them exactly.
+
+4. PRODUCT NAME RULE - Wine product descriptions typically include: Producer name, wine type, appellation/region, vintage year, bottle size (0.75L), and alcohol %. Copy the FULL description exactly as written.
+
+5. VERIFY YOUR OUTPUT - Before returning each product name, confirm you can point to those exact characters in the document. If you cannot, you are hallucinating.
+
+6. NUMBERS - Only use numbers you can clearly see. Do not calculate or estimate.
+
+7. DATES - Use ISO 8601 format (YYYY-MM-DD). Only use dates visible in the document.
+
+8. If the document text is garbled or unreadable, output "DOCUMENT UNREADABLE" rather than guessing.
+
+You are a TRANSCRIPTION tool, not a creative writer. Extract ONLY what exists in the document.`;
 
   const typeSpecificInstructions: Record<string, string> = {
     freight_invoice: `Focus on extracting:
@@ -164,23 +173,23 @@ const adminExtractDocument = adminProcedure.input(extractDocumentSchema).mutatio
   // The AI SDK expects raw base64, not a data URL
   const file = rawFile.includes(',') ? rawFile.split(',')[1] ?? rawFile : rawFile;
 
-  const openaiKey = process.env.OPENAI_API_KEY;
+  const anthropicKey = process.env.ANTHROPIC_API_KEY;
 
   logger.info('[LogisticsDocumentExtraction] Starting extraction:', {
-    hasKey: !!openaiKey,
+    hasKey: !!anthropicKey,
     documentType,
     fileType,
   });
 
-  if (!openaiKey) {
+  if (!anthropicKey) {
     throw new TRPCError({
       code: 'INTERNAL_SERVER_ERROR',
-      message: 'AI extraction is not configured. OPENAI_API_KEY environment variable is not set.',
+      message: 'AI extraction is not configured. ANTHROPIC_API_KEY environment variable is not set.',
     });
   }
 
-  const openai = createOpenAI({
-    apiKey: openaiKey,
+  const anthropic = createAnthropic({
+    apiKey: anthropicKey,
   });
 
   const systemPrompt = getSystemPrompt(documentType);
@@ -206,7 +215,7 @@ const adminExtractDocument = adminProcedure.input(extractDocumentSchema).mutatio
       ];
 
       const result = await generateObject({
-        model: openai('gpt-4o'),
+        model: anthropic('claude-sonnet-4-20250514'),
         schema: extractedLogisticsDataSchema,
         system: systemPrompt,
         messages,
@@ -236,7 +245,7 @@ const adminExtractDocument = adminProcedure.input(extractDocumentSchema).mutatio
       // If we got meaningful text, use text-based extraction
       if (pdfText && pdfText.trim().length >= 50) {
         const result = await generateObject({
-          model: openai('gpt-4o'),
+          model: anthropic('claude-sonnet-4-20250514'),
           schema: extractedLogisticsDataSchema,
           system: systemPrompt,
           maxTokens: 16384,
@@ -274,7 +283,7 @@ ${pdfText}
         ];
 
         const result = await generateObject({
-          model: openai('gpt-4o'),
+          model: anthropic('claude-sonnet-4-20250514'),
           schema: extractedLogisticsDataSchema,
           system: systemPrompt,
           messages: pdfMessages,
