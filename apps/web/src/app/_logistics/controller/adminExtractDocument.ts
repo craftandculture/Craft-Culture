@@ -1,4 +1,4 @@
-import { createGoogleGenerativeAI } from '@ai-sdk/google';
+import { createOpenAI } from '@ai-sdk/openai';
 import { TRPCError } from '@trpc/server';
 import { type CoreMessage, generateObject } from 'ai';
 import pdfParse from 'pdf-parse';
@@ -173,23 +173,23 @@ const adminExtractDocument = adminProcedure.input(extractDocumentSchema).mutatio
   // The AI SDK expects raw base64, not a data URL
   const file = rawFile.includes(',') ? rawFile.split(',')[1] ?? rawFile : rawFile;
 
-  const googleKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY;
+  const openaiKey = process.env.OPENAI_API_KEY;
 
   logger.info('[LogisticsDocumentExtraction] Starting extraction:', {
-    hasKey: !!googleKey,
+    hasKey: !!openaiKey,
     documentType,
     fileType,
   });
 
-  if (!googleKey) {
+  if (!openaiKey) {
     throw new TRPCError({
       code: 'INTERNAL_SERVER_ERROR',
-      message: 'AI extraction is not configured. GOOGLE_GENERATIVE_AI_API_KEY environment variable is not set.',
+      message: 'AI extraction is not configured. OPENAI_API_KEY environment variable is not set.',
     });
   }
 
-  const google = createGoogleGenerativeAI({
-    apiKey: googleKey,
+  const openai = createOpenAI({
+    apiKey: openaiKey,
   });
 
   const systemPrompt = getSystemPrompt(documentType);
@@ -224,7 +224,7 @@ This is a TRANSCRIPTION task, not interpretation. Copy exactly what you see.`,
       ];
 
       const result = await generateObject({
-        model: google('gemini-2.0-flash-exp'),
+        model: openai('gpt-4o'),
         schema: extractedLogisticsDataSchema,
         system: systemPrompt,
         messages,
@@ -254,20 +254,23 @@ This is a TRANSCRIPTION task, not interpretation. Copy exactly what you see.`,
       // If we got meaningful text, use text-based extraction
       if (pdfText && pdfText.trim().length >= 50) {
         const result = await generateObject({
-          model: google('gemini-2.0-flash-exp'),
+          model: openai('gpt-4o'),
           schema: extractedLogisticsDataSchema,
           system: systemPrompt,
           maxTokens: 16384,
-          prompt: `TRANSCRIBE all data from this ${documentType.replace('_', ' ')} document.
+          prompt: `Parse this invoice text and extract structured data.
 
-CRITICAL RULES:
-1. Product names must be copied CHARACTER BY CHARACTER from the text below
-2. Wine products typically look like: "Producer Name Wine Type Appellation Year 0.75L 12.5" - copy the FULL string exactly
-3. NEVER output famous brand names (Moet, Dom Perignon, Veuve Clicquot, Krug, Pommery, etc.) unless those EXACT letters appear in the text
-4. If text is garbled or unclear, output "UNREADABLE"
-5. Extract EVERY line item - count them to ensure completeness
+EXAMPLES OF CORRECT EXTRACTION:
+Input text: "François Thienpont Terre Elysée 2021 0.75L 12 22042142 420 70 $28.58"
+Output: { productName: "François Thienpont Terre Elysée 2021 0.75L 12", hsCode: "22042142", quantity: 420, cases: 70, unitPrice: 28.58 }
 
-This is a TRANSCRIPTION task, not interpretation. Copy exactly what appears in the text.
+Input text: "Masseria Alfano Fiano d'Avellino DOCG Riserva Il Gheppio 2020 0.75L 12.5 22042138 420 70 $38.11"
+Output: { productName: "Masseria Alfano Fiano d'Avellino DOCG Riserva Il Gheppio 2020 0.75L 12.5", hsCode: "22042138", quantity: 420, cases: 70, unitPrice: 38.11 }
+
+RULES:
+- Copy product names EXACTLY as they appear - these are small wine producers, NOT famous brands
+- The Description column contains the full product name including producer, wine, vintage, size, and alcohol %
+- Extract ALL rows from the table
 
 --- DOCUMENT TEXT ---
 ${pdfText}
@@ -307,7 +310,7 @@ This is a TRANSCRIPTION task, not interpretation. Copy exactly what you see.`,
         ];
 
         const result = await generateObject({
-          model: google('gemini-2.0-flash-exp'),
+          model: openai('gpt-4o'),
           schema: extractedLogisticsDataSchema,
           system: systemPrompt,
           messages: pdfMessages,
