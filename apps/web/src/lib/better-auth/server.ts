@@ -149,9 +149,14 @@ const authServerClient = betterAuth({
               user.email.endsWith(`@${domain}`),
             );
 
+            // If name is empty, use the email prefix as the name
+            // This prevents database errors when Better Auth doesn't provide a name
+            const name = user.name?.trim() || user.email.split('@')[0];
+
             return {
               data: {
                 ...user,
+                name,
                 role: isAdmin ? 'admin' : 'user',
                 approvalStatus: isAdmin ? 'approved' : 'pending',
               },
