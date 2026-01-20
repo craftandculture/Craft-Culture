@@ -17,7 +17,7 @@ const styles = StyleSheet.create({
   page: {
     paddingTop: 40,
     paddingHorizontal: 40,
-    paddingBottom: 80,
+    paddingBottom: 100,
     fontFamily: 'Roboto',
     fontSize: 10,
     color: '#0a0a0a',
@@ -212,11 +212,12 @@ const styles = StyleSheet.create({
   },
   footer: {
     position: 'absolute',
-    bottom: 20,
+    bottom: 30,
     left: 40,
     right: 40,
     borderTop: '1px solid #e5e5e5',
     paddingTop: 10,
+    backgroundColor: '#ffffff',
   },
   footerContent: {
     flexDirection: 'row',
@@ -436,7 +437,7 @@ const ProformaInvoicePDFTemplate = ({
         </View>
 
         {/* Pricing Summary */}
-        <View style={styles.pricingSection}>
+        <View style={styles.pricingSection} wrap={false}>
           <View style={styles.pricingBox}>
             {order.subtotalUsd !== null && order.subtotalUsd !== undefined && (
               <View style={styles.pricingRow}>
