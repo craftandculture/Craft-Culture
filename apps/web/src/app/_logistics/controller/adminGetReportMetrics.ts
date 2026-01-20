@@ -18,93 +18,112 @@ const adminGetReportMetrics = adminProcedure.query(async () => {
   const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
   const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
 
-  // Shipment counts by status
-  const shipmentsByStatus = await db
-    .select({
-      status: logisticsShipments.status,
-      count: count(),
-    })
-    .from(logisticsShipments)
-    .groupBy(logisticsShipments.status);
+  // Run all queries in parallel for better performance
+  const [
+    shipmentsByStatus,
+    shipmentsByType,
+    shipmentsByTransportMode,
+    totalShipments,
+    recentShipments,
+    requiredDocs,
+    verifiedDocs,
+    expiringDocs,
+    expiredDocs,
+    invoiceMetrics,
+    costSummary,
+  ] = await Promise.all([
+    // Shipment counts by status
+    db
+      .select({
+        status: logisticsShipments.status,
+        count: count(),
+      })
+      .from(logisticsShipments)
+      .groupBy(logisticsShipments.status),
 
-  // Shipment counts by type
-  const shipmentsByType = await db
-    .select({
-      shipmentType: logisticsShipments.type,
-      count: count(),
-    })
-    .from(logisticsShipments)
-    .groupBy(logisticsShipments.type);
+    // Shipment counts by type
+    db
+      .select({
+        shipmentType: logisticsShipments.type,
+        count: count(),
+      })
+      .from(logisticsShipments)
+      .groupBy(logisticsShipments.type),
 
-  // Shipment counts by transport mode
-  const shipmentsByTransportMode = await db
-    .select({
-      transportMode: logisticsShipments.transportMode,
-      count: count(),
-    })
-    .from(logisticsShipments)
-    .groupBy(logisticsShipments.transportMode);
+    // Shipment counts by transport mode
+    db
+      .select({
+        transportMode: logisticsShipments.transportMode,
+        count: count(),
+      })
+      .from(logisticsShipments)
+      .groupBy(logisticsShipments.transportMode),
 
-  // Total shipments and recent activity
-  const totalShipments = await db.select({ count: count() }).from(logisticsShipments);
+    // Total shipments
+    db.select({ count: count() }).from(logisticsShipments),
 
-  const recentShipments = await db
-    .select({ count: count() })
-    .from(logisticsShipments)
-    .where(gte(logisticsShipments.createdAt, thirtyDaysAgo));
+    // Recent shipments
+    db
+      .select({ count: count() })
+      .from(logisticsShipments)
+      .where(gte(logisticsShipments.createdAt, thirtyDaysAgo)),
 
-  // Document compliance metrics
-  const requiredDocs = await db
-    .select({ count: count() })
-    .from(logisticsDocuments)
-    .where(eq(logisticsDocuments.isRequired, true));
+    // Required docs
+    db
+      .select({ count: count() })
+      .from(logisticsDocuments)
+      .where(eq(logisticsDocuments.isRequired, true)),
 
-  const verifiedDocs = await db
-    .select({ count: count() })
-    .from(logisticsDocuments)
-    .where(and(eq(logisticsDocuments.isRequired, true), eq(logisticsDocuments.isVerified, true)));
+    // Verified docs
+    db
+      .select({ count: count() })
+      .from(logisticsDocuments)
+      .where(and(eq(logisticsDocuments.isRequired, true), eq(logisticsDocuments.isVerified, true))),
 
-  const expiringDocs = await db
-    .select({ count: count() })
-    .from(logisticsDocuments)
-    .where(
-      and(
-        isNotNull(logisticsDocuments.expiryDate),
-        lt(logisticsDocuments.expiryDate, sevenDaysFromNow),
-        gte(logisticsDocuments.expiryDate, now),
+    // Expiring docs
+    db
+      .select({ count: count() })
+      .from(logisticsDocuments)
+      .where(
+        and(
+          isNotNull(logisticsDocuments.expiryDate),
+          lt(logisticsDocuments.expiryDate, sevenDaysFromNow),
+          gte(logisticsDocuments.expiryDate, now),
+        ),
       ),
-    );
 
-  const expiredDocs = await db
-    .select({ count: count() })
-    .from(logisticsDocuments)
-    .where(and(isNotNull(logisticsDocuments.expiryDate), lt(logisticsDocuments.expiryDate, now)));
+    // Expired docs
+    db
+      .select({ count: count() })
+      .from(logisticsDocuments)
+      .where(and(isNotNull(logisticsDocuments.expiryDate), lt(logisticsDocuments.expiryDate, now))),
 
-  // Invoice metrics
-  const invoiceMetrics = await db
-    .select({
-      status: logisticsInvoices.status,
-      count: count(),
-      totalAmount: sum(logisticsInvoices.totalAmount),
-      openAmount: sum(logisticsInvoices.openAmount),
-    })
-    .from(logisticsInvoices)
-    .groupBy(logisticsInvoices.status);
+    // Invoice metrics
+    db
+      .select({
+        status: logisticsInvoices.status,
+        count: count(),
+        totalAmount: sum(logisticsInvoices.totalAmount),
+        openAmount: sum(logisticsInvoices.openAmount),
+      })
+      .from(logisticsInvoices)
+      .groupBy(logisticsInvoices.status),
 
-  // Cost summaries (from shipments)
-  const costSummary = await db
-    .select({
-      totalFreight: sum(logisticsShipments.freightCostUsd),
-      totalInsurance: sum(logisticsShipments.insuranceCostUsd),
-      totalHandling: sum(
-        sql`COALESCE(${logisticsShipments.originHandlingUsd}, 0) + COALESCE(${logisticsShipments.destinationHandlingUsd}, 0)`,
-      ),
-      totalCustoms: sum(logisticsShipments.customsClearanceUsd),
-      totalGovFees: sum(logisticsShipments.govFeesUsd),
-      totalDelivery: sum(logisticsShipments.deliveryCostUsd),
-      totalOther: sum(logisticsShipments.otherCostsUsd),
-    })
-    .from(logisticsShipments);
+    // Cost summaries
+    db
+      .select({
+        totalFreight: sum(logisticsShipments.freightCostUsd),
+        totalInsurance: sum(logisticsShipments.insuranceCostUsd),
+        totalHandling: sum(
+          sql`COALESCE(${logisticsShipments.originHandlingUsd}, 0) + COALESCE(${logisticsShipments.destinationHandlingUsd}, 0)`,
+        ),
+        totalCustoms: sum(logisticsShipments.customsClearanceUsd),
+        totalGovFees: sum(logisticsShipments.govFeesUsd),
+        totalDelivery: sum(logisticsShipments.deliveryCostUsd),
+        totalOther: sum(logisticsShipments.otherCostsUsd),
+      })
+      .from(logisticsShipments),
+  ]);
 
   // Calculate totals
   const statusCounts: Record<string, number> = {};

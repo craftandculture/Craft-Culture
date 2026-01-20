@@ -47,42 +47,45 @@ const adminGetOne = adminProcedure
       return null;
     }
 
-    // Get items
-    const items = await db
-      .select()
-      .from(logisticsShipmentItems)
-      .where(eq(logisticsShipmentItems.shipmentId, input.id))
-      .orderBy(logisticsShipmentItems.sortOrder);
+    // Run all secondary queries in parallel for better performance
+    const [items, documents, activityLogs] = await Promise.all([
+      // Get items
+      db
+        .select()
+        .from(logisticsShipmentItems)
+        .where(eq(logisticsShipmentItems.shipmentId, input.id))
+        .orderBy(logisticsShipmentItems.sortOrder),
 
-    // Get documents
-    const documents = await db
-      .select({
-        document: logisticsDocuments,
-        uploadedByUser: {
-          id: users.id,
-          name: users.name,
-          email: users.email,
-        },
-      })
-      .from(logisticsDocuments)
-      .leftJoin(users, eq(logisticsDocuments.uploadedBy, users.id))
-      .where(eq(logisticsDocuments.shipmentId, input.id))
-      .orderBy(logisticsDocuments.uploadedAt);
+      // Get documents
+      db
+        .select({
+          document: logisticsDocuments,
+          uploadedByUser: {
+            id: users.id,
+            name: users.name,
+            email: users.email,
+          },
+        })
+        .from(logisticsDocuments)
+        .leftJoin(users, eq(logisticsDocuments.uploadedBy, users.id))
+        .where(eq(logisticsDocuments.shipmentId, input.id))
+        .orderBy(logisticsDocuments.uploadedAt),
 
-    // Get activity logs
-    const activityLogs = await db
-      .select({
-        log: logisticsShipmentActivityLogs,
-        user: {
-          id: users.id,
-          name: users.name,
-          email: users.email,
-        },
-      })
-      .from(logisticsShipmentActivityLogs)
-      .leftJoin(users, eq(logisticsShipmentActivityLogs.userId, users.id))
-      .where(eq(logisticsShipmentActivityLogs.shipmentId, input.id))
-      .orderBy(logisticsShipmentActivityLogs.createdAt);
+      // Get activity logs
+      db
+        .select({
+          log: logisticsShipmentActivityLogs,
+          user: {
+            id: users.id,
+            name: users.name,
+            email: users.email,
+          },
+        })
+        .from(logisticsShipmentActivityLogs)
+        .leftJoin(users, eq(logisticsShipmentActivityLogs.userId, users.id))
+        .where(eq(logisticsShipmentActivityLogs.shipmentId, input.id))
+        .orderBy(logisticsShipmentActivityLogs.createdAt),
+    ]);
 
     return {
       ...result.shipment,
