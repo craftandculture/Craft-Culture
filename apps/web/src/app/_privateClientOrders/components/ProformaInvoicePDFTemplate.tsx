@@ -285,6 +285,7 @@ export interface ProformaInvoicePDFTemplateProps {
     vatUsd?: number | null;
     logisticsUsd?: number | null;
     totalUsd: number;
+    usdToAedRate?: number;
   };
   lineItems: Array<{
     productName: string;
@@ -319,9 +320,13 @@ const ProformaInvoicePDFTemplate = ({
   partner,
   distributor,
 }: ProformaInvoicePDFTemplateProps) => {
-  const formatPrice = (amount: number | null | undefined) => {
-    if (amount === null || amount === undefined) return 'AED 0.00';
-    return `AED ${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  // Default exchange rate if not provided
+  const exchangeRate = order.usdToAedRate ?? 3.6725;
+
+  const formatPrice = (amountUsd: number | null | undefined) => {
+    if (amountUsd === null || amountUsd === undefined) return 'AED 0.00';
+    const amountAed = amountUsd * exchangeRate;
+    return `AED ${amountAed.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
   const formatDate = (date: Date) => {
