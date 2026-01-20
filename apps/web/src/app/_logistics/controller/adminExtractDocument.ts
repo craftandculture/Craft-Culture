@@ -1,4 +1,4 @@
-import { createOpenAI } from '@ai-sdk/openai';
+import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { TRPCError } from '@trpc/server';
 import { type CoreMessage, generateObject } from 'ai';
 import pdfParse from 'pdf-parse';
@@ -173,23 +173,23 @@ const adminExtractDocument = adminProcedure.input(extractDocumentSchema).mutatio
   // The AI SDK expects raw base64, not a data URL
   const file = rawFile.includes(',') ? rawFile.split(',')[1] ?? rawFile : rawFile;
 
-  const openaiKey = process.env.OPENAI_API_KEY;
+  const googleKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY;
 
   logger.info('[LogisticsDocumentExtraction] Starting extraction:', {
-    hasKey: !!openaiKey,
+    hasKey: !!googleKey,
     documentType,
     fileType,
   });
 
-  if (!openaiKey) {
+  if (!googleKey) {
     throw new TRPCError({
       code: 'INTERNAL_SERVER_ERROR',
-      message: 'AI extraction is not configured. OPENAI_API_KEY environment variable is not set.',
+      message: 'AI extraction is not configured. GOOGLE_GENERATIVE_AI_API_KEY environment variable is not set.',
     });
   }
 
-  const openai = createOpenAI({
-    apiKey: openaiKey,
+  const google = createGoogleGenerativeAI({
+    apiKey: googleKey,
   });
 
   const systemPrompt = getSystemPrompt(documentType);
@@ -224,7 +224,7 @@ This is a TRANSCRIPTION task, not interpretation. Copy exactly what you see.`,
       ];
 
       const result = await generateObject({
-        model: openai('gpt-4o'),
+        model: google('gemini-1.5-pro'),
         schema: extractedLogisticsDataSchema,
         system: systemPrompt,
         messages,
@@ -254,7 +254,7 @@ This is a TRANSCRIPTION task, not interpretation. Copy exactly what you see.`,
       // If we got meaningful text, use text-based extraction
       if (pdfText && pdfText.trim().length >= 50) {
         const result = await generateObject({
-          model: openai('gpt-4o'),
+          model: google('gemini-1.5-pro'),
           schema: extractedLogisticsDataSchema,
           system: systemPrompt,
           maxTokens: 16384,
@@ -307,7 +307,7 @@ This is a TRANSCRIPTION task, not interpretation. Copy exactly what you see.`,
         ];
 
         const result = await generateObject({
-          model: openai('gpt-4o'),
+          model: google('gemini-1.5-pro'),
           schema: extractedLogisticsDataSchema,
           system: systemPrompt,
           messages: pdfMessages,
