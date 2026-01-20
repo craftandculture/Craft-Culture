@@ -29,6 +29,14 @@ const authServerClient = betterAuth({
     }),
     magicLink({
       sendMagicLink: async ({ email, token, url }) => {
+        // Log magic link details for debugging
+        logger.info('[Better Auth] Sending magic link', {
+          email,
+          url,
+          tokenLength: token?.length,
+          env: serverConfig.env,
+        });
+
         if (serverConfig.env !== 'production') {
           logger.dev('You are in development mode, so no email will be sent');
           logger.dev('Email:', email);
@@ -37,13 +45,18 @@ const authServerClient = betterAuth({
           return;
         }
 
-        await loops.sendTransactionalEmail({
+        const result = await loops.sendTransactionalEmail({
           transactionalId: 'cmglxdfzwzzscz00inq1dm56c',
           email,
           dataVariables: {
             token,
             url,
           },
+        });
+
+        logger.info('[Better Auth] Magic link email sent', {
+          email,
+          success: result.success,
         });
       },
     }),
