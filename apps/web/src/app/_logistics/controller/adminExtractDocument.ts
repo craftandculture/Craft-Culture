@@ -224,7 +224,7 @@ This is a TRANSCRIPTION task, not interpretation. Copy exactly what you see.`,
       ];
 
       const result = await generateObject({
-        model: google('gemini-1.5-pro-latest'),
+        model: google('gemini-2.0-flash-exp'),
         schema: extractedLogisticsDataSchema,
         system: systemPrompt,
         messages,
@@ -254,7 +254,7 @@ This is a TRANSCRIPTION task, not interpretation. Copy exactly what you see.`,
       // If we got meaningful text, use text-based extraction
       if (pdfText && pdfText.trim().length >= 50) {
         const result = await generateObject({
-          model: google('gemini-1.5-pro-latest'),
+          model: google('gemini-2.0-flash-exp'),
           schema: extractedLogisticsDataSchema,
           system: systemPrompt,
           maxTokens: 16384,
@@ -307,7 +307,7 @@ This is a TRANSCRIPTION task, not interpretation. Copy exactly what you see.`,
         ];
 
         const result = await generateObject({
-          model: google('gemini-1.5-pro-latest'),
+          model: google('gemini-2.0-flash-exp'),
           schema: extractedLogisticsDataSchema,
           system: systemPrompt,
           messages: pdfMessages,
