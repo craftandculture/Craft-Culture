@@ -129,19 +129,40 @@ const authServerClient = betterAuth({
     user: {
       create: {
         before: async (user) => {
-          const isAdmin = serverConfig.adminDomains.some((domain) =>
-            user.email.endsWith(`@${domain}`),
-          );
+          try {
+            logger.info('[Better Auth] User creation started', {
+              email: user.email,
+              hasName: !!user.name,
+              name: user.name,
+            });
 
-          return {
-            data: {
-              ...user,
-              role: isAdmin ? 'admin' : 'user',
-              approvalStatus: isAdmin ? 'approved' : 'pending',
-            },
-          };
+            const isAdmin = serverConfig.adminDomains.some((domain) =>
+              user.email.endsWith(`@${domain}`),
+            );
+
+            return {
+              data: {
+                ...user,
+                role: isAdmin ? 'admin' : 'user',
+                approvalStatus: isAdmin ? 'approved' : 'pending',
+              },
+            };
+          } catch (error) {
+            logger.error('[Better Auth] Error in user.create.before hook', {
+              error,
+              email: user.email,
+            });
+            throw error;
+          }
         },
         after: async (user) => {
+          logger.info('[Better Auth] User created successfully', {
+            userId: user.id,
+            email: user.email,
+            role: user.role,
+            approvalStatus: user.approvalStatus,
+          });
+
           // Log new user signup for admin monitoring
           void logUserActivity({
             userId: user.id,
