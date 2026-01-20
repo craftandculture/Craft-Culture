@@ -1,4 +1,4 @@
-import { createAnthropic } from '@ai-sdk/anthropic';
+import { createOpenAI } from '@ai-sdk/openai';
 import { TRPCError } from '@trpc/server';
 import { type CoreMessage, generateObject } from 'ai';
 import pdfParse from 'pdf-parse';
@@ -164,23 +164,23 @@ const adminExtractDocument = adminProcedure.input(extractDocumentSchema).mutatio
   // The AI SDK expects raw base64, not a data URL
   const file = rawFile.includes(',') ? rawFile.split(',')[1] ?? rawFile : rawFile;
 
-  const anthropicKey = process.env.ANTHROPIC_API_KEY;
+  const openaiKey = process.env.OPENAI_API_KEY;
 
   logger.info('[LogisticsDocumentExtraction] Starting extraction:', {
-    hasKey: !!anthropicKey,
+    hasKey: !!openaiKey,
     documentType,
     fileType,
   });
 
-  if (!anthropicKey) {
+  if (!openaiKey) {
     throw new TRPCError({
       code: 'INTERNAL_SERVER_ERROR',
-      message: 'AI extraction is not configured. ANTHROPIC_API_KEY environment variable is not set.',
+      message: 'AI extraction is not configured. OPENAI_API_KEY environment variable is not set.',
     });
   }
 
-  const anthropic = createAnthropic({
-    apiKey: anthropicKey,
+  const openai = createOpenAI({
+    apiKey: openaiKey,
   });
 
   const systemPrompt = getSystemPrompt(documentType);
@@ -206,7 +206,7 @@ const adminExtractDocument = adminProcedure.input(extractDocumentSchema).mutatio
       ];
 
       const result = await generateObject({
-        model: anthropic('claude-3-5-sonnet-20241022'),
+        model: openai('gpt-4o'),
         schema: extractedLogisticsDataSchema,
         system: systemPrompt,
         messages,
@@ -236,7 +236,7 @@ const adminExtractDocument = adminProcedure.input(extractDocumentSchema).mutatio
       // If we got meaningful text, use text-based extraction
       if (pdfText && pdfText.trim().length >= 50) {
         const result = await generateObject({
-          model: anthropic('claude-3-5-sonnet-20241022'),
+          model: openai('gpt-4o'),
           schema: extractedLogisticsDataSchema,
           system: systemPrompt,
           maxTokens: 16384,
@@ -274,7 +274,7 @@ ${pdfText}
         ];
 
         const result = await generateObject({
-          model: anthropic('claude-3-5-sonnet-20241022'),
+          model: openai('gpt-4o'),
           schema: extractedLogisticsDataSchema,
           system: systemPrompt,
           messages: pdfMessages,
