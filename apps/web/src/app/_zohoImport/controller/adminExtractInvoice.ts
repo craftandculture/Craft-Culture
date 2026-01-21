@@ -220,6 +220,7 @@ This is a TRANSCRIPTION task. Copy product names exactly as written.`,
       }
 
       if (pdfText && pdfText.trim().length >= 50) {
+        // Digital PDF with extractable text - use text extraction
         const result = await generateObject({
           model: openai('gpt-4o'),
           schema: extractedInvoiceSchema,
@@ -242,11 +243,49 @@ ${pdfText}
 
         extractedData = result.object;
       } else {
-        throw new TRPCError({
-          code: 'BAD_REQUEST',
-          message:
-            'This PDF appears to be scanned or contains no extractable text. Please upload a digital PDF or convert to an image (PNG/JPG).',
+        // Scanned PDF or no extractable text - fall back to vision
+        logger.info('[ZohoImport] PDF has no extractable text, using vision mode');
+
+        const messages: CoreMessage[] = [
+          {
+            role: 'user',
+            content: [
+              {
+                type: 'text',
+                text: `Extract all wine line items from this supplier invoice/packing list.
+
+For each product, extract:
+- Full product name (producer + wine + region)
+- Vintage year (4 digits like 2018, 2020, etc. NOT lot numbers)
+- Quantity (number of CASES, not bottles)
+- Case configuration (bottles per case: 3, 6, or 12)
+- Bottle size in ml (750 for standard bottles, 1500 for magnums)
+- LWIN code if visible
+
+IMPORTANT:
+- "Magnum" or "150 cl" means 1500ml bottle size
+- Count CASES not bottles (e.g., "3 cases of 12 bottles" = quantity 3)
+- "Lot 05" is NOT a vintage - leave vintage empty for lot-numbered wines
+- "wb" = wooden box, "ct" = cardboard - these indicate case packaging, not quantity
+
+This is a TRANSCRIPTION task. Copy product names exactly as written.`,
+              },
+              {
+                type: 'image',
+                image: file,
+              },
+            ],
+          },
+        ];
+
+        const result = await generateObject({
+          model: openai('gpt-4o'),
+          schema: extractedInvoiceSchema,
+          system: systemPrompt,
+          messages,
         });
+
+        extractedData = result.object;
       }
     } else {
       throw new TRPCError({
