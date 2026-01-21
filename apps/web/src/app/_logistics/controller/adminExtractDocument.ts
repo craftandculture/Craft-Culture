@@ -59,7 +59,7 @@ const extractedLogisticsDataSchema = z.object({
       z.object({
         description: z.string().optional().describe('Item description'),
         productName: z.string().optional().describe('Product name'),
-        hsCode: z.string().optional().describe('HS/tariff code'),
+        hsCode: z.string().optional().describe('FULL HS/tariff/commodity code with ALL digits exactly as shown (e.g., 22042109, 22042132, NOT truncated to 22042100)'),
         quantity: z.number().optional().describe('Quantity'),
         cases: z.number().optional().describe('Number of cases'),
         weight: z.number().optional().describe('Weight in kg'),
@@ -112,7 +112,9 @@ ABSOLUTE RULES - VIOLATION IS UNACCEPTABLE:
 
 7. DATES - Use ISO 8601 format (YYYY-MM-DD). Only use dates visible in the document.
 
-8. If the document text is garbled or unreadable, output "DOCUMENT UNREADABLE" rather than guessing.
+8. HS CODES - Extract the COMPLETE commodity/tariff code with ALL digits exactly as written. Codes like 22042109, 22042132, 22041000 are DIFFERENT - never truncate to generic codes like 22042100.
+
+9. If the document text is garbled or unreadable, output "DOCUMENT UNREADABLE" rather than guessing.
 
 You are a TRANSCRIPTION tool, not a creative writer. Extract ONLY what exists in the document.`;
 
@@ -212,6 +214,7 @@ CRITICAL RULES:
 3. NEVER output famous brand names (Moet, Dom Perignon, Veuve Clicquot, Krug, etc.) unless those EXACT letters appear
 4. If you cannot read text clearly, output "UNREADABLE"
 5. Extract EVERY line item - count them to ensure completeness
+6. HS CODES - Extract the COMPLETE code with ALL digits exactly as shown. Codes like 22042109, 22042132, 22041000 are DIFFERENT - do NOT truncate them to 22042100. Copy every digit.
 
 This is a TRANSCRIPTION task, not interpretation. Copy exactly what you see.`,
             },
@@ -271,6 +274,7 @@ RULES:
 - Copy product names EXACTLY as they appear - these are small wine producers, NOT famous brands
 - The Description column contains the full product name including producer, wine, vintage, size, and alcohol %
 - Extract ALL rows from the table
+- HS CODES ARE CRITICAL: Extract the COMPLETE code with ALL digits. Codes like 22042109, 22042132, 22041000 are DIFFERENT codes - do NOT truncate or simplify to 22042100. Each row may have a unique HS code.
 
 --- DOCUMENT TEXT ---
 ${pdfText}
