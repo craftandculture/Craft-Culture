@@ -3,6 +3,7 @@ import { TRPCError } from '@trpc/server';
 import { type CoreMessage, generateObject } from 'ai';
 import { sql } from 'drizzle-orm';
 import pdfParse from 'pdf-parse';
+import { pdf } from 'pdf-to-img';
 import { z } from 'zod';
 
 import db from '@/database/client';
@@ -243,13 +244,80 @@ ${pdfText}
 
         extractedData = result.object;
       } else {
-        // Scanned PDF or no extractable text - ask user to convert to image
-        logger.info('[ZohoImport] PDF has no extractable text');
-        throw new TRPCError({
-          code: 'BAD_REQUEST',
-          message:
-            'This PDF appears to be scanned or image-based. Please export it as a PNG/JPG image (in Preview: File → Export → Format: PNG) and upload that instead.',
+        // Scanned PDF or no extractable text - convert to images and use vision
+        logger.info('[ZohoImport] PDF has no extractable text, converting to images for vision mode');
+
+        // Convert PDF pages to images
+        const pdfImages: string[] = [];
+        try {
+          const document = await pdf(pdfBuffer, { scale: 2.0 });
+          for await (const image of document) {
+            // image is a Buffer with PNG data
+            pdfImages.push(image.toString('base64'));
+          }
+          logger.info('[ZohoImport] PDF converted to images', { pageCount: pdfImages.length });
+        } catch (convertError) {
+          logger.error('[ZohoImport] PDF to image conversion failed', {
+            error: convertError instanceof Error ? convertError.message : 'Unknown error',
+          });
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message:
+              'Could not process this PDF. Please try exporting it as a PNG/JPG image and uploading that instead.',
+          });
+        }
+
+        if (pdfImages.length === 0) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'PDF appears to be empty. Please check the file and try again.',
+          });
+        }
+
+        // Build message content with all page images
+        const imageContent: CoreMessage['content'] = [
+          {
+            type: 'text',
+            text: `Extract all wine line items from this supplier invoice/packing list (${pdfImages.length} page${pdfImages.length > 1 ? 's' : ''}).
+
+For each product, extract:
+- Full product name (producer + wine + region)
+- Vintage year (4 digits like 2018, 2020, etc. NOT lot numbers)
+- Quantity (number of CASES, not bottles)
+- Case configuration (bottles per case: 3, 6, or 12)
+- Bottle size in ml (750 for standard bottles, 1500 for magnums)
+- LWIN code if visible
+
+IMPORTANT:
+- "Magnum" or "150 cl" means 1500ml bottle size
+- Count CASES not bottles (e.g., "3 cases of 12 bottles" = quantity 3)
+- "Lot 05" is NOT a vintage - leave vintage empty for lot-numbered wines
+- "wb" = wooden box, "ct" = cardboard - these indicate case packaging, not quantity
+
+This is a TRANSCRIPTION task. Copy product names exactly as written.`,
+          },
+          // Add each page as an image (limit to first 5 pages to avoid token limits)
+          ...pdfImages.slice(0, 5).map((img) => ({
+            type: 'image' as const,
+            image: img,
+          })),
+        ];
+
+        const messages: CoreMessage[] = [
+          {
+            role: 'user',
+            content: imageContent,
+          },
+        ];
+
+        const result = await generateObject({
+          model: openai('gpt-4o'),
+          schema: extractedInvoiceSchema,
+          system: systemPrompt,
+          messages,
         });
+
+        extractedData = result.object;
       }
     } else {
       throw new TRPCError({
