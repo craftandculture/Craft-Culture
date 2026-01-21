@@ -33,6 +33,7 @@ type StockStatus =
   | 'confirmed'
   | 'in_transit_to_cc'
   | 'at_cc_bonded'
+  | 'at_cc_ready_for_dispatch'
   | 'in_transit_to_distributor'
   | 'at_distributor'
   | 'delivered';
@@ -63,6 +64,7 @@ const stockStatusOptions: { value: StockStatus; label: string; icon: React.React
   { value: 'confirmed', label: 'Confirmed', icon: <IconCheck size={14} /> },
   { value: 'in_transit_to_cc', label: 'In Air', icon: <IconPlane size={14} /> },
   { value: 'at_cc_bonded', label: 'At C&C', icon: <IconBox size={14} /> },
+  { value: 'at_cc_ready_for_dispatch', label: 'Packed', icon: <IconPackage size={14} /> },
   { value: 'in_transit_to_distributor', label: 'To Distributor', icon: <IconTruck size={14} /> },
   { value: 'at_distributor', label: 'Ready', icon: <IconPackage size={14} /> },
   { value: 'delivered', label: 'Delivered', icon: <IconCheck size={14} /> },
@@ -72,6 +74,7 @@ const bulkStatusOptions: { value: StockStatus; label: string; description: strin
   { value: 'confirmed', label: 'Confirmed', description: 'Supplier confirmed stock' },
   { value: 'in_transit_to_cc', label: 'In Air', description: 'Shipment in transit to UAE' },
   { value: 'at_cc_bonded', label: 'At C&C', description: 'Arrived at C&C warehouse' },
+  { value: 'at_cc_ready_for_dispatch', label: 'Packed', description: 'Packed and ready for dispatch' },
   { value: 'in_transit_to_distributor', label: 'To Distributor', description: 'In transit to distributor' },
   { value: 'at_distributor', label: 'Ready', description: 'Ready for delivery' },
 ];
@@ -198,6 +201,7 @@ const StockManagementSection = ({
     (statusCounts['at_distributor'] || 0) + (statusCounts['delivered'] || 0);
   const inTransitCount =
     (statusCounts['at_cc_bonded'] || 0) +
+    (statusCounts['at_cc_ready_for_dispatch'] || 0) +
     (statusCounts['in_transit_to_cc'] || 0) +
     (statusCounts['in_transit_to_distributor'] || 0);
   const pendingCount =

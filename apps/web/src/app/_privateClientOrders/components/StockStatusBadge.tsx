@@ -18,6 +18,7 @@ type StockStatus =
   | 'confirmed'
   | 'in_transit_to_cc'
   | 'at_cc_bonded'
+  | 'at_cc_ready_for_dispatch'
   | 'in_transit_to_distributor'
   | 'at_distributor'
   | 'delivered';
@@ -31,6 +32,7 @@ const stockStatusBadgeVariants = tv({
       confirmed: 'text-blue-600 dark:text-blue-400',
       in_transit_to_cc: 'text-amber-600 dark:text-amber-400',
       at_cc_bonded: 'text-purple-600 dark:text-purple-400',
+      at_cc_ready_for_dispatch: 'text-indigo-600 dark:text-indigo-400',
       in_transit_to_distributor: 'text-cyan-600 dark:text-cyan-400',
       at_distributor: 'text-green-600 dark:text-green-400',
       delivered: 'text-green-600 dark:text-green-400',
@@ -67,6 +69,7 @@ const statusConfig: Record<StockStatus, StatusConfig> = {
   confirmed: { label: 'Confirmed', shortLabel: 'Confirmed', icon: IconCheck },
   in_transit_to_cc: { label: 'In Air to UAE', shortLabel: 'In Air', icon: IconPlane },
   at_cc_bonded: { label: 'At C&C Warehouse', shortLabel: 'At C&C', icon: IconBox },
+  at_cc_ready_for_dispatch: { label: 'At C&C Ready for Dispatch', shortLabel: 'Packed', icon: IconPackage },
   in_transit_to_distributor: { label: 'To Distributor', shortLabel: 'To Dist.', icon: IconTruck },
   at_distributor: { label: 'Ready for Delivery', shortLabel: 'Ready', icon: IconCheck },
   delivered: { label: 'Delivered', shortLabel: 'Delivered', icon: IconCheck },
