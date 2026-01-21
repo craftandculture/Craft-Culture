@@ -8,6 +8,7 @@ import {
   IconChevronRight,
   IconCoin,
   IconCurrencyDollar,
+  IconFileImport,
   IconMenu2,
   IconPackage,
   IconSearch,
@@ -65,6 +66,7 @@ const navGroups: NavGroup[] = [
     title: 'System',
     items: [
       { label: 'Activity', href: '/platform/admin/activity', icon: IconActivity },
+      { label: 'Zoho Import', href: '/platform/admin/zoho-import', icon: IconFileImport },
       { label: 'Settings', href: '/platform/admin/settings', icon: IconSettings },
     ],
   },
