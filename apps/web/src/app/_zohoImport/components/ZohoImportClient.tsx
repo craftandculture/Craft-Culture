@@ -5,12 +5,13 @@ import {
   IconCheck,
   IconCloudUpload,
   IconDownload,
+  IconEdit,
   IconLoader2,
   IconTrash,
   IconX,
 } from '@tabler/icons-react';
 import { useMutation } from '@tanstack/react-query';
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
@@ -19,6 +20,9 @@ import Typography from '@/app/_ui/components/Typography/Typography';
 import useTRPC from '@/lib/trpc/browser';
 
 import type { ZohoItem } from '../schemas/zohoItemSchema';
+
+/** Case pack size options */
+const CASE_SIZES = [1, 3, 6, 12] as const;
 
 /**
  * Main client component for Zoho Import tool
@@ -39,6 +43,9 @@ const ZohoImportClient = () => {
     unmatched: number;
     needsReview: number;
   } | null>(null);
+  const [editingCell, setEditingCell] = useState<{ itemId: string; field: string } | null>(null);
+  const [editValue, setEditValue] = useState('');
+  const editInputRef = useRef<HTMLInputElement>(null);
 
   // Extract invoice mutation
   const { mutate: extractInvoice, isPending: isExtracting } = useMutation(
@@ -196,6 +203,78 @@ const ZohoImportClient = () => {
     setExtractedItems(null);
     setStats(null);
     setExtractionError(null);
+    setEditingCell(null);
+  };
+
+  // Start editing a cell
+  const handleStartEdit = (itemId: string, field: string, currentValue: string | number | null) => {
+    setEditingCell({ itemId, field });
+    setEditValue(String(currentValue ?? ''));
+    setTimeout(() => editInputRef.current?.focus(), 0);
+  };
+
+  // Save edited cell
+  const handleSaveEdit = () => {
+    if (!editingCell || !extractedItems) return;
+
+    const { itemId, field } = editingCell;
+    const newItems = extractedItems.map((item) => {
+      if (item.id !== itemId) return item;
+
+      const updated = { ...item };
+      switch (field) {
+        case 'productName':
+          updated.productName = editValue;
+          break;
+        case 'vintage':
+          updated.vintage = editValue || null;
+          break;
+        case 'quantity':
+          updated.quantity = parseInt(editValue, 10) || 1;
+          break;
+        case 'caseConfig':
+          updated.caseConfig = parseInt(editValue, 10) || 6;
+          break;
+        case 'country':
+          updated.country = editValue || null;
+          break;
+        case 'hsCode':
+          updated.hsCode = editValue;
+          break;
+      }
+      return updated;
+    });
+
+    setExtractedItems(newItems);
+    setEditingCell(null);
+    setEditValue('');
+  };
+
+  // Cancel editing
+  const handleCancelEdit = () => {
+    setEditingCell(null);
+    setEditValue('');
+  };
+
+  // Handle key press in edit input
+  const handleEditKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleSaveEdit();
+    } else if (e.key === 'Escape') {
+      handleCancelEdit();
+    }
+  };
+
+  // Update case config for an item
+  const handleCaseConfigChange = (itemId: string, newCaseConfig: number) => {
+    if (!extractedItems) return;
+
+    const newItems = extractedItems.map((item) => {
+      if (item.id !== itemId) return item;
+      return { ...item, caseConfig: newCaseConfig };
+    });
+
+    setExtractedItems(newItems);
   };
 
   // Get confidence color
@@ -338,67 +417,186 @@ const ZohoImportClient = () => {
           {/* Items Table */}
           <div className="border border-border-muted rounded-lg overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-border-muted">
+              <table className="min-w-full divide-y divide-border-muted table-fixed">
                 <thead className="bg-fill-muted/50">
                   <tr>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-text-muted">Product</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-text-muted">LWIN Match</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-text-muted">Confidence</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-text-muted">Country</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-text-muted">HS Code</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-text-muted">SKU</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-text-muted">Qty</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-text-muted"></th>
+                    <th className="w-[280px] min-w-[200px] px-3 py-2 text-left text-xs font-medium text-text-muted">
+                      Product
+                    </th>
+                    <th className="w-[70px] px-2 py-2 text-left text-xs font-medium text-text-muted">Vintage</th>
+                    <th className="w-[80px] px-2 py-2 text-left text-xs font-medium text-text-muted">Case</th>
+                    <th className="w-[60px] px-2 py-2 text-left text-xs font-medium text-text-muted">Qty</th>
+                    <th className="w-[90px] px-2 py-2 text-left text-xs font-medium text-text-muted">Country</th>
+                    <th className="w-[90px] px-2 py-2 text-left text-xs font-medium text-text-muted">HS Code</th>
+                    <th className="w-[70px] px-2 py-2 text-left text-xs font-medium text-text-muted">LWIN</th>
+                    <th className="w-[50px] px-2 py-2 text-left text-xs font-medium text-text-muted"></th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border-muted">
                   {extractedItems.map((item) => (
                     <tr key={item.id} className={getRowBgColor(item)}>
+                      {/* Product Name - Editable */}
                       <td className="px-3 py-2">
-                        <div className="max-w-xs">
-                          <Typography variant="bodySm" className="font-medium truncate">
-                            {item.productName}
-                          </Typography>
-                          {item.vintage && (
-                            <Typography variant="bodyXs" colorRole="muted">
-                              {item.vintage} • {item.caseConfig}x{item.bottleSize / 10}cl
+                        {editingCell?.itemId === item.id && editingCell?.field === 'productName' ? (
+                          <input
+                            ref={editInputRef}
+                            type="text"
+                            value={editValue}
+                            onChange={(e) => setEditValue(e.target.value)}
+                            onBlur={handleSaveEdit}
+                            onKeyDown={handleEditKeyDown}
+                            className="w-full px-2 py-1 text-sm border border-blue-400 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => handleStartEdit(item.id, 'productName', item.productName)}
+                            className="w-full text-left group"
+                            title="Click to edit"
+                          >
+                            <Typography variant="bodySm" className="font-medium break-words">
+                              {item.productName}
                             </Typography>
-                          )}
-                        </div>
+                            <IconEdit className="hidden group-hover:inline-block h-3 w-3 ml-1 text-text-muted" />
+                          </button>
+                        )}
                       </td>
-                      <td className="px-3 py-2">
+
+                      {/* Vintage - Editable */}
+                      <td className="px-2 py-2">
+                        {editingCell?.itemId === item.id && editingCell?.field === 'vintage' ? (
+                          <input
+                            ref={editInputRef}
+                            type="text"
+                            value={editValue}
+                            onChange={(e) => setEditValue(e.target.value)}
+                            onBlur={handleSaveEdit}
+                            onKeyDown={handleEditKeyDown}
+                            className="w-full px-2 py-1 text-xs border border-blue-400 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            placeholder="NV"
+                          />
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => handleStartEdit(item.id, 'vintage', item.vintage)}
+                            className="w-full text-left hover:bg-fill-muted rounded px-1 py-0.5"
+                            title="Click to edit"
+                          >
+                            <Typography variant="bodyXs">{item.vintage || 'NV'}</Typography>
+                          </button>
+                        )}
+                      </td>
+
+                      {/* Case Config - Dropdown */}
+                      <td className="px-2 py-2">
+                        <select
+                          value={item.caseConfig}
+                          onChange={(e) => handleCaseConfigChange(item.id, parseInt(e.target.value, 10))}
+                          className="w-full px-1 py-1 text-xs border border-border-muted rounded bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                          {CASE_SIZES.map((size) => (
+                            <option key={size} value={size}>
+                              {size}x{item.bottleSize / 10}cl
+                            </option>
+                          ))}
+                        </select>
+                      </td>
+
+                      {/* Quantity - Editable */}
+                      <td className="px-2 py-2">
+                        {editingCell?.itemId === item.id && editingCell?.field === 'quantity' ? (
+                          <input
+                            ref={editInputRef}
+                            type="number"
+                            value={editValue}
+                            onChange={(e) => setEditValue(e.target.value)}
+                            onBlur={handleSaveEdit}
+                            onKeyDown={handleEditKeyDown}
+                            className="w-full px-2 py-1 text-xs border border-blue-400 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            min="1"
+                          />
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => handleStartEdit(item.id, 'quantity', item.quantity)}
+                            className="w-full text-left hover:bg-fill-muted rounded px-1 py-0.5"
+                            title="Click to edit"
+                          >
+                            <Typography variant="bodyXs" className="font-medium">
+                              {item.quantity}
+                            </Typography>
+                          </button>
+                        )}
+                      </td>
+
+                      {/* Country - Editable */}
+                      <td className="px-2 py-2">
+                        {editingCell?.itemId === item.id && editingCell?.field === 'country' ? (
+                          <input
+                            ref={editInputRef}
+                            type="text"
+                            value={editValue}
+                            onChange={(e) => setEditValue(e.target.value)}
+                            onBlur={handleSaveEdit}
+                            onKeyDown={handleEditKeyDown}
+                            className="w-full px-2 py-1 text-xs border border-blue-400 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => handleStartEdit(item.id, 'country', item.country)}
+                            className="w-full text-left hover:bg-fill-muted rounded px-1 py-0.5"
+                            title="Click to edit"
+                          >
+                            <Typography variant="bodyXs">{item.country || '-'}</Typography>
+                          </button>
+                        )}
+                      </td>
+
+                      {/* HS Code - Editable */}
+                      <td className="px-2 py-2">
+                        {editingCell?.itemId === item.id && editingCell?.field === 'hsCode' ? (
+                          <input
+                            ref={editInputRef}
+                            type="text"
+                            value={editValue}
+                            onChange={(e) => setEditValue(e.target.value)}
+                            onBlur={handleSaveEdit}
+                            onKeyDown={handleEditKeyDown}
+                            className="w-full px-2 py-1 text-xs border border-blue-400 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
+                          />
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => handleStartEdit(item.id, 'hsCode', item.hsCode)}
+                            className="w-full text-left hover:bg-fill-muted rounded px-1 py-0.5"
+                            title="Click to edit"
+                          >
+                            <Typography variant="bodyXs" className="font-mono">
+                              {item.hsCode}
+                            </Typography>
+                          </button>
+                        )}
+                      </td>
+
+                      {/* LWIN - Read only */}
+                      <td className="px-2 py-2">
                         {item.hasLwinMatch ? (
-                          <Typography variant="bodyXs" className="text-green-600">
+                          <span
+                            className={`text-xs font-mono ${getConfidenceColor(item.matchConfidence)}`}
+                            title={`${Math.round(item.matchConfidence * 100)}% match`}
+                          >
                             {item.lwin7}
-                          </Typography>
+                          </span>
                         ) : (
                           <Typography variant="bodyXs" className="text-red-600">
-                            No match
+                            -
                           </Typography>
                         )}
                       </td>
-                      <td className="px-3 py-2">
-                        <span className={`text-xs font-medium ${getConfidenceColor(item.matchConfidence)}`}>
-                          {Math.round(item.matchConfidence * 100)}%
-                        </span>
-                      </td>
-                      <td className="px-3 py-2">
-                        <Typography variant="bodyXs">{item.country || '-'}</Typography>
-                      </td>
-                      <td className="px-3 py-2">
-                        <Typography variant="bodyXs" className="font-mono">
-                          {item.hsCode}
-                        </Typography>
-                      </td>
-                      <td className="px-3 py-2">
-                        <Typography variant="bodyXs" className="font-mono text-text-muted">
-                          {item.sku}
-                        </Typography>
-                      </td>
-                      <td className="px-3 py-2">
-                        <Typography variant="bodyXs">{item.quantity}</Typography>
-                      </td>
-                      <td className="px-3 py-2">
+
+                      {/* Actions */}
+                      <td className="px-2 py-2">
                         <button
                           type="button"
                           onClick={() => handleRemoveItem(item.id)}
