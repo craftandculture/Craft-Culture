@@ -120,6 +120,13 @@
       "when": 1768508107547,
       "tag": "0016_mysterious_silhouette",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1768987617737,
+      "tag": "0017_add-better-auth-banned-fields",
+      "breakpoints": true
     }
   ]
 }
