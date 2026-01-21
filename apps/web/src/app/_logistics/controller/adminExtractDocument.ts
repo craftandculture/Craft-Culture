@@ -100,21 +100,28 @@ ABSOLUTE RULES - VIOLATION IS UNACCEPTABLE:
 
 1. TRANSCRIBE ONLY - You are a transcription tool. Copy text EXACTLY as it appears character-by-character.
 
-2. ZERO INVENTION - NEVER generate, guess, or invent ANY text. If you cannot read something clearly, output "UNREADABLE" or leave empty.
+2. ZERO INVENTION - NEVER generate, guess, or invent ANY data. If you cannot read something, leave that field EMPTY. Do NOT make up products, quantities, or codes that don't exist in the document.
 
-3. NO FAMOUS BRANDS - You are FORBIDDEN from outputting well-known brand names (Moet, Veuve Clicquot, Dom Perignon, Krug, etc.) unless those EXACT words appear in the document. Wine invoices often contain obscure producer names - transcribe them exactly.
+3. NO FAMOUS BRANDS - You are FORBIDDEN from outputting well-known brand names (Moet, Veuve Clicquot, Dom Perignon, Krug, etc.) unless those EXACT words appear in the document.
 
-4. PRODUCT NAME RULE - Wine product descriptions typically include: Producer name, wine type, appellation/region, vintage year, bottle size (0.75L), and alcohol %. Copy the FULL description exactly as written.
+4. PRODUCT NAME RULE - Copy the FULL product description exactly as written.
 
-5. VERIFY YOUR OUTPUT - Before returning each product name, confirm you can point to those exact characters in the document. If you cannot, you are hallucinating.
+5. VERIFY YOUR OUTPUT - Before returning EACH item, confirm it EXISTS in the document. If you cannot find it, DO NOT INCLUDE IT. Ghost/phantom entries are unacceptable.
 
 6. NUMBERS - Only use numbers you can clearly see. Do not calculate or estimate.
 
 7. DATES - Use ISO 8601 format (YYYY-MM-DD). Only use dates visible in the document.
 
-8. HS CODES - Extract the COMPLETE commodity/tariff code with ALL digits exactly as written. Codes like 22042109, 22042132, 22041000 are DIFFERENT - never truncate to generic codes like 22042100.
+8. HS/COMMODITY CODES - CRITICAL:
+   - Each row has its OWN commodity code in the rightmost column
+   - Codes vary by product: 22042109, 22042132, 22041000, 22042142, 22042198, etc.
+   - DO NOT default everything to 22042100 - that is INCORRECT
+   - Read each code digit-by-digit from the document
+   - If you cannot read a code, leave it EMPTY (do not guess 22042100)
 
-9. If the document text is garbled or unreadable, output "DOCUMENT UNREADABLE" rather than guessing.
+9. COMPLETENESS - Extract ALL rows from the document. Count them. If the document shows 50 items, you must return 50 items.
+
+10. NO HALLUCINATION - Every single item you return MUST exist in the source document. Do not invent products.
 
 You are a TRANSCRIPTION tool, not a creative writer. Extract ONLY what exists in the document.`;
 
@@ -214,7 +221,13 @@ CRITICAL RULES:
 3. NEVER output famous brand names (Moet, Dom Perignon, Veuve Clicquot, Krug, etc.) unless those EXACT letters appear
 4. If you cannot read text clearly, output "UNREADABLE"
 5. Extract EVERY line item - count them to ensure completeness
-6. HS CODES - Extract the COMPLETE code with ALL digits exactly as shown. Codes like 22042109, 22042132, 22041000 are DIFFERENT - do NOT truncate them to 22042100. Copy every digit.
+
+HS CODE EXTRACTION - EXTREMELY IMPORTANT:
+- The document has a "Commodity Code" column - READ EACH ROW'S CODE INDIVIDUALLY
+- Each product may have a DIFFERENT 8-digit code (22042109, 22042132, 22041000, 22042142, etc.)
+- DO NOT assume all wines are 22042100 - that is WRONG
+- Look at the rightmost numeric column for the commodity/HS code
+- If you cannot read a specific code clearly, leave it empty rather than defaulting to 22042100
 
 This is a TRANSCRIPTION task, not interpretation. Copy exactly what you see.`,
             },
