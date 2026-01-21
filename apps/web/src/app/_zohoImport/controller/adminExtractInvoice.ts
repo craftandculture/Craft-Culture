@@ -3,6 +3,7 @@ import { TRPCError } from '@trpc/server';
 import { type CoreMessage, generateObject } from 'ai';
 import { sql } from 'drizzle-orm';
 import pdfParse from 'pdf-parse';
+import { pdf } from 'pdf-to-img';
 import { z } from 'zod';
 
 import db from '@/database/client';
@@ -243,16 +244,41 @@ ${pdfText}
 
         extractedData = result.object;
       } else {
-        // Scanned PDF or no extractable text - fall back to vision
-        logger.info('[ZohoImport] PDF has no extractable text, using vision mode');
+        // Scanned PDF or no extractable text - convert to images and use vision
+        logger.info('[ZohoImport] PDF has no extractable text, converting to images for vision mode');
 
-        const messages: CoreMessage[] = [
+        // Convert PDF pages to images
+        const pdfImages: string[] = [];
+        try {
+          const document = await pdf(pdfBuffer, { scale: 2.0 });
+          for await (const image of document) {
+            // image is a Buffer with PNG data
+            pdfImages.push(image.toString('base64'));
+          }
+          logger.info('[ZohoImport] PDF converted to images', { pageCount: pdfImages.length });
+        } catch (convertError) {
+          logger.error('[ZohoImport] PDF to image conversion failed', {
+            error: convertError instanceof Error ? convertError.message : 'Unknown error',
+          });
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message:
+              'Could not process this PDF. Please try exporting it as a PNG/JPG image and uploading that instead.',
+          });
+        }
+
+        if (pdfImages.length === 0) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'PDF appears to be empty. Please check the file and try again.',
+          });
+        }
+
+        // Build message content with all page images
+        const imageContent: CoreMessage['content'] = [
           {
-            role: 'user',
-            content: [
-              {
-                type: 'text',
-                text: `Extract all wine line items from this supplier invoice/packing list.
+            type: 'text',
+            text: `Extract all wine line items from this supplier invoice/packing list (${pdfImages.length} page${pdfImages.length > 1 ? 's' : ''}).
 
 For each product, extract:
 - Full product name (producer + wine + region)
@@ -269,12 +295,18 @@ IMPORTANT:
 - "wb" = wooden box, "ct" = cardboard - these indicate case packaging, not quantity
 
 This is a TRANSCRIPTION task. Copy product names exactly as written.`,
-              },
-              {
-                type: 'image',
-                image: file,
-              },
-            ],
+          },
+          // Add each page as an image (limit to first 5 pages to avoid token limits)
+          ...pdfImages.slice(0, 5).map((img) => ({
+            type: 'image' as const,
+            image: img,
+          })),
+        ];
+
+        const messages: CoreMessage[] = [
+          {
+            role: 'user',
+            content: imageContent,
           },
         ];
 
