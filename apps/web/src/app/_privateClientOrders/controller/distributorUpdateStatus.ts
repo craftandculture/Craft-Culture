@@ -136,13 +136,8 @@ const distributorUpdateStatus = distributorProcedure
         });
       }
 
-      // Check if partner has acknowledged the invoice
-      if (!order.partnerInvoiceAcknowledgedAt) {
-        throw new TRPCError({
-          code: 'BAD_REQUEST',
-          message: 'Partner must acknowledge the invoice before you can confirm payment',
-        });
-      }
+      // Partner acknowledgment is no longer required - payment takes priority over ACK
+      // If partner hasn't acknowledged, we proceed anyway to keep stock moving
     }
 
     // Build update data with timestamp
