@@ -150,6 +150,11 @@ export const users = pgTable('users', {
     adminDisabledTypes?: string[];
   }>(),
 
+  // Better Auth admin plugin fields
+  banned: boolean('banned').default(false),
+  banReason: text('ban_reason'),
+  banExpires: timestamp('ban_expires', { mode: 'date' }),
+
   ...timestamps,
 });
 // Note: No RLS on users - managed by Better Auth
