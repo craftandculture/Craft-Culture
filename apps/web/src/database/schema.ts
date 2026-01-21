@@ -971,6 +971,7 @@ export const orderItemStockStatus = pgEnum('order_item_stock_status', [
   'confirmed',
   'in_transit_to_cc',
   'at_cc_bonded',
+  'at_cc_ready_for_dispatch',
   'in_transit_to_distributor',
   'at_distributor',
   'delivered',

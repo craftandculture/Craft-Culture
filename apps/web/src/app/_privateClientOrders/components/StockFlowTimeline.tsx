@@ -35,7 +35,9 @@ const stockStatusLabels: Record<string, string> = {
   pending: 'Pending',
   confirmed: 'Confirmed',
   at_cc_bonded: 'At C&C',
+  at_cc_ready_for_dispatch: 'Packed',
   in_transit_to_cc: 'In Transit',
+  in_transit_to_distributor: 'To Distributor',
   at_distributor: 'At Distributor',
   delivered: 'Delivered',
 };
@@ -44,7 +46,9 @@ const stockStatusIcons: Record<string, typeof IconCheck> = {
   pending: IconClock,
   confirmed: IconCheck,
   at_cc_bonded: IconBox,
+  at_cc_ready_for_dispatch: IconPackage,
   in_transit_to_cc: IconPlane,
+  in_transit_to_distributor: IconTruck,
   at_distributor: IconPackage,
   delivered: IconTruck,
 };
@@ -53,7 +57,9 @@ const stockStatusColors: Record<string, string> = {
   pending: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300',
   confirmed: 'bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-300',
   at_cc_bonded: 'bg-purple-100 text-purple-600 dark:bg-purple-900 dark:text-purple-300',
+  at_cc_ready_for_dispatch: 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900 dark:text-indigo-300',
   in_transit_to_cc: 'bg-amber-100 text-amber-600 dark:bg-amber-900 dark:text-amber-300',
+  in_transit_to_distributor: 'bg-cyan-100 text-cyan-600 dark:bg-cyan-900 dark:text-cyan-300',
   at_distributor: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900 dark:text-emerald-300',
   delivered: 'bg-green-100 text-green-600 dark:bg-green-900 dark:text-green-300',
 };
