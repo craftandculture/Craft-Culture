@@ -76,9 +76,9 @@ const extractedLogisticsDataSchema = z.object({
   costBreakdown: z
     .array(
       z.object({
-        category: z.string().describe('Cost category (freight, handling, customs, etc.)'),
+        category: z.string().optional().describe('Cost category (freight, handling, customs, etc.)'),
         description: z.string().optional().describe('Description of charge'),
-        amount: z.number().describe('Amount'),
+        amount: z.number().optional().describe('Amount'),
         currency: z.string().optional().describe('Currency if different from main'),
       }),
     )
@@ -279,44 +279,17 @@ ${pdfText}
 
         extractedData = result.object;
       } else {
-        // For scanned PDFs or PDFs with minimal text, send as file to GPT-4o
-        logger.info('[LogisticsDocumentExtraction] Using direct PDF file processing (scanned/image PDF)');
-
-        const pdfMessages: CoreMessage[] = [
-          {
-            role: 'user',
-            content: [
-              {
-                type: 'text',
-                text: `TRANSCRIBE all data from this ${documentType.replace('_', ' ')} PDF document.
-
-CRITICAL RULES:
-1. Product names must be copied CHARACTER BY CHARACTER from the document
-2. Wine products typically look like: "Producer Name Wine Type Appellation Year 0.75L 12.5" - copy the FULL string exactly
-3. NEVER output famous brand names (Moet, Dom Perignon, Veuve Clicquot, Krug, Pommery, etc.) unless those EXACT letters appear
-4. If you cannot read text clearly, output "UNREADABLE"
-5. Extract EVERY line item from ALL pages - count them to ensure completeness
-6. Be precise with numbers, dates, and reference numbers
-
-This is a TRANSCRIPTION task, not interpretation. Copy exactly what you see.`,
-              },
-              {
-                type: 'file',
-                data: file,
-                mediaType: 'application/pdf',
-              },
-            ],
-          },
-        ];
-
-        const result = await generateObject({
-          model: openai('gpt-4o'),
-          schema: extractedLogisticsDataSchema,
-          system: systemPrompt,
-          messages: pdfMessages,
+        // For scanned PDFs or PDFs with minimal text, we cannot process directly
+        // GPT-4o doesn't support PDF files - user needs to convert to image or use a digital PDF
+        logger.warn('[LogisticsDocumentExtraction] PDF has no extractable text (likely scanned)', {
+          textLength: pdfText?.length ?? 0,
         });
 
-        extractedData = result.object;
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message:
+            'This PDF appears to be scanned or contains no extractable text. Please either: (1) Upload the original digital PDF, or (2) Convert the PDF to an image (PNG/JPG) and upload that instead.',
+        });
       }
     } else {
       throw new TRPCError({
