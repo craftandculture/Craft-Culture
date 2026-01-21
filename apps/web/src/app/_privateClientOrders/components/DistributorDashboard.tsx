@@ -2,6 +2,7 @@
 
 import {
   IconArrowRight,
+  IconBook,
   IconBox,
   IconBuilding,
   IconBuildingStore,
@@ -594,6 +595,12 @@ const DistributorDashboard = () => {
               <Button variant="outline" className="gap-2">
                 <Icon icon={IconPackage} size="sm" />
                 All Orders ({kpis.totalOrders})
+              </Button>
+            </Link>
+            <Link href="/docs/pco-flows">
+              <Button variant="outline" className="gap-2 border-border-brand text-text-brand hover:bg-fill-brand/5">
+                <Icon icon={IconBook} size="sm" />
+                Process Guide
               </Button>
             </Link>
           </div>
