@@ -148,6 +148,7 @@ const ZohoImportClient = () => {
   const handleDrop = useCallback(
     async (e: React.DragEvent<HTMLDivElement>) => {
       e.preventDefault();
+      e.stopPropagation();
       setIsDragOver(false);
 
       const file = e.dataTransfer.files[0];
@@ -157,6 +158,20 @@ const ZohoImportClient = () => {
     },
     [processFile],
   );
+
+  // Handle drag over
+  const handleDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(true);
+  }, []);
+
+  // Handle drag leave
+  const handleDragLeave = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
+  }, []);
 
   // Handle file input change
   const handleFileChange = useCallback(
@@ -316,11 +331,8 @@ const ZohoImportClient = () => {
           className={`relative border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
             isDragOver ? 'border-blue-500 bg-blue-50' : 'border-border-muted hover:border-border-primary'
           } ${!supplierName.trim() ? 'opacity-50 pointer-events-none' : ''}`}
-          onDragOver={(e) => {
-            e.preventDefault();
-            setIsDragOver(true);
-          }}
-          onDragLeave={() => setIsDragOver(false)}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
           onDrop={handleDrop}
         >
           {isExtracting ? (
@@ -348,7 +360,7 @@ const ZohoImportClient = () => {
                 type="file"
                 accept=".pdf,image/png,image/jpeg,image/jpg"
                 onChange={handleFileChange}
-                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                className={`absolute inset-0 w-full h-full opacity-0 cursor-pointer ${isDragOver ? 'pointer-events-none' : ''}`}
                 disabled={!supplierName.trim()}
               />
             </>
