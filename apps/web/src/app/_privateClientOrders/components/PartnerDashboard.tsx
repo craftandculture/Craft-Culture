@@ -2,6 +2,7 @@
 
 import {
   IconArrowRight,
+  IconBook,
   IconBox,
   IconCalendar,
   IconCash,
@@ -605,6 +606,13 @@ const PartnerDashboard = () => {
         >
           <Icon icon={IconUsers} size="xs" />
           <span>Manage Clients</span>
+        </Link>
+        <Link
+          href="/docs/pco-flows"
+          className="flex items-center gap-1.5 rounded-full border border-border-brand bg-fill-brand/5 px-3 py-1.5 text-text-brand transition-colors hover:bg-fill-brand/10"
+        >
+          <Icon icon={IconBook} size="xs" />
+          <span>Process Guide</span>
         </Link>
       </div>
     </div>
