@@ -18,6 +18,7 @@ export const GET = async (request: NextRequest) => {
   if (isMagicLink) {
     logger.info('[Auth] Magic link verification request', {
       pathname: url.pathname,
+      searchParams: url.searchParams.toString(),
       isEdge,
       userAgent: userAgent.substring(0, 100),
       cookies: request.headers.get('cookie')?.substring(0, 200) ?? 'none',
@@ -25,17 +26,40 @@ export const GET = async (request: NextRequest) => {
     });
   }
 
-  const response = await handler.GET(request);
+  try {
+    const response = await handler.GET(request);
 
-  if (isMagicLink) {
-    logger.info('[Auth] Magic link verification response', {
-      status: response.status,
-      isEdge,
-      setCookie: response.headers.get('set-cookie')?.substring(0, 200) ?? 'none',
+    if (isMagicLink) {
+      logger.info('[Auth] Magic link verification response', {
+        status: response.status,
+        isEdge,
+        setCookie: response.headers.get('set-cookie')?.substring(0, 200) ?? 'none',
+      });
+    }
+
+    return response;
+  } catch (error) {
+    logger.error('[Auth] Error in GET handler', {
+      pathname: url.pathname,
+      searchParams: url.searchParams.toString(),
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
     });
+    throw error;
   }
-
-  return response;
 };
 
-export const POST = handler.POST;
+export const POST = async (request: NextRequest) => {
+  const url = new URL(request.url);
+
+  try {
+    return await handler.POST(request);
+  } catch (error) {
+    logger.error('[Auth] Error in POST handler', {
+      pathname: url.pathname,
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+    throw error;
+  }
+};
