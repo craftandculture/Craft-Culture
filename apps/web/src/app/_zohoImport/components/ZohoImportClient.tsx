@@ -5,6 +5,7 @@ import {
   IconCheck,
   IconCloudUpload,
   IconDownload,
+  IconEdit,
   IconLoader2,
   IconTrash,
   IconX,
@@ -20,6 +21,11 @@ import useTRPC from '@/lib/trpc/browser';
 
 import type { ZohoItem } from '../schemas/zohoItemSchema';
 
+interface EditingCell {
+  itemId: string;
+  field: keyof ZohoItem;
+}
+
 /**
  * Main client component for Zoho Import tool
  *
@@ -33,6 +39,8 @@ const ZohoImportClient = () => {
   const [supplierName, setSupplierName] = useState('');
   const [extractedItems, setExtractedItems] = useState<ZohoItem[] | null>(null);
   const [extractionError, setExtractionError] = useState<string | null>(null);
+  const [editingCell, setEditingCell] = useState<EditingCell | null>(null);
+  const [editValue, setEditValue] = useState('');
   const [stats, setStats] = useState<{
     total: number;
     matched: number;
@@ -162,6 +170,16 @@ const ZohoImportClient = () => {
     [processFile],
   );
 
+  // Update stats helper
+  const updateStats = (items: ZohoItem[]) => {
+    setStats({
+      total: items.length,
+      matched: items.filter((i) => i.hasLwinMatch).length,
+      unmatched: items.filter((i) => !i.hasLwinMatch).length,
+      needsReview: items.filter((i) => i.needsReview).length,
+    });
+  };
+
   // Handle download CSV
   const handleDownloadCsv = () => {
     if (!extractedItems || extractedItems.length === 0) return;
@@ -177,17 +195,51 @@ const ZohoImportClient = () => {
     if (!extractedItems) return;
     const newItems = extractedItems.filter((i) => i.id !== itemId);
     setExtractedItems(newItems);
-    setStats((prev) =>
-      prev
-        ? {
-            ...prev,
-            total: newItems.length,
-            matched: newItems.filter((i) => i.hasLwinMatch).length,
-            unmatched: newItems.filter((i) => !i.hasLwinMatch).length,
-            needsReview: newItems.filter((i) => i.needsReview).length,
-          }
-        : null,
-    );
+    updateStats(newItems);
+  };
+
+  // Start editing a cell
+  const startEditing = (itemId: string, field: keyof ZohoItem, currentValue: string | number | null) => {
+    setEditingCell({ itemId, field });
+    setEditValue(currentValue?.toString() ?? '');
+  };
+
+  // Save edited cell
+  const saveEdit = () => {
+    if (!editingCell || !extractedItems) return;
+
+    const updatedItems = extractedItems.map((item) => {
+      if (item.id !== editingCell.itemId) return item;
+
+      const field = editingCell.field;
+      let newValue: string | number | null = editValue;
+
+      // Convert to appropriate type
+      if (field === 'quantity' || field === 'caseConfig' || field === 'bottleSize') {
+        newValue = parseInt(editValue, 10) || 0;
+      }
+
+      return { ...item, [field]: newValue };
+    });
+
+    setExtractedItems(updatedItems);
+    setEditingCell(null);
+    setEditValue('');
+  };
+
+  // Cancel editing
+  const cancelEdit = () => {
+    setEditingCell(null);
+    setEditValue('');
+  };
+
+  // Handle key press in edit input
+  const handleEditKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      saveEdit();
+    } else if (e.key === 'Escape') {
+      cancelEdit();
+    }
   };
 
   // Clear and reset
@@ -196,6 +248,7 @@ const ZohoImportClient = () => {
     setExtractedItems(null);
     setStats(null);
     setExtractionError(null);
+    setEditingCell(null);
   };
 
   // Get confidence color
@@ -210,6 +263,42 @@ const ZohoImportClient = () => {
     if (!item.hasLwinMatch) return 'bg-red-50/50';
     if (item.needsReview) return 'bg-amber-50/50';
     return '';
+  };
+
+  // Render editable cell
+  const renderEditableCell = (
+    item: ZohoItem,
+    field: keyof ZohoItem,
+    value: string | number | null,
+    className?: string,
+  ) => {
+    const isEditing = editingCell?.itemId === item.id && editingCell?.field === field;
+
+    if (isEditing) {
+      return (
+        <input
+          type={field === 'quantity' || field === 'caseConfig' || field === 'bottleSize' ? 'number' : 'text'}
+          value={editValue}
+          onChange={(e) => setEditValue(e.target.value)}
+          onBlur={saveEdit}
+          onKeyDown={handleEditKeyDown}
+          autoFocus
+          className="w-full px-1 py-0.5 text-xs border border-blue-400 rounded focus:outline-none focus:ring-1 focus:ring-blue-400"
+        />
+      );
+    }
+
+    return (
+      <button
+        type="button"
+        onClick={() => startEditing(item.id, field, value)}
+        className={`group flex items-center gap-1 text-left hover:bg-fill-muted/50 rounded px-1 py-0.5 -mx-1 w-full ${className ?? ''}`}
+        title="Click to edit"
+      >
+        <span className="flex-1 min-w-0">{value ?? '-'}</span>
+        <IconEdit className="h-3 w-3 text-text-muted opacity-0 group-hover:opacity-100 flex-shrink-0" />
+      </button>
+    );
   };
 
   return (
@@ -335,46 +424,114 @@ const ZohoImportClient = () => {
             </div>
           </div>
 
-          {/* Items Table */}
-          <div className="border border-border-muted rounded-lg overflow-hidden">
+          {/* Editing hint */}
+          <Typography variant="bodyXs" colorRole="muted" className="flex items-center gap-1">
+            <IconEdit className="h-3.5 w-3.5" />
+            Click any cell to edit. Press Enter to save, Escape to cancel.
+          </Typography>
+
+          {/* Items - Card Layout for mobile, Table for desktop */}
+          <div className="space-y-3 md:hidden">
+            {extractedItems.map((item) => (
+              <div
+                key={item.id}
+                className={`border border-border-muted rounded-lg p-4 space-y-3 ${getRowBgColor(item)}`}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium text-sm">
+                      {renderEditableCell(item, 'productName', item.productName)}
+                    </div>
+                    <div className="flex items-center gap-2 mt-1 text-xs text-text-muted">
+                      <span>Vintage:</span>
+                      {renderEditableCell(item, 'vintage', item.vintage)}
+                      <span className="text-border-muted">|</span>
+                      {renderEditableCell(item, 'caseConfig', item.caseConfig)}
+                      <span>x</span>
+                      {renderEditableCell(item, 'bottleSize', item.bottleSize)}
+                      <span>ml</span>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveItem(item.id)}
+                    className="p-1 hover:bg-red-50 rounded"
+                    title="Remove"
+                  >
+                    <IconTrash className="h-4 w-4 text-red-500" />
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div>
+                    <span className="text-text-muted">LWIN:</span>{' '}
+                    <span className={item.hasLwinMatch ? 'text-green-600' : 'text-red-600'}>
+                      {item.hasLwinMatch ? item.lwin7 : 'No match'}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-text-muted">Confidence:</span>{' '}
+                    <span className={getConfidenceColor(item.matchConfidence)}>
+                      {Math.round(item.matchConfidence * 100)}%
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-text-muted">Country:</span>{' '}
+                    {renderEditableCell(item, 'country', item.country)}
+                  </div>
+                  <div>
+                    <span className="text-text-muted">HS Code:</span>{' '}
+                    {renderEditableCell(item, 'hsCode', item.hsCode, 'font-mono')}
+                  </div>
+                  <div>
+                    <span className="text-text-muted">SKU:</span>{' '}
+                    <span className="font-mono text-text-muted">{item.sku}</span>
+                  </div>
+                  <div>
+                    <span className="text-text-muted">Qty:</span>{' '}
+                    {renderEditableCell(item, 'quantity', item.quantity)}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop Table */}
+          <div className="hidden md:block border border-border-muted rounded-lg overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-border-muted">
+              <table className="w-full divide-y divide-border-muted text-sm">
                 <thead className="bg-fill-muted/50">
                   <tr>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-text-muted">Product</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-text-muted">LWIN Match</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-text-muted">Confidence</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-text-muted">Country</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-text-muted">HS Code</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-text-muted">SKU</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-text-muted">Qty</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-text-muted"></th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-text-muted min-w-[300px]">Product</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-text-muted w-24">LWIN</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-text-muted w-20">Conf.</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-text-muted w-24">Country</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-text-muted w-24">HS Code</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-text-muted w-16">Qty</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-text-muted w-10"></th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border-muted">
                   {extractedItems.map((item) => (
                     <tr key={item.id} className={getRowBgColor(item)}>
                       <td className="px-3 py-2">
-                        <div className="max-w-xs">
-                          <Typography variant="bodySm" className="font-medium truncate">
-                            {item.productName}
-                          </Typography>
-                          {item.vintage && (
-                            <Typography variant="bodyXs" colorRole="muted">
-                              {item.vintage} • {item.caseConfig}x{item.bottleSize / 10}cl
-                            </Typography>
-                          )}
+                        <div>
+                          {renderEditableCell(item, 'productName', item.productName, 'font-medium')}
+                          <div className="flex items-center gap-1 text-xs text-text-muted mt-0.5">
+                            {renderEditableCell(item, 'vintage', item.vintage)}
+                            <span className="text-border-muted mx-1">•</span>
+                            {renderEditableCell(item, 'caseConfig', item.caseConfig)}
+                            <span>x</span>
+                            {renderEditableCell(item, 'bottleSize', item.bottleSize)}
+                            <span>ml</span>
+                          </div>
                         </div>
                       </td>
                       <td className="px-3 py-2">
                         {item.hasLwinMatch ? (
-                          <Typography variant="bodyXs" className="text-green-600">
-                            {item.lwin7}
-                          </Typography>
+                          <span className="text-green-600 text-xs">{item.lwin7}</span>
                         ) : (
-                          <Typography variant="bodyXs" className="text-red-600">
-                            No match
-                          </Typography>
+                          <span className="text-red-600 text-xs">No match</span>
                         )}
                       </td>
                       <td className="px-3 py-2">
@@ -382,21 +539,14 @@ const ZohoImportClient = () => {
                           {Math.round(item.matchConfidence * 100)}%
                         </span>
                       </td>
-                      <td className="px-3 py-2">
-                        <Typography variant="bodyXs">{item.country || '-'}</Typography>
+                      <td className="px-3 py-2 text-xs">
+                        {renderEditableCell(item, 'country', item.country)}
                       </td>
-                      <td className="px-3 py-2">
-                        <Typography variant="bodyXs" className="font-mono">
-                          {item.hsCode}
-                        </Typography>
+                      <td className="px-3 py-2 text-xs">
+                        {renderEditableCell(item, 'hsCode', item.hsCode, 'font-mono')}
                       </td>
-                      <td className="px-3 py-2">
-                        <Typography variant="bodyXs" className="font-mono text-text-muted">
-                          {item.sku}
-                        </Typography>
-                      </td>
-                      <td className="px-3 py-2">
-                        <Typography variant="bodyXs">{item.quantity}</Typography>
+                      <td className="px-3 py-2 text-xs">
+                        {renderEditableCell(item, 'quantity', item.quantity)}
                       </td>
                       <td className="px-3 py-2">
                         <button
