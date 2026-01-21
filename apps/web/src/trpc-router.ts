@@ -13,6 +13,7 @@ import quotesRouter from '@/app/_quotes/router';
 import settingsRouter from '@/app/_settings/router';
 import sourceRouter from '@/app/_source/router';
 import warehouseRouter from '@/app/_warehouse/router';
+import zohoImportRouter from '@/app/_zohoImport/router';
 
 import productsRouter from './app/_products/router';
 import { createTRPCRouter } from './lib/trpc/trpc';
@@ -34,6 +35,7 @@ export const appRouter = createTRPCRouter({
   source: sourceRouter,
   warehouse: warehouseRouter,
   settings: settingsRouter,
+  zohoImport: zohoImportRouter,
 });
 
 export type AppRouter = typeof appRouter;
