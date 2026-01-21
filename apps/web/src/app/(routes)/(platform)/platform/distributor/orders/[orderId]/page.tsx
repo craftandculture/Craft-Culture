@@ -61,6 +61,22 @@ const formatPrice = (amount: number, currency: Currency) => {
 };
 
 /**
+ * Calculate the client-facing price for a line item by prorating the order total
+ *
+ * Line items store supplier/partner prices, but the order total includes all markup
+ * (C&C margin, duty, VAT, transfer costs). This function prorates the final total
+ * back to each line item based on their proportion of the supplier cost.
+ */
+const calculateClientPrice = (
+  itemSupplierTotal: number,
+  totalSupplierCost: number,
+  orderTotal: number,
+): number => {
+  if (totalSupplierCost === 0) return 0;
+  return (itemSupplierTotal / totalSupplierCost) * orderTotal;
+};
+
+/**
  * Distributor order detail page
  *
  * Shows full order details with action buttons for status updates.
@@ -868,36 +884,48 @@ const DistributorOrderDetailPage = () => {
             </div>
 
             {order.items && order.items.length > 0 ? (
-              <div className="overflow-x-auto">
-                <table className="w-full text-xs">
-                  <thead className="border-b border-border-muted bg-surface-secondary/50">
-                    <tr>
-                      <th className="px-2 py-1.5 text-left text-[10px] font-medium uppercase tracking-wide text-text-muted">Product</th>
-                      <th className="px-2 py-1.5 text-left text-[10px] font-medium uppercase tracking-wide text-text-muted">Producer</th>
-                      <th className="px-2 py-1.5 text-center text-[10px] font-medium uppercase tracking-wide text-text-muted">Yr</th>
-                      <th className="px-2 py-1.5 text-center text-[10px] font-medium uppercase tracking-wide text-text-muted">Pack</th>
-                      <th className="px-2 py-1.5 text-center text-[10px] font-medium uppercase tracking-wide text-text-muted">Qty</th>
-                      <th className="px-2 py-1.5 text-right text-[10px] font-medium uppercase tracking-wide text-text-muted">Total ({currency})</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border-muted/50">
-                    {order.items.map((item) => (
-                      <tr key={item.id} className="hover:bg-surface-muted/20">
-                        <td className="px-2 py-1.5">
-                          <span className="text-xs font-medium">{item.productName}</span>
-                        </td>
-                        <td className="px-2 py-1.5 text-xs">{item.producer || '-'}</td>
-                        <td className="px-2 py-1.5 text-center text-xs">{item.vintage || '-'}</td>
-                        <td className="px-2 py-1.5 text-center text-xs text-text-muted">{item.caseConfig}×{item.bottleSize}</td>
-                        <td className="px-2 py-1.5 text-center text-xs font-medium">{item.quantity}</td>
-                        <td className="px-2 py-1.5 text-right text-xs font-semibold">
-                          {formatPrice(getAmount(item.totalUsd), currency)}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              (() => {
+                // Calculate total supplier cost to prorate client prices
+                const totalSupplierCost = order.items.reduce((sum, item) => sum + item.totalUsd, 0);
+                const orderTotal = order.totalUsd ?? 0;
+
+                return (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-xs">
+                      <thead className="border-b border-border-muted bg-surface-secondary/50">
+                        <tr>
+                          <th className="px-2 py-1.5 text-left text-[10px] font-medium uppercase tracking-wide text-text-muted">Product</th>
+                          <th className="px-2 py-1.5 text-left text-[10px] font-medium uppercase tracking-wide text-text-muted">Producer</th>
+                          <th className="px-2 py-1.5 text-center text-[10px] font-medium uppercase tracking-wide text-text-muted">Yr</th>
+                          <th className="px-2 py-1.5 text-center text-[10px] font-medium uppercase tracking-wide text-text-muted">Pack</th>
+                          <th className="px-2 py-1.5 text-center text-[10px] font-medium uppercase tracking-wide text-text-muted">Qty</th>
+                          <th className="px-2 py-1.5 text-right text-[10px] font-medium uppercase tracking-wide text-text-muted">Total ({currency})</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border-muted/50">
+                        {order.items.map((item) => {
+                          // Calculate client-facing price by prorating order total
+                          const clientTotal = calculateClientPrice(item.totalUsd, totalSupplierCost, orderTotal);
+                          return (
+                            <tr key={item.id} className="hover:bg-surface-muted/20">
+                              <td className="px-2 py-1.5">
+                                <span className="text-xs font-medium">{item.productName}</span>
+                              </td>
+                              <td className="px-2 py-1.5 text-xs">{item.producer || '-'}</td>
+                              <td className="px-2 py-1.5 text-center text-xs">{item.vintage || '-'}</td>
+                              <td className="px-2 py-1.5 text-center text-xs text-text-muted">{item.caseConfig}×{item.bottleSize}</td>
+                              <td className="px-2 py-1.5 text-center text-xs font-medium">{item.quantity}</td>
+                              <td className="px-2 py-1.5 text-right text-xs font-semibold">
+                                {formatPrice(getAmount(clientTotal), currency)}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                );
+              })()
             ) : (
               <Typography variant="bodySm" colorRole="muted">
                 No line items

@@ -90,7 +90,17 @@ export async function GET(request: NextRequest) {
     // Get USD to AED exchange rate (default to 3.6725 if not set)
     const usdToAedRate = order.usdToAedRate ?? 3.6725;
 
-    // Generate PDF
+    // Calculate total supplier cost for prorating client prices
+    const totalSupplierCost = lineItems.reduce((sum, item) => sum + item.totalUsd, 0);
+    const orderTotal = order.totalUsd ?? 0;
+
+    // Helper to calculate client-facing price by prorating order total
+    const calculateClientPrice = (supplierTotal: number) => {
+      if (totalSupplierCost === 0) return 0;
+      return (supplierTotal / totalSupplierCost) * orderTotal;
+    };
+
+    // Generate PDF with client-facing prices
     const pdfBuffer = await renderProformaInvoicePDF({
       order: {
         orderNumber: order.orderNumber ?? order.id,
@@ -101,23 +111,28 @@ export async function GET(request: NextRequest) {
         clientPhone: order.clientPhone,
         clientAddress: order.clientAddress,
         deliveryNotes: order.deliveryNotes,
-        subtotalUsd: order.subtotalUsd,
-        dutyUsd: order.dutyUsd,
-        vatUsd: order.vatUsd,
-        logisticsUsd: order.logisticsUsd,
-        totalUsd: order.totalUsd ?? 0,
+        // For proforma, show the total as the subtotal since line items are client-facing
+        subtotalUsd: orderTotal,
+        dutyUsd: 0, // Included in prorated line items
+        vatUsd: 0, // Included in prorated line items
+        logisticsUsd: 0, // Included in prorated line items
+        totalUsd: orderTotal,
         usdToAedRate,
       },
-      lineItems: lineItems.map((item) => ({
-        productName: item.productName ?? 'Unknown Product',
-        producer: item.producer,
-        vintage: item.vintage,
-        region: item.region,
-        bottleSize: item.bottleSize,
-        quantity: item.quantity ?? 0,
-        pricePerCaseUsd: item.pricePerCaseUsd,
-        totalUsd: item.totalUsd,
-      })),
+      lineItems: lineItems.map((item) => {
+        const clientTotal = calculateClientPrice(item.totalUsd);
+        const clientPricePerCase = item.quantity > 0 ? clientTotal / item.quantity : 0;
+        return {
+          productName: item.productName ?? 'Unknown Product',
+          producer: item.producer,
+          vintage: item.vintage,
+          region: item.region,
+          bottleSize: item.bottleSize,
+          quantity: item.quantity ?? 0,
+          pricePerCaseUsd: clientPricePerCase,
+          totalUsd: clientTotal,
+        };
+      }),
       partner,
       distributor,
     });
