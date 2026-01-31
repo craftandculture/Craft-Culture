@@ -37,7 +37,9 @@ const LocationsPage = () => {
   const { data: locations, isLoading } = useQuery({
     ...api.wms.admin.locations.getMany.queryOptions({
       aisle: filterAisle || undefined,
-      locationType: filterType as 'rack' | 'floor' | 'receiving' | 'shipping' | undefined,
+      locationType: filterType
+        ? (filterType as 'rack' | 'floor' | 'receiving' | 'shipping')
+        : undefined,
       search: search || undefined,
     }),
   });
