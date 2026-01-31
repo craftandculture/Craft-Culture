@@ -1,0 +1,1331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Craft & Culture - Marketing Campaign Templates</title>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      /* Brand Colors - from craftculture.xyz */
+      --primary: #3DB3AA;
+      --primary-dim: #237F79;
+      --primary-glow: rgba(61, 179, 170, 0.3);
+      --accent: #8DE4DD;
+
+      /* Dark Theme */
+      --bg-dark: #0a0a0a;
+      --bg-surface: #141414;
+      --bg-elevated: #1a1a1a;
+      --bg-card: #1f1f1f;
+
+      /* Text */
+      --text-primary: #fafafa;
+      --text-secondary: #a1a1a1;
+      --text-muted: #6b6b6b;
+
+      /* Borders */
+      --border: rgba(255, 255, 255, 0.1);
+      --border-accent: rgba(61, 179, 170, 0.3);
+
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg-dark);
+      color: var(--text-primary);
+      line-height: 1.6;
+    }
+
+    /* Serif accent class - matches website pattern */
+    .serif {
+      font-family: 'Instrument Serif', serif;
+      font-style: italic;
+    }
+
+    .page-header {
+      background: linear-gradient(180deg, var(--bg-surface) 0%, var(--bg-dark) 100%);
+      padding: 80px 40px;
+      text-align: center;
+      border-bottom: 1px solid var(--border);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .page-header::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 600px;
+      height: 300px;
+      background: radial-gradient(ellipse, var(--primary-glow) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .page-header p {
+      font-size: 1.1rem;
+      color: var(--text-secondary);
+      position: relative;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 40px 20px;
+    }
+
+    .section-title {
+      font-family: 'Inter', sans-serif;
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin: 80px 0 40px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--border-accent);
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+
+    .section-title::before {
+      content: '';
+      width: 8px;
+      height: 8px;
+      background: var(--primary);
+      border-radius: 50%;
+      box-shadow: 0 0 15px var(--primary-glow);
+    }
+
+    .templates-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+      gap: 40px;
+      margin-bottom: 60px;
+    }
+
+    .template-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      overflow: hidden;
+      transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .template-card:hover {
+      border-color: var(--border-accent);
+      box-shadow: 0 0 30px rgba(61, 179, 170, 0.1);
+    }
+
+    .template-label {
+      background: var(--bg-elevated);
+      color: var(--text-secondary);
+      padding: 14px 20px;
+      font-size: 0.75rem;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    /* ================================
+       LINKEDIN TEMPLATES
+    ================================ */
+
+    .linkedin-post {
+      width: 100%;
+      max-width: 520px;
+      background: var(--bg-dark);
+      aspect-ratio: 1.91 / 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 40px 50px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .linkedin-post::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      right: -30%;
+      width: 400px;
+      height: 400px;
+      background: radial-gradient(ellipse, var(--primary-glow) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .linkedin-post.tall {
+      aspect-ratio: 4 / 5;
+    }
+
+    .linkedin-post .logo {
+      position: absolute;
+      top: 25px;
+      left: 30px;
+    }
+
+    .linkedin-post .logo img {
+      height: 22px;
+      width: auto;
+      filter: invert(1) brightness(2);
+    }
+
+    .linkedin-post .headline {
+      font-family: 'Inter', sans-serif;
+      font-size: 2rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      line-height: 1.2;
+      margin-bottom: 20px;
+      position: relative;
+    }
+
+    .linkedin-post .headline .serif {
+      color: var(--primary);
+    }
+
+    .linkedin-post .subtext {
+      font-size: 0.95rem;
+      color: var(--text-secondary);
+      line-height: 1.7;
+      position: relative;
+    }
+
+    .linkedin-post .accent-line {
+      width: 60px;
+      height: 2px;
+      background: linear-gradient(90deg, var(--primary) 0%, var(--accent) 100%);
+      margin: 20px 0;
+      position: relative;
+    }
+
+    .linkedin-post .stat-large {
+      font-family: 'Inter', sans-serif;
+      font-size: 4rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      line-height: 1;
+      position: relative;
+    }
+
+    .linkedin-post .stat-label {
+      font-size: 1rem;
+      color: var(--text-secondary);
+      margin-top: 10px;
+      position: relative;
+    }
+
+    .linkedin-post .cta {
+      display: inline-block;
+      background: var(--primary);
+      color: var(--bg-dark);
+      padding: 14px 32px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      letter-spacing: 0.3px;
+      margin-top: 25px;
+      border-radius: 8px;
+      position: relative;
+      transition: all 0.3s ease;
+    }
+
+    .linkedin-post .list-item {
+      display: flex;
+      align-items: flex-start;
+      margin-bottom: 12px;
+      font-size: 0.9rem;
+      position: relative;
+      color: var(--text-secondary);
+    }
+
+    .linkedin-post .list-item .icon {
+      color: var(--primary);
+      margin-right: 12px;
+      font-weight: 600;
+      font-size: 0.8rem;
+    }
+
+    /* ================================
+       INSTAGRAM TEMPLATES
+    ================================ */
+
+    .instagram-post {
+      width: 100%;
+      max-width: 400px;
+      aspect-ratio: 1 / 1;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .instagram-post.portrait {
+      aspect-ratio: 4 / 5;
+    }
+
+    /* Style 1: Minimal Dark */
+    .ig-minimal {
+      background: var(--bg-dark);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      padding: 40px;
+      position: relative;
+    }
+
+    .ig-minimal::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 300px;
+      height: 300px;
+      background: radial-gradient(ellipse, var(--primary-glow) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .ig-minimal .headline {
+      font-family: 'Inter', sans-serif;
+      font-size: 1.8rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      line-height: 1.3;
+      margin-bottom: 20px;
+      position: relative;
+    }
+
+    .ig-minimal .headline .serif {
+      color: var(--primary);
+    }
+
+    .ig-minimal .divider {
+      width: 50px;
+      height: 2px;
+      background: linear-gradient(90deg, var(--primary) 0%, var(--accent) 100%);
+      margin: 15px 0;
+      position: relative;
+    }
+
+    .ig-minimal .subtext {
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+      line-height: 1.6;
+      position: relative;
+    }
+
+    .ig-minimal .logo-bottom {
+      position: absolute;
+      bottom: 30px;
+    }
+
+    .ig-minimal .logo-bottom img {
+      height: 18px;
+      width: auto;
+      filter: invert(1) brightness(2);
+    }
+
+    /* Style 2: Teal Bold */
+    .ig-teal {
+      background: linear-gradient(135deg, var(--primary-dim) 0%, var(--primary) 100%);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 40px;
+      position: relative;
+    }
+
+    .ig-teal::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%' height='100%' filter='url(%23noise)'/%3E%3C/svg%3E");
+      opacity: 0.03;
+      pointer-events: none;
+    }
+
+    .ig-teal .headline {
+      font-family: 'Inter', sans-serif;
+      font-size: 2rem;
+      font-weight: 600;
+      color: var(--bg-dark);
+      line-height: 1.2;
+      margin-bottom: 20px;
+      position: relative;
+    }
+
+    .ig-teal .headline .serif {
+      font-family: 'Instrument Serif', serif;
+      font-style: italic;
+      color: var(--text-primary);
+    }
+
+    .ig-teal .subtext {
+      font-size: 0.9rem;
+      color: rgba(10,10,10,0.8);
+      line-height: 1.6;
+      position: relative;
+    }
+
+    .ig-teal .logo-bottom {
+      position: absolute;
+      bottom: 30px;
+      left: 40px;
+    }
+
+    .ig-teal .logo-bottom img {
+      height: 18px;
+      width: auto;
+      filter: brightness(0);
+    }
+
+    /* Style 3: Split Design */
+    .ig-split {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .ig-split .left {
+      background: var(--primary);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 30px;
+    }
+
+    .ig-split .right {
+      background: var(--bg-dark);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 30px;
+    }
+
+    .ig-split .stat {
+      font-family: 'Inter', sans-serif;
+      font-size: 3rem;
+      font-weight: 700;
+      color: var(--bg-dark);
+      line-height: 1;
+    }
+
+    .ig-split .stat-unit {
+      font-size: 1rem;
+      color: rgba(10,10,10,0.7);
+      margin-top: 5px;
+    }
+
+    .ig-split .content-text {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      line-height: 1.6;
+    }
+
+    .ig-split .content-text strong {
+      color: var(--text-primary);
+    }
+
+    /* Style 4: Photo Overlay */
+    .ig-overlay {
+      background: linear-gradient(180deg, rgba(10,10,10,0.4) 0%, rgba(10,10,10,0.95) 100%),
+                  linear-gradient(135deg, var(--primary-dim) 0%, var(--bg-dark) 100%);
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      padding: 40px;
+    }
+
+    .ig-overlay .headline {
+      font-family: 'Inter', sans-serif;
+      font-size: 1.6rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      line-height: 1.3;
+      margin-bottom: 15px;
+    }
+
+    .ig-overlay .subtext {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+
+    .ig-overlay .logo-bottom {
+      position: absolute;
+      top: 25px;
+      left: 30px;
+    }
+
+    .ig-overlay .logo-bottom img {
+      height: 16px;
+      width: auto;
+      filter: invert(1) brightness(2);
+    }
+
+    /* Style 5: Data/Stats Focus */
+    .ig-data {
+      background: var(--bg-dark);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      padding: 40px;
+      position: relative;
+    }
+
+    .ig-data::before {
+      content: '';
+      position: absolute;
+      top: 30%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 250px;
+      height: 250px;
+      background: radial-gradient(ellipse, var(--primary-glow) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .ig-data .label {
+      font-size: 0.65rem;
+      color: var(--primary);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-bottom: 15px;
+      position: relative;
+      font-weight: 500;
+    }
+
+    .ig-data .big-stat {
+      font-family: 'Inter', sans-serif;
+      font-size: 4.5rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, var(--text-primary) 0%, var(--primary) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      line-height: 1;
+      position: relative;
+    }
+
+    .ig-data .stat-context {
+      font-size: 1rem;
+      color: var(--text-secondary);
+      margin-top: 10px;
+      position: relative;
+    }
+
+    .ig-data .subtext {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-top: 25px;
+      line-height: 1.5;
+      position: relative;
+    }
+
+    .ig-data .logo-bottom {
+      position: absolute;
+      bottom: 25px;
+    }
+
+    .ig-data .logo-bottom img {
+      height: 16px;
+      width: auto;
+      filter: invert(1) brightness(2);
+    }
+
+    /* Style 6: Quote/Testimonial */
+    .ig-quote {
+      background: var(--bg-surface);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 45px;
+      position: relative;
+      border: 1px solid var(--border);
+    }
+
+    .ig-quote .quote-mark {
+      font-family: 'Instrument Serif', serif;
+      font-size: 5rem;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      line-height: 0.5;
+      margin-bottom: 20px;
+    }
+
+    .ig-quote .quote-text {
+      font-family: 'Instrument Serif', serif;
+      font-size: 1.4rem;
+      font-weight: 400;
+      color: var(--text-primary);
+      line-height: 1.5;
+      font-style: italic;
+    }
+
+    .ig-quote .attribution {
+      font-family: 'Inter', sans-serif;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 25px;
+    }
+
+    .ig-quote .logo-bottom {
+      position: absolute;
+      bottom: 25px;
+      right: 30px;
+    }
+
+    .ig-quote .logo-bottom img {
+      height: 16px;
+      width: auto;
+      filter: invert(1) brightness(2);
+    }
+
+    /* Style 7: Checklist/Features */
+    .ig-checklist {
+      background: var(--bg-dark);
+      padding: 35px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .ig-checklist .header {
+      background: linear-gradient(135deg, var(--primary-dim) 0%, var(--primary) 100%);
+      margin: -35px -35px 25px -35px;
+      padding: 25px 35px;
+    }
+
+    .ig-checklist .header h3 {
+      font-family: 'Inter', sans-serif;
+      font-size: 1.3rem;
+      font-weight: 600;
+      color: var(--bg-dark);
+    }
+
+    .ig-checklist .items {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .ig-checklist .item {
+      display: flex;
+      align-items: center;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .ig-checklist .item:last-child {
+      border-bottom: none;
+    }
+
+    .ig-checklist .check {
+      width: 24px;
+      height: 24px;
+      background: var(--primary);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--bg-dark);
+      font-size: 0.7rem;
+      margin-right: 15px;
+      flex-shrink: 0;
+      font-weight: 600;
+    }
+
+    .ig-checklist .item-text {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+    }
+
+    .ig-checklist .logo-bottom {
+      text-align: center;
+      margin-top: 20px;
+    }
+
+    .ig-checklist .logo-bottom img {
+      height: 16px;
+      width: auto;
+      filter: invert(1) brightness(2);
+    }
+
+    /* Caption preview */
+    .caption-preview {
+      padding: 20px;
+      background: var(--bg-elevated);
+      border-top: 1px solid var(--border);
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+
+    .caption-preview strong {
+      color: var(--text-primary);
+    }
+
+    /* ================================
+       CAROUSEL TEMPLATES
+    ================================ */
+
+    .carousel-container {
+      display: flex;
+      gap: 15px;
+      overflow-x: auto;
+      padding: 20px 0;
+    }
+
+    .carousel-slide {
+      flex-shrink: 0;
+      width: 350px;
+      aspect-ratio: 4 / 5;
+      position: relative;
+    }
+
+    /* Slide styles */
+    .slide-intro {
+      background: linear-gradient(135deg, var(--primary-dim) 0%, var(--primary) 100%);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      padding: 40px;
+      position: relative;
+    }
+
+    .slide-intro::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%' height='100%' filter='url(%23noise)'/%3E%3C/svg%3E");
+      opacity: 0.03;
+      pointer-events: none;
+    }
+
+    .slide-intro h2 {
+      font-family: 'Inter', sans-serif;
+      font-size: 1.8rem;
+      font-weight: 600;
+      color: var(--bg-dark);
+      line-height: 1.2;
+      position: relative;
+    }
+
+    .slide-intro .subtitle {
+      font-size: 0.9rem;
+      color: rgba(10,10,10,0.7);
+      margin-top: 15px;
+      position: relative;
+    }
+
+    .slide-content {
+      background: var(--bg-dark);
+      display: flex;
+      flex-direction: column;
+      padding: 40px;
+      position: relative;
+    }
+
+    .slide-content::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 200px;
+      height: 200px;
+      background: radial-gradient(ellipse, var(--primary-glow) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .slide-content .step-number {
+      font-family: 'Inter', sans-serif;
+      font-size: 3.5rem;
+      font-weight: 700;
+      color: var(--primary);
+      opacity: 0.2;
+      position: absolute;
+      top: 15px;
+      right: 25px;
+    }
+
+    .slide-content h3 {
+      font-family: 'Inter', sans-serif;
+      font-size: 1.4rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 20px;
+      margin-top: 30px;
+      position: relative;
+    }
+
+    .slide-content p {
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+      line-height: 1.7;
+      position: relative;
+    }
+
+    .slide-content .solution {
+      color: var(--primary);
+      font-weight: 500;
+    }
+
+    .slide-content .icon-large {
+      font-size: 2.5rem;
+      margin-bottom: 10px;
+      position: relative;
+    }
+
+    .slide-cta {
+      background: linear-gradient(135deg, var(--bg-surface) 0%, var(--bg-dark) 100%);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      padding: 40px;
+      position: relative;
+      border: 1px solid var(--border-accent);
+    }
+
+    .slide-cta::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 300px;
+      height: 300px;
+      background: radial-gradient(ellipse, var(--primary-glow) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .slide-cta h3 {
+      font-family: 'Inter', sans-serif;
+      font-size: 1.6rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 25px;
+      position: relative;
+    }
+
+    .slide-cta .btn {
+      background: var(--primary);
+      color: var(--bg-dark);
+      padding: 16px 40px;
+      font-weight: 600;
+      font-size: 0.85rem;
+      letter-spacing: 0.3px;
+      border-radius: 8px;
+      position: relative;
+    }
+
+    .slide-cta .website {
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      margin-top: 20px;
+      position: relative;
+    }
+
+    /* Print/Export helper */
+    @media print {
+      .page-header, .section-title, .template-label, .caption-preview {
+        display: none;
+      }
+      .template-card {
+        break-inside: avoid;
+        box-shadow: none;
+        border: 1px solid #333;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <header class="page-header">
+    <img src="https://craftculture.xyz/cc-logo-cropped.png" alt="Craft & Culture" style="height: 50px; width: auto; filter: invert(1) brightness(2); margin-bottom: 20px;">
+    <p>Marketing Campaign Templates — "Unlock the Gulf"</p>
+  </header>
+
+  <div class="container">
+
+    <!-- ================================
+         LINKEDIN TEMPLATES
+    ================================ -->
+
+    <h2 class="section-title">LinkedIn Templates</h2>
+
+    <div class="templates-grid">
+
+      <!-- LinkedIn 1: Market Opportunity -->
+      <div class="template-card">
+        <div class="template-label">LinkedIn — Market Opportunity</div>
+        <div class="linkedin-post tall">
+          <div class="logo"><img src="https://craftculture.xyz/cc-logo-cropped.png" alt="Craft & Culture"></div>
+          <div class="stat-large">$350M+</div>
+          <div class="stat-label">Annual UAE wine imports</div>
+          <div class="accent-line"></div>
+          <div class="subtext">
+            Yet most producers never tap this market.<br><br>
+            Three barriers stand in the way:<br>
+            <span style="color: var(--primary);">→</span> Complex licensing<br>
+            <span style="color: var(--primary);">→</span> Extreme temperatures<br>
+            <span style="color: var(--primary);">→</span> Finding the right partner
+          </div>
+          <div class="cta">We've solved them all</div>
+        </div>
+      </div>
+
+      <!-- LinkedIn 2: Cold Chain -->
+      <div class="template-card">
+        <div class="template-label">LinkedIn — Cold Chain Focus</div>
+        <div class="linkedin-post tall">
+          <div class="logo"><img src="https://craftculture.xyz/cc-logo-cropped.png" alt="Craft & Culture"></div>
+          <div class="headline">A single break in the cold chain can <span class="serif">destroy</span> a vintage.</div>
+          <div class="accent-line"></div>
+          <div class="subtext">
+            In the Gulf, where temperatures exceed 45°C, we take no chances:
+          </div>
+          <div style="margin-top: 20px;">
+            <div class="list-item">
+              <span class="icon">01</span>
+              <span>Bonded warehouse at constant 12-14°C</span>
+            </div>
+            <div class="list-item">
+              <span class="icon">02</span>
+              <span>Calibrated data loggers on every shipment</span>
+            </div>
+            <div class="list-item">
+              <span class="icon">03</span>
+              <span>Temperature-monitored transport</span>
+            </div>
+            <div class="list-item">
+              <span class="icon">04</span>
+              <span>Real-time tracking platform</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- LinkedIn 3: Neutral Partner -->
+      <div class="template-card">
+        <div class="template-label">LinkedIn — Neutral Partner Advantage</div>
+        <div class="linkedin-post tall">
+          <div class="logo"><img src="https://craftculture.xyz/cc-logo-cropped.png" alt="Craft & Culture"></div>
+          <div class="headline">We don't compete with <span class="serif">distributors</span>.</div>
+          <div class="subtext" style="font-size: 1.2rem; color: var(--primary); margin-bottom: 15px;">
+            We connect you to them.
+          </div>
+          <div class="accent-line"></div>
+          <div class="subtext">
+            As a neutral logistics partner, we give you something rare: <span style="color: var(--text-primary); font-weight: 500;">flexibility</span>.
+          </div>
+          <div style="margin-top: 20px;">
+            <div class="list-item">
+              <span class="icon">→</span>
+              <span>Work with multiple distributors</span>
+            </div>
+            <div class="list-item">
+              <span class="icon">→</span>
+              <span>Access all channels: HoReCa, retail, duty-free</span>
+            </div>
+            <div class="list-item">
+              <span class="icon">→</span>
+              <span>No exclusivity requirements</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- LinkedIn 4: Infrastructure -->
+      <div class="template-card">
+        <div class="template-label">LinkedIn — Infrastructure</div>
+        <div class="linkedin-post">
+          <div class="logo"><img src="https://craftculture.xyz/cc-logo-cropped.png" alt="Craft & Culture"></div>
+          <div class="headline">Your wine deserves a <span class="serif">home</span> in the Gulf.</div>
+          <div class="accent-line"></div>
+          <div class="subtext">
+            Bonded cold storage • Customs compliance • Distribution network<br>
+            <span style="color: var(--primary); font-weight: 500;">We built the infrastructure so you don't have to.</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- LinkedIn 5: Success Story -->
+      <div class="template-card">
+        <div class="template-label">LinkedIn — Success Story</div>
+        <div class="linkedin-post tall">
+          <div class="logo"><img src="https://craftculture.xyz/cc-logo-cropped.png" alt="Craft & Culture"></div>
+          <div style="font-family: 'Instrument Serif', serif; font-size: 3rem; background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 10px;">"</div>
+          <div class="headline" style="font-size: 1.5rem;">
+            <span class="serif">Before Craft & Culture,</span> entering the UAE felt impossible.
+          </div>
+          <div class="accent-line"></div>
+          <div class="subtext">
+            <strong style="color: var(--text-primary);">12 months later:</strong><br><br>
+            <span style="color: var(--primary);">✓</span> Listed in 15+ Dubai hotels<br>
+            <span style="color: var(--primary);">✓</span> Available in premium retail<br>
+            <span style="color: var(--primary);">✓</span> Expanding to Abu Dhabi & Qatar
+          </div>
+          <div class="cta">Write your Gulf story</div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ================================
+         INSTAGRAM TEMPLATES
+    ================================ -->
+
+    <h2 class="section-title">Instagram Feed Templates</h2>
+
+    <div class="templates-grid">
+
+      <!-- IG 1: Minimal Hero -->
+      <div class="template-card">
+        <div class="template-label">Instagram — Hero Statement</div>
+        <div class="instagram-post ig-minimal">
+          <div class="headline">Your wine deserves<br>a <span class="serif">home</span> in the Gulf.</div>
+          <div class="divider"></div>
+          <div class="subtext">From vineyard to Gulf,<br>we make the journey seamless.</div>
+          <div class="logo-bottom"><img src="https://craftculture.xyz/cc-logo-cropped.png" alt="Craft & Culture"></div>
+        </div>
+        <div class="caption-preview">
+          <strong>craftculture.xyz</strong> Fine wine finds its place in the Gulf. From the world's best vineyards to the region's finest tables.<br><br>
+          #GulfWine #WineLogistics #CraftAndCulture
+        </div>
+      </div>
+
+      <!-- IG 2: Temperature Stats -->
+      <div class="template-card">
+        <div class="template-label">Instagram — Temperature Data</div>
+        <div class="instagram-post ig-data">
+          <div class="label">Outside Temperature</div>
+          <div class="big-stat">45°C</div>
+          <div class="stat-context">Your wine? 12°C.</div>
+          <div class="subtext">Climate-controlled storage.<br>No compromises.</div>
+          <div class="logo-bottom"><img src="https://craftculture.xyz/cc-logo-cropped.png" alt="Craft & Culture"></div>
+        </div>
+        <div class="caption-preview">
+          <strong>craftculture.xyz</strong> 45°C outside. 12°C inside. Your wine doesn't feel the heat.<br><br>
+          #ColdChain #WineStorage #UAEWine
+        </div>
+      </div>
+
+      <!-- IG 3: Teal Bold -->
+      <div class="template-card">
+        <div class="template-label">Instagram — Bold Statement</div>
+        <div class="instagram-post ig-teal">
+          <div class="headline">We don't compete with <span class="serif">distributors</span>.</div>
+          <div class="subtext" style="margin-top: 20px;">
+            We connect you to them.<br><br>
+            Neutral infrastructure.<br>
+            Maximum flexibility.
+          </div>
+          <div class="logo-bottom"><img src="https://craftculture.xyz/cc-logo-cropped.png" alt="Craft & Culture"></div>
+        </div>
+        <div class="caption-preview">
+          <strong>craftculture.xyz</strong> As a neutral logistics partner, we give you something rare in this industry: flexibility. Work with multiple distributors. Access all channels. No exclusivity required.<br><br>
+          #WineDistribution #B2B #NeutralPartner
+        </div>
+      </div>
+
+      <!-- IG 4: Quote -->
+      <div class="template-card">
+        <div class="template-label">Instagram — Testimonial</div>
+        <div class="instagram-post ig-quote">
+          <div class="quote-mark">"</div>
+          <div class="quote-text">Before Craft & Culture, entering the UAE felt impossible.</div>
+          <div class="attribution">— Wine Producer, France</div>
+          <div class="logo-bottom"><img src="https://craftculture.xyz/cc-logo-cropped.png" alt="Craft & Culture"></div>
+        </div>
+        <div class="caption-preview">
+          <strong>craftculture.xyz</strong> 12 months later: listed in 15+ Dubai hotels, available in premium retail, expanding to Abu Dhabi & Qatar. The difference? Having the right infrastructure partner.<br><br>
+          #SuccessStory #UAEMarket #WineExport
+        </div>
+      </div>
+
+      <!-- IG 5: Split Stats -->
+      <div class="template-card">
+        <div class="template-label">Instagram — Split Statistics</div>
+        <div class="instagram-post ig-split" style="position: relative;">
+          <div class="left">
+            <div class="stat">12°C</div>
+            <div class="stat-unit">constant</div>
+          </div>
+          <div class="right">
+            <div class="content-text">
+              <strong>Bonded Cold Storage</strong><br><br>
+              RAK Free Zone facility with duty-suspended storage and real-time monitoring.
+            </div>
+          </div>
+          <div style="position: absolute; bottom: 15px; right: 20px;"><img src="https://craftculture.xyz/cc-logo-cropped.png" alt="Craft & Culture" style="height: 14px; width: auto; filter: invert(1) brightness(2);"></div>
+        </div>
+        <div class="caption-preview">
+          <strong>craftculture.xyz</strong> Where your wine lives in the Gulf. Bonded, climate-controlled, monitored 24/7. This is what "in safe hands" looks like.<br><br>
+          #BondedWarehouse #WineStorage #RAKFreeZone
+        </div>
+      </div>
+
+      <!-- IG 6: Checklist -->
+      <div class="template-card">
+        <div class="template-label">Instagram — Services Checklist</div>
+        <div class="instagram-post ig-checklist">
+          <div class="header">
+            <h3>What we handle</h3>
+          </div>
+          <div class="items">
+            <div class="item">
+              <div class="check">✓</div>
+              <div class="item-text">Bonded cold storage at 12-14°C</div>
+            </div>
+            <div class="item">
+              <div class="check">✓</div>
+              <div class="item-text">Customs & compliance</div>
+            </div>
+            <div class="item">
+              <div class="check">✓</div>
+              <div class="item-text">Distribution network access</div>
+            </div>
+            <div class="item">
+              <div class="check">✓</div>
+              <div class="item-text">Real-time inventory tracking</div>
+            </div>
+            <div class="item">
+              <div class="check">✓</div>
+              <div class="item-text">Cold chain logistics</div>
+            </div>
+          </div>
+          <div class="logo-bottom"><img src="https://craftculture.xyz/cc-logo-cropped.png" alt="Craft & Culture"></div>
+        </div>
+        <div class="caption-preview">
+          <strong>craftculture.xyz</strong> We built the infrastructure so you don't have to. Focus on making exceptional wine—we'll handle the rest.<br><br>
+          #WineLogistics #GulfMarket #WineIndustry
+        </div>
+      </div>
+
+      <!-- IG 7: Overlay Style -->
+      <div class="template-card">
+        <div class="template-label">Instagram — Photo Overlay</div>
+        <div class="instagram-post ig-overlay">
+          <div class="logo-bottom"><img src="https://craftculture.xyz/cc-logo-cropped.png" alt="Craft & Culture"></div>
+          <div class="headline">From origin to <span class="serif">customer</span>.</div>
+          <div class="subtext">12,000km from vineyard to Gulf.<br>12-14°C the entire journey.<br>Zero compromises.</div>
+        </div>
+        <div class="caption-preview">
+          <strong>craftculture.xyz</strong> Another consignment home safe. Welcome to your new home.<br><br>
+          #WineImport #GulfWine #CraftAndCulture
+        </div>
+      </div>
+
+      <!-- IG 8: Market Stats -->
+      <div class="template-card">
+        <div class="template-label">Instagram — Market Data</div>
+        <div class="instagram-post ig-data">
+          <div class="label">UAE Wine Imports</div>
+          <div class="big-stat">$350M</div>
+          <div class="stat-context">annually</div>
+          <div class="subtext">Is your wine part of it?</div>
+          <div class="logo-bottom"><img src="https://craftculture.xyz/cc-logo-cropped.png" alt="Craft & Culture"></div>
+        </div>
+        <div class="caption-preview">
+          <strong>craftculture.xyz</strong> The UAE imports over $350M in wine annually. Yet most producers never tap this market. We're changing that.<br><br>
+          #UAEMarket #WineExport #MarketOpportunity
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ================================
+         INSTAGRAM CAROUSEL TEMPLATES
+    ================================ -->
+
+    <h2 class="section-title">Instagram Carousel — "3 Barriers to Gulf Market Entry"</h2>
+
+    <div class="template-card" style="max-width: 100%;">
+      <div class="template-label">Instagram Carousel (Swipe-through educational content)</div>
+      <div class="carousel-container">
+
+        <!-- Slide 1: Intro -->
+        <div class="carousel-slide slide-intro" style="position: relative;">
+          <h2>3 Barriers<br>to Gulf Market<br><span class="serif" style="color: var(--bg-dark);">Entry</span></h2>
+          <div class="subtitle">And how we solve them →</div>
+          <div style="position: absolute; bottom: 25px;"><img src="https://craftculture.xyz/cc-logo-cropped.png" alt="Craft & Culture" style="height: 16px; width: auto;"></div>
+        </div>
+
+        <!-- Slide 2: Barrier 1 -->
+        <div class="carousel-slide slide-content">
+          <div class="step-number">01</div>
+          <div class="icon-large">📋</div>
+          <h3>Complex Licensing</h3>
+          <p>UAE regulations require licensed importers, Arabic labeling, and specific compliance frameworks.</p>
+          <p style="margin-top: 15px;" class="solution">We handle all customs and compliance—you focus on your wine.</p>
+        </div>
+
+        <!-- Slide 3: Barrier 2 -->
+        <div class="carousel-slide slide-content">
+          <div class="step-number">02</div>
+          <div class="icon-large">🌡️</div>
+          <h3>Extreme Heat</h3>
+          <p>Summer temperatures exceed 45°C. One break in the cold chain can destroy a vintage.</p>
+          <p style="margin-top: 15px;" class="solution">Our bonded facility stays at 12-14°C year-round with monitored transport.</p>
+        </div>
+
+        <!-- Slide 4: Barrier 3 -->
+        <div class="carousel-slide slide-content">
+          <div class="step-number">03</div>
+          <div class="icon-large">🤝</div>
+          <h3>Finding Partners</h3>
+          <p>Navigating distributor relationships in an unfamiliar market is challenging.</p>
+          <p style="margin-top: 15px;" class="solution">Our neutral position connects you to HoReCa, retail, and duty-free networks.</p>
+        </div>
+
+        <!-- Slide 5: CTA -->
+        <div class="carousel-slide slide-cta">
+          <h3>Ready to <span class="serif">unlock</span><br>the Gulf market?</h3>
+          <div class="btn">Let's talk</div>
+          <div class="website">craftculture.xyz</div>
+        </div>
+
+      </div>
+      <div class="caption-preview">
+        <strong>craftculture.xyz</strong> Thinking about the Gulf market? Here are the 3 barriers most producers face—and exactly how we solve them. Swipe through 👉<br><br>
+        Save this for later 📌<br><br>
+        #WineExport #UAEBusiness #WineTips #GulfMarket #WineIndustry
+      </div>
+    </div>
+
+    <!-- ================================
+         INSTAGRAM REELS COVERS
+    ================================ -->
+
+    <h2 class="section-title">Instagram Reels Cover Templates</h2>
+
+    <div class="templates-grid">
+
+      <!-- Reel Cover 1 -->
+      <div class="template-card">
+        <div class="template-label">Reels Cover — Export Tips</div>
+        <div class="instagram-post portrait ig-teal" style="justify-content: center; text-align: center;">
+          <div style="font-size: 3rem; margin-bottom: 15px;">🍷</div>
+          <div class="headline" style="font-size: 1.5rem;">3 things to know before <span class="serif">exporting</span> to the UAE</div>
+          <div class="subtext" style="margin-top: 20px;">Watch this first ↓</div>
+          <div class="logo-bottom"><img src="https://craftculture.xyz/cc-logo-cropped.png" alt="Craft & Culture"></div>
+        </div>
+      </div>
+
+      <!-- Reel Cover 2 -->
+      <div class="template-card">
+        <div class="template-label">Reels Cover — Behind the Scenes</div>
+        <div class="instagram-post portrait ig-overlay" style="justify-content: center; text-align: center;">
+          <div class="logo-bottom"><img src="https://craftculture.xyz/cc-logo-cropped.png" alt="Craft & Culture"></div>
+          <div style="font-size: 2.5rem; margin-bottom: 15px;">📦</div>
+          <div class="headline" style="font-size: 1.4rem;">Behind the scenes at our <span class="serif">bonded warehouse</span></div>
+          <div class="subtext" style="margin-top: 15px;">Where your wine lives in the Gulf</div>
+        </div>
+      </div>
+
+      <!-- Reel Cover 3 -->
+      <div class="template-card">
+        <div class="template-label">Reels Cover — Cold Chain</div>
+        <div class="instagram-post portrait ig-data" style="background: linear-gradient(180deg, var(--primary-dim) 0%, var(--bg-dark) 100%);">
+          <div class="label">Did you know?</div>
+          <div class="big-stat" style="font-size: 3rem;">45°C</div>
+          <div class="stat-context">Gulf summer temperature</div>
+          <div class="subtext" style="margin-top: 30px; font-size: 1rem;">Here's how we protect<br>your wine ↓</div>
+          <div class="logo-bottom"><img src="https://craftculture.xyz/cc-logo-cropped.png" alt="Craft & Culture"></div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ================================
+         LINKEDIN BANNER
+    ================================ -->
+
+    <h2 class="section-title">LinkedIn Company Banner</h2>
+
+    <div class="template-card" style="max-width: 100%;">
+      <div class="template-label">LinkedIn Banner (1584 x 396px)</div>
+      <div style="width: 100%; aspect-ratio: 4 / 1; background: linear-gradient(135deg, var(--bg-surface) 0%, var(--bg-dark) 100%); display: flex; align-items: center; justify-content: space-between; padding: 0 60px; position: relative; overflow: hidden; border: 1px solid var(--border);">
+        <div style="position: absolute; top: -50%; right: -10%; width: 500px; height: 500px; background: radial-gradient(ellipse, var(--primary-glow) 0%, transparent 70%); pointer-events: none;"></div>
+        <div style="position: relative;">
+          <div style="font-family: 'Inter', sans-serif; font-size: 2.2rem; font-weight: 600; color: var(--text-primary); margin-bottom: 10px;">Your wine deserves a <span class="serif">home</span> in the Gulf.</div>
+          <div style="font-size: 0.95rem; color: var(--text-secondary);">Bonded Storage • Cold Chain Logistics • Distribution Network • <span style="color: var(--primary);">craftculture.xyz</span></div>
+        </div>
+        <div style="position: relative;"><img src="https://craftculture.xyz/cc-logo-cropped.png" alt="Craft & Culture" style="height: 28px; width: auto; filter: invert(1) brightness(2);"></div>
+      </div>
+    </div>
+
+    <!-- ================================
+         STORY TEMPLATES
+    ================================ -->
+
+    <h2 class="section-title">Instagram/LinkedIn Story Templates</h2>
+
+    <div class="templates-grid" style="grid-template-columns: repeat(auto-fit, minmax(250px, 300px));">
+
+      <!-- Story 1 -->
+      <div class="template-card">
+        <div class="template-label">Story — Question Poll</div>
+        <div style="width: 100%; aspect-ratio: 9 / 16; background: linear-gradient(180deg, var(--primary-dim) 0%, var(--primary) 100%); display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 30px; position: relative;">
+          <div style="font-family: 'Inter', sans-serif; font-size: 1.6rem; font-weight: 600; color: var(--bg-dark); margin-bottom: 30px;">Thinking about entering the <span class="serif">Gulf market</span>?</div>
+          <div style="background: var(--bg-dark); padding: 15px 40px; margin: 8px 0; border-radius: 25px; font-size: 0.85rem; color: var(--text-primary);">Yes, actively exploring</div>
+          <div style="background: rgba(10,10,10,0.3); padding: 15px 40px; margin: 8px 0; border-radius: 25px; font-size: 0.85rem; color: var(--bg-dark);">Not yet, but interested</div>
+          <div style="position: absolute; bottom: 40px;"><img src="https://craftculture.xyz/cc-logo-cropped.png" alt="Craft & Culture" style="height: 16px; width: auto; filter: brightness(0);"></div>
+        </div>
+      </div>
+
+      <!-- Story 2 -->
+      <div class="template-card">
+        <div class="template-label">Story — Stat Highlight</div>
+        <div style="width: 100%; aspect-ratio: 9 / 16; background: var(--bg-dark); display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 30px; position: relative;">
+          <div style="position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%); width: 250px; height: 250px; background: radial-gradient(ellipse, var(--primary-glow) 0%, transparent 70%); pointer-events: none;"></div>
+          <div style="font-size: 0.65rem; color: var(--primary); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 15px; position: relative; font-weight: 500;">Fun Fact</div>
+          <div style="font-family: 'Inter', sans-serif; font-size: 3.5rem; font-weight: 700; background: linear-gradient(135deg, var(--text-primary) 0%, var(--primary) 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; position: relative;">12-14°C</div>
+          <div style="width: 50px; height: 2px; background: linear-gradient(90deg, var(--primary) 0%, var(--accent) 100%); margin: 20px 0; position: relative;"></div>
+          <div style="font-size: 0.95rem; color: var(--text-secondary); position: relative;">Our warehouse temperature.<br>Year-round. No exceptions.</div>
+          <div style="position: absolute; bottom: 40px;"><img src="https://craftculture.xyz/cc-logo-cropped.png" alt="Craft & Culture" style="height: 16px; width: auto; filter: invert(1) brightness(2);"></div>
+        </div>
+      </div>
+
+      <!-- Story 3 -->
+      <div class="template-card">
+        <div class="template-label">Story — Link Prompt</div>
+        <div style="width: 100%; aspect-ratio: 9 / 16; background: linear-gradient(180deg, var(--bg-surface) 0%, var(--bg-dark) 100%); display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 30px; position: relative; border: 1px solid var(--border);">
+          <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 300px; height: 300px; background: radial-gradient(ellipse, var(--primary-glow) 0%, transparent 70%); pointer-events: none;"></div>
+          <div style="font-family: 'Inter', sans-serif; font-size: 1.6rem; font-weight: 600; color: var(--text-primary); margin-bottom: 20px; position: relative;">Ready to <span class="serif">explore</span> the Gulf market?</div>
+          <div style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 30px; position: relative;">Let's talk about your goals.</div>
+          <div style="background: var(--primary); color: var(--bg-dark); padding: 16px 40px; font-weight: 600; font-size: 0.85rem; border-radius: 8px; position: relative;">Tap to learn more</div>
+          <div style="position: absolute; bottom: 40px;"><img src="https://craftculture.xyz/cc-logo-cropped.png" alt="Craft & Culture" style="height: 16px; width: auto; filter: invert(1) brightness(2);"></div>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+  <footer style="background: var(--bg-surface); border-top: 1px solid var(--border); color: var(--text-primary); padding: 50px; text-align: center; margin-top: 80px;">
+    <img src="https://craftculture.xyz/cc-logo-cropped.png" alt="Craft & Culture" style="height: 32px; width: auto; filter: invert(1) brightness(2); margin-bottom: 15px;">
+    <div style="font-size: 0.85rem; color: var(--text-muted);">Marketing Campaign Templates — "Unlock the Gulf"</div>
+  </footer>
+
+</body>
+</html>

@@ -231,3 +231,95 @@ export const distributorProcedure = protectedProcedure.use(
     });
   },
 );
+
+/**
+ * Supplier procedure
+ *
+ * Accessible to users linked to a supplier (European wine suppliers) via:
+ * 1. Member link (partnerMembers table) - PRIMARY source of truth
+ * 2. Direct link (partners.userId) - owner access
+ * 3. User's partnerId field - LEGACY fallback only
+ *
+ * Users must be explicitly linked to a supplier by an admin.
+ * Injects the partnerId into the context for data isolation.
+ */
+export const supplierProcedure = protectedProcedure.use(
+  async ({ ctx, next }) => {
+    const { eq, and } = await import('drizzle-orm');
+    const { partners, partnerMembers } = await import('@/database/schema');
+
+    let partner;
+
+    // PRIMARY: Check partnerMembers table first (admin-assigned memberships)
+    const membership = await db
+      .select({ partner: partners })
+      .from(partnerMembers)
+      .innerJoin(partners, eq(partnerMembers.partnerId, partners.id))
+      .where(
+        and(
+          eq(partnerMembers.userId, ctx.user.id),
+          eq(partners.type, 'supplier'),
+        ),
+      )
+      .limit(1);
+
+    if (membership.length > 0 && membership[0]) {
+      partner = membership[0].partner;
+    }
+
+    // FALLBACK 1: Check direct partner link (owner)
+    if (!partner) {
+      const directPartnerResult = await db
+        .select()
+        .from(partners)
+        .where(
+          and(
+            eq(partners.userId, ctx.user.id),
+            eq(partners.type, 'supplier'),
+          ),
+        )
+        .limit(1);
+
+      partner = directPartnerResult[0];
+    }
+
+    // FALLBACK 2: Check legacy user.partnerId field (deprecated)
+    if (!partner && ctx.user.partnerId) {
+      const userPartnerResult = await db
+        .select()
+        .from(partners)
+        .where(
+          and(
+            eq(partners.id, ctx.user.partnerId),
+            eq(partners.type, 'supplier'),
+          ),
+        )
+        .limit(1);
+
+      partner = userPartnerResult[0];
+    }
+
+    if (!partner) {
+      throw new TRPCError({
+        code: 'FORBIDDEN',
+        message:
+          'You are not linked to a supplier. Contact admin to be assigned.',
+      });
+    }
+
+    if (partner.status !== 'active') {
+      throw new TRPCError({
+        code: 'FORBIDDEN',
+        message: 'Your supplier account is not active',
+      });
+    }
+
+    return await next({
+      ctx: {
+        ...ctx,
+        partner,
+        partnerId: partner.id,
+      },
+    });
+  },
+);
