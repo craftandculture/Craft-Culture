@@ -68,7 +68,7 @@
     "@trpc/tanstack-react-query": "^11.8.1",
     "@types/bcrypt": "^6.0.0",
     "@vercel/blob": "^2.0.0",
-    "ai": "^5.0.29",
+    "ai": "^6.0.65",
     "another-name-parser": "^0.1.0",
     "babel-plugin-react-compiler": "^19.1.0-rc.2",
     "bcrypt": "^6.0.0",
