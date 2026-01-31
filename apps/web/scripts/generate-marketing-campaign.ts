@@ -39,12 +39,16 @@ const _pricePerBottle = (price: number, unitCount: number) => Math.round(price /
 /**
  * Generate wine card HTML
  */
-const generateWineCard = (item: LocalStockItem) => `
+const generateWineCard = (item: LocalStockItem) => {
+  const perBottle = Math.round(item.price / item.unit_count);
+  return `
   <div class="wine-card">
     <div class="wine-region">${item.region || item.country || ''}</div>
     <div class="wine-name">${item.name}${item.year ? ` '${String(item.year).slice(-2)}` : ''}</div>
     <div class="wine-price">${formatPrice(item.price)}<span class="price-unit">/${item.unit_count}×${item.unit_size}</span></div>
+    <div class="wine-per-bottle">$${perBottle}/bottle</div>
   </div>`;
+};
 
 /**
  * Generate high-engagement B2B email using marketing best practices
@@ -313,6 +317,13 @@ const generateEmail = (
       font-size: 12px;
       font-weight: 500;
       color: #888;
+    }
+
+    .wine-per-bottle {
+      font-size: 12px;
+      font-weight: 600;
+      color: #3D9A9A;
+      margin-top: 4px;
     }
 
     /* CTA Section */

@@ -77,6 +77,11 @@ const relations = defineRelations(schema, (r) => ({
       from: r.products.id,
       to: r.productOffers.productId,
     }),
+    // Exchange: Supplier products linked to this product
+    supplierProducts: r.many.supplierProducts({
+      from: r.products.id,
+      to: r.supplierProducts.productId,
+    }),
   },
   productOffers: {
     product: r.one.products({
@@ -126,6 +131,26 @@ const relations = defineRelations(schema, (r) => ({
       from: r.partners.id,
       to: r.partnerPricingOverrides.partnerId,
       optional: true,
+    }),
+    // Exchange: Supplier products (when partner is a supplier)
+    supplierProducts: r.many.supplierProducts({
+      from: r.partners.id,
+      to: r.supplierProducts.supplierId,
+    }),
+    // Exchange: Supplier payouts (when partner is a supplier)
+    supplierPayouts: r.many.supplierPayouts({
+      from: r.partners.id,
+      to: r.supplierPayouts.supplierId,
+    }),
+    // Exchange: Supplier shipments (when partner is a supplier)
+    supplierShipments: r.many.supplierShipments({
+      from: r.partners.id,
+      to: r.supplierShipments.supplierId,
+    }),
+    // Exchange: Orders placed by this partner (as buyer)
+    exchangeOrdersAsBuyer: r.many.exchangeOrders({
+      from: r.partners.id,
+      to: r.exchangeOrders.buyerId,
     }),
   },
   partnerApiKeys: {
@@ -339,6 +364,97 @@ const relations = defineRelations(schema, (r) => ({
       from: r.logisticsRateCards.createdBy,
       to: r.users.id,
       optional: true,
+    }),
+  },
+  // ============================================================================
+  // Wine Exchange Module Relations
+  // ============================================================================
+  supplierProducts: {
+    supplier: r.one.partners({
+      from: r.supplierProducts.supplierId,
+      to: r.partners.id,
+      optional: false,
+    }),
+    product: r.one.products({
+      from: r.supplierProducts.productId,
+      to: r.products.id,
+      optional: false,
+    }),
+    exchangeOrderItems: r.many.exchangeOrderItems({
+      from: r.supplierProducts.id,
+      to: r.exchangeOrderItems.supplierProductId,
+    }),
+  },
+  exchangeOrders: {
+    buyer: r.one.partners({
+      from: r.exchangeOrders.buyerId,
+      to: r.partners.id,
+      optional: false,
+    }),
+    items: r.many.exchangeOrderItems({
+      from: r.exchangeOrders.id,
+      to: r.exchangeOrderItems.orderId,
+    }),
+  },
+  exchangeOrderItems: {
+    order: r.one.exchangeOrders({
+      from: r.exchangeOrderItems.orderId,
+      to: r.exchangeOrders.id,
+      optional: false,
+    }),
+    supplierProduct: r.one.supplierProducts({
+      from: r.exchangeOrderItems.supplierProductId,
+      to: r.supplierProducts.id,
+      optional: false,
+    }),
+    product: r.one.products({
+      from: r.exchangeOrderItems.productId,
+      to: r.products.id,
+      optional: false,
+    }),
+    supplier: r.one.partners({
+      from: r.exchangeOrderItems.supplierId,
+      to: r.partners.id,
+      optional: false,
+    }),
+    payout: r.one.supplierPayouts({
+      from: r.exchangeOrderItems.payoutId,
+      to: r.supplierPayouts.id,
+      optional: true,
+    }),
+  },
+  supplierPayouts: {
+    supplier: r.one.partners({
+      from: r.supplierPayouts.supplierId,
+      to: r.partners.id,
+      optional: false,
+    }),
+    items: r.many.exchangeOrderItems({
+      from: r.supplierPayouts.id,
+      to: r.exchangeOrderItems.payoutId,
+    }),
+  },
+  supplierShipments: {
+    supplier: r.one.partners({
+      from: r.supplierShipments.supplierId,
+      to: r.partners.id,
+      optional: false,
+    }),
+    items: r.many.supplierShipmentItems({
+      from: r.supplierShipments.id,
+      to: r.supplierShipmentItems.shipmentId,
+    }),
+  },
+  supplierShipmentItems: {
+    shipment: r.one.supplierShipments({
+      from: r.supplierShipmentItems.shipmentId,
+      to: r.supplierShipments.id,
+      optional: false,
+    }),
+    supplierProduct: r.one.supplierProducts({
+      from: r.supplierShipmentItems.supplierProductId,
+      to: r.supplierProducts.id,
+      optional: false,
     }),
   },
 }));

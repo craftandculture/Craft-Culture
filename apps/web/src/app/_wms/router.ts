@@ -29,6 +29,7 @@ import adminSearchStock from './controller/adminSearchStock';
 import adminTransferOwnership from './controller/adminTransferOwnership';
 import adminTransferStock from './controller/adminTransferStock';
 import adminUpdateLocation from './controller/adminUpdateLocation';
+import partnerGetStock from './controller/partnerGetStock';
 
 const locationsRouter = createTRPCRouter({
   create: adminCreateLocation,
@@ -86,8 +87,13 @@ const adminRouter = createTRPCRouter({
   ownership: ownershipRouter,
 });
 
+const partnerRouter = createTRPCRouter({
+  getStock: partnerGetStock,
+});
+
 const wmsRouter = createTRPCRouter({
   admin: adminRouter,
+  partner: partnerRouter,
 });
 
 export default wmsRouter;

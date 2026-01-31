@@ -3,7 +3,7 @@ import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
 
 import db from '@/database/client';
-import { privateClientContacts } from '@/database/schema';
+import { privateClientContacts, privateClientOrders } from '@/database/schema';
 import { winePartnerProcedure } from '@/lib/trpc/procedures';
 
 const updateSchema = z.object({
@@ -65,6 +65,20 @@ const update = winePartnerProcedure.input(updateSchema).mutation(async ({ input,
     .set(updateData)
     .where(and(eq(privateClientContacts.id, id), eq(privateClientContacts.partnerId, partnerId)))
     .returning();
+
+  // Cascade contact updates to linked orders
+  // This ensures distributor portal shows current client details
+  if (data.name !== undefined || data.phone !== undefined || data.email !== undefined) {
+    const orderUpdateData: Record<string, unknown> = { updatedAt: new Date() };
+    if (data.name !== undefined) orderUpdateData.clientName = data.name;
+    if (data.phone !== undefined) orderUpdateData.clientPhone = data.phone || null;
+    if (data.email !== undefined) orderUpdateData.clientEmail = data.email || null;
+
+    await db
+      .update(privateClientOrders)
+      .set(orderUpdateData)
+      .where(eq(privateClientOrders.clientId, id));
+  }
 
   return updated;
 });
