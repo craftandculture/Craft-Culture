@@ -4,6 +4,7 @@ import {
   IconActivity,
   IconBottle,
   IconBuildingStore,
+  IconBuildingWarehouse,
   IconChevronLeft,
   IconChevronRight,
   IconCoin,
@@ -53,6 +54,7 @@ const navGroups: NavGroup[] = [
       { label: 'Private Clients', href: '/platform/admin/private-orders', icon: IconPackage },
       { label: 'Source', href: '/platform/admin/source', icon: IconSearch },
       { label: 'Logistics', href: '/platform/admin/logistics', icon: IconShip },
+      { label: 'WMS', href: '/platform/admin/wms', icon: IconBuildingWarehouse },
     ],
   },
   {
