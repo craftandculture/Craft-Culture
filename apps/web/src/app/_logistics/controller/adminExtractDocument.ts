@@ -297,17 +297,53 @@ ${pdfText}
 
         extractedData = result.object;
       } else {
-        // For scanned PDFs or PDFs with minimal text, we cannot process directly
-        // Claude can handle PDFs as images - suggest converting to image
-        logger.warn('[LogisticsDocumentExtraction] PDF has no extractable text (likely scanned)', {
+        // For scanned PDFs or PDFs with minimal text, use Claude's vision capability
+        // Claude can process PDFs directly as images
+        logger.info('[LogisticsDocumentExtraction] PDF has minimal text, using vision-based extraction', {
           textLength: pdfText?.length ?? 0,
         });
 
-        throw new TRPCError({
-          code: 'BAD_REQUEST',
-          message:
-            'This PDF appears to be scanned or contains no extractable text. Please convert the PDF to an image (PNG/JPG) and upload that instead for vision-based extraction.',
+        const messages: CoreMessage[] = [
+          {
+            role: 'user',
+            content: [
+              {
+                type: 'text',
+                text: `TRANSCRIBE all data from this ${documentType.replace('_', ' ')} document.
+
+CRITICAL RULES:
+1. Product names must be copied CHARACTER BY CHARACTER from the document
+2. Wine products typically look like: "Producer Name Wine Type Appellation Year 0.75L 12.5" - copy the FULL string exactly
+3. NEVER output famous brand names (Moet, Dom Perignon, Veuve Clicquot, Krug, etc.) unless those EXACT letters appear
+4. If you cannot read text clearly, output "UNREADABLE"
+5. Extract EVERY line item - count them to ensure completeness
+
+HS CODE EXTRACTION - EXTREMELY IMPORTANT:
+- The document has a "Commodity Code" column - READ EACH ROW'S CODE INDIVIDUALLY
+- Each product may have a DIFFERENT 8-digit code (22042109, 22042132, 22041000, 22042142, etc.)
+- DO NOT assume all wines are 22042100 - that is WRONG
+- Look at the rightmost numeric column for the commodity/HS code
+- If you cannot read a specific code clearly, leave it empty rather than defaulting to 22042100
+
+This is a TRANSCRIPTION task, not interpretation. Copy exactly what you see.`,
+              },
+              {
+                type: 'file',
+                data: file,
+                mimeType: 'application/pdf',
+              },
+            ],
+          },
+        ];
+
+        const result = await generateObject({
+          model: anthropic('claude-sonnet-4-20250514'),
+          schema: extractedLogisticsDataSchema,
+          system: systemPrompt,
+          messages,
         });
+
+        extractedData = result.object;
       }
     } else {
       throw new TRPCError({
