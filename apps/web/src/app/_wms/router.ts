@@ -11,6 +11,7 @@ import adminGetLocationByBarcode from './controller/adminGetLocationByBarcode';
 import adminGetLocationLabels from './controller/adminGetLocationLabels';
 import adminGetLocations from './controller/adminGetLocations';
 import adminGetMovementHistory from './controller/adminGetMovementHistory';
+import adminGetPartnerRequests from './controller/adminGetPartnerRequests';
 import adminGetPendingShipments from './controller/adminGetPendingShipments';
 import adminGetShipmentForReceiving from './controller/adminGetShipmentForReceiving';
 import adminGetStockAtLocation from './controller/adminGetStockAtLocation';
@@ -20,8 +21,12 @@ import adminGetStockOverview from './controller/adminGetStockOverview';
 import adminMarkLabelsPrinted from './controller/adminMarkLabelsPrinted';
 import adminPutaway from './controller/adminPutaway';
 import adminReceiveShipment from './controller/adminReceiveShipment';
+import adminReleaseReservation from './controller/adminReleaseReservation';
 import adminRepack from './controller/adminRepack';
+import adminReserveStock from './controller/adminReserveStock';
+import adminResolvePartnerRequest from './controller/adminResolvePartnerRequest';
 import adminSearchStock from './controller/adminSearchStock';
+import adminTransferOwnership from './controller/adminTransferOwnership';
 import adminTransferStock from './controller/adminTransferStock';
 import adminUpdateLocation from './controller/adminUpdateLocation';
 
@@ -64,12 +69,21 @@ const stockRouter = createTRPCRouter({
   search: adminSearchStock,
 });
 
+const ownershipRouter = createTRPCRouter({
+  transfer: adminTransferOwnership,
+  reserve: adminReserveStock,
+  release: adminReleaseReservation,
+  getRequests: adminGetPartnerRequests,
+  resolve: adminResolvePartnerRequest,
+});
+
 const adminRouter = createTRPCRouter({
   locations: locationsRouter,
   receiving: receivingRouter,
   labels: labelsRouter,
   operations: operationsRouter,
   stock: stockRouter,
+  ownership: ownershipRouter,
 });
 
 const wmsRouter = createTRPCRouter({
