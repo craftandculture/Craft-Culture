@@ -77,6 +77,9 @@ const PlatformMobileNav = ({ user }: PlatformMobileNavProps) => {
         { href: '/platform/admin/users', label: 'Users' },
         { href: '/platform/admin/partners', label: 'Distributors' },
         { href: '/platform/admin/wine-partners', label: 'Wine Partners' },
+        { href: '/platform/admin/logistics', label: 'Logistics' },
+        { href: '/platform/admin/wms', label: 'WMS' },
+        { href: '/platform/admin/settings', label: 'Settings' },
       ],
     });
   }
