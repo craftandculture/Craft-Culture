@@ -1,6 +1,6 @@
 import { createAnthropic } from '@ai-sdk/anthropic';
 import { TRPCError } from '@trpc/server';
-import { type CoreMessage, generateObject } from 'ai';
+import { generateObject } from 'ai';
 import pdfParse from 'pdf-parse';
 import { z } from 'zod';
 
@@ -207,12 +207,12 @@ const adminExtractDocument = adminProcedure.input(extractDocumentSchema).mutatio
     let extractedData: z.infer<typeof extractedLogisticsDataSchema>;
 
     if (fileType.startsWith('image/')) {
-      const messages: CoreMessage[] = [
+      const messages = [
         {
-          role: 'user',
+          role: 'user' as const,
           content: [
             {
-              type: 'text',
+              type: 'text' as const,
               text: `TRANSCRIBE all data from this ${documentType.replace('_', ' ')} image.
 
 CRITICAL RULES:
@@ -232,7 +232,7 @@ HS CODE EXTRACTION - EXTREMELY IMPORTANT:
 This is a TRANSCRIPTION task, not interpretation. Copy exactly what you see.`,
             },
             {
-              type: 'image',
+              type: 'image' as const,
               image: file,
             },
           ],
@@ -303,12 +303,12 @@ ${pdfText}
           textLength: pdfText?.length ?? 0,
         });
 
-        const messages: CoreMessage[] = [
+        const messages = [
           {
-            role: 'user',
+            role: 'user' as const,
             content: [
               {
-                type: 'text',
+                type: 'text' as const,
                 text: `TRANSCRIBE all data from this ${documentType.replace('_', ' ')} document.
 
 CRITICAL RULES:
@@ -328,9 +328,9 @@ HS CODE EXTRACTION - EXTREMELY IMPORTANT:
 This is a TRANSCRIPTION task, not interpretation. Copy exactly what you see.`,
               },
               {
-                type: 'file',
+                type: 'file' as const,
                 data: file,
-                mimeType: 'application/pdf',
+                mimeType: 'application/pdf' as const,
               },
             ],
           },
