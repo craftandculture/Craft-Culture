@@ -407,20 +407,10 @@ const relations = defineRelations(schema, (r) => ({
       to: r.supplierProducts.id,
       optional: false,
     }),
-    product: r.one.products({
-      from: r.exchangeOrderItems.productId,
-      to: r.products.id,
-      optional: false,
-    }),
     supplier: r.one.partners({
       from: r.exchangeOrderItems.supplierId,
       to: r.partners.id,
       optional: false,
-    }),
-    payout: r.one.supplierPayouts({
-      from: r.exchangeOrderItems.payoutId,
-      to: r.supplierPayouts.id,
-      optional: true,
     }),
   },
   supplierPayouts: {
@@ -428,10 +418,6 @@ const relations = defineRelations(schema, (r) => ({
       from: r.supplierPayouts.supplierId,
       to: r.partners.id,
       optional: false,
-    }),
-    items: r.many.exchangeOrderItems({
-      from: r.supplierPayouts.id,
-      to: r.exchangeOrderItems.payoutId,
     }),
   },
   supplierShipments: {
