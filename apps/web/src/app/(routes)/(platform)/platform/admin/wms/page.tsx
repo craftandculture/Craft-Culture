@@ -15,6 +15,8 @@ import {
   IconTransfer,
   IconTruck,
   IconUser,
+  IconUserDollar,
+  IconUsers,
 } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
@@ -51,6 +53,11 @@ const WMSDashboardPage = () => {
     ...api.wms.admin.stock.getExpiring.queryOptions({ daysThreshold: 90 }),
   });
 
+  // Fetch pending partner requests
+  const { data: partnerRequests } = useQuery({
+    ...api.wms.admin.ownership.getRequests.queryOptions({ status: 'pending', limit: 5, offset: 0 }),
+  });
+
   const isLoading = overviewLoading;
 
   if (isLoading) {
@@ -75,6 +82,8 @@ const WMSDashboardPage = () => {
   const hasExpiryAlerts =
     (expiringStock?.summary?.expiredCases ?? 0) > 0 ||
     (expiringStock?.summary?.criticalCases ?? 0) > 0;
+
+  const pendingRequestCount = partnerRequests?.summary?.pendingCount ?? 0;
 
   return (
     <div className="container mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8">
@@ -188,8 +197,8 @@ const WMSDashboardPage = () => {
         </div>
 
         {/* Alerts Section */}
-        {(hasExpiryAlerts || (overview?.pendingPutaway?.casesInReceiving ?? 0) > 0) && (
-          <div className="grid gap-4 sm:grid-cols-2">
+        {(hasExpiryAlerts || (overview?.pendingPutaway?.casesInReceiving ?? 0) > 0 || pendingRequestCount > 0) && (
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {/* Expiry Alerts */}
             {hasExpiryAlerts && (
               <Card className="border-orange-200 bg-orange-50 dark:border-orange-800 dark:bg-orange-900/20">
@@ -263,6 +272,32 @@ const WMSDashboardPage = () => {
                     className="mt-3 block text-sm text-blue-700 underline hover:no-underline dark:text-blue-400"
                   >
                     Start put-away →
+                  </Link>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Pending Partner Requests */}
+            {pendingRequestCount > 0 && (
+              <Card className="border-purple-200 bg-purple-50 dark:border-purple-800 dark:bg-purple-900/20">
+                <CardContent className="p-4">
+                  <div className="mb-3 flex items-center gap-2">
+                    <Icon icon={IconUsers} size="md" className="text-purple-600" />
+                    <Typography variant="headingSm" className="text-purple-800 dark:text-purple-300">
+                      Partner Requests
+                    </Typography>
+                  </div>
+                  <Typography variant="headingLg" className="mb-1 text-purple-600">
+                    {pendingRequestCount} pending
+                  </Typography>
+                  <Typography variant="bodyXs" className="text-purple-700 dark:text-purple-400">
+                    requests awaiting review
+                  </Typography>
+                  <Link
+                    href="/platform/admin/wms/ownership/requests"
+                    className="mt-3 block text-sm text-purple-700 underline hover:no-underline dark:text-purple-400"
+                  >
+                    Review requests →
                   </Link>
                 </CardContent>
               </Card>
@@ -462,6 +497,39 @@ const WMSDashboardPage = () => {
                     Stock movement history
                   </Typography>
                 </div>
+                <IconChevronRight className="ml-auto h-5 w-5 text-text-muted" />
+              </CardContent>
+            </Card>
+          </Link>
+          <Link href="/platform/admin/wms/ownership/transfer">
+            <Card className="cursor-pointer transition-colors hover:border-border-brand">
+              <CardContent className="flex items-center gap-3 p-4">
+                <Icon icon={IconUserDollar} size="md" className="text-text-muted" />
+                <div>
+                  <Typography variant="headingSm">Transfer Ownership</Typography>
+                  <Typography variant="bodyXs" colorRole="muted">
+                    Transfer stock between partners
+                  </Typography>
+                </div>
+                <IconChevronRight className="ml-auto h-5 w-5 text-text-muted" />
+              </CardContent>
+            </Card>
+          </Link>
+          <Link href="/platform/admin/wms/ownership/requests">
+            <Card className="cursor-pointer transition-colors hover:border-border-brand">
+              <CardContent className="flex items-center gap-3 p-4">
+                <Icon icon={IconUsers} size="md" className="text-text-muted" />
+                <div className="flex items-center gap-2">
+                  <Typography variant="headingSm">Partner Requests</Typography>
+                  {pendingRequestCount > 0 && (
+                    <span className="rounded-full bg-purple-600 px-2 py-0.5 text-xs font-medium text-white">
+                      {pendingRequestCount}
+                    </span>
+                  )}
+                </div>
+                <Typography variant="bodyXs" colorRole="muted">
+                  Review transfer & withdrawal requests
+                </Typography>
                 <IconChevronRight className="ml-auto h-5 w-5 text-text-muted" />
               </CardContent>
             </Card>
