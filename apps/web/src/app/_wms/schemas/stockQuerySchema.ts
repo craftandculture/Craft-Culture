@@ -1,0 +1,81 @@
+import { z } from 'zod';
+
+/**
+ * Schema for querying stock overview with filtering and pagination
+ */
+export const getStockOverviewSchema = z.object({});
+
+/**
+ * Schema for querying stock by product (LWIN)
+ */
+export const getStockByProductSchema = z.object({
+  search: z.string().optional(),
+  ownerId: z.string().uuid().optional(),
+  hasExpiry: z.boolean().optional(),
+  lowStock: z.boolean().optional(),
+  limit: z.number().min(1).max(100).default(50),
+  offset: z.number().min(0).default(0),
+});
+
+/**
+ * Schema for querying stock by owner
+ */
+export const getStockByOwnerSchema = z.object({
+  ownerId: z.string().uuid().optional(),
+});
+
+/**
+ * Schema for querying movement history
+ */
+export const getMovementHistorySchema = z.object({
+  movementType: z
+    .enum([
+      'receive',
+      'putaway',
+      'transfer',
+      'pick',
+      'adjust',
+      'count',
+      'ownership_transfer',
+      'repack_out',
+      'repack_in',
+      'pallet_add',
+      'pallet_remove',
+      'pallet_move',
+    ])
+    .optional(),
+  lwin18: z.string().optional(),
+  locationId: z.string().uuid().optional(),
+  dateFrom: z.coerce.date().optional(),
+  dateTo: z.coerce.date().optional(),
+  limit: z.number().min(1).max(100).default(50),
+  offset: z.number().min(0).default(0),
+});
+
+/**
+ * Schema for querying expiring stock
+ */
+export const getExpiringStockSchema = z.object({
+  daysThreshold: z.number().min(1).max(365).default(90),
+  includeExpired: z.boolean().default(true),
+});
+
+/**
+ * Schema for global stock search
+ */
+export const searchStockSchema = z.object({
+  query: z.string().min(1).max(100),
+  limit: z.number().min(1).max(50).default(20),
+});
+
+/**
+ * Schema for exporting stock data
+ */
+export const exportStockSchema = z.object({
+  format: z.enum(['csv', 'xlsx']).default('csv'),
+  groupBy: z.enum(['product', 'location', 'owner']).default('product'),
+  ownerId: z.string().uuid().optional(),
+  locationId: z.string().uuid().optional(),
+});
+
+export default getStockOverviewSchema;

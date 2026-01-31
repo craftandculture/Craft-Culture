@@ -5,17 +5,23 @@ import adminCreateLocation from './controller/adminCreateLocation';
 import adminCreateSpecialLocation from './controller/adminCreateSpecialLocation';
 import adminGetCaseByBarcode from './controller/adminGetCaseByBarcode';
 import adminGetCaseLabels from './controller/adminGetCaseLabels';
+import adminGetExpiringStock from './controller/adminGetExpiringStock';
 import adminGetLocation from './controller/adminGetLocation';
 import adminGetLocationByBarcode from './controller/adminGetLocationByBarcode';
 import adminGetLocationLabels from './controller/adminGetLocationLabels';
 import adminGetLocations from './controller/adminGetLocations';
+import adminGetMovementHistory from './controller/adminGetMovementHistory';
 import adminGetPendingShipments from './controller/adminGetPendingShipments';
 import adminGetShipmentForReceiving from './controller/adminGetShipmentForReceiving';
 import adminGetStockAtLocation from './controller/adminGetStockAtLocation';
+import adminGetStockByOwner from './controller/adminGetStockByOwner';
+import adminGetStockByProduct from './controller/adminGetStockByProduct';
+import adminGetStockOverview from './controller/adminGetStockOverview';
 import adminMarkLabelsPrinted from './controller/adminMarkLabelsPrinted';
 import adminPutaway from './controller/adminPutaway';
 import adminReceiveShipment from './controller/adminReceiveShipment';
 import adminRepack from './controller/adminRepack';
+import adminSearchStock from './controller/adminSearchStock';
 import adminTransferStock from './controller/adminTransferStock';
 import adminUpdateLocation from './controller/adminUpdateLocation';
 
@@ -49,11 +55,21 @@ const operationsRouter = createTRPCRouter({
   repack: adminRepack,
 });
 
+const stockRouter = createTRPCRouter({
+  getOverview: adminGetStockOverview,
+  getByProduct: adminGetStockByProduct,
+  getByOwner: adminGetStockByOwner,
+  getMovements: adminGetMovementHistory,
+  getExpiring: adminGetExpiringStock,
+  search: adminSearchStock,
+});
+
 const adminRouter = createTRPCRouter({
   locations: locationsRouter,
   receiving: receivingRouter,
   labels: labelsRouter,
   operations: operationsRouter,
+  stock: stockRouter,
 });
 
 const wmsRouter = createTRPCRouter({
