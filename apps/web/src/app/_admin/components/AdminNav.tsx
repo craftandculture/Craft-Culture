@@ -4,6 +4,7 @@ import {
   IconActivity,
   IconBottle,
   IconBuildingStore,
+  IconBuildingWarehouse,
   IconCoin,
   IconCurrencyDollar,
   IconPackage,
@@ -61,6 +62,12 @@ const navItems: NavItem[] = [
     href: '/platform/admin/logistics',
     icon: IconShip,
     description: 'Shipments',
+  },
+  {
+    label: 'WMS',
+    href: '/platform/admin/wms',
+    icon: IconBuildingWarehouse,
+    description: 'Warehouse',
   },
   {
     label: 'Commissions',
