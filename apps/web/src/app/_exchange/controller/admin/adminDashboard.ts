@@ -1,8 +1,7 @@
-import { and, eq, gte, sql } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 
 import db from '@/database/client';
 import {
-  exchangeOrderItems,
   exchangeOrders,
   partners,
   supplierPayouts,

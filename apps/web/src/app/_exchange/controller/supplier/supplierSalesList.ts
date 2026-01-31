@@ -5,7 +5,6 @@ import {
   exchangeOrderItems,
   exchangeOrders,
   partners,
-  products,
 } from '@/database/schema';
 import { supplierProcedure } from '@/lib/trpc/procedures';
 
@@ -24,24 +23,24 @@ const supplierSalesList = supplierProcedure
   .input(exchangeOrderListSchema)
   .query(async ({ ctx, input }) => {
     const { partnerId } = ctx;
-    const { page, limit, status } = input;
+    const { page, limit, status: _status } = input;
     const offset = (page - 1) * limit;
 
-    // Build base query
+    // Build base query using denormalized fields on exchangeOrderItems
     const baseQuery = db
       .select({
         itemId: exchangeOrderItems.id,
         orderId: exchangeOrderItems.orderId,
-        productId: exchangeOrderItems.productId,
-        productName: products.name,
-        vintage: products.vintage,
+        supplierProductId: exchangeOrderItems.supplierProductId,
+        productName: exchangeOrderItems.productName,
+        vintage: exchangeOrderItems.productVintage,
         quantity: exchangeOrderItems.quantity,
-        pricePerCase: exchangeOrderItems.pricePerCase,
-        totalPrice: exchangeOrderItems.totalPrice,
-        supplierPayout: exchangeOrderItems.supplierPayout,
+        pricePerCase: exchangeOrderItems.unitPriceUsd,
+        totalPrice: exchangeOrderItems.lineTotalUsd,
+        supplierCostEur: exchangeOrderItems.supplierCostEur,
         orderStatus: exchangeOrders.status,
-        orderReference: exchangeOrders.reference,
-        buyerName: partners.businessName,
+        orderReference: exchangeOrders.orderNumber,
+        buyerName: partners.companyName,
         createdAt: exchangeOrderItems.createdAt,
       })
       .from(exchangeOrderItems)
@@ -49,7 +48,6 @@ const supplierSalesList = supplierProcedure
         exchangeOrders,
         eq(exchangeOrderItems.orderId, exchangeOrders.id),
       )
-      .innerJoin(products, eq(exchangeOrderItems.productId, products.id))
       .innerJoin(partners, eq(exchangeOrders.buyerId, partners.id))
       .where(eq(exchangeOrderItems.supplierId, partnerId));
 

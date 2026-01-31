@@ -1,7 +1,7 @@
 import { and, asc, desc, eq, gte, lte, sql } from 'drizzle-orm';
 
 import db from '@/database/client';
-import { partners, products, supplierProducts } from '@/database/schema';
+import { products, supplierProducts } from '@/database/schema';
 import { protectedProcedure } from '@/lib/trpc/procedures';
 
 import { catalogListSchema } from '../../schemas/exchangeOrderSchema';
