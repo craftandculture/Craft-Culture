@@ -9,6 +9,7 @@ import {
   IconLoader2,
   IconMapPin,
   IconPackage,
+  IconPackages,
   IconPlus,
   IconTransfer,
 } from '@tabler/icons-react';
@@ -149,7 +150,7 @@ const WMSDashboardPage = () => {
             <CardTitle>Quick Actions</CardTitle>
           </div>
           <CardContent className="pt-0">
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
               <Button variant="outline" className="h-auto flex-col gap-2 py-4" asChild>
                 <Link href="/platform/admin/wms/putaway">
                   <Icon icon={IconArrowRight} size="lg" />
@@ -160,6 +161,12 @@ const WMSDashboardPage = () => {
                 <Link href="/platform/admin/wms/transfer">
                   <Icon icon={IconTransfer} size="lg" />
                   <span>Transfer</span>
+                </Link>
+              </Button>
+              <Button variant="outline" className="h-auto flex-col gap-2 py-4" asChild>
+                <Link href="/platform/admin/wms/repack">
+                  <Icon icon={IconPackages} size="lg" />
+                  <span>Repack</span>
                 </Link>
               </Button>
               <Button variant="outline" className="h-auto flex-col gap-2 py-4" asChild>
