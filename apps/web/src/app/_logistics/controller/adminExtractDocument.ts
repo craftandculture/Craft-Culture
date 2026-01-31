@@ -1,4 +1,4 @@
-import { createOpenAI } from '@ai-sdk/openai';
+import { createAnthropic } from '@ai-sdk/anthropic';
 import { TRPCError } from '@trpc/server';
 import { type CoreMessage, generateObject } from 'ai';
 import pdfParse from 'pdf-parse';
@@ -171,7 +171,7 @@ You are a TRANSCRIPTION tool, not a creative writer. Extract ONLY what exists in
 /**
  * Extract structured data from a logistics document
  *
- * Uses GPT-4o to extract data from freight invoices, packing lists, BOLs, AWBs, etc.
+ * Uses Claude to extract data from freight invoices, packing lists, BOLs, AWBs, etc.
  * Supports both image files (PNG, JPG) and PDF documents.
  * Returns extracted data immediately for display and export.
  */
@@ -182,23 +182,23 @@ const adminExtractDocument = adminProcedure.input(extractDocumentSchema).mutatio
   // The AI SDK expects raw base64, not a data URL
   const file = rawFile.includes(',') ? rawFile.split(',')[1] ?? rawFile : rawFile;
 
-  const openaiKey = process.env.OPENAI_API_KEY;
+  const anthropicKey = process.env.ANTHROPIC_API_KEY;
 
   logger.info('[LogisticsDocumentExtraction] Starting extraction:', {
-    hasKey: !!openaiKey,
+    hasKey: !!anthropicKey,
     documentType,
     fileType,
   });
 
-  if (!openaiKey) {
+  if (!anthropicKey) {
     throw new TRPCError({
       code: 'INTERNAL_SERVER_ERROR',
-      message: 'AI extraction is not configured. OPENAI_API_KEY environment variable is not set.',
+      message: 'AI extraction is not configured. ANTHROPIC_API_KEY environment variable is not set.',
     });
   }
 
-  const openai = createOpenAI({
-    apiKey: openaiKey,
+  const anthropic = createAnthropic({
+    apiKey: anthropicKey,
   });
 
   const systemPrompt = getSystemPrompt(documentType);
@@ -240,7 +240,7 @@ This is a TRANSCRIPTION task, not interpretation. Copy exactly what you see.`,
       ];
 
       const result = await generateObject({
-        model: openai('gpt-4o'),
+        model: anthropic('claude-sonnet-4-20250514'),
         schema: extractedLogisticsDataSchema,
         system: systemPrompt,
         messages,
@@ -270,11 +270,11 @@ This is a TRANSCRIPTION task, not interpretation. Copy exactly what you see.`,
       // If we got meaningful text, use text-based extraction
       if (pdfText && pdfText.trim().length >= 50) {
         const result = await generateObject({
-          model: openai('gpt-4o'),
+          model: anthropic('claude-sonnet-4-20250514'),
           schema: extractedLogisticsDataSchema,
           system: systemPrompt,
           maxTokens: 16384,
-          prompt: `Parse this invoice text and extract structured data.
+          prompt: `Parse this invoice/document text and extract structured data.
 
 EXAMPLES OF CORRECT EXTRACTION:
 Input text: "François Thienpont Terre Elysée 2021 0.75L 12 22042142 420 70 $28.58"
@@ -284,10 +284,11 @@ Input text: "Masseria Alfano Fiano d'Avellino DOCG Riserva Il Gheppio 2020 0.75L
 Output: { productName: "Masseria Alfano Fiano d'Avellino DOCG Riserva Il Gheppio 2020 0.75L 12.5", hsCode: "22042138", quantity: 420, cases: 70, unitPrice: 38.11 }
 
 RULES:
-- Copy product names EXACTLY as they appear - these are small wine producers, NOT famous brands
+- Copy product names EXACTLY as they appear - these are wine producers, copy the full description
 - The Description column contains the full product name including producer, wine, vintage, size, and alcohol %
-- Extract ALL rows from the table
+- Extract ALL rows from the table - count them to ensure completeness
 - HS CODES ARE CRITICAL: Extract the COMPLETE code with ALL digits. Codes like 22042109, 22042132, 22041000 are DIFFERENT codes - do NOT truncate or simplify to 22042100. Each row may have a unique HS code.
+- For wine products, look for: Producer, Wine Name, Appellation, Vintage Year, Bottle Size (0.75L), Alcohol %
 
 --- DOCUMENT TEXT ---
 ${pdfText}
@@ -297,7 +298,7 @@ ${pdfText}
         extractedData = result.object;
       } else {
         // For scanned PDFs or PDFs with minimal text, we cannot process directly
-        // GPT-4o doesn't support PDF files - user needs to convert to image or use a digital PDF
+        // Claude can handle PDFs as images - suggest converting to image
         logger.warn('[LogisticsDocumentExtraction] PDF has no extractable text (likely scanned)', {
           textLength: pdfText?.length ?? 0,
         });
@@ -305,7 +306,7 @@ ${pdfText}
         throw new TRPCError({
           code: 'BAD_REQUEST',
           message:
-            'This PDF appears to be scanned or contains no extractable text. Please either: (1) Upload the original digital PDF, or (2) Convert the PDF to an image (PNG/JPG) and upload that instead.',
+            'This PDF appears to be scanned or contains no extractable text. Please convert the PDF to an image (PNG/JPG) and upload that instead for vision-based extraction.',
         });
       }
     } else {
