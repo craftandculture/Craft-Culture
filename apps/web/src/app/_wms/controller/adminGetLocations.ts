@@ -18,6 +18,8 @@ import { getLocationsSchema } from '../schemas/locationSchema';
 const adminGetLocations = adminProcedure
   .input(getLocationsSchema)
   .query(async ({ input }) => {
+    console.log('[WMS] adminGetLocations called with input:', input);
+    const startTime = Date.now();
     const conditions = [];
 
     if (input.aisle) {
@@ -71,6 +73,7 @@ const adminGetLocations = adminProcedure
         asc(wmsLocations.level),
       );
 
+    console.log('[WMS] adminGetLocations returning', locations.length, 'locations in', Date.now() - startTime, 'ms');
     return locations;
   });
 

@@ -15,6 +15,9 @@ import { getStockOverviewSchema } from '../schemas/stockQuerySchema';
 const adminGetStockOverview = adminProcedure
   .input(getStockOverviewSchema)
   .query(async () => {
+    console.log('[WMS] adminGetStockOverview called');
+    const startTime = Date.now();
+
     // Get total stock stats
     const [stockStats] = await db
       .select({
@@ -82,6 +85,8 @@ const adminGetStockOverview = adminProcedure
       .from(wmsStock)
       .innerJoin(wmsLocations, sql`${wmsLocations.id} = ${wmsStock.locationId}`)
       .where(sql`${wmsLocations.locationType} = 'receiving'`);
+
+    console.log('[WMS] adminGetStockOverview completed in', Date.now() - startTime, 'ms');
 
     return {
       summary: {
