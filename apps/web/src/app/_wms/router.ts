@@ -1,13 +1,17 @@
 import { createTRPCRouter } from '@/lib/trpc/trpc';
 
+import adminAddOrdersToBatch from './controller/adminAddOrdersToBatch';
 import adminAssignPickList from './controller/adminAssignPickList';
 import adminBatchCreateLocations from './controller/adminBatchCreateLocations';
 import adminCompletePickList from './controller/adminCompletePickList';
+import adminCreateDispatchBatch from './controller/adminCreateDispatchBatch';
 import adminCreateLocation from './controller/adminCreateLocation';
 import adminCreatePickList from './controller/adminCreatePickList';
 import adminCreateSpecialLocation from './controller/adminCreateSpecialLocation';
 import adminGetCaseByBarcode from './controller/adminGetCaseByBarcode';
 import adminGetCaseLabels from './controller/adminGetCaseLabels';
+import adminGetDispatchBatch from './controller/adminGetDispatchBatch';
+import adminGetDispatchBatches from './controller/adminGetDispatchBatches';
 import adminGetExpiringStock from './controller/adminGetExpiringStock';
 import adminGetLocation from './controller/adminGetLocation';
 import adminGetLocationByBarcode from './controller/adminGetLocationByBarcode';
@@ -34,6 +38,7 @@ import adminResolvePartnerRequest from './controller/adminResolvePartnerRequest'
 import adminSearchStock from './controller/adminSearchStock';
 import adminTransferOwnership from './controller/adminTransferOwnership';
 import adminTransferStock from './controller/adminTransferStock';
+import adminUpdateBatchStatus from './controller/adminUpdateBatchStatus';
 import adminUpdateLocation from './controller/adminUpdateLocation';
 import partnerGetStock from './controller/partnerGetStock';
 
@@ -93,6 +98,14 @@ const pickingRouter = createTRPCRouter({
   complete: adminCompletePickList,
 });
 
+const dispatchRouter = createTRPCRouter({
+  create: adminCreateDispatchBatch,
+  getMany: adminGetDispatchBatches,
+  getOne: adminGetDispatchBatch,
+  addOrders: adminAddOrdersToBatch,
+  updateStatus: adminUpdateBatchStatus,
+});
+
 const adminRouter = createTRPCRouter({
   locations: locationsRouter,
   receiving: receivingRouter,
@@ -101,6 +114,7 @@ const adminRouter = createTRPCRouter({
   stock: stockRouter,
   ownership: ownershipRouter,
   picking: pickingRouter,
+  dispatch: dispatchRouter,
 });
 
 const partnerRouter = createTRPCRouter({
