@@ -1,7 +1,10 @@
 import { createTRPCRouter } from '@/lib/trpc/trpc';
 
+import adminAssignPickList from './controller/adminAssignPickList';
 import adminBatchCreateLocations from './controller/adminBatchCreateLocations';
+import adminCompletePickList from './controller/adminCompletePickList';
 import adminCreateLocation from './controller/adminCreateLocation';
+import adminCreatePickList from './controller/adminCreatePickList';
 import adminCreateSpecialLocation from './controller/adminCreateSpecialLocation';
 import adminGetCaseByBarcode from './controller/adminGetCaseByBarcode';
 import adminGetCaseLabels from './controller/adminGetCaseLabels';
@@ -13,12 +16,15 @@ import adminGetLocations from './controller/adminGetLocations';
 import adminGetMovementHistory from './controller/adminGetMovementHistory';
 import adminGetPartnerRequests from './controller/adminGetPartnerRequests';
 import adminGetPendingShipments from './controller/adminGetPendingShipments';
+import adminGetPickList from './controller/adminGetPickList';
+import adminGetPickLists from './controller/adminGetPickLists';
 import adminGetShipmentForReceiving from './controller/adminGetShipmentForReceiving';
 import adminGetStockAtLocation from './controller/adminGetStockAtLocation';
 import adminGetStockByOwner from './controller/adminGetStockByOwner';
 import adminGetStockByProduct from './controller/adminGetStockByProduct';
 import adminGetStockOverview from './controller/adminGetStockOverview';
 import adminMarkLabelsPrinted from './controller/adminMarkLabelsPrinted';
+import adminPickItem from './controller/adminPickItem';
 import adminPutaway from './controller/adminPutaway';
 import adminReceiveShipment from './controller/adminReceiveShipment';
 import adminReleaseReservation from './controller/adminReleaseReservation';
@@ -78,6 +84,15 @@ const ownershipRouter = createTRPCRouter({
   resolve: adminResolvePartnerRequest,
 });
 
+const pickingRouter = createTRPCRouter({
+  create: adminCreatePickList,
+  getMany: adminGetPickLists,
+  getOne: adminGetPickList,
+  assign: adminAssignPickList,
+  pickItem: adminPickItem,
+  complete: adminCompletePickList,
+});
+
 const adminRouter = createTRPCRouter({
   locations: locationsRouter,
   receiving: receivingRouter,
@@ -85,6 +100,7 @@ const adminRouter = createTRPCRouter({
   operations: operationsRouter,
   stock: stockRouter,
   ownership: ownershipRouter,
+  picking: pickingRouter,
 });
 
 const partnerRouter = createTRPCRouter({
