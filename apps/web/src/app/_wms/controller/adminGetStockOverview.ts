@@ -26,11 +26,11 @@ const adminGetStockOverview = adminProcedure
       })
       .from(wmsStock);
 
-    // Get location stats
+    // Get location stats - use COUNT(DISTINCT) to avoid duplicates from join
     const [locationStats] = await db
       .select({
-        totalLocations: sql<number>`COUNT(*)::int`,
-        activeLocations: sql<number>`COUNT(*) FILTER (WHERE ${wmsLocations.isActive} = true)::int`,
+        totalLocations: sql<number>`COUNT(DISTINCT ${wmsLocations.id})::int`,
+        activeLocations: sql<number>`COUNT(DISTINCT CASE WHEN ${wmsLocations.isActive} = true THEN ${wmsLocations.id} END)::int`,
         occupiedLocations: sql<number>`COUNT(DISTINCT ${wmsStock.locationId})::int`,
       })
       .from(wmsLocations)
