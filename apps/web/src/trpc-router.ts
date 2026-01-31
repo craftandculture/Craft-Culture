@@ -1,7 +1,6 @@
 import adminRouter from '@/app/_admin/router';
 import usersRouter from '@/app/_auth/router';
 import commissionsRouter from '@/app/_commissions/router';
-import exchangeRouter from '@/app/_exchange/router';
 import logisticsRouter from '@/app/_logistics/router';
 import notificationsRouter from '@/app/_notifications/router';
 import partnersRouter from '@/app/_partners/router';
@@ -23,7 +22,6 @@ import { createTRPCRouter } from './lib/trpc/trpc';
 export const appRouter = createTRPCRouter({
   admin: adminRouter,
   commissions: commissionsRouter,
-  exchange: exchangeRouter,
   logistics: logisticsRouter,
   users: usersRouter,
   notifications: notificationsRouter,
