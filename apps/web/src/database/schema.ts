@@ -366,6 +366,7 @@ export const partnerType = pgEnum('partner_type', [
   'sommelier',
   'distributor',
   'wine_partner',
+  'supplier',
 ]);
 
 export const partnerStatus = pgEnum('partner_status', [
@@ -722,10 +723,9 @@ export const notifications = pgTable(
     userId: uuid('user_id')
       .references(() => users.id, { onDelete: 'cascade' })
       .notNull(),
-    // TODO: Re-enable partnerId once migration script is run on production
-    // partnerId: uuid('partner_id').references(() => partners.id, {
-    //   onDelete: 'cascade',
-    // }), // Partner context for filtering when user switches partners
+    partnerId: uuid('partner_id').references(() => partners.id, {
+      onDelete: 'cascade',
+    }),
     type: notificationType('type').notNull(),
     title: text('title').notNull(),
     message: text('message').notNull(),
@@ -741,7 +741,7 @@ export const notifications = pgTable(
     index('notifications_user_id_idx').on(table.userId),
     index('notifications_user_id_is_read_idx').on(table.userId, table.isRead),
     index('notifications_created_at_idx').on(table.createdAt),
-    // index('notifications_partner_id_idx').on(table.partnerId), // TODO: Re-enable after migration
+    index('notifications_partner_id_idx').on(table.partnerId),
   ],
 ).enableRLS();
 
@@ -3399,3 +3399,980 @@ export const logisticsQuoteRequestAttachments = pgTable(
 ).enableRLS();
 
 export type LogisticsQuoteRequestAttachment = typeof logisticsQuoteRequestAttachments.$inferSelect;
+
+// ============================================================================
+// WINE EXCHANGE TABLES
+// B2B marketplace connecting EU suppliers with UAE trade buyers
+// ============================================================================
+
+/**
+ * Status for supplier products (consigned inventory)
+ */
+export const supplierProductStatus = pgEnum('supplier_product_status', [
+  'incoming', // Shipment in transit to RAK
+  'available', // Checked in and available for sale
+  'low_stock', // Below threshold
+  'sold_out', // No cases remaining
+]);
+
+/**
+ * Status for exchange orders
+ */
+export const exchangeOrderStatus = pgEnum('exchange_order_status', [
+  'pending', // Order placed, awaiting confirmation
+  'confirmed', // Stock reserved
+  'paid', // Payment received
+  'picking', // Being picked at warehouse
+  'shipped', // Out for delivery
+  'delivered', // Completed
+  'cancelled', // Cancelled
+]);
+
+/**
+ * Status for supplier payouts
+ */
+export const supplierPayoutStatus = pgEnum('supplier_payout_status', [
+  'pending', // Awaiting processing
+  'processing', // Being processed
+  'paid', // Completed
+]);
+
+/**
+ * Status for supplier shipments (inbound to RAK)
+ */
+export const supplierShipmentStatus = pgEnum('supplier_shipment_status', [
+  'draft', // Being prepared
+  'submitted', // Manifest sent
+  'in_transit', // Shipped
+  'arrived', // At port/warehouse
+  'checked_in', // Verified and added to inventory
+  'issues', // Problems identified
+]);
+
+/**
+ * Supplier products - consigned inventory from suppliers (partners with type='supplier')
+ * Links suppliers to products with pricing and availability
+ */
+export const supplierProducts = pgTable(
+  'supplier_products',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+
+    // Supplier (partner with type='supplier')
+    supplierId: uuid('supplier_id')
+      .references(() => partners.id, { onDelete: 'cascade' })
+      .notNull(),
+
+    // Product reference
+    productId: uuid('product_id')
+      .references(() => products.id, { onDelete: 'cascade' })
+      .notNull(),
+
+    // Supplier's own SKU/reference
+    supplierSku: text('supplier_sku'),
+
+    // Pricing (supplier's cost in EUR)
+    costPriceEur: doublePrecision('cost_price_eur').notNull(),
+
+    // Inventory tracking
+    casesConsigned: integer('cases_consigned').notNull().default(0),
+    casesAvailable: integer('cases_available').notNull().default(0),
+    casesSold: integer('cases_sold').notNull().default(0),
+    casesReserved: integer('cases_reserved').notNull().default(0),
+
+    // Status
+    status: supplierProductStatus('status').notNull().default('incoming'),
+
+    // Low stock threshold
+    lowStockThreshold: integer('low_stock_threshold').default(3),
+
+    // Notes
+    notes: text('notes'),
+
+    ...timestamps,
+  },
+  (table) => [
+    index('supplier_products_supplier_id_idx').on(table.supplierId),
+    index('supplier_products_product_id_idx').on(table.productId),
+    index('supplier_products_status_idx').on(table.status),
+  ],
+).enableRLS();
+
+export type SupplierProduct = typeof supplierProducts.$inferSelect;
+
+/**
+ * Exchange orders - orders placed by trade buyers on the exchange
+ */
+export const exchangeOrders = pgTable(
+  'exchange_orders',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+
+    // Order reference (EXC-YYYY-XXXX)
+    orderNumber: text('order_number').notNull().unique(),
+
+    // Buyer (partner - can be retailer, distributor, etc.)
+    buyerId: uuid('buyer_id')
+      .references(() => partners.id, { onDelete: 'restrict' })
+      .notNull(),
+
+    // User who placed the order
+    placedBy: uuid('placed_by')
+      .references(() => users.id, { onDelete: 'set null' })
+      .notNull(),
+
+    // Status
+    status: exchangeOrderStatus('status').notNull().default('pending'),
+
+    // Financials (USD)
+    subtotalUsd: doublePrecision('subtotal_usd').notNull().default(0),
+    deliveryFeeUsd: doublePrecision('delivery_fee_usd').notNull().default(0),
+    totalUsd: doublePrecision('total_usd').notNull().default(0),
+
+    // Delivery details
+    deliveryAddress: text('delivery_address'),
+    deliveryNotes: text('delivery_notes'),
+
+    // Order notes
+    buyerNotes: text('buyer_notes'),
+    internalNotes: text('internal_notes'),
+
+    // Timestamps
+    placedAt: timestamp('placed_at', { mode: 'date' }).notNull().defaultNow(),
+    confirmedAt: timestamp('confirmed_at', { mode: 'date' }),
+    paidAt: timestamp('paid_at', { mode: 'date' }),
+    shippedAt: timestamp('shipped_at', { mode: 'date' }),
+    deliveredAt: timestamp('delivered_at', { mode: 'date' }),
+    cancelledAt: timestamp('cancelled_at', { mode: 'date' }),
+    cancellationReason: text('cancellation_reason'),
+
+    ...timestamps,
+  },
+  (table) => [
+    index('exchange_orders_order_number_idx').on(table.orderNumber),
+    index('exchange_orders_buyer_id_idx').on(table.buyerId),
+    index('exchange_orders_status_idx').on(table.status),
+    index('exchange_orders_placed_at_idx').on(table.placedAt),
+  ],
+).enableRLS();
+
+export type ExchangeOrder = typeof exchangeOrders.$inferSelect;
+
+/**
+ * Exchange order items - line items in exchange orders
+ * Tracks which supplier product was purchased
+ */
+export const exchangeOrderItems = pgTable(
+  'exchange_order_items',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+
+    // Order reference
+    orderId: uuid('order_id')
+      .references(() => exchangeOrders.id, { onDelete: 'cascade' })
+      .notNull(),
+
+    // Supplier product reference
+    supplierProductId: uuid('supplier_product_id')
+      .references(() => supplierProducts.id, { onDelete: 'restrict' })
+      .notNull(),
+
+    // Supplier reference (denormalized for reporting)
+    supplierId: uuid('supplier_id')
+      .references(() => partners.id, { onDelete: 'restrict' })
+      .notNull(),
+
+    // Quantity
+    quantity: integer('quantity').notNull(),
+
+    // Pricing at time of order (USD)
+    unitPriceUsd: doublePrecision('unit_price_usd').notNull(),
+    lineTotalUsd: doublePrecision('line_total_usd').notNull(),
+
+    // Supplier's cost at time of order (EUR for settlement)
+    supplierCostEur: doublePrecision('supplier_cost_eur').notNull(),
+
+    // Product details (denormalized for order history)
+    productName: text('product_name').notNull(),
+    productVintage: text('product_vintage'),
+    productRegion: text('product_region'),
+    caseSize: integer('case_size').notNull(),
+    bottleSize: integer('bottle_size').notNull(),
+
+    ...timestamps,
+  },
+  (table) => [
+    index('exchange_order_items_order_id_idx').on(table.orderId),
+    index('exchange_order_items_supplier_product_id_idx').on(table.supplierProductId),
+    index('exchange_order_items_supplier_id_idx').on(table.supplierId),
+  ],
+).enableRLS();
+
+export type ExchangeOrderItem = typeof exchangeOrderItems.$inferSelect;
+
+/**
+ * Supplier payouts - monthly settlement records for suppliers
+ */
+export const supplierPayouts = pgTable(
+  'supplier_payouts',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+
+    // Payout reference (PAY-YYYY-MM-XXXX)
+    payoutNumber: text('payout_number').notNull().unique(),
+
+    // Supplier
+    supplierId: uuid('supplier_id')
+      .references(() => partners.id, { onDelete: 'restrict' })
+      .notNull(),
+
+    // Period
+    periodStart: timestamp('period_start', { mode: 'date' }).notNull(),
+    periodEnd: timestamp('period_end', { mode: 'date' }).notNull(),
+
+    // Financials (EUR)
+    grossSalesEur: doublePrecision('gross_sales_eur').notNull().default(0),
+    commissionEur: doublePrecision('commission_eur').notNull().default(0),
+    commissionRate: doublePrecision('commission_rate').notNull(), // Rate at time of payout
+    netPayoutEur: doublePrecision('net_payout_eur').notNull().default(0),
+
+    // Order count for this period
+    orderCount: integer('order_count').notNull().default(0),
+    itemCount: integer('item_count').notNull().default(0),
+
+    // Status
+    status: supplierPayoutStatus('status').notNull().default('pending'),
+
+    // Payment details
+    paidAt: timestamp('paid_at', { mode: 'date' }),
+    paymentReference: text('payment_reference'),
+    processedBy: uuid('processed_by').references(() => users.id, { onDelete: 'set null' }),
+
+    // Notes
+    notes: text('notes'),
+
+    ...timestamps,
+  },
+  (table) => [
+    index('supplier_payouts_payout_number_idx').on(table.payoutNumber),
+    index('supplier_payouts_supplier_id_idx').on(table.supplierId),
+    index('supplier_payouts_status_idx').on(table.status),
+    index('supplier_payouts_period_idx').on(table.periodStart, table.periodEnd),
+  ],
+).enableRLS();
+
+export type SupplierPayout = typeof supplierPayouts.$inferSelect;
+
+/**
+ * Supplier shipments - inbound shipments from suppliers to RAK warehouse
+ */
+export const supplierShipments = pgTable(
+  'supplier_shipments',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+
+    // Shipment reference (SHP-YYYY-XXXX)
+    shipmentNumber: text('shipment_number').notNull().unique(),
+
+    // Supplier
+    supplierId: uuid('supplier_id')
+      .references(() => partners.id, { onDelete: 'restrict' })
+      .notNull(),
+
+    // Status
+    status: supplierShipmentStatus('status').notNull().default('draft'),
+
+    // Tracking
+    trackingNumber: text('tracking_number'),
+    carrier: text('carrier'),
+
+    // Dates
+    expectedArrival: timestamp('expected_arrival', { mode: 'date' }),
+    actualArrival: timestamp('actual_arrival', { mode: 'date' }),
+    checkedInAt: timestamp('checked_in_at', { mode: 'date' }),
+    checkedInBy: uuid('checked_in_by').references(() => users.id, { onDelete: 'set null' }),
+
+    // Totals
+    totalCases: integer('total_cases').notNull().default(0),
+    totalProducts: integer('total_products').notNull().default(0),
+
+    // Notes
+    notes: text('notes'),
+    issueNotes: text('issue_notes'),
+
+    ...timestamps,
+  },
+  (table) => [
+    index('supplier_shipments_shipment_number_idx').on(table.shipmentNumber),
+    index('supplier_shipments_supplier_id_idx').on(table.supplierId),
+    index('supplier_shipments_status_idx').on(table.status),
+  ],
+).enableRLS();
+
+export type SupplierShipment = typeof supplierShipments.$inferSelect;
+
+/**
+ * Supplier shipment items - products in an inbound shipment
+ */
+export const supplierShipmentItems = pgTable(
+  'supplier_shipment_items',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+
+    // Shipment reference
+    shipmentId: uuid('shipment_id')
+      .references(() => supplierShipments.id, { onDelete: 'cascade' })
+      .notNull(),
+
+    // Product reference (optional - may be created during check-in)
+    productId: uuid('product_id').references(() => products.id, { onDelete: 'set null' }),
+
+    // Supplier product (created/updated on check-in)
+    supplierProductId: uuid('supplier_product_id').references(() => supplierProducts.id, {
+      onDelete: 'set null',
+    }),
+
+    // Product details from manifest
+    productName: text('product_name').notNull(),
+    producer: text('producer'),
+    vintage: text('vintage'),
+    region: text('region'),
+    country: text('country'),
+    caseSize: integer('case_size').notNull().default(12),
+    bottleSize: integer('bottle_size').notNull().default(750),
+
+    // Quantity
+    casesExpected: integer('cases_expected').notNull(),
+    casesReceived: integer('cases_received'),
+
+    // Pricing (EUR)
+    costPriceEur: doublePrecision('cost_price_eur').notNull(),
+
+    // LWIN matching
+    lwin7: text('lwin7'),
+    lwin11: text('lwin11'),
+    matchConfidence: doublePrecision('match_confidence'),
+
+    // Notes
+    notes: text('notes'),
+
+    ...timestamps,
+  },
+  (table) => [
+    index('supplier_shipment_items_shipment_id_idx').on(table.shipmentId),
+    index('supplier_shipment_items_product_id_idx').on(table.productId),
+  ],
+).enableRLS();
+
+export type SupplierShipmentItem = typeof supplierShipmentItems.$inferSelect;
+
+// ============================================================================
+// WMS (Warehouse Management System)
+// ============================================================================
+
+export const wmsLocationType = pgEnum('wms_location_type', [
+  'rack',
+  'floor',
+  'receiving',
+  'shipping',
+]);
+
+export const wmsMovementType = pgEnum('wms_movement_type', [
+  'receive',
+  'putaway',
+  'transfer',
+  'pick',
+  'adjust',
+  'count',
+  'ownership_transfer',
+  'repack_out',
+  'repack_in',
+  'pallet_add',
+  'pallet_remove',
+  'pallet_move',
+]);
+
+export const wmsCycleCountStatus = pgEnum('wms_cycle_count_status', [
+  'pending',
+  'in_progress',
+  'completed',
+  'reconciled',
+]);
+
+export const wmsPickListStatus = pgEnum('wms_pick_list_status', [
+  'pending',
+  'in_progress',
+  'completed',
+  'cancelled',
+]);
+
+export const wmsDispatchBatchStatus = pgEnum('wms_dispatch_batch_status', [
+  'draft',
+  'picking',
+  'staged',
+  'dispatched',
+  'delivered',
+]);
+
+export const wmsPalletStatus = pgEnum('wms_pallet_status', [
+  'active',
+  'sealed',
+  'retrieved',
+  'archived',
+]);
+
+export const wmsRequestType = pgEnum('wms_request_type', [
+  'transfer',
+  'mark_for_sale',
+  'withdrawal',
+]);
+
+export const wmsRequestStatus = pgEnum('wms_request_status', [
+  'pending',
+  'approved',
+  'rejected',
+  'completed',
+]);
+
+export const settlementStatus = pgEnum('settlement_status', [
+  'pending',
+  'payment_received',
+  'settled',
+]);
+
+/**
+ * WMS Locations - warehouse bin locations
+ */
+export const wmsLocations = pgTable(
+  'wms_locations',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    locationCode: text('location_code').notNull().unique(),
+    aisle: text('aisle').notNull(),
+    bay: text('bay').notNull(),
+    level: text('level').notNull(),
+    locationType: wmsLocationType('location_type').notNull(),
+    capacityCases: integer('capacity_cases'),
+    requiresForklift: boolean('requires_forklift').default(false),
+    isActive: boolean('is_active').default(true),
+    barcode: text('barcode').notNull().unique(),
+    notes: text('notes'),
+    ...timestamps,
+  },
+  (table) => [
+    index('wms_locations_aisle_idx').on(table.aisle),
+    index('wms_locations_location_type_idx').on(table.locationType),
+    index('wms_locations_barcode_idx').on(table.barcode),
+  ],
+).enableRLS();
+
+export type WmsLocation = typeof wmsLocations.$inferSelect;
+
+/**
+ * WMS Stock - stock by location with multi-owner support
+ */
+export const wmsStock = pgTable(
+  'wms_stock',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    locationId: uuid('location_id')
+      .references(() => wmsLocations.id)
+      .notNull(),
+    ownerId: uuid('owner_id')
+      .references(() => partners.id)
+      .notNull(),
+    ownerName: text('owner_name').notNull(),
+    lwin18: text('lwin18').notNull(),
+    productName: text('product_name').notNull(),
+    producer: text('producer'),
+    vintage: integer('vintage'),
+    bottleSize: text('bottle_size').default('750ml'),
+    caseConfig: integer('case_config').default(12),
+    quantityCases: integer('quantity_cases').notNull().default(0),
+    reservedCases: integer('reserved_cases').notNull().default(0),
+    availableCases: integer('available_cases').notNull().default(0),
+    lotNumber: text('lot_number'),
+    receivedAt: timestamp('received_at', { mode: 'date' }),
+    shipmentId: uuid('shipment_id').references(() => logisticsShipments.id),
+    salesArrangement: text('sales_arrangement').default('consignment'),
+    consignmentCommissionPercent: doublePrecision('consignment_commission_percent'),
+    expiryDate: timestamp('expiry_date', { mode: 'date' }),
+    isPerishable: boolean('is_perishable').default(false),
+    notes: text('notes'),
+    ...timestamps,
+  },
+  (table) => [
+    index('wms_stock_location_id_idx').on(table.locationId),
+    index('wms_stock_owner_id_idx').on(table.ownerId),
+    index('wms_stock_lwin18_idx').on(table.lwin18),
+    index('wms_stock_shipment_id_idx').on(table.shipmentId),
+  ],
+).enableRLS();
+
+export type WmsStock = typeof wmsStock.$inferSelect;
+
+/**
+ * WMS Stock Movements - audit trail for all stock movements
+ */
+export const wmsStockMovements = pgTable(
+  'wms_stock_movements',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    movementNumber: text('movement_number').notNull().unique(),
+    movementType: wmsMovementType('movement_type').notNull(),
+    lwin18: text('lwin18').notNull(),
+    productName: text('product_name').notNull(),
+    quantityCases: integer('quantity_cases').notNull(),
+    fromLocationId: uuid('from_location_id').references(() => wmsLocations.id),
+    toLocationId: uuid('to_location_id').references(() => wmsLocations.id),
+    fromOwnerId: uuid('from_owner_id').references(() => partners.id),
+    toOwnerId: uuid('to_owner_id').references(() => partners.id),
+    lotNumber: text('lot_number'),
+    shipmentId: uuid('shipment_id').references(() => logisticsShipments.id),
+    orderId: uuid('order_id'),
+    scannedBarcodes: jsonb('scanned_barcodes').$type<string[]>(),
+    notes: text('notes'),
+    reasonCode: text('reason_code'),
+    performedBy: uuid('performed_by')
+      .references(() => users.id)
+      .notNull(),
+    performedAt: timestamp('performed_at', { mode: 'date' }).notNull().defaultNow(),
+    ...timestamps,
+  },
+  (table) => [
+    index('wms_stock_movements_movement_type_idx').on(table.movementType),
+    index('wms_stock_movements_lwin18_idx').on(table.lwin18),
+    index('wms_stock_movements_performed_at_idx').on(table.performedAt),
+  ],
+).enableRLS();
+
+export type WmsStockMovement = typeof wmsStockMovements.$inferSelect;
+
+/**
+ * WMS Case Labels - individual case barcode tracking
+ */
+export const wmsCaseLabels = pgTable(
+  'wms_case_labels',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    barcode: text('barcode').notNull().unique(),
+    lwin18: text('lwin18').notNull(),
+    productName: text('product_name').notNull(),
+    lotNumber: text('lot_number'),
+    shipmentId: uuid('shipment_id').references(() => logisticsShipments.id),
+    currentLocationId: uuid('current_location_id').references(() => wmsLocations.id),
+    isActive: boolean('is_active').default(true),
+    printedAt: timestamp('printed_at', { mode: 'date' }),
+    ...timestamps,
+  },
+  (table) => [
+    index('wms_case_labels_barcode_idx').on(table.barcode),
+    index('wms_case_labels_lwin18_idx').on(table.lwin18),
+    index('wms_case_labels_current_location_id_idx').on(table.currentLocationId),
+  ],
+).enableRLS();
+
+export type WmsCaseLabel = typeof wmsCaseLabels.$inferSelect;
+
+/**
+ * WMS Cycle Counts - inventory counting
+ */
+export const wmsCycleCounts = pgTable(
+  'wms_cycle_counts',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    countNumber: text('count_number').notNull().unique(),
+    locationId: uuid('location_id').references(() => wmsLocations.id),
+    status: wmsCycleCountStatus('status').default('pending'),
+    expectedItems: integer('expected_items').default(0),
+    countedItems: integer('counted_items').default(0),
+    discrepancyCount: integer('discrepancy_count').default(0),
+    createdBy: uuid('created_by').references(() => users.id),
+    completedAt: timestamp('completed_at', { mode: 'date' }),
+    ...timestamps,
+  },
+  (table) => [
+    index('wms_cycle_counts_location_id_idx').on(table.locationId),
+    index('wms_cycle_counts_status_idx').on(table.status),
+  ],
+).enableRLS();
+
+export type WmsCycleCount = typeof wmsCycleCounts.$inferSelect;
+
+/**
+ * WMS Repacks - case splitting/repacking tracking
+ */
+export const wmsRepacks = pgTable(
+  'wms_repacks',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    repackNumber: text('repack_number').notNull().unique(),
+    sourceLwin18: text('source_lwin18').notNull(),
+    sourceProductName: text('source_product_name').notNull(),
+    sourceCaseConfig: integer('source_case_config').notNull(),
+    sourceQuantityCases: integer('source_quantity_cases').notNull(),
+    sourceStockId: uuid('source_stock_id').references(() => wmsStock.id),
+    targetLwin18: text('target_lwin18').notNull(),
+    targetProductName: text('target_product_name').notNull(),
+    targetCaseConfig: integer('target_case_config').notNull(),
+    targetQuantityCases: integer('target_quantity_cases').notNull(),
+    targetStockId: uuid('target_stock_id').references(() => wmsStock.id),
+    locationId: uuid('location_id')
+      .references(() => wmsLocations.id)
+      .notNull(),
+    ownerId: uuid('owner_id')
+      .references(() => partners.id)
+      .notNull(),
+    performedBy: uuid('performed_by')
+      .references(() => users.id)
+      .notNull(),
+    performedAt: timestamp('performed_at', { mode: 'date' }).notNull().defaultNow(),
+    notes: text('notes'),
+    ...timestamps,
+  },
+  (table) => [
+    index('wms_repacks_location_id_idx').on(table.locationId),
+    index('wms_repacks_owner_id_idx').on(table.ownerId),
+  ],
+).enableRLS();
+
+export type WmsRepack = typeof wmsRepacks.$inferSelect;
+
+/**
+ * WMS Pick Lists - order picking
+ */
+export const wmsPickLists = pgTable(
+  'wms_pick_lists',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    pickListNumber: text('pick_list_number').notNull().unique(),
+    status: wmsPickListStatus('status').default('pending'),
+    orderId: uuid('order_id').notNull(),
+    orderNumber: text('order_number').notNull(),
+    totalItems: integer('total_items').notNull().default(0),
+    pickedItems: integer('picked_items').notNull().default(0),
+    assignedTo: uuid('assigned_to').references(() => users.id),
+    startedAt: timestamp('started_at', { mode: 'date' }),
+    completedAt: timestamp('completed_at', { mode: 'date' }),
+    completedBy: uuid('completed_by').references(() => users.id),
+    notes: text('notes'),
+    ...timestamps,
+  },
+  (table) => [
+    index('wms_pick_lists_status_idx').on(table.status),
+    index('wms_pick_lists_order_id_idx').on(table.orderId),
+  ],
+).enableRLS();
+
+export type WmsPickList = typeof wmsPickLists.$inferSelect;
+
+/**
+ * WMS Pick List Items - individual items to pick
+ */
+export const wmsPickListItems = pgTable(
+  'wms_pick_list_items',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    pickListId: uuid('pick_list_id')
+      .references(() => wmsPickLists.id)
+      .notNull(),
+    lwin18: text('lwin18').notNull(),
+    productName: text('product_name').notNull(),
+    quantityCases: integer('quantity_cases').notNull(),
+    suggestedLocationId: uuid('suggested_location_id').references(() => wmsLocations.id),
+    suggestedStockId: uuid('suggested_stock_id').references(() => wmsStock.id),
+    pickedFromLocationId: uuid('picked_from_location_id').references(() => wmsLocations.id),
+    pickedQuantity: integer('picked_quantity'),
+    pickedAt: timestamp('picked_at', { mode: 'date' }),
+    pickedBy: uuid('picked_by').references(() => users.id),
+    isPicked: boolean('is_picked').default(false),
+    notes: text('notes'),
+    ...timestamps,
+  },
+  (table) => [index('wms_pick_list_items_pick_list_id_idx').on(table.pickListId)],
+).enableRLS();
+
+export type WmsPickListItem = typeof wmsPickListItems.$inferSelect;
+
+/**
+ * WMS Dispatch Batches - pallet batching for distributors
+ */
+export const wmsDispatchBatches = pgTable(
+  'wms_dispatch_batches',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    batchNumber: text('batch_number').notNull().unique(),
+    status: wmsDispatchBatchStatus('status').default('draft'),
+    distributorId: uuid('distributor_id')
+      .references(() => partners.id)
+      .notNull(),
+    distributorName: text('distributor_name').notNull(),
+    orderCount: integer('order_count').notNull().default(0),
+    totalCases: integer('total_cases').notNull().default(0),
+    palletCount: integer('pallet_count').default(1),
+    estimatedWeightKg: doublePrecision('estimated_weight_kg'),
+    deliveryNotes: text('delivery_notes'),
+    pickListId: uuid('pick_list_id').references(() => wmsPickLists.id),
+    dispatchedAt: timestamp('dispatched_at', { mode: 'date' }),
+    dispatchedBy: uuid('dispatched_by').references(() => users.id),
+    deliveredAt: timestamp('delivered_at', { mode: 'date' }),
+    notes: text('notes'),
+    ...timestamps,
+  },
+  (table) => [
+    index('wms_dispatch_batches_status_idx').on(table.status),
+    index('wms_dispatch_batches_distributor_id_idx').on(table.distributorId),
+  ],
+).enableRLS();
+
+export type WmsDispatchBatch = typeof wmsDispatchBatches.$inferSelect;
+
+/**
+ * WMS Delivery Notes - delivery documentation
+ */
+export const wmsDeliveryNotes = pgTable(
+  'wms_delivery_notes',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    deliveryNoteNumber: text('delivery_note_number').notNull().unique(),
+    batchId: uuid('batch_id')
+      .references(() => wmsDispatchBatches.id)
+      .notNull(),
+    orderCount: integer('order_count').notNull().default(0),
+    totalCases: integer('total_cases').notNull().default(0),
+    generatedAt: timestamp('generated_at', { mode: 'date' }).notNull().defaultNow(),
+    generatedBy: uuid('generated_by')
+      .references(() => users.id)
+      .notNull(),
+    pdfUrl: text('pdf_url'),
+    notes: text('notes'),
+    ...timestamps,
+  },
+  (table) => [index('wms_delivery_notes_batch_id_idx').on(table.batchId)],
+).enableRLS();
+
+export type WmsDeliveryNote = typeof wmsDeliveryNotes.$inferSelect;
+
+/**
+ * WMS Dispatch Batch Orders - orders in a batch
+ */
+export const wmsDispatchBatchOrders = pgTable(
+  'wms_dispatch_batch_orders',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    batchId: uuid('batch_id')
+      .references(() => wmsDispatchBatches.id)
+      .notNull(),
+    orderId: uuid('order_id').notNull(),
+    orderNumber: text('order_number').notNull(),
+    addedAt: timestamp('added_at', { mode: 'date' }).notNull().defaultNow(),
+    deliveryNoteId: uuid('delivery_note_id').references(() => wmsDeliveryNotes.id),
+    ...timestamps,
+  },
+  (table) => [
+    index('wms_dispatch_batch_orders_batch_id_idx').on(table.batchId),
+    index('wms_dispatch_batch_orders_order_id_idx').on(table.orderId),
+  ],
+).enableRLS();
+
+export type WmsDispatchBatchOrder = typeof wmsDispatchBatchOrders.$inferSelect;
+
+/**
+ * WMS Pallets - customer storage pallets
+ */
+export const wmsPallets = pgTable(
+  'wms_pallets',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    palletCode: text('pallet_code').notNull().unique(),
+    barcode: text('barcode').notNull().unique(),
+    ownerId: uuid('owner_id')
+      .references(() => partners.id)
+      .notNull(),
+    ownerName: text('owner_name').notNull(),
+    locationId: uuid('location_id').references(() => wmsLocations.id),
+    totalCases: integer('total_cases').notNull().default(0),
+    storageType: text('storage_type').default('customer_storage'),
+    monthlyStorageFee: doublePrecision('monthly_storage_fee'),
+    feeType: text('fee_type').default('per_case'),
+    status: wmsPalletStatus('status').default('active'),
+    isSealed: boolean('is_sealed').default(false),
+    sealedAt: timestamp('sealed_at', { mode: 'date' }),
+    sealedBy: uuid('sealed_by').references(() => users.id),
+    notes: text('notes'),
+    ...timestamps,
+  },
+  (table) => [
+    index('wms_pallets_owner_id_idx').on(table.ownerId),
+    index('wms_pallets_location_id_idx').on(table.locationId),
+    index('wms_pallets_status_idx').on(table.status),
+    index('wms_pallets_barcode_idx').on(table.barcode),
+  ],
+).enableRLS();
+
+export type WmsPallet = typeof wmsPallets.$inferSelect;
+
+/**
+ * WMS Pallet Cases - cases linked to pallets
+ */
+export const wmsPalletCases = pgTable(
+  'wms_pallet_cases',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    palletId: uuid('pallet_id')
+      .references(() => wmsPallets.id)
+      .notNull(),
+    caseLabelId: uuid('case_label_id')
+      .references(() => wmsCaseLabels.id)
+      .notNull(),
+    lwin18: text('lwin18').notNull(),
+    productName: text('product_name').notNull(),
+    addedAt: timestamp('added_at', { mode: 'date' }).notNull().defaultNow(),
+    addedBy: uuid('added_by')
+      .references(() => users.id)
+      .notNull(),
+    removedAt: timestamp('removed_at', { mode: 'date' }),
+    removedBy: uuid('removed_by').references(() => users.id),
+    removalReason: text('removal_reason'),
+    ...timestamps,
+  },
+  (table) => [
+    index('wms_pallet_cases_pallet_id_idx').on(table.palletId),
+    index('wms_pallet_cases_case_label_id_idx').on(table.caseLabelId),
+  ],
+).enableRLS();
+
+export type WmsPalletCase = typeof wmsPalletCases.$inferSelect;
+
+/**
+ * WMS Storage Charges - storage fee tracking
+ */
+export const wmsStorageCharges = pgTable(
+  'wms_storage_charges',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    chargeNumber: text('charge_number').notNull().unique(),
+    palletId: uuid('pallet_id').references(() => wmsPallets.id),
+    ownerId: uuid('owner_id')
+      .references(() => partners.id)
+      .notNull(),
+    ownerName: text('owner_name').notNull(),
+    periodStart: timestamp('period_start', { mode: 'date' }).notNull(),
+    periodEnd: timestamp('period_end', { mode: 'date' }).notNull(),
+    caseCount: integer('case_count').notNull(),
+    palletCount: integer('pallet_count').notNull().default(1),
+    ratePerUnit: doublePrecision('rate_per_unit').notNull(),
+    rateType: text('rate_type').notNull(),
+    totalAmount: doublePrecision('total_amount').notNull(),
+    currency: text('currency').default('USD'),
+    invoiced: boolean('invoiced').default(false),
+    zohoInvoiceId: text('zoho_invoice_id'),
+    paidAt: timestamp('paid_at', { mode: 'date' }),
+    notes: text('notes'),
+    ...timestamps,
+  },
+  (table) => [
+    index('wms_storage_charges_owner_id_idx').on(table.ownerId),
+    index('wms_storage_charges_pallet_id_idx').on(table.palletId),
+  ],
+).enableRLS();
+
+export type WmsStorageCharge = typeof wmsStorageCharges.$inferSelect;
+
+/**
+ * WMS Partner Requests - partner action requests
+ */
+export const wmsPartnerRequests = pgTable(
+  'wms_partner_requests',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    requestNumber: text('request_number').notNull().unique(),
+    requestType: wmsRequestType('request_type').notNull(),
+    status: wmsRequestStatus('status').default('pending'),
+    partnerId: uuid('partner_id')
+      .references(() => partners.id)
+      .notNull(),
+    requestedBy: uuid('requested_by')
+      .references(() => users.id)
+      .notNull(),
+    requestedAt: timestamp('requested_at', { mode: 'date' }).notNull().defaultNow(),
+    stockId: uuid('stock_id').references(() => wmsStock.id),
+    lwin18: text('lwin18').notNull(),
+    productName: text('product_name').notNull(),
+    quantityCases: integer('quantity_cases').notNull(),
+    targetLocationId: uuid('target_location_id').references(() => wmsLocations.id),
+    partnerNotes: text('partner_notes'),
+    adminNotes: text('admin_notes'),
+    resolvedBy: uuid('resolved_by').references(() => users.id),
+    resolvedAt: timestamp('resolved_at', { mode: 'date' }),
+    ...timestamps,
+  },
+  (table) => [
+    index('wms_partner_requests_partner_id_idx').on(table.partnerId),
+    index('wms_partner_requests_status_idx').on(table.status),
+  ],
+).enableRLS();
+
+export type WmsPartnerRequest = typeof wmsPartnerRequests.$inferSelect;
+
+/**
+ * Consignment Settlements - tracking payments to stock owners
+ */
+export const consignmentSettlements = pgTable(
+  'consignment_settlements',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    settlementNumber: text('settlement_number').notNull().unique(),
+    orderId: uuid('order_id').notNull(),
+    orderNumber: text('order_number').notNull(),
+    zohoInvoiceId: text('zoho_invoice_id'),
+    zohoInvoiceNumber: text('zoho_invoice_number'),
+    zohoBillId: text('zoho_bill_id'),
+    ownerId: uuid('owner_id')
+      .references(() => partners.id)
+      .notNull(),
+    ownerName: text('owner_name').notNull(),
+    saleAmount: doublePrecision('sale_amount').notNull(),
+    commissionPercent: doublePrecision('commission_percent').notNull(),
+    commissionAmount: doublePrecision('commission_amount').notNull(),
+    owedToOwner: doublePrecision('owed_to_owner').notNull(),
+    currency: text('currency').default('USD'),
+    status: settlementStatus('status').default('pending'),
+    invoicePaidAt: timestamp('invoice_paid_at', { mode: 'date' }),
+    settledAt: timestamp('settled_at', { mode: 'date' }),
+    settledBy: uuid('settled_by').references(() => users.id),
+    notes: text('notes'),
+    ...timestamps,
+  },
+  (table) => [
+    index('consignment_settlements_owner_id_idx').on(table.ownerId),
+    index('consignment_settlements_status_idx').on(table.status),
+    index('consignment_settlements_order_id_idx').on(table.orderId),
+  ],
+).enableRLS();
+
+export type ConsignmentSettlement = typeof consignmentSettlements.$inferSelect;
+
+/**
+ * Consignment Settlement Items - line items for settlements
+ */
+export const consignmentSettlementItems = pgTable(
+  'consignment_settlement_items',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    settlementId: uuid('settlement_id')
+      .references(() => consignmentSettlements.id)
+      .notNull(),
+    lwin18: text('lwin18').notNull(),
+    productName: text('product_name').notNull(),
+    quantityCases: integer('quantity_cases').notNull(),
+    unitPrice: doublePrecision('unit_price').notNull(),
+    lineTotal: doublePrecision('line_total').notNull(),
+    stockId: uuid('stock_id').references(() => wmsStock.id),
+    lotNumber: text('lot_number'),
+    ...timestamps,
+  },
+  (table) => [index('consignment_settlement_items_settlement_id_idx').on(table.settlementId)],
+).enableRLS();
+
+export type ConsignmentSettlementItem = typeof consignmentSettlementItems.$inferSelect;
