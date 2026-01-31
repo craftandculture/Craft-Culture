@@ -3864,7 +3864,7 @@ export const wmsLocations = pgTable(
     index('wms_locations_location_type_idx').on(table.locationType),
     index('wms_locations_barcode_idx').on(table.barcode),
   ],
-).enableRLS();
+);
 
 export type WmsLocation = typeof wmsLocations.$inferSelect;
 
@@ -3907,7 +3907,7 @@ export const wmsStock = pgTable(
     index('wms_stock_lwin18_idx').on(table.lwin18),
     index('wms_stock_shipment_id_idx').on(table.shipmentId),
   ],
-).enableRLS();
+);
 
 export type WmsStock = typeof wmsStock.$inferSelect;
 
@@ -3944,7 +3944,7 @@ export const wmsStockMovements = pgTable(
     index('wms_stock_movements_lwin18_idx').on(table.lwin18),
     index('wms_stock_movements_performed_at_idx').on(table.performedAt),
   ],
-).enableRLS();
+);
 
 export type WmsStockMovement = typeof wmsStockMovements.$inferSelect;
 
@@ -3970,7 +3970,7 @@ export const wmsCaseLabels = pgTable(
     index('wms_case_labels_lwin18_idx').on(table.lwin18),
     index('wms_case_labels_current_location_id_idx').on(table.currentLocationId),
   ],
-).enableRLS();
+);
 
 export type WmsCaseLabel = typeof wmsCaseLabels.$inferSelect;
 
@@ -3995,7 +3995,7 @@ export const wmsCycleCounts = pgTable(
     index('wms_cycle_counts_location_id_idx').on(table.locationId),
     index('wms_cycle_counts_status_idx').on(table.status),
   ],
-).enableRLS();
+);
 
 export type WmsCycleCount = typeof wmsCycleCounts.$inferSelect;
 
@@ -4034,7 +4034,7 @@ export const wmsRepacks = pgTable(
     index('wms_repacks_location_id_idx').on(table.locationId),
     index('wms_repacks_owner_id_idx').on(table.ownerId),
   ],
-).enableRLS();
+);
 
 export type WmsRepack = typeof wmsRepacks.$inferSelect;
 
@@ -4062,7 +4062,7 @@ export const wmsPickLists = pgTable(
     index('wms_pick_lists_status_idx').on(table.status),
     index('wms_pick_lists_order_id_idx').on(table.orderId),
   ],
-).enableRLS();
+);
 
 export type WmsPickList = typeof wmsPickLists.$inferSelect;
 
@@ -4090,7 +4090,7 @@ export const wmsPickListItems = pgTable(
     ...timestamps,
   },
   (table) => [index('wms_pick_list_items_pick_list_id_idx').on(table.pickListId)],
-).enableRLS();
+);
 
 export type WmsPickListItem = typeof wmsPickListItems.$inferSelect;
 
@@ -4123,7 +4123,7 @@ export const wmsDispatchBatches = pgTable(
     index('wms_dispatch_batches_status_idx').on(table.status),
     index('wms_dispatch_batches_distributor_id_idx').on(table.distributorId),
   ],
-).enableRLS();
+);
 
 export type WmsDispatchBatch = typeof wmsDispatchBatches.$inferSelect;
 
@@ -4149,7 +4149,7 @@ export const wmsDeliveryNotes = pgTable(
     ...timestamps,
   },
   (table) => [index('wms_delivery_notes_batch_id_idx').on(table.batchId)],
-).enableRLS();
+);
 
 export type WmsDeliveryNote = typeof wmsDeliveryNotes.$inferSelect;
 
@@ -4173,7 +4173,7 @@ export const wmsDispatchBatchOrders = pgTable(
     index('wms_dispatch_batch_orders_batch_id_idx').on(table.batchId),
     index('wms_dispatch_batch_orders_order_id_idx').on(table.orderId),
   ],
-).enableRLS();
+);
 
 export type WmsDispatchBatchOrder = typeof wmsDispatchBatchOrders.$inferSelect;
 
@@ -4208,7 +4208,7 @@ export const wmsPallets = pgTable(
     index('wms_pallets_status_idx').on(table.status),
     index('wms_pallets_barcode_idx').on(table.barcode),
   ],
-).enableRLS();
+);
 
 export type WmsPallet = typeof wmsPallets.$inferSelect;
 
@@ -4240,7 +4240,7 @@ export const wmsPalletCases = pgTable(
     index('wms_pallet_cases_pallet_id_idx').on(table.palletId),
     index('wms_pallet_cases_case_label_id_idx').on(table.caseLabelId),
   ],
-).enableRLS();
+);
 
 export type WmsPalletCase = typeof wmsPalletCases.$inferSelect;
 
@@ -4275,7 +4275,7 @@ export const wmsStorageCharges = pgTable(
     index('wms_storage_charges_owner_id_idx').on(table.ownerId),
     index('wms_storage_charges_pallet_id_idx').on(table.palletId),
   ],
-).enableRLS();
+);
 
 export type WmsStorageCharge = typeof wmsStorageCharges.$inferSelect;
 
@@ -4311,7 +4311,7 @@ export const wmsPartnerRequests = pgTable(
     index('wms_partner_requests_partner_id_idx').on(table.partnerId),
     index('wms_partner_requests_status_idx').on(table.status),
   ],
-).enableRLS();
+);
 
 export type WmsPartnerRequest = typeof wmsPartnerRequests.$inferSelect;
 
@@ -4349,7 +4349,7 @@ export const consignmentSettlements = pgTable(
     index('consignment_settlements_status_idx').on(table.status),
     index('consignment_settlements_order_id_idx').on(table.orderId),
   ],
-).enableRLS();
+);
 
 export type ConsignmentSettlement = typeof consignmentSettlements.$inferSelect;
 
@@ -4373,6 +4373,6 @@ export const consignmentSettlementItems = pgTable(
     ...timestamps,
   },
   (table) => [index('consignment_settlement_items_settlement_id_idx').on(table.settlementId)],
-).enableRLS();
+);
 
 export type ConsignmentSettlementItem = typeof consignmentSettlementItems.$inferSelect;
