@@ -82,6 +82,12 @@ interface ExtractedData {
   lineItems?: Array<{
     description?: string;
     productName?: string;
+    producer?: string;
+    vintage?: number;
+    bottleSize?: string;
+    bottlesPerCase?: number;
+    alcoholPercent?: number;
+    region?: string;
     hsCode?: string;
     quantity?: number;
     cases?: number;
@@ -237,28 +243,36 @@ const PdfExtractPage = () => {
     if (extractedData.lineItems && extractedData.lineItems.length > 0) {
       const itemsSheet = workbook.addWorksheet('Line Items');
       itemsSheet.columns = [
-        { header: 'Description', key: 'description', width: 40 },
-        { header: 'Product Name', key: 'productName', width: 30 },
-        { header: 'HS Code', key: 'hsCode', width: 15 },
-        { header: 'Quantity', key: 'quantity', width: 12 },
+        { header: 'Product Name', key: 'productName', width: 40 },
+        { header: 'Producer', key: 'producer', width: 25 },
+        { header: 'Vintage', key: 'vintage', width: 10 },
+        { header: 'Bottle Size', key: 'bottleSize', width: 12 },
+        { header: 'Bottles/Case', key: 'bottlesPerCase', width: 12 },
         { header: 'Cases', key: 'cases', width: 10 },
-        { header: 'Weight (kg)', key: 'weight', width: 12 },
+        { header: 'Region', key: 'region', width: 20 },
+        { header: 'Country', key: 'countryOfOrigin', width: 15 },
+        { header: 'HS Code', key: 'hsCode', width: 15 },
+        { header: 'Alcohol %', key: 'alcoholPercent', width: 10 },
         { header: 'Unit Price', key: 'unitPrice', width: 12 },
         { header: 'Total', key: 'total', width: 12 },
-        { header: 'Origin', key: 'countryOfOrigin', width: 15 },
+        { header: 'Weight (kg)', key: 'weight', width: 12 },
       ];
 
       for (const item of extractedData.lineItems) {
         itemsSheet.addRow({
-          description: item.description || '',
-          productName: item.productName || '',
-          hsCode: item.hsCode || '',
-          quantity: item.quantity || '',
+          productName: item.productName || item.description || '',
+          producer: item.producer || '',
+          vintage: item.vintage || '',
+          bottleSize: item.bottleSize || '',
+          bottlesPerCase: item.bottlesPerCase || '',
           cases: item.cases || '',
-          weight: item.weight || '',
+          region: item.region || '',
+          countryOfOrigin: item.countryOfOrigin || '',
+          hsCode: item.hsCode || '',
+          alcoholPercent: item.alcoholPercent || '',
           unitPrice: item.unitPrice || '',
           total: item.total || '',
-          countryOfOrigin: item.countryOfOrigin || '',
+          weight: item.weight || '',
         });
       }
 
@@ -427,9 +441,9 @@ const PdfExtractPage = () => {
                         <SelectValue placeholder="Select shipment..." />
                       </SelectTrigger>
                       <SelectContent>
-                        {shipments?.shipments?.map((shipment) => (
+                        {shipments?.data?.map((shipment) => (
                           <SelectItem key={shipment.id} value={shipment.id}>
-                            {shipment.shipmentNumber} - {shipment.partnerName || 'Unknown'}
+                            {shipment.shipmentNumber} - {shipment.partner?.businessName || 'Unknown'}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -576,11 +590,14 @@ const PdfExtractPage = () => {
                       <table className="w-full text-sm">
                         <thead>
                           <tr className="border-b border-border-muted text-left text-xs uppercase text-text-muted">
-                            <th className="pb-2 pr-4">Description</th>
-                            <th className="pb-2 pr-4">HS Code</th>
-                            <th className="pb-2 pr-4 text-right">Qty</th>
+                            <th className="pb-2 pr-4">Product</th>
+                            <th className="pb-2 pr-4">Producer</th>
+                            <th className="pb-2 pr-4 text-right">Vintage</th>
+                            <th className="pb-2 pr-4">Size</th>
+                            <th className="pb-2 pr-4 text-right">Pack</th>
                             <th className="pb-2 pr-4 text-right">Cases</th>
-                            <th className="pb-2 pr-4 text-right">Weight</th>
+                            <th className="pb-2 pr-4">Region</th>
+                            <th className="pb-2 pr-4">HS Code</th>
                             <th className="pb-2 pr-4 text-right">Unit Price</th>
                             <th className="pb-2 text-right">Total</th>
                           </tr>
@@ -588,11 +605,14 @@ const PdfExtractPage = () => {
                         <tbody className="divide-y divide-border-muted">
                           {extractedData.lineItems.map((item, idx) => (
                             <tr key={idx}>
-                              <td className="py-2 pr-4">{item.description || item.productName || '-'}</td>
-                              <td className="py-2 pr-4 font-mono text-xs">{item.hsCode || '-'}</td>
-                              <td className="py-2 pr-4 text-right">{item.quantity || '-'}</td>
+                              <td className="py-2 pr-4">{item.productName || item.description || '-'}</td>
+                              <td className="py-2 pr-4">{item.producer || '-'}</td>
+                              <td className="py-2 pr-4 text-right">{item.vintage || '-'}</td>
+                              <td className="py-2 pr-4">{item.bottleSize || '-'}</td>
+                              <td className="py-2 pr-4 text-right">{item.bottlesPerCase || '-'}</td>
                               <td className="py-2 pr-4 text-right">{item.cases || '-'}</td>
-                              <td className="py-2 pr-4 text-right">{item.weight || '-'}</td>
+                              <td className="py-2 pr-4">{item.region || item.countryOfOrigin || '-'}</td>
+                              <td className="py-2 pr-4 font-mono text-xs">{item.hsCode || '-'}</td>
                               <td className="py-2 pr-4 text-right">{item.unitPrice || '-'}</td>
                               <td className="py-2 text-right font-medium">{item.total || '-'}</td>
                             </tr>
