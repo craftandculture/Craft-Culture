@@ -21,7 +21,8 @@ import { getStockByProductSchema } from '../schemas/stockQuerySchema';
 const adminGetStockByProduct = adminProcedure
   .input(getStockByProductSchema)
   .query(async ({ input }) => {
-    const { search, ownerId, hasExpiry, limit, offset } = input;
+    const { search, ownerId, hasExpiry, vintageFrom, vintageTo, sortBy, sortOrder, limit, offset } =
+      input;
 
     const conditions = [];
 
@@ -41,6 +42,14 @@ const adminGetStockByProduct = adminProcedure
 
     if (hasExpiry) {
       conditions.push(sql`${wmsStock.expiryDate} IS NOT NULL`);
+    }
+
+    if (vintageFrom) {
+      conditions.push(sql`${wmsStock.vintage} >= ${vintageFrom}`);
+    }
+
+    if (vintageTo) {
+      conditions.push(sql`${wmsStock.vintage} <= ${vintageTo}`);
     }
 
     // Get products with aggregated stock info
@@ -70,7 +79,27 @@ const adminGetStockByProduct = adminProcedure
         wmsStock.bottleSize,
         wmsStock.caseConfig,
       )
-      .orderBy(desc(sql`SUM(${wmsStock.quantityCases})`))
+      .orderBy(
+        sortOrder === 'desc'
+          ? desc(
+              sortBy === 'totalCases'
+                ? sql`SUM(${wmsStock.quantityCases})`
+                : sortBy === 'productName'
+                  ? wmsStock.productName
+                  : sortBy === 'vintage'
+                    ? wmsStock.vintage
+                    : sql`MAX(${wmsStock.receivedAt})`,
+            )
+          : asc(
+              sortBy === 'totalCases'
+                ? sql`SUM(${wmsStock.quantityCases})`
+                : sortBy === 'productName'
+                  ? wmsStock.productName
+                  : sortBy === 'vintage'
+                    ? wmsStock.vintage
+                    : sql`MAX(${wmsStock.receivedAt})`,
+            ),
+      )
       .limit(limit)
       .offset(offset);
 
