@@ -2,6 +2,7 @@ import { createTRPCRouter } from '@/lib/trpc/trpc';
 
 import adminAddOrdersToBatch from './controller/adminAddOrdersToBatch';
 import adminAssignPickList from './controller/adminAssignPickList';
+import adminAutoFixStock from './controller/adminAutoFixStock';
 import adminBatchCreateLocations from './controller/adminBatchCreateLocations';
 import adminCompletePickList from './controller/adminCompletePickList';
 import adminCreateCaseLabels from './controller/adminCreateCaseLabels';
@@ -97,6 +98,7 @@ const stockRouter = createTRPCRouter({
   getAll: adminGetAllStockRecords,
   reconcile: adminReconcileStock,
   deleteRecord: adminDeleteStockRecord,
+  autoFix: adminAutoFixStock,
 });
 
 const ownershipRouter = createTRPCRouter({
