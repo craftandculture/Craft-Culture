@@ -14,11 +14,12 @@ import { adminProcedure } from '@/lib/trpc/procedures';
  */
 const adminReconcileStock = adminProcedure.query(async () => {
   // Get total cases from movements (receives only - this is the source of truth)
+  // Exclude 'stock_correction' adjustments - those are data fixes, not physical inventory changes
   const [movementTotals] = await db
     .select({
       totalReceived: sql<number>`COALESCE(SUM(CASE WHEN ${wmsStockMovements.movementType} = 'receive' THEN ${wmsStockMovements.quantityCases} ELSE 0 END), 0)::int`,
       totalPicked: sql<number>`COALESCE(SUM(CASE WHEN ${wmsStockMovements.movementType} = 'pick' THEN ${wmsStockMovements.quantityCases} ELSE 0 END), 0)::int`,
-      totalAdjusted: sql<number>`COALESCE(SUM(CASE WHEN ${wmsStockMovements.movementType} = 'adjust' THEN ${wmsStockMovements.quantityCases} ELSE 0 END), 0)::int`,
+      totalAdjusted: sql<number>`COALESCE(SUM(CASE WHEN ${wmsStockMovements.movementType} = 'adjust' AND ${wmsStockMovements.reasonCode} != 'stock_correction' THEN ${wmsStockMovements.quantityCases} ELSE 0 END), 0)::int`,
       receiveCount: sql<number>`COUNT(*) FILTER (WHERE ${wmsStockMovements.movementType} = 'receive')::int`,
     })
     .from(wmsStockMovements);
