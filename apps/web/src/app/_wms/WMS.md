@@ -434,8 +434,32 @@ wms.partner.*             // Partner portal APIs
 ### Issue: Reconciliation Double-Counting
 **Fixed**: Stock corrections (reason_code = 'stock_correction') excluded from expected calculation.
 
+### Issue: Transfer Handling in Rebuild
+**Fixed**: The `rebuildFromMovements` controller now correctly handles transfers by treating each transfer as two separate effects: subtract from source location, add to destination location.
+
 ### Issue: Labels Not Printing
 **Workaround**: Ensure Zebra Browser Print app is running on TC27, printer is paired via Bluetooth.
+
+---
+
+## Security Notes
+
+### Authentication
+- All admin controllers use `adminProcedure` which enforces admin role authentication
+- Partner controllers use `partnerProcedure` which filters by partner ID
+
+### SQL Injection Prevention
+- All SQL queries use Drizzle ORM's parameterized `sql` template literals
+- No raw string concatenation in SQL queries
+
+### Audit Trail
+- All stock modifications create movement records
+- Auto-fix and rebuild operations are logged with `reasonCode: 'stock_correction'`
+- Delete operations require a reason which is stored in movement notes
+
+### Data Validation
+- Input validation via Zod schemas on all mutations
+- Database constraints prevent duplicate stock records
 
 ---
 
