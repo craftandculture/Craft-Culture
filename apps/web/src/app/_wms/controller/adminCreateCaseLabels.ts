@@ -1,4 +1,4 @@
-import { eq, sql } from 'drizzle-orm';
+import { eq, like, sql } from 'drizzle-orm';
 import { z } from 'zod';
 
 import db from '@/database/client';
@@ -60,29 +60,36 @@ const adminCreateCaseLabels = adminProcedure
       await tx.execute(sql`SELECT pg_advisory_xact_lock(${lockKey})`);
       console.log('[createCaseLabels] Advisory lock acquired');
 
-      // First, check all existing labels for this LWIN18 to debug
+      // Query by BARCODE PREFIX instead of lwin18 field to catch all potential conflicts
+      // This is more robust because the unique constraint is on barcode, not on lwin18
+      const barcodePrefix = `CASE-${lwin18}-`;
+
+      console.log('[createCaseLabels] Searching for existing labels with barcode prefix', { barcodePrefix });
+
+      // Find all existing labels that START WITH this barcode prefix
       const existingLabels = await tx
         .select({
           barcode: wmsCaseLabels.barcode,
           lwin18: wmsCaseLabels.lwin18,
         })
         .from(wmsCaseLabels)
-        .where(eq(wmsCaseLabels.lwin18, lwin18));
+        .where(like(wmsCaseLabels.barcode, `${barcodePrefix}%`));
 
-      console.log('[createCaseLabels] Existing labels for LWIN18', {
-        lwin18,
+      console.log('[createCaseLabels] Existing labels with matching barcode prefix', {
+        barcodePrefix,
         count: existingLabels.length,
         barcodes: existingLabels.map((l) => l.barcode),
+        lwin18Values: existingLabels.map((l) => l.lwin18),
       });
 
-      // Now safely get the current max sequence for this LWIN across ALL labels
-      // Barcode format: CASE-{LWIN18}-{SEQ} where SEQ is the last segment
+      // Get max sequence from barcodes that match the prefix
+      // This catches ALL labels that would conflict, regardless of their lwin18 field value
       const [maxSeqResult] = await tx
         .select({
           maxSeq: sql<number>`COALESCE(MAX(CAST(SUBSTRING(${wmsCaseLabels.barcode} FROM '[0-9]+$') AS INTEGER)), 0)`,
         })
         .from(wmsCaseLabels)
-        .where(eq(wmsCaseLabels.lwin18, lwin18));
+        .where(like(wmsCaseLabels.barcode, `${barcodePrefix}%`));
 
       console.log('[createCaseLabels] Max sequence query result', { maxSeqResult, rawMaxSeq: maxSeqResult?.maxSeq });
 
