@@ -29,15 +29,20 @@ const adminGetStockOverview = adminProcedure
       })
       .from(wmsStock);
 
-    // Get location stats - use COUNT(DISTINCT) to avoid duplicates from join
+    // Get location stats - query locations table directly to ensure we always get results
     const [locationStats] = await db
       .select({
-        totalLocations: sql<number>`COUNT(DISTINCT ${wmsLocations.id})::int`,
-        activeLocations: sql<number>`COUNT(DISTINCT CASE WHEN ${wmsLocations.isActive} = true THEN ${wmsLocations.id} END)::int`,
+        totalLocations: sql<number>`COUNT(*)::int`,
+        activeLocations: sql<number>`COUNT(*) FILTER (WHERE ${wmsLocations.isActive} = true)::int`,
+      })
+      .from(wmsLocations);
+
+    // Get occupied locations count separately (locations with stock)
+    const [occupiedStats] = await db
+      .select({
         occupiedLocations: sql<number>`COUNT(DISTINCT ${wmsStock.locationId})::int`,
       })
-      .from(wmsLocations)
-      .leftJoin(wmsStock, sql`${wmsStock.locationId} = ${wmsLocations.id}`);
+      .from(wmsStock);
 
     // Get expiry alerts
     const now = new Date();
@@ -99,11 +104,11 @@ const adminGetStockOverview = adminProcedure
       locations: {
         total: locationStats?.totalLocations ?? 0,
         active: locationStats?.activeLocations ?? 0,
-        occupied: locationStats?.occupiedLocations ?? 0,
+        occupied: occupiedStats?.occupiedLocations ?? 0,
         utilizationPercent:
           locationStats?.activeLocations && locationStats.activeLocations > 0
             ? Math.round(
-                ((locationStats?.occupiedLocations ?? 0) / locationStats.activeLocations) * 100,
+                ((occupiedStats?.occupiedLocations ?? 0) / locationStats.activeLocations) * 100,
               )
             : 0,
       },

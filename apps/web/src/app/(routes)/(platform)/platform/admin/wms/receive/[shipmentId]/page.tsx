@@ -3,15 +3,16 @@
 import {
   IconAlertCircle,
   IconAlertTriangle,
-  IconArrowLeft,
   IconArrowRight,
   IconCheck,
   IconChevronRight,
   IconCloudUpload,
+  IconList,
   IconLoader2,
   IconMapPin,
   IconPlus,
   IconPrinter,
+  IconSearch,
   IconTrash,
 } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -78,6 +79,10 @@ const WMSReceiveShipmentPage = () => {
   const api = useTRPC();
   const queryClient = useQueryClient();
   const { print: zebraPrint, isConnected: isPrinterConnected } = useZebraPrint();
+
+  // View mode: 'list' shows all products with search, 'detail' shows single product
+  const [viewMode, setViewMode] = useState<'list' | 'detail'>('list');
+  const [searchTerm, setSearchTerm] = useState('');
 
   // Product navigation
   const [currentProductIndex, setCurrentProductIndex] = useState(0);
@@ -423,14 +428,6 @@ const WMSReceiveShipmentPage = () => {
     }
   };
 
-  // Move to previous product
-  const handlePreviousProduct = () => {
-    if (currentProductIndex > 0) {
-      setCurrentProductIndex(currentProductIndex - 1);
-      setProductPhase('verifying');
-    }
-  };
-
   // Complete all receiving
   const handleCompleteReceiving = () => {
     const itemsToReceive = Array.from(receivedItems.values()).filter(
@@ -513,6 +510,37 @@ const WMSReceiveShipmentPage = () => {
   const progressPercent = Math.round((completedProducts / totalProducts) * 100);
   const allComplete = completedProducts === totalProducts;
 
+  // Filter products by search term
+  const filteredProducts = shipment.items
+    .map((item, index) => ({
+      item,
+      index,
+      receivedItem: receivedItems.get(item.id),
+    }))
+    .filter(({ item, receivedItem }) => {
+      if (!searchTerm) return true;
+      const search = searchTerm.toLowerCase();
+      return (
+        item.productName.toLowerCase().includes(search) ||
+        item.producer?.toLowerCase().includes(search) ||
+        item.lwin?.toLowerCase().includes(search) ||
+        receivedItem?.lwin?.toLowerCase().includes(search)
+      );
+    });
+
+  // Select a product from the list
+  const selectProduct = (index: number) => {
+    setCurrentProductIndex(index);
+    setProductPhase('verifying');
+    setViewMode('detail');
+  };
+
+  // Go back to list view
+  const backToList = () => {
+    setViewMode('list');
+    setSearchTerm('');
+  };
+
   return (
     <div className="min-h-screen bg-fill-secondary pb-32 sm:bg-fill-primary sm:pb-8">
       {/* Header */}
@@ -578,46 +606,159 @@ const WMSReceiveShipmentPage = () => {
       </div>
 
       <div className="space-y-4 p-4 pt-0">
-        {/* Product Navigation */}
-        <div className="flex items-center justify-between">
-          <Button
-            variant="outline"
-            size="md"
-            onClick={handlePreviousProduct}
-            disabled={currentProductIndex === 0}
-          >
-            <ButtonContent iconLeft={IconArrowLeft}>Prev</ButtonContent>
-          </Button>
-          <Typography variant="headingSm">
-            Product {currentProductIndex + 1} of {totalProducts}
-          </Typography>
-          <Button
-            variant="outline"
-            size="md"
-            onClick={handleNextProduct}
-            disabled={currentProductIndex === totalProducts - 1}
-          >
-            <ButtonContent iconRight={IconArrowRight}>Next</ButtonContent>
-          </Button>
-        </div>
+        {/* List View - Search and select products */}
+        {viewMode === 'list' && (
+          <>
+            {/* Search bar */}
+            <div className="relative">
+              <IconSearch className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-text-muted" />
+              <input
+                type="text"
+                placeholder="Search products by name, producer, or LWIN..."
+                className="h-12 w-full rounded-lg border-2 border-border-primary bg-fill-primary pl-10 pr-4 text-base focus:border-border-brand focus:outline-none"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                autoFocus
+              />
+            </div>
 
-        {/* Current Product Card */}
-        {currentItem && (
-          <Card>
-            <CardContent className="p-4">
-              {/* Product Info */}
-              <div className="mb-4">
-                <Typography variant="headingMd" className="leading-tight">
-                  {currentItem.productName}
-                </Typography>
-                <Typography variant="bodySm" colorRole="muted" className="mt-1">
-                  {currentItem.producer && `${currentItem.producer}`}
-                  {currentItem.producer && currentItem.vintage && ' • '}
-                  {currentItem.vintage && `${currentItem.vintage}`}
-                </Typography>
-                <div className="mt-2 flex items-center gap-2">
-                  <span className="rounded bg-fill-secondary px-2 py-1 text-sm font-medium">
-                    {currentItem.receivedBottlesPerCase}×{currentItem.receivedBottleSizeMl}ml
+            {/* Product list */}
+            <div className="space-y-2">
+              {filteredProducts.length === 0 ? (
+                <div className="rounded-lg bg-fill-secondary p-8 text-center">
+                  <Typography variant="bodySm" colorRole="muted">
+                    {searchTerm ? 'No products match your search' : 'No products in shipment'}
+                  </Typography>
+                </div>
+              ) : (
+                filteredProducts.map(({ item, index, receivedItem }) => {
+                  const isComplete =
+                    receivedItem &&
+                    receivedItem.locationAssignments.length > 0 &&
+                    receivedItem.locationAssignments.reduce((sum, a) => sum + a.cases, 0) >= receivedItem.receivedCases;
+                  const isVerified = receivedItem?.isVerified;
+
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => selectProduct(index)}
+                      className="flex w-full items-center gap-3 rounded-lg border-2 border-border-primary bg-fill-primary p-4 text-left transition-colors hover:border-border-brand hover:bg-fill-secondary"
+                    >
+                      {/* Status indicator */}
+                      <div
+                        className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full ${
+                          isComplete
+                            ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30'
+                            : isVerified
+                              ? 'bg-amber-100 text-amber-600 dark:bg-amber-900/30'
+                              : 'bg-gray-100 text-gray-400 dark:bg-gray-800'
+                        }`}
+                      >
+                        {isComplete ? (
+                          <IconCheck className="h-5 w-5" />
+                        ) : (
+                          <span className="text-sm font-bold">{(receivedItem?.receivedCases ?? item.cases)}</span>
+                        )}
+                      </div>
+
+                      {/* Product info */}
+                      <div className="min-w-0 flex-1">
+                        <Typography variant="bodySm" className="truncate font-medium">
+                          {item.productName}
+                        </Typography>
+                        <div className="flex items-center gap-2">
+                          {item.producer && (
+                            <Typography variant="bodyXs" colorRole="muted" className="truncate">
+                              {item.producer}
+                            </Typography>
+                          )}
+                          {item.vintage && (
+                            <Typography variant="bodyXs" colorRole="muted">
+                              {item.vintage}
+                            </Typography>
+                          )}
+                        </div>
+                        <div className="mt-1 flex items-center gap-2">
+                          <span className="rounded bg-fill-tertiary px-1.5 py-0.5 text-xs">
+                            {item.bottlesPerCase ?? 12}×{item.bottleSizeMl ?? 750}ml
+                          </span>
+                          <Typography variant="bodyXs" colorRole="muted">
+                            Expected: {item.cases} cases
+                          </Typography>
+                        </div>
+                      </div>
+
+                      {/* Status text */}
+                      <div className="text-right">
+                        {isComplete ? (
+                          <span className="rounded-full bg-emerald-100 px-2 py-1 text-xs font-medium text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
+                            Done
+                          </span>
+                        ) : isVerified ? (
+                          <span className="rounded-full bg-amber-100 px-2 py-1 text-xs font-medium text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+                            Verified
+                          </span>
+                        ) : (
+                          <span className="rounded-full bg-gray-100 px-2 py-1 text-xs font-medium text-gray-600 dark:bg-gray-800 dark:text-gray-400">
+                            Pending
+                          </span>
+                        )}
+                      </div>
+
+                      <IconChevronRight className="h-5 w-5 flex-shrink-0 text-text-muted" />
+                    </button>
+                  );
+                })
+              )}
+            </div>
+
+            {/* Complete Receiving button at bottom of list */}
+            {allComplete && (
+              <Button
+                variant="primary"
+                size="lg"
+                className="h-14 w-full text-lg"
+                onClick={handleCompleteReceiving}
+                disabled={receiveMutation.isPending}
+              >
+                <ButtonContent iconLeft={receiveMutation.isPending ? IconLoader2 : IconCheck}>
+                  {receiveMutation.isPending ? 'Completing...' : 'Complete Receiving'}
+                </ButtonContent>
+              </Button>
+            )}
+          </>
+        )}
+
+        {/* Detail View - Single product verification */}
+        {viewMode === 'detail' && (
+          <>
+            {/* Back to list button */}
+            <div className="flex items-center justify-between">
+              <Button variant="outline" size="md" onClick={backToList}>
+                <ButtonContent iconLeft={IconList}>All Products</ButtonContent>
+              </Button>
+              <Typography variant="bodySm" colorRole="muted">
+                {currentProductIndex + 1} of {totalProducts}
+              </Typography>
+            </div>
+
+            {/* Current Product Card */}
+            {currentItem && (
+              <Card>
+                <CardContent className="p-4">
+                  {/* Product Info */}
+                  <div className="mb-4">
+                    <Typography variant="headingMd" className="leading-tight">
+                      {currentItem.productName}
+                    </Typography>
+                    <Typography variant="bodySm" colorRole="muted" className="mt-1">
+                      {currentItem.producer && `${currentItem.producer}`}
+                      {currentItem.producer && currentItem.vintage && ' • '}
+                      {currentItem.vintage && `${currentItem.vintage}`}
+                    </Typography>
+                    <div className="mt-2 flex items-center gap-2">
+                      <span className="rounded bg-fill-secondary px-2 py-1 text-sm font-medium">
+                        {currentItem.receivedBottlesPerCase}×{currentItem.receivedBottleSizeMl}ml
                   </span>
                   {currentItem.lwin && (
                     <Typography variant="bodyXs" className="font-mono text-text-muted">
@@ -891,21 +1032,23 @@ const WMSReceiveShipmentPage = () => {
           </Card>
         )}
 
-        {/* Notes */}
-        <Card>
-          <CardContent className="p-4">
-            <CardTitle className="mb-2 text-base">Notes (Optional)</CardTitle>
-            <textarea
-              className="w-full rounded-lg border-2 border-border-primary bg-fill-primary p-3 text-base focus:border-border-brand focus:outline-none"
-              rows={2}
-              placeholder="Add notes about discrepancies, damage, etc."
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-            />
-          </CardContent>
-        </Card>
+            {/* Notes - in detail view */}
+            <Card>
+              <CardContent className="p-4">
+                <CardTitle className="mb-2 text-base">Notes (Optional)</CardTitle>
+                <textarea
+                  className="w-full rounded-lg border-2 border-border-primary bg-fill-primary p-3 text-base focus:border-border-brand focus:outline-none"
+                  rows={2}
+                  placeholder="Add notes about discrepancies, damage, etc."
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                />
+              </CardContent>
+            </Card>
+          </>
+        )}
 
-        {/* Summary when all complete */}
+        {/* Summary when all complete - shown in both views */}
         {allComplete && (
           <Card className="border-emerald-200 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-900/20">
             <CardContent className="p-4">
