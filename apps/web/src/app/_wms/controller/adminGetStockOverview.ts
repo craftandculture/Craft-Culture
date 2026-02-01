@@ -45,13 +45,13 @@ const adminGetStockOverview = adminProcedure
         })
         .from(wmsStock),
 
-      // Get location stats - use raw SQL string for debugging
-      db.execute(sql`
-        SELECT
-          COUNT(*)::int as "totalLocations",
-          SUM(CASE WHEN is_active = true THEN 1 ELSE 0 END)::int as "activeLocations"
-        FROM wms_locations
-      `),
+      // Get location stats
+      db
+        .select({
+          totalLocations: sql<number>`COUNT(*)::int`,
+          activeLocations: sql<number>`SUM(CASE WHEN ${wmsLocations.isActive} = true THEN 1 ELSE 0 END)::int`,
+        })
+        .from(wmsLocations),
 
       // Get occupied locations count
       db
@@ -102,27 +102,16 @@ const adminGetStockOverview = adminProcedure
     ]);
 
     const stockStats = stockStatsResult[0];
-    // db.execute returns rows directly or in a rows property depending on driver
-    const locationStatsRaw = Array.isArray(locationStatsResult)
-      ? locationStatsResult[0]
-      : (locationStatsResult as { rows: Array<{ totalLocations: number; activeLocations: number }> }).rows?.[0];
-    const locationStats = locationStatsRaw as { totalLocations: number; activeLocations: number } | undefined;
+    const locationStats = locationStatsResult[0];
     const occupiedStats = occupiedStatsResult[0];
     const expiryStats = expiryStatsResult[0];
     const movementStats = movementStatsResult[0];
     const receivingStock = receivingStockResult[0];
 
-    // Debug logging to trace query results
-    console.log('[WMS] adminGetStockOverview debug:', {
-      stockStatsResult: JSON.stringify(stockStatsResult),
-      locationStatsResult: JSON.stringify(locationStatsResult),
-      locationStatsRaw: JSON.stringify(locationStatsRaw),
-      locationStats: JSON.stringify(locationStats),
-      totalLocations: locationStats?.totalLocations,
-      activeLocations: locationStats?.activeLocations,
-      typeofTotal: typeof locationStats?.totalLocations,
-    });
     console.log('[WMS] adminGetStockOverview completed in', Date.now() - startTime, 'ms');
+
+    const totalLocs = locationStats?.totalLocations ?? 0;
+    const activeLocs = locationStats?.activeLocations ?? 0;
 
     return {
       summary: {
@@ -133,14 +122,12 @@ const adminGetStockOverview = adminProcedure
         uniqueOwners: stockStats?.uniqueOwners ?? 0,
       },
       locations: {
-        total: locationStats?.totalLocations ?? 0,
-        active: locationStats?.activeLocations ?? 0,
+        total: totalLocs,
+        active: activeLocs,
         occupied: occupiedStats?.occupiedLocations ?? 0,
         utilizationPercent:
-          locationStats?.activeLocations && locationStats.activeLocations > 0
-            ? Math.round(
-                ((occupiedStats?.occupiedLocations ?? 0) / locationStats.activeLocations) * 100,
-              )
+          activeLocs > 0
+            ? Math.round(((occupiedStats?.occupiedLocations ?? 0) / activeLocs) * 100)
             : 0,
       },
       expiry: {
