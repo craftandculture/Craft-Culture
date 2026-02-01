@@ -11,6 +11,7 @@ import adminCreatePickList from './controller/adminCreatePickList';
 import adminCreateSpecialLocation from './controller/adminCreateSpecialLocation';
 import adminDeduplicateStock from './controller/adminDeduplicateStock';
 import adminDeleteReceivingDraft from './controller/adminDeleteReceivingDraft';
+import adminGetAllStockRecords from './controller/adminGetAllStockRecords';
 import adminGetCaseByBarcode from './controller/adminGetCaseByBarcode';
 import adminGetCaseLabels from './controller/adminGetCaseLabels';
 import adminGetDispatchBatch from './controller/adminGetDispatchBatch';
@@ -91,6 +92,7 @@ const stockRouter = createTRPCRouter({
   getExpiring: adminGetExpiringStock,
   search: adminSearchStock,
   deduplicate: adminDeduplicateStock,
+  getAll: adminGetAllStockRecords,
 });
 
 const ownershipRouter = createTRPCRouter({

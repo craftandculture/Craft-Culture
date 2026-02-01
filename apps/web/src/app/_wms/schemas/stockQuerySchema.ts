@@ -13,6 +13,12 @@ export const getStockByProductSchema = z.object({
   ownerId: z.string().uuid().optional(),
   hasExpiry: z.boolean().optional(),
   lowStock: z.boolean().optional(),
+  vintageFrom: z.number().min(1900).max(2100).optional(),
+  vintageTo: z.number().min(1900).max(2100).optional(),
+  sortBy: z
+    .enum(['productName', 'totalCases', 'vintage', 'receivedAt'])
+    .default('totalCases'),
+  sortOrder: z.enum(['asc', 'desc']).default('desc'),
   limit: z.number().min(1).max(100).default(50),
   offset: z.number().min(0).default(0),
 });
