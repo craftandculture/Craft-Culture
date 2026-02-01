@@ -14,206 +14,78 @@
       --warning-light: #fef3c7;
       --danger: #ef4444;
       --danger-light: #fee2e2;
+      --info: #3b82f6;
+      --info-light: #dbeafe;
       --text: #1f2937;
       --text-muted: #6b7280;
       --border: #e5e7eb;
       --bg: #f9fafb;
     }
 
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       line-height: 1.6;
       color: var(--text);
-      max-width: 900px;
+      max-width: 1000px;
       margin: 0 auto;
       padding: 2rem;
       background: white;
     }
 
-    h1 {
-      color: var(--primary);
-      margin-bottom: 0.5rem;
-      font-size: 2rem;
-    }
+    h1 { color: var(--primary); margin-bottom: 0.5rem; font-size: 2rem; }
+    h2 { color: var(--text); margin-top: 2.5rem; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid var(--primary); }
+    h3 { color: var(--text); margin-top: 1.5rem; margin-bottom: 0.75rem; }
+    h4 { color: var(--text-muted); margin-top: 1rem; margin-bottom: 0.5rem; font-size: 0.95rem; text-transform: uppercase; letter-spacing: 0.05em; }
+    p { margin-bottom: 1rem; }
+    .subtitle { color: var(--text-muted); font-size: 1.1rem; margin-bottom: 2rem; }
 
-    h2 {
-      color: var(--text);
-      margin-top: 2rem;
-      margin-bottom: 1rem;
-      padding-bottom: 0.5rem;
-      border-bottom: 2px solid var(--primary);
-    }
+    .status-box { padding: 1rem; border-radius: 8px; margin: 1rem 0; }
+    .status-success { background: var(--success-light); border-left: 4px solid var(--success); }
+    .status-warning { background: var(--warning-light); border-left: 4px solid var(--warning); }
+    .status-info { background: var(--info-light); border-left: 4px solid var(--info); }
+    .status-danger { background: var(--danger-light); border-left: 4px solid var(--danger); }
 
-    h3 {
-      color: var(--text);
-      margin-top: 1.5rem;
-      margin-bottom: 0.75rem;
-    }
+    table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
+    th, td { padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--border); }
+    th { background: var(--bg); font-weight: 600; }
+    tr:hover { background: var(--bg); }
 
-    p {
-      margin-bottom: 1rem;
-    }
-
-    .subtitle {
-      color: var(--text-muted);
-      font-size: 1.1rem;
-      margin-bottom: 2rem;
-    }
-
-    .status-box {
-      padding: 1rem;
-      border-radius: 8px;
-      margin: 1rem 0;
-    }
-
-    .status-tested {
-      background: var(--success-light);
-      border-left: 4px solid var(--success);
-    }
-
-    .status-needs-testing {
-      background: var(--warning-light);
-      border-left: 4px solid var(--warning);
-    }
-
-    .status-not-built {
-      background: var(--bg);
-      border-left: 4px solid var(--border);
-    }
-
-    .status-critical {
-      background: var(--danger-light);
-      border-left: 4px solid var(--danger);
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin: 1rem 0;
-    }
-
-    th, td {
-      padding: 0.75rem;
-      text-align: left;
-      border-bottom: 1px solid var(--border);
-    }
-
-    th {
-      background: var(--bg);
-      font-weight: 600;
-    }
-
-    .badge {
-      display: inline-block;
-      padding: 0.25rem 0.5rem;
-      border-radius: 4px;
-      font-size: 0.75rem;
-      font-weight: 600;
-    }
-
+    .badge { display: inline-block; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: 600; }
     .badge-success { background: var(--success-light); color: #065f46; }
     .badge-warning { background: var(--warning-light); color: #92400e; }
     .badge-danger { background: var(--danger-light); color: #991b1b; }
+    .badge-info { background: var(--info-light); color: #1e40af; }
     .badge-neutral { background: var(--bg); color: var(--text-muted); }
 
-    ul, ol {
-      margin-left: 1.5rem;
-      margin-bottom: 1rem;
-    }
+    ul, ol { margin-left: 1.5rem; margin-bottom: 1rem; }
+    li { margin-bottom: 0.5rem; }
+    code { background: var(--bg); padding: 0.2rem 0.4rem; border-radius: 4px; font-family: 'Monaco', 'Consolas', monospace; font-size: 0.9em; }
 
-    li {
-      margin-bottom: 0.5rem;
-    }
+    .workflow-step { display: flex; align-items: flex-start; gap: 1rem; margin: 1rem 0; padding: 1rem; background: var(--bg); border-radius: 8px; }
+    .step-number { width: 32px; height: 32px; background: var(--primary); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; flex-shrink: 0; }
 
-    code {
-      background: var(--bg);
-      padding: 0.2rem 0.4rem;
-      border-radius: 4px;
-      font-family: 'Monaco', 'Consolas', monospace;
-      font-size: 0.9em;
-    }
+    .checklist { list-style: none; margin-left: 0; }
+    .checklist li { padding: 0.5rem 0; padding-left: 2rem; position: relative; border-bottom: 1px solid var(--border); }
+    .checklist li:last-child { border-bottom: none; }
+    .checklist li::before { content: "☐"; position: absolute; left: 0; font-size: 1.2em; }
 
-    .workflow-step {
-      display: flex;
-      align-items: flex-start;
-      gap: 1rem;
-      margin: 1rem 0;
-      padding: 1rem;
-      background: var(--bg);
-      border-radius: 8px;
-    }
+    .toc { background: var(--primary-light); padding: 1.5rem; border-radius: 8px; margin-bottom: 2rem; }
+    .toc h3 { margin-top: 0; }
+    .toc ul { margin-bottom: 0; columns: 2; }
+    .toc a { color: var(--primary); text-decoration: none; }
+    .toc a:hover { text-decoration: underline; }
 
-    .step-number {
-      width: 32px;
-      height: 32px;
-      background: var(--primary);
-      color: white;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: bold;
-      flex-shrink: 0;
-    }
+    .nav-path { background: var(--bg); padding: 0.5rem 1rem; border-radius: 4px; font-family: monospace; margin: 0.5rem 0; display: inline-block; }
 
-    .checklist {
-      list-style: none;
-      margin-left: 0;
-    }
+    .feature-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; margin: 1rem 0; }
+    .feature-card { background: white; border: 1px solid var(--border); border-radius: 8px; padding: 1rem; }
+    .feature-card h4 { margin-top: 0; color: var(--text); text-transform: none; letter-spacing: normal; font-size: 1rem; }
+    .feature-card p { margin-bottom: 0.5rem; font-size: 0.9rem; color: var(--text-muted); }
 
-    .checklist li {
-      padding: 0.5rem 0;
-      padding-left: 2rem;
-      position: relative;
-    }
-
-    .checklist li::before {
-      content: "☐";
-      position: absolute;
-      left: 0;
-      font-size: 1.2em;
-    }
-
-    .toc {
-      background: var(--primary-light);
-      padding: 1.5rem;
-      border-radius: 8px;
-      margin-bottom: 2rem;
-    }
-
-    .toc h3 {
-      margin-top: 0;
-    }
-
-    .toc ul {
-      margin-bottom: 0;
-    }
-
-    .toc a {
-      color: var(--primary);
-      text-decoration: none;
-    }
-
-    .toc a:hover {
-      text-decoration: underline;
-    }
-
-    @media print {
-      body {
-        max-width: 100%;
-        padding: 1rem;
-      }
-
-      .status-box, .toc {
-        break-inside: avoid;
-      }
-    }
+    @media print { body { max-width: 100%; padding: 1rem; } .status-box, .toc { break-inside: avoid; } }
+    @media (max-width: 600px) { .toc ul { columns: 1; } .feature-grid { grid-template-columns: 1fr; } }
   </style>
 </head>
 <body>
@@ -224,8 +96,13 @@
     <h3>Contents</h3>
     <ul>
       <li><a href="#overview">System Overview</a></li>
-      <li><a href="#current-status">Current Status</a></li>
-      <li><a href="#workflows">Workflows</a></li>
+      <li><a href="#integration">System Integration & Flows</a></li>
+      <li><a href="#navigation">Navigation Guide</a></li>
+      <li><a href="#features">Feature Status</a></li>
+      <li><a href="#receiving">Receiving Workflow</a></li>
+      <li><a href="#stock">Stock Management</a></li>
+      <li><a href="#operations">Warehouse Operations</a></li>
+      <li><a href="#picking">Picking & Dispatch</a></li>
       <li><a href="#testing">Testing Checklist</a></li>
       <li><a href="#hardware">Hardware Setup</a></li>
       <li><a href="#troubleshooting">Troubleshooting</a></li>
@@ -234,266 +111,784 @@
 
   <h2 id="overview">System Overview</h2>
 
-  <p>The WMS is a custom warehouse management system built specifically for Craft & Culture to manage wine inventory with barcode scanning and multi-owner stock tracking.</p>
+  <p>The WMS is a custom warehouse management system built for Craft & Culture to manage wine inventory with barcode scanning, multi-owner stock tracking, and integration with the Logistics module.</p>
 
   <h3>Key Concepts</h3>
   <table>
-    <tr>
-      <th>Concept</th>
-      <th>Description</th>
-    </tr>
+    <tr><th>Concept</th><th>Description</th><th>Example</th></tr>
     <tr>
       <td><strong>Location</strong></td>
-      <td>A bin in the warehouse (e.g., A-01-02 = Aisle A, Bay 01, Level 02)</td>
+      <td>A bin in the warehouse (Aisle-Bay-Level)</td>
+      <td><code>A-01-02</code> = Aisle A, Bay 01, Level 02</td>
     </tr>
     <tr>
       <td><strong>LWIN-18</strong></td>
       <td>Unique product code including vintage and pack config</td>
+      <td><code>1010279-2015-06-00750</code></td>
     </tr>
     <tr>
-      <td><strong>Case Label</strong></td>
-      <td>Barcode sticker on each case for tracking</td>
+      <td><strong>Case Barcode</strong></td>
+      <td>Unique barcode per physical case</td>
+      <td><code>CASE-1010279-2015-06-00750-001</code></td>
+    </tr>
+    <tr>
+      <td><strong>Location Barcode</strong></td>
+      <td>Scannable label on each bay</td>
+      <td><code>LOC-A-01-02</code></td>
     </tr>
     <tr>
       <td><strong>Movement</strong></td>
-      <td>Any stock action (receive, transfer, pick, etc.) - the audit trail</td>
+      <td>Audit trail entry for any stock action</td>
+      <td>receive, transfer, pick, adjust</td>
     </tr>
     <tr>
       <td><strong>Owner</strong></td>
-      <td>Partner who owns the stock (consignment or purchased)</td>
+      <td>Partner who owns the stock</td>
+      <td>Cru Wine, Crurated, C&C</td>
     </tr>
   </table>
 
-  <h2 id="current-status">Current Status</h2>
+  <h3>Database Tables</h3>
+  <p>The WMS uses 14 database tables:</p>
+  <ul>
+    <li><code>wms_locations</code> - Warehouse bin locations</li>
+    <li><code>wms_stock</code> - Stock records (quantity by product/location/owner)</li>
+    <li><code>wms_stock_movements</code> - Complete audit trail</li>
+    <li><code>wms_case_labels</code> - Individual case barcodes</li>
+    <li><code>wms_receiving_drafts</code> - Saved receiving progress</li>
+    <li><code>wms_pick_lists</code> / <code>wms_pick_list_items</code> - Order picking</li>
+    <li><code>wms_dispatch_batches</code> / <code>wms_dispatch_batch_orders</code> - Dispatch batching</li>
+    <li><code>wms_delivery_notes</code> - Delivery documentation</li>
+    <li><code>wms_repacks</code> - Pack conversion history</li>
+    <li><code>wms_partner_requests</code> - Partner transfer requests</li>
+    <li><code>wms_pallets</code> / <code>wms_pallet_cases</code> - Customer storage</li>
+    <li><code>wms_storage_charges</code> - Storage billing</li>
+  </ul>
 
-  <div class="status-box status-critical">
-    <strong>Action Required:</strong> Stock records were deleted during reconciliation. Go to <strong>Stock → Reconcile</strong> and click <strong>"Rebuild Stock"</strong> to restore stock from movement history.
+  <h2 id="integration">System Integration & Flow Diagrams</h2>
+
+  <p>This section shows how WMS integrates with other systems and the complete flow from shipment to dispatch.</p>
+
+  <h3>High-Level Architecture</h3>
+  <div style="background: #1e293b; color: #e2e8f0; padding: 1.5rem; border-radius: 8px; font-family: monospace; font-size: 0.85rem; line-height: 1.4; overflow-x: auto; white-space: pre;">
+┌─────────────────────────────────────────────────────────────────────────────────────┐
+│                           CRAFT & CULTURE PLATFORM                                   │
+├─────────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                      │
+│   ┌──────────────┐      ┌──────────────┐      ┌──────────────┐      ┌────────────┐  │
+│   │   PARTNERS   │      │   LOGISTICS  │      │     WMS      │      │   ORDERS   │  │
+│   │              │      │              │      │              │      │            │  │
+│   │ • Suppliers  │─────▶│ • Shipments  │─────▶│ • Stock      │◀─────│ • Private  │  │
+│   │ • Brands     │      │ • Documents  │      │ • Locations  │      │   Client   │  │
+│   │ • Customers  │      │ • Tracking   │      │ • Movements  │─────▶│ • B2B      │  │
+│   └──────────────┘      └──────────────┘      └──────────────┘      └────────────┘  │
+│          │                     │                     │                     │         │
+│          │                     │                     │                     │         │
+│          ▼                     ▼                     ▼                     ▼         │
+│   ┌──────────────────────────────────────────────────────────────────────────────┐  │
+│   │                              DATABASE (PostgreSQL)                            │  │
+│   │  partners | logistics_shipments | wms_stock | wms_movements | orders         │  │
+│   └──────────────────────────────────────────────────────────────────────────────┘  │
+│                                                                                      │
+│   ┌──────────────┐      ┌──────────────┐      ┌──────────────┐      ┌────────────┐  │
+│   │   TRIGGER    │      │    ZEBRA     │      │    ZOHO      │      │  PARTNER   │  │
+│   │    .DEV      │      │   HARDWARE   │      │   (FUTURE)   │      │   PORTAL   │  │
+│   │              │      │              │      │              │      │            │  │
+│   │ • Auto jobs  │      │ • TC27 Scan  │      │ • Invoices   │      │ • Stock    │  │
+│   │ • Schedules  │      │ • ZD421 Print│      │ • Payments   │      │   View     │  │
+│   └──────────────┘      └──────────────┘      └──────────────┘      └────────────┘  │
+│                                                                                      │
+└─────────────────────────────────────────────────────────────────────────────────────┘
   </div>
 
-  <h3>Feature Status</h3>
+  <h3>End-to-End Flow: Inbound Stock</h3>
+  <p>Complete flow from partner shipment to stock available in warehouse:</p>
+
+  <div style="background: #1e293b; color: #e2e8f0; padding: 1.5rem; border-radius: 8px; font-family: monospace; font-size: 0.8rem; line-height: 1.5; overflow-x: auto; white-space: pre;">
+┌──────────────────────────────────────────────────────────────────────────────────────────┐
+│  LOGISTICS MODULE                           │  WMS MODULE                                │
+├─────────────────────────────────────────────┼────────────────────────────────────────────┤
+│                                             │                                            │
+│  ┌─────────────────────┐                    │                                            │
+│  │  1. CREATE SHIPMENT │                    │                                            │
+│  │  ──────────────────  │                    │                                            │
+│  │  • Partner assigned  │                    │                                            │
+│  │  • Items with LWIN  │                    │                                            │
+│  │  • Expected qty     │                    │                                            │
+│  │  • Commercial inv.  │                    │                                            │
+│  └──────────┬──────────┘                    │                                            │
+│             │                               │                                            │
+│             ▼                               │                                            │
+│  ┌─────────────────────┐                    │                                            │
+│  │  2. SHIPMENT IN     │                    │                                            │
+│  │     TRANSIT         │                    │                                            │
+│  │  ──────────────────  │                    │                                            │
+│  │  Status: 'shipped'  │                    │                                            │
+│  │  Tracking updates   │                    │                                            │
+│  └──────────┬──────────┘                    │                                            │
+│             │                               │                                            │
+│             │   status = 'delivered'        │                                            │
+│             │   OR manually triggered       │                                            │
+│             │                               │                                            │
+│             └──────────────────────────────▶│   ┌─────────────────────┐                  │
+│                                             │   │  3. RECEIVE SHIPMENT │                  │
+│                                             │   │  ────────────────────  │                  │
+│  DOCUMENTS OUTPUT:                          │   │  • Verify quantities │                  │
+│  ─────────────────                          │   │  • Assign locations  │                  │
+│  📄 Commercial Invoice                      │   │  • Print case labels │                  │
+│  📄 Packing List                            │   │  • Scan bay barcodes │                  │
+│  📄 AWB / Bill of Lading                    │   └──────────┬──────────┘                  │
+│                                             │              │                              │
+│                                             │              ▼                              │
+│                                             │   ┌─────────────────────┐                  │
+│                                             │   │  4. STOCK CREATED   │                  │
+│                                             │   │  ────────────────────  │                  │
+│                                             │   │  wms_stock records  │                  │
+│                                             │   │  wms_case_labels    │                  │
+│                                             │   │  wms_movements      │                  │
+│                                             │   │  (type: 'receive')  │                  │
+│                                             │   └──────────┬──────────┘                  │
+│                                             │              │                              │
+│                                             │              ▼                              │
+│                                             │   ┌─────────────────────┐                  │
+│                                             │   │  5. STOCK AVAILABLE │                  │
+│                                             │   │  ────────────────────  │                  │
+│                                             │   │  Dashboard shows qty│                  │
+│                                             │   │  Available for pick │                  │
+│                                             │   │  Partner can view   │                  │
+│                                             │   └─────────────────────┘                  │
+│                                             │                                            │
+│                                             │   DOCUMENTS OUTPUT:                        │
+│                                             │   ─────────────────                        │
+│                                             │   🏷️ Case Labels (ZPL)                     │
+│                                             │   📊 Receiving Report                      │
+│                                             │   📸 Receiving Photos                      │
+│                                             │                                            │
+└─────────────────────────────────────────────┴────────────────────────────────────────────┘
+  </div>
+
+  <h3>End-to-End Flow: Outbound (Picking & Dispatch)</h3>
+  <p>Flow from order placement to dispatch:</p>
+
+  <div style="background: #1e293b; color: #e2e8f0; padding: 1.5rem; border-radius: 8px; font-family: monospace; font-size: 0.8rem; line-height: 1.5; overflow-x: auto; white-space: pre;">
+┌──────────────────────────────────────────────────────────────────────────────────────────┐
+│  ORDERS MODULE                              │  WMS MODULE                                │
+├─────────────────────────────────────────────┼────────────────────────────────────────────┤
+│                                             │                                            │
+│  ┌─────────────────────┐                    │                                            │
+│  │  1. ORDER CREATED   │                    │                                            │
+│  │  ──────────────────  │                    │                                            │
+│  │  • Private Client   │                    │                                            │
+│  │  • B2B Order        │                    │                                            │
+│  │  • Line items       │                    │                                            │
+│  └──────────┬──────────┘                    │                                            │
+│             │                               │                                            │
+│             ▼                               │                                            │
+│  ┌─────────────────────┐                    │                                            │
+│  │  2. ORDER CONFIRMED │ ──────────────────▶│   ┌─────────────────────┐                  │
+│  │  ──────────────────  │   TRIGGER:         │   │  3. PICK LIST       │                  │
+│  │  Status: confirmed  │   Auto or Manual   │   │     CREATED          │                  │
+│  │  Payment processed  │                    │   │  ────────────────────  │                  │
+│  └─────────────────────┘                    │   │  wms_pick_lists     │                  │
+│                                             │   │  wms_pick_list_items│                  │
+│  ═══════════════════════════════════════════│═══│══════════════════════│══════════════════│
+│  HOW PICKING IS TRIGGERED:                  │   │  Stock reserved     │                  │
+│  ─────────────────────────                  │   └──────────┬──────────┘                  │
+│                                             │              │                              │
+│  Option A: MANUAL                           │              │                              │
+│  ┌─────────────────────────────┐            │              │                              │
+│  │ Admin goes to /wms/pick    │            │              │                              │
+│  │ → Click "Create Pick List" │            │              ▼                              │
+│  │ → Select Order             │            │   ┌─────────────────────┐                  │
+│  │ → Pick list generated      │            │   │  4. PICKING         │                  │
+│  └─────────────────────────────┘            │   │  ────────────────────  │                  │
+│                                             │   │  • Staff assigned   │                  │
+│  Option B: AUTO (FUTURE)                    │   │  • Scan case codes  │                  │
+│  ┌─────────────────────────────┐            │   │  • Confirm picks    │                  │
+│  │ Trigger.dev job on order   │            │   │  → SHIPPING loc     │                  │
+│  │ status = 'confirmed'       │            │   └──────────┬──────────┘                  │
+│  │ → Auto-create pick list    │            │              │                              │
+│  └─────────────────────────────┘            │              │                              │
+│                                             │              ▼                              │
+│  ═══════════════════════════════════════════│═══│══════════════════════│══════════════════│
+│                                             │   │                      │                  │
+│                                             │   ┌─────────────────────┐                  │
+│                                             │   │  5. DISPATCH BATCH  │                  │
+│                                             │   │  ────────────────────  │                  │
+│                                             │   │  • Group by distrib │                  │
+│                                             │   │  • Generate DN      │                  │
+│                                             │   │  • Print pallet lbl │                  │
+│                                             │   └──────────┬──────────┘                  │
+│                                             │              │                              │
+│                                             │              ▼                              │
+│                                             │   ┌─────────────────────┐                  │
+│                                             │   │  6. DISPATCHED      │                  │
+│                                             │   │  ────────────────────  │                  │
+│                                             │   │  Stock decremented  │                  │
+│  ◀───────────────────────────────────────────   │  Order updated      │                  │
+│  Order status = 'dispatched'                │   │  Movement logged    │                  │
+│                                             │   └─────────────────────┘                  │
+│                                             │                                            │
+│  DOCUMENTS OUTPUT:                          │   DOCUMENTS OUTPUT:                        │
+│  ─────────────────                          │   ─────────────────                        │
+│  📄 Invoice (Zoho - future)                 │   📋 Pick List                             │
+│  📄 Order Confirmation                      │   📄 Delivery Note (PDF)                   │
+│                                             │   🏷️ Pallet Label                          │
+│                                             │                                            │
+└─────────────────────────────────────────────┴────────────────────────────────────────────┘
+  </div>
+
+  <h3>Data Flow: Receiving Creates Stock</h3>
+  <p>Detailed view of what happens when a shipment is received:</p>
+
+  <div style="background: #1e293b; color: #e2e8f0; padding: 1.5rem; border-radius: 8px; font-family: monospace; font-size: 0.8rem; line-height: 1.5; overflow-x: auto; white-space: pre;">
+adminReceiveShipment.mutate({ shipmentId, items })
+        │
+        ▼
+┌───────────────────────────────────────────────────────────────────────────┐
+│  1. VALIDATE SHIPMENT                                                      │
+│  ─────────────────────                                                      │
+│  • Load shipment from logistics_shipments                                  │
+│  • Verify partner exists (for ownership)                                   │
+│  • Check status allows receiving                                           │
+└───────────────────────────────────────────────────────────────────────────┘
+        │
+        ▼
+┌───────────────────────────────────────────────────────────────────────────┐
+│  2. GENERATE LOT NUMBER                                                    │
+│  ─────────────────────                                                      │
+│  Format: YYYY-MM-DD-NNN (e.g., 2026-02-01-001)                            │
+│  Used to group all items received together                                 │
+└───────────────────────────────────────────────────────────────────────────┘
+        │
+        ▼
+┌───────────────────────────────────────────────────────────────────────────┐
+│  3. FOR EACH ITEM                                                          │
+│  ─────────────────                                                          │
+│                                                                            │
+│    ┌─────────────────────────────────────────────────────────────────┐    │
+│    │  a. Generate LWIN-18                                             │    │
+│    │     {LWIN7}-{vintage}-{bottles}-{sizeMl}                         │    │
+│    │     Example: 1010279-2015-06-00750                               │    │
+│    └─────────────────────────────────────────────────────────────────┘    │
+│                         │                                                  │
+│                         ▼                                                  │
+│    ┌─────────────────────────────────────────────────────────────────┐    │
+│    │  b. Check for existing stock (IDEMPOTENCY)                       │    │
+│    │     SELECT * FROM wms_stock WHERE                                │    │
+│    │       lwin18 = ? AND location_id = ? AND shipment_id = ?         │    │
+│    │     If exists → Skip (prevents duplicates on retry)              │    │
+│    └─────────────────────────────────────────────────────────────────┘    │
+│                         │                                                  │
+│                         ▼                                                  │
+│    ┌─────────────────────────────────────────────────────────────────┐    │
+│    │  c. INSERT wms_stock                                             │    │
+│    │     • location_id (from item.locationId)                         │    │
+│    │     • owner_id (from shipment.partner_id)                        │    │
+│    │     • lwin18, product_name, quantity_cases                       │    │
+│    │     • shipment_id (for provenance)                               │    │
+│    │     • lot_number                                                 │    │
+│    └─────────────────────────────────────────────────────────────────┘    │
+│                         │                                                  │
+│                         ▼                                                  │
+│    ┌─────────────────────────────────────────────────────────────────┐    │
+│    │  d. INSERT wms_case_labels (for each case)                       │    │
+│    │     • barcode: CASE-{LWIN18}-{seq}                               │    │
+│    │     • lwin18, product_name, lot_number                           │    │
+│    │     • current_location_id                                        │    │
+│    └─────────────────────────────────────────────────────────────────┘    │
+│                         │                                                  │
+│                         ▼                                                  │
+│    ┌─────────────────────────────────────────────────────────────────┐    │
+│    │  e. INSERT wms_stock_movements                                   │    │
+│    │     • movement_type: 'receive'                                   │    │
+│    │     • to_location_id: assigned location                          │    │
+│    │     • quantity_cases, lwin18, product_name                       │    │
+│    │     • shipment_id, lot_number                                    │    │
+│    │     • performed_by: current user                                 │    │
+│    └─────────────────────────────────────────────────────────────────┘    │
+│                                                                            │
+└───────────────────────────────────────────────────────────────────────────┘
+        │
+        ▼
+┌───────────────────────────────────────────────────────────────────────────┐
+│  4. UPDATE SHIPMENT STATUS                                                 │
+│  ─────────────────────────                                                  │
+│  UPDATE logistics_shipments SET status = 'delivered' WHERE id = ?          │
+└───────────────────────────────────────────────────────────────────────────┘
+        │
+        ▼
+┌───────────────────────────────────────────────────────────────────────────┐
+│  5. RETURN RESULT                                                          │
+│  ─────────────────                                                          │
+│  { success: true, stockRecords: [...], caseLabels: [...] }                │
+└───────────────────────────────────────────────────────────────────────────┘
+  </div>
+
+  <h3>Movement Types & When They're Created</h3>
   <table>
+    <tr><th>Movement Type</th><th>Trigger</th><th>Location Fields</th><th>Stock Impact</th></tr>
     <tr>
-      <th>Feature</th>
-      <th>Status</th>
-      <th>Notes</th>
+      <td><code>receive</code></td>
+      <td>Complete receiving</td>
+      <td>to_location_id = assigned bay</td>
+      <td>+ quantity</td>
+    </tr>
+    <tr>
+      <td><code>transfer</code></td>
+      <td>Transfer workflow</td>
+      <td>from_location_id → to_location_id</td>
+      <td>Move between locations</td>
+    </tr>
+    <tr>
+      <td><code>putaway</code></td>
+      <td>Put-away workflow</td>
+      <td>from: RECEIVING → to: assigned bay</td>
+      <td>Move from receiving</td>
+    </tr>
+    <tr>
+      <td><code>pick</code></td>
+      <td>Complete pick item</td>
+      <td>from_location_id = picked bay</td>
+      <td>- quantity</td>
+    </tr>
+    <tr>
+      <td><code>adjust</code></td>
+      <td>Manual adjustment</td>
+      <td>location_id of adjustment</td>
+      <td>+/- quantity (with reason)</td>
+    </tr>
+    <tr>
+      <td><code>repack_out</code></td>
+      <td>Repack source consumed</td>
+      <td>location_id of repack</td>
+      <td>- source quantity</td>
+    </tr>
+    <tr>
+      <td><code>repack_in</code></td>
+      <td>Repack target created</td>
+      <td>location_id of repack</td>
+      <td>+ target quantity</td>
+    </tr>
+    <tr>
+      <td><code>ownership_transfer</code></td>
+      <td>Transfer ownership</td>
+      <td>N/A (same location)</td>
+      <td>Owner changed</td>
+    </tr>
+  </table>
+
+  <h3>Document Outputs Summary</h3>
+  <table>
+    <tr><th>Stage</th><th>Document</th><th>Format</th><th>Purpose</th></tr>
+    <tr>
+      <td rowspan="2">Receiving</td>
+      <td>Case Labels</td>
+      <td>ZPL → Thermal Label</td>
+      <td>Individual case identification</td>
+    </tr>
+    <tr>
+      <td>Receiving Photos</td>
+      <td>Image upload</td>
+      <td>Condition documentation</td>
     </tr>
     <tr>
       <td>Locations</td>
-      <td><span class="badge badge-success">Tested</span></td>
-      <td>Create, edit, print labels</td>
+      <td>Location Labels</td>
+      <td>ZPL → Thermal Label</td>
+      <td>Bay identification for scanning</td>
     </tr>
     <tr>
-      <td>Receiving</td>
-      <td><span class="badge badge-warning">Needs Testing</span></td>
-      <td>Pack variants, drafts, labels</td>
+      <td rowspan="2">Picking</td>
+      <td>Pick List</td>
+      <td>Screen / Print</td>
+      <td>Staff picking instructions</td>
     </tr>
     <tr>
-      <td>Stock Views</td>
-      <td><span class="badge badge-warning">Needs Testing</span></td>
-      <td>By product, by owner, by location</td>
+      <td>Pick Report</td>
+      <td>PDF (future)</td>
+      <td>Picking confirmation</td>
     </tr>
     <tr>
-      <td>Reconciliation</td>
-      <td><span class="badge badge-success">Tested</span></td>
-      <td>Auto-fix and rebuild working</td>
+      <td rowspan="2">Dispatch</td>
+      <td>Delivery Note</td>
+      <td>PDF</td>
+      <td>Driver/customer handover</td>
     </tr>
     <tr>
-      <td>Put-Away</td>
-      <td><span class="badge badge-warning">Needs Testing</span></td>
-      <td>Barcode scanning</td>
-    </tr>
-    <tr>
-      <td>Transfer</td>
-      <td><span class="badge badge-warning">Needs Testing</span></td>
-      <td>Between locations</td>
-    </tr>
-    <tr>
-      <td>Repack</td>
-      <td><span class="badge badge-danger">Not Tested</span></td>
-      <td>12-pack to 6-pack conversion</td>
-    </tr>
-    <tr>
-      <td>Picking</td>
-      <td><span class="badge badge-danger">Not Tested</span></td>
-      <td>Order fulfillment</td>
-    </tr>
-    <tr>
-      <td>Dispatch</td>
-      <td><span class="badge badge-danger">Not Tested</span></td>
-      <td>Batch orders for delivery</td>
-    </tr>
-    <tr>
-      <td>Labels (ZPL)</td>
-      <td><span class="badge badge-warning">Needs Testing</span></td>
-      <td>Zebra printer integration</td>
-    </tr>
-    <tr>
-      <td>Dashboard</td>
-      <td><span class="badge badge-warning">Needs Testing</span></td>
-      <td>KPIs and alerts</td>
+      <td>Pallet Label</td>
+      <td>ZPL → Thermal Label</td>
+      <td>Pallet identification</td>
     </tr>
   </table>
 
-  <h2 id="workflows">Workflows</h2>
+  <h3>Current vs Future Integration</h3>
 
-  <h3>1. Receiving a Shipment</h3>
-  <p>When goods arrive at the warehouse:</p>
+  <div class="status-box status-success">
+    <strong>Currently Working (Test Ready):</strong>
+    <ul style="margin-top: 0.5rem; margin-bottom: 0;">
+      <li>Logistics shipments flow to WMS receiving</li>
+      <li>Receiving creates stock at assigned locations</li>
+      <li>Stock appears in all dashboard views</li>
+      <li>Movement history tracks all actions</li>
+      <li>Reconciliation can detect and fix discrepancies</li>
+      <li>Case label ZPL generation</li>
+    </ul>
+  </div>
+
+  <div class="status-box status-warning">
+    <strong>Built But Needs Testing:</strong>
+    <ul style="margin-top: 0.5rem; margin-bottom: 0;">
+      <li>Put-away workflow with barcode scanning</li>
+      <li>Transfer workflow</li>
+      <li>Repack workflow</li>
+      <li>Pick list creation and picking</li>
+      <li>Dispatch batch creation</li>
+      <li>Zebra Browser Print integration (hardware)</li>
+    </ul>
+  </div>
+
+  <div class="status-box status-info">
+    <strong>Future (Not Yet Built):</strong>
+    <ul style="margin-top: 0.5rem; margin-bottom: 0;">
+      <li>Auto-generate pick list when order confirmed (Trigger.dev job)</li>
+      <li>Zoho invoice creation on order</li>
+      <li>Zoho payment sync</li>
+      <li>Delivery note PDF generation</li>
+      <li>Partner portal stock view</li>
+    </ul>
+  </div>
+
+  <h2 id="navigation">Navigation Guide</h2>
+
+  <p>All WMS pages are under <code>/platform/admin/wms/</code></p>
+
+  <h4>Main Pages</h4>
+  <table>
+    <tr><th>Page</th><th>Path</th><th>Purpose</th></tr>
+    <tr><td>Dashboard</td><td class="nav-path">/wms</td><td>Overview, KPIs, quick actions</td></tr>
+    <tr><td>Locations</td><td class="nav-path">/wms/locations</td><td>Manage warehouse bays</td></tr>
+    <tr><td>Receive</td><td class="nav-path">/wms/receive</td><td>Receive incoming shipments</td></tr>
+    <tr><td>Stock Overview</td><td class="nav-path">/wms/stock</td><td>View stock by product/owner</td></tr>
+    <tr><td>All Stock</td><td class="nav-path">/wms/stock/all</td><td>Raw list of all stock records</td></tr>
+    <tr><td>Reconcile</td><td class="nav-path">/wms/stock/reconcile</td><td>Fix discrepancies</td></tr>
+    <tr><td>Movements</td><td class="nav-path">/wms/movements</td><td>Audit trail history</td></tr>
+    <tr><td>Put-Away</td><td class="nav-path">/wms/putaway</td><td>Move stock to bins</td></tr>
+    <tr><td>Transfer</td><td class="nav-path">/wms/transfer</td><td>Move between locations</td></tr>
+    <tr><td>Repack</td><td class="nav-path">/wms/repack</td><td>Convert pack sizes</td></tr>
+    <tr><td>Pick Lists</td><td class="nav-path">/wms/pick</td><td>Order fulfillment</td></tr>
+    <tr><td>Dispatch</td><td class="nav-path">/wms/dispatch</td><td>Batch orders for delivery</td></tr>
+    <tr><td>Labels</td><td class="nav-path">/wms/labels</td><td>Print case/location labels</td></tr>
+    <tr><td>Scanner Test</td><td class="nav-path">/wms/scanner-test</td><td>Test barcode scanning</td></tr>
+  </table>
+
+  <h2 id="features">Feature Status</h2>
+
+  <p>53 API controllers have been built across these functional areas:</p>
+
+  <div class="feature-grid">
+    <div class="feature-card">
+      <h4>Locations <span class="badge badge-success">Built</span></h4>
+      <p>Create, edit, batch create, print labels, barcode lookup</p>
+      <p><strong>6 controllers</strong></p>
+    </div>
+    <div class="feature-card">
+      <h4>Receiving <span class="badge badge-success">Built</span></h4>
+      <p>Product-by-product flow, drafts, photo capture, pack variants, Zebra print</p>
+      <p><strong>7 controllers</strong></p>
+    </div>
+    <div class="feature-card">
+      <h4>Stock Views <span class="badge badge-success">Built</span></h4>
+      <p>By product, by owner, by location, search, expiring alerts</p>
+      <p><strong>8 controllers</strong></p>
+    </div>
+    <div class="feature-card">
+      <h4>Reconciliation <span class="badge badge-success">Built</span></h4>
+      <p>Compare movements vs stock, auto-fix, rebuild, dedupe</p>
+      <p><strong>5 controllers</strong></p>
+    </div>
+    <div class="feature-card">
+      <h4>Operations <span class="badge badge-success">Built</span></h4>
+      <p>Put-away, transfer, repack, barcode lookup</p>
+      <p><strong>5 controllers</strong></p>
+    </div>
+    <div class="feature-card">
+      <h4>Labels <span class="badge badge-success">Built</span></h4>
+      <p>Case labels, location labels, ZPL generation, print tracking</p>
+      <p><strong>4 controllers</strong></p>
+    </div>
+    <div class="feature-card">
+      <h4>Picking <span class="badge badge-success">Built</span></h4>
+      <p>Create pick lists, assign, pick items, complete</p>
+      <p><strong>6 controllers</strong></p>
+    </div>
+    <div class="feature-card">
+      <h4>Dispatch <span class="badge badge-success">Built</span></h4>
+      <p>Create batches, add orders, update status</p>
+      <p><strong>5 controllers</strong></p>
+    </div>
+    <div class="feature-card">
+      <h4>Ownership <span class="badge badge-success">Built</span></h4>
+      <p>Transfer ownership, reserve, release, partner requests</p>
+      <p><strong>5 controllers</strong></p>
+    </div>
+    <div class="feature-card">
+      <h4>Partner Portal <span class="badge badge-info">Partial</span></h4>
+      <p>Partner stock view (API ready, UI basic)</p>
+      <p><strong>1 controller</strong></p>
+    </div>
+  </div>
+
+  <h3>What's NOT Built Yet</h3>
+  <ul>
+    <li><strong>Cycle Counting</strong> - Schema exists, no UI</li>
+    <li><strong>Customer Storage Pallets</strong> - Schema exists, no UI</li>
+    <li><strong>Storage Billing</strong> - Schema exists, no UI</li>
+    <li><strong>Zoho Integration</strong> - Not started</li>
+  </ul>
+
+  <h2 id="receiving">Receiving Workflow</h2>
+
+  <div class="status-box status-info">
+    <strong>Key Features:</strong> Product-by-product flow, photo capture, pack variant handling, save/resume drafts, Zebra label printing, per-product location assignment
+  </div>
+
+  <h3>Step-by-Step Process</h3>
 
   <div class="workflow-step">
     <div class="step-number">1</div>
     <div>
-      <strong>Navigate to Receive</strong><br>
-      Go to WMS → Receive and select the pending shipment
+      <strong>Select Shipment</strong><br>
+      Go to <span class="nav-path">WMS → Receive</span>. Choose a pending shipment from the list.<br>
+      <em>Note: Shipment must have a Partner assigned for stock ownership.</em>
     </div>
   </div>
 
   <div class="workflow-step">
     <div class="step-number">2</div>
     <div>
-      <strong>Verify Quantities</strong><br>
-      Enter the actual received quantity for each item. Mark any discrepancies.
-    </div>
-  </div>
-
-  <div class="workflow-step">
-    <div class="step-number">3</div>
-    <div>
-      <strong>Assign Locations</strong><br>
-      For each product, scan or select the bay where it will be stored.
-    </div>
-  </div>
-
-  <div class="workflow-step">
-    <div class="step-number">4</div>
-    <div>
-      <strong>Complete Receiving</strong><br>
-      Click complete. Stock records and movement history are created.
-    </div>
-  </div>
-
-  <h3>2. Stock Reconciliation</h3>
-  <p>If stock numbers don't match what movements say should be there:</p>
-
-  <div class="workflow-step">
-    <div class="step-number">1</div>
-    <div>
-      <strong>Check Reconciliation</strong><br>
-      Go to Stock → Reconcile. See expected vs actual stock.
-    </div>
-  </div>
-
-  <div class="workflow-step">
-    <div class="step-number">2</div>
-    <div>
-      <strong>Fix Issues</strong><br>
+      <strong>Choose View Mode</strong><br>
       <ul>
-        <li><strong>Stock Over (too many)</strong>: Click "Auto-Fix" to remove orphan/duplicate records</li>
-        <li><strong>Stock Under (too few)</strong>: Click "Rebuild Stock" to recreate from movements</li>
+        <li><strong>List View:</strong> See all items at once, quick quantity entry</li>
+        <li><strong>Detail View:</strong> Product-by-product with full controls</li>
       </ul>
     </div>
   </div>
 
-  <h3>3. Transferring Stock</h3>
-  <p>Moving cases between locations:</p>
-
-  <div class="workflow-step">
-    <div class="step-number">1</div>
-    <div>
-      <strong>Go to Transfer</strong><br>
-      WMS → Transfer
-    </div>
-  </div>
-
-  <div class="workflow-step">
-    <div class="step-number">2</div>
-    <div>
-      <strong>Scan Source</strong><br>
-      Scan a case barcode or location barcode
-    </div>
-  </div>
-
   <div class="workflow-step">
     <div class="step-number">3</div>
     <div>
-      <strong>Scan Destination</strong><br>
-      Scan the new location barcode
+      <strong>For Each Product (Detail View)</strong><br>
+      <ol>
+        <li><strong>Verify quantity:</strong> Enter actual received cases</li>
+        <li><strong>Check pack config:</strong> If different from expected (e.g., 6x750ml vs 12x750ml), system handles it</li>
+        <li><strong>Assign location:</strong> Scan bay barcode or select from dropdown</li>
+        <li><strong>Print labels:</strong> Click "Print Labels" to send to Zebra printer</li>
+        <li><strong>Take photo:</strong> Optional - capture receiving photo</li>
+      </ol>
     </div>
   </div>
 
   <div class="workflow-step">
     <div class="step-number">4</div>
     <div>
-      <strong>Confirm</strong><br>
-      Movement is logged automatically
+      <strong>Save Draft (Optional)</strong><br>
+      Click "Save Draft" to pause and resume later. Draft includes all quantities, locations, and notes.
     </div>
   </div>
 
-  <h2 id="testing">Testing Checklist</h2>
+  <div class="workflow-step">
+    <div class="step-number">5</div>
+    <div>
+      <strong>Complete Receiving</strong><br>
+      Click "Complete Receiving". System creates:
+      <ul>
+        <li>Stock records at assigned locations</li>
+        <li>Case label records for each case</li>
+        <li>Movement records (type: 'receive')</li>
+        <li>Updates shipment status to 'delivered'</li>
+      </ul>
+    </div>
+  </div>
 
-  <h3>Before Using in Production</h3>
-  <ul class="checklist">
-    <li>Dashboard shows correct totals (Total Cases, Products, Locations)</li>
-    <li>Stock by Owner shows partner breakdown</li>
-    <li>Receive a test shipment end-to-end</li>
-    <li>Verify stock appears at correct location after receiving</li>
-    <li>Transfer stock between two locations</li>
-    <li>Verify movement history records both actions</li>
-    <li>Run reconciliation - should show "Stock is Reconciled"</li>
+  <h3>Pack Variant Handling</h3>
+  <p>When received pack differs from expected:</p>
+  <ul>
+    <li>System generates correct LWIN-18 based on <em>actual</em> received pack</li>
+    <li>Original item marked with variance note</li>
+    <li>Can add additional pack variants (e.g., magnums received alongside standard bottles)</li>
   </ul>
 
-  <h3>Hardware Testing (When TC27 + ZD421 Ready)</h3>
+  <h2 id="stock">Stock Management</h2>
+
+  <h3>Stock Views</h3>
+  <table>
+    <tr><th>View</th><th>Path</th><th>Shows</th></tr>
+    <tr><td>By Product</td><td class="nav-path">/wms/stock</td><td>Stock grouped by LWIN-18, expandable to see locations</td></tr>
+    <tr><td>By Owner</td><td class="nav-path">/wms/stock?tab=owner</td><td>Stock grouped by partner/owner</td></tr>
+    <tr><td>All Records</td><td class="nav-path">/wms/stock/all</td><td>Raw list of every stock record</td></tr>
+    <tr><td>At Location</td><td class="nav-path">/wms/locations/[id]</td><td>All stock at a specific bay</td></tr>
+  </table>
+
+  <h3>Stock Reconciliation</h3>
+  <p class="nav-path">/wms/stock/reconcile</p>
+
+  <p>Reconciliation compares:</p>
+  <ul>
+    <li><strong>Expected Stock</strong> = Received - Picked + Adjustments (from movements)</li>
+    <li><strong>Actual Stock</strong> = Sum of all stock records</li>
+  </ul>
+
+  <div class="status-box status-success">
+    <strong>If Reconciled:</strong> Numbers match - everything is correct.
+  </div>
+
+  <div class="status-box status-warning">
+    <strong>If Stock OVER (actual > expected):</strong><br>
+    Duplicate or orphan records exist. Click <strong>"Auto-Fix"</strong> to remove them.
+  </div>
+
+  <div class="status-box status-warning">
+    <strong>If Stock UNDER (actual < expected):</strong><br>
+    Stock records missing. Click <strong>"Rebuild Stock"</strong> to recreate from movements.
+  </div>
+
+  <h3>Data Integrity</h3>
+  <p>The system prevents duplicates with:</p>
+  <ul>
+    <li><strong>Database constraint:</strong> Unique index on (lwin18, location_id, shipment_id)</li>
+    <li><strong>Code check:</strong> Receiving checks for existing stock before creating</li>
+    <li><strong>Cleanup tools:</strong> Deduplicate and Auto-Fix buttons</li>
+  </ul>
+
+  <h2 id="operations">Warehouse Operations</h2>
+
+  <h3>Put-Away</h3>
+  <p class="nav-path">/wms/putaway</p>
+  <ol>
+    <li>Scan case barcode (shows product details)</li>
+    <li>Scan destination location barcode</li>
+    <li>Confirm move</li>
+  </ol>
+
+  <h3>Transfer</h3>
+  <p class="nav-path">/wms/transfer</p>
+  <ol>
+    <li>Scan source (case or location)</li>
+    <li>If location: select items and quantities to move</li>
+    <li>Scan destination location</li>
+    <li>Confirm transfer</li>
+  </ol>
+
+  <h3>Repack</h3>
+  <p class="nav-path">/wms/repack</p>
+  <p>Convert pack sizes (e.g., 1x 12-pack → 2x 6-packs):</p>
+  <ol>
+    <li>Scan source case</li>
+    <li>Select target pack configuration</li>
+    <li>Confirm - creates new stock records with correct LWIN-18</li>
+  </ol>
+
+  <h2 id="picking">Picking & Dispatch</h2>
+
+  <h3>Pick Lists</h3>
+  <p class="nav-path">/wms/pick</p>
+  <ol>
+    <li>Create pick list from an order</li>
+    <li>Assign to warehouse staff</li>
+    <li>Pick each item (scan case barcodes)</li>
+    <li>Complete when all items picked</li>
+  </ol>
+
+  <h3>Dispatch Batching</h3>
+  <p class="nav-path">/wms/dispatch</p>
+  <ol>
+    <li>Create batch for a distributor</li>
+    <li>Add orders to the batch</li>
+    <li>Generate pick list for the batch</li>
+    <li>Pick items → staged in SHIPPING location</li>
+    <li>Generate delivery note(s)</li>
+    <li>Mark batch as dispatched</li>
+  </ol>
+
+  <h2 id="testing">Testing Checklist</h2>
+
+  <h3>Core Workflows</h3>
   <ul class="checklist">
-    <li>TC27 scanner connects to web app in Chrome</li>
+    <li>Create a new location (e.g., TEST-01-00)</li>
+    <li>Print location label and verify it scans</li>
+    <li>Receive a shipment with 2+ products</li>
+    <li>Verify stock appears at correct locations after receiving</li>
+    <li>Check dashboard shows correct totals</li>
+    <li>Check Stock by Owner shows partner breakdown</li>
+    <li>Run reconciliation - should show "Stock is Reconciled"</li>
+    <li>Transfer stock from one location to another</li>
+    <li>Verify movement history shows all actions</li>
+  </ul>
+
+  <h3>Receiving Details</h3>
+  <ul class="checklist">
+    <li>Save a receiving draft and resume it later</li>
+    <li>Receive with pack variant (different bottles per case)</li>
+    <li>Add extra product during receiving</li>
+    <li>Upload photo during receiving</li>
+    <li>Print case labels during receiving</li>
+    <li>Verify case label barcodes scan correctly</li>
+  </ul>
+
+  <h3>Hardware (TC27 + ZD421)</h3>
+  <ul class="checklist">
+    <li>Scanner Test page detects barcode scans</li>
     <li>Scan location barcode → shows in UI</li>
     <li>Scan case barcode → shows product details</li>
     <li>Print case label → ZD421 prints correctly</li>
-    <li>Printed barcode scans correctly</li>
+    <li>Printed label barcode scans back correctly</li>
     <li>Put-away workflow works with scanner</li>
     <li>Transfer workflow works with scanner</li>
   </ul>
 
-  <h3>Known Issues to Watch</h3>
-  <ul>
-    <li><strong>Pack variants</strong>: If received pack (6x750ml) differs from expected (12x750ml), verify LWIN-18 is correct</li>
-    <li><strong>Duplicate stock</strong>: Should be impossible now due to database constraints - if it happens, report immediately</li>
-    <li><strong>Dashboard zeros</strong>: If dashboard shows 0 but movements exist, use "Rebuild Stock" on reconciliation page</li>
+  <h3>Edge Cases</h3>
+  <ul class="checklist">
+    <li>Receiving retry doesn't create duplicates</li>
+    <li>Partial transfer (move 2 of 5 cases)</li>
+    <li>Repack 12-pack to 6-packs</li>
+    <li>Stock search finds products by partial name</li>
+    <li>Expiring stock alert appears for perishable items</li>
   </ul>
 
   <h2 id="hardware">Hardware Setup</h2>
 
-  <h3>Zebra TC27 Scanner</h3>
+  <h3>Zebra TC27 Mobile Computer</h3>
   <ol>
-    <li>Install Chrome browser</li>
-    <li>Install "Zebra Browser Print" app from Play Store</li>
-    <li>Configure scanner for "Keyboard Wedge" mode (settings may vary)</li>
+    <li>Install Chrome browser from Play Store</li>
+    <li>Install <strong>Zebra Browser Print</strong> app from Play Store</li>
+    <li>Go to Settings → Scanner → configure for <strong>Keyboard Wedge</strong> mode</li>
     <li>Navigate to <code>cc.craftandculture.ae</code> and log in</li>
+    <li>Test on <span class="nav-path">/wms/scanner-test</span> page</li>
   </ol>
 
   <h3>Zebra ZD421 Label Printer</h3>
   <ol>
     <li>Pair with TC27 via Bluetooth</li>
-    <li>Load 4" x 2" direct thermal labels</li>
-    <li>Run calibration (auto-calibrate for label size)</li>
-    <li>Open Zebra Browser Print app on TC27 and connect to printer</li>
+    <li>Load 4" x 2" direct thermal labels (no ribbon)</li>
+    <li>Run auto-calibration for label size</li>
+    <li>Open Zebra Browser Print app on TC27</li>
+    <li>Connect to the ZD421 printer in the app</li>
+    <li>Test print from <span class="nav-path">/wms/labels</span> page</li>
   </ol>
 
-  <h3>Label Formats</h3>
+  <h3>Barcode Formats</h3>
   <table>
-    <tr>
-      <th>Label Type</th>
-      <th>Size</th>
-      <th>Content</th>
-    </tr>
-    <tr>
-      <td>Case Label</td>
-      <td>4" x 2"</td>
-      <td>Barcode, Product Name, LWIN, Pack Size, Bay</td>
-    </tr>
-    <tr>
-      <td>Location Label</td>
-      <td>4" x 2"</td>
-      <td>Barcode, Location Code (A-01-02)</td>
-    </tr>
+    <tr><th>Type</th><th>Format</th><th>Example</th></tr>
+    <tr><td>Case Label</td><td><code>CASE-{LWIN18}-{seq}</code></td><td>CASE-1010279-2015-06-00750-001</td></tr>
+    <tr><td>Location Label</td><td><code>LOC-{code}</code></td><td>LOC-A-01-02</td></tr>
+  </table>
+
+  <h3>Label Content</h3>
+  <table>
+    <tr><th>Label Type</th><th>Size</th><th>Contains</th></tr>
+    <tr><td>Case Label</td><td>4" x 2"</td><td>Barcode, Product Name, LWIN, Pack Size, Location, Lot</td></tr>
+    <tr><td>Location Label</td><td>4" x 2"</td><td>Barcode, Location Code (large), Aisle/Bay/Level</td></tr>
   </table>
 
   <h2 id="troubleshooting">Troubleshooting</h2>
@@ -501,43 +896,64 @@
   <h3>Dashboard shows all zeros</h3>
   <div class="status-box status-warning">
     <strong>Cause:</strong> Stock records missing or deleted<br>
-    <strong>Fix:</strong> Go to Stock → Reconcile → Click "Rebuild Stock"
+    <strong>Fix:</strong> Go to <span class="nav-path">/wms/stock/reconcile</span> → Click "Rebuild Stock"
   </div>
 
   <h3>Reconciliation shows discrepancy</h3>
   <div class="status-box status-warning">
-    <strong>If actual &gt; expected (too many cases):</strong><br>
-    Click "Auto-Fix" to remove orphan/duplicate records<br><br>
-    <strong>If actual &lt; expected (too few cases):</strong><br>
-    Click "Rebuild Stock" to recreate from movements
+    <strong>If actual > expected:</strong> Click "Auto-Fix" to remove orphan/duplicate records<br>
+    <strong>If actual < expected:</strong> Click "Rebuild Stock" to recreate from movements
   </div>
 
   <h3>Labels not printing</h3>
   <div class="status-box status-warning">
     <strong>Check:</strong>
     <ul>
-      <li>Zebra Browser Print app is running on TC27</li>
-      <li>Printer is paired via Bluetooth</li>
-      <li>Printer has labels loaded and is online</li>
-      <li>Try printing a test page from Zebra Browser Print app first</li>
+      <li>Zebra Browser Print app is open on TC27</li>
+      <li>Printer is connected in the app (shows as available)</li>
+      <li>Printer has labels and is powered on</li>
+      <li>Try a test print from within Zebra Browser Print app first</li>
     </ul>
   </div>
 
-  <h3>Scanner not working</h3>
+  <h3>Scanner not detecting barcodes</h3>
   <div class="status-box status-warning">
     <strong>Check:</strong>
     <ul>
-      <li>Scanner is in "Keyboard Wedge" mode</li>
-      <li>Cursor is in the scan input field before scanning</li>
-      <li>Barcode is not damaged or obscured</li>
+      <li>Scanner is in Keyboard Wedge mode (check device settings)</li>
+      <li>Cursor is focused in a text input field</li>
+      <li>Test on <span class="nav-path">/wms/scanner-test</span> page</li>
+      <li>Barcode is clean and undamaged</li>
     </ul>
+  </div>
+
+  <h3>Receiving fails with "Partner required"</h3>
+  <div class="status-box status-warning">
+    <strong>Cause:</strong> Shipment doesn't have an associated partner<br>
+    <strong>Fix:</strong> Edit the shipment in Logistics and assign a partner before receiving
+  </div>
+
+  <h3>Duplicate stock created</h3>
+  <div class="status-box status-warning">
+    <strong>This should not happen</strong> with current safeguards. If it does:<br>
+    <ol>
+      <li>Go to <span class="nav-path">/wms/stock/reconcile</span></li>
+      <li>Click "Auto-Fix" to merge duplicates</li>
+      <li>Report the issue so we can investigate</li>
+    </ol>
+  </div>
+
+  <h3>"Clean Up Duplicate Stock" button on dashboard</h3>
+  <div class="status-box status-info">
+    This is a legacy cleanup tool. Use the Reconciliation page instead - it has more comprehensive Auto-Fix and Rebuild options.
   </div>
 
   <hr style="margin: 3rem 0; border: none; border-top: 1px solid var(--border);">
 
   <p style="color: var(--text-muted); font-size: 0.9rem;">
-    Last updated: February 2026<br>
-    For technical support, contact the development team.
+    <strong>WMS Version:</strong> 53 controllers, 23 UI pages, 14 database tables<br>
+    <strong>Last updated:</strong> February 2026<br>
+    <strong>Technical reference:</strong> <code>apps/web/src/app/_wms/WMS.md</code>
   </p>
 </body>
 </html>
