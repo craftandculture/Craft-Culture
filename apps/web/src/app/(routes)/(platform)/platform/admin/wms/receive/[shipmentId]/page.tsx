@@ -343,10 +343,24 @@ const WMSReceiveShipmentPage = () => {
     },
   });
 
-  // Delete draft mutation (used on complete)
-  const { mutate: deleteDraftMutate } = useMutation({
+  // Delete draft mutation (used on complete or reset)
+  const { mutate: deleteDraftMutate, isPending: isDeletingDraft } = useMutation({
     ...api.wms.admin.receiving.deleteDraft.mutationOptions(),
+    onSuccess: () => {
+      // Reset local state to reinitialize from shipment items
+      setReceivedItems(new Map());
+      setInitialized(false);
+      setLastSaved(null);
+      void queryClient.invalidateQueries();
+    },
   });
+
+  // Reset handler - clears draft and starts fresh
+  const handleReset = () => {
+    if (confirm('Clear saved progress and start fresh? This cannot be undone.')) {
+      deleteDraftMutate({ shipmentId });
+    }
+  };
 
   // Save draft to database (debounced)
   const saveDraft = useCallback(() => {
@@ -711,6 +725,16 @@ const WMSReceiveShipmentPage = () => {
               <span className="hidden sm:inline">Saved</span>
             </span>
           ) : null}
+          {/* Reset button - only show if there's saved draft data */}
+          {lastSaved && (
+            <button
+              onClick={handleReset}
+              disabled={isDeletingDraft}
+              className="flex items-center gap-1 rounded-full bg-gray-100 px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700"
+            >
+              {isDeletingDraft ? 'Resetting...' : 'Reset'}
+            </button>
+          )}
         </div>
 
         {/* Desktop breadcrumb - hidden on mobile */}
