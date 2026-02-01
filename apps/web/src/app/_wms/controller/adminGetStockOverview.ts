@@ -109,9 +109,12 @@ const adminGetStockOverview = adminProcedure
     const receivingStock = receivingStockResult[0];
 
     console.log('[WMS] adminGetStockOverview completed in', Date.now() - startTime, 'ms');
+    console.log('[WMS] locationStatsResult:', JSON.stringify(locationStatsResult));
+    console.log('[WMS] locationStats:', JSON.stringify(locationStats));
 
     const totalLocs = locationStats?.totalLocations ?? 0;
     const activeLocs = locationStats?.activeLocations ?? 0;
+    console.log('[WMS] totalLocs:', totalLocs, 'activeLocs:', activeLocs);
 
     return {
       summary: {

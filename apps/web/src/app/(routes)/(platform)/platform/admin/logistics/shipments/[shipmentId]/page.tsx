@@ -90,6 +90,22 @@ const ShipmentDetailPage = () => {
     }),
   );
 
+  const { mutate: updateShipment, isPending: isUpdatingShipment } = useMutation(
+    api.logistics.admin.update.mutationOptions({
+      onSuccess: () => {
+        toast.success('Shipment updated');
+        void refetch();
+      },
+      onError: (error) => {
+        toast.error(error.message);
+      },
+    }),
+  );
+
+  const { data: partners } = useQuery({
+    ...api.partners.getMany.queryOptions({ limit: 100 }),
+  });
+
   const { mutate: addItem, isPending: isAddingItemPending } = useMutation(
     api.logistics.admin.addItem.mutationOptions({
       onSuccess: () => {
@@ -130,6 +146,10 @@ const ShipmentDetailPage = () => {
 
   const handleStatusChange = (status: ShipmentStatus) => {
     updateStatus({ id: shipmentId, status });
+  };
+
+  const handlePartnerChange = (partnerId: string) => {
+    updateShipment({ id: shipmentId, partnerId: partnerId || null });
   };
 
   const handleAddItem = () => {
@@ -297,6 +317,27 @@ const ShipmentDetailPage = () => {
                   Shipment Details
                 </Typography>
                 <dl className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <dt className="text-text-muted">Partner</dt>
+                    <dd>
+                      <Select
+                        value={shipment.partnerId ?? ''}
+                        onValueChange={handlePartnerChange}
+                        disabled={isUpdatingShipment}
+                      >
+                        <SelectTrigger className="w-44">
+                          <SelectValue placeholder="Select partner..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {partners?.partners?.map((partner) => (
+                            <SelectItem key={partner.id} value={partner.id}>
+                              {partner.businessName}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </dd>
+                  </div>
                   <div className="flex justify-between">
                     <dt className="text-text-muted">Type</dt>
                     <dd className="capitalize">{shipment.type.replace('_', '-')}</dd>
