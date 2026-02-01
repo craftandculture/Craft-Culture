@@ -1,3 +1,5 @@
+import { desc, like } from 'drizzle-orm';
+
 import db from '@/database/client';
 import { wmsStockMovements } from '@/database/schema';
 
@@ -17,8 +19,8 @@ const generateMovementNumber = async () => {
   const result = await db
     .select({ movementNumber: wmsStockMovements.movementNumber })
     .from(wmsStockMovements)
-    .where((fields, { like }) => like(fields.movementNumber, `${prefix}%`))
-    .orderBy((fields) => fields.movementNumber)
+    .where(like(wmsStockMovements.movementNumber, `${prefix}%`))
+    .orderBy(desc(wmsStockMovements.movementNumber))
     .limit(1);
 
   let nextSequence = 1;
