@@ -6,13 +6,14 @@ import { adminProcedure } from '@/lib/trpc/procedures';
 
 /**
  * Get shipments that are ready to be received in the WMS
- * Returns inbound shipments with status 'at_warehouse' or 'cleared'
+ * Returns inbound shipments with status that indicates readiness for receiving
  *
  * @example
  *   await trpcClient.wms.admin.receiving.getPendingShipments.query();
  */
 const adminGetPendingShipments = adminProcedure.query(async () => {
-  // Get inbound shipments that are at warehouse or cleared (ready to receive)
+  // Get inbound shipments that are ready to receive
+  // Includes: at_warehouse, cleared, customs_clearance, arrived_port
   const shipments = await db
     .select({
       id: logisticsShipments.id,
@@ -29,7 +30,14 @@ const adminGetPendingShipments = adminProcedure.query(async () => {
     .from(logisticsShipments)
     .leftJoin(partners, eq(logisticsShipments.partnerId, partners.id))
     .leftJoin(logisticsShipmentItems, eq(logisticsShipmentItems.shipmentId, logisticsShipments.id))
-    .where(inArray(logisticsShipments.status, ['at_warehouse', 'cleared']))
+    .where(
+      inArray(logisticsShipments.status, [
+        'at_warehouse',
+        'cleared',
+        'customs_clearance',
+        'arrived_port',
+      ])
+    )
     .groupBy(logisticsShipments.id, partners.businessName)
     .orderBy(desc(logisticsShipments.ata), desc(logisticsShipments.eta));
 
