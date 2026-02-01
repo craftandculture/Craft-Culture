@@ -1,4 +1,4 @@
-import { count } from 'drizzle-orm';
+import { count, like } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { logisticsQuotes } from '@/database/schema';
@@ -19,7 +19,7 @@ const generateQuoteNumber = async () => {
   const [result] = await db
     .select({ count: count() })
     .from(logisticsQuotes)
-    .where((fields, { like }) => like(fields.quoteNumber, `${prefix}%`));
+    .where(like(logisticsQuotes.quoteNumber, `${prefix}%`));
 
   const nextNumber = (result?.count ?? 0) + 1;
   const paddedNumber = nextNumber.toString().padStart(4, '0');
