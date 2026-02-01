@@ -17,6 +17,8 @@ import { adminProcedure } from '@/lib/trpc/procedures';
  */
 const adminDeduplicateStock = adminProcedure.mutation(async () => {
   // Find all duplicate combinations
+  // Note: Using (ARRAY_AGG(id ORDER BY created_at))[1] instead of MIN(id)
+  // because PostgreSQL doesn't support MIN() on UUID type
   const duplicates = await db.execute(sql`
     WITH duplicates AS (
       SELECT
@@ -24,9 +26,9 @@ const adminDeduplicateStock = adminProcedure.mutation(async () => {
         location_id,
         shipment_id,
         COUNT(*) as count,
-        MIN(id) as keep_id,
+        (ARRAY_AGG(id ORDER BY created_at))[1] as keep_id,
         SUM(quantity_cases) as total_cases,
-        ARRAY_AGG(id) as all_ids
+        ARRAY_AGG(id ORDER BY created_at) as all_ids
       FROM wms_stock
       WHERE shipment_id IS NOT NULL
       GROUP BY lwin18, location_id, shipment_id
