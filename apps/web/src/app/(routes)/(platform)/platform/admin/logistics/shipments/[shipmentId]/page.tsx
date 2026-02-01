@@ -329,7 +329,7 @@ const ShipmentDetailPage = () => {
                           <SelectValue placeholder="Select partner..." />
                         </SelectTrigger>
                         <SelectContent>
-                          {partners?.partners?.map((partner) => (
+                          {partners?.map((partner) => (
                             <SelectItem key={partner.id} value={partner.id}>
                               {partner.businessName}
                             </SelectItem>
