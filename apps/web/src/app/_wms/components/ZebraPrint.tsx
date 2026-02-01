@@ -191,6 +191,14 @@ export default ZebraPrint;
  *   await print(zplCode);
  */
 export const useZebraPrint = () => {
+  // Check for window to avoid SSR issues
+  if (typeof window === 'undefined') {
+    return {
+      print: async () => false,
+      isConnected: () => false,
+    };
+  }
+
   const zebraPrint = (window as unknown as { zebraPrint?: { print: (zpl: string) => Promise<boolean>; isConnected: () => boolean } }).zebraPrint;
 
   return {
