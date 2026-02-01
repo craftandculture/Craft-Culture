@@ -2,6 +2,7 @@
 
 import {
   IconAlertCircle,
+  IconAlertTriangle,
   IconBarcode,
   IconCheck,
   IconChevronRight,
@@ -10,6 +11,7 @@ import {
   IconEdit,
   IconLoader2,
   IconMapPin,
+  IconTool,
   IconTrash,
 } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -44,6 +46,7 @@ interface ReceivedItem {
   packChanged: boolean;
   isAddedItem: boolean; // true if this was added manually (different pack variant)
   isChecked: boolean; // true if verified/checked off
+  locationId?: string; // per-item location assignment
   expiryDate?: Date;
   notes?: string;
 }
@@ -63,10 +66,12 @@ interface ItemRowProps {
     bottlesPerCase?: number | null;
     bottleSizeMl?: number | null;
   };
+  locations: Array<{ id: string; locationCode: string; locationType: string }>;
   isEditingPack: boolean;
   onToggleCheck: () => void;
   onUpdateCases: (cases: number) => void;
   onUpdatePackConfig: (bottlesPerCase: number, bottleSizeMl: number) => void;
+  onUpdateLocation: (locationId: string) => void;
   onEditPack: () => void;
   onClosePack: () => void;
   onAddVariant?: () => void;
@@ -77,10 +82,12 @@ interface ItemRowProps {
 const ItemRow = ({
   item,
   shipmentItem,
+  locations,
   isEditingPack,
   onToggleCheck,
   onUpdateCases,
   onUpdatePackConfig,
+  onUpdateLocation,
   onEditPack,
   onClosePack,
   onAddVariant,
@@ -236,6 +243,25 @@ const ItemRow = ({
         )}
       </div>
 
+      {/* Location selector - per item */}
+      <div className="flex items-center gap-2">
+        <Icon icon={IconMapPin} size="sm" colorRole="muted" />
+        <select
+          className={`h-12 flex-1 rounded-lg border-2 bg-fill-primary px-3 text-base font-medium focus:border-border-brand focus:outline-none ${
+            item.locationId ? 'border-emerald-500 text-emerald-700' : 'border-border-primary'
+          }`}
+          value={item.locationId || ''}
+          onChange={(e) => onUpdateLocation(e.target.value)}
+        >
+          <option value="">Select location...</option>
+          {locations.map((loc) => (
+            <option key={loc.id} value={loc.id}>
+              {loc.locationCode}
+            </option>
+          ))}
+        </select>
+      </div>
+
       {/* Action buttons row */}
       <div className="flex gap-2">
         {/* Add variant button (only for original items) */}
@@ -323,6 +349,16 @@ const WMSReceiveShipmentPage = () => {
     ...api.wms.admin.receiving.deleteDraft.mutationOptions(),
   });
 
+  // Fix shipment data mutation
+  const fixDataMutation = useMutation({
+    ...api.logistics.admin.fixShipmentItemCases.mutationOptions(),
+    onSuccess: () => {
+      // Refetch shipment data and reset state
+      void queryClient.invalidateQueries();
+      setInitialized(false);
+    },
+  });
+
   // Save draft to database (debounced)
   const saveDraft = useCallback(() => {
     if (receivedItems.size === 0) return;
@@ -353,6 +389,7 @@ const WMSReceiveShipmentPage = () => {
         packChanged: item.packChanged,
         isAddedItem: item.isAddedItem,
         isChecked: item.isChecked,
+        locationId: item.locationId,
         expiryDate: item.expiryDate?.toISOString(),
         notes: item.notes,
       }));
@@ -393,6 +430,7 @@ const WMSReceiveShipmentPage = () => {
       packChanged: item.packChanged,
       isAddedItem: item.isAddedItem,
       isChecked: item.isChecked,
+      locationId: item.locationId,
       expiryDate: item.expiryDate?.toISOString(),
       notes: item.notes,
     }));
@@ -414,6 +452,7 @@ const WMSReceiveShipmentPage = () => {
       savedDraft.items.forEach((item) => {
         loadedItems.set(item.id, {
           ...item,
+          locationId: item.locationId ?? undefined,
           expiryDate: item.expiryDate ? new Date(item.expiryDate) : undefined,
         });
       });
@@ -495,6 +534,15 @@ const WMSReceiveShipmentPage = () => {
     }
   };
 
+  const updateItemLocation = (itemId: string, locationId: string) => {
+    const item = receivedItems.get(itemId);
+    if (item) {
+      const newMap = new Map(receivedItems.set(itemId, { ...item, locationId: locationId || undefined }));
+      setReceivedItems(newMap);
+      saveDraft(); // Debounced save
+    }
+  };
+
   const toggleChecked = (itemId: string) => {
     const item = receivedItems.get(itemId);
     if (item) {
@@ -557,36 +605,39 @@ const WMSReceiveShipmentPage = () => {
   });
 
   const handleReceive = () => {
-    if (!receivingLocationId) {
-      alert('Please select a receiving location');
-      return;
-    }
+    const itemsToReceive = Array.from(receivedItems.values()).filter((item) => item.receivedCases > 0);
 
-    const items = Array.from(receivedItems.values())
-      .filter((item) => item.receivedCases > 0)
-      .map((item) => ({
-        shipmentItemId: item.shipmentItemId ?? item.baseItemId ?? '', // Use baseItemId for added items
-        expectedCases: item.expectedCases,
-        receivedCases: item.receivedCases,
-        receivedBottlesPerCase: item.receivedBottlesPerCase,
-        receivedBottleSizeMl: item.receivedBottleSizeMl,
-        packChanged: item.packChanged,
-        isAddedItem: item.isAddedItem,
-        productName: item.productName,
-        producer: item.producer,
-        vintage: item.vintage,
-        expiryDate: item.expiryDate,
-        notes: item.notes,
-      }));
-
-    if (items.length === 0) {
+    if (itemsToReceive.length === 0) {
       alert('No items to receive');
       return;
     }
 
+    // Check all items have a location assigned
+    const itemsWithoutLocation = itemsToReceive.filter((item) => !item.locationId);
+    if (itemsWithoutLocation.length > 0) {
+      alert(`${itemsWithoutLocation.length} item(s) need a location assigned. Please select a location for each item.`);
+      return;
+    }
+
+    const items = itemsToReceive.map((item) => ({
+      shipmentItemId: item.shipmentItemId ?? item.baseItemId ?? '', // Use baseItemId for added items
+      expectedCases: item.expectedCases,
+      receivedCases: item.receivedCases,
+      receivedBottlesPerCase: item.receivedBottlesPerCase,
+      receivedBottleSizeMl: item.receivedBottleSizeMl,
+      packChanged: item.packChanged,
+      isAddedItem: item.isAddedItem,
+      productName: item.productName,
+      producer: item.producer,
+      vintage: item.vintage,
+      locationId: item.locationId!, // Per-item location
+      expiryDate: item.expiryDate,
+      notes: item.notes,
+    }));
+
     receiveMutation.mutate({
       shipmentId,
-      receivingLocationId,
+      receivingLocationId: items[0]?.locationId ?? '', // Fallback, but per-item is used
       items,
       notes: notes || undefined,
     });
@@ -630,6 +681,26 @@ const WMSReceiveShipmentPage = () => {
   const totalItems = allItems.length;
   const hasDiscrepancy = totalExpected !== totalReceived;
   const allChecked = checkedCount === totalItems && totalItems > 0;
+
+  // Detect if data looks corrupted (bottles were put in cases field)
+  // Check if total expected is suspiciously high (> 100 cases for most shipments)
+  // AND all items have cases divisible by bottlesPerCase
+  const suspiciouslyHighTotal = totalExpected > 100;
+  const allItemsDivisible = shipment.items.every((item) => {
+    const bottlesPerCase = item.bottlesPerCase ?? 12;
+    if (bottlesPerCase <= 1) return true; // Can't detect for single bottle
+    const possibleCases = item.cases / bottlesPerCase;
+    return Number.isInteger(possibleCases) && possibleCases >= 1;
+  });
+  const dataLooksCorrupted = suspiciouslyHighTotal && allItemsDivisible;
+
+  // Calculate what the corrected totals would be
+  const correctedExpected = dataLooksCorrupted
+    ? shipment.items.reduce((sum, item) => {
+        const bottlesPerCase = item.bottlesPerCase ?? 12;
+        return sum + Math.floor(item.cases / bottlesPerCase);
+      }, 0)
+    : totalExpected;
 
   // Group items by base product (original + added variants)
   const itemGroups = new Map<string, ReceivedItem[]>();
@@ -760,21 +831,64 @@ const WMSReceiveShipmentPage = () => {
           </Card>
         </div>
 
-        {/* Location Selector */}
+        {/* Data Correction Alert - Show if total > 100 to help fix extraction errors */}
+        {totalExpected > 100 && (
+          <Card className="border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-900/20">
+            <CardContent className="p-4">
+              <div className="flex items-start gap-3">
+                <Icon icon={IconAlertTriangle} size="lg" className="flex-shrink-0 text-amber-600" />
+                <div className="flex-1">
+                  <Typography variant="headingSm" className="text-amber-800 dark:text-amber-200">
+                    Data Extraction Error Detected
+                  </Typography>
+                  <Typography variant="bodySm" className="mt-1 text-amber-700 dark:text-amber-300">
+                    It looks like bottle counts were incorrectly saved as case counts. Expected total should be{' '}
+                    <strong>{correctedExpected} cases</strong>, not {totalExpected}.
+                  </Typography>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <Button
+                      variant="outline"
+                      size="md"
+                      className="border-amber-300 bg-white text-amber-800 hover:bg-amber-100"
+                      onClick={() => fixDataMutation.mutate({ shipmentId, recalculateFromBottles: true })}
+                      disabled={fixDataMutation.isPending}
+                    >
+                      <ButtonContent iconLeft={fixDataMutation.isPending ? IconLoader2 : IconTool}>
+                        {fixDataMutation.isPending ? 'Fixing...' : 'Fix Data'}
+                      </ButtonContent>
+                    </Button>
+                  </div>
+                  {fixDataMutation.isError && (
+                    <Typography variant="bodyXs" className="mt-2 text-red-600">
+                      {fixDataMutation.error?.message ?? 'Failed to fix data'}
+                    </Typography>
+                  )}
+                  {fixDataMutation.isSuccess && (
+                    <Typography variant="bodyXs" className="mt-2 text-emerald-600">
+                      Data fixed! Reloading...
+                    </Typography>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Default Location (optional - applied to items without a location) */}
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <Icon icon={IconMapPin} size="lg" colorRole="muted" />
               <div className="min-w-0 flex-1">
                 <Typography variant="bodySm" colorRole="muted">
-                  Receiving Location
+                  Default Location (optional)
                 </Typography>
                 <select
                   className="mt-1 h-12 w-full rounded-lg border-2 border-border-primary bg-fill-primary px-3 text-base font-medium focus:border-border-brand focus:outline-none"
                   value={receivingLocationId}
                   onChange={(e) => setReceivingLocationId(e.target.value)}
                 >
-                  <option value="">Select location...</option>
+                  <option value="">Select default...</option>
                   {locations?.map((loc) => (
                     <option key={loc.id} value={loc.id}>
                       {loc.locationCode} ({loc.locationType})
@@ -782,12 +896,29 @@ const WMSReceiveShipmentPage = () => {
                   ))}
                 </select>
               </div>
+              {receivingLocationId && (
+                <Button
+                  variant="outline"
+                  size="md"
+                  onClick={() => {
+                    // Apply default to all items without a location
+                    const newMap = new Map(receivedItems);
+                    newMap.forEach((item, id) => {
+                      if (!item.locationId) {
+                        newMap.set(id, { ...item, locationId: receivingLocationId });
+                      }
+                    });
+                    setReceivedItems(newMap);
+                    saveDraft();
+                  }}
+                >
+                  Apply to All
+                </Button>
+              )}
             </div>
-            {!receivingLocationId && (
-              <Typography variant="bodyXs" className="mt-2 text-amber-600">
-                Please select where to receive this shipment
-              </Typography>
-            )}
+            <Typography variant="bodyXs" className="mt-2 text-text-muted">
+              Set location per item below, or select a default and click &quot;Apply to All&quot;
+            </Typography>
           </CardContent>
         </Card>
 
@@ -814,10 +945,12 @@ const WMSReceiveShipmentPage = () => {
                       <ItemRow
                         item={originalItem}
                         shipmentItem={shipmentItem}
+                        locations={locations ?? []}
                         isEditingPack={editingPackItemId === originalItem.id}
                         onToggleCheck={() => toggleChecked(originalItem.id)}
                         onUpdateCases={(cases) => updateReceivedCases(originalItem.id, cases)}
                         onUpdatePackConfig={(bpc, bs) => updatePackConfig(originalItem.id, bpc, bs)}
+                        onUpdateLocation={(locId) => updateItemLocation(originalItem.id, locId)}
                         onEditPack={() => setEditingPackItemId(originalItem.id)}
                         onClosePack={() => setEditingPackItemId(null)}
                         onAddVariant={() => addPackVariant(originalItem.id)}
@@ -830,10 +963,12 @@ const WMSReceiveShipmentPage = () => {
                         <ItemRow
                           item={addedItem}
                           shipmentItem={shipmentItem}
+                          locations={locations ?? []}
                           isEditingPack={editingPackItemId === addedItem.id}
                           onToggleCheck={() => toggleChecked(addedItem.id)}
                           onUpdateCases={(cases) => updateReceivedCases(addedItem.id, cases)}
                           onUpdatePackConfig={(bpc, bs) => updatePackConfig(addedItem.id, bpc, bs)}
+                          onUpdateLocation={(locId) => updateItemLocation(addedItem.id, locId)}
                           onEditPack={() => setEditingPackItemId(addedItem.id)}
                           onClosePack={() => setEditingPackItemId(null)}
                           onRemove={() => removeAddedItem(addedItem.id)}

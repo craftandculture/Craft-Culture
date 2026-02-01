@@ -25,6 +25,7 @@ const draftItemSchema = z.object({
   packChanged: z.boolean(),
   isAddedItem: z.boolean(),
   isChecked: z.boolean(),
+  locationId: z.string().uuid().optional(),
   expiryDate: z.string().optional(),
   notes: z.string().optional(),
 });

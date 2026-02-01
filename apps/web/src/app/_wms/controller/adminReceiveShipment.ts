@@ -129,11 +129,14 @@ const adminReceiveShipment = adminProcedure
         stockNotes = `Pack changed: expected ${shipmentItem.bottlesPerCase ?? 12}x${shipmentItem.bottleSizeMl ?? 750}ml, received ${actualBottlesPerCase}x${actualBottleSizeMl}ml. ${stockNotes}`;
       }
 
+      // Use per-item location if provided, otherwise fall back to global receivingLocationId
+      const itemLocationId = receivedItem.locationId ?? receivingLocationId;
+
       // Create stock record with actual received pack configuration
       const [stock] = await db
         .insert(wmsStock)
         .values({
-          locationId: receivingLocationId,
+          locationId: itemLocationId,
           ownerId: partner?.id ?? ctx.user.id, // Partner owns the stock, fallback to admin
           ownerName: partner?.businessName ?? 'Craft & Culture',
           lwin18,
@@ -169,7 +172,7 @@ const adminReceiveShipment = adminProcedure
             productName,
             lotNumber,
             shipmentId,
-            currentLocationId: receivingLocationId,
+            currentLocationId: itemLocationId,
             isActive: true,
           })
           .returning();
@@ -185,7 +188,7 @@ const adminReceiveShipment = adminProcedure
         lwin18,
         productName,
         quantityCases: receivedItem.receivedCases,
-        toLocationId: receivingLocationId,
+        toLocationId: itemLocationId,
         lotNumber,
         shipmentId,
         scannedBarcodes: caseLabels.map((l) => l.barcode),

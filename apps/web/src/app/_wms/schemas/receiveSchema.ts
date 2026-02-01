@@ -20,6 +20,8 @@ export const receiveItemSchema = z.object({
   productName: z.string().optional(),
   producer: z.string().nullable().optional(),
   vintage: z.number().nullable().optional(),
+  // Per-item location for direct-to-rack receiving
+  locationId: z.string().uuid().optional(),
   expiryDate: z.date().optional(),
   notes: z.string().optional(),
 });
