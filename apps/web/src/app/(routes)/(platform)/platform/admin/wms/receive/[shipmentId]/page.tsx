@@ -5,6 +5,7 @@ import {
   IconBarcode,
   IconCheck,
   IconChevronRight,
+  IconEdit,
   IconLoader2,
   IconMinus,
   IconPlus,
@@ -28,6 +29,12 @@ interface ReceivedItem {
   shipmentItemId: string;
   expectedCases: number;
   receivedCases: number;
+  // Pack configuration - track if changed from expected
+  expectedBottlesPerCase: number;
+  expectedBottleSizeMl: number;
+  receivedBottlesPerCase: number;
+  receivedBottleSizeMl: number;
+  packChanged: boolean;
   expiryDate?: Date;
   notes?: string;
 }
@@ -69,6 +76,11 @@ const WMSReceiveShipmentPage = () => {
           shipmentItemId: item.id,
           expectedCases: item.cases,
           receivedCases: item.cases, // Default to expected
+          expectedBottlesPerCase: item.bottlesPerCase ?? 12,
+          expectedBottleSizeMl: item.bottleSizeMl ?? 750,
+          receivedBottlesPerCase: item.bottlesPerCase ?? 12,
+          receivedBottleSizeMl: item.bottleSizeMl ?? 750,
+          packChanged: false,
         });
       });
       setReceivedItems(initial);
@@ -83,6 +95,11 @@ const WMSReceiveShipmentPage = () => {
         shipmentItemId: item.id,
         expectedCases: item.cases,
         receivedCases: item.cases,
+        expectedBottlesPerCase: item.bottlesPerCase ?? 12,
+        expectedBottleSizeMl: item.bottleSizeMl ?? 750,
+        receivedBottlesPerCase: item.bottlesPerCase ?? 12,
+        receivedBottleSizeMl: item.bottleSizeMl ?? 750,
+        packChanged: false,
       });
     });
     setReceivedItems(initial);
@@ -100,6 +117,27 @@ const WMSReceiveShipmentPage = () => {
     }
   };
 
+  const updatePackConfig = (itemId: string, bottlesPerCase: number, bottleSizeMl: number) => {
+    const item = receivedItems.get(itemId);
+    if (item) {
+      const packChanged =
+        bottlesPerCase !== item.expectedBottlesPerCase || bottleSizeMl !== item.expectedBottleSizeMl;
+      setReceivedItems(
+        new Map(
+          receivedItems.set(itemId, {
+            ...item,
+            receivedBottlesPerCase: bottlesPerCase,
+            receivedBottleSizeMl: bottleSizeMl,
+            packChanged,
+          }),
+        ),
+      );
+    }
+  };
+
+  // State for editing pack config
+  const [editingPackItemId, setEditingPackItemId] = useState<string | null>(null);
+
   const receiveMutation = useMutation({
     ...api.wms.admin.receiving.receiveShipment.mutationOptions(),
     onSuccess: (data) => {
@@ -115,7 +153,18 @@ const WMSReceiveShipmentPage = () => {
       return;
     }
 
-    const items = Array.from(receivedItems.values()).filter((item) => item.receivedCases > 0);
+    const items = Array.from(receivedItems.values())
+      .filter((item) => item.receivedCases > 0)
+      .map((item) => ({
+        shipmentItemId: item.shipmentItemId,
+        expectedCases: item.expectedCases,
+        receivedCases: item.receivedCases,
+        receivedBottlesPerCase: item.receivedBottlesPerCase,
+        receivedBottleSizeMl: item.receivedBottleSizeMl,
+        packChanged: item.packChanged,
+        expiryDate: item.expiryDate,
+        notes: item.notes,
+      }));
 
     if (items.length === 0) {
       alert('No items to receive');
@@ -265,17 +314,99 @@ const WMSReceiveShipmentPage = () => {
               {shipment.items.map((item) => {
                 const received = receivedItems.get(item.id);
                 const variance = (received?.receivedCases ?? 0) - item.cases;
+                const isEditingPack = editingPackItemId === item.id;
 
                 return (
                   <div key={item.id} className="p-4">
-                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-                      <div className="flex-1">
-                        <Typography variant="headingSm">{item.productName}</Typography>
-                        <Typography variant="bodyXs" colorRole="muted">
-                          {item.producer && `${item.producer} • `}
-                          {item.vintage && `${item.vintage} • `}
-                          {item.bottlesPerCase}x{item.bottleSizeMl}ml
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
+                      <div className="flex-1 min-w-0">
+                        <Typography variant="headingSm" className="mb-1">
+                          {item.productName}
                         </Typography>
+                        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                          <Typography variant="bodyXs" colorRole="muted">
+                            {item.producer && `${item.producer} • `}
+                            {item.vintage && `${item.vintage}`}
+                          </Typography>
+                          {/* Pack Config with Edit */}
+                          <div className="flex items-center gap-1">
+                            {isEditingPack ? (
+                              <div className="flex items-center gap-2 rounded-md bg-fill-secondary p-1">
+                                <select
+                                  className="rounded border border-border-primary bg-fill-primary px-2 py-1 text-xs"
+                                  value={received?.receivedBottlesPerCase ?? 6}
+                                  onChange={(e) =>
+                                    updatePackConfig(
+                                      item.id,
+                                      parseInt(e.target.value),
+                                      received?.receivedBottleSizeMl ?? 750,
+                                    )
+                                  }
+                                >
+                                  <option value={1}>1</option>
+                                  <option value={3}>3</option>
+                                  <option value={6}>6</option>
+                                  <option value={12}>12</option>
+                                  <option value={24}>24</option>
+                                </select>
+                                <span className="text-xs">×</span>
+                                <select
+                                  className="rounded border border-border-primary bg-fill-primary px-2 py-1 text-xs"
+                                  value={received?.receivedBottleSizeMl ?? 750}
+                                  onChange={(e) =>
+                                    updatePackConfig(
+                                      item.id,
+                                      received?.receivedBottlesPerCase ?? 6,
+                                      parseInt(e.target.value),
+                                    )
+                                  }
+                                >
+                                  <option value={375}>375ml</option>
+                                  <option value={500}>500ml</option>
+                                  <option value={750}>750ml</option>
+                                  <option value={1500}>1500ml</option>
+                                  <option value={3000}>3000ml</option>
+                                </select>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-6 px-2"
+                                  onClick={() => setEditingPackItemId(null)}
+                                >
+                                  <Icon icon={IconCheck} size="sm" />
+                                </Button>
+                              </div>
+                            ) : (
+                              <button
+                                className={`flex items-center gap-1 rounded px-1.5 py-0.5 text-xs transition-colors hover:bg-fill-secondary ${
+                                  received?.packChanged
+                                    ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300'
+                                    : 'text-text-muted'
+                                }`}
+                                onClick={() => setEditingPackItemId(item.id)}
+                              >
+                                {received?.receivedBottlesPerCase ?? item.bottlesPerCase}x
+                                {received?.receivedBottleSizeMl ?? item.bottleSizeMl}ml
+                                <Icon icon={IconEdit} size="xs" />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                        {/* LWIN */}
+                        {item.lwin && (
+                          <Typography variant="bodyXs" className="mt-1 font-mono text-text-muted">
+                            {item.lwin}
+                          </Typography>
+                        )}
+                        {/* Pack changed indicator */}
+                        {received?.packChanged && (
+                          <div className="mt-1 flex items-center gap-1 text-xs text-amber-600">
+                            <span>
+                              Originally: {item.bottlesPerCase}x{item.bottleSizeMl}ml → Now:{' '}
+                              {received.receivedBottlesPerCase}x{received.receivedBottleSizeMl}ml
+                            </span>
+                          </div>
+                        )}
                       </div>
                       <div className="flex items-center gap-4">
                         <div className="text-right">

@@ -44,6 +44,7 @@ const adminGetShipmentForReceiving = adminProcedure
       .select({
         id: logisticsShipmentItems.id,
         productName: logisticsShipmentItems.productName,
+        lwin: logisticsShipmentItems.lwin,
         producer: logisticsShipmentItems.producer,
         vintage: logisticsShipmentItems.vintage,
         region: logisticsShipmentItems.region,
