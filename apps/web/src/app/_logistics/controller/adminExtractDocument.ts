@@ -330,7 +330,7 @@ This is a TRANSCRIPTION task, not interpretation. Copy exactly what you see.`,
               {
                 type: 'file' as const,
                 data: file,
-                mimeType: 'application/pdf' as const,
+                mediaType: 'application/pdf' as const,
               },
             ],
           },
