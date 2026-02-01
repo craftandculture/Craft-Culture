@@ -3,6 +3,7 @@
 import {
   IconAlertTriangle,
   IconCheck,
+  IconDatabaseImport,
   IconLoader2,
   IconRefresh,
   IconTrash,
@@ -49,6 +50,14 @@ const ReconcilePage = () => {
     },
   });
 
+  const rebuildMutation = useMutation({
+    ...api.wms.admin.stock.rebuildFromMovements.mutationOptions(),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['wms', 'admin', 'stock'] });
+      void refetch();
+    },
+  });
+
   if (isLoading) {
     return (
       <div className="container mx-auto max-w-4xl px-4 py-8">
@@ -82,7 +91,25 @@ const ReconcilePage = () => {
             </Typography>
           </div>
           <div className="flex gap-2">
-            {!isReconciled && (
+            {/* Rebuild button - when stock is missing/under */}
+            {(data?.summary.actualStock ?? 0) < (data?.summary.expectedStock ?? 0) && (
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => {
+                  if (confirm('Rebuild stock records from movement history? This will create missing stock records.')) {
+                    rebuildMutation.mutate({});
+                  }
+                }}
+                disabled={rebuildMutation.isPending}
+              >
+                <ButtonContent iconLeft={IconDatabaseImport}>
+                  {rebuildMutation.isPending ? 'Rebuilding...' : 'Rebuild Stock'}
+                </ButtonContent>
+              </Button>
+            )}
+            {/* Auto-fix button - when stock is over */}
+            {(data?.summary.actualStock ?? 0) > (data?.summary.expectedStock ?? 0) && (
               <Button
                 variant="primary"
                 size="sm"
@@ -155,6 +182,26 @@ const ReconcilePage = () => {
                 <Typography variant="bodySm" className="mt-2 text-amber-700">
                   ⚠ Still {autoFixMutation.data.finalState.discrepancy} cases discrepancy. Manual review needed.
                 </Typography>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Rebuild Results */}
+        {rebuildMutation.data && (
+          <Card className="border-emerald-200 bg-emerald-50">
+            <CardContent className="p-4">
+              <Typography variant="headingSm" className="mb-2 text-emerald-800">
+                {rebuildMutation.data.message}
+              </Typography>
+              {rebuildMutation.data.errors && rebuildMutation.data.errors.length > 0 && (
+                <div className="mt-2 space-y-1">
+                  {rebuildMutation.data.errors.map((error, idx) => (
+                    <div key={idx} className="text-sm text-amber-700">
+                      ⚠ {error}
+                    </div>
+                  ))}
+                </div>
               )}
             </CardContent>
           </Card>
