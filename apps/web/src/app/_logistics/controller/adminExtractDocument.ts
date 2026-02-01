@@ -59,21 +59,21 @@ const extractedLogisticsDataSchema = z.object({
       z.object({
         description: z.string().optional().describe('Item description'),
         productName: z.string().optional().describe('Product name'),
-        lwin: z.string().optional().describe('LWIN code (Liv-ex Wine Identification Number) - may be labeled as "Product Code", "LWIN", "SKU", or "Item Code" in the document'),
-        producer: z.string().optional().describe('Producer/winery name extracted from description'),
-        vintage: z.number().optional().describe('Vintage year (e.g., 2015, 2018, 2021) - extract 4-digit year from product description'),
-        bottleSize: z.string().optional().describe('Bottle size (e.g., "750ml", "1.5L", "375ml") - extract from description like "0.75L" or "75cl"'),
-        bottlesPerCase: z.number().optional().describe('Bottles per case / case configuration (e.g., 6, 12) - often shown as "6x75cl" or just a number'),
-        alcoholPercent: z.number().optional().describe('Alcohol percentage (e.g., 12.5, 14.0) - extract from description'),
-        region: z.string().optional().describe('Wine region or appellation (e.g., "Bordeaux", "Margaux", "Napa Valley")'),
-        hsCode: z.string().optional().describe('FULL HS/tariff/commodity code with ALL digits exactly as shown (e.g., 22042109, 22042132, NOT truncated to 22042100)'),
-        quantity: z.number().optional().describe('Total quantity of bottles'),
-        cases: z.number().optional().describe('Number of cases'),
+        lwin: z.string().optional().describe('LWIN-18 code - found in "Product Code" column. Format is 18 digits like "100604520190600750"'),
+        producer: z.string().optional().describe('Producer/winery name (e.g., "Chateau Angelus", "Domaine de la Romanee-Conti")'),
+        vintage: z.number().optional().describe('Vintage year from "Vintage" column (e.g., 2015, 2018, 2021)'),
+        bottleSize: z.string().optional().describe('Bottle size in ml. Parse from "Size" column: "6x75cl"→"750ml", "12x75cl"→"750ml", "1x150cl"→"1500ml", "3x75cl"→"750ml"'),
+        bottlesPerCase: z.number().optional().describe('Bottles per case from "Size" column. Parse: "6x75cl"→6, "12x75cl"→12, "3x75cl"→3, "1x150cl"→1'),
+        alcoholPercent: z.number().optional().describe('Alcohol % from "ABV %" column (e.g., 12.5, 14.0, 14.5)'),
+        region: z.string().optional().describe('Wine region/appellation extracted from product name (e.g., "Saint-Emilion Grand Cru", "Margaux", "Pomerol")'),
+        hsCode: z.string().optional().describe('HS/Commodity code from "Commodity Code" column. Extract ALL digits exactly (e.g., "2204214290", "2204214210")'),
+        quantity: z.number().optional().describe('DEPRECATED - use cases instead'),
+        cases: z.number().optional().describe('Number of CASES from "Qty" column. This is the case count, NOT bottle count. E.g., Qty=1 means 1 case'),
         weight: z.number().optional().describe('Weight in kg'),
         volume: z.number().optional().describe('Volume in m³'),
-        unitPrice: z.number().optional().describe('Unit price'),
-        total: z.number().optional().describe('Line total'),
-        countryOfOrigin: z.string().optional().describe('Country of origin'),
+        unitPrice: z.number().optional().describe('Unit price per case from "Unit Price USD" column'),
+        total: z.number().optional().describe('Line total from "Total Price USD" column'),
+        countryOfOrigin: z.string().optional().describe('Country from "Origin" column (e.g., "France", "Italy", "Spain")'),
       }),
     )
     .optional()
@@ -157,12 +157,26 @@ You are a TRANSCRIPTION tool, not a creative writer. Extract ONLY what exists in
 - Airport of origin and destination
 - Shipper and consignee
 - Cargo weight and dimensions`,
-    commercial_invoice: `Focus on extracting:
-- Invoice number and date
-- Buyer and seller details
-- All product line items with HS codes
-- Unit prices and totals
-- Incoterms and payment terms`,
+    commercial_invoice: `Focus on extracting wine commercial invoice data:
+
+COLUMN MAPPING - CRITICAL:
+- "Qty" column → cases (NUMBER OF CASES, not bottles!)
+- "Size" column (e.g., "6x75cl") → parse into bottlesPerCase (6) and bottleSize ("750ml")
+- "Product Code" column → lwin (this is the LWIN-18 SKU code!)
+- "ABV %" column → alcoholPercent
+- "Origin" column → countryOfOrigin
+- "Vintage" column → vintage
+- "Commodity Code" column → hsCode
+- "Unit Price USD" column → unitPrice
+- "Total Price USD" column → total
+
+PARSING "Size" COLUMN - EXAMPLES:
+- "6x75cl" → bottlesPerCase: 6, bottleSize: "750ml"
+- "12x75cl" → bottlesPerCase: 12, bottleSize: "750ml"
+- "3x75cl" → bottlesPerCase: 3, bottleSize: "750ml"
+- "1x150cl" → bottlesPerCase: 1, bottleSize: "1500ml"
+
+CRITICAL: The "Qty" column shows NUMBER OF CASES. If Qty=1 and Size=6x75cl, that means 1 case containing 6 bottles.`,
     customs_document: `Focus on extracting:
 - Declaration number
 - HS codes and tariff classifications
@@ -220,38 +234,38 @@ const adminExtractDocument = adminProcedure.input(extractDocumentSchema).mutatio
           content: [
             {
               type: 'text' as const,
-              text: `TRANSCRIBE all data from this ${documentType.replace('_', ' ')} image.
+              text: `TRANSCRIBE this WINE COMMERCIAL INVOICE image.
 
-CRITICAL RULES:
-1. Product names must be copied CHARACTER BY CHARACTER from the document
-2. Wine products typically look like: "Producer Name Wine Type Appellation Year 0.75L 12.5" - copy the FULL string exactly
-3. NEVER output famous brand names (Moet, Dom Perignon, Veuve Clicquot, Krug, etc.) unless those EXACT letters appear
-4. If you cannot read text clearly, output "UNREADABLE"
-5. Extract EVERY line item - count them to ensure completeness
+COLUMN MAPPING FOR WINE INVOICES - CRITICAL:
+| Column | Maps to | Description |
+|--------|---------|-------------|
+| Qty | cases | NUMBER OF CASES (NOT bottles!) |
+| Size | bottlesPerCase + bottleSize | Parse "6x75cl" → bottlesPerCase:6, bottleSize:"750ml" |
+| ABV % | alcoholPercent | Alcohol percentage |
+| Origin | countryOfOrigin | Country (France, Italy, Spain, etc.) |
+| Description of Goods | productName + producer + region | Full wine name |
+| Product Code | lwin | LWIN-18 code (18-digit SKU like "100604520190600750") |
+| Vintage | vintage | 4-digit year |
+| Unit Price USD | unitPrice | Price per case |
+| Total Price USD | total | Line total |
+| Commodity Code | hsCode | HS tariff code (10 digits like "2204214290") |
 
-LWIN EXTRACTION - CRITICAL FOR SKU:
-- lwin: Extract the LWIN (Liv-ex Wine Identification Number) from each row
-- May be labeled as "Product Code", "LWIN", "SKU", "Item Code", or "Code" in the document
-- LWIN is typically a numeric code like "1010279" or alphanumeric - copy EXACTLY as shown
-- This is used as the unique SKU identifier - extraction is ESSENTIAL
+PARSING SIZE COLUMN - VERY IMPORTANT:
+- "6x75cl" → bottlesPerCase: 6, bottleSize: "750ml"
+- "12x75cl" → bottlesPerCase: 12, bottleSize: "750ml"
+- "3x75cl" → bottlesPerCase: 3, bottleSize: "750ml"
+- "1x150cl" → bottlesPerCase: 1, bottleSize: "1500ml"
 
-WINE FIELD EXTRACTION - PARSE EACH LINE ITEM:
-- producer: Extract winery/producer name (e.g., "Chateau Margaux", "Domaine de la Romanee-Conti")
-- vintage: Extract 4-digit year (e.g., 2015, 2018, 2021)
-- bottleSize: Extract bottle size like "750ml", "0.75L", "1.5L", "375ml" - convert "75cl" to "750ml"
-- bottlesPerCase: Extract case config (e.g., 6 or 12) from patterns like "6x75cl" or separate column
-- alcoholPercent: Extract alcohol % (e.g., 12.5, 14.0)
-- region: Extract region/appellation (e.g., "Bordeaux", "Pomerol", "Saint-Emilion")
-- countryOfOrigin: Extract country (e.g., "France", "Italy", "Spain")
+CRITICAL RULE: The "Qty" column shows NUMBER OF CASES!
+- If Qty=1 and Size="6x75cl", this means 1 CASE containing 6 bottles
+- Do NOT put "6" in cases just because the Size says "6x75cl"
+- The "6" in "6x75cl" goes into bottlesPerCase, NOT cases
 
-HS CODE EXTRACTION - EXTREMELY IMPORTANT:
-- The document has a "Commodity Code" column - READ EACH ROW'S CODE INDIVIDUALLY
-- Each product may have a DIFFERENT 8-digit code (22042109, 22042132, 22041000, 22042142, etc.)
-- DO NOT assume all wines are 22042100 - that is WRONG
-- Look at the rightmost numeric column for the commodity/HS code
-- If you cannot read a specific code clearly, leave it empty rather than defaulting to 22042100
+EXAMPLE:
+Row: Qty=1, Size="6x75cl", Description="Chateau Angelus...", Product Code="100604520190600750"
+Result: cases=1, bottlesPerCase=6, bottleSize="750ml", lwin="100604520190600750"
 
-This is a TRANSCRIPTION task, not interpretation. Copy exactly what you see.`,
+Extract EVERY line item. Copy product names exactly as written.`,
             },
             {
               type: 'image' as const,
@@ -296,34 +310,47 @@ This is a TRANSCRIPTION task, not interpretation. Copy exactly what you see.`,
           schema: extractedLogisticsDataSchema,
           system: systemPrompt,
           maxTokens: 16384,
-          prompt: `Parse this invoice/document text and extract structured data.
+          prompt: `Parse this WINE COMMERCIAL INVOICE and extract structured data.
 
-EXAMPLES OF CORRECT EXTRACTION:
-Input text: "François Thienpont Terre Elysée 2021 0.75L 12 22042142 420 70 $28.58"
-Output: { productName: "François Thienpont Terre Elysée 2021 0.75L 12", hsCode: "22042142", quantity: 420, cases: 70, unitPrice: 28.58 }
+COLUMN MAPPING FOR WINE INVOICES - EXTREMELY IMPORTANT:
+| Column | Maps to | Description |
+|--------|---------|-------------|
+| Qty | cases | NUMBER OF CASES (not bottles!) |
+| Size | bottlesPerCase + bottleSize | Parse "6x75cl" → bottlesPerCase:6, bottleSize:"750ml" |
+| ABV % | alcoholPercent | Alcohol percentage |
+| Origin | countryOfOrigin | Country (France, Italy, Spain, etc.) |
+| Description of Goods | productName + producer + region | Full wine name |
+| Product Code | lwin | LWIN-18 code (18-digit SKU) |
+| Vintage | vintage | 4-digit year |
+| Unit Price USD | unitPrice | Price per case |
+| Total Price USD | total | Line total |
+| Commodity Code | hsCode | HS tariff code |
 
-Input text: "Masseria Alfano Fiano d'Avellino DOCG Riserva Il Gheppio 2020 0.75L 12.5 22042138 420 70 $38.11"
-Output: { productName: "Masseria Alfano Fiano d'Avellino DOCG Riserva Il Gheppio 2020 0.75L 12.5", hsCode: "22042138", quantity: 420, cases: 70, unitPrice: 38.11 }
+PARSING SIZE COLUMN - CRITICAL:
+- "6x75cl" → bottlesPerCase: 6, bottleSize: "750ml"
+- "12x75cl" → bottlesPerCase: 12, bottleSize: "750ml"
+- "3x75cl" → bottlesPerCase: 3, bottleSize: "750ml"
+- "1x150cl" → bottlesPerCase: 1, bottleSize: "1500ml"
 
-RULES:
-- Copy product names EXACTLY as they appear - these are wine producers, copy the full description
-- The Description column contains the full product name including producer, wine, vintage, size, and alcohol %
-- Extract ALL rows from the table - count them to ensure completeness
-- HS CODES ARE CRITICAL: Extract the COMPLETE code with ALL digits. Codes like 22042109, 22042132, 22041000 are DIFFERENT codes - do NOT truncate or simplify to 22042100. Each row may have a unique HS code.
+EXAMPLE ROW:
+Qty=1, Size="6x75cl", Origin="France", Description="Chateau Angelus Premier Grand Cru Classe A, Saint-Emilion Grand Cru", Product Code="100604520190600750", Vintage=2019, Unit Price=$1,575.50
 
-LWIN EXTRACTION - CRITICAL FOR SKU:
-- lwin: Extract the LWIN (Liv-ex Wine Identification Number) from each row
-- May be labeled as "Product Code", "LWIN", "SKU", "Item Code", or "Code"
-- Copy the code EXACTLY as shown - this is used as the unique SKU identifier
+Should produce:
+{
+  cases: 1,          // FROM QTY COLUMN - THIS IS CASES NOT BOTTLES
+  bottlesPerCase: 6, // PARSED FROM "6x75cl"
+  bottleSize: "750ml", // PARSED FROM "6x75cl"
+  countryOfOrigin: "France",
+  productName: "Chateau Angelus Premier Grand Cru Classe A, Saint-Emilion Grand Cru",
+  producer: "Chateau Angelus",
+  region: "Saint-Emilion Grand Cru",
+  lwin: "100604520190600750",
+  vintage: 2019,
+  unitPrice: 1575.50,
+  total: 1575.50
+}
 
-WINE FIELD EXTRACTION - FOR EACH LINE ITEM, EXTRACT:
-- producer: The winery/producer name (first part of description)
-- vintage: The 4-digit year (e.g., 2015, 2018, 2021)
-- bottleSize: Bottle size like "750ml" (convert "0.75L" or "75cl" to "750ml")
-- bottlesPerCase: Case configuration (6 or 12) - look for "6x75cl" or "12x75cl" patterns
-- alcoholPercent: Alcohol % (e.g., 12.5, 14.0) - usually at end of description
-- region: Wine region/appellation if shown (e.g., "Bordeaux", "Pomerol", "Saint-Emilion")
-- countryOfOrigin: Country of origin if shown
+CRITICAL: The Qty column is the NUMBER OF CASES. Do NOT confuse the "6" in "6x75cl" with the Qty.
 
 --- DOCUMENT TEXT ---
 ${pdfText}
@@ -344,38 +371,38 @@ ${pdfText}
             content: [
               {
                 type: 'text' as const,
-                text: `TRANSCRIBE all data from this ${documentType.replace('_', ' ')} document.
+                text: `TRANSCRIBE this WINE COMMERCIAL INVOICE document.
 
-CRITICAL RULES:
-1. Product names must be copied CHARACTER BY CHARACTER from the document
-2. Wine products typically look like: "Producer Name Wine Type Appellation Year 0.75L 12.5" - copy the FULL string exactly
-3. NEVER output famous brand names (Moet, Dom Perignon, Veuve Clicquot, Krug, etc.) unless those EXACT letters appear
-4. If you cannot read text clearly, output "UNREADABLE"
-5. Extract EVERY line item - count them to ensure completeness
+COLUMN MAPPING FOR WINE INVOICES - CRITICAL:
+| Column | Maps to | Description |
+|--------|---------|-------------|
+| Qty | cases | NUMBER OF CASES (NOT bottles!) |
+| Size | bottlesPerCase + bottleSize | Parse "6x75cl" → bottlesPerCase:6, bottleSize:"750ml" |
+| ABV % | alcoholPercent | Alcohol percentage |
+| Origin | countryOfOrigin | Country (France, Italy, Spain, etc.) |
+| Description of Goods | productName + producer + region | Full wine name |
+| Product Code | lwin | LWIN-18 code (18-digit SKU like "100604520190600750") |
+| Vintage | vintage | 4-digit year |
+| Unit Price USD | unitPrice | Price per case |
+| Total Price USD | total | Line total |
+| Commodity Code | hsCode | HS tariff code (10 digits like "2204214290") |
 
-LWIN EXTRACTION - CRITICAL FOR SKU:
-- lwin: Extract the LWIN (Liv-ex Wine Identification Number) from each row
-- May be labeled as "Product Code", "LWIN", "SKU", "Item Code", or "Code" in the document
-- LWIN is typically a numeric code like "1010279" or alphanumeric - copy EXACTLY as shown
-- This is used as the unique SKU identifier - extraction is ESSENTIAL
+PARSING SIZE COLUMN - VERY IMPORTANT:
+- "6x75cl" → bottlesPerCase: 6, bottleSize: "750ml"
+- "12x75cl" → bottlesPerCase: 12, bottleSize: "750ml"
+- "3x75cl" → bottlesPerCase: 3, bottleSize: "750ml"
+- "1x150cl" → bottlesPerCase: 1, bottleSize: "1500ml"
 
-WINE FIELD EXTRACTION - PARSE EACH LINE ITEM:
-- producer: Extract winery/producer name (e.g., "Chateau Margaux", "Domaine de la Romanee-Conti")
-- vintage: Extract 4-digit year (e.g., 2015, 2018, 2021)
-- bottleSize: Extract bottle size like "750ml", "0.75L", "1.5L", "375ml" - convert "75cl" to "750ml"
-- bottlesPerCase: Extract case config (e.g., 6 or 12) from patterns like "6x75cl" or separate column
-- alcoholPercent: Extract alcohol % (e.g., 12.5, 14.0)
-- region: Extract region/appellation (e.g., "Bordeaux", "Pomerol", "Saint-Emilion")
-- countryOfOrigin: Extract country (e.g., "France", "Italy", "Spain")
+CRITICAL RULE: The "Qty" column shows NUMBER OF CASES!
+- If Qty=1 and Size="6x75cl", this means 1 CASE containing 6 bottles
+- Do NOT put "6" in cases just because the Size says "6x75cl"
+- The "6" in "6x75cl" goes into bottlesPerCase, NOT cases
 
-HS CODE EXTRACTION - EXTREMELY IMPORTANT:
-- The document has a "Commodity Code" column - READ EACH ROW'S CODE INDIVIDUALLY
-- Each product may have a DIFFERENT 8-digit code (22042109, 22042132, 22041000, 22042142, etc.)
-- DO NOT assume all wines are 22042100 - that is WRONG
-- Look at the rightmost numeric column for the commodity/HS code
-- If you cannot read a specific code clearly, leave it empty rather than defaulting to 22042100
+EXAMPLE:
+Row: Qty=1, Size="6x75cl", Description="Chateau Angelus...", Product Code="100604520190600750"
+Result: cases=1, bottlesPerCase=6, bottleSize="750ml", lwin="100604520190600750"
 
-This is a TRANSCRIPTION task, not interpretation. Copy exactly what you see.`,
+Extract EVERY line item. Copy product names exactly as written.`,
               },
               {
                 type: 'file' as const,
