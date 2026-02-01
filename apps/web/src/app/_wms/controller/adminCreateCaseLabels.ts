@@ -47,13 +47,13 @@ const adminCreateCaseLabels = adminProcedure
 
     const locationCode = location?.locationCode ?? '';
 
-    // Get the current max sequence for this LWIN in this shipment
+    // Get the current max sequence for this LWIN across ALL labels (globally unique)
     const [maxSeqResult] = await db
       .select({
         maxSeq: sql<number>`COALESCE(MAX(CAST(SPLIT_PART(${wmsCaseLabels.barcode}, '-', -1) AS INTEGER)), 0)`,
       })
       .from(wmsCaseLabels)
-      .where(eq(wmsCaseLabels.shipmentId, shipmentId));
+      .where(eq(wmsCaseLabels.lwin18, lwin18));
 
     let currentSeq = maxSeqResult?.maxSeq ?? 0;
 
