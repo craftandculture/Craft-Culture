@@ -3,14 +3,15 @@
 import {
   IconAlertCircle,
   IconAlertTriangle,
-  IconBarcode,
+  IconArrowLeft,
+  IconArrowRight,
   IconCheck,
   IconChevronRight,
   IconCloudUpload,
-  IconCopy,
-  IconEdit,
   IconLoader2,
   IconMapPin,
+  IconPlus,
+  IconPrinter,
   IconTrash,
 } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -25,273 +26,50 @@ import CardContent from '@/app/_ui/components/Card/CardContent';
 import CardTitle from '@/app/_ui/components/Card/CardTitle';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Typography from '@/app/_ui/components/Typography/Typography';
+import ScanInput from '@/app/_wms/components/ScanInput';
+import ZebraPrint, { useZebraPrint } from '@/app/_wms/components/ZebraPrint';
 import useTRPC from '@/lib/trpc/browser';
 
+interface LocationAssignment {
+  locationId: string;
+  locationCode: string;
+  cases: number;
+  labelsPrinted: boolean;
+}
+
 interface ReceivedItem {
-  id: string; // unique ID for this line (shipmentItemId or generated for added items)
-  shipmentItemId: string | null; // null for manually added items
-  baseItemId: string | null; // reference to original item for added variants
+  id: string;
+  shipmentItemId: string | null;
+  baseItemId: string | null;
   productName: string;
   producer?: string | null;
   vintage?: number | null;
   lwin?: string | null;
   expectedCases: number;
   receivedCases: number;
-  // Pack configuration
   expectedBottlesPerCase: number;
   expectedBottleSizeMl: number;
   receivedBottlesPerCase: number;
   receivedBottleSizeMl: number;
   packChanged: boolean;
-  isAddedItem: boolean; // true if this was added manually (different pack variant)
-  isChecked: boolean; // true if verified/checked off
-  locationId?: string; // per-item location assignment
-  expiryDate?: Date;
+  isAddedItem: boolean;
+  isVerified: boolean;
+  locationAssignments: LocationAssignment[];
+  totalLabelsPrinted: number;
   notes?: string;
 }
 
-/**
- * Item row component for receiving - Mobile optimized for Zebra scanner (6" screen)
- */
-interface ItemRowProps {
-  item: ReceivedItem;
-  shipmentItem: {
-    id: string;
-    productName: string;
-    producer?: string | null;
-    vintage?: number | null;
-    lwin?: string | null;
-    cases: number;
-    bottlesPerCase?: number | null;
-    bottleSizeMl?: number | null;
-  };
-  locations: Array<{ id: string; locationCode: string; locationType: string }>;
-  isEditingPack: boolean;
-  onToggleCheck: () => void;
-  onUpdateCases: (cases: number) => void;
-  onUpdatePackConfig: (bottlesPerCase: number, bottleSizeMl: number) => void;
-  onUpdateLocation: (locationId: string) => void;
-  onEditPack: () => void;
-  onClosePack: () => void;
-  onAddVariant?: () => void;
-  onRemove?: () => void;
-  isAddedVariant?: boolean;
-}
-
-const ItemRow = ({
-  item,
-  shipmentItem,
-  locations,
-  isEditingPack,
-  onToggleCheck,
-  onUpdateCases,
-  onUpdatePackConfig,
-  onUpdateLocation,
-  onEditPack,
-  onClosePack,
-  onAddVariant,
-  onRemove,
-  isAddedVariant = false,
-}: ItemRowProps) => {
-  const variance = item.receivedCases - item.expectedCases;
-
-  return (
-    <div className={`flex flex-col gap-3 ${item.isChecked ? 'opacity-60' : ''}`}>
-      {/* Top row: Checkbox + Product Name + Badge */}
-      <div className="flex items-start gap-3">
-        {/* Large touch-friendly checkbox (48px minimum) */}
-        <button
-          onClick={onToggleCheck}
-          className={`flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg border-2 transition-colors active:scale-95 ${
-            item.isChecked
-              ? 'border-emerald-500 bg-emerald-500 text-white'
-              : 'border-border-primary bg-fill-secondary hover:border-border-brand'
-          }`}
-        >
-          {item.isChecked && <IconCheck className="h-6 w-6" />}
-        </button>
-
-        <div className="min-w-0 flex-1">
-          <div className="flex items-start gap-2">
-            <Typography variant="headingSm" className={`leading-tight ${item.isChecked ? 'line-through' : ''}`}>
-              {item.productName}
-            </Typography>
-            {isAddedVariant && (
-              <span className="flex-shrink-0 rounded bg-amber-100 px-2 py-1 text-xs font-medium text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">
-                Added
-              </span>
-            )}
-          </div>
-          <Typography variant="bodySm" colorRole="muted" className="mt-0.5">
-            {item.producer && `${item.producer}`}
-            {item.producer && item.vintage && ' • '}
-            {item.vintage && `${item.vintage}`}
-          </Typography>
-          {/* Pack Config button - larger touch target */}
-          <button
-            className={`mt-2 flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium transition-colors active:scale-95 ${
-              item.packChanged
-                ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300'
-                : 'bg-fill-secondary text-text-muted hover:bg-fill-tertiary'
-            }`}
-            onClick={onEditPack}
-          >
-            {item.receivedBottlesPerCase}×{item.receivedBottleSizeMl}ml
-            <Icon icon={IconEdit} size="sm" />
-          </button>
-        </div>
-      </div>
-
-      {/* Pack editor - full width on mobile */}
-      {isEditingPack && (
-        <div className="flex flex-wrap items-center gap-2 rounded-lg bg-fill-secondary p-3">
-          <select
-            className="h-12 flex-1 rounded-lg border border-border-primary bg-fill-primary px-3 text-base"
-            value={item.receivedBottlesPerCase}
-            onChange={(e) => onUpdatePackConfig(parseInt(e.target.value), item.receivedBottleSizeMl)}
-          >
-            <option value={1}>1 bottle</option>
-            <option value={3}>3 bottles</option>
-            <option value={6}>6 bottles</option>
-            <option value={12}>12 bottles</option>
-            <option value={24}>24 bottles</option>
-          </select>
-          <span className="text-lg font-medium">×</span>
-          <select
-            className="h-12 flex-1 rounded-lg border border-border-primary bg-fill-primary px-3 text-base"
-            value={item.receivedBottleSizeMl}
-            onChange={(e) => onUpdatePackConfig(item.receivedBottlesPerCase, parseInt(e.target.value))}
-          >
-            <option value={375}>375ml</option>
-            <option value={500}>500ml</option>
-            <option value={750}>750ml</option>
-            <option value={1500}>1.5L</option>
-            <option value={3000}>3L</option>
-          </select>
-          <Button variant="primary" size="lg" className="h-12 px-4" onClick={onClosePack}>
-            <Icon icon={IconCheck} size="md" />
-          </Button>
-        </div>
-      )}
-
-      {/* LWIN - hidden on very small screens, shown on tablets+ */}
-      {item.lwin && (
-        <Typography variant="bodyXs" className="hidden font-mono text-text-muted sm:block">
-          {item.lwin}
-        </Typography>
-      )}
-
-      {/* Pack changed indicator */}
-      {item.packChanged && !isAddedVariant && (
-        <div className="rounded-md bg-amber-50 p-2 text-sm text-amber-700 dark:bg-amber-900/20 dark:text-amber-400">
-          Changed from {shipmentItem.bottlesPerCase}×{shipmentItem.bottleSizeMl}ml
-        </div>
-      )}
-
-      {/* Quantity controls - large touch targets */}
-      <div className="flex items-center gap-3">
-        {/* Expected (for original items) */}
-        {!isAddedVariant && (
-          <div className="min-w-16 text-center">
-            <Typography variant="bodyXs" colorRole="muted">
-              Expected
-            </Typography>
-            <Typography variant="headingSm" className="text-blue-600">
-              {item.expectedCases}
-            </Typography>
-          </div>
-        )}
-
-        {/* Quantity stepper - 48px touch targets */}
-        <div className="flex flex-1 items-center justify-center gap-2">
-          <button
-            onClick={() => onUpdateCases(item.receivedCases - 1)}
-            className="flex h-14 w-14 items-center justify-center rounded-lg border-2 border-border-primary bg-fill-secondary text-xl font-bold transition-colors hover:bg-fill-tertiary active:scale-95 active:bg-fill-tertiary"
-          >
-            −
-          </button>
-          <input
-            type="number"
-            inputMode="numeric"
-            pattern="[0-9]*"
-            className="h-14 w-20 rounded-lg border-2 border-border-primary bg-fill-primary text-center text-xl font-bold focus:border-border-brand focus:outline-none"
-            value={item.receivedCases}
-            onChange={(e) => onUpdateCases(parseInt(e.target.value) || 0)}
-            min={0}
-          />
-          <button
-            onClick={() => onUpdateCases(item.receivedCases + 1)}
-            className="flex h-14 w-14 items-center justify-center rounded-lg border-2 border-border-primary bg-fill-secondary text-xl font-bold transition-colors hover:bg-fill-tertiary active:scale-95 active:bg-fill-tertiary"
-          >
-            +
-          </button>
-        </div>
-
-        {/* Variance indicator */}
-        {!isAddedVariant && variance !== 0 && (
-          <div
-            className={`min-w-14 rounded-lg px-3 py-2 text-center text-sm font-bold ${
-              variance > 0
-                ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300'
-                : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'
-            }`}
-          >
-            {variance > 0 ? '+' : ''}
-            {variance}
-          </div>
-        )}
-      </div>
-
-      {/* Location selector - per item */}
-      <div className="flex items-center gap-2">
-        <Icon icon={IconMapPin} size="sm" colorRole="muted" />
-        <select
-          className={`h-12 flex-1 rounded-lg border-2 bg-fill-primary px-3 text-base font-medium focus:border-border-brand focus:outline-none ${
-            item.locationId ? 'border-emerald-500 text-emerald-700' : 'border-border-primary'
-          }`}
-          value={item.locationId || ''}
-          onChange={(e) => onUpdateLocation(e.target.value)}
-        >
-          <option value="">Select location...</option>
-          {locations.map((loc) => (
-            <option key={loc.id} value={loc.id}>
-              {loc.locationCode}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {/* Action buttons row */}
-      <div className="flex gap-2">
-        {/* Add variant button (only for original items) */}
-        {!isAddedVariant && onAddVariant && (
-          <Button
-            variant="outline"
-            size="lg"
-            className="h-12 flex-1"
-            onClick={onAddVariant}
-          >
-            <ButtonContent iconLeft={IconCopy}>Add Pack Size</ButtonContent>
-          </Button>
-        )}
-        {/* Remove button (only for added items) */}
-        {isAddedVariant && onRemove && (
-          <Button
-            variant="outline"
-            size="lg"
-            className="h-12 flex-1 border-red-200 text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-900/20"
-            onClick={onRemove}
-          >
-            <ButtonContent iconLeft={IconTrash}>Remove</ButtonContent>
-          </Button>
-        )}
-      </div>
-    </div>
-  );
-};
+type ProductPhase = 'verifying' | 'printing' | 'shelving' | 'complete';
 
 /**
- * WMS Receive Shipment - enter received quantities
+ * WMS Receive Shipment - Product-by-product receiving with integrated label printing
+ *
+ * Flow for each product:
+ * 1. VERIFY: Find and count all cases of this product
+ * 2. PRINT: Print labels for cases going to a specific bay
+ * 3. SHELVE: Scan bay barcode and assign cases
+ * 4. Repeat 2-3 if splitting across multiple bays
+ * 5. Move to next product
  */
 const WMSReceiveShipmentPage = () => {
   const params = useParams();
@@ -299,16 +77,27 @@ const WMSReceiveShipmentPage = () => {
   const shipmentId = params.shipmentId as string;
   const api = useTRPC();
   const queryClient = useQueryClient();
+  const { print: zebraPrint, isConnected: isPrinterConnected } = useZebraPrint();
 
+  // Product navigation
+  const [currentProductIndex, setCurrentProductIndex] = useState(0);
+  const [productPhase, setProductPhase] = useState<ProductPhase>('verifying');
+
+  // Receiving state
   const [receivedItems, setReceivedItems] = useState<Map<string, ReceivedItem>>(new Map());
   const [notes, setNotes] = useState('');
-  const [receivingLocationId, setReceivingLocationId] = useState<string>('');
-  const [editingPackItemId, setEditingPackItemId] = useState<string | null>(null);
   const [initialized, setInitialized] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
-  // Track pending saves to debounce
+  // Current bay assignment state (for the current product)
+  const [pendingCases, setPendingCases] = useState(0);
+  const [scannedLocationCode, setScannedLocationCode] = useState<string | null>(null);
+  const [scannedLocationId, setScannedLocationId] = useState<string | null>(null);
+  const [scanError, setScanError] = useState<string | null>(null);
+  const [isPrinting, setIsPrinting] = useState(false);
+  const [printError, setPrintError] = useState<string | null>(null);
+
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Get shipment details
@@ -317,19 +106,26 @@ const WMSReceiveShipmentPage = () => {
     enabled: !!shipmentId,
   });
 
-  // Get saved draft from database
+  // Get saved draft
   const { data: savedDraft, isLoading: draftLoading } = useQuery({
     ...api.wms.admin.receiving.getDraft.queryOptions({ shipmentId }),
     enabled: !!shipmentId,
   });
 
-  // Get locations (to select RECEIVING location)
+  // Get locations
   const { data: locations } = useQuery({
     ...api.wms.admin.locations.getMany.queryOptions({}),
   });
 
-  // Find RECEIVING location
-  const receivingLocation = locations?.find((l) => l.locationType === 'receiving');
+  // Location lookup by barcode
+  const locationLookupMutation = useMutation({
+    ...api.wms.admin.operations.getLocationByBarcode.mutationOptions(),
+  });
+
+  // Create case labels
+  const createLabelsMutation = useMutation({
+    ...api.wms.admin.labels.createCaseLabels.mutationOptions(),
+  });
 
   // Save draft mutation
   const { mutate: saveDraftMutate } = useMutation({
@@ -343,37 +139,39 @@ const WMSReceiveShipmentPage = () => {
     },
   });
 
-  // Delete draft mutation (used on complete or reset)
+  // Delete draft mutation
   const { mutate: deleteDraftMutate, isPending: isDeletingDraft } = useMutation({
     ...api.wms.admin.receiving.deleteDraft.mutationOptions(),
     onSuccess: () => {
-      // Reset local state to reinitialize from shipment items
       setReceivedItems(new Map());
       setInitialized(false);
       setLastSaved(null);
+      setCurrentProductIndex(0);
+      setProductPhase('verifying');
       void queryClient.invalidateQueries();
     },
   });
 
-  // Reset handler - clears draft and starts fresh
-  const handleReset = () => {
-    if (confirm('Clear saved progress and start fresh? This cannot be undone.')) {
+  // Complete receiving mutation
+  const receiveMutation = useMutation({
+    ...api.wms.admin.receiving.receiveShipment.mutationOptions(),
+    onSuccess: () => {
       deleteDraftMutate({ shipmentId });
-    }
-  };
+      void queryClient.invalidateQueries();
+      router.push('/platform/admin/wms/receive');
+    },
+  });
 
-  // Save draft to database (debounced)
+  // Save draft (debounced)
   const saveDraft = useCallback(() => {
     if (receivedItems.size === 0) return;
 
-    // Cancel any pending save
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current);
     }
 
     setIsSaving(true);
 
-    // Debounce: wait 1 second before saving
     saveTimeoutRef.current = setTimeout(() => {
       const items = Array.from(receivedItems.values()).map((item) => ({
         id: item.id,
@@ -391,9 +189,8 @@ const WMSReceiveShipmentPage = () => {
         receivedBottleSizeMl: item.receivedBottleSizeMl,
         packChanged: item.packChanged,
         isAddedItem: item.isAddedItem,
-        isChecked: item.isChecked,
-        locationId: item.locationId,
-        expiryDate: item.expiryDate?.toISOString(),
+        isChecked: item.isVerified,
+        locationId: item.locationAssignments[0]?.locationId,
         notes: item.notes,
       }));
 
@@ -405,58 +202,27 @@ const WMSReceiveShipmentPage = () => {
     }, 1000);
   }, [receivedItems, notes, shipmentId, saveDraftMutate]);
 
-  // Save immediately (no debounce) - for checkbox changes
-  const saveImmediately = useCallback(() => {
-    if (receivedItems.size === 0) return;
+  // Get current item - defined early so it can be used in effects
+  const getCurrentItem = useCallback((): ReceivedItem | undefined => {
+    if (!shipment?.items) return undefined;
+    const itemId = shipment.items[currentProductIndex]?.id;
+    return itemId ? receivedItems.get(itemId) : undefined;
+  }, [shipment?.items, currentProductIndex, receivedItems]);
 
-    // Cancel any pending debounced save
-    if (saveTimeoutRef.current) {
-      clearTimeout(saveTimeoutRef.current);
-    }
-
-    setIsSaving(true);
-
-    const items = Array.from(receivedItems.values()).map((item) => ({
-      id: item.id,
-      shipmentItemId: item.shipmentItemId,
-      baseItemId: item.baseItemId,
-      productName: item.productName,
-      producer: item.producer,
-      vintage: item.vintage,
-      lwin: item.lwin,
-      expectedCases: item.expectedCases,
-      receivedCases: item.receivedCases,
-      expectedBottlesPerCase: item.expectedBottlesPerCase,
-      expectedBottleSizeMl: item.expectedBottleSizeMl,
-      receivedBottlesPerCase: item.receivedBottlesPerCase,
-      receivedBottleSizeMl: item.receivedBottleSizeMl,
-      packChanged: item.packChanged,
-      isAddedItem: item.isAddedItem,
-      isChecked: item.isChecked,
-      locationId: item.locationId,
-      expiryDate: item.expiryDate?.toISOString(),
-      notes: item.notes,
-    }));
-
-    saveDraftMutate({
-      shipmentId,
-      items,
-      notes: notes || undefined,
-    });
-  }, [receivedItems, notes, shipmentId, saveDraftMutate]);
-
-  // Initialize from saved draft or shipment items
+  // Initialize from draft or shipment
   useEffect(() => {
     if (!shipment?.items || initialized || draftLoading) return;
 
-    // If there's a saved draft, load it
     if (savedDraft?.items) {
       const loadedItems = new Map<string, ReceivedItem>();
       savedDraft.items.forEach((item) => {
         loadedItems.set(item.id, {
           ...item,
-          locationId: item.locationId ?? undefined,
-          expiryDate: item.expiryDate ? new Date(item.expiryDate) : undefined,
+          isVerified: item.isChecked,
+          locationAssignments: item.locationId
+            ? [{ locationId: item.locationId, locationCode: '', cases: item.receivedCases, labelsPrinted: true }]
+            : [],
+          totalLabelsPrinted: item.isChecked ? item.receivedCases : 0,
         });
       });
       setReceivedItems(loadedItems);
@@ -468,7 +234,6 @@ const WMSReceiveShipmentPage = () => {
       return;
     }
 
-    // Initialize from shipment items (fresh start)
     const initial = new Map<string, ReceivedItem>();
     shipment.items.forEach((item) => {
       initial.set(item.id, {
@@ -487,21 +252,29 @@ const WMSReceiveShipmentPage = () => {
         receivedBottleSizeMl: item.bottleSizeMl ?? 750,
         packChanged: false,
         isAddedItem: false,
-        isChecked: false,
+        isVerified: false,
+        locationAssignments: [],
+        totalLabelsPrinted: 0,
       });
     });
     setReceivedItems(initial);
     setInitialized(true);
   }, [shipment?.items, savedDraft, initialized, draftLoading]);
 
-  // Set receiving location when locations load
+  // Reset pending cases when product changes
   useEffect(() => {
-    if (receivingLocation && !receivingLocationId) {
-      setReceivingLocationId(receivingLocation.id);
+    const currentItem = getCurrentItem();
+    if (currentItem) {
+      const assignedCases = currentItem.locationAssignments.reduce((sum, a) => sum + a.cases, 0);
+      setPendingCases(currentItem.receivedCases - assignedCases);
     }
-  }, [receivingLocation, receivingLocationId]);
+    setScannedLocationCode(null);
+    setScannedLocationId(null);
+    setScanError(null);
+    setPrintError(null);
+  }, [currentProductIndex, getCurrentItem]);
 
-  // Cleanup timeout on unmount
+  // Cleanup
   useEffect(() => {
     return () => {
       if (saveTimeoutRef.current) {
@@ -510,120 +283,169 @@ const WMSReceiveShipmentPage = () => {
     };
   }, []);
 
-  const updateReceivedCases = (itemId: string, cases: number) => {
-    const item = receivedItems.get(itemId);
-    if (item) {
-      const newMap = new Map(receivedItems.set(itemId, { ...item, receivedCases: Math.max(0, cases) }));
-      setReceivedItems(newMap);
-      saveDraft(); // Debounced save
+  // Update received cases
+  const updateReceivedCases = (cases: number) => {
+    const currentItem = getCurrentItem();
+    if (!currentItem) return;
+
+    const newCases = Math.max(0, cases);
+    const newMap = new Map(receivedItems.set(currentItem.id, { ...currentItem, receivedCases: newCases }));
+    setReceivedItems(newMap);
+
+    const assignedCases = currentItem.locationAssignments.reduce((sum, a) => sum + a.cases, 0);
+    setPendingCases(newCases - assignedCases);
+    saveDraft();
+  };
+
+  // Mark as verified and move to printing phase
+  const handleVerify = () => {
+    const currentItem = getCurrentItem();
+    if (!currentItem) return;
+
+    const newMap = new Map(receivedItems.set(currentItem.id, { ...currentItem, isVerified: true }));
+    setReceivedItems(newMap);
+    saveDraft();
+    setProductPhase('printing');
+  };
+
+  // Handle bay barcode scan
+  const handleBarcodeScan = async (barcode: string) => {
+    setScanError(null);
+    setScannedLocationCode(null);
+    setScannedLocationId(null);
+
+    try {
+      const result = await locationLookupMutation.mutateAsync({ barcode });
+      if (result) {
+        setScannedLocationCode(result.locationCode);
+        setScannedLocationId(result.id);
+      } else {
+        setScanError('Location not found');
+      }
+    } catch {
+      setScanError('Invalid barcode or location not found');
     }
   };
 
-  const updatePackConfig = (itemId: string, bottlesPerCase: number, bottleSizeMl: number) => {
-    const item = receivedItems.get(itemId);
-    if (item) {
-      const packChanged =
-        bottlesPerCase !== item.expectedBottlesPerCase || bottleSizeMl !== item.expectedBottleSizeMl;
-      const newMap = new Map(
-        receivedItems.set(itemId, {
-          ...item,
-          receivedBottlesPerCase: bottlesPerCase,
-          receivedBottleSizeMl: bottleSizeMl,
-          packChanged,
-        }),
-      );
+  // Print labels for pending cases at scanned location
+  const handlePrintLabels = async () => {
+    const currentItem = getCurrentItem();
+    if (!currentItem || !scannedLocationId || pendingCases <= 0) return;
+
+    setIsPrinting(true);
+    setPrintError(null);
+
+    try {
+      // Generate LWIN-18 from item data
+      const lwin18 = currentItem.lwin || `${currentItem.productName.replace(/\s+/g, '-').slice(0, 20)}`;
+      const packSize = `${currentItem.receivedBottlesPerCase}x${currentItem.receivedBottleSizeMl}ml`;
+
+      // Create labels in database and get ZPL
+      const result = await createLabelsMutation.mutateAsync({
+        shipmentId,
+        productName: currentItem.productName,
+        lwin18,
+        packSize,
+        lotNumber: new Date().toISOString().split('T')[0],
+        locationId: scannedLocationId,
+        quantity: pendingCases,
+      });
+
+      // Send ZPL to printer
+      if (result.zpl && isPrinterConnected()) {
+        const printSuccess = await zebraPrint(result.zpl);
+        if (!printSuccess) {
+          setPrintError('Failed to send to printer. Check connection.');
+        }
+      } else if (!isPrinterConnected()) {
+        setPrintError('Printer not connected. Labels saved but not printed.');
+      }
+
+      // Update item with new location assignment
+      const newAssignment: LocationAssignment = {
+        locationId: scannedLocationId,
+        locationCode: scannedLocationCode || '',
+        cases: pendingCases,
+        labelsPrinted: true,
+      };
+
+      const updatedItem = {
+        ...currentItem,
+        locationAssignments: [...currentItem.locationAssignments, newAssignment],
+        totalLabelsPrinted: currentItem.totalLabelsPrinted + pendingCases,
+      };
+
+      const newMap = new Map(receivedItems.set(currentItem.id, updatedItem));
       setReceivedItems(newMap);
-      saveDraft(); // Debounced save
+
+      // Reset state
+      setPendingCases(0);
+      setScannedLocationCode(null);
+      setScannedLocationId(null);
+      setProductPhase('shelving');
+      saveDraft();
+    } catch (err) {
+      setPrintError(err instanceof Error ? err.message : 'Failed to create labels');
+    } finally {
+      setIsPrinting(false);
     }
   };
 
-  const updateItemLocation = (itemId: string, locationId: string) => {
-    const item = receivedItems.get(itemId);
-    if (item) {
-      const newMap = new Map(receivedItems.set(itemId, { ...item, locationId: locationId || undefined }));
-      setReceivedItems(newMap);
-      saveDraft(); // Debounced save
-    }
-  };
+  // Remove a location assignment
+  const removeLocationAssignment = (assignmentIndex: number) => {
+    const currentItem = getCurrentItem();
+    if (!currentItem) return;
 
-  const toggleChecked = (itemId: string) => {
-    const item = receivedItems.get(itemId);
-    if (item) {
-      const newMap = new Map(receivedItems.set(itemId, { ...item, isChecked: !item.isChecked }));
-      setReceivedItems(newMap);
-      // Save immediately when checking off items (no debounce)
-      setTimeout(() => saveImmediately(), 0);
-    }
-  };
+    const assignment = currentItem.locationAssignments[assignmentIndex];
+    if (!assignment) return;
 
-  const addPackVariant = (baseItemId: string) => {
-    const baseItem = receivedItems.get(baseItemId);
-    if (!baseItem) return;
-
-    const newId = `added-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
-    const newItem: ReceivedItem = {
-      id: newId,
-      shipmentItemId: null, // Not a shipment item
-      baseItemId, // Reference to original
-      productName: baseItem.productName,
-      producer: baseItem.producer,
-      vintage: baseItem.vintage,
-      lwin: baseItem.lwin,
-      expectedCases: 0, // No expectation for added items
-      receivedCases: 1, // Default to 1
-      expectedBottlesPerCase: baseItem.expectedBottlesPerCase,
-      expectedBottleSizeMl: baseItem.expectedBottleSizeMl,
-      receivedBottlesPerCase: 6, // Default to common variant
-      receivedBottleSizeMl: baseItem.expectedBottleSizeMl,
-      packChanged: true,
-      isAddedItem: true,
-      isChecked: false,
+    const newAssignments = currentItem.locationAssignments.filter((_, i) => i !== assignmentIndex);
+    const updatedItem = {
+      ...currentItem,
+      locationAssignments: newAssignments,
+      totalLabelsPrinted: currentItem.totalLabelsPrinted - assignment.cases,
     };
 
-    const newMap = new Map(receivedItems.set(newId, newItem));
+    const newMap = new Map(receivedItems.set(currentItem.id, updatedItem));
     setReceivedItems(newMap);
-    setEditingPackItemId(newId); // Open pack editor for new item
-    saveDraft(); // Debounced save
+    setPendingCases(pendingCases + assignment.cases);
+    setProductPhase('printing');
+    saveDraft();
   };
 
-  const removeAddedItem = (itemId: string) => {
-    const item = receivedItems.get(itemId);
-    if (item?.isAddedItem) {
-      const newMap = new Map(receivedItems);
-      newMap.delete(itemId);
-      setReceivedItems(newMap);
-      saveDraft(); // Debounced save
+  // Move to next product
+  const handleNextProduct = () => {
+    if (!shipment?.items) return;
+
+    if (currentProductIndex < shipment.items.length - 1) {
+      setCurrentProductIndex(currentProductIndex + 1);
+      setProductPhase('verifying');
     }
   };
 
-  const receiveMutation = useMutation({
-    ...api.wms.admin.receiving.receiveShipment.mutationOptions(),
-    onSuccess: (data) => {
-      // Delete draft from database on successful receive
-      deleteDraftMutate({ shipmentId });
-      void queryClient.invalidateQueries();
-      // Redirect to labels page
-      router.push(`/platform/admin/wms/labels?shipmentId=${shipmentId}&totalLabels=${data.totalCaseLabels}`);
-    },
-  });
+  // Move to previous product
+  const handlePreviousProduct = () => {
+    if (currentProductIndex > 0) {
+      setCurrentProductIndex(currentProductIndex - 1);
+      setProductPhase('verifying');
+    }
+  };
 
-  const handleReceive = () => {
-    const itemsToReceive = Array.from(receivedItems.values()).filter((item) => item.receivedCases > 0);
+  // Complete all receiving
+  const handleCompleteReceiving = () => {
+    const itemsToReceive = Array.from(receivedItems.values()).filter(
+      (item) => item.receivedCases > 0 && item.locationAssignments.length > 0,
+    );
 
     if (itemsToReceive.length === 0) {
-      alert('No items to receive');
+      alert('No items ready to receive. Each product needs at least one bay assignment.');
       return;
     }
 
-    // Check all items have a location assigned
-    const itemsWithoutLocation = itemsToReceive.filter((item) => !item.locationId);
-    if (itemsWithoutLocation.length > 0) {
-      alert(`${itemsWithoutLocation.length} item(s) need a location assigned. Please select a location for each item.`);
-      return;
-    }
-
+    // Convert to receive format - use first location assignment for now
+    // TODO: Support multiple locations per item in receiveShipment
     const items = itemsToReceive.map((item) => ({
-      shipmentItemId: item.shipmentItemId ?? item.baseItemId ?? '', // Use baseItemId for added items
+      shipmentItemId: item.shipmentItemId ?? item.baseItemId ?? '',
       expectedCases: item.expectedCases,
       receivedCases: item.receivedCases,
       receivedBottlesPerCase: item.receivedBottlesPerCase,
@@ -633,17 +455,23 @@ const WMSReceiveShipmentPage = () => {
       productName: item.productName,
       producer: item.producer,
       vintage: item.vintage,
-      locationId: item.locationId!, // Per-item location
-      expiryDate: item.expiryDate,
+      locationId: item.locationAssignments[0]?.locationId ?? '',
       notes: item.notes,
     }));
 
     receiveMutation.mutate({
       shipmentId,
-      receivingLocationId: items[0]?.locationId ?? '', // Fallback, but per-item is used
+      receivingLocationId: items[0]?.locationId ?? '',
       items,
       notes: notes || undefined,
     });
+  };
+
+  // Reset handler
+  const handleReset = () => {
+    if (confirm('Clear all progress and start fresh? This cannot be undone.')) {
+      deleteDraftMutate({ shipmentId });
+    }
   };
 
   if (shipmentLoading || draftLoading) {
@@ -677,293 +505,398 @@ const WMSReceiveShipmentPage = () => {
     );
   }
 
-  const totalExpected = shipment.items.reduce((sum, item) => sum + item.cases, 0);
-  const allItems = Array.from(receivedItems.values());
-  const totalReceived = allItems.reduce((sum, item) => sum + item.receivedCases, 0);
-  const checkedCount = allItems.filter((item) => item.isChecked).length;
-  const totalItems = allItems.length;
-  const hasDiscrepancy = totalExpected !== totalReceived;
-  const allChecked = checkedCount === totalItems && totalItems > 0;
-
-  // Group items by base product (original + added variants)
-  const itemGroups = new Map<string, ReceivedItem[]>();
-  allItems.forEach((item) => {
-    const groupKey = item.baseItemId ?? item.id;
-    const existing = itemGroups.get(groupKey) || [];
-    existing.push(item);
-    itemGroups.set(groupKey, existing);
-  });
+  const currentItem = getCurrentItem();
+  const totalProducts = shipment.items.length;
+  const completedProducts = Array.from(receivedItems.values()).filter(
+    (item) => item.locationAssignments.length > 0 && item.locationAssignments.reduce((sum, a) => sum + a.cases, 0) >= item.receivedCases,
+  ).length;
+  const progressPercent = Math.round((completedProducts / totalProducts) * 100);
+  const allComplete = completedProducts === totalProducts;
 
   return (
     <div className="min-h-screen bg-fill-secondary pb-32 sm:bg-fill-primary sm:pb-8">
-      {/* Mobile Header - Sticky */}
-      <div className="sticky top-0 z-10 bg-fill-primary p-4 shadow-sm sm:relative sm:shadow-none">
+      {/* Header */}
+      <div className="sticky top-0 z-10 bg-fill-primary p-4 shadow-sm">
         <div className="flex items-center justify-between gap-3">
           <Link
             href="/platform/admin/wms/receive"
-            className="flex h-10 w-10 items-center justify-center rounded-lg bg-fill-secondary text-text-muted hover:text-text-primary sm:hidden"
+            className="flex h-10 w-10 items-center justify-center rounded-lg bg-fill-secondary text-text-muted hover:text-text-primary"
           >
             <IconChevronRight className="h-5 w-5 rotate-180" />
           </Link>
           <div className="min-w-0 flex-1">
-            <Typography variant="headingMd" className="truncate sm:text-xl">
+            <Typography variant="headingMd" className="truncate">
               {shipment.shipmentNumber}
             </Typography>
             <Typography variant="bodySm" colorRole="muted" className="truncate">
               {shipment.partnerName}
             </Typography>
           </div>
-          {/* Save indicator */}
+          {/* Save/status indicators */}
           {isSaving ? (
             <span className="flex items-center gap-1.5 rounded-full bg-blue-100 px-3 py-1.5 text-sm font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
               <IconCloudUpload className="h-4 w-4 animate-pulse" />
-              <span className="hidden sm:inline">Saving...</span>
             </span>
           ) : lastSaved ? (
             <span className="flex items-center gap-1.5 rounded-full bg-emerald-100 px-3 py-1.5 text-sm font-medium text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
               <IconCheck className="h-4 w-4" />
-              <span className="hidden sm:inline">Saved</span>
             </span>
           ) : null}
-          {/* Reset button - only show if there's saved draft data */}
           {lastSaved && (
             <button
               onClick={handleReset}
               disabled={isDeletingDraft}
-              className="flex items-center gap-1 rounded-full bg-gray-100 px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700"
+              className="rounded-full bg-gray-100 px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-400"
             >
-              {isDeletingDraft ? 'Resetting...' : 'Reset'}
+              Reset
             </button>
           )}
         </div>
 
-        {/* Desktop breadcrumb - hidden on mobile */}
-        <div className="mt-2 hidden items-center gap-2 sm:flex">
-          <Link href="/platform/admin/wms" className="text-text-muted hover:text-text-primary">
-            <Typography variant="bodySm">WMS</Typography>
-          </Link>
-          <IconChevronRight className="h-4 w-4 text-text-muted" />
-          <Link href="/platform/admin/wms/receive" className="text-text-muted hover:text-text-primary">
-            <Typography variant="bodySm">Receiving</Typography>
-          </Link>
-          <IconChevronRight className="h-4 w-4 text-text-muted" />
-          <Typography variant="bodySm">{shipment.shipmentNumber}</Typography>
+        {/* Progress bar */}
+        <div className="mt-3">
+          <div className="mb-1 flex items-center justify-between">
+            <Typography variant="bodyXs" colorRole="muted">
+              Progress: {completedProducts}/{totalProducts} products
+            </Typography>
+            <Typography variant="bodyXs" colorRole="muted">
+              {progressPercent}%
+            </Typography>
+          </div>
+          <div className="h-2 overflow-hidden rounded-full bg-fill-tertiary">
+            <div
+              className="h-full bg-emerald-500 transition-all duration-300"
+              style={{ width: `${progressPercent}%` }}
+            />
+          </div>
         </div>
       </div>
 
-      <div className="space-y-4 p-4 sm:container sm:mx-auto sm:max-w-7xl sm:space-y-6 sm:px-6 sm:py-8">
-        {/* Summary Cards - 2x2 grid on mobile, 4 cols on desktop */}
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
-          <Card>
-            <CardContent className="p-3 text-center sm:p-4">
-              <Typography variant="bodyXs" colorRole="muted">
-                Expected
-              </Typography>
-              <Typography variant="headingLg" className="text-2xl text-blue-600 sm:text-3xl">
-                {totalExpected}
-              </Typography>
-              <Typography variant="bodyXs" colorRole="muted">
-                cases
-              </Typography>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-3 text-center sm:p-4">
-              <Typography variant="bodyXs" colorRole="muted">
-                Received
-              </Typography>
-              <Typography
-                variant="headingLg"
-                className={`text-2xl sm:text-3xl ${hasDiscrepancy ? 'text-amber-600' : 'text-emerald-600'}`}
-              >
-                {totalReceived}
-              </Typography>
-              <Typography variant="bodyXs" colorRole="muted">
-                cases
-              </Typography>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-3 text-center sm:p-4">
-              <Typography variant="bodyXs" colorRole="muted">
-                Variance
-              </Typography>
-              <Typography
-                variant="headingLg"
-                className={`text-2xl sm:text-3xl ${
-                  totalReceived - totalExpected === 0
-                    ? 'text-text-muted'
-                    : totalReceived - totalExpected > 0
-                      ? 'text-emerald-600'
-                      : 'text-red-600'
-                }`}
-              >
-                {totalReceived - totalExpected > 0 ? '+' : ''}
-                {totalReceived - totalExpected}
-              </Typography>
-              <Typography variant="bodyXs" colorRole="muted">
-                cases
-              </Typography>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-3 text-center sm:p-4">
-              <Typography variant="bodyXs" colorRole="muted">
-                Checked
-              </Typography>
-              <Typography
-                variant="headingLg"
-                className={`text-2xl sm:text-3xl ${allChecked ? 'text-emerald-600' : 'text-amber-600'}`}
-              >
-                {checkedCount}/{totalItems}
-              </Typography>
-              <Typography variant="bodyXs" colorRole="muted">
-                items
-              </Typography>
-            </CardContent>
-          </Card>
+      {/* Zebra Printer Status */}
+      <div className="p-4 pt-2">
+        <ZebraPrint />
+      </div>
+
+      <div className="space-y-4 p-4 pt-0">
+        {/* Product Navigation */}
+        <div className="flex items-center justify-between">
+          <Button
+            variant="outline"
+            size="md"
+            onClick={handlePreviousProduct}
+            disabled={currentProductIndex === 0}
+          >
+            <ButtonContent iconLeft={IconArrowLeft}>Prev</ButtonContent>
+          </Button>
+          <Typography variant="headingSm">
+            Product {currentProductIndex + 1} of {totalProducts}
+          </Typography>
+          <Button
+            variant="outline"
+            size="md"
+            onClick={handleNextProduct}
+            disabled={currentProductIndex === totalProducts - 1}
+          >
+            <ButtonContent iconRight={IconArrowRight}>Next</ButtonContent>
+          </Button>
         </div>
 
-        {/* Data Warning - Show if total > 100 which is unusually high */}
-        {totalExpected > 100 && (
-          <Card className="border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-900/20">
+        {/* Current Product Card */}
+        {currentItem && (
+          <Card>
             <CardContent className="p-4">
-              <div className="flex items-start gap-3">
-                <Icon icon={IconAlertTriangle} size="lg" className="flex-shrink-0 text-amber-600" />
-                <div className="flex-1">
-                  <Typography variant="headingSm" className="text-amber-800 dark:text-amber-200">
-                    High Case Count Warning
-                  </Typography>
-                  <Typography variant="bodySm" className="mt-1 text-amber-700 dark:text-amber-300">
-                    This shipment shows {totalExpected} cases total. If this looks incorrect (e.g., bottle counts were
-                    saved as cases), please delete the shipment items and re-extract from the packing list.
-                  </Typography>
-                  <Typography variant="bodyXs" className="mt-2 text-amber-600 dark:text-amber-400">
-                    Go to Logistics → Shipment → Delete Items → Re-extract packing list with updated prompts.
-                  </Typography>
+              {/* Product Info */}
+              <div className="mb-4">
+                <Typography variant="headingMd" className="leading-tight">
+                  {currentItem.productName}
+                </Typography>
+                <Typography variant="bodySm" colorRole="muted" className="mt-1">
+                  {currentItem.producer && `${currentItem.producer}`}
+                  {currentItem.producer && currentItem.vintage && ' • '}
+                  {currentItem.vintage && `${currentItem.vintage}`}
+                </Typography>
+                <div className="mt-2 flex items-center gap-2">
+                  <span className="rounded bg-fill-secondary px-2 py-1 text-sm font-medium">
+                    {currentItem.receivedBottlesPerCase}×{currentItem.receivedBottleSizeMl}ml
+                  </span>
+                  {currentItem.lwin && (
+                    <Typography variant="bodyXs" className="font-mono text-text-muted">
+                      {currentItem.lwin}
+                    </Typography>
+                  )}
                 </div>
               </div>
+
+              {/* Phase: Verifying */}
+              {productPhase === 'verifying' && (
+                <div className="space-y-4">
+                  <div className="rounded-lg bg-blue-50 p-4 dark:bg-blue-900/20">
+                    <Typography variant="headingSm" className="text-blue-800 dark:text-blue-200">
+                      Step 1: Find & Count
+                    </Typography>
+                    <Typography variant="bodySm" className="mt-1 text-blue-700 dark:text-blue-300">
+                      Locate all cases of this product and verify the count
+                    </Typography>
+                  </div>
+
+                  {/* Quantity control */}
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Typography variant="bodyXs" colorRole="muted">
+                        Expected
+                      </Typography>
+                      <Typography variant="headingLg" className="text-blue-600">
+                        {currentItem.expectedCases}
+                      </Typography>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={() => updateReceivedCases(currentItem.receivedCases - 1)}
+                        className="flex h-14 w-14 items-center justify-center rounded-lg border-2 border-border-primary bg-fill-secondary text-xl font-bold"
+                      >
+                        −
+                      </button>
+                      <input
+                        type="number"
+                        inputMode="numeric"
+                        className="h-14 w-20 rounded-lg border-2 border-border-primary bg-fill-primary text-center text-xl font-bold focus:border-border-brand focus:outline-none"
+                        value={currentItem.receivedCases}
+                        onChange={(e) => updateReceivedCases(parseInt(e.target.value) || 0)}
+                        min={0}
+                      />
+                      <button
+                        onClick={() => updateReceivedCases(currentItem.receivedCases + 1)}
+                        className="flex h-14 w-14 items-center justify-center rounded-lg border-2 border-border-primary bg-fill-secondary text-xl font-bold"
+                      >
+                        +
+                      </button>
+                    </div>
+
+                    <div>
+                      <Typography variant="bodyXs" colorRole="muted">
+                        Found
+                      </Typography>
+                      <Typography
+                        variant="headingLg"
+                        className={currentItem.receivedCases === currentItem.expectedCases ? 'text-emerald-600' : 'text-amber-600'}
+                      >
+                        {currentItem.receivedCases}
+                      </Typography>
+                    </div>
+                  </div>
+
+                  {/* Variance warning */}
+                  {currentItem.receivedCases !== currentItem.expectedCases && (
+                    <div className="flex items-center gap-2 rounded-lg bg-amber-50 p-3 dark:bg-amber-900/20">
+                      <Icon icon={IconAlertTriangle} className="text-amber-600" />
+                      <Typography variant="bodySm" className="text-amber-800 dark:text-amber-300">
+                        Variance: {currentItem.receivedCases - currentItem.expectedCases > 0 ? '+' : ''}
+                        {currentItem.receivedCases - currentItem.expectedCases} cases
+                      </Typography>
+                    </div>
+                  )}
+
+                  <Button
+                    variant="primary"
+                    size="lg"
+                    className="h-14 w-full text-lg"
+                    onClick={handleVerify}
+                    disabled={currentItem.receivedCases === 0}
+                  >
+                    <ButtonContent iconLeft={IconCheck}>
+                      Verified - {currentItem.receivedCases} Cases Found
+                    </ButtonContent>
+                  </Button>
+                </div>
+              )}
+
+              {/* Phase: Printing / Shelving */}
+              {(productPhase === 'printing' || productPhase === 'shelving') && (
+                <div className="space-y-4">
+                  {/* Already assigned locations */}
+                  {currentItem.locationAssignments.length > 0 && (
+                    <div className="space-y-2">
+                      <Typography variant="headingSm">Assigned Bays</Typography>
+                      {currentItem.locationAssignments.map((assignment, index) => (
+                        <div
+                          key={index}
+                          className="flex items-center justify-between rounded-lg bg-emerald-50 p-3 dark:bg-emerald-900/20"
+                        >
+                          <div className="flex items-center gap-3">
+                            <Icon icon={IconMapPin} className="text-emerald-600" />
+                            <div>
+                              <Typography variant="headingSm" className="text-emerald-800 dark:text-emerald-200">
+                                {assignment.locationCode}
+                              </Typography>
+                              <Typography variant="bodyXs" className="text-emerald-700 dark:text-emerald-300">
+                                {assignment.cases} cases • Labels printed
+                              </Typography>
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => removeLocationAssignment(index)}
+                            className="rounded-lg p-2 text-red-500 hover:bg-red-100 dark:hover:bg-red-900/30"
+                          >
+                            <IconTrash className="h-5 w-5" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Remaining cases to assign */}
+                  {pendingCases > 0 && (
+                    <>
+                      <div className="rounded-lg bg-amber-50 p-4 dark:bg-amber-900/20">
+                        <Typography variant="headingSm" className="text-amber-800 dark:text-amber-200">
+                          {productPhase === 'printing' ? 'Step 2: Print Labels' : 'Step 3: Place on Shelf'}
+                        </Typography>
+                        <Typography variant="bodySm" className="mt-1 text-amber-700 dark:text-amber-300">
+                          {pendingCases} cases remaining to assign
+                        </Typography>
+                      </div>
+
+                      {/* Scan bay barcode */}
+                      <ScanInput
+                        label="Scan Bay Barcode"
+                        placeholder="LOC-A-01-02"
+                        onScan={handleBarcodeScan}
+                        isLoading={locationLookupMutation.isPending}
+                        error={scanError || undefined}
+                        success={scannedLocationCode ? `✓ ${scannedLocationCode}` : undefined}
+                      />
+
+                      {/* Manual bay selection */}
+                      <div className="flex items-center gap-2">
+                        <Typography variant="bodySm" colorRole="muted">
+                          Or select:
+                        </Typography>
+                        <select
+                          className="h-12 flex-1 rounded-lg border-2 border-border-primary bg-fill-primary px-3 text-base"
+                          value={scannedLocationId || ''}
+                          onChange={(e) => {
+                            const loc = locations?.find((l) => l.id === e.target.value);
+                            if (loc) {
+                              setScannedLocationId(loc.id);
+                              setScannedLocationCode(loc.locationCode);
+                              setScanError(null);
+                            }
+                          }}
+                        >
+                          <option value="">Select bay...</option>
+                          {locations?.filter((l) => l.locationType === 'rack').map((loc) => (
+                            <option key={loc.id} value={loc.id}>
+                              {loc.locationCode}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* Print button */}
+                      {scannedLocationId && (
+                        <Button
+                          variant="primary"
+                          size="lg"
+                          className="h-14 w-full text-lg"
+                          onClick={handlePrintLabels}
+                          disabled={isPrinting || pendingCases === 0}
+                        >
+                          <ButtonContent iconLeft={isPrinting ? IconLoader2 : IconPrinter}>
+                            {isPrinting ? 'Printing...' : `Print ${pendingCases} Labels → ${scannedLocationCode}`}
+                          </ButtonContent>
+                        </Button>
+                      )}
+
+                      {printError && (
+                        <div className="flex items-center gap-2 rounded-lg bg-red-50 p-3 dark:bg-red-900/20">
+                          <Icon icon={IconAlertCircle} className="text-red-600" />
+                          <Typography variant="bodySm" className="text-red-800 dark:text-red-300">
+                            {printError}
+                          </Typography>
+                        </div>
+                      )}
+                    </>
+                  )}
+
+                  {/* All cases assigned - ready for next */}
+                  {pendingCases === 0 && currentItem.locationAssignments.length > 0 && (
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-3 rounded-lg bg-emerald-100 p-4 dark:bg-emerald-900/30">
+                        <Icon icon={IconCheck} size="lg" className="text-emerald-600" />
+                        <div>
+                          <Typography variant="headingSm" className="text-emerald-800 dark:text-emerald-200">
+                            All {currentItem.receivedCases} Cases Assigned
+                          </Typography>
+                          <Typography variant="bodyXs" className="text-emerald-700 dark:text-emerald-300">
+                            Labels printed and bays assigned
+                          </Typography>
+                        </div>
+                      </div>
+
+                      {/* Add another bay button */}
+                      <Button
+                        variant="outline"
+                        size="md"
+                        className="w-full"
+                        onClick={() => {
+                          setProductPhase('printing');
+                          setScannedLocationCode(null);
+                          setScannedLocationId(null);
+                        }}
+                      >
+                        <ButtonContent iconLeft={IconPlus}>Add Another Bay (Split)</ButtonContent>
+                      </Button>
+
+                      {currentProductIndex < totalProducts - 1 ? (
+                        <Button
+                          variant="primary"
+                          size="lg"
+                          className="h-14 w-full text-lg"
+                          onClick={handleNextProduct}
+                        >
+                          <ButtonContent iconRight={IconArrowRight}>Next Product</ButtonContent>
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="primary"
+                          size="lg"
+                          className="h-14 w-full text-lg"
+                          onClick={handleCompleteReceiving}
+                          disabled={receiveMutation.isPending || !allComplete}
+                        >
+                          <ButtonContent iconLeft={receiveMutation.isPending ? IconLoader2 : IconCheck}>
+                            {receiveMutation.isPending ? 'Completing...' : 'Complete Receiving'}
+                          </ButtonContent>
+                        </Button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Already verified badge */}
+              {currentItem.isVerified && productPhase === 'verifying' && (
+                <div className="mt-4 flex items-center gap-2 rounded-lg bg-emerald-50 p-3 dark:bg-emerald-900/20">
+                  <Icon icon={IconCheck} className="text-emerald-600" />
+                  <Typography variant="bodySm" className="text-emerald-800 dark:text-emerald-300">
+                    Already verified. Tap to continue to labeling.
+                  </Typography>
+                  <Button variant="outline" size="sm" onClick={() => setProductPhase('printing')}>
+                    Continue
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </Card>
         )}
 
-        {/* Default Location (optional - applied to items without a location) */}
+        {/* Notes */}
         <Card>
           <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <Icon icon={IconMapPin} size="lg" colorRole="muted" />
-              <div className="min-w-0 flex-1">
-                <Typography variant="bodySm" colorRole="muted">
-                  Default Location (optional)
-                </Typography>
-                <select
-                  className="mt-1 h-12 w-full rounded-lg border-2 border-border-primary bg-fill-primary px-3 text-base font-medium focus:border-border-brand focus:outline-none"
-                  value={receivingLocationId}
-                  onChange={(e) => setReceivingLocationId(e.target.value)}
-                >
-                  <option value="">Select default...</option>
-                  {locations?.map((loc) => (
-                    <option key={loc.id} value={loc.id}>
-                      {loc.locationCode} ({loc.locationType})
-                    </option>
-                  ))}
-                </select>
-              </div>
-              {receivingLocationId && (
-                <Button
-                  variant="outline"
-                  size="md"
-                  onClick={() => {
-                    // Apply default to all items without a location
-                    const newMap = new Map(receivedItems);
-                    newMap.forEach((item, id) => {
-                      if (!item.locationId) {
-                        newMap.set(id, { ...item, locationId: receivingLocationId });
-                      }
-                    });
-                    setReceivedItems(newMap);
-                    saveDraft();
-                  }}
-                >
-                  Apply to All
-                </Button>
-              )}
-            </div>
-            <Typography variant="bodyXs" className="mt-2 text-text-muted">
-              Set location per item below, or select a default and click &quot;Apply to All&quot;
-            </Typography>
-          </CardContent>
-        </Card>
-
-        {/* Items to Receive */}
-        <Card>
-          <div className="p-4 pb-2">
-            <CardTitle className="text-lg">Items to Receive</CardTitle>
-            <Typography variant="bodySm" colorRole="muted">
-              Tap checkbox to mark verified
-            </Typography>
-          </div>
-          <CardContent className="p-0">
-            <div className="divide-y divide-border-muted">
-              {shipment.items.map((shipmentItem) => {
-                // Get all items for this group (original + added variants)
-                const groupItems = itemGroups.get(shipmentItem.id) || [];
-                const originalItem = groupItems.find((i) => !i.isAddedItem);
-                const addedItems = groupItems.filter((i) => i.isAddedItem);
-
-                return (
-                  <div key={shipmentItem.id} className="p-4">
-                    {/* Original Item */}
-                    {originalItem && (
-                      <ItemRow
-                        item={originalItem}
-                        shipmentItem={shipmentItem}
-                        locations={locations ?? []}
-                        isEditingPack={editingPackItemId === originalItem.id}
-                        onToggleCheck={() => toggleChecked(originalItem.id)}
-                        onUpdateCases={(cases) => updateReceivedCases(originalItem.id, cases)}
-                        onUpdatePackConfig={(bpc, bs) => updatePackConfig(originalItem.id, bpc, bs)}
-                        onUpdateLocation={(locId) => updateItemLocation(originalItem.id, locId)}
-                        onEditPack={() => setEditingPackItemId(originalItem.id)}
-                        onClosePack={() => setEditingPackItemId(null)}
-                        onAddVariant={() => addPackVariant(originalItem.id)}
-                      />
-                    )}
-
-                    {/* Added Variants */}
-                    {addedItems.map((addedItem) => (
-                      <div key={addedItem.id} className="ml-4 mt-4 border-l-4 border-amber-300 pl-4 sm:ml-6">
-                        <ItemRow
-                          item={addedItem}
-                          shipmentItem={shipmentItem}
-                          locations={locations ?? []}
-                          isEditingPack={editingPackItemId === addedItem.id}
-                          onToggleCheck={() => toggleChecked(addedItem.id)}
-                          onUpdateCases={(cases) => updateReceivedCases(addedItem.id, cases)}
-                          onUpdatePackConfig={(bpc, bs) => updatePackConfig(addedItem.id, bpc, bs)}
-                          onUpdateLocation={(locId) => updateItemLocation(addedItem.id, locId)}
-                          onEditPack={() => setEditingPackItemId(addedItem.id)}
-                          onClosePack={() => setEditingPackItemId(null)}
-                          onRemove={() => removeAddedItem(addedItem.id)}
-                          isAddedVariant
-                        />
-                      </div>
-                    ))}
-                  </div>
-                );
-              })}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Notes - collapsible on mobile */}
-        <Card>
-          <div className="p-4 pb-2">
-            <CardTitle className="text-lg">Notes (Optional)</CardTitle>
-          </div>
-          <CardContent>
+            <CardTitle className="mb-2 text-base">Notes (Optional)</CardTitle>
             <textarea
-              className="w-full rounded-lg border-2 border-border-primary bg-fill-primary p-4 text-base focus:border-border-brand focus:outline-none"
+              className="w-full rounded-lg border-2 border-border-primary bg-fill-primary p-3 text-base focus:border-border-brand focus:outline-none"
               rows={2}
               placeholder="Add notes about discrepancies, damage, etc."
               value={notes}
@@ -972,22 +905,36 @@ const WMSReceiveShipmentPage = () => {
           </CardContent>
         </Card>
 
-        {/* Desktop Action Buttons - hidden on mobile (we have fixed footer) */}
-        <div className="hidden items-center justify-end gap-3 sm:flex">
-          <Button variant="outline" asChild>
-            <Link href="/platform/admin/wms/receive">Cancel</Link>
-          </Button>
-          <Button
-            variant="primary"
-            size="lg"
-            onClick={handleReceive}
-            disabled={receiveMutation.isPending || totalReceived === 0}
-          >
-            <ButtonContent iconLeft={receiveMutation.isPending ? IconLoader2 : IconBarcode}>
-              {receiveMutation.isPending ? 'Receiving...' : `Receive & Print ${totalReceived} Labels`}
-            </ButtonContent>
-          </Button>
-        </div>
+        {/* Summary when all complete */}
+        {allComplete && (
+          <Card className="border-emerald-200 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-900/20">
+            <CardContent className="p-4">
+              <div className="flex items-start gap-3">
+                <Icon icon={IconCheck} size="lg" className="text-emerald-600" />
+                <div className="flex-1">
+                  <Typography variant="headingSm" className="text-emerald-800 dark:text-emerald-200">
+                    All Products Received
+                  </Typography>
+                  <Typography variant="bodySm" className="mt-1 text-emerald-700 dark:text-emerald-300">
+                    {completedProducts} products with{' '}
+                    {Array.from(receivedItems.values()).reduce((sum, item) => sum + item.receivedCases, 0)} total cases
+                  </Typography>
+                  <Button
+                    variant="primary"
+                    size="lg"
+                    className="mt-4 h-14 w-full text-lg"
+                    onClick={handleCompleteReceiving}
+                    disabled={receiveMutation.isPending}
+                  >
+                    <ButtonContent iconLeft={receiveMutation.isPending ? IconLoader2 : IconCheck}>
+                      {receiveMutation.isPending ? 'Completing...' : 'Complete Receiving'}
+                    </ButtonContent>
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Error Display */}
         {receiveMutation.isError && (
@@ -1002,31 +949,6 @@ const WMSReceiveShipmentPage = () => {
             </CardContent>
           </Card>
         )}
-      </div>
-
-      {/* Fixed Bottom Action Bar - Mobile Only */}
-      <div className="fixed bottom-0 left-0 right-0 border-t border-border-muted bg-fill-primary p-4 shadow-lg sm:hidden">
-        <div className="flex gap-3">
-          <Button
-            variant="outline"
-            size="lg"
-            className="h-14 flex-1 text-base"
-            asChild
-          >
-            <Link href="/platform/admin/wms/receive">Cancel</Link>
-          </Button>
-          <Button
-            variant="primary"
-            size="lg"
-            className="h-14 flex-[2] text-base"
-            onClick={handleReceive}
-            disabled={receiveMutation.isPending || totalReceived === 0}
-          >
-            <ButtonContent iconLeft={receiveMutation.isPending ? IconLoader2 : IconCheck}>
-              {receiveMutation.isPending ? 'Processing...' : `Complete (${totalReceived})`}
-            </ButtonContent>
-          </Button>
-        </div>
       </div>
     </div>
   );
