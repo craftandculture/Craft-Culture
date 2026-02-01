@@ -40,6 +40,8 @@ const adminCreateCaseLabels = adminProcedure
   .mutation(async ({ input }) => {
     const { shipmentId, productName, lwin18, packSize, lotNumber, locationId, quantity } = input;
 
+    console.log('[createCaseLabels] Starting label creation', { lwin18, quantity, shipmentId });
+
     // Get the location code for the label
     const [location] = await db
       .select({ locationCode: wmsLocations.locationCode })
@@ -54,7 +56,24 @@ const adminCreateCaseLabels = adminProcedure
       // Get an advisory lock based on the LWIN18 hash to prevent concurrent inserts for same product
       // This ensures only one request at a time can generate sequences for a specific LWIN18
       const lockKey = Buffer.from(lwin18).reduce((acc, byte) => acc + byte, 0) % 2147483647;
+      console.log('[createCaseLabels] Acquiring advisory lock', { lockKey, lwin18 });
       await tx.execute(sql`SELECT pg_advisory_xact_lock(${lockKey})`);
+      console.log('[createCaseLabels] Advisory lock acquired');
+
+      // First, check all existing labels for this LWIN18 to debug
+      const existingLabels = await tx
+        .select({
+          barcode: wmsCaseLabels.barcode,
+          lwin18: wmsCaseLabels.lwin18,
+        })
+        .from(wmsCaseLabels)
+        .where(eq(wmsCaseLabels.lwin18, lwin18));
+
+      console.log('[createCaseLabels] Existing labels for LWIN18', {
+        lwin18,
+        count: existingLabels.length,
+        barcodes: existingLabels.map((l) => l.barcode),
+      });
 
       // Now safely get the current max sequence for this LWIN across ALL labels
       // Barcode format: CASE-{LWIN18}-{SEQ} where SEQ is the last segment
@@ -65,7 +84,29 @@ const adminCreateCaseLabels = adminProcedure
         .from(wmsCaseLabels)
         .where(eq(wmsCaseLabels.lwin18, lwin18));
 
-      let currentSeq = maxSeqResult?.maxSeq ?? 0;
+      console.log('[createCaseLabels] Max sequence query result', { maxSeqResult, rawMaxSeq: maxSeqResult?.maxSeq });
+
+      // Also calculate max sequence in JavaScript as a backup/verification
+      let jsMaxSeq = 0;
+      for (const label of existingLabels) {
+        const match = label.barcode.match(/(\d+)$/);
+        if (match) {
+          const seq = parseInt(match[1], 10);
+          if (seq > jsMaxSeq) jsMaxSeq = seq;
+        }
+      }
+
+      const sqlMaxSeq = maxSeqResult?.maxSeq ?? 0;
+
+      // Use the higher of the two to be safe
+      let currentSeq = Math.max(sqlMaxSeq, jsMaxSeq);
+
+      console.log('[createCaseLabels] Sequence comparison', {
+        sqlMaxSeq,
+        jsMaxSeq,
+        usingSeq: currentSeq,
+        willGenerate: `${currentSeq + 1} to ${currentSeq + quantity}`,
+      });
 
       // Create labels
       const labelsToInsert: Array<{
@@ -104,13 +145,33 @@ const adminCreateCaseLabels = adminProcedure
         });
       }
 
-      // Insert all labels within the transaction
-      const insertedLabels = await tx.insert(wmsCaseLabels).values(labelsToInsert).returning({
-        id: wmsCaseLabels.id,
-        barcode: wmsCaseLabels.barcode,
+      console.log('[createCaseLabels] Barcodes to insert', {
+        barcodes: labelsToInsert.map((l) => l.barcode),
       });
 
-      return { insertedLabels, labelDataForZpl };
+      // Insert all labels within the transaction
+      try {
+        const insertedLabels = await tx.insert(wmsCaseLabels).values(labelsToInsert).returning({
+          id: wmsCaseLabels.id,
+          barcode: wmsCaseLabels.barcode,
+        });
+
+        console.log('[createCaseLabels] Successfully inserted labels', {
+          count: insertedLabels.length,
+          barcodes: insertedLabels.map((l) => l.barcode),
+        });
+
+        return { insertedLabels, labelDataForZpl };
+      } catch (insertError) {
+        console.error('[createCaseLabels] INSERT FAILED', {
+          error: insertError,
+          attemptedBarcodes: labelsToInsert.map((l) => l.barcode),
+          lwin18,
+          existingBarcodes: existingLabels.map((l) => l.barcode),
+          maxSeqFound: maxSeqResult?.maxSeq,
+        });
+        throw insertError;
+      }
     });
 
     // Generate ZPL for all labels (outside transaction for performance)
