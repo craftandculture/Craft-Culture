@@ -27,6 +27,7 @@ import CardContent from '@/app/_ui/components/Card/CardContent';
 import CardTitle from '@/app/_ui/components/Card/CardTitle';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Typography from '@/app/_ui/components/Typography/Typography';
+import PhotoCapture from '@/app/_wms/components/PhotoCapture';
 import ScanInput from '@/app/_wms/components/ScanInput';
 import ZebraPrint, { useZebraPrint } from '@/app/_wms/components/ZebraPrint';
 import useTRPC from '@/lib/trpc/browser';
@@ -58,6 +59,8 @@ interface ReceivedItem {
   locationAssignments: LocationAssignment[];
   totalLabelsPrinted: number;
   notes?: string;
+  /** URLs of photos captured during receiving (e.g., case condition, labels) */
+  photos?: string[];
 }
 
 type ProductPhase = 'verifying' | 'printing' | 'shelving' | 'complete';
@@ -132,6 +135,11 @@ const WMSReceiveShipmentPage = () => {
     ...api.wms.admin.labels.createCaseLabels.mutationOptions(),
   });
 
+  // Upload receiving photo
+  const uploadPhotoMutation = useMutation({
+    ...api.wms.admin.receiving.uploadPhoto.mutationOptions(),
+  });
+
   // Save draft mutation
   const { mutate: saveDraftMutate } = useMutation({
     ...api.wms.admin.receiving.saveDraft.mutationOptions(),
@@ -197,6 +205,7 @@ const WMSReceiveShipmentPage = () => {
         isChecked: item.isVerified,
         locationId: item.locationAssignments[0]?.locationId,
         notes: item.notes,
+        photos: item.photos,
       }));
 
       saveDraftMutate({
@@ -260,6 +269,7 @@ const WMSReceiveShipmentPage = () => {
         isVerified: false,
         locationAssignments: [],
         totalLabelsPrinted: 0,
+        photos: [],
       });
     });
     setReceivedItems(initial);
@@ -311,6 +321,31 @@ const WMSReceiveShipmentPage = () => {
     setReceivedItems(newMap);
     saveDraft();
     setProductPhase('printing');
+  };
+
+  // Update photos for current item
+  const updatePhotos = (photos: string[]) => {
+    const currentItem = getCurrentItem();
+    if (!currentItem) return;
+
+    const newMap = new Map(receivedItems.set(currentItem.id, { ...currentItem, photos }));
+    setReceivedItems(newMap);
+    saveDraft();
+  };
+
+  // Upload a photo and return the URL
+  const handleUploadPhoto = async (file: string, filename: string, fileType: string) => {
+    const currentItem = getCurrentItem();
+    if (!currentItem) throw new Error('No item selected');
+
+    const result = await uploadPhotoMutation.mutateAsync({
+      shipmentId,
+      itemId: currentItem.id,
+      file,
+      filename,
+      fileType: fileType as 'image/png' | 'image/jpeg' | 'image/jpg' | 'image/webp',
+    });
+    return result.url;
   };
 
   // Handle bay barcode scan
@@ -837,6 +872,19 @@ const WMSReceiveShipmentPage = () => {
                       </Typography>
                     </div>
                   )}
+
+                  {/* Photo capture */}
+                  <div className="rounded-lg border border-border-secondary p-3">
+                    <Typography variant="bodyXs" colorRole="muted" className="mb-2">
+                      Photos (optional) - document case condition or labels
+                    </Typography>
+                    <PhotoCapture
+                      photos={currentItem.photos ?? []}
+                      onPhotosChange={updatePhotos}
+                      onUpload={handleUploadPhoto}
+                      maxPhotos={5}
+                    />
+                  </div>
 
                   <Button
                     variant="primary"

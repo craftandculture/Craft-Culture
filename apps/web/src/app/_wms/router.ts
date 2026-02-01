@@ -44,6 +44,7 @@ import adminTransferOwnership from './controller/adminTransferOwnership';
 import adminTransferStock from './controller/adminTransferStock';
 import adminUpdateBatchStatus from './controller/adminUpdateBatchStatus';
 import adminUpdateLocation from './controller/adminUpdateLocation';
+import adminUploadReceivingPhoto from './controller/adminUploadReceivingPhoto';
 import partnerGetStock from './controller/partnerGetStock';
 
 const locationsRouter = createTRPCRouter({
@@ -62,6 +63,7 @@ const receivingRouter = createTRPCRouter({
   getDraft: adminGetReceivingDraft,
   saveDraft: adminSaveReceivingDraft,
   deleteDraft: adminDeleteReceivingDraft,
+  uploadPhoto: adminUploadReceivingPhoto,
 });
 
 const labelsRouter = createTRPCRouter({
