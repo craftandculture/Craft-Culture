@@ -9,6 +9,7 @@ import {
   pgTable,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
 } from 'drizzle-orm/pg-core';
 
@@ -3908,6 +3909,12 @@ export const wmsStock = pgTable(
     index('wms_stock_owner_id_idx').on(table.ownerId),
     index('wms_stock_lwin18_idx').on(table.lwin18),
     index('wms_stock_shipment_id_idx').on(table.shipmentId),
+    // Prevent duplicate stock records for same product at same location from same shipment
+    uniqueIndex('wms_stock_lwin18_location_shipment_unique').on(
+      table.lwin18,
+      table.locationId,
+      table.shipmentId,
+    ),
   ],
 );
 
