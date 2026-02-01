@@ -25,10 +25,10 @@ const adminDeduplicateStock = adminProcedure.mutation(async () => {
         lwin18,
         location_id,
         shipment_id,
-        COUNT(*) as count,
-        (ARRAY_AGG(id ORDER BY created_at))[1] as keep_id,
-        SUM(quantity_cases) as total_cases,
-        ARRAY_AGG(id ORDER BY created_at) as all_ids
+        COUNT(*)::int as count,
+        (ARRAY_AGG(id ORDER BY created_at))[1]::text as keep_id,
+        SUM(quantity_cases)::int as total_cases,
+        ARRAY_AGG(id::text ORDER BY created_at) as all_ids
       FROM wms_stock
       WHERE shipment_id IS NOT NULL
       GROUP BY lwin18, location_id, shipment_id
@@ -37,17 +37,12 @@ const adminDeduplicateStock = adminProcedure.mutation(async () => {
     SELECT * FROM duplicates
   `);
 
-  const duplicateRows = duplicates.rows as Array<{
-    lwin18: string;
-    location_id: string;
-    shipment_id: string;
-    count: number;
-    keep_id: string;
-    total_cases: number;
-    all_ids: string[];
-  }>;
+  console.log('[WMS Dedupe] Raw result:', JSON.stringify(duplicates));
 
-  if (duplicateRows.length === 0) {
+  // Handle both array and object with rows property
+  const rows = Array.isArray(duplicates) ? duplicates : duplicates.rows;
+
+  if (!rows || rows.length === 0) {
     return {
       success: true,
       message: 'No duplicate stock records found',
@@ -55,6 +50,8 @@ const adminDeduplicateStock = adminProcedure.mutation(async () => {
       deletedCount: 0,
     };
   }
+
+  console.log('[WMS Dedupe] Found duplicates:', rows.length);
 
   let totalDeleted = 0;
   const deduplicatedProducts: Array<{
@@ -65,18 +62,32 @@ const adminDeduplicateStock = adminProcedure.mutation(async () => {
     correctQuantity: number;
   }> = [];
 
-  for (const dup of duplicateRows) {
+  for (const dup of rows) {
+    const allIds: string[] = dup.all_ids ?? [];
+    const keepId: string = dup.keep_id ?? allIds[0];
+
+    console.log('[WMS Dedupe] Processing:', {
+      lwin18: dup.lwin18,
+      keepId,
+      allIdsCount: allIds.length,
+    });
+
+    if (!keepId || allIds.length === 0) {
+      console.log('[WMS Dedupe] Skipping - no valid IDs');
+      continue;
+    }
+
     // The correct quantity should be quantity_cases from the first record
     // (since all records were created with the same quantity, just duplicated)
     const [firstRecord] = await db
       .select({ quantityCases: wmsStock.quantityCases })
       .from(wmsStock)
-      .where(eq(wmsStock.id, dup.keep_id));
+      .where(eq(wmsStock.id, keepId));
 
     const correctQuantity = firstRecord?.quantityCases ?? 0;
 
     // Delete all records except the one we're keeping
-    const idsToDelete = dup.all_ids.filter((id) => id !== dup.keep_id);
+    const idsToDelete = allIds.filter((id) => id !== keepId);
 
     for (const idToDelete of idsToDelete) {
       await db.delete(wmsStock).where(eq(wmsStock.id, idToDelete));
@@ -85,8 +96,8 @@ const adminDeduplicateStock = adminProcedure.mutation(async () => {
 
     deduplicatedProducts.push({
       lwin18: dup.lwin18,
-      originalCount: dup.count,
-      keptRecord: dup.keep_id,
+      originalCount: Number(dup.count) || allIds.length,
+      keptRecord: keepId,
       deletedCount: idsToDelete.length,
       correctQuantity,
     });
@@ -94,8 +105,8 @@ const adminDeduplicateStock = adminProcedure.mutation(async () => {
 
   return {
     success: true,
-    message: `Deduplicated ${duplicateRows.length} products, deleted ${totalDeleted} duplicate records`,
-    deduplicatedCount: duplicateRows.length,
+    message: `Deduplicated ${deduplicatedProducts.length} products, deleted ${totalDeleted} duplicate records`,
+    deduplicatedCount: deduplicatedProducts.length,
     deletedCount: totalDeleted,
     details: deduplicatedProducts,
   };
