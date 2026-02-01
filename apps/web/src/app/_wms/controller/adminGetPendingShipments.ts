@@ -13,19 +13,29 @@ import logger from '@/utils/logger';
  *   await trpcClient.wms.admin.receiving.getPendingShipments.query();
  */
 const adminGetPendingShipments = adminProcedure.query(async () => {
-  // Debug: Check all shipments and their statuses
+  // Debug: Check all shipments and their statuses including type
   const allShipments = await db
     .select({
       id: logisticsShipments.id,
       shipmentNumber: logisticsShipments.shipmentNumber,
       status: logisticsShipments.status,
+      type: logisticsShipments.type,
     })
     .from(logisticsShipments)
+    .orderBy(desc(logisticsShipments.createdAt))
     .limit(10);
 
+  // Log for debugging - check Vercel logs
   logger.info('[WMS GetPendingShipments] All recent shipments:', {
-    shipments: allShipments.map((s) => ({ number: s.shipmentNumber, status: s.status })),
+    shipments: allShipments.map((s) => ({
+      number: s.shipmentNumber,
+      status: s.status,
+      type: s.type,
+    })),
   });
+
+  // TEMPORARY: Log to console as well for easier debugging
+  console.log('[WMS DEBUG] All shipments:', JSON.stringify(allShipments, null, 2));
 
   // Get inbound shipments that are at warehouse or cleared (ready to receive)
   const shipments = await db
@@ -50,10 +60,25 @@ const adminGetPendingShipments = adminProcedure.query(async () => {
     .groupBy(logisticsShipments.id, partners.name)
     .orderBy(desc(logisticsShipments.ata), desc(logisticsShipments.eta));
 
-  logger.info('[WMS GetPendingShipments] Filtered shipments:', {
-    count: shipments.length,
-    shipments: shipments.map((s) => s.shipmentNumber),
-  });
+  console.log('[WMS DEBUG] Filtered shipments:', shipments.length);
+
+  // TEMPORARY: If no filtered shipments, return all shipments for debugging
+  if (shipments.length === 0 && allShipments.length > 0) {
+    console.log('[WMS DEBUG] No matching shipments, returning debug info');
+    // Return debug info as a special shipment entry
+    return allShipments.map((s) => ({
+      id: s.id,
+      shipmentNumber: `[DEBUG] ${s.shipmentNumber} (status: ${s.status}, type: ${s.type})`,
+      status: s.status,
+      partnerId: null,
+      partnerName: null,
+      originCountry: null,
+      totalCases: 0,
+      eta: null,
+      ata: null,
+      itemCount: 0,
+    }));
+  }
 
   return shipments;
 });
