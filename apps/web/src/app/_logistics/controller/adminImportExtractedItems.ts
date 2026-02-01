@@ -65,11 +65,27 @@ const adminImportExtractedItems = adminProcedure
       // Determine cases - use cases field or fall back to quantity
       const cases = item.cases || item.quantity || 1;
 
+      // Parse bottle size from string like "750ml" or "1.5L" to integer ml
+      let bottleSizeMl = 750; // Default
+      if (item.bottleSize) {
+        const sizeStr = item.bottleSize.toLowerCase();
+        if (sizeStr.includes('ml')) {
+          bottleSizeMl = parseInt(sizeStr.replace(/[^0-9]/g, ''), 10) || 750;
+        } else if (sizeStr.includes('l')) {
+          const liters = parseFloat(sizeStr.replace(/[^0-9.]/g, ''));
+          bottleSizeMl = Math.round(liters * 1000) || 750;
+        }
+      }
+
+      // Determine bottles per case
+      const bottlesPerCase = item.bottlesPerCase || 12;
+
+      // Calculate total bottles
+      const totalBottles = cases * bottlesPerCase;
+
       // Calculate cost per bottle if we have total and cases
       let productCostPerBottle: number | undefined;
-      if (item.total && cases) {
-        // Assume 12 bottles per case for calculation
-        const totalBottles = cases * 12;
+      if (item.total && totalBottles) {
         productCostPerBottle = item.total / totalBottles;
       } else if (item.unitPrice) {
         productCostPerBottle = item.unitPrice;
@@ -82,10 +98,13 @@ const adminImportExtractedItems = adminProcedure
         .values({
           shipmentId,
           productName,
+          producer: item.producer,
+          vintage: item.vintage,
+          region: item.region,
           cases,
-          bottlesPerCase: 12, // Default
-          bottleSizeMl: 750, // Default
-          totalBottles: cases * 12,
+          bottlesPerCase,
+          bottleSizeMl,
+          totalBottles,
           hsCode: item.hsCode,
           countryOfOrigin: item.countryOfOrigin,
           grossWeightKg: item.weight,

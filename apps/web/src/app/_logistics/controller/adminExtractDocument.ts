@@ -59,8 +59,14 @@ const extractedLogisticsDataSchema = z.object({
       z.object({
         description: z.string().optional().describe('Item description'),
         productName: z.string().optional().describe('Product name'),
+        producer: z.string().optional().describe('Producer/winery name extracted from description'),
+        vintage: z.number().optional().describe('Vintage year (e.g., 2015, 2018, 2021) - extract 4-digit year from product description'),
+        bottleSize: z.string().optional().describe('Bottle size (e.g., "750ml", "1.5L", "375ml") - extract from description like "0.75L" or "75cl"'),
+        bottlesPerCase: z.number().optional().describe('Bottles per case / case configuration (e.g., 6, 12) - often shown as "6x75cl" or just a number'),
+        alcoholPercent: z.number().optional().describe('Alcohol percentage (e.g., 12.5, 14.0) - extract from description'),
+        region: z.string().optional().describe('Wine region or appellation (e.g., "Bordeaux", "Margaux", "Napa Valley")'),
         hsCode: z.string().optional().describe('FULL HS/tariff/commodity code with ALL digits exactly as shown (e.g., 22042109, 22042132, NOT truncated to 22042100)'),
-        quantity: z.number().optional().describe('Quantity'),
+        quantity: z.number().optional().describe('Total quantity of bottles'),
         cases: z.number().optional().describe('Number of cases'),
         weight: z.number().optional().describe('Weight in kg'),
         volume: z.number().optional().describe('Volume in m³'),
@@ -222,6 +228,15 @@ CRITICAL RULES:
 4. If you cannot read text clearly, output "UNREADABLE"
 5. Extract EVERY line item - count them to ensure completeness
 
+WINE FIELD EXTRACTION - PARSE EACH LINE ITEM:
+- producer: Extract winery/producer name (e.g., "Chateau Margaux", "Domaine de la Romanee-Conti")
+- vintage: Extract 4-digit year (e.g., 2015, 2018, 2021)
+- bottleSize: Extract bottle size like "750ml", "0.75L", "1.5L", "375ml" - convert "75cl" to "750ml"
+- bottlesPerCase: Extract case config (e.g., 6 or 12) from patterns like "6x75cl" or separate column
+- alcoholPercent: Extract alcohol % (e.g., 12.5, 14.0)
+- region: Extract region/appellation (e.g., "Bordeaux", "Pomerol", "Saint-Emilion")
+- countryOfOrigin: Extract country (e.g., "France", "Italy", "Spain")
+
 HS CODE EXTRACTION - EXTREMELY IMPORTANT:
 - The document has a "Commodity Code" column - READ EACH ROW'S CODE INDIVIDUALLY
 - Each product may have a DIFFERENT 8-digit code (22042109, 22042132, 22041000, 22042142, etc.)
@@ -288,7 +303,15 @@ RULES:
 - The Description column contains the full product name including producer, wine, vintage, size, and alcohol %
 - Extract ALL rows from the table - count them to ensure completeness
 - HS CODES ARE CRITICAL: Extract the COMPLETE code with ALL digits. Codes like 22042109, 22042132, 22041000 are DIFFERENT codes - do NOT truncate or simplify to 22042100. Each row may have a unique HS code.
-- For wine products, look for: Producer, Wine Name, Appellation, Vintage Year, Bottle Size (0.75L), Alcohol %
+
+WINE FIELD EXTRACTION - FOR EACH LINE ITEM, EXTRACT:
+- producer: The winery/producer name (first part of description)
+- vintage: The 4-digit year (e.g., 2015, 2018, 2021)
+- bottleSize: Bottle size like "750ml" (convert "0.75L" or "75cl" to "750ml")
+- bottlesPerCase: Case configuration (6 or 12) - look for "6x75cl" or "12x75cl" patterns
+- alcoholPercent: Alcohol % (e.g., 12.5, 14.0) - usually at end of description
+- region: Wine region/appellation if shown (e.g., "Bordeaux", "Pomerol", "Saint-Emilion")
+- countryOfOrigin: Country of origin if shown
 
 --- DOCUMENT TEXT ---
 ${pdfText}
@@ -317,6 +340,15 @@ CRITICAL RULES:
 3. NEVER output famous brand names (Moet, Dom Perignon, Veuve Clicquot, Krug, etc.) unless those EXACT letters appear
 4. If you cannot read text clearly, output "UNREADABLE"
 5. Extract EVERY line item - count them to ensure completeness
+
+WINE FIELD EXTRACTION - PARSE EACH LINE ITEM:
+- producer: Extract winery/producer name (e.g., "Chateau Margaux", "Domaine de la Romanee-Conti")
+- vintage: Extract 4-digit year (e.g., 2015, 2018, 2021)
+- bottleSize: Extract bottle size like "750ml", "0.75L", "1.5L", "375ml" - convert "75cl" to "750ml"
+- bottlesPerCase: Extract case config (e.g., 6 or 12) from patterns like "6x75cl" or separate column
+- alcoholPercent: Extract alcohol % (e.g., 12.5, 14.0)
+- region: Extract region/appellation (e.g., "Bordeaux", "Pomerol", "Saint-Emilion")
+- countryOfOrigin: Extract country (e.g., "France", "Italy", "Spain")
 
 HS CODE EXTRACTION - EXTREMELY IMPORTANT:
 - The document has a "Commodity Code" column - READ EACH ROW'S CODE INDIVIDUALLY

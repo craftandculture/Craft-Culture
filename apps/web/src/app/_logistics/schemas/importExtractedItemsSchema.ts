@@ -6,6 +6,12 @@ import { z } from 'zod';
 const extractedItemSchema = z.object({
   description: z.string().optional(),
   productName: z.string().optional(),
+  producer: z.string().optional(),
+  vintage: z.number().optional(),
+  bottleSize: z.string().optional(),
+  bottlesPerCase: z.number().optional(),
+  alcoholPercent: z.number().optional(),
+  region: z.string().optional(),
   hsCode: z.string().optional(),
   quantity: z.number().optional(),
   cases: z.number().optional(),
