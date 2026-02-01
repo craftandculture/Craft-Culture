@@ -104,8 +104,8 @@ const adminImportExtractedItems = adminProcedure
         continue;
       }
 
-      // Determine cases - use cases field or fall back to quantity
-      const cases = item.cases || item.quantity || 1;
+      // Determine cases - ONLY use cases field, never quantity (quantity is bottle count, not case count)
+      const cases = item.cases ?? 1;
 
       // Parse bottle size from string like "750ml" or "1.5L" to integer ml
       let bottleSizeMl = 750; // Default

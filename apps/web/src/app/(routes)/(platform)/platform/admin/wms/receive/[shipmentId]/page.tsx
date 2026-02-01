@@ -11,7 +11,6 @@ import {
   IconEdit,
   IconLoader2,
   IconMapPin,
-  IconTool,
   IconTrash,
 } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -349,16 +348,6 @@ const WMSReceiveShipmentPage = () => {
     ...api.wms.admin.receiving.deleteDraft.mutationOptions(),
   });
 
-  // Fix shipment data mutation
-  const fixDataMutation = useMutation({
-    ...api.logistics.admin.fixShipmentItemCases.mutationOptions(),
-    onSuccess: () => {
-      // Refetch shipment data and reset state
-      void queryClient.invalidateQueries();
-      setInitialized(false);
-    },
-  });
-
   // Save draft to database (debounced)
   const saveDraft = useCallback(() => {
     if (receivedItems.size === 0) return;
@@ -682,26 +671,6 @@ const WMSReceiveShipmentPage = () => {
   const hasDiscrepancy = totalExpected !== totalReceived;
   const allChecked = checkedCount === totalItems && totalItems > 0;
 
-  // Detect if data looks corrupted (bottles were put in cases field)
-  // Check if total expected is suspiciously high (> 100 cases for most shipments)
-  // AND all items have cases divisible by bottlesPerCase
-  const suspiciouslyHighTotal = totalExpected > 100;
-  const allItemsDivisible = shipment.items.every((item) => {
-    const bottlesPerCase = item.bottlesPerCase ?? 12;
-    if (bottlesPerCase <= 1) return true; // Can't detect for single bottle
-    const possibleCases = item.cases / bottlesPerCase;
-    return Number.isInteger(possibleCases) && possibleCases >= 1;
-  });
-  const dataLooksCorrupted = suspiciouslyHighTotal && allItemsDivisible;
-
-  // Calculate what the corrected totals would be
-  const correctedExpected = dataLooksCorrupted
-    ? shipment.items.reduce((sum, item) => {
-        const bottlesPerCase = item.bottlesPerCase ?? 12;
-        return sum + Math.floor(item.cases / bottlesPerCase);
-      }, 0)
-    : totalExpected;
-
   // Group items by base product (original + added variants)
   const itemGroups = new Map<string, ReceivedItem[]>();
   allItems.forEach((item) => {
@@ -831,7 +800,7 @@ const WMSReceiveShipmentPage = () => {
           </Card>
         </div>
 
-        {/* Data Correction Alert - Show if total > 100 to help fix extraction errors */}
+        {/* Data Warning - Show if total > 100 which is unusually high */}
         {totalExpected > 100 && (
           <Card className="border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-900/20">
             <CardContent className="p-4">
@@ -839,35 +808,15 @@ const WMSReceiveShipmentPage = () => {
                 <Icon icon={IconAlertTriangle} size="lg" className="flex-shrink-0 text-amber-600" />
                 <div className="flex-1">
                   <Typography variant="headingSm" className="text-amber-800 dark:text-amber-200">
-                    Data Extraction Error Detected
+                    High Case Count Warning
                   </Typography>
                   <Typography variant="bodySm" className="mt-1 text-amber-700 dark:text-amber-300">
-                    It looks like bottle counts were incorrectly saved as case counts. Expected total should be{' '}
-                    <strong>{correctedExpected} cases</strong>, not {totalExpected}.
+                    This shipment shows {totalExpected} cases total. If this looks incorrect (e.g., bottle counts were
+                    saved as cases), please delete the shipment items and re-extract from the packing list.
                   </Typography>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    <Button
-                      variant="outline"
-                      size="md"
-                      className="border-amber-300 bg-white text-amber-800 hover:bg-amber-100"
-                      onClick={() => fixDataMutation.mutate({ shipmentId, recalculateFromBottles: true })}
-                      disabled={fixDataMutation.isPending}
-                    >
-                      <ButtonContent iconLeft={fixDataMutation.isPending ? IconLoader2 : IconTool}>
-                        {fixDataMutation.isPending ? 'Fixing...' : 'Fix Data'}
-                      </ButtonContent>
-                    </Button>
-                  </div>
-                  {fixDataMutation.isError && (
-                    <Typography variant="bodyXs" className="mt-2 text-red-600">
-                      {fixDataMutation.error?.message ?? 'Failed to fix data'}
-                    </Typography>
-                  )}
-                  {fixDataMutation.isSuccess && (
-                    <Typography variant="bodyXs" className="mt-2 text-emerald-600">
-                      Data fixed! Reloading...
-                    </Typography>
-                  )}
+                  <Typography variant="bodyXs" className="mt-2 text-amber-600 dark:text-amber-400">
+                    Go to Logistics → Shipment → Delete Items → Re-extract packing list with updated prompts.
+                  </Typography>
                 </div>
               </div>
             </CardContent>
