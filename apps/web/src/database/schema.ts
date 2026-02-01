@@ -4378,3 +4378,65 @@ export const consignmentSettlementItems = pgTable(
 );
 
 export type ConsignmentSettlementItem = typeof consignmentSettlementItems.$inferSelect;
+
+/**
+ * WMS Receiving Draft Status
+ */
+export const wmsReceivingDraftStatus = pgEnum('wms_receiving_draft_status', [
+  'in_progress',
+  'completed',
+]);
+
+/**
+ * WMS Receiving Draft Item - individual item in a receiving draft
+ */
+interface WmsReceivingDraftItem {
+  id: string;
+  shipmentItemId: string | null;
+  baseItemId: string | null;
+  productName: string;
+  producer?: string | null;
+  vintage?: number | null;
+  lwin?: string | null;
+  expectedCases: number;
+  receivedCases: number;
+  expectedBottlesPerCase: number;
+  expectedBottleSizeMl: number;
+  receivedBottlesPerCase: number;
+  receivedBottleSizeMl: number;
+  packChanged: boolean;
+  isAddedItem: boolean;
+  isChecked: boolean;
+  expiryDate?: string;
+  notes?: string;
+}
+
+/**
+ * WMS Receiving Drafts - persists in-progress receiving data
+ *
+ * Allows receiving to be done over multiple sessions (can take hours)
+ * Items are saved as they're checked off
+ */
+export const wmsReceivingDrafts = pgTable(
+  'wms_receiving_drafts',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    shipmentId: uuid('shipment_id')
+      .references(() => logisticsShipments.id)
+      .notNull()
+      .unique(),
+    items: jsonb('items').$type<WmsReceivingDraftItem[]>().notNull(),
+    notes: text('notes'),
+    status: wmsReceivingDraftStatus('status').default('in_progress'),
+    lastModifiedBy: uuid('last_modified_by').references(() => users.id),
+    lastModifiedAt: timestamp('last_modified_at', { mode: 'date' }).notNull().defaultNow(),
+    ...timestamps,
+  },
+  (table) => [
+    index('wms_receiving_drafts_shipment_id_idx').on(table.shipmentId),
+    index('wms_receiving_drafts_status_idx').on(table.status),
+  ],
+);
+
+export type WmsReceivingDraft = typeof wmsReceivingDrafts.$inferSelect;
+export type WmsReceivingDraftItemType = WmsReceivingDraftItem;

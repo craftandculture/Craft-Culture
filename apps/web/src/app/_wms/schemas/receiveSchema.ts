@@ -2,8 +2,12 @@ import { z } from 'zod';
 
 /**
  * Schema for a single item being received
+ *
+ * Supports both original shipment items and manually added pack variants
  */
 export const receiveItemSchema = z.object({
+  // For original items: the shipment item ID
+  // For added items: the base shipment item ID (what it was derived from)
   shipmentItemId: z.string().uuid(),
   expectedCases: z.number().int().min(0),
   receivedCases: z.number().int().min(0),
@@ -11,6 +15,11 @@ export const receiveItemSchema = z.object({
   receivedBottlesPerCase: z.number().int().min(1).optional(),
   receivedBottleSizeMl: z.number().int().min(1).optional(),
   packChanged: z.boolean().optional(),
+  // For added items - explicit product info
+  isAddedItem: z.boolean().optional(),
+  productName: z.string().optional(),
+  producer: z.string().nullable().optional(),
+  vintage: z.number().nullable().optional(),
   expiryDate: z.date().optional(),
   notes: z.string().optional(),
 });
