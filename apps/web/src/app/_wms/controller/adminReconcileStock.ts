@@ -1,7 +1,7 @@
-import { sql } from 'drizzle-orm';
+import { asc, eq, sql } from 'drizzle-orm';
 
 import db from '@/database/client';
-import { wmsStock, wmsStockMovements } from '@/database/schema';
+import { wmsLocations, wmsStock, wmsStockMovements } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
 /**
@@ -78,6 +78,36 @@ const adminReconcileStock = adminProcedure.query(async () => {
 
   const duplicateRows = Array.isArray(duplicates) ? duplicates : duplicates.rows ?? [];
 
+  // Get all stock records for manual inspection when there's a discrepancy
+  const allStockRecords = await db
+    .select({
+      id: wmsStock.id,
+      lwin18: wmsStock.lwin18,
+      productName: wmsStock.productName,
+      quantityCases: wmsStock.quantityCases,
+      locationCode: wmsLocations.locationCode,
+      shipmentId: wmsStock.shipmentId,
+      receivedAt: wmsStock.receivedAt,
+      createdAt: wmsStock.createdAt,
+    })
+    .from(wmsStock)
+    .innerJoin(wmsLocations, eq(wmsLocations.id, wmsStock.locationId))
+    .orderBy(asc(wmsStock.productName), asc(wmsStock.createdAt));
+
+  // Get all receive movements for comparison
+  const allReceiveMovements = await db
+    .select({
+      id: wmsStockMovements.id,
+      lwin18: wmsStockMovements.lwin18,
+      productName: wmsStockMovements.productName,
+      quantityCases: wmsStockMovements.quantityCases,
+      shipmentId: wmsStockMovements.shipmentId,
+      performedAt: wmsStockMovements.performedAt,
+    })
+    .from(wmsStockMovements)
+    .where(eq(wmsStockMovements.movementType, 'receive'))
+    .orderBy(asc(wmsStockMovements.productName), asc(wmsStockMovements.performedAt));
+
   return {
     summary: {
       movementsReceived: movementTotals?.totalReceived ?? 0,
@@ -98,6 +128,9 @@ const adminReconcileStock = adminProcedure.query(async () => {
       hasOrphans: orphanStock.length > 0,
       hasDuplicates: duplicateRows.length > 0,
     },
+    // For manual inspection
+    allStockRecords,
+    allReceiveMovements,
   };
 });
 
