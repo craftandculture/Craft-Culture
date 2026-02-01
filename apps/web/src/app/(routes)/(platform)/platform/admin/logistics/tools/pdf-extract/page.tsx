@@ -446,7 +446,7 @@ const PdfExtractPage = () => {
                       <SelectContent>
                         {shipments?.data?.map((shipment) => (
                           <SelectItem key={shipment.id} value={shipment.id}>
-                            {shipment.shipmentNumber} - {shipment.partner?.businessName || 'Unknown'}
+                            {shipment.shipmentNumber} • {shipment.transportMode?.toUpperCase() || '?'} • {shipment.originCountry || shipment.originCity || 'Unknown origin'}
                           </SelectItem>
                         ))}
                       </SelectContent>
