@@ -4,6 +4,7 @@ import adminAddOrdersToBatch from './controller/adminAddOrdersToBatch';
 import adminAssignPickList from './controller/adminAssignPickList';
 import adminBatchCreateLocations from './controller/adminBatchCreateLocations';
 import adminCompletePickList from './controller/adminCompletePickList';
+import adminCreateCaseLabels from './controller/adminCreateCaseLabels';
 import adminCreateDispatchBatch from './controller/adminCreateDispatchBatch';
 import adminCreateLocation from './controller/adminCreateLocation';
 import adminCreatePickList from './controller/adminCreatePickList';
@@ -64,6 +65,7 @@ const receivingRouter = createTRPCRouter({
 });
 
 const labelsRouter = createTRPCRouter({
+  createCaseLabels: adminCreateCaseLabels,
   getCaseLabels: adminGetCaseLabels,
   getLocationLabels: adminGetLocationLabels,
   markPrinted: adminMarkLabelsPrinted,
