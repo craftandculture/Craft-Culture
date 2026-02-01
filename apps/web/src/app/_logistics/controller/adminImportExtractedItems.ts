@@ -17,17 +17,20 @@ import importExtractedItemsSchema from '../schemas/importExtractedItemsSchema';
 const adminImportExtractedItems = adminProcedure
   .input(importExtractedItemsSchema)
   .mutation(async ({ input }) => {
-    const { shipmentId, items } = input;
+    const { shipmentId, items, cargoSummary, overwriteCargoData } = input;
 
     logger.info('[ImportExtractedItems] Starting import:', {
       shipmentId,
       itemCount: items.length,
+      hasCargoSummary: !!cargoSummary,
     });
 
-    // Verify shipment exists
-    const shipment = await db.query.logisticsShipments.findFirst({
-      where: eq(logisticsShipments.id, shipmentId),
-    });
+    // Verify shipment exists using select instead of query API to avoid relation issues
+    const [shipment] = await db
+      .select()
+      .from(logisticsShipments)
+      .where(eq(logisticsShipments.id, shipmentId))
+      .limit(1);
 
     if (!shipment) {
       throw new TRPCError({
@@ -36,11 +39,50 @@ const adminImportExtractedItems = adminProcedure
       });
     }
 
+    // Update shipment cargo summary if provided
+    if (cargoSummary) {
+      const updateData: Partial<typeof logisticsShipments.$inferInsert> = {};
+
+      // Only update fields that are provided AND (either overwrite is true OR existing value is null)
+      if (cargoSummary.totalCases !== undefined) {
+        if (overwriteCargoData || shipment.totalCases === null || shipment.totalCases === 0) {
+          updateData.totalCases = cargoSummary.totalCases;
+        }
+      }
+      if (cargoSummary.totalPallets !== undefined) {
+        if (overwriteCargoData || shipment.totalPallets === null) {
+          updateData.totalPallets = cargoSummary.totalPallets;
+        }
+      }
+      if (cargoSummary.totalWeight !== undefined) {
+        if (overwriteCargoData || shipment.totalWeightKg === null) {
+          updateData.totalWeightKg = cargoSummary.totalWeight;
+        }
+      }
+      if (cargoSummary.totalVolume !== undefined) {
+        if (overwriteCargoData || shipment.totalVolumeM3 === null) {
+          updateData.totalVolumeM3 = cargoSummary.totalVolume;
+        }
+      }
+
+      if (Object.keys(updateData).length > 0) {
+        await db
+          .update(logisticsShipments)
+          .set(updateData)
+          .where(eq(logisticsShipments.id, shipmentId));
+
+        logger.info('[ImportExtractedItems] Updated shipment cargo data:', {
+          shipmentId,
+          updatedFields: Object.keys(updateData),
+        });
+      }
+    }
+
     // Get current max sort order for this shipment
-    const existingItems = await db.query.logisticsShipmentItems.findMany({
-      where: eq(logisticsShipmentItems.shipmentId, shipmentId),
-      columns: { sortOrder: true },
-    });
+    const existingItems = await db
+      .select({ sortOrder: logisticsShipmentItems.sortOrder })
+      .from(logisticsShipmentItems)
+      .where(eq(logisticsShipmentItems.shipmentId, shipmentId));
 
     let maxSortOrder = 0;
     for (const item of existingItems) {
@@ -124,6 +166,7 @@ const adminImportExtractedItems = adminProcedure
       shipmentId,
       itemsImported: createdItems.length,
       itemsSkipped: items.length - createdItems.length,
+      cargoSummaryUpdated: !!cargoSummary,
     });
 
     return {
@@ -131,6 +174,7 @@ const adminImportExtractedItems = adminProcedure
       itemsImported: createdItems.length,
       itemsSkipped: items.length - createdItems.length,
       items: createdItems,
+      cargoSummaryUpdated: !!cargoSummary,
     };
   });
 

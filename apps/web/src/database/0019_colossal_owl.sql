@@ -1,0 +1,1 @@
+ALTER TABLE "logistics_shipments" ADD COLUMN "total_pallets" integer;

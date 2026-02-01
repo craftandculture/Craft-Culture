@@ -145,7 +145,10 @@ const PdfExtractPage = () => {
   const { mutate: importItems, isPending: isImporting } = useMutation({
     ...api.logistics.admin.importExtractedItems.mutationOptions(),
     onSuccess: (result) => {
-      toast.success(`Imported ${result.itemsImported} items to shipment`);
+      const message = result.cargoSummaryUpdated
+        ? `Imported ${result.itemsImported} items + cargo data to shipment`
+        : `Imported ${result.itemsImported} items to shipment`;
+      toast.success(message);
       setShowImportModal(false);
       setSelectedShipmentId('');
     },
@@ -324,9 +327,21 @@ const PdfExtractPage = () => {
   const handleImportToShipment = () => {
     if (!extractedData?.lineItems || !selectedShipmentId) return;
 
+    // Build cargo summary from extracted data
+    const cargoSummary = {
+      totalCases: extractedData.totalCases,
+      totalPallets: extractedData.totalPallets,
+      totalWeight: extractedData.totalWeight,
+      totalVolume: extractedData.totalVolume,
+    };
+
+    // Only include cargo summary if at least one field has a value
+    const hasCargoData = Object.values(cargoSummary).some((v) => v !== undefined && v !== null);
+
     importItems({
       shipmentId: selectedShipmentId,
       items: extractedData.lineItems,
+      ...(hasCargoData && { cargoSummary }),
     });
   };
 

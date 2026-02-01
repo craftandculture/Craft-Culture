@@ -134,6 +134,13 @@
       "when": 1769925818401,
       "tag": "0018_normal_sumo",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1769927023893,
+      "tag": "0019_colossal_owl",
+      "breakpoints": true
     }
   ]
 }

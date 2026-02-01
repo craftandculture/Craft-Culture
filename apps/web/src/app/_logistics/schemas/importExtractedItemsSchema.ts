@@ -24,14 +24,29 @@ const extractedItemSchema = z.object({
 });
 
 /**
+ * Schema for cargo summary data (from packing lists, BOLs)
+ */
+const cargoSummarySchema = z.object({
+  totalCases: z.number().optional(),
+  totalPallets: z.number().optional(),
+  totalWeight: z.number().optional(), // kg
+  totalVolume: z.number().optional(), // m³
+});
+
+/**
  * Schema for importing extracted items to a shipment
  */
 const importExtractedItemsSchema = z.object({
   shipmentId: z.string().uuid(),
   items: z.array(extractedItemSchema).min(1, 'At least one item is required'),
+  // Optional cargo summary data to update on shipment
+  cargoSummary: cargoSummarySchema.optional(),
+  // Whether to update shipment cargo fields (even if they have values)
+  overwriteCargoData: z.boolean().optional().default(false),
 });
 
 export type ImportExtractedItemsInput = z.infer<typeof importExtractedItemsSchema>;
 export type ExtractedItem = z.infer<typeof extractedItemSchema>;
+export type CargoSummary = z.infer<typeof cargoSummarySchema>;
 
 export default importExtractedItemsSchema;

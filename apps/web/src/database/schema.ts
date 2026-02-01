@@ -2763,6 +2763,7 @@ export const logisticsShipments = pgTable(
     // Cargo details
     totalCases: integer('total_cases').default(0),
     totalBottles: integer('total_bottles').default(0),
+    totalPallets: integer('total_pallets'),
     totalWeightKg: doublePrecision('total_weight_kg'),
     totalVolumeM3: doublePrecision('total_volume_m3'),
 
