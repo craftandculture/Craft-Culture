@@ -8,6 +8,7 @@ import adminCreateDispatchBatch from './controller/adminCreateDispatchBatch';
 import adminCreateLocation from './controller/adminCreateLocation';
 import adminCreatePickList from './controller/adminCreatePickList';
 import adminCreateSpecialLocation from './controller/adminCreateSpecialLocation';
+import adminDeleteReceivingDraft from './controller/adminDeleteReceivingDraft';
 import adminGetCaseByBarcode from './controller/adminGetCaseByBarcode';
 import adminGetCaseLabels from './controller/adminGetCaseLabels';
 import adminGetDispatchBatch from './controller/adminGetDispatchBatch';
@@ -22,6 +23,7 @@ import adminGetPartnerRequests from './controller/adminGetPartnerRequests';
 import adminGetPendingShipments from './controller/adminGetPendingShipments';
 import adminGetPickList from './controller/adminGetPickList';
 import adminGetPickLists from './controller/adminGetPickLists';
+import adminGetReceivingDraft from './controller/adminGetReceivingDraft';
 import adminGetShipmentForReceiving from './controller/adminGetShipmentForReceiving';
 import adminGetStockAtLocation from './controller/adminGetStockAtLocation';
 import adminGetStockByOwner from './controller/adminGetStockByOwner';
@@ -35,6 +37,7 @@ import adminReleaseReservation from './controller/adminReleaseReservation';
 import adminRepack from './controller/adminRepack';
 import adminReserveStock from './controller/adminReserveStock';
 import adminResolvePartnerRequest from './controller/adminResolvePartnerRequest';
+import adminSaveReceivingDraft from './controller/adminSaveReceivingDraft';
 import adminSearchStock from './controller/adminSearchStock';
 import adminTransferOwnership from './controller/adminTransferOwnership';
 import adminTransferStock from './controller/adminTransferStock';
@@ -55,6 +58,9 @@ const receivingRouter = createTRPCRouter({
   getPendingShipments: adminGetPendingShipments,
   getShipmentForReceiving: adminGetShipmentForReceiving,
   receiveShipment: adminReceiveShipment,
+  getDraft: adminGetReceivingDraft,
+  saveDraft: adminSaveReceivingDraft,
+  deleteDraft: adminDeleteReceivingDraft,
 });
 
 const labelsRouter = createTRPCRouter({

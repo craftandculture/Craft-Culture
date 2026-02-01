@@ -107,14 +107,27 @@ const adminReceiveShipment = adminProcedure
       const actualBottlesPerCase = receivedItem.receivedBottlesPerCase ?? shipmentItem.bottlesPerCase ?? 12;
       const actualBottleSizeMl = receivedItem.receivedBottleSizeMl ?? shipmentItem.bottleSizeMl ?? 750;
 
+      // For added items, use the explicit product info if provided, otherwise fall back to shipment item
+      const productName = receivedItem.productName ?? shipmentItem.productName;
+      const producer = receivedItem.producer ?? shipmentItem.producer;
+      const vintage = receivedItem.vintage ?? shipmentItem.vintage;
+
       // Generate LWIN-18 for this product with actual received pack config
       const lwin18 = generateLwin18({
-        productName: shipmentItem.productName,
-        producer: shipmentItem.producer ?? undefined,
-        vintage: shipmentItem.vintage ?? undefined,
+        productName,
+        producer: producer ?? undefined,
+        vintage: vintage ?? undefined,
         bottlesPerCase: actualBottlesPerCase,
         bottleSizeMl: actualBottleSizeMl,
       });
+
+      // Build notes for the stock record
+      let stockNotes = receivedItem.notes ?? '';
+      if (receivedItem.isAddedItem) {
+        stockNotes = `Added pack variant: ${actualBottlesPerCase}x${actualBottleSizeMl}ml. ${stockNotes}`;
+      } else if (receivedItem.packChanged) {
+        stockNotes = `Pack changed: expected ${shipmentItem.bottlesPerCase ?? 12}x${shipmentItem.bottleSizeMl ?? 750}ml, received ${actualBottlesPerCase}x${actualBottleSizeMl}ml. ${stockNotes}`;
+      }
 
       // Create stock record with actual received pack configuration
       const [stock] = await db
@@ -124,9 +137,9 @@ const adminReceiveShipment = adminProcedure
           ownerId: partner?.id ?? ctx.user.id, // Partner owns the stock, fallback to admin
           ownerName: partner?.businessName ?? 'Craft & Culture',
           lwin18,
-          productName: shipmentItem.productName,
-          producer: shipmentItem.producer,
-          vintage: shipmentItem.vintage,
+          productName,
+          producer,
+          vintage,
           bottleSize: `${actualBottleSizeMl}ml`,
           caseConfig: actualBottlesPerCase,
           quantityCases: receivedItem.receivedCases,
@@ -138,9 +151,7 @@ const adminReceiveShipment = adminProcedure
           salesArrangement: 'consignment',
           expiryDate: receivedItem.expiryDate,
           isPerishable: !!receivedItem.expiryDate,
-          notes: receivedItem.packChanged
-            ? `Pack changed: expected ${shipmentItem.bottlesPerCase ?? 12}x${shipmentItem.bottleSizeMl ?? 750}ml, received ${actualBottlesPerCase}x${actualBottleSizeMl}ml. ${receivedItem.notes ?? ''}`
-            : receivedItem.notes,
+          notes: stockNotes || undefined,
         })
         .returning();
 
@@ -155,7 +166,7 @@ const adminReceiveShipment = adminProcedure
           .values({
             barcode,
             lwin18,
-            productName: shipmentItem.productName,
+            productName,
             lotNumber,
             shipmentId,
             currentLocationId: receivingLocationId,
@@ -172,7 +183,7 @@ const adminReceiveShipment = adminProcedure
         movementNumber,
         movementType: 'receive',
         lwin18,
-        productName: shipmentItem.productName,
+        productName,
         quantityCases: receivedItem.receivedCases,
         toLocationId: receivingLocationId,
         lotNumber,
@@ -186,7 +197,7 @@ const adminReceiveShipment = adminProcedure
       createdStock.push({
         stockId: stock.id,
         lwin18,
-        productName: shipmentItem.productName,
+        productName,
         cases: receivedItem.receivedCases,
         caseLabels,
       });
