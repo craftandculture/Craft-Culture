@@ -23,6 +23,7 @@ import adminGetQuoteRequest from './controller/adminGetQuoteRequest';
 import adminGetQuoteRequests from './controller/adminGetQuoteRequests';
 import adminGetQuotes from './controller/adminGetQuotes';
 import adminGetReportMetrics from './controller/adminGetReportMetrics';
+import adminImportExtractedItems from './controller/adminImportExtractedItems';
 import adminRejectQuote from './controller/adminRejectQuote';
 import adminRemoveItem from './controller/adminRemoveItem';
 import adminSyncHillebrand from './controller/adminSyncHillebrand';
@@ -77,6 +78,7 @@ const adminRouter = createTRPCRouter({
 
   // Tools
   extractDocument: adminExtractDocument,
+  importExtractedItems: adminImportExtractedItems,
 
   // Quotes
   quotes: createTRPCRouter({
