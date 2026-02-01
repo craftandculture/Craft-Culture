@@ -75,6 +75,11 @@ const WMSDashboardContent = () => {
     ...api.wms.admin.ownership.getRequests.queryOptions({ status: 'pending', limit: 5, offset: 0 }),
   });
 
+  // Fetch stock reconciliation status
+  const { data: reconcileData } = useQuery({
+    ...api.wms.admin.stock.reconcile.queryOptions(),
+  });
+
   const formatDate = (date: Date) => {
     return new Date(date).toLocaleString('en-GB', {
       day: '2-digit',
@@ -89,6 +94,7 @@ const WMSDashboardContent = () => {
     (expiringStock?.summary?.criticalCases ?? 0) > 0;
 
   const pendingRequestCount = partnerRequests?.summary?.pendingCount ?? 0;
+  const hasReconcileIssues = reconcileData?.summary && !reconcileData.summary.isReconciled;
 
   return (
     <div className="container mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8">
@@ -200,6 +206,36 @@ const WMSDashboardContent = () => {
             </CardContent>
           </Card>
         </div>
+
+        {/* Critical Alert: Stock Reconciliation Issue */}
+        {hasReconcileIssues && (
+          <Card className="border-red-500 bg-red-50 dark:border-red-700 dark:bg-red-900/30">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Icon icon={IconAlertTriangle} size="lg" className="text-red-600" />
+                  <div>
+                    <Typography variant="headingSm" className="text-red-800 dark:text-red-300">
+                      Stock Reconciliation Required
+                    </Typography>
+                    <Typography variant="bodySm" className="text-red-700 dark:text-red-400">
+                      {Math.abs(reconcileData?.summary.discrepancy ?? 0)} case
+                      {Math.abs(reconcileData?.summary.discrepancy ?? 0) !== 1 ? 's' : ''}{' '}
+                      {(reconcileData?.summary.discrepancy ?? 0) > 0 ? 'over' : 'under'} —
+                      movements show {reconcileData?.summary.expectedStock} cases but stock has{' '}
+                      {reconcileData?.summary.actualStock}
+                    </Typography>
+                  </div>
+                </div>
+                <Button variant="destructive" size="sm" asChild>
+                  <Link href="/platform/admin/wms/stock/reconcile">
+                    <ButtonContent>Fix Now</ButtonContent>
+                  </Link>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Alerts Section */}
         {(hasExpiryAlerts || (overview?.pendingPutaway?.casesInReceiving ?? 0) > 0 || pendingRequestCount > 0) && (
@@ -502,6 +538,25 @@ const WMSDashboardContent = () => {
                     Stock movement history
                   </Typography>
                 </div>
+                <IconChevronRight className="ml-auto h-5 w-5 text-text-muted" />
+              </CardContent>
+            </Card>
+          </Link>
+          <Link href="/platform/admin/wms/stock/reconcile">
+            <Card className={`cursor-pointer transition-colors hover:border-border-brand ${hasReconcileIssues ? 'border-red-300 bg-red-50 dark:border-red-800 dark:bg-red-900/20' : ''}`}>
+              <CardContent className="flex items-center gap-3 p-4">
+                <Icon icon={IconAlertTriangle} size="md" className={hasReconcileIssues ? 'text-red-600' : 'text-text-muted'} />
+                <div className="flex items-center gap-2">
+                  <Typography variant="headingSm">Reconciliation</Typography>
+                  {hasReconcileIssues && (
+                    <span className="rounded-full bg-red-600 px-2 py-0.5 text-xs font-medium text-white">
+                      Issue
+                    </span>
+                  )}
+                </div>
+                <Typography variant="bodyXs" colorRole="muted">
+                  Compare movements vs stock
+                </Typography>
                 <IconChevronRight className="ml-auto h-5 w-5 text-text-muted" />
               </CardContent>
             </Card>
