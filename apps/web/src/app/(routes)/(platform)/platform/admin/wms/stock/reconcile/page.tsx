@@ -6,6 +6,7 @@ import {
   IconLoader2,
   IconRefresh,
   IconTrash,
+  IconWand,
 } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
@@ -34,6 +35,14 @@ const ReconcilePage = () => {
 
   const deleteMutation = useMutation({
     ...api.wms.admin.stock.deleteRecord.mutationOptions(),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['wms', 'admin', 'stock'] });
+      void refetch();
+    },
+  });
+
+  const autoFixMutation = useMutation({
+    ...api.wms.admin.stock.autoFix.mutationOptions(),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['wms', 'admin', 'stock'] });
       void refetch();
@@ -72,9 +81,27 @@ const ReconcilePage = () => {
               Compare movements against stock records to find discrepancies
             </Typography>
           </div>
-          <Button variant="outline" size="sm" onClick={() => refetch()}>
-            <ButtonContent iconLeft={IconRefresh}>Refresh</ButtonContent>
-          </Button>
+          <div className="flex gap-2">
+            {!isReconciled && (
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => {
+                  if (confirm('Auto-fix will delete orphan records and merge duplicates. Continue?')) {
+                    autoFixMutation.mutate({});
+                  }
+                }}
+                disabled={autoFixMutation.isPending}
+              >
+                <ButtonContent iconLeft={IconWand}>
+                  {autoFixMutation.isPending ? 'Fixing...' : 'Auto-Fix'}
+                </ButtonContent>
+              </Button>
+            )}
+            <Button variant="outline" size="sm" onClick={() => refetch()}>
+              <ButtonContent iconLeft={IconRefresh}>Refresh</ButtonContent>
+            </Button>
+          </div>
         </div>
 
         {/* Status Banner */}
@@ -99,6 +126,39 @@ const ReconcilePage = () => {
             </div>
           </CardContent>
         </Card>
+
+        {/* Auto-Fix Results */}
+        {autoFixMutation.data && (
+          <Card className="border-blue-200 bg-blue-50">
+            <CardContent className="p-4">
+              <Typography variant="headingSm" className="mb-2 text-blue-800">
+                Auto-Fix Complete: {autoFixMutation.data.totalFixes} fixes applied
+              </Typography>
+              {autoFixMutation.data.fixes.length > 0 ? (
+                <div className="space-y-2">
+                  {autoFixMutation.data.fixes.map((fix, idx) => (
+                    <div key={idx} className="text-sm text-blue-700">
+                      • {fix.productName}: {fix.detail}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <Typography variant="bodySm" className="text-blue-700">
+                  No issues found to fix.
+                </Typography>
+              )}
+              {autoFixMutation.data.finalState.isReconciled ? (
+                <Typography variant="bodySm" className="mt-2 font-medium text-emerald-700">
+                  ✓ Stock is now reconciled!
+                </Typography>
+              ) : (
+                <Typography variant="bodySm" className="mt-2 text-amber-700">
+                  ⚠ Still {autoFixMutation.data.finalState.discrepancy} cases discrepancy. Manual review needed.
+                </Typography>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         {/* Summary */}
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
