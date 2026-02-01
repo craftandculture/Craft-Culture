@@ -18,7 +18,7 @@ const adminGetCaseLabels = adminProcedure
     const [shipmentResult] = await db
       .select({
         shipmentNumber: logisticsShipments.shipmentNumber,
-        partnerName: partners.name,
+        partnerName: partners.businessName,
         originCountry: logisticsShipments.originCountry,
       })
       .from(logisticsShipments)

@@ -43,7 +43,7 @@ const adminGetPartnerRequests = adminProcedure
         requestType: wmsPartnerRequests.requestType,
         status: wmsPartnerRequests.status,
         partnerId: wmsPartnerRequests.partnerId,
-        partnerName: partners.name,
+        partnerName: partners.businessName,
         requestedById: wmsPartnerRequests.requestedBy,
         requestedByName: users.name,
         requestedByEmail: users.email,

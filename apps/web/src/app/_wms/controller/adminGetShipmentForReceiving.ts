@@ -22,7 +22,7 @@ const adminGetShipmentForReceiving = adminProcedure
         status: logisticsShipments.status,
         type: logisticsShipments.type,
         partnerId: logisticsShipments.partnerId,
-        partnerName: partners.name,
+        partnerName: partners.businessName,
         originCountry: logisticsShipments.originCountry,
         originCity: logisticsShipments.originCity,
         totalCases: logisticsShipments.totalCases,
