@@ -19,7 +19,7 @@ const adminGetPendingShipments = adminProcedure.query(async () => {
       shipmentNumber: logisticsShipments.shipmentNumber,
       status: logisticsShipments.status,
       partnerId: logisticsShipments.partnerId,
-      partnerName: partners.name,
+      partnerName: partners.businessName,
       originCountry: logisticsShipments.originCountry,
       totalCases: logisticsShipments.totalCases,
       eta: logisticsShipments.eta,
@@ -30,7 +30,7 @@ const adminGetPendingShipments = adminProcedure.query(async () => {
     .leftJoin(partners, eq(logisticsShipments.partnerId, partners.id))
     .leftJoin(logisticsShipmentItems, eq(logisticsShipmentItems.shipmentId, logisticsShipments.id))
     .where(inArray(logisticsShipments.status, ['at_warehouse', 'cleared']))
-    .groupBy(logisticsShipments.id, partners.name)
+    .groupBy(logisticsShipments.id, partners.businessName)
     .orderBy(desc(logisticsShipments.ata), desc(logisticsShipments.eta));
 
   return shipments;
