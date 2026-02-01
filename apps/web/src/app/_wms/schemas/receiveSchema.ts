@@ -7,6 +7,10 @@ export const receiveItemSchema = z.object({
   shipmentItemId: z.string().uuid(),
   expectedCases: z.number().int().min(0),
   receivedCases: z.number().int().min(0),
+  // Pack configuration - allows changing if different pack size arrived
+  receivedBottlesPerCase: z.number().int().min(1).optional(),
+  receivedBottleSizeMl: z.number().int().min(1).optional(),
+  packChanged: z.boolean().optional(),
   expiryDate: z.date().optional(),
   notes: z.string().optional(),
 });

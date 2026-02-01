@@ -103,28 +103,32 @@ const adminReceiveShipment = adminProcedure
         continue; // Skip items with zero received
       }
 
-      // Generate LWIN-18 for this product
+      // Use received pack config if provided, otherwise use shipment item values
+      const actualBottlesPerCase = receivedItem.receivedBottlesPerCase ?? shipmentItem.bottlesPerCase ?? 12;
+      const actualBottleSizeMl = receivedItem.receivedBottleSizeMl ?? shipmentItem.bottleSizeMl ?? 750;
+
+      // Generate LWIN-18 for this product with actual received pack config
       const lwin18 = generateLwin18({
         productName: shipmentItem.productName,
         producer: shipmentItem.producer ?? undefined,
         vintage: shipmentItem.vintage ?? undefined,
-        bottlesPerCase: shipmentItem.bottlesPerCase ?? 12,
-        bottleSizeMl: shipmentItem.bottleSizeMl ?? 750,
+        bottlesPerCase: actualBottlesPerCase,
+        bottleSizeMl: actualBottleSizeMl,
       });
 
-      // Create stock record
+      // Create stock record with actual received pack configuration
       const [stock] = await db
         .insert(wmsStock)
         .values({
           locationId: receivingLocationId,
           ownerId: partner?.id ?? ctx.user.id, // Partner owns the stock, fallback to admin
-          ownerName: partner?.name ?? 'Craft & Culture',
+          ownerName: partner?.businessName ?? 'Craft & Culture',
           lwin18,
           productName: shipmentItem.productName,
           producer: shipmentItem.producer,
           vintage: shipmentItem.vintage,
-          bottleSize: `${shipmentItem.bottleSizeMl ?? 750}ml`,
-          caseConfig: shipmentItem.bottlesPerCase ?? 12,
+          bottleSize: `${actualBottleSizeMl}ml`,
+          caseConfig: actualBottlesPerCase,
           quantityCases: receivedItem.receivedCases,
           reservedCases: 0,
           availableCases: receivedItem.receivedCases,
@@ -134,7 +138,9 @@ const adminReceiveShipment = adminProcedure
           salesArrangement: 'consignment',
           expiryDate: receivedItem.expiryDate,
           isPerishable: !!receivedItem.expiryDate,
-          notes: receivedItem.notes,
+          notes: receivedItem.packChanged
+            ? `Pack changed: expected ${shipmentItem.bottlesPerCase ?? 12}x${shipmentItem.bottleSizeMl ?? 750}ml, received ${actualBottlesPerCase}x${actualBottleSizeMl}ml. ${receivedItem.notes ?? ''}`
+            : receivedItem.notes,
         })
         .returning();
 
