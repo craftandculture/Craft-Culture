@@ -50,26 +50,26 @@ const adminGetDashboardMetrics = adminProcedure.query(async () => {
       .groupBy(logisticsShipments.status),
 
     // Recent shipments (top 10)
-    db.query.logisticsShipments.findMany({
-      orderBy: [desc(logisticsShipments.createdAt)],
-      limit: 10,
-      columns: {
-        id: true,
-        shipmentNumber: true,
-        status: true,
-        type: true,
-        transportMode: true,
-        originCity: true,
-        originCountry: true,
-        destinationCity: true,
-        destinationCountry: true,
-        destinationWarehouse: true,
-        carrierName: true,
-        eta: true,
-        totalCases: true,
-        createdAt: true,
-      },
-    }),
+    db
+      .select({
+        id: logisticsShipments.id,
+        shipmentNumber: logisticsShipments.shipmentNumber,
+        status: logisticsShipments.status,
+        type: logisticsShipments.type,
+        transportMode: logisticsShipments.transportMode,
+        originCity: logisticsShipments.originCity,
+        originCountry: logisticsShipments.originCountry,
+        destinationCity: logisticsShipments.destinationCity,
+        destinationCountry: logisticsShipments.destinationCountry,
+        destinationWarehouse: logisticsShipments.destinationWarehouse,
+        carrierName: logisticsShipments.carrierName,
+        eta: logisticsShipments.eta,
+        totalCases: logisticsShipments.totalCases,
+        createdAt: logisticsShipments.createdAt,
+      })
+      .from(logisticsShipments)
+      .orderBy(desc(logisticsShipments.createdAt))
+      .limit(10),
 
     // Required docs count
     db
