@@ -54,6 +54,15 @@ const adminReceiveShipment = adminProcedure
 
     const { shipment, partner } = shipmentResult;
 
+    // Validate that the shipment has a partner (required for stock ownership)
+    if (!partner) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message:
+          'Shipment must have a partner associated for stock ownership. Please edit the shipment and assign a partner before receiving.',
+      });
+    }
+
     // 2. Validate the receiving location exists
     const [receivingLocation] = await db
       .select()
@@ -137,8 +146,8 @@ const adminReceiveShipment = adminProcedure
         .insert(wmsStock)
         .values({
           locationId: itemLocationId,
-          ownerId: partner?.id ?? ctx.user.id, // Partner owns the stock, fallback to admin
-          ownerName: partner?.businessName ?? 'Craft & Culture',
+          ownerId: partner.id,
+          ownerName: partner.businessName,
           lwin18,
           productName,
           producer,
