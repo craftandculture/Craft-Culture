@@ -37,6 +37,7 @@ import adminGetStockOverview from './controller/adminGetStockOverview';
 import adminMarkLabelsPrinted from './controller/adminMarkLabelsPrinted';
 import adminPickItem from './controller/adminPickItem';
 import adminPutaway from './controller/adminPutaway';
+import adminRebuildStockFromMovements from './controller/adminRebuildStockFromMovements';
 import adminReceiveShipment from './controller/adminReceiveShipment';
 import adminReconcileStock from './controller/adminReconcileStock';
 import adminReleaseReservation from './controller/adminReleaseReservation';
@@ -99,6 +100,7 @@ const stockRouter = createTRPCRouter({
   reconcile: adminReconcileStock,
   deleteRecord: adminDeleteStockRecord,
   autoFix: adminAutoFixStock,
+  rebuildFromMovements: adminRebuildStockFromMovements,
 });
 
 const ownershipRouter = createTRPCRouter({
