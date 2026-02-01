@@ -12,6 +12,7 @@ import generateLabelZpl, { type LabelData } from '../utils/generateLabelZpl';
  * Create case labels for a product during receiving
  *
  * Generates unique barcodes, stores labels in database, and returns ZPL for printing.
+ * Uses a database transaction with row-level locking to prevent race conditions.
  *
  * @example
  *   await trpcClient.wms.admin.labels.createCaseLabels.mutate({
@@ -47,69 +48,79 @@ const adminCreateCaseLabels = adminProcedure
 
     const locationCode = location?.locationCode ?? '';
 
-    // Get the current max sequence for this LWIN across ALL labels (globally unique)
-    // Barcode format: CASE-{LWIN18}-{SEQ} where SEQ is the last segment
-    // Use regexp to extract the last numeric segment after the final dash
-    const [maxSeqResult] = await db
-      .select({
-        maxSeq: sql<number>`COALESCE(MAX(CAST(SUBSTRING(${wmsCaseLabels.barcode} FROM '[0-9]+$') AS INTEGER)), 0)`,
-      })
-      .from(wmsCaseLabels)
-      .where(eq(wmsCaseLabels.lwin18, lwin18));
+    // Use a transaction with advisory lock to prevent race conditions
+    // Advisory locks are lightweight and perfect for preventing concurrent sequence generation
+    const result = await db.transaction(async (tx) => {
+      // Get an advisory lock based on the LWIN18 hash to prevent concurrent inserts for same product
+      // This ensures only one request at a time can generate sequences for a specific LWIN18
+      const lockKey = Buffer.from(lwin18).reduce((acc, byte) => acc + byte, 0) % 2147483647;
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(${lockKey})`);
 
-    let currentSeq = maxSeqResult?.maxSeq ?? 0;
+      // Now safely get the current max sequence for this LWIN across ALL labels
+      // Barcode format: CASE-{LWIN18}-{SEQ} where SEQ is the last segment
+      const [maxSeqResult] = await tx
+        .select({
+          maxSeq: sql<number>`COALESCE(MAX(CAST(SUBSTRING(${wmsCaseLabels.barcode} FROM '[0-9]+$') AS INTEGER)), 0)`,
+        })
+        .from(wmsCaseLabels)
+        .where(eq(wmsCaseLabels.lwin18, lwin18));
 
-    // Create labels
-    const labelsToInsert: Array<{
-      barcode: string;
-      lwin18: string;
-      productName: string;
-      lotNumber: string | null;
-      shipmentId: string;
-      currentLocationId: string;
-      printedAt: Date;
-    }> = [];
+      let currentSeq = maxSeqResult?.maxSeq ?? 0;
 
-    const labelDataForZpl: LabelData[] = [];
+      // Create labels
+      const labelsToInsert: Array<{
+        barcode: string;
+        lwin18: string;
+        productName: string;
+        lotNumber: string | null;
+        shipmentId: string;
+        currentLocationId: string;
+        printedAt: Date;
+      }> = [];
 
-    for (let i = 0; i < quantity; i++) {
-      currentSeq += 1;
-      const barcode = generateCaseLabelBarcode(lwin18, currentSeq);
+      const labelDataForZpl: LabelData[] = [];
 
-      labelsToInsert.push({
-        barcode,
-        lwin18,
-        productName,
-        lotNumber: lotNumber ?? null,
-        shipmentId,
-        currentLocationId: locationId,
-        printedAt: new Date(),
+      for (let i = 0; i < quantity; i++) {
+        currentSeq += 1;
+        const barcode = generateCaseLabelBarcode(lwin18, currentSeq);
+
+        labelsToInsert.push({
+          barcode,
+          lwin18,
+          productName,
+          lotNumber: lotNumber ?? null,
+          shipmentId,
+          currentLocationId: locationId,
+          printedAt: new Date(),
+        });
+
+        labelDataForZpl.push({
+          barcode,
+          productName,
+          lwin18,
+          packSize: packSize ?? '',
+          lotNumber,
+          locationCode,
+        });
+      }
+
+      // Insert all labels within the transaction
+      const insertedLabels = await tx.insert(wmsCaseLabels).values(labelsToInsert).returning({
+        id: wmsCaseLabels.id,
+        barcode: wmsCaseLabels.barcode,
       });
 
-      labelDataForZpl.push({
-        barcode,
-        productName,
-        lwin18,
-        packSize: packSize ?? '',
-        lotNumber,
-        locationCode,
-      });
-    }
-
-    // Insert all labels
-    const insertedLabels = await db.insert(wmsCaseLabels).values(labelsToInsert).returning({
-      id: wmsCaseLabels.id,
-      barcode: wmsCaseLabels.barcode,
+      return { insertedLabels, labelDataForZpl };
     });
 
-    // Generate ZPL for all labels
-    const zplCommands = labelDataForZpl.map((data) => generateLabelZpl(data));
+    // Generate ZPL for all labels (outside transaction for performance)
+    const zplCommands = result.labelDataForZpl.map((data) => generateLabelZpl(data));
     const combinedZpl = zplCommands.join('\n');
 
     return {
       success: true,
-      labels: insertedLabels,
-      quantity: insertedLabels.length,
+      labels: result.insertedLabels,
+      quantity: result.insertedLabels.length,
       zpl: combinedZpl,
     };
   });
