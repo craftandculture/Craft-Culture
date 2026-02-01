@@ -12,6 +12,7 @@ import adminDeleteDocument from './controller/adminDeleteDocument';
 import adminExportCompliancePdf from './controller/adminExportCompliancePdf';
 import adminExportLandedCostExcel from './controller/adminExportLandedCostExcel';
 import adminExtractDocument from './controller/adminExtractDocument';
+import adminFixShipmentItemCases from './controller/adminFixShipmentItemCases';
 import adminGetDashboardMetrics from './controller/adminGetDashboardMetrics';
 import adminGetDocumentCompliance from './controller/adminGetDocumentCompliance';
 import adminGetHillebrandEvents from './controller/adminGetHillebrandEvents';
@@ -79,6 +80,7 @@ const adminRouter = createTRPCRouter({
   // Tools
   extractDocument: adminExtractDocument,
   importExtractedItems: adminImportExtractedItems,
+  fixShipmentItemCases: adminFixShipmentItemCases,
 
   // Quotes
   quotes: createTRPCRouter({

@@ -100,6 +100,75 @@ const extractedLogisticsDataSchema = z.object({
 /**
  * Get the appropriate system prompt based on document type
  */
+/**
+ * Get document-type-specific extraction prompt for the user message
+ */
+const getExtractionPrompt = (documentType: string) => {
+  if (documentType === 'packing_list') {
+    return `TRANSCRIBE this WINE PACKING LIST document.
+
+CRITICAL COLUMN MAPPING FOR PACKING LISTS:
+| Column Name | Maps To | Description |
+|-------------|---------|-------------|
+| "Number of cases" or "Qty" | cases | NUMBER OF CASES - put this in 'cases' field |
+| "CASES" or "Pack Type" | bottlesPerCase | Parse "cases of 12 bottles" → 12 |
+| "Number of bottles" | quantity (for verification) | Total bottles = cases × bottlesPerCase |
+| Product/Description | productName | Full wine name |
+| Vintage | vintage | 4-digit year |
+
+PARSING PACK TYPE - CRITICAL:
+- "cases of 12 bottles" → bottlesPerCase: 12, bottleSize: "750ml"
+- "cases of 6 bottles" → bottlesPerCase: 6, bottleSize: "750ml"
+- "wb × 12 bottles" or "wooden box 12" → bottlesPerCase: 12, bottleSize: "750ml"
+- "wb × 6 bottles" or "wooden box 6" → bottlesPerCase: 6, bottleSize: "750ml"
+- "3 wb × 12 bottles" means 3 cases with 12 bottles each → cases: 3, bottlesPerCase: 12
+
+VALIDATION - Use both values for cross-checking:
+1. Read "Number of cases" → put in 'cases' field
+2. Read "CASES" column → parse to get 'bottlesPerCase'
+3. Read "Number of bottles" → put in 'quantity' field for verification
+4. Verify: cases × bottlesPerCase should equal quantity (Number of bottles)
+
+EXAMPLE:
+Row: Product="Château Fontenil 2005", Number of cases=3, CASES="wb × 12 bottles", Number of bottles=36
+Verification: 3 × 12 = 36 ✓
+Result: cases=3, bottlesPerCase=12, bottleSize="750ml", quantity=36, productName="Château Fontenil 2005", vintage=2005
+
+Also look for document totals like "Total: 80 CASES" or "504 bottles" for verification.
+Extract EVERY line item. Copy product names exactly as written.`;
+  }
+
+  // Default: Commercial invoice format
+  return `TRANSCRIBE this WINE COMMERCIAL INVOICE document.
+
+COLUMN MAPPING FOR WINE INVOICES - CRITICAL:
+| Column | Maps to | Description |
+|--------|---------|-------------|
+| Qty | cases | NUMBER OF CASES (NOT bottles!) |
+| Size | bottlesPerCase + bottleSize | Parse "6x75cl" → bottlesPerCase:6, bottleSize:"750ml" |
+| ABV % | alcoholPercent | Alcohol percentage |
+| Origin | countryOfOrigin | Country (France, Italy, Spain, etc.) |
+| Description of Goods | productName + producer + region | Full wine name |
+| Product Code | lwin | LWIN-18 code (18-digit SKU like "100604520190600750") |
+| Vintage | vintage | 4-digit year |
+| Unit Price USD | unitPrice | Price per case |
+| Total Price USD | total | Line total |
+| Commodity Code | hsCode | HS tariff code (10 digits like "2204214290") |
+
+PARSING SIZE COLUMN - VERY IMPORTANT:
+- "6x75cl" → bottlesPerCase: 6, bottleSize: "750ml"
+- "12x75cl" → bottlesPerCase: 12, bottleSize: "750ml"
+- "3x75cl" → bottlesPerCase: 3, bottleSize: "750ml"
+- "1x150cl" → bottlesPerCase: 1, bottleSize: "1500ml"
+
+CRITICAL RULE: The "Qty" column shows NUMBER OF CASES!
+- If Qty=1 and Size="6x75cl", this means 1 CASE containing 6 bottles
+- Do NOT put "6" in cases just because the Size says "6x75cl"
+- The "6" in "6x75cl" goes into bottlesPerCase, NOT cases
+
+Extract EVERY line item. Copy product names exactly as written.`;
+};
+
 const getSystemPrompt = (documentType: string) => {
   const baseInstructions = `You are a precise OCR system that extracts structured data from logistics documents.
 
@@ -139,11 +208,38 @@ You are a TRANSCRIPTION tool, not a creative writer. Extract ONLY what exists in
 - All cost line items (freight, handling, customs, insurance, etc.)
 - Total amount and currency
 - Payment terms`,
-    packing_list: `Focus on extracting:
-- All product line items with quantities, weights, and dimensions
-- Total cases, pallets, weight, and volume
+    packing_list: `Focus on extracting WINE PACKING LIST data:
+
+CRITICAL COLUMN MAPPING FOR PACKING LISTS:
+| Column Name | Maps To | Description |
+|-------------|---------|-------------|
+| "Number of cases" or "Qty" or "Cases" | cases | NUMBER OF CASES - THIS IS WHAT YOU PUT IN 'cases' |
+| "CASES" or "Pack" or "Type" | bottlesPerCase | Parse "cases of 12 bottles" → bottlesPerCase: 12 |
+| "Number of bottles" or "Bottles" | VERIFICATION ONLY | Do NOT put this in 'cases'! |
+| Description/Product | productName | Full product name |
+| Vintage | vintage | 4-digit year |
+
+PARSING PACK TYPE COLUMN:
+- "cases of 12 bottles" → bottlesPerCase: 12
+- "cases of 6 bottles" → bottlesPerCase: 6
+- "wooden box 12" or "wb × 12 bottles" → bottlesPerCase: 12
+- "wooden box 6" or "wb × 6 bottles" → bottlesPerCase: 6
+- "3 wb × 12 bottles" means 3 cases, each with 12 bottles → cases: 3, bottlesPerCase: 12
+
+CRITICAL: "Number of bottles" is the TOTAL bottle count (cases × bottlesPerCase).
+DO NOT use "Number of bottles" for the 'cases' field!
+ALWAYS use "Number of cases" for the 'cases' field!
+
+EXAMPLE ROW FROM PACKING LIST:
+Product: "Château Fontenil 2005", Number of cases: 3, CASES: "wb × 12 bottles", Number of bottles: 36
+Result: cases: 3, bottlesPerCase: 12, productName: "Château Fontenil 2005", vintage: 2005
+
+Also extract:
+- Total cases from document summary (look for "Total cases: X" or "80 CASES")
+- Total bottles from document summary (for verification)
+- Shipper and consignee details
 - HS codes and country of origin
-- Shipper and consignee details`,
+- Weights and dimensions if present`,
     bill_of_lading: `Focus on extracting:
 - BOL number
 - Vessel name and voyage number
@@ -227,6 +323,8 @@ const adminExtractDocument = adminProcedure.input(extractDocumentSchema).mutatio
   try {
     let extractedData: z.infer<typeof extractedLogisticsDataSchema>;
 
+    const extractionPrompt = getExtractionPrompt(documentType);
+
     if (fileType.startsWith('image/')) {
       const messages = [
         {
@@ -234,38 +332,7 @@ const adminExtractDocument = adminProcedure.input(extractDocumentSchema).mutatio
           content: [
             {
               type: 'text' as const,
-              text: `TRANSCRIBE this WINE COMMERCIAL INVOICE image.
-
-COLUMN MAPPING FOR WINE INVOICES - CRITICAL:
-| Column | Maps to | Description |
-|--------|---------|-------------|
-| Qty | cases | NUMBER OF CASES (NOT bottles!) |
-| Size | bottlesPerCase + bottleSize | Parse "6x75cl" → bottlesPerCase:6, bottleSize:"750ml" |
-| ABV % | alcoholPercent | Alcohol percentage |
-| Origin | countryOfOrigin | Country (France, Italy, Spain, etc.) |
-| Description of Goods | productName + producer + region | Full wine name |
-| Product Code | lwin | LWIN-18 code (18-digit SKU like "100604520190600750") |
-| Vintage | vintage | 4-digit year |
-| Unit Price USD | unitPrice | Price per case |
-| Total Price USD | total | Line total |
-| Commodity Code | hsCode | HS tariff code (10 digits like "2204214290") |
-
-PARSING SIZE COLUMN - VERY IMPORTANT:
-- "6x75cl" → bottlesPerCase: 6, bottleSize: "750ml"
-- "12x75cl" → bottlesPerCase: 12, bottleSize: "750ml"
-- "3x75cl" → bottlesPerCase: 3, bottleSize: "750ml"
-- "1x150cl" → bottlesPerCase: 1, bottleSize: "1500ml"
-
-CRITICAL RULE: The "Qty" column shows NUMBER OF CASES!
-- If Qty=1 and Size="6x75cl", this means 1 CASE containing 6 bottles
-- Do NOT put "6" in cases just because the Size says "6x75cl"
-- The "6" in "6x75cl" goes into bottlesPerCase, NOT cases
-
-EXAMPLE:
-Row: Qty=1, Size="6x75cl", Description="Chateau Angelus...", Product Code="100604520190600750"
-Result: cases=1, bottlesPerCase=6, bottleSize="750ml", lwin="100604520190600750"
-
-Extract EVERY line item. Copy product names exactly as written.`,
+              text: extractionPrompt,
             },
             {
               type: 'image' as const,
@@ -310,47 +377,7 @@ Extract EVERY line item. Copy product names exactly as written.`,
           schema: extractedLogisticsDataSchema,
           system: systemPrompt,
           maxTokens: 16384,
-          prompt: `Parse this WINE COMMERCIAL INVOICE and extract structured data.
-
-COLUMN MAPPING FOR WINE INVOICES - EXTREMELY IMPORTANT:
-| Column | Maps to | Description |
-|--------|---------|-------------|
-| Qty | cases | NUMBER OF CASES (not bottles!) |
-| Size | bottlesPerCase + bottleSize | Parse "6x75cl" → bottlesPerCase:6, bottleSize:"750ml" |
-| ABV % | alcoholPercent | Alcohol percentage |
-| Origin | countryOfOrigin | Country (France, Italy, Spain, etc.) |
-| Description of Goods | productName + producer + region | Full wine name |
-| Product Code | lwin | LWIN-18 code (18-digit SKU) |
-| Vintage | vintage | 4-digit year |
-| Unit Price USD | unitPrice | Price per case |
-| Total Price USD | total | Line total |
-| Commodity Code | hsCode | HS tariff code |
-
-PARSING SIZE COLUMN - CRITICAL:
-- "6x75cl" → bottlesPerCase: 6, bottleSize: "750ml"
-- "12x75cl" → bottlesPerCase: 12, bottleSize: "750ml"
-- "3x75cl" → bottlesPerCase: 3, bottleSize: "750ml"
-- "1x150cl" → bottlesPerCase: 1, bottleSize: "1500ml"
-
-EXAMPLE ROW:
-Qty=1, Size="6x75cl", Origin="France", Description="Chateau Angelus Premier Grand Cru Classe A, Saint-Emilion Grand Cru", Product Code="100604520190600750", Vintage=2019, Unit Price=$1,575.50
-
-Should produce:
-{
-  cases: 1,          // FROM QTY COLUMN - THIS IS CASES NOT BOTTLES
-  bottlesPerCase: 6, // PARSED FROM "6x75cl"
-  bottleSize: "750ml", // PARSED FROM "6x75cl"
-  countryOfOrigin: "France",
-  productName: "Chateau Angelus Premier Grand Cru Classe A, Saint-Emilion Grand Cru",
-  producer: "Chateau Angelus",
-  region: "Saint-Emilion Grand Cru",
-  lwin: "100604520190600750",
-  vintage: 2019,
-  unitPrice: 1575.50,
-  total: 1575.50
-}
-
-CRITICAL: The Qty column is the NUMBER OF CASES. Do NOT confuse the "6" in "6x75cl" with the Qty.
+          prompt: `${extractionPrompt}
 
 --- DOCUMENT TEXT ---
 ${pdfText}
@@ -371,38 +398,7 @@ ${pdfText}
             content: [
               {
                 type: 'text' as const,
-                text: `TRANSCRIBE this WINE COMMERCIAL INVOICE document.
-
-COLUMN MAPPING FOR WINE INVOICES - CRITICAL:
-| Column | Maps to | Description |
-|--------|---------|-------------|
-| Qty | cases | NUMBER OF CASES (NOT bottles!) |
-| Size | bottlesPerCase + bottleSize | Parse "6x75cl" → bottlesPerCase:6, bottleSize:"750ml" |
-| ABV % | alcoholPercent | Alcohol percentage |
-| Origin | countryOfOrigin | Country (France, Italy, Spain, etc.) |
-| Description of Goods | productName + producer + region | Full wine name |
-| Product Code | lwin | LWIN-18 code (18-digit SKU like "100604520190600750") |
-| Vintage | vintage | 4-digit year |
-| Unit Price USD | unitPrice | Price per case |
-| Total Price USD | total | Line total |
-| Commodity Code | hsCode | HS tariff code (10 digits like "2204214290") |
-
-PARSING SIZE COLUMN - VERY IMPORTANT:
-- "6x75cl" → bottlesPerCase: 6, bottleSize: "750ml"
-- "12x75cl" → bottlesPerCase: 12, bottleSize: "750ml"
-- "3x75cl" → bottlesPerCase: 3, bottleSize: "750ml"
-- "1x150cl" → bottlesPerCase: 1, bottleSize: "1500ml"
-
-CRITICAL RULE: The "Qty" column shows NUMBER OF CASES!
-- If Qty=1 and Size="6x75cl", this means 1 CASE containing 6 bottles
-- Do NOT put "6" in cases just because the Size says "6x75cl"
-- The "6" in "6x75cl" goes into bottlesPerCase, NOT cases
-
-EXAMPLE:
-Row: Qty=1, Size="6x75cl", Description="Chateau Angelus...", Product Code="100604520190600750"
-Result: cases=1, bottlesPerCase=6, bottleSize="750ml", lwin="100604520190600750"
-
-Extract EVERY line item. Copy product names exactly as written.`,
+                text: extractionPrompt,
               },
               {
                 type: 'file' as const,
