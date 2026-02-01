@@ -1,4 +1,4 @@
-import { sql } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { wmsLocations, wmsStock, wmsStockMovements } from '@/database/schema';
@@ -49,7 +49,7 @@ const adminGetStockOverview = adminProcedure
       db
         .select({
           totalLocations: sql<number>`COUNT(*)::int`,
-          activeLocations: sql<number>`COUNT(*) FILTER (WHERE ${wmsLocations.isActive} = true)::int`,
+          activeLocations: sql<number>`SUM(CASE WHEN ${wmsLocations.isActive} THEN 1 ELSE 0 END)::int`,
         })
         .from(wmsLocations),
 
@@ -68,13 +68,13 @@ const adminGetStockOverview = adminProcedure
           expiringNinetyDays: sql<number>`COALESCE(SUM(CASE WHEN ${wmsStock.expiryDate} > ${thirtyDaysFromNow} AND ${wmsStock.expiryDate} <= ${ninetyDaysFromNow} THEN ${wmsStock.quantityCases} ELSE 0 END), 0)::int`,
         })
         .from(wmsStock)
-        .where(sql`${wmsStock.isPerishable} = true`),
+        .where(eq(wmsStock.isPerishable, true)),
 
       // Get recent movement counts
       db
         .select({
-          last24Hours: sql<number>`COUNT(*) FILTER (WHERE ${wmsStockMovements.performedAt} >= ${twentyFourHoursAgo})::int`,
-          last7Days: sql<number>`COUNT(*) FILTER (WHERE ${wmsStockMovements.performedAt} >= ${sevenDaysAgo})::int`,
+          last24Hours: sql<number>`SUM(CASE WHEN ${wmsStockMovements.performedAt} >= ${twentyFourHoursAgo} THEN 1 ELSE 0 END)::int`,
+          last7Days: sql<number>`SUM(CASE WHEN ${wmsStockMovements.performedAt} >= ${sevenDaysAgo} THEN 1 ELSE 0 END)::int`,
         })
         .from(wmsStockMovements),
 
@@ -97,8 +97,8 @@ const adminGetStockOverview = adminProcedure
           casesInReceiving: sql<number>`COALESCE(SUM(${wmsStock.quantityCases}), 0)::int`,
         })
         .from(wmsStock)
-        .innerJoin(wmsLocations, sql`${wmsLocations.id} = ${wmsStock.locationId}`)
-        .where(sql`${wmsLocations.locationType} = 'receiving'`),
+        .innerJoin(wmsLocations, eq(wmsLocations.id, wmsStock.locationId))
+        .where(eq(wmsLocations.locationType, 'receiving')),
     ]);
 
     const stockStats = stockStatsResult[0];
