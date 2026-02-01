@@ -2,13 +2,16 @@
 
 import {
   IconArrowLeft,
+  IconCheck,
   IconClipboard,
   IconDownload,
   IconFileText,
   IconLoader2,
+  IconPackageImport,
   IconUpload,
+  IconX,
 } from '@tabler/icons-react';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import ExcelJS from 'exceljs';
 import Link from 'next/link';
 import { useCallback, useState } from 'react';
@@ -122,6 +125,27 @@ const PdfExtractPage = () => {
   const [documentType, setDocumentType] = useState<DocumentType>('general');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [extractedData, setExtractedData] = useState<ExtractedData | null>(null);
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [selectedShipmentId, setSelectedShipmentId] = useState<string>('');
+
+  // Fetch shipments for import dropdown
+  const { data: shipments } = useQuery({
+    ...api.logistics.admin.getMany.queryOptions({ limit: 50 }),
+    enabled: showImportModal,
+  });
+
+  // Import mutation
+  const { mutate: importItems, isPending: isImporting } = useMutation({
+    ...api.logistics.admin.importExtractedItems.mutationOptions(),
+    onSuccess: (result) => {
+      toast.success(`Imported ${result.itemsImported} items to shipment`);
+      setShowImportModal(false);
+      setSelectedShipmentId('');
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to import items');
+    },
+  });
 
   const { mutate: extractDocument, isPending: isExtracting } = useMutation({
     ...api.logistics.admin.extractDocument.mutationOptions(),
@@ -280,6 +304,15 @@ const PdfExtractPage = () => {
     toast.success('Excel file downloaded');
   };
 
+  const handleImportToShipment = () => {
+    if (!extractedData?.lineItems || !selectedShipmentId) return;
+
+    importItems({
+      shipmentId: selectedShipmentId,
+      items: extractedData.lineItems,
+    });
+  };
+
   return (
     <div className="container mx-auto max-w-5xl px-4 py-6 sm:px-6 sm:py-8">
       <div className="space-y-6">
@@ -372,6 +405,76 @@ const PdfExtractPage = () => {
           </CardContent>
         </Card>
 
+        {/* Import Modal */}
+        {showImportModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+            <Card className="w-full max-w-md mx-4">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <Typography variant="headingSm">Import to Shipment</Typography>
+                  <button onClick={() => setShowImportModal(false)} className="p-1 hover:bg-fill-secondary rounded">
+                    <Icon icon={IconX} size="sm" colorRole="muted" />
+                  </button>
+                </div>
+
+                <div className="space-y-4">
+                  <div>
+                    <Typography variant="bodySm" colorRole="muted" className="mb-2">
+                      Select a shipment to import {extractedData?.lineItems?.length || 0} items into:
+                    </Typography>
+                    <Select value={selectedShipmentId} onValueChange={setSelectedShipmentId}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select shipment..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {shipments?.shipments?.map((shipment) => (
+                          <SelectItem key={shipment.id} value={shipment.id}>
+                            {shipment.shipmentNumber} - {shipment.partnerName || 'Unknown'}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {extractedData?.lineItems && extractedData.lineItems.length > 0 && (
+                    <div className="bg-fill-secondary rounded-lg p-3 max-h-48 overflow-y-auto">
+                      <Typography variant="bodyXs" colorRole="muted" className="mb-2">
+                        Items to import:
+                      </Typography>
+                      <div className="space-y-1">
+                        {extractedData.lineItems.map((item, idx) => (
+                          <div key={idx} className="flex items-center justify-between text-sm">
+                            <span className="truncate flex-1 mr-2">
+                              {item.productName || item.description || 'Unknown product'}
+                            </span>
+                            <span className="text-text-muted whitespace-nowrap">
+                              {item.cases || item.quantity || 1} cases
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="flex justify-end gap-2 pt-2">
+                    <Button variant="outline" onClick={() => setShowImportModal(false)}>
+                      Cancel
+                    </Button>
+                    <Button
+                      onClick={handleImportToShipment}
+                      disabled={!selectedShipmentId || isImporting}
+                    >
+                      <ButtonContent iconLeft={isImporting ? IconLoader2 : IconCheck}>
+                        {isImporting ? 'Importing...' : 'Import Items'}
+                      </ButtonContent>
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
         {/* Results Section */}
         {extractedData && (
           <Card>
@@ -385,6 +488,11 @@ const PdfExtractPage = () => {
                   <Button variant="outline" size="sm" onClick={handleExportExcel}>
                     <ButtonContent iconLeft={IconDownload}>Export Excel</ButtonContent>
                   </Button>
+                  {extractedData.lineItems && extractedData.lineItems.length > 0 && (
+                    <Button size="sm" onClick={() => setShowImportModal(true)}>
+                      <ButtonContent iconLeft={IconPackageImport}>Import to Shipment</ButtonContent>
+                    </Button>
+                  )}
                 </div>
               </div>
 
