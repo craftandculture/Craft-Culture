@@ -1,5 +1,5 @@
 import { TRPCError } from '@trpc/server';
-import { eq, like } from 'drizzle-orm';
+import { and, eq, like } from 'drizzle-orm';
 
 import db from '@/database/client';
 import {
@@ -139,31 +139,53 @@ const adminReceiveShipment = adminProcedure
       // Use per-item location if provided, otherwise fall back to global receivingLocationId
       const itemLocationId = receivedItem.locationId ?? receivingLocationId;
 
-      // Create stock record with actual received pack configuration
-      const [stock] = await db
-        .insert(wmsStock)
-        .values({
-          locationId: itemLocationId,
-          ownerId: partner.id,
-          ownerName: partner.businessName,
-          lwin18,
-          productName,
-          producer,
-          vintage,
-          bottleSize: `${actualBottleSizeMl}ml`,
-          caseConfig: actualBottlesPerCase,
-          quantityCases: receivedItem.receivedCases,
-          reservedCases: 0,
-          availableCases: receivedItem.receivedCases,
-          lotNumber,
-          receivedAt: new Date(),
-          shipmentId,
-          salesArrangement: 'consignment',
-          expiryDate: receivedItem.expiryDate,
-          isPerishable: !!receivedItem.expiryDate,
-          notes: stockNotes || undefined,
-        })
-        .returning();
+      // Check if stock already exists for this product at this location from this shipment
+      // This prevents duplicate stock records if receiving is retried after an error
+      const [existingStock] = await db
+        .select()
+        .from(wmsStock)
+        .where(
+          and(
+            eq(wmsStock.lwin18, lwin18),
+            eq(wmsStock.locationId, itemLocationId),
+            eq(wmsStock.shipmentId, shipmentId),
+          ),
+        );
+
+      let stock: typeof wmsStock.$inferSelect;
+
+      if (existingStock) {
+        // Stock already exists - this is a retry, skip creation
+        // Use the existing stock record
+        stock = existingStock;
+      } else {
+        // Create new stock record
+        const [newStock] = await db
+          .insert(wmsStock)
+          .values({
+            locationId: itemLocationId,
+            ownerId: partner.id,
+            ownerName: partner.businessName,
+            lwin18,
+            productName,
+            producer,
+            vintage,
+            bottleSize: `${actualBottleSizeMl}ml`,
+            caseConfig: actualBottlesPerCase,
+            quantityCases: receivedItem.receivedCases,
+            reservedCases: 0,
+            availableCases: receivedItem.receivedCases,
+            lotNumber,
+            receivedAt: new Date(),
+            shipmentId,
+            salesArrangement: 'consignment',
+            expiryDate: receivedItem.expiryDate,
+            isPerishable: !!receivedItem.expiryDate,
+            notes: stockNotes || undefined,
+          })
+          .returning();
+        stock = newStock;
+      }
 
       // Check for existing case labels with this barcode prefix
       // Labels may have been created during the print step
@@ -216,22 +238,24 @@ const adminReceiveShipment = adminProcedure
         }
       }
 
-      // Create movement record
-      const movementNumber = await generateMovementNumber();
-      await db.insert(wmsStockMovements).values({
-        movementNumber,
-        movementType: 'receive',
-        lwin18,
-        productName,
-        quantityCases: receivedItem.receivedCases,
-        toLocationId: itemLocationId,
-        lotNumber,
-        shipmentId,
-        scannedBarcodes: caseLabels.map((l) => l.barcode),
-        notes: notes ?? `Received from shipment ${shipment.shipmentNumber}`,
-        performedBy: ctx.user.id,
-        performedAt: new Date(),
-      });
+      // Only create movement record if we created new stock (not a retry)
+      if (!existingStock) {
+        const movementNumber = await generateMovementNumber();
+        await db.insert(wmsStockMovements).values({
+          movementNumber,
+          movementType: 'receive',
+          lwin18,
+          productName,
+          quantityCases: receivedItem.receivedCases,
+          toLocationId: itemLocationId,
+          lotNumber,
+          shipmentId,
+          scannedBarcodes: caseLabels.map((l) => l.barcode),
+          notes: notes ?? `Received from shipment ${shipment.shipmentNumber}`,
+          performedBy: ctx.user.id,
+          performedAt: new Date(),
+        });
+      }
 
       createdStock.push({
         stockId: stock.id,
