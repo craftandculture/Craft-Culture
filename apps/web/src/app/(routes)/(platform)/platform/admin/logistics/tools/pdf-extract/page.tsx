@@ -136,7 +136,11 @@ const PdfExtractPage = () => {
   const [selectedShipmentId, setSelectedShipmentId] = useState<string>('');
 
   // Fetch shipments for import dropdown
-  const { data: shipments } = useQuery({
+  const {
+    data: shipments,
+    isLoading: isLoadingShipments,
+    error: shipmentsError,
+  } = useQuery({
     ...api.logistics.admin.getMany.queryOptions({ limit: 50 }),
     enabled: showImportModal,
   });
@@ -454,16 +458,31 @@ const PdfExtractPage = () => {
                     <Typography variant="bodySm" colorRole="muted" className="mb-2">
                       Select a shipment to import {extractedData?.lineItems?.length || 0} items into:
                     </Typography>
+                    {shipmentsError && (
+                      <Typography variant="bodyXs" colorRole="danger" className="mb-2">
+                        Error loading shipments: {shipmentsError.message}
+                      </Typography>
+                    )}
                     <Select value={selectedShipmentId} onValueChange={setSelectedShipmentId}>
                       <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Select shipment..." />
+                        <SelectValue placeholder={isLoadingShipments ? 'Loading shipments...' : 'Select shipment...'} />
                       </SelectTrigger>
                       <SelectContent>
-                        {shipments?.data?.map((shipment) => (
-                          <SelectItem key={shipment.id} value={shipment.id}>
-                            {shipment.shipmentNumber} • {shipment.transportMode?.toUpperCase() || '?'} • {shipment.originCountry || shipment.originCity || 'Unknown origin'}
-                          </SelectItem>
-                        ))}
+                        {isLoadingShipments ? (
+                          <div className="py-2 px-3 text-center text-sm text-text-muted">
+                            Loading shipments...
+                          </div>
+                        ) : shipments?.data && shipments.data.length > 0 ? (
+                          shipments.data.map((shipment) => (
+                            <SelectItem key={shipment.id} value={shipment.id}>
+                              {shipment.shipmentNumber} • {shipment.transportMode?.toUpperCase() || '?'} • {shipment.originCountry || shipment.originCity || 'Unknown origin'}
+                            </SelectItem>
+                          ))
+                        ) : (
+                          <div className="py-2 px-3 text-center text-sm text-text-muted">
+                            No shipments found
+                          </div>
+                        )}
                       </SelectContent>
                     </Select>
                   </div>
