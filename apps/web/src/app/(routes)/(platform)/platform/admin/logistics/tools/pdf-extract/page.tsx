@@ -499,7 +499,7 @@ const PdfExtractPage = () => {
                               {item.productName || item.description || 'Unknown product'}
                             </span>
                             <span className="text-text-muted whitespace-nowrap">
-                              {item.cases || item.quantity || 1} cases
+                              {item.cases ?? 1} cases
                             </span>
                           </div>
                         ))}
