@@ -15,35 +15,54 @@ import { adminProcedure } from '@/lib/trpc/procedures';
 const adminRebuildStockFromMovements = adminProcedure.mutation(async () => {
   // Calculate net stock per product/location/shipment from all movements
   // This is the source of truth
+  // Note: Transfers need special handling - each transfer creates TWO effects:
+  //   -quantity at from_location_id, +quantity at to_location_id
+  // We use UNION ALL to treat each transfer as two separate rows
   const netStockFromMovements = await db.execute(sql`
+    WITH movement_effects AS (
+      -- Receives: add stock at to_location
+      SELECT lwin18, product_name, to_location_id as location_id, shipment_id, quantity_cases as effect
+      FROM wms_stock_movements
+      WHERE movement_type = 'receive' AND to_location_id IS NOT NULL
+
+      UNION ALL
+
+      -- Picks: remove stock from from_location
+      SELECT lwin18, product_name, from_location_id as location_id, shipment_id, -quantity_cases as effect
+      FROM wms_stock_movements
+      WHERE movement_type = 'pick' AND from_location_id IS NOT NULL
+
+      UNION ALL
+
+      -- Transfers: add stock at to_location
+      SELECT lwin18, product_name, to_location_id as location_id, shipment_id, quantity_cases as effect
+      FROM wms_stock_movements
+      WHERE movement_type = 'transfer' AND to_location_id IS NOT NULL
+
+      UNION ALL
+
+      -- Transfers: remove stock from from_location
+      SELECT lwin18, product_name, from_location_id as location_id, shipment_id, -quantity_cases as effect
+      FROM wms_stock_movements
+      WHERE movement_type = 'transfer' AND from_location_id IS NOT NULL
+
+      UNION ALL
+
+      -- Adjustments (excluding stock corrections): add/subtract at from_location
+      SELECT lwin18, product_name, COALESCE(to_location_id, from_location_id) as location_id, shipment_id, quantity_cases as effect
+      FROM wms_stock_movements
+      WHERE movement_type = 'adjust' AND reason_code != 'stock_correction'
+    )
     SELECT
-      m.lwin18,
-      m.product_name,
-      COALESCE(m.to_location_id, m.from_location_id) as location_id,
-      m.shipment_id,
-      SUM(
-        CASE
-          WHEN m.movement_type = 'receive' THEN m.quantity_cases
-          WHEN m.movement_type = 'pick' THEN -m.quantity_cases
-          WHEN m.movement_type = 'transfer' AND m.to_location_id IS NOT NULL THEN m.quantity_cases
-          WHEN m.movement_type = 'transfer' AND m.from_location_id IS NOT NULL THEN -m.quantity_cases
-          WHEN m.movement_type = 'adjust' AND m.reason_code != 'stock_correction' THEN m.quantity_cases
-          ELSE 0
-        END
-      ) as net_cases
-    FROM wms_stock_movements m
-    WHERE m.movement_type IN ('receive', 'pick', 'transfer', 'adjust')
-    GROUP BY m.lwin18, m.product_name, COALESCE(m.to_location_id, m.from_location_id), m.shipment_id
-    HAVING SUM(
-      CASE
-        WHEN m.movement_type = 'receive' THEN m.quantity_cases
-        WHEN m.movement_type = 'pick' THEN -m.quantity_cases
-        WHEN m.movement_type = 'transfer' AND m.to_location_id IS NOT NULL THEN m.quantity_cases
-        WHEN m.movement_type = 'transfer' AND m.from_location_id IS NOT NULL THEN -m.quantity_cases
-        WHEN m.movement_type = 'adjust' AND m.reason_code != 'stock_correction' THEN m.quantity_cases
-        ELSE 0
-      END
-    ) > 0
+      lwin18,
+      product_name,
+      location_id,
+      shipment_id,
+      SUM(effect) as net_cases
+    FROM movement_effects
+    WHERE location_id IS NOT NULL
+    GROUP BY lwin18, product_name, location_id, shipment_id
+    HAVING SUM(effect) > 0
   `);
 
   const stockToCreate = Array.isArray(netStockFromMovements)
