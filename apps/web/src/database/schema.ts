@@ -2821,6 +2821,7 @@ export const logisticsShipmentItems = pgTable(
 
     // Product details (denormalized for independence)
     productName: text('product_name').notNull(),
+    lwin: text('lwin'), // LWIN code - unique SKU identifier
     producer: text('producer'),
     vintage: integer('vintage'),
     region: text('region'),

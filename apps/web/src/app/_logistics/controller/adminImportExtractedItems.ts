@@ -98,6 +98,7 @@ const adminImportExtractedItems = adminProcedure
         .values({
           shipmentId,
           productName,
+          lwin: item.lwin,
           producer: item.producer,
           vintage: item.vintage,
           region: item.region,
