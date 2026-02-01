@@ -1,5 +1,5 @@
 import { TRPCError } from '@trpc/server';
-import { eq } from 'drizzle-orm';
+import { eq, like } from 'drizzle-orm';
 
 import db from '@/database/client';
 import {
@@ -96,8 +96,6 @@ const adminReceiveShipment = adminProcedure
       caseLabels: Array<{ id: string; barcode: string }>;
     }> = [];
 
-    let totalCaseLabelSequence = 1;
-
     for (const receivedItem of items) {
       const shipmentItem = shipmentItemMap.get(receivedItem.shipmentItemId);
 
@@ -167,26 +165,55 @@ const adminReceiveShipment = adminProcedure
         })
         .returning();
 
-      // Create case labels for each case
+      // Check for existing case labels with this barcode prefix
+      // Labels may have been created during the print step
+      const barcodePrefix = `CASE-${lwin18}-`;
+      const existingLabels = await db
+        .select({ id: wmsCaseLabels.id, barcode: wmsCaseLabels.barcode })
+        .from(wmsCaseLabels)
+        .where(like(wmsCaseLabels.barcode, `${barcodePrefix}%`));
+
       const caseLabels: Array<{ id: string; barcode: string }> = [];
-      for (let i = 0; i < receivedItem.receivedCases; i++) {
-        const barcode = generateCaseLabelBarcode(lwin18, totalCaseLabelSequence);
-        totalCaseLabelSequence++;
 
-        const [caseLabel] = await db
-          .insert(wmsCaseLabels)
-          .values({
-            barcode,
-            lwin18,
-            productName,
-            lotNumber,
-            shipmentId,
-            currentLocationId: itemLocationId,
-            isActive: true,
-          })
-          .returning();
+      // If labels already exist for this LWIN18, use them
+      if (existingLabels.length >= receivedItem.receivedCases) {
+        // Use existing labels (already created during print step)
+        caseLabels.push(...existingLabels.slice(0, receivedItem.receivedCases));
+      } else {
+        // Some or no labels exist - find max sequence and create remaining
+        let maxSeq = 0;
+        for (const label of existingLabels) {
+          const match = label.barcode.match(/(\d+)$/);
+          if (match) {
+            const seq = parseInt(match[1], 10);
+            if (seq > maxSeq) maxSeq = seq;
+          }
+        }
 
-        caseLabels.push({ id: caseLabel.id, barcode: caseLabel.barcode });
+        // Use existing labels first
+        caseLabels.push(...existingLabels);
+
+        // Create remaining labels needed
+        const labelsNeeded = receivedItem.receivedCases - existingLabels.length;
+        for (let i = 0; i < labelsNeeded; i++) {
+          maxSeq++;
+          const barcode = generateCaseLabelBarcode(lwin18, maxSeq);
+
+          const [caseLabel] = await db
+            .insert(wmsCaseLabels)
+            .values({
+              barcode,
+              lwin18,
+              productName,
+              lotNumber,
+              shipmentId,
+              currentLocationId: itemLocationId,
+              isActive: true,
+            })
+            .returning();
+
+          caseLabels.push({ id: caseLabel.id, barcode: caseLabel.barcode });
+        }
       }
 
       // Create movement record
