@@ -82,6 +82,7 @@ interface ExtractedData {
   lineItems?: Array<{
     description?: string;
     productName?: string;
+    lwin?: string;
     producer?: string;
     vintage?: number;
     bottleSize?: string;
@@ -243,6 +244,7 @@ const PdfExtractPage = () => {
     if (extractedData.lineItems && extractedData.lineItems.length > 0) {
       const itemsSheet = workbook.addWorksheet('Line Items');
       itemsSheet.columns = [
+        { header: 'LWIN', key: 'lwin', width: 15 },
         { header: 'Product Name', key: 'productName', width: 40 },
         { header: 'Producer', key: 'producer', width: 25 },
         { header: 'Vintage', key: 'vintage', width: 10 },
@@ -260,6 +262,7 @@ const PdfExtractPage = () => {
 
       for (const item of extractedData.lineItems) {
         itemsSheet.addRow({
+          lwin: item.lwin || '',
           productName: item.productName || item.description || '',
           producer: item.producer || '',
           vintage: item.vintage || '',
@@ -590,6 +593,7 @@ const PdfExtractPage = () => {
                       <table className="w-full text-sm">
                         <thead>
                           <tr className="border-b border-border-muted text-left text-xs uppercase text-text-muted">
+                            <th className="pb-2 pr-4">LWIN</th>
                             <th className="pb-2 pr-4">Product</th>
                             <th className="pb-2 pr-4">Producer</th>
                             <th className="pb-2 pr-4 text-right">Vintage</th>
@@ -605,6 +609,7 @@ const PdfExtractPage = () => {
                         <tbody className="divide-y divide-border-muted">
                           {extractedData.lineItems.map((item, idx) => (
                             <tr key={idx}>
+                              <td className="py-2 pr-4 font-mono text-xs">{item.lwin || '-'}</td>
                               <td className="py-2 pr-4">{item.productName || item.description || '-'}</td>
                               <td className="py-2 pr-4">{item.producer || '-'}</td>
                               <td className="py-2 pr-4 text-right">{item.vintage || '-'}</td>

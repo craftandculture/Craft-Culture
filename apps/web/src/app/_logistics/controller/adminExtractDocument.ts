@@ -59,6 +59,7 @@ const extractedLogisticsDataSchema = z.object({
       z.object({
         description: z.string().optional().describe('Item description'),
         productName: z.string().optional().describe('Product name'),
+        lwin: z.string().optional().describe('LWIN code (Liv-ex Wine Identification Number) - may be labeled as "Product Code", "LWIN", "SKU", or "Item Code" in the document'),
         producer: z.string().optional().describe('Producer/winery name extracted from description'),
         vintage: z.number().optional().describe('Vintage year (e.g., 2015, 2018, 2021) - extract 4-digit year from product description'),
         bottleSize: z.string().optional().describe('Bottle size (e.g., "750ml", "1.5L", "375ml") - extract from description like "0.75L" or "75cl"'),
@@ -228,6 +229,12 @@ CRITICAL RULES:
 4. If you cannot read text clearly, output "UNREADABLE"
 5. Extract EVERY line item - count them to ensure completeness
 
+LWIN EXTRACTION - CRITICAL FOR SKU:
+- lwin: Extract the LWIN (Liv-ex Wine Identification Number) from each row
+- May be labeled as "Product Code", "LWIN", "SKU", "Item Code", or "Code" in the document
+- LWIN is typically a numeric code like "1010279" or alphanumeric - copy EXACTLY as shown
+- This is used as the unique SKU identifier - extraction is ESSENTIAL
+
 WINE FIELD EXTRACTION - PARSE EACH LINE ITEM:
 - producer: Extract winery/producer name (e.g., "Chateau Margaux", "Domaine de la Romanee-Conti")
 - vintage: Extract 4-digit year (e.g., 2015, 2018, 2021)
@@ -304,6 +311,11 @@ RULES:
 - Extract ALL rows from the table - count them to ensure completeness
 - HS CODES ARE CRITICAL: Extract the COMPLETE code with ALL digits. Codes like 22042109, 22042132, 22041000 are DIFFERENT codes - do NOT truncate or simplify to 22042100. Each row may have a unique HS code.
 
+LWIN EXTRACTION - CRITICAL FOR SKU:
+- lwin: Extract the LWIN (Liv-ex Wine Identification Number) from each row
+- May be labeled as "Product Code", "LWIN", "SKU", "Item Code", or "Code"
+- Copy the code EXACTLY as shown - this is used as the unique SKU identifier
+
 WINE FIELD EXTRACTION - FOR EACH LINE ITEM, EXTRACT:
 - producer: The winery/producer name (first part of description)
 - vintage: The 4-digit year (e.g., 2015, 2018, 2021)
@@ -340,6 +352,12 @@ CRITICAL RULES:
 3. NEVER output famous brand names (Moet, Dom Perignon, Veuve Clicquot, Krug, etc.) unless those EXACT letters appear
 4. If you cannot read text clearly, output "UNREADABLE"
 5. Extract EVERY line item - count them to ensure completeness
+
+LWIN EXTRACTION - CRITICAL FOR SKU:
+- lwin: Extract the LWIN (Liv-ex Wine Identification Number) from each row
+- May be labeled as "Product Code", "LWIN", "SKU", "Item Code", or "Code" in the document
+- LWIN is typically a numeric code like "1010279" or alphanumeric - copy EXACTLY as shown
+- This is used as the unique SKU identifier - extraction is ESSENTIAL
 
 WINE FIELD EXTRACTION - PARSE EACH LINE ITEM:
 - producer: Extract winery/producer name (e.g., "Chateau Margaux", "Domaine de la Romanee-Conti")
