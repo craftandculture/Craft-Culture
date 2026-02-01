@@ -495,10 +495,12 @@ const ShipmentDetailPage = () => {
                 </Typography>
               ) : (
                 <div className="overflow-x-auto">
-                  <table className="w-full">
+                  <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b border-border-muted text-left text-xs uppercase text-text-muted">
                         <th className="pb-3 pr-4">Product</th>
+                        <th className="pb-3 pr-4">LWIN / SKU</th>
+                        <th className="pb-3 pr-4 text-center">Pack</th>
                         <th className="pb-3 pr-4 text-right">Cases</th>
                         <th className="pb-3 pr-4 text-right">Bottles</th>
                         <th className="pb-3 pr-4 text-right">Cost/Btl</th>
@@ -514,11 +516,37 @@ const ShipmentDetailPage = () => {
                             <Typography variant="bodySm" className="font-medium">
                               {item.productName}
                             </Typography>
-                            {item.producer && (
-                              <Typography variant="bodyXs" colorRole="muted">
-                                {item.producer}
-                              </Typography>
+                            <div className="flex items-center gap-2 mt-0.5">
+                              {item.producer && (
+                                <Typography variant="bodyXs" colorRole="muted">
+                                  {item.producer}
+                                </Typography>
+                              )}
+                              {item.vintage && (
+                                <Typography variant="bodyXs" colorRole="muted">
+                                  {item.vintage}
+                                </Typography>
+                              )}
+                              {item.region && (
+                                <Typography variant="bodyXs" colorRole="muted">
+                                  {item.region}
+                                </Typography>
+                              )}
+                            </div>
+                          </td>
+                          <td className="py-3 pr-4">
+                            {item.lwin ? (
+                              <code className="text-xs font-mono bg-fill-secondary px-1.5 py-0.5 rounded">
+                                {item.lwin}
+                              </code>
+                            ) : (
+                              <span className="text-text-muted">-</span>
                             )}
+                          </td>
+                          <td className="py-3 pr-4 text-center">
+                            <span className="text-xs">
+                              {item.bottlesPerCase || 12}x{item.bottleSizeMl || 750}ml
+                            </span>
                           </td>
                           <td className="py-3 pr-4 text-right">{item.cases}</td>
                           <td className="py-3 pr-4 text-right">{item.totalBottles ?? '-'}</td>
