@@ -28,6 +28,7 @@ const draftItemSchema = z.object({
   locationId: z.string().uuid().optional(),
   expiryDate: z.string().optional(),
   notes: z.string().optional(),
+  photos: z.array(z.string().url()).optional(),
 });
 
 /**

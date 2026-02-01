@@ -4407,8 +4407,11 @@ interface WmsReceivingDraftItem {
   packChanged: boolean;
   isAddedItem: boolean;
   isChecked: boolean;
+  locationId?: string;
   expiryDate?: string;
   notes?: string;
+  /** URLs of photos captured during receiving (e.g., case condition, labels) */
+  photos?: string[];
 }
 
 /**
