@@ -263,6 +263,92 @@ const ReconcilePage = () => {
           </Card>
         )}
 
+        {/* Manual Comparison - Show when discrepancy but no auto-detected issues */}
+        {!isReconciled && !data?.issues.hasOrphans && !data?.issues.hasDuplicates && (
+          <div>
+            <Typography variant="headingSm" className="mb-4">
+              All Stock Records ({data?.allStockRecords?.length ?? 0})
+            </Typography>
+            <Typography variant="bodySm" colorRole="muted" className="mb-4">
+              Compare these with the receive movements below to identify the extra records.
+            </Typography>
+            <div className="mb-4">
+              <label className="block text-sm text-text-muted mb-1">Delete reason:</label>
+              <input
+                type="text"
+                value={deleteReason}
+                onChange={(e) => setDeleteReason(e.target.value)}
+                className="w-full rounded border border-border-primary px-3 py-2 text-sm"
+              />
+            </div>
+            <div className="space-y-2">
+              {data?.allStockRecords?.map((record) => (
+                <Card key={record.id} className="border-border-secondary">
+                  <CardContent className="p-3">
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="min-w-0 flex-1">
+                        <Typography variant="bodySm" className="font-medium truncate">
+                          {record.productName}
+                        </Typography>
+                        <div className="flex flex-wrap gap-2 text-xs text-text-muted">
+                          <span className="font-mono">{record.lwin18}</span>
+                          <span>•</span>
+                          <span>{record.locationCode}</span>
+                          <span>•</span>
+                          <span className="font-semibold text-blue-600">{record.quantityCases} cases</span>
+                        </div>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          if (confirm(`Delete ${record.quantityCases} cases of ${record.productName}?`)) {
+                            deleteMutation.mutate({
+                              stockId: record.id,
+                              reason: deleteReason,
+                            });
+                          }
+                        }}
+                        disabled={deleteMutation.isPending}
+                        className="border-red-300 text-red-600 hover:bg-red-50 shrink-0"
+                      >
+                        <ButtonContent iconLeft={IconTrash}>Delete</ButtonContent>
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+
+            <Typography variant="headingSm" className="mb-4 mt-8">
+              All Receive Movements ({data?.allReceiveMovements?.length ?? 0})
+            </Typography>
+            <Typography variant="bodySm" colorRole="muted" className="mb-4">
+              These are the source of truth - stock should match these totals.
+            </Typography>
+            <div className="space-y-2">
+              {data?.allReceiveMovements?.map((movement) => (
+                <Card key={movement.id} className="border-border-secondary bg-emerald-50/50">
+                  <CardContent className="p-3">
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="min-w-0 flex-1">
+                        <Typography variant="bodySm" className="font-medium truncate">
+                          {movement.productName}
+                        </Typography>
+                        <div className="flex flex-wrap gap-2 text-xs text-text-muted">
+                          <span className="font-mono">{movement.lwin18}</span>
+                          <span>•</span>
+                          <span className="font-semibold text-emerald-600">{movement.quantityCases} cases</span>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Counts */}
         <Card className="bg-fill-secondary">
           <CardContent className="p-4">
