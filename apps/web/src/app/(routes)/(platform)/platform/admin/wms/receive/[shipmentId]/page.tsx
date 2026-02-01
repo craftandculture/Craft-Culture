@@ -9,8 +9,7 @@ import {
   IconCopy,
   IconEdit,
   IconLoader2,
-  IconMinus,
-  IconPlus,
+  IconMapPin,
   IconTrash,
 } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -24,7 +23,6 @@ import Card from '@/app/_ui/components/Card/Card';
 import CardContent from '@/app/_ui/components/Card/CardContent';
 import CardTitle from '@/app/_ui/components/Card/CardTitle';
 import Icon from '@/app/_ui/components/Icon/Icon';
-import Input from '@/app/_ui/components/Input/Input';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import useTRPC from '@/lib/trpc/browser';
 
@@ -51,7 +49,7 @@ interface ReceivedItem {
 }
 
 /**
- * Item row component for receiving
+ * Item row component for receiving - Mobile optimized for Zebra scanner (6" screen)
  */
 interface ItemRowProps {
   item: ReceivedItem;
@@ -92,129 +90,141 @@ const ItemRow = ({
   const variance = item.receivedCases - item.expectedCases;
 
   return (
-    <div className={`flex flex-col gap-4 sm:flex-row sm:items-start ${item.isChecked ? 'opacity-60' : ''}`}>
-      {/* Checkbox */}
-      <div className="flex items-start pt-1">
+    <div className={`flex flex-col gap-3 ${item.isChecked ? 'opacity-60' : ''}`}>
+      {/* Top row: Checkbox + Product Name + Badge */}
+      <div className="flex items-start gap-3">
+        {/* Large touch-friendly checkbox (48px minimum) */}
         <button
           onClick={onToggleCheck}
-          className={`flex h-5 w-5 items-center justify-center rounded border-2 transition-colors ${
+          className={`flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg border-2 transition-colors active:scale-95 ${
             item.isChecked
               ? 'border-emerald-500 bg-emerald-500 text-white'
-              : 'border-border-primary hover:border-border-brand'
+              : 'border-border-primary bg-fill-secondary hover:border-border-brand'
           }`}
         >
-          {item.isChecked && <IconCheck className="h-3 w-3" />}
+          {item.isChecked && <IconCheck className="h-6 w-6" />}
         </button>
-      </div>
 
-      <div className="flex-1 min-w-0">
-        <div className="flex items-start gap-2">
-          <Typography variant="headingSm" className={`mb-1 ${item.isChecked ? 'line-through' : ''}`}>
-            {item.productName}
-          </Typography>
-          {isAddedVariant && (
-            <span className="rounded bg-amber-100 px-1.5 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">
-              Added
-            </span>
-          )}
-        </div>
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-          <Typography variant="bodyXs" colorRole="muted">
-            {item.producer && `${item.producer} • `}
-            {item.vintage && `${item.vintage}`}
-          </Typography>
-          {/* Pack Config with Edit */}
-          <div className="flex items-center gap-1">
-            {isEditingPack ? (
-              <div className="flex items-center gap-2 rounded-md bg-fill-secondary p-1">
-                <select
-                  className="rounded border border-border-primary bg-fill-primary px-2 py-1 text-xs"
-                  value={item.receivedBottlesPerCase}
-                  onChange={(e) => onUpdatePackConfig(parseInt(e.target.value), item.receivedBottleSizeMl)}
-                >
-                  <option value={1}>1</option>
-                  <option value={3}>3</option>
-                  <option value={6}>6</option>
-                  <option value={12}>12</option>
-                  <option value={24}>24</option>
-                </select>
-                <span className="text-xs">×</span>
-                <select
-                  className="rounded border border-border-primary bg-fill-primary px-2 py-1 text-xs"
-                  value={item.receivedBottleSizeMl}
-                  onChange={(e) => onUpdatePackConfig(item.receivedBottlesPerCase, parseInt(e.target.value))}
-                >
-                  <option value={375}>375ml</option>
-                  <option value={500}>500ml</option>
-                  <option value={750}>750ml</option>
-                  <option value={1500}>1500ml</option>
-                  <option value={3000}>3000ml</option>
-                </select>
-                <Button variant="ghost" size="sm" className="h-6 px-2" onClick={onClosePack}>
-                  <Icon icon={IconCheck} size="sm" />
-                </Button>
-              </div>
-            ) : (
-              <button
-                className={`flex items-center gap-1 rounded px-1.5 py-0.5 text-xs transition-colors hover:bg-fill-secondary ${
-                  item.packChanged
-                    ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300'
-                    : 'text-text-muted'
-                }`}
-                onClick={onEditPack}
-              >
-                {item.receivedBottlesPerCase}x{item.receivedBottleSizeMl}ml
-                <Icon icon={IconEdit} size="xs" />
-              </button>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start gap-2">
+            <Typography variant="headingSm" className={`leading-tight ${item.isChecked ? 'line-through' : ''}`}>
+              {item.productName}
+            </Typography>
+            {isAddedVariant && (
+              <span className="flex-shrink-0 rounded bg-amber-100 px-2 py-1 text-xs font-medium text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">
+                Added
+              </span>
             )}
           </div>
-        </div>
-        {/* LWIN */}
-        {item.lwin && (
-          <Typography variant="bodyXs" className="mt-1 font-mono text-text-muted">
-            {item.lwin}
+          <Typography variant="bodySm" colorRole="muted" className="mt-0.5">
+            {item.producer && `${item.producer}`}
+            {item.producer && item.vintage && ' • '}
+            {item.vintage && `${item.vintage}`}
           </Typography>
-        )}
-        {/* Pack changed indicator */}
-        {item.packChanged && !isAddedVariant && (
-          <div className="mt-1 flex items-center gap-1 text-xs text-amber-600">
-            <span>
-              Originally: {shipmentItem.bottlesPerCase}x{shipmentItem.bottleSizeMl}ml → Now:{' '}
-              {item.receivedBottlesPerCase}x{item.receivedBottleSizeMl}ml
-            </span>
-          </div>
-        )}
+          {/* Pack Config button - larger touch target */}
+          <button
+            className={`mt-2 flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium transition-colors active:scale-95 ${
+              item.packChanged
+                ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300'
+                : 'bg-fill-secondary text-text-muted hover:bg-fill-tertiary'
+            }`}
+            onClick={onEditPack}
+          >
+            {item.receivedBottlesPerCase}×{item.receivedBottleSizeMl}ml
+            <Icon icon={IconEdit} size="sm" />
+          </button>
+        </div>
       </div>
 
-      <div className="flex items-center gap-4">
+      {/* Pack editor - full width on mobile */}
+      {isEditingPack && (
+        <div className="flex flex-wrap items-center gap-2 rounded-lg bg-fill-secondary p-3">
+          <select
+            className="h-12 flex-1 rounded-lg border border-border-primary bg-fill-primary px-3 text-base"
+            value={item.receivedBottlesPerCase}
+            onChange={(e) => onUpdatePackConfig(parseInt(e.target.value), item.receivedBottleSizeMl)}
+          >
+            <option value={1}>1 bottle</option>
+            <option value={3}>3 bottles</option>
+            <option value={6}>6 bottles</option>
+            <option value={12}>12 bottles</option>
+            <option value={24}>24 bottles</option>
+          </select>
+          <span className="text-lg font-medium">×</span>
+          <select
+            className="h-12 flex-1 rounded-lg border border-border-primary bg-fill-primary px-3 text-base"
+            value={item.receivedBottleSizeMl}
+            onChange={(e) => onUpdatePackConfig(item.receivedBottlesPerCase, parseInt(e.target.value))}
+          >
+            <option value={375}>375ml</option>
+            <option value={500}>500ml</option>
+            <option value={750}>750ml</option>
+            <option value={1500}>1.5L</option>
+            <option value={3000}>3L</option>
+          </select>
+          <Button variant="primary" size="lg" className="h-12 px-4" onClick={onClosePack}>
+            <Icon icon={IconCheck} size="md" />
+          </Button>
+        </div>
+      )}
+
+      {/* LWIN - hidden on very small screens, shown on tablets+ */}
+      {item.lwin && (
+        <Typography variant="bodyXs" className="hidden font-mono text-text-muted sm:block">
+          {item.lwin}
+        </Typography>
+      )}
+
+      {/* Pack changed indicator */}
+      {item.packChanged && !isAddedVariant && (
+        <div className="rounded-md bg-amber-50 p-2 text-sm text-amber-700 dark:bg-amber-900/20 dark:text-amber-400">
+          Changed from {shipmentItem.bottlesPerCase}×{shipmentItem.bottleSizeMl}ml
+        </div>
+      )}
+
+      {/* Quantity controls - large touch targets */}
+      <div className="flex items-center gap-3">
+        {/* Expected (for original items) */}
         {!isAddedVariant && (
-          <div className="text-right">
+          <div className="min-w-16 text-center">
             <Typography variant="bodyXs" colorRole="muted">
               Expected
             </Typography>
-            <Typography variant="bodySm" className="font-medium">
-              {item.expectedCases} cases
+            <Typography variant="headingSm" className="text-blue-600">
+              {item.expectedCases}
             </Typography>
           </div>
         )}
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => onUpdateCases(item.receivedCases - 1)}>
-            <Icon icon={IconMinus} size="sm" />
-          </Button>
-          <Input
+
+        {/* Quantity stepper - 48px touch targets */}
+        <div className="flex flex-1 items-center justify-center gap-2">
+          <button
+            onClick={() => onUpdateCases(item.receivedCases - 1)}
+            className="flex h-14 w-14 items-center justify-center rounded-lg border-2 border-border-primary bg-fill-secondary text-xl font-bold transition-colors hover:bg-fill-tertiary active:scale-95 active:bg-fill-tertiary"
+          >
+            −
+          </button>
+          <input
             type="number"
-            className="w-20 text-center"
+            inputMode="numeric"
+            pattern="[0-9]*"
+            className="h-14 w-20 rounded-lg border-2 border-border-primary bg-fill-primary text-center text-xl font-bold focus:border-border-brand focus:outline-none"
             value={item.receivedCases}
             onChange={(e) => onUpdateCases(parseInt(e.target.value) || 0)}
             min={0}
           />
-          <Button variant="outline" size="sm" onClick={() => onUpdateCases(item.receivedCases + 1)}>
-            <Icon icon={IconPlus} size="sm" />
-          </Button>
+          <button
+            onClick={() => onUpdateCases(item.receivedCases + 1)}
+            className="flex h-14 w-14 items-center justify-center rounded-lg border-2 border-border-primary bg-fill-secondary text-xl font-bold transition-colors hover:bg-fill-tertiary active:scale-95 active:bg-fill-tertiary"
+          >
+            +
+          </button>
         </div>
+
+        {/* Variance indicator */}
         {!isAddedVariant && variance !== 0 && (
-          <span
-            className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+          <div
+            className={`min-w-14 rounded-lg px-3 py-2 text-center text-sm font-bold ${
               variance > 0
                 ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300'
                 : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'
@@ -222,18 +232,32 @@ const ItemRow = ({
           >
             {variance > 0 ? '+' : ''}
             {variance}
-          </span>
+          </div>
         )}
+      </div>
+
+      {/* Action buttons row */}
+      <div className="flex gap-2">
         {/* Add variant button (only for original items) */}
         {!isAddedVariant && onAddVariant && (
-          <Button variant="ghost" size="sm" onClick={onAddVariant} title="Add different pack size">
-            <Icon icon={IconCopy} size="sm" />
+          <Button
+            variant="outline"
+            size="lg"
+            className="h-12 flex-1"
+            onClick={onAddVariant}
+          >
+            <ButtonContent iconLeft={IconCopy}>Add Pack Size</ButtonContent>
           </Button>
         )}
         {/* Remove button (only for added items) */}
         {isAddedVariant && onRemove && (
-          <Button variant="ghost" size="sm" onClick={onRemove} title="Remove">
-            <Icon icon={IconTrash} size="sm" className="text-red-500" />
+          <Button
+            variant="outline"
+            size="lg"
+            className="h-12 flex-1 border-red-200 text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-900/20"
+            onClick={onRemove}
+          >
+            <ButtonContent iconLeft={IconTrash}>Remove</ButtonContent>
           </Button>
         )}
       </div>
@@ -570,9 +594,12 @@ const WMSReceiveShipmentPage = () => {
 
   if (shipmentLoading || draftLoading) {
     return (
-      <div className="container mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8">
-        <div className="flex items-center justify-center p-12">
-          <Icon icon={IconLoader2} className="animate-spin" colorRole="muted" size="lg" />
+      <div className="flex min-h-[50vh] items-center justify-center p-6">
+        <div className="text-center">
+          <Icon icon={IconLoader2} className="mx-auto animate-spin" colorRole="muted" size="xl" />
+          <Typography variant="bodySm" colorRole="muted" className="mt-3">
+            Loading shipment...
+          </Typography>
         </div>
       </div>
     );
@@ -580,7 +607,7 @@ const WMSReceiveShipmentPage = () => {
 
   if (!shipment) {
     return (
-      <div className="container mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8">
+      <div className="p-4">
         <Card>
           <CardContent className="p-6 text-center">
             <Icon icon={IconAlertCircle} size="xl" colorRole="muted" className="mx-auto mb-4" />
@@ -602,6 +629,7 @@ const WMSReceiveShipmentPage = () => {
   const checkedCount = allItems.filter((item) => item.isChecked).length;
   const totalItems = allItems.length;
   const hasDiscrepancy = totalExpected !== totalReceived;
+  const allChecked = checkedCount === totalItems && totalItems > 0;
 
   // Group items by base product (original + added variants)
   const itemGroups = new Map<string, ReceivedItem[]>();
@@ -613,73 +641,61 @@ const WMSReceiveShipmentPage = () => {
   });
 
   return (
-    <div className="container mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8">
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <div className="mb-2 flex items-center gap-2">
-              <Link href="/platform/admin/wms" className="text-text-muted hover:text-text-primary">
-                <Typography variant="bodySm">WMS</Typography>
-              </Link>
-              <IconChevronRight className="h-4 w-4 text-text-muted" />
-              <Link href="/platform/admin/wms/receive" className="text-text-muted hover:text-text-primary">
-                <Typography variant="bodySm">Receiving</Typography>
-              </Link>
-              <IconChevronRight className="h-4 w-4 text-text-muted" />
-              <Typography variant="bodySm">{shipment.shipmentNumber}</Typography>
-            </div>
-            <Typography variant="headingLg" className="mb-2">
-              Receive: {shipment.shipmentNumber}
+    <div className="min-h-screen bg-fill-secondary pb-32 sm:bg-fill-primary sm:pb-8">
+      {/* Mobile Header - Sticky */}
+      <div className="sticky top-0 z-10 bg-fill-primary p-4 shadow-sm sm:relative sm:shadow-none">
+        <div className="flex items-center justify-between gap-3">
+          <Link
+            href="/platform/admin/wms/receive"
+            className="flex h-10 w-10 items-center justify-center rounded-lg bg-fill-secondary text-text-muted hover:text-text-primary sm:hidden"
+          >
+            <IconChevronRight className="h-5 w-5 rotate-180" />
+          </Link>
+          <div className="min-w-0 flex-1">
+            <Typography variant="headingMd" className="truncate sm:text-xl">
+              {shipment.shipmentNumber}
             </Typography>
-            <div className="flex flex-wrap items-center gap-3">
-              <Typography variant="bodyMd" colorRole="muted">
-                {shipment.partnerName} • {shipment.originCountry ?? 'Unknown'} {shipment.originCity && `• ${shipment.originCity}`}
-              </Typography>
-              {isSaving ? (
-                <span className="flex items-center gap-1 rounded-full bg-blue-100 px-2 py-0.5 text-xs text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
-                  <IconCloudUpload className="h-3 w-3 animate-pulse" />
-                  Saving...
-                </span>
-              ) : lastSaved ? (
-                <span className="flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-xs text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
-                  <IconCheck className="h-3 w-3" />
-                  Saved {lastSaved.toLocaleTimeString()}
-                </span>
-              ) : null}
-            </div>
+            <Typography variant="bodySm" colorRole="muted" className="truncate">
+              {shipment.partnerName}
+            </Typography>
           </div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={saveImmediately}
-              disabled={isSaving}
-            >
-              <ButtonContent iconLeft={isSaving ? IconLoader2 : IconCloudUpload}>
-                {isSaving ? 'Saving...' : 'Save Now'}
-              </ButtonContent>
-            </Button>
-            <Button
-              variant="primary"
-              onClick={handleReceive}
-              disabled={receiveMutation.isPending || totalReceived === 0}
-            >
-              <ButtonContent iconLeft={receiveMutation.isPending ? IconLoader2 : IconCheck}>
-                {receiveMutation.isPending ? 'Receiving...' : 'Complete Receiving'}
-              </ButtonContent>
-            </Button>
-          </div>
+          {/* Save indicator */}
+          {isSaving ? (
+            <span className="flex items-center gap-1.5 rounded-full bg-blue-100 px-3 py-1.5 text-sm font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+              <IconCloudUpload className="h-4 w-4 animate-pulse" />
+              <span className="hidden sm:inline">Saving...</span>
+            </span>
+          ) : lastSaved ? (
+            <span className="flex items-center gap-1.5 rounded-full bg-emerald-100 px-3 py-1.5 text-sm font-medium text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
+              <IconCheck className="h-4 w-4" />
+              <span className="hidden sm:inline">Saved</span>
+            </span>
+          ) : null}
         </div>
 
-        {/* Summary Card */}
-        <div className="grid gap-4 sm:grid-cols-4">
+        {/* Desktop breadcrumb - hidden on mobile */}
+        <div className="mt-2 hidden items-center gap-2 sm:flex">
+          <Link href="/platform/admin/wms" className="text-text-muted hover:text-text-primary">
+            <Typography variant="bodySm">WMS</Typography>
+          </Link>
+          <IconChevronRight className="h-4 w-4 text-text-muted" />
+          <Link href="/platform/admin/wms/receive" className="text-text-muted hover:text-text-primary">
+            <Typography variant="bodySm">Receiving</Typography>
+          </Link>
+          <IconChevronRight className="h-4 w-4 text-text-muted" />
+          <Typography variant="bodySm">{shipment.shipmentNumber}</Typography>
+        </div>
+      </div>
+
+      <div className="space-y-4 p-4 sm:container sm:mx-auto sm:max-w-7xl sm:space-y-6 sm:px-6 sm:py-8">
+        {/* Summary Cards - 2x2 grid on mobile, 4 cols on desktop */}
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
           <Card>
-            <CardContent className="p-4 text-center">
+            <CardContent className="p-3 text-center sm:p-4">
               <Typography variant="bodyXs" colorRole="muted">
                 Expected
               </Typography>
-              <Typography variant="headingLg" className="text-blue-600">
+              <Typography variant="headingLg" className="text-2xl text-blue-600 sm:text-3xl">
                 {totalExpected}
               </Typography>
               <Typography variant="bodyXs" colorRole="muted">
@@ -688,13 +704,13 @@ const WMSReceiveShipmentPage = () => {
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="p-4 text-center">
+            <CardContent className="p-3 text-center sm:p-4">
               <Typography variant="bodyXs" colorRole="muted">
                 Received
               </Typography>
               <Typography
                 variant="headingLg"
-                className={hasDiscrepancy ? 'text-amber-600' : 'text-emerald-600'}
+                className={`text-2xl sm:text-3xl ${hasDiscrepancy ? 'text-amber-600' : 'text-emerald-600'}`}
               >
                 {totalReceived}
               </Typography>
@@ -704,19 +720,19 @@ const WMSReceiveShipmentPage = () => {
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="p-4 text-center">
+            <CardContent className="p-3 text-center sm:p-4">
               <Typography variant="bodyXs" colorRole="muted">
                 Variance
               </Typography>
               <Typography
                 variant="headingLg"
-                className={
+                className={`text-2xl sm:text-3xl ${
                   totalReceived - totalExpected === 0
                     ? 'text-text-muted'
                     : totalReceived - totalExpected > 0
                       ? 'text-emerald-600'
                       : 'text-red-600'
-                }
+                }`}
               >
                 {totalReceived - totalExpected > 0 ? '+' : ''}
                 {totalReceived - totalExpected}
@@ -727,13 +743,13 @@ const WMSReceiveShipmentPage = () => {
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="p-4 text-center">
+            <CardContent className="p-3 text-center sm:p-4">
               <Typography variant="bodyXs" colorRole="muted">
                 Checked
               </Typography>
               <Typography
                 variant="headingLg"
-                className={checkedCount === totalItems ? 'text-emerald-600' : 'text-amber-600'}
+                className={`text-2xl sm:text-3xl ${allChecked ? 'text-emerald-600' : 'text-amber-600'}`}
               >
                 {checkedCount}/{totalItems}
               </Typography>
@@ -744,10 +760,44 @@ const WMSReceiveShipmentPage = () => {
           </Card>
         </div>
 
+        {/* Location Selector */}
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <Icon icon={IconMapPin} size="lg" colorRole="muted" />
+              <div className="min-w-0 flex-1">
+                <Typography variant="bodySm" colorRole="muted">
+                  Receiving Location
+                </Typography>
+                <select
+                  className="mt-1 h-12 w-full rounded-lg border-2 border-border-primary bg-fill-primary px-3 text-base font-medium focus:border-border-brand focus:outline-none"
+                  value={receivingLocationId}
+                  onChange={(e) => setReceivingLocationId(e.target.value)}
+                >
+                  <option value="">Select location...</option>
+                  {locations?.map((loc) => (
+                    <option key={loc.id} value={loc.id}>
+                      {loc.locationCode} ({loc.locationType})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            {!receivingLocationId && (
+              <Typography variant="bodyXs" className="mt-2 text-amber-600">
+                Please select where to receive this shipment
+              </Typography>
+            )}
+          </CardContent>
+        </Card>
+
         {/* Items to Receive */}
         <Card>
           <div className="p-4 pb-2">
-            <CardTitle>Items to Receive</CardTitle>
+            <CardTitle className="text-lg">Items to Receive</CardTitle>
+            <Typography variant="bodySm" colorRole="muted">
+              Tap checkbox to mark verified
+            </Typography>
           </div>
           <CardContent className="p-0">
             <div className="divide-y divide-border-muted">
@@ -776,7 +826,7 @@ const WMSReceiveShipmentPage = () => {
 
                     {/* Added Variants */}
                     {addedItems.map((addedItem) => (
-                      <div key={addedItem.id} className="ml-6 mt-3 border-l-2 border-amber-300 pl-4">
+                      <div key={addedItem.id} className="ml-4 mt-4 border-l-4 border-amber-300 pl-4 sm:ml-6">
                         <ItemRow
                           item={addedItem}
                           shipmentItem={shipmentItem}
@@ -798,29 +848,30 @@ const WMSReceiveShipmentPage = () => {
           </CardContent>
         </Card>
 
-        {/* Notes */}
+        {/* Notes - collapsible on mobile */}
         <Card>
           <div className="p-4 pb-2">
-            <CardTitle>Receiving Notes</CardTitle>
+            <CardTitle className="text-lg">Notes (Optional)</CardTitle>
           </div>
           <CardContent>
             <textarea
-              className="w-full rounded-lg border border-border-primary bg-fill-primary p-3 text-sm focus:border-border-brand focus:outline-none"
-              rows={3}
-              placeholder="Add any notes about discrepancies, damage, etc."
+              className="w-full rounded-lg border-2 border-border-primary bg-fill-primary p-4 text-base focus:border-border-brand focus:outline-none"
+              rows={2}
+              placeholder="Add notes about discrepancies, damage, etc."
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
             />
           </CardContent>
         </Card>
 
-        {/* Action Buttons */}
-        <div className="flex items-center justify-end gap-3">
+        {/* Desktop Action Buttons - hidden on mobile (we have fixed footer) */}
+        <div className="hidden items-center justify-end gap-3 sm:flex">
           <Button variant="outline" asChild>
             <Link href="/platform/admin/wms/receive">Cancel</Link>
           </Button>
           <Button
             variant="primary"
+            size="lg"
             onClick={handleReceive}
             disabled={receiveMutation.isPending || totalReceived === 0}
           >
@@ -834,8 +885,8 @@ const WMSReceiveShipmentPage = () => {
         {receiveMutation.isError && (
           <Card className="border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-900/20">
             <CardContent className="p-4">
-              <div className="flex items-center gap-2">
-                <Icon icon={IconAlertCircle} size="sm" className="text-red-600" />
+              <div className="flex items-center gap-3">
+                <Icon icon={IconAlertCircle} size="md" className="flex-shrink-0 text-red-600" />
                 <Typography variant="bodySm" className="text-red-800 dark:text-red-300">
                   {receiveMutation.error?.message ?? 'Failed to receive shipment'}
                 </Typography>
@@ -843,6 +894,31 @@ const WMSReceiveShipmentPage = () => {
             </CardContent>
           </Card>
         )}
+      </div>
+
+      {/* Fixed Bottom Action Bar - Mobile Only */}
+      <div className="fixed bottom-0 left-0 right-0 border-t border-border-muted bg-fill-primary p-4 shadow-lg sm:hidden">
+        <div className="flex gap-3">
+          <Button
+            variant="outline"
+            size="lg"
+            className="h-14 flex-1 text-base"
+            asChild
+          >
+            <Link href="/platform/admin/wms/receive">Cancel</Link>
+          </Button>
+          <Button
+            variant="primary"
+            size="lg"
+            className="h-14 flex-[2] text-base"
+            onClick={handleReceive}
+            disabled={receiveMutation.isPending || totalReceived === 0}
+          >
+            <ButtonContent iconLeft={receiveMutation.isPending ? IconLoader2 : IconCheck}>
+              {receiveMutation.isPending ? 'Processing...' : `Complete (${totalReceived})`}
+            </ButtonContent>
+          </Button>
+        </div>
       </div>
     </div>
   );
