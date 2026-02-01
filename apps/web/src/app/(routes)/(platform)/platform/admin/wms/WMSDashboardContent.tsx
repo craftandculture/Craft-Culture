@@ -13,13 +13,15 @@ import {
   IconPackages,
   IconPlus,
   IconTransfer,
+  IconTrash,
   IconTruck,
   IconUser,
   IconUserDollar,
   IconUsers,
 } from '@tabler/icons-react';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
+import { useState } from 'react';
 
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
@@ -37,10 +39,25 @@ import useTRPC from '@/lib/trpc/browser';
  */
 const WMSDashboardContent = () => {
   const api = useTRPC();
+  const queryClient = useQueryClient();
+  const [dedupeResult, setDedupeResult] = useState<string | null>(null);
 
   // Fetch comprehensive overview (will use prefetched data)
   const { data: overview } = useQuery({
     ...api.wms.admin.stock.getOverview.queryOptions({}),
+  });
+
+  // Deduplication mutation
+  const dedupeMutation = useMutation({
+    ...api.wms.admin.stock.deduplicate.mutationOptions(),
+    onSuccess: (data) => {
+      setDedupeResult(data.message);
+      // Invalidate stock queries to refresh data
+      void queryClient.invalidateQueries({ queryKey: ['wms'] });
+    },
+    onError: (error) => {
+      setDedupeResult(`Error: ${error.message}`);
+    },
   });
 
   // Fetch recent movements (will use prefetched data)
@@ -543,6 +560,40 @@ const WMSDashboardContent = () => {
             </CardContent>
           </Card>
         )}
+
+        {/* Maintenance: Stock Deduplication */}
+        <Card className="border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-900/20">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="mb-1 flex items-center gap-2">
+                  <Icon icon={IconTrash} size="md" className="text-red-600" />
+                  <Typography variant="headingSm" className="text-red-800 dark:text-red-300">
+                    Clean Up Duplicate Stock
+                  </Typography>
+                </div>
+                <Typography variant="bodyXs" className="text-red-700 dark:text-red-400">
+                  Remove duplicate stock records created from receiving retries (one-time cleanup)
+                </Typography>
+                {dedupeResult && (
+                  <Typography variant="bodySm" className="mt-2 font-medium text-green-700 dark:text-green-400">
+                    {dedupeResult}
+                  </Typography>
+                )}
+              </div>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => dedupeMutation.mutate({})}
+                disabled={dedupeMutation.isPending}
+              >
+                <ButtonContent iconLeft={dedupeMutation.isPending ? IconLoader2 : IconTrash}>
+                  {dedupeMutation.isPending ? 'Cleaning...' : 'Clean Up'}
+                </ButtonContent>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
