@@ -1,8 +1,12 @@
 import { TRPCError } from '@trpc/server';
-import { eq } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
 
 import db from '@/database/client';
-import { wmsDispatchBatches } from '@/database/schema';
+import {
+  privateClientOrders,
+  wmsDispatchBatchOrders,
+  wmsDispatchBatches,
+} from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
 import { updateBatchStatusSchema } from '../schemas/dispatchBatchSchema';
@@ -75,6 +79,31 @@ const adminUpdateBatchStatus = adminProcedure
       .set(updateData)
       .where(eq(wmsDispatchBatches.id, batchId))
       .returning();
+
+    // Update order statuses based on batch status
+    if (status === 'dispatched' || status === 'delivered') {
+      // Get all order IDs in this batch
+      const batchOrders = await db
+        .select({ orderId: wmsDispatchBatchOrders.orderId })
+        .from(wmsDispatchBatchOrders)
+        .where(eq(wmsDispatchBatchOrders.batchId, batchId));
+
+      const orderIds = batchOrders.map((o) => o.orderId);
+
+      if (orderIds.length > 0) {
+        // Update orders: dispatched → stock_in_transit, delivered → with_distributor
+        const newOrderStatus =
+          status === 'dispatched' ? 'stock_in_transit' : 'with_distributor';
+
+        await db
+          .update(privateClientOrders)
+          .set({
+            status: newOrderStatus,
+            updatedAt: new Date(),
+          })
+          .where(inArray(privateClientOrders.id, orderIds));
+      }
+    }
 
     return {
       success: true,

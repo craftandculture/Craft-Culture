@@ -1,5 +1,5 @@
 import { TRPCError } from '@trpc/server';
-import { eq, sql } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 
 import db from '@/database/client';
 import {
@@ -90,11 +90,16 @@ const adminPickItem = adminProcedure
       });
     }
 
-    // Find stock at location
+    // Find stock at location for this specific product
     const [stock] = await db
       .select()
       .from(wmsStock)
-      .where(eq(wmsStock.locationId, pickedFromLocationId));
+      .where(
+        and(
+          eq(wmsStock.locationId, pickedFromLocationId),
+          eq(wmsStock.lwin18, pickListItem.lwin18),
+        ),
+      );
 
     // Validate stock availability (if stock exists at location)
     if (stock && stock.availableCases < pickedQuantity) {
