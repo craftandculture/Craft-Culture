@@ -884,6 +884,91 @@ adminReceiveShipment.mutate({ shipmentId, items })
     <tr><td>Location Label</td><td><code>LOC-{code}</code></td><td>LOC-A-01-02</td></tr>
   </table>
 
+  <h3>Barcode Structure Breakdown</h3>
+
+  <h4>Case Barcode</h4>
+  <div style="background: #1e293b; color: #e2e8f0; padding: 1rem; border-radius: 8px; font-family: monospace; font-size: 0.85rem; line-height: 1.6; overflow-x: auto; white-space: pre;">
+CASE-1010279-2015-06-00750-001
+│    │       │    │  │     │
+│    │       │    │  │     └── Sequence (3 digits, zero-padded)
+│    │       │    │  └──────── Bottle size in ml (00750 = 750ml)
+│    │       │    └─────────── Pack config (06 = 6-pack)
+│    │       └──────────────── Vintage year (2015)
+│    └──────────────────────── LWIN7 (wine identifier from Liv-ex)
+└───────────────────────────── Prefix (identifies as case label)
+  </div>
+
+  <h4>Location Barcode</h4>
+  <div style="background: #1e293b; color: #e2e8f0; padding: 1rem; border-radius: 8px; font-family: monospace; font-size: 0.85rem; line-height: 1.6; overflow-x: auto; white-space: pre;">
+LOC-A-01-02
+│   │ │  │
+│   │ │  └── Level (00 = floor, 01-03 = upper shelves)
+│   │ └───── Bay number (01, 02, etc.)
+│   └─────── Aisle letter (A, B, C, etc.)
+└─────────── Prefix (identifies as location label)
+  </div>
+
+  <h3>How Barcodes Work</h3>
+
+  <p>The text barcode (e.g., <code>CASE-1010279-2015-06-00750-001</code>) is <strong>encoded as a Code 128 barcode</strong> - a pattern of bars and spaces that the scanner reads.</p>
+
+  <div style="background: #1e293b; color: #e2e8f0; padding: 1.5rem; border-radius: 8px; font-family: monospace; font-size: 0.85rem; line-height: 1.6; overflow-x: auto; white-space: pre;">
+┌────────────────────────────────────────────────┐
+│                                                │
+│  ║║█║║█║██║█║║██║║█║║█║█║██║║█║█║║██║║█║█║     │  ← Code 128 barcode
+│  CASE-1010279-2015-06-00750-001                │  ← Human-readable text
+│                                                │
+│  Château Margaux 2015                          │  ← Product name
+│                                                │
+│  LWIN: 1010279-2015-06-00750       6x75cl      │
+│  Lot: 2026-01-31-001               Bay: A-01-02│
+│                                                │
+└────────────────────────────────────────────────┘
+             4" x 2" thermal label
+  </div>
+
+  <h4>The Process</h4>
+  <ol>
+    <li><strong>ZPL Command</strong> - System generates ZPL code with <code>^BC</code> (Code 128) command</li>
+    <li><strong>Encoding</strong> - Zebra printer encodes the text into bar/space patterns</li>
+    <li><strong>Printing</strong> - ZD421 prints the barcode on thermal label</li>
+    <li><strong>Scanning</strong> - TC27 reads the pattern and decodes back to text</li>
+    <li><strong>Input</strong> - Text appears in the browser as keyboard input (wedge mode)</li>
+  </ol>
+
+  <h3>Uniqueness Enforcement</h3>
+
+  <p>Each barcode must be globally unique. The system ensures this through:</p>
+
+  <table>
+    <tr><th>Layer</th><th>Mechanism</th><th>Purpose</th></tr>
+    <tr>
+      <td>Database</td>
+      <td>Unique constraint on <code>wms_case_labels.barcode</code></td>
+      <td>Hard block on duplicates</td>
+    </tr>
+    <tr>
+      <td>Transaction</td>
+      <td>PostgreSQL advisory locks</td>
+      <td>Prevent race conditions</td>
+    </tr>
+    <tr>
+      <td>Sequence</td>
+      <td>Global max sequence per LWIN18</td>
+      <td>Never reuse sequence numbers</td>
+    </tr>
+    <tr>
+      <td>Validation</td>
+      <td>Dual check (SQL + JavaScript)</td>
+      <td>Safety backup for sequence calculation</td>
+    </tr>
+  </table>
+
+  <div class="status-box status-info">
+    <strong>Why Globally Unique?</strong><br>
+    The barcode includes the LWIN18, so the same wine from different shipments would collide if we only tracked sequence per shipment. The system tracks the max sequence across ALL labels with the same LWIN18 prefix.
+  </div>
+
   <h3>Label Content</h3>
   <table>
     <tr><th>Label Type</th><th>Size</th><th>Contains</th></tr>
