@@ -12,8 +12,8 @@
  *     levels: [
  *       { level: '03', barcode: 'LOC-A-01-03', requiresForklift: true },
  *       { level: '02', barcode: 'LOC-A-01-02', requiresForklift: true },
- *       { level: '01', barcode: 'LOC-A-01-01', requiresForklift: true },
- *       { level: '00', barcode: 'LOC-A-01-00', requiresForklift: false },
+ *       { level: '01', barcode: 'LOC-A-01-01', requiresForklift: false },  // Floor level (bay splits)
+ *       { level: '00', barcode: 'LOC-A-01-00', requiresForklift: false },  // Floor level
  *     ],
  *   });
  */
@@ -78,7 +78,8 @@ const generateBayTotemZpl = (data: BayTotemData) => {
     const yOffset = headerHeight + (index * sectionHeight);
     const locationCode = `${data.aisle}-${data.bay}-${level.level}`;
     const levelNum = parseInt(level.level, 10);
-    const levelLabel = levelNum === 0 ? 'FLOOR' : `LEVEL ${levelNum}`;
+    // Levels 00 and 01 are both floor-accessible (bay splits into 2 at ground level)
+    const levelLabel = levelNum <= 1 ? 'FLOOR' : `LEVEL ${levelNum}`;
     const forkliftText = level.requiresForklift ? 'FORKLIFT' : '';
 
     zpl += `
