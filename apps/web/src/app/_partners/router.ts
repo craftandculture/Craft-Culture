@@ -13,6 +13,7 @@ import partnersDelete from './controllers/partnersDelete';
 import partnersGetMany from './controllers/partnersGetMany';
 import partnersGetOne from './controllers/partnersGetOne';
 import partnersGetPublicInfo from './controllers/partnersGetPublicInfo';
+import partnersListSimple from './controllers/partnersListSimple';
 import partnersUpdate from './controllers/partnersUpdate';
 
 const apiKeysRouter = createTRPCRouter({
@@ -35,6 +36,7 @@ const partnersRouter = createTRPCRouter({
   getMany: partnersGetMany,
   getOne: partnersGetOne,
   getPublicInfo: partnersGetPublicInfo,
+  list: partnersListSimple,
   update: partnersUpdate,
   apiKeys: apiKeysRouter,
   contacts: contactsRouter,
