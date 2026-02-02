@@ -20,6 +20,9 @@ import Card from '@/app/_ui/components/Card/Card';
 import CardContent from '@/app/_ui/components/Card/CardContent';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Typography from '@/app/_ui/components/Typography/Typography';
+import ZebraPrint, { useZebraPrint } from '@/app/_wms/components/ZebraPrint';
+import type { LocationLabelData } from '@/app/_wms/utils/generateLocationLabelZpl';
+import { generateBatchLocationLabelsZpl } from '@/app/_wms/utils/generateLocationLabelZpl';
 import useTRPC from '@/lib/trpc/browser';
 
 /**
@@ -30,9 +33,12 @@ const WMSLabelsPage = () => {
   const shipmentId = searchParams.get('shipmentId');
   const api = useTRPC();
   const queryClient = useQueryClient();
+  const { print: zebraPrint } = useZebraPrint();
 
   const [activeTab, setActiveTab] = useState<'case' | 'location'>(shipmentId ? 'case' : 'location');
   const [selectedLabels, setSelectedLabels] = useState<Set<string>>(new Set());
+  const [isPrintingToZebra, setIsPrintingToZebra] = useState(false);
+  const [zebraConnected, setZebraConnected] = useState(false);
 
   // Get case labels for a shipment
   const { data: caseLabelsData, isLoading: caseLabelsLoading } = useQuery({
@@ -84,6 +90,42 @@ const WMSLabelsPage = () => {
     window.print();
   };
 
+  const handlePrintToZebra = async () => {
+    if (activeTab !== 'location' || !locationLabelsData || selectedLabels.size === 0) {
+      return;
+    }
+
+    setIsPrintingToZebra(true);
+
+    try {
+      // Filter to only selected locations
+      const selectedLocations = locationLabelsData.locations.filter((loc) =>
+        selectedLabels.has(loc.id),
+      );
+
+      // Generate ZPL for selected labels only
+      const labelData: LocationLabelData[] = selectedLocations.map((loc) => ({
+        barcode: loc.barcode,
+        locationCode: loc.locationCode,
+        aisle: loc.aisle,
+        bay: loc.bay,
+        level: loc.level,
+        locationType: loc.locationType,
+        requiresForklift: loc.requiresForklift,
+      }));
+
+      const zpl = generateBatchLocationLabelsZpl(labelData);
+      const success = await zebraPrint(zpl);
+
+      if (success) {
+        // Optionally clear selection after successful print
+        setSelectedLabels(new Set());
+      }
+    } finally {
+      setIsPrintingToZebra(false);
+    }
+  };
+
   const handleMarkPrinted = () => {
     if (selectedLabels.size > 0) {
       markPrintedMutation.mutate({ labelIds: Array.from(selectedLabels) });
@@ -113,6 +155,9 @@ const WMSLabelsPage = () => {
             </Typography>
           </div>
           <div className="flex items-center gap-2">
+            {/* Zebra Printer Status */}
+            <ZebraPrint onConnectionChange={setZebraConnected} />
+
             {selectedLabels.size > 0 && activeTab === 'case' && (
               <Button
                 variant="outline"
@@ -123,8 +168,25 @@ const WMSLabelsPage = () => {
                 <ButtonContent iconLeft={IconCheck}>Mark Printed ({selectedLabels.size})</ButtonContent>
               </Button>
             )}
-            <Button variant="primary" onClick={handlePrint} disabled={selectedLabels.size === 0}>
-              <ButtonContent iconLeft={IconPrinter}>Print ({selectedLabels.size})</ButtonContent>
+
+            {/* Print to Zebra button for location labels */}
+            {activeTab === 'location' && (
+              <Button
+                variant="primary"
+                onClick={handlePrintToZebra}
+                disabled={selectedLabels.size === 0 || !zebraConnected || isPrintingToZebra}
+              >
+                <ButtonContent iconLeft={isPrintingToZebra ? IconLoader2 : IconPrinter}>
+                  {isPrintingToZebra
+                    ? 'Printing...'
+                    : `Print to Zebra (${selectedLabels.size})`}
+                </ButtonContent>
+              </Button>
+            )}
+
+            {/* Browser print fallback */}
+            <Button variant="outline" onClick={handlePrint} disabled={selectedLabels.size === 0}>
+              <ButtonContent iconLeft={IconPrinter}>Browser Print</ButtonContent>
             </Button>
           </div>
         </div>
