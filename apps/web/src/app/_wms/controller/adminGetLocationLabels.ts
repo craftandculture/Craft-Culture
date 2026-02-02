@@ -5,8 +5,13 @@ import db from '@/database/client';
 import { wmsLocations } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
+import type { LocationLabelData } from '../utils/generateLocationLabelZpl';
+import { generateBatchLocationLabelsZpl } from '../utils/generateLocationLabelZpl';
+
 /**
  * Get location labels for printing
+ *
+ * Returns location data and ZPL code for Zebra printer with QR codes
  *
  * @example
  *   // Get all active locations
@@ -50,9 +55,23 @@ const adminGetLocationLabels = adminProcedure
       .where(and(...conditions))
       .orderBy(wmsLocations.aisle, wmsLocations.bay, wmsLocations.level);
 
+    // Generate ZPL for all labels with QR codes
+    const labelData: LocationLabelData[] = locations.map((loc) => ({
+      barcode: loc.barcode,
+      locationCode: loc.locationCode,
+      aisle: loc.aisle,
+      bay: loc.bay,
+      level: loc.level,
+      locationType: loc.locationType,
+      requiresForklift: loc.requiresForklift,
+    }));
+
+    const zpl = generateBatchLocationLabelsZpl(labelData);
+
     return {
       locations,
       totalLabels: locations.length,
+      zpl,
     };
   });
 
