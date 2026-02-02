@@ -4,6 +4,7 @@ import {
   IconBarcode,
   IconCheck,
   IconChevronRight,
+  IconLayoutList,
   IconLoader2,
   IconMapPin,
   IconPrinter,
@@ -21,6 +22,8 @@ import CardContent from '@/app/_ui/components/Card/CardContent';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import ZebraPrint, { useZebraPrint } from '@/app/_wms/components/ZebraPrint';
+import type { BayTotemData } from '@/app/_wms/utils/generateBayTotemZpl';
+import { generateBatchBayTotemsZpl } from '@/app/_wms/utils/generateBayTotemZpl';
 import type { LocationLabelData } from '@/app/_wms/utils/generateLocationLabelZpl';
 import { generateBatchLocationLabelsZpl } from '@/app/_wms/utils/generateLocationLabelZpl';
 import useTRPC from '@/lib/trpc/browser';
@@ -35,7 +38,7 @@ const WMSLabelsPage = () => {
   const queryClient = useQueryClient();
   const { print: zebraPrint } = useZebraPrint();
 
-  const [activeTab, setActiveTab] = useState<'case' | 'location'>(shipmentId ? 'case' : 'location');
+  const [activeTab, setActiveTab] = useState<'case' | 'location' | 'totem'>(shipmentId ? 'case' : 'totem');
   const [selectedLabels, setSelectedLabels] = useState<Set<string>>(new Set());
   const [isPrintingToZebra, setIsPrintingToZebra] = useState(false);
   const [zebraConnected, setZebraConnected] = useState(false);
@@ -49,6 +52,11 @@ const WMSLabelsPage = () => {
   // Get location labels
   const { data: locationLabelsData, isLoading: locationLabelsLoading } = useQuery({
     ...api.wms.admin.labels.getLocationLabels.queryOptions({}),
+  });
+
+  // Get bay totems
+  const { data: bayTotemsData, isLoading: bayTotemsLoading } = useQuery({
+    ...api.wms.admin.labels.getBayTotems.queryOptions({}),
   });
 
   const markPrintedMutation = useMutation({
@@ -72,6 +80,12 @@ const WMSLabelsPage = () => {
       } else {
         setSelectedLabels(new Set(locationLabelsData.locations.map((l) => l.id)));
       }
+    } else if (activeTab === 'totem' && bayTotemsData) {
+      if (selectedLabels.size === bayTotemsData.totems.length) {
+        setSelectedLabels(new Set());
+      } else {
+        setSelectedLabels(new Set(bayTotemsData.totems.map((t) => `${t.aisle}-${t.bay}`)));
+      }
     }
   };
 
@@ -91,35 +105,52 @@ const WMSLabelsPage = () => {
   };
 
   const handlePrintToZebra = async () => {
-    if (activeTab !== 'location' || !locationLabelsData || selectedLabels.size === 0) {
-      return;
-    }
+    if (selectedLabels.size === 0) return;
 
     setIsPrintingToZebra(true);
 
     try {
-      // Filter to only selected locations
-      const selectedLocations = locationLabelsData.locations.filter((loc) =>
-        selectedLabels.has(loc.id),
-      );
+      let zpl = '';
 
-      // Generate ZPL for selected labels only
-      const labelData: LocationLabelData[] = selectedLocations.map((loc) => ({
-        barcode: loc.barcode,
-        locationCode: loc.locationCode,
-        aisle: loc.aisle,
-        bay: loc.bay,
-        level: loc.level,
-        locationType: loc.locationType,
-        requiresForklift: loc.requiresForklift,
-      }));
+      if (activeTab === 'location' && locationLabelsData) {
+        // Filter to only selected locations
+        const selectedLocations = locationLabelsData.locations.filter((loc) =>
+          selectedLabels.has(loc.id),
+        );
 
-      const zpl = generateBatchLocationLabelsZpl(labelData);
-      const success = await zebraPrint(zpl);
+        // Generate ZPL for selected labels only
+        const labelData: LocationLabelData[] = selectedLocations.map((loc) => ({
+          barcode: loc.barcode,
+          locationCode: loc.locationCode,
+          aisle: loc.aisle,
+          bay: loc.bay,
+          level: loc.level,
+          locationType: loc.locationType,
+          requiresForklift: loc.requiresForklift,
+        }));
 
-      if (success) {
-        // Optionally clear selection after successful print
-        setSelectedLabels(new Set());
+        zpl = generateBatchLocationLabelsZpl(labelData);
+      } else if (activeTab === 'totem' && bayTotemsData) {
+        // Filter to only selected totems
+        const selectedTotems = bayTotemsData.totems.filter((totem) =>
+          selectedLabels.has(`${totem.aisle}-${totem.bay}`),
+        );
+
+        // Generate ZPL for selected totems
+        const totemData: BayTotemData[] = selectedTotems.map((totem) => ({
+          aisle: totem.aisle,
+          bay: totem.bay,
+          levels: totem.levels,
+        }));
+
+        zpl = generateBatchBayTotemsZpl(totemData);
+      }
+
+      if (zpl) {
+        const success = await zebraPrint(zpl);
+        if (success) {
+          setSelectedLabels(new Set());
+        }
       }
     } finally {
       setIsPrintingToZebra(false);
@@ -132,7 +163,12 @@ const WMSLabelsPage = () => {
     }
   };
 
-  const isLoading = activeTab === 'case' ? caseLabelsLoading : locationLabelsLoading;
+  const isLoading =
+    activeTab === 'case'
+      ? caseLabelsLoading
+      : activeTab === 'location'
+        ? locationLabelsLoading
+        : bayTotemsLoading;
 
   return (
     <div className="container mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8">
@@ -169,8 +205,8 @@ const WMSLabelsPage = () => {
               </Button>
             )}
 
-            {/* Print to Zebra button for location labels */}
-            {activeTab === 'location' && (
+            {/* Print to Zebra button for location labels and bay totems */}
+            {(activeTab === 'location' || activeTab === 'totem') && (
               <Button
                 variant="primary"
                 onClick={handlePrintToZebra}
@@ -219,6 +255,20 @@ const WMSLabelsPage = () => {
               <Icon icon={IconMapPin} size="sm" />
               Location Labels
               {locationLabelsData && ` (${locationLabelsData.totalLabels})`}
+            </div>
+          </button>
+          <button
+            onClick={() => setActiveTab('totem')}
+            className={`border-b-2 px-4 py-2 text-sm font-medium transition-colors ${
+              activeTab === 'totem'
+                ? 'border-border-brand text-text-brand'
+                : 'border-transparent text-text-muted hover:text-text-primary'
+            }`}
+          >
+            <div className="flex items-center gap-2">
+              <Icon icon={IconLayoutList} size="sm" />
+              Bay Totems
+              {bayTotemsData && ` (${bayTotemsData.totalTotems})`}
             </div>
           </button>
         </div>
@@ -330,7 +380,7 @@ const WMSLabelsPage = () => {
               </CardContent>
             </Card>
           )
-        ) : (
+        ) : activeTab === 'location' ? (
           /* Location Labels */
           locationLabelsData && locationLabelsData.locations.length > 0 ? (
             <div className="space-y-4">
@@ -412,6 +462,131 @@ const WMSLabelsPage = () => {
                 </Typography>
                 <Typography variant="bodySm" colorRole="muted" className="mb-4">
                   Create warehouse locations first
+                </Typography>
+                <Button variant="outline" asChild>
+                  <Link href="/platform/admin/wms/locations/new">
+                    <ButtonContent iconLeft={IconMapPin}>Create Locations</ButtonContent>
+                  </Link>
+                </Button>
+              </CardContent>
+            </Card>
+          )
+        ) : (
+          /* Bay Totems */
+          bayTotemsData && bayTotemsData.totems.length > 0 ? (
+            <div className="space-y-4">
+              {/* Info banner */}
+              <Card className="print:hidden">
+                <CardContent className="p-4">
+                  <div className="flex items-start gap-3">
+                    <Icon icon={IconLayoutList} size="md" className="mt-0.5 text-blue-600" />
+                    <div>
+                      <Typography variant="headingSm">Bay Totem Labels</Typography>
+                      <Typography variant="bodyXs" colorRole="muted">
+                        Vertical strips showing all levels for each bay. Mount at eye level (1.5m) on the upright column.
+                        Uses 4&quot; x 6&quot; labels.
+                      </Typography>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Select All - Hidden when printing */}
+              <div className="flex items-center justify-between print:hidden">
+                <label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={selectedLabels.size === bayTotemsData.totems.length}
+                    onChange={toggleSelectAll}
+                    className="h-4 w-4 rounded border-border-primary"
+                  />
+                  <Typography variant="bodySm">
+                    Select All ({bayTotemsData.totems.length} bay totems)
+                  </Typography>
+                </label>
+              </div>
+
+              {/* Totems Grid */}
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                {bayTotemsData.totems.map((totem) => {
+                  const totemKey = `${totem.aisle}-${totem.bay}`;
+                  return (
+                    <div key={totemKey} className="relative">
+                      {/* Checkbox - Hidden when printing */}
+                      <div className="absolute left-2 top-2 z-10 print:hidden">
+                        <input
+                          type="checkbox"
+                          checked={selectedLabels.has(totemKey)}
+                          onChange={() => toggleLabel(totemKey)}
+                          className="h-4 w-4 rounded border-border-primary"
+                        />
+                      </div>
+                      {/* Totem Card */}
+                      <Card
+                        className={`cursor-pointer transition-colors ${
+                          selectedLabels.has(totemKey)
+                            ? 'border-border-brand ring-1 ring-border-brand'
+                            : 'hover:border-border-muted'
+                        }`}
+                        onClick={() => toggleLabel(totemKey)}
+                      >
+                        <CardContent className="p-4">
+                          {/* Bay Header */}
+                          <div className="mb-3 border-b border-border-muted pb-2">
+                            <Typography variant="headingMd" className="text-center">
+                              Bay {totem.aisle}-{totem.bay}
+                            </Typography>
+                          </div>
+
+                          {/* Levels */}
+                          <div className="space-y-2">
+                            {totem.levels.map((level) => (
+                              <div
+                                key={level.level}
+                                className="flex items-center justify-between rounded bg-fill-secondary px-3 py-2"
+                              >
+                                <div className="flex items-center gap-2">
+                                  <div className="flex h-8 w-8 items-center justify-center rounded bg-fill-primary text-xs font-mono">
+                                    QR
+                                  </div>
+                                  <div>
+                                    <Typography variant="bodySm" className="font-medium">
+                                      {totem.aisle}-{totem.bay}-{level.level}
+                                    </Typography>
+                                    <Typography variant="bodyXs" colorRole="muted">
+                                      {parseInt(level.level, 10) === 0 ? 'Floor' : `Level ${parseInt(level.level, 10)}`}
+                                    </Typography>
+                                  </div>
+                                </div>
+                                {level.requiresForklift && (
+                                  <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
+                                    Forklift
+                                  </span>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+
+                          {/* Footer */}
+                          <Typography variant="bodyXs" colorRole="muted" className="mt-3 text-center">
+                            {totem.levels.length} levels
+                          </Typography>
+                        </CardContent>
+                      </Card>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ) : (
+            <Card className="print:hidden">
+              <CardContent className="p-6 text-center">
+                <Icon icon={IconLayoutList} size="xl" colorRole="muted" className="mx-auto mb-4" />
+                <Typography variant="headingSm" className="mb-2">
+                  No Bay Totems Available
+                </Typography>
+                <Typography variant="bodySm" colorRole="muted" className="mb-4">
+                  Create rack locations first to generate bay totems
                 </Typography>
                 <Button variant="outline" asChild>
                   <Link href="/platform/admin/wms/locations/new">

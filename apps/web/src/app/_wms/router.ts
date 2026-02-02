@@ -14,6 +14,7 @@ import adminDeduplicateStock from './controller/adminDeduplicateStock';
 import adminDeleteReceivingDraft from './controller/adminDeleteReceivingDraft';
 import adminDeleteStockRecord from './controller/adminDeleteStockRecord';
 import adminGetAllStockRecords from './controller/adminGetAllStockRecords';
+import adminGetBayTotems from './controller/adminGetBayTotems';
 import adminGetCaseByBarcode from './controller/adminGetCaseByBarcode';
 import adminGetCaseLabels from './controller/adminGetCaseLabels';
 import adminGetDispatchBatch from './controller/adminGetDispatchBatch';
@@ -76,6 +77,7 @@ const labelsRouter = createTRPCRouter({
   createCaseLabels: adminCreateCaseLabels,
   getCaseLabels: adminGetCaseLabels,
   getLocationLabels: adminGetLocationLabels,
+  getBayTotems: adminGetBayTotems,
   markPrinted: adminMarkLabelsPrinted,
 });
 
