@@ -223,6 +223,11 @@
   <h1>WMS Test Schedule</h1>
   <p class="subtitle">Comprehensive testing checklist for Warehouse Management System</p>
 
+  <div class="status-box status-warning">
+    <strong>Hardware Status:</strong> TC27 Scanner + ZD421 Printer in transit<br>
+    <strong>Current Mode:</strong> Desktop-only testing (skip hardware-dependent steps marked with 🖨️ or 📱)
+  </div>
+
   <div class="summary-grid">
     <div class="summary-card">
       <div class="number" id="total-tests">32</div>
@@ -259,14 +264,14 @@
     <strong>Ensure these are ready before starting:</strong>
   </div>
 
-  <div class="test-group">
-    <h4>Hardware Setup</h4>
+  <div class="test-group" style="opacity: 0.5;">
+    <h4>Hardware Setup <span style="background: var(--warning-light); color: #92400e; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.75rem; margin-left: 0.5rem;">SKIP - Hardware in transit</span></h4>
     <ul class="prereq-list">
-      <li>Zebra TC27 charged and connected to WiFi</li>
-      <li>Zebra Browser Print app installed on TC27</li>
-      <li>TC27 scanner configured for Keyboard Wedge mode</li>
-      <li>Zebra ZD421 printer powered on and paired via Bluetooth</li>
-      <li>4" x 2" thermal labels loaded in printer</li>
+      <li>🖨️ Zebra TC27 charged and connected to WiFi</li>
+      <li>🖨️ Zebra Browser Print app installed on TC27</li>
+      <li>📱 TC27 scanner configured for Keyboard Wedge mode</li>
+      <li>🖨️ Zebra ZD421 printer powered on and paired via Bluetooth</li>
+      <li>🖨️ 4" x 2" thermal labels loaded in printer</li>
     </ul>
   </div>
 
@@ -330,14 +335,14 @@
     </div>
   </div>
 
-  <div class="test-group">
-    <h4>1.2 Print Location Labels</h4>
+  <div class="test-group" style="opacity: 0.5;">
+    <h4>1.2 Print Location Labels <span style="background: var(--warning-light); color: #92400e; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.75rem; margin-left: 0.5rem;">🖨️ SKIP</span></h4>
 
     <div class="test-item">
       <input type="checkbox" id="test-1-4" onchange="updateProgress()">
       <div class="step-num">4</div>
       <label for="test-1-4">
-        Select locations A-01-00 through A-01-03 and click "Print Labels"
+        🖨️ Select locations A-01-00 through A-01-03 and click "Print Labels"
         <div class="expected">Expected: 4 labels print on ZD421</div>
       </label>
     </div>
@@ -346,20 +351,20 @@
       <input type="checkbox" id="test-1-5" onchange="updateProgress()">
       <div class="step-num">5</div>
       <label for="test-1-5">
-        Verify labels show: barcode, location code (LOC-A-01-00), aisle/bay/level
+        🖨️ Verify labels show: barcode, location code (LOC-A-01-00), aisle/bay/level
         <div class="expected">Expected: All information visible and legible</div>
       </label>
     </div>
   </div>
 
-  <div class="test-group">
-    <h4>1.3 Test Location Scanning</h4>
+  <div class="test-group" style="opacity: 0.5;">
+    <h4>1.3 Test Location Scanning <span style="background: var(--warning-light); color: #92400e; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.75rem; margin-left: 0.5rem;">📱 SKIP</span></h4>
 
     <div class="test-item">
       <input type="checkbox" id="test-1-6" onchange="updateProgress()">
       <div class="step-num">6</div>
       <label for="test-1-6">
-        Go to <span class="nav-path">/wms/scanner-test</span> on TC27
+        📱 Go to <span class="nav-path">/wms/scanner-test</span> on TC27
         <div class="expected">Expected: Scanner test page loads</div>
       </label>
     </div>
@@ -368,7 +373,7 @@
       <input type="checkbox" id="test-1-7" onchange="updateProgress()">
       <div class="step-num">7</div>
       <label for="test-1-7">
-        Scan each printed location label
+        📱 Scan each printed location label
         <div class="expected">Expected: "LOC-A-01-00" etc. appears in input field</div>
       </label>
     </div>
@@ -438,26 +443,26 @@
       <input type="checkbox" id="test-2-5" onchange="updateProgress()">
       <div class="step-num">5</div>
       <label for="test-2-5">
-        Scan location barcode OR select from dropdown
+        Select location from dropdown (scan not available yet)
         <div class="expected">Expected: Location assigned (e.g., A-01-00)</div>
       </label>
     </div>
 
-    <div class="test-item">
+    <div class="test-item" style="opacity: 0.5;">
       <input type="checkbox" id="test-2-6" onchange="updateProgress()">
       <div class="step-num">6</div>
       <label for="test-2-6">
-        Click "Print Labels" button
-        <div class="expected">Expected: Case labels print (one per case)</div>
+        🖨️ Click "Print Labels" button
+        <div class="expected">Expected: Case labels print (one per case) — <strong>SKIP: No printer</strong></div>
       </label>
     </div>
 
-    <div class="test-item">
+    <div class="test-item" style="opacity: 0.5;">
       <input type="checkbox" id="test-2-7" onchange="updateProgress()">
       <div class="step-num">7</div>
       <label for="test-2-7">
-        Verify case label content: barcode, product name, LWIN, pack size, location
-        <div class="expected">Expected: All information correct and legible</div>
+        🖨️ Verify case label content: barcode, product name, LWIN, pack size, location
+        <div class="expected">Expected: All information correct and legible — <strong>SKIP: No printer</strong></div>
       </label>
     </div>
   </div>
@@ -634,25 +639,25 @@
   </div>
 
   <!-- PHASE 5: Case Label Scanning -->
-  <h2>
+  <h2 style="opacity: 0.5;">
     <div class="phase-header">
-      <span>Phase 5: Case Label Scanning</span>
-      <span class="phase-time">~5 min</span>
+      <span>Phase 5: Case Label Scanning 📱🖨️</span>
+      <span class="phase-time">SKIP - Hardware required</span>
     </div>
   </h2>
 
-  <div class="status-box status-info">
-    <strong>Goal:</strong> Verify printed case labels scan correctly and return product info
+  <div class="status-box status-warning">
+    <strong>Requires Hardware:</strong> This phase needs the TC27 scanner and printed labels. Skip for now.
   </div>
 
-  <div class="test-group">
+  <div class="test-group" style="opacity: 0.5;">
     <h4>5.1 Test Case Barcode Lookup</h4>
 
     <div class="test-item">
       <input type="checkbox" id="test-5-1" onchange="updateProgress()">
       <div class="step-num">1</div>
       <label for="test-5-1">
-        Go to <span class="nav-path">/wms/scanner-test</span>
+        📱 Go to <span class="nav-path">/wms/scanner-test</span>
         <div class="expected">Expected: Scanner test page loads</div>
       </label>
     </div>
@@ -661,7 +666,7 @@
       <input type="checkbox" id="test-5-2" onchange="updateProgress()">
       <div class="step-num">2</div>
       <label for="test-5-2">
-        Scan a case label printed during receiving
+        📱🖨️ Scan a case label printed during receiving
         <div class="expected">Expected: Barcode text appears (CASE-LWIN18-SEQ format)</div>
       </label>
     </div>
@@ -670,7 +675,7 @@
       <input type="checkbox" id="test-5-3" onchange="updateProgress()">
       <div class="step-num">3</div>
       <label for="test-5-3">
-        Go to <span class="nav-path">/wms/putaway</span> and scan same case label
+        📱 Go to <span class="nav-path">/wms/putaway</span> and scan same case label
         <div class="expected">Expected: Product details shown (name, LWIN, current location)</div>
       </label>
     </div>
@@ -709,7 +714,7 @@
       <input type="checkbox" id="test-6-2" onchange="updateProgress()">
       <div class="step-num">2</div>
       <label for="test-6-2">
-        Scan source location barcode (e.g., LOC-A-01-00)
+        Select source location from dropdown (or scan if hardware available)
         <div class="expected">Expected: Stock at that location displayed</div>
       </label>
     </div>
@@ -727,7 +732,7 @@
       <input type="checkbox" id="test-6-4" onchange="updateProgress()">
       <div class="step-num">4</div>
       <label for="test-6-4">
-        Scan destination location (e.g., LOC-A-01-02)
+        Select destination location from dropdown (or scan if hardware available)
         <div class="expected">Expected: Destination accepted</div>
       </label>
     </div>
