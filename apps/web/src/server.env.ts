@@ -18,6 +18,10 @@ const envSchema = z.object({
   TWILIO_PHONE_NUMBER: z.string().optional(),
   ADMIN_PHONE_NUMBER: z.string().optional(),
   OPENAI_API_KEY: z.string().optional(),
+  ZOHO_CLIENT_ID: z.string().optional(),
+  ZOHO_CLIENT_SECRET: z.string().optional(),
+  ZOHO_REFRESH_TOKEN: z.string().optional(),
+  ZOHO_ORGANIZATION_ID: z.string().optional(),
 });
 
 const rawEnv = {
@@ -31,6 +35,10 @@ const rawEnv = {
   TWILIO_PHONE_NUMBER: process.env.TWILIO_PHONE_NUMBER,
   ADMIN_PHONE_NUMBER: process.env.ADMIN_PHONE_NUMBER,
   OPENAI_API_KEY: process.env.OPENAI_API_KEY,
+  ZOHO_CLIENT_ID: process.env.ZOHO_CLIENT_ID,
+  ZOHO_CLIENT_SECRET: process.env.ZOHO_CLIENT_SECRET,
+  ZOHO_REFRESH_TOKEN: process.env.ZOHO_REFRESH_TOKEN,
+  ZOHO_ORGANIZATION_ID: process.env.ZOHO_ORGANIZATION_ID,
 };
 
 /**
