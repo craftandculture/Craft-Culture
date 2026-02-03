@@ -14,6 +14,10 @@ const serverConfig = {
   twilioPhoneNumber: serverEnv.TWILIO_PHONE_NUMBER,
   adminPhoneNumber: serverEnv.ADMIN_PHONE_NUMBER,
   adminDomains: ['byont.nl', 'craftculture.xyz'],
+  zohoClientId: serverEnv.ZOHO_CLIENT_ID,
+  zohoClientSecret: serverEnv.ZOHO_CLIENT_SECRET,
+  zohoRefreshToken: serverEnv.ZOHO_REFRESH_TOKEN,
+  zohoOrganizationId: serverEnv.ZOHO_ORGANIZATION_ID,
 } as const;
 
 export default serverConfig;

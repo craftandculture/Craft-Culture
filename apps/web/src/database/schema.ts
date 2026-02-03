@@ -424,6 +424,10 @@ export const partners = pgTable(
       // Payment link
       paymentUrl?: string;
     }>(),
+    // Zoho Books integration
+    zohoContactId: text('zoho_contact_id'),
+    zohoVendorId: text('zoho_vendor_id'),
+    zohoLastSyncAt: timestamp('zoho_last_sync_at', { mode: 'date' }),
     ...timestamps,
   },
   (table) => [
@@ -1187,6 +1191,12 @@ export const privateClientOrders = pgTable(
       onDelete: 'set null',
     }),
     cancellationReason: text('cancellation_reason'),
+
+    // Zoho Books integration
+    zohoInvoiceId: text('zoho_invoice_id'),
+    zohoInvoiceNumber: text('zoho_invoice_number'),
+    zohoInvoiceStatus: text('zoho_invoice_status'),
+    zohoLastSyncAt: timestamp('zoho_last_sync_at', { mode: 'date' }),
 
     ...timestamps,
   },
