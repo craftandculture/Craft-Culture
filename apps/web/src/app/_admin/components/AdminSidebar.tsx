@@ -132,7 +132,7 @@ const AdminSidebar = ({ isCollapsed, onToggleCollapse }: AdminSidebarProps) => {
       </div>
 
       {/* Navigation Groups */}
-      <nav className="flex-1 overflow-y-auto p-2">
+      <nav className="flex-1 overflow-y-auto overscroll-contain p-2 touch-pan-y">
         {navGroups.map((group) => (
           <div key={group.title} className="mb-4">
             {!collapsed && (
@@ -160,7 +160,7 @@ const AdminSidebar = ({ isCollapsed, onToggleCollapse }: AdminSidebarProps) => {
             <Icon icon={IconMenu2} size="md" />
           </button>
         </SheetTrigger>
-        <SheetContent side="left" className="w-64 p-0">
+        <SheetContent side="left" className="w-64 overflow-y-auto p-0">
           <SheetTitle className="sr-only">Admin Navigation</SheetTitle>
           {renderNavContent(false)}
         </SheetContent>
