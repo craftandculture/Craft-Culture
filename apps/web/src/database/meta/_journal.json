@@ -148,6 +148,13 @@
       "when": 1770108543707,
       "tag": "0020_dizzy_mariko_yashida",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1770219494099,
+      "tag": "0021_fair_wallow",
+      "breakpoints": true
     }
   ]
 }

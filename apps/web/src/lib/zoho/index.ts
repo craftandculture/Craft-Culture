@@ -22,8 +22,9 @@
 
 export { isZohoConfigured, zohoFetch } from './client';
 
+export * as bills from './bills';
 export * as contacts from './contacts';
 export * as invoices from './invoices';
-export * as bills from './bills';
+export * as salesOrders from './salesOrders';
 
 export type * from './types';

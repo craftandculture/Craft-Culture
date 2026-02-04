@@ -210,3 +210,74 @@ export interface ZohoBillResponse {
   message: string;
   bill: ZohoBill;
 }
+
+/**
+ * Zoho Sales Order line item
+ */
+export interface ZohoSalesOrderLineItem {
+  line_item_id: string;
+  item_id?: string;
+  sku?: string;
+  name: string;
+  description?: string;
+  rate: number;
+  quantity: number;
+  quantity_invoiced?: number;
+  quantity_packed?: number;
+  quantity_shipped?: number;
+  unit?: string;
+  discount?: number;
+  tax_id?: string;
+  item_total: number;
+}
+
+/**
+ * Zoho Sales Order
+ */
+export interface ZohoSalesOrder {
+  salesorder_id: string;
+  salesorder_number: string;
+  customer_id: string;
+  customer_name: string;
+  status: 'draft' | 'open' | 'invoiced' | 'partially_invoiced' | 'void' | 'overdue' | 'closed';
+  date: string;
+  shipment_date?: string;
+  reference_number?: string;
+  line_items: ZohoSalesOrderLineItem[];
+  sub_total: number;
+  total: number;
+  currency_code: string;
+  shipping_charge?: number;
+  adjustment?: number;
+  discount?: number;
+  notes?: string;
+  terms?: string;
+  billing_address?: ZohoAddress;
+  shipping_address?: ZohoAddress;
+  created_time: string;
+  last_modified_time: string;
+}
+
+/**
+ * Sales Order response
+ */
+export interface ZohoSalesOrderResponse {
+  code: number;
+  message: string;
+  salesorder: ZohoSalesOrder;
+}
+
+/**
+ * List Sales Orders response
+ */
+export interface ZohoSalesOrdersListResponse {
+  code: number;
+  message: string;
+  salesorders: ZohoSalesOrder[];
+  page_context: {
+    page: number;
+    per_page: number;
+    has_more_page: boolean;
+    total: number;
+  };
+}
