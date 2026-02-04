@@ -68,7 +68,7 @@ const LocationsPage = () => {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8">
+      <div className="container mx-auto max-w-lg px-4 py-6">
         <div className="flex items-center justify-center p-12">
           <Icon icon={IconLoader2} className="animate-spin" colorRole="muted" size="lg" />
         </div>
@@ -77,34 +77,30 @@ const LocationsPage = () => {
   }
 
   return (
-    <div className="container mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8">
-      <div className="space-y-6">
+    <div className="container mx-auto max-w-lg px-4 py-6">
+      <div className="space-y-4">
         {/* Header */}
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div className="flex items-center gap-4">
-            <Button asChild variant="ghost" size="sm">
-              <Link href="/platform/admin/wms">
-                <Icon icon={IconArrowLeft} size="sm" />
-              </Link>
-            </Button>
-            <div>
-              <Typography variant="headingLg" className="mb-2">
-                Warehouse Locations
-              </Typography>
-              <Typography variant="bodyMd" colorRole="muted">
-                {locations?.length ?? 0} locations configured
-              </Typography>
+        <div className="flex items-start gap-3">
+          <Link
+            href="/platform/admin/wms"
+            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-fill-secondary text-text-muted transition-colors hover:bg-fill-primary hover:text-text-primary active:bg-fill-secondary"
+          >
+            <IconArrowLeft className="h-6 w-6" />
+          </Link>
+          <div className="min-w-0 flex-1">
+            <Typography variant="headingLg" className="mb-1">
+              Locations
+            </Typography>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button asChild size="sm">
+                <Link href="/platform/admin/wms/locations/new">
+                  <ButtonContent iconLeft={IconPlus}>Add</ButtonContent>
+                </Link>
+              </Button>
+              <Button variant="outline" size="sm">
+                <Icon icon={IconPrinter} size="sm" />
+              </Button>
             </div>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <Button variant="outline" size="sm">
-              <ButtonContent iconLeft={IconPrinter}>Print Labels</ButtonContent>
-            </Button>
-            <Button asChild>
-              <Link href="/platform/admin/wms/locations/new">
-                <ButtonContent iconLeft={IconPlus}>Add Locations</ButtonContent>
-              </Link>
-            </Button>
           </div>
         </div>
 

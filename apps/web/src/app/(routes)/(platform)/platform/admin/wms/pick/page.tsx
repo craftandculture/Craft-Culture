@@ -1,6 +1,7 @@
 'use client';
 
 import {
+  IconArrowLeft,
   IconChevronRight,
   IconClipboardList,
   IconLoader2,
@@ -64,34 +65,30 @@ const WMSPickListsPage = () => {
   };
 
   return (
-    <div className="container mx-auto max-w-5xl px-4 py-6 sm:px-6 sm:py-8">
-      <div className="space-y-6">
+    <div className="container mx-auto max-w-lg px-4 py-6">
+      <div className="space-y-4">
         {/* Header */}
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <div className="mb-2 flex items-center gap-2">
-              <Link href="/platform/admin/wms" className="text-text-muted hover:text-text-primary">
-                <Typography variant="bodySm">WMS</Typography>
-              </Link>
-              <IconChevronRight className="h-4 w-4 text-text-muted" />
-              <Typography variant="bodySm">Order Picking</Typography>
-            </div>
+        <div className="flex items-start gap-3">
+          <Link
+            href="/platform/admin/wms"
+            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-fill-secondary text-text-muted transition-colors hover:bg-fill-primary hover:text-text-primary active:bg-fill-secondary"
+          >
+            <IconArrowLeft className="h-6 w-6" />
+          </Link>
+          <div className="min-w-0 flex-1">
             <Typography variant="headingLg" className="mb-1">
               Pick Lists
             </Typography>
-            <Typography variant="bodySm" colorRole="muted">
-              Pick and pack orders for dispatch
-            </Typography>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => refetch()}>
-              <ButtonContent iconLeft={IconRefresh}>Refresh</ButtonContent>
-            </Button>
-            <Link href="/platform/admin/wms/pick/new">
-              <Button variant="primary" size="sm">
-                <ButtonContent iconLeft={IconPlus}>New Pick List</ButtonContent>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" onClick={() => refetch()}>
+                <Icon icon={IconRefresh} size="sm" />
               </Button>
-            </Link>
+              <Link href="/platform/admin/wms/pick/new">
+                <Button variant="primary" size="sm">
+                  <ButtonContent iconLeft={IconPlus}>New</ButtonContent>
+                </Button>
+              </Link>
+            </div>
           </div>
         </div>
 

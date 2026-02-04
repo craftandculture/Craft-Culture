@@ -6,28 +6,22 @@ import {
   IconBarcode,
   IconBox,
   IconBuildingWarehouse,
-  IconChevronRight,
-  IconLoader2,
   IconMapPin,
   IconPackage,
   IconPackages,
   IconPlus,
   IconTransfer,
-  IconTrash,
   IconTruck,
-  IconUser,
   IconUserDollar,
   IconUsers,
 } from '@tabler/icons-react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
-import { useState } from 'react';
 
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
 import Card from '@/app/_ui/components/Card/Card';
 import CardContent from '@/app/_ui/components/Card/CardContent';
-import CardTitle from '@/app/_ui/components/Card/CardTitle';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import MovementTypeBadge from '@/app/_wms/components/MovementTypeBadge';
@@ -39,29 +33,14 @@ import useTRPC from '@/lib/trpc/browser';
  */
 const WMSDashboardContent = () => {
   const api = useTRPC();
-  const queryClient = useQueryClient();
-  const [dedupeResult, setDedupeResult] = useState<string | null>(null);
 
   // Fetch comprehensive overview (will use prefetched data)
   const { data: overview } = useQuery({
     ...api.wms.admin.stock.getOverview.queryOptions({}),
   });
 
-  // Deduplication mutation
-  const dedupeMutation = useMutation({
-    ...api.wms.admin.stock.deduplicate.mutationOptions(),
-    onSuccess: (data) => {
-      setDedupeResult(data.message);
-      // Invalidate stock queries to refresh data
-      void queryClient.invalidateQueries({ queryKey: ['wms'] });
-    },
-    onError: (error) => {
-      setDedupeResult(`Error: ${error.message}`);
-    },
-  });
-
   // Fetch recent movements (will use prefetched data)
-  const { data: movements, isLoading: movementsLoading } = useQuery({
+  const { data: movements } = useQuery({
     ...api.wms.admin.stock.getMovements.queryOptions({ limit: 5 }),
   });
 
@@ -80,15 +59,6 @@ const WMSDashboardContent = () => {
     ...api.wms.admin.stock.reconcile.queryOptions(),
   });
 
-  const formatDate = (date: Date) => {
-    return new Date(date).toLocaleString('en-GB', {
-      day: '2-digit',
-      month: 'short',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
-
   const hasExpiryAlerts =
     (expiringStock?.summary?.expiredCases ?? 0) > 0 ||
     (expiringStock?.summary?.criticalCases ?? 0) > 0;
@@ -97,115 +67,51 @@ const WMSDashboardContent = () => {
   const hasReconcileIssues = reconcileData?.summary && !reconcileData.summary.isReconciled;
 
   return (
-    <div className="container mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8">
-      <div className="space-y-6">
+    <div className="container mx-auto max-w-lg px-4 py-6">
+      <div className="space-y-4">
         {/* Header */}
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <Typography variant="headingLg" className="mb-2">
-              WMS Dashboard
-            </Typography>
-            <Typography variant="bodyMd" colorRole="muted">
-              Warehouse management system overview
-            </Typography>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <Button variant="outline" size="sm" asChild>
-              <Link href="/platform/admin/wms/scanner-test">
-                <ButtonContent iconLeft={IconBarcode}>Scanner Test</ButtonContent>
-              </Link>
-            </Button>
-          </div>
+        <div className="flex items-center justify-between">
+          <Typography variant="headingLg">
+            WMS
+          </Typography>
+          <Button variant="outline" size="sm" asChild>
+            <Link href="/platform/admin/wms/scanner-test">
+              <Icon icon={IconBarcode} size="sm" />
+            </Link>
+          </Button>
         </div>
 
-        {/* KPI Cards */}
-        <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-purple-100 dark:bg-purple-900/30">
-                  <Icon icon={IconBox} size="md" className="text-purple-600" />
-                </div>
-                <div>
-                  <Typography variant="bodyXs" colorRole="muted">
-                    Total Cases
-                  </Typography>
-                  <Typography variant="headingMd" className="text-purple-600">
-                    {(overview?.summary?.totalCases ?? 0).toLocaleString()}
-                  </Typography>
-                </div>
+        {/* KPI Summary - Compact */}
+        <Card>
+          <CardContent className="p-3">
+            <div className="grid grid-cols-4 divide-x divide-border-primary text-center">
+              <div className="px-2">
+                <Typography variant="headingSm" className="text-purple-600">
+                  {(overview?.summary?.totalCases ?? 0).toLocaleString()}
+                </Typography>
+                <Typography variant="bodyXs" colorRole="muted">cases</Typography>
               </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-900/30">
-                  <Icon icon={IconPackage} size="md" className="text-emerald-600" />
-                </div>
-                <div>
-                  <Typography variant="bodyXs" colorRole="muted">
-                    Products
-                  </Typography>
-                  <Typography variant="headingMd" className="text-emerald-600">
-                    {overview?.summary?.uniqueProducts ?? 0}
-                  </Typography>
-                </div>
+              <div className="px-2">
+                <Typography variant="headingSm" className="text-emerald-600">
+                  {overview?.summary?.uniqueProducts ?? 0}
+                </Typography>
+                <Typography variant="bodyXs" colorRole="muted">products</Typography>
               </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/30">
-                  <Icon icon={IconMapPin} size="md" className="text-blue-600" />
-                </div>
-                <div>
-                  <Typography variant="bodyXs" colorRole="muted">
-                    Locations
-                  </Typography>
-                  <Typography variant="headingMd" className="text-blue-600">
-                    {overview?.locations?.occupied ?? 0}/{overview?.locations?.active ?? 0}
-                  </Typography>
-                </div>
+              <div className="px-2">
+                <Typography variant="headingSm" className="text-blue-600">
+                  {overview?.locations?.occupied ?? 0}
+                </Typography>
+                <Typography variant="bodyXs" colorRole="muted">locations</Typography>
               </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-orange-100 dark:bg-orange-900/30">
-                  <Icon icon={IconUser} size="md" className="text-orange-600" />
-                </div>
-                <div>
-                  <Typography variant="bodyXs" colorRole="muted">
-                    Owners
-                  </Typography>
-                  <Typography variant="headingMd" className="text-orange-600">
-                    {overview?.summary?.uniqueOwners ?? 0}
-                  </Typography>
-                </div>
+              <div className="px-2">
+                <Typography variant="headingSm" className="text-cyan-600">
+                  {overview?.movements?.last24Hours ?? 0}
+                </Typography>
+                <Typography variant="bodyXs" colorRole="muted">moves</Typography>
               </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-cyan-100 dark:bg-cyan-900/30">
-                  <Icon icon={IconTransfer} size="md" className="text-cyan-600" />
-                </div>
-                <div>
-                  <Typography variant="bodyXs" colorRole="muted">
-                    Moves (24h)
-                  </Typography>
-                  <Typography variant="headingMd" className="text-cyan-600">
-                    {overview?.movements?.last24Hours ?? 0}
-                  </Typography>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Critical Alert: Stock Reconciliation Issue */}
         {hasReconcileIssues && (
@@ -346,171 +252,73 @@ const WMSDashboardContent = () => {
           </div>
         )}
 
-        {/* Quick Actions */}
-        <Card>
-          <div className="p-4 pb-3">
-            <CardTitle>Quick Actions</CardTitle>
-          </div>
-          <CardContent className="pt-0">
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-              <Button variant="outline" className="h-auto flex-col gap-2 py-4" asChild>
-                <Link href="/platform/admin/wms/putaway">
-                  <Icon icon={IconArrowRight} size="lg" />
-                  <span>Put Away</span>
-                </Link>
-              </Button>
-              <Button variant="outline" className="h-auto flex-col gap-2 py-4" asChild>
-                <Link href="/platform/admin/wms/transfer">
-                  <Icon icon={IconTransfer} size="lg" />
-                  <span>Transfer</span>
-                </Link>
-              </Button>
-              <Button variant="outline" className="h-auto flex-col gap-2 py-4" asChild>
-                <Link href="/platform/admin/wms/repack">
-                  <Icon icon={IconPackages} size="lg" />
-                  <span>Repack</span>
-                </Link>
-              </Button>
-              <Button variant="outline" className="h-auto flex-col gap-2 py-4" asChild>
-                <Link href="/platform/admin/wms/receive">
-                  <Icon icon={IconPackage} size="lg" />
-                  <span>Receive</span>
-                </Link>
-              </Button>
-              <Button variant="outline" className="h-auto flex-col gap-2 py-4" asChild>
-                <Link href="/platform/admin/wms/labels">
-                  <Icon icon={IconBarcode} size="lg" />
-                  <span>Print Labels</span>
-                </Link>
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Two Column Layout: Recent Movements + Top Owners */}
-        <div className="grid gap-6 lg:grid-cols-2">
-          {/* Recent Movements */}
-          <Card>
-            <div className="flex items-center justify-between p-4 pb-3">
-              <CardTitle>Recent Movements</CardTitle>
-              <Link
-                href="/platform/admin/wms/movements"
-                className="text-sm text-text-muted hover:text-text-primary"
-              >
-                View all →
-              </Link>
-            </div>
-            <CardContent className="pt-0">
-              {movementsLoading ? (
-                <div className="flex items-center justify-center p-8">
-                  <Icon icon={IconLoader2} className="animate-spin" colorRole="muted" />
+        {/* Quick Actions - Large touch targets for mobile */}
+        <div className="grid grid-cols-2 gap-3">
+          <Link href="/platform/admin/wms/putaway">
+            <Card className="cursor-pointer transition-colors hover:border-border-brand active:bg-fill-secondary">
+              <CardContent className="flex flex-col items-center justify-center p-6">
+                <div className="mb-2 flex h-14 w-14 items-center justify-center rounded-xl bg-blue-100 dark:bg-blue-900/30">
+                  <Icon icon={IconArrowRight} size="xl" className="text-blue-600" />
                 </div>
-              ) : movements?.movements && movements.movements.length > 0 ? (
-                <div className="space-y-3">
-                  {movements.movements.map((movement) => (
-                    <div
-                      key={movement.id}
-                      className="flex items-center gap-3 rounded-lg bg-fill-secondary p-3"
-                    >
-                      <MovementTypeBadge
-                        movementType={movement.movementType as 'receive' | 'putaway' | 'transfer' | 'pick' | 'adjust' | 'count' | 'ownership_transfer' | 'repack_out' | 'repack_in' | 'pallet_add' | 'pallet_remove' | 'pallet_move'}
-                        size="sm"
-                        showLabel={false}
-                      />
-                      <div className="min-w-0 flex-1">
-                        <Typography variant="bodySm" className="truncate font-medium">
-                          {movement.productName}
-                        </Typography>
-                        <div className="flex items-center gap-1 text-xs text-text-muted">
-                          {movement.fromLocationCode && (
-                            <span>{movement.fromLocationCode}</span>
-                          )}
-                          {movement.fromLocationCode && movement.toLocationCode && (
-                            <span>→</span>
-                          )}
-                          {movement.toLocationCode && (
-                            <span>{movement.toLocationCode}</span>
-                          )}
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <Typography variant="bodySm" className="font-medium text-blue-600">
-                          {movement.quantityCases} cs
-                        </Typography>
-                        <Typography variant="bodyXs" colorRole="muted">
-                          {formatDate(movement.performedAt)}
-                        </Typography>
-                      </div>
-                    </div>
-                  ))}
+                <Typography variant="headingSm">Put Away</Typography>
+              </CardContent>
+            </Card>
+          </Link>
+          <Link href="/platform/admin/wms/transfer">
+            <Card className="cursor-pointer transition-colors hover:border-border-brand active:bg-fill-secondary">
+              <CardContent className="flex flex-col items-center justify-center p-6">
+                <div className="mb-2 flex h-14 w-14 items-center justify-center rounded-xl bg-purple-100 dark:bg-purple-900/30">
+                  <Icon icon={IconTransfer} size="xl" className="text-purple-600" />
                 </div>
-              ) : (
-                <div className="p-6 text-center">
-                  <Typography variant="bodySm" colorRole="muted">
-                    No recent movements
-                  </Typography>
+                <Typography variant="headingSm">Transfer</Typography>
+              </CardContent>
+            </Card>
+          </Link>
+          <Link href="/platform/admin/wms/receive">
+            <Card className="cursor-pointer transition-colors hover:border-border-brand active:bg-fill-secondary">
+              <CardContent className="flex flex-col items-center justify-center p-6">
+                <div className="mb-2 flex h-14 w-14 items-center justify-center rounded-xl bg-emerald-100 dark:bg-emerald-900/30">
+                  <Icon icon={IconPackage} size="xl" className="text-emerald-600" />
                 </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Top Stock Owners */}
-          <Card>
-            <div className="flex items-center justify-between p-4 pb-3">
-              <CardTitle>Stock by Owner</CardTitle>
-              <Link
-                href="/platform/admin/wms/stock?tab=owner"
-                className="text-sm text-text-muted hover:text-text-primary"
-              >
-                View all →
-              </Link>
-            </div>
-            <CardContent className="pt-0">
-              {overview?.topOwners && overview.topOwners.length > 0 ? (
-                <div className="space-y-3">
-                  {overview.topOwners.map((owner) => (
-                    <div
-                      key={owner.ownerId}
-                      className="flex items-center justify-between rounded-lg bg-fill-secondary p-3"
-                    >
-                      <div>
-                        <Typography variant="bodySm" className="font-medium">
-                          {owner.ownerName}
-                        </Typography>
-                        <Typography variant="bodyXs" colorRole="muted">
-                          {owner.productCount} products
-                        </Typography>
-                      </div>
-                      <Typography variant="headingSm" className="text-blue-600">
-                        {owner.totalCases.toLocaleString()} cs
-                      </Typography>
-                    </div>
-                  ))}
+                <Typography variant="headingSm">Receive</Typography>
+              </CardContent>
+            </Card>
+          </Link>
+          <Link href="/platform/admin/wms/repack">
+            <Card className="cursor-pointer transition-colors hover:border-border-brand active:bg-fill-secondary">
+              <CardContent className="flex flex-col items-center justify-center p-6">
+                <div className="mb-2 flex h-14 w-14 items-center justify-center rounded-xl bg-orange-100 dark:bg-orange-900/30">
+                  <Icon icon={IconPackages} size="xl" className="text-orange-600" />
                 </div>
-              ) : (
-                <div className="p-6 text-center">
-                  <Typography variant="bodySm" colorRole="muted">
-                    No stock owners yet
-                  </Typography>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                <Typography variant="headingSm">Repack</Typography>
+              </CardContent>
+            </Card>
+          </Link>
         </div>
 
-        {/* Navigation Links */}
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <Link href="/platform/admin/wms/locations">
+        {/* Secondary Actions */}
+        <div className="grid grid-cols-2 gap-3">
+          <Link href="/platform/admin/wms/pick">
             <Card className="cursor-pointer transition-colors hover:border-border-brand">
               <CardContent className="flex items-center gap-3 p-4">
-                <Icon icon={IconMapPin} size="md" className="text-text-muted" />
-                <div>
-                  <Typography variant="headingSm">Locations</Typography>
-                  <Typography variant="bodyXs" colorRole="muted">
-                    Manage warehouse locations
-                  </Typography>
-                </div>
-                <IconChevronRight className="ml-auto h-5 w-5 text-text-muted" />
+                <Icon icon={IconBox} size="md" className="text-text-muted" />
+                <Typography variant="bodySm" className="font-medium">Pick Lists</Typography>
+              </CardContent>
+            </Card>
+          </Link>
+          <Link href="/platform/admin/wms/dispatch">
+            <Card className="cursor-pointer transition-colors hover:border-border-brand">
+              <CardContent className="flex items-center gap-3 p-4">
+                <Icon icon={IconTruck} size="md" className="text-text-muted" />
+                <Typography variant="bodySm" className="font-medium">Dispatch</Typography>
+              </CardContent>
+            </Card>
+          </Link>
+          <Link href="/platform/admin/wms/labels">
+            <Card className="cursor-pointer transition-colors hover:border-border-brand">
+              <CardContent className="flex items-center gap-3 p-4">
+                <Icon icon={IconBarcode} size="md" className="text-text-muted" />
+                <Typography variant="bodySm" className="font-medium">Labels</Typography>
               </CardContent>
             </Card>
           </Link>
@@ -518,96 +326,85 @@ const WMSDashboardContent = () => {
             <Card className="cursor-pointer transition-colors hover:border-border-brand">
               <CardContent className="flex items-center gap-3 p-4">
                 <Icon icon={IconBox} size="md" className="text-text-muted" />
-                <div>
-                  <Typography variant="headingSm">Stock Overview</Typography>
-                  <Typography variant="bodyXs" colorRole="muted">
-                    View stock by product or location
-                  </Typography>
-                </div>
-                <IconChevronRight className="ml-auto h-5 w-5 text-text-muted" />
-              </CardContent>
-            </Card>
-          </Link>
-          <Link href="/platform/admin/wms/movements">
-            <Card className="cursor-pointer transition-colors hover:border-border-brand">
-              <CardContent className="flex items-center gap-3 p-4">
-                <Icon icon={IconTransfer} size="md" className="text-text-muted" />
-                <div>
-                  <Typography variant="headingSm">Movements</Typography>
-                  <Typography variant="bodyXs" colorRole="muted">
-                    Stock movement history
-                  </Typography>
-                </div>
-                <IconChevronRight className="ml-auto h-5 w-5 text-text-muted" />
-              </CardContent>
-            </Card>
-          </Link>
-          <Link href="/platform/admin/wms/stock/reconcile">
-            <Card className={`cursor-pointer transition-colors hover:border-border-brand ${hasReconcileIssues ? 'border-red-300 bg-red-50 dark:border-red-800 dark:bg-red-900/20' : ''}`}>
-              <CardContent className="flex items-center gap-3 p-4">
-                <Icon icon={IconAlertTriangle} size="md" className={hasReconcileIssues ? 'text-red-600' : 'text-text-muted'} />
-                <div className="flex items-center gap-2">
-                  <Typography variant="headingSm">Reconciliation</Typography>
-                  {hasReconcileIssues && (
-                    <span className="rounded-full bg-red-600 px-2 py-0.5 text-xs font-medium text-white">
-                      Issue
-                    </span>
-                  )}
-                </div>
-                <Typography variant="bodyXs" colorRole="muted">
-                  Compare movements vs stock
-                </Typography>
-                <IconChevronRight className="ml-auto h-5 w-5 text-text-muted" />
-              </CardContent>
-            </Card>
-          </Link>
-          <Link href="/platform/admin/wms/ownership/transfer">
-            <Card className="cursor-pointer transition-colors hover:border-border-brand">
-              <CardContent className="flex items-center gap-3 p-4">
-                <Icon icon={IconUserDollar} size="md" className="text-text-muted" />
-                <div>
-                  <Typography variant="headingSm">Transfer Ownership</Typography>
-                  <Typography variant="bodyXs" colorRole="muted">
-                    Transfer stock between partners
-                  </Typography>
-                </div>
-                <IconChevronRight className="ml-auto h-5 w-5 text-text-muted" />
-              </CardContent>
-            </Card>
-          </Link>
-          <Link href="/platform/admin/wms/ownership/requests">
-            <Card className="cursor-pointer transition-colors hover:border-border-brand">
-              <CardContent className="flex items-center gap-3 p-4">
-                <Icon icon={IconUsers} size="md" className="text-text-muted" />
-                <div className="flex items-center gap-2">
-                  <Typography variant="headingSm">Partner Requests</Typography>
-                  {pendingRequestCount > 0 && (
-                    <span className="rounded-full bg-purple-600 px-2 py-0.5 text-xs font-medium text-white">
-                      {pendingRequestCount}
-                    </span>
-                  )}
-                </div>
-                <Typography variant="bodyXs" colorRole="muted">
-                  Review transfer & withdrawal requests
-                </Typography>
-                <IconChevronRight className="ml-auto h-5 w-5 text-text-muted" />
+                <Typography variant="bodySm" className="font-medium">Stock</Typography>
               </CardContent>
             </Card>
           </Link>
         </div>
 
+        {/* Recent Movements - Compact */}
+        {movements?.movements && movements.movements.length > 0 && (
+          <Card>
+            <div className="flex items-center justify-between p-3 pb-2">
+              <Typography variant="bodySm" className="font-medium">Recent Activity</Typography>
+              <Link href="/platform/admin/wms/movements" className="text-xs text-text-muted">
+                All →
+              </Link>
+            </div>
+            <CardContent className="p-3 pt-0">
+              <div className="space-y-2">
+                {movements.movements.slice(0, 3).map((movement) => (
+                  <div key={movement.id} className="flex items-center gap-2 text-sm">
+                    <MovementTypeBadge
+                      movementType={movement.movementType as 'receive' | 'putaway' | 'transfer' | 'pick' | 'adjust' | 'count' | 'ownership_transfer' | 'repack_out' | 'repack_in' | 'pallet_add' | 'pallet_remove' | 'pallet_move'}
+                      size="sm"
+                      showLabel={false}
+                    />
+                    <span className="min-w-0 flex-1 truncate text-text-muted">
+                      {movement.productName?.substring(0, 25)}...
+                    </span>
+                    <span className="font-medium text-blue-600">{movement.quantityCases}cs</span>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* More Options */}
+        <Card>
+          <CardContent className="p-3">
+            <div className="grid grid-cols-2 gap-2">
+              <Link href="/platform/admin/wms/locations" className="flex items-center gap-2 rounded-lg p-2 transition-colors hover:bg-fill-secondary">
+                <Icon icon={IconMapPin} size="sm" colorRole="muted" />
+                <Typography variant="bodySm">Locations</Typography>
+              </Link>
+              <Link href="/platform/admin/wms/movements" className="flex items-center gap-2 rounded-lg p-2 transition-colors hover:bg-fill-secondary">
+                <Icon icon={IconTransfer} size="sm" colorRole="muted" />
+                <Typography variant="bodySm">Movements</Typography>
+              </Link>
+              <Link href="/platform/admin/wms/ownership/transfer" className="flex items-center gap-2 rounded-lg p-2 transition-colors hover:bg-fill-secondary">
+                <Icon icon={IconUserDollar} size="sm" colorRole="muted" />
+                <Typography variant="bodySm">Ownership</Typography>
+              </Link>
+              <Link href="/platform/admin/wms/ownership/requests" className="flex items-center gap-2 rounded-lg p-2 transition-colors hover:bg-fill-secondary">
+                <Icon icon={IconUsers} size="sm" colorRole="muted" />
+                <Typography variant="bodySm">Requests</Typography>
+                {pendingRequestCount > 0 && (
+                  <span className="ml-auto rounded-full bg-purple-600 px-1.5 py-0.5 text-xs font-medium text-white">
+                    {pendingRequestCount}
+                  </span>
+                )}
+              </Link>
+              {hasReconcileIssues && (
+                <Link href="/platform/admin/wms/stock/reconcile" className="col-span-2 flex items-center gap-2 rounded-lg bg-red-50 p-2 transition-colors hover:bg-red-100 dark:bg-red-900/20">
+                  <Icon icon={IconAlertTriangle} size="sm" className="text-red-600" />
+                  <Typography variant="bodySm" className="text-red-700 dark:text-red-400">Reconciliation Issue</Typography>
+                </Link>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Setup Notice */}
         {(overview?.locations?.total ?? 0) === 0 && (
-          <Card>
-            <CardContent className="p-6 text-center">
-              <Icon icon={IconBuildingWarehouse} size="xl" colorRole="muted" className="mx-auto mb-4" />
-              <Typography variant="headingSm" className="mb-2">
-                Set Up Your Warehouse
+          <Card className="border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-900/20">
+            <CardContent className="p-4 text-center">
+              <Icon icon={IconBuildingWarehouse} size="lg" colorRole="muted" className="mx-auto mb-2" />
+              <Typography variant="bodySm" className="mb-3">
+                Create locations to get started
               </Typography>
-              <Typography variant="bodySm" colorRole="muted" className="mb-4">
-                Create locations to start managing your warehouse inventory
-              </Typography>
-              <Button asChild>
+              <Button asChild size="lg" className="w-full">
                 <Link href="/platform/admin/wms/locations/new">
                   <ButtonContent iconLeft={IconPlus}>Create Locations</ButtonContent>
                 </Link>
@@ -615,40 +412,6 @@ const WMSDashboardContent = () => {
             </CardContent>
           </Card>
         )}
-
-        {/* Maintenance: Stock Deduplication */}
-        <Card className="border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-900/20">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="mb-1 flex items-center gap-2">
-                  <Icon icon={IconTrash} size="md" className="text-red-600" />
-                  <Typography variant="headingSm" className="text-red-800 dark:text-red-300">
-                    Clean Up Duplicate Stock
-                  </Typography>
-                </div>
-                <Typography variant="bodyXs" className="text-red-700 dark:text-red-400">
-                  Remove duplicate stock records created from receiving retries (one-time cleanup)
-                </Typography>
-                {dedupeResult && (
-                  <Typography variant="bodySm" className="mt-2 font-medium text-green-700 dark:text-green-400">
-                    {dedupeResult}
-                  </Typography>
-                )}
-              </div>
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={() => dedupeMutation.mutate({})}
-                disabled={dedupeMutation.isPending}
-              >
-                <ButtonContent iconLeft={dedupeMutation.isPending ? IconLoader2 : IconTrash}>
-                  {dedupeMutation.isPending ? 'Cleaning...' : 'Clean Up'}
-                </ButtonContent>
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
       </div>
     </div>
   );
