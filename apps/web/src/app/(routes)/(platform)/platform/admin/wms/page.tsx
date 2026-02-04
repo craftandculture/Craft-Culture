@@ -14,19 +14,26 @@ const WMSDashboardPage = async () => {
 
   console.log('[WMS Page] Starting server-side prefetch...');
 
-  // Prefetch all dashboard data in parallel
+  // Use fetchQuery for overview to see errors (unlike prefetchQuery which swallows them)
+  try {
+    const overviewData = await queryClient.fetchQuery(api.wms.admin.stock.getOverview.queryOptions({}));
+    console.log('[WMS Page] Overview fetch SUCCESS:', JSON.stringify(overviewData).slice(0, 500));
+  } catch (error) {
+    console.error('[WMS Page] Overview fetch FAILED:', error);
+  }
+
+  // Prefetch other data in parallel
   try {
     await Promise.all([
-      queryClient.prefetchQuery(api.wms.admin.stock.getOverview.queryOptions({})),
       queryClient.prefetchQuery(api.wms.admin.stock.getMovements.queryOptions({ limit: 5 })),
       queryClient.prefetchQuery(api.wms.admin.stock.getExpiring.queryOptions({ daysThreshold: 90 })),
       queryClient.prefetchQuery(
         api.wms.admin.ownership.getRequests.queryOptions({ status: 'pending', limit: 5, offset: 0 })
       ),
     ]);
-    console.log('[WMS Page] Prefetch completed successfully');
+    console.log('[WMS Page] Other prefetches completed successfully');
   } catch (error) {
-    console.error('[WMS Page] Prefetch error:', error);
+    console.error('[WMS Page] Other prefetch error:', error);
   }
 
   // Log the dehydrated state to see what data was prefetched
