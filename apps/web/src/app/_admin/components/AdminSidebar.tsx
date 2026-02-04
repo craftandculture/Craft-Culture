@@ -12,6 +12,7 @@ import {
   IconFileImport,
   IconMenu2,
   IconPackage,
+  IconReceipt,
   IconSearch,
   IconSettings,
   IconShip,
@@ -52,6 +53,7 @@ const navGroups: NavGroup[] = [
     title: 'Orders',
     items: [
       { label: 'Private Clients', href: '/platform/admin/private-orders', icon: IconPackage },
+      { label: 'Zoho Sales', href: '/platform/admin/zoho-sales-orders', icon: IconReceipt },
       { label: 'Source', href: '/platform/admin/source', icon: IconSearch },
       { label: 'Logistics', href: '/platform/admin/logistics', icon: IconShip },
       { label: 'WMS', href: '/platform/admin/wms', icon: IconBuildingWarehouse },
