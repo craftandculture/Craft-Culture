@@ -1,9 +1,9 @@
 'use client';
 
 import {
+  IconArrowLeft,
   IconBarcode,
   IconCheck,
-  IconChevronRight,
   IconLayoutList,
   IconLoader2,
   IconMapPin,
@@ -171,24 +171,25 @@ const WMSLabelsPage = () => {
         : bayTotemsLoading;
 
   return (
-    <div className="container mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8">
+    <div className="container mx-auto max-w-lg px-4 py-6">
       <div className="space-y-6 print:space-y-0">
         {/* Header - Hidden when printing */}
         <div className="flex flex-col gap-4 print:hidden sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <div className="mb-2 flex items-center gap-2">
-              <Link href="/platform/admin/wms" className="text-text-muted hover:text-text-primary">
-                <Typography variant="bodySm">WMS</Typography>
-              </Link>
-              <IconChevronRight className="h-4 w-4 text-text-muted" />
-              <Typography variant="bodySm">Labels</Typography>
+          <div className="flex items-start gap-3">
+            <Link
+              href="/platform/admin/wms"
+              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-fill-secondary text-text-muted transition-colors hover:bg-fill-primary hover:text-text-primary active:bg-fill-secondary"
+            >
+              <IconArrowLeft className="h-6 w-6" />
+            </Link>
+            <div className="min-w-0 flex-1">
+              <Typography variant="headingLg" className="mb-1">
+                Print Labels
+              </Typography>
+              <Typography variant="bodySm" colorRole="muted">
+                Generate and print case labels and location labels
+              </Typography>
             </div>
-            <Typography variant="headingLg" className="mb-2">
-              Print Labels
-            </Typography>
-            <Typography variant="bodyMd" colorRole="muted">
-              Generate and print case labels and location labels
-            </Typography>
           </div>
           <div className="flex items-center gap-2">
             {/* Zebra Printer Status */}
