@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WMS Test Barcodes</title>
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      padding: 20px;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    h1 { margin-bottom: 10px; }
+    p { color: #666; margin-bottom: 20px; }
+    h2 { margin-top: 30px; margin-bottom: 15px; color: #7c3aed; }
+    .barcode-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 20px;
+    }
+    .barcode-card {
+      border: 2px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 15px;
+      text-align: center;
+    }
+    .barcode-card h3 {
+      font-size: 14px;
+      color: #374151;
+      margin-bottom: 10px;
+    }
+    .barcode-card svg {
+      max-width: 100%;
+    }
+    .barcode-card .code {
+      font-family: monospace;
+      font-size: 12px;
+      color: #6b7280;
+      margin-top: 5px;
+    }
+    @media print {
+      body { padding: 10px; }
+      .no-print { display: none; }
+      .barcode-card { break-inside: avoid; page-break-inside: avoid; }
+    }
+    .instructions {
+      background: #f3f4f6;
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+    }
+    .instructions ol {
+      margin-left: 20px;
+    }
+    .instructions li {
+      margin: 5px 0;
+    }
+    button {
+      background: #7c3aed;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 16px;
+      margin-bottom: 20px;
+    }
+    button:hover { background: #6d28d9; }
+  </style>
+</head>
+<body>
+  <h1>WMS Test Barcodes</h1>
+  <p>Print this page on any printer to test TC27 scanning</p>
+
+  <div class="instructions no-print">
+    <strong>Instructions:</strong>
+    <ol>
+      <li>Click "Print Page" below</li>
+      <li>Print on any standard printer</li>
+      <li>Cut out the barcodes</li>
+      <li>Use TC27 to scan them in WMS pages</li>
+    </ol>
+  </div>
+
+  <button onclick="window.print()" class="no-print">Print Page</button>
+
+  <h2>Location Barcodes</h2>
+  <p class="no-print">Scan these on the transfer page or location lookup</p>
+
+  <div class="barcode-grid">
+    <div class="barcode-card">
+      <h3>Floor Level - Bay A-01</h3>
+      <svg id="loc1"></svg>
+      <div class="code">LOC-A-01-00</div>
+    </div>
+    <div class="barcode-card">
+      <h3>Level 1 - Bay A-01</h3>
+      <svg id="loc2"></svg>
+      <div class="code">LOC-A-01-01</div>
+    </div>
+    <div class="barcode-card">
+      <h3>Level 2 - Bay A-01</h3>
+      <svg id="loc3"></svg>
+      <div class="code">LOC-A-01-02</div>
+    </div>
+    <div class="barcode-card">
+      <h3>Floor Level - Bay A-02</h3>
+      <svg id="loc4"></svg>
+      <div class="code">LOC-A-02-00</div>
+    </div>
+    <div class="barcode-card">
+      <h3>Receiving Area</h3>
+      <svg id="loc5"></svg>
+      <div class="code">LOC-RECEIVING</div>
+    </div>
+    <div class="barcode-card">
+      <h3>Dispatch Area</h3>
+      <svg id="loc6"></svg>
+      <div class="code">LOC-DISPATCH</div>
+    </div>
+  </div>
+
+  <h2>Case Barcodes (Test)</h2>
+  <p class="no-print">Scan these to look up case/stock information</p>
+
+  <div class="barcode-grid">
+    <div class="barcode-card">
+      <h3>Test Case 1</h3>
+      <svg id="case1"></svg>
+      <div class="code">CASE-000000000000000001-0001</div>
+    </div>
+    <div class="barcode-card">
+      <h3>Test Case 2</h3>
+      <svg id="case2"></svg>
+      <div class="code">CASE-000000000000000001-0002</div>
+    </div>
+  </div>
+
+  <script>
+    // Location barcodes
+    JsBarcode("#loc1", "LOC-A-01-00", { format: "CODE128", height: 50, fontSize: 14 });
+    JsBarcode("#loc2", "LOC-A-01-01", { format: "CODE128", height: 50, fontSize: 14 });
+    JsBarcode("#loc3", "LOC-A-01-02", { format: "CODE128", height: 50, fontSize: 14 });
+    JsBarcode("#loc4", "LOC-A-02-00", { format: "CODE128", height: 50, fontSize: 14 });
+    JsBarcode("#loc5", "LOC-RECEIVING", { format: "CODE128", height: 50, fontSize: 14 });
+    JsBarcode("#loc6", "LOC-DISPATCH", { format: "CODE128", height: 50, fontSize: 14 });
+
+    // Case barcodes (test data)
+    JsBarcode("#case1", "CASE-000000000000000001-0001", { format: "CODE128", height: 50, fontSize: 10 });
+    JsBarcode("#case2", "CASE-000000000000000001-0002", { format: "CODE128", height: 50, fontSize: 10 });
+  </script>
+</body>
+</html>
