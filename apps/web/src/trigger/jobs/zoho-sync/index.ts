@@ -7,3 +7,4 @@
 export { zohoCreateBillJob } from './zohoCreateBillJob';
 export { zohoCreateInvoiceJob } from './zohoCreateInvoiceJob';
 export { zohoPaymentSyncJob } from './zohoPaymentSyncJob';
+export { zohoSalesOrderSyncJob } from './zohoSalesOrderSyncJob';

@@ -1,0 +1,145 @@
+/**
+ * Zoho Sales Order Sync Job
+ *
+ * Scheduled job that syncs sales orders from Zoho Books into the system.
+ * Fetches open/confirmed sales orders that need fulfillment.
+ */
+
+import { logger, schedules } from '@trigger.dev/sdk';
+import { eq } from 'drizzle-orm';
+
+import { zohoSalesOrderItems, zohoSalesOrders } from '@/database/schema';
+import { isZohoConfigured } from '@/lib/zoho/client';
+import { getSalesOrder, listSalesOrders } from '@/lib/zoho/salesOrders';
+import triggerDb from '@/trigger/triggerDb';
+
+export const zohoSalesOrderSyncJob = schedules.task({
+  id: 'zoho-sales-order-sync',
+  cron: {
+    pattern: '*/15 * * * *', // Every 15 minutes
+    timezone: 'Asia/Dubai',
+  },
+  async run() {
+    logger.info('Starting Zoho sales order sync');
+
+    if (!isZohoConfigured()) {
+      logger.warn('Zoho integration not configured, skipping sync');
+      return { skipped: true, reason: 'not_configured' };
+    }
+
+    const results = {
+      fetched: 0,
+      created: 0,
+      updated: 0,
+      errors: 0,
+    };
+
+    try {
+      // Fetch open sales orders from Zoho (these need fulfillment)
+      const { salesOrders } = await listSalesOrders({
+        status: 'open',
+        perPage: 100,
+      });
+
+      results.fetched = salesOrders.length;
+      logger.info(`Fetched ${salesOrders.length} open sales orders from Zoho`);
+
+      for (const zohoOrder of salesOrders) {
+        try {
+          // Check if we already have this order
+          const [existing] = await triggerDb
+            .select({ id: zohoSalesOrders.id, status: zohoSalesOrders.status })
+            .from(zohoSalesOrders)
+            .where(eq(zohoSalesOrders.zohoSalesOrderId, zohoOrder.salesorder_id))
+            .limit(1);
+
+          if (existing) {
+            // Already synced, check if we need to update
+            // Don't update if we've started processing (picking, etc.)
+            if (existing.status === 'synced') {
+              await triggerDb
+                .update(zohoSalesOrders)
+                .set({
+                  zohoStatus: zohoOrder.status,
+                  zohoLastModifiedTime: new Date(zohoOrder.last_modified_time),
+                  lastSyncAt: new Date(),
+                })
+                .where(eq(zohoSalesOrders.id, existing.id));
+              results.updated++;
+            }
+            continue;
+          }
+
+          // Fetch full order details with line items
+          const fullOrder = await getSalesOrder(zohoOrder.salesorder_id);
+
+          // Create new sales order
+          const [newOrder] = await triggerDb
+            .insert(zohoSalesOrders)
+            .values({
+              zohoSalesOrderId: fullOrder.salesorder_id,
+              salesOrderNumber: fullOrder.salesorder_number,
+              zohoCustomerId: fullOrder.customer_id,
+              customerName: fullOrder.customer_name,
+              zohoStatus: fullOrder.status,
+              status: 'synced',
+              orderDate: new Date(fullOrder.date),
+              shipmentDate: fullOrder.shipment_date
+                ? new Date(fullOrder.shipment_date)
+                : null,
+              referenceNumber: fullOrder.reference_number,
+              subTotal: fullOrder.sub_total,
+              total: fullOrder.total,
+              currencyCode: fullOrder.currency_code,
+              shippingCharge: fullOrder.shipping_charge,
+              discount: fullOrder.discount,
+              notes: fullOrder.notes,
+              billingAddress: fullOrder.billing_address,
+              shippingAddress: fullOrder.shipping_address,
+              zohoCreatedTime: new Date(fullOrder.created_time),
+              zohoLastModifiedTime: new Date(fullOrder.last_modified_time),
+              lastSyncAt: new Date(),
+            })
+            .returning({ id: zohoSalesOrders.id });
+
+          // Create line items
+          if (fullOrder.line_items && fullOrder.line_items.length > 0) {
+            await triggerDb.insert(zohoSalesOrderItems).values(
+              fullOrder.line_items.map((item) => ({
+                salesOrderId: newOrder.id,
+                zohoLineItemId: item.line_item_id,
+                zohoItemId: item.item_id,
+                sku: item.sku,
+                name: item.name,
+                description: item.description,
+                rate: item.rate,
+                quantity: item.quantity,
+                unit: item.unit,
+                discount: item.discount,
+                itemTotal: item.item_total,
+              })),
+            );
+          }
+
+          results.created++;
+          logger.info(`Created sales order ${fullOrder.salesorder_number}`, {
+            zohoId: fullOrder.salesorder_id,
+            orderId: newOrder.id,
+          });
+        } catch (error) {
+          results.errors++;
+          logger.error(`Failed to sync sales order ${zohoOrder.salesorder_number}`, {
+            error,
+            zohoId: zohoOrder.salesorder_id,
+          });
+        }
+      }
+    } catch (error) {
+      logger.error('Failed to fetch sales orders from Zoho', { error });
+      results.errors++;
+    }
+
+    logger.info('Zoho sales order sync completed', results);
+    return results;
+  },
+});

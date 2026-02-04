@@ -1,6 +1,7 @@
 import { sql } from 'drizzle-orm';
 import {
   boolean,
+  date,
   doublePrecision,
   index,
   integer,
@@ -4460,3 +4461,89 @@ export const wmsReceivingDrafts = pgTable(
 
 export type WmsReceivingDraft = typeof wmsReceivingDrafts.$inferSelect;
 export type WmsReceivingDraftItemType = WmsReceivingDraftItem;
+
+/**
+ * Zoho Sales Order Status
+ */
+export const zohoSalesOrderStatus = pgEnum('zoho_sales_order_status', [
+  'synced',
+  'picking',
+  'picked',
+  'dispatched',
+  'delivered',
+  'cancelled',
+]);
+
+/**
+ * Zoho Sales Orders - synced from Zoho Books
+ *
+ * Traditional B2B sales that originate in Zoho Books and need fulfillment.
+ * These are separate from Private Client Orders (PCO).
+ */
+export const zohoSalesOrders = pgTable(
+  'zoho_sales_orders',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    zohoSalesOrderId: text('zoho_salesorder_id').notNull().unique(),
+    salesOrderNumber: text('salesorder_number').notNull(),
+    zohoCustomerId: text('zoho_customer_id').notNull(),
+    customerName: text('customer_name').notNull(),
+    zohoStatus: text('zoho_status').notNull(),
+    status: zohoSalesOrderStatus('status').default('synced'),
+    orderDate: date('order_date', { mode: 'date' }).notNull(),
+    shipmentDate: date('shipment_date', { mode: 'date' }),
+    referenceNumber: text('reference_number'),
+    subTotal: doublePrecision('sub_total').notNull(),
+    total: doublePrecision('total').notNull(),
+    currencyCode: text('currency_code').default('USD'),
+    shippingCharge: doublePrecision('shipping_charge'),
+    discount: doublePrecision('discount'),
+    notes: text('notes'),
+    billingAddress: jsonb('billing_address'),
+    shippingAddress: jsonb('shipping_address'),
+    pickListId: uuid('pick_list_id').references(() => wmsPickLists.id),
+    dispatchBatchId: uuid('dispatch_batch_id').references(() => wmsDispatchBatches.id),
+    zohoCreatedTime: timestamp('zoho_created_time', { mode: 'date' }),
+    zohoLastModifiedTime: timestamp('zoho_last_modified_time', { mode: 'date' }),
+    lastSyncAt: timestamp('last_sync_at', { mode: 'date' }),
+    ...timestamps,
+  },
+  (table) => [
+    index('zoho_sales_orders_zoho_id_idx').on(table.zohoSalesOrderId),
+    index('zoho_sales_orders_status_idx').on(table.status),
+    index('zoho_sales_orders_customer_idx').on(table.zohoCustomerId),
+  ],
+);
+
+export type ZohoSalesOrder = typeof zohoSalesOrders.$inferSelect;
+
+/**
+ * Zoho Sales Order Items - line items from Zoho
+ */
+export const zohoSalesOrderItems = pgTable(
+  'zoho_sales_order_items',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    salesOrderId: uuid('sales_order_id')
+      .references(() => zohoSalesOrders.id, { onDelete: 'cascade' })
+      .notNull(),
+    zohoLineItemId: text('zoho_line_item_id').notNull(),
+    zohoItemId: text('zoho_item_id'),
+    sku: text('sku'),
+    name: text('name').notNull(),
+    description: text('description'),
+    rate: doublePrecision('rate').notNull(),
+    quantity: integer('quantity').notNull(),
+    quantityPicked: integer('quantity_picked').default(0),
+    quantityShipped: integer('quantity_shipped').default(0),
+    unit: text('unit'),
+    discount: doublePrecision('discount'),
+    itemTotal: doublePrecision('item_total').notNull(),
+    lwin18: text('lwin18'),
+    stockId: uuid('stock_id').references(() => wmsStock.id),
+    ...timestamps,
+  },
+  (table) => [index('zoho_sales_order_items_order_idx').on(table.salesOrderId)],
+);
+
+export type ZohoSalesOrderItem = typeof zohoSalesOrderItems.$inferSelect;
