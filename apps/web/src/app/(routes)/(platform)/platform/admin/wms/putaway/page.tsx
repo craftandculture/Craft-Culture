@@ -20,7 +20,7 @@ import Icon from '@/app/_ui/components/Icon/Icon';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import LocationBadge from '@/app/_wms/components/LocationBadge';
 import ScanInput from '@/app/_wms/components/ScanInput';
-import useTRPC from '@/lib/trpc/browser';
+import useTRPC, { useTRPCClient } from '@/lib/trpc/browser';
 
 type WorkflowStep = 'scan-case' | 'scan-location' | 'confirm' | 'success';
 
@@ -47,6 +47,7 @@ interface ScannedLocation {
  */
 const WMSPutawayPage = () => {
   const api = useTRPC();
+  const trpcClient = useTRPCClient();
   const queryClient = useQueryClient();
 
   const [step, setStep] = useState<WorkflowStep>('scan-case');
@@ -89,7 +90,7 @@ const WMSPutawayPage = () => {
   const handleCaseScan = async (barcode: string) => {
     setError('');
     try {
-      const result = await api.wms.admin.operations.getCaseByBarcode.query({ barcode });
+      const result = await trpcClient.wms.admin.operations.getCaseByBarcode.query({ barcode });
       setScannedCase({
         barcode: result.caseLabel.barcode,
         productName: result.caseLabel.productName,
@@ -106,7 +107,7 @@ const WMSPutawayPage = () => {
   const handleLocationScan = async (barcode: string) => {
     setError('');
     try {
-      const result = await api.wms.admin.operations.getLocationByBarcode.query({ barcode });
+      const result = await trpcClient.wms.admin.operations.getLocationByBarcode.query({ barcode });
       setScannedLocation({
         id: result.location.id,
         locationCode: result.location.locationCode,

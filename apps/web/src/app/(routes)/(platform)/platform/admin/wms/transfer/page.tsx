@@ -22,7 +22,7 @@ import Icon from '@/app/_ui/components/Icon/Icon';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import LocationBadge from '@/app/_wms/components/LocationBadge';
 import ScanInput from '@/app/_wms/components/ScanInput';
-import useTRPC from '@/lib/trpc/browser';
+import useTRPC, { useTRPCClient } from '@/lib/trpc/browser';
 
 type WorkflowStep = 'scan-source' | 'select-stock' | 'scan-dest' | 'confirm' | 'success';
 
@@ -48,6 +48,7 @@ interface StockItem {
  */
 const WMSTransferPage = () => {
   const api = useTRPC();
+  const trpcClient = useTRPCClient();
   const queryClient = useQueryClient();
 
   const [step, setStep] = useState<WorkflowStep>('scan-source');
@@ -85,7 +86,7 @@ const WMSTransferPage = () => {
   const handleSourceScan = async (barcode: string) => {
     setError('');
     try {
-      const result = await api.wms.admin.operations.getLocationByBarcode.query({ barcode });
+      const result = await trpcClient.wms.admin.operations.getLocationByBarcode.query({ barcode });
       setSourceLocation({
         id: result.location.id,
         locationCode: result.location.locationCode,
@@ -118,7 +119,7 @@ const WMSTransferPage = () => {
   const handleDestScan = async (barcode: string) => {
     setError('');
     try {
-      const result = await api.wms.admin.operations.getLocationByBarcode.query({ barcode });
+      const result = await trpcClient.wms.admin.operations.getLocationByBarcode.query({ barcode });
 
       if (result.location.id === sourceLocation?.id) {
         setError('Destination cannot be the same as source');
