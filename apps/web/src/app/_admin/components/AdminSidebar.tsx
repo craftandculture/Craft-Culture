@@ -84,6 +84,7 @@ interface AdminSidebarProps {
 /**
  * Admin sidebar navigation component
  * Renders grouped navigation with collapse support
+ * Mobile: touch scrolling enabled for scanner devices
  */
 const AdminSidebar = ({ isCollapsed, onToggleCollapse }: AdminSidebarProps) => {
   const pathname = usePathname();
