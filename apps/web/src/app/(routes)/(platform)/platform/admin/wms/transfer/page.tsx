@@ -1,9 +1,9 @@
 'use client';
 
 import {
+  IconArrowLeft,
   IconArrowRight,
   IconCheck,
-  IconChevronRight,
   IconLoader2,
   IconMapPin,
   IconMinus,
@@ -172,21 +172,22 @@ const WMSTransferPage = () => {
   return (
     <div className="container mx-auto max-w-lg px-4 py-6">
       <div className="space-y-6">
-        {/* Header */}
-        <div>
-          <div className="mb-2 flex items-center gap-2">
-            <Link href="/platform/admin/wms" className="text-text-muted hover:text-text-primary">
-              <Typography variant="bodySm">WMS</Typography>
-            </Link>
-            <IconChevronRight className="h-4 w-4 text-text-muted" />
-            <Typography variant="bodySm">Transfer</Typography>
+        {/* Header with large back button */}
+        <div className="flex items-start gap-3">
+          <Link
+            href="/platform/admin/wms"
+            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-fill-secondary text-text-muted transition-colors hover:bg-fill-primary hover:text-text-primary active:bg-fill-secondary"
+          >
+            <IconArrowLeft className="h-6 w-6" />
+          </Link>
+          <div className="min-w-0 flex-1">
+            <Typography variant="headingLg" className="mb-1">
+              Transfer Stock
+            </Typography>
+            <Typography variant="bodySm" colorRole="muted">
+              Move stock between locations
+            </Typography>
           </div>
-          <Typography variant="headingLg" className="mb-1">
-            Transfer Stock
-          </Typography>
-          <Typography variant="bodySm" colorRole="muted">
-            Move stock between warehouse locations
-          </Typography>
         </div>
 
         {/* Step: Scan Source Location */}
@@ -264,7 +265,7 @@ const WMSTransferPage = () => {
               </CardContent>
             </Card>
 
-            <Button variant="outline" className="w-full" onClick={handleReset}>
+            <Button variant="outline" size="lg" className="w-full" onClick={handleReset}>
               <ButtonContent iconLeft={IconX}>Cancel</ButtonContent>
             </Button>
           </div>
@@ -339,7 +340,7 @@ const WMSTransferPage = () => {
               </CardContent>
             </Card>
 
-            <Button variant="outline" className="w-full" onClick={handleReset}>
+            <Button variant="outline" size="lg" className="w-full" onClick={handleReset}>
               <ButtonContent iconLeft={IconX}>Cancel</ButtonContent>
             </Button>
           </div>
@@ -384,11 +385,12 @@ const WMSTransferPage = () => {
             </Card>
 
             <div className="flex gap-3">
-              <Button variant="outline" className="flex-1" onClick={() => setStep('scan-dest')}>
-                <ButtonContent iconLeft={IconX}>Back</ButtonContent>
+              <Button variant="outline" size="lg" className="flex-1" onClick={() => setStep('scan-dest')}>
+                <ButtonContent iconLeft={IconArrowLeft}>Back</ButtonContent>
               </Button>
               <Button
                 variant="primary"
+                size="lg"
                 className="flex-1"
                 onClick={handleConfirm}
                 disabled={transferMutation.isPending}
@@ -437,10 +439,10 @@ const WMSTransferPage = () => {
             </Card>
 
             <div className="flex gap-3">
-              <Button variant="outline" className="flex-1" asChild>
+              <Button variant="outline" size="lg" className="flex-1" asChild>
                 <Link href="/platform/admin/wms">Done</Link>
               </Button>
-              <Button variant="primary" className="flex-1" onClick={handleScanNext}>
+              <Button variant="primary" size="lg" className="flex-1" onClick={handleScanNext}>
                 <ButtonContent iconLeft={IconMapPin}>Transfer More</ButtonContent>
               </Button>
             </div>

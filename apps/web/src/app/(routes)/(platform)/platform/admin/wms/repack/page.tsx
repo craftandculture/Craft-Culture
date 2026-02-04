@@ -1,9 +1,9 @@
 'use client';
 
 import {
+  IconArrowLeft,
   IconArrowRight,
   IconCheck,
-  IconChevronRight,
   IconLoader2,
   IconMapPin,
   IconPackage,
@@ -181,21 +181,22 @@ const WMSRepackPage = () => {
   return (
     <div className="container mx-auto max-w-lg px-4 py-6">
       <div className="space-y-6">
-        {/* Header */}
-        <div>
-          <div className="mb-2 flex items-center gap-2">
-            <Link href="/platform/admin/wms" className="text-text-muted hover:text-text-primary">
-              <Typography variant="bodySm">WMS</Typography>
-            </Link>
-            <IconChevronRight className="h-4 w-4 text-text-muted" />
-            <Typography variant="bodySm">Repack</Typography>
+        {/* Header with large back button */}
+        <div className="flex items-start gap-3">
+          <Link
+            href="/platform/admin/wms"
+            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-fill-secondary text-text-muted transition-colors hover:bg-fill-primary hover:text-text-primary active:bg-fill-secondary"
+          >
+            <IconArrowLeft className="h-6 w-6" />
+          </Link>
+          <div className="min-w-0 flex-1">
+            <Typography variant="headingLg" className="mb-1">
+              Repack Cases
+            </Typography>
+            <Typography variant="bodySm" colorRole="muted">
+              Split into smaller configurations
+            </Typography>
           </div>
-          <Typography variant="headingLg" className="mb-1">
-            Repack Cases
-          </Typography>
-          <Typography variant="bodySm" colorRole="muted">
-            Split cases into smaller configurations
-          </Typography>
         </div>
 
         {/* Step: Scan Location */}
@@ -269,7 +270,7 @@ const WMSRepackPage = () => {
               </CardContent>
             </Card>
 
-            <Button variant="outline" className="w-full" onClick={handleReset}>
+            <Button variant="outline" size="lg" className="w-full" onClick={handleReset}>
               <ButtonContent iconLeft={IconX}>Cancel</ButtonContent>
             </Button>
           </div>
@@ -333,11 +334,12 @@ const WMSRepackPage = () => {
             </Card>
 
             <div className="flex gap-3">
-              <Button variant="outline" className="flex-1" onClick={() => setStep('select-stock')}>
-                <ButtonContent iconLeft={IconX}>Back</ButtonContent>
+              <Button variant="outline" size="lg" className="flex-1" onClick={() => setStep('select-stock')}>
+                <ButtonContent iconLeft={IconArrowLeft}>Back</ButtonContent>
               </Button>
               <Button
                 variant="primary"
+                size="lg"
                 className="flex-1"
                 onClick={() => setStep('confirm')}
                 disabled={getTargetCases() === 0}
@@ -394,19 +396,21 @@ const WMSRepackPage = () => {
             <div className="flex gap-3">
               <Button
                 variant="outline"
+                size="lg"
                 className="flex-1"
                 onClick={() => setStep('select-config')}
               >
-                <ButtonContent iconLeft={IconX}>Back</ButtonContent>
+                <ButtonContent iconLeft={IconArrowLeft}>Back</ButtonContent>
               </Button>
               <Button
                 variant="primary"
+                size="lg"
                 className="flex-1"
                 onClick={handleConfirm}
                 disabled={repackMutation.isPending}
               >
                 <ButtonContent iconLeft={repackMutation.isPending ? IconLoader2 : IconCheck}>
-                  {repackMutation.isPending ? 'Processing...' : 'Confirm Repack'}
+                  {repackMutation.isPending ? 'Processing...' : 'Confirm'}
                 </ButtonContent>
               </Button>
             </div>
@@ -478,17 +482,17 @@ const WMSRepackPage = () => {
             </Card>
 
             <div className="flex gap-3">
-              <Button variant="outline" className="flex-1" asChild>
+              <Button variant="outline" size="lg" className="flex-1" asChild>
                 <Link href="/platform/admin/wms">Done</Link>
               </Button>
-              <Button variant="outline" className="flex-1" asChild>
+              <Button variant="outline" size="lg" className="flex-1" asChild>
                 <Link href="/platform/admin/wms/labels">
-                  <ButtonContent iconLeft={IconPrinter}>Print Labels</ButtonContent>
+                  <ButtonContent iconLeft={IconPrinter}>Print</ButtonContent>
                 </Link>
               </Button>
             </div>
 
-            <Button variant="primary" className="w-full" onClick={handleReset}>
+            <Button variant="primary" size="lg" className="w-full" onClick={handleReset}>
               <ButtonContent iconLeft={IconPackage}>Repack More</ButtonContent>
             </Button>
           </div>
