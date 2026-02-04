@@ -16,7 +16,7 @@ import triggerDb from '@/trigger/triggerDb';
 export const zohoSalesOrderSyncJob = schedules.task({
   id: 'zoho-sales-order-sync',
   cron: {
-    pattern: '*/15 * * * *', // Every 15 minutes
+    pattern: '*/2 * * * *', // Every 2 minutes
     timezone: 'Asia/Dubai',
   },
   async run() {

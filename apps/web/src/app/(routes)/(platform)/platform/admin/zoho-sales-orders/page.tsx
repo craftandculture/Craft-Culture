@@ -4,6 +4,7 @@ import {
   IconCheck,
   IconChevronRight,
   IconClipboardList,
+  IconCloudDownload,
   IconLoader2,
   IconPackage,
   IconRefresh,
@@ -70,6 +71,18 @@ const ZohoSalesOrdersPage = () => {
       },
       onError: (error) => {
         toast.error(error.message || 'Failed to create pick list');
+      },
+    }),
+  );
+
+  const { mutate: syncOrders, isPending: isSyncing } = useMutation(
+    api.zohoSalesOrders.sync.mutationOptions({
+      onSuccess: (result) => {
+        toast.success(result.message);
+        void refetch();
+      },
+      onError: (error) => {
+        toast.error(error.message || 'Failed to sync from Zoho');
       },
     }),
   );
@@ -204,6 +217,16 @@ const ZohoSalesOrdersPage = () => {
             </Typography>
           </div>
           <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => syncOrders()}
+              disabled={isSyncing}
+            >
+              <ButtonContent iconLeft={isSyncing ? IconLoader2 : IconCloudDownload}>
+                {isSyncing ? 'Syncing...' : 'Sync from Zoho'}
+              </ButtonContent>
+            </Button>
             <Button
               variant="outline"
               size="sm"
