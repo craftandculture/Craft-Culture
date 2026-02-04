@@ -1,3 +1,4 @@
+import { tasks } from '@trigger.dev/sdk/v3';
 import { TRPCError } from '@trpc/server';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
@@ -5,6 +6,7 @@ import { z } from 'zod';
 import db from '@/database/client';
 import { privateClientOrderActivityLogs, privateClientOrders } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
+import type { zohoCreateInvoiceJob } from '@/trigger/jobs/zoho-sync';
 import logger from '@/utils/logger';
 
 import { privateClientOrderStatusEnum } from '../schemas/getOrdersSchema';
@@ -120,6 +122,13 @@ const adminUpdateStatus = adminProcedure
         orderId,
         status,
         reason: !notificationType ? 'no notification type for this status' : 'no partnerId on order',
+      });
+    }
+
+    // Trigger Zoho invoice creation when client pays
+    if (status === 'client_paid') {
+      await tasks.trigger<typeof zohoCreateInvoiceJob>('zoho-create-invoice', {
+        orderId,
       });
     }
 

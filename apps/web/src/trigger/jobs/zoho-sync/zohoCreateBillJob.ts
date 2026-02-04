@@ -39,7 +39,7 @@ export const zohoCreateBillJob = task({
         id: consignmentSettlements.id,
         settlementNumber: consignmentSettlements.settlementNumber,
         ownerId: consignmentSettlements.ownerId,
-        totalOwedToOwner: consignmentSettlements.totalOwedToOwner,
+        owedToOwner: consignmentSettlements.owedToOwner,
         zohoBillId: consignmentSettlements.zohoBillId,
       })
       .from(consignmentSettlements)
@@ -111,7 +111,7 @@ export const zohoCreateBillJob = task({
           name: 'Consignment Settlement',
           description: `Settlement ${settlement.settlementNumber}`,
           quantity: 1,
-          rate: settlement.totalOwedToOwner,
+          rate: settlement.owedToOwner,
         },
       ],
       notes: `Consignment settlement ${settlement.settlementNumber}`,
