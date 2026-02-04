@@ -190,10 +190,10 @@ const ScanInput = ({
             <button
               type="button"
               onClick={handleSubmit}
-              className="ml-2 flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-blue-600 text-white transition-colors hover:bg-blue-700 active:bg-blue-800"
+              className="ml-2 flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white transition-colors hover:bg-blue-700 active:bg-blue-800"
               aria-label="Submit barcode"
             >
-              <IconArrowRight className="h-5 w-5" />
+              <IconArrowRight className="h-6 w-6" />
             </button>
           )}
         </div>
