@@ -1,6 +1,6 @@
 'use client';
 
-import { IconBarcode, IconLoader2 } from '@tabler/icons-react';
+import { IconArrowRight, IconBarcode, IconLoader2 } from '@tabler/icons-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import Icon from '@/app/_ui/components/Icon/Icon';
@@ -125,6 +125,29 @@ const ScanInput = ({
     [isLoading],
   );
 
+  const handleSubmit = useCallback(() => {
+    if (!value.trim()) return;
+
+    // Debounce rapid submissions
+    const now = Date.now();
+    if (now - lastScanTimeRef.current < SCAN_DEBOUNCE_MS) {
+      setValue('');
+      return;
+    }
+
+    // Prevent double-processing
+    if (processingRef.current || isLoading) {
+      setValue('');
+      return;
+    }
+
+    lastScanTimeRef.current = now;
+    processingRef.current = true;
+    const scannedValue = value.trim();
+    setValue('');
+    onScan(scannedValue);
+  }, [value, onScan, isLoading]);
+
   return (
     <div className="w-full">
       {label && (
@@ -163,6 +186,16 @@ const ScanInput = ({
             spellCheck={false}
             className="min-h-[56px] w-full bg-transparent px-3 text-lg font-medium text-text-primary placeholder:text-text-muted/60 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
           />
+          {value.trim() && !isLoading && (
+            <button
+              type="button"
+              onClick={handleSubmit}
+              className="ml-2 flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-blue-600 text-white transition-colors hover:bg-blue-700 active:bg-blue-800"
+              aria-label="Submit barcode"
+            >
+              <IconArrowRight className="h-5 w-5" />
+            </button>
+          )}
         </div>
       </div>
 
