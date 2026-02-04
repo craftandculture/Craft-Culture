@@ -35,9 +35,14 @@ const WMSDashboardContent = () => {
   const api = useTRPC();
 
   // Fetch comprehensive overview (will use prefetched data)
-  const { data: overview } = useQuery({
+  const { data: overview, isLoading: overviewLoading, error: overviewError } = useQuery({
     ...api.wms.admin.stock.getOverview.queryOptions({}),
   });
+
+  // Debug logging
+  console.log('[WMS Dashboard] overview:', overview);
+  console.log('[WMS Dashboard] overviewLoading:', overviewLoading);
+  console.log('[WMS Dashboard] overviewError:', overviewError);
 
   // Fetch recent movements (will use prefetched data)
   const { data: movements } = useQuery({
