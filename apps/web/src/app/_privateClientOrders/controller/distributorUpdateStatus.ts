@@ -1,3 +1,4 @@
+import { tasks } from '@trigger.dev/sdk/v3';
 import { TRPCError } from '@trpc/server';
 import { and, eq, inArray } from 'drizzle-orm';
 import { z } from 'zod';
@@ -10,6 +11,7 @@ import {
   privateClientOrders,
 } from '@/database/schema';
 import { distributorProcedure } from '@/lib/trpc/procedures';
+import type { zohoCreateInvoiceJob } from '@/trigger/jobs/zoho-sync';
 
 type PrivateClientOrderStatus = (typeof privateClientOrderStatus.enumValues)[number];
 
@@ -178,6 +180,13 @@ const distributorUpdateStatus = distributorProcedure
       newStatus: status,
       notes,
     });
+
+    // Trigger Zoho invoice creation when client pays
+    if (status === 'client_paid') {
+      await tasks.trigger<typeof zohoCreateInvoiceJob>('zoho-create-invoice', {
+        orderId,
+      });
+    }
 
     return updatedOrder;
   });
