@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WMS User Guide - Craft & Culture</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      line-height: 1.6;
+      color: #1f2937;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #f9fafb;
+    }
+    h1 { color: #7c3aed; margin-bottom: 10px; font-size: 28px; }
+    h2 { color: #4f46e5; margin: 30px 0 15px; font-size: 22px; border-bottom: 2px solid #e5e7eb; padding-bottom: 8px; }
+    h3 { color: #1f2937; margin: 20px 0 10px; font-size: 18px; }
+    p { margin-bottom: 15px; }
+    .hero {
+      background: linear-gradient(135deg, #7c3aed, #4f46e5);
+      color: white;
+      padding: 30px;
+      border-radius: 12px;
+      margin-bottom: 30px;
+    }
+    .hero h1 { color: white; }
+    .hero p { color: rgba(255,255,255,0.9); margin: 0; }
+    .card {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .workflow-step {
+      display: flex;
+      gap: 15px;
+      margin-bottom: 20px;
+      align-items: flex-start;
+    }
+    .step-number {
+      background: #7c3aed;
+      color: white;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      flex-shrink: 0;
+    }
+    .step-content { flex: 1; }
+    .step-content h4 { margin-bottom: 5px; color: #1f2937; }
+    .step-content p { margin: 0; color: #6b7280; font-size: 14px; }
+    code {
+      background: #f3f4f6;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-family: 'SF Mono', Monaco, monospace;
+      font-size: 14px;
+      color: #7c3aed;
+    }
+    .tip {
+      background: #fef3c7;
+      border-left: 4px solid #f59e0b;
+      padding: 15px;
+      margin: 20px 0;
+      border-radius: 0 8px 8px 0;
+    }
+    .tip strong { color: #92400e; }
+    .warning {
+      background: #fee2e2;
+      border-left: 4px solid #ef4444;
+      padding: 15px;
+      margin: 20px 0;
+      border-radius: 0 8px 8px 0;
+    }
+    .warning strong { color: #991b1b; }
+    .nav-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+      margin: 20px 0;
+    }
+    .nav-item {
+      background: white;
+      border: 2px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 15px;
+      text-decoration: none;
+      color: inherit;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .nav-item:hover {
+      border-color: #7c3aed;
+      box-shadow: 0 4px 6px rgba(124, 58, 237, 0.1);
+    }
+    .nav-item h4 { color: #7c3aed; margin-bottom: 5px; }
+    .nav-item p { color: #6b7280; font-size: 13px; margin: 0; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 15px 0;
+      font-size: 14px;
+    }
+    th, td {
+      padding: 12px;
+      text-align: left;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    th { background: #f9fafb; font-weight: 600; }
+    ul, ol { margin: 15px 0; padding-left: 25px; }
+    li { margin-bottom: 8px; }
+    .barcode-example {
+      background: #1f2937;
+      color: #10b981;
+      padding: 15px;
+      border-radius: 8px;
+      font-family: 'SF Mono', Monaco, monospace;
+      font-size: 16px;
+      text-align: center;
+      margin: 15px 0;
+    }
+    @media (max-width: 600px) {
+      body { padding: 15px; }
+      h1 { font-size: 24px; }
+      h2 { font-size: 20px; }
+      .nav-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="hero">
+    <h1>WMS User Guide</h1>
+    <p>Warehouse Management System for Craft & Culture</p>
+  </div>
+
+  <h2>Quick Start</h2>
+
+  <div class="nav-grid">
+    <a href="/platform/admin/wms" class="nav-item">
+      <h4>Dashboard</h4>
+      <p>Overview and quick actions</p>
+    </a>
+    <a href="/platform/admin/wms/receiving" class="nav-item">
+      <h4>Receiving</h4>
+      <p>Receive incoming shipments</p>
+    </a>
+    <a href="/platform/admin/wms/putaway" class="nav-item">
+      <h4>Put Away</h4>
+      <p>Move cases to storage</p>
+    </a>
+    <a href="/platform/admin/wms/transfer" class="nav-item">
+      <h4>Transfer</h4>
+      <p>Move stock between locations</p>
+    </a>
+    <a href="/platform/admin/wms/pick" class="nav-item">
+      <h4>Picking</h4>
+      <p>Pick orders for fulfillment</p>
+    </a>
+    <a href="/platform/admin/wms/dispatch" class="nav-item">
+      <h4>Dispatch</h4>
+      <p>Ship orders to customers</p>
+    </a>
+  </div>
+
+  <h2>Using the Scanner (Zebra TC27)</h2>
+
+  <div class="card">
+    <h3>Scanner Basics</h3>
+    <p>The TC27 barcode scanner works as a "keyboard wedge" - when you scan a barcode, it types the characters followed by Enter. This means:</p>
+    <ol>
+      <li>Tap the input field to focus it (or it auto-focuses)</li>
+      <li>Point the scanner at the barcode</li>
+      <li>Press the yellow scan button</li>
+      <li>The barcode is automatically entered and submitted</li>
+    </ol>
+  </div>
+
+  <div class="tip">
+    <strong>Tip:</strong> If scanning doesn't work, make sure the input field has focus (tap it). The cursor should be blinking in the field.
+  </div>
+
+  <h2>Barcode Formats</h2>
+
+  <div class="card">
+    <h3>Location Barcodes</h3>
+    <p>Location barcodes identify warehouse rack positions:</p>
+    <div class="barcode-example">LOC-A-01-02</div>
+    <table>
+      <tr><th>Part</th><th>Meaning</th><th>Example</th></tr>
+      <tr><td><code>LOC</code></td><td>Prefix (always "LOC")</td><td>LOC</td></tr>
+      <tr><td><code>A</code></td><td>Aisle letter</td><td>A, B, C...</td></tr>
+      <tr><td><code>01</code></td><td>Bay number</td><td>01-99</td></tr>
+      <tr><td><code>02</code></td><td>Level number</td><td>00=floor, 01-05=rack</td></tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <h3>Case Label Barcodes</h3>
+    <p>Case labels identify individual cases of wine:</p>
+    <div class="barcode-example">CASE-1010279-2015-06-00750-001</div>
+    <table>
+      <tr><th>Part</th><th>Meaning</th></tr>
+      <tr><td><code>CASE</code></td><td>Prefix (always "CASE")</td></tr>
+      <tr><td><code>1010279-2015-06-00750</code></td><td>LWIN18 (wine identifier)</td></tr>
+      <tr><td><code>001</code></td><td>Sequence number</td></tr>
+    </table>
+  </div>
+
+  <h2>Workflows</h2>
+
+  <h3>1. Receiving Stock</h3>
+  <div class="card">
+    <p>When a shipment arrives at the warehouse:</p>
+
+    <div class="workflow-step">
+      <div class="step-number">1</div>
+      <div class="step-content">
+        <h4>Select Shipment</h4>
+        <p>Go to Receiving and select the pending shipment from the list</p>
+      </div>
+    </div>
+
+    <div class="workflow-step">
+      <div class="step-number">2</div>
+      <div class="step-content">
+        <h4>Verify Contents</h4>
+        <p>Check the products and quantities match the physical delivery</p>
+      </div>
+    </div>
+
+    <div class="workflow-step">
+      <div class="step-number">3</div>
+      <div class="step-content">
+        <h4>Print Case Labels</h4>
+        <p>Generate and print labels for each case. Labels include QR codes for scanning.</p>
+      </div>
+    </div>
+
+    <div class="workflow-step">
+      <div class="step-number">4</div>
+      <div class="step-content">
+        <h4>Apply Labels</h4>
+        <p>Stick each label on its corresponding case</p>
+      </div>
+    </div>
+
+    <div class="workflow-step">
+      <div class="step-number">5</div>
+      <div class="step-content">
+        <h4>Confirm Receipt</h4>
+        <p>Submit the receiving to create stock records</p>
+      </div>
+    </div>
+  </div>
+
+  <h3>2. Put Away</h3>
+  <div class="card">
+    <p>Moving cases from receiving area to storage locations:</p>
+
+    <div class="workflow-step">
+      <div class="step-number">1</div>
+      <div class="step-content">
+        <h4>Scan Case Label</h4>
+        <p>Scan the QR code on the case you want to put away</p>
+      </div>
+    </div>
+
+    <div class="workflow-step">
+      <div class="step-number">2</div>
+      <div class="step-content">
+        <h4>Scan Destination</h4>
+        <p>Scan the location barcode where you're placing the case</p>
+      </div>
+    </div>
+
+    <div class="workflow-step">
+      <div class="step-number">3</div>
+      <div class="step-content">
+        <h4>Confirm</h4>
+        <p>Review and confirm the put away action</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="tip">
+    <strong>Tip:</strong> Put away requires case labels. You must receive stock first to generate case labels.
+  </div>
+
+  <h3>3. Transfer</h3>
+  <div class="card">
+    <p>Moving stock between warehouse locations:</p>
+
+    <div class="workflow-step">
+      <div class="step-number">1</div>
+      <div class="step-content">
+        <h4>Scan Source Location</h4>
+        <p>Scan the location barcode where the stock currently is</p>
+      </div>
+    </div>
+
+    <div class="workflow-step">
+      <div class="step-number">2</div>
+      <div class="step-content">
+        <h4>Select Stock</h4>
+        <p>If multiple products, select which one to transfer</p>
+      </div>
+    </div>
+
+    <div class="workflow-step">
+      <div class="step-number">3</div>
+      <div class="step-content">
+        <h4>Set Quantity</h4>
+        <p>Choose how many cases to transfer (use +/- buttons)</p>
+      </div>
+    </div>
+
+    <div class="workflow-step">
+      <div class="step-number">4</div>
+      <div class="step-content">
+        <h4>Scan Destination</h4>
+        <p>Scan the location barcode for the destination</p>
+      </div>
+    </div>
+
+    <div class="workflow-step">
+      <div class="step-number">5</div>
+      <div class="step-content">
+        <h4>Confirm</h4>
+        <p>Review the from/to locations and confirm</p>
+      </div>
+    </div>
+  </div>
+
+  <h3>4. Picking Orders</h3>
+  <div class="card">
+    <p>Picking items for customer orders:</p>
+
+    <div class="workflow-step">
+      <div class="step-number">1</div>
+      <div class="step-content">
+        <h4>Select Pick List</h4>
+        <p>Open an assigned pick list from the picking page</p>
+      </div>
+    </div>
+
+    <div class="workflow-step">
+      <div class="step-number">2</div>
+      <div class="step-content">
+        <h4>Go to Location</h4>
+        <p>Navigate to the displayed location in the warehouse</p>
+      </div>
+    </div>
+
+    <div class="workflow-step">
+      <div class="step-number">3</div>
+      <div class="step-content">
+        <h4>Scan Location</h4>
+        <p>Scan the location barcode to confirm you're at the right spot</p>
+      </div>
+    </div>
+
+    <div class="workflow-step">
+      <div class="step-number">4</div>
+      <div class="step-content">
+        <h4>Pick Items</h4>
+        <p>Take the required quantity and confirm the pick</p>
+      </div>
+    </div>
+
+    <div class="workflow-step">
+      <div class="step-number">5</div>
+      <div class="step-content">
+        <h4>Complete Pick List</h4>
+        <p>After all items picked, mark the pick list as complete</p>
+      </div>
+    </div>
+  </div>
+
+  <h2>Location Types</h2>
+
+  <div class="card">
+    <table>
+      <tr><th>Type</th><th>Description</th><th>Examples</th></tr>
+      <tr>
+        <td><strong>Rack</strong></td>
+        <td>Standard pallet racking with multiple levels</td>
+        <td>LOC-A-01-02, LOC-B-05-03</td>
+      </tr>
+      <tr>
+        <td><strong>Floor</strong></td>
+        <td>Ground-level storage (no forklift needed)</td>
+        <td>LOC-A-01-00, LOC-A-01-01</td>
+      </tr>
+      <tr>
+        <td><strong>Receiving</strong></td>
+        <td>Inbound staging area for new shipments</td>
+        <td>LOC-RECEIVING</td>
+      </tr>
+      <tr>
+        <td><strong>Shipping</strong></td>
+        <td>Outbound staging area for dispatch</td>
+        <td>LOC-DISPATCH</td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="warning">
+    <strong>Forklift Required:</strong> Locations at level 02 and above require a forklift. The system will show a forklift icon for these locations.
+  </div>
+
+  <h2>Troubleshooting</h2>
+
+  <div class="card">
+    <h3>Scanner Not Working</h3>
+    <ul>
+      <li>Make sure the input field has focus (tap it)</li>
+      <li>Check the scanner is paired via Bluetooth</li>
+      <li>Try the Scanner Test page to verify scanning works</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h3>"Case Not Found" Error</h3>
+    <ul>
+      <li>Case labels are created during receiving</li>
+      <li>You must receive stock first before doing put away</li>
+      <li>Check if you're scanning the right type of barcode</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h3>"Location Not Found" Error</h3>
+    <ul>
+      <li>Verify the location exists in the system</li>
+      <li>Check the barcode format: <code>LOC-{aisle}-{bay}-{level}</code></li>
+      <li>Ensure the location is active (not disabled)</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h3>"No Stock at Location" Error</h3>
+    <ul>
+      <li>The scanned location has no stock to transfer</li>
+      <li>Stock may have been moved by another user</li>
+      <li>Check the Stock Overview page to find where stock is located</li>
+    </ul>
+  </div>
+
+  <h2>Tips for Efficiency</h2>
+
+  <div class="card">
+    <ul>
+      <li><strong>Batch similar tasks</strong> - Do all put aways for one area before moving to another</li>
+      <li><strong>Keep scanner ready</strong> - Hold the TC27 in your dominant hand while moving</li>
+      <li><strong>Check dashboard first</strong> - See pending put aways and alerts before starting work</li>
+      <li><strong>Use "Scan Next" button</strong> - After completing a task, quickly start the next one</li>
+      <li><strong>Print test barcodes</strong> - Use /docs/test-barcodes.html for training</li>
+    </ul>
+  </div>
+
+  <h2>Need Help?</h2>
+
+  <div class="card">
+    <p>Contact the system administrator if you encounter issues not covered in this guide.</p>
+    <p style="margin-top: 15px;">
+      <strong>Useful Links:</strong><br>
+      <a href="/platform/admin/wms/scanner-test">Scanner Test Page</a><br>
+      <a href="/docs/test-barcodes.html">Printable Test Barcodes</a><br>
+      <a href="/platform/admin/wms/movements">Movement History</a>
+    </p>
+  </div>
+
+  <footer style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #e5e7eb; color: #6b7280; font-size: 14px;">
+    <p>Craft & Culture WMS User Guide - Last updated: February 2026</p>
+  </footer>
+</body>
+</html>

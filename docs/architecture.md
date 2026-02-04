@@ -174,3 +174,123 @@ Stored in Vercel, injected at build/runtime:
 | Google Sheets | Pricing formulas | Sheets API v4 |
 | Loops | Transactional email | REST API |
 | Neon | Serverless Postgres | PostgreSQL protocol |
+| Zoho Books | Accounting & invoicing | REST API (OAuth2) |
+| Zoho Inventory | Sales orders | REST API (OAuth2) |
+
+---
+
+## WMS (Warehouse Management System)
+
+The platform includes a full warehouse management system for wine storage and fulfillment.
+
+### WMS Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           WAREHOUSE FLOOR                                    │
+│                                                                             │
+│  ┌───────────────┐    ┌───────────────┐    ┌───────────────┐               │
+│  │  Zebra TC27   │    │  Zebra ZD421  │    │   Rack System │               │
+│  │   Scanner     │    │    Printer    │    │   A-01 to Z-99│               │
+│  │  (Android)    │    │  (4x6 labels) │    │   (5 levels)  │               │
+│  └───────┬───────┘    └───────┬───────┘    └───────────────┘               │
+│          │                    │                                             │
+│          │ Chrome Browser     │ ZPL Commands                                │
+│          │ (keyboard wedge)   │ (via Browser Print API)                    │
+│          ▼                    ▼                                             │
+└──────────┼────────────────────┼─────────────────────────────────────────────┘
+           │                    │
+           ▼                    ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         NEXT.JS WMS PAGES                                    │
+│                                                                             │
+│  /platform/admin/wms/                                                       │
+│  ├── receiving    ─── Receive shipments, create case labels                 │
+│  ├── putaway      ─── Scan case → Scan location → Move to storage           │
+│  ├── transfer     ─── Move stock between locations                          │
+│  ├── pick         ─── Pick orders for fulfillment                           │
+│  ├── dispatch     ─── Confirm order dispatch                                │
+│  ├── labels       ─── Print location & case labels                          │
+│  └── movements    ─── View audit trail                                      │
+│                                                                             │
+│  Mobile-first design optimized for TC27 (480px width)                       │
+└──────────────────────────────────────────────────────────────────────────────┘
+           │
+           ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                            tRPC API                                          │
+│                                                                             │
+│  wms.admin.operations.*    ─── Stock movements, transfers, putaway          │
+│  wms.admin.labels.*        ─── Case label generation, ZPL output            │
+│  wms.admin.stock.*         ─── Stock queries, movement history              │
+│  wms.admin.pickLists.*     ─── Pick list management                         │
+│                                                                             │
+└──────────────────────────────────────────────────────────────────────────────┘
+           │
+           ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                          DATABASE (Neon)                                     │
+│                                                                             │
+│  wms_locations       ─── Rack/floor/receiving/shipping zones                │
+│  wms_stock           ─── Current inventory (LWIN18 + location + owner)      │
+│  wms_case_labels     ─── Individual case barcodes                           │
+│  wms_stock_movements ─── Full audit trail                                   │
+│  wms_pick_lists      ─── Order picking batches                              │
+│  wms_pallets         ─── Pallet tracking                                    │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Barcode Formats
+
+| Type | Format | Example |
+|------|--------|---------|
+| Location | `LOC-{aisle}-{bay}-{level}` | `LOC-A-01-02` |
+| Case Label | `CASE-{lwin18}-{seq}` | `CASE-1010279-2015-06-00750-001` |
+
+### WMS Workflow Sequence
+
+```
+1. RECEIVING
+   Shipment arrives → Receive in system → Generate case labels → Print labels
+
+2. PUTAWAY
+   Scan case label → Scan destination location → Confirm → Case moved to storage
+
+3. PICKING
+   Orders approved → Pick list created → Scan locations → Pick items → Confirm
+
+4. DISPATCH
+   Pick list complete → Stage for shipping → Scan dispatch → Mark dispatched
+```
+
+---
+
+## Zoho Integration
+
+```
+┌────────────────────┐      ┌────────────────────┐      ┌────────────────────┐
+│    Zoho Books      │      │  Zoho Inventory    │      │   Craft & Culture  │
+│   (Accounting)     │      │  (Sales Orders)    │      │    (WMS + Orders)  │
+└─────────┬──────────┘      └─────────┬──────────┘      └─────────┬──────────┘
+          │                           │                           │
+          │                           │   Scheduled Sync          │
+          │                           │   (every 2 mins)          │
+          │                           ├──────────────────────────►│
+          │                           │                           │
+          │                           │   Sales Orders            │
+          │                           │◄──────────────────────────┤
+          │                           │                           │
+          │   Create Invoice          │                           │
+          │◄──────────────────────────┼───────────────────────────┤
+          │   (on order confirm)      │                           │
+          │                           │                           │
+          │   Payment Status          │                           │
+          ├───────────────────────────┼──────────────────────────►│
+          │   (sync payments)         │                           │
+          │                           │                           │
+          │   Create Bill             │                           │
+          │◄──────────────────────────┼───────────────────────────┤
+          │   (on settlement)         │                           │
+          └───────────────────────────┴───────────────────────────┘
+```
