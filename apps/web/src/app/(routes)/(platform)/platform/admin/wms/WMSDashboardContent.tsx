@@ -39,10 +39,10 @@ const WMSDashboardContent = () => {
     ...api.wms.admin.stock.getOverview.queryOptions({}),
   });
 
-  // Debug logging
-  console.log('[WMS Dashboard] overview:', overview);
+  // Debug logging - log the actual state
+  console.log('[WMS Dashboard] overview data:', JSON.stringify(overview, null, 2));
   console.log('[WMS Dashboard] overviewLoading:', overviewLoading);
-  console.log('[WMS Dashboard] overviewError:', overviewError);
+  console.log('[WMS Dashboard] overviewError:', overviewError?.message);
 
   // Fetch recent movements (will use prefetched data)
   const { data: movements } = useQuery({
@@ -71,9 +71,28 @@ const WMSDashboardContent = () => {
   const pendingRequestCount = partnerRequests?.summary?.pendingCount ?? 0;
   const hasReconcileIssues = reconcileData?.summary && !reconcileData.summary.isReconciled;
 
+  // Show debug info if there's an error or if data seems wrong
+  const showDebug = overviewError || (overview && overview.summary?.totalCases === 0 && overview.locations?.total === 0);
+
   return (
     <div className="container mx-auto max-w-lg px-4 py-6">
       <div className="space-y-4">
+        {/* Debug Banner */}
+        {showDebug && (
+          <Card className="border-yellow-500 bg-yellow-50 dark:border-yellow-600 dark:bg-yellow-900/20">
+            <CardContent className="p-3">
+              <Typography variant="bodyXs" className="font-mono text-yellow-800 dark:text-yellow-300">
+                Debug: {overviewLoading ? 'Loading...' : overviewError ? `Error: ${overviewError.message}` : 'Data loaded but appears empty'}
+                {!overviewError && overview && (
+                  <span className="block">
+                    Raw: totalCases={overview.summary?.totalCases}, locations={overview.locations?.total}
+                  </span>
+                )}
+              </Typography>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Header */}
         <div className="flex items-center justify-between">
           <Typography variant="headingLg">
