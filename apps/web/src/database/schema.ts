@@ -4467,6 +4467,7 @@ export type WmsReceivingDraftItemType = WmsReceivingDraftItem;
  */
 export const zohoSalesOrderStatus = pgEnum('zoho_sales_order_status', [
   'synced',
+  'approved',
   'picking',
   'picked',
   'dispatched',
