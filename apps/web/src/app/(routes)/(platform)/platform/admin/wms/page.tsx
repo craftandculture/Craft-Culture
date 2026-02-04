@@ -32,7 +32,13 @@ const WMSDashboardPage = async () => {
   // Log the dehydrated state to see what data was prefetched
   const dehydratedState = dehydrate(queryClient);
   console.log('[WMS Page] Dehydrated queries count:', dehydratedState.queries?.length);
-  console.log('[WMS Page] Dehydrated state:', JSON.stringify(dehydratedState, null, 2).slice(0, 2000));
+  // Log each query's key and data
+  dehydratedState.queries?.forEach((q) => {
+    console.log('[WMS Page] Query:', JSON.stringify(q.queryKey), 'State:', q.state.status);
+    if (q.state.data) {
+      console.log('[WMS Page] Data preview:', JSON.stringify(q.state.data).slice(0, 500));
+    }
+  });
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
