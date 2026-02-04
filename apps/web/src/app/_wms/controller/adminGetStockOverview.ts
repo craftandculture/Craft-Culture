@@ -152,6 +152,11 @@ const adminGetStockOverview = adminProcedure
         casesInReceiving: receivingStock?.casesInReceiving ?? 0,
       },
       topOwners: stockByOwner,
+      // Debug: server timestamp to verify data freshness
+      _debug: {
+        serverTime: new Date().toISOString(),
+        queryTimeMs: Date.now() - startTime,
+      },
     };
   });
 
