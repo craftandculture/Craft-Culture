@@ -1,9 +1,9 @@
 'use client';
 
 import {
+  IconArrowLeft,
   IconArrowRight,
   IconCheck,
-  IconChevronRight,
   IconLoader2,
   IconPackage,
   IconX,
@@ -147,21 +147,22 @@ const WMSPutawayPage = () => {
   return (
     <div className="container mx-auto max-w-lg px-4 py-6">
       <div className="space-y-6">
-        {/* Header */}
-        <div>
-          <div className="mb-2 flex items-center gap-2">
-            <Link href="/platform/admin/wms" className="text-text-muted hover:text-text-primary">
-              <Typography variant="bodySm">WMS</Typography>
-            </Link>
-            <IconChevronRight className="h-4 w-4 text-text-muted" />
-            <Typography variant="bodySm">Put Away</Typography>
+        {/* Header with large back button */}
+        <div className="flex items-start gap-3">
+          <Link
+            href="/platform/admin/wms"
+            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-fill-secondary text-text-muted transition-colors hover:bg-fill-primary hover:text-text-primary active:bg-fill-secondary"
+          >
+            <IconArrowLeft className="h-6 w-6" />
+          </Link>
+          <div className="min-w-0 flex-1">
+            <Typography variant="headingLg" className="mb-1">
+              Put Away
+            </Typography>
+            <Typography variant="bodySm" colorRole="muted">
+              Move cases from receiving to storage
+            </Typography>
           </div>
-          <Typography variant="headingLg" className="mb-1">
-            Put Away
-          </Typography>
-          <Typography variant="bodySm" colorRole="muted">
-            Move cases from receiving to storage locations
-          </Typography>
         </div>
 
         {/* Step Indicator */}
@@ -267,7 +268,7 @@ const WMSPutawayPage = () => {
               </CardContent>
             </Card>
 
-            <Button variant="outline" className="w-full" onClick={handleReset}>
+            <Button variant="outline" size="lg" className="w-full" onClick={handleReset}>
               <ButtonContent iconLeft={IconX}>Cancel</ButtonContent>
             </Button>
           </div>
@@ -316,11 +317,12 @@ const WMSPutawayPage = () => {
             </Card>
 
             <div className="flex gap-3">
-              <Button variant="outline" className="flex-1" onClick={() => setStep('scan-location')}>
-                <ButtonContent iconLeft={IconX}>Back</ButtonContent>
+              <Button variant="outline" size="lg" className="flex-1" onClick={() => setStep('scan-location')}>
+                <ButtonContent iconLeft={IconArrowLeft}>Back</ButtonContent>
               </Button>
               <Button
                 variant="primary"
+                size="lg"
                 className="flex-1"
                 onClick={handleConfirm}
                 disabled={putawayMutation.isPending}
@@ -365,10 +367,10 @@ const WMSPutawayPage = () => {
             </Card>
 
             <div className="flex gap-3">
-              <Button variant="outline" className="flex-1" asChild>
+              <Button variant="outline" size="lg" className="flex-1" asChild>
                 <Link href="/platform/admin/wms">Done</Link>
               </Button>
-              <Button variant="primary" className="flex-1" onClick={handleScanNext}>
+              <Button variant="primary" size="lg" className="flex-1" onClick={handleScanNext}>
                 <ButtonContent iconLeft={IconPackage}>Scan Next</ButtonContent>
               </Button>
             </div>
