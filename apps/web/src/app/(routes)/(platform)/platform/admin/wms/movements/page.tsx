@@ -1,8 +1,8 @@
 'use client';
 
 import {
+  IconArrowLeft,
   IconArrowRight,
-  IconChevronRight,
   IconFilter,
   IconLoader2,
   IconTransfer,
@@ -82,30 +82,26 @@ const WMSMovementsPage = () => {
   };
 
   return (
-    <div className="container mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8">
-      <div className="space-y-6">
+    <div className="container mx-auto max-w-lg px-4 py-6">
+      <div className="space-y-4">
         {/* Header */}
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <div className="mb-2 flex items-center gap-2">
-              <Link href="/platform/admin/wms" className="text-text-muted hover:text-text-primary">
-                <Typography variant="bodySm">WMS</Typography>
-              </Link>
-              <IconChevronRight className="h-4 w-4 text-text-muted" />
-              <Typography variant="bodySm">Movements</Typography>
-            </div>
+        <div className="flex items-start gap-3">
+          <Link
+            href="/platform/admin/wms"
+            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-fill-secondary text-text-muted transition-colors hover:bg-fill-primary hover:text-text-primary active:bg-fill-secondary"
+          >
+            <IconArrowLeft className="h-6 w-6" />
+          </Link>
+          <div className="min-w-0 flex-1">
             <Typography variant="headingLg" className="mb-1">
-              Movement History
+              Movements
             </Typography>
-            <Typography variant="bodySm" colorRole="muted">
-              Audit trail of all warehouse stock movements
-            </Typography>
+            <Button variant="outline" size="sm" onClick={() => setShowFilters(!showFilters)}>
+              <ButtonContent iconLeft={IconFilter}>
+                {filterType ? 'Filtered' : 'Filter'}
+              </ButtonContent>
+            </Button>
           </div>
-          <Button variant="outline" size="sm" onClick={() => setShowFilters(!showFilters)}>
-            <ButtonContent iconLeft={IconFilter}>
-              {filterType ? 'Filtered' : 'Filter'}
-            </ButtonContent>
-          </Button>
         </div>
 
         {/* Filters */}
