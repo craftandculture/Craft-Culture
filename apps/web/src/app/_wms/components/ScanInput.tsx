@@ -1,7 +1,7 @@
 'use client';
 
 import { IconBarcode, IconLoader2 } from '@tabler/icons-react';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Typography from '@/app/_ui/components/Typography/Typography';
@@ -23,13 +23,19 @@ export interface ScanInputProps {
   label?: string;
   /** Whether the input is disabled */
   disabled?: boolean;
+  /** Whether to show virtual keyboard (default: false for scanner use) */
+  showKeyboard?: boolean;
 }
 
 /**
  * ScanInput - a large, mobile-friendly input for barcode scanning
  *
- * Designed for use with keyboard-wedge barcode scanners on Zebra TC21/TC26 devices.
+ * Designed for use with keyboard-wedge barcode scanners on Zebra TC21/TC26/TC27 devices.
  * The scanner acts as a keyboard and sends characters followed by Enter.
+ *
+ * By default, prevents the virtual keyboard from appearing (inputMode="none")
+ * since the scanner sends keystrokes directly. Use showKeyboard=true if manual
+ * entry is needed.
  *
  * @example
  *   <ScanInput
@@ -47,9 +53,15 @@ const ScanInput = ({
   success,
   label,
   disabled = false,
+  showKeyboard = false,
 }: ScanInputProps) => {
   const inputRef = useRef<HTMLInputElement>(null);
   const [value, setValue] = useState('');
+  const processingRef = useRef(false);
+  const lastScanTimeRef = useRef(0);
+
+  // Debounce time in ms - prevents double scans
+  const SCAN_DEBOUNCE_MS = 500;
 
   // Auto-focus on mount
   useEffect(() => {
@@ -58,24 +70,60 @@ const ScanInput = ({
     }
   }, [autoFocus, disabled]);
 
-  // Re-focus after loading completes
+  // Re-focus after loading completes and clear any pending input
   useEffect(() => {
     if (!isLoading && inputRef.current && !disabled) {
+      processingRef.current = false;
+      setValue('');
       inputRef.current.focus();
     }
   }, [isLoading, disabled]);
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' && value.trim()) {
-      e.preventDefault();
-      onScan(value.trim());
-      setValue('');
+  // Clear value when loading starts
+  useEffect(() => {
+    if (isLoading) {
+      processingRef.current = true;
     }
-  };
+  }, [isLoading]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setValue(e.target.value);
-  };
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === 'Enter' && value.trim()) {
+        e.preventDefault();
+
+        // Debounce rapid scans
+        const now = Date.now();
+        if (now - lastScanTimeRef.current < SCAN_DEBOUNCE_MS) {
+          setValue('');
+          return;
+        }
+
+        // Prevent double-processing
+        if (processingRef.current || isLoading) {
+          setValue('');
+          return;
+        }
+
+        lastScanTimeRef.current = now;
+        processingRef.current = true;
+        const scannedValue = value.trim();
+        setValue('');
+        onScan(scannedValue);
+      }
+    },
+    [value, onScan, isLoading],
+  );
+
+  const handleChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      // Ignore input while processing to prevent double-scan accumulation
+      if (processingRef.current || isLoading) {
+        return;
+      }
+      setValue(e.target.value);
+    },
+    [isLoading],
+  );
 
   return (
     <div className="w-full">
@@ -103,6 +151,7 @@ const ScanInput = ({
           <input
             ref={inputRef}
             type="text"
+            inputMode={showKeyboard ? 'text' : 'none'}
             value={value}
             onChange={handleChange}
             onKeyDown={handleKeyDown}
@@ -129,9 +178,11 @@ const ScanInput = ({
         </Typography>
       )}
 
-      <Typography variant="bodyXs" colorRole="muted" className="mt-2">
-        Or type barcode manually and press Enter
-      </Typography>
+      {showKeyboard && (
+        <Typography variant="bodyXs" colorRole="muted" className="mt-2">
+          Or type barcode manually and press Enter
+        </Typography>
+      )}
     </div>
   );
 };

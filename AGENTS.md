@@ -10,10 +10,189 @@ Craft & Culture is a B2B/B2C web application helping wine and spirits brands suc
 - **Quote generation** - Creating quotes with multiple line items
 - **Custom pricing models** - Spreadsheet-like pricing formulas
 - **User management** - Magic link authentication with B2B/B2C customer types
+- **Warehouse Management System (WMS)** - Full inventory, receiving, putaway, picking, and dispatch
+- **Zoho Integration** - Sales orders sync, invoicing, and accounting automation
 
 **Tech Stack:** Next.js 15, React 19, TypeScript, PostgreSQL (Neon), Drizzle ORM, Better Auth, tRPC, Trigger.dev, Tailwind CSS 4
 
+**Live URLs:**
+- Production: https://wine.craftculture.xyz
+- Warehouse: https://warehouse.craftculture.xyz
+
 The user you're assisting has deep domain expertise in wine trading, regional markets, compliance, and distribution. They may request changes to business logic, pricing models, product workflows, or UI improvements. Your role is to implement their requests while maintaining code quality and following the established patterns.
+
+---
+
+## WMS (Warehouse Management System)
+
+The WMS module (`apps/web/src/app/_wms/`) handles physical warehouse operations for wine storage and fulfillment.
+
+### Hardware
+
+- **Scanner:** Zebra TC27 (Android-based barcode scanner with Chrome browser)
+- **Printer:** Zebra ZD421 (thermal label printer for 4x6" labels)
+- **Barcode Format:** Code 128 for locations, QR codes for case labels
+
+### Key WMS Tables
+
+```
+wmsLocations        - Warehouse locations (rack, floor, receiving, shipping)
+wmsStock            - Current inventory by LWIN18/location/owner
+wmsCaseLabels       - Individual case tracking with barcodes
+wmsStockMovements   - Audit trail of all stock movements
+wmsPickLists        - Order picking batches
+wmsPickListItems    - Individual items to pick
+wmsPallets          - Pallet tracking
+```
+
+### WMS Workflows
+
+| Page | URL | Purpose |
+|------|-----|---------|
+| Dashboard | `/platform/admin/wms` | Overview and navigation |
+| Receiving | `/platform/admin/wms/receiving` | Receive shipments → Creates stock + case labels |
+| Putaway | `/platform/admin/wms/putaway` | Scan case → Scan destination → Move to storage |
+| Transfer | `/platform/admin/wms/transfer` | Scan source → Select stock → Scan destination |
+| Pick | `/platform/admin/wms/pick` | Pick items for orders |
+| Dispatch | `/platform/admin/wms/dispatch` | Mark orders as dispatched |
+| Labels | `/platform/admin/wms/labels` | Print location and case labels |
+| Movements | `/platform/admin/wms/movements` | View movement history |
+| Scanner Test | `/platform/admin/wms/scanner-test` | Test barcode scanner |
+
+### Barcode Formats
+
+- **Location:** `LOC-{aisle}-{bay}-{level}` (e.g., `LOC-A-01-02`)
+- **Case Label:** `CASE-{lwin18}-{sequence}` (e.g., `CASE-1010279-2015-06-00750-001`)
+
+### tRPC Pattern for WMS Pages
+
+WMS mobile pages use imperative queries with `useTRPCClient()`:
+
+```typescript
+import useTRPC, { useTRPCClient } from '@/lib/trpc/browser';
+
+const WMSPage = () => {
+  const api = useTRPC();           // For queryOptions/mutationOptions
+  const trpcClient = useTRPCClient(); // For imperative .query() calls
+
+  const handleScan = async (barcode: string) => {
+    // Use trpcClient for async operations in event handlers
+    const result = await trpcClient.wms.admin.operations.getLocationByBarcode.query({ barcode });
+  };
+
+  // Use api for TanStack Query hooks
+  const mutation = useMutation({
+    ...api.wms.admin.operations.transfer.mutationOptions(),
+  });
+};
+```
+
+---
+
+## Zoho Integration
+
+The platform integrates with Zoho Books for accounting and Zoho Inventory for sales orders.
+
+### Implemented Features
+
+- **Sales Order Sync** - Scheduled job syncs open/invoiced orders from Zoho every 2 minutes
+- **Manual Sync** - "Sync from Zoho" button for immediate sync
+- **Order Approval** - Admin approves synced orders for warehouse release
+- **Pick List Creation** - Create WMS pick lists from approved Zoho orders
+
+### Key Files
+
+```
+apps/web/src/lib/zoho/
+├── client.ts          # OAuth2 client with token refresh
+├── types.ts           # Zoho API types
+├── contacts.ts        # Contact sync
+├── invoices.ts        # Invoice creation
+├── bills.ts           # Bill creation for settlements
+└── salesOrders.ts     # Sales order fetching
+
+apps/web/src/trigger/jobs/zoho-sync/
+├── zohoSalesOrderSyncJob.ts   # Scheduled sync every 2 mins
+├── zohoPaymentSyncJob.ts      # Payment status sync
+├── zohoCreateInvoiceJob.ts    # Create invoice on order confirm
+└── zohoCreateBillJob.ts       # Create bill for settlement
+```
+
+### Database Tables
+
+```
+zohoSalesOrders      - Synced sales orders from Zoho
+zohoSalesOrderItems  - Line items for each order
+```
+
+### Admin Pages
+
+- `/platform/admin/zoho-sales-orders` - View and approve synced orders
+
+---
+
+## Current Development State
+
+### Recently Completed
+- WMS scanner integration with Zebra TC27
+- Transfer, putaway, and repack page fixes (trpcClient pattern)
+- Zoho Sales Order sync with approval workflow
+- Mobile sidebar scroll fix for TC27
+
+### In Progress
+- ZD421 printer setup (waiting for label roll)
+- Full end-to-end WMS testing
+
+### Pending
+- Print case labels during receiving
+- Pick list workflow with scanner
+- Dispatch confirmation workflow
+
+---
+
+## Future Development Concepts
+
+### WMS Operator Profile (Planned)
+
+A dedicated user role for warehouse operators using the TC27 scanner. This would provide a decluttered interface optimized for warehouse operations.
+
+**Rationale:** Current WMS users have full admin access, seeing menu items irrelevant to warehouse operations (Finance, Partners, Users, etc.). A dedicated operator profile would:
+
+1. **Streamlined Navigation** - Show only WMS-related menu items:
+   - Dashboard (WMS-specific)
+   - Receiving
+   - Put Away
+   - Transfer
+   - Pick Lists
+   - Dispatch
+   - Labels
+   - Movements
+
+2. **Hidden Menu Items** - Remove from operator view:
+   - Finance / Settlements
+   - Partners
+   - Users
+   - Products (full management)
+   - Quotes
+   - Orders (admin view)
+   - System Settings
+
+3. **Implementation Approach:**
+   - Add `role: 'wms_operator'` to user schema
+   - Create `WMSOperatorLayout` component
+   - Filter sidebar navigation based on role
+   - Restrict tRPC procedures to appropriate roles
+   - Keep `adminProcedure` for full admin access
+   - Add `operatorProcedure` for WMS-only access
+
+4. **TC27-Specific Optimizations:**
+   - Larger touch targets (minimum 48px)
+   - High-contrast color scheme
+   - Simplified forms with minimal input fields
+   - Auto-focus on scan inputs
+   - Haptic feedback on scan success/error
+
+**Status:** Concept documented for future implementation. Not started.
 
 ---
 

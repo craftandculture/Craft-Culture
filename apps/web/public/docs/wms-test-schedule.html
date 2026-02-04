@@ -207,6 +207,18 @@
       color: var(--text-muted);
     }
 
+    .device-badge {
+      display: inline-block;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      margin-right: 4px;
+    }
+    .device-tc27 { background: #dbeafe; color: #1d4ed8; }
+    .device-printer { background: #fef3c7; color: #92400e; }
+    .device-desktop { background: #e5e7eb; color: #374151; }
+
     @media print {
       body { max-width: 100%; padding: 1rem; }
       .test-item input[type="checkbox"] { -webkit-appearance: none; appearance: none; border: 2px solid var(--text); border-radius: 3px; }
@@ -221,16 +233,17 @@
 </head>
 <body>
   <h1>WMS Test Schedule</h1>
-  <p class="subtitle">Comprehensive testing checklist for Warehouse Management System</p>
+  <p class="subtitle">Comprehensive end-to-end testing checklist for Warehouse Management System</p>
 
   <div class="status-box status-success">
-    <strong>Hardware Status:</strong> TC27 Scanner available ✓ | ZD421 Printer available ✓<br>
-    <strong>Current Mode:</strong> Full testing with scanner and printer
+    <strong>Hardware Status:</strong><br>
+    <span class="device-badge device-tc27">TC27</span> Zebra TC27 Scanner - Available<br>
+    <span class="device-badge device-printer">ZD421</span> Zebra ZD421 Printer - Available (awaiting label roll)
   </div>
 
   <div class="summary-grid">
     <div class="summary-card">
-      <div class="number" id="total-tests">32</div>
+      <div class="number" id="total-tests">48</div>
       <div class="label">Total Tests</div>
     </div>
     <div class="summary-card">
@@ -238,11 +251,11 @@
       <div class="label">Completed</div>
     </div>
     <div class="summary-card">
-      <div class="number" id="remaining-tests">32</div>
+      <div class="number" id="remaining-tests">48</div>
       <div class="label">Remaining</div>
     </div>
     <div class="summary-card">
-      <div class="number" id="estimated-time">~60</div>
+      <div class="number" id="estimated-time">~90</div>
       <div class="label">Est. Minutes</div>
     </div>
   </div>
@@ -267,10 +280,10 @@
   <div class="test-group">
     <h4>Hardware Setup</h4>
     <ul class="prereq-list">
-      <li>📱 Zebra TC27 charged and connected to WiFi</li>
-      <li>📱 TC27 scanner configured for Keyboard Wedge mode</li>
-      <li>🖨️ Zebra ZD421 printer powered on and paired via Bluetooth</li>
-      <li>🖨️ 4" x 2" thermal labels loaded in printer</li>
+      <li><span class="device-badge device-tc27">TC27</span> Zebra TC27 charged and connected to WiFi</li>
+      <li><span class="device-badge device-tc27">TC27</span> Scanner configured for Keyboard Wedge mode (Enter suffix)</li>
+      <li><span class="device-badge device-printer">ZD421</span> Printer powered on and paired via Bluetooth or USB</li>
+      <li><span class="device-badge device-printer">ZD421</span> 4" x 6" or 4" x 2" thermal labels loaded</li>
     </ul>
   </div>
 
@@ -278,8 +291,9 @@
     <h4>Data Setup</h4>
     <ul class="prereq-list">
       <li>At least one Partner exists in the system (for stock ownership)</li>
-      <li>At least one Shipment exists with status ready for receiving (or create test shipment)</li>
+      <li>At least one Shipment exists with status ready for receiving</li>
       <li>Warehouse locations created (or will create in Phase 1)</li>
+      <li>Print test barcodes from <code>/docs/test-barcodes.html</code></li>
     </ul>
   </div>
 
@@ -288,30 +302,31 @@
     <ul class="prereq-list">
       <li>Admin account credentials ready</li>
       <li>Can access <code>https://wine.craftculture.xyz</code> on TC27</li>
+      <li>Review <code>/docs/wms-user-guide.html</code> for workflow reference</li>
     </ul>
   </div>
 
-  <!-- PHASE 1: Locations -->
+  <!-- PHASE 1: TC27 Mobile Experience -->
   <h2>
     <div class="phase-header">
-      <span>Phase 1: Locations</span>
+      <span>Phase 1: TC27 Mobile Experience</span>
       <span class="phase-time">~10 min</span>
     </div>
   </h2>
 
   <div class="status-box status-info">
-    <strong>Goal:</strong> Create warehouse locations, print labels, verify scanning works
+    <strong>Goal:</strong> Verify the TC27 user experience is optimized for the smaller screen
   </div>
 
   <div class="test-group">
-    <h4>1.1 Create Locations</h4>
+    <h4>1.1 Login & Navigation</h4>
 
     <div class="test-item">
       <input type="checkbox" id="test-1-1" onchange="updateProgress()">
       <div class="step-num">1</div>
       <label for="test-1-1">
-        Navigate to <span class="nav-path">/wms/locations</span>
-        <div class="expected">Expected: See list of existing locations (may be empty)</div>
+        <span class="device-badge device-tc27">TC27</span> Navigate to login page
+        <div class="expected">Expected: Login form fits screen, input fields large enough for touch</div>
       </label>
     </div>
 
@@ -319,8 +334,8 @@
       <input type="checkbox" id="test-1-2" onchange="updateProgress()">
       <div class="step-num">2</div>
       <label for="test-1-2">
-        Click "Batch Create" and create locations A-01-00 through A-01-03
-        <div class="expected">Expected: 4 locations created (floor + 3 upper levels)</div>
+        <span class="device-badge device-tc27">TC27</span> Log in with admin credentials
+        <div class="expected">Expected: Magic link email received, login successful</div>
       </label>
     </div>
 
@@ -328,21 +343,17 @@
       <input type="checkbox" id="test-1-3" onchange="updateProgress()">
       <div class="step-num">3</div>
       <label for="test-1-3">
-        Create special location "RECEIVING" if not exists
-        <div class="expected">Expected: RECEIVING location appears in list</div>
+        <span class="device-badge device-tc27">TC27</span> Open mobile sidebar menu (hamburger icon)
+        <div class="expected">Expected: Sidebar slides in, WMS menu items visible</div>
       </label>
     </div>
-  </div>
-
-  <div class="test-group">
-    <h4>1.2 Print Location Labels</h4>
 
     <div class="test-item">
       <input type="checkbox" id="test-1-4" onchange="updateProgress()">
       <div class="step-num">4</div>
       <label for="test-1-4">
-        🖨️ Select locations A-01-00 through A-01-03 and click "Print Labels"
-        <div class="expected">Expected: 4 labels print on ZD421</div>
+        <span class="device-badge device-tc27">TC27</span> Scroll the sidebar menu up and down
+        <div class="expected">Expected: Sidebar scrolls smoothly, all menu items accessible</div>
       </label>
     </div>
 
@@ -350,21 +361,21 @@
       <input type="checkbox" id="test-1-5" onchange="updateProgress()">
       <div class="step-num">5</div>
       <label for="test-1-5">
-        🖨️ Verify labels show: barcode, location code (LOC-A-01-00), aisle/bay/level
-        <div class="expected">Expected: All information visible and legible</div>
+        <span class="device-badge device-tc27">TC27</span> Navigate to WMS Dashboard
+        <div class="expected">Expected: Dashboard loads, KPIs visible, touch targets adequate</div>
       </label>
     </div>
   </div>
 
   <div class="test-group">
-    <h4>1.3 Test Location Scanning</h4>
+    <h4>1.2 Scanner Test Page</h4>
 
     <div class="test-item">
       <input type="checkbox" id="test-1-6" onchange="updateProgress()">
       <div class="step-num">6</div>
       <label for="test-1-6">
-        📱 Go to <span class="nav-path">/wms/scanner-test</span> on TC27
-        <div class="expected">Expected: Scanner test page loads</div>
+        <span class="device-badge device-tc27">TC27</span> Navigate to <span class="nav-path">/wms/scanner-test</span>
+        <div class="expected">Expected: Scanner test page loads, input field prominent</div>
       </label>
     </div>
 
@@ -372,38 +383,47 @@
       <input type="checkbox" id="test-1-7" onchange="updateProgress()">
       <div class="step-num">7</div>
       <label for="test-1-7">
-        📱 Scan each printed location label
-        <div class="expected">Expected: "LOC-A-01-00" etc. appears in input field</div>
+        <span class="device-badge device-tc27">TC27</span> Scan a location barcode (e.g., LOC-A-01-00)
+        <div class="expected">Expected: Barcode appears in input, "Valid" indicator shown</div>
+      </label>
+    </div>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-1-8" onchange="updateProgress()">
+      <div class="step-num">8</div>
+      <label for="test-1-8">
+        <span class="device-badge device-tc27">TC27</span> Type barcode manually and press Enter
+        <div class="expected">Expected: Manual entry works, same validation as scanning</div>
       </label>
     </div>
   </div>
 
   <div class="notes-section">
-    <h4>Phase 1 Notes</h4>
-    <textarea placeholder="Record any issues, observations, or deviations..."></textarea>
+    <h4>Phase 1 Notes (TC27 Experience)</h4>
+    <textarea placeholder="Note any UI issues: text too small, buttons hard to tap, scrolling problems..."></textarea>
   </div>
 
-  <!-- PHASE 2: Receiving -->
+  <!-- PHASE 2: Locations -->
   <h2>
     <div class="phase-header">
-      <span>Phase 2: Receiving Workflow</span>
-      <span class="phase-time">~20 min</span>
+      <span>Phase 2: Locations Setup</span>
+      <span class="phase-time">~10 min</span>
     </div>
   </h2>
 
   <div class="status-box status-info">
-    <strong>Goal:</strong> Receive a shipment end-to-end, create stock, print case labels
+    <strong>Goal:</strong> Create warehouse locations, print labels, verify scanning
   </div>
 
   <div class="test-group">
-    <h4>2.1 Start Receiving</h4>
+    <h4>2.1 Create Locations</h4>
 
     <div class="test-item">
       <input type="checkbox" id="test-2-1" onchange="updateProgress()">
       <div class="step-num">1</div>
       <label for="test-2-1">
-        Navigate to <span class="nav-path">/wms/receive</span>
-        <div class="expected">Expected: List of pending shipments (must have partner assigned)</div>
+        <span class="device-badge device-desktop">Desktop</span> Navigate to <span class="nav-path">/wms/locations</span>
+        <div class="expected">Expected: See list of existing locations (may be empty)</div>
       </label>
     </div>
 
@@ -411,8 +431,8 @@
       <input type="checkbox" id="test-2-2" onchange="updateProgress()">
       <div class="step-num">2</div>
       <label for="test-2-2">
-        Click on a shipment to start receiving
-        <div class="expected">Expected: Receiving page loads with expected items</div>
+        <span class="device-badge device-desktop">Desktop</span> Click "Batch Create" and create locations A-01-00 through A-01-03
+        <div class="expected">Expected: 4 locations created (floor + 3 upper levels)</div>
       </label>
     </div>
 
@@ -420,21 +440,21 @@
       <input type="checkbox" id="test-2-3" onchange="updateProgress()">
       <div class="step-num">3</div>
       <label for="test-2-3">
-        Switch to "Detail View" (product-by-product)
-        <div class="expected">Expected: First product shows with quantity input, location, print button</div>
+        <span class="device-badge device-desktop">Desktop</span> Create special locations: RECEIVING, DISPATCH
+        <div class="expected">Expected: Special locations appear in list</div>
       </label>
     </div>
   </div>
 
   <div class="test-group">
-    <h4>2.2 Process First Product</h4>
+    <h4>2.2 Print & Scan Location Labels</h4>
 
     <div class="test-item">
       <input type="checkbox" id="test-2-4" onchange="updateProgress()">
       <div class="step-num">4</div>
       <label for="test-2-4">
-        Enter received quantity (match expected or enter different value to test variance)
-        <div class="expected">Expected: Quantity updates, variance shown if different</div>
+        <span class="device-badge device-printer">ZD421</span> Print location labels for A-01-00 through A-01-03
+        <div class="expected">Expected: Labels print with barcode and location code</div>
       </label>
     </div>
 
@@ -442,100 +462,38 @@
       <input type="checkbox" id="test-2-5" onchange="updateProgress()">
       <div class="step-num">5</div>
       <label for="test-2-5">
-        Select location from dropdown (scan not available yet)
-        <div class="expected">Expected: Location assigned (e.g., A-01-00)</div>
-      </label>
-    </div>
-
-    <div class="test-item">
-      <input type="checkbox" id="test-2-6" onchange="updateProgress()">
-      <div class="step-num">6</div>
-      <label for="test-2-6">
-        🖨️ Click "Print Labels" button
-        <div class="expected">Expected: Case labels print (one per case)</div>
-      </label>
-    </div>
-
-    <div class="test-item">
-      <input type="checkbox" id="test-2-7" onchange="updateProgress()">
-      <div class="step-num">7</div>
-      <label for="test-2-7">
-        🖨️ Verify case label content: barcode, product name, LWIN, pack size, location
-        <div class="expected">Expected: All information correct and legible</div>
-      </label>
-    </div>
-  </div>
-
-  <div class="test-group">
-    <h4>2.3 Save Draft (Optional Test)</h4>
-
-    <div class="test-item">
-      <input type="checkbox" id="test-2-8" onchange="updateProgress()">
-      <div class="step-num">8</div>
-      <label for="test-2-8">
-        Click "Save Draft" with partial progress
-        <div class="expected">Expected: Success message, draft saved</div>
-      </label>
-    </div>
-
-    <div class="test-item">
-      <input type="checkbox" id="test-2-9" onchange="updateProgress()">
-      <div class="step-num">9</div>
-      <label for="test-2-9">
-        Navigate away, then return to same shipment
-        <div class="expected">Expected: Draft restored with previous quantities and locations</div>
-      </label>
-    </div>
-  </div>
-
-  <div class="test-group">
-    <h4>2.4 Complete Receiving</h4>
-
-    <div class="test-item">
-      <input type="checkbox" id="test-2-10" onchange="updateProgress()">
-      <div class="step-num">10</div>
-      <label for="test-2-10">
-        Process remaining products (assign locations, print labels)
-        <div class="expected">Expected: All products have locations and labels printed</div>
-      </label>
-    </div>
-
-    <div class="test-item">
-      <input type="checkbox" id="test-2-11" onchange="updateProgress()">
-      <div class="step-num">11</div>
-      <label for="test-2-11">
-        Click "Complete Receiving"
-        <div class="expected">Expected: Success message, redirected to stock view or dashboard</div>
+        <span class="device-badge device-tc27">TC27</span> Scan each printed location label
+        <div class="expected">Expected: LOC-A-01-00 etc. recognized correctly</div>
       </label>
     </div>
   </div>
 
   <div class="notes-section">
     <h4>Phase 2 Notes</h4>
-    <textarea placeholder="Record shipment ID used, any issues with printing, scanning, etc..."></textarea>
+    <textarea placeholder="Record any issues with location creation or label printing..."></textarea>
   </div>
 
-  <!-- PHASE 3: Stock Verification -->
+  <!-- PHASE 3: Receiving -->
   <h2>
     <div class="phase-header">
-      <span>Phase 3: Stock Verification</span>
-      <span class="phase-time">~10 min</span>
+      <span>Phase 3: Receiving Workflow</span>
+      <span class="phase-time">~20 min</span>
     </div>
   </h2>
 
   <div class="status-box status-info">
-    <strong>Goal:</strong> Verify stock records created correctly, dashboard shows accurate data
+    <strong>Goal:</strong> Receive a shipment end-to-end, create stock and case labels
   </div>
 
   <div class="test-group">
-    <h4>3.1 Dashboard Check</h4>
+    <h4>3.1 Start Receiving</h4>
 
     <div class="test-item">
       <input type="checkbox" id="test-3-1" onchange="updateProgress()">
       <div class="step-num">1</div>
       <label for="test-3-1">
-        Navigate to <span class="nav-path">/wms</span> (dashboard)
-        <div class="expected">Expected: Total cases matches what was just received</div>
+        Navigate to <span class="nav-path">/wms/receive</span>
+        <div class="expected">Expected: List of pending shipments displayed</div>
       </label>
     </div>
 
@@ -543,21 +501,17 @@
       <input type="checkbox" id="test-3-2" onchange="updateProgress()">
       <div class="step-num">2</div>
       <label for="test-3-2">
-        Check "Recent Movements" shows receive entries
-        <div class="expected">Expected: Movement type "receive" with correct product and quantity</div>
+        Click on a shipment to start receiving
+        <div class="expected">Expected: Receiving page loads with expected products</div>
       </label>
     </div>
-  </div>
-
-  <div class="test-group">
-    <h4>3.2 Stock Views</h4>
 
     <div class="test-item">
       <input type="checkbox" id="test-3-3" onchange="updateProgress()">
       <div class="step-num">3</div>
       <label for="test-3-3">
-        Navigate to <span class="nav-path">/wms/stock</span> → By Product tab
-        <div class="expected">Expected: Products from shipment appear with correct quantities</div>
+        Enter received quantity and select location for first product
+        <div class="expected">Expected: Quantity and location saved</div>
       </label>
     </div>
 
@@ -565,60 +519,69 @@
       <input type="checkbox" id="test-3-4" onchange="updateProgress()">
       <div class="step-num">4</div>
       <label for="test-3-4">
-        Click "By Owner" tab
-        <div class="expected">Expected: Stock grouped by partner who owns it</div>
-      </label>
-    </div>
-
-    <div class="test-item">
-      <input type="checkbox" id="test-3-5" onchange="updateProgress()">
-      <div class="step-num">5</div>
-      <label for="test-3-5">
-        Navigate to <span class="nav-path">/wms/stock/all</span>
-        <div class="expected">Expected: Raw list shows individual stock records with locations</div>
+        <span class="device-badge device-printer">ZD421</span> Click "Print Labels" for first product
+        <div class="expected">Expected: Case labels print (one per case)</div>
       </label>
     </div>
   </div>
 
   <div class="test-group">
-    <h4>3.3 Movement History</h4>
+    <h4>3.2 Complete Receiving</h4>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-3-5" onchange="updateProgress()">
+      <div class="step-num">5</div>
+      <label for="test-3-5">
+        Process remaining products (quantities, locations, labels)
+        <div class="expected">Expected: All products have locations and labels printed</div>
+      </label>
+    </div>
 
     <div class="test-item">
       <input type="checkbox" id="test-3-6" onchange="updateProgress()">
       <div class="step-num">6</div>
       <label for="test-3-6">
-        Navigate to <span class="nav-path">/wms/movements</span>
-        <div class="expected">Expected: Receive movements logged with shipment reference</div>
+        Click "Complete Receiving"
+        <div class="expected">Expected: Success message, stock created in system</div>
+      </label>
+    </div>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-3-7" onchange="updateProgress()">
+      <div class="step-num">7</div>
+      <label for="test-3-7">
+        Verify stock in <span class="nav-path">/wms/stock</span>
+        <div class="expected">Expected: Received products appear with correct quantities</div>
       </label>
     </div>
   </div>
 
   <div class="notes-section">
     <h4>Phase 3 Notes</h4>
-    <textarea placeholder="Record actual quantities seen, any discrepancies..."></textarea>
+    <textarea placeholder="Record shipment ID, product names, any issues..."></textarea>
   </div>
 
-  <!-- PHASE 4: Reconciliation -->
+  <!-- PHASE 4: Put Away -->
   <h2>
     <div class="phase-header">
-      <span>Phase 4: Reconciliation</span>
-      <span class="phase-time">~5 min</span>
+      <span>Phase 4: Put Away Workflow</span>
+      <span class="phase-time">~10 min</span>
     </div>
   </h2>
 
   <div class="status-box status-info">
-    <strong>Goal:</strong> Verify stock matches movements, test reconciliation tools
+    <strong>Goal:</strong> Move cases from receiving to storage using case label scanning
   </div>
 
   <div class="test-group">
-    <h4>4.1 Check Reconciliation Status</h4>
+    <h4>4.1 Put Away Cases</h4>
 
     <div class="test-item">
       <input type="checkbox" id="test-4-1" onchange="updateProgress()">
       <div class="step-num">1</div>
       <label for="test-4-1">
-        Navigate to <span class="nav-path">/wms/stock/reconcile</span>
-        <div class="expected">Expected: Page loads, shows expected vs actual comparison</div>
+        <span class="device-badge device-tc27">TC27</span> Navigate to <span class="nav-path">/wms/putaway</span>
+        <div class="expected">Expected: Put away page loads with scan input</div>
       </label>
     </div>
 
@@ -626,38 +589,65 @@
       <input type="checkbox" id="test-4-2" onchange="updateProgress()">
       <div class="step-num">2</div>
       <label for="test-4-2">
-        Check if status shows "Stock is Reconciled" (green)
-        <div class="expected">Expected: Numbers match, no discrepancy after fresh receiving</div>
+        <span class="device-badge device-tc27">TC27</span> Scan a case label from receiving
+        <div class="expected">Expected: Case details shown (product name, current location)</div>
+      </label>
+    </div>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-4-3" onchange="updateProgress()">
+      <div class="step-num">3</div>
+      <label for="test-4-3">
+        <span class="device-badge device-tc27">TC27</span> Scan destination location barcode
+        <div class="expected">Expected: Destination location shown, ready to confirm</div>
+      </label>
+    </div>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-4-4" onchange="updateProgress()">
+      <div class="step-num">4</div>
+      <label for="test-4-4">
+        <span class="device-badge device-tc27">TC27</span> Confirm the put away
+        <div class="expected">Expected: Success message, "Scan Next" button available</div>
+      </label>
+    </div>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-4-5" onchange="updateProgress()">
+      <div class="step-num">5</div>
+      <label for="test-4-5">
+        Click "Scan Next" and repeat for another case
+        <div class="expected">Expected: Ready for next case without full page reload</div>
       </label>
     </div>
   </div>
 
   <div class="notes-section">
     <h4>Phase 4 Notes</h4>
-    <textarea placeholder="If discrepancy found, record expected vs actual values..."></textarea>
+    <textarea placeholder="Record case barcodes, any scanning issues..."></textarea>
   </div>
 
-  <!-- PHASE 5: Case Label Scanning -->
+  <!-- PHASE 5: Transfer -->
   <h2>
     <div class="phase-header">
-      <span>Phase 5: Case Label Scanning</span>
+      <span>Phase 5: Transfer Workflow</span>
       <span class="phase-time">~10 min</span>
     </div>
   </h2>
 
   <div class="status-box status-info">
-    <strong>Goal:</strong> Test scanning case labels printed during receiving
+    <strong>Goal:</strong> Move stock between locations using barcode scanning
   </div>
 
   <div class="test-group">
-    <h4>5.1 Test Case Barcode Lookup</h4>
+    <h4>5.1 Transfer Stock</h4>
 
     <div class="test-item">
       <input type="checkbox" id="test-5-1" onchange="updateProgress()">
       <div class="step-num">1</div>
       <label for="test-5-1">
-        📱 Go to <span class="nav-path">/wms/scanner-test</span>
-        <div class="expected">Expected: Scanner test page loads</div>
+        <span class="device-badge device-tc27">TC27</span> Navigate to <span class="nav-path">/wms/transfer</span>
+        <div class="expected">Expected: Transfer page loads with source location scan input</div>
       </label>
     </div>
 
@@ -665,8 +655,8 @@
       <input type="checkbox" id="test-5-2" onchange="updateProgress()">
       <div class="step-num">2</div>
       <label for="test-5-2">
-        📱 Scan a case label printed during receiving
-        <div class="expected">Expected: Barcode text appears (CASE-LWIN18-SEQ format)</div>
+        <span class="device-badge device-tc27">TC27</span> Scan source location barcode
+        <div class="expected">Expected: Stock at location displayed for selection</div>
       </label>
     </div>
 
@@ -674,38 +664,87 @@
       <input type="checkbox" id="test-5-3" onchange="updateProgress()">
       <div class="step-num">3</div>
       <label for="test-5-3">
-        📱 Go to <span class="nav-path">/wms/putaway</span> and scan same case label
-        <div class="expected">Expected: Product details shown (name, LWIN, current location)</div>
+        <span class="device-badge device-tc27">TC27</span> Select stock item and set quantity
+        <div class="expected">Expected: +/- buttons work, quantity within available range</div>
+      </label>
+    </div>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-5-4" onchange="updateProgress()">
+      <div class="step-num">4</div>
+      <label for="test-5-4">
+        <span class="device-badge device-tc27">TC27</span> Scan destination location barcode
+        <div class="expected">Expected: Destination shown, confirm screen displayed</div>
+      </label>
+    </div>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-5-5" onchange="updateProgress()">
+      <div class="step-num">5</div>
+      <label for="test-5-5">
+        <span class="device-badge device-tc27">TC27</span> Confirm transfer
+        <div class="expected">Expected: Success message with from/to locations</div>
+      </label>
+    </div>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-5-6" onchange="updateProgress()">
+      <div class="step-num">6</div>
+      <label for="test-5-6">
+        Verify in <span class="nav-path">/wms/movements</span>
+        <div class="expected">Expected: Transfer movement logged with correct details</div>
+      </label>
+    </div>
+  </div>
+
+  <div class="test-group">
+    <h4>5.2 Error Handling</h4>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-5-7" onchange="updateProgress()">
+      <div class="step-num">7</div>
+      <label for="test-5-7">
+        <span class="device-badge device-tc27">TC27</span> Try scanning same location as source and destination
+        <div class="expected">Expected: Error "Destination cannot be the same as source"</div>
+      </label>
+    </div>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-5-8" onchange="updateProgress()">
+      <div class="step-num">8</div>
+      <label for="test-5-8">
+        <span class="device-badge device-tc27">TC27</span> Scan location with no stock
+        <div class="expected">Expected: Error "No stock at this location"</div>
       </label>
     </div>
   </div>
 
   <div class="notes-section">
     <h4>Phase 5 Notes</h4>
-    <textarea placeholder="Record barcode scanned, any scanning issues..."></textarea>
+    <textarea placeholder="Record transfer details, any issues..."></textarea>
   </div>
 
-  <!-- PHASE 6: Operations -->
+  <!-- PHASE 6: Pick & Dispatch -->
   <h2>
     <div class="phase-header">
-      <span>Phase 6: Warehouse Operations</span>
-      <span class="phase-time">~10 min</span>
+      <span>Phase 6: Pick & Dispatch</span>
+      <span class="phase-time">~15 min</span>
     </div>
   </h2>
 
   <div class="status-box status-info">
-    <strong>Goal:</strong> Test transfer workflow (move stock between locations)
+    <strong>Goal:</strong> Test order picking and dispatch workflows
   </div>
 
   <div class="test-group">
-    <h4>6.1 Transfer Stock</h4>
+    <h4>6.1 Create Pick List</h4>
 
     <div class="test-item">
       <input type="checkbox" id="test-6-1" onchange="updateProgress()">
       <div class="step-num">1</div>
       <label for="test-6-1">
-        Navigate to <span class="nav-path">/wms/transfer</span>
-        <div class="expected">Expected: Transfer page loads with scan inputs</div>
+        <span class="device-badge device-desktop">Desktop</span> Navigate to <span class="nav-path">/wms/pick</span>
+        <div class="expected">Expected: Pick lists page loads</div>
       </label>
     </div>
 
@@ -713,17 +752,21 @@
       <input type="checkbox" id="test-6-2" onchange="updateProgress()">
       <div class="step-num">2</div>
       <label for="test-6-2">
-        Select source location from dropdown (or scan if hardware available)
-        <div class="expected">Expected: Stock at that location displayed</div>
+        <span class="device-badge device-desktop">Desktop</span> Create a new pick list with test items
+        <div class="expected">Expected: Pick list created with items to pick</div>
       </label>
     </div>
+  </div>
+
+  <div class="test-group">
+    <h4>6.2 Execute Pick List</h4>
 
     <div class="test-item">
       <input type="checkbox" id="test-6-3" onchange="updateProgress()">
       <div class="step-num">3</div>
       <label for="test-6-3">
-        Select stock to transfer and enter quantity
-        <div class="expected">Expected: Quantity selected, ready for destination</div>
+        <span class="device-badge device-tc27">TC27</span> Open the pick list on mobile
+        <div class="expected">Expected: Pick items displayed with locations</div>
       </label>
     </div>
 
@@ -731,8 +774,8 @@
       <input type="checkbox" id="test-6-4" onchange="updateProgress()">
       <div class="step-num">4</div>
       <label for="test-6-4">
-        Select destination location from dropdown (or scan if hardware available)
-        <div class="expected">Expected: Destination accepted</div>
+        <span class="device-badge device-tc27">TC27</span> Scan location barcode to confirm you're at right spot
+        <div class="expected">Expected: Location confirmed, pick button enabled</div>
       </label>
     </div>
 
@@ -740,8 +783,8 @@
       <input type="checkbox" id="test-6-5" onchange="updateProgress()">
       <div class="step-num">5</div>
       <label for="test-6-5">
-        Confirm transfer
-        <div class="expected">Expected: Success message, stock moved</div>
+        <span class="device-badge device-tc27">TC27</span> Pick item and confirm quantity
+        <div class="expected">Expected: Item marked as picked, stock decremented</div>
       </label>
     </div>
 
@@ -749,15 +792,98 @@
       <input type="checkbox" id="test-6-6" onchange="updateProgress()">
       <div class="step-num">6</div>
       <label for="test-6-6">
-        Check <span class="nav-path">/wms/movements</span> for transfer movement
-        <div class="expected">Expected: Transfer movement logged with from/to locations</div>
+        Complete all picks and mark pick list complete
+        <div class="expected">Expected: Pick list status changes to "Completed"</div>
+      </label>
+    </div>
+  </div>
+
+  <div class="test-group">
+    <h4>6.3 Dispatch</h4>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-6-7" onchange="updateProgress()">
+      <div class="step-num">7</div>
+      <label for="test-6-7">
+        Navigate to <span class="nav-path">/wms/dispatch</span>
+        <div class="expected">Expected: Dispatch page loads with batches</div>
+      </label>
+    </div>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-6-8" onchange="updateProgress()">
+      <div class="step-num">8</div>
+      <label for="test-6-8">
+        Mark a batch as dispatched
+        <div class="expected">Expected: Status updated, orders marked as shipped</div>
       </label>
     </div>
   </div>
 
   <div class="notes-section">
     <h4>Phase 6 Notes</h4>
-    <textarea placeholder="Record source/destination locations, quantities transferred..."></textarea>
+    <textarea placeholder="Record pick list details, dispatch results..."></textarea>
+  </div>
+
+  <!-- PHASE 7: Reconciliation & Reports -->
+  <h2>
+    <div class="phase-header">
+      <span>Phase 7: Reconciliation & Reports</span>
+      <span class="phase-time">~10 min</span>
+    </div>
+  </h2>
+
+  <div class="status-box status-info">
+    <strong>Goal:</strong> Verify data integrity and audit trails
+  </div>
+
+  <div class="test-group">
+    <h4>7.1 Stock Reconciliation</h4>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-7-1" onchange="updateProgress()">
+      <div class="step-num">1</div>
+      <label for="test-7-1">
+        Navigate to <span class="nav-path">/wms/stock/reconcile</span>
+        <div class="expected">Expected: Reconciliation page loads</div>
+      </label>
+    </div>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-7-2" onchange="updateProgress()">
+      <div class="step-num">2</div>
+      <label for="test-7-2">
+        Check if stock matches movements
+        <div class="expected">Expected: "Stock is Reconciled" (green) or discrepancy shown</div>
+      </label>
+    </div>
+  </div>
+
+  <div class="test-group">
+    <h4>7.2 Movement History</h4>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-7-3" onchange="updateProgress()">
+      <div class="step-num">3</div>
+      <label for="test-7-3">
+        Navigate to <span class="nav-path">/wms/movements</span>
+        <div class="expected">Expected: All movements from testing session visible</div>
+      </label>
+    </div>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-7-4" onchange="updateProgress()">
+      <div class="step-num">4</div>
+      <label for="test-7-4">
+        Filter by movement type (receive, putaway, transfer, pick)
+        <div class="expected">Expected: Filters work correctly</div>
+      </label>
+    </div>
+  </div>
+
+  <div class="notes-section">
+    <h4>Phase 7 Notes</h4>
+    <textarea placeholder="Record reconciliation status, any discrepancies..."></textarea>
   </div>
 
   <!-- SIGN OFF -->
@@ -795,14 +921,15 @@
 
   <div class="notes-section">
     <h4>Final Summary & Issues</h4>
-    <textarea placeholder="Summary of testing session, any issues to address, recommendations..." style="min-height: 120px;"></textarea>
+    <textarea placeholder="Summary of testing session, issues to fix, recommendations..." style="min-height: 120px;"></textarea>
   </div>
 
   <hr style="margin: 2rem 0; border: none; border-top: 1px solid var(--border);">
 
   <p style="color: var(--text-muted); font-size: 0.85rem; text-align: center;">
-    WMS Test Schedule v1.0 | February 2026<br>
-    <a href="/docs/wms-guide.html" style="color: var(--primary);">View Full WMS Guide</a>
+    WMS Test Schedule v2.0 | February 2026<br>
+    <a href="/docs/wms-user-guide.html" style="color: var(--primary);">WMS User Guide</a> |
+    <a href="/docs/test-barcodes.html" style="color: var(--primary);">Test Barcodes</a>
   </p>
 
   <script>
@@ -824,12 +951,12 @@
       checkboxes.forEach(cb => {
         progress[cb.id] = cb.checked;
       });
-      localStorage.setItem('wms-test-progress', JSON.stringify(progress));
+      localStorage.setItem('wms-test-progress-v2', JSON.stringify(progress));
     }
 
     // Load saved progress
     function loadProgress() {
-      const saved = localStorage.getItem('wms-test-progress');
+      const saved = localStorage.getItem('wms-test-progress-v2');
       if (saved) {
         const progress = JSON.parse(saved);
         Object.keys(progress).forEach(id => {
