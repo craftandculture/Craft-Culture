@@ -51,6 +51,8 @@ const adminGetLocationByBarcode = adminProcedure
         quantityCases: wmsStock.quantityCases,
         availableCases: wmsStock.availableCases,
         lotNumber: wmsStock.lotNumber,
+        caseConfig: wmsStock.caseConfig,
+        bottleSize: wmsStock.bottleSize,
       })
       .from(wmsStock)
       .where(eq(wmsStock.locationId, location.id));
