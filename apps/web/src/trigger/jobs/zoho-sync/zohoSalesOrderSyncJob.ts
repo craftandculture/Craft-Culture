@@ -35,14 +35,23 @@ export const zohoSalesOrderSyncJob = schedules.task({
     };
 
     try {
-      // Fetch open sales orders from Zoho (these need fulfillment)
-      const { salesOrders } = await listSalesOrders({
-        status: 'open',
-        perPage: 100,
-      });
+      // Fetch sales orders from Zoho that need fulfillment
+      // - 'open' = confirmed, awaiting invoice
+      // - 'invoiced' = fully invoiced, ready for fulfillment
+      const [openOrders, invoicedOrders] = await Promise.all([
+        listSalesOrders({ status: 'open', perPage: 100 }),
+        listSalesOrders({ status: 'invoiced', perPage: 100 }),
+      ]);
+
+      const salesOrders = [
+        ...openOrders.salesOrders,
+        ...invoicedOrders.salesOrders,
+      ];
 
       results.fetched = salesOrders.length;
-      logger.info(`Fetched ${salesOrders.length} open sales orders from Zoho`);
+      logger.info(
+        `Fetched ${salesOrders.length} sales orders from Zoho (${openOrders.salesOrders.length} open, ${invoicedOrders.salesOrders.length} invoiced)`,
+      );
 
       for (const zohoOrder of salesOrders) {
         try {
