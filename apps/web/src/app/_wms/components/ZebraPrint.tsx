@@ -128,64 +128,48 @@ const ZebraPrint = ({
   // Print function exposed via ref
   const print = useCallback(
     async (zpl: string): Promise<boolean> => {
-      // On mobile, try multiple approaches
+      // On mobile, copy ZPL to clipboard and show instructions
       if (isMobileDevice()) {
         try {
-          // Try Web Share API first (works well on Android)
-          if (navigator.share && navigator.canShare) {
-            const file = new File([zpl], 'label.zpl', { type: 'application/octet-stream' });
-            if (navigator.canShare({ files: [file] })) {
-              await navigator.share({
-                files: [file],
-                title: 'Print Label',
-                text: 'Open with PrintConnect to print',
-              });
-              onPrintComplete?.(true);
-              return true;
-            }
-          }
+          // Copy to clipboard
+          await navigator.clipboard.writeText(zpl);
 
-          // Fallback: Create blob URL and try to open PrintConnect via intent
-          const blob = new Blob([zpl], { type: 'application/octet-stream' });
-          const url = URL.createObjectURL(blob);
-
-          // Try opening with intent (Android)
-          const intentUrl = `intent://${url.replace('blob:', '')}#Intent;scheme=file;type=application/octet-stream;package=com.zebra.printconnect;end`;
-
-          // Create hidden iframe to try intent
-          const iframe = document.createElement('iframe');
-          iframe.style.display = 'none';
-          iframe.src = intentUrl;
-          document.body.appendChild(iframe);
-
-          // Also create download link as fallback
-          setTimeout(() => {
-            document.body.removeChild(iframe);
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = `label-${Date.now()}.zpl`;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            URL.revokeObjectURL(url);
-          }, 1000);
+          // Show simple alert with instructions
+          alert(
+            'ZPL copied to clipboard!\n\n' +
+            '1. Open PrintConnect app\n' +
+            '2. Select your ZD421 printer\n' +
+            '3. Tap "Send Data" or "Passthrough"\n' +
+            '4. Paste and send'
+          );
 
           onPrintComplete?.(true);
           return true;
         } catch {
-          // Final fallback: just download
-          const blob = new Blob([zpl], { type: 'application/octet-stream' });
-          const url = URL.createObjectURL(blob);
-          const link = document.createElement('a');
-          link.href = url;
-          link.download = `label-${Date.now()}.zpl`;
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-          URL.revokeObjectURL(url);
+          // Clipboard failed, try download
+          try {
+            const blob = new Blob([zpl], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `label.zpl`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
 
-          onPrintComplete?.(true);
-          return true;
+            alert(
+              'ZPL file downloaded!\n\n' +
+              'Open Downloads folder and tap the .zpl file,\n' +
+              'then choose PrintConnect to print.'
+            );
+
+            onPrintComplete?.(true);
+            return true;
+          } catch {
+            onPrintComplete?.(false, 'Failed to copy or download ZPL');
+            return false;
+          }
         }
       }
 
