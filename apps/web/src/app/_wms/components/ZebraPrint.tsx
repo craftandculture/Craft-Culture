@@ -23,15 +23,20 @@ export interface ZebraPrintHandle {
 }
 
 /**
- * ZebraPrint - Component for printing to Zebra label printers via Zebra Browser Print
+ * Detect if running on a mobile device
+ */
+const isMobileDevice = () => {
+  if (typeof window === 'undefined') return false;
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+    navigator.userAgent
+  );
+};
+
+/**
+ * ZebraPrint - Component for printing to Zebra label printers
  *
- * Connects to Zebra Browser Print app running on TC27 scanner.
- * The app creates a local WebSocket connection to Bluetooth-paired printers.
- *
- * Setup required:
- * 1. Install "Zebra Browser Print" app on TC27 from Play Store
- * 2. Pair ZD421 printer to TC27 via Bluetooth
- * 3. Open app and ensure printer is connected
+ * On desktop: Uses Zebra Browser Print app
+ * On mobile (TC27): Uses system print dialog or downloadable ZPL
  *
  * @example
  *   const printRef = useRef<ZebraPrintHandle>(null);
@@ -50,16 +55,33 @@ const ZebraPrint = ({
   const [isConnected, setIsConnected] = useState(false);
   const [printerName, setPrinterName] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
   const deviceRef = useRef<unknown>(null);
+
+  // Check if mobile on mount
+  useEffect(() => {
+    setIsMobile(isMobileDevice());
+  }, []);
 
   // Check for Zebra Browser Print SDK availability
   const checkConnection = useCallback(async () => {
+    // On mobile, we use a different print mechanism
+    if (isMobileDevice()) {
+      // Mobile devices use system print or ZPL download
+      // Mark as "connected" since we can always generate ZPL
+      setIsConnected(true);
+      setPrinterName('Mobile Print (System)');
+      setError(null);
+      onConnectionChange?.(true);
+      return;
+    }
+
     try {
       // Zebra Browser Print exposes BrowserPrint on window
       const BrowserPrint = (window as unknown as { BrowserPrint?: ZebraBrowserPrint }).BrowserPrint;
 
       if (!BrowserPrint) {
-        setError('Zebra Browser Print not available. Install the app on your device.');
+        setError('Zebra Browser Print not available. Use Browser Print button for mobile.');
         setIsConnected(false);
         onConnectionChange?.(false);
         return;
@@ -106,6 +128,31 @@ const ZebraPrint = ({
   // Print function exposed via ref
   const print = useCallback(
     async (zpl: string): Promise<boolean> => {
+      // On mobile, download ZPL file for use with Zebra Print Connect
+      if (isMobileDevice()) {
+        try {
+          // Create a blob and download link
+          const blob = new Blob([zpl], { type: 'application/octet-stream' });
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = `label-${Date.now()}.zpl`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          URL.revokeObjectURL(url);
+
+          // Show instruction
+          alert('ZPL file downloaded. Open with Zebra Print Connect or PrintConnect app to print.');
+          onPrintComplete?.(true);
+          return true;
+        } catch {
+          onPrintComplete?.(false, 'Failed to generate ZPL file');
+          return false;
+        }
+      }
+
+      // Desktop: use Zebra Browser Print
       const device = deviceRef.current as ZebraDevice | null;
 
       if (!device) {
@@ -151,9 +198,18 @@ const ZebraPrint = ({
       />
       <div className="flex flex-col">
         <Typography variant="bodyXs" className="font-medium">
-          {isConnected ? printerName || 'Printer Connected' : 'Printer Offline'}
+          {isMobile
+            ? 'Mobile Print Ready'
+            : isConnected
+              ? printerName || 'Printer Connected'
+              : 'Printer Offline'}
         </Typography>
-        {error && (
+        {isMobile && (
+          <Typography variant="bodyXs" colorRole="muted">
+            Downloads ZPL for PrintConnect
+          </Typography>
+        )}
+        {!isMobile && error && (
           <Typography variant="bodyXs" colorRole="muted" className="text-red-500">
             {error}
           </Typography>
