@@ -243,46 +243,16 @@ ${pdfText}
 
         extractedData = result.object;
       } else {
-        // Scanned PDF or text extraction failed - use vision on PDF
-        logger.info('[ZohoImport] Using vision for PDF (text extraction insufficient)', {
+        // Scanned PDF or text extraction failed
+        logger.warn('[ZohoImport] PDF text extraction insufficient', {
           textLength: pdfText?.length ?? 0,
         });
 
-        const messages: CoreMessage[] = [
-          {
-            role: 'user',
-            content: [
-              {
-                type: 'text',
-                text: `Extract all wine line items from this supplier invoice PDF.
-
-For each product, extract:
-- Full product name (producer + wine + region)
-- Vintage year
-- Quantity (cases)
-- Case configuration (bottles per case)
-- Bottle size (ml)
-- LWIN code if visible
-
-This is a TRANSCRIPTION task. Copy product names exactly as written.`,
-              },
-              {
-                type: 'file',
-                data: file,
-                mimeType: 'application/pdf',
-              },
-            ],
-          },
-        ];
-
-        const result = await generateObject({
-          model: openai('gpt-4o'),
-          schema: extractedInvoiceSchema,
-          system: systemPrompt,
-          messages,
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message:
+            'Could not extract text from this PDF. Please export as PNG (Preview: File → Export → PNG) and upload the image instead.',
         });
-
-        extractedData = result.object;
       }
     } else {
       throw new TRPCError({
