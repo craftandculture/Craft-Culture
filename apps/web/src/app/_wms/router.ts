@@ -43,6 +43,7 @@ import adminRebuildStockFromMovements from './controller/adminRebuildStockFromMo
 import adminReceiveShipment from './controller/adminReceiveShipment';
 import adminReconcileStock from './controller/adminReconcileStock';
 import adminReleaseReservation from './controller/adminReleaseReservation';
+import adminRemoveOrderFromBatch from './controller/adminRemoveOrderFromBatch';
 import adminRepack from './controller/adminRepack';
 import adminReserveStock from './controller/adminReserveStock';
 import adminResolvePartnerRequest from './controller/adminResolvePartnerRequest';
@@ -129,6 +130,7 @@ const dispatchRouter = createTRPCRouter({
   getOne: adminGetDispatchBatch,
   addOrders: adminAddOrdersToBatch,
   addZohoOrders: adminAddZohoOrdersToBatch,
+  removeOrder: adminRemoveOrderFromBatch,
   updateStatus: adminUpdateBatchStatus,
 });
 

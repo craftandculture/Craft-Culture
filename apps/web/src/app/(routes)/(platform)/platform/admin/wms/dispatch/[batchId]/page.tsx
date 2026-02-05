@@ -7,6 +7,7 @@ import {
   IconLoader2,
   IconPackage,
   IconPlus,
+  IconTrash,
   IconTruck,
   IconX,
 } from '@tabler/icons-react';
@@ -100,6 +101,14 @@ const WMSDispatchBatchDetailPage = () => {
   // Update status mutation
   const updateStatusMutation = useMutation({
     ...api.wms.admin.dispatch.updateStatus.mutationOptions(),
+    onSuccess: () => {
+      void queryClient.invalidateQueries();
+    },
+  });
+
+  // Remove order mutation
+  const removeOrderMutation = useMutation({
+    ...api.wms.admin.dispatch.removeOrder.mutationOptions(),
     onSuccess: () => {
       void queryClient.invalidateQueries();
     },
@@ -313,15 +322,32 @@ const WMSDispatchBatchDetailPage = () => {
                         Added {new Date(order.addedAt).toLocaleDateString()}
                       </Typography>
                     </div>
-                    {order.deliveryNoteId ? (
-                      <span className="rounded bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300">
-                        DN assigned
-                      </span>
-                    ) : (
-                      <span className="rounded bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
-                        Pending DN
-                      </span>
-                    )}
+                    <div className="flex items-center gap-2">
+                      {order.deliveryNoteId ? (
+                        <span className="rounded bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300">
+                          DN assigned
+                        </span>
+                      ) : (
+                        <span className="rounded bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
+                          Pending DN
+                        </span>
+                      )}
+                      {canAddOrders && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          type="button"
+                          onClick={() => removeOrderMutation.mutate({ batchId, orderId: order.orderId })}
+                          disabled={removeOrderMutation.isPending}
+                        >
+                          <Icon
+                            icon={removeOrderMutation.isPending ? IconLoader2 : IconTrash}
+                            size="sm"
+                            className={removeOrderMutation.isPending ? 'animate-spin' : 'text-red-500'}
+                          />
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -401,12 +427,18 @@ const WMSDispatchBatchDetailPage = () => {
 
       {/* Add Orders Modal */}
       {showAddOrders && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <Card className="w-full max-w-lg max-h-[80vh] overflow-hidden flex flex-col">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          onClick={() => setShowAddOrders(false)}
+        >
+          <Card
+            className="w-full max-w-lg max-h-[80vh] overflow-hidden flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
             <CardContent className="p-4 border-b border-border-primary">
               <div className="flex items-center justify-between">
                 <Typography variant="headingSm">Add Orders to Batch</Typography>
-                <Button variant="ghost" size="sm" onClick={() => setShowAddOrders(false)}>
+                <Button variant="ghost" size="sm" type="button" onClick={() => setShowAddOrders(false)}>
                   <Icon icon={IconX} size="sm" />
                 </Button>
               </div>
@@ -467,7 +499,7 @@ const WMSDispatchBatchDetailPage = () => {
             </div>
             <CardContent className="p-4 border-t border-border-primary">
               <div className="flex gap-3">
-                <Button variant="outline" className="flex-1" onClick={() => setShowAddOrders(false)}>
+                <Button variant="outline" className="flex-1" type="button" onClick={() => setShowAddOrders(false)}>
                   Cancel
                 </Button>
                 <Button
