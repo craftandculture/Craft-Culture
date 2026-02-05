@@ -54,8 +54,8 @@ const adminGetStockByOwner = adminProcedure
       const [owner] = await db
         .select({
           id: partners.id,
-          name: partners.companyName,
-          type: partners.partnerType,
+          name: partners.businessName,
+          type: partners.type,
         })
         .from(partners)
         .where(eq(partners.id, ownerId));
