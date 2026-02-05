@@ -122,7 +122,8 @@ const WMSPickListDetailPage = () => {
         setScannedBarcodes((prev) => new Set(prev).add(value.toUpperCase()));
       } catch (err) {
         console.log('[SCAN] Location lookup error:', err);
-        setLocationError('Location not found');
+        const errorMsg = err instanceof Error ? err.message : 'Location not found';
+        setLocationError(errorMsg);
       } finally {
         setIsLookingUpLocation(false);
         setScanInput('');
