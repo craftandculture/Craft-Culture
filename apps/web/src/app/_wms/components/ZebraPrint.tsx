@@ -33,6 +33,40 @@ const isMobileDevice = () => {
 };
 
 /**
+ * Detect if running in Zebra Enterprise Browser
+ */
+const isEnterpriseBrowser = () => {
+  if (typeof window === 'undefined') return false;
+  return !!(window as unknown as { EB?: unknown }).EB ||
+    !!(window as unknown as { Zebra?: unknown }).Zebra ||
+    navigator.userAgent.includes('EnterpriseBrowser');
+};
+
+/**
+ * Zebra Enterprise Browser API types
+ */
+interface ZebraEBPrinter {
+  connect: (mac: string, callback: (result: { status: string }) => void) => void;
+  disconnect: (callback: () => void) => void;
+  send: (data: string, callback: (result: { status: string }) => void) => void;
+  searchPrinters: (options: { connectionType: string }, callback: (printers: Array<{ address: string; friendlyName: string }>) => void) => void;
+}
+
+interface ZebraEB {
+  Printer: ZebraEBPrinter;
+}
+
+/**
+ * Get Zebra Enterprise Browser API
+ */
+const getEBApi = (): ZebraEB | null => {
+  if (typeof window === 'undefined') return null;
+  return (window as unknown as { EB?: ZebraEB }).EB ||
+    (window as unknown as { Zebra?: ZebraEB }).Zebra ||
+    null;
+};
+
+/**
  * ZebraPrint - Component for printing to Zebra label printers
  *
  * On desktop: Uses Zebra Browser Print app
@@ -56,23 +90,47 @@ const ZebraPrint = ({
   const [printerName, setPrinterName] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isMobile, setIsMobile] = useState(false);
+  const [isEB, setIsEB] = useState(false);
+  const [ebPrinterAddress, setEbPrinterAddress] = useState<string | null>(null);
   const deviceRef = useRef<unknown>(null);
 
-  // Check if mobile on mount
+  // Check if mobile/EB on mount
   useEffect(() => {
     setIsMobile(isMobileDevice());
+    setIsEB(isEnterpriseBrowser());
   }, []);
 
   // Check for Zebra Browser Print SDK availability
   const checkConnection = useCallback(async () => {
-    // On mobile, we use a different print mechanism
+    // Check for Enterprise Browser first
+    if (isEnterpriseBrowser()) {
+      const eb = getEBApi();
+      if (eb?.Printer) {
+        // Search for Bluetooth printers
+        eb.Printer.searchPrinters({ connectionType: 'bluetooth' }, (printers) => {
+          if (printers && printers.length > 0) {
+            const printer = printers[0];
+            setEbPrinterAddress(printer.address);
+            setPrinterName(printer.friendlyName || 'Zebra Printer');
+            setIsConnected(true);
+            setError(null);
+            onConnectionChange?.(true);
+          } else {
+            setError('No Bluetooth printer found. Pair ZD421 first.');
+            setIsConnected(false);
+            onConnectionChange?.(false);
+          }
+        });
+        return;
+      }
+    }
+
+    // On mobile Chrome, show manual instructions
     if (isMobileDevice()) {
-      // Mobile devices use system print or ZPL download
-      // Mark as "connected" since we can always generate ZPL
-      setIsConnected(true);
-      setPrinterName('Mobile Print (System)');
-      setError(null);
-      onConnectionChange?.(true);
+      setIsConnected(false);
+      setPrinterName(null);
+      setError('Use Enterprise Browser for direct printing');
+      onConnectionChange?.(false);
       return;
     }
 
@@ -81,7 +139,7 @@ const ZebraPrint = ({
       const BrowserPrint = (window as unknown as { BrowserPrint?: ZebraBrowserPrint }).BrowserPrint;
 
       if (!BrowserPrint) {
-        setError('Zebra Browser Print not available. Use Browser Print button for mobile.');
+        setError('Zebra Browser Print not available.');
         setIsConnected(false);
         onConnectionChange?.(false);
         return;
@@ -128,49 +186,46 @@ const ZebraPrint = ({
   // Print function exposed via ref
   const print = useCallback(
     async (zpl: string): Promise<boolean> => {
-      // On mobile, copy ZPL to clipboard and show instructions
-      if (isMobileDevice()) {
-        try {
-          // Copy to clipboard
-          await navigator.clipboard.writeText(zpl);
-
-          // Show simple alert with instructions
-          alert(
-            'ZPL copied to clipboard!\n\n' +
-            '1. Open PrintConnect app\n' +
-            '2. Select your ZD421 printer\n' +
-            '3. Tap "Send Data" or "Passthrough"\n' +
-            '4. Paste and send'
-          );
-
-          onPrintComplete?.(true);
-          return true;
-        } catch {
-          // Clipboard failed, try download
-          try {
-            const blob = new Blob([zpl], { type: 'text/plain' });
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = `label.zpl`;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            URL.revokeObjectURL(url);
-
-            alert(
-              'ZPL file downloaded!\n\n' +
-              'Open Downloads folder and tap the .zpl file,\n' +
-              'then choose PrintConnect to print.'
-            );
-
-            onPrintComplete?.(true);
-            return true;
-          } catch {
-            onPrintComplete?.(false, 'Failed to copy or download ZPL');
-            return false;
-          }
+      // Enterprise Browser - use native Zebra API
+      if (isEnterpriseBrowser() && ebPrinterAddress) {
+        const eb = getEBApi();
+        if (eb?.Printer) {
+          return new Promise((resolve) => {
+            // Connect to printer
+            eb.Printer.connect(ebPrinterAddress, (connectResult) => {
+              if (connectResult.status === 'connected' || connectResult.status === 'PRINTER_STATUS_SUCCESS') {
+                // Send ZPL
+                eb.Printer.send(zpl, (sendResult) => {
+                  eb.Printer.disconnect(() => {
+                    if (sendResult.status === 'sent' || sendResult.status === 'PRINTER_STATUS_SUCCESS') {
+                      onPrintComplete?.(true);
+                      resolve(true);
+                    } else {
+                      onPrintComplete?.(false, `Print failed: ${sendResult.status}`);
+                      resolve(false);
+                    }
+                  });
+                });
+              } else {
+                onPrintComplete?.(false, `Connect failed: ${connectResult.status}`);
+                resolve(false);
+              }
+            });
+          });
         }
+      }
+
+      // On mobile Chrome without EB, show instructions
+      if (isMobileDevice()) {
+        alert(
+          'For direct printing on TC27:\n\n' +
+          '1. Open Enterprise Browser (EB) app\n' +
+          '2. Go to warehouse.craftculture.xyz\n' +
+          '3. Print from there\n\n' +
+          'Enterprise Browser has direct Zebra printer support.'
+        );
+        onPrintComplete?.(false, 'Use Enterprise Browser for printing');
+        return false;
       }
 
       // Desktop: use Zebra Browser Print
@@ -195,7 +250,7 @@ const ZebraPrint = ({
         );
       });
     },
-    [onPrintComplete],
+    [onPrintComplete, ebPrinterAddress],
   );
 
   // Expose print function globally for parent components
@@ -215,22 +270,31 @@ const ZebraPrint = ({
       <Icon
         icon={isConnected ? IconPrinter : IconPrinterOff}
         size="md"
-        className={isConnected ? 'text-emerald-500' : 'text-red-500'}
+        className={isConnected ? 'text-emerald-500' : isEB || isMobile ? 'text-amber-500' : 'text-red-500'}
       />
       <div className="flex flex-col">
         <Typography variant="bodyXs" className="font-medium">
-          {isMobile
-            ? 'Mobile Print Ready'
-            : isConnected
-              ? printerName || 'Printer Connected'
-              : 'Printer Offline'}
+          {isEB && isConnected
+            ? printerName || 'EB: Printer Ready'
+            : isEB
+              ? 'EB: Searching...'
+              : isMobile
+                ? 'Use Enterprise Browser'
+                : isConnected
+                  ? printerName || 'Printer Connected'
+                  : 'Printer Offline'}
         </Typography>
-        {isMobile && (
+        {isMobile && !isEB && (
           <Typography variant="bodyXs" colorRole="muted">
-            Downloads ZPL for PrintConnect
+            Open site in EB app for printing
           </Typography>
         )}
-        {!isMobile && error && (
+        {isEB && !isConnected && (
+          <Typography variant="bodyXs" colorRole="muted">
+            Pair ZD421 via Bluetooth
+          </Typography>
+        )}
+        {!isMobile && !isEB && error && (
           <Typography variant="bodyXs" colorRole="muted" className="text-red-500">
             {error}
           </Typography>
