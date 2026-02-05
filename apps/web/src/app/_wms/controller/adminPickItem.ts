@@ -104,8 +104,16 @@ const adminPickItem = adminProcedure
         ),
       );
 
-    // Validate stock availability (if stock exists at location)
-    if (stock && stock.availableCases < pickedQuantity) {
+    // Stock must exist at this location
+    if (!stock) {
+      throw new TRPCError({
+        code: 'NOT_FOUND',
+        message: `No stock found at this location for ${pickListItem.productName}`,
+      });
+    }
+
+    // Validate stock availability
+    if (stock.availableCases < pickedQuantity) {
       throw new TRPCError({
         code: 'BAD_REQUEST',
         message: `Insufficient stock. Available: ${stock.availableCases}, requested: ${pickedQuantity}`,
@@ -128,16 +136,14 @@ const adminPickItem = adminProcedure
       .returning();
 
     // Update stock (decrement available)
-    if (stock) {
-      await db
-        .update(wmsStock)
-        .set({
-          quantityCases: sql`${wmsStock.quantityCases} - ${pickedQuantity}`,
-          availableCases: sql`${wmsStock.availableCases} - ${pickedQuantity}`,
-          updatedAt: new Date(),
-        })
-        .where(eq(wmsStock.id, stock.id));
-    }
+    await db
+      .update(wmsStock)
+      .set({
+        quantityCases: sql`${wmsStock.quantityCases} - ${pickedQuantity}`,
+        availableCases: sql`${wmsStock.availableCases} - ${pickedQuantity}`,
+        updatedAt: new Date(),
+      })
+      .where(eq(wmsStock.id, stock.id));
 
     // Record movement
     const movementNumber = await generateMovementNumber();
