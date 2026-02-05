@@ -53,7 +53,7 @@ const NewDispatchBatchPage = () => {
 
   const filteredDistributors = partners?.filter((partner) =>
     searchQuery
-      ? partner.companyName?.toLowerCase().includes(searchQuery.toLowerCase())
+      ? partner.name?.toLowerCase().includes(searchQuery.toLowerCase())
       : true,
   );
 
@@ -131,13 +131,8 @@ const NewDispatchBatchPage = () => {
                         </div>
                         <div>
                           <Typography variant="bodySm" className="font-semibold">
-                            {distributor.companyName}
+                            {distributor.name}
                           </Typography>
-                          {distributor.contactName && (
-                            <Typography variant="bodyXs" colorRole="muted">
-                              {distributor.contactName}
-                            </Typography>
-                          )}
                         </div>
                       </div>
                       <div
