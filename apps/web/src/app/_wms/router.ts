@@ -14,6 +14,7 @@ import adminCreateSpecialLocation from './controller/adminCreateSpecialLocation'
 import adminDeduplicateStock from './controller/adminDeduplicateStock';
 import adminDeleteReceivingDraft from './controller/adminDeleteReceivingDraft';
 import adminDeleteStockRecord from './controller/adminDeleteStockRecord';
+import adminGenerateDeliveryNote from './controller/adminGenerateDeliveryNote';
 import adminGetAllStockRecords from './controller/adminGetAllStockRecords';
 import adminGetBayTotems from './controller/adminGetBayTotems';
 import adminGetCaseByBarcode from './controller/adminGetCaseByBarcode';
@@ -132,6 +133,7 @@ const dispatchRouter = createTRPCRouter({
   addZohoOrders: adminAddZohoOrdersToBatch,
   removeOrder: adminRemoveOrderFromBatch,
   updateStatus: adminUpdateBatchStatus,
+  generateDeliveryNote: adminGenerateDeliveryNote,
 });
 
 const adminRouter = createTRPCRouter({
