@@ -8,6 +8,7 @@ import { createTRPCRouter } from '@/lib/trpc/trpc';
 
 import adminApproveSalesOrders from './controller/adminApproveSalesOrders';
 import adminCreatePickListFromSalesOrder from './controller/adminCreatePickListFromSalesOrder';
+import adminGetPickedOrdersForDispatch from './controller/adminGetPickedOrdersForDispatch';
 import adminGetSalesOrder from './controller/adminGetSalesOrder';
 import adminListSalesOrders from './controller/adminListSalesOrders';
 import adminSyncSalesOrders from './controller/adminSyncSalesOrders';
@@ -18,6 +19,7 @@ const zohoSalesOrdersRouter = createTRPCRouter({
   approve: adminApproveSalesOrders,
   createPickList: adminCreatePickListFromSalesOrder,
   sync: adminSyncSalesOrders,
+  getPickedForDispatch: adminGetPickedOrdersForDispatch,
 });
 
 export default zohoSalesOrdersRouter;

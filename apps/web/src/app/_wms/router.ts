@@ -1,6 +1,7 @@
 import { createTRPCRouter } from '@/lib/trpc/trpc';
 
 import adminAddOrdersToBatch from './controller/adminAddOrdersToBatch';
+import adminAddZohoOrdersToBatch from './controller/adminAddZohoOrdersToBatch';
 import adminAssignPickList from './controller/adminAssignPickList';
 import adminAutoFixStock from './controller/adminAutoFixStock';
 import adminBatchCreateLocations from './controller/adminBatchCreateLocations';
@@ -127,6 +128,7 @@ const dispatchRouter = createTRPCRouter({
   getMany: adminGetDispatchBatches,
   getOne: adminGetDispatchBatch,
   addOrders: adminAddOrdersToBatch,
+  addZohoOrders: adminAddZohoOrdersToBatch,
   updateStatus: adminUpdateBatchStatus,
 });
 
