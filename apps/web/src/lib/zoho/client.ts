@@ -70,9 +70,11 @@ const refreshAccessToken = async (): Promise<string> => {
     throw new Error('Zoho credentials not configured');
   }
 
-  // Log credentials being used (first/last chars only for security)
-  const clientId = serverConfig.zohoClientId!;
-  const refreshToken = serverConfig.zohoRefreshToken!;
+  // Trim all credentials to remove any trailing newlines from env vars
+  const clientId = serverConfig.zohoClientId!.trim();
+  const clientSecret = serverConfig.zohoClientSecret!.trim();
+  const refreshToken = serverConfig.zohoRefreshToken!.trim();
+
   logger.info('Zoho token refresh attempt', {
     clientIdPreview: `${clientId.slice(0, 10)}...${clientId.slice(-4)}`,
     refreshTokenPreview: `${refreshToken.slice(0, 10)}...${refreshToken.slice(-4)}`,
@@ -81,7 +83,7 @@ const refreshAccessToken = async (): Promise<string> => {
   const params = new URLSearchParams({
     grant_type: 'refresh_token',
     client_id: clientId,
-    client_secret: serverConfig.zohoClientSecret!,
+    client_secret: clientSecret,
     refresh_token: refreshToken,
   });
 
