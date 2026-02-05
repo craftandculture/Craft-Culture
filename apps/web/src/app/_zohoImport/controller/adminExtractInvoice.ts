@@ -1,8 +1,7 @@
-import { createOpenAI } from '@ai-sdk/openai';
+import { createAnthropic } from '@ai-sdk/anthropic';
 import { TRPCError } from '@trpc/server';
 import { type CoreMessage, generateObject } from 'ai';
 import { sql } from 'drizzle-orm';
-import pdfParse from 'pdf-parse';
 import { z } from 'zod';
 
 import db from '@/database/client';
@@ -128,22 +127,22 @@ const adminExtractInvoice = adminProcedure.input(extractInvoiceSchema).mutation(
   // Strip data URL prefix if present
   const file = rawFile.includes(',') ? rawFile.split(',')[1] ?? rawFile : rawFile;
 
-  const openaiKey = process.env.OPENAI_API_KEY;
+  const anthropicKey = process.env.ANTHROPIC_API_KEY;
 
   logger.info('[ZohoImport] Starting invoice extraction', {
-    hasKey: !!openaiKey,
+    hasKey: !!anthropicKey,
     fileType,
     supplierName,
   });
 
-  if (!openaiKey) {
+  if (!anthropicKey) {
     throw new TRPCError({
       code: 'INTERNAL_SERVER_ERROR',
-      message: 'AI extraction is not configured. OPENAI_API_KEY environment variable is not set.',
+      message: 'AI extraction is not configured. ANTHROPIC_API_KEY environment variable is not set.',
     });
   }
 
-  const openai = createOpenAI({ apiKey: openaiKey });
+  const anthropic = createAnthropic({ apiKey: anthropicKey });
 
   const systemPrompt = `You are a precise OCR system that extracts wine product data from supplier invoices.
 
@@ -167,6 +166,7 @@ Focus on extracting:
     let extractedData: z.infer<typeof extractedInvoiceSchema>;
 
     if (fileType.startsWith('image/')) {
+      // Image file - use Claude vision
       const messages: CoreMessage[] = [
         {
           role: 'user',
@@ -194,7 +194,7 @@ This is a TRANSCRIPTION task. Copy product names exactly as written.`,
       ];
 
       const result = await generateObject({
-        model: openai('gpt-4o'),
+        model: anthropic('claude-sonnet-4-20250514'),
         schema: extractedInvoiceSchema,
         system: systemPrompt,
         messages,
@@ -202,31 +202,16 @@ This is a TRANSCRIPTION task. Copy product names exactly as written.`,
 
       extractedData = result.object;
     } else if (fileType === 'application/pdf') {
-      const pdfBuffer = Buffer.from(file, 'base64');
-      let pdfText = '';
+      // PDF file - use Claude vision with native PDF support
+      logger.info('[ZohoImport] Processing PDF with Claude vision');
 
-      try {
-        const pdfData = await pdfParse(pdfBuffer);
-        pdfText = pdfData.text;
-
-        logger.info('[ZohoImport] PDF text extracted', {
-          pages: pdfData.numpages,
-          textLength: pdfText.length,
-        });
-      } catch (parseError) {
-        logger.warn('[ZohoImport] pdf-parse failed', {
-          error: parseError instanceof Error ? parseError.message : 'Unknown error',
-        });
-      }
-
-      if (pdfText && pdfText.trim().length >= 50) {
-        // Digital PDF with extractable text - use text extraction
-        const result = await generateObject({
-          model: openai('gpt-4o'),
-          schema: extractedInvoiceSchema,
-          system: systemPrompt,
-          maxTokens: 16384,
-          prompt: `Extract all wine line items from this supplier invoice.
+      const messages: CoreMessage[] = [
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'text',
+              text: `Extract all wine line items from this supplier invoice PDF.
 
 For each product, extract:
 - Full product name (producer + wine + region)
@@ -236,24 +221,25 @@ For each product, extract:
 - Bottle size (ml, default 750)
 - LWIN code if visible
 
---- INVOICE TEXT ---
-${pdfText}
---- END INVOICE ---`,
-        });
+This is a TRANSCRIPTION task. Copy product names exactly as written. Extract ALL items from all pages.`,
+            },
+            {
+              type: 'file',
+              data: file,
+              mimeType: 'application/pdf',
+            },
+          ],
+        },
+      ];
 
-        extractedData = result.object;
-      } else {
-        // Scanned PDF or text extraction failed
-        logger.warn('[ZohoImport] PDF text extraction insufficient', {
-          textLength: pdfText?.length ?? 0,
-        });
+      const result = await generateObject({
+        model: anthropic('claude-sonnet-4-20250514'),
+        schema: extractedInvoiceSchema,
+        system: systemPrompt,
+        messages,
+      });
 
-        throw new TRPCError({
-          code: 'BAD_REQUEST',
-          message:
-            'Could not extract text from this PDF. Please export as PNG (Preview: File → Export → PNG) and upload the image instead.',
-        });
-      }
+      extractedData = result.object;
     } else {
       throw new TRPCError({
         code: 'BAD_REQUEST',
