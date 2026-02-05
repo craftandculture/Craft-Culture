@@ -4,6 +4,7 @@ import { z } from 'zod';
 
 import db from '@/database/client';
 import {
+  wmsDispatchBatchOrders,
   wmsDispatchBatches,
   zohoSalesOrderItems,
   zohoSalesOrders,
@@ -87,6 +88,15 @@ const adminAddZohoOrdersToBatch = adminProcedure
         updatedAt: new Date(),
       })
       .where(inArray(zohoSalesOrders.id, availableOrders.map((o) => o.id)));
+
+    // Insert records into dispatch batch orders table for tracking
+    await db.insert(wmsDispatchBatchOrders).values(
+      availableOrders.map((order) => ({
+        batchId,
+        orderId: order.id,
+        orderNumber: order.salesOrderNumber,
+      })),
+    );
 
     // Calculate total cases from order items
     const orderCases = await db
