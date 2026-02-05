@@ -35,31 +35,9 @@ const WMSDashboardContent = () => {
   const api = useTRPC();
 
   // Fetch comprehensive overview (will use prefetched data)
-  const {
-    data: overview,
-    isLoading: overviewLoading,
-    error: overviewError,
-    isFetching,
-    isStale,
-    dataUpdatedAt,
-    status,
-    fetchStatus,
-  } = useQuery({
+  const { data: overview } = useQuery({
     ...api.wms.admin.stock.getOverview.queryOptions({}),
   });
-
-  // Debug logging - comprehensive
-  console.log('[WMS Dashboard] Query state:', {
-    status,
-    fetchStatus,
-    isLoading: overviewLoading,
-    isFetching,
-    isStale,
-    dataUpdatedAt: dataUpdatedAt ? new Date(dataUpdatedAt).toISOString() : null,
-    hasData: !!overview,
-    errorMessage: overviewError?.message,
-  });
-  console.log('[WMS Dashboard] overview data:', JSON.stringify(overview, null, 2));
 
   // Fetch recent movements (will use prefetched data)
   const { data: movements } = useQuery({
@@ -88,35 +66,9 @@ const WMSDashboardContent = () => {
   const pendingRequestCount = partnerRequests?.summary?.pendingCount ?? 0;
   const hasReconcileIssues = reconcileData?.summary && !reconcileData.summary.isReconciled;
 
-  // Show debug info if there's an error or if data seems wrong
-  const showDebug = overviewError || (overview && overview.summary?.totalCases === 0 && overview.locations?.total === 0);
-
   return (
     <div className="container mx-auto max-w-lg px-4 py-6">
       <div className="space-y-4">
-        {/* Debug Banner */}
-        {showDebug && (
-          <Card className="border-yellow-500 bg-yellow-50 dark:border-yellow-600 dark:bg-yellow-900/20">
-            <CardContent className="p-3">
-              <Typography variant="bodyXs" className="font-mono text-yellow-800 dark:text-yellow-300">
-                <span className="block font-bold">Debug Info (SSR disabled):</span>
-                <span className="block">Client status: {status}, fetchStatus: {fetchStatus}</span>
-                <span className="block">Loading: {overviewLoading ? 'yes' : 'no'}, Fetching: {isFetching ? 'yes' : 'no'}</span>
-                <span className="block">Client updated: {dataUpdatedAt ? new Date(dataUpdatedAt).toLocaleTimeString() : 'never'}</span>
-                {overviewError && <span className="block text-red-600">Error: {overviewError.message}</span>}
-                {!overviewError && overview && (
-                  <>
-                    <span className="block mt-1 font-bold">Server Response:</span>
-                    <span className="block">Server time: {(overview as { _debug?: { serverTime?: string } })._debug?.serverTime ?? 'N/A'}</span>
-                    <span className="block">Query time: {(overview as { _debug?: { queryTimeMs?: number } })._debug?.queryTimeMs ?? 'N/A'}ms</span>
-                    <span className="block mt-1">Raw data: cases={overview.summary?.totalCases}, products={overview.summary?.uniqueProducts}, locations={overview.locations?.total}</span>
-                  </>
-                )}
-              </Typography>
-            </CardContent>
-          </Card>
-        )}
-
         {/* Header */}
         <div className="flex items-center justify-between">
           <Typography variant="headingLg">
