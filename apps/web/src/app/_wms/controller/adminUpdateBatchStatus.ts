@@ -65,7 +65,7 @@ const adminUpdateBatchStatus = adminProcedure
     // Set dispatch info if dispatching
     if (status === 'dispatched') {
       updateData.dispatchedAt = new Date();
-      updateData.dispatchedBy = ctx.session.user.id;
+      updateData.dispatchedBy = ctx.user.id;
     }
 
     // Set delivered info if delivered

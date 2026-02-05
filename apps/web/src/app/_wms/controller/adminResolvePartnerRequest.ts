@@ -49,7 +49,7 @@ const adminResolvePartnerRequest = adminProcedure
       .set({
         status,
         adminNotes,
-        resolvedBy: ctx.session.user.id,
+        resolvedBy: ctx.user.id,
         resolvedAt: new Date(),
         updatedAt: new Date(),
       })
