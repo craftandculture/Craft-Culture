@@ -30,14 +30,8 @@ const adminPickItem = adminProcedure
   .mutation(async ({ input, ctx }) => {
     const { pickListItemId, pickedFromLocationId, pickedQuantity, notes } = input;
 
-    // Ensure user is authenticated
-    const userId = ctx.session?.user?.id;
-    if (!userId) {
-      throw new TRPCError({
-        code: 'UNAUTHORIZED',
-        message: 'You must be logged in to pick items',
-      });
-    }
+    // Get user ID from context (adminProcedure guarantees ctx.user exists)
+    const userId = ctx.user.id;
 
     // Get pick list item
     const [pickListItem] = await db
