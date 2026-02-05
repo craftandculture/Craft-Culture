@@ -15,8 +15,6 @@ import { getStockOverviewSchema } from '../schemas/stockQuerySchema';
 const adminGetStockOverview = adminProcedure
   .input(getStockOverviewSchema)
   .query(async () => {
-    const startTime = Date.now();
-
     // Prepare date constants for queries (as ISO strings for SQL compatibility)
     const now = new Date();
     const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString();
@@ -108,17 +106,8 @@ const adminGetStockOverview = adminProcedure
     const movementStats = movementStatsResult[0];
     const receivingStock = receivingStockResult[0];
 
-    console.log('[WMS] adminGetStockOverview completed in', Date.now() - startTime, 'ms');
-    console.log('[WMS] stockStatsResult:', JSON.stringify(stockStatsResult));
-    console.log('[WMS] stockStats:', JSON.stringify(stockStats));
-    console.log('[WMS] stockByOwner:', JSON.stringify(stockByOwner));
-    console.log('[WMS] locationStatsResult:', JSON.stringify(locationStatsResult));
-    console.log('[WMS] locationStats:', JSON.stringify(locationStats));
-    console.log('[WMS] movementStats:', JSON.stringify(movementStats));
-
     const totalLocs = locationStats?.totalLocations ?? 0;
     const activeLocs = locationStats?.activeLocations ?? 0;
-    console.log('[WMS] totalLocs:', totalLocs, 'activeLocs:', activeLocs);
 
     return {
       summary: {
@@ -152,11 +141,6 @@ const adminGetStockOverview = adminProcedure
         casesInReceiving: receivingStock?.casesInReceiving ?? 0,
       },
       topOwners: stockByOwner,
-      // Debug: server timestamp to verify data freshness
-      _debug: {
-        serverTime: new Date().toISOString(),
-        queryTimeMs: Date.now() - startTime,
-      },
     };
   });
 
