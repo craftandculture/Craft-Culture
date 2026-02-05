@@ -93,34 +93,35 @@ const WMSPickListDetailPage = () => {
 
   // Handle scan/barcode input
   const handleScan = async (value: string) => {
-    console.log('handleScan called:', { value, scanStep, pickingItem: !!pickingItem });
+    console.log('[SCAN] handleScan called with:', value);
+    console.log('[SCAN] Current state:', { scanStep, pickingItem, scannedBarcodes: Array.from(scannedBarcodes) });
     setDuplicateScanError(null);
 
     // Check for duplicate scan
     if (scannedBarcodes.has(value.toUpperCase())) {
-      console.log('Duplicate scan detected:', value);
+      console.log('[SCAN] Duplicate barcode detected:', value);
       setDuplicateScanError(`Barcode already scanned: ${value}`);
       setScanInput('');
       return;
     }
 
     if (scanStep === 'location') {
+      console.log('[SCAN] Location scan step - looking up barcode:', value);
       // Look up location by barcode
       setIsLookingUpLocation(true);
       setLocationError(null);
-      console.log('Looking up location:', value);
       try {
         const result = await queryClient.fetchQuery(
           api.wms.admin.operations.getLocationByBarcode.queryOptions({ barcode: value }),
         );
-        console.log('Location found:', result);
+        console.log('[SCAN] Location found:', result);
         setPickedLocationId(result.location.id);
         setPickedLocationCode(result.location.locationCode);
         setScanStep('case');
         // Track scanned barcode
         setScannedBarcodes((prev) => new Set(prev).add(value.toUpperCase()));
       } catch (err) {
-        console.error('Location lookup error:', err);
+        console.log('[SCAN] Location lookup error:', err);
         setLocationError('Location not found');
       } finally {
         setIsLookingUpLocation(false);
@@ -130,27 +131,29 @@ const WMSPickListDetailPage = () => {
     }
 
     if (scanStep === 'case' && pickingItem) {
-      console.log('Verifying case barcode:', { value, lwin18: pickingItem.lwin18 });
+      console.log('[SCAN] Case scan step - verifying barcode:', value);
       // Verify case barcode matches the item's LWIN
       // Accept if it contains the LWIN or matches exactly
       const normalizedScan = value.replace(/-/g, '').toLowerCase();
       const normalizedLwin = pickingItem.lwin18.replace(/-/g, '').toLowerCase();
 
+      console.log('[SCAN] Comparing:', { normalizedScan, normalizedLwin, valueLength: value.length });
+
       if (normalizedScan.includes(normalizedLwin) || normalizedLwin.includes(normalizedScan) || value.length > 5) {
-        // For now, accept scan if it's reasonably long (barcode was scanned)
-        console.log('Case verified!');
+        // Accept scan if it's reasonably long (barcode was scanned)
+        console.log('[SCAN] Case barcode accepted!');
         setCaseVerified(true);
         // Track scanned barcode
         setScannedBarcodes((prev) => new Set(prev).add(value.toUpperCase()));
         setScanInput('');
       } else {
-        // Show error - wrong product
-        console.log('Case verification failed');
+        console.log('[SCAN] Case barcode rejected');
         setScanInput('');
       }
       return;
     }
 
+    console.log('[SCAN] No matching scan step, clearing input');
     setScanInput('');
   };
 
@@ -186,11 +189,33 @@ const WMSPickListDetailPage = () => {
 
   // Confirm pick
   const confirmPick = () => {
-    if (!pickingItem) return;
+    console.log('[CONFIRM] confirmPick called');
+    console.log('[CONFIRM] State:', {
+      pickingItem,
+      pickedLocationId,
+      caseVerified,
+      pickedQuantity
+    });
+
+    if (!pickingItem) {
+      console.log('[CONFIRM] No pickingItem, returning');
+      return;
+    }
 
     // Use scanned location or fall back to suggested
     const locationId = pickedLocationId ?? pickingItem.suggestedLocationId;
-    if (!locationId) return;
+    console.log('[CONFIRM] Location ID resolved to:', locationId);
+
+    if (!locationId) {
+      console.log('[CONFIRM] No locationId, returning');
+      return;
+    }
+
+    console.log('[CONFIRM] Calling mutation with:', {
+      pickListItemId: pickingItem.itemId,
+      pickedFromLocationId: locationId,
+      pickedQuantity: pickedQuantity,
+    });
 
     pickItemMutation.mutate({
       pickListItemId: pickingItem.itemId,
@@ -550,13 +575,25 @@ const WMSPickListDetailPage = () => {
               </Typography>
             )}
 
-            {/* Debug info */}
-            <div className="rounded bg-gray-100 p-2 text-xs font-mono dark:bg-gray-800">
-              <div>locationId: {pickedLocationId ?? 'null'}</div>
-              <div>locationCode: {pickedLocationCode || 'null'}</div>
-              <div>caseVerified: {caseVerified ? 'true' : 'false'}</div>
-              <div>scanStep: {scanStep}</div>
-            </div>
+            {/* Debug Panel */}
+            <Card className="border-yellow-500 bg-yellow-50 dark:bg-yellow-900/20">
+              <CardContent className="p-3">
+                <Typography variant="bodyXs" className="font-mono font-bold text-yellow-700 dark:text-yellow-400">
+                  DEBUG STATE
+                </Typography>
+                <div className="mt-2 space-y-1 font-mono text-xs text-yellow-800 dark:text-yellow-300">
+                  <div>scanStep: {scanStep}</div>
+                  <div>pickedLocationId: {pickedLocationId ?? 'null'}</div>
+                  <div>pickedLocationCode: {pickedLocationCode || 'empty'}</div>
+                  <div>caseVerified: {caseVerified ? 'YES' : 'NO'}</div>
+                  <div>pickedQuantity: {pickedQuantity}</div>
+                  <div>pickingItem: {pickingItem ? pickingItem.itemId : 'null'}</div>
+                  <div>Button disabled: {(!pickedLocationId || !caseVerified) ? 'YES' : 'NO'}</div>
+                  <div>Mutation pending: {pickItemMutation.isPending ? 'YES' : 'NO'}</div>
+                  <div>Mutation error: {pickItemMutation.error?.message ?? 'none'}</div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         )}
 
