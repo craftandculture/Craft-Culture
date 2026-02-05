@@ -40,8 +40,8 @@ const WMSDispatchBatchDetailPage = () => {
     ...api.wms.admin.dispatch.getOne.queryOptions({ batchId }),
   });
 
-  // Fetch available orders for adding
-  const { data: availableOrders } = useQuery({
+  // Fetch available PCO orders for adding
+  const { data: availablePcoOrders } = useQuery({
     ...api.privateClientOrders.admin.getMany.queryOptions({
       status: 'cc_approved',
       limit: 50,
@@ -49,9 +49,47 @@ const WMSDispatchBatchDetailPage = () => {
     enabled: showAddOrders,
   });
 
-  // Add orders mutation
-  const addOrdersMutation = useMutation({
+  // Fetch available Zoho Sales Orders (picked, not yet in a batch)
+  const { data: availableZohoOrders } = useQuery({
+    ...api.zohoSalesOrders.getPickedForDispatch.queryOptions({
+      distributorName: batch?.distributorName ?? undefined,
+    }),
+    enabled: showAddOrders && !!batch?.distributorName,
+  });
+
+  // Combine available orders
+  const availableOrders = {
+    orders: [
+      ...(availableZohoOrders?.orders ?? []).map((o) => ({
+        id: o.id,
+        orderNumber: o.salesOrderNumber,
+        clientName: o.customerName,
+        totalCases: o.totalCases,
+        type: 'zoho' as const,
+      })),
+      ...(availablePcoOrders?.orders ?? []).map((o) => ({
+        id: o.id,
+        orderNumber: o.orderNumber,
+        clientName: o.clientName,
+        totalCases: o.totalCases,
+        type: 'pco' as const,
+      })),
+    ],
+  };
+
+  // Add PCO orders mutation
+  const addPcoOrdersMutation = useMutation({
     ...api.wms.admin.dispatch.addOrders.mutationOptions(),
+    onSuccess: () => {
+      void queryClient.invalidateQueries();
+      setShowAddOrders(false);
+      setSelectedOrderIds([]);
+    },
+  });
+
+  // Add Zoho orders mutation
+  const addZohoOrdersMutation = useMutation({
+    ...api.wms.admin.dispatch.addZohoOrders.mutationOptions(),
     onSuccess: () => {
       void queryClient.invalidateQueries();
       setShowAddOrders(false);
@@ -69,7 +107,29 @@ const WMSDispatchBatchDetailPage = () => {
 
   const handleAddOrders = () => {
     if (selectedOrderIds.length === 0) return;
-    addOrdersMutation.mutate({ batchId, orderIds: selectedOrderIds });
+
+    // Separate orders by type
+    const zohoOrderIds = selectedOrderIds.filter((id) =>
+      availableOrders.orders.find((o) => o.id === id && o.type === 'zoho'),
+    );
+    const pcoOrderIds = selectedOrderIds.filter((id) =>
+      availableOrders.orders.find((o) => o.id === id && o.type === 'pco'),
+    );
+
+    // Add Zoho orders if any
+    if (zohoOrderIds.length > 0) {
+      addZohoOrdersMutation.mutate({ batchId, orderIds: zohoOrderIds });
+    }
+    // Add PCO orders if any
+    if (pcoOrderIds.length > 0) {
+      addPcoOrdersMutation.mutate({ batchId, orderIds: pcoOrderIds });
+    }
+  };
+
+  const addOrdersMutation = {
+    isPending: addPcoOrdersMutation.isPending || addZohoOrdersMutation.isPending,
+    isError: addPcoOrdersMutation.isError || addZohoOrdersMutation.isError,
+    error: addPcoOrdersMutation.error ?? addZohoOrdersMutation.error,
   };
 
   const handleUpdateStatus = (status: 'picking' | 'staged' | 'dispatched' | 'delivered') => {
