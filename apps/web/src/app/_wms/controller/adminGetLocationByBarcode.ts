@@ -21,36 +21,55 @@ const adminGetLocationByBarcode = adminProcedure
   .query(async ({ input }) => {
     const { barcode } = input;
 
+    // Clean the barcode - trim whitespace and normalize
+    const cleanBarcode = barcode.trim();
+
+    console.log('[getLocationByBarcode] Input:', {
+      original: barcode,
+      cleaned: cleanBarcode,
+      length: cleanBarcode.length,
+      charCodes: cleanBarcode.split('').map(c => c.charCodeAt(0))
+    });
+
     // Find the location by barcode first, then try locationCode
     let [location] = await db
       .select()
       .from(wmsLocations)
-      .where(eq(wmsLocations.barcode, barcode));
+      .where(eq(wmsLocations.barcode, cleanBarcode));
+
+    console.log('[getLocationByBarcode] Barcode match result:', location?.id ?? 'not found');
 
     // If not found by barcode, try matching by locationCode
     if (!location) {
       // Try with and without "LOC-" prefix
-      const codeToTry = barcode.startsWith('LOC-') ? barcode.slice(4) : barcode;
+      const codeToTry = cleanBarcode.startsWith('LOC-') ? cleanBarcode.slice(4) : cleanBarcode;
+      console.log('[getLocationByBarcode] Trying locationCode:', codeToTry);
       [location] = await db
         .select()
         .from(wmsLocations)
         .where(eq(wmsLocations.locationCode, codeToTry));
+      console.log('[getLocationByBarcode] LocationCode match result:', location?.id ?? 'not found');
     }
 
     // Also try the full barcode as locationCode
     if (!location) {
+      console.log('[getLocationByBarcode] Trying full barcode as locationCode:', cleanBarcode);
       [location] = await db
         .select()
         .from(wmsLocations)
-        .where(eq(wmsLocations.locationCode, barcode));
+        .where(eq(wmsLocations.locationCode, cleanBarcode));
+      console.log('[getLocationByBarcode] Full barcode as locationCode result:', location?.id ?? 'not found');
     }
 
     if (!location) {
+      console.log('[getLocationByBarcode] Location not found for:', cleanBarcode);
       throw new TRPCError({
         code: 'NOT_FOUND',
-        message: `Location not found: ${barcode}`,
+        message: `Location not found: ${cleanBarcode}`,
       });
     }
+
+    console.log('[getLocationByBarcode] Found location:', { id: location.id, code: location.locationCode, barcode: location.barcode });
 
     if (!location.isActive) {
       throw new TRPCError({
