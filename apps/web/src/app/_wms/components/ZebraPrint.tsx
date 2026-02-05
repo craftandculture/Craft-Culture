@@ -128,10 +128,52 @@ const ZebraPrint = ({
   // Print function exposed via ref
   const print = useCallback(
     async (zpl: string): Promise<boolean> => {
-      // On mobile, download ZPL file for use with Zebra Print Connect
+      // On mobile, try multiple approaches
       if (isMobileDevice()) {
         try {
-          // Create a blob and download link
+          // Try Web Share API first (works well on Android)
+          if (navigator.share && navigator.canShare) {
+            const file = new File([zpl], 'label.zpl', { type: 'application/octet-stream' });
+            if (navigator.canShare({ files: [file] })) {
+              await navigator.share({
+                files: [file],
+                title: 'Print Label',
+                text: 'Open with PrintConnect to print',
+              });
+              onPrintComplete?.(true);
+              return true;
+            }
+          }
+
+          // Fallback: Create blob URL and try to open PrintConnect via intent
+          const blob = new Blob([zpl], { type: 'application/octet-stream' });
+          const url = URL.createObjectURL(blob);
+
+          // Try opening with intent (Android)
+          const intentUrl = `intent://${url.replace('blob:', '')}#Intent;scheme=file;type=application/octet-stream;package=com.zebra.printconnect;end`;
+
+          // Create hidden iframe to try intent
+          const iframe = document.createElement('iframe');
+          iframe.style.display = 'none';
+          iframe.src = intentUrl;
+          document.body.appendChild(iframe);
+
+          // Also create download link as fallback
+          setTimeout(() => {
+            document.body.removeChild(iframe);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `label-${Date.now()}.zpl`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+          }, 1000);
+
+          onPrintComplete?.(true);
+          return true;
+        } catch {
+          // Final fallback: just download
           const blob = new Blob([zpl], { type: 'application/octet-stream' });
           const url = URL.createObjectURL(blob);
           const link = document.createElement('a');
@@ -142,13 +184,8 @@ const ZebraPrint = ({
           document.body.removeChild(link);
           URL.revokeObjectURL(url);
 
-          // Show instruction
-          alert('ZPL file downloaded. Open with Zebra Print Connect or PrintConnect app to print.');
           onPrintComplete?.(true);
           return true;
-        } catch {
-          onPrintComplete?.(false, 'Failed to generate ZPL file');
-          return false;
         }
       }
 
