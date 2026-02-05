@@ -75,7 +75,7 @@ const refreshAccessToken = async (): Promise<string> => {
   const clientSecret = serverConfig.zohoClientSecret!.trim();
   const refreshToken = serverConfig.zohoRefreshToken!.trim();
 
-  logger.info('Zoho token refresh attempt', {
+  logger.info('Zoho token refresh starting', {
     clientIdPreview: `${clientId.slice(0, 10)}...${clientId.slice(-4)}`,
     refreshTokenPreview: `${refreshToken.slice(0, 10)}...${refreshToken.slice(-4)}`,
   });
@@ -88,34 +88,61 @@ const refreshAccessToken = async (): Promise<string> => {
   });
 
   const { accounts: accountsUrl } = getZohoUrls();
-  const response = await fetch(`${accountsUrl}/oauth/v2/token`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded',
-    },
-    body: params.toString(),
-  });
+  const tokenUrl = `${accountsUrl}/oauth/v2/token`;
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    logger.error('Failed to refresh Zoho token', {
-      status: response.status,
-      error: errorText,
+  logger.info('Zoho token refresh request', { url: tokenUrl });
+
+  // Add 30 second timeout
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 30000);
+
+  try {
+    const response = await fetch(tokenUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: params.toString(),
+      signal: controller.signal,
     });
-    throw new Error(`Failed to refresh Zoho token: ${response.status}`);
+
+    clearTimeout(timeoutId);
+
+    logger.info('Zoho token refresh response received', { status: response.status });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      logger.error('Failed to refresh Zoho token', {
+        status: response.status,
+        error: errorText,
+      });
+      throw new Error(`Failed to refresh Zoho token: ${response.status} - ${errorText}`);
+    }
+
+    const data = (await response.json()) as ZohoTokenResponse;
+
+    logger.info('Zoho token response parsed', {
+      hasAccessToken: !!data.access_token,
+      expiresIn: data.expires_in,
+    });
+
+    // Cache the token (Zoho tokens expire in 1 hour = 3600 seconds)
+    tokenCache = {
+      accessToken: data.access_token,
+      expiresAt: Date.now() + (data.expires_in || 3600) * 1000,
+    };
+
+    logger.info('Zoho token refreshed successfully', { expiresIn: data.expires_in });
+
+    return data.access_token;
+  } catch (error) {
+    clearTimeout(timeoutId);
+    if (error instanceof Error && error.name === 'AbortError') {
+      logger.error('Zoho token refresh timeout after 30s');
+      throw new Error('Zoho token refresh timed out');
+    }
+    throw error;
   }
-
-  const data = (await response.json()) as ZohoTokenResponse;
-
-  // Cache the token (Zoho tokens expire in 1 hour = 3600 seconds)
-  tokenCache = {
-    accessToken: data.access_token,
-    expiresAt: Date.now() + data.expires_in * 1000,
-  };
-
-  logger.info('Zoho token refreshed', { expiresIn: data.expires_in });
-
-  return data.access_token;
 };
 
 /**
