@@ -18,6 +18,7 @@ const serverConfig = {
   zohoClientSecret: serverEnv.ZOHO_CLIENT_SECRET,
   zohoRefreshToken: serverEnv.ZOHO_REFRESH_TOKEN,
   zohoOrganizationId: serverEnv.ZOHO_ORGANIZATION_ID,
+  zohoRegion: serverEnv.ZOHO_REGION,
 } as const;
 
 export default serverConfig;
