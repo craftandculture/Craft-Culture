@@ -40,7 +40,7 @@ const supplierSalesList = supplierProcedure
         supplierCostEur: exchangeOrderItems.supplierCostEur,
         orderStatus: exchangeOrders.status,
         orderReference: exchangeOrders.orderNumber,
-        buyerName: partners.companyName,
+        buyerName: partners.businessName,
         createdAt: exchangeOrderItems.createdAt,
       })
       .from(exchangeOrderItems)

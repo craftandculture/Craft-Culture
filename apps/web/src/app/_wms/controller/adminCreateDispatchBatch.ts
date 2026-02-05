@@ -25,7 +25,7 @@ const adminCreateDispatchBatch = adminProcedure
     const [distributor] = await db
       .select({
         id: partners.id,
-        name: partners.companyName,
+        name: partners.businessName,
         type: partners.type,
       })
       .from(partners)
