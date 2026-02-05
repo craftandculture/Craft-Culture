@@ -2,7 +2,7 @@ import { TRPCError } from '@trpc/server';
 import { eq } from 'drizzle-orm';
 
 import db from '@/database/client';
-import { wmsPickListItems, wmsPickLists } from '@/database/schema';
+import { wmsPickListItems, wmsPickLists, zohoSalesOrders } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
 import { completePickListSchema } from '../schemas/pickListSchema';
@@ -75,6 +75,17 @@ const adminCompletePickList = adminProcedure
       })
       .where(eq(wmsPickLists.id, pickListId))
       .returning();
+
+    // Update linked Zoho Sales Order status to 'picked' if this is a Zoho order
+    if (pickList.orderId) {
+      await db
+        .update(zohoSalesOrders)
+        .set({
+          status: 'picked',
+          updatedAt: new Date(),
+        })
+        .where(eq(zohoSalesOrders.id, pickList.orderId));
+    }
 
     return {
       success: true,
