@@ -45,6 +45,8 @@ const WMSPickListDetailPage = () => {
   const [pickedQuantity, setPickedQuantity] = useState(0);
   const [caseVerified, setCaseVerified] = useState(false);
   const [scanStep, setScanStep] = useState<'location' | 'case'>('location');
+  const [scannedBarcodes, setScannedBarcodes] = useState<Set<string>>(new Set());
+  const [duplicateScanError, setDuplicateScanError] = useState<string | null>(null);
 
   const scanInputRef = useRef<HTMLInputElement>(null);
 
@@ -92,6 +94,15 @@ const WMSPickListDetailPage = () => {
   // Handle scan/barcode input
   const handleScan = async (value: string) => {
     console.log('handleScan called:', { value, scanStep, pickingItem: !!pickingItem });
+    setDuplicateScanError(null);
+
+    // Check for duplicate scan
+    if (scannedBarcodes.has(value.toUpperCase())) {
+      console.log('Duplicate scan detected:', value);
+      setDuplicateScanError(`Barcode already scanned: ${value}`);
+      setScanInput('');
+      return;
+    }
 
     if (scanStep === 'location') {
       // Look up location by barcode
@@ -106,6 +117,8 @@ const WMSPickListDetailPage = () => {
         setPickedLocationId(result.location.id);
         setPickedLocationCode(result.location.locationCode);
         setScanStep('case');
+        // Track scanned barcode
+        setScannedBarcodes((prev) => new Set(prev).add(value.toUpperCase()));
       } catch (err) {
         console.error('Location lookup error:', err);
         setLocationError('Location not found');
@@ -127,6 +140,8 @@ const WMSPickListDetailPage = () => {
         // For now, accept scan if it's reasonably long (barcode was scanned)
         console.log('Case verified!');
         setCaseVerified(true);
+        // Track scanned barcode
+        setScannedBarcodes((prev) => new Set(prev).add(value.toUpperCase()));
         setScanInput('');
       } else {
         // Show error - wrong product
@@ -165,6 +180,8 @@ const WMSPickListDetailPage = () => {
     setCaseVerified(false);
     setScanStep('location');
     setLocationError(null);
+    setDuplicateScanError(null);
+    // Note: Don't reset scannedBarcodes here - we want to prevent re-scanning across items
   };
 
   // Confirm pick
@@ -442,6 +459,11 @@ const WMSPickListDetailPage = () => {
                     {locationError} - try again
                   </Typography>
                 )}
+                {duplicateScanError && scanStep === 'location' && (
+                  <Typography variant="bodyXs" className="mt-2 text-center text-amber-600">
+                    {duplicateScanError}
+                  </Typography>
+                )}
                 {isLookingUpLocation && (
                   <div className="mt-2 flex items-center justify-center">
                     <Icon icon={IconLoader2} size="sm" className="animate-spin" />
@@ -485,6 +507,11 @@ const WMSPickListDetailPage = () => {
                       Scan location first
                     </Typography>
                   </div>
+                )}
+                {duplicateScanError && scanStep === 'case' && (
+                  <Typography variant="bodyXs" className="mt-2 text-center text-amber-600">
+                    {duplicateScanError}
+                  </Typography>
                 )}
               </CardContent>
             </Card>
