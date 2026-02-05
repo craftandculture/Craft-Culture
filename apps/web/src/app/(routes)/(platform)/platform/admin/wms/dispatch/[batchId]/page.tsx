@@ -114,6 +114,18 @@ const WMSDispatchBatchDetailPage = () => {
     },
   });
 
+  // Generate delivery note mutation
+  const generateDeliveryNoteMutation = useMutation({
+    ...api.wms.admin.dispatch.generateDeliveryNote.mutationOptions(),
+    onSuccess: (data) => {
+      void queryClient.invalidateQueries();
+      // Open the PDF in a new tab
+      if (data.deliveryNote.pdfUrl) {
+        window.open(data.deliveryNote.pdfUrl, '_blank');
+      }
+    },
+  });
+
   const handleAddOrders = () => {
     if (selectedOrderIds.length === 0) return;
 
@@ -284,6 +296,19 @@ const WMSDispatchBatchDetailPage = () => {
             >
               <ButtonContent iconLeft={updateStatusMutation.isPending ? IconLoader2 : IconCheck}>
                 Mark Delivered
+              </ButtonContent>
+            </Button>
+          )}
+          {batch.ordersWithoutDeliveryNote > 0 && (
+            <Button
+              variant="outline"
+              onClick={() => generateDeliveryNoteMutation.mutate({ batchId })}
+              disabled={generateDeliveryNoteMutation.isPending}
+            >
+              <ButtonContent iconLeft={generateDeliveryNoteMutation.isPending ? IconLoader2 : IconFileText}>
+                {generateDeliveryNoteMutation.isPending
+                  ? 'Generating...'
+                  : `Generate Delivery Note (${batch.ordersWithoutDeliveryNote})`}
               </ButtonContent>
             </Button>
           )}
