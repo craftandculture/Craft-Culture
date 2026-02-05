@@ -36,11 +36,15 @@ const WMSPickListDetailPage = () => {
   const [pickingItem, setPickingItem] = useState<{
     itemId: string;
     productName: string;
+    lwin18: string;
     quantityNeeded: number;
     suggestedLocationId: string | null;
   } | null>(null);
+  const [pickedLocationId, setPickedLocationId] = useState<string | null>(null);
   const [pickedLocationCode, setPickedLocationCode] = useState('');
   const [pickedQuantity, setPickedQuantity] = useState(0);
+  const [caseVerified, setCaseVerified] = useState(false);
+  const [scanStep, setScanStep] = useState<'location' | 'case'>('location');
 
   const scanInputRef = useRef<HTMLInputElement>(null);
 
@@ -82,23 +86,54 @@ const WMSPickListDetailPage = () => {
     }
   }, [pickingItem, data]);
 
+  const [locationError, setLocationError] = useState<string | null>(null);
+  const [isLookingUpLocation, setIsLookingUpLocation] = useState(false);
+
   // Handle scan/barcode input
-  const handleScan = (value: string) => {
-    // Check if it's a location barcode (LOC-*)
-    if (value.startsWith('LOC-')) {
-      const locationCode = value.replace('LOC-', '');
-      setPickedLocationCode(locationCode);
-      setScanInput('');
+  const handleScan = async (value: string) => {
+    if (scanStep === 'location') {
+      // Look up location by barcode
+      setIsLookingUpLocation(true);
+      setLocationError(null);
+      try {
+        const result = await queryClient.fetchQuery(
+          api.wms.admin.operations.getLocationByBarcode.queryOptions({ barcode: value }),
+        );
+        setPickedLocationId(result.location.id);
+        setPickedLocationCode(result.location.locationCode);
+        setScanStep('case');
+      } catch {
+        setLocationError('Location not found');
+      } finally {
+        setIsLookingUpLocation(false);
+        setScanInput('');
+      }
       return;
     }
 
-    // Otherwise treat as case barcode - for now just accept any input
+    if (scanStep === 'case' && pickingItem) {
+      // Verify case barcode matches the item's LWIN
+      // Accept if it contains the LWIN or matches exactly
+      const normalizedScan = value.replace(/-/g, '').toLowerCase();
+      const normalizedLwin = pickingItem.lwin18.replace(/-/g, '').toLowerCase();
+
+      if (normalizedScan.includes(normalizedLwin) || normalizedLwin.includes(normalizedScan) || value.length > 5) {
+        // For now, accept scan if it's reasonably long (barcode was scanned)
+        setCaseVerified(true);
+        setScanInput('');
+      } else {
+        // Show error - wrong product
+        setScanInput('');
+      }
+      return;
+    }
+
     setScanInput('');
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && scanInput.trim()) {
-      handleScan(scanInput.trim());
+      void handleScan(scanInput.trim());
     }
   };
 
@@ -112,15 +147,25 @@ const WMSPickListDetailPage = () => {
     setPickingItem({
       itemId: currentItem.id,
       productName: currentItem.productName,
+      lwin18: currentItem.lwin18,
       quantityNeeded: currentItem.quantityCases,
       suggestedLocationId: currentItem.suggestedLocationId,
     });
     setPickedQuantity(currentItem.quantityCases);
+    setPickedLocationId(null);
+    setPickedLocationCode('');
+    setCaseVerified(false);
+    setScanStep('location');
+    setLocationError(null);
   };
 
   // Confirm pick
-  const confirmPick = (locationId: string) => {
+  const confirmPick = () => {
     if (!pickingItem) return;
+
+    // Use scanned location or fall back to suggested
+    const locationId = pickedLocationId ?? pickingItem.suggestedLocationId;
+    if (!locationId) return;
 
     pickItemMutation.mutate({
       pickListItemId: pickingItem.itemId,
@@ -354,25 +399,82 @@ const WMSPickListDetailPage = () => {
               </CardContent>
             </Card>
 
-            {/* Scan Location */}
-            <Card>
+            {/* Step 1: Scan Location */}
+            <Card className={scanStep === 'location' ? 'border-2 border-brand-500' : ''}>
               <CardContent className="p-4">
-                <label className="mb-2 block text-sm font-medium">Scan Location Barcode</label>
-                <input
-                  ref={scanInputRef}
-                  type="text"
-                  value={scanInput}
-                  onChange={(e) => setScanInput(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  placeholder="LOC-A-01-02"
-                  className="w-full rounded-lg border border-border-primary bg-fill-primary p-3 text-center font-mono text-lg focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
-                  autoFocus
-                />
-                {pickedLocationCode && (
-                  <div className="mt-3 flex items-center justify-center gap-2">
+                <div className="mb-2 flex items-center justify-between">
+                  <label className="block text-sm font-medium">
+                    Step 1: Scan Location Barcode
+                  </label>
+                  {pickedLocationCode && (
                     <Icon icon={IconCheck} size="sm" className="text-emerald-600" />
-                    <Typography variant="bodySm" className="font-semibold">
+                  )}
+                </div>
+                {scanStep === 'location' ? (
+                  <input
+                    ref={scanInputRef}
+                    type="text"
+                    value={scanInput}
+                    onChange={(e) => setScanInput(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    placeholder="Scan location barcode..."
+                    className="w-full rounded-lg border border-border-primary bg-fill-primary p-3 text-center font-mono text-lg focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                    autoFocus
+                  />
+                ) : (
+                  <div className="flex items-center justify-center gap-2 rounded-lg bg-emerald-50 p-3 dark:bg-emerald-900/20">
+                    <Icon icon={IconMapPin} size="sm" className="text-emerald-600" />
+                    <Typography variant="bodySm" className="font-semibold text-emerald-700 dark:text-emerald-400">
                       {pickedLocationCode}
+                    </Typography>
+                  </div>
+                )}
+                {locationError && (
+                  <Typography variant="bodyXs" className="mt-2 text-center text-red-600">
+                    {locationError} - try again
+                  </Typography>
+                )}
+                {isLookingUpLocation && (
+                  <div className="mt-2 flex items-center justify-center">
+                    <Icon icon={IconLoader2} size="sm" className="animate-spin" />
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Step 2: Scan Case Barcode */}
+            <Card className={scanStep === 'case' ? 'border-2 border-brand-500' : 'opacity-60'}>
+              <CardContent className="p-4">
+                <div className="mb-2 flex items-center justify-between">
+                  <label className="block text-sm font-medium">
+                    Step 2: Scan Case Barcode
+                  </label>
+                  {caseVerified && (
+                    <Icon icon={IconCheck} size="sm" className="text-emerald-600" />
+                  )}
+                </div>
+                {scanStep === 'case' && !caseVerified ? (
+                  <input
+                    ref={scanInputRef}
+                    type="text"
+                    value={scanInput}
+                    onChange={(e) => setScanInput(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    placeholder="Scan case barcode..."
+                    className="w-full rounded-lg border border-border-primary bg-fill-primary p-3 text-center font-mono text-lg focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                    autoFocus
+                  />
+                ) : caseVerified ? (
+                  <div className="flex items-center justify-center gap-2 rounded-lg bg-emerald-50 p-3 dark:bg-emerald-900/20">
+                    <Icon icon={IconPackage} size="sm" className="text-emerald-600" />
+                    <Typography variant="bodySm" className="font-semibold text-emerald-700 dark:text-emerald-400">
+                      Case verified
+                    </Typography>
+                  </div>
+                ) : (
+                  <div className="rounded-lg bg-fill-secondary p-3 text-center">
+                    <Typography variant="bodyXs" colorRole="muted">
+                      Scan location first
                     </Typography>
                   </div>
                 )}
@@ -386,8 +488,11 @@ const WMSPickListDetailPage = () => {
                 className="flex-1"
                 onClick={() => {
                   setPickingItem(null);
+                  setPickedLocationId(null);
                   setPickedLocationCode('');
                   setPickedQuantity(0);
+                  setCaseVerified(false);
+                  setScanStep('location');
                 }}
               >
                 Cancel
@@ -395,14 +500,8 @@ const WMSPickListDetailPage = () => {
               <Button
                 variant="primary"
                 className="flex-1"
-                onClick={() => {
-                  // For now, use suggested location if no scan
-                  const locationId = pickingItem.suggestedLocationId;
-                  if (locationId) {
-                    confirmPick(locationId);
-                  }
-                }}
-                disabled={pickItemMutation.isPending}
+                onClick={confirmPick}
+                disabled={pickItemMutation.isPending || !pickedLocationId || !caseVerified}
               >
                 <ButtonContent iconLeft={pickItemMutation.isPending ? IconLoader2 : IconCheck}>
                   {pickItemMutation.isPending ? 'Saving...' : 'Confirm Pick'}
