@@ -6,6 +6,7 @@ import {
   IconDownload,
   IconLoader2,
   IconMapPin,
+  IconPackageImport,
   IconSearch,
   IconUser,
 } from '@tabler/icons-react';
@@ -85,9 +86,16 @@ const WMSStockPage = () => {
             <Typography variant="headingLg" className="mb-1">
               Stock
             </Typography>
-            <Button variant="outline" size="sm">
-              <ButtonContent iconLeft={IconDownload}>Export</ButtonContent>
-            </Button>
+            <div className="flex gap-2">
+              <Link href="/platform/admin/wms/stock/import">
+                <Button variant="primary" size="sm">
+                  <ButtonContent iconLeft={IconPackageImport}>Import</ButtonContent>
+                </Button>
+              </Link>
+              <Button variant="outline" size="sm">
+                <ButtonContent iconLeft={IconDownload}>Export</ButtonContent>
+              </Button>
+            </div>
           </div>
         </div>
 
