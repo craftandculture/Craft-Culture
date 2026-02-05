@@ -20,9 +20,35 @@ interface TokenCache {
 // In-memory token cache
 let tokenCache: TokenCache | null = null;
 
-// Zoho API base URL (UAE region uses .com domain)
-const ZOHO_ACCOUNTS_URL = 'https://accounts.zoho.com';
-const ZOHO_API_URL = 'https://www.zohoapis.com/books/v3';
+/**
+ * Get Zoho API URLs based on configured region
+ * - us: zoho.com (default)
+ * - eu: zoho.eu (UAE/Europe)
+ * - in: zoho.in (India)
+ * - au: zoho.com.au (Australia)
+ */
+const getZohoUrls = () => {
+  const region = serverConfig.zohoRegion || 'us';
+  const domains: Record<string, { accounts: string; api: string }> = {
+    us: {
+      accounts: 'https://accounts.zoho.com',
+      api: 'https://www.zohoapis.com/books/v3',
+    },
+    eu: {
+      accounts: 'https://accounts.zoho.eu',
+      api: 'https://www.zohoapis.eu/books/v3',
+    },
+    in: {
+      accounts: 'https://accounts.zoho.in',
+      api: 'https://www.zohoapis.in/books/v3',
+    },
+    au: {
+      accounts: 'https://accounts.zoho.com.au',
+      api: 'https://www.zohoapis.com.au/books/v3',
+    },
+  };
+  return domains[region] || domains.us;
+};
 
 /**
  * Check if Zoho integration is configured
@@ -51,7 +77,8 @@ const refreshAccessToken = async (): Promise<string> => {
     refresh_token: serverConfig.zohoRefreshToken!,
   });
 
-  const response = await fetch(`${ZOHO_ACCOUNTS_URL}/oauth/v2/token`, {
+  const { accounts: accountsUrl } = getZohoUrls();
+  const response = await fetch(`${accountsUrl}/oauth/v2/token`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
@@ -108,7 +135,8 @@ const zohoFetch = async <T>(
   const token = await getAccessToken();
 
   // Build URL with organization_id
-  const url = new URL(`${ZOHO_API_URL}${endpoint}`);
+  const { api: apiUrl } = getZohoUrls();
+  const url = new URL(`${apiUrl}${endpoint}`);
   url.searchParams.set('organization_id', serverConfig.zohoOrganizationId!);
 
   const response = await fetch(url.toString(), {

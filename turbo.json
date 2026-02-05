@@ -1,7 +1,7 @@
 {
   "$schema": "https://turbo.build/schema.json",
   "globalDependencies": ["**/.env.*local"],
-  "globalEnv": ["OPENAI_API_KEY", "ANTHROPIC_API_KEY", "VERCEL_ENV", "NEXT_PUBLIC_VERCEL_ENV", "ZOHO_CLIENT_ID", "ZOHO_CLIENT_SECRET", "ZOHO_REFRESH_TOKEN", "ZOHO_ORGANIZATION_ID"],
+  "globalEnv": ["OPENAI_API_KEY", "ANTHROPIC_API_KEY", "VERCEL_ENV", "NEXT_PUBLIC_VERCEL_ENV", "ZOHO_CLIENT_ID", "ZOHO_CLIENT_SECRET", "ZOHO_REFRESH_TOKEN", "ZOHO_ORGANIZATION_ID", "ZOHO_REGION"],
   "tasks": {
     "build": {
       "dependsOn": ["^build"]
