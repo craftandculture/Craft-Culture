@@ -215,17 +215,25 @@ const ZebraPrint = ({
         }
       }
 
-      // On mobile Chrome without EB, show instructions
+      // On mobile, download ZPL file for Printer Setup Utility
       if (isMobileDevice()) {
-        alert(
-          'For direct printing on TC27:\n\n' +
-          '1. Open Enterprise Browser (EB) app\n' +
-          '2. Go to warehouse.craftculture.xyz\n' +
-          '3. Print from there\n\n' +
-          'Enterprise Browser has direct Zebra printer support.'
-        );
-        onPrintComplete?.(false, 'Use Enterprise Browser for printing');
-        return false;
+        try {
+          const blob = new Blob([zpl], { type: 'text/plain' });
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = `label-${Date.now()}.zpl`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          URL.revokeObjectURL(url);
+
+          onPrintComplete?.(true);
+          return true;
+        } catch {
+          onPrintComplete?.(false, 'Failed to download ZPL file');
+          return false;
+        }
       }
 
       // Desktop: use Zebra Browser Print
