@@ -21,16 +21,34 @@ const adminGetLocationByBarcode = adminProcedure
   .query(async ({ input }) => {
     const { barcode } = input;
 
-    // Find the location
-    const [location] = await db
+    // Find the location by barcode first, then try locationCode
+    let [location] = await db
       .select()
       .from(wmsLocations)
       .where(eq(wmsLocations.barcode, barcode));
 
+    // If not found by barcode, try matching by locationCode
+    if (!location) {
+      // Try with and without "LOC-" prefix
+      const codeToTry = barcode.startsWith('LOC-') ? barcode.slice(4) : barcode;
+      [location] = await db
+        .select()
+        .from(wmsLocations)
+        .where(eq(wmsLocations.locationCode, codeToTry));
+    }
+
+    // Also try the full barcode as locationCode
+    if (!location) {
+      [location] = await db
+        .select()
+        .from(wmsLocations)
+        .where(eq(wmsLocations.locationCode, barcode));
+    }
+
     if (!location) {
       throw new TRPCError({
         code: 'NOT_FOUND',
-        message: 'Location not found with this barcode',
+        message: `Location not found: ${barcode}`,
       });
     }
 
