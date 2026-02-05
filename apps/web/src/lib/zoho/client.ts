@@ -137,7 +137,16 @@ const zohoFetch = async <T>(
   // Build URL with organization_id
   const { api: apiUrl } = getZohoUrls();
   const url = new URL(`${apiUrl}${endpoint}`);
-  url.searchParams.set('organization_id', serverConfig.zohoOrganizationId!);
+  const orgId = serverConfig.zohoOrganizationId!.trim();
+  url.searchParams.set('organization_id', orgId);
+
+  logger.info('Zoho API request', {
+    endpoint,
+    apiUrl,
+    orgId,
+    region: serverConfig.zohoRegion,
+    fullUrl: url.toString(),
+  });
 
   const response = await fetch(url.toString(), {
     ...options,
