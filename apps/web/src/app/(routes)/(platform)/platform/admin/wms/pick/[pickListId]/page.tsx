@@ -91,18 +91,23 @@ const WMSPickListDetailPage = () => {
 
   // Handle scan/barcode input
   const handleScan = async (value: string) => {
+    console.log('handleScan called:', { value, scanStep, pickingItem: !!pickingItem });
+
     if (scanStep === 'location') {
       // Look up location by barcode
       setIsLookingUpLocation(true);
       setLocationError(null);
+      console.log('Looking up location:', value);
       try {
         const result = await queryClient.fetchQuery(
           api.wms.admin.operations.getLocationByBarcode.queryOptions({ barcode: value }),
         );
+        console.log('Location found:', result);
         setPickedLocationId(result.location.id);
         setPickedLocationCode(result.location.locationCode);
         setScanStep('case');
-      } catch {
+      } catch (err) {
+        console.error('Location lookup error:', err);
         setLocationError('Location not found');
       } finally {
         setIsLookingUpLocation(false);
@@ -112,6 +117,7 @@ const WMSPickListDetailPage = () => {
     }
 
     if (scanStep === 'case' && pickingItem) {
+      console.log('Verifying case barcode:', { value, lwin18: pickingItem.lwin18 });
       // Verify case barcode matches the item's LWIN
       // Accept if it contains the LWIN or matches exactly
       const normalizedScan = value.replace(/-/g, '').toLowerCase();
@@ -119,10 +125,12 @@ const WMSPickListDetailPage = () => {
 
       if (normalizedScan.includes(normalizedLwin) || normalizedLwin.includes(normalizedScan) || value.length > 5) {
         // For now, accept scan if it's reasonably long (barcode was scanned)
+        console.log('Case verified!');
         setCaseVerified(true);
         setScanInput('');
       } else {
         // Show error - wrong product
+        console.log('Case verification failed');
         setScanInput('');
       }
       return;
@@ -514,6 +522,14 @@ const WMSPickListDetailPage = () => {
                 {pickItemMutation.error?.message}
               </Typography>
             )}
+
+            {/* Debug info */}
+            <div className="rounded bg-gray-100 p-2 text-xs font-mono dark:bg-gray-800">
+              <div>locationId: {pickedLocationId ?? 'null'}</div>
+              <div>locationCode: {pickedLocationCode || 'null'}</div>
+              <div>caseVerified: {caseVerified ? 'true' : 'false'}</div>
+              <div>scanStep: {scanStep}</div>
+            </div>
           </div>
         )}
 
