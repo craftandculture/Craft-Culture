@@ -554,6 +554,9 @@ const WMSPickListDetailPage = () => {
                   setPickedQuantity(0);
                   setCaseVerified(false);
                   setScanStep('location');
+                  setScannedBarcodes(new Set());
+                  setDuplicateScanError(null);
+                  setLocationError(null);
                 }}
               >
                 Cancel
@@ -592,6 +595,9 @@ const WMSPickListDetailPage = () => {
                   <div>Button disabled: {(!pickedLocationId || !caseVerified) ? 'YES' : 'NO'}</div>
                   <div>Mutation pending: {pickItemMutation.isPending ? 'YES' : 'NO'}</div>
                   <div>Mutation error: {pickItemMutation.error?.message ?? 'none'}</div>
+                  <div>Duplicate error: {duplicateScanError ?? 'none'}</div>
+                  <div>Location error: {locationError ?? 'none'}</div>
+                  <div>Scanned count: {scannedBarcodes.size}</div>
                 </div>
               </CardContent>
             </Card>
