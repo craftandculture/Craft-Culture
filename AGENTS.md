@@ -54,10 +54,49 @@ wmsPallets          - Pallet tracking
 | Putaway | `/platform/admin/wms/putaway` | Scan case → Scan destination → Move to storage |
 | Transfer | `/platform/admin/wms/transfer` | Scan source → Select stock → Scan destination |
 | Pick | `/platform/admin/wms/pick` | Pick items for orders |
-| Dispatch | `/platform/admin/wms/dispatch` | Mark orders as dispatched |
+| Dispatch | `/platform/admin/wms/dispatch` | Create dispatch batches, add orders, ship to distributors |
 | Labels | `/platform/admin/wms/labels` | Print location and case labels |
 | Movements | `/platform/admin/wms/movements` | View movement history |
 | Scanner Test | `/platform/admin/wms/scanner-test` | Test barcode scanner |
+
+### Dispatch Workflow
+
+The dispatch module handles outbound shipments to distributors. Orders flow through these stages:
+
+| Status | Description | What Happens |
+|--------|-------------|--------------|
+| **Draft** | Batch created, adding orders | Group orders going to same distributor on same truck |
+| **Picking** | Warehouse picking stock | Workers pulling cases from shelves for this batch |
+| **Staged** | Ready at loading dock | Pallets wrapped and waiting for truck |
+| **Dispatched** | Truck has left | Driver en route to distributor |
+| **Delivered** | Confirmed arrival | Distributor received the goods |
+
+**Key Tables:**
+```
+wmsDispatchBatches      - Batch header (distributor, status, totals)
+wmsDispatchBatchOrders  - Join table linking orders to batches
+wmsDeliveryNotes        - Delivery paperwork for batches
+```
+
+**Order Sources:**
+- Zoho Sales Orders (`zohoSalesOrders`) - Synced from Zoho, linked via `dispatchBatchId`
+- Private Client Orders (`privateClientOrders`) - Internal orders, linked via `dispatchBatchId`
+
+**API Endpoints:**
+```typescript
+wms.admin.dispatch.create          // Create new batch
+wms.admin.dispatch.getMany         // List batches with filters
+wms.admin.dispatch.getOne          // Get batch with orders
+wms.admin.dispatch.addZohoOrders   // Add Zoho orders to batch
+wms.admin.dispatch.addOrders       // Add PCO orders to batch
+wms.admin.dispatch.updateStatus    // Change batch status
+```
+
+**Flow:**
+1. Create dispatch batch for a distributor
+2. Add picked orders (Zoho or PCO) to the batch
+3. Update status: Draft → Picking → Staged → Dispatched → Delivered
+4. Generate delivery notes (optional)
 
 ### Barcode Formats
 

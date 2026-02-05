@@ -382,6 +382,91 @@
     </div>
   </div>
 
+  <h3>5. Dispatch</h3>
+  <div class="card">
+    <p>Shipping picked orders to distributors:</p>
+
+    <div class="workflow-step">
+      <div class="step-number">1</div>
+      <div class="step-content">
+        <h4>Create Dispatch Batch</h4>
+        <p>Go to Dispatch and click "+ New" to create a batch for a distributor</p>
+      </div>
+    </div>
+
+    <div class="workflow-step">
+      <div class="step-number">2</div>
+      <div class="step-content">
+        <h4>Add Orders</h4>
+        <p>Click "+ Add Orders" to add picked orders to the batch</p>
+      </div>
+    </div>
+
+    <div class="workflow-step">
+      <div class="step-number">3</div>
+      <div class="step-content">
+        <h4>Start Picking</h4>
+        <p>Click "Start Picking" to move batch to Picking status</p>
+      </div>
+    </div>
+
+    <div class="workflow-step">
+      <div class="step-number">4</div>
+      <div class="step-content">
+        <h4>Mark Staged</h4>
+        <p>When pallets are ready at loading dock, click "Mark Staged"</p>
+      </div>
+    </div>
+
+    <div class="workflow-step">
+      <div class="step-number">5</div>
+      <div class="step-content">
+        <h4>Dispatch</h4>
+        <p>When truck leaves, click "Dispatch" to mark as shipped</p>
+      </div>
+    </div>
+
+    <div class="workflow-step">
+      <div class="step-number">6</div>
+      <div class="step-content">
+        <h4>Mark Delivered</h4>
+        <p>When distributor confirms receipt, click "Mark Delivered"</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Dispatch Batch Statuses</h3>
+    <table>
+      <tr><th>Status</th><th>Meaning</th><th>What's Happening</th></tr>
+      <tr>
+        <td><strong>Draft</strong></td>
+        <td>Building batch</td>
+        <td>Adding orders, grouping for same truck</td>
+      </tr>
+      <tr>
+        <td><strong>Picking</strong></td>
+        <td>Warehouse picking</td>
+        <td>Workers pulling cases from shelves</td>
+      </tr>
+      <tr>
+        <td><strong>Staged</strong></td>
+        <td>Ready to ship</td>
+        <td>Pallets wrapped, waiting at loading dock</td>
+      </tr>
+      <tr>
+        <td><strong>Dispatched</strong></td>
+        <td>In transit</td>
+        <td>Truck has left, driver en route</td>
+      </tr>
+      <tr>
+        <td><strong>Delivered</strong></td>
+        <td>Complete</td>
+        <td>Distributor received the goods</td>
+      </tr>
+    </table>
+  </div>
+
   <h2>Location Types</h2>
 
   <div class="card">
@@ -450,6 +535,22 @@
       <li>Stock may have been moved by another user</li>
       <li>Check the Stock Overview page to find where stock is located</li>
     </ul>
+  </div>
+
+  <div class="card">
+    <h3>Stock Reconciliation Required</h3>
+    <p>This alert appears when there's a mismatch between:</p>
+    <ul>
+      <li><strong>Movement history</strong> - Sum of all stock ins/outs</li>
+      <li><strong>Stock table</strong> - Current recorded inventory</li>
+    </ul>
+    <p style="margin-top: 10px;"><strong>Why it happens:</strong></p>
+    <ul>
+      <li>Testing created stock without movement records</li>
+      <li>Manual database adjustments</li>
+      <li>System errors during transfers</li>
+    </ul>
+    <p style="margin-top: 10px;"><strong>To fix:</strong> Click "Fix Now" on the WMS dashboard to reconcile the data.</p>
   </div>
 
   <h2>Tips for Efficiency</h2>
