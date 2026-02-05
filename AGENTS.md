@@ -30,8 +30,44 @@ The WMS module (`apps/web/src/app/_wms/`) handles physical warehouse operations 
 ### Hardware
 
 - **Scanner:** Zebra TC27 (Android-based barcode scanner with Chrome browser)
-- **Printer:** Zebra ZD421 (thermal label printer for 4x6" labels)
+- **Printer:** Zebra ZD421 (thermal label printer for 4x6" labels, Bluetooth connected)
 - **Barcode Format:** Code 128 for locations, QR codes for case labels
+
+### Zebra Printing Setup
+
+The ZebraPrint component (`apps/web/src/app/_wms/components/ZebraPrint.tsx`) handles label printing across different environments:
+
+**Environments:**
+
+| Environment | Method | How It Works |
+|-------------|--------|--------------|
+| Desktop (Mac/PC) | Zebra Browser Print | Install Browser Print app, auto-detects paired printer |
+| Mobile (TC27) | Web Share API | Share ZPL file → Select "Printer Setup Utility" → Prints |
+| Enterprise Browser | Native Zebra API | Direct Bluetooth printing (paid license required) |
+
+**Mobile Printing Workflow (TC27 → ZD421):**
+
+1. TC27 must be Bluetooth paired with ZD421 (one-time setup via Android Settings)
+2. Install "Zebra Printer Setup Utility" app on TC27 from Play Store
+3. In WMS, tap Print button → Share sheet appears
+4. Select "Printer Setup Utility" → Label prints immediately
+
+**Why Not Web Bluetooth?**
+Web Bluetooth only supports Bluetooth Low Energy (BLE). The ZD421 connects via Bluetooth Classic (SPP) for printing, which browsers cannot access. The share-to-app workflow is the practical solution for mobile.
+
+**ZPL (Zebra Programming Language):**
+Labels are generated as ZPL code. Example:
+```zpl
+^XA
+^FO50,30^ADN,46,24^FDLOC-A-01-02^FS
+^FO50,100^BY2^BCN,80,Y,N,N^FDLOC-A-01-02^FS
+^XZ
+```
+
+**Key Files:**
+- `ZebraPrint.tsx` - Print component and `useZebraPrint()` hook
+- `generateLocationLabelZpl.ts` - Generate location label ZPL
+- `generateCaseLabelZpl.ts` - Generate case label ZPL
 
 ### Key WMS Tables
 
@@ -177,12 +213,18 @@ zohoSalesOrderItems  - Line items for each order
 - Transfer, putaway, and repack page fixes (trpcClient pattern)
 - Zoho Sales Order sync with approval workflow
 - Mobile sidebar scroll fix for TC27
+- ZD421 printer setup and EU RED security configuration
+- Zebra printing via Web Share API (TC27 → Printer Setup Utility → ZD421)
+- Stock import from Zoho Inventory export
+- Dispatch batch workflow with Zoho order support
+- Delivery note PDF generation
 
 ### In Progress
-- ZD421 printer setup (waiting for label roll)
+- Optimizing mobile printing workflow for high-volume label printing
 - Full end-to-end WMS testing
 
 ### Pending
+- Investigate faster mobile printing options (Enterprise Browser license vs current share workflow)
 - Print case labels during receiving
 - Pick list workflow with scanner
 - Dispatch confirmation workflow
