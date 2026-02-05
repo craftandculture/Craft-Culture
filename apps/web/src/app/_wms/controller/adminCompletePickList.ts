@@ -69,7 +69,7 @@ const adminCompletePickList = adminProcedure
       .set({
         status: 'completed',
         completedAt: new Date(),
-        completedBy: ctx.session.user.id,
+        completedBy: ctx.user.id,
         notes: notes ? (pickList.notes ? `${pickList.notes}\n${notes}` : notes) : pickList.notes,
         updatedAt: new Date(),
       })

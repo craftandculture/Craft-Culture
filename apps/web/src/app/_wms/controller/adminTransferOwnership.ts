@@ -156,7 +156,7 @@ const adminTransferOwnership = adminProcedure
           toOwnerId: newOwnerId,
           lotNumber: sourceStock.lotNumber,
           notes,
-          performedBy: ctx.session.user.id,
+          performedBy: ctx.user.id,
           performedAt: new Date(),
         })
         .returning();
