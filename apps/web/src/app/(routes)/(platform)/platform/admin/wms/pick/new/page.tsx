@@ -29,10 +29,10 @@ const NewPickListPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
 
-  // Fetch orders that need picking (confirmed status, no pick list yet)
+  // Fetch orders that need picking (client_paid status, no pick list yet)
   const { data: orders, isLoading } = useQuery({
     ...api.privateClientOrders.admin.getMany.queryOptions({
-      status: 'confirmed',
+      status: 'client_paid',
       limit: 50,
     }),
   });
@@ -109,7 +109,7 @@ const NewPickListPage = () => {
                     No Orders Available
                   </Typography>
                   <Typography variant="bodySm" colorRole="muted">
-                    There are no confirmed orders ready for picking
+                    There are no paid orders ready for picking
                   </Typography>
                 </CardContent>
               </Card>

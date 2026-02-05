@@ -43,7 +43,7 @@ const WMSDispatchBatchDetailPage = () => {
   // Fetch available orders for adding
   const { data: availableOrders } = useQuery({
     ...api.privateClientOrders.admin.getMany.queryOptions({
-      status: 'confirmed',
+      status: 'client_paid',
       limit: 50,
     }),
     enabled: showAddOrders,
