@@ -334,21 +334,14 @@ export const supplierProcedure = protectedProcedure.use(
  * The device token is passed as an input parameter and validated against
  * the WMS_DEVICE_TOKEN environment variable.
  */
-export const deviceProcedure = publicProcedure.use(async ({ ctx, next, rawInput }) => {
-  // In tRPC v10+, rawInput might be a Promise
-  const resolvedInput = await rawInput;
-  const input = resolvedInput as { deviceToken?: string } | undefined;
-  const deviceToken = input?.deviceToken?.trim();
+/**
+ * Validates a device token against the expected WMS device token.
+ * Call this from within your query/mutation handler after input is parsed.
+ *
+ * @throws TRPCError if token is invalid
+ */
+export const validateDeviceToken = (deviceToken: string | undefined) => {
   const expectedToken = serverConfig.wmsDeviceToken?.trim();
-
-  // DEBUG: Log token info
-  console.log('[deviceProcedure] DEBUG:', {
-    rawInputType: typeof rawInput,
-    resolvedInputType: typeof resolvedInput,
-    resolvedInputKeys: resolvedInput ? Object.keys(resolvedInput as object) : null,
-    inputDeviceToken: deviceToken,
-    expectedToken: expectedToken,
-  });
 
   if (!expectedToken) {
     throw new TRPCError({
@@ -357,12 +350,18 @@ export const deviceProcedure = publicProcedure.use(async ({ ctx, next, rawInput 
     });
   }
 
-  if (!deviceToken || deviceToken !== expectedToken) {
+  const trimmedToken = deviceToken?.trim();
+
+  if (!trimmedToken || trimmedToken !== expectedToken) {
     throw new TRPCError({
       code: 'UNAUTHORIZED',
-      message: `Invalid device token. rawInput type: ${typeof rawInput}, resolvedInput type: ${typeof resolvedInput}, keys: ${resolvedInput ? Object.keys(resolvedInput as object).join(',') : 'null'}, json: ${JSON.stringify(resolvedInput)?.slice(0, 200)}`,
+      message: 'Invalid device token',
     });
   }
+};
 
-  return next({ ctx });
-});
+/**
+ * Device procedure - uses publicProcedure as base.
+ * Token validation must be done in the query handler using validateDeviceToken().
+ */
+export const deviceProcedure = publicProcedure;
