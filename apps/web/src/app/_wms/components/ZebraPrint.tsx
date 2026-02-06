@@ -11,6 +11,8 @@ export interface ZebraPrintProps {
   onConnectionChange?: (connected: boolean) => void;
   /** Called when print completes or fails */
   onPrintComplete?: (success: boolean, error?: string) => void;
+  /** Called when print function is ready - use this instead of useZebraPrint hook */
+  onPrintReady?: (printFn: (zpl: string) => Promise<boolean>) => void;
 }
 
 export interface ZebraPrintHandle {
@@ -87,6 +89,7 @@ const getEBApi = (): ZebraEB | null => {
 const ZebraPrint = ({
   onConnectionChange,
   onPrintComplete,
+  onPrintReady,
 }: ZebraPrintProps) => {
   const [isConnected, setIsConnected] = useState(false);
   const [printerName, setPrinterName] = useState<string | null>(null);
@@ -282,17 +285,20 @@ const ZebraPrint = ({
     [onPrintComplete, ebPrinterAddress],
   );
 
-  // Expose print function globally for parent components
+  // Expose print function globally and via callback
   useEffect(() => {
     (window as unknown as { zebraPrint?: { print: typeof print; isConnected: () => boolean } }).zebraPrint = {
       print,
       isConnected: () => isConnected || isMobileDevice(), // Mobile always "ready" via share
     };
 
+    // Notify parent that print function is ready
+    onPrintReady?.(print);
+
     return () => {
       delete (window as unknown as { zebraPrint?: unknown }).zebraPrint;
     };
-  }, [print, isConnected]);
+  }, [print, isConnected, onPrintReady]);
 
   // Mobile view - always ready via share
   if (isMobile && !isEB) {
