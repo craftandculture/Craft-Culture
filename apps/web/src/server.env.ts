@@ -23,6 +23,8 @@ const envSchema = z.object({
   ZOHO_REFRESH_TOKEN: z.string().optional(),
   ZOHO_ORGANIZATION_ID: z.string().optional(),
   ZOHO_REGION: z.enum(['us', 'eu', 'in', 'au']).default('us'),
+  WMS_DEVICE_TOKEN: z.string().optional(),
+  WMS_DEVICE_USER_EMAIL: z.string().email().optional(),
 });
 
 const rawEnv = {
@@ -41,6 +43,8 @@ const rawEnv = {
   ZOHO_REFRESH_TOKEN: process.env.ZOHO_REFRESH_TOKEN,
   ZOHO_ORGANIZATION_ID: process.env.ZOHO_ORGANIZATION_ID,
   ZOHO_REGION: process.env.ZOHO_REGION,
+  WMS_DEVICE_TOKEN: process.env.WMS_DEVICE_TOKEN,
+  WMS_DEVICE_USER_EMAIL: process.env.WMS_DEVICE_USER_EMAIL,
 };
 
 /**
