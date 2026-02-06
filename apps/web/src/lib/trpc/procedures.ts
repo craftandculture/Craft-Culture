@@ -334,21 +334,20 @@ export const supplierProcedure = protectedProcedure.use(
  * The device token is passed as an input parameter and validated against
  * the WMS_DEVICE_TOKEN environment variable.
  */
-export const deviceProcedure = publicProcedure.use(({ ctx, next, rawInput }) => {
-  const input = rawInput as { deviceToken?: string } | undefined;
+export const deviceProcedure = publicProcedure.use(async ({ ctx, next, rawInput }) => {
+  // In tRPC v10+, rawInput might be a Promise
+  const resolvedInput = await rawInput;
+  const input = resolvedInput as { deviceToken?: string } | undefined;
   const deviceToken = input?.deviceToken?.trim();
   const expectedToken = serverConfig.wmsDeviceToken?.trim();
 
   // DEBUG: Log token info
   console.log('[deviceProcedure] DEBUG:', {
     rawInputType: typeof rawInput,
-    rawInputKeys: rawInput ? Object.keys(rawInput as object) : null,
+    resolvedInputType: typeof resolvedInput,
+    resolvedInputKeys: resolvedInput ? Object.keys(resolvedInput as object) : null,
     inputDeviceToken: deviceToken,
-    inputTokenLength: deviceToken?.length,
     expectedToken: expectedToken,
-    expectedTokenLength: expectedToken?.length,
-    tokensMatch: deviceToken === expectedToken,
-    hardcodedCheck: deviceToken === 'wms_device_2026_CraftCulture_TC27',
   });
 
   if (!expectedToken) {
@@ -361,7 +360,7 @@ export const deviceProcedure = publicProcedure.use(({ ctx, next, rawInput }) => 
   if (!deviceToken || deviceToken !== expectedToken) {
     throw new TRPCError({
       code: 'UNAUTHORIZED',
-      message: `Invalid device token. rawInput type: ${typeof rawInput}, keys: ${rawInput ? Object.keys(rawInput as object).join(',') : 'null'}, json: ${JSON.stringify(rawInput)?.slice(0, 200)}`,
+      message: `Invalid device token. rawInput type: ${typeof rawInput}, resolvedInput type: ${typeof resolvedInput}, keys: ${resolvedInput ? Object.keys(resolvedInput as object).join(',') : 'null'}, json: ${JSON.stringify(resolvedInput)?.slice(0, 200)}`,
     });
   }
 
