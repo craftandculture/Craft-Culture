@@ -336,25 +336,28 @@ export const supplierProcedure = protectedProcedure.use(
  */
 export const deviceProcedure = publicProcedure.use(({ ctx, next, rawInput }) => {
   const input = rawInput as { deviceToken?: string } | undefined;
-  const deviceToken = input?.deviceToken;
+  const deviceToken = input?.deviceToken?.trim();
+  const expectedToken = serverConfig.wmsDeviceToken?.trim();
 
   // Debug logging - remove after testing
   console.error('[deviceProcedure] Token check:', {
     providedToken: deviceToken?.slice(0, 8) + '...',
-    expectedToken: serverConfig.wmsDeviceToken?.slice(0, 8) + '...',
+    expectedToken: expectedToken?.slice(0, 8) + '...',
     providedLength: deviceToken?.length,
-    expectedLength: serverConfig.wmsDeviceToken?.length,
-    match: deviceToken === serverConfig.wmsDeviceToken,
+    expectedLength: expectedToken?.length,
+    match: deviceToken === expectedToken,
+    providedHex: deviceToken ? Buffer.from(deviceToken).toString('hex').slice(0, 32) : 'none',
+    expectedHex: expectedToken ? Buffer.from(expectedToken).toString('hex').slice(0, 32) : 'none',
   });
 
-  if (!serverConfig.wmsDeviceToken) {
+  if (!expectedToken) {
     throw new TRPCError({
       code: 'INTERNAL_SERVER_ERROR',
       message: 'Device authentication not configured',
     });
   }
 
-  if (!deviceToken || deviceToken !== serverConfig.wmsDeviceToken) {
+  if (!deviceToken || deviceToken !== expectedToken) {
     throw new TRPCError({
       code: 'UNAUTHORIZED',
       message: 'Invalid device token',
