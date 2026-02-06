@@ -152,41 +152,32 @@ const ZebraPrint = ({
    */
   const print = useCallback(
     async (zpl: string): Promise<boolean> => {
-      // Enterprise Browser / Mobile - use Web Share API or fallback to download
+      // Enterprise Browser / Mobile - use server-side download endpoint
+      // This bypasses JavaScript issues and uses standard HTTP which EB handles reliably
       if (isEnterpriseBrowser() || isMobileDevice()) {
         try {
-          // Try Web Share API first (works well with Printer Setup Utility)
-          const file = new File([zpl], `label-${Date.now()}.zpl`, {
-            type: 'application/octet-stream'
-          });
+          // Get device token from URL
+          const urlParams = new URLSearchParams(window.location.search);
+          const deviceToken = urlParams.get('device_token') || '';
 
-          if (navigator.canShare && navigator.canShare({ files: [file] })) {
-            await navigator.share({
-              files: [file],
-              title: 'Print Label',
-            });
-            onPrintComplete?.(true);
-            return true;
-          }
+          // Encode ZPL as base64 for URL safety
+          const zplBase64 = btoa(zpl);
 
-          // Fallback: direct download
-          const blob = new Blob([zpl], { type: 'application/octet-stream' });
-          const url = URL.createObjectURL(blob);
+          // Create link to download endpoint
+          const downloadUrl = `/api/wms/print?device_token=${encodeURIComponent(deviceToken)}&zpl=${encodeURIComponent(zplBase64)}`;
           const link = document.createElement('a');
-          link.href = url;
-          link.download = `label-${Date.now()}.zpl`;
+          link.href = downloadUrl;
+          link.download = `labels-${Date.now()}.zpl`;
+          link.target = '_blank';
           document.body.appendChild(link);
           link.click();
           document.body.removeChild(link);
-          setTimeout(() => URL.revokeObjectURL(url), 1000);
+
           onPrintComplete?.(true);
           return true;
         } catch (err) {
           const message = err instanceof Error ? err.message : 'Print failed';
-          // Don't report as error if user cancelled share
-          if (!message.includes('abort') && !message.includes('cancel')) {
-            onPrintComplete?.(false, message);
-          }
+          onPrintComplete?.(false, message);
           return false;
         }
       }
