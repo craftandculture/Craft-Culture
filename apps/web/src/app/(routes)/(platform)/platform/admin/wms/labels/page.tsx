@@ -162,44 +162,25 @@ const WMSLabelsPage = () => {
       }
 
       if (zpl) {
-        // On mobile, directly use Web Share API
+        // On mobile, save file to Downloads then user opens from Printer Setup Utility
         if (isMobile) {
           try {
-            // Use .txt extension and text/plain type for better Android compatibility
-            const file = new File([zpl], `label-${Date.now()}.txt`, { type: 'text/plain' });
+            // Download the ZPL file
+            const blob = new Blob([zpl], { type: 'application/octet-stream' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'label.zpl';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
 
-            if (navigator.canShare?.({ files: [file] })) {
-              await navigator.share({
-                files: [file],
-                title: 'Print Label',
-              });
-              setSelectedLabels(new Set());
-            } else {
-              // Fallback: try sharing just as text
-              if (navigator.share) {
-                await navigator.share({
-                  title: 'Print Label',
-                  text: zpl,
-                });
-                setSelectedLabels(new Set());
-              } else {
-                // Last resort: copy to clipboard
-                await navigator.clipboard.writeText(zpl);
-                alert('ZPL copied to clipboard. Paste in Printer Setup Utility.');
-              }
-            }
+            setSelectedLabels(new Set());
+            alert('File saved to Downloads!\n\nOpen Printer Setup Utility → Files → Downloads → label.zpl');
           } catch (err) {
-            // User cancelled share - that's ok
-            const message = err instanceof Error ? err.message : 'Share failed';
-            if (!message.includes('abort') && !message.includes('cancel')) {
-              // Try clipboard as fallback
-              try {
-                await navigator.clipboard.writeText(zpl);
-                alert('Share failed. ZPL copied to clipboard instead. Paste in Printer Setup Utility.');
-              } catch {
-                alert(`Print error: ${message}`);
-              }
-            }
+            const message = err instanceof Error ? err.message : 'Download failed';
+            alert(`Error: ${message}`);
           }
         } else if (printFnRef.current) {
           // Desktop: use ZebraPrint component
