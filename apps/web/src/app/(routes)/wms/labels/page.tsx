@@ -8,7 +8,7 @@ import {
 } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import { useSearchParams } from 'next/navigation';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
@@ -24,10 +24,9 @@ import { generateBatchLocationLabelsZpl } from '@/app/_wms/utils/generateLocatio
 import useTRPC from '@/lib/trpc/browser';
 
 /**
- * WMS Device Labels Page - Standalone page for TC27/Enterprise Browser
- * This page bypasses normal authentication and uses device_token instead
+ * Inner component that uses useSearchParams
  */
-const WMSDeviceLabelsPage = () => {
+const WMSDeviceLabelsContent = () => {
   const searchParams = useSearchParams();
   const deviceToken = searchParams.get('device_token');
   const api = useTRPC();
@@ -341,6 +340,23 @@ const WMSDeviceLabelsPage = () => {
         )}
       </main>
     </div>
+  );
+};
+
+/**
+ * WMS Device Labels Page - wrapped in Suspense for useSearchParams
+ */
+const WMSDeviceLabelsPage = () => {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center bg-background-primary">
+          <Icon icon={IconLoader2} className="animate-spin" colorRole="muted" size="xl" />
+        </div>
+      }
+    >
+      <WMSDeviceLabelsContent />
+    </Suspense>
   );
 };
 
