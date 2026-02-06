@@ -19,7 +19,8 @@ const serverConfig = {
   zohoRefreshToken: serverEnv.ZOHO_REFRESH_TOKEN,
   zohoOrganizationId: serverEnv.ZOHO_ORGANIZATION_ID,
   zohoRegion: serverEnv.ZOHO_REGION,
-  wmsDeviceToken: serverEnv.WMS_DEVICE_TOKEN,
+  // TEMP: Hardcoded for debugging - remove after testing
+  wmsDeviceToken: serverEnv.WMS_DEVICE_TOKEN || 'wms_device_2026_CraftCulture_TC27',
   wmsDeviceUserEmail: serverEnv.WMS_DEVICE_USER_EMAIL,
 } as const;
 

@@ -339,17 +339,6 @@ export const deviceProcedure = publicProcedure.use(({ ctx, next, rawInput }) => 
   const deviceToken = input?.deviceToken?.trim();
   const expectedToken = serverConfig.wmsDeviceToken?.trim();
 
-  // Debug logging - remove after testing
-  console.error('[deviceProcedure] Token check:', {
-    providedToken: deviceToken?.slice(0, 8) + '...',
-    expectedToken: expectedToken?.slice(0, 8) + '...',
-    providedLength: deviceToken?.length,
-    expectedLength: expectedToken?.length,
-    match: deviceToken === expectedToken,
-    providedHex: deviceToken ? Buffer.from(deviceToken).toString('hex').slice(0, 32) : 'none',
-    expectedHex: expectedToken ? Buffer.from(expectedToken).toString('hex').slice(0, 32) : 'none',
-  });
-
   if (!expectedToken) {
     throw new TRPCError({
       code: 'INTERNAL_SERVER_ERROR',
