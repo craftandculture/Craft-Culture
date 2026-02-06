@@ -361,7 +361,7 @@ export const deviceProcedure = publicProcedure.use(({ ctx, next, rawInput }) => 
   if (!deviceToken || deviceToken !== expectedToken) {
     throw new TRPCError({
       code: 'UNAUTHORIZED',
-      message: `Invalid device token. Expected length: ${expectedToken?.length}, got: ${deviceToken?.length}`,
+      message: `Invalid device token. rawInput type: ${typeof rawInput}, keys: ${rawInput ? Object.keys(rawInput as object).join(',') : 'null'}, json: ${JSON.stringify(rawInput)?.slice(0, 200)}`,
     });
   }
 
