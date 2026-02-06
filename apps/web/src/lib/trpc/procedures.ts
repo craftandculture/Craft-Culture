@@ -1,6 +1,7 @@
 import { TRPCError } from '@trpc/server';
 
 import db from '@/database/client';
+import serverConfig from '@/server.config';
 
 import { t } from './trpc';
 
@@ -323,3 +324,33 @@ export const supplierProcedure = protectedProcedure.use(
     });
   },
 );
+
+/**
+ * Device procedure
+ *
+ * For warehouse devices (TC27, Enterprise Browser) that authenticate via
+ * a pre-shared device token instead of user sessions.
+ *
+ * The device token is passed as an input parameter and validated against
+ * the WMS_DEVICE_TOKEN environment variable.
+ */
+export const deviceProcedure = publicProcedure.use(({ ctx, next, rawInput }) => {
+  const input = rawInput as { deviceToken?: string } | undefined;
+  const deviceToken = input?.deviceToken;
+
+  if (!serverConfig.wmsDeviceToken) {
+    throw new TRPCError({
+      code: 'INTERNAL_SERVER_ERROR',
+      message: 'Device authentication not configured',
+    });
+  }
+
+  if (!deviceToken || deviceToken !== serverConfig.wmsDeviceToken) {
+    throw new TRPCError({
+      code: 'UNAUTHORIZED',
+      message: 'Invalid device token',
+    });
+  }
+
+  return next({ ctx });
+});

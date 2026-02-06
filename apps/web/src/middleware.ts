@@ -11,6 +11,7 @@ const protectedRoutes = [
 /** WMS routes that can be accessed with device token */
 const wmsRoutes = [
   /\/platform\/admin\/wms/,
+  /\/wms\//,
 ];
 
 export const middleware = async (request: NextRequest) => {
