@@ -98,9 +98,16 @@ const ZebraPrint = ({
 
   // Check environment on mount
   useEffect(() => {
-    setIsMobile(isMobileDevice());
-    setIsEB(isEnterpriseBrowser());
-  }, []);
+    const mobile = isMobileDevice();
+    const eb = isEnterpriseBrowser();
+    setIsMobile(mobile);
+    setIsEB(eb);
+
+    // Mobile is always "ready" via Web Share API - no connection needed
+    if (mobile && !eb) {
+      onConnectionChange?.(true);
+    }
+  }, [onConnectionChange]);
 
   // Check for Zebra Browser Print SDK availability (desktop only)
   const checkDesktopConnection = useCallback(async () => {
