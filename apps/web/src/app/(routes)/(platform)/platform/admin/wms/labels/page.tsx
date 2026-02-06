@@ -165,32 +165,40 @@ const WMSLabelsPage = () => {
         // On mobile, directly use Web Share API
         if (isMobile) {
           try {
-            const file = new File([zpl], `labels-${Date.now()}.zpl`, { type: 'application/octet-stream' });
+            // Use .txt extension and text/plain type for better Android compatibility
+            const file = new File([zpl], `label-${Date.now()}.txt`, { type: 'text/plain' });
 
-            if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            if (navigator.canShare?.({ files: [file] })) {
               await navigator.share({
                 files: [file],
-                title: 'Print Labels',
+                title: 'Print Label',
               });
               setSelectedLabels(new Set());
             } else {
-              // Fallback: download file
-              const blob = new Blob([zpl], { type: 'application/octet-stream' });
-              const url = URL.createObjectURL(blob);
-              const link = document.createElement('a');
-              link.href = url;
-              link.download = `labels-${Date.now()}.zpl`;
-              document.body.appendChild(link);
-              link.click();
-              document.body.removeChild(link);
-              URL.revokeObjectURL(url);
-              alert('ZPL file downloaded. Open it with Printer Setup Utility.');
+              // Fallback: try sharing just as text
+              if (navigator.share) {
+                await navigator.share({
+                  title: 'Print Label',
+                  text: zpl,
+                });
+                setSelectedLabels(new Set());
+              } else {
+                // Last resort: copy to clipboard
+                await navigator.clipboard.writeText(zpl);
+                alert('ZPL copied to clipboard. Paste in Printer Setup Utility.');
+              }
             }
           } catch (err) {
             // User cancelled share - that's ok
             const message = err instanceof Error ? err.message : 'Share failed';
             if (!message.includes('abort') && !message.includes('cancel')) {
-              alert(`Print error: ${message}`);
+              // Try clipboard as fallback
+              try {
+                await navigator.clipboard.writeText(zpl);
+                alert('Share failed. ZPL copied to clipboard instead. Paste in Printer Setup Utility.');
+              } catch {
+                alert(`Print error: ${message}`);
+              }
             }
           }
         } else if (printFnRef.current) {
