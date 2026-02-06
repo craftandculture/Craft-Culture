@@ -167,8 +167,13 @@ const WMSDeviceLabelsContent = () => {
             <Typography variant="bodyMd" colorRole="muted">
               {!deviceToken
                 ? 'No device token provided. This page is for authorized warehouse devices only.'
-                : 'Invalid or expired device token. Please contact IT support.'}
+                : `API Error: ${(authError as Error)?.message || 'Unknown error'}`}
             </Typography>
+            {deviceToken && (
+              <Typography variant="bodySm" colorRole="muted" className="mt-4 break-all">
+                Token: {deviceToken.slice(0, 10)}...
+              </Typography>
+            )}
           </CardContent>
         </Card>
       </div>
