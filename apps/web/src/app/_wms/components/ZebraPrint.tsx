@@ -152,9 +152,24 @@ const ZebraPrint = ({
    */
   const print = useCallback(
     async (zpl: string): Promise<boolean> => {
-      // Enterprise Browser - download file for Printer Setup Utility
-      if (isEnterpriseBrowser()) {
+      // Enterprise Browser / Mobile - use Web Share API or fallback to download
+      if (isEnterpriseBrowser() || isMobileDevice()) {
         try {
+          // Try Web Share API first (works well with Printer Setup Utility)
+          const file = new File([zpl], `label-${Date.now()}.zpl`, {
+            type: 'application/octet-stream'
+          });
+
+          if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            await navigator.share({
+              files: [file],
+              title: 'Print Label',
+            });
+            onPrintComplete?.(true);
+            return true;
+          }
+
+          // Fallback: direct download
           const blob = new Blob([zpl], { type: 'application/octet-stream' });
           const url = URL.createObjectURL(blob);
           const link = document.createElement('a');
@@ -167,46 +182,15 @@ const ZebraPrint = ({
           onPrintComplete?.(true);
           return true;
         } catch (err) {
-          const message = err instanceof Error ? err.message : 'Download failed';
-          onPrintComplete?.(false, message);
-          return false;
-        }
-      }
-
-      // Mobile - use Web Share API for Printer Setup Utility
-      if (isMobileDevice()) {
-        try {
-          const file = new File([zpl], `label-${Date.now()}.zpl`, { type: 'application/octet-stream' });
-
-          if (navigator.canShare && navigator.canShare({ files: [file] })) {
-            await navigator.share({
-              files: [file],
-              title: 'Print Label',
-            });
-            onPrintComplete?.(true);
-            return true;
-          }
-
-          // Fallback: download file
-          const blob = new Blob([zpl], { type: 'application/octet-stream' });
-          const url = URL.createObjectURL(blob);
-          const link = document.createElement('a');
-          link.href = url;
-          link.download = `label-${Date.now()}.zpl`;
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-          URL.revokeObjectURL(url);
-          onPrintComplete?.(true);
-          return true;
-        } catch (err) {
-          const message = err instanceof Error ? err.message : 'Share failed';
+          const message = err instanceof Error ? err.message : 'Print failed';
+          // Don't report as error if user cancelled share
           if (!message.includes('abort') && !message.includes('cancel')) {
             onPrintComplete?.(false, message);
           }
           return false;
         }
       }
+
 
       // Desktop: use Zebra Browser Print SDK
       const device = deviceRef.current as ZebraDevice | null;
