@@ -19,7 +19,8 @@ export const middleware = async (request: NextRequest) => {
 
   // Check for device token in URL (for Enterprise Browser/TC27)
   const deviceToken = searchParams.get('device_token');
-  const wmsDeviceToken = process.env.WMS_DEVICE_TOKEN;
+  // TEMP: Hardcoded token - the env var has wrong value. Remove after fixing.
+  const wmsDeviceToken = 'wms_device_2026_CraftCulture_TC27';
 
   // Allow WMS routes with valid device token
   if (deviceToken && wmsDeviceToken && deviceToken === wmsDeviceToken) {
