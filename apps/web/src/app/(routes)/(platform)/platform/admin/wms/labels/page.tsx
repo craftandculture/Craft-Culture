@@ -162,24 +162,31 @@ const WMSLabelsPage = () => {
       }
 
       if (zpl) {
-        // On mobile, save file to Downloads then user opens from Printer Setup Utility
+        // On mobile, try to open file directly with Printer Setup Utility
         if (isMobile) {
           try {
-            // Download the ZPL file
-            const blob = new Blob([zpl], { type: 'application/octet-stream' });
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = 'label.zpl';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            URL.revokeObjectURL(url);
+            // Create blob with ZPL content
+            const blob = new Blob([zpl], { type: 'application/vnd.zebra.zpl' });
+            const fileUrl = URL.createObjectURL(blob);
 
+            // Open the file URL - Android should show "Open with" dialog
+            const newWindow = window.open(fileUrl, '_blank');
+
+            if (!newWindow) {
+              // Popup blocked, fall back to download
+              const link = document.createElement('a');
+              link.href = fileUrl;
+              link.download = 'label.zpl';
+              document.body.appendChild(link);
+              link.click();
+              document.body.removeChild(link);
+              alert('File downloaded. Open with Printer Setup Utility.');
+            }
+
+            setTimeout(() => URL.revokeObjectURL(fileUrl), 1000);
             setSelectedLabels(new Set());
-            alert('File saved to Downloads!\n\nOpen Printer Setup Utility → Files → Downloads → label.zpl');
           } catch (err) {
-            const message = err instanceof Error ? err.message : 'Download failed';
+            const message = err instanceof Error ? err.message : 'Print failed';
             alert(`Error: ${message}`);
           }
         } else if (printFnRef.current) {
