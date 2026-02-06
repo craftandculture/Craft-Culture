@@ -56,6 +56,8 @@ import adminTransferStock from './controller/adminTransferStock';
 import adminUpdateBatchStatus from './controller/adminUpdateBatchStatus';
 import adminUpdateLocation from './controller/adminUpdateLocation';
 import adminUploadReceivingPhoto from './controller/adminUploadReceivingPhoto';
+import deviceGetBayTotems from './controller/deviceGetBayTotems';
+import deviceGetLocationLabels from './controller/deviceGetLocationLabels';
 import partnerGetStock from './controller/partnerGetStock';
 
 const locationsRouter = createTRPCRouter({
@@ -153,9 +155,20 @@ const partnerRouter = createTRPCRouter({
   getStock: partnerGetStock,
 });
 
+/** Device-authenticated routes for WMS terminals (TC27/Enterprise Browser) */
+const deviceLabelsRouter = createTRPCRouter({
+  getLocationLabels: deviceGetLocationLabels,
+  getBayTotems: deviceGetBayTotems,
+});
+
+const deviceRouter = createTRPCRouter({
+  labels: deviceLabelsRouter,
+});
+
 const wmsRouter = createTRPCRouter({
   admin: adminRouter,
   partner: partnerRouter,
+  device: deviceRouter,
 });
 
 export default wmsRouter;
