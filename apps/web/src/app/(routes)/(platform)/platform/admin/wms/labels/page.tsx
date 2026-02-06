@@ -161,10 +161,44 @@ const WMSLabelsPage = () => {
         zpl = generateBatchBayTotemsZpl(totemData);
       }
 
-      if (zpl && printFnRef.current) {
-        const success = await printFnRef.current(zpl);
-        if (success) {
-          setSelectedLabels(new Set());
+      if (zpl) {
+        // On mobile, directly use Web Share API
+        if (isMobile) {
+          try {
+            const file = new File([zpl], `labels-${Date.now()}.zpl`, { type: 'application/octet-stream' });
+
+            if (navigator.canShare && navigator.canShare({ files: [file] })) {
+              await navigator.share({
+                files: [file],
+                title: 'Print Labels',
+              });
+              setSelectedLabels(new Set());
+            } else {
+              // Fallback: download file
+              const blob = new Blob([zpl], { type: 'application/octet-stream' });
+              const url = URL.createObjectURL(blob);
+              const link = document.createElement('a');
+              link.href = url;
+              link.download = `labels-${Date.now()}.zpl`;
+              document.body.appendChild(link);
+              link.click();
+              document.body.removeChild(link);
+              URL.revokeObjectURL(url);
+              alert('ZPL file downloaded. Open it with Printer Setup Utility.');
+            }
+          } catch (err) {
+            // User cancelled share - that's ok
+            const message = err instanceof Error ? err.message : 'Share failed';
+            if (!message.includes('abort') && !message.includes('cancel')) {
+              alert(`Print error: ${message}`);
+            }
+          }
+        } else if (printFnRef.current) {
+          // Desktop: use ZebraPrint component
+          const success = await printFnRef.current(zpl);
+          if (success) {
+            setSelectedLabels(new Set());
+          }
         }
       }
     } finally {
