@@ -8,8 +8,24 @@ const protectedRoutes = [
   /(?:^|\/)([\w-]+\/)?welcome/,
 ];
 
+/** WMS routes that can be accessed with device token */
+const wmsRoutes = [
+  /\/platform\/admin\/wms/,
+];
+
 export const middleware = async (request: NextRequest) => {
-  const { pathname } = request.nextUrl;
+  const { pathname, searchParams } = request.nextUrl;
+
+  // Check for device token in URL (for Enterprise Browser/TC27)
+  const deviceToken = searchParams.get('device_token');
+  const wmsDeviceToken = process.env.WMS_DEVICE_TOKEN;
+
+  // Allow WMS routes with valid device token
+  if (deviceToken && wmsDeviceToken && deviceToken === wmsDeviceToken) {
+    if (wmsRoutes.some((route) => route.test(pathname))) {
+      return NextResponse.next();
+    }
+  }
 
   const hasSession =
     getSessionCookie(request, {
