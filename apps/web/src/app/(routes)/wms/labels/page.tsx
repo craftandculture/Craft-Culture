@@ -154,17 +154,6 @@ const WMSDeviceLabelsContent = () => {
     }
   };
 
-  // Debug: Always show state info for troubleshooting
-  const debugInfo = {
-    deviceToken: deviceToken ? `${deviceToken.slice(0, 15)}...` : 'null',
-    locationError: locationError ? (locationError as Error).message : null,
-    totemError: totemError ? (totemError as Error).message : null,
-    locationLoading: locationLabelsLoading,
-    totemLoading: bayTotemsLoading,
-    locationDataExists: !!locationLabelsData,
-    totemDataExists: !!bayTotemsData,
-  };
-
   // Check for auth errors
   const authError = locationError || totemError;
   if (!deviceToken || authError) {
@@ -178,13 +167,8 @@ const WMSDeviceLabelsContent = () => {
             <Typography variant="bodyMd" colorRole="muted">
               {!deviceToken
                 ? 'No device token provided. This page is for authorized warehouse devices only.'
-                : `API Error: ${(authError as Error)?.message || 'Unknown error'}`}
+                : `Authentication failed. Please contact support.`}
             </Typography>
-            <div className="mt-4 p-4 bg-fill-secondary rounded text-left">
-              <Typography variant="bodySm" className="font-mono text-xs break-all">
-                Debug: {JSON.stringify(debugInfo, null, 2)}
-              </Typography>
-            </div>
           </CardContent>
         </Card>
       </div>

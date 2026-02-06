@@ -353,12 +353,9 @@ export const validateDeviceToken = (deviceToken: string | undefined) => {
   const trimmedToken = deviceToken?.trim();
 
   if (!trimmedToken || trimmedToken !== expectedToken) {
-    // Debug: show what was received vs expected (truncated for security)
-    const receivedPreview = trimmedToken ? `${trimmedToken.slice(0, 20)}...` : 'empty';
-    const expectedPreview = `${expectedToken.slice(0, 20)}...`;
     throw new TRPCError({
       code: 'UNAUTHORIZED',
-      message: `Invalid device token. Got: "${receivedPreview}" Expected: "${expectedPreview}"`,
+      message: 'Invalid device token',
     });
   }
 };
