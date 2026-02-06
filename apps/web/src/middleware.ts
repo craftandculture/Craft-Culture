@@ -19,7 +19,7 @@ export const middleware = async (request: NextRequest) => {
 
   // Check for device token in URL (for Enterprise Browser/TC27)
   const deviceToken = searchParams.get('device_token');
-  // TEMP: Hardcoded token - the env var has wrong value. Remove after fixing.
+  // TODO: Move to env var WMS_DEVICE_TOKEN after fixing Vercel config
   const wmsDeviceToken = 'wms_device_2026_CraftCulture_TC27';
 
   // Allow WMS routes with valid device token
