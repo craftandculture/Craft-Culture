@@ -19,6 +19,8 @@ const serverConfig = {
   zohoRefreshToken: serverEnv.ZOHO_REFRESH_TOKEN,
   zohoOrganizationId: serverEnv.ZOHO_ORGANIZATION_ID,
   zohoRegion: serverEnv.ZOHO_REGION,
+  wmsDeviceToken: serverEnv.WMS_DEVICE_TOKEN,
+  wmsDeviceUserEmail: serverEnv.WMS_DEVICE_USER_EMAIL,
 } as const;
 
 export default serverConfig;
