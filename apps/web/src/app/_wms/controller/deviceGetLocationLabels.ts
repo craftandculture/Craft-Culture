@@ -3,7 +3,7 @@ import { z } from 'zod';
 
 import db from '@/database/client';
 import { wmsLocations } from '@/database/schema';
-import { deviceProcedure } from '@/lib/trpc/procedures';
+import { deviceProcedure, validateDeviceToken } from '@/lib/trpc/procedures';
 
 import type { LocationLabelData } from '../utils/generateLocationLabelZpl';
 import { generateBatchLocationLabelsZpl } from '../utils/generateLocationLabelZpl';
@@ -23,6 +23,9 @@ const deviceGetLocationLabels = deviceProcedure
     }),
   )
   .query(async ({ input }) => {
+    // Validate device token
+    validateDeviceToken(input.deviceToken);
+
     const conditions = [eq(wmsLocations.isActive, true)];
 
     if (input.locationIds?.length) {
