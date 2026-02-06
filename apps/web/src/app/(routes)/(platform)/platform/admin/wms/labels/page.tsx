@@ -13,7 +13,7 @@ import {
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
@@ -42,6 +42,15 @@ const WMSLabelsPage = () => {
   const [selectedLabels, setSelectedLabels] = useState<Set<string>>(new Set());
   const [isPrintingToZebra, setIsPrintingToZebra] = useState(false);
   const [zebraConnected, setZebraConnected] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Detect mobile device for print button enablement
+  useEffect(() => {
+    const mobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+      navigator.userAgent
+    );
+    setIsMobile(mobile);
+  }, []);
 
   // Get case labels for a shipment
   const { data: caseLabelsData, isLoading: caseLabelsLoading } = useQuery({
@@ -211,7 +220,7 @@ const WMSLabelsPage = () => {
               <Button
                 variant="primary"
                 onClick={handlePrintToZebra}
-                disabled={selectedLabels.size === 0 || !zebraConnected || isPrintingToZebra}
+                disabled={selectedLabels.size === 0 || (!zebraConnected && !isMobile) || isPrintingToZebra}
               >
                 <ButtonContent iconLeft={isPrintingToZebra ? IconLoader2 : IconPrinter}>
                   {isPrintingToZebra
