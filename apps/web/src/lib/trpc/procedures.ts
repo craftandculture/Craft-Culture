@@ -339,6 +339,18 @@ export const deviceProcedure = publicProcedure.use(({ ctx, next, rawInput }) => 
   const deviceToken = input?.deviceToken?.trim();
   const expectedToken = serverConfig.wmsDeviceToken?.trim();
 
+  // DEBUG: Log token info
+  console.log('[deviceProcedure] DEBUG:', {
+    rawInputType: typeof rawInput,
+    rawInputKeys: rawInput ? Object.keys(rawInput as object) : null,
+    inputDeviceToken: deviceToken,
+    inputTokenLength: deviceToken?.length,
+    expectedToken: expectedToken,
+    expectedTokenLength: expectedToken?.length,
+    tokensMatch: deviceToken === expectedToken,
+    hardcodedCheck: deviceToken === 'wms_device_2026_CraftCulture_TC27',
+  });
+
   if (!expectedToken) {
     throw new TRPCError({
       code: 'INTERNAL_SERVER_ERROR',
@@ -349,7 +361,7 @@ export const deviceProcedure = publicProcedure.use(({ ctx, next, rawInput }) => 
   if (!deviceToken || deviceToken !== expectedToken) {
     throw new TRPCError({
       code: 'UNAUTHORIZED',
-      message: 'Invalid device token',
+      message: `Invalid device token. Expected length: ${expectedToken?.length}, got: ${deviceToken?.length}`,
     });
   }
 
