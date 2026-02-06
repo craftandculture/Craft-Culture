@@ -1,10 +1,9 @@
 import { eq } from 'drizzle-orm';
-import { cookies } from 'next/headers';
 import { type NextRequest, NextResponse } from 'next/server';
 
-import clientConfig from '@/client.config';
 import db from '@/database/client';
-import { sessions, users } from '@/database/schema';
+import { users } from '@/database/schema';
+import auth from '@/lib/better-auth/server';
 import serverConfig from '@/server.config';
 import logger from '@/utils/logger';
 
@@ -63,43 +62,73 @@ export const GET = async (request: NextRequest) => {
     );
   }
 
-  // Create a session token
-  const sessionToken = crypto.randomUUID();
-  const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
+  try {
+    // Use Better Auth's internal API to create a session
+    // This ensures the session is created in the format Better Auth expects
+    const response = await auth.api.signInEmail({
+      body: {
+        email: serverConfig.wmsDeviceUserEmail,
+        // Better Auth magic link plugin allows empty password when callbackURL is provided
+        password: '',
+        callbackURL: redirect,
+      },
+      asResponse: true,
+      headers: request.headers,
+    });
 
-  // Insert session into database
-  const [session] = await db
-    .insert(sessions)
-    .values({
+    // If sign-in requires verification, create session directly using internal context
+    if (!response.ok) {
+      // Fallback: Create session using Better Auth's internal adapter
+      const ctx = await auth.$context;
+      const sessionResult = await ctx.internalAdapter.createSession(
+        user.id,
+        request.headers,
+        false, // not remember me
+      );
+
+      if (!sessionResult) {
+        throw new Error('Failed to create session');
+      }
+
+      logger.info('[Device Auth] Session created via internal adapter', {
+        userId: user.id,
+        sessionId: sessionResult.session.id,
+      });
+
+      // Build redirect response with session cookie
+      const baseUrl = serverConfig.appUrl.toString().replace(/\/$/, '');
+      const redirectResponse = NextResponse.redirect(`${baseUrl}${redirect}`);
+
+      // Set the session cookie
+      const cookieName = ctx.authCookies.sessionToken.name;
+      redirectResponse.cookies.set(cookieName, sessionResult.session.token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        path: '/',
+        expires: sessionResult.session.expiresAt,
+      });
+
+      return redirectResponse;
+    }
+
+    // If sign-in succeeded, forward the response (it has the cookie set)
+    logger.info('[Device Auth] Session created via signInEmail', {
       userId: user.id,
-      token: sessionToken,
-      expiresAt,
-      ipAddress: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip'),
-      userAgent: request.headers.get('user-agent'),
-    })
-    .returning();
+    });
 
-  logger.info('[Device Auth] Session created', {
-    userId: user.id,
-    sessionId: session.id,
-    expiresAt,
-  });
+    return response;
+  } catch (error) {
+    logger.error('[Device Auth] Failed to create session', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      userId: user.id,
+    });
 
-  // Set the session cookie
-  const cookieStore = await cookies();
-  const cookieName = `${clientConfig.cookiePrefix}.session_token`;
-
-  cookieStore.set(cookieName, sessionToken, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    path: '/',
-    expires: expiresAt,
-  });
-
-  // Redirect to the target page
-  const baseUrl = serverConfig.appUrl.toString().replace(/\/$/, '');
-  return NextResponse.redirect(`${baseUrl}${redirect}`);
+    return NextResponse.json(
+      { error: 'Failed to create session' },
+      { status: 500 },
+    );
+  }
 };
 
 export default GET;
