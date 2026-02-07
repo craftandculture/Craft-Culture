@@ -31,11 +31,30 @@ export interface LabelData {
 }
 
 /**
- * Truncate string to max length, adding ellipsis if needed
+ * Split text into two lines if it exceeds max length
+ * Returns [line1, line2] - line2 may be empty if text fits on one line
  */
-const truncate = (str: string, maxLength: number) => {
-  if (str.length <= maxLength) return str;
-  return str.slice(0, maxLength - 3) + '...';
+const splitToTwoLines = (str: string, maxCharsPerLine: number): [string, string] => {
+  if (str.length <= maxCharsPerLine) {
+    return [str, ''];
+  }
+
+  // Find a good break point (space) near the middle or max length
+  let breakPoint = str.lastIndexOf(' ', maxCharsPerLine);
+  if (breakPoint === -1 || breakPoint < maxCharsPerLine / 2) {
+    // No good break point, just split at max length
+    breakPoint = maxCharsPerLine;
+  }
+
+  const line1 = str.slice(0, breakPoint).trim();
+  const line2 = str.slice(breakPoint).trim();
+
+  // Truncate line2 if still too long
+  if (line2.length > maxCharsPerLine) {
+    return [line1, line2.slice(0, maxCharsPerLine - 3) + '...'];
+  }
+
+  return [line1, line2];
 };
 
 /**
@@ -65,58 +84,84 @@ const escapeZpl = (str: string) => {
 /**
  * Generate ZPL code for a single case label
  *
- * Label layout (4" x 2" at 203 DPI = 812 x 406 dots):
- * - Top: Large Code 128 barcode with human-readable text
- * - Middle: Product name (bold, truncated if needed)
- * - Bottom: LWIN | Pack size | Lot | Location
+ * Professional wine warehouse label layout (4" x 2" at 203 DPI = 812 x 406 dots)
+ * Inspired by Cru Wine Limited labels:
+ * - Header with company name
+ * - Large barcode
+ * - Product name (2 lines if needed)
+ * - Labeled data fields in clean columns
  */
 const generateLabelZpl = (data: LabelData) => {
-  const productName = escapeZpl(truncate(data.productName, 35));
+  const [productLine1, productLine2] = splitToTwoLines(escapeZpl(data.productName), 38);
   const lwin = escapeZpl(data.lwin18);
-  const packSize = escapeZpl(data.packSize || '');
+  const packSize = escapeZpl(data.packSize || '-');
   const lot = data.lotNumber ? escapeZpl(data.lotNumber) : '-';
   const location = data.locationCode ? escapeZpl(data.locationCode) : '-';
 
-  // ZPL code for 4" x 2" label at 203 DPI
-  // ^XA = Start format
-  // ^FO = Field origin (x, y in dots)
-  // ^BY = Barcode defaults (module width, ratio, height)
-  // ^BC = Code 128 barcode
-  // ^FD = Field data
-  // ^FS = Field separator
-  // ^A0 = Font 0 (scalable)
-  // ^XZ = End format
+  // ZPL code for 4" x 2" label at 203 DPI (812 x 406 dots)
   const zpl = `^XA
 
-^FX -- Barcode at top --
-^FO50,30
-^BY2,3,80
-^BCN,80,Y,N,N
+^FX -- Company header --
+^FO30,15
+^A0N,22,22
+^FDCraft & Culture^FS
+
+^FX -- Large barcode --
+^FO30,45
+^BY2,3,65
+^BCN,65,Y,N,N
 ^FD${data.barcode}^FS
 
-^FX -- Product name (large, bold) --
-^FO50,140
-^A0N,40,40
-^FD${productName}^FS
+^FX -- Horizontal separator --
+^FO30,135
+^GB750,2,2^FS
 
-^FX -- LWIN code --
-^FO50,190
-^A0N,24,24
-^FDLWIN: ${lwin}^FS
+^FX -- Product name line 1 (prominent) --
+^FO30,150
+^A0N,32,32
+^FD${productLine1}^FS
 
-^FX -- Pack size --
-^FO400,190
-^A0N,24,24
+${productLine2 ? `^FX -- Product name line 2 --
+^FO30,185
+^A0N,32,32
+^FD${productLine2}^FS
+` : ''}
+^FX -- Data fields section --
+^FX -- Left column labels --
+^FO30,225
+^A0N,20,20
+^FDLWIN:^FS
+
+^FO30,250
+^A0N,20,20
+^FDLot:^FS
+
+^FX -- Left column values --
+^FO100,225
+^A0N,20,20
+^FD${lwin}^FS
+
+^FO100,250
+^A0N,20,20
+^FD${lot}^FS
+
+^FX -- Right column labels --
+^FO450,225
+^A0N,20,20
+^FDSize:^FS
+
+^FO450,250
+^A0N,20,20
+^FDBay:^FS
+
+^FX -- Right column values --
+^FO510,225
+^A0N,20,20
 ^FD${packSize}^FS
 
-^FX -- Lot and Location --
-^FO50,220
-^A0N,24,24
-^FDLot: ${lot}^FS
-
-^FO400,220
-^A0N,24,24
-^FDBay: ${location}^FS
+^FO510,250
+^A0N,20,20
+^FD${location}^FS
 
 ^XZ`;
 
