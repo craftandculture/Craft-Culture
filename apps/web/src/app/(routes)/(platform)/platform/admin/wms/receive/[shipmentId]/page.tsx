@@ -29,7 +29,8 @@ import Icon from '@/app/_ui/components/Icon/Icon';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import PhotoCapture from '@/app/_wms/components/PhotoCapture';
 import ScanInput from '@/app/_wms/components/ScanInput';
-import ZebraPrint, { useZebraPrint } from '@/app/_wms/components/ZebraPrint';
+import ZebraPrint from '@/app/_wms/components/ZebraPrint';
+import downloadZplFile from '@/app/_wms/utils/downloadZplFile';
 import useTRPC from '@/lib/trpc/browser';
 
 interface LocationAssignment {
@@ -81,7 +82,6 @@ const WMSReceiveShipmentPage = () => {
   const shipmentId = params.shipmentId as string;
   const api = useTRPC();
   const queryClient = useQueryClient();
-  const { print: zebraPrint, isConnected: isPrinterConnected } = useZebraPrint();
 
   // View mode: 'list' shows all products with search, 'detail' shows single product
   const [viewMode, setViewMode] = useState<'list' | 'detail'>('list');
@@ -367,7 +367,7 @@ const WMSReceiveShipmentPage = () => {
     }
   };
 
-  // Print labels for pending cases at scanned location
+  // Download labels for pending cases at scanned location (2-step print workflow)
   const handlePrintLabels = async () => {
     const currentItem = getCurrentItem();
     if (!currentItem || !scannedLocationId || pendingCases <= 0) return;
@@ -391,14 +391,11 @@ const WMSReceiveShipmentPage = () => {
         quantity: pendingCases,
       });
 
-      // Send ZPL to printer
-      if (result.zpl && isPrinterConnected()) {
-        const printSuccess = await zebraPrint(result.zpl);
-        if (!printSuccess) {
-          setPrintError('Failed to send to printer. Check connection.');
-        }
-      } else if (!isPrinterConnected()) {
-        setPrintError('Printer not connected. Labels saved but not printed.');
+      // Download ZPL file for 2-step print workflow
+      // User opens file with Printer Setup Utility to print
+      if (result.zpl) {
+        const filename = `labels-${currentItem.productName.replace(/[^a-zA-Z0-9]/g, '-').slice(0, 30)}-${scannedLocationCode}`;
+        downloadZplFile(result.zpl, filename);
       }
 
       // Update item with new location assignment
@@ -976,7 +973,7 @@ const WMSReceiveShipmentPage = () => {
                         </select>
                       </div>
 
-                      {/* Print button */}
+                      {/* Download labels button (2-step print: download → Printer Setup Utility) */}
                       {scannedLocationId && (
                         <Button
                           variant="primary"
@@ -986,7 +983,7 @@ const WMSReceiveShipmentPage = () => {
                           disabled={isPrinting || pendingCases === 0}
                         >
                           <ButtonContent iconLeft={isPrinting ? IconLoader2 : IconPrinter}>
-                            {isPrinting ? 'Printing...' : `Print ${pendingCases} Labels → ${scannedLocationCode}`}
+                            {isPrinting ? 'Downloading...' : `Download ${pendingCases} Labels → ${scannedLocationCode}`}
                           </ButtonContent>
                         </Button>
                       )}
