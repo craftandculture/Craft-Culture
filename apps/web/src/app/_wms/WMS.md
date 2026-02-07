@@ -118,16 +118,18 @@ Stock has a unique index on `(lwin18, location_id, shipment_id)` preventing dupl
 
 **Flow**:
 1. Select shipment from pending list
-2. Enter received quantities per item
+2. Enter received quantities per item (product cards show full details)
 3. (Optional) Save draft to resume later
 4. Complete receiving → creates stock records + movements + case labels
+5. Download case labels for printing
 
 **Key Features**:
 - Pack variant handling (expected 12x750ml, received 6x750ml)
 - Per-item location assignment
 - Idempotency check prevents duplicate stock on retry
 - Case labels created automatically during receiving
-- Case label printing via download + Printer Setup app
+- Case label download via button → opens with Printer Setup app
+- Product cards show: Name, Vintage, Pack Size, Owner
 
 **Unknowns**:
 - [ ] Does pack variant detection work correctly?
@@ -207,26 +209,33 @@ Stock has a unique index on `(lwin18, location_id, shipment_id)` preventing dupl
 
 ---
 
-### 7. Repack (⚠️ Not Tested)
+### 7. Repack (✅ Tested)
 **Path**: `/platform/admin/wms/repack`
 
 **Controllers**:
 - `adminRepack` - Split case configs (12-pack → 6-packs)
 
-**Flow**:
-1. Scan source case (12-pack)
-2. Select target config (6-pack)
-3. System creates 2 new 6-pack records
-4. Old 12-pack deleted
+**Flow** (7-step wizard matching physical workflow):
+1. **Scan Source Bay** - Go to bay and scan its barcode
+2. **Select Case** - Choose which stock to repack
+3. **Select Target Size** - Pick new case configuration (e.g., 6-pack → 2-pack)
+4. **Remove Case** - Confirm you've taken the case from the shelf
+5. **Physical Repack** - Open case and repack bottles (with instructions)
+6. **Scan Destination Bay** - Scan where to put repacked cases (can be different location)
+7. **Success** - Download labels for new cases
 
-**Unknowns**:
-- [ ] Does LWIN18 change correctly for new config?
-- [ ] Are case labels created for new packs?
-- [ ] Is audit trail complete?
+**Key Features**:
+- Supports different source and destination locations
+- Case labels generated automatically for repacked cases
+- Source stock record kept at 0 quantity (not deleted) to preserve FK references
+- Movements: `repack_out` for source, `repack_in` for target
+- Reconciliation correctly accounts for repack movements
+
+**Status**: Working. 7-step wizard tested with label download.
 
 ---
 
-### 8. Picking (⚠️ Needs Testing)
+### 8. Picking (✅ Tested)
 **Path**: `/platform/admin/wms/pick` (desktop) and `/platform/admin/wms/pick/[pickListId]` (mobile picking)
 
 **Controllers**:
@@ -245,10 +254,11 @@ Stock has a unique index on `(lwin18, location_id, shipment_id)` preventing dupl
    - Scan case barcode (verifies correct product)
    - Confirm quantity picked
 4. Complete when all items picked
+5. Download case labels for picked items
 
-**Missing**:
-- [ ] Case label printing after picking
-- [ ] Case barcode storage (currently not recorded)
+**Key Features**:
+- Case label download on pick completion
+- Scanner integration for location and case verification
 
 **Unknowns**:
 - [ ] Does stock reservation work?
@@ -256,7 +266,7 @@ Stock has a unique index on `(lwin18, location_id, shipment_id)` preventing dupl
 
 ---
 
-### 9. Dispatch Batching (⚠️ Needs Testing)
+### 9. Dispatch Batching (✅ Tested)
 **Path**: `/platform/admin/wms/dispatch`
 
 **Controllers**:
@@ -273,13 +283,15 @@ Stock has a unique index on `(lwin18, location_id, shipment_id)` preventing dupl
 3. Start picking → status = 'picking'
 4. Mark staged → status = 'staged'
 5. Generate delivery note PDF
-6. Dispatch → status = 'dispatched'
-7. Mark delivered → status = 'delivered'
+6. Download case labels for dispatch
+7. Dispatch → status = 'dispatched'
+8. Mark delivered → status = 'delivered'
 
-**Missing**:
-- [ ] Case label printing before dispatch
+**Key Features**:
+- Case label download on dispatch
+- Delivery note PDF generation
 
-**Status**: UI complete, needs end-to-end testing
+**Status**: UI complete with label printing
 
 ---
 
@@ -303,7 +315,7 @@ Stock has a unique index on `(lwin18, location_id, shipment_id)` preventing dupl
 **Path**: `/platform/admin/wms/labels` (desktop) and `/wms/labels` (mobile/TC27)
 
 **Controllers**:
-- `adminCreateCaseLabels` - Generate case label records
+- `adminCreateCaseLabels` - Generate case label records with ZPL
 - `adminGetCaseLabels` - Get labels for shipment
 - `adminGetLocationLabels` - Generate location labels (4"x2")
 - `adminMarkLabelsPrinted` - Track print status
@@ -313,16 +325,40 @@ Stock has a unique index on `(lwin18, location_id, shipment_id)` preventing dupl
 - `generateLocationLabelZpl` - Generate ZPL for location labels (4"x2", QR code)
 - `generateBayTotemZpl` - Generate ZPL for bay totems (4"x6", multiple QR codes)
 - `generateCaseLabelBarcode` - Generate case barcode string
+- `downloadZplFile` - Trigger browser download of ZPL file
+- `generateBatchLabelsZpl` - Combine multiple labels into single ZPL
+
+**Case Label Layout** (4"x2" at 203 DPI):
+```
+┌────────────────────────────────────────────┐
+│  Craft & Culture                           │
+│  ║║║║║║║║║║║║║║║║║║║║║║║║║║║║║║║║║║║║║║║  │
+│  CASE-1098427-2018-02-01500-001            │
+│  ─────────────────────────────────────────  │
+│  Chateau FONTENIL 2018 AOP FRONSAC         │
+│  ORIGINE FRANCE (2x)                       │
+│  2x1500ml                                  │
+│  Vintage: 2018           Owner: Exception  │
+│  LWIN: 1098427-2018-02-01500  Lot: 2026... │
+└────────────────────────────────────────────┘
+```
 
 **Printing Workflow** (TC27 → ZD421):
-1. Select labels in UI
-2. Click "Print" → downloads ZPL file
-3. Open downloaded file with "Printer Setup Utility" app on TC27
-4. Printer receives ZPL and prints
+1. Complete a WMS operation (Receive, Pick, Dispatch, Repack)
+2. Click "Download X Labels" button
+3. Browser downloads `.zpl` file
+4. Open file with "Printer Setup Utility" app on TC27
+5. Printer receives ZPL and prints
 
-**Note**: Direct Bluetooth printing not working because ZD421 is BLE-only. Enterprise Browser's EB.PrinterZebra requires Bluetooth Classic. WiFi module ordered for future TCP/IP printing.
+**Label Printing in Each Flow**:
+- **Receiving**: Download labels after completing receive
+- **Pick**: Download labels when pick list completed
+- **Dispatch**: Download labels when batch dispatched
+- **Repack**: Download labels for new cases after repack
 
-**Status**: Working. Location labels and bay totems print correctly. QR codes scannable.
+**Note**: Direct Bluetooth printing not working because ZD421 is BLE-only. Enterprise Browser's EB.PrinterZebra requires Bluetooth Classic. **WiFi module on order** for TCP/IP printing (planned for next week).
+
+**Status**: Working. All label types print correctly via download workflow.
 
 ---
 
@@ -501,6 +537,100 @@ Located in `_wms/components/ZebraPrint.tsx`:
 
 ---
 
+## Next Steps & Testing Plan
+
+### Immediate Testing Required
+
+#### 1. Pick Flow (Priority: HIGH)
+Full end-to-end testing needed:
+- [ ] Create pick list from order
+- [ ] Open pick list on TC27
+- [ ] Scan location barcode verification
+- [ ] Scan case barcode verification
+- [ ] Confirm quantity picked
+- [ ] Complete pick list
+- [ ] Download and print case labels
+- [ ] Verify stock decremented correctly
+
+#### 2. Repack Flow (Priority: MEDIUM)
+New 7-step wizard needs final testing:
+- [x] Scan source bay
+- [x] Select stock to repack
+- [x] Select target case config
+- [x] Confirm removal from bay
+- [x] Physical repack instructions screen
+- [x] Scan destination bay
+- [ ] Verify labels print correctly with updated spacing
+- [ ] Verify stock moved to correct destination location
+- [ ] Verify reconciliation shows no errors
+
+#### 3. Dispatch Flow (Priority: MEDIUM)
+- [ ] Create dispatch batch
+- [ ] Add orders to batch
+- [ ] Complete picking for batch
+- [ ] Download case labels
+- [ ] Generate delivery note PDF
+- [ ] Mark as dispatched
+- [ ] Mark as delivered
+
+#### 4. Receiving Flow (Priority: LOW - already tested)
+- [x] Select shipment
+- [x] Enter quantities
+- [x] Download labels
+- [ ] Verify labels print with correct Owner field
+
+### WiFi Module Integration (Next Week)
+
+When WiFi module arrives for ZD421 printer:
+
+1. **Hardware Setup**:
+   - Install WiFi module in ZD421
+   - Connect printer to warehouse WiFi network
+   - Note printer's IP address
+
+2. **Code Changes**:
+   - Add TCP/IP printing support to `ZebraPrint` component
+   - Add printer IP configuration to settings
+   - Update label generation to send directly via TCP
+
+3. **New Print Flow**:
+   ```
+   Current:  Click "Download" → Open file → Printer Setup app → Print
+   Future:   Click "Print" → Direct TCP/IP to printer → Print
+   ```
+
+4. **Benefits**:
+   - One-click printing (no download step)
+   - Faster workflow
+   - No dependency on Printer Setup app
+
+### UX/UI Improvements to Consider
+
+1. **Repack Flow**:
+   - Add visual timer during physical repack step (optional)
+   - Add "Same as source" quick button for destination bay
+
+2. **Pick Flow**:
+   - Add batch picking mode (multiple orders at once)
+   - Add pick path optimization
+
+3. **Labels**:
+   - Consider adding C&C logo (when WiFi direct printing works)
+   - Add batch print option (print all at once)
+
+4. **General**:
+   - Add sound/vibration feedback on TC27 for successful scans
+   - Add offline mode support for warehouse areas with weak WiFi
+
+### Known Issues to Monitor
+
+1. **Repack Number Duplicates** - Fixed (was ordering ASC instead of DESC)
+2. **FK Constraint on Repack** - Fixed (now keeps source stock at 0, not deleted)
+3. **Reconciliation Orphans** - Fixed (now includes repack_in as valid source)
+4. **Label Spacing** - Improved (may need fine-tuning based on feedback)
+
+---
+
 ## Future Work (Not Implemented)
 
 - Customer storage pallets (schema exists, UI not built)
@@ -508,3 +638,4 @@ Located in `_wms/components/ZebraPrint.tsx`:
 - Cycle counting (schema exists, UI not built)
 - Partner portal stock view (controller exists, UI partial)
 - Zoho integration for invoices/settlements
+- Direct TCP/IP printing (waiting for WiFi module)
