@@ -47,30 +47,40 @@ const escapeZpl = (str: string) => {
  * Generate ZPL code for a single bay totem label
  *
  * Label layout (4" x 6" at 203 DPI = 812 x 1218 dots):
- * - Header: Bay identifier (A-01)
+ * - Header: Bay identifier in large bold text with border
  * - 4 level sections, each with:
- *   - QR code on left
+ *   - Large QR code on left
  *   - Location code and level text on right
- *   - Forklift indicator if needed
- *   - Horizontal separator line
+ *   - Visual badges for forklift indicator
+ *   - Clean separator lines
  */
 const generateBayTotemZpl = (data: BayTotemData) => {
   const bayCode = `${escapeZpl(data.aisle)}-${escapeZpl(data.bay)}`;
 
   // Calculate section height - 6" label at 203 DPI = 1218 dots
-  // Header: ~150 dots, each level section: ~250 dots
-  const headerHeight = 120;
-  const sectionHeight = 270;
+  // Header: ~150 dots, each level section: ~260 dots
+  const headerHeight = 140;
+  const sectionHeight = 260;
 
   let zpl = `^XA
 
-^FX -- Bay Header --
-^FO30,30
-^A0N,70,70
+^FX -- Outer border --
+^FO15,15
+^GB782,1188,3^FS
+
+^FX -- Bay Header with background box --
+^FO25,25
+^GB762,110,110,B^FS
+
+^FX -- Bay Header Text (reversed/white on black) --
+^FO60,45
+^A0N,80,80
+^FR
 ^FDBay ${bayCode}^FS
 
-^FO30,100
-^GB750,3,3^FS
+^FX -- Header separator --
+^FO25,140
+^GB762,4,4^FS
 `;
 
   // Add each level section (from top level to bottom)
@@ -78,48 +88,41 @@ const generateBayTotemZpl = (data: BayTotemData) => {
     const yOffset = headerHeight + (index * sectionHeight);
     const locationCode = `${data.aisle}-${data.bay}-${level.level}`;
     const levelNum = parseInt(level.level, 10);
-    // Levels 00 and 01 are both floor-accessible (bay splits into 2 at ground level)
     const levelLabel = levelNum <= 1 ? 'FLOOR' : `LEVEL ${levelNum}`;
     const forkliftText = level.requiresForklift ? 'FORKLIFT' : '';
 
     zpl += `
 ^FX -- Level ${level.level} Section --
 
-^FX QR Code
-^FO30,${yOffset + 20}
-^BQN,2,5
+^FX Large QR Code (magnification 7 for easy scanning)
+^FO40,${yOffset + 20}
+^BQN,2,7
 ^FDMA,${level.barcode}^FS
 
-^FX Location Code (large)
-^FO200,${yOffset + 30}
-^A0N,60,60
+^FX Location Code (large and bold)
+^FO260,${yOffset + 25}
+^A0N,70,70
 ^FD${escapeZpl(locationCode)}^FS
 
 ^FX Level Label
-^FO200,${yOffset + 100}
-^A0N,40,40
+^FO260,${yOffset + 105}
+^A0N,45,45
 ^FD${levelLabel}^FS
 
-^FX Forklift indicator
-^FO450,${yOffset + 100}
-^A0N,32,32
-^FD${forkliftText}^FS
+^FX Forklift badge (if required)
+${forkliftText ? `^FO260,${yOffset + 160}
+^GB150,40,2^FS
+^FO270,${yOffset + 168}
+^A0N,26,26
+^FD${forkliftText}^FS` : ''}
 
 ^FX Separator line
-^FO30,${yOffset + 160}
-^GB750,2,2^FS
+^FO25,${yOffset + 215}
+^GB762,2,2^FS
 `;
   });
 
-  // Add mounting instruction at bottom
-  const bottomY = headerHeight + (data.levels.length * sectionHeight);
-  zpl += `
-^FX -- Mounting instruction --
-^FO200,${bottomY + 10}
-^A0N,24,24
-^FDMount at eye level (1.5m)^FS
-
-^XZ`;
+  zpl += `^XZ`;
 
   return zpl;
 };
