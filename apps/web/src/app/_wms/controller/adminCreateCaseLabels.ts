@@ -32,13 +32,14 @@ const adminCreateCaseLabels = adminProcedure
       productName: z.string().min(1),
       lwin18: z.string().min(1),
       packSize: z.string().optional(),
+      vintage: z.number().optional(),
       lotNumber: z.string().optional(),
       locationId: z.string().uuid(),
       quantity: z.number().int().min(1).max(100),
     }),
   )
   .mutation(async ({ input }) => {
-    const { shipmentId, productName, lwin18, packSize, lotNumber, locationId, quantity } = input;
+    const { shipmentId, productName, lwin18, packSize, vintage, lotNumber, locationId, quantity } = input;
 
     console.log('[createCaseLabels] Starting label creation', { lwin18, quantity, shipmentId });
 
@@ -147,6 +148,7 @@ const adminCreateCaseLabels = adminProcedure
           productName,
           lwin18,
           packSize: packSize ?? '',
+          vintage,
           lotNumber,
           locationCode,
         });

@@ -386,6 +386,7 @@ const WMSReceiveShipmentPage = () => {
         productName: currentItem.productName,
         lwin18,
         packSize,
+        vintage: currentItem.vintage ?? undefined,
         lotNumber: new Date().toISOString().split('T')[0],
         locationId: scannedLocationId,
         quantity: pendingCases,
