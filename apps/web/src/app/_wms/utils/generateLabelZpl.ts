@@ -24,6 +24,8 @@ export interface LabelData {
   lwin18: string;
   /** Pack size (e.g., 6x75cl) */
   packSize: string;
+  /** Vintage year (e.g., 2019) */
+  vintage?: number | string;
   /** Lot number */
   lotNumber?: string;
   /** Location code where case is stored (e.g., A-01-02) */
@@ -95,6 +97,7 @@ const generateLabelZpl = (data: LabelData) => {
   const [productLine1, productLine2] = splitToTwoLines(escapeZpl(data.productName), 38);
   const lwin = escapeZpl(data.lwin18);
   const packSize = escapeZpl(data.packSize || '-');
+  const vintage = data.vintage ? escapeZpl(String(data.vintage)) : '-';
   const lot = data.lotNumber ? escapeZpl(data.lotNumber) : '-';
   const location = data.locationCode ? escapeZpl(data.locationCode) : '-';
 
@@ -126,40 +129,47 @@ ${productLine2 ? `^FX -- Product name line 2 --
 ^A0N,32,32
 ^FD${productLine2}^FS
 ` : ''}
-^FX -- Data fields section --
-^FX -- Left column labels --
-^FO30,225
+^FX -- Data fields section (3 rows) --
+^FX -- Row 1: LWIN and Vintage --
+^FO30,220
 ^A0N,20,20
 ^FDLWIN:^FS
 
-^FO30,250
-^A0N,20,20
-^FDLot:^FS
-
-^FX -- Left column values --
-^FO100,225
+^FO100,220
 ^A0N,20,20
 ^FD${lwin}^FS
 
-^FO100,250
+^FO450,220
 ^A0N,20,20
-^FD${lot}^FS
+^FDVintage:^FS
 
-^FX -- Right column labels --
-^FO450,225
+^FO530,220
+^A0N,20,20
+^FD${vintage}^FS
+
+^FX -- Row 2: Size and Lot --
+^FO30,245
 ^A0N,20,20
 ^FDSize:^FS
 
-^FO450,250
-^A0N,20,20
-^FDBay:^FS
-
-^FX -- Right column values --
-^FO510,225
+^FO100,245
 ^A0N,20,20
 ^FD${packSize}^FS
 
-^FO510,250
+^FO450,245
+^A0N,20,20
+^FDLot:^FS
+
+^FO530,245
+^A0N,20,20
+^FD${lot}^FS
+
+^FX -- Row 3: Bay (location) --
+^FO30,270
+^A0N,20,20
+^FDBay:^FS
+
+^FO100,270
 ^A0N,20,20
 ^FD${location}^FS
 
