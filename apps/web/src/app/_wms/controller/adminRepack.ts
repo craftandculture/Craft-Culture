@@ -257,6 +257,10 @@ const adminRepack = adminProcedure
       performedAt: new Date(),
     });
 
+    // Calculate pack size for labels (e.g., "6x750ml")
+    const bottleSize = sourceStock.bottleSize ?? 750;
+    const packSize = `${targetCaseConfig}x${bottleSize}ml`;
+
     return {
       success: true,
       repackNumber,
@@ -275,6 +279,11 @@ const adminRepack = adminProcedure
         quantityCases: targetQuantityCases,
         stockId: targetStockId,
         newCaseLabels,
+        // Additional data for label generation
+        packSize,
+        vintage: sourceStock.vintage,
+        owner: sourceStock.ownerName,
+        lotNumber: sourceStock.lotNumber,
       },
     };
   });
