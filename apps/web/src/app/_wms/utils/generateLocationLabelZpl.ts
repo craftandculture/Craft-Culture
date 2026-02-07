@@ -34,10 +34,24 @@ export interface LocationLabelData {
 }
 
 /**
+ * Normalize accented characters to ASCII equivalents
+ */
+const normalizeAccents = (str: string) => {
+  return str
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/œ/g, 'oe')
+    .replace(/Œ/g, 'OE')
+    .replace(/æ/g, 'ae')
+    .replace(/Æ/g, 'AE')
+    .replace(/ß/g, 'ss');
+};
+
+/**
  * Escape special characters for ZPL
  */
 const escapeZpl = (str: string) => {
-  return str.replace(/\^/g, ' ').replace(/~/g, ' ');
+  return normalizeAccents(str).replace(/\^/g, ' ').replace(/~/g, ' ');
 };
 
 /**
