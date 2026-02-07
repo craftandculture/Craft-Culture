@@ -22,6 +22,8 @@ import Icon from '@/app/_ui/components/Icon/Icon';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import LocationBadge from '@/app/_wms/components/LocationBadge';
 import ScanInput from '@/app/_wms/components/ScanInput';
+import downloadZplFile from '@/app/_wms/utils/downloadZplFile';
+import { generateBatchLabelsZpl } from '@/app/_wms/utils/generateLabelZpl';
 import useTRPC, { useTRPCClient } from '@/lib/trpc/browser';
 
 type WorkflowStep = 'scan-location' | 'select-stock' | 'select-config' | 'confirm' | 'success';
@@ -51,10 +53,15 @@ interface RepackResult {
     quantityCases: number;
   };
   target: {
+    lwin18: string;
     productName: string;
     caseConfig: number;
     quantityCases: number;
     newCaseLabels: Array<{ barcode: string }>;
+    packSize: string;
+    vintage?: number | null;
+    owner?: string | null;
+    lotNumber?: string | null;
   };
 }
 
@@ -87,10 +94,15 @@ const WMSRepackPage = () => {
           quantityCases: data.source.quantityCases,
         },
         target: {
+          lwin18: data.target.lwin18,
           productName: data.target.productName,
           caseConfig: data.target.caseConfig,
           quantityCases: data.target.quantityCases,
           newCaseLabels: data.target.newCaseLabels,
+          packSize: data.target.packSize,
+          vintage: data.target.vintage,
+          owner: data.target.owner,
+          lotNumber: data.target.lotNumber,
         },
       });
       setStep('success');
@@ -153,6 +165,25 @@ const WMSRepackPage = () => {
     setTargetCaseConfig(6);
     setError('');
     setRepackResult(null);
+  };
+
+  // Download labels for repacked cases
+  const handleDownloadLabels = () => {
+    if (!repackResult) return;
+
+    const labelData = repackResult.target.newCaseLabels.map((label) => ({
+      barcode: label.barcode,
+      productName: repackResult.target.productName,
+      lwin18: repackResult.target.lwin18,
+      packSize: repackResult.target.packSize,
+      vintage: repackResult.target.vintage ?? undefined,
+      lotNumber: repackResult.target.lotNumber ?? undefined,
+      owner: repackResult.target.owner ?? undefined,
+    }));
+
+    const zpl = generateBatchLabelsZpl(labelData);
+    const filename = `repack-${repackResult.repackNumber}-labels`;
+    downloadZplFile(zpl, filename);
   };
 
   // Calculate target cases from source
@@ -481,20 +512,25 @@ const WMSRepackPage = () => {
               </CardContent>
             </Card>
 
+            <Button
+              variant="primary"
+              size="lg"
+              className="w-full"
+              onClick={handleDownloadLabels}
+            >
+              <ButtonContent iconLeft={IconPrinter}>
+                Download {repackResult.target.newCaseLabels.length} Labels
+              </ButtonContent>
+            </Button>
+
             <div className="flex gap-3">
               <Button variant="outline" size="lg" className="flex-1" asChild>
                 <Link href="/platform/admin/wms">Done</Link>
               </Button>
-              <Button variant="outline" size="lg" className="flex-1" asChild>
-                <Link href="/platform/admin/wms/labels">
-                  <ButtonContent iconLeft={IconPrinter}>Print</ButtonContent>
-                </Link>
+              <Button variant="outline" size="lg" className="flex-1" onClick={handleReset}>
+                <ButtonContent iconLeft={IconPackage}>Repack More</ButtonContent>
               </Button>
             </div>
-
-            <Button variant="primary" size="lg" className="w-full" onClick={handleReset}>
-              <ButtonContent iconLeft={IconPackage}>Repack More</ButtonContent>
-            </Button>
           </div>
         )}
       </div>

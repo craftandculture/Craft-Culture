@@ -13,13 +13,16 @@ import { adminProcedure } from '@/lib/trpc/procedures';
  *   await trpcClient.wms.admin.stock.reconcile.query();
  */
 const adminReconcileStock = adminProcedure.query(async () => {
-  // Get total cases from movements (receives only - this is the source of truth)
+  // Get total cases from movements (all movement types that affect stock)
   // Exclude 'stock_correction' adjustments - those are data fixes, not physical inventory changes
+  // Repack movements: repack_out removes stock, repack_in adds stock (net neutral for total bottles)
   const [movementTotals] = await db
     .select({
       totalReceived: sql<number>`COALESCE(SUM(CASE WHEN ${wmsStockMovements.movementType} = 'receive' THEN ${wmsStockMovements.quantityCases} ELSE 0 END), 0)::int`,
       totalPicked: sql<number>`COALESCE(SUM(CASE WHEN ${wmsStockMovements.movementType} = 'pick' THEN ${wmsStockMovements.quantityCases} ELSE 0 END), 0)::int`,
       totalAdjusted: sql<number>`COALESCE(SUM(CASE WHEN ${wmsStockMovements.movementType} = 'adjust' AND ${wmsStockMovements.reasonCode} != 'stock_correction' THEN ${wmsStockMovements.quantityCases} ELSE 0 END), 0)::int`,
+      totalRepackIn: sql<number>`COALESCE(SUM(CASE WHEN ${wmsStockMovements.movementType} = 'repack_in' THEN ${wmsStockMovements.quantityCases} ELSE 0 END), 0)::int`,
+      totalRepackOut: sql<number>`COALESCE(SUM(CASE WHEN ${wmsStockMovements.movementType} = 'repack_out' THEN ${wmsStockMovements.quantityCases} ELSE 0 END), 0)::int`,
       receiveCount: sql<number>`COUNT(*) FILTER (WHERE ${wmsStockMovements.movementType} = 'receive')::int`,
     })
     .from(wmsStockMovements);
@@ -32,17 +35,22 @@ const adminReconcileStock = adminProcedure.query(async () => {
     })
     .from(wmsStock);
 
-  // Expected stock = received - picked + adjustments
+  // Expected stock = received - picked + adjustments + repack_in - repack_out
+  // Note: repack_in and repack_out should balance out in terms of total bottles,
+  // but case counts may differ (e.g., 1x12-pack becomes 2x6-packs)
   const expectedStock =
     (movementTotals?.totalReceived ?? 0) -
     (movementTotals?.totalPicked ?? 0) +
-    (movementTotals?.totalAdjusted ?? 0);
+    (movementTotals?.totalAdjusted ?? 0) +
+    (movementTotals?.totalRepackIn ?? 0) -
+    (movementTotals?.totalRepackOut ?? 0);
 
   const actualStock = stockTotals?.totalCases ?? 0;
   const discrepancy = actualStock - expectedStock;
 
-  // Find stock records that don't have a corresponding receive movement
+  // Find stock records that don't have a corresponding receive or repack_in movement
   // This helps identify orphan records
+  // Stock can come from either receiving (receive movement) or repacking (repack_in movement)
   const orphanStock = await db
     .select({
       id: wmsStock.id,
@@ -58,7 +66,7 @@ const adminReconcileStock = adminProcedure.query(async () => {
       sql`NOT EXISTS (
         SELECT 1 FROM ${wmsStockMovements} m
         WHERE m.lwin18 = ${wmsStock.lwin18}
-        AND m.movement_type = 'receive'
+        AND m.movement_type IN ('receive', 'repack_in')
         AND (m.shipment_id = ${wmsStock.shipmentId} OR (m.shipment_id IS NULL AND ${wmsStock.shipmentId} IS NULL))
       )`,
     );
@@ -114,6 +122,8 @@ const adminReconcileStock = adminProcedure.query(async () => {
       movementsReceived: movementTotals?.totalReceived ?? 0,
       movementsPicked: movementTotals?.totalPicked ?? 0,
       movementsAdjusted: movementTotals?.totalAdjusted ?? 0,
+      movementsRepackIn: movementTotals?.totalRepackIn ?? 0,
+      movementsRepackOut: movementTotals?.totalRepackOut ?? 0,
       expectedStock,
       actualStock,
       discrepancy,
