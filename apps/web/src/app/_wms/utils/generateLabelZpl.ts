@@ -152,25 +152,25 @@ ${productLine2 ? `^FX -- Product name line 2 --
 ` : ''}
 ^FX -- Data fields section --
 ^FX -- Row 1: Pack Size (LARGE, prominent) --
-^FO30,215
+^FO30,220
 ^A0N,36,36
 ^FD${packSize}^FS
 
 ^FX -- Row 2: Vintage and Bay --
-^FO30,255
+^FO30,270
 ^A0N,24,24
 ^FDVintage: ${vintage}^FS
 
-^FO450,255
+^FO450,270
 ^A0N,24,24
 ^FDBay: ${location}^FS
 
 ^FX -- Row 3: LWIN and Lot --
-^FO30,285
+^FO30,310
 ^A0N,22,22
 ^FDLWIN: ${lwin}^FS
 
-^FO450,285
+^FO450,310
 ^A0N,22,22
 ^FDLot: ${lot}^FS
 
