@@ -58,67 +58,61 @@ const getLocationTypeDisplay = (type: string) => {
  *
  * Label layout (4" x 2" at 203 DPI = 812 x 406 dots):
  * - Left: Large QR code containing barcode data
- * - Right: Location code in large text (A-01-02)
- * - Bottom: Breakdown (Aisle / Bay / Level) and type/forklift info
+ * - Right: Location code in large text, level info, badges
+ * - Clean, centered design with visual hierarchy
  */
 const generateLocationLabelZpl = (data: LocationLabelData) => {
   const locationCode = escapeZpl(data.locationCode);
   const locationType = getLocationTypeDisplay(data.locationType);
   const forkliftText = data.requiresForklift ? 'FORKLIFT' : '';
+  const levelNum = parseInt(data.level, 10);
+  const levelLabel = levelNum <= 1 ? 'FLOOR' : `LEVEL ${levelNum}`;
 
-  // ZPL code for 4" x 2" label at 203 DPI
-  // ^XA = Start format
-  // ^BQ = QR Code (N=normal, 2=model 2, magnification)
-  // ^FD = Field data (MA = alphanumeric mode, then comma, then data)
-  // ^A0 = Scalable font
-  // ^XZ = End format
+  // ZPL code for 4" x 2" label at 203 DPI (812 x 406 dots)
+  // Centered layout with larger QR code
   const zpl = `^XA
 
-^FX -- QR Code on left side --
-^FO30,30
-^BQN,2,7
+^FX -- Outer border for visual appeal --
+^FO20,20
+^GB772,366,3^FS
+
+^FX -- Large QR Code on left (magnification 10 for better scanning) --
+^FO50,60
+^BQN,2,10
 ^FDMA,${data.barcode}^FS
 
-^FX -- Large location code on right --
-^FO220,40
-^A0N,90,90
+^FX -- Vertical separator line --
+^FO320,40
+^GB3,326,3^FS
+
+^FX -- Large location code (bold, prominent) --
+^FO350,50
+^A0N,100,100
 ^FD${locationCode}^FS
 
-^FX -- Breakdown labels --
-^FO220,150
-^A0N,28,28
-^FDAisle^FS
+^FX -- Level indicator (large) --
+^FO350,160
+^A0N,55,55
+^FD${levelLabel}^FS
 
-^FO340,150
-^A0N,28,28
-^FDBay^FS
-
-^FO450,150
-^A0N,28,28
-^FDLevel^FS
-
-^FX -- Breakdown values --
-^FO230,185
-^A0N,50,50
-^FD${escapeZpl(data.aisle)}^FS
-
-^FO345,185
-^A0N,50,50
-^FD${escapeZpl(data.bay)}^FS
-
-^FO455,185
-^A0N,50,50
-^FD${escapeZpl(data.level)}^FS
-
-^FX -- Location type --
-^FO30,250
+^FX -- Location type badge with box --
+^FO350,240
+^GB150,50,2^FS
+^FO360,250
 ^A0N,32,32
 ^FD${locationType}^FS
 
-^FX -- Forklift indicator (if required) --
-^FO250,250
+^FX -- Forklift indicator badge (if required) --
+${forkliftText ? `^FO520,240
+^GB160,50,2^FS
+^FO530,250
 ^A0N,32,32
-^FD${forkliftText}^FS
+^FD${forkliftText}^FS` : ''}
+
+^FX -- Aisle/Bay breakdown at bottom --
+^FO350,310
+^A0N,24,24
+^FDAisle: ${escapeZpl(data.aisle)}  Bay: ${escapeZpl(data.bay)}^FS
 
 ^XZ`;
 
