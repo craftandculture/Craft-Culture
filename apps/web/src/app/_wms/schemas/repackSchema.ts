@@ -11,11 +11,13 @@ export const repackSchema = z.object({
 
 /**
  * Schema for repacking by stock ID
+ * Supports optional destination location for putting away repacked cases
  */
 export const repackByStockSchema = z.object({
   stockId: z.string().uuid('Invalid stock ID'),
   sourceQuantityCases: z.number().int().positive('Source quantity must be at least 1'),
   targetCaseConfig: z.number().int().positive('Target case config must be positive'),
+  destinationLocationId: z.string().uuid('Invalid destination location ID').optional(),
   notes: z.string().optional(),
 });
 

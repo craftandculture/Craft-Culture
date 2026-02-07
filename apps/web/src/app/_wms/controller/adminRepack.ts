@@ -29,7 +29,7 @@ import generateRepackNumber from '../utils/generateRepackNumber';
 const adminRepack = adminProcedure
   .input(repackByStockSchema)
   .mutation(async ({ input, ctx }) => {
-    const { stockId, sourceQuantityCases, targetCaseConfig, notes } = input;
+    const { stockId, sourceQuantityCases, targetCaseConfig, destinationLocationId, notes } = input;
 
     // 1. Get the source stock record
     const [sourceStock] = await db.select().from(wmsStock).where(eq(wmsStock.id, stockId));
@@ -69,6 +69,9 @@ const adminRepack = adminProcedure
 
     const targetQuantityCases = totalBottles / targetCaseConfig;
 
+    // Determine destination location (use provided or default to source)
+    const targetLocationId = destinationLocationId ?? sourceStock.locationId;
+
     // 4. Generate new LWIN-18 for target (change case config portion)
     // LWIN-18 format: LWIN11-VINTAGE-CASECONFIG-BOTTLESIZE
     const sourceLwin18Parts = sourceStock.lwin18.split('-');
@@ -91,13 +94,13 @@ const adminRepack = adminProcedure
       })
       .where(eq(wmsStock.id, stockId));
 
-    // 7. Create or update target stock
+    // 7. Create or update target stock at destination location
     const [existingTargetStock] = await db
       .select()
       .from(wmsStock)
       .where(
         and(
-          eq(wmsStock.locationId, sourceStock.locationId),
+          eq(wmsStock.locationId, targetLocationId),
           eq(wmsStock.lwin18, targetLwin18),
           eq(wmsStock.ownerId, sourceStock.ownerId),
           eq(wmsStock.lotNumber, sourceStock.lotNumber ?? ''),
@@ -121,7 +124,7 @@ const adminRepack = adminProcedure
       const [newStock] = await db
         .insert(wmsStock)
         .values({
-          locationId: sourceStock.locationId,
+          locationId: targetLocationId,
           ownerId: sourceStock.ownerId,
           ownerName: sourceStock.ownerName,
           lwin18: targetLwin18,
@@ -192,7 +195,7 @@ const adminRepack = adminProcedure
           productName: targetProductName,
           lotNumber: sourceStock.lotNumber,
           shipmentId: sourceStock.shipmentId,
-          currentLocationId: sourceStock.locationId,
+          currentLocationId: targetLocationId,
           isActive: true,
         })
         .returning();
@@ -246,7 +249,7 @@ const adminRepack = adminProcedure
       lwin18: targetLwin18,
       productName: targetProductName,
       quantityCases: targetQuantityCases,
-      toLocationId: sourceStock.locationId,
+      toLocationId: targetLocationId,
       lotNumber: sourceStock.lotNumber,
       scannedBarcodes: newCaseLabels.map((l) => l.barcode),
       notes: `Repacked from ${sourceCaseConfig}-pack (${repackNumber})`,
@@ -267,6 +270,7 @@ const adminRepack = adminProcedure
         productName: sourceStock.productName,
         caseConfig: sourceCaseConfig,
         quantityCases: sourceQuantityCases,
+        locationId: sourceStock.locationId,
         deactivatedBarcodes,
       },
       target: {
@@ -275,6 +279,7 @@ const adminRepack = adminProcedure
         caseConfig: targetCaseConfig,
         quantityCases: targetQuantityCases,
         stockId: targetStockId,
+        locationId: targetLocationId,
         newCaseLabels,
         // Additional data for label generation
         packSize,
