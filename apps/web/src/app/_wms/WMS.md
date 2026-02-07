@@ -104,7 +104,7 @@ Stock has a unique index on `(lwin18, location_id, shipment_id)` preventing dupl
 
 ---
 
-### 2. Receiving (⚠️ Needs Testing)
+### 2. Receiving (✅ Tested)
 **Path**: `/platform/admin/wms/receive`
 
 **Controllers**:
@@ -120,18 +120,18 @@ Stock has a unique index on `(lwin18, location_id, shipment_id)` preventing dupl
 1. Select shipment from pending list
 2. Enter received quantities per item
 3. (Optional) Save draft to resume later
-4. Complete receiving → creates stock records + movements
+4. Complete receiving → creates stock records + movements + case labels
 
 **Key Features**:
 - Pack variant handling (expected 12x750ml, received 6x750ml)
 - Per-item location assignment
 - Idempotency check prevents duplicate stock on retry
-- Case labels created automatically
+- Case labels created automatically during receiving
+- Case label printing via download + Printer Setup app
 
 **Unknowns**:
 - [ ] Does pack variant detection work correctly?
 - [ ] Is draft save/resume reliable?
-- [ ] Are case labels created with correct barcodes?
 
 ---
 
@@ -226,52 +226,60 @@ Stock has a unique index on `(lwin18, location_id, shipment_id)` preventing dupl
 
 ---
 
-### 8. Picking (⚠️ Not Tested)
-**Path**: `/platform/admin/wms/pick`
+### 8. Picking (⚠️ Needs Testing)
+**Path**: `/platform/admin/wms/pick` (desktop) and `/platform/admin/wms/pick/[pickListId]` (mobile picking)
 
 **Controllers**:
 - `adminCreatePickList` - Create pick list from order
 - `adminGetPickLists` - List all pick lists
 - `adminGetPickList` - Get single pick list
 - `adminAssignPickList` - Assign to picker
-- `adminPickItem` - Mark item as picked
+- `adminPickItem` - Mark item as picked (decrements stock)
 - `adminCompletePickList` - Complete picking
 
 **Flow**:
-1. Create pick list from order
-2. Assign to warehouse staff
-3. Staff picks items, scanning each
+1. Create pick list from order (desktop)
+2. Open pick list on TC27
+3. For each item:
+   - Scan location barcode (verifies correct location)
+   - Scan case barcode (verifies correct product)
+   - Confirm quantity picked
 4. Complete when all items picked
 
+**Missing**:
+- [ ] Case label printing after picking
+- [ ] Case barcode storage (currently not recorded)
+
 **Unknowns**:
-- [ ] How does it integrate with orders?
 - [ ] Does stock reservation work?
 - [ ] Is suggested location logic correct?
 
 ---
 
-### 9. Dispatch Batching (⚠️ Not Tested)
+### 9. Dispatch Batching (⚠️ Needs Testing)
 **Path**: `/platform/admin/wms/dispatch`
 
 **Controllers**:
 - `adminCreateDispatchBatch` - Create batch for distributor
 - `adminGetDispatchBatches` - List batches
 - `adminGetDispatchBatch` - Get batch details
-- `adminAddOrdersToBatch` - Add orders to batch
-- `adminUpdateBatchStatus` - Update status
+- `adminAddOrdersToBatch` - Add orders to batch (PCO or Zoho orders)
+- `adminUpdateBatchStatus` - Update status (draft → picking → staged → dispatched → delivered)
+- `adminGenerateDeliveryNote` - Generate delivery note PDF
 
 **Flow**:
 1. Create batch, select distributor
-2. Add orders to batch
-3. Generate pick list
-4. Pick items
-5. Generate delivery note
-6. Mark dispatched
+2. Add orders to batch (confirmed PCO or picked Zoho orders)
+3. Start picking → status = 'picking'
+4. Mark staged → status = 'staged'
+5. Generate delivery note PDF
+6. Dispatch → status = 'dispatched'
+7. Mark delivered → status = 'delivered'
 
-**Unknowns**:
-- [ ] Does delivery note PDF generate correctly?
-- [ ] Can multiple delivery notes be generated?
-- [ ] How does batch status flow work?
+**Missing**:
+- [ ] Case label printing before dispatch
+
+**Status**: UI complete, needs end-to-end testing
 
 ---
 
@@ -291,23 +299,30 @@ Stock has a unique index on `(lwin18, location_id, shipment_id)` preventing dupl
 
 ---
 
-### 11. Labels (⚠️ Needs Testing)
-**Path**: `/platform/admin/wms/labels`
+### 11. Labels (✅ Tested)
+**Path**: `/platform/admin/wms/labels` (desktop) and `/wms/labels` (mobile/TC27)
 
 **Controllers**:
 - `adminCreateCaseLabels` - Generate case label records
 - `adminGetCaseLabels` - Get labels for shipment
-- `adminGetLocationLabels` - Generate location labels
+- `adminGetLocationLabels` - Generate location labels (4"x2")
 - `adminMarkLabelsPrinted` - Track print status
 
 **Utils**:
-- `generateLabelZpl` - Generate ZPL code for Zebra printer
+- `generateLabelZpl` - Generate ZPL for case labels (4"x2", Code 128)
+- `generateLocationLabelZpl` - Generate ZPL for location labels (4"x2", QR code)
+- `generateBayTotemZpl` - Generate ZPL for bay totems (4"x6", multiple QR codes)
 - `generateCaseLabelBarcode` - Generate case barcode string
 
-**Unknowns**:
-- [ ] Does ZPL output work with ZD421 printer?
-- [ ] Is Zebra Browser Print integration working?
-- [ ] Are barcodes scannable after printing?
+**Printing Workflow** (TC27 → ZD421):
+1. Select labels in UI
+2. Click "Print" → downloads ZPL file
+3. Open downloaded file with "Printer Setup Utility" app on TC27
+4. Printer receives ZPL and prints
+
+**Note**: Direct Bluetooth printing not working because ZD421 is BLE-only. Enterprise Browser's EB.PrinterZebra requires Bluetooth Classic. WiFi module ordered for future TCP/IP printing.
+
+**Status**: Working. Location labels and bay totems print correctly. QR codes scannable.
 
 ---
 
@@ -387,15 +402,25 @@ wms.partner.*             // Partner portal APIs
 
 ## Hardware Integration
 
-### Zebra TC27 Scanner
-- Keyboard wedge mode (barcode types like keyboard)
-- Chrome browser for web app
-- Zebra Browser Print app for label printing
+### Zebra TC27 Mobile Computer
+- Android-based mobile computer with built-in scanner
+- Runs Enterprise Browser (Chrome-based)
+- Keyboard wedge mode (scanned barcodes type as keyboard input)
+- Access web app at: `warehouse.craftculture.xyz`
 
 ### Zebra ZD421 Printer
-- 4" x 2" direct thermal labels
-- Bluetooth connected to TC27
-- Receives ZPL commands via Browser Print
+- 4" x 2" (100mm x 50mm) direct thermal labels - for case labels, location labels
+- 4" x 6" (100mm x 150mm) direct thermal labels - for bay totems
+- **Connection**: BLE only (Bluetooth Low Energy)
+- **Current printing method**: Download ZPL file → Open with "Printer Setup Utility" app
+- **Future**: TCP/IP printing when WiFi module arrives
+
+### Label Types
+| Label | Size | Format | Use |
+|-------|------|--------|-----|
+| Case Label | 4"x2" | Code 128 barcode | Individual wine cases |
+| Location Label | 4"x2" | QR code + text | Rack/bin locations |
+| Bay Totem | 4"x6" | 4 QR codes | Multi-level bay signage |
 
 ### Barcode Formats
 | Type | Format | Example |
@@ -403,6 +428,19 @@ wms.partner.*             // Partner portal APIs
 | Case | `CASE-{LWIN18}-{seq}` | `CASE-1010279-2015-06-00750-001` |
 | Location | `LOC-{code}` | `LOC-A-01-02` |
 | Batch | `BATCH-{year}-{seq}` | `BATCH-2026-0042` |
+
+### ZPL Components
+Located in `_wms/utils/`:
+- `generateLabelZpl.ts` - Case label ZPL (Code 128, 4"x2")
+- `generateLocationLabelZpl.ts` - Location label ZPL (QR, 4"x2")
+- `generateBayTotemZpl.ts` - Bay totem ZPL (multi-QR, 4"x6")
+
+### ZebraPrint Component
+Located in `_wms/components/ZebraPrint.tsx`:
+- Supports Enterprise Browser (EB.PrinterZebra)
+- Supports Web Bluetooth (BLE)
+- Supports Desktop Browser Print SDK
+- **Note**: EB.PrinterZebra requires Bluetooth Classic - doesn't work with BLE-only printer
 
 ---
 
