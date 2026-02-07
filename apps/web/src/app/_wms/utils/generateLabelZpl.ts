@@ -150,49 +150,29 @@ ${productLine2 ? `^FX -- Product name line 2 --
 ^A0N,32,32
 ^FD${productLine2}^FS
 ` : ''}
-^FX -- Data fields section (3 rows) --
-^FX -- Row 1: LWIN and Vintage --
-^FO30,220
-^A0N,20,20
-^FDLWIN:^FS
-
-^FO100,220
-^A0N,20,20
-^FD${lwin}^FS
-
-^FO450,220
-^A0N,20,20
-^FDVintage:^FS
-
-^FO530,220
-^A0N,20,20
-^FD${vintage}^FS
-
-^FX -- Row 2: Size and Lot --
-^FO30,245
-^A0N,20,20
-^FDSize:^FS
-
-^FO100,245
-^A0N,20,20
+^FX -- Data fields section --
+^FX -- Row 1: Pack Size (LARGE, prominent) --
+^FO30,215
+^A0N,36,36
 ^FD${packSize}^FS
 
-^FO450,245
-^A0N,20,20
-^FDLot:^FS
+^FX -- Row 2: Vintage and Bay --
+^FO30,255
+^A0N,24,24
+^FDVintage: ${vintage}^FS
 
-^FO530,245
-^A0N,20,20
-^FD${lot}^FS
+^FO450,255
+^A0N,24,24
+^FDBay: ${location}^FS
 
-^FX -- Row 3: Bay (location) --
-^FO30,270
-^A0N,20,20
-^FDBay:^FS
+^FX -- Row 3: LWIN and Lot --
+^FO30,285
+^A0N,22,22
+^FDLWIN: ${lwin}^FS
 
-^FO100,270
-^A0N,20,20
-^FD${location}^FS
+^FO450,285
+^A0N,22,22
+^FDLot: ${lot}^FS
 
 ^XZ`;
 
