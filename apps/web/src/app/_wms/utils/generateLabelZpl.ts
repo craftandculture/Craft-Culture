@@ -30,6 +30,8 @@ export interface LabelData {
   lotNumber?: string;
   /** Location code where case is stored (e.g., A-01-02) */
   locationCode?: string;
+  /** Owner/partner name (e.g., Cru Wine, Cult Wine) */
+  owner?: string;
 }
 
 /**
@@ -120,7 +122,7 @@ const generateLabelZpl = (data: LabelData) => {
   const vintageValue = data.vintage || extractVintageFromLwin(data.lwin18);
   const vintage = vintageValue ? String(vintageValue) : '-';
   const lot = data.lotNumber ? escapeZpl(data.lotNumber) : '-';
-  const location = data.locationCode ? escapeZpl(data.locationCode) : '-';
+  const owner = data.owner ? escapeZpl(data.owner) : '-';
 
   // ZPL code for 4" x 2" label at 203 DPI (812 x 406 dots)
   const zpl = `^XA
@@ -156,14 +158,14 @@ ${productLine2 ? `^FX -- Product name line 2 --
 ^A0N,36,36
 ^FD${packSize}^FS
 
-^FX -- Row 2: Vintage and Bay --
+^FX -- Row 2: Vintage and Owner --
 ^FO30,270
 ^A0N,24,24
 ^FDVintage: ${vintage}^FS
 
-^FO450,270
+^FO350,270
 ^A0N,24,24
-^FDBay: ${location}^FS
+^FDOwner: ${owner}^FS
 
 ^FX -- Row 3: LWIN and Lot --
 ^FO30,310

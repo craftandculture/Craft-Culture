@@ -1,8 +1,8 @@
-import { eq, like, sql } from 'drizzle-orm';
+import { like, sql } from 'drizzle-orm';
 import { z } from 'zod';
 
 import db from '@/database/client';
-import { wmsCaseLabels, wmsLocations } from '@/database/schema';
+import { wmsCaseLabels } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
 import generateCaseLabelBarcode from '../utils/generateCaseLabelBarcode';
@@ -35,21 +35,14 @@ const adminCreateCaseLabels = adminProcedure
       vintage: z.number().optional(),
       lotNumber: z.string().optional(),
       locationId: z.string().uuid(),
+      owner: z.string().optional(),
       quantity: z.number().int().min(1).max(100),
     }),
   )
   .mutation(async ({ input }) => {
-    const { shipmentId, productName, lwin18, packSize, vintage, lotNumber, locationId, quantity } = input;
+    const { shipmentId, productName, lwin18, packSize, vintage, lotNumber, locationId, owner, quantity } = input;
 
     console.log('[createCaseLabels] Starting label creation', { lwin18, quantity, shipmentId });
-
-    // Get the location code for the label
-    const [location] = await db
-      .select({ locationCode: wmsLocations.locationCode })
-      .from(wmsLocations)
-      .where(eq(wmsLocations.id, locationId));
-
-    const locationCode = location?.locationCode ?? '';
 
     // Use a transaction with advisory lock to prevent race conditions
     // Advisory locks are lightweight and perfect for preventing concurrent sequence generation
@@ -150,7 +143,7 @@ const adminCreateCaseLabels = adminProcedure
           packSize: packSize ?? '',
           vintage,
           lotNumber,
-          locationCode,
+          owner,
         });
       }
 

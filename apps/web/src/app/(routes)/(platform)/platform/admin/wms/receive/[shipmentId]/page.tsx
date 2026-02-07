@@ -389,6 +389,7 @@ const WMSReceiveShipmentPage = () => {
         vintage: currentItem.vintage ?? undefined,
         lotNumber: new Date().toISOString().split('T')[0],
         locationId: scannedLocationId,
+        owner: shipment?.partnerName ?? undefined,
         quantity: pendingCases,
       });
 
