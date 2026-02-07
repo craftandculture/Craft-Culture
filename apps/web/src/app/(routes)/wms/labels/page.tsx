@@ -129,24 +129,18 @@ const WMSDeviceLabelsContent = () => {
       }
 
       if (zpl) {
-        // Try Enterprise Browser native print first, then ZebraPrint component
-        if (printFnRef.current) {
+        // Try ZebraPrint component (EB.PrinterZebra or Web Bluetooth)
+        if (printFnRef.current && zebraConnected) {
           const success = await printFnRef.current(zpl);
           if (success) {
             setSelectedLabels(new Set());
           }
         } else {
-          // Fallback: download ZPL file
-          const blob = new Blob([zpl], { type: 'application/vnd.zebra.zpl' });
-          const fileUrl = URL.createObjectURL(blob);
-          const link = document.createElement('a');
-          link.href = fileUrl;
-          link.download = 'label.zpl';
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-          setTimeout(() => URL.revokeObjectURL(fileUrl), 1000);
-          alert('File downloaded. Open with Printer Setup Utility.');
+          // Fallback: use server-side download endpoint
+          const zplBase64 = btoa(zpl);
+          const downloadUrl = `/api/wms/print?device_token=${encodeURIComponent(deviceToken ?? '')}&zpl=${encodeURIComponent(zplBase64)}`;
+          window.location.href = downloadUrl;
+          alert('File downloaded. Open with Printer Setup Utility to print.');
         }
       }
     } finally {
@@ -191,7 +185,7 @@ const WMSDeviceLabelsContent = () => {
               variant="primary"
               size="lg"
               onClick={handlePrintToZebra}
-              disabled={selectedLabels.size === 0 || (!zebraConnected) || isPrintingToZebra}
+              disabled={selectedLabels.size === 0 || isPrintingToZebra}
               className="text-lg px-6 py-3"
             >
               <ButtonContent iconLeft={isPrintingToZebra ? IconLoader2 : IconPrinter}>
