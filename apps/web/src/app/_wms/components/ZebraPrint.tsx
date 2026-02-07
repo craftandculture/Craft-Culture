@@ -164,9 +164,14 @@ const ZebraPrint = ({
     setError(null);
 
     try {
-      // Request device with Zebra service
+      // Request device - try name filter first, then accept all printers
       const device = await navigator.bluetooth.requestDevice({
-        filters: [{ services: [ZEBRA_PARSER_SERVICE] }],
+        filters: [
+          { namePrefix: 'ZD421' },
+          { namePrefix: 'Zebra' },
+          { namePrefix: 'ZTC' },
+        ],
+        optionalServices: [ZEBRA_PARSER_SERVICE, ZEBRA_WRITE_CHARACTERISTIC],
       });
 
       if (!device.gatt) {
