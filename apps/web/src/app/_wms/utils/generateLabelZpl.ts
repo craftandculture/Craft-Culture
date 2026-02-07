@@ -84,6 +84,25 @@ const escapeZpl = (str: string) => {
 };
 
 /**
+ * Extract vintage year from LWIN-18 code
+ * LWIN-18 format: 7-digit producer + 4-digit vintage + 2-digit pack + 5-digit bottle size
+ * Example: 1007286-2016-12-00750 → vintage is 2016
+ */
+const extractVintageFromLwin = (lwin18: string) => {
+  // Remove dashes to get raw digits
+  const digits = lwin18.replace(/-/g, '');
+  if (digits.length >= 11) {
+    const vintageStr = digits.slice(7, 11);
+    const vintage = parseInt(vintageStr, 10);
+    // Validate it's a reasonable year (1900-2100)
+    if (vintage >= 1900 && vintage <= 2100) {
+      return vintage;
+    }
+  }
+  return null;
+};
+
+/**
  * Generate ZPL code for a single case label
  *
  * Professional wine warehouse label layout (4" x 2" at 203 DPI = 812 x 406 dots)
@@ -97,7 +116,9 @@ const generateLabelZpl = (data: LabelData) => {
   const [productLine1, productLine2] = splitToTwoLines(escapeZpl(data.productName), 38);
   const lwin = escapeZpl(data.lwin18);
   const packSize = escapeZpl(data.packSize || '-');
-  const vintage = data.vintage ? escapeZpl(String(data.vintage)) : '-';
+  // Use provided vintage, or extract from LWIN-18 if not provided
+  const vintageValue = data.vintage || extractVintageFromLwin(data.lwin18);
+  const vintage = vintageValue ? String(vintageValue) : '-';
   const lot = data.lotNumber ? escapeZpl(data.lotNumber) : '-';
   const location = data.locationCode ? escapeZpl(data.locationCode) : '-';
 
