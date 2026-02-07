@@ -677,70 +677,64 @@ const WMSReceiveShipmentPage = () => {
                     <button
                       key={item.id}
                       onClick={() => selectProduct(index)}
-                      className="flex w-full items-center gap-3 rounded-lg border-2 border-border-primary bg-fill-primary p-4 text-left transition-colors hover:border-border-brand hover:bg-fill-secondary"
+                      className="w-full rounded-lg border-2 border-border-primary bg-fill-primary p-4 text-left transition-colors hover:border-border-brand hover:bg-fill-secondary"
                     >
-                      {/* Status indicator */}
-                      <div
-                        className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full ${
-                          isComplete
-                            ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30'
-                            : isVerified
-                              ? 'bg-amber-100 text-amber-600 dark:bg-amber-900/30'
-                              : 'bg-gray-100 text-gray-400 dark:bg-gray-800'
-                        }`}
-                      >
-                        {isComplete ? (
-                          <IconCheck className="h-5 w-5" />
-                        ) : (
-                          <span className="text-sm font-bold">{(receivedItem?.receivedCases ?? item.cases)}</span>
-                        )}
-                      </div>
-
-                      {/* Product info */}
-                      <div className="min-w-0 flex-1">
-                        <Typography variant="bodySm" className="truncate font-medium">
-                          {item.productName}
-                        </Typography>
+                      {/* Top row: Status badge and case count */}
+                      <div className="mb-2 flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          {item.producer && (
-                            <Typography variant="bodyXs" colorRole="muted" className="truncate">
-                              {item.producer}
-                            </Typography>
-                          )}
-                          {item.vintage && (
-                            <Typography variant="bodyXs" colorRole="muted">
-                              {item.vintage}
-                            </Typography>
+                          {isComplete ? (
+                            <span className="flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-1 text-xs font-medium text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
+                              <IconCheck className="h-3 w-3" />
+                              Done
+                            </span>
+                          ) : isVerified ? (
+                            <span className="rounded-full bg-amber-100 px-2 py-1 text-xs font-medium text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+                              Verified
+                            </span>
+                          ) : (
+                            <span className="rounded-full bg-gray-100 px-2 py-1 text-xs font-medium text-gray-600 dark:bg-gray-800 dark:text-gray-400">
+                              Pending
+                            </span>
                           )}
                         </div>
-                        <div className="mt-1 flex items-center gap-2">
-                          <span className="rounded bg-fill-tertiary px-1.5 py-0.5 text-xs">
-                            {item.bottlesPerCase ?? 12}×{item.bottleSizeMl ?? 750}ml
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-semibold">
+                            {receivedItem?.receivedCases ?? item.cases} cases
                           </span>
-                          <Typography variant="bodyXs" colorRole="muted">
-                            Expected: {item.cases} cases
-                          </Typography>
+                          <IconChevronRight className="h-5 w-5 text-text-muted" />
                         </div>
                       </div>
 
-                      {/* Status text */}
-                      <div className="text-right">
-                        {isComplete ? (
-                          <span className="rounded-full bg-emerald-100 px-2 py-1 text-xs font-medium text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
-                            Done
-                          </span>
-                        ) : isVerified ? (
-                          <span className="rounded-full bg-amber-100 px-2 py-1 text-xs font-medium text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
-                            Verified
-                          </span>
-                        ) : (
-                          <span className="rounded-full bg-gray-100 px-2 py-1 text-xs font-medium text-gray-600 dark:bg-gray-800 dark:text-gray-400">
-                            Pending
-                          </span>
+                      {/* Product name - full width, no truncation */}
+                      <Typography variant="bodySm" className="font-semibold leading-tight">
+                        {item.productName}
+                      </Typography>
+
+                      {/* Producer and vintage */}
+                      <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
+                        {item.producer && (
+                          <Typography variant="bodyXs" colorRole="muted">
+                            {item.producer}
+                          </Typography>
+                        )}
+                        {item.vintage && (
+                          <Typography variant="bodyXs" colorRole="muted">
+                            • {item.vintage}
+                          </Typography>
                         )}
                       </div>
 
-                      <IconChevronRight className="h-5 w-5 flex-shrink-0 text-text-muted" />
+                      {/* Pack size and expected cases */}
+                      <div className="mt-2 flex flex-wrap items-center gap-2">
+                        <span className="rounded bg-fill-tertiary px-1.5 py-0.5 text-xs font-medium">
+                          {item.bottlesPerCase ?? 12}×{item.bottleSizeMl ?? 750}ml
+                        </span>
+                        {item.lwin && (
+                          <span className="font-mono text-xs text-text-muted">
+                            {item.lwin}
+                          </span>
+                        )}
+                      </div>
                     </button>
                   );
                 })
