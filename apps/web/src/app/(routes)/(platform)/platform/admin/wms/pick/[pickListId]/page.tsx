@@ -3,6 +3,7 @@
 import {
   IconArrowLeft,
   IconCheck,
+  IconDownload,
   IconLoader2,
   IconMapPin,
   IconPackage,
@@ -19,6 +20,8 @@ import CardContent from '@/app/_ui/components/Card/CardContent';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import LocationBadge from '@/app/_wms/components/LocationBadge';
+import downloadZplFile from '@/app/_wms/utils/downloadZplFile';
+import { generateBatchLabelsZpl } from '@/app/_wms/utils/generateLabelZpl';
 import useTRPC from '@/lib/trpc/browser';
 
 /**
@@ -300,9 +303,27 @@ const WMSPickListDetailPage = () => {
               <Typography variant="headingSm" className="mb-2">
                 Pick List Complete
               </Typography>
-              <Typography variant="bodySm" colorRole="muted">
+              <Typography variant="bodySm" colorRole="muted" className="mb-4">
                 All items have been picked and the pick list is complete.
               </Typography>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  // Generate labels for all picked items
+                  const labels = data.items.map((item, idx) => ({
+                    barcode: `PICK-${data.pickListNumber}-${String(idx + 1).padStart(3, '0')}`,
+                    productName: item.productName,
+                    lwin18: item.lwin18,
+                    packSize: '',
+                    lotNumber: data.pickListNumber,
+                    locationCode: item.suggestedLocationCode ?? undefined,
+                  }));
+                  const zpl = generateBatchLabelsZpl(labels);
+                  downloadZplFile(zpl, `pick-${data.pickListNumber}`);
+                }}
+              >
+                <ButtonContent iconLeft={IconDownload}>Download Case Labels</ButtonContent>
+              </Button>
             </CardContent>
           </Card>
         )}
@@ -320,15 +341,35 @@ const WMSPickListDetailPage = () => {
               <Typography variant="bodySm" colorRole="muted" className="mb-4">
                 Ready to complete the pick list
               </Typography>
-              <Button
-                variant="primary"
-                onClick={handleComplete}
-                disabled={completeMutation.isPending}
-              >
-                <ButtonContent iconLeft={completeMutation.isPending ? IconLoader2 : IconCheck}>
-                  {completeMutation.isPending ? 'Completing...' : 'Complete Pick List'}
-                </ButtonContent>
-              </Button>
+              <div className="flex flex-col gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    // Generate labels for all picked items
+                    const labels = data.items.map((item, idx) => ({
+                      barcode: `PICK-${data.pickListNumber}-${String(idx + 1).padStart(3, '0')}`,
+                      productName: item.productName,
+                      lwin18: item.lwin18,
+                      packSize: '',
+                      lotNumber: data.pickListNumber,
+                      locationCode: item.suggestedLocationCode ?? undefined,
+                    }));
+                    const zpl = generateBatchLabelsZpl(labels);
+                    downloadZplFile(zpl, `pick-${data.pickListNumber}`);
+                  }}
+                >
+                  <ButtonContent iconLeft={IconDownload}>Download Case Labels</ButtonContent>
+                </Button>
+                <Button
+                  variant="primary"
+                  onClick={handleComplete}
+                  disabled={completeMutation.isPending}
+                >
+                  <ButtonContent iconLeft={completeMutation.isPending ? IconLoader2 : IconCheck}>
+                    {completeMutation.isPending ? 'Completing...' : 'Complete Pick List'}
+                  </ButtonContent>
+                </Button>
+              </div>
             </CardContent>
           </Card>
         )}
@@ -578,29 +619,6 @@ const WMSPickListDetailPage = () => {
                 {pickItemMutation.error?.message}
               </Typography>
             )}
-
-            {/* Debug Panel */}
-            <Card className="border-yellow-500 bg-yellow-50 dark:bg-yellow-900/20">
-              <CardContent className="p-3">
-                <Typography variant="bodyXs" className="font-mono font-bold text-yellow-700 dark:text-yellow-400">
-                  DEBUG STATE
-                </Typography>
-                <div className="mt-2 space-y-1 font-mono text-xs text-yellow-800 dark:text-yellow-300">
-                  <div>scanStep: {scanStep}</div>
-                  <div>pickedLocationId: {pickedLocationId ?? 'null'}</div>
-                  <div>pickedLocationCode: {pickedLocationCode || 'empty'}</div>
-                  <div>caseVerified: {caseVerified ? 'YES' : 'NO'}</div>
-                  <div>pickedQuantity: {pickedQuantity}</div>
-                  <div>pickingItem: {pickingItem ? pickingItem.itemId : 'null'}</div>
-                  <div>Button disabled: {(!pickedLocationId || !caseVerified) ? 'YES' : 'NO'}</div>
-                  <div>Mutation pending: {pickItemMutation.isPending ? 'YES' : 'NO'}</div>
-                  <div>Mutation error: {pickItemMutation.error?.message ?? 'none'}</div>
-                  <div>Duplicate error: {duplicateScanError ?? 'none'}</div>
-                  <div>Location error: {locationError ?? 'none'}</div>
-                  <div>Scanned count: {scannedBarcodes.size}</div>
-                </div>
-              </CardContent>
-            </Card>
           </div>
         )}
 
