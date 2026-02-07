@@ -139,8 +139,17 @@ const WMSDeviceLabelsContent = () => {
           // Fallback: use server-side download endpoint
           const zplBase64 = btoa(zpl);
           const downloadUrl = `/api/wms/print?device_token=${encodeURIComponent(deviceToken ?? '')}&zpl=${encodeURIComponent(zplBase64)}`;
-          window.location.href = downloadUrl;
-          alert('File downloaded. Open with Printer Setup Utility to print.');
+
+          // Use iframe to download without navigating away
+          const iframe = document.createElement('iframe');
+          iframe.style.display = 'none';
+          iframe.src = downloadUrl;
+          document.body.appendChild(iframe);
+
+          // Clean up after download starts
+          setTimeout(() => {
+            document.body.removeChild(iframe);
+          }, 5000);
         }
       }
     } finally {
