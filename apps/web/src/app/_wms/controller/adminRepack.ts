@@ -78,21 +78,18 @@ const adminRepack = adminProcedure
     const repackNumber = await generateRepackNumber();
 
     // 6. Decrease source stock
+    // Note: Don't delete even if quantity is 0 - wms_repacks has FK reference to source_stock_id
     const newSourceQuantity = sourceStock.quantityCases - sourceQuantityCases;
     const newSourceAvailable = sourceStock.availableCases - sourceQuantityCases;
 
-    if (newSourceQuantity === 0) {
-      await db.delete(wmsStock).where(eq(wmsStock.id, stockId));
-    } else {
-      await db
-        .update(wmsStock)
-        .set({
-          quantityCases: newSourceQuantity,
-          availableCases: newSourceAvailable,
-          updatedAt: new Date(),
-        })
-        .where(eq(wmsStock.id, stockId));
-    }
+    await db
+      .update(wmsStock)
+      .set({
+        quantityCases: newSourceQuantity,
+        availableCases: newSourceAvailable,
+        updatedAt: new Date(),
+      })
+      .where(eq(wmsStock.id, stockId));
 
     // 7. Create or update target stock
     const [existingTargetStock] = await db
