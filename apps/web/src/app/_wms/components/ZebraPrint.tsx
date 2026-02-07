@@ -79,6 +79,7 @@ const ZebraPrint = ({
   const [error, setError] = useState<string | null>(null);
   const [isSearching, setIsSearching] = useState(false);
   const [connectionType, setConnectionType] = useState<'eb' | 'ble' | 'desktop' | null>(null);
+  const [debugInfo, setDebugInfo] = useState<string>('');
 
   // Refs for persistent connections
   const ebPrinterRef = useRef<ReturnType<NonNullable<ReturnType<typeof getEBPrinterZebra>>['getPrinterByID']> | null>(null);
@@ -90,20 +91,42 @@ const ZebraPrint = ({
   // Enterprise Browser Printing (Bluetooth Classic)
   // ============================================
   const searchEBPrinters = useCallback(() => {
+    // Debug: Log what APIs are available
+    const win = window as unknown as { EB?: unknown };
+    console.log('=== EB Debug ===');
+    console.log('window.EB:', win.EB);
+    console.log('typeof window.EB:', typeof win.EB);
+    if (win.EB && typeof win.EB === 'object') {
+      console.log('EB keys:', Object.keys(win.EB as object));
+    }
+
     const ebPrinter = getEBPrinterZebra();
+    console.log('ebPrinter:', ebPrinter);
+
+    // Collect debug info
+    const ebObj = win.EB as Record<string, unknown> | undefined;
+    const availableAPIs = ebObj ? Object.keys(ebObj).join(', ') : 'none';
+    setDebugInfo(`EB APIs: ${availableAPIs}`);
+
     if (!ebPrinter) {
-      setError('EB PrinterZebra API not available');
+      setError(`EB.PrinterZebra not found. Available: ${availableAPIs}`);
       return;
     }
 
     setIsSearching(true);
     setError(null);
 
+    // Use hardcoded strings as fallback
+    const connectionType = ebPrinter.CONNECTION_TYPE_BLUETOOTH || 'CONNECTION_TYPE_BLUETOOTH';
+    const printerType = ebPrinter.PRINTER_TYPE_ZEBRA || 'PRINTER_TYPE_ZEBRA';
+
+    console.log('Searching with:', { connectionType, printerType });
+
     ebPrinter.searchPrinters(
       {
-        connectionType: ebPrinter.CONNECTION_TYPE_BLUETOOTH || 'BLUETOOTH',
-        printerType: ebPrinter.PRINTER_TYPE_ZEBRA || 'ZEBRA',
-        timeout: 15000,
+        connectionType,
+        printerType,
+        timeout: 30000,
       },
       (result) => {
         console.log('EB searchPrinters result:', result);
@@ -372,6 +395,11 @@ const ZebraPrint = ({
         {error && (
           <Typography variant="bodyXs" colorRole="muted" className="text-red-500">
             {error}
+          </Typography>
+        )}
+        {debugInfo && (
+          <Typography variant="bodyXs" colorRole="muted" className="text-gray-400">
+            {debugInfo}
           </Typography>
         )}
       </div>
