@@ -1,4 +1,4 @@
-import { like } from 'drizzle-orm';
+import { desc, like } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { wmsRepacks } from '@/database/schema';
@@ -15,12 +15,12 @@ const generateRepackNumber = async () => {
   const year = new Date().getFullYear();
   const prefix = `RPK-${year}-`;
 
-  // Get the highest sequence number for this year
+  // Get the highest sequence number for this year (order DESC to get max)
   const result = await db
     .select({ repackNumber: wmsRepacks.repackNumber })
     .from(wmsRepacks)
     .where(like(wmsRepacks.repackNumber, `${prefix}%`))
-    .orderBy(wmsRepacks.repackNumber)
+    .orderBy(desc(wmsRepacks.repackNumber))
     .limit(1);
 
   let nextSequence = 1;
