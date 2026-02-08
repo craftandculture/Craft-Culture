@@ -1,25 +1,11 @@
 /**
  * Generate ZPL for a Compact Bay Totem - vertical strip on 4x2 label
  *
- * Designed for 4" x 2" labels printed in portrait orientation
- * Uses ^PW (Print Width) and ^LL (Label Length) to force portrait mode
+ * Physical label: 4" x 2" at 203 DPI = 812 x 406 dots
+ * When applied vertically: 2" wide x 4" tall
  *
- * Physical label: 4" x 2" (fed through printer as 4" wide)
- * Print area: 2" x 4" (portrait orientation)
- *
- * @example
- *   generateCompactTotemZpl({
- *     aisle: 'A',
- *     bay: '01',
- *     levels: [
- *       { level: '04', barcode: 'LOC-A-01-04', requiresForklift: true },
- *       { level: '03', barcode: 'LOC-A-01-03', requiresForklift: true },
- *       { level: '02', barcode: 'LOC-A-01-02', requiresForklift: true },
- *       { level: '01', barcode: 'LOC-A-01-01', requiresForklift: false },
- *       { level: '00', barcode: 'LOC-A-01-00', requiresForklift: false },
- *     ],
- *     arrowDirection: 'right',
- *   });
+ * Content is rotated 90° so when the label is peeled and applied
+ * vertically, it reads top-to-bottom correctly.
  */
 
 export interface CompactTotemLevel {
@@ -49,91 +35,94 @@ const escapeZpl = (str: string) => {
 /**
  * Generate ZPL for a compact vertical totem
  *
- * Uses rotation approach: content is designed for 2" wide x 4" tall (portrait)
- * but printed on 4" x 2" label with 90-degree rotation
+ * Physical dimensions at 203 DPI:
+ * - Label width: 4" = 812 dots (becomes height when applied vertically)
+ * - Label height: 2" = 406 dots (becomes width when applied vertically)
  *
- * At 203 DPI:
- * - 2" = 406 dots (width when held vertically)
- * - 4" = 812 dots (height when held vertically)
+ * Uses ^A0R for rotated text (90° clockwise)
+ * Coordinates are in physical label space (0,0 = top-left corner as printed)
  */
 const generateCompactTotemZpl = (data: CompactTotemData) => {
   const bayCode = `${escapeZpl(data.aisle)}-${escapeZpl(data.bay)}`;
-  const arrow = data.arrowDirection === 'left' ? '<' : '>';
+  const arrow = data.arrowDirection === 'left' ? '<<<' : '>>>';
 
-  // Physical label is 4" wide x 2" tall at 203 DPI = 812 x 406 dots
-  // We rotate content 90° so it appears as 2" wide x 4" tall when peeled
-  const labelWidth = 812; // Physical width (4")
-  const labelHeight = 406; // Physical height (2")
+  // Physical label dimensions
+  const labelWidth = 812; // 4" physical width (becomes visual height)
+  const labelHeight = 406; // 2" physical height (becomes visual width)
 
-  // Content dimensions (rotated) - labelHeight becomes visual width, labelWidth becomes visual height
-  const contentHeight = labelWidth; // 812 dots = 4" visual height
+  // Layout calculations - content fills most of the label
+  const margin = 15;
+  const headerWidth = 70; // Width of black header bar (in physical X)
+  const arrowWidth = 50; // Width of arrow section
+  const contentStart = margin + headerWidth + 5;
+  const contentEnd = labelWidth - margin - arrowWidth;
+  const contentArea = contentEnd - contentStart;
 
-  // Calculate row dimensions
-  const headerHeight = 70;
-  const arrowHeight = 50;
-  const availableHeight = contentHeight - headerHeight - arrowHeight - 20;
+  // Calculate level spacing
   const levelCount = Math.min(data.levels.length, 5);
-  const rowHeight = Math.floor(availableHeight / levelCount);
+  const levelWidth = Math.floor(contentArea / levelCount);
 
-  // Start ZPL - using rotation (^FWR) for all content
   let zpl = `^XA
 
-^FX -- Compact Totem for 4x2 label (portrait when peeled) --
-^FX -- All content rotated 90 degrees using ^FWR --
+^FX -- Compact Totem: ${bayCode} --
+^FX -- Physical 4x2 label, content rotated for vertical application --
 
-^FWR
-^CF0,28
+^FX === BAY HEADER (black bar at top when applied) ===
+^FO${margin},${margin}
+^GB${headerWidth},${labelHeight - margin * 2},${headerWidth},B^FS
 
-^FX -- Bay Header with black background --
-^FO${labelHeight - headerHeight},10
-^GB${headerHeight},${labelWidth - 20},${headerHeight},B^FS
-
-^FX -- Bay Header Text (white on black) --
-^FO${labelHeight - headerHeight + 15},30
-^A0R,50,50
+^FO${margin + 10},${margin + 20}
+^A0R,48,48
 ^FR
 ^FDBay ${bayCode}^FS
 
 `;
 
-  // Add each level (rotated coordinates)
+  // Add each level - highest level first (closest to header)
   data.levels.slice(0, 5).forEach((level, index) => {
-    const xPos = labelHeight - headerHeight - 10 - (index + 1) * rowHeight;
+    const xPos = contentStart + index * levelWidth;
     const locationCode = `${data.aisle}-${data.bay}-${level.level}`;
     const levelNum = parseInt(level.level, 10);
     const levelText = levelNum === 0 ? 'FLOOR' : `LVL ${levelNum}`;
     const forkliftText = level.requiresForklift ? ' [F]' : '';
 
-    zpl += `
-^FX -- Level ${level.level} Row --
+    // QR code size 2 = ~42 dots, position centered in row
+    const qrSize = 2;
 
-^FX QR Code (rotated)
-^FO${xPos + rowHeight - 75},15
-^BQN,2,2
+    zpl += `
+^FX -- Level ${level.level} --
+
+^FX QR Code
+^FO${xPos + 5},${margin + 10}
+^BQN,2,${qrSize}
 ^FDMA,${level.barcode}^FS
 
-^FX Location code and level info
-^FO${xPos + rowHeight - 30},100
-^A0R,24,24
+^FX Location code (rotated text)
+^FO${xPos + 5},${margin + 100}
+^A0R,22,22
 ^FD${escapeZpl(locationCode)}^FS
 
-^FO${xPos + rowHeight - 58},100
-^A0R,20,20
+^FX Level indicator
+^FO${xPos + 30},${margin + 100}
+^A0R,18,18
 ^FD${levelText}${forkliftText}^FS
 
-^FX Row separator line
-^FO${xPos},15
-^GB1,${labelWidth - 30},1^FS
+^FX Separator line (vertical in physical space = horizontal when applied)
+^FO${xPos + levelWidth - 2},${margin + 5}
+^GB1,${labelHeight - margin * 2 - 10},1^FS
 `;
   });
 
-  // Arrow at bottom (which is left side in rotated view)
-  const arrowX = 10;
+  // Arrow at bottom (right edge in physical = bottom when applied vertically)
   zpl += `
-^FX -- Direction Arrow --
-^FO${arrowX},${Math.floor(labelWidth / 2) - 60}
-^A0R,80,80
-^FD${arrow}${arrow}${arrow}^FS
+^FX === DIRECTION ARROW (bottom when applied) ===
+^FO${labelWidth - margin - arrowWidth},${margin}
+^GB${arrowWidth - 5},${labelHeight - margin * 2},${arrowWidth - 5},B^FS
+
+^FO${labelWidth - margin - arrowWidth + 5},${Math.floor(labelHeight / 2) - 30}
+^A0R,50,50
+^FR
+^FD${arrow}^FS
 
 ^XZ`;
 
