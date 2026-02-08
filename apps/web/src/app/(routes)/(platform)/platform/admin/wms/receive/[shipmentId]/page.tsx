@@ -356,9 +356,9 @@ const WMSReceiveShipmentPage = () => {
 
     try {
       const result = await locationLookupMutation.mutateAsync({ barcode });
-      if (result) {
-        setScannedLocationCode(result.locationCode);
-        setScannedLocationId(result.id);
+      if (result?.location) {
+        setScannedLocationCode(result.location.locationCode);
+        setScannedLocationId(result.location.id);
       } else {
         setScanError('Location not found');
       }
