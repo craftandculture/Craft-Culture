@@ -7,12 +7,13 @@
  */
 
 import { TRPCError } from '@trpc/server';
-import { eq } from 'drizzle-orm';
+import { and, eq, gt, ilike, or } from 'drizzle-orm';
 import { z } from 'zod';
 
 import generatePickListNumber from '@/app/_wms/utils/generatePickListNumber';
 import db from '@/database/client';
 import {
+  wmsLocations,
   wmsPickListItems,
   wmsPickLists,
   wmsStock,
@@ -95,44 +96,91 @@ const adminReleaseToPick = adminProcedure
     const pickListItems = [];
 
     for (const item of orderItems) {
-      // Try to match by SKU first, then by LWIN if available
-      let availableStock = [];
+      // Try multiple matching strategies to find stock
+      let availableStock: {
+        stockId: string;
+        locationId: string;
+        locationCode: string;
+        availableCases: number;
+        lwin18: string;
+        productName: string;
+      }[] = [];
 
+      // Strategy 1: Match by LWIN18 (if populated)
       if (item.lwin18) {
         availableStock = await db
           .select({
             stockId: wmsStock.id,
             locationId: wmsStock.locationId,
+            locationCode: wmsLocations.locationCode,
             availableCases: wmsStock.availableCases,
             lwin18: wmsStock.lwin18,
+            productName: wmsStock.productName,
           })
           .from(wmsStock)
-          .where(eq(wmsStock.lwin18, item.lwin18))
+          .innerJoin(wmsLocations, eq(wmsLocations.id, wmsStock.locationId))
+          .where(and(eq(wmsStock.lwin18, item.lwin18), gt(wmsStock.availableCases, 0)))
           .orderBy(wmsStock.availableCases);
-      } else if (item.sku) {
-        // Try matching by SKU (stored in lwin18 field in some cases)
+      }
+
+      // Strategy 2: Match by SKU (stored in lwin18 field)
+      if (availableStock.length === 0 && item.sku) {
         availableStock = await db
           .select({
             stockId: wmsStock.id,
             locationId: wmsStock.locationId,
+            locationCode: wmsLocations.locationCode,
             availableCases: wmsStock.availableCases,
             lwin18: wmsStock.lwin18,
+            productName: wmsStock.productName,
           })
           .from(wmsStock)
-          .where(eq(wmsStock.lwin18, item.sku))
+          .innerJoin(wmsLocations, eq(wmsLocations.id, wmsStock.locationId))
+          .where(and(eq(wmsStock.lwin18, item.sku), gt(wmsStock.availableCases, 0)))
           .orderBy(wmsStock.availableCases);
+      }
+
+      // Strategy 3: Match by product name (case-insensitive partial match)
+      if (availableStock.length === 0 && item.name) {
+        // Extract key words from product name for matching
+        const searchTerms = item.name
+          .split(/[\s,\-]+/)
+          .filter((word) => word.length > 2)
+          .slice(0, 3); // Use first 3 significant words
+
+        if (searchTerms.length > 0) {
+          // Build OR conditions for partial matching
+          const conditions = searchTerms.map((term) =>
+            ilike(wmsStock.productName, `%${term}%`),
+          );
+
+          availableStock = await db
+            .select({
+              stockId: wmsStock.id,
+              locationId: wmsStock.locationId,
+              locationCode: wmsLocations.locationCode,
+              availableCases: wmsStock.availableCases,
+              lwin18: wmsStock.lwin18,
+              productName: wmsStock.productName,
+            })
+            .from(wmsStock)
+            .innerJoin(wmsLocations, eq(wmsLocations.id, wmsStock.locationId))
+            .where(and(or(...conditions), gt(wmsStock.availableCases, 0)))
+            .orderBy(wmsStock.availableCases);
+        }
       }
 
       // Find first location with enough stock
       const suggestedStock = availableStock.find(
         (s) => s.availableCases >= item.quantity,
-      );
+      ) ?? availableStock[0]; // Fall back to any available stock if none has enough
 
       const [pickListItem] = await db
         .insert(wmsPickListItems)
         .values({
           pickListId: pickList.id,
-          lwin18: item.lwin18 ?? item.sku ?? '',
+          // Use matched stock's LWIN if available, otherwise fall back to order item data
+          lwin18: suggestedStock?.lwin18 ?? item.lwin18 ?? item.sku ?? '',
           productName: item.name,
           quantityCases: item.quantity,
           suggestedLocationId: suggestedStock?.locationId ?? null,
