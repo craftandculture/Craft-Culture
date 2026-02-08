@@ -10,6 +10,7 @@ import {
   IconMapPin,
   IconMinus,
   IconPlus,
+  IconPrinter,
   IconSearch,
   IconX,
 } from '@tabler/icons-react';
@@ -86,12 +87,14 @@ interface StockItemCardProps {
   editingItem: EditingItem | null;
   adjustmentReason: string;
   isAdjusting: boolean;
+  isPrinting: boolean;
   onStartEditing: () => void;
   onCancelEditing: () => void;
   onAdjustQty: (delta: number) => void;
   onSetQty: (qty: number) => void;
   onSetReason: (reason: string) => void;
   onSave: () => void;
+  onPrintLabels: () => void;
 }
 
 const StockItemCard = ({
@@ -100,12 +103,14 @@ const StockItemCard = ({
   editingItem,
   adjustmentReason,
   isAdjusting,
+  isPrinting,
   onStartEditing,
   onCancelEditing,
   onAdjustQty,
   onSetQty,
   onSetReason,
   onSave,
+  onPrintLabels,
 }: StockItemCardProps) => {
   return (
     <Card className={isEditing ? 'border-blue-500 ring-2 ring-blue-500/20' : ''}>
@@ -139,9 +144,24 @@ const StockItemCard = ({
                 cases in system
               </Typography>
             </div>
-            <Button variant="outline" size="sm" onClick={onStartEditing}>
-              <ButtonContent iconLeft={IconEdit}>Edit Qty</ButtonContent>
-            </Button>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={onPrintLabels}
+                disabled={isPrinting}
+                className="flex h-9 w-9 items-center justify-center rounded-lg border border-border-primary text-text-muted transition-colors hover:bg-fill-secondary hover:text-text-primary disabled:opacity-50"
+                title="Reprint labels"
+              >
+                {isPrinting ? (
+                  <IconLoader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <IconPrinter className="h-4 w-4" />
+                )}
+              </button>
+              <Button variant="outline" size="sm" onClick={onStartEditing}>
+                <ButtonContent iconLeft={IconEdit}>Edit Qty</ButtonContent>
+              </Button>
+            </div>
           </div>
         )}
 
@@ -295,6 +315,40 @@ const StockCheckPage = () => {
       toast.error(`Failed to update: ${error.message}`);
     },
   });
+
+  // Reprint case labels mutation
+  const [printingStockId, setPrintingStockId] = useState<string | null>(null);
+  const { mutate: reprintLabels } = useMutation({
+    ...api.wms.admin.labels.reprintCaseLabels.mutationOptions(),
+    onSuccess: (data) => {
+      setPrintingStockId(null);
+      if (!data.success) {
+        toast.error(data.error || 'Failed to generate labels');
+        return;
+      }
+      // Download ZPL file
+      const blob = new Blob([data.zpl], { type: 'application/octet-stream' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `reprint-labels-${data.quantity}.zpl`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast.success(`Downloaded ${data.quantity} label${data.quantity !== 1 ? 's' : ''}`);
+    },
+    onError: (error) => {
+      setPrintingStockId(null);
+      toast.error(`Failed to reprint labels: ${error.message}`);
+    },
+  });
+
+  // Handle print labels for a stock item
+  const handlePrintLabels = useCallback((stockId: string) => {
+    setPrintingStockId(stockId);
+    reprintLabels({ stockId });
+  }, [reprintLabels]);
 
   // Handle barcode scan for bay mode
   const handleBayScan = useCallback(
@@ -618,12 +672,14 @@ const StockCheckPage = () => {
                       editingItem={editingItem}
                       adjustmentReason={adjustmentReason}
                       isAdjusting={isAdjusting}
+                      isPrinting={printingStockId === item.id}
                       onStartEditing={() => startEditing(item)}
                       onCancelEditing={cancelEditing}
                       onAdjustQty={adjustQty}
                       onSetQty={setQty}
                       onSetReason={setAdjustmentReason}
                       onSave={saveAdjustment}
+                      onPrintLabels={() => handlePrintLabels(item.id)}
                     />
                   );
                 })}
