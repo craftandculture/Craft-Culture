@@ -146,7 +146,64 @@ Stock has a unique index on `(lwin18, location_id, shipment_id)` preventing dupl
 
 ---
 
-### 3. Stock Views (⚠️ Needs Testing)
+### 3. Stock Check / Cycle Count (✅ Tested - Feb 2026)
+**Path**: `/platform/admin/wms/stock/check`
+
+**Controllers**:
+- `adminGetLocationByBarcode` - Lookup location by scanned barcode
+- `adminGetStockAtLocation` - Get stock items at a location
+- `adminGetCaseByBarcode` - Lookup case/product by barcode
+- `adminGetStockByProduct` - Get all stock for a product across locations
+- `adminAdjustStockQuantity` - Adjust quantity during cycle count
+- `adminReprintCaseLabels` - Reprint labels for existing stock
+
+**Two Modes**:
+
+#### By Bay (Default)
+Scan a bay location barcode to see all stock at that location.
+
+**Flow**:
+1. Navigate to Stock → Check button
+2. Scan bay QR code (e.g., `LOC-A-01-01`)
+3. See list of stock items at that location
+4. Each item shows: name, vintage, pack size, LWIN, owner, case count
+5. Tap "Edit Qty" to adjust quantity (cycle count)
+6. Tap printer icon to reprint labels for that stock
+
+**Edit Quantity Flow**:
+1. Tap "Edit Qty" on stock item
+2. Use +/- buttons to adjust
+3. See change indicator (e.g., "+2 from 5")
+4. Enter optional reason
+5. Tap "Save" → creates adjustment movement
+
+**Reprint Labels**:
+1. Tap printer icon next to stock item
+2. ZPL file downloads with existing case labels
+3. Print on Zebra printer
+4. Labels match original (same barcodes)
+
+#### By Product
+Scan a case barcode to see total stock across all locations.
+
+**Flow**:
+1. Tap "By Product" tab
+2. Scan case label barcode
+3. See product header with name, LWIN, pack size
+4. See "TOTAL STOCK" card with total cases
+5. See breakdown by location
+6. Tap "Done - Check Another Product" to reset
+
+**Edge Cases Handled**:
+- Empty bay: Shows "No Stock - This location is empty"
+- Invalid barcode: Shows "Location not found: XXX"
+- Product not found: Shows "Product Not Found" message
+
+**Status**: Fully tested on desktop and mobile.
+
+---
+
+### 4. Stock Views (✅ Tested)
 **Path**: `/platform/admin/wms/stock`
 
 **Controllers**:
@@ -157,14 +214,17 @@ Stock has a unique index on `(lwin18, location_id, shipment_id)` preventing dupl
 - `adminSearchStock` - Search by product name/LWIN
 - `adminGetStockAtLocation` - Stock at specific location
 - `adminGetExpiringStock` - Stock with expiry dates
+- `adminSyncStockToZoho` - Sync WMS quantities to Zoho Inventory
 
-**Unknowns**:
-- [ ] Do totals match across different views?
-- [ ] Does search work with partial matches?
+**Stock Page Features**:
+- "Check" button → Opens Stock Check page
+- "Sync Zoho" button → Syncs stock to Zoho Inventory
+
+**Status**: Working. Stock totals verified.
 
 ---
 
-### 4. Reconciliation (✅ Tested)
+### 5. Reconciliation (✅ Tested)
 **Path**: `/platform/admin/wms/stock/reconcile`
 
 **Controllers**:
@@ -183,7 +243,7 @@ Stock has a unique index on `(lwin18, location_id, shipment_id)` preventing dupl
 
 ---
 
-### 5. Transfer (⚠️ Needs Testing)
+### 6. Transfer (⚠️ Needs Testing)
 **Path**: `/platform/admin/wms/transfer`
 
 **Controllers**:
@@ -201,7 +261,7 @@ Stock has a unique index on `(lwin18, location_id, shipment_id)` preventing dupl
 
 ---
 
-### 6. Repack (✅ Tested)
+### 7. Repack (✅ Tested)
 **Path**: `/platform/admin/wms/repack`
 
 **Controllers**:
@@ -227,7 +287,7 @@ Stock has a unique index on `(lwin18, location_id, shipment_id)` preventing dupl
 
 ---
 
-### 7. Picking (✅ Tested)
+### 8. Picking (✅ Tested)
 **Path**: `/platform/admin/wms/pick` (desktop) and `/platform/admin/wms/pick/[pickListId]` (mobile picking)
 
 **Controllers**:
@@ -258,7 +318,7 @@ Stock has a unique index on `(lwin18, location_id, shipment_id)` preventing dupl
 
 ---
 
-### 8. Dispatch Batching (✅ Tested)
+### 9. Dispatch Batching (✅ Tested)
 **Path**: `/platform/admin/wms/dispatch`
 
 **Controllers**:
@@ -287,7 +347,7 @@ Stock has a unique index on `(lwin18, location_id, shipment_id)` preventing dupl
 
 ---
 
-### 9. Ownership (⚠️ Not Tested)
+### 10. Ownership (⚠️ Not Tested)
 **Path**: `/platform/admin/wms/ownership`
 
 **Controllers**:
@@ -303,7 +363,7 @@ Stock has a unique index on `(lwin18, location_id, shipment_id)` preventing dupl
 
 ---
 
-### 10. Labels (✅ Tested)
+### 11. Labels (✅ Tested)
 **Path**: `/platform/admin/wms/labels` (desktop) and `/wms/labels` (mobile/TC27)
 
 **Controllers**:
@@ -354,7 +414,7 @@ Stock has a unique index on `(lwin18, location_id, shipment_id)` preventing dupl
 
 ---
 
-### 11. Movement History (✅ Tested)
+### 12. Movement History (✅ Tested)
 **Path**: `/platform/admin/wms/movements`
 
 **Controllers**:
@@ -466,6 +526,8 @@ scanInputRef.current?.focus();
 - **Same-value blocking**: Ignores identical barcode within 3 seconds
 - **Cooldown**: 2000ms cooldown after successful scan (ignores all input during processing)
 - **Processing lock**: `processingRef` prevents concurrent scan handling
+- **Safety timeout**: 5-second auto-reset if processingRef gets stuck
+- **Error recovery**: processingRef resets when error prop changes
 
 **Keyboard Popup Prevention**:
 - `inputMode="none"` prevents virtual keyboard on focus
@@ -550,20 +612,32 @@ Located in `_wms/components/ZebraPrint.tsx`:
 
 ## Testing Checklist
 
+### UAT Test Checklists
+Interactive HTML test checklist available at:
+- **URL**: `https://warehouse.craftculture.xyz/wms-test-checklists.html`
+- **Source**: `apps/web/public/wms-test-checklists.html`
+- **Also**: Markdown version at `apps/web/docs/WMS-TEST-CHECKLISTS.md`
+
+**Features**:
+- Interactive checkboxes for all test steps
+- Progress bar with localStorage persistence
+- Covers 6 flows: Receiving, Stock Check, Picking, Transfer, Zoho Sync, Mobile UX
+- Sign-off section for testers
+
 ### Before Go-Live
 - [ ] Create all warehouse locations
 - [ ] Test receiving a shipment end-to-end
 - [ ] Test barcode scanning on TC27
 - [ ] Test label printing on ZD421
 - [ ] Verify stock totals match movements
-- [ ] Test put-away workflow
+- [ ] Test stock check workflow (by bay and by product)
 - [ ] Test transfer workflow
 - [ ] Test reconciliation auto-fix
 
 ### Integration Points
 - [x] Logistics shipments flow to receiving
-- [ ] Orders create pick lists (manual trigger, see below)
-- [ ] Pick completion updates stock
+- [x] Orders create pick lists (manual trigger via "Release to Pick")
+- [x] Pick completion updates stock
 - [ ] Dispatch updates order status
 
 ---
@@ -759,6 +833,96 @@ When WiFi module arrives for ZD421 printer:
 
 ---
 
+## UX/UI Review & Proposed Improvements
+
+### Current Strengths
+
+**Dashboard:**
+- Mobile-first design with large touch targets (44px+ for quick actions)
+- Clear KPI summary at top with 4 key metrics
+- Critical alerts (reconciliation, expiry) prominently displayed
+- Quick actions grid is intuitive and scannable
+
+**Stock Check:**
+- Two-mode approach (By Bay / By Product) covers both use cases
+- Tab switching is clear and maintains state
+- Edit quantity flow with +/- buttons is intuitive
+- Reprint labels accessible with printer icon
+
+**Receiving:**
+- Phase-based workflow (Verify → Print → Shelve) is clear
+- Draft saving for interrupted sessions
+- Photo capture for documentation
+- Auto-scroll to top on product selection
+
+**Picking:**
+- Two-step verification (location → case) ensures accuracy
+- "GO TO BAY" instruction is prominent
+- Duplicate scan prevention works well
+
+**Mobile UX:**
+- ScanInput handles keyboard-wedge scanners correctly
+- `inputMode="none"` prevents virtual keyboard popup
+- Anti-double-scan with debounce + cooldown
+- Safety timeout prevents stuck state
+
+### Proposed Improvements
+
+**High Priority:**
+
+1. **Add Stock Check to Dashboard Quick Actions**
+   - Stock Check is frequently used but requires Stock → Check navigation
+   - Add as 5th quick action tile or replace Repack
+
+2. **Add Sound/Vibration Feedback on Scan**
+   - Currently scans have no haptic feedback
+   - Add `navigator.vibrate(100)` on successful scan
+   - Consider success/error sounds using Web Audio API
+
+3. **Add Progress Indicator to Receiving**
+   - Show "3 of 12 products completed" in header
+   - Visual progress bar for long shipments
+
+4. **Improve Empty State for Stock Check By Bay**
+   - Current "No Stock - This location is empty" is minimal
+   - Add "Last movement at this location: [date]" if available
+   - Add "Transfer stock here" action button
+
+**Medium Priority:**
+
+5. **Add Batch Scanning Mode for Receiving**
+   - Currently scan one bay → print → repeat
+   - Allow scanning multiple bays then batch print
+
+6. **Add Pick Path Optimization**
+   - Sort pick items by physical location
+   - Show "Next nearest bay" after each pick
+
+7. **Add Offline Mode Support**
+   - Cache critical data in IndexedDB
+   - Queue mutations for sync when online
+   - Important for warehouse areas with weak WiFi
+
+8. **Add Quick Location Switch in Stock Check**
+   - After checking Bay A-01-02, allow quick jump to A-01-03
+   - Numeric pad for level/position entry
+
+**Low Priority (Nice to Have):**
+
+9. **Add Dark Mode Toggle on Dashboard**
+   - Quick toggle for warehouse lighting conditions
+   - Currently follows system preference only
+
+10. **Add Keyboard Shortcuts for Desktop**
+    - `Ctrl+R` for Receive, `Ctrl+P` for Pick, etc.
+    - Power users on desktop benefit from shortcuts
+
+11. **Add Dashboard Widgets Customization**
+    - Let users reorder/hide quick action tiles
+    - Remember preference in localStorage
+
+---
+
 ## Future Work (Not Implemented)
 
 - Customer storage pallets (schema exists, UI not built)
@@ -772,7 +936,54 @@ When WiFi module arrives for ZD421 printer:
 
 ## Changelog
 
-### February 2026
+### February 2026 (Week 2)
+
+**Stock Check Feature** (NEW):
+- Added Stock Check page at `/platform/admin/wms/stock/check`
+- Two modes: "By Bay" (scan location) and "By Product" (scan case)
+- Edit quantity with +/- buttons for cycle counting
+- Creates adjustment movements with optional reason
+- Added `adminAdjustStockQuantity` controller
+
+**Reprint Labels Feature** (NEW):
+- Added printer icon to Stock Check By Bay results
+- Reprint existing case labels for any stock item
+- Added `adminReprintCaseLabels` controller
+- Downloads ZPL with all labels for that product/location
+
+**Zoho Inventory Sync** (NEW):
+- Added "Sync Zoho" button to Stock page
+- Syncs WMS quantities to Zoho Inventory
+- Added `adminSyncStockToZoho` controller
+- Creates inventory adjustments in Zoho
+
+**ScanInput Reliability Improvements**:
+- Fixed processingRef getting stuck after errors
+- Added effect to reset processingRef when error prop changes
+- Added 5-second safety timeout (auto-resets if stuck)
+- Fixes issue where scan input clears but nothing happens
+
+**UAT Test Checklists** (NEW):
+- Created interactive HTML test checklist at `/wms-test-checklists.html`
+- Covers all WMS flows: Receiving, Stock Check, Picking, Transfer, Zoho Sync
+- Progress tracking with localStorage persistence
+- Sign-off section for testers
+
+**Files Added**:
+- `_wms/controller/adminAdjustStockQuantity.ts` - Cycle count adjustments
+- `_wms/controller/adminReprintCaseLabels.ts` - Reprint existing labels
+- `_wms/controller/adminSyncStockToZoho.ts` - Zoho inventory sync
+- `public/wms-test-checklists.html` - UAT test checklist
+- `docs/WMS-TEST-CHECKLISTS.md` - Markdown version
+
+**Files Modified**:
+- `_wms/components/ScanInput.tsx` - Safety timeout, error recovery
+- `_wms/router.ts` - Added new controllers
+- `(routes)/.../wms/stock/check/page.tsx` - Stock Check UI
+
+---
+
+### February 2026 (Week 1)
 
 **Receiving Flow UX Improvements**:
 - Fixed total cases showing 0 on pending shipments list (now uses `SUM(logisticsShipmentItems.cases)`)
