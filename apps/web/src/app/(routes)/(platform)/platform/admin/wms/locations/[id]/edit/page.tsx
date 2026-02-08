@@ -2,12 +2,12 @@
 
 import {
   IconArrowLeft,
+  IconBox,
   IconCheck,
   IconForklift,
   IconLoader2,
   IconMapPin,
-  IconPackage,
-  IconShelf,
+  IconPackages,
 } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
@@ -161,7 +161,7 @@ const LocationEditPage = () => {
                     }`}
                   >
                     <Icon
-                      icon={IconShelf}
+                      icon={IconBox}
                       size="lg"
                       colorRole={storageMethod === 'shelf' ? 'brand' : 'muted'}
                     />
@@ -185,7 +185,7 @@ const LocationEditPage = () => {
                     }`}
                   >
                     <Icon
-                      icon={IconPackage}
+                      icon={IconPackages}
                       size="lg"
                       colorRole={storageMethod === 'pallet' ? 'brand' : 'muted'}
                     />
@@ -210,12 +210,12 @@ const LocationEditPage = () => {
                   >
                     <div className="flex">
                       <Icon
-                        icon={IconShelf}
+                        icon={IconBox}
                         size="md"
                         colorRole={storageMethod === 'mixed' ? 'brand' : 'muted'}
                       />
                       <Icon
-                        icon={IconPackage}
+                        icon={IconPackages}
                         size="md"
                         colorRole={storageMethod === 'mixed' ? 'brand' : 'muted'}
                         className="-ml-1"
