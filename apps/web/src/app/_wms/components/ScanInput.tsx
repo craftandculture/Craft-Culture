@@ -59,9 +59,10 @@ const ScanInput = ({
   const [value, setValue] = useState('');
   const processingRef = useRef(false);
   const lastScanTimeRef = useRef(0);
+  const lastScannedValueRef = useRef('');
 
-  // Debounce time in ms - prevents double scans
-  const SCAN_DEBOUNCE_MS = 500;
+  // Debounce time in ms - prevents double scans (increased for scanner reliability)
+  const SCAN_DEBOUNCE_MS = 1000;
 
   // Auto-focus on mount
   useEffect(() => {
@@ -91,9 +92,17 @@ const ScanInput = ({
       if (e.key === 'Enter' && value.trim()) {
         e.preventDefault();
 
-        // Debounce rapid scans
+        const scannedValue = value.trim();
         const now = Date.now();
+
+        // Debounce rapid scans
         if (now - lastScanTimeRef.current < SCAN_DEBOUNCE_MS) {
+          setValue('');
+          return;
+        }
+
+        // Prevent scanning the exact same value twice in a row within 3 seconds
+        if (scannedValue === lastScannedValueRef.current && now - lastScanTimeRef.current < 3000) {
           setValue('');
           return;
         }
@@ -105,8 +114,8 @@ const ScanInput = ({
         }
 
         lastScanTimeRef.current = now;
+        lastScannedValueRef.current = scannedValue;
         processingRef.current = true;
-        const scannedValue = value.trim();
         setValue('');
         onScan(scannedValue);
       }
@@ -128,9 +137,17 @@ const ScanInput = ({
   const handleSubmit = useCallback(() => {
     if (!value.trim()) return;
 
-    // Debounce rapid submissions
+    const scannedValue = value.trim();
     const now = Date.now();
+
+    // Debounce rapid submissions
     if (now - lastScanTimeRef.current < SCAN_DEBOUNCE_MS) {
+      setValue('');
+      return;
+    }
+
+    // Prevent scanning the exact same value twice in a row within 3 seconds
+    if (scannedValue === lastScannedValueRef.current && now - lastScanTimeRef.current < 3000) {
       setValue('');
       return;
     }
@@ -142,8 +159,8 @@ const ScanInput = ({
     }
 
     lastScanTimeRef.current = now;
+    lastScannedValueRef.current = scannedValue;
     processingRef.current = true;
-    const scannedValue = value.trim();
     setValue('');
     onScan(scannedValue);
   }, [value, onScan, isLoading]);

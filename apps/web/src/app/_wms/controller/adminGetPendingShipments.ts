@@ -22,7 +22,8 @@ const adminGetPendingShipments = adminProcedure.query(async () => {
       partnerId: logisticsShipments.partnerId,
       partnerName: partners.businessName,
       originCountry: logisticsShipments.originCountry,
-      totalCases: logisticsShipments.totalCases,
+      // Calculate total cases from items (sum of cases field)
+      totalCases: sql<number>`COALESCE(SUM(${logisticsShipmentItems.cases}), 0)::int`,
       eta: logisticsShipments.eta,
       ata: logisticsShipments.ata,
       itemCount: sql<number>`count(${logisticsShipmentItems.id})::int`,
