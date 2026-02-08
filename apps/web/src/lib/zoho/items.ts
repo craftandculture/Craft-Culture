@@ -181,24 +181,30 @@ const createItem = async (item: ZohoCreateItemRequest) => {
  * Create a wine inventory item in Zoho
  *
  * Maps WMS stock data to Zoho item fields:
+ * - Name = product name + vintage (e.g., "Chateau Margaux 2015")
  * - SKU = lwin18 (critical for picking)
+ * - Description = pack config only (e.g., "6x75cl")
  * - UPC = HS Code (for customs)
  * - ISBN = Country of Origin (for customs)
  * - Manufacturer/Brand = Producer
- * - Description = pack config + vintage
  */
 const createWineItem = async (data: WineItemData) => {
   const bottlesPerCase = data.bottlesPerCase ?? 6;
   const bottleSizeMl = data.bottleSizeMl ?? 750;
   const bottleSizeCl = Math.round(bottleSizeMl / 10);
 
-  // Build description: "6×75cl - Red wine - 2016"
-  const packConfig = `${bottlesPerCase}×${bottleSizeCl}cl`;
-  const vintageStr = data.vintage ? ` - ${data.vintage}` : '';
-  const description = `${packConfig}${vintageStr}`;
+  // Build name with vintage: "Chateau Margaux 2015"
+  // Only add vintage if not already in the product name
+  const hasVintageInName = data.vintage && data.productName.includes(String(data.vintage));
+  const itemName = data.vintage && !hasVintageInName
+    ? `${data.productName} ${data.vintage}`
+    : data.productName;
+
+  // Description is just pack config: "6x75cl"
+  const description = `${bottlesPerCase}x${bottleSizeCl}cl`;
 
   const item: ZohoCreateItemRequest = {
-    name: data.productName,
+    name: itemName,
     sku: data.lwin18,
     rate: 0, // Will be set when selling
     unit: 'Case',
@@ -220,15 +226,41 @@ const createWineItem = async (data: WineItemData) => {
 /**
  * Find or create a wine item in Zoho by SKU (lwin18)
  *
- * Searches for existing item with matching SKU.
- * If not found, creates a new item with the provided data.
+ * Searches for existing item with matching SKU using multiple strategies:
+ * 1. Exact SKU match
+ * 2. LWIN-11 prefix match (first 11 digits = wine ID without vintage/pack)
+ * 3. Product name search as fallback
  *
  * @returns The existing or newly created Zoho item
  */
 const findOrCreateWineItem = async (data: WineItemData) => {
-  // Search for existing item by SKU
+  // Strategy 1: Search by full LWIN-18 SKU
   const existingItems = await searchItems(data.lwin18);
-  const existingItem = existingItems.find((item) => item.sku === data.lwin18);
+
+  // Try exact match first
+  let existingItem = existingItems.find((item) => item.sku === data.lwin18);
+
+  // Strategy 2: Try matching by LWIN-11 prefix (first 11 digits = wine identifier)
+  // This handles cases where existing items have truncated SKUs
+  if (!existingItem && data.lwin18.length >= 11) {
+    const lwin11Prefix = data.lwin18.substring(0, 11);
+    existingItem = existingItems.find((item) => item.sku?.startsWith(lwin11Prefix));
+  }
+
+  // Strategy 3: Search by product name if SKU search didn't find anything
+  if (!existingItem) {
+    const nameSearchItems = await searchItems(data.productName);
+    // Match by exact name or name with vintage
+    const nameWithVintage = data.vintage
+      ? `${data.productName} ${data.vintage}`
+      : data.productName;
+    existingItem = nameSearchItems.find(
+      (item) =>
+        item.name === data.productName ||
+        item.name === nameWithVintage ||
+        item.name.toLowerCase() === data.productName.toLowerCase(),
+    );
+  }
 
   if (existingItem) {
     return { item: existingItem, created: false };
