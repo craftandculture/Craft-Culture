@@ -108,6 +108,13 @@ const ScanInput = forwardRef<ScanInputHandle, ScanInputProps>(({
     }
   }, [isLoading]);
 
+  // Reset processing state when error occurs (so user can retry)
+  useEffect(() => {
+    if (error) {
+      processingRef.current = false;
+    }
+  }, [error]);
+
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>) => {
       if (e.key === 'Enter' && value.trim()) {
@@ -116,7 +123,7 @@ const ScanInput = forwardRef<ScanInputHandle, ScanInputProps>(({
         const scannedValue = value.trim();
         const now = Date.now();
 
-        // Debounce rapid scans
+        // Debounce rapid scans (but allow after 1.5 seconds)
         if (now - lastScanTimeRef.current < SCAN_DEBOUNCE_MS) {
           setValue('');
           return;
@@ -128,8 +135,19 @@ const ScanInput = forwardRef<ScanInputHandle, ScanInputProps>(({
           return;
         }
 
-        // Prevent double-processing
-        if (processingRef.current || isLoading) {
+        // If currently loading, don't allow new submissions
+        if (isLoading) {
+          setValue('');
+          return;
+        }
+
+        // Safety reset: if processingRef has been stuck for more than 5 seconds, reset it
+        if (processingRef.current && now - lastScanTimeRef.current > 5000) {
+          processingRef.current = false;
+        }
+
+        // Prevent double-processing (but with safety reset above)
+        if (processingRef.current) {
           setValue('');
           return;
         }
@@ -161,7 +179,7 @@ const ScanInput = forwardRef<ScanInputHandle, ScanInputProps>(({
     const scannedValue = value.trim();
     const now = Date.now();
 
-    // Debounce rapid submissions
+    // Debounce rapid submissions (but allow after 1.5 seconds)
     if (now - lastScanTimeRef.current < SCAN_DEBOUNCE_MS) {
       setValue('');
       return;
@@ -173,8 +191,19 @@ const ScanInput = forwardRef<ScanInputHandle, ScanInputProps>(({
       return;
     }
 
-    // Prevent double-processing
-    if (processingRef.current || isLoading) {
+    // If currently loading, don't allow new submissions
+    if (isLoading) {
+      setValue('');
+      return;
+    }
+
+    // Safety reset: if processingRef has been stuck for more than 5 seconds, reset it
+    if (processingRef.current && now - lastScanTimeRef.current > 5000) {
+      processingRef.current = false;
+    }
+
+    // Prevent double-processing (but with safety reset above)
+    if (processingRef.current) {
       setValue('');
       return;
     }
