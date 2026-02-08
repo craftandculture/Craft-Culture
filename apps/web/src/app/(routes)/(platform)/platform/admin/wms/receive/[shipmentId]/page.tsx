@@ -333,6 +333,16 @@ const WMSReceiveShipmentPage = () => {
     saveDraft();
   };
 
+  // Update notes for current item
+  const updateItemNotes = (itemNotes: string) => {
+    const currentItem = getCurrentItem();
+    if (!currentItem) return;
+
+    const newMap = new Map(receivedItems.set(currentItem.id, { ...currentItem, notes: itemNotes }));
+    setReceivedItems(newMap);
+    saveDraft();
+  };
+
   // Upload a photo and return the URL
   const handleUploadPhoto = async (file: string, filename: string, fileType: string) => {
     const currentItem = getCurrentItem();
@@ -357,6 +367,17 @@ const WMSReceiveShipmentPage = () => {
     try {
       const result = await locationLookupMutation.mutateAsync({ barcode });
       if (result?.location) {
+        // Check if this location is already assigned to current item
+        const currentItem = getCurrentItem();
+        if (currentItem) {
+          const alreadyAssigned = currentItem.locationAssignments.some(
+            (a) => a.locationId === result.location.id,
+          );
+          if (alreadyAssigned) {
+            setScanError(`Location ${result.location.locationCode} already assigned to this product`);
+            return;
+          }
+        }
         setScannedLocationCode(result.location.locationCode);
         setScannedLocationId(result.location.id);
       } else {
@@ -452,14 +473,44 @@ const WMSReceiveShipmentPage = () => {
     saveDraft();
   };
 
-  // Move to next product
+  // Move to next incomplete product (skip completed ones)
   const handleNextProduct = () => {
     if (!shipment?.items) return;
 
-    if (currentProductIndex < shipment.items.length - 1) {
-      setCurrentProductIndex(currentProductIndex + 1);
-      setProductPhase('verifying');
+    // Find next incomplete product
+    for (let i = currentProductIndex + 1; i < shipment.items.length; i++) {
+      const item = shipment.items[i];
+      if (!item) continue;
+      const receivedItem = receivedItems.get(item.id);
+      const isComplete =
+        receivedItem &&
+        receivedItem.locationAssignments.length > 0 &&
+        receivedItem.locationAssignments.reduce((sum, a) => sum + a.cases, 0) >= receivedItem.receivedCases;
+      if (!isComplete) {
+        setCurrentProductIndex(i);
+        setProductPhase('verifying');
+        return;
+      }
     }
+
+    // If no incomplete found after current, check from beginning
+    for (let i = 0; i < currentProductIndex; i++) {
+      const item = shipment.items[i];
+      if (!item) continue;
+      const receivedItem = receivedItems.get(item.id);
+      const isComplete =
+        receivedItem &&
+        receivedItem.locationAssignments.length > 0 &&
+        receivedItem.locationAssignments.reduce((sum, a) => sum + a.cases, 0) >= receivedItem.receivedCases;
+      if (!isComplete) {
+        setCurrentProductIndex(i);
+        setProductPhase('verifying');
+        return;
+      }
+    }
+
+    // All complete - go back to list view
+    setViewMode('list');
   };
 
   // Complete all receiving
@@ -1073,19 +1124,21 @@ const WMSReceiveShipmentPage = () => {
           </Card>
         )}
 
-            {/* Notes - in detail view */}
-            <Card>
-              <CardContent className="p-4">
-                <CardTitle className="mb-2 text-base">Notes (Optional)</CardTitle>
-                <textarea
-                  className="w-full rounded-lg border-2 border-border-primary bg-fill-primary p-3 text-base focus:border-border-brand focus:outline-none"
-                  rows={2}
-                  placeholder="Add notes about discrepancies, damage, etc."
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                />
-              </CardContent>
-            </Card>
+            {/* Notes - per item, in detail view */}
+            {currentItem && (
+              <Card>
+                <CardContent className="p-4">
+                  <CardTitle className="mb-2 text-base">Notes for this product (Optional)</CardTitle>
+                  <textarea
+                    className="w-full rounded-lg border-2 border-border-primary bg-fill-primary p-3 text-base focus:border-border-brand focus:outline-none"
+                    rows={2}
+                    placeholder="Add notes about discrepancies, damage, etc."
+                    value={currentItem.notes ?? ''}
+                    onChange={(e) => updateItemNotes(e.target.value)}
+                  />
+                </CardContent>
+              </Card>
+            )}
           </>
         )}
 
