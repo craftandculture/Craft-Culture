@@ -24,6 +24,8 @@ import Typography from '@/app/_ui/components/Typography/Typography';
 import ZebraPrint from '@/app/_wms/components/ZebraPrint';
 import type { BayTotemData } from '@/app/_wms/utils/generateBayTotemZpl';
 import { generateBatchBayTotemsZpl } from '@/app/_wms/utils/generateBayTotemZpl';
+import type { CompactTotemData } from '@/app/_wms/utils/generateCompactTotemZpl';
+import { generateBatchCompactTotemsZpl } from '@/app/_wms/utils/generateCompactTotemZpl';
 import type { LocationLabelData } from '@/app/_wms/utils/generateLocationLabelZpl';
 import { generateBatchLocationLabelsZpl } from '@/app/_wms/utils/generateLocationLabelZpl';
 import useTRPC from '@/lib/trpc/browser';
@@ -37,7 +39,7 @@ const WMSLabelsPage = () => {
   const api = useTRPC();
   const queryClient = useQueryClient();
 
-  const [activeTab, setActiveTab] = useState<'case' | 'location' | 'totem'>(shipmentId ? 'case' : 'totem');
+  const [activeTab, setActiveTab] = useState<'case' | 'location' | 'totem' | 'compact'>(shipmentId ? 'case' : 'compact');
   const [selectedLabels, setSelectedLabels] = useState<Set<string>>(new Set());
   const [isPrintingToZebra, setIsPrintingToZebra] = useState(false);
   const [zebraConnected, setZebraConnected] = useState(false);
@@ -101,6 +103,12 @@ const WMSLabelsPage = () => {
       } else {
         setSelectedLabels(new Set(bayTotemsData.totems.map((t) => `${t.aisle}-${t.bay}`)));
       }
+    } else if (activeTab === 'compact' && bayTotemsData) {
+      if (selectedLabels.size === bayTotemsData.totems.length) {
+        setSelectedLabels(new Set());
+      } else {
+        setSelectedLabels(new Set(bayTotemsData.totems.map((t) => `${t.aisle}-${t.bay}`)));
+      }
     }
   };
 
@@ -159,6 +167,25 @@ const WMSLabelsPage = () => {
         }));
 
         zpl = generateBatchBayTotemsZpl(totemData);
+      } else if (activeTab === 'compact' && bayTotemsData) {
+        // Filter to only selected totems
+        const selectedTotems = bayTotemsData.totems.filter((totem) =>
+          selectedLabels.has(`${totem.aisle}-${totem.bay}`),
+        );
+
+        // Generate ZPL for compact totems (4x2 vertical)
+        const compactData: CompactTotemData[] = selectedTotems.map((totem, index) => ({
+          aisle: totem.aisle,
+          bay: totem.bay,
+          levels: totem.levels.map((level) => ({
+            level: level.level,
+            barcode: level.barcode,
+            requiresForklift: level.requiresForklift,
+          })),
+          arrowDirection: index % 2 === 0 ? 'right' : 'left', // Alternate arrow direction
+        }));
+
+        zpl = generateBatchCompactTotemsZpl(compactData);
       }
 
       if (zpl) {
@@ -213,7 +240,7 @@ const WMSLabelsPage = () => {
       ? caseLabelsLoading
       : activeTab === 'location'
         ? locationLabelsLoading
-        : bayTotemsLoading;
+        : bayTotemsLoading; // both totem and compact use bayTotemsData
 
   return (
     <div className="container mx-auto max-w-lg px-4 py-6">
@@ -252,7 +279,7 @@ const WMSLabelsPage = () => {
             )}
 
             {/* Print to Zebra button for location labels and bay totems */}
-            {(activeTab === 'location' || activeTab === 'totem') && (
+            {(activeTab === 'location' || activeTab === 'totem' || activeTab === 'compact') && (
               <Button
                 variant="primary"
                 onClick={handlePrintToZebra}
@@ -313,7 +340,21 @@ const WMSLabelsPage = () => {
           >
             <div className="flex items-center gap-2">
               <Icon icon={IconLayoutList} size="sm" />
-              Bay Totems
+              Bay Totems (4x6)
+              {bayTotemsData && ` (${bayTotemsData.totalTotems})`}
+            </div>
+          </button>
+          <button
+            onClick={() => setActiveTab('compact')}
+            className={`border-b-2 px-4 py-2 text-sm font-medium transition-colors ${
+              activeTab === 'compact'
+                ? 'border-border-brand text-text-brand'
+                : 'border-transparent text-text-muted hover:text-text-primary'
+            }`}
+          >
+            <div className="flex items-center gap-2">
+              <Icon icon={IconLayoutList} size="sm" />
+              Compact Totems (4x2)
               {bayTotemsData && ` (${bayTotemsData.totalTotems})`}
             </div>
           </button>
@@ -517,8 +558,8 @@ const WMSLabelsPage = () => {
               </CardContent>
             </Card>
           )
-        ) : (
-          /* Bay Totems */
+        ) : activeTab === 'totem' ? (
+          /* Bay Totems (4x6) */
           bayTotemsData && bayTotemsData.totems.length > 0 ? (
             <div className="space-y-4">
               {/* Info banner */}
@@ -642,7 +683,129 @@ const WMSLabelsPage = () => {
               </CardContent>
             </Card>
           )
-        )}
+        ) : activeTab === 'compact' ? (
+          /* Compact Totems (4x2 vertical) */
+          bayTotemsData && bayTotemsData.totems.length > 0 ? (
+            <div className="space-y-4">
+              {/* Info banner */}
+              <Card className="print:hidden">
+                <CardContent className="p-4">
+                  <div className="flex items-start gap-3">
+                    <Icon icon={IconLayoutList} size="md" className="mt-0.5 text-purple-600" />
+                    <div>
+                      <Typography variant="headingSm">Compact Totem Labels (4&quot; x 2&quot;)</Typography>
+                      <Typography variant="bodyXs" colorRole="muted">
+                        Vertical strips for upper rack levels. Mount at eye level on the upright column.
+                        Designed for your 4&quot; x 2&quot; labels printed in portrait orientation.
+                      </Typography>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Select All - Hidden when printing */}
+              <div className="flex items-center justify-between print:hidden">
+                <label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={selectedLabels.size === bayTotemsData.totems.length}
+                    onChange={toggleSelectAll}
+                    className="h-4 w-4 rounded border-border-primary"
+                  />
+                  <Typography variant="bodySm">
+                    Select All ({bayTotemsData.totems.length} compact totems)
+                  </Typography>
+                </label>
+              </div>
+
+              {/* Compact Totems Grid */}
+              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+                {bayTotemsData.totems.map((totem, index) => {
+                  const totemKey = `${totem.aisle}-${totem.bay}`;
+                  const arrowDir = index % 2 === 0 ? '→' : '←';
+                  return (
+                    <div key={totemKey} className="relative">
+                      {/* Checkbox */}
+                      <div className="absolute left-2 top-2 z-10 print:hidden">
+                        <input
+                          type="checkbox"
+                          checked={selectedLabels.has(totemKey)}
+                          onChange={() => toggleLabel(totemKey)}
+                          className="h-4 w-4 rounded border-border-primary"
+                        />
+                      </div>
+                      {/* Compact Totem Preview Card */}
+                      <Card
+                        className={`cursor-pointer transition-colors ${
+                          selectedLabels.has(totemKey)
+                            ? 'border-border-brand ring-1 ring-border-brand'
+                            : 'hover:border-border-muted'
+                        }`}
+                        onClick={() => toggleLabel(totemKey)}
+                      >
+                        <CardContent className="p-2">
+                          {/* Bay Header with black background */}
+                          <div className="mb-2 rounded bg-gray-900 px-2 py-1 text-center">
+                            <Typography variant="labelSm" className="text-white">
+                              Bay {totem.aisle}-{totem.bay}
+                            </Typography>
+                          </div>
+
+                          {/* Compact Levels (show first 5) */}
+                          <div className="space-y-1">
+                            {totem.levels.slice(0, 5).map((level) => (
+                              <div
+                                key={level.level}
+                                className="flex items-center gap-1 rounded bg-fill-secondary px-1 py-0.5 text-xs"
+                              >
+                                <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-fill-primary text-[8px] font-mono">
+                                  QR
+                                </div>
+                                <div className="min-w-0 flex-1 truncate font-mono text-[10px]">
+                                  {totem.aisle}-{totem.bay}-{level.level}
+                                </div>
+                                {level.requiresForklift && (
+                                  <span className="text-[8px] text-amber-600">[F]</span>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+
+                          {/* Arrow Direction */}
+                          <div className="mt-2 rounded bg-gray-900 py-1 text-center">
+                            <span className="text-lg text-white">{arrowDir}</span>
+                          </div>
+
+                          {/* Footer */}
+                          <Typography variant="bodyXs" colorRole="muted" className="mt-1 text-center">
+                            {totem.levels.length} levels • 4x2
+                          </Typography>
+                        </CardContent>
+                      </Card>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ) : (
+            <Card className="print:hidden">
+              <CardContent className="p-6 text-center">
+                <Icon icon={IconLayoutList} size="xl" colorRole="muted" className="mx-auto mb-4" />
+                <Typography variant="headingSm" className="mb-2">
+                  No Compact Totems Available
+                </Typography>
+                <Typography variant="bodySm" colorRole="muted" className="mb-4">
+                  Create rack locations first to generate compact totems
+                </Typography>
+                <Button variant="outline" asChild>
+                  <Link href="/platform/admin/wms/locations/new">
+                    <ButtonContent iconLeft={IconMapPin}>Create Locations</ButtonContent>
+                  </Link>
+                </Button>
+              </CardContent>
+            </Card>
+          )
+        ) : null}
       </div>
 
       {/* Print Styles */}
