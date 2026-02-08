@@ -447,9 +447,10 @@ const WMSPickListDetailPage = () => {
           </div>
         )}
 
-        {/* Picking Item - Scan Location */}
+        {/* Picking Item - Location-First Flow */}
         {pickingItem && (
           <div className="space-y-4">
+            {/* Product Info */}
             <Card>
               <CardContent className="p-4">
                 <Typography variant="bodyXs" className="mb-2 font-medium text-brand-600">
@@ -458,17 +459,48 @@ const WMSPickListDetailPage = () => {
                 <Typography variant="bodySm" className="font-semibold">
                   {pickingItem.productName}
                 </Typography>
-                <Typography variant="bodyXs" colorRole="muted">
-                  {pickingItem.quantityNeeded} cases needed
+                <Typography variant="bodyXs" colorRole="muted" className="font-mono">
+                  {pickingItem.lwin18}
                 </Typography>
               </CardContent>
             </Card>
 
+            {/* GO TO LOCATION - Prominent Display */}
+            {currentItem?.suggestedLocationCode && scanStep === 'location' && (
+              <Card className="border-2 border-amber-500 bg-amber-50 dark:bg-amber-900/20">
+                <CardContent className="p-6 text-center">
+                  <Typography variant="bodyXs" className="mb-1 font-medium text-amber-700 dark:text-amber-300">
+                    GO TO BAY
+                  </Typography>
+                  <Typography variant="headingXl" className="font-mono text-amber-700 dark:text-amber-300">
+                    {currentItem.suggestedLocationCode}
+                  </Typography>
+                  <Typography variant="bodyXs" colorRole="muted" className="mt-2">
+                    Pick {pickingItem.quantityNeeded} cases
+                  </Typography>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* No suggested location warning */}
+            {!currentItem?.suggestedLocationCode && scanStep === 'location' && (
+              <Card className="border-2 border-red-500 bg-red-50 dark:bg-red-900/20">
+                <CardContent className="p-4 text-center">
+                  <Typography variant="bodySm" className="font-semibold text-red-700 dark:text-red-300">
+                    No location found in system
+                  </Typography>
+                  <Typography variant="bodyXs" colorRole="muted" className="mt-1">
+                    Scan any bay where you find this product
+                  </Typography>
+                </CardContent>
+              </Card>
+            )}
+
             {/* Quantity Input */}
             <Card>
               <CardContent className="p-4">
-                <label className="mb-2 block text-sm font-medium">Quantity Picked</label>
-                <div className="flex items-center gap-4">
+                <label className="mb-2 block text-sm font-medium">Quantity to Pick</label>
+                <div className="flex items-center justify-center gap-4">
                   <Button
                     variant="outline"
                     size="sm"
@@ -491,12 +523,12 @@ const WMSPickListDetailPage = () => {
               </CardContent>
             </Card>
 
-            {/* Step 1: Scan Location */}
+            {/* Step 1: Confirm Location */}
             <Card className={scanStep === 'location' ? 'border-2 border-brand-500' : ''}>
               <CardContent className="p-4">
                 <div className="mb-2 flex items-center justify-between">
                   <label className="block text-sm font-medium">
-                    Step 1: Scan Location Barcode
+                    Step 1: Scan Bay Barcode to Confirm
                   </label>
                   {pickedLocationCode && (
                     <Icon icon={IconCheck} size="sm" className="text-emerald-600" />
@@ -509,8 +541,9 @@ const WMSPickListDetailPage = () => {
                     value={scanInput}
                     onChange={(e) => setScanInput(e.target.value)}
                     onKeyDown={handleKeyDown}
-                    placeholder="Scan location barcode..."
+                    placeholder="Scan bay barcode..."
                     className="w-full rounded-lg border border-border-primary bg-fill-primary p-3 text-center font-mono text-lg focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                    inputMode="none"
                     autoFocus
                   />
                 ) : (
