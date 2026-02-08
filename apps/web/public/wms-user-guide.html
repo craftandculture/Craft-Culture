@@ -1,0 +1,854 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Craft & Culture - Warehouse Management Guide</title>
+  <style>
+    :root {
+      --primary: #4f46e5;
+      --primary-dark: #4338ca;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --gray-50: #f9fafb;
+      --gray-100: #f3f4f6;
+      --gray-200: #e5e7eb;
+      --gray-300: #d1d5db;
+      --gray-600: #4b5563;
+      --gray-700: #374151;
+      --gray-800: #1f2937;
+      --gray-900: #111827;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      line-height: 1.6;
+      color: var(--gray-800);
+      background: var(--gray-50);
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+
+    header {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+      color: white;
+      padding: 3rem 2rem;
+      text-align: center;
+    }
+
+    header h1 {
+      font-size: 2.5rem;
+      margin-bottom: 0.5rem;
+    }
+
+    header p {
+      font-size: 1.25rem;
+      opacity: 0.9;
+    }
+
+    nav {
+      background: white;
+      border-bottom: 1px solid var(--gray-200);
+      padding: 1rem 2rem;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    nav ul {
+      list-style: none;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      justify-content: center;
+    }
+
+    nav a {
+      color: var(--gray-600);
+      text-decoration: none;
+      font-weight: 500;
+      padding: 0.5rem 1rem;
+      border-radius: 0.5rem;
+      transition: all 0.2s;
+    }
+
+    nav a:hover {
+      background: var(--gray-100);
+      color: var(--primary);
+    }
+
+    section {
+      background: white;
+      margin: 2rem 0;
+      padding: 2rem;
+      border-radius: 1rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    h2 {
+      color: var(--primary);
+      font-size: 1.75rem;
+      margin-bottom: 1rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 2px solid var(--gray-200);
+    }
+
+    h3 {
+      color: var(--gray-700);
+      font-size: 1.25rem;
+      margin: 1.5rem 0 0.75rem;
+    }
+
+    h4 {
+      color: var(--gray-600);
+      font-size: 1rem;
+      margin: 1rem 0 0.5rem;
+    }
+
+    p {
+      margin-bottom: 1rem;
+    }
+
+    .step-list {
+      list-style: none;
+      counter-reset: step;
+    }
+
+    .step-list li {
+      counter-increment: step;
+      padding: 1rem 1rem 1rem 4rem;
+      margin: 0.75rem 0;
+      background: var(--gray-50);
+      border-radius: 0.5rem;
+      border-left: 4px solid var(--primary);
+      position: relative;
+    }
+
+    .step-list li::before {
+      content: counter(step);
+      position: absolute;
+      left: 1rem;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 2rem;
+      height: 2rem;
+      background: var(--primary);
+      color: white;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+    }
+
+    .tip {
+      background: #ecfdf5;
+      border-left: 4px solid var(--success);
+      padding: 1rem;
+      margin: 1rem 0;
+      border-radius: 0 0.5rem 0.5rem 0;
+    }
+
+    .tip::before {
+      content: "TIP";
+      font-weight: bold;
+      color: var(--success);
+      display: block;
+      margin-bottom: 0.25rem;
+    }
+
+    .warning {
+      background: #fffbeb;
+      border-left: 4px solid var(--warning);
+      padding: 1rem;
+      margin: 1rem 0;
+      border-radius: 0 0.5rem 0.5rem 0;
+    }
+
+    .warning::before {
+      content: "IMPORTANT";
+      font-weight: bold;
+      color: var(--warning);
+      display: block;
+      margin-bottom: 0.25rem;
+    }
+
+    .danger {
+      background: #fef2f2;
+      border-left: 4px solid var(--danger);
+      padding: 1rem;
+      margin: 1rem 0;
+      border-radius: 0 0.5rem 0.5rem 0;
+    }
+
+    .danger::before {
+      content: "WARNING";
+      font-weight: bold;
+      color: var(--danger);
+      display: block;
+      margin-bottom: 0.25rem;
+    }
+
+    .barcode-example {
+      font-family: 'Courier New', monospace;
+      background: var(--gray-100);
+      padding: 0.5rem 1rem;
+      border-radius: 0.25rem;
+      display: inline-block;
+      margin: 0.25rem 0;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1rem 0;
+    }
+
+    th, td {
+      padding: 0.75rem 1rem;
+      text-align: left;
+      border-bottom: 1px solid var(--gray-200);
+    }
+
+    th {
+      background: var(--gray-50);
+      font-weight: 600;
+      color: var(--gray-700);
+    }
+
+    tr:hover {
+      background: var(--gray-50);
+    }
+
+    .status-badge {
+      display: inline-block;
+      padding: 0.25rem 0.75rem;
+      border-radius: 9999px;
+      font-size: 0.875rem;
+      font-weight: 500;
+    }
+
+    .status-pending { background: #fef3c7; color: #92400e; }
+    .status-progress { background: #dbeafe; color: #1e40af; }
+    .status-complete { background: #d1fae5; color: #065f46; }
+
+    .diagram {
+      background: var(--gray-100);
+      padding: 1.5rem;
+      border-radius: 0.5rem;
+      font-family: 'Courier New', monospace;
+      white-space: pre;
+      overflow-x: auto;
+      font-size: 0.875rem;
+      line-height: 1.4;
+    }
+
+    .icon {
+      width: 1.25em;
+      height: 1.25em;
+      vertical-align: middle;
+      margin-right: 0.5rem;
+    }
+
+    footer {
+      text-align: center;
+      padding: 2rem;
+      color: var(--gray-600);
+      font-size: 0.875rem;
+    }
+
+    @media (max-width: 768px) {
+      .container {
+        padding: 1rem;
+      }
+
+      header {
+        padding: 2rem 1rem;
+      }
+
+      header h1 {
+        font-size: 1.75rem;
+      }
+
+      nav ul {
+        flex-direction: column;
+        align-items: center;
+      }
+
+      section {
+        padding: 1.5rem;
+      }
+
+      .step-list li {
+        padding-left: 3.5rem;
+      }
+    }
+
+    @media print {
+      nav {
+        display: none;
+      }
+
+      section {
+        page-break-inside: avoid;
+        box-shadow: none;
+        border: 1px solid var(--gray-200);
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Warehouse Management Guide</h1>
+    <p>Craft & Culture WMS - Operations Manual</p>
+  </header>
+
+  <nav>
+    <ul>
+      <li><a href="#getting-started">Getting Started</a></li>
+      <li><a href="#receiving">Receiving</a></li>
+      <li><a href="#putaway">Put-Away</a></li>
+      <li><a href="#picking">Picking</a></li>
+      <li><a href="#repack">Repack</a></li>
+      <li><a href="#dispatch">Dispatch</a></li>
+      <li><a href="#labels">Labels</a></li>
+      <li><a href="#troubleshooting">Troubleshooting</a></li>
+    </ul>
+  </nav>
+
+  <div class="container">
+
+    <!-- Getting Started -->
+    <section id="getting-started">
+      <h2>Getting Started</h2>
+
+      <h3>Accessing the WMS</h3>
+      <p>Open the web browser on your TC27 device and navigate to:</p>
+      <p class="barcode-example">warehouse.craftculture.xyz</p>
+      <p>Log in with your admin credentials to access the WMS dashboard.</p>
+
+      <h3>Equipment</h3>
+      <table>
+        <tr>
+          <th>Device</th>
+          <th>Purpose</th>
+        </tr>
+        <tr>
+          <td>Zebra TC27</td>
+          <td>Mobile scanner for warehouse operations</td>
+        </tr>
+        <tr>
+          <td>Zebra ZD421</td>
+          <td>Label printer (4x2" case labels, location labels)</td>
+        </tr>
+      </table>
+
+      <h3>Barcode Formats</h3>
+      <table>
+        <tr>
+          <th>Type</th>
+          <th>Format</th>
+          <th>Example</th>
+        </tr>
+        <tr>
+          <td>Case Label</td>
+          <td>CASE-{LWIN18}-{sequence}</td>
+          <td class="barcode-example">CASE-1010279-2015-06-00750-001</td>
+        </tr>
+        <tr>
+          <td>Location Label</td>
+          <td>LOC-{aisle}-{bay}-{level}</td>
+          <td class="barcode-example">LOC-A-01-02</td>
+        </tr>
+        <tr>
+          <td>Batch Label</td>
+          <td>BATCH-{year}-{sequence}</td>
+          <td class="barcode-example">BATCH-2026-0042</td>
+        </tr>
+      </table>
+
+      <div class="tip">
+        The TC27's built-in scanner acts as a keyboard. Point, scan, and the barcode will type automatically into any input field.
+      </div>
+    </section>
+
+    <!-- Receiving -->
+    <section id="receiving">
+      <h2>Receiving Shipments</h2>
+      <p>When goods arrive at the warehouse, use this workflow to receive them into stock.</p>
+
+      <h3>Before You Start</h3>
+      <ul>
+        <li>Verify the shipment number matches paperwork</li>
+        <li>Check that the shipment appears in "Pending Shipments" list</li>
+        <li>Have the ZD421 printer ready with labels loaded</li>
+      </ul>
+
+      <h3>Step-by-Step Process</h3>
+      <ol class="step-list">
+        <li>
+          <strong>Select Shipment</strong><br>
+          From the WMS menu, tap <strong>Receive</strong>. Find your shipment in the list. The card shows shipment number, partner, and total cases.
+        </li>
+        <li>
+          <strong>View Products</strong><br>
+          Tap the shipment to see all products. Each card shows: Product Name, Vintage, Pack Size (e.g., 6x750ml), and Owner.
+        </li>
+        <li>
+          <strong>Select Product</strong><br>
+          Tap a product to open its detail view. The screen will scroll to the top automatically.
+        </li>
+        <li>
+          <strong>Verify Quantity</strong><br>
+          Check the expected quantity matches what you received. Adjust if different (e.g., received 10 cases instead of 12).
+        </li>
+        <li>
+          <strong>Download Labels</strong><br>
+          Tap <strong>Download Labels</strong>. A .zpl file will download. Open it with the Printer Setup app to print.
+        </li>
+        <li>
+          <strong>Scan Bay Location</strong><br>
+          The scan input is automatically focused. Scan the bay barcode where you will put the cases.
+        </li>
+        <li>
+          <strong>Confirm and Continue</strong><br>
+          Tap <strong>Confirm</strong> to save this product. Move to the next product and repeat.
+        </li>
+        <li>
+          <strong>Complete Receiving</strong><br>
+          After all products are processed, tap <strong>Complete Receiving</strong>. Stock is now in the system.
+        </li>
+      </ol>
+
+      <div class="tip">
+        If you need to stop mid-way, your progress is saved automatically. Return to the shipment later to continue.
+      </div>
+
+      <div class="warning">
+        If you receive a different pack size than expected (e.g., ordered 12x750ml but received 6x750ml), adjust the pack configuration when entering quantities.
+      </div>
+    </section>
+
+    <!-- Put-Away -->
+    <section id="putaway">
+      <h2>Put-Away</h2>
+      <p>Move cases from the receiving area to their designated storage locations.</p>
+
+      <h3>Step-by-Step Process</h3>
+      <ol class="step-list">
+        <li>
+          <strong>Open Put-Away</strong><br>
+          From the WMS menu, tap <strong>Put-Away</strong>.
+        </li>
+        <li>
+          <strong>Scan Case</strong><br>
+          Scan the case barcode on the label.
+        </li>
+        <li>
+          <strong>Scan Destination</strong><br>
+          Go to the storage location and scan the location barcode.
+        </li>
+        <li>
+          <strong>Confirm Move</strong><br>
+          Verify the information and tap <strong>Confirm</strong>.
+        </li>
+      </ol>
+
+      <div class="tip">
+        The system will suggest the best location based on available space and product grouping.
+      </div>
+    </section>
+
+    <!-- Picking -->
+    <section id="picking">
+      <h2>Picking Orders</h2>
+      <p>Pick cases from storage to fulfill customer orders.</p>
+
+      <h3>How Pick Lists Are Created</h3>
+      <p>Pick lists are created by the admin team from customer orders. You'll see them appear in your Pick Lists queue.</p>
+
+      <h3>Pick List States</h3>
+      <table>
+        <tr>
+          <th>Status</th>
+          <th>Meaning</th>
+        </tr>
+        <tr>
+          <td><span class="status-badge status-pending">Pending</span></td>
+          <td>Ready to be picked, not started</td>
+        </tr>
+        <tr>
+          <td><span class="status-badge status-progress">In Progress</span></td>
+          <td>Currently being picked</td>
+        </tr>
+        <tr>
+          <td><span class="status-badge status-complete">Completed</span></td>
+          <td>All items picked</td>
+        </tr>
+      </table>
+
+      <h3>Step-by-Step Process</h3>
+      <ol class="step-list">
+        <li>
+          <strong>Select Pick List</strong><br>
+          From WMS menu, tap <strong>Pick</strong>. Find and tap your assigned pick list.
+        </li>
+        <li>
+          <strong>Go to Location</strong><br>
+          The first item shows the location code. Go to that bay.
+        </li>
+        <li>
+          <strong>Scan Location</strong><br>
+          Scan the location barcode to confirm you're at the right place.
+        </li>
+        <li>
+          <strong>Scan Case</strong><br>
+          Scan the case barcode to confirm you have the right product.
+        </li>
+        <li>
+          <strong>Confirm Quantity</strong><br>
+          Enter the quantity you're picking and tap <strong>Confirm</strong>.
+        </li>
+        <li>
+          <strong>Repeat</strong><br>
+          Continue for each item on the pick list.
+        </li>
+        <li>
+          <strong>Complete Pick List</strong><br>
+          When all items are picked, tap <strong>Complete</strong>. Download labels if needed.
+        </li>
+      </ol>
+
+      <div class="warning">
+        If stock is not where expected, check other locations for the same product. Report any discrepancies to admin.
+      </div>
+    </section>
+
+    <!-- Repack -->
+    <section id="repack">
+      <h2>Repacking Cases</h2>
+      <p>Split larger cases into smaller configurations (e.g., 12-pack into two 6-packs).</p>
+
+      <h3>When to Repack</h3>
+      <ul>
+        <li>Customer orders a quantity that requires splitting a case</li>
+        <li>Converting bulk stock into retail-ready packs</li>
+        <li>Changing pack configuration for distribution</li>
+      </ul>
+
+      <h3>7-Step Repack Process</h3>
+      <ol class="step-list">
+        <li>
+          <strong>Scan Source Bay</strong><br>
+          Go to the bay containing the case to repack. Scan the bay barcode.
+        </li>
+        <li>
+          <strong>Select Case</strong><br>
+          Choose which stock record to repack from the list.
+        </li>
+        <li>
+          <strong>Select Target Size</strong><br>
+          Choose the new case configuration (e.g., 6-pack, 3-pack, 2-pack).
+        </li>
+        <li>
+          <strong>Remove Case</strong><br>
+          Physically take the case from the shelf. Tap <strong>Confirm Removed</strong>.
+        </li>
+        <li>
+          <strong>Perform Repack</strong><br>
+          Open the case and repack bottles into new case(s). Follow on-screen instructions.
+        </li>
+        <li>
+          <strong>Scan Destination Bay</strong><br>
+          Scan the bay where you will store the repacked cases. Can be same or different location.
+        </li>
+        <li>
+          <strong>Download Labels</strong><br>
+          Print new labels for the repacked cases.
+        </li>
+      </ol>
+
+      <div class="tip">
+        The source location and destination can be different. This is useful when reorganizing stock.
+      </div>
+
+      <h3>Example</h3>
+      <div class="diagram">
+SOURCE: 1x 12-pack (12 bottles)
+        ↓
+      Repack
+        ↓
+TARGET: 2x 6-pack (6 bottles each)
+
+New labels generated for both 6-packs
+      </div>
+    </section>
+
+    <!-- Dispatch -->
+    <section id="dispatch">
+      <h2>Dispatch Batching</h2>
+      <p>Group picked orders into batches for efficient delivery.</p>
+
+      <h3>Batch Workflow</h3>
+      <div class="diagram">
+Create Batch → Add Orders → Picking → Staged → Dispatched → Delivered
+      </div>
+
+      <h3>Step-by-Step Process</h3>
+      <ol class="step-list">
+        <li>
+          <strong>Create Batch</strong><br>
+          From WMS menu, tap <strong>Dispatch</strong> then <strong>New Batch</strong>. Select the distributor.
+        </li>
+        <li>
+          <strong>Add Orders</strong><br>
+          Add confirmed orders to the batch. Orders must be picked first.
+        </li>
+        <li>
+          <strong>Generate Pick Lists</strong><br>
+          If orders aren't picked yet, create pick lists for the batch.
+        </li>
+        <li>
+          <strong>Stage Orders</strong><br>
+          When picking is complete, mark the batch as <strong>Staged</strong>.
+        </li>
+        <li>
+          <strong>Print Documents</strong><br>
+          Download delivery note PDF and case labels for the batch.
+        </li>
+        <li>
+          <strong>Dispatch</strong><br>
+          When goods leave the warehouse, mark as <strong>Dispatched</strong>.
+        </li>
+        <li>
+          <strong>Confirm Delivery</strong><br>
+          When customer confirms receipt, mark as <strong>Delivered</strong>.
+        </li>
+      </ol>
+    </section>
+
+    <!-- Labels -->
+    <section id="labels">
+      <h2>Label Printing</h2>
+      <p>Print labels for cases, locations, and bay signage.</p>
+
+      <h3>Label Types</h3>
+      <table>
+        <tr>
+          <th>Type</th>
+          <th>Size</th>
+          <th>Use</th>
+        </tr>
+        <tr>
+          <td>Case Label</td>
+          <td>4" x 2"</td>
+          <td>Individual wine cases (barcode)</td>
+        </tr>
+        <tr>
+          <td>Location Label</td>
+          <td>4" x 2"</td>
+          <td>Rack and bin locations (QR code)</td>
+        </tr>
+        <tr>
+          <td>Bay Totem</td>
+          <td>4" x 6"</td>
+          <td>Multi-level bay signage (4 QR codes)</td>
+        </tr>
+      </table>
+
+      <h3>Printing Workflow</h3>
+      <ol class="step-list">
+        <li>
+          <strong>Download Labels</strong><br>
+          Click the <strong>Download Labels</strong> button in any WMS workflow.
+        </li>
+        <li>
+          <strong>Open File</strong><br>
+          A .zpl file will download. Tap to open it.
+        </li>
+        <li>
+          <strong>Select Printer App</strong><br>
+          Choose <strong>Printer Setup Utility</strong> to open the file.
+        </li>
+        <li>
+          <strong>Print</strong><br>
+          The app will send the label to the ZD421 printer.
+        </li>
+      </ol>
+
+      <h3>Case Label Layout</h3>
+      <div class="diagram">
+┌────────────────────────────────────────────┐
+│  Craft & Culture                           │
+│  ║║║║║║║║║║║║║║║║║║║║║║║║║║║║║║║║║║║║║║║  │
+│  CASE-1098427-2018-02-01500-001            │
+│  ─────────────────────────────────────────  │
+│  Chateau FONTENIL 2018 AOP FRONSAC         │
+│  ORIGINE FRANCE (2x)                       │
+│  2x1500ml                                  │
+│  Vintage: 2018           Owner: Exception  │
+│  LWIN: 1098427-2018-02-01500  Lot: 2026... │
+└────────────────────────────────────────────┘
+      </div>
+
+      <div class="warning">
+        Ensure the correct label size is loaded in the printer before printing. Case labels use 4x2" stock.
+      </div>
+    </section>
+
+    <!-- Troubleshooting -->
+    <section id="troubleshooting">
+      <h2>Troubleshooting</h2>
+
+      <h3>Scanner Issues</h3>
+      <h4>Barcode won't scan</h4>
+      <ul>
+        <li>Ensure the barcode is not damaged or obscured</li>
+        <li>Hold scanner 6-10 inches from barcode</li>
+        <li>Try scanning at a slight angle to avoid glare</li>
+        <li>If still not working, type the barcode manually</li>
+      </ul>
+
+      <h4>Wrong barcode scanned</h4>
+      <ul>
+        <li>Wait for error message to clear (about 2 seconds)</li>
+        <li>Scan the correct barcode</li>
+      </ul>
+
+      <h3>Printer Issues</h3>
+      <h4>Labels not printing</h4>
+      <ol class="step-list">
+        <li>Check printer is turned on and has paper</li>
+        <li>Ensure Bluetooth is connected (blue light on printer)</li>
+        <li>Try downloading the label file again</li>
+        <li>Restart the Printer Setup app</li>
+      </ol>
+
+      <h4>Labels printing incorrectly</h4>
+      <ul>
+        <li>Verify correct label stock is loaded (4x2" for cases)</li>
+        <li>Run a calibration on the printer</li>
+        <li>Check for paper jams or misalignment</li>
+      </ul>
+
+      <h3>Stock Discrepancies</h3>
+      <h4>Stock not where expected</h4>
+      <ol class="step-list">
+        <li>Check nearby locations for the product</li>
+        <li>Search by product name in Stock view</li>
+        <li>Report discrepancy to admin for investigation</li>
+      </ol>
+
+      <h4>Quantity doesn't match</h4>
+      <ul>
+        <li>Count physical cases again</li>
+        <li>Check if cases were moved or picked</li>
+        <li>Report to admin - may need stock reconciliation</li>
+      </ul>
+
+      <h3>App Issues</h3>
+      <h4>Screen not responding</h4>
+      <ul>
+        <li>Wait a few seconds - may be loading</li>
+        <li>Refresh the page (pull down or tap refresh)</li>
+        <li>If stuck, close and reopen the browser</li>
+      </ul>
+
+      <h4>Keyboard keeps appearing</h4>
+      <ul>
+        <li>Tap outside the input field to dismiss</li>
+        <li>The scan input is designed to not show keyboard</li>
+        <li>If persistent, refresh the page</li>
+      </ul>
+
+      <div class="danger">
+        If you encounter a critical error that prevents work, contact the admin team immediately. Do not attempt to work around the system as it may cause data inconsistencies.
+      </div>
+    </section>
+
+    <!-- Quick Reference -->
+    <section id="quick-reference">
+      <h2>Quick Reference</h2>
+
+      <h3>Common Locations</h3>
+      <table>
+        <tr>
+          <th>Code</th>
+          <th>Area</th>
+        </tr>
+        <tr>
+          <td class="barcode-example">LOC-RECEIVING</td>
+          <td>Receiving dock area</td>
+        </tr>
+        <tr>
+          <td class="barcode-example">LOC-SHIPPING</td>
+          <td>Shipping staging area</td>
+        </tr>
+        <tr>
+          <td class="barcode-example">LOC-A-01-00</td>
+          <td>Aisle A, Bay 01, Floor level</td>
+        </tr>
+        <tr>
+          <td class="barcode-example">LOC-A-01-03</td>
+          <td>Aisle A, Bay 01, Level 3 (top)</td>
+        </tr>
+      </table>
+
+      <h3>Status Meanings</h3>
+      <table>
+        <tr>
+          <th>Status</th>
+          <th>What to Do</th>
+        </tr>
+        <tr>
+          <td><span class="status-badge status-pending">Pending</span></td>
+          <td>Ready to start work</td>
+        </tr>
+        <tr>
+          <td><span class="status-badge status-progress">In Progress</span></td>
+          <td>Work is ongoing</td>
+        </tr>
+        <tr>
+          <td><span class="status-badge status-complete">Completed</span></td>
+          <td>No action needed</td>
+        </tr>
+      </table>
+
+      <h3>Keyboard Shortcuts</h3>
+      <table>
+        <tr>
+          <th>Key</th>
+          <th>Action</th>
+        </tr>
+        <tr>
+          <td>Enter</td>
+          <td>Submit scanned barcode</td>
+        </tr>
+        <tr>
+          <td>Backspace</td>
+          <td>Clear current input</td>
+        </tr>
+      </table>
+    </section>
+
+  </div>
+
+  <footer>
+    <p>Craft & Culture Warehouse Management System</p>
+    <p>Document Version: February 2026</p>
+    <p>For technical support, contact the admin team</p>
+  </footer>
+
+</body>
+</html>
