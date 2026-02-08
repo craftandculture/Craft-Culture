@@ -318,7 +318,7 @@
     <ul>
       <li><a href="#getting-started">Getting Started</a></li>
       <li><a href="#receiving">Receiving</a></li>
-      <li><a href="#putaway">Put-Away</a></li>
+      <li><a href="#transfer">Transfer</a></li>
       <li><a href="#picking">Picking</a></li>
       <li><a href="#repack">Repack</a></li>
       <li><a href="#dispatch">Dispatch</a></li>
@@ -440,33 +440,44 @@
       </div>
     </section>
 
-    <!-- Put-Away -->
-    <section id="putaway">
-      <h2>Put-Away</h2>
-      <p>Move cases from the receiving area to their designated storage locations.</p>
+    <!-- Transfer -->
+    <section id="transfer">
+      <h2>Transfer Stock</h2>
+      <p>Move cases from one location to another within the warehouse.</p>
+
+      <h3>When to Transfer</h3>
+      <ul>
+        <li>Reorganizing stock for better warehouse layout</li>
+        <li>Moving stock to make room for new arrivals</li>
+        <li>Consolidating partial cases in one location</li>
+      </ul>
 
       <h3>Step-by-Step Process</h3>
       <ol class="step-list">
         <li>
-          <strong>Open Put-Away</strong><br>
-          From the WMS menu, tap <strong>Put-Away</strong>.
+          <strong>Open Transfer</strong><br>
+          From the WMS menu, tap <strong>Transfer</strong>.
         </li>
         <li>
-          <strong>Scan Case</strong><br>
-          Scan the case barcode on the label.
+          <strong>Scan Source</strong><br>
+          Scan the case barcode or location barcode where stock is currently stored.
+        </li>
+        <li>
+          <strong>Select Quantity</strong><br>
+          If moving partial quantity, enter how many cases to transfer.
         </li>
         <li>
           <strong>Scan Destination</strong><br>
-          Go to the storage location and scan the location barcode.
+          Go to the new location and scan its barcode.
         </li>
         <li>
-          <strong>Confirm Move</strong><br>
+          <strong>Confirm Transfer</strong><br>
           Verify the information and tap <strong>Confirm</strong>.
         </li>
       </ol>
 
       <div class="tip">
-        The system will suggest the best location based on available space and product grouping.
+        Stock is assigned to locations during Receiving. Use Transfer only when you need to move stock after it has been received.
       </div>
     </section>
 

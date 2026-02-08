@@ -2,7 +2,6 @@
 
 import {
   IconAlertTriangle,
-  IconArrowRight,
   IconBarcode,
   IconBox,
   IconBuildingWarehouse,
@@ -144,7 +143,7 @@ const WMSDashboardContent = () => {
         )}
 
         {/* Alerts Section */}
-        {(hasExpiryAlerts || (overview?.pendingPutaway?.casesInReceiving ?? 0) > 0 || pendingRequestCount > 0) && (
+        {(hasExpiryAlerts || pendingRequestCount > 0) && (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {/* Expiry Alerts */}
             {hasExpiryAlerts && (
@@ -198,32 +197,6 @@ const WMSDashboardContent = () => {
               </Card>
             )}
 
-            {/* Pending Put-Away */}
-            {(overview?.pendingPutaway?.casesInReceiving ?? 0) > 0 && (
-              <Card className="border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-900/20">
-                <CardContent className="p-4">
-                  <div className="mb-3 flex items-center gap-2">
-                    <Icon icon={IconTruck} size="md" className="text-blue-600" />
-                    <Typography variant="headingSm" className="text-blue-800 dark:text-blue-300">
-                      Pending Put-Away
-                    </Typography>
-                  </div>
-                  <Typography variant="headingLg" className="mb-1 text-blue-600">
-                    {overview?.pendingPutaway?.casesInReceiving} cases
-                  </Typography>
-                  <Typography variant="bodyXs" className="text-blue-700 dark:text-blue-400">
-                    in receiving area awaiting storage
-                  </Typography>
-                  <Link
-                    href="/platform/admin/wms/putaway"
-                    className="mt-3 block text-sm text-blue-700 underline hover:no-underline dark:text-blue-400"
-                  >
-                    Start put-away →
-                  </Link>
-                </CardContent>
-              </Card>
-            )}
-
             {/* Pending Partner Requests */}
             {pendingRequestCount > 0 && (
               <Card className="border-purple-200 bg-purple-50 dark:border-purple-800 dark:bg-purple-900/20">
@@ -254,13 +227,13 @@ const WMSDashboardContent = () => {
 
         {/* Quick Actions - Large touch targets for mobile */}
         <div className="grid grid-cols-2 gap-3">
-          <Link href="/platform/admin/wms/putaway">
+          <Link href="/platform/admin/wms/receive">
             <Card className="cursor-pointer transition-colors hover:border-border-brand active:bg-fill-secondary">
               <CardContent className="flex flex-col items-center justify-center p-6">
-                <div className="mb-2 flex h-14 w-14 items-center justify-center rounded-xl bg-blue-100 dark:bg-blue-900/30">
-                  <Icon icon={IconArrowRight} size="xl" className="text-blue-600" />
+                <div className="mb-2 flex h-14 w-14 items-center justify-center rounded-xl bg-emerald-100 dark:bg-emerald-900/30">
+                  <Icon icon={IconPackage} size="xl" className="text-emerald-600" />
                 </div>
-                <Typography variant="headingSm">Put Away</Typography>
+                <Typography variant="headingSm">Receive</Typography>
               </CardContent>
             </Card>
           </Link>
@@ -274,13 +247,13 @@ const WMSDashboardContent = () => {
               </CardContent>
             </Card>
           </Link>
-          <Link href="/platform/admin/wms/receive">
+          <Link href="/platform/admin/wms/pick">
             <Card className="cursor-pointer transition-colors hover:border-border-brand active:bg-fill-secondary">
               <CardContent className="flex flex-col items-center justify-center p-6">
-                <div className="mb-2 flex h-14 w-14 items-center justify-center rounded-xl bg-emerald-100 dark:bg-emerald-900/30">
-                  <Icon icon={IconPackage} size="xl" className="text-emerald-600" />
+                <div className="mb-2 flex h-14 w-14 items-center justify-center rounded-xl bg-blue-100 dark:bg-blue-900/30">
+                  <Icon icon={IconBox} size="xl" className="text-blue-600" />
                 </div>
-                <Typography variant="headingSm">Receive</Typography>
+                <Typography variant="headingSm">Pick</Typography>
               </CardContent>
             </Card>
           </Link>
@@ -298,19 +271,19 @@ const WMSDashboardContent = () => {
 
         {/* Secondary Actions */}
         <div className="grid grid-cols-2 gap-3">
-          <Link href="/platform/admin/wms/pick">
-            <Card className="cursor-pointer transition-colors hover:border-border-brand">
-              <CardContent className="flex items-center gap-3 p-4">
-                <Icon icon={IconBox} size="md" className="text-text-muted" />
-                <Typography variant="bodySm" className="font-medium">Pick Lists</Typography>
-              </CardContent>
-            </Card>
-          </Link>
           <Link href="/platform/admin/wms/dispatch">
             <Card className="cursor-pointer transition-colors hover:border-border-brand">
               <CardContent className="flex items-center gap-3 p-4">
                 <Icon icon={IconTruck} size="md" className="text-text-muted" />
                 <Typography variant="bodySm" className="font-medium">Dispatch</Typography>
+              </CardContent>
+            </Card>
+          </Link>
+          <Link href="/platform/admin/wms/stock">
+            <Card className="cursor-pointer transition-colors hover:border-border-brand">
+              <CardContent className="flex items-center gap-3 p-4">
+                <Icon icon={IconBox} size="md" className="text-text-muted" />
+                <Typography variant="bodySm" className="font-medium">Stock</Typography>
               </CardContent>
             </Card>
           </Link>
@@ -322,11 +295,11 @@ const WMSDashboardContent = () => {
               </CardContent>
             </Card>
           </Link>
-          <Link href="/platform/admin/wms/stock">
+          <Link href="/platform/admin/wms/locations">
             <Card className="cursor-pointer transition-colors hover:border-border-brand">
               <CardContent className="flex items-center gap-3 p-4">
-                <Icon icon={IconBox} size="md" className="text-text-muted" />
-                <Typography variant="bodySm" className="font-medium">Stock</Typography>
+                <Icon icon={IconMapPin} size="md" className="text-text-muted" />
+                <Typography variant="bodySm" className="font-medium">Locations</Typography>
               </CardContent>
             </Card>
           </Link>
@@ -365,17 +338,9 @@ const WMSDashboardContent = () => {
         <Card>
           <CardContent className="p-3">
             <div className="grid grid-cols-2 gap-2">
-              <Link href="/platform/admin/wms/locations" className="flex items-center gap-2 rounded-lg p-2 transition-colors hover:bg-fill-secondary">
-                <Icon icon={IconMapPin} size="sm" colorRole="muted" />
-                <Typography variant="bodySm">Locations</Typography>
-              </Link>
               <Link href="/platform/admin/wms/movements" className="flex items-center gap-2 rounded-lg p-2 transition-colors hover:bg-fill-secondary">
                 <Icon icon={IconTransfer} size="sm" colorRole="muted" />
                 <Typography variant="bodySm">Movements</Typography>
-              </Link>
-              <Link href="/platform/admin/wms/ownership/transfer" className="flex items-center gap-2 rounded-lg p-2 transition-colors hover:bg-fill-secondary">
-                <Icon icon={IconUserDollar} size="sm" colorRole="muted" />
-                <Typography variant="bodySm">Ownership</Typography>
               </Link>
               <Link href="/platform/admin/wms/ownership/requests" className="flex items-center gap-2 rounded-lg p-2 transition-colors hover:bg-fill-secondary">
                 <Icon icon={IconUsers} size="sm" colorRole="muted" />
@@ -386,12 +351,14 @@ const WMSDashboardContent = () => {
                   </span>
                 )}
               </Link>
-              {hasReconcileIssues && (
-                <Link href="/platform/admin/wms/stock/reconcile" className="col-span-2 flex items-center gap-2 rounded-lg bg-red-50 p-2 transition-colors hover:bg-red-100 dark:bg-red-900/20">
-                  <Icon icon={IconAlertTriangle} size="sm" className="text-red-600" />
-                  <Typography variant="bodySm" className="text-red-700 dark:text-red-400">Reconciliation Issue</Typography>
-                </Link>
-              )}
+              <Link href="/platform/admin/wms/ownership/transfer" className="flex items-center gap-2 rounded-lg p-2 transition-colors hover:bg-fill-secondary">
+                <Icon icon={IconUserDollar} size="sm" colorRole="muted" />
+                <Typography variant="bodySm">Ownership</Typography>
+              </Link>
+              <Link href="/platform/admin/wms/stock/reconcile" className="flex items-center gap-2 rounded-lg p-2 transition-colors hover:bg-fill-secondary">
+                <Icon icon={IconAlertTriangle} size="sm" colorRole="muted" />
+                <Typography variant="bodySm">Reconcile</Typography>
+              </Link>
             </div>
           </CardContent>
         </Card>

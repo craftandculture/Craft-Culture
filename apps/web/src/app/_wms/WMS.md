@@ -17,9 +17,8 @@ apps/web/src/app/_wms/
 apps/web/src/app/(routes)/(platform)/platform/admin/wms/
 ├── page.tsx             # Dashboard
 ├── locations/           # Location management
-├── receive/             # Receiving workflow
+├── receive/             # Receiving workflow (includes put-away)
 ├── stock/               # Stock views & reconciliation
-├── putaway/             # Put-away workflow
 ├── transfer/            # Transfer workflow
 ├── repack/              # Repack workflow
 ├── pick/                # Picking workflow
@@ -184,24 +183,7 @@ Stock has a unique index on `(lwin18, location_id, shipment_id)` preventing dupl
 
 ---
 
-### 5. Put-Away (⚠️ Needs Testing)
-**Path**: `/platform/admin/wms/putaway`
-
-**Controllers**:
-- `adminPutaway` - Move stock to new location
-
-**Flow**:
-1. Scan case barcode
-2. Scan destination location barcode
-3. Confirm move
-
-**Unknowns**:
-- [ ] Does barcode scanning work on TC27?
-- [ ] Are movements logged correctly?
-
----
-
-### 6. Transfer (⚠️ Needs Testing)
+### 5. Transfer (⚠️ Needs Testing)
 **Path**: `/platform/admin/wms/transfer`
 
 **Controllers**:
@@ -219,7 +201,7 @@ Stock has a unique index on `(lwin18, location_id, shipment_id)` preventing dupl
 
 ---
 
-### 7. Repack (✅ Tested)
+### 6. Repack (✅ Tested)
 **Path**: `/platform/admin/wms/repack`
 
 **Controllers**:
@@ -245,7 +227,7 @@ Stock has a unique index on `(lwin18, location_id, shipment_id)` preventing dupl
 
 ---
 
-### 8. Picking (✅ Tested)
+### 7. Picking (✅ Tested)
 **Path**: `/platform/admin/wms/pick` (desktop) and `/platform/admin/wms/pick/[pickListId]` (mobile picking)
 
 **Controllers**:
@@ -276,7 +258,7 @@ Stock has a unique index on `(lwin18, location_id, shipment_id)` preventing dupl
 
 ---
 
-### 9. Dispatch Batching (✅ Tested)
+### 8. Dispatch Batching (✅ Tested)
 **Path**: `/platform/admin/wms/dispatch`
 
 **Controllers**:
@@ -305,7 +287,7 @@ Stock has a unique index on `(lwin18, location_id, shipment_id)` preventing dupl
 
 ---
 
-### 10. Ownership (⚠️ Not Tested)
+### 9. Ownership (⚠️ Not Tested)
 **Path**: `/platform/admin/wms/ownership`
 
 **Controllers**:
@@ -321,7 +303,7 @@ Stock has a unique index on `(lwin18, location_id, shipment_id)` preventing dupl
 
 ---
 
-### 11. Labels (✅ Tested)
+### 10. Labels (✅ Tested)
 **Path**: `/platform/admin/wms/labels` (desktop) and `/wms/labels` (mobile/TC27)
 
 **Controllers**:
@@ -372,7 +354,7 @@ Stock has a unique index on `(lwin18, location_id, shipment_id)` preventing dupl
 
 ---
 
-### 12. Movement History (✅ Tested)
+### 11. Movement History (✅ Tested)
 **Path**: `/platform/admin/wms/movements`
 
 **Controllers**:
