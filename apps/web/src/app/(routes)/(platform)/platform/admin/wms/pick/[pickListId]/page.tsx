@@ -98,6 +98,11 @@ const WMSPickListDetailPage = () => {
     },
   });
 
+  // Location lookup mutation
+  const locationLookupMutation = useMutation({
+    ...api.wms.admin.operations.getLocationByBarcode.mutationOptions(),
+  });
+
   const handleDelete = () => {
     if (confirm('Delete this pick list? The order will be reset so you can release it again.')) {
       deleteMutation.mutate({ pickListId });
@@ -130,13 +135,11 @@ const WMSPickListDetailPage = () => {
 
     if (scanStep === 'location') {
       console.log('[SCAN] Location scan step - looking up barcode:', value);
-      // Look up location by barcode
+      // Look up location by barcode using mutation
       setIsLookingUpLocation(true);
       setLocationError(null);
       try {
-        const result = await queryClient.fetchQuery(
-          api.wms.admin.operations.getLocationByBarcode.queryOptions({ barcode: value }),
-        );
+        const result = await locationLookupMutation.mutateAsync({ barcode: value });
         console.log('[SCAN] Location found:', result);
         setPickedLocationId(result.location.id);
         setPickedLocationCode(result.location.locationCode);
