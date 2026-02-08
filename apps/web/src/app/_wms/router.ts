@@ -2,6 +2,7 @@ import { createTRPCRouter } from '@/lib/trpc/trpc';
 
 import adminAddOrdersToBatch from './controller/adminAddOrdersToBatch';
 import adminAddZohoOrdersToBatch from './controller/adminAddZohoOrdersToBatch';
+import adminAdjustStockQuantity from './controller/adminAdjustStockQuantity';
 import adminAssignPickList from './controller/adminAssignPickList';
 import adminAutoFixStock from './controller/adminAutoFixStock';
 import adminBatchCreateLocations from './controller/adminBatchCreateLocations';
@@ -52,6 +53,7 @@ import adminReserveStock from './controller/adminReserveStock';
 import adminResolvePartnerRequest from './controller/adminResolvePartnerRequest';
 import adminSaveReceivingDraft from './controller/adminSaveReceivingDraft';
 import adminSearchStock from './controller/adminSearchStock';
+import adminSyncStockToZoho from './controller/adminSyncStockToZoho';
 import adminTransferOwnership from './controller/adminTransferOwnership';
 import adminTransferStock from './controller/adminTransferStock';
 import adminUpdateBatchStatus from './controller/adminUpdateBatchStatus';
@@ -111,6 +113,8 @@ const stockRouter = createTRPCRouter({
   autoFix: adminAutoFixStock,
   rebuildFromMovements: adminRebuildStockFromMovements,
   import: adminImportStock,
+  adjustQuantity: adminAdjustStockQuantity,
+  syncToZoho: adminSyncStockToZoho,
 });
 
 const ownershipRouter = createTRPCRouter({
