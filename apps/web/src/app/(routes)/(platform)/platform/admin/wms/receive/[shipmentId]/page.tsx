@@ -618,6 +618,8 @@ const WMSReceiveShipmentPage = () => {
     setCurrentProductIndex(index);
     setProductPhase('verifying');
     setViewMode('detail');
+    // Scroll to top when entering detail view
+    window.scrollTo({ top: 0, behavior: 'instant' });
   };
 
   // Go back to list view
@@ -998,6 +1000,7 @@ const WMSReceiveShipmentPage = () => {
                         isLoading={locationLookupMutation.isPending}
                         error={scanError || undefined}
                         success={scannedLocationCode ? `✓ ${scannedLocationCode}` : undefined}
+                        autoFocus={false}
                       />
 
                       {/* Manual bay selection */}
