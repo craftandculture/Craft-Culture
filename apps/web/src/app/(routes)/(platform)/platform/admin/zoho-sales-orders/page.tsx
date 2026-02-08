@@ -1,13 +1,12 @@
 'use client';
 
 import {
-  IconCheck,
   IconChevronRight,
-  IconClipboardList,
   IconCloudDownload,
   IconLoader2,
   IconPackage,
   IconRefresh,
+  IconTruckDelivery,
 } from '@tabler/icons-react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
@@ -18,7 +17,6 @@ import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
 import Card from '@/app/_ui/components/Card/Card';
 import CardContent from '@/app/_ui/components/Card/CardContent';
-import Checkbox from '@/app/_ui/components/Checkbox/Checkbox';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import useTRPC from '@/lib/trpc/browser';
@@ -26,8 +24,8 @@ import formatPrice from '@/utils/formatPrice';
 
 type StatusFilter =
   | 'all'
-  | 'synced'
-  | 'approved'
+  | 'ready'
+  | 'pending'
   | 'picking'
   | 'picked'
   | 'dispatched'
@@ -37,12 +35,11 @@ type StatusFilter =
  * Admin page for managing Zoho Sales Orders
  *
  * Displays synced sales orders from Zoho Books.
- * Allows batch approval to release orders for warehouse picking.
+ * Allows release to pick for invoiced orders (buffered from changes).
  */
 const ZohoSalesOrdersPage = () => {
   const api = useTRPC();
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('synced');
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('ready');
 
   const { data, isLoading, refetch, isFetching } = useQuery({
     ...api.zohoSalesOrders.list.queryOptions(),
@@ -50,27 +47,14 @@ const ZohoSalesOrdersPage = () => {
     refetchInterval: 30000,
   });
 
-  const { mutate: approveOrders, isPending: isApproving } = useMutation(
-    api.zohoSalesOrders.approve.mutationOptions({
-      onSuccess: (result) => {
-        toast.success(result.message);
-        setSelectedIds(new Set());
-        void refetch();
-      },
-      onError: (error) => {
-        toast.error(error.message || 'Failed to approve orders');
-      },
-    }),
-  );
-
-  const { mutate: createPickList, isPending: isCreatingPickList } = useMutation(
-    api.zohoSalesOrders.createPickList.mutationOptions({
+  const { mutate: releaseToPick, isPending: isReleasing } = useMutation(
+    api.zohoSalesOrders.releaseToPick.mutationOptions({
       onSuccess: (result) => {
         toast.success(result.message);
         void refetch();
       },
       onError: (error) => {
-        toast.error(error.message || 'Failed to create pick list');
+        toast.error(error.message || 'Failed to release to pick');
       },
     }),
   );
@@ -90,15 +74,25 @@ const ZohoSalesOrdersPage = () => {
   const orders = data ?? [];
 
   // Filter orders by status
-  const filteredOrders =
-    statusFilter === 'all'
-      ? orders
-      : orders.filter((o) => o.status === statusFilter);
+  // 'ready' = invoiced in Zoho and synced (ready to release)
+  // 'pending' = open in Zoho (awaiting invoice)
+  const filteredOrders = (() => {
+    switch (statusFilter) {
+      case 'ready':
+        return orders.filter((o) => o.status === 'synced' && o.zohoStatus === 'invoiced');
+      case 'pending':
+        return orders.filter((o) => o.status === 'synced' && o.zohoStatus !== 'invoiced');
+      case 'all':
+        return orders;
+      default:
+        return orders.filter((o) => o.status === statusFilter);
+    }
+  })();
 
   // Count orders by status for summary
   const statusCounts = {
-    synced: orders.filter((o) => o.status === 'synced').length,
-    approved: orders.filter((o) => o.status === 'approved').length,
+    ready: orders.filter((o) => o.status === 'synced' && o.zohoStatus === 'invoiced').length,
+    pending: orders.filter((o) => o.status === 'synced' && o.zohoStatus !== 'invoiced').length,
     picking: orders.filter((o) => o.status === 'picking').length,
     picked: orders.filter((o) => o.status === 'picked').length,
     dispatched: orders.filter((o) => o.status === 'dispatched').length,
@@ -106,20 +100,32 @@ const ZohoSalesOrdersPage = () => {
   };
 
   const statusFilters: { id: StatusFilter; label: string; count?: number }[] = [
-    { id: 'synced', label: 'Synced', count: statusCounts.synced },
-    { id: 'approved', label: 'Approved', count: statusCounts.approved },
+    { id: 'ready', label: 'Ready for Release', count: statusCounts.ready },
+    { id: 'pending', label: 'Pending Invoice', count: statusCounts.pending },
     { id: 'picking', label: 'Picking', count: statusCounts.picking },
     { id: 'picked', label: 'Picked', count: statusCounts.picked },
     { id: 'dispatched', label: 'Dispatched', count: statusCounts.dispatched },
     { id: 'all', label: 'All' },
   ];
 
-  const getStatusBadge = (status: string | null) => {
+  const getStatusBadge = (order: { status: string | null; zohoStatus: string }) => {
+    // For synced orders, show whether they're ready (invoiced) or pending
+    if (order.status === 'synced') {
+      if (order.zohoStatus === 'invoiced') {
+        return (
+          <span className="rounded bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300">
+            Ready for Release
+          </span>
+        );
+      }
+      return (
+        <span className="rounded bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
+          Pending Invoice
+        </span>
+      );
+    }
+
     const colors: Record<string, string> = {
-      synced:
-        'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
-      approved:
-        'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300',
       picking:
         'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300',
       picked:
@@ -132,8 +138,6 @@ const ZohoSalesOrdersPage = () => {
         'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
     };
     const labels: Record<string, string> = {
-      synced: 'Synced',
-      approved: 'Approved',
       picking: 'Picking',
       picked: 'Picked',
       dispatched: 'Dispatched',
@@ -142,9 +146,9 @@ const ZohoSalesOrdersPage = () => {
     };
     return (
       <span
-        className={`rounded px-2 py-0.5 text-xs font-medium ${colors[status ?? ''] || 'bg-fill-secondary text-text-muted'}`}
+        className={`rounded px-2 py-0.5 text-xs font-medium ${colors[order.status ?? ''] || 'bg-fill-secondary text-text-muted'}`}
       >
-        {labels[status ?? ''] || status}
+        {labels[order.status ?? ''] || order.status}
       </span>
     );
   };
@@ -159,38 +163,8 @@ const ZohoSalesOrdersPage = () => {
     });
   };
 
-  const toggleSelection = (orderId: string) => {
-    const newSet = new Set(selectedIds);
-    if (newSet.has(orderId)) {
-      newSet.delete(orderId);
-    } else {
-      newSet.add(orderId);
-    }
-    setSelectedIds(newSet);
-  };
-
-  const toggleAllSynced = () => {
-    const syncedIds = filteredOrders
-      .filter((o) => o.status === 'synced')
-      .map((o) => o.id);
-    const allSelected = syncedIds.every((id) => selectedIds.has(id));
-    if (allSelected) {
-      setSelectedIds(new Set());
-    } else {
-      setSelectedIds(new Set(syncedIds));
-    }
-  };
-
-  const handleApprove = () => {
-    if (selectedIds.size === 0) {
-      toast.error('Select at least one order to approve');
-      return;
-    }
-    approveOrders({ orderIds: Array.from(selectedIds) });
-  };
-
-  const handleCreatePickList = (salesOrderId: string) => {
-    createPickList({ salesOrderId });
+  const handleReleaseToPick = (salesOrderId: string) => {
+    releaseToPick({ salesOrderId });
   };
 
   return (
@@ -237,41 +211,28 @@ const ZohoSalesOrdersPage = () => {
                 {isFetching ? 'Refreshing...' : 'Refresh'}
               </ButtonContent>
             </Button>
-            {selectedIds.size > 0 && statusFilter === 'synced' && (
-              <Button
-                variant="primary"
-                size="sm"
-                onClick={handleApprove}
-                disabled={isApproving}
-              >
-                <ButtonContent iconLeft={IconCheck}>
-                  Approve {selectedIds.size} Order
-                  {selectedIds.size > 1 ? 's' : ''}
-                </ButtonContent>
-              </Button>
-            )}
           </div>
         </div>
 
         {/* Summary Cards */}
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 lg:grid-cols-6">
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
           <Card>
             <CardContent className="p-4 text-center">
-              <Typography variant="headingLg" className="text-blue-600">
-                {statusCounts.synced}
+              <Typography variant="headingLg" className="text-emerald-600">
+                {statusCounts.ready}
               </Typography>
               <Typography variant="bodyXs" colorRole="muted">
-                Awaiting Approval
+                Ready for Release
               </Typography>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="p-4 text-center">
               <Typography variant="headingLg" className="text-amber-600">
-                {statusCounts.approved}
+                {statusCounts.pending}
               </Typography>
               <Typography variant="bodyXs" colorRole="muted">
-                Ready to Pick
+                Pending Invoice
               </Typography>
             </CardContent>
           </Card>
@@ -322,10 +283,7 @@ const ZohoSalesOrdersPage = () => {
           {statusFilters.map((filter) => (
             <button
               key={filter.id}
-              onClick={() => {
-                setStatusFilter(filter.id);
-                setSelectedIds(new Set());
-              }}
+              onClick={() => setStatusFilter(filter.id)}
               className={`flex-shrink-0 rounded-md px-4 py-2 text-sm font-medium transition-colors ${
                 statusFilter === filter.id
                   ? 'bg-fill-primary text-text-primary shadow-sm'
@@ -340,22 +298,11 @@ const ZohoSalesOrdersPage = () => {
           ))}
         </div>
 
-        {/* Batch Selection Header */}
-        {statusFilter === 'synced' && filteredOrders.length > 0 && (
-          <div className="flex items-center gap-3 rounded-lg border border-border-muted bg-fill-secondary/50 px-4 py-3">
-            <Checkbox
-              checked={
-                filteredOrders.filter((o) => o.status === 'synced').length > 0 &&
-                filteredOrders
-                  .filter((o) => o.status === 'synced')
-                  .every((o) => selectedIds.has(o.id))
-              }
-              onCheckedChange={() => toggleAllSynced()}
-            />
-            <Typography variant="bodySm">
-              {selectedIds.size > 0
-                ? `${selectedIds.size} order${selectedIds.size > 1 ? 's' : ''} selected`
-                : 'Select orders to approve for picking'}
+        {/* Info Banner for Ready for Release */}
+        {statusFilter === 'ready' && filteredOrders.length > 0 && (
+          <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 dark:border-emerald-800 dark:bg-emerald-900/20">
+            <Typography variant="bodySm" className="text-emerald-800 dark:text-emerald-200">
+              These orders are invoiced in Zoho and ready to be released to the warehouse for picking.
             </Typography>
           </div>
         )}
@@ -388,9 +335,11 @@ const ZohoSalesOrdersPage = () => {
                     No Orders
                   </Typography>
                   <Typography variant="bodySm" colorRole="muted">
-                    {statusFilter === 'synced'
-                      ? 'No orders awaiting approval'
-                      : `No ${statusFilter} orders found`}
+                    {statusFilter === 'ready'
+                      ? 'No orders ready for release'
+                      : statusFilter === 'pending'
+                        ? 'No orders pending invoice'
+                        : `No ${statusFilter} orders found`}
                   </Typography>
                 </CardContent>
               </Card>
@@ -402,23 +351,13 @@ const ZohoSalesOrdersPage = () => {
                 >
                   <CardContent className="p-4">
                     <div className="flex items-start gap-3">
-                      {/* Checkbox for synced orders */}
-                      {order.status === 'synced' && (
-                        <div className="pt-1">
-                          <Checkbox
-                            checked={selectedIds.has(order.id)}
-                            onCheckedChange={() => toggleSelection(order.id)}
-                          />
-                        </div>
-                      )}
-
                       {/* Order Info */}
                       <div className="flex-1 space-y-2">
                         <div className="flex flex-wrap items-center gap-2">
                           <Typography variant="bodySm" className="font-semibold">
                             {order.salesOrderNumber}
                           </Typography>
-                          {getStatusBadge(order.status)}
+                          {getStatusBadge(order)}
                           {order.referenceNumber && (
                             <Typography variant="bodyXs" colorRole="muted">
                               Ref: {order.referenceNumber}
@@ -453,15 +392,16 @@ const ZohoSalesOrdersPage = () => {
 
                       {/* Actions */}
                       <div className="flex items-center gap-2">
-                        {order.status === 'approved' && !order.pickListId && (
+                        {/* Release to Pick button for invoiced orders */}
+                        {order.status === 'synced' && order.zohoStatus === 'invoiced' && (
                           <Button
-                            variant="outline"
+                            variant="primary"
                             size="sm"
-                            onClick={() => handleCreatePickList(order.id)}
-                            disabled={isCreatingPickList}
+                            onClick={() => handleReleaseToPick(order.id)}
+                            disabled={isReleasing}
                           >
-                            <ButtonContent iconLeft={IconClipboardList}>
-                              Create Pick List
+                            <ButtonContent iconLeft={isReleasing ? IconLoader2 : IconTruckDelivery}>
+                              Release to Pick
                             </ButtonContent>
                           </Button>
                         )}
