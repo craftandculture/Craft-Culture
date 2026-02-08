@@ -1,7 +1,7 @@
 'use client';
 
 import { IconArrowRight, IconBarcode, IconLoader2 } from '@tabler/icons-react';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
 
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Typography from '@/app/_ui/components/Typography/Typography';
@@ -27,6 +27,10 @@ export interface ScanInputProps {
   showKeyboard?: boolean;
 }
 
+export interface ScanInputHandle {
+  focus: () => void;
+}
+
 /**
  * ScanInput - a large, mobile-friendly input for barcode scanning
  *
@@ -39,12 +43,13 @@ export interface ScanInputProps {
  *
  * @example
  *   <ScanInput
+ *     ref={scanInputRef}
  *     label="Scan case barcode"
  *     placeholder="CASE-..."
  *     onScan={(barcode) => handleScan(barcode)}
  *   />
  */
-const ScanInput = ({
+const ScanInput = forwardRef<ScanInputHandle, ScanInputProps>(({
   onScan,
   placeholder = 'Scan barcode...',
   isLoading = false,
@@ -54,8 +59,15 @@ const ScanInput = ({
   label,
   disabled = false,
   showKeyboard = false,
-}: ScanInputProps) => {
+}, ref) => {
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Expose focus method to parent
+  useImperativeHandle(ref, () => ({
+    focus: () => {
+      inputRef.current?.focus();
+    },
+  }));
   const [value, setValue] = useState('');
   const processingRef = useRef(false);
   const lastScanTimeRef = useRef(0);
@@ -244,6 +256,8 @@ const ScanInput = ({
       )}
     </div>
   );
-};
+});
+
+ScanInput.displayName = 'ScanInput';
 
 export default ScanInput;

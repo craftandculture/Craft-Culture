@@ -29,6 +29,7 @@ import Icon from '@/app/_ui/components/Icon/Icon';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import PhotoCapture from '@/app/_wms/components/PhotoCapture';
 import ScanInput from '@/app/_wms/components/ScanInput';
+import type { ScanInputHandle } from '@/app/_wms/components/ScanInput';
 import ZebraPrint from '@/app/_wms/components/ZebraPrint';
 import downloadZplFile from '@/app/_wms/utils/downloadZplFile';
 import useTRPC from '@/lib/trpc/browser';
@@ -107,6 +108,7 @@ const WMSReceiveShipmentPage = () => {
   const [printError, setPrintError] = useState<string | null>(null);
 
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const scanInputRef = useRef<ScanInputHandle>(null);
 
   // Get shipment details
   const { data: shipment, isLoading: shipmentLoading } = useQuery({
@@ -298,6 +300,16 @@ const WMSReceiveShipmentPage = () => {
     };
   }, []);
 
+  // Auto-focus scan input when entering printing phase
+  useEffect(() => {
+    if (productPhase === 'printing' && scanInputRef.current) {
+      // Small delay to ensure DOM is ready
+      setTimeout(() => {
+        scanInputRef.current?.focus();
+      }, 100);
+    }
+  }, [productPhase]);
+
   // Update received cases
   const updateReceivedCases = (cases: number) => {
     const currentItem = getCurrentItem();
@@ -444,6 +456,10 @@ const WMSReceiveShipmentPage = () => {
       setScannedLocationId(null);
       setProductPhase('shelving');
       saveDraft();
+      // Scroll to top after labels downloaded
+      requestAnimationFrame(() => {
+        window.scrollTo({ top: 0, behavior: 'instant' });
+      });
     } catch (err) {
       setPrintError(err instanceof Error ? err.message : 'Failed to create labels');
     } finally {
@@ -1000,6 +1016,7 @@ const WMSReceiveShipmentPage = () => {
 
                       {/* Scan bay barcode */}
                       <ScanInput
+                        ref={scanInputRef}
                         label="Scan Bay Barcode"
                         placeholder="LOC-A-01-02"
                         onScan={handleBarcodeScan}
