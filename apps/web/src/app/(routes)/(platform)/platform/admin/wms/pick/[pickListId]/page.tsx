@@ -190,9 +190,18 @@ const WMSPickListDetailPage = () => {
     }
   };
 
-  // Get current unpicked item
-  const unpickedItems = data?.items.filter((i) => !i.isPicked) ?? [];
+  // Get current unpicked item - sorted by location for optimal pick path
+  const unpickedItems = (data?.items.filter((i) => !i.isPicked) ?? []).sort((a, b) => {
+    // Sort by location code for optimal pick path
+    const locA = a.suggestedLocationCode ?? 'ZZZ';
+    const locB = b.suggestedLocationCode ?? 'ZZZ';
+    return locA.localeCompare(locB);
+  });
   const currentItem = unpickedItems[currentItemIndex];
+
+  // Get next location hint for picker
+  const nextItem = unpickedItems[currentItemIndex + 1];
+  const nextLocationHint = nextItem?.suggestedLocationCode;
 
   // Start picking current item
   const startPicking = () => {
@@ -506,7 +515,7 @@ const WMSPickListDetailPage = () => {
                   <Typography variant="bodyXs" className="mb-1 font-medium text-amber-700 dark:text-amber-300">
                     GO TO BAY
                   </Typography>
-                  <Typography variant="headingXl" className="font-mono text-amber-700 dark:text-amber-300">
+                  <Typography variant="headingLg" className="font-mono text-2xl text-amber-700 dark:text-amber-300">
                     {currentItem.suggestedLocationCode}
                   </Typography>
                   <Typography variant="bodyXs" colorRole="muted" className="mt-2">
@@ -711,6 +720,20 @@ const WMSPickListDetailPage = () => {
               <Typography variant="bodyXs" className="text-center text-red-600">
                 {pickItemMutation.error?.message}
               </Typography>
+            )}
+
+            {/* Next bay hint */}
+            {nextLocationHint && (
+              <Card className="border-dashed border-blue-300 bg-blue-50/50 dark:bg-blue-900/10">
+                <CardContent className="p-3 text-center">
+                  <Typography variant="bodyXs" colorRole="muted">
+                    Next: {nextItem?.productName?.substring(0, 30)}...
+                  </Typography>
+                  <Typography variant="bodySm" className="font-medium text-blue-600">
+                    Bay {nextLocationHint}
+                  </Typography>
+                </CardContent>
+              </Card>
             )}
           </div>
         )}
