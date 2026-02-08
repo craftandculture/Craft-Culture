@@ -39,14 +39,7 @@ const adminDeletePickList = adminProcedure
       });
     }
 
-    // Delete pick list items first (cascade would handle this but being explicit)
-    await db
-      .delete(wmsPickListItems)
-      .where(eq(wmsPickListItems.pickListId, pickListId));
-
-    // Delete the pick list
-    await db.delete(wmsPickLists).where(eq(wmsPickLists.id, pickListId));
-
+    // IMPORTANT: Clear FK reference FIRST before deleting pick list
     // Reset the Zoho sales order if linked
     if (pickList.orderId) {
       await db
@@ -58,6 +51,14 @@ const adminDeletePickList = adminProcedure
         })
         .where(eq(zohoSalesOrders.id, pickList.orderId));
     }
+
+    // Delete pick list items
+    await db
+      .delete(wmsPickListItems)
+      .where(eq(wmsPickListItems.pickListId, pickListId));
+
+    // Delete the pick list
+    await db.delete(wmsPickLists).where(eq(wmsPickLists.id, pickListId));
 
     return {
       success: true,
