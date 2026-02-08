@@ -7,6 +7,7 @@ import {
   IconForklift,
   IconLoader2,
   IconMapPin,
+  IconPackages,
   IconPlus,
   IconPrinter,
   IconSearch,
@@ -187,6 +188,9 @@ const LocationsPage = () => {
                     <tr className="border-b border-border-primary bg-fill-secondary">
                       <th className="px-4 py-3 text-left font-medium text-text-muted">Location</th>
                       <th className="px-4 py-3 text-left font-medium text-text-muted">Type</th>
+                      <th className="px-4 py-3 text-center font-medium text-text-muted hidden sm:table-cell">
+                        Storage
+                      </th>
                       <th className="px-4 py-3 text-left font-medium text-text-muted hidden sm:table-cell">
                         Aisle
                       </th>
@@ -225,6 +229,23 @@ const LocationsPage = () => {
                           <Badge colorRole={getTypeColor(location.locationType)} size="sm">
                             {location.locationType}
                           </Badge>
+                        </td>
+                        <td className="px-4 py-3 text-center hidden sm:table-cell">
+                          {location.storageMethod === 'pallet' ? (
+                            <span className="inline-flex items-center gap-1 text-xs text-purple-600">
+                              <Icon icon={IconPackages} size="sm" />
+                              Pallet
+                            </span>
+                          ) : location.storageMethod === 'shelf' ? (
+                            <span className="inline-flex items-center gap-1 text-xs text-blue-600">
+                              <Icon icon={IconBox} size="sm" />
+                              Shelf
+                            </span>
+                          ) : location.storageMethod === 'mixed' ? (
+                            <span className="text-xs text-text-muted">Mixed</span>
+                          ) : (
+                            <span className="text-text-muted">-</span>
+                          )}
                         </td>
                         <td className="px-4 py-3 hidden sm:table-cell">
                           {location.aisle === '-' ? '-' : location.aisle}
