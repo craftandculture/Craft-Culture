@@ -3,6 +3,8 @@
 import {
   IconArrowLeft,
   IconBox,
+  IconClipboardCheck,
+  IconCloudUpload,
   IconDownload,
   IconLoader2,
   IconMapPin,
@@ -10,9 +12,10 @@ import {
   IconSearch,
   IconUser,
 } from '@tabler/icons-react';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useState } from 'react';
+import { toast } from 'sonner';
 
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
@@ -65,6 +68,30 @@ const WMSStockPage = () => {
     (activeTab === 'location' && locationsLoading) ||
     (activeTab === 'owner' && ownersLoading);
 
+  // Sync to Zoho mutation
+  const { mutate: syncToZoho, isPending: isSyncing } = useMutation({
+    ...api.wms.admin.stock.syncToZoho.mutationOptions(),
+    onSuccess: (data) => {
+      if (data.dryRun) {
+        toast.info(
+          `Dry run: ${data.summary.adjusted} items would be adjusted, ${data.summary.matched} already match`,
+        );
+      } else if (data.summary.adjusted > 0) {
+        toast.success(
+          `Synced ${data.summary.adjusted} items to Zoho. ${data.summary.matched} already matched.`,
+        );
+      } else {
+        toast.info(`All ${data.summary.matched} items already match Zoho.`);
+      }
+      if (data.summary.notFound > 0) {
+        toast.warning(`${data.summary.notFound} items not found in Zoho`);
+      }
+    },
+    onError: (error) => {
+      toast.error(`Sync failed: ${error.message}`);
+    },
+  });
+
   const tabs: { id: TabView; label: string; icon: typeof IconBox }[] = [
     { id: 'product', label: 'By Product', icon: IconBox },
     { id: 'location', label: 'By Location', icon: IconMapPin },
@@ -86,9 +113,24 @@ const WMSStockPage = () => {
             <Typography variant="headingLg" className="mb-1">
               Stock
             </Typography>
-            <div className="flex gap-2">
-              <Link href="/platform/admin/wms/stock/import">
+            <div className="flex flex-wrap gap-2">
+              <Link href="/platform/admin/wms/stock/check">
                 <Button variant="primary" size="sm">
+                  <ButtonContent iconLeft={IconClipboardCheck}>Check</ButtonContent>
+                </Button>
+              </Link>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => syncToZoho({ dryRun: false })}
+                disabled={isSyncing}
+              >
+                <ButtonContent iconLeft={isSyncing ? IconLoader2 : IconCloudUpload}>
+                  {isSyncing ? 'Syncing...' : 'Sync Zoho'}
+                </ButtonContent>
+              </Button>
+              <Link href="/platform/admin/wms/stock/import">
+                <Button variant="outline" size="sm">
                   <ButtonContent iconLeft={IconPackageImport}>Import</ButtonContent>
                 </Button>
               </Link>
