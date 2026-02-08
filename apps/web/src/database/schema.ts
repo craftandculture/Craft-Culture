@@ -3792,6 +3792,12 @@ export const wmsLocationType = pgEnum('wms_location_type', [
   'shipping',
 ]);
 
+export const wmsStorageMethod = pgEnum('wms_storage_method', [
+  'pallet', // Full pallet locations - pick entire pallets
+  'shelf', // Shelf locations - pick individual cases
+  'mixed', // Can store either
+]);
+
 export const wmsMovementType = pgEnum('wms_movement_type', [
   'receive',
   'putaway',
@@ -3867,6 +3873,8 @@ export const wmsLocations = pgTable(
     bay: text('bay').notNull(),
     level: text('level').notNull(),
     locationType: wmsLocationType('location_type').notNull(),
+    storageMethod: wmsStorageMethod('storage_method').default('shelf'),
+    position: text('position'), // Optional sub-position (e.g., 'L', 'R', '01', '02')
     capacityCases: integer('capacity_cases'),
     requiresForklift: boolean('requires_forklift').default(false),
     isActive: boolean('is_active').default(true),

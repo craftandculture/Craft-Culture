@@ -155,6 +155,13 @@
       "when": 1770219494099,
       "tag": "0021_fair_wallow",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1770578744906,
+      "tag": "0022_add-storage-method-to-locations",
+      "breakpoints": true
     }
   ]
 }
