@@ -12,6 +12,7 @@ import adminCreateLocation from './controller/adminCreateLocation';
 import adminCreatePickList from './controller/adminCreatePickList';
 import adminCreateSpecialLocation from './controller/adminCreateSpecialLocation';
 import adminDeduplicateStock from './controller/adminDeduplicateStock';
+import adminDeletePickList from './controller/adminDeletePickList';
 import adminDeleteReceivingDraft from './controller/adminDeleteReceivingDraft';
 import adminDeleteStockRecord from './controller/adminDeleteStockRecord';
 import adminGenerateDeliveryNote from './controller/adminGenerateDeliveryNote';
@@ -122,6 +123,7 @@ const ownershipRouter = createTRPCRouter({
 
 const pickingRouter = createTRPCRouter({
   create: adminCreatePickList,
+  delete: adminDeletePickList,
   getMany: adminGetPickLists,
   getOne: adminGetPickList,
   assign: adminAssignPickList,

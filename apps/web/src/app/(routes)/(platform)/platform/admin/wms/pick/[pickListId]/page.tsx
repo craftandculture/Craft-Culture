@@ -7,11 +7,13 @@ import {
   IconLoader2,
   IconMapPin,
   IconPackage,
+  IconTrash,
 } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
+import { toast } from 'sonner';
 
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
@@ -83,6 +85,24 @@ const WMSPickListDetailPage = () => {
       router.push('/platform/admin/wms/pick');
     },
   });
+
+  // Delete pick list mutation
+  const deleteMutation = useMutation({
+    ...api.wms.admin.picking.delete.mutationOptions(),
+    onSuccess: (result) => {
+      toast.success(result.message);
+      router.push('/platform/admin/zoho-sales-orders');
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to delete pick list');
+    },
+  });
+
+  const handleDelete = () => {
+    if (confirm('Delete this pick list? The order will be reset so you can release it again.')) {
+      deleteMutation.mutate({ pickListId });
+    }
+  };
 
   // Auto-focus scan input
   useEffect(() => {
@@ -269,6 +289,17 @@ const WMSPickListDetailPage = () => {
               Order: {data.orderNumber}
             </Typography>
           </div>
+          {!isComplete && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleDelete}
+              disabled={deleteMutation.isPending}
+              className="text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+            >
+              <Icon icon={deleteMutation.isPending ? IconLoader2 : IconTrash} size="sm" />
+            </Button>
+          )}
         </div>
 
         {/* Progress */}
