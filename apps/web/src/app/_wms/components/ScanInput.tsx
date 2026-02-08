@@ -25,7 +25,75 @@ export interface ScanInputProps {
   disabled?: boolean;
   /** Whether to show virtual keyboard (default: false for scanner use) */
   showKeyboard?: boolean;
+  /** Whether to enable haptic/sound feedback (default: true) */
+  enableFeedback?: boolean;
 }
+
+// Audio context for feedback sounds
+let audioContext: AudioContext | null = null;
+
+/**
+ * Play a success beep sound using Web Audio API
+ */
+const playSuccessBeep = () => {
+  try {
+    if (!audioContext) {
+      audioContext = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+    }
+    const oscillator = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
+
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+
+    oscillator.frequency.value = 880; // A5 note
+    oscillator.type = 'sine';
+
+    gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+
+    oscillator.start(audioContext.currentTime);
+    oscillator.stop(audioContext.currentTime + 0.1);
+  } catch {
+    // Ignore audio errors (e.g., autoplay policy)
+  }
+};
+
+/**
+ * Play an error buzz sound
+ */
+const playErrorBuzz = () => {
+  try {
+    if (!audioContext) {
+      audioContext = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+    }
+    const oscillator = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
+
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+
+    oscillator.frequency.value = 200; // Low buzz
+    oscillator.type = 'square';
+
+    gainNode.gain.setValueAtTime(0.2, audioContext.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+
+    oscillator.start(audioContext.currentTime);
+    oscillator.stop(audioContext.currentTime + 0.2);
+  } catch {
+    // Ignore audio errors
+  }
+};
+
+/**
+ * Trigger haptic vibration (if available)
+ */
+const triggerVibration = (pattern: number | number[]) => {
+  if (navigator.vibrate) {
+    navigator.vibrate(pattern);
+  }
+};
 
 export interface ScanInputHandle {
   focus: () => void;
@@ -59,6 +127,7 @@ const ScanInput = forwardRef<ScanInputHandle, ScanInputProps>(({
   label,
   disabled = false,
   showKeyboard = false,
+  enableFeedback = true,
 }, ref) => {
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -109,11 +178,17 @@ const ScanInput = forwardRef<ScanInputHandle, ScanInputProps>(({
   }, [isLoading]);
 
   // Reset processing state when error occurs (so user can retry)
+  // Also provide error feedback
   useEffect(() => {
     if (error) {
       processingRef.current = false;
+      // Provide error feedback
+      if (enableFeedback) {
+        playErrorBuzz();
+        triggerVibration([100, 50, 100]); // Double buzz for error
+      }
     }
-  }, [error]);
+  }, [error, enableFeedback]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -156,10 +231,17 @@ const ScanInput = forwardRef<ScanInputHandle, ScanInputProps>(({
         lastScannedValueRef.current = scannedValue;
         processingRef.current = true;
         setValue('');
+
+        // Provide haptic/audio feedback on scan
+        if (enableFeedback) {
+          playSuccessBeep();
+          triggerVibration(100);
+        }
+
         onScan(scannedValue);
       }
     },
-    [value, onScan, isLoading],
+    [value, onScan, isLoading, enableFeedback],
   );
 
   const handleChange = useCallback(
@@ -212,8 +294,15 @@ const ScanInput = forwardRef<ScanInputHandle, ScanInputProps>(({
     lastScannedValueRef.current = scannedValue;
     processingRef.current = true;
     setValue('');
+
+    // Provide haptic/audio feedback on scan
+    if (enableFeedback) {
+      playSuccessBeep();
+      triggerVibration(100);
+    }
+
     onScan(scannedValue);
-  }, [value, onScan, isLoading]);
+  }, [value, onScan, isLoading, enableFeedback]);
 
   return (
     <div className="w-full">

@@ -4,6 +4,8 @@ import {
   IconArrowLeft,
   IconBox,
   IconCheck,
+  IconChevronLeft,
+  IconChevronRight,
   IconClipboardCheck,
   IconEdit,
   IconLoader2,
@@ -12,6 +14,7 @@ import {
   IconPlus,
   IconPrinter,
   IconSearch,
+  IconTransfer,
   IconX,
 } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -56,6 +59,37 @@ interface EditingItem {
   originalQty: number;
   newQty: number;
 }
+
+/**
+ * Parse a location code into its components
+ * Format: A-01-02 (Aisle-Bay-Level)
+ */
+const parseLocationCode = (code: string): { aisle: string; bay: string; level: string } | null => {
+  const parts = code.split('-');
+  if (parts.length !== 3) return null;
+  return { aisle: parts[0] ?? '', bay: parts[1] ?? '', level: parts[2] ?? '' };
+};
+
+/**
+ * Get adjacent location codes for quick navigation
+ */
+const getAdjacentLocations = (code: string): { prev: string | null; next: string | null; up: string | null; down: string | null } => {
+  const parsed = parseLocationCode(code);
+  if (!parsed) return { prev: null, next: null, up: null, down: null };
+
+  const { aisle, bay, level } = parsed;
+  const bayNum = parseInt(bay, 10);
+  const levelNum = parseInt(level, 10);
+
+  const formatPart = (num: number) => String(num).padStart(2, '0');
+
+  return {
+    prev: bayNum > 1 ? `${aisle}-${formatPart(bayNum - 1)}-${level}` : null,
+    next: `${aisle}-${formatPart(bayNum + 1)}-${level}`,
+    up: `${aisle}-${bay}-${formatPart(levelNum + 1)}`,
+    down: levelNum > 0 ? `${aisle}-${bay}-${formatPart(levelNum - 1)}` : null,
+  };
+};
 
 /**
  * Extract lwin18 from a case barcode
@@ -656,9 +690,14 @@ const StockCheckPage = () => {
                   <Typography variant="headingSm" className="mb-2">
                     No Stock
                   </Typography>
-                  <Typography variant="bodySm" colorRole="muted">
+                  <Typography variant="bodySm" colorRole="muted" className="mb-4">
                     This location is empty
                   </Typography>
+                  <Link href={`/platform/admin/wms/transfer?to=${stockData.location.locationCode}`}>
+                    <Button variant="outline" size="md">
+                      <ButtonContent iconLeft={IconTransfer}>Transfer Stock Here</ButtonContent>
+                    </Button>
+                  </Link>
                 </CardContent>
               </Card>
             )}
@@ -689,10 +728,65 @@ const StockCheckPage = () => {
               </div>
             )}
 
-            {!stockLoading && stockData.stock.length > 0 && !editingItem && (
-              <Button variant="default" size="lg" className="w-full" onClick={resetScan}>
-                <ButtonContent iconLeft={IconCheck}>Done - Check Another Bay</ButtonContent>
-              </Button>
+            {!stockLoading && !editingItem && (
+              <>
+                {/* Quick Location Navigation */}
+                {stockData.location.locationCode && (() => {
+                  const adjacent = getAdjacentLocations(stockData.location.locationCode);
+                  return (
+                    <Card>
+                      <CardContent className="p-3">
+                        <Typography variant="bodyXs" colorRole="muted" className="mb-2 text-center">
+                          Quick Navigate
+                        </Typography>
+                        <div className="grid grid-cols-3 gap-2">
+                          {/* Previous Bay */}
+                          <button
+                            onClick={() => adjacent.prev && handleBayScan(`LOC-${adjacent.prev}`)}
+                            disabled={!adjacent.prev}
+                            className="flex h-10 items-center justify-center gap-1 rounded-lg border border-border-primary bg-fill-primary text-sm transition-colors hover:bg-fill-secondary disabled:cursor-not-allowed disabled:opacity-30"
+                          >
+                            <IconChevronLeft className="h-4 w-4" />
+                            {adjacent.prev || '--'}
+                          </button>
+
+                          {/* Current (shows up/down) */}
+                          <div className="flex flex-col gap-1">
+                            <button
+                              onClick={() => adjacent.up && handleBayScan(`LOC-${adjacent.up}`)}
+                              disabled={!adjacent.up}
+                              className="flex h-4 items-center justify-center rounded border border-border-primary bg-fill-primary text-xs transition-colors hover:bg-fill-secondary disabled:opacity-30"
+                            >
+                              ▲ {adjacent.up?.split('-')[2] || ''}
+                            </button>
+                            <button
+                              onClick={() => adjacent.down && handleBayScan(`LOC-${adjacent.down}`)}
+                              disabled={!adjacent.down}
+                              className="flex h-4 items-center justify-center rounded border border-border-primary bg-fill-primary text-xs transition-colors hover:bg-fill-secondary disabled:opacity-30"
+                            >
+                              ▼ {adjacent.down?.split('-')[2] || ''}
+                            </button>
+                          </div>
+
+                          {/* Next Bay */}
+                          <button
+                            onClick={() => adjacent.next && handleBayScan(`LOC-${adjacent.next}`)}
+                            disabled={!adjacent.next}
+                            className="flex h-10 items-center justify-center gap-1 rounded-lg border border-border-primary bg-fill-primary text-sm transition-colors hover:bg-fill-secondary disabled:cursor-not-allowed disabled:opacity-30"
+                          >
+                            {adjacent.next || '--'}
+                            <IconChevronRight className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })()}
+
+                <Button variant="default" size="lg" className="w-full" onClick={resetScan}>
+                  <ButtonContent iconLeft={IconCheck}>Done - Check Another Bay</ButtonContent>
+                </Button>
+              </>
             )}
           </div>
         )}

@@ -5,10 +5,13 @@ import {
   IconBarcode,
   IconBox,
   IconBuildingWarehouse,
+  IconClipboardCheck,
+  IconGripVertical,
   IconMapPin,
+  IconMoon,
   IconPackage,
-  IconPackages,
   IconPlus,
+  IconSun,
   IconTransfer,
   IconTruck,
   IconUserDollar,
@@ -16,6 +19,8 @@ import {
 } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useCallback, useEffect, useState } from 'react';
 
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
@@ -23,8 +28,26 @@ import Card from '@/app/_ui/components/Card/Card';
 import CardContent from '@/app/_ui/components/Card/CardContent';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Typography from '@/app/_ui/components/Typography/Typography';
+import ConnectionStatus from '@/app/_wms/components/ConnectionStatus';
 import MovementTypeBadge from '@/app/_wms/components/MovementTypeBadge';
 import useTRPC from '@/lib/trpc/browser';
+
+// Quick action configuration
+interface QuickAction {
+  id: string;
+  href: string;
+  icon: typeof IconPackage;
+  label: string;
+  color: string;
+  bgColor: string;
+}
+
+const DEFAULT_QUICK_ACTIONS: QuickAction[] = [
+  { id: 'receive', href: '/platform/admin/wms/receive', icon: IconPackage, label: 'Receive', color: 'text-emerald-600', bgColor: 'bg-emerald-100 dark:bg-emerald-900/30' },
+  { id: 'check', href: '/platform/admin/wms/stock/check', icon: IconClipboardCheck, label: 'Check', color: 'text-cyan-600', bgColor: 'bg-cyan-100 dark:bg-cyan-900/30' },
+  { id: 'pick', href: '/platform/admin/wms/pick', icon: IconBox, label: 'Pick', color: 'text-blue-600', bgColor: 'bg-blue-100 dark:bg-blue-900/30' },
+  { id: 'transfer', href: '/platform/admin/wms/transfer', icon: IconTransfer, label: 'Transfer', color: 'text-purple-600', bgColor: 'bg-purple-100 dark:bg-purple-900/30' },
+];
 
 /**
  * WMS Dashboard content component - renders the dashboard UI
@@ -32,6 +55,132 @@ import useTRPC from '@/lib/trpc/browser';
  */
 const WMSDashboardContent = () => {
   const api = useTRPC();
+  const router = useRouter();
+
+  // Dark mode toggle state
+  const [isDarkMode, setIsDarkMode] = useState(false);
+
+  // Quick actions order (customizable)
+  const [quickActionsOrder, setQuickActionsOrder] = useState<string[]>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('wms-quick-actions-order');
+      if (saved) {
+        try {
+          return JSON.parse(saved) as string[];
+        } catch {
+          // Ignore parse error
+        }
+      }
+    }
+    return DEFAULT_QUICK_ACTIONS.map((a) => a.id);
+  });
+
+  // Dragging state for reordering
+  const [isDragging, setIsDragging] = useState(false);
+  const [draggedId, setDraggedId] = useState<string | null>(null);
+
+  // Initialize dark mode from system preference or saved preference
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('wms-dark-mode');
+      if (saved !== null) {
+        setIsDarkMode(saved === 'true');
+      } else {
+        setIsDarkMode(window.matchMedia('(prefers-color-scheme: dark)').matches);
+      }
+    }
+  }, []);
+
+  // Apply dark mode class to document
+  useEffect(() => {
+    if (typeof document !== 'undefined') {
+      if (isDarkMode) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+      localStorage.setItem('wms-dark-mode', String(isDarkMode));
+    }
+  }, [isDarkMode]);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Only trigger if Ctrl/Cmd is pressed and not in an input
+      if (!(e.ctrlKey || e.metaKey)) return;
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+
+      switch (e.key.toLowerCase()) {
+        case 'r':
+          e.preventDefault();
+          router.push('/platform/admin/wms/receive');
+          break;
+        case 'p':
+          e.preventDefault();
+          router.push('/platform/admin/wms/pick');
+          break;
+        case 't':
+          e.preventDefault();
+          router.push('/platform/admin/wms/transfer');
+          break;
+        case 'c':
+          e.preventDefault();
+          router.push('/platform/admin/wms/stock/check');
+          break;
+        case 's':
+          e.preventDefault();
+          router.push('/platform/admin/wms/stock');
+          break;
+        case 'd':
+          e.preventDefault();
+          setIsDarkMode((prev) => !prev);
+          break;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [router]);
+
+  // Save quick actions order to localStorage
+  const saveQuickActionsOrder = useCallback((order: string[]) => {
+    setQuickActionsOrder(order);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('wms-quick-actions-order', JSON.stringify(order));
+    }
+  }, []);
+
+  // Handle drag start
+  const handleDragStart = useCallback((id: string) => {
+    setDraggedId(id);
+    setIsDragging(true);
+  }, []);
+
+  // Handle drag over
+  const handleDragOver = useCallback((e: React.DragEvent, targetId: string) => {
+    e.preventDefault();
+    if (!draggedId || draggedId === targetId) return;
+
+    const newOrder = [...quickActionsOrder];
+    const draggedIndex = newOrder.indexOf(draggedId);
+    const targetIndex = newOrder.indexOf(targetId);
+
+    newOrder.splice(draggedIndex, 1);
+    newOrder.splice(targetIndex, 0, draggedId);
+
+    saveQuickActionsOrder(newOrder);
+  }, [draggedId, quickActionsOrder, saveQuickActionsOrder]);
+
+  // Handle drag end
+  const handleDragEnd = useCallback(() => {
+    setDraggedId(null);
+    setIsDragging(false);
+  }, []);
+
+  // Get ordered quick actions
+  const orderedQuickActions = quickActionsOrder
+    .map((id) => DEFAULT_QUICK_ACTIONS.find((a) => a.id === id))
+    .filter((a): a is QuickAction => a !== undefined);
 
   // Fetch comprehensive overview (will use prefetched data)
   const { data: overview } = useQuery({
@@ -66,18 +215,38 @@ const WMSDashboardContent = () => {
   const hasReconcileIssues = reconcileData?.summary && !reconcileData.summary.isReconciled;
 
   return (
-    <div className="container mx-auto max-w-lg px-4 py-6">
-      <div className="space-y-4">
-        {/* Header */}
+    <>
+      {/* Offline/Online Status Banner */}
+      <ConnectionStatus />
+
+      <div className="container mx-auto max-w-lg px-4 py-6">
+        <div className="space-y-4">
+          {/* Header */}
         <div className="flex items-center justify-between">
           <Typography variant="headingLg">
             WMS
           </Typography>
-          <Button variant="outline" size="sm" asChild>
-            <Link href="/platform/admin/wms/scanner-test">
-              <Icon icon={IconBarcode} size="sm" />
-            </Link>
-          </Button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setIsDarkMode(!isDarkMode)}
+              className="flex h-9 w-9 items-center justify-center rounded-lg border border-border-primary bg-fill-primary text-text-muted transition-colors hover:bg-fill-secondary hover:text-text-primary"
+              title={isDarkMode ? 'Switch to light mode (Ctrl+D)' : 'Switch to dark mode (Ctrl+D)'}
+            >
+              <Icon icon={isDarkMode ? IconSun : IconMoon} size="sm" />
+            </button>
+            <Button variant="outline" size="sm" asChild>
+              <Link href="/platform/admin/wms/scanner-test">
+                <Icon icon={IconBarcode} size="sm" />
+              </Link>
+            </Button>
+          </div>
+        </div>
+
+        {/* Keyboard Shortcuts Hint */}
+        <div className="hidden sm:block">
+          <Typography variant="bodyXs" colorRole="muted" className="text-center">
+            Shortcuts: Ctrl+R (Receive) · Ctrl+P (Pick) · Ctrl+C (Check) · Ctrl+T (Transfer) · Ctrl+D (Dark Mode)
+          </Typography>
         </div>
 
         {/* KPI Summary - Compact */}
@@ -225,48 +394,32 @@ const WMSDashboardContent = () => {
           </div>
         )}
 
-        {/* Quick Actions - Large touch targets for mobile */}
+        {/* Quick Actions - Large touch targets for mobile, draggable for customization */}
         <div className="grid grid-cols-2 gap-3">
-          <Link href="/platform/admin/wms/receive">
-            <Card className="cursor-pointer transition-colors hover:border-border-brand active:bg-fill-secondary">
-              <CardContent className="flex flex-col items-center justify-center p-6">
-                <div className="mb-2 flex h-14 w-14 items-center justify-center rounded-xl bg-emerald-100 dark:bg-emerald-900/30">
-                  <Icon icon={IconPackage} size="xl" className="text-emerald-600" />
-                </div>
-                <Typography variant="headingSm">Receive</Typography>
-              </CardContent>
-            </Card>
-          </Link>
-          <Link href="/platform/admin/wms/transfer">
-            <Card className="cursor-pointer transition-colors hover:border-border-brand active:bg-fill-secondary">
-              <CardContent className="flex flex-col items-center justify-center p-6">
-                <div className="mb-2 flex h-14 w-14 items-center justify-center rounded-xl bg-purple-100 dark:bg-purple-900/30">
-                  <Icon icon={IconTransfer} size="xl" className="text-purple-600" />
-                </div>
-                <Typography variant="headingSm">Transfer</Typography>
-              </CardContent>
-            </Card>
-          </Link>
-          <Link href="/platform/admin/wms/pick">
-            <Card className="cursor-pointer transition-colors hover:border-border-brand active:bg-fill-secondary">
-              <CardContent className="flex flex-col items-center justify-center p-6">
-                <div className="mb-2 flex h-14 w-14 items-center justify-center rounded-xl bg-blue-100 dark:bg-blue-900/30">
-                  <Icon icon={IconBox} size="xl" className="text-blue-600" />
-                </div>
-                <Typography variant="headingSm">Pick</Typography>
-              </CardContent>
-            </Card>
-          </Link>
-          <Link href="/platform/admin/wms/repack">
-            <Card className="cursor-pointer transition-colors hover:border-border-brand active:bg-fill-secondary">
-              <CardContent className="flex flex-col items-center justify-center p-6">
-                <div className="mb-2 flex h-14 w-14 items-center justify-center rounded-xl bg-orange-100 dark:bg-orange-900/30">
-                  <Icon icon={IconPackages} size="xl" className="text-orange-600" />
-                </div>
-                <Typography variant="headingSm">Repack</Typography>
-              </CardContent>
-            </Card>
-          </Link>
+          {orderedQuickActions.map((action) => (
+            <div
+              key={action.id}
+              draggable
+              onDragStart={() => handleDragStart(action.id)}
+              onDragOver={(e) => handleDragOver(e, action.id)}
+              onDragEnd={handleDragEnd}
+              className={`${isDragging && draggedId === action.id ? 'opacity-50' : ''}`}
+            >
+              <Link href={action.href}>
+                <Card className="cursor-pointer transition-colors hover:border-border-brand active:bg-fill-secondary">
+                  <CardContent className="relative flex flex-col items-center justify-center p-6">
+                    <div className="absolute right-2 top-2 cursor-grab opacity-30 hover:opacity-60">
+                      <Icon icon={IconGripVertical} size="sm" />
+                    </div>
+                    <div className={`mb-2 flex h-14 w-14 items-center justify-center rounded-xl ${action.bgColor}`}>
+                      <Icon icon={action.icon} size="xl" className={action.color} />
+                    </div>
+                    <Typography variant="headingSm">{action.label}</Typography>
+                  </CardContent>
+                </Card>
+              </Link>
+            </div>
+          ))}
         </div>
 
         {/* Secondary Actions */}
@@ -381,6 +534,7 @@ const WMSDashboardContent = () => {
         )}
       </div>
     </div>
+    </>
   );
 };
 
