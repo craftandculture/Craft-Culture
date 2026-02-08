@@ -615,11 +615,17 @@ const WMSReceiveShipmentPage = () => {
 
   // Select a product from the list
   const selectProduct = (index: number) => {
+    // Blur any focused element to prevent keyboard from staying open
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
     setCurrentProductIndex(index);
     setProductPhase('verifying');
     setViewMode('detail');
-    // Scroll to top when entering detail view
-    window.scrollTo({ top: 0, behavior: 'instant' });
+    // Scroll to top after React renders the detail view
+    requestAnimationFrame(() => {
+      window.scrollTo({ top: 0, behavior: 'instant' });
+    });
   };
 
   // Go back to list view
@@ -701,11 +707,11 @@ const WMSReceiveShipmentPage = () => {
               <IconSearch className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-text-muted" />
               <input
                 type="text"
+                inputMode="none"
                 placeholder="Search products by name, producer, or LWIN..."
                 className="h-12 w-full rounded-lg border-2 border-border-primary bg-fill-primary pl-10 pr-4 text-base focus:border-border-brand focus:outline-none"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                autoFocus
               />
             </div>
 

@@ -61,26 +61,35 @@ const ScanInput = ({
   const lastScanTimeRef = useRef(0);
   const lastScannedValueRef = useRef('');
 
-  // Debounce time in ms - prevents double scans (increased for scanner reliability)
-  const SCAN_DEBOUNCE_MS = 1000;
+  // Debounce time in ms - prevents double scans
+  const SCAN_DEBOUNCE_MS = 1500;
+  // Cooldown after successful scan - ignore all input during this period
+  const SCAN_COOLDOWN_MS = 2000;
 
-  // Auto-focus on mount
+  // Auto-focus on mount only (not on re-renders)
   useEffect(() => {
     if (autoFocus && inputRef.current && !disabled) {
-      inputRef.current.focus();
+      // Small delay to prevent keyboard popup on mobile during page transitions
+      const timer = setTimeout(() => {
+        inputRef.current?.focus();
+      }, 100);
+      return () => clearTimeout(timer);
     }
-  }, [autoFocus, disabled]);
+  }, []); // Only run on mount
 
-  // Re-focus after loading completes and clear any pending input
+  // Reset processing state when loading completes, but DON'T auto-focus
+  // User can tap input to focus if they need to scan again
   useEffect(() => {
-    if (!isLoading && inputRef.current && !disabled) {
-      processingRef.current = false;
+    if (!isLoading) {
+      // Keep processing blocked for cooldown period after scan completes
+      setTimeout(() => {
+        processingRef.current = false;
+      }, SCAN_COOLDOWN_MS);
       setValue('');
-      inputRef.current.focus();
     }
-  }, [isLoading, disabled]);
+  }, [isLoading]);
 
-  // Clear value when loading starts
+  // Block input while loading
   useEffect(() => {
     if (isLoading) {
       processingRef.current = true;
