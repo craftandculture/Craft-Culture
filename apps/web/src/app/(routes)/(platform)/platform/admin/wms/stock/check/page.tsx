@@ -39,8 +39,8 @@ interface StockItem {
   productName: string;
   producer: string | null;
   vintage: number | null;
-  bottleSize: number;
-  caseConfig: number;
+  bottleSize: string | null;
+  caseConfig: number | null;
   quantityCases: number;
   reservedCases: number | null;
   availableCases: number;
@@ -120,9 +120,11 @@ const StockItemCard = ({
           <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-text-muted">
             {item.producer && <span>{item.producer}</span>}
             {item.vintage && <span>• {item.vintage}</span>}
-            <span>
-              • {item.caseConfig}x{item.bottleSize}ml
-            </span>
+            {item.caseConfig && item.bottleSize && (
+              <span>
+                • {item.caseConfig}x{item.bottleSize}ml
+              </span>
+            )}
           </div>
           <Typography variant="bodyXs" colorRole="muted" className="mt-1 font-mono">
             {item.lwin18}
@@ -220,7 +222,7 @@ const StockItemCard = ({
                 <ButtonContent iconLeft={IconX}>Cancel</ButtonContent>
               </Button>
               <Button
-                variant="primary"
+                variant="default"
                 size="md"
                 className="flex-1"
                 onClick={onSave}
@@ -301,8 +303,9 @@ const StockCheckPage = () => {
       if (data.noChange) {
         toast.info('No change - quantity was already correct');
       } else {
+        const adj = data.adjustment ?? 0;
         toast.success(
-          `Updated ${editingItem?.originalQty} → ${data.newQuantity} cases (${data.adjustment > 0 ? '+' : ''}${data.adjustment})`,
+          `Updated ${editingItem?.originalQty} → ${data.newQuantity} cases (${adj > 0 ? '+' : ''}${adj})`,
         );
       }
       setEditingItem(null);
@@ -687,7 +690,7 @@ const StockCheckPage = () => {
             )}
 
             {!stockLoading && stockData.stock.length > 0 && !editingItem && (
-              <Button variant="primary" size="lg" className="w-full" onClick={resetScan}>
+              <Button variant="default" size="lg" className="w-full" onClick={resetScan}>
                 <ButtonContent iconLeft={IconCheck}>Done - Check Another Bay</ButtonContent>
               </Button>
             )}
@@ -754,7 +757,7 @@ const StockCheckPage = () => {
                         <Typography variant="bodyXs" colorRole="muted">
                           TOTAL STOCK (ALL LOCATIONS)
                         </Typography>
-                        <Typography variant="headingXl" className="text-blue-600">
+                        <Typography variant="headingLg" className="text-2xl text-blue-600">
                           {product.totalCases} cases
                         </Typography>
                         <Typography variant="bodySm" colorRole="muted">
@@ -800,7 +803,7 @@ const StockCheckPage = () => {
                   ))}
                 </div>
 
-                <Button variant="primary" size="lg" className="w-full" onClick={resetScan}>
+                <Button variant="default" size="lg" className="w-full" onClick={resetScan}>
                   <ButtonContent iconLeft={IconCheck}>Done - Check Another Product</ButtonContent>
                 </Button>
               </>
