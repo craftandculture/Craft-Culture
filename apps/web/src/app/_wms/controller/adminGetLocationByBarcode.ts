@@ -18,7 +18,7 @@ import { getLocationByBarcodeSchema } from '../schemas/transferSchema';
  */
 const adminGetLocationByBarcode = adminProcedure
   .input(getLocationByBarcodeSchema)
-  .query(async ({ input }) => {
+  .mutation(async ({ input }) => {
     const { barcode } = input;
 
     // Clean the barcode - trim whitespace and normalize
