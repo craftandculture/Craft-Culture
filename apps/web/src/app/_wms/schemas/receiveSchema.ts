@@ -20,6 +20,12 @@ export const receiveItemSchema = z.object({
   productName: z.string().optional(),
   producer: z.string().nullable().optional(),
   vintage: z.number().nullable().optional(),
+  // Product identification
+  lwin: z.string().nullable().optional(), // LWIN from lookup or supplier SKU used as identifier
+  supplierSku: z.string().nullable().optional(), // Supplier's own reference code (e.g., W-codes from CRURATED)
+  // Customs data (for Zoho sync)
+  hsCode: z.string().nullable().optional(), // HS/tariff code for customs
+  countryOfOrigin: z.string().nullable().optional(), // Country of origin for customs
   // Per-item location for direct-to-rack receiving
   locationId: z.string().uuid().optional(),
   expiryDate: z.date().optional(),
