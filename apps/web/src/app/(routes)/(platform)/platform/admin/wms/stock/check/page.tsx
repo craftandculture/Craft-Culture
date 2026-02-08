@@ -302,8 +302,8 @@ const StockCheckPage = () => {
       setScanError(null);
 
       try {
-        const location = await lookupLocation({ barcode });
-        setSelectedLocationId(location.id);
+        const result = await lookupLocation({ barcode });
+        setSelectedLocationId(result.location.id);
         setShowLocationList(false);
       } catch {
         setScanError(`Location not found: ${barcode}`);
