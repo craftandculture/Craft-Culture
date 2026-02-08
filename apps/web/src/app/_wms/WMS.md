@@ -104,11 +104,11 @@ Stock has a unique index on `(lwin18, location_id, shipment_id)` preventing dupl
 
 ---
 
-### 2. Receiving (✅ Tested)
+### 2. Receiving (✅ Tested - Feb 2026)
 **Path**: `/platform/admin/wms/receive`
 
 **Controllers**:
-- `adminGetPendingShipments` - List shipments ready to receive
+- `adminGetPendingShipments` - List shipments ready to receive (calculates total cases from items)
 - `adminGetShipmentForReceiving` - Get shipment details with items
 - `adminReceiveShipment` - Complete receiving, create stock
 - `adminSaveReceivingDraft` - Save progress mid-receiving
@@ -117,23 +117,33 @@ Stock has a unique index on `(lwin18, location_id, shipment_id)` preventing dupl
 - `adminUploadReceivingPhoto` - Upload photo during receiving
 
 **Flow**:
-1. Select shipment from pending list
-2. Enter received quantities per item (product cards show full details)
-3. (Optional) Save draft to resume later
-4. Complete receiving → creates stock records + movements + case labels
-5. Download case labels for printing
+1. Select shipment from pending list (shows correct case totals)
+2. Tap on product to enter detail view (auto-scrolls to top)
+3. Verify quantity or adjust received quantity
+4. Print labels (generates ZPL, auto-focuses scan input)
+5. Scan bay barcode for location assignment
+6. Confirm and move to next product
+7. Complete receiving → creates stock records + movements + case labels
 
 **Key Features**:
 - Pack variant handling (expected 12x750ml, received 6x750ml)
-- Per-item location assignment
+- Per-item location assignment via barcode scan
 - Idempotency check prevents duplicate stock on retry
 - Case labels created automatically during receiving
 - Case label download via button → opens with Printer Setup app
 - Product cards show: Name, Vintage, Pack Size, Owner
+- Total cases calculated from `SUM(logisticsShipmentItems.cases)`
+- Auto-scroll to top when entering product detail view
+- Auto-focus on scan input when entering printing phase
 
-**Unknowns**:
-- [ ] Does pack variant detection work correctly?
-- [ ] Is draft save/resume reliable?
+**Mobile UX Fixes** (Feb 2026):
+- Double-scan prevention: 1500ms debounce + 2000ms cooldown after successful scan
+- Same-barcode blocking: Prevents scanning identical barcode within 3 seconds
+- Keyboard popup prevention: `inputMode="none"` on search bar, removed autoFocus
+- Scroll behavior: Uses `requestAnimationFrame` for reliable scroll-to-top
+- Focus management: Auto-blur before view transitions
+
+**Status**: Fully tested with 31 products on TC27. All mobile UX issues resolved.
 
 ---
 
@@ -436,6 +446,82 @@ wms.partner.*             // Partner portal APIs
 
 ---
 
+## Mobile UX Components
+
+### ScanInput Component
+**Path**: `_wms/components/ScanInput.tsx`
+
+A mobile-optimized input designed for Zebra TC27 barcode scanners. The scanner acts as a keyboard wedge, sending characters followed by Enter.
+
+**Props**:
+```typescript
+interface ScanInputProps {
+  onScan: (barcode: string) => void;  // Called when Enter pressed with value
+  placeholder?: string;               // Default: "Scan barcode..."
+  isLoading?: boolean;                // Shows spinner, disables input
+  autoFocus?: boolean;                // Auto-focus on mount (default: true)
+  error?: string;                     // Error message to display
+  success?: string;                   // Success message to display
+  label?: string;                     // Label above input
+  disabled?: boolean;                 // Disable input
+  showKeyboard?: boolean;             // Show virtual keyboard (default: false)
+}
+```
+
+**Imperative Handle**:
+```typescript
+interface ScanInputHandle {
+  focus: () => void;  // Programmatically focus the input
+}
+
+// Usage:
+const scanInputRef = useRef<ScanInputHandle>(null);
+scanInputRef.current?.focus();
+```
+
+**Anti-Double-Scan Features**:
+- **Debounce**: 1500ms between scans (prevents rapid-fire duplicate scans)
+- **Same-value blocking**: Ignores identical barcode within 3 seconds
+- **Cooldown**: 2000ms cooldown after successful scan (ignores all input during processing)
+- **Processing lock**: `processingRef` prevents concurrent scan handling
+
+**Keyboard Popup Prevention**:
+- `inputMode="none"` prevents virtual keyboard on focus
+- Scanner sends keystrokes directly as keyboard wedge
+- Set `showKeyboard={true}` for manual entry fallback
+
+### Mobile UX Patterns
+
+**Auto-Scroll to Top**:
+```typescript
+// Use requestAnimationFrame to ensure DOM is ready
+requestAnimationFrame(() => {
+  window.scrollTo({ top: 0, behavior: 'instant' });
+});
+```
+
+**Focus Management**:
+```typescript
+// Blur before view transitions to prevent keyboard popup
+if (document.activeElement instanceof HTMLElement) {
+  document.activeElement.blur();
+}
+```
+
+**Auto-Focus on Phase Change**:
+```typescript
+// Focus scan input when entering specific workflow phase
+useEffect(() => {
+  if (productPhase === 'printing' && scanInputRef.current) {
+    setTimeout(() => {
+      scanInputRef.current?.focus();
+    }, 100);
+  }
+}, [productPhase]);
+```
+
+---
+
 ## Hardware Integration
 
 ### Zebra TC27 Mobile Computer
@@ -493,10 +579,66 @@ Located in `_wms/components/ZebraPrint.tsx`:
 - [ ] Test reconciliation auto-fix
 
 ### Integration Points
-- [ ] Logistics shipments flow to receiving
-- [ ] Orders create pick lists
+- [x] Logistics shipments flow to receiving
+- [ ] Orders create pick lists (manual trigger, see below)
 - [ ] Pick completion updates stock
 - [ ] Dispatch updates order status
+
+---
+
+## Pick List Integration
+
+### How Pick Lists Are Created
+
+Pick lists are **manually triggered** by admin users - there is no automatic creation. Two order sources can create pick lists:
+
+#### 1. Private Client Orders (PCO)
+**Path**: Private Client Orders → Order Detail → Create Pick List
+
+**Flow**:
+1. Customer places order via B2C checkout
+2. Payment confirmed → order status = `client_paid`
+3. Admin navigates to order detail page
+4. Clicks "Create Pick List" button
+5. Pick list created with status = `pending`
+6. Picker opens pick list on TC27 and picks items
+
+**Order Statuses**:
+- `pending_payment` → `client_paid` → `picked` → `dispatched` → `delivered`
+
+#### 2. Zoho Sales Orders
+**Path**: Zoho Sales Orders → Order Detail → Create Pick List
+
+**Flow**:
+1. Sales team creates order in Zoho CRM
+2. Zoho webhook syncs order to platform
+3. Admin views order in Zoho Orders section
+4. Clicks "Create Pick List" button
+5. Pick list created with status = `pending`
+6. Picker opens pick list on TC27 and picks items
+
+**Order Statuses**:
+- `confirmed` → `picked` → `dispatched` → `delivered`
+
+### Pick List States
+
+```
+pending → assigned → in_progress → completed
+```
+
+| State | Description |
+|-------|-------------|
+| `pending` | Just created, not assigned |
+| `assigned` | Assigned to picker, not started |
+| `in_progress` | Picker actively working |
+| `completed` | All items picked |
+
+### Why Manual Trigger?
+
+1. **Inventory verification**: Admin can verify stock before committing to pick
+2. **Batch planning**: Multiple orders can be grouped for efficient picking
+3. **Priority control**: Urgent orders can be prioritized
+4. **Error prevention**: Avoids creating pick lists for orders with issues
 
 ---
 
@@ -573,11 +715,15 @@ New 7-step wizard needs final testing:
 - [ ] Mark as dispatched
 - [ ] Mark as delivered
 
-#### 4. Receiving Flow (Priority: LOW - already tested)
-- [x] Select shipment
+#### 4. Receiving Flow (✅ COMPLETED - Feb 2026)
+- [x] Select shipment (total cases now calculated correctly)
 - [x] Enter quantities
 - [x] Download labels
-- [ ] Verify labels print with correct Owner field
+- [x] Verify labels print with correct Owner field
+- [x] Mobile UX: No keyboard popup on product selection
+- [x] Mobile UX: Auto-scroll to top on product detail view
+- [x] Mobile UX: Auto-focus scan input when printing phase
+- [x] Mobile UX: No double-scan issues (tested with 31 products)
 
 ### WiFi Module Integration (Next Week)
 
@@ -639,3 +785,23 @@ When WiFi module arrives for ZD421 printer:
 - Partner portal stock view (controller exists, UI partial)
 - Zoho integration for invoices/settlements
 - Direct TCP/IP printing (waiting for WiFi module)
+
+---
+
+## Changelog
+
+### February 2026
+
+**Receiving Flow UX Improvements**:
+- Fixed total cases showing 0 on pending shipments list (now uses `SUM(logisticsShipmentItems.cases)`)
+- Fixed double-scan issues with 1500ms debounce + 2000ms cooldown
+- Fixed keyboard popup when selecting products (removed autoFocus, added `inputMode="none"`)
+- Fixed page not scrolling to top (using `requestAnimationFrame`)
+- Added auto-focus on scan input when entering printing phase
+- Added `forwardRef` and `useImperativeHandle` to ScanInput component
+- Tested end-to-end with 31 products on TC27
+
+**Files Modified**:
+- `_wms/components/ScanInput.tsx` - Anti-double-scan, imperative handle
+- `_wms/controller/adminGetPendingShipments.ts` - Total cases calculation
+- `(routes)/.../wms/receive/[shipmentId]/page.tsx` - Mobile UX fixes
