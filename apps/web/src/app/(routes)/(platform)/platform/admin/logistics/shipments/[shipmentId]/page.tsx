@@ -3,13 +3,17 @@
 import {
   IconArrowLeft,
   IconCalculator,
+  IconCheck,
+  IconCloud,
   IconFileText,
   IconLoader2,
   IconPackage,
+  IconPencil,
   IconPlus,
   IconRefresh,
   IconTrash,
   IconUpload,
+  IconX,
 } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
@@ -22,6 +26,8 @@ import LogisticsDocumentUpload from '@/app/_logistics/components/DocumentUpload'
 import ShipmentStatusBadge from '@/app/_logistics/components/ShipmentStatusBadge';
 import ShipmentStatusStepper from '@/app/_logistics/components/ShipmentStatusStepper';
 import ShipmentTracker from '@/app/_logistics/components/ShipmentTracker';
+import type { LwinLookupResult } from '@/app/_lwin/components/LwinLookup';
+import LwinLookup from '@/app/_lwin/components/LwinLookup';
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
 import Card from '@/app/_ui/components/Card/Card';
@@ -73,6 +79,7 @@ const ShipmentDetailPage = () => {
     bottlesPerCase: '12',
     productCostPerBottle: '',
   });
+  const [editingItemId, setEditingItemId] = useState<string | null>(null);
 
   const { data: shipment, isLoading, isError, error, refetch } = useQuery({
     ...api.logistics.admin.getOne.queryOptions({ id: shipmentId }),
@@ -132,6 +139,35 @@ const ShipmentDetailPage = () => {
     }),
   );
 
+  const { mutate: updateItem, isPending: isUpdatingItem } = useMutation(
+    api.logistics.admin.updateItem.mutationOptions({
+      onSuccess: () => {
+        toast.success('Item updated');
+        setEditingItemId(null);
+        void refetch();
+      },
+      onError: (error) => {
+        toast.error(error.message);
+      },
+    }),
+  );
+
+  const { mutate: syncToZoho, isPending: isSyncingToZoho } = useMutation(
+    api.logistics.admin.syncItemsToZoho.mutationOptions({
+      onSuccess: (result) => {
+        if (result.success) {
+          toast.success(`Synced to Zoho: ${result.summary.created} created, ${result.summary.exists} already exist`);
+        } else {
+          toast.warning(`Sync completed with errors: ${result.summary.errors} failed`);
+        }
+        void refetch();
+      },
+      onError: (error) => {
+        toast.error(error.message);
+      },
+    }),
+  );
+
   const { mutate: calculateLandedCost, isPending: isCalculating } = useMutation(
     api.logistics.admin.calculateLandedCost.mutationOptions({
       onSuccess: (result) => {
@@ -163,6 +199,25 @@ const ShipmentDetailPage = () => {
       cases: parseInt(newItem.cases, 10),
       bottlesPerCase: parseInt(newItem.bottlesPerCase, 10) || 12,
       productCostPerBottle: newItem.productCostPerBottle ? parseFloat(newItem.productCostPerBottle) : undefined,
+    });
+  };
+
+  const handleLwinSelect = (itemId: string, result: LwinLookupResult) => {
+    updateItem({
+      itemId,
+      lwin: result.lwin18,
+      producer: result.producer || undefined,
+      vintage: result.vintage || undefined,
+      region: result.region || undefined,
+      countryOfOrigin: result.country || undefined,
+    });
+  };
+
+  const handleUseSupplierSku = (itemId: string, supplierSku: string) => {
+    updateItem({
+      itemId,
+      lwin: supplierSku, // Use supplier SKU as the identifier
+      supplierSku: supplierSku,
     });
   };
 
@@ -475,9 +530,21 @@ const ShipmentDetailPage = () => {
             <CardContent className="p-6">
               <div className="flex items-center justify-between mb-4">
                 <Typography variant="headingSm">Items</Typography>
-                <Button size="sm" onClick={() => setIsAddingItem(true)}>
-                  <ButtonContent iconLeft={IconPlus}>Add Item</ButtonContent>
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => syncToZoho({ shipmentId })}
+                    disabled={isSyncingToZoho || !shipment.items?.some((i) => i.lwin)}
+                  >
+                    <ButtonContent iconLeft={isSyncingToZoho ? IconLoader2 : IconCloud}>
+                      {isSyncingToZoho ? 'Syncing...' : 'Sync to Zoho'}
+                    </ButtonContent>
+                  </Button>
+                  <Button size="sm" onClick={() => setIsAddingItem(true)}>
+                    <ButtonContent iconLeft={IconPlus}>Add Item</ButtonContent>
+                  </Button>
+                </div>
               </div>
 
               {isAddingItem && (
@@ -576,12 +643,53 @@ const ShipmentDetailPage = () => {
                             </div>
                           </td>
                           <td className="py-3 pr-4">
-                            {item.lwin ? (
-                              <code className="text-xs font-mono bg-fill-secondary px-1.5 py-0.5 rounded">
-                                {item.lwin}
-                              </code>
+                            {editingItemId === item.id ? (
+                              <div className="space-y-2">
+                                <LwinLookup
+                                  productName={item.productName}
+                                  onSelect={(result) => handleLwinSelect(item.id, result)}
+                                  disabled={isUpdatingItem}
+                                />
+                                {item.supplierSku && !item.lwin && (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => handleUseSupplierSku(item.id, item.supplierSku!)}
+                                    disabled={isUpdatingItem}
+                                  >
+                                    <ButtonContent>
+                                      Use Supplier SKU ({item.supplierSku})
+                                    </ButtonContent>
+                                  </Button>
+                                )}
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => setEditingItemId(null)}
+                                >
+                                  <ButtonContent iconLeft={IconX}>Cancel</ButtonContent>
+                                </Button>
+                              </div>
                             ) : (
-                              <span className="text-text-muted">-</span>
+                              <div className="flex items-center gap-2">
+                                {item.lwin ? (
+                                  <div className="flex items-center gap-1">
+                                    <Icon icon={IconCheck} size="sm" className="text-green-600" />
+                                    <code className="text-xs font-mono bg-fill-secondary px-1.5 py-0.5 rounded">
+                                      {item.lwin}
+                                    </code>
+                                  </div>
+                                ) : (
+                                  <span className="text-text-warning text-xs">Not mapped</span>
+                                )}
+                                <button
+                                  onClick={() => setEditingItemId(item.id)}
+                                  className="p-1 rounded hover:bg-fill-secondary text-text-muted hover:text-text-primary"
+                                  title="Edit LWIN/SKU"
+                                >
+                                  <Icon icon={IconPencil} size="sm" />
+                                </button>
+                              </div>
                             )}
                           </td>
                           <td className="py-3 pr-4 text-center">
