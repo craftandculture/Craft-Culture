@@ -49,6 +49,7 @@ import adminReconcileStock from './controller/adminReconcileStock';
 import adminReleaseReservation from './controller/adminReleaseReservation';
 import adminRemoveOrderFromBatch from './controller/adminRemoveOrderFromBatch';
 import adminRepack from './controller/adminRepack';
+import adminReprintCaseLabels from './controller/adminReprintCaseLabels';
 import adminReserveStock from './controller/adminReserveStock';
 import adminResolvePartnerRequest from './controller/adminResolvePartnerRequest';
 import adminSaveReceivingDraft from './controller/adminSaveReceivingDraft';
@@ -85,6 +86,7 @@ const receivingRouter = createTRPCRouter({
 const labelsRouter = createTRPCRouter({
   createCaseLabels: adminCreateCaseLabels,
   getCaseLabels: adminGetCaseLabels,
+  reprintCaseLabels: adminReprintCaseLabels,
   getLocationLabels: adminGetLocationLabels,
   getBayTotems: adminGetBayTotems,
   markPrinted: adminMarkLabelsPrinted,
