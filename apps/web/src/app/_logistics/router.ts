@@ -30,7 +30,9 @@ import adminRemoveItem from './controller/adminRemoveItem';
 import adminSyncHillebrand from './controller/adminSyncHillebrand';
 import adminSyncHillebrandDocuments from './controller/adminSyncHillebrandDocuments';
 import adminSyncHillebrandInvoices from './controller/adminSyncHillebrandInvoices';
+import adminSyncItemsToZoho from './controller/adminSyncItemsToZoho';
 import adminUpdate from './controller/adminUpdate';
+import adminUpdateItem from './controller/adminUpdateItem';
 import adminUpdateQuote from './controller/adminUpdateQuote';
 import adminUpdateQuoteRequest from './controller/adminUpdateQuoteRequest';
 import adminUpdateStatus from './controller/adminUpdateStatus';
@@ -53,7 +55,9 @@ const adminRouter = createTRPCRouter({
 
   // Items
   addItem: adminAddItem,
+  updateItem: adminUpdateItem,
   removeItem: adminRemoveItem,
+  syncItemsToZoho: adminSyncItemsToZoho,
 
   // Documents
   uploadDocument: adminUploadDocument,

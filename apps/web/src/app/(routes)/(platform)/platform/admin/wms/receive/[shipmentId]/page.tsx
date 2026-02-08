@@ -20,17 +20,11 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import LwinLookup from '@/app/_lwin/components/LwinLookup';
-import type { LwinLookupResult } from '@/app/_lwin/components/LwinLookup';
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
 import Card from '@/app/_ui/components/Card/Card';
 import CardContent from '@/app/_ui/components/Card/CardContent';
 import CardTitle from '@/app/_ui/components/Card/CardTitle';
-import Dialog from '@/app/_ui/components/Dialog/Dialog';
-import DialogContent from '@/app/_ui/components/Dialog/DialogContent';
-import DialogHeader from '@/app/_ui/components/Dialog/DialogHeader';
-import DialogTitle from '@/app/_ui/components/Dialog/DialogTitle';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import PhotoCapture from '@/app/_wms/components/PhotoCapture';
@@ -116,9 +110,6 @@ const WMSReceiveShipmentPage = () => {
 
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const scanInputRef = useRef<ScanInputHandle>(null);
-
-  // LWIN lookup modal state
-  const [showLwinLookup, setShowLwinLookup] = useState(false);
 
   // Get shipment details
   const { data: shipment, isLoading: shipmentLoading } = useQuery({
@@ -364,25 +355,6 @@ const WMSReceiveShipmentPage = () => {
 
     const newMap = new Map(receivedItems.set(currentItem.id, { ...currentItem, notes: itemNotes }));
     setReceivedItems(newMap);
-    saveDraft();
-  };
-
-  // Handle LWIN lookup result - update item with proper LWIN18
-  const handleLwinLookupResult = (result: LwinLookupResult) => {
-    const currentItem = getCurrentItem();
-    if (!currentItem) return;
-
-    const updatedItem = {
-      ...currentItem,
-      lwin: result.compact, // Use compact format (no dashes) as the SKU
-      receivedBottlesPerCase: result.caseSize,
-      receivedBottleSizeMl: result.bottleSizeMl,
-      vintage: result.vintage,
-    };
-
-    const newMap = new Map(receivedItems.set(currentItem.id, updatedItem));
-    setReceivedItems(newMap);
-    setShowLwinLookup(false);
     saveDraft();
   };
 
@@ -902,38 +874,14 @@ const WMSReceiveShipmentPage = () => {
                     </span>
                   )}
                   {currentItem.lwin ? (
-                    <Typography variant="bodyXs" className="font-mono text-text-muted">
+                    <span className="flex items-center gap-1 rounded bg-emerald-100 px-2 py-1 text-xs font-medium text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
+                      <IconCheck className="h-3 w-3" />
                       LWIN: {currentItem.lwin}
-                    </Typography>
+                    </span>
                   ) : (
-                    <div className="flex flex-wrap items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setShowLwinLookup(true)}
-                        className="rounded bg-amber-100 px-2 py-1 text-xs font-medium text-amber-700 hover:bg-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:hover:bg-amber-900/50"
-                      >
-                        Lookup LWIN
-                      </button>
-                      {currentItem.supplierSku && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const itemId = currentItem.id;
-                            setReceivedItems((prev) => {
-                              const updated = new Map(prev);
-                              const item = updated.get(itemId);
-                              if (item) {
-                                updated.set(itemId, { ...item, lwin: item.supplierSku });
-                              }
-                              return updated;
-                            });
-                          }}
-                          className="rounded bg-purple-100 px-2 py-1 text-xs font-medium text-purple-700 hover:bg-purple-200 dark:bg-purple-900/30 dark:text-purple-400 dark:hover:bg-purple-900/50"
-                        >
-                          Use Supplier SKU
-                        </button>
-                      )}
-                    </div>
+                    <span className="rounded bg-amber-100 px-2 py-1 text-xs font-medium text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+                      LWIN not mapped
+                    </span>
                   )}
                 </div>
               </div>
@@ -1281,37 +1229,6 @@ const WMSReceiveShipmentPage = () => {
         )}
       </div>
 
-      {/* LWIN Lookup Dialog */}
-      <Dialog open={showLwinLookup} onOpenChange={setShowLwinLookup}>
-        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Lookup Wine LWIN</DialogTitle>
-          </DialogHeader>
-          <div className="py-4">
-            {currentItem && (
-              <div className="mb-4 rounded-lg bg-fill-secondary p-3">
-                <Typography variant="bodySm" colorRole="muted">
-                  Looking up LWIN for:
-                </Typography>
-                <Typography variant="headingSm" className="mt-1">
-                  {currentItem.productName}
-                </Typography>
-                {currentItem.producer && (
-                  <Typography variant="bodyXs" colorRole="muted">
-                    {currentItem.producer}
-                  </Typography>
-                )}
-              </div>
-            )}
-            <LwinLookup
-              onSelect={handleLwinLookupResult}
-              defaultVintage={currentItem?.vintage ?? undefined}
-              defaultCaseSize={currentItem?.receivedBottlesPerCase ?? 6}
-              defaultBottleSize={currentItem?.receivedBottleSizeMl ?? 750}
-            />
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };
