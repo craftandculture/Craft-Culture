@@ -12,6 +12,8 @@ import {
   wmsStockMovements,
 } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
+import { findOrCreateWineItem } from '@/lib/zoho/items';
+import logger from '@/utils/logger';
 
 import { receiveShipmentSchema } from '../schemas/receiveSchema';
 import generateCaseLabelBarcode from '../utils/generateCaseLabelBarcode';
@@ -118,15 +120,29 @@ const adminReceiveShipment = adminProcedure
       const productName = receivedItem.productName ?? shipmentItem.productName;
       const producer = receivedItem.producer ?? shipmentItem.producer;
       const vintage = receivedItem.vintage ?? shipmentItem.vintage;
+      // Supplier SKU comes from shipment item, or can be overridden
+      const supplierSku = receivedItem.supplierSku ?? shipmentItem.supplierSku;
+      // Customs data for Zoho sync
+      const hsCode = receivedItem.hsCode ?? shipmentItem.hsCode;
+      const countryOfOrigin = receivedItem.countryOfOrigin ?? shipmentItem.countryOfOrigin;
 
-      // Generate LWIN-18 for this product with actual received pack config
-      const lwin18 = generateLwin18({
-        productName,
-        producer: producer ?? undefined,
-        vintage: vintage ?? undefined,
-        bottlesPerCase: actualBottlesPerCase,
-        bottleSizeMl: actualBottleSizeMl,
-      });
+      // Determine LWIN-18 for this product:
+      // 1. If receiver specified an LWIN (from lookup or using supplier SKU), use it
+      // 2. Otherwise generate one from product details
+      let lwin18: string;
+      if (receivedItem.lwin) {
+        // Use the LWIN specified during receiving (could be actual LWIN or supplier SKU used as identifier)
+        lwin18 = receivedItem.lwin;
+      } else {
+        // Generate LWIN-18 from product details with actual received pack config
+        lwin18 = generateLwin18({
+          productName,
+          producer: producer ?? undefined,
+          vintage: vintage ?? undefined,
+          bottlesPerCase: actualBottlesPerCase,
+          bottleSizeMl: actualBottleSizeMl,
+        });
+      }
 
       // Build notes for the stock record
       let stockNotes = receivedItem.notes ?? '';
@@ -167,6 +183,7 @@ const adminReceiveShipment = adminProcedure
             ownerId: partner.id,
             ownerName: partner.businessName,
             lwin18,
+            supplierSku,
             productName,
             producer,
             vintage,
@@ -245,6 +262,7 @@ const adminReceiveShipment = adminProcedure
           movementNumber,
           movementType: 'receive',
           lwin18,
+          supplierSku,
           productName,
           quantityCases: receivedItem.receivedCases,
           toLocationId: itemLocationId,
@@ -264,6 +282,27 @@ const adminReceiveShipment = adminProcedure
         cases: receivedItem.receivedCases,
         caseLabels,
       });
+
+      // Sync product to Zoho inventory (don't fail receiving if Zoho errors)
+      try {
+        await findOrCreateWineItem({
+          lwin18,
+          productName,
+          producer: producer ?? undefined,
+          vintage: vintage ?? undefined,
+          hsCode,
+          countryOfOrigin,
+          bottlesPerCase: actualBottlesPerCase,
+          bottleSizeMl: actualBottleSizeMl,
+        });
+      } catch (zohoError) {
+        logger.error('[ReceiveShipment] Failed to sync item to Zoho:', {
+          lwin18,
+          productName,
+          error: zohoError instanceof Error ? zohoError.message : zohoError,
+        });
+        // Continue receiving - Zoho sync failure should not block WMS operations
+      }
     }
 
     // 6. Update shipment status to delivered

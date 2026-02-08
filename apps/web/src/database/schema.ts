@@ -2835,6 +2835,7 @@ export const logisticsShipmentItems = pgTable(
     // Product details (denormalized for independence)
     productName: text('product_name').notNull(),
     lwin: text('lwin'), // LWIN code - unique SKU identifier
+    supplierSku: text('supplier_sku'), // Supplier's own reference code (e.g., W-codes from CRURATED)
     producer: text('producer'),
     vintage: integer('vintage'),
     region: text('region'),
@@ -3897,6 +3898,7 @@ export const wmsStock = pgTable(
       .notNull(),
     ownerName: text('owner_name').notNull(),
     lwin18: text('lwin18').notNull(),
+    supplierSku: text('supplier_sku'), // Supplier's own reference code (e.g., W-codes from CRURATED)
     productName: text('product_name').notNull(),
     producer: text('producer'),
     vintage: integer('vintage'),
@@ -3941,6 +3943,7 @@ export const wmsStockMovements = pgTable(
     movementNumber: text('movement_number').notNull().unique(),
     movementType: wmsMovementType('movement_type').notNull(),
     lwin18: text('lwin18').notNull(),
+    supplierSku: text('supplier_sku'), // Supplier's own reference code
     productName: text('product_name').notNull(),
     quantityCases: integer('quantity_cases').notNull(),
     fromLocationId: uuid('from_location_id').references(() => wmsLocations.id),
@@ -4416,6 +4419,7 @@ interface WmsReceivingDraftItem {
   producer?: string | null;
   vintage?: number | null;
   lwin?: string | null;
+  supplierSku?: string | null; // Supplier's own reference code (e.g., W-codes from CRURATED)
   expectedCases: number;
   receivedCases: number;
   expectedBottlesPerCase: number;

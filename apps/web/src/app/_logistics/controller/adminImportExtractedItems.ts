@@ -141,6 +141,7 @@ const adminImportExtractedItems = adminProcedure
           shipmentId,
           productName,
           lwin: item.lwin,
+          supplierSku: item.supplierSku,
           producer: item.producer,
           vintage: item.vintage,
           region: item.region,
