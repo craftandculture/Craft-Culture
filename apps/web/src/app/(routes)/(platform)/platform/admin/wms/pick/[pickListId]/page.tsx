@@ -569,17 +569,30 @@ const WMSPickListDetailPage = () => {
                   )}
                 </div>
                 {scanStep === 'location' ? (
-                  <input
-                    ref={scanInputRef}
-                    type="text"
-                    value={scanInput}
-                    onChange={(e) => setScanInput(e.target.value)}
-                    onKeyDown={handleKeyDown}
-                    placeholder="Scan bay barcode..."
-                    className="w-full rounded-lg border border-border-primary bg-fill-primary p-3 text-center font-mono text-lg focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
-                    inputMode="none"
-                    autoFocus
-                  />
+                  <div className="flex gap-2">
+                    <input
+                      ref={scanInputRef}
+                      type="text"
+                      value={scanInput}
+                      onChange={(e) => setScanInput(e.target.value)}
+                      onKeyDown={handleKeyDown}
+                      placeholder="Scan bay barcode..."
+                      className="flex-1 rounded-lg border border-border-primary bg-fill-primary p-3 text-center font-mono text-lg focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                      inputMode="none"
+                      autoFocus
+                    />
+                    <Button
+                      variant="primary"
+                      onClick={() => {
+                        if (scanInput.trim()) {
+                          void handleScan(scanInput.trim());
+                        }
+                      }}
+                      disabled={!scanInput.trim() || isLookingUpLocation}
+                    >
+                      {isLookingUpLocation ? <Icon icon={IconLoader2} size="sm" className="animate-spin" /> : 'OK'}
+                    </Button>
+                  </div>
                 ) : (
                   <div className="flex items-center justify-center gap-2 rounded-lg bg-emerald-50 p-3 dark:bg-emerald-900/20">
                     <Icon icon={IconMapPin} size="sm" className="text-emerald-600" />
@@ -618,16 +631,29 @@ const WMSPickListDetailPage = () => {
                   )}
                 </div>
                 {scanStep === 'case' && !caseVerified ? (
-                  <input
-                    ref={scanInputRef}
-                    type="text"
-                    value={scanInput}
-                    onChange={(e) => setScanInput(e.target.value)}
-                    onKeyDown={handleKeyDown}
-                    placeholder="Scan case barcode..."
-                    className="w-full rounded-lg border border-border-primary bg-fill-primary p-3 text-center font-mono text-lg focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
-                    autoFocus
-                  />
+                  <div className="flex gap-2">
+                    <input
+                      ref={scanInputRef}
+                      type="text"
+                      value={scanInput}
+                      onChange={(e) => setScanInput(e.target.value)}
+                      onKeyDown={handleKeyDown}
+                      placeholder="Scan case barcode..."
+                      className="flex-1 rounded-lg border border-border-primary bg-fill-primary p-3 text-center font-mono text-lg focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                      autoFocus
+                    />
+                    <Button
+                      variant="primary"
+                      onClick={() => {
+                        if (scanInput.trim()) {
+                          void handleScan(scanInput.trim());
+                        }
+                      }}
+                      disabled={!scanInput.trim()}
+                    >
+                      OK
+                    </Button>
+                  </div>
                 ) : caseVerified ? (
                   <div className="flex items-center justify-center gap-2 rounded-lg bg-emerald-50 p-3 dark:bg-emerald-900/20">
                     <Icon icon={IconPackage} size="sm" className="text-emerald-600" />
