@@ -1,6 +1,6 @@
 'use client';
 
-import { IconArrowRight, IconBarcode, IconLoader2 } from '@tabler/icons-react';
+import { IconArrowRight, IconBarcode, IconKeyboard, IconLoader2 } from '@tabler/icons-react';
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
 
 import Icon from '@/app/_ui/components/Icon/Icon';
@@ -130,6 +130,9 @@ const ScanInput = forwardRef<ScanInputHandle, ScanInputProps>(({
   enableFeedback = true,
 }, ref) => {
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Internal keyboard toggle state - allows user to enable keyboard for manual input
+  const [keyboardEnabled, setKeyboardEnabled] = useState(showKeyboard);
 
   // Expose focus method to parent
   useImperativeHandle(ref, () => ({
@@ -330,7 +333,7 @@ const ScanInput = forwardRef<ScanInputHandle, ScanInputProps>(({
           <input
             ref={inputRef}
             type="text"
-            inputMode={showKeyboard ? 'text' : 'none'}
+            inputMode={keyboardEnabled ? 'text' : 'none'}
             value={value}
             onChange={handleChange}
             onKeyDown={handleKeyDown}
@@ -352,6 +355,29 @@ const ScanInput = forwardRef<ScanInputHandle, ScanInputProps>(({
               <IconArrowRight className="h-6 w-6" />
             </button>
           )}
+          {/* Keyboard toggle button - allows manual input when needed */}
+          {!value.trim() && !isLoading && (
+            <button
+              type="button"
+              onClick={() => {
+                setKeyboardEnabled(!keyboardEnabled);
+                // Re-focus to trigger keyboard
+                setTimeout(() => {
+                  inputRef.current?.blur();
+                  inputRef.current?.focus();
+                }, 50);
+              }}
+              className={`ml-2 flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg border transition-colors ${
+                keyboardEnabled
+                  ? 'border-blue-500 bg-blue-50 text-blue-600 dark:bg-blue-900/30'
+                  : 'border-border-primary bg-fill-secondary text-text-muted hover:bg-fill-tertiary'
+              }`}
+              aria-label={keyboardEnabled ? 'Disable keyboard' : 'Enable keyboard for manual input'}
+              title={keyboardEnabled ? 'Keyboard enabled - tap to disable' : 'Tap for manual input'}
+            >
+              <IconKeyboard className="h-5 w-5" />
+            </button>
+          )}
         </div>
       </div>
 
@@ -367,9 +393,9 @@ const ScanInput = forwardRef<ScanInputHandle, ScanInputProps>(({
         </Typography>
       )}
 
-      {showKeyboard && (
+      {keyboardEnabled && (
         <Typography variant="bodyXs" colorRole="muted" className="mt-2">
-          Or type barcode manually and press Enter
+          Keyboard enabled - type barcode and press Enter
         </Typography>
       )}
     </div>
