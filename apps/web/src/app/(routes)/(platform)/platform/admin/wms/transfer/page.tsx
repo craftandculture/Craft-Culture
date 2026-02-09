@@ -86,7 +86,7 @@ const WMSTransferPage = () => {
   const handleSourceScan = async (barcode: string) => {
     setError('');
     try {
-      const result = await trpcClient.wms.admin.operations.getLocationByBarcode.query({ barcode });
+      const result = await trpcClient.wms.admin.operations.getLocationByBarcode.mutate({ barcode });
       setSourceLocation({
         id: result.location.id,
         locationCode: result.location.locationCode,
@@ -119,7 +119,7 @@ const WMSTransferPage = () => {
   const handleDestScan = async (barcode: string) => {
     setError('');
     try {
-      const result = await trpcClient.wms.admin.operations.getLocationByBarcode.query({ barcode });
+      const result = await trpcClient.wms.admin.operations.getLocationByBarcode.mutate({ barcode });
 
       if (result.location.id === sourceLocation?.id) {
         setError('Destination cannot be the same as source');
