@@ -47,26 +47,6 @@ export const releaseReservationSchema = z.object({
 });
 
 /**
- * Schema for partner requests
- */
-export const createPartnerRequestSchema = z.object({
-  /** Type of request */
-  requestType: z.enum(['transfer', 'mark_for_sale', 'withdrawal']),
-  /** Stock ID if applicable */
-  stockId: z.string().uuid().optional(),
-  /** LWIN of product */
-  lwin18: z.string(),
-  /** Product name */
-  productName: z.string(),
-  /** Quantity in cases */
-  quantityCases: z.number().int().positive(),
-  /** Target location (for transfers) */
-  targetLocationId: z.string().uuid().optional(),
-  /** Partner notes */
-  notes: z.string().optional(),
-});
-
-/**
  * Schema for resolving partner requests
  */
 export const resolvePartnerRequestSchema = z.object({

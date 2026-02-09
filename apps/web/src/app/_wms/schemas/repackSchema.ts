@@ -21,13 +21,5 @@ export const repackByStockSchema = z.object({
   notes: z.string().optional(),
 });
 
-/**
- * Schema for getting available repack configurations
- */
-export const getRepackOptionsSchema = z.object({
-  caseBarcode: z.string().min(1, 'Case barcode is required'),
-});
-
 export type RepackInput = z.infer<typeof repackSchema>;
 export type RepackByStockInput = z.infer<typeof repackByStockSchema>;
-export type GetRepackOptionsInput = z.infer<typeof getRepackOptionsSchema>;

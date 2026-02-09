@@ -33,14 +33,6 @@ export const addOrdersToBatchSchema = z.object({
 });
 
 /**
- * Schema for removing an order from a batch
- */
-export const removeOrderFromBatchSchema = z.object({
-  batchId: z.string().uuid(),
-  orderId: z.string().uuid(),
-});
-
-/**
  * Schema for updating batch status
  */
 export const updateBatchStatusSchema = z.object({
