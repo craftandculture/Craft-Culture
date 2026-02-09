@@ -1,15 +1,16 @@
 /**
- * Generate ZPL for a Compact Bay Totem - vertical strip on 4x2 label
+ * Generate ZPL for a Compact Bay Totem - PALLET LEVELS ONLY
  *
- * Inspired by Camcode warehouse rack labels:
- * - Clean horizontal bands for each level
- * - Level number in small box on LEFT
- * - QR code in CENTER
- * - Location code BELOW QR (small text)
- * - Thin separator lines (not thick black bars)
+ * Purpose: Visual identification for forklift operators
+ * - BIG level numbers visible from forklift cab
+ * - Small QR code in header for bay-level scanning
+ * - Location codes for reference
+ * - Optimized for 2-4 pallet levels (not picking levels)
+ *
+ * Picking levels (00, 01) should use individual 4x6 labels instead.
  *
  * Physical: 4" x 2" at 203 DPI = 812 x 406 dots
- * Applied vertically: X=bottom→top, Y=left→right
+ * Applied vertically (90° CCW): X=bottom→top, Y=right→left
  */
 
 export interface CompactTotemLevel {
@@ -37,111 +38,104 @@ const escapeZpl = (str: string) => {
 };
 
 /**
- * Generate ZPL for a compact vertical totem
+ * Generate ZPL for pallet level totem
  *
  * Visual layout (when applied vertically):
- * ┌────────────────────────────┐
- * │      Bay A-01              │ ← Thin header
- * ├────────────────────────────┤
- * │ ┌──┐                       │
- * │ │04│  ▓▓▓▓   A-01-04 [F]  │ ← Level row
- * │ └──┘  QR                   │
- * ├────────────────────────────┤
- * │ ┌──┐                       │
- * │ │03│  ▓▓▓▓   A-01-03 [F]  │
- * │ └──┘  QR                   │
- * ├────────────────────────────┤
- * │ etc...                     │
- * └────────────────────────────┘
+ * ┌──────────────────────────────────────┐
+ * │  BAY A-01              [QR]         │ ← Header with bay QR
+ * ├──────────────────────────────────────┤
+ * │                                      │
+ * │    04               A-01-04         │ ← BIG level number
+ * │                                      │
+ * ├──────────────────────────────────────┤
+ * │                                      │
+ * │    03               A-01-03         │
+ * │                                      │
+ * ├──────────────────────────────────────┤
+ * │                                      │
+ * │    02               A-01-02         │
+ * │                                      │
+ * └──────────────────────────────────────┘
  */
 const generateCompactTotemZpl = (data: CompactTotemData) => {
   const bayCode = `${escapeZpl(data.aisle)}-${escapeZpl(data.bay)}`;
 
-  // ===========================================
-  // COORDINATE SYSTEM (4x2 label rotated 90° CCW)
-  // ===========================================
-  // Physical print: 812w x 406h dots (4" x 2")
-  // After CCW rotation to apply vertically:
-  //
-  //   Physical X (0-812, left→right) → Applied VERTICAL (bottom→top)
-  //   Physical Y (0-406, top→bottom) → Applied HORIZONTAL (right→left)
-  //
-  // KEY INSIGHT: Physical Y is REVERSED horizontally!
-  //   Y=0   (physical top)    → RIGHT side when applied
-  //   Y=406 (physical bottom) → LEFT side when applied
-  //
-  // ===========================================
+  // Physical dimensions at 203 DPI
+  // After 90° CCW rotation: X=bottom→top, Y=right→left
+  const W = 812; // Physical width → applied height
+  const H = 406; // Physical height → applied width (REVERSED: high Y = left)
 
-  const W = 812; // Physical width (applied: height)
-  const H = 406; // Physical height (applied: width, but REVERSED)
+  const M = 10;
+  const headerH = 70; // Taller header for bay name + QR
 
-  const M = 8; // Margin
-  const headerH = 50; // Header height
-  const levelCount = Math.min(data.levels.length, 5);
+  // Filter to forklift levels only, max 4
+  const palletLevels = data.levels
+    .filter((l) => l.requiresForklift)
+    .slice(0, 4);
+
+  // If no forklift levels, use all levels (fallback)
+  const levels = palletLevels.length > 0 ? palletLevels : data.levels.slice(0, 4);
+  const levelCount = levels.length;
+
+  if (levelCount === 0) {
+    return `^XA^FO50,50^A0,30,30^FDNo levels^FS^XZ`;
+  }
+
   const rowH = Math.floor((W - M * 2 - headerH) / levelCount);
 
-  // HORIZONTAL ZONES (physical Y → applied horizontal, REVERSED)
-  // Applied layout: [LEVEL BOX] [QR CODE] [LOCATION TEXT]
-  //                    LEFT       CENTER      RIGHT
-  // Physical Y:        HIGH        MID        LOW
-  //
-  const levelZoneW = 70; // Level number zone
-  const qrZoneW = 130; // QR code zone
-
-  // Physical Y positions (remember: high Y = LEFT when applied)
-  const levelY = H - M - levelZoneW; // ~328 - LEFT zone
-  const qrY = levelY - qrZoneW; // ~198 - CENTER zone
-  const textY = M; // ~8 - RIGHT zone
+  // Get bay barcode from first level (for header QR)
+  const bayBarcode = `BAY-${data.aisle}-${data.bay}`;
 
   let zpl = `^XA
 
-^FX === HEADER (TOP when applied = high X) ===
+^FX === HEADER: Bay name + QR (TOP when applied) ===
 ^FO${W - M - headerH},${M}
 ^GB${headerH},${H - M * 2},${headerH},B^FS
-^FO${W - M - headerH + 8},${Math.floor(H / 2) - 55}
-^A0R,36,34^FR
+
+^FX Bay name (large, white on black)
+^FO${W - M - headerH + 10},${M + 20}
+^A0R,50,48^FR
 ^FDBay ${bayCode}^FS
+
+^FX Bay QR code (small, in header)
+^FO${W - M - headerH + 10},${H - M - 90}
+^BQN,2,2^FR
+^FDMA,${bayBarcode}^FS
 
 `;
 
-  data.levels.slice(0, 5).forEach((level, idx) => {
-    const levelText = level.level.padStart(2, '0');
+  // Each pallet level - BIG numbers, visual-first
+  levels.forEach((level, idx) => {
+    const levelNum = level.level.padStart(2, '0');
     const locCode = `${data.aisle}-${data.bay}-${level.level}`;
 
-    // Row vertical position (high X = top when applied)
+    // Row position
     const rowBottom = W - M - headerH - (idx + 1) * rowH;
-    const rowCenterX = rowBottom + Math.floor(rowH / 2);
+    const rowMid = rowBottom + Math.floor(rowH / 2);
 
     zpl += `
 ^FX === LEVEL ${level.level} ===
 
-^FX LEVEL NUMBER (LEFT zone - high Y)
-^FO${rowCenterX - 28},${levelY}
-^GB58,${levelZoneW - 5},2^FS
-^FO${rowCenterX - 20},${levelY + 12}
-^A0R,48,44
-^FD${levelText}^FS
+^FX BIG level number (LEFT when applied = high Y)
+^FO${rowMid - 40},${H - M - 110}
+^A0R,90,85
+^FD${levelNum}^FS
 
-^FX QR CODE (CENTER zone - mid Y)
-^FO${rowCenterX - 50},${qrY + 5}
-^BQN,2,4
-^FDMA,${level.barcode}^FS
+^FX Location code (RIGHT when applied = low Y)
+^FO${rowMid - 25},${M + 10}
+^A0R,28,26
+^FD${escapeZpl(locCode)}^FS
 
-^FX LOCATION + FORKLIFT (RIGHT zone - low Y)
-^FO${rowCenterX - 35},${textY}
-^A0R,26,24
-^FD${escapeZpl(locCode)}${level.requiresForklift ? ' [F]' : ''}^FS
-
-^FX Row separator line
+^FX Row separator
 ^FO${rowBottom},${M}
 ^GB2,${H - M * 2},2^FS
 `;
   });
 
-  // Bottom edge line and outer border
+  // Outer border
   zpl += `
-^FO${M},${M}^GB2,${H - M * 2},2^FS
-^FO${M},${M}^GB${W - M * 2},${H - M * 2},2^FS
+^FO${M},${M}
+^GB${W - M * 2},${H - M * 2},2^FS
 ^XZ`;
 
   return zpl;
