@@ -4,6 +4,7 @@ import {
   IconAlertCircle,
   IconAlertTriangle,
   IconArrowRight,
+  IconBan,
   IconCheck,
   IconChevronRight,
   IconCloudUpload,
@@ -59,6 +60,8 @@ interface ReceivedItem {
   packChanged: boolean;
   isAddedItem: boolean;
   isVerified: boolean;
+  /** Item was skipped during receiving (not found, 0 cases) */
+  isSkipped?: boolean;
   locationAssignments: LocationAssignment[];
   totalLabelsPrinted: number;
   notes?: string;
@@ -492,7 +495,7 @@ const WMSReceiveShipmentPage = () => {
     saveDraft();
   };
 
-  // Move to next incomplete product (skip completed ones)
+  // Move to next incomplete product (skip completed/skipped ones)
   const handleNextProduct = () => {
     if (!shipment?.items) return;
 
@@ -503,8 +506,9 @@ const WMSReceiveShipmentPage = () => {
       const receivedItem = receivedItems.get(item.id);
       const isComplete =
         receivedItem &&
-        receivedItem.locationAssignments.length > 0 &&
-        receivedItem.locationAssignments.reduce((sum, a) => sum + a.cases, 0) >= receivedItem.receivedCases;
+        (receivedItem.isSkipped ||
+          (receivedItem.locationAssignments.length > 0 &&
+            receivedItem.locationAssignments.reduce((sum, a) => sum + a.cases, 0) >= receivedItem.receivedCases));
       if (!isComplete) {
         setCurrentProductIndex(i);
         setProductPhase('verifying');
@@ -519,8 +523,9 @@ const WMSReceiveShipmentPage = () => {
       const receivedItem = receivedItems.get(item.id);
       const isComplete =
         receivedItem &&
-        receivedItem.locationAssignments.length > 0 &&
-        receivedItem.locationAssignments.reduce((sum, a) => sum + a.cases, 0) >= receivedItem.receivedCases;
+        (receivedItem.isSkipped ||
+          (receivedItem.locationAssignments.length > 0 &&
+            receivedItem.locationAssignments.reduce((sum, a) => sum + a.cases, 0) >= receivedItem.receivedCases));
       if (!isComplete) {
         setCurrentProductIndex(i);
         setProductPhase('verifying');
@@ -530,6 +535,29 @@ const WMSReceiveShipmentPage = () => {
 
     // All complete - go back to list view
     setViewMode('list');
+  };
+
+  // Skip item (not found / 0 cases) and move to next product
+  const handleSkipItem = () => {
+    const currentItem = getCurrentItem();
+    if (!currentItem) return;
+
+    // Mark as skipped with 0 cases and add note
+    const newMap = new Map(
+      receivedItems.set(currentItem.id, {
+        ...currentItem,
+        isSkipped: true,
+        receivedCases: 0,
+        notes: currentItem.notes
+          ? `${currentItem.notes}\n[SKIPPED - Item not found during receiving]`
+          : '[SKIPPED - Item not found during receiving]',
+      }),
+    );
+    setReceivedItems(newMap);
+    saveDraft();
+
+    // Move to next product
+    handleNextProduct();
   };
 
   // Complete all receiving
@@ -746,10 +774,13 @@ const WMSReceiveShipmentPage = () => {
                 </div>
               ) : (
                 filteredProducts.map(({ item, index, receivedItem }) => {
+                  const isSkipped = receivedItem?.isSkipped;
                   const isComplete =
                     receivedItem &&
-                    receivedItem.locationAssignments.length > 0 &&
-                    receivedItem.locationAssignments.reduce((sum, a) => sum + a.cases, 0) >= receivedItem.receivedCases;
+                    (receivedItem.isSkipped ||
+                      (receivedItem.locationAssignments.length > 0 &&
+                        receivedItem.locationAssignments.reduce((sum, a) => sum + a.cases, 0) >=
+                          receivedItem.receivedCases));
                   const isVerified = receivedItem?.isVerified;
 
                   return (
@@ -761,7 +792,12 @@ const WMSReceiveShipmentPage = () => {
                       {/* Top row: Status badge and case count */}
                       <div className="mb-2 flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          {isComplete ? (
+                          {isSkipped ? (
+                            <span className="flex items-center gap-1 rounded-full bg-gray-200 px-2 py-1 text-xs font-medium text-gray-600 dark:bg-gray-700 dark:text-gray-300">
+                              <IconBan className="h-3 w-3" />
+                              Skipped
+                            </span>
+                          ) : isComplete ? (
                             <span className="flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-1 text-xs font-medium text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
                               <IconCheck className="h-3 w-3" />
                               Done
@@ -980,6 +1016,23 @@ const WMSReceiveShipmentPage = () => {
                       Verified - {currentItem.receivedCases} Cases Found
                     </ButtonContent>
                   </Button>
+
+                  {/* Skip button - shows when 0 cases entered */}
+                  {currentItem.receivedCases === 0 && (
+                    <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-800 dark:bg-amber-900/20">
+                      <Typography variant="bodySm" className="mb-2 text-amber-800 dark:text-amber-200">
+                        Can&apos;t verify with 0 cases. Skip this item if not found.
+                      </Typography>
+                      <Button
+                        variant="outline"
+                        size="md"
+                        className="w-full border-amber-300 text-amber-700 hover:bg-amber-100 dark:border-amber-700 dark:text-amber-300 dark:hover:bg-amber-900/30"
+                        onClick={handleSkipItem}
+                      >
+                        <ButtonContent iconLeft={IconBan}>Skip - Item Not Found</ButtonContent>
+                      </Button>
+                    </div>
+                  )}
                 </div>
               )}
 
