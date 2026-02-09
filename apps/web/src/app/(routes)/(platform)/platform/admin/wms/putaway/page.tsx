@@ -107,7 +107,7 @@ const WMSPutawayPage = () => {
   const handleLocationScan = async (barcode: string) => {
     setError('');
     try {
-      const result = await trpcClient.wms.admin.operations.getLocationByBarcode.query({ barcode });
+      const result = await trpcClient.wms.admin.operations.getLocationByBarcode.mutate({ barcode });
       setScannedLocation({
         id: result.location.id,
         locationCode: result.location.locationCode,
