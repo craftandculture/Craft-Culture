@@ -1,11 +1,14 @@
 'use client';
 
 import {
+  IconCheck,
   IconCloudUpload,
   IconFile,
   IconFileText,
   IconLoader2,
+  IconPackageImport,
   IconPhoto,
+  IconSparkles,
   IconTrash,
   IconX,
 } from '@tabler/icons-react';
@@ -16,6 +19,7 @@ import { toast } from 'sonner';
 
 import Badge from '@/app/_ui/components/Badge/Badge';
 import Button from '@/app/_ui/components/Button/Button';
+import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Select from '@/app/_ui/components/Select/Select';
 import SelectContent from '@/app/_ui/components/Select/SelectContent';
@@ -25,6 +29,28 @@ import SelectValue from '@/app/_ui/components/Select/SelectValue';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import type { LogisticsDocument } from '@/database/schema';
 import { useTRPCClient } from '@/lib/trpc/browser';
+
+interface ExtractedLineItem {
+  description?: string;
+  productName?: string;
+  lwin?: string;
+  producer?: string;
+  vintage?: number;
+  bottleSize?: string;
+  bottlesPerCase?: number;
+  cases?: number;
+  hsCode?: string;
+  countryOfOrigin?: string;
+  unitPrice?: number;
+  total?: number;
+}
+
+interface ExtractionResult {
+  documentType?: string;
+  lineItems?: ExtractedLineItem[];
+  totalCases?: number;
+  totalWeight?: number;
+}
 
 type DocumentType =
   | 'bill_of_lading'
@@ -68,6 +94,9 @@ const documentTypeLabels: Record<DocumentType, string> = {
  *
  * Supports drag-and-drop upload of shipping documents.
  */
+// Document types that support AI extraction
+const extractableTypes: DocumentType[] = ['commercial_invoice', 'packing_list'];
+
 const LogisticsDocumentUpload = ({
   shipmentId,
   documents = [],
@@ -76,9 +105,15 @@ const LogisticsDocumentUpload = ({
   const trpcClient = useTRPCClient();
   const queryClient = useQueryClient();
 
-  const [selectedType, setSelectedType] = useState<DocumentType>('bill_of_lading');
+  const [selectedType, setSelectedType] = useState<DocumentType>('commercial_invoice');
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+
+  // Extraction state
+  const [isExtracting, setIsExtracting] = useState(false);
+  const [extractingDocId, setExtractingDocId] = useState<string | null>(null);
+  const [extractionResult, setExtractionResult] = useState<ExtractionResult | null>(null);
+  const [isImporting, setIsImporting] = useState(false);
 
   // Upload mutation
   const { mutateAsync: uploadDocument } = useMutation({
@@ -115,6 +150,105 @@ const LogisticsDocumentUpload = ({
       toast.error(error.message || 'Failed to delete document');
     },
   });
+
+  // Extract items from document
+  const handleExtract = useCallback(
+    async (doc: LogisticsDocument) => {
+      setIsExtracting(true);
+      setExtractingDocId(doc.id);
+      setExtractionResult(null);
+
+      try {
+        // Fetch the document file and convert to base64
+        const response = await fetch(doc.fileUrl);
+        const blob = await response.blob();
+
+        const base64Promise = new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = () => reject(new Error('Failed to read file'));
+          reader.readAsDataURL(blob);
+        });
+        const base64 = await base64Promise;
+
+        // Map document type to extraction type
+        const extractionType =
+          doc.documentType === 'commercial_invoice'
+            ? 'commercial_invoice'
+            : doc.documentType === 'packing_list'
+              ? 'packing_list'
+              : 'general';
+
+        // Call extraction API
+        const result = await trpcClient.logistics.admin.extractDocument.mutate({
+          file: base64,
+          fileType: doc.mimeType as 'application/pdf' | 'image/png' | 'image/jpeg' | 'image/jpg',
+          documentType: extractionType,
+        });
+
+        if (result.success && result.data) {
+          setExtractionResult(result.data);
+          const itemCount = result.data.lineItems?.length ?? 0;
+          toast.success(`Extracted ${itemCount} items from document`);
+        } else {
+          toast.error('No items found in document');
+        }
+      } catch (err) {
+        console.error('Extraction error:', err);
+        toast.error(err instanceof Error ? err.message : 'Failed to extract items');
+      } finally {
+        setIsExtracting(false);
+        setExtractingDocId(null);
+      }
+    },
+    [trpcClient],
+  );
+
+  // Import extracted items to shipment
+  const handleImport = useCallback(async () => {
+    if (!extractionResult?.lineItems?.length) {
+      toast.error('No items to import');
+      return;
+    }
+
+    setIsImporting(true);
+
+    try {
+      const result = await trpcClient.logistics.admin.importExtractedItems.mutate({
+        shipmentId,
+        items: extractionResult.lineItems.map((item) => ({
+          productName: item.productName,
+          description: item.description,
+          lwin: item.lwin,
+          producer: item.producer,
+          vintage: item.vintage,
+          bottleSize: item.bottleSize,
+          bottlesPerCase: item.bottlesPerCase,
+          cases: item.cases,
+          hsCode: item.hsCode,
+          countryOfOrigin: item.countryOfOrigin,
+          unitPrice: item.unitPrice,
+          total: item.total,
+        })),
+        cargoSummary: extractionResult.totalCases
+          ? {
+              totalCases: extractionResult.totalCases,
+              totalWeight: extractionResult.totalWeight,
+            }
+          : undefined,
+      });
+
+      toast.success(`Imported ${result.itemsImported} items to shipment`);
+      setExtractionResult(null);
+      void queryClient.invalidateQueries({ queryKey: [['logistics', 'admin', 'getOne']] });
+      onUploadComplete?.();
+    } catch (err) {
+      console.error('Import error:', err);
+      toast.error(err instanceof Error ? err.message : 'Failed to import items');
+    } finally {
+      setIsImporting(false);
+    }
+  }, [extractionResult, shipmentId, trpcClient, queryClient, onUploadComplete]);
 
   const processFile = useCallback(
     async (file: File) => {
@@ -282,6 +416,21 @@ const LogisticsDocumentUpload = ({
                 </div>
 
                 <div className="flex items-center gap-1">
+                  {extractableTypes.includes(doc.documentType as DocumentType) && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleExtract(doc)}
+                      isDisabled={isExtracting}
+                      title="Extract items with AI"
+                    >
+                      <Icon
+                        icon={extractingDocId === doc.id ? IconLoader2 : IconSparkles}
+                        size="sm"
+                        className={extractingDocId === doc.id ? 'animate-spin' : ''}
+                      />
+                    </Button>
+                  )}
                   <Button variant="ghost" size="sm" asChild>
                     <a href={doc.fileUrl} target="_blank" rel="noopener noreferrer">
                       <Icon icon={IconFile} size="sm" />
@@ -298,6 +447,108 @@ const LogisticsDocumentUpload = ({
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* Extraction Results Panel */}
+      {extractionResult && extractionResult.lineItems && extractionResult.lineItems.length > 0 && (
+        <div className="rounded-lg border border-border-brand bg-surface-brand/5 p-4">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Icon icon={IconSparkles} size="md" colorRole="brand" />
+              <Typography variant="headingSm">
+                Extracted Items ({extractionResult.lineItems.length})
+              </Typography>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" size="sm" onClick={() => setExtractionResult(null)}>
+                <ButtonContent iconLeft={IconX}>Cancel</ButtonContent>
+              </Button>
+              <Button size="sm" onClick={handleImport} isDisabled={isImporting}>
+                <ButtonContent iconLeft={isImporting ? IconLoader2 : IconPackageImport}>
+                  {isImporting ? 'Importing...' : 'Import to Shipment'}
+                </ButtonContent>
+              </Button>
+            </div>
+          </div>
+
+          {/* Cargo Summary */}
+          {(extractionResult.totalCases || extractionResult.totalWeight) && (
+            <div className="flex gap-4 mb-4 p-3 bg-fill-muted/50 rounded-md">
+              {extractionResult.totalCases && (
+                <div>
+                  <Typography variant="bodyXs" colorRole="muted">
+                    Total Cases
+                  </Typography>
+                  <Typography variant="headingSm">{extractionResult.totalCases}</Typography>
+                </div>
+              )}
+              {extractionResult.totalWeight && (
+                <div>
+                  <Typography variant="bodyXs" colorRole="muted">
+                    Total Weight
+                  </Typography>
+                  <Typography variant="headingSm">{extractionResult.totalWeight} kg</Typography>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Items Table */}
+          <div className="overflow-x-auto max-h-80 overflow-y-auto">
+            <table className="w-full text-sm">
+              <thead className="sticky top-0 bg-surface-primary">
+                <tr className="border-b border-border-muted text-left text-xs uppercase text-text-muted">
+                  <th className="pb-2 pr-3">Product</th>
+                  <th className="pb-2 pr-3">Vintage</th>
+                  <th className="pb-2 pr-3 text-center">Pack</th>
+                  <th className="pb-2 pr-3 text-right">Cases</th>
+                  <th className="pb-2 pr-3">HS Code</th>
+                  <th className="pb-2 text-right">Value</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border-muted">
+                {extractionResult.lineItems.map((item, idx) => (
+                  <tr key={idx} className="hover:bg-fill-muted/30">
+                    <td className="py-2 pr-3">
+                      <Typography variant="bodySm" className="font-medium">
+                        {item.productName || item.description || '-'}
+                      </Typography>
+                      {item.producer && (
+                        <Typography variant="bodyXs" colorRole="muted">
+                          {item.producer}
+                        </Typography>
+                      )}
+                    </td>
+                    <td className="py-2 pr-3">{item.vintage || '-'}</td>
+                    <td className="py-2 pr-3 text-center">
+                      {item.bottlesPerCase || 12}x{item.bottleSize || '750ml'}
+                    </td>
+                    <td className="py-2 pr-3 text-right font-medium">{item.cases || 1}</td>
+                    <td className="py-2 pr-3 font-mono text-xs">{item.hsCode || '-'}</td>
+                    <td className="py-2 text-right">
+                      {item.total ? `$${item.total.toFixed(2)}` : '-'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Import confirmation */}
+          <div className="mt-4 pt-4 border-t border-border-muted flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Icon icon={IconCheck} size="sm" colorRole="success" />
+              <Typography variant="bodySm" colorRole="muted">
+                Ready to import {extractionResult.lineItems.length} items
+              </Typography>
+            </div>
+            <Button size="sm" onClick={handleImport} isDisabled={isImporting}>
+              <ButtonContent iconLeft={isImporting ? IconLoader2 : IconPackageImport}>
+                {isImporting ? 'Importing...' : 'Import Items'}
+              </ButtonContent>
+            </Button>
           </div>
         </div>
       )}
