@@ -2,10 +2,12 @@
  * Generate ZPL for a Compact Bay Totem - vertical strip on 4x2 label
  *
  * Physical label: 4" x 2" at 203 DPI = 812 x 406 dots
- * When applied vertically: 2" wide x 4" tall
+ * When peeled and applied vertically (rotated 90° CCW): 2" wide x 4" tall
  *
- * Content is rotated 90° so when the label is peeled and applied
- * vertically, it reads top-to-bottom correctly.
+ * Layout when applied vertically:
+ * - TOP: Bay header (black bar with "Bay A-01")
+ * - MIDDLE: Levels from highest (04) to lowest (00/FLOOR)
+ * - BOTTOM: Direction arrow
  */
 
 export interface CompactTotemLevel {
@@ -35,27 +37,39 @@ const escapeZpl = (str: string) => {
 /**
  * Generate ZPL for a compact vertical totem
  *
- * Physical dimensions at 203 DPI:
- * - Label width: 4" = 812 dots (becomes height when applied vertically)
- * - Label height: 2" = 406 dots (becomes width when applied vertically)
+ * Physical label at 203 DPI: 812 x 406 dots (4" x 2")
  *
- * Uses ^A0R for rotated text (90° clockwise)
- * Coordinates are in physical label space (0,0 = top-left corner as printed)
+ * When label is peeled and rotated 90° counter-clockwise for vertical application:
+ * - Physical X=812 (right edge) becomes visual TOP
+ * - Physical X=0 (left edge) becomes visual BOTTOM
+ * - Physical Y stays as visual left-to-right
+ *
+ * So we place:
+ * - Bay header at HIGH X values (right edge → top when applied)
+ * - Arrow at LOW X values (left edge → bottom when applied)
  */
 const generateCompactTotemZpl = (data: CompactTotemData) => {
   const bayCode = `${escapeZpl(data.aisle)}-${escapeZpl(data.bay)}`;
   const arrow = data.arrowDirection === 'left' ? '<<<' : '>>>';
 
   // Physical label dimensions
-  const labelWidth = 812; // 4" physical width (becomes visual height)
-  const labelHeight = 406; // 2" physical height (becomes visual width)
+  const labelWidth = 812; // 4" = physical width (becomes visual height)
+  const labelHeight = 406; // 2" = physical height (becomes visual width)
 
-  // Layout calculations - content fills most of the label
-  const margin = 15;
-  const headerWidth = 70; // Width of black header bar (in physical X)
-  const arrowWidth = 50; // Width of arrow section
-  const contentStart = margin + headerWidth + 5;
-  const contentEnd = labelWidth - margin - arrowWidth;
+  // Layout dimensions
+  const margin = 10;
+  const headerWidth = 80; // Width of bay header bar
+  const arrowWidth = 60; // Width of arrow section
+
+  // Position header at RIGHT edge (becomes TOP when applied)
+  const headerX = labelWidth - margin - headerWidth;
+
+  // Position arrow at LEFT edge (becomes BOTTOM when applied)
+  const arrowX = margin;
+
+  // Content area between arrow and header
+  const contentStart = arrowX + arrowWidth + 5;
+  const contentEnd = headerX - 5;
   const contentArea = contentEnd - contentStart;
 
   // Calculate level spacing
@@ -65,62 +79,61 @@ const generateCompactTotemZpl = (data: CompactTotemData) => {
   let zpl = `^XA
 
 ^FX -- Compact Totem: ${bayCode} --
-^FX -- Physical 4x2 label, content rotated for vertical application --
+^FX -- Right edge = TOP when applied, Left edge = BOTTOM --
 
-^FX === BAY HEADER (black bar at top when applied) ===
-^FO${margin},${margin}
+^FX === BAY HEADER (right edge → TOP when applied) ===
+^FO${headerX},${margin}
 ^GB${headerWidth},${labelHeight - margin * 2},${headerWidth},B^FS
 
-^FO${margin + 10},${margin + 20}
-^A0R,48,48
+^FO${headerX + 15},${margin + 15}
+^A0R,44,44
 ^FR
 ^FDBay ${bayCode}^FS
 
 `;
 
-  // Add each level - highest level first (closest to header)
+  // Add each level - highest level first (closest to header = highest X)
+  // Levels go from right to left in physical space (top to bottom when applied)
   data.levels.slice(0, 5).forEach((level, index) => {
-    const xPos = contentStart + index * levelWidth;
+    // Start from near header and work toward arrow
+    const xPos = contentEnd - (index + 1) * levelWidth;
     const locationCode = `${data.aisle}-${data.bay}-${level.level}`;
     const levelNum = parseInt(level.level, 10);
-    const levelText = levelNum === 0 ? 'FLOOR' : `LVL ${levelNum}`;
-    const forkliftText = level.requiresForklift ? ' [F]' : '';
-
-    // QR code size 2 = ~42 dots, position centered in row
-    const qrSize = 2;
+    const levelText = levelNum === 0 ? 'FLR' : `L${levelNum}`;
+    const forkliftText = level.requiresForklift ? '[F]' : '';
 
     zpl += `
 ^FX -- Level ${level.level} --
 
 ^FX QR Code
-^FO${xPos + 5},${margin + 10}
-^BQN,2,${qrSize}
+^FO${xPos + 10},${margin + 5}
+^BQN,2,2
 ^FDMA,${level.barcode}^FS
 
-^FX Location code (rotated text)
-^FO${xPos + 5},${margin + 100}
-^A0R,22,22
+^FX Location code
+^FO${xPos + 10},${margin + 95}
+^A0R,20,20
 ^FD${escapeZpl(locationCode)}^FS
 
-^FX Level indicator
-^FO${xPos + 30},${margin + 100}
+^FX Level + forklift
+^FO${xPos + 32},${margin + 95}
 ^A0R,18,18
-^FD${levelText}${forkliftText}^FS
+^FD${levelText} ${forkliftText}^FS
 
-^FX Separator line (vertical in physical space = horizontal when applied)
-^FO${xPos + levelWidth - 2},${margin + 5}
-^GB1,${labelHeight - margin * 2 - 10},1^FS
+^FX Separator line
+^FO${xPos},${margin}
+^GB1,${labelHeight - margin * 2},1^FS
 `;
   });
 
-  // Arrow at bottom (right edge in physical = bottom when applied vertically)
+  // Arrow at LEFT edge (becomes BOTTOM when applied)
   zpl += `
-^FX === DIRECTION ARROW (bottom when applied) ===
-^FO${labelWidth - margin - arrowWidth},${margin}
-^GB${arrowWidth - 5},${labelHeight - margin * 2},${arrowWidth - 5},B^FS
+^FX === DIRECTION ARROW (left edge → BOTTOM when applied) ===
+^FO${arrowX},${margin}
+^GB${arrowWidth},${labelHeight - margin * 2},${arrowWidth},B^FS
 
-^FO${labelWidth - margin - arrowWidth + 5},${Math.floor(labelHeight / 2) - 30}
-^A0R,50,50
+^FO${arrowX + 8},${Math.floor(labelHeight / 2) - 40}
+^A0R,60,60
 ^FR
 ^FD${arrow}^FS
 
