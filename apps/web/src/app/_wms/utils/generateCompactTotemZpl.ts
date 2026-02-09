@@ -96,6 +96,17 @@ const generateCompactTotemZpl = (data: CompactTotemData) => {
 `;
 
   // Each level - BIG QR + BIG number
+  // Layout (when label applied vertically, reading top to bottom):
+  //   LEFT side: Large level number (04, 03, etc)
+  //   CENTER: QR code
+  //   RIGHT side: Location code (A-01-04)
+  //
+  // Y axis mapping (REVERSED after 90° CCW):
+  //   Y=0 → RIGHT edge when applied
+  //   Y=406 → LEFT edge when applied
+  //
+  // QR code at magnification 5 is ~105 dots wide
+
   levels.forEach((level, idx) => {
     const levelNum = level.level.padStart(2, '0');
     const locCode = `${data.aisle}-${data.bay}-${level.level}`;
@@ -104,32 +115,27 @@ const generateCompactTotemZpl = (data: CompactTotemData) => {
     const rowBottom = W - M - headerH - (idx + 1) * rowH;
     const rowMid = rowBottom + Math.floor(rowH / 2);
 
-    // With 2 levels, each row is ~350 dots tall
-    // Layout within row (Y axis, reversed):
-    //   High Y (left when applied): Level number
-    //   Mid Y: QR code
-    //   Low Y (right when applied): Location code
-
-    const levelNumY = H - M - 80; // Left zone
-    const qrY = H - M - 80 - 130; // Center zone (after level num)
-    const locY = M + 15; // Right zone
+    // Clear zones across the Y axis (horizontal when applied)
+    // Zone 1: Level number at LEFT (Y = 330-390)
+    // Zone 2: QR code at CENTER (Y = 140-260)
+    // Zone 3: Location code at RIGHT (Y = 20-100)
 
     zpl += `
 ^FX === LEVEL ${level.level} ===
 
-^FX Level number (LEFT when applied)
-^FO${rowMid - 35},${levelNumY}
-^A0R,80,75
+^FX Level number at LEFT edge
+^FO${rowMid - 40},${H - M - 60}
+^A0R,70,65
 ^FD${levelNum}^FS
 
-^FX BIG QR Code (CENTER when applied)
-^FO${rowMid - 55},${qrY}
+^FX QR Code at CENTER (magnification 5 = ~105 dots)
+^FO${rowMid - 52},${Math.floor(H / 2) + 25}
 ^BQN,2,5
 ^FDMA,${level.barcode}^FS
 
-^FX Location code (RIGHT when applied)
-^FO${rowMid - 30},${locY}
-^A0R,26,24
+^FX Location code at RIGHT edge
+^FO${rowMid - 25},${M + 5}
+^A0R,24,22
 ^FD${escapeZpl(locCode)}^FS
 
 ^FX Row separator
