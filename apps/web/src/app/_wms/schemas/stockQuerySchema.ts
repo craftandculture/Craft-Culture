@@ -74,14 +74,4 @@ export const searchStockSchema = z.object({
   limit: z.number().min(1).max(50).default(20),
 });
 
-/**
- * Schema for exporting stock data
- */
-export const exportStockSchema = z.object({
-  format: z.enum(['csv', 'xlsx']).default('csv'),
-  groupBy: z.enum(['product', 'location', 'owner']).default('product'),
-  ownerId: z.string().uuid().optional(),
-  locationId: z.string().uuid().optional(),
-});
-
 export default getStockOverviewSchema;

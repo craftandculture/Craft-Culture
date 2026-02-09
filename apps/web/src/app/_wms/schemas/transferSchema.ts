@@ -1,15 +1,6 @@
 import { z } from 'zod';
 
 /**
- * Schema for transferring a single case between locations
- */
-export const transferCaseSchema = z.object({
-  caseBarcode: z.string().min(1, 'Case barcode is required'),
-  toLocationId: z.string().uuid('Invalid destination location ID'),
-  notes: z.string().optional(),
-});
-
-/**
  * Schema for transferring stock (multiple cases) between locations
  */
 export const transferStockSchema = z.object({
@@ -33,7 +24,6 @@ export const getLocationByBarcodeSchema = z.object({
   barcode: z.string().min(1, 'Barcode is required'),
 });
 
-export type TransferCaseInput = z.infer<typeof transferCaseSchema>;
 export type TransferStockInput = z.infer<typeof transferStockSchema>;
 export type GetStockAtLocationInput = z.infer<typeof getStockAtLocationSchema>;
 export type GetLocationByBarcodeInput = z.infer<typeof getLocationByBarcodeSchema>;
