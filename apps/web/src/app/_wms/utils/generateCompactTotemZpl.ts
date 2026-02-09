@@ -57,84 +57,91 @@ const escapeZpl = (str: string) => {
 const generateCompactTotemZpl = (data: CompactTotemData) => {
   const bayCode = `${escapeZpl(data.aisle)}-${escapeZpl(data.bay)}`;
 
-  // Physical dimensions at 203 DPI
-  const W = 812; // 4" - becomes visual height
-  const H = 406; // 2" - becomes visual width
+  // ===========================================
+  // COORDINATE SYSTEM (4x2 label rotated 90° CCW)
+  // ===========================================
+  // Physical print: 812w x 406h dots (4" x 2")
+  // After CCW rotation to apply vertically:
+  //
+  //   Physical X (0-812, left→right) → Applied VERTICAL (bottom→top)
+  //   Physical Y (0-406, top→bottom) → Applied HORIZONTAL (right→left)
+  //
+  // KEY INSIGHT: Physical Y is REVERSED horizontally!
+  //   Y=0   (physical top)    → RIGHT side when applied
+  //   Y=406 (physical bottom) → LEFT side when applied
+  //
+  // ===========================================
 
-  // Margins and spacing
-  const M = 10;
-  const headerH = 45;
+  const W = 812; // Physical width (applied: height)
+  const H = 406; // Physical height (applied: width, but REVERSED)
+
+  const M = 8; // Margin
+  const headerH = 50; // Header height
   const levelCount = Math.min(data.levels.length, 5);
   const rowH = Math.floor((W - M * 2 - headerH) / levelCount);
 
-  // Visual column widths (physical Y positions)
-  const levelBoxSize = 50; // Small box for level number
-  const qrStartY = M + levelBoxSize + 10;
-  const locStartY = qrStartY + 95; // After QR code
+  // HORIZONTAL ZONES (physical Y → applied horizontal, REVERSED)
+  // Applied layout: [LEVEL BOX] [QR CODE] [LOCATION TEXT]
+  //                    LEFT       CENTER      RIGHT
+  // Physical Y:        HIGH        MID        LOW
+  //
+  const levelZoneW = 70; // Level number zone
+  const qrZoneW = 130; // QR code zone
+
+  // Physical Y positions (remember: high Y = LEFT when applied)
+  const levelY = H - M - levelZoneW; // ~328 - LEFT zone
+  const qrY = levelY - qrZoneW; // ~198 - CENTER zone
+  const textY = M; // ~8 - RIGHT zone
 
   let zpl = `^XA
 
-^FX === BAY HEADER ===
+^FX === HEADER (TOP when applied = high X) ===
 ^FO${W - M - headerH},${M}
 ^GB${headerH},${H - M * 2},${headerH},B^FS
-^FO${W - M - headerH + 5},${M + 50}
-^A0R,32,30^FR
+^FO${W - M - headerH + 8},${Math.floor(H / 2) - 55}
+^A0R,36,34^FR
 ^FDBay ${bayCode}^FS
 
 `;
 
-  // Each level row
   data.levels.slice(0, 5).forEach((level, idx) => {
     const levelText = level.level.padStart(2, '0');
     const locCode = `${data.aisle}-${data.bay}-${level.level}`;
 
-    // Row position (X = vertical when applied)
-    const rowX = W - M - headerH - 5 - (idx + 1) * rowH;
+    // Row vertical position (high X = top when applied)
+    const rowBottom = W - M - headerH - (idx + 1) * rowH;
+    const rowCenterX = rowBottom + Math.floor(rowH / 2);
 
     zpl += `
 ^FX === LEVEL ${level.level} ===
 
-^FX Level box (outlined, not filled)
-^FO${rowX + rowH - levelBoxSize - 5},${M + 2}
-^GB${levelBoxSize},${levelBoxSize},2^FS
-
-^FX Level number
-^FO${rowX + rowH - levelBoxSize},${M + 8}
-^A0R,38,36
+^FX LEVEL NUMBER (LEFT zone - high Y)
+^FO${rowCenterX - 28},${levelY}
+^GB58,${levelZoneW - 5},2^FS
+^FO${rowCenterX - 20},${levelY + 12}
+^A0R,48,44
 ^FD${levelText}^FS
 
-^FX QR Code
-^FO${rowX + 5},${qrStartY}
-^BQN,2,3
+^FX QR CODE (CENTER zone - mid Y)
+^FO${rowCenterX - 50},${qrY + 5}
+^BQN,2,4
 ^FDMA,${level.barcode}^FS
 
-^FX Location code
-^FO${rowX + 5},${locStartY}
-^A0R,24,22
-^FD${escapeZpl(locCode)}^FS
+^FX LOCATION + FORKLIFT (RIGHT zone - low Y)
+^FO${rowCenterX - 35},${textY}
+^A0R,26,24
+^FD${escapeZpl(locCode)}${level.requiresForklift ? ' [F]' : ''}^FS
 
-${
-  level.requiresForklift
-    ? `^FX Forklift badge
-^FO${rowX + 40},${locStartY}
-^A0R,20,18
-^FD[F]^FS
-`
-    : ''
-}
-
-^FX Thin separator line
-^FO${rowX},${M}
+^FX Row separator line
+^FO${rowBottom},${M}
 ^GB2,${H - M * 2},2^FS
 `;
   });
 
-  // Outer border
+  // Bottom edge line and outer border
   zpl += `
-^FX === OUTER BORDER ===
-^FO${M},${M}
-^GB${W - M * 2},${H - M * 2},2^FS
-
+^FO${M},${M}^GB2,${H - M * 2},2^FS
+^FO${M},${M}^GB${W - M * 2},${H - M * 2},2^FS
 ^XZ`;
 
   return zpl;
