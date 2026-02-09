@@ -233,7 +233,12 @@ const ScanInput = forwardRef<ScanInputHandle, ScanInputProps>(({
         lastScanTimeRef.current = now;
         lastScannedValueRef.current = scannedValue;
         processingRef.current = true;
+
+        // Clear both React state AND DOM directly to prevent any character accumulation
         setValue('');
+        if (inputRef.current) {
+          inputRef.current.value = '';
+        }
 
         // Provide haptic/audio feedback on scan
         if (enableFeedback) {
@@ -249,8 +254,26 @@ const ScanInput = forwardRef<ScanInputHandle, ScanInputProps>(({
 
   const handleChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
+      const now = Date.now();
+
+      // Ignore ALL input during cooldown period after a scan
+      // This prevents rapid double-scans from accumulating characters
+      if (now - lastScanTimeRef.current < SCAN_COOLDOWN_MS) {
+        // Force clear the DOM input directly (React state may be async)
+        if (inputRef.current) {
+          inputRef.current.value = '';
+        }
+        setValue('');
+        return;
+      }
+
       // Ignore input while processing to prevent double-scan accumulation
       if (processingRef.current || isLoading) {
+        // Force clear the DOM input directly
+        if (inputRef.current) {
+          inputRef.current.value = '';
+        }
+        setValue('');
         return;
       }
       setValue(e.target.value);
@@ -296,7 +319,12 @@ const ScanInput = forwardRef<ScanInputHandle, ScanInputProps>(({
     lastScanTimeRef.current = now;
     lastScannedValueRef.current = scannedValue;
     processingRef.current = true;
+
+    // Clear both React state AND DOM directly to prevent any character accumulation
     setValue('');
+    if (inputRef.current) {
+      inputRef.current.value = '';
+    }
 
     // Provide haptic/audio feedback on scan
     if (enableFeedback) {
