@@ -74,6 +74,19 @@
       word-break: break-all;
     }
 
+    .feature-box {
+      background: #e7f3ff;
+      border: 1px solid #4a90d9;
+      border-radius: 8px;
+      padding: 15px;
+      margin: 15px 0;
+    }
+
+    .feature-box h4 {
+      margin: 0 0 10px 0;
+      color: #1a5490;
+    }
+
     table {
       width: 100%;
       border-collapse: collapse;
@@ -254,6 +267,16 @@
       color: white;
     }
 
+    .kbd {
+      display: inline-block;
+      padding: 2px 6px;
+      background: #f0f0f0;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 12px;
+    }
+
     @media print {
       body {
         background: white;
@@ -305,7 +328,9 @@
       <li><a href="#stock-check">2. Stock Check</a></li>
       <li><a href="#picking">3. Picking</a></li>
       <li><a href="#transfer">4. Transfer</a></li>
-      <li><a href="#zoho-sync">5. Zoho Sync</a></li>
+      <li><a href="#repack">5. Repack</a></li>
+      <li><a href="#dispatch">6. Dispatch</a></li>
+      <li><a href="#zoho-sync">7. Zoho Sync</a></li>
       <li><a href="#mobile-ux">Mobile UX</a></li>
       <li><a href="#sign-off">Sign-Off</a></li>
     </ul>
@@ -341,17 +366,34 @@
       </table>
     </div>
 
+    <div class="feature-box">
+      <h4>Keyboard Shortcuts (Desktop)</h4>
+      <table>
+        <tr><td><span class="kbd">Ctrl+R</span></td><td>Go to Receive</td></tr>
+        <tr><td><span class="kbd">Ctrl+P</span></td><td>Go to Pick</td></tr>
+        <tr><td><span class="kbd">Ctrl+C</span></td><td>Go to Stock Check</td></tr>
+        <tr><td><span class="kbd">Ctrl+T</span></td><td>Go to Transfer</td></tr>
+        <tr><td><span class="kbd">Ctrl+S</span></td><td>Go to Stock</td></tr>
+        <tr><td><span class="kbd">Ctrl+D</span></td><td>Toggle Dark Mode</td></tr>
+      </table>
+    </div>
+
     <div class="url-box">
       <strong>Test URLs:</strong><br>
       <a href="https://warehouse.craftculture.xyz/platform/admin/wms" target="_blank">WMS Dashboard</a><br>
       <a href="https://warehouse.craftculture.xyz/platform/admin/wms/stock/check" target="_blank">Stock Check</a><br>
-      <a href="https://warehouse.craftculture.xyz/platform/admin/wms/receive" target="_blank">Receive</a>
+      <a href="https://warehouse.craftculture.xyz/platform/admin/wms/receive" target="_blank">Receive</a><br>
+      <a href="https://warehouse.craftculture.xyz/platform/admin/wms/pick" target="_blank">Pick</a><br>
+      <a href="https://warehouse.craftculture.xyz/platform/admin/wms/transfer" target="_blank">Transfer</a><br>
+      <a href="https://warehouse.craftculture.xyz/platform/admin/wms/repack" target="_blank">Repack</a><br>
+      <a href="https://warehouse.craftculture.xyz/platform/admin/wms/dispatch" target="_blank">Dispatch</a>
     </div>
   </div>
 
   <!-- FLOW 1: RECEIVING -->
   <div class="flow-section" id="receiving">
     <h2>Flow 1: Receiving</h2>
+    <p>Three-phase receiving: <strong>Verify Items</strong> → <strong>Print Labels</strong> → <strong>Shelve Stock</strong></p>
 
     <h3>1.1 View Pending Shipments</h3>
     <table>
@@ -369,19 +411,25 @@
       </tr>
       <tr>
         <td class="step-num">2</td>
-        <td>Verify shipment shows: partner name, shipment #, item count, case count</td>
-        <td>All info displayed correctly</td>
+        <td>Verify shipment card shows: transport icon (plane/ship/truck), shipment #, status badge, partner, origin → destination</td>
+        <td>All info displayed correctly with correct transport mode icon</td>
         <td class="pass-col"><input type="checkbox" class="test-check"></td>
       </tr>
       <tr>
         <td class="step-num">3</td>
+        <td>Verify status badge colors: Green for "At Warehouse", Amber for "Arrived Port"/"In Clearance"</td>
+        <td>Correct colors displayed</td>
+        <td class="pass-col"><input type="checkbox" class="test-check"></td>
+      </tr>
+      <tr>
+        <td class="step-num">4</td>
         <td>Tap on a shipment</td>
-        <td>Opens shipment detail view</td>
+        <td>Opens shipment detail view with item list</td>
         <td class="pass-col"><input type="checkbox" class="test-check"></td>
       </tr>
     </table>
 
-    <h3>1.2 Receive Shipment Items</h3>
+    <h3>1.2 Phase 1: Verify Items</h3>
     <table>
       <tr>
         <th class="step-num">#</th>
@@ -392,7 +440,7 @@
       <tr>
         <td class="step-num">1</td>
         <td>View shipment items list</td>
-        <td>See all items with product names, quantities</td>
+        <td>See all items with product names, expected quantities</td>
         <td class="pass-col"><input type="checkbox" class="test-check"></td>
       </tr>
       <tr>
@@ -403,43 +451,31 @@
       </tr>
       <tr>
         <td class="step-num">3</td>
-        <td>Verify item info shows: product name, LWIN/SKU, expected cases</td>
+        <td>Verify item info shows: product name, LWIN/SKU, expected cases, pack size</td>
         <td>Info matches shipment data</td>
         <td class="pass-col"><input type="checkbox" class="test-check"></td>
       </tr>
       <tr>
         <td class="step-num">4</td>
-        <td>Verify keyboard does NOT pop up automatically</td>
-        <td>No keyboard on mobile</td>
+        <td>Verify keyboard does NOT pop up automatically on mobile</td>
+        <td>No keyboard flash on focus</td>
         <td class="pass-col"><input type="checkbox" class="test-check"></td>
       </tr>
       <tr>
         <td class="step-num">5</td>
-        <td>Enter received quantity (match expected)</td>
+        <td>Enter received quantity (match expected or adjust)</td>
         <td>Quantity accepted</td>
         <td class="pass-col"><input type="checkbox" class="test-check"></td>
       </tr>
       <tr>
         <td class="step-num">6</td>
-        <td>Tap "Confirm & Print Labels"</td>
-        <td>Labels generated, ZPL downloads</td>
-        <td class="pass-col"><input type="checkbox" class="test-check"></td>
-      </tr>
-      <tr>
-        <td class="step-num">7</td>
-        <td>Send ZPL to Zebra printer</td>
-        <td>Labels print correctly</td>
-        <td class="pass-col"><input type="checkbox" class="test-check"></td>
-      </tr>
-      <tr>
-        <td class="step-num">8</td>
-        <td>Verify label shows: barcode, product name, pack size, vintage, owner</td>
-        <td>All fields correct</td>
+        <td>Tap "Confirm Quantity"</td>
+        <td>Item marked as verified</td>
         <td class="pass-col"><input type="checkbox" class="test-check"></td>
       </tr>
     </table>
 
-    <h3>1.3 Assign Location (Putaway)</h3>
+    <h3>1.3 Phase 2: Print Labels</h3>
     <table>
       <tr>
         <th class="step-num">#</th>
@@ -449,7 +485,41 @@
       </tr>
       <tr>
         <td class="step-num">1</td>
-        <td>After printing labels, see "Scan Bay Barcode" input</td>
+        <td>Tap "Print Labels" button</td>
+        <td>Labels generated, ZPL file downloads</td>
+        <td class="pass-col"><input type="checkbox" class="test-check"></td>
+      </tr>
+      <tr>
+        <td class="step-num">2</td>
+        <td>Send ZPL to Zebra printer</td>
+        <td>Labels print correctly</td>
+        <td class="pass-col"><input type="checkbox" class="test-check"></td>
+      </tr>
+      <tr>
+        <td class="step-num">3</td>
+        <td>Verify label shows: QR barcode, product name, pack size, vintage, owner</td>
+        <td>All fields correct and scannable</td>
+        <td class="pass-col"><input type="checkbox" class="test-check"></td>
+      </tr>
+      <tr>
+        <td class="step-num">4</td>
+        <td>Apply labels to physical cases</td>
+        <td>Labels attached to correct cases</td>
+        <td class="pass-col"><input type="checkbox" class="test-check"></td>
+      </tr>
+    </table>
+
+    <h3>1.4 Phase 3: Shelve Stock</h3>
+    <table>
+      <tr>
+        <th class="step-num">#</th>
+        <th class="action-col">Action</th>
+        <th class="expected-col">Expected Result</th>
+        <th class="pass-col">Pass</th>
+      </tr>
+      <tr>
+        <td class="step-num">1</td>
+        <td>See "Scan Bay Barcode" input</td>
         <td>Input focused, ready for scan</td>
         <td class="pass-col"><input type="checkbox" class="test-check"></td>
       </tr>
@@ -468,7 +538,7 @@
       <tr>
         <td class="step-num">4</td>
         <td>Tap "Confirm Location"</td>
-        <td>Location assigned to stock</td>
+        <td>Stock assigned to location, success beep/vibration</td>
         <td class="pass-col"><input type="checkbox" class="test-check"></td>
       </tr>
       <tr>
@@ -479,7 +549,7 @@
       </tr>
     </table>
 
-    <h3>1.4 Complete Receiving</h3>
+    <h3>1.5 Complete Receiving</h3>
     <table>
       <tr>
         <th class="step-num">#</th>
@@ -495,8 +565,8 @@
       </tr>
       <tr>
         <td class="step-num">2</td>
-        <td>Repeat steps 1.2-1.3 for remaining items</td>
-        <td>All items received</td>
+        <td>Repeat phases for remaining items</td>
+        <td>All items received and shelved</td>
         <td class="pass-col"><input type="checkbox" class="test-check"></td>
       </tr>
       <tr>
@@ -514,12 +584,12 @@
       <tr>
         <td class="step-num">5</td>
         <td>Check Stock page - new stock visible</td>
-        <td>Stock records created</td>
+        <td>Stock records created with correct locations</td>
         <td class="pass-col"><input type="checkbox" class="test-check"></td>
       </tr>
     </table>
 
-    <h3>1.5 Edge Cases - Receiving</h3>
+    <h3>1.6 Edge Cases - Receiving</h3>
     <table class="edge-case">
       <tr>
         <th class="step-num">#</th>
@@ -529,30 +599,24 @@
       </tr>
       <tr>
         <td class="step-num">1</td>
-        <td>Try scanning same location twice for same item</td>
-        <td>Error: "Location already assigned"</td>
+        <td>Try scanning invalid barcode</td>
+        <td>Error: "Location not found", error buzz/vibration</td>
         <td class="pass-col"><input type="checkbox" class="test-check"></td>
       </tr>
       <tr>
         <td class="step-num">2</td>
-        <td>Try scanning invalid barcode</td>
-        <td>Error: "Location not found"</td>
-        <td class="pass-col"><input type="checkbox" class="test-check"></td>
-      </tr>
-      <tr>
-        <td class="step-num">3</td>
         <td>Rapidly scan barcode twice (double-scan)</td>
         <td>Only processes once, no duplicate</td>
         <td class="pass-col"><input type="checkbox" class="test-check"></td>
       </tr>
       <tr>
-        <td class="step-num">4</td>
+        <td class="step-num">3</td>
         <td>Enter 0 cases received</td>
         <td>Handled gracefully (skip or warn)</td>
         <td class="pass-col"><input type="checkbox" class="test-check"></td>
       </tr>
       <tr>
-        <td class="step-num">5</td>
+        <td class="step-num">4</td>
         <td>Close browser mid-receiving, reopen</td>
         <td>Draft saved, can resume</td>
         <td class="pass-col"><input type="checkbox" class="test-check"></td>
@@ -574,7 +638,7 @@
       </tr>
       <tr>
         <td class="step-num">1</td>
-        <td>Navigate to WMS → Stock → Check button</td>
+        <td>Navigate to WMS → Check (or Ctrl+C)</td>
         <td>Opens Stock Check page</td>
         <td class="pass-col"><input type="checkbox" class="test-check"></td>
       </tr>
@@ -593,7 +657,7 @@
       <tr>
         <td class="step-num">4</td>
         <td>Scan bay QR code (e.g., LOC-A-01-01)</td>
-        <td>Spinner shows, then results load</td>
+        <td>Spinner shows, then results load. Success beep.</td>
         <td class="pass-col"><input type="checkbox" class="test-check"></td>
       </tr>
       <tr>
@@ -616,7 +680,35 @@
       </tr>
     </table>
 
-    <h3>2.2 Edit Stock Quantity</h3>
+    <h3>2.2 Quick Location Navigation</h3>
+    <table>
+      <tr>
+        <th class="step-num">#</th>
+        <th class="action-col">Action</th>
+        <th class="expected-col">Expected Result</th>
+        <th class="pass-col">Pass</th>
+      </tr>
+      <tr>
+        <td class="step-num">1</td>
+        <td>With results showing, look for navigation buttons</td>
+        <td>See prev/next bay, up/down level buttons</td>
+        <td class="pass-col"><input type="checkbox" class="test-check"></td>
+      </tr>
+      <tr>
+        <td class="step-num">2</td>
+        <td>Tap "Next Bay" button</td>
+        <td>Moves to adjacent bay (A-01-02)</td>
+        <td class="pass-col"><input type="checkbox" class="test-check"></td>
+      </tr>
+      <tr>
+        <td class="step-num">3</td>
+        <td>Tap "Up Level" button</td>
+        <td>Moves to level above (A-02-01)</td>
+        <td class="pass-col"><input type="checkbox" class="test-check"></td>
+      </tr>
+    </table>
+
+    <h3>2.3 Edit Stock Quantity</h3>
     <table>
       <tr>
         <th class="step-num">#</th>
@@ -672,15 +764,9 @@
         <td>Shows new quantity</td>
         <td class="pass-col"><input type="checkbox" class="test-check"></td>
       </tr>
-      <tr>
-        <td class="step-num">9</td>
-        <td>Tap "Cancel" on another item</td>
-        <td>Returns to view mode, no change</td>
-        <td class="pass-col"><input type="checkbox" class="test-check"></td>
-      </tr>
     </table>
 
-    <h3>2.3 Reprint Labels</h3>
+    <h3>2.4 Reprint Labels</h3>
     <table>
       <tr>
         <th class="step-num">#</th>
@@ -697,30 +783,18 @@
       <tr>
         <td class="step-num">2</td>
         <td>Tap printer icon</td>
-        <td>Spinner shows</td>
+        <td>ZPL file downloads</td>
         <td class="pass-col"><input type="checkbox" class="test-check"></td>
       </tr>
       <tr>
         <td class="step-num">3</td>
-        <td>ZPL file downloads</td>
-        <td>File named "reprint-labels-X.zpl"</td>
-        <td class="pass-col"><input type="checkbox" class="test-check"></td>
-      </tr>
-      <tr>
-        <td class="step-num">4</td>
         <td>Print ZPL on Zebra printer</td>
         <td>Labels print correctly</td>
         <td class="pass-col"><input type="checkbox" class="test-check"></td>
       </tr>
-      <tr>
-        <td class="step-num">5</td>
-        <td>Verify labels match stock at location</td>
-        <td>Same barcodes as original</td>
-        <td class="pass-col"><input type="checkbox" class="test-check"></td>
-      </tr>
     </table>
 
-    <h3>2.4 Check Stock By Product</h3>
+    <h3>2.5 Check Stock By Product</h3>
     <table>
       <tr>
         <th class="step-num">#</th>
@@ -764,15 +838,9 @@
         <td>Each location with case count</td>
         <td class="pass-col"><input type="checkbox" class="test-check"></td>
       </tr>
-      <tr>
-        <td class="step-num">7</td>
-        <td>Tap "Done - Check Another Product"</td>
-        <td>Resets to scan input</td>
-        <td class="pass-col"><input type="checkbox" class="test-check"></td>
-      </tr>
     </table>
 
-    <h3>2.5 Edge Cases - Stock Check</h3>
+    <h3>2.6 Edge Cases - Stock Check</h3>
     <table class="edge-case">
       <tr>
         <th class="step-num">#</th>
@@ -783,13 +851,13 @@
       <tr>
         <td class="step-num">1</td>
         <td>Scan empty bay (no stock)</td>
-        <td>Shows "No Stock - This location is empty"</td>
+        <td>Shows "No Stock - This location is empty" with "Transfer Stock Here" button</td>
         <td class="pass-col"><input type="checkbox" class="test-check"></td>
       </tr>
       <tr>
         <td class="step-num">2</td>
         <td>Scan invalid location barcode</td>
-        <td>Error: "Location not found: XXX"</td>
+        <td>Error: "Location not found: XXX", error buzz</td>
         <td class="pass-col"><input type="checkbox" class="test-check"></td>
       </tr>
       <tr>
@@ -807,19 +875,7 @@
       <tr>
         <td class="step-num">5</td>
         <td>Tap "Select from List"</td>
-        <td>Location list appears</td>
-        <td class="pass-col"><input type="checkbox" class="test-check"></td>
-      </tr>
-      <tr>
-        <td class="step-num">6</td>
-        <td>Search locations by code</td>
-        <td>Filter works</td>
-        <td class="pass-col"><input type="checkbox" class="test-check"></td>
-      </tr>
-      <tr>
-        <td class="step-num">7</td>
-        <td>Select location from list</td>
-        <td>Same result as scanning</td>
+        <td>Location list appears with search</td>
         <td class="pass-col"><input type="checkbox" class="test-check"></td>
       </tr>
     </table>
@@ -828,6 +884,7 @@
   <!-- FLOW 3: PICKING -->
   <div class="flow-section" id="picking">
     <h2>Flow 3: Picking</h2>
+    <p>Pick items are sorted by location for optimal pick path with "next bay" hints.</p>
 
     <h3>3.1 Release Order to Pick</h3>
     <table>
@@ -857,13 +914,7 @@
       </tr>
       <tr>
         <td class="step-num">4</td>
-        <td>See success toast</td>
-        <td>"Pick list created"</td>
-        <td class="pass-col"><input type="checkbox" class="test-check"></td>
-      </tr>
-      <tr>
-        <td class="step-num">5</td>
-        <td>Navigate to WMS → Pick</td>
+        <td>Navigate to WMS → Pick (or Ctrl+P)</td>
         <td>See new pick list</td>
         <td class="pass-col"><input type="checkbox" class="test-check"></td>
       </tr>
@@ -885,8 +936,8 @@
       </tr>
       <tr>
         <td class="step-num">2</td>
-        <td>See order info, items to pick</td>
-        <td>All items listed</td>
+        <td>Verify items sorted by location for optimal path</td>
+        <td>Items grouped by location, sorted A→Z</td>
         <td class="pass-col"><input type="checkbox" class="test-check"></td>
       </tr>
       <tr>
@@ -903,8 +954,8 @@
       </tr>
       <tr>
         <td class="step-num">5</td>
-        <td>See product info: name, quantity needed</td>
-        <td>Correct item shown</td>
+        <td>See "Next bay" hint showing upcoming location</td>
+        <td>Helps plan pick path</td>
         <td class="pass-col"><input type="checkbox" class="test-check"></td>
       </tr>
     </table>
@@ -926,7 +977,7 @@
       <tr>
         <td class="step-num">2</td>
         <td>Scan bay QR code to confirm location</td>
-        <td>"Location confirmed" or similar</td>
+        <td>"Location confirmed", success beep/vibration</td>
         <td class="pass-col"><input type="checkbox" class="test-check"></td>
       </tr>
       <tr>
@@ -938,31 +989,25 @@
       <tr>
         <td class="step-num">4</td>
         <td>Scan case label barcode</td>
-        <td>Case validated</td>
+        <td>Case validated, success feedback</td>
         <td class="pass-col"><input type="checkbox" class="test-check"></td>
       </tr>
       <tr>
         <td class="step-num">5</td>
         <td>If wrong product, see error</td>
-        <td>"Wrong product" warning</td>
+        <td>"Wrong product" warning, error buzz</td>
         <td class="pass-col"><input type="checkbox" class="test-check"></td>
       </tr>
       <tr>
         <td class="step-num">6</td>
-        <td>If correct product, see success</td>
-        <td>Item marked as picked</td>
-        <td class="pass-col"><input type="checkbox" class="test-check"></td>
-      </tr>
-      <tr>
-        <td class="step-num">7</td>
         <td>Repeat for quantity needed</td>
         <td>All cases picked</td>
         <td class="pass-col"><input type="checkbox" class="test-check"></td>
       </tr>
       <tr>
-        <td class="step-num">8</td>
+        <td class="step-num">7</td>
         <td>Auto-advances to next item</td>
-        <td>Next product shown</td>
+        <td>Next product shown with its location</td>
         <td class="pass-col"><input type="checkbox" class="test-check"></td>
       </tr>
     </table>
@@ -1012,7 +1057,7 @@
       <tr>
         <td class="step-num">1</td>
         <td>Scan wrong location</td>
-        <td>Error: location doesn't match</td>
+        <td>Error: location doesn't match, error buzz</td>
         <td class="pass-col"><input type="checkbox" class="test-check"></td>
       </tr>
       <tr>
@@ -1029,12 +1074,6 @@
       </tr>
       <tr>
         <td class="step-num">4</td>
-        <td>Partial pick (less than needed)</td>
-        <td>Handled appropriately</td>
-        <td class="pass-col"><input type="checkbox" class="test-check"></td>
-      </tr>
-      <tr>
-        <td class="step-num">5</td>
         <td>Cancel mid-pick</td>
         <td>Can resume later</td>
         <td class="pass-col"><input type="checkbox" class="test-check"></td>
@@ -1056,7 +1095,7 @@
       </tr>
       <tr>
         <td class="step-num">1</td>
-        <td>Navigate to WMS → Transfer</td>
+        <td>Navigate to WMS → Transfer (or Ctrl+T)</td>
         <td>Transfer page opens</td>
         <td class="pass-col"><input type="checkbox" class="test-check"></td>
       </tr>
@@ -1069,7 +1108,7 @@
       <tr>
         <td class="step-num">3</td>
         <td>Scan source bay QR code</td>
-        <td>Location loaded, stock shown</td>
+        <td>Location loaded, stock shown, success beep</td>
         <td class="pass-col"><input type="checkbox" class="test-check"></td>
       </tr>
       <tr>
@@ -1103,13 +1142,13 @@
       <tr>
         <td class="step-num">2</td>
         <td>Scan destination bay QR code</td>
-        <td>Location validated</td>
+        <td>Location validated, success beep</td>
         <td class="pass-col"><input type="checkbox" class="test-check"></td>
       </tr>
       <tr>
         <td class="step-num">3</td>
         <td>Confirm transfer</td>
-        <td>Success message</td>
+        <td>Success message, haptic feedback</td>
         <td class="pass-col"><input type="checkbox" class="test-check"></td>
       </tr>
       <tr>
@@ -1133,11 +1172,12 @@
     </table>
   </div>
 
-  <!-- FLOW 5: ZOHO SYNC -->
-  <div class="flow-section" id="zoho-sync">
-    <h2>Flow 5: Zoho Sync</h2>
+  <!-- FLOW 5: REPACK -->
+  <div class="flow-section" id="repack">
+    <h2>Flow 5: Repack</h2>
+    <p>Convert cases between pack sizes (e.g., 12-pack → 6-pack).</p>
 
-    <h3>5.1 Sync Stock to Zoho</h3>
+    <h3>5.1 Select Source Stock</h3>
     <table>
       <tr>
         <th class="step-num">#</th>
@@ -1147,7 +1187,250 @@
       </tr>
       <tr>
         <td class="step-num">1</td>
-        <td>Navigate to WMS → Stock</td>
+        <td>Navigate to WMS → Repack</td>
+        <td>Repack page opens with step indicator</td>
+        <td class="pass-col"><input type="checkbox" class="test-check"></td>
+      </tr>
+      <tr>
+        <td class="step-num">2</td>
+        <td>See "Scan Source Location" input</td>
+        <td>Ready for scan</td>
+        <td class="pass-col"><input type="checkbox" class="test-check"></td>
+      </tr>
+      <tr>
+        <td class="step-num">3</td>
+        <td>Scan bay QR code containing stock to repack</td>
+        <td>Location loaded, stock items shown</td>
+        <td class="pass-col"><input type="checkbox" class="test-check"></td>
+      </tr>
+      <tr>
+        <td class="step-num">4</td>
+        <td>Select stock item to repack</td>
+        <td>Shows current pack size (e.g., 12x750ml)</td>
+        <td class="pass-col"><input type="checkbox" class="test-check"></td>
+      </tr>
+    </table>
+
+    <h3>5.2 Configure Repack</h3>
+    <table>
+      <tr>
+        <th class="step-num">#</th>
+        <th class="action-col">Action</th>
+        <th class="expected-col">Expected Result</th>
+        <th class="pass-col">Pass</th>
+      </tr>
+      <tr>
+        <td class="step-num">1</td>
+        <td>See available target pack sizes</td>
+        <td>Options like 6-pack, 3-pack shown</td>
+        <td class="pass-col"><input type="checkbox" class="test-check"></td>
+      </tr>
+      <tr>
+        <td class="step-num">2</td>
+        <td>Select target pack size (e.g., 6-pack)</td>
+        <td>Shows conversion: "1 case of 12 → 2 cases of 6"</td>
+        <td class="pass-col"><input type="checkbox" class="test-check"></td>
+      </tr>
+      <tr>
+        <td class="step-num">3</td>
+        <td>Enter number of source cases to repack</td>
+        <td>Calculates resulting cases</td>
+        <td class="pass-col"><input type="checkbox" class="test-check"></td>
+      </tr>
+      <tr>
+        <td class="step-num">4</td>
+        <td>Tap "Start Repack"</td>
+        <td>Proceeds to physical repack step</td>
+        <td class="pass-col"><input type="checkbox" class="test-check"></td>
+      </tr>
+    </table>
+
+    <h3>5.3 Physical Repack & Labels</h3>
+    <table>
+      <tr>
+        <th class="step-num">#</th>
+        <th class="action-col">Action</th>
+        <th class="expected-col">Expected Result</th>
+        <th class="pass-col">Pass</th>
+      </tr>
+      <tr>
+        <td class="step-num">1</td>
+        <td>See instructions for physical repack</td>
+        <td>"Remove X bottles from case, place in new cases"</td>
+        <td class="pass-col"><input type="checkbox" class="test-check"></td>
+      </tr>
+      <tr>
+        <td class="step-num">2</td>
+        <td>Physically repack the bottles</td>
+        <td>Bottles moved to new cases</td>
+        <td class="pass-col"><input type="checkbox" class="test-check"></td>
+      </tr>
+      <tr>
+        <td class="step-num">3</td>
+        <td>Tap "Print New Labels"</td>
+        <td>Labels for new cases download</td>
+        <td class="pass-col"><input type="checkbox" class="test-check"></td>
+      </tr>
+      <tr>
+        <td class="step-num">4</td>
+        <td>Print and apply new labels</td>
+        <td>New cases labeled with new barcodes</td>
+        <td class="pass-col"><input type="checkbox" class="test-check"></td>
+      </tr>
+    </table>
+
+    <h3>5.4 Assign Destination</h3>
+    <table>
+      <tr>
+        <th class="step-num">#</th>
+        <th class="action-col">Action</th>
+        <th class="expected-col">Expected Result</th>
+        <th class="pass-col">Pass</th>
+      </tr>
+      <tr>
+        <td class="step-num">1</td>
+        <td>See "Scan Destination Location" (optional)</td>
+        <td>Can shelve new cases immediately or skip</td>
+        <td class="pass-col"><input type="checkbox" class="test-check"></td>
+      </tr>
+      <tr>
+        <td class="step-num">2</td>
+        <td>Scan destination bay or skip</td>
+        <td>New cases assigned to location</td>
+        <td class="pass-col"><input type="checkbox" class="test-check"></td>
+      </tr>
+      <tr>
+        <td class="step-num">3</td>
+        <td>Tap "Complete Repack"</td>
+        <td>Repack completed, success message</td>
+        <td class="pass-col"><input type="checkbox" class="test-check"></td>
+      </tr>
+      <tr>
+        <td class="step-num">4</td>
+        <td>Verify stock updated</td>
+        <td>Source reduced, new stock created with new pack size</td>
+        <td class="pass-col"><input type="checkbox" class="test-check"></td>
+      </tr>
+      <tr>
+        <td class="step-num">5</td>
+        <td>Check movements log</td>
+        <td>Shows "repack_out" and "repack_in" movements</td>
+        <td class="pass-col"><input type="checkbox" class="test-check"></td>
+      </tr>
+    </table>
+  </div>
+
+  <!-- FLOW 6: DISPATCH -->
+  <div class="flow-section" id="dispatch">
+    <h2>Flow 6: Dispatch</h2>
+    <p>Batch picked orders for dispatch to carriers.</p>
+
+    <h3>6.1 View Dispatch Queue</h3>
+    <table>
+      <tr>
+        <th class="step-num">#</th>
+        <th class="action-col">Action</th>
+        <th class="expected-col">Expected Result</th>
+        <th class="pass-col">Pass</th>
+      </tr>
+      <tr>
+        <td class="step-num">1</td>
+        <td>Navigate to WMS → Dispatch</td>
+        <td>See list of picked orders ready for dispatch</td>
+        <td class="pass-col"><input type="checkbox" class="test-check"></td>
+      </tr>
+      <tr>
+        <td class="step-num">2</td>
+        <td>Verify orders show: order number, customer, case count, pick date</td>
+        <td>All info displayed</td>
+        <td class="pass-col"><input type="checkbox" class="test-check"></td>
+      </tr>
+    </table>
+
+    <h3>6.2 Create Dispatch Batch</h3>
+    <table>
+      <tr>
+        <th class="step-num">#</th>
+        <th class="action-col">Action</th>
+        <th class="expected-col">Expected Result</th>
+        <th class="pass-col">Pass</th>
+      </tr>
+      <tr>
+        <td class="step-num">1</td>
+        <td>Tap "New Dispatch Batch"</td>
+        <td>Opens batch creation</td>
+        <td class="pass-col"><input type="checkbox" class="test-check"></td>
+      </tr>
+      <tr>
+        <td class="step-num">2</td>
+        <td>Select orders to include in batch</td>
+        <td>Orders added to batch</td>
+        <td class="pass-col"><input type="checkbox" class="test-check"></td>
+      </tr>
+      <tr>
+        <td class="step-num">3</td>
+        <td>Enter carrier/driver info (optional)</td>
+        <td>Info saved</td>
+        <td class="pass-col"><input type="checkbox" class="test-check"></td>
+      </tr>
+      <tr>
+        <td class="step-num">4</td>
+        <td>Tap "Create Batch"</td>
+        <td>Dispatch batch created</td>
+        <td class="pass-col"><input type="checkbox" class="test-check"></td>
+      </tr>
+    </table>
+
+    <h3>6.3 Complete Dispatch</h3>
+    <table>
+      <tr>
+        <th class="step-num">#</th>
+        <th class="action-col">Action</th>
+        <th class="expected-col">Expected Result</th>
+        <th class="pass-col">Pass</th>
+      </tr>
+      <tr>
+        <td class="step-num">1</td>
+        <td>View dispatch batch details</td>
+        <td>See all orders in batch</td>
+        <td class="pass-col"><input type="checkbox" class="test-check"></td>
+      </tr>
+      <tr>
+        <td class="step-num">2</td>
+        <td>Physically load orders onto vehicle</td>
+        <td>Cases loaded</td>
+        <td class="pass-col"><input type="checkbox" class="test-check"></td>
+      </tr>
+      <tr>
+        <td class="step-num">3</td>
+        <td>Tap "Mark Dispatched"</td>
+        <td>Batch marked as dispatched</td>
+        <td class="pass-col"><input type="checkbox" class="test-check"></td>
+      </tr>
+      <tr>
+        <td class="step-num">4</td>
+        <td>Verify order statuses updated</td>
+        <td>Orders show "dispatched"</td>
+        <td class="pass-col"><input type="checkbox" class="test-check"></td>
+      </tr>
+    </table>
+  </div>
+
+  <!-- FLOW 7: ZOHO SYNC -->
+  <div class="flow-section" id="zoho-sync">
+    <h2>Flow 7: Zoho Sync</h2>
+
+    <h3>7.1 Sync Stock to Zoho</h3>
+    <table>
+      <tr>
+        <th class="step-num">#</th>
+        <th class="action-col">Action</th>
+        <th class="expected-col">Expected Result</th>
+        <th class="pass-col">Pass</th>
+      </tr>
+      <tr>
+        <td class="step-num">1</td>
+        <td>Navigate to WMS → Stock (or Ctrl+S)</td>
         <td>Stock overview page</td>
         <td class="pass-col"><input type="checkbox" class="test-check"></td>
       </tr>
@@ -1216,12 +1499,18 @@
       </tr>
       <tr>
         <td class="step-num">4</td>
-        <td>Virtual keyboard only appears when needed</td>
-        <td>Not on scan inputs</td>
+        <td>Virtual keyboard hidden by default on scan inputs</td>
+        <td>No keyboard flash on focus</td>
         <td class="pass-col"><input type="checkbox" class="test-check"></td>
       </tr>
       <tr>
         <td class="step-num">5</td>
+        <td>Tap keyboard toggle icon to show keyboard when needed</td>
+        <td>Keyboard appears for manual entry</td>
+        <td class="pass-col"><input type="checkbox" class="test-check"></td>
+      </tr>
+      <tr>
+        <td class="step-num">6</td>
         <td>Page scrolls to relevant section after actions</td>
         <td>User sees result</td>
         <td class="pass-col"><input type="checkbox" class="test-check"></td>
@@ -1257,7 +1546,69 @@
       <tr>
         <td class="step-num">4</td>
         <td>Manual entry possible when needed</td>
-        <td>Can type barcodes</td>
+        <td>Can type barcodes after tapping keyboard icon</td>
+        <td class="pass-col"><input type="checkbox" class="test-check"></td>
+      </tr>
+    </table>
+
+    <h3>Sound & Haptic Feedback</h3>
+    <table>
+      <tr>
+        <th class="step-num">#</th>
+        <th class="action-col">Action</th>
+        <th class="expected-col">Expected Result</th>
+        <th class="pass-col">Pass</th>
+      </tr>
+      <tr>
+        <td class="step-num">1</td>
+        <td>Successful scan</td>
+        <td>Success beep sound + single vibration (100ms)</td>
+        <td class="pass-col"><input type="checkbox" class="test-check"></td>
+      </tr>
+      <tr>
+        <td class="step-num">2</td>
+        <td>Error (invalid barcode, wrong product)</td>
+        <td>Error buzz sound + double vibration pattern (100-50-100ms)</td>
+        <td class="pass-col"><input type="checkbox" class="test-check"></td>
+      </tr>
+      <tr>
+        <td class="step-num">3</td>
+        <td>Device volume up</td>
+        <td>Sounds audible in warehouse environment</td>
+        <td class="pass-col"><input type="checkbox" class="test-check"></td>
+      </tr>
+    </table>
+
+    <h3>Dashboard Features</h3>
+    <table>
+      <tr>
+        <th class="step-num">#</th>
+        <th class="action-col">Action</th>
+        <th class="expected-col">Expected Result</th>
+        <th class="pass-col">Pass</th>
+      </tr>
+      <tr>
+        <td class="step-num">1</td>
+        <td>Tap dark mode toggle (sun/moon icon)</td>
+        <td>Theme switches between light and dark</td>
+        <td class="pass-col"><input type="checkbox" class="test-check"></td>
+      </tr>
+      <tr>
+        <td class="step-num">2</td>
+        <td>Drag quick action tiles to reorder</td>
+        <td>Order saved, persists on refresh</td>
+        <td class="pass-col"><input type="checkbox" class="test-check"></td>
+      </tr>
+      <tr>
+        <td class="step-num">3</td>
+        <td>Go offline (airplane mode)</td>
+        <td>Offline banner appears at top</td>
+        <td class="pass-col"><input type="checkbox" class="test-check"></td>
+      </tr>
+      <tr>
+        <td class="step-num">4</td>
+        <td>Come back online</td>
+        <td>Online banner appears briefly, then disappears</td>
         <td class="pass-col"><input type="checkbox" class="test-check"></td>
       </tr>
     </table>
@@ -1319,6 +1670,34 @@
       </tr>
       <tr>
         <td>Transfer</td>
+        <td><input type="text" placeholder="Name"></td>
+        <td><input type="date"></td>
+        <td><input type="text" placeholder="TC27 / Desktop"></td>
+        <td>
+          <select>
+            <option value="">-</option>
+            <option value="pass">Pass</option>
+            <option value="fail">Fail</option>
+            <option value="partial">Partial</option>
+          </select>
+        </td>
+      </tr>
+      <tr>
+        <td>Repack</td>
+        <td><input type="text" placeholder="Name"></td>
+        <td><input type="date"></td>
+        <td><input type="text" placeholder="TC27 / Desktop"></td>
+        <td>
+          <select>
+            <option value="">-</option>
+            <option value="pass">Pass</option>
+            <option value="fail">Fail</option>
+            <option value="partial">Partial</option>
+          </select>
+        </td>
+      </tr>
+      <tr>
+        <td>Dispatch</td>
         <td><input type="text" placeholder="Name"></td>
         <td><input type="date"></td>
         <td><input type="text" placeholder="TC27 / Desktop"></td>
@@ -1394,19 +1773,19 @@
     function saveProgress() {
       const checkboxes = document.querySelectorAll('.test-check');
       const state = Array.from(checkboxes).map(cb => cb.checked);
-      localStorage.setItem('wms-test-progress', JSON.stringify(state));
+      localStorage.setItem('wms-test-progress-v2', JSON.stringify(state));
 
       // Save sign-off data
       const signOffInputs = document.querySelectorAll('.sign-off input, .sign-off select, .sign-off textarea');
       const signOffState = Array.from(signOffInputs).map(input => input.value);
-      localStorage.setItem('wms-test-signoff', JSON.stringify(signOffState));
+      localStorage.setItem('wms-test-signoff-v2', JSON.stringify(signOffState));
 
       alert('Progress saved!');
     }
 
     // Load progress from localStorage
     function loadProgress() {
-      const saved = localStorage.getItem('wms-test-progress');
+      const saved = localStorage.getItem('wms-test-progress-v2');
       if (saved) {
         const state = JSON.parse(saved);
         const checkboxes = document.querySelectorAll('.test-check');
@@ -1416,7 +1795,7 @@
       }
 
       // Load sign-off data
-      const signOffSaved = localStorage.getItem('wms-test-signoff');
+      const signOffSaved = localStorage.getItem('wms-test-signoff-v2');
       if (signOffSaved) {
         const signOffState = JSON.parse(signOffSaved);
         const signOffInputs = document.querySelectorAll('.sign-off input, .sign-off select, .sign-off textarea');
@@ -1431,8 +1810,8 @@
     // Reset all progress
     function resetProgress() {
       if (confirm('Are you sure you want to reset all progress? This cannot be undone.')) {
-        localStorage.removeItem('wms-test-progress');
-        localStorage.removeItem('wms-test-signoff');
+        localStorage.removeItem('wms-test-progress-v2');
+        localStorage.removeItem('wms-test-signoff-v2');
 
         document.querySelectorAll('.test-check').forEach(cb => cb.checked = false);
         document.querySelectorAll('.sign-off input, .sign-off select, .sign-off textarea').forEach(input => input.value = '');
