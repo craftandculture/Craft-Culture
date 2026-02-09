@@ -346,6 +346,7 @@ const adminExtractDocument = adminProcedure.input(extractDocumentSchema).mutatio
         model: anthropic('claude-sonnet-4-20250514'),
         schema: extractedLogisticsDataSchema,
         system: systemPrompt,
+        maxTokens: 16384,
         messages,
       });
 
@@ -413,6 +414,7 @@ ${pdfText}
           model: anthropic('claude-sonnet-4-20250514'),
           schema: extractedLogisticsDataSchema,
           system: systemPrompt,
+          maxTokens: 16384,
           messages,
         });
 

@@ -19,9 +19,12 @@ const adminGetPendingShipments = adminProcedure.query(async () => {
       id: logisticsShipments.id,
       shipmentNumber: logisticsShipments.shipmentNumber,
       status: logisticsShipments.status,
+      transportMode: logisticsShipments.transportMode,
       partnerId: logisticsShipments.partnerId,
       partnerName: partners.businessName,
       originCountry: logisticsShipments.originCountry,
+      destinationCountry: logisticsShipments.destinationCountry,
+      destinationCity: logisticsShipments.destinationCity,
       // Calculate total cases from items (sum of cases field)
       totalCases: sql<number>`COALESCE(SUM(${logisticsShipmentItems.cases}), 0)::int`,
       eta: logisticsShipments.eta,
@@ -39,7 +42,13 @@ const adminGetPendingShipments = adminProcedure.query(async () => {
         'arrived_port',
       ])
     )
-    .groupBy(logisticsShipments.id, partners.businessName)
+    .groupBy(
+      logisticsShipments.id,
+      logisticsShipments.transportMode,
+      logisticsShipments.destinationCountry,
+      logisticsShipments.destinationCity,
+      partners.businessName,
+    )
     .orderBy(desc(logisticsShipments.ata), desc(logisticsShipments.eta));
 
   return shipments;
