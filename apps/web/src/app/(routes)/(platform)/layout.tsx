@@ -1,3 +1,4 @@
+import { headers } from 'next/headers';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 
@@ -11,6 +12,7 @@ import BrandedFooter from '@/app/_ui/components/Footer/BrandedFooter';
 import BrandedLogo from '@/app/_ui/components/Logo/BrandedLogo';
 import PlatformMobileNav from '@/app/_ui/components/MobileNav/PlatformMobileNav';
 import ThemeToggle from '@/app/_ui/components/ThemeToggle/ThemeToggle';
+import WMSHeader from '@/app/_wms/components/WMSHeader';
 import getQueryClient from '@/lib/react-query';
 import api from '@/lib/trpc/server';
 import tryCatch from '@/utils/tryCatch';
@@ -37,6 +39,26 @@ const PlatformLayout = async ({ children }: React.PropsWithChildren) => {
     redirect('/welcome');
   }
 
+  // Check if we're in WMS mode (warehouse-focused layout)
+  const headersList = await headers();
+  const pathname = headersList.get('x-pathname') || headersList.get('x-invoke-path') || '';
+  const isWMSMode = pathname.startsWith('/platform/admin/wms');
+
+  // WMS Mode: Clean, focused warehouse layout
+  if (isWMSMode) {
+    return (
+      <div className="bg-background-primary flex min-h-dvh flex-col">
+        <BrandedTitleProvider customerType={user.customerType} />
+        {user.isImpersonated && (
+          <ImpersonationBanner userName={user.name} userEmail={user.email} />
+        )}
+        <WMSHeader userName={user.name ?? user.email} />
+        <div className="flex-1 overflow-auto">{children}</div>
+      </div>
+    );
+  }
+
+  // Standard platform layout
   return (
     <div className="bg-background-primary flex min-h-dvh flex-col">
       <BrandedTitleProvider customerType={user.customerType} />

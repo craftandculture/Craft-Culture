@@ -25,7 +25,9 @@ export const middleware = async (request: NextRequest) => {
   // Allow WMS routes with valid device token
   if (deviceToken && wmsDeviceToken && deviceToken === wmsDeviceToken) {
     if (wmsRoutes.some((route) => route.test(pathname))) {
-      return NextResponse.next();
+      const response = NextResponse.next();
+      response.headers.set('x-pathname', pathname);
+      return response;
     }
   }
 
@@ -40,7 +42,10 @@ export const middleware = async (request: NextRequest) => {
     );
   }
 
-  return NextResponse.next();
+  // Add pathname header for server components to access current route
+  const response = NextResponse.next();
+  response.headers.set('x-pathname', pathname);
+  return response;
 };
 
 export const config = {
