@@ -169,7 +169,7 @@ const WMSRepackPage = () => {
   const handleSourceLocationScan = async (barcode: string) => {
     setError('');
     try {
-      const result = await trpcClient.wms.admin.operations.getLocationByBarcode.query({ barcode });
+      const result = await trpcClient.wms.admin.operations.getLocationByBarcode.mutate({ barcode });
       setSourceLocation({
         id: result.location.id,
         locationCode: result.location.locationCode,
@@ -196,7 +196,7 @@ const WMSRepackPage = () => {
   const handleDestinationLocationScan = async (barcode: string) => {
     setError('');
     try {
-      const result = await trpcClient.wms.admin.operations.getLocationByBarcode.query({ barcode });
+      const result = await trpcClient.wms.admin.operations.getLocationByBarcode.mutate({ barcode });
       setDestinationLocation({
         id: result.location.id,
         locationCode: result.location.locationCode,
