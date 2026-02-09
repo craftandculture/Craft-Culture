@@ -7,7 +7,7 @@
  * Used when receiving stock without a known LWIN.
  */
 
-import { IconCheck, IconLoader2, IconSearch, IconWine } from '@tabler/icons-react';
+import { IconBottle, IconCheck, IconLoader2, IconSearch } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 
@@ -149,7 +149,7 @@ const LwinLookup = ({
               }
               className="flex w-full items-start gap-3 rounded-md p-2 text-left hover:bg-fill-primary"
             >
-              <Icon icon={IconWine} size="sm" className="mt-0.5 text-brand-500" />
+              <Icon icon={IconBottle} size="sm" className="mt-0.5 text-brand-500" />
               <div className="flex-1">
                 <Typography variant="bodySm" className="font-medium">
                   {wine.displayName}
