@@ -10,6 +10,7 @@ import {
   IconMapPin,
   IconMoon,
   IconPackage,
+  IconPackages,
   IconPlus,
   IconSun,
   IconTransfer,
@@ -47,6 +48,7 @@ const DEFAULT_QUICK_ACTIONS: QuickAction[] = [
   { id: 'check', href: '/platform/admin/wms/stock/check', icon: IconClipboardCheck, label: 'Check', color: 'text-cyan-600', bgColor: 'bg-cyan-100 dark:bg-cyan-900/30' },
   { id: 'pick', href: '/platform/admin/wms/pick', icon: IconBox, label: 'Pick', color: 'text-blue-600', bgColor: 'bg-blue-100 dark:bg-blue-900/30' },
   { id: 'transfer', href: '/platform/admin/wms/transfer', icon: IconTransfer, label: 'Transfer', color: 'text-purple-600', bgColor: 'bg-purple-100 dark:bg-purple-900/30' },
+  { id: 'repack', href: '/platform/admin/wms/repack', icon: IconPackages, label: 'Repack', color: 'text-orange-600', bgColor: 'bg-orange-100 dark:bg-orange-900/30' },
 ];
 
 /**

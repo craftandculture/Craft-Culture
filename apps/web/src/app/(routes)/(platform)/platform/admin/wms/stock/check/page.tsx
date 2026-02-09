@@ -560,7 +560,7 @@ const StockCheckPage = () => {
               onScan={handleBayScan}
               isLoading={isLookingUp}
               error={scanError ?? undefined}
-              showKeyboard
+              showKeyboard={false}
             />
 
             <div className="flex items-center gap-3">
@@ -644,7 +644,7 @@ const StockCheckPage = () => {
               placeholder="CASE-1002720... or 1002720..."
               onScan={handleProductScan}
               error={scanError ?? undefined}
-              showKeyboard
+              showKeyboard={false}
             />
 
             <Typography variant="bodyXs" colorRole="muted" className="text-center">
