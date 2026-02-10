@@ -1,5 +1,6 @@
 import { createTRPCRouter } from '@/lib/trpc/trpc';
 
+import adminAddBay from './controller/adminAddBay';
 import adminAddOrdersToBatch from './controller/adminAddOrdersToBatch';
 import adminAddZohoOrdersToBatch from './controller/adminAddZohoOrdersToBatch';
 import adminAdjustStockQuantity from './controller/adminAdjustStockQuantity';
@@ -13,6 +14,7 @@ import adminCreateLocation from './controller/adminCreateLocation';
 import adminCreatePickList from './controller/adminCreatePickList';
 import adminCreateSpecialLocation from './controller/adminCreateSpecialLocation';
 import adminDeduplicateStock from './controller/adminDeduplicateStock';
+import adminDeleteBay from './controller/adminDeleteBay';
 import adminDeletePickList from './controller/adminDeletePickList';
 import adminDeleteReceivingDraft from './controller/adminDeleteReceivingDraft';
 import adminDeleteStockRecord from './controller/adminDeleteStockRecord';
@@ -68,6 +70,8 @@ const locationsRouter = createTRPCRouter({
   create: adminCreateLocation,
   createSpecial: adminCreateSpecialLocation,
   batchCreate: adminBatchCreateLocations,
+  addBay: adminAddBay,
+  deleteBay: adminDeleteBay,
   getMany: adminGetLocations,
   getOne: adminGetLocation,
   update: adminUpdateLocation,

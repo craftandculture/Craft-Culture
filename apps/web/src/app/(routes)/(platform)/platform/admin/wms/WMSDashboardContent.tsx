@@ -7,6 +7,7 @@ import {
   IconBuildingWarehouse,
   IconClipboardCheck,
   IconGripVertical,
+  IconLayoutGrid,
   IconMapPin,
   IconMoon,
   IconPackage,
@@ -455,6 +456,14 @@ const WMSDashboardContent = () => {
               <CardContent className="flex items-center gap-3 p-4">
                 <Icon icon={IconMapPin} size="md" className="text-text-muted" />
                 <Typography variant="bodySm" className="font-medium">Locations</Typography>
+              </CardContent>
+            </Card>
+          </Link>
+          <Link href="/platform/admin/wms/bays">
+            <Card className="cursor-pointer transition-colors hover:border-border-brand">
+              <CardContent className="flex items-center gap-3 p-4">
+                <Icon icon={IconLayoutGrid} size="md" className="text-text-muted" />
+                <Typography variant="bodySm" className="font-medium">Bays</Typography>
               </CardContent>
             </Card>
           </Link>
