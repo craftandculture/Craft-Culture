@@ -1,6 +1,7 @@
 import { createTRPCRouter } from '@/lib/trpc/trpc';
 
 import adminAddBay from './controller/adminAddBay';
+import adminAddCaseToPallet from './controller/adminAddCaseToPallet';
 import adminAddOrdersToBatch from './controller/adminAddOrdersToBatch';
 import adminAddZohoOrdersToBatch from './controller/adminAddZohoOrdersToBatch';
 import adminAdjustStockQuantity from './controller/adminAdjustStockQuantity';
@@ -11,6 +12,7 @@ import adminCompletePickList from './controller/adminCompletePickList';
 import adminCreateCaseLabels from './controller/adminCreateCaseLabels';
 import adminCreateDispatchBatch from './controller/adminCreateDispatchBatch';
 import adminCreateLocation from './controller/adminCreateLocation';
+import adminCreatePallet from './controller/adminCreatePallet';
 import adminCreatePickList from './controller/adminCreatePickList';
 import adminCreateSpecialLocation from './controller/adminCreateSpecialLocation';
 import adminDeduplicateStock from './controller/adminDeduplicateStock';
@@ -32,6 +34,10 @@ import adminGetLocationByBarcode from './controller/adminGetLocationByBarcode';
 import adminGetLocationLabels from './controller/adminGetLocationLabels';
 import adminGetLocations from './controller/adminGetLocations';
 import adminGetMovementHistory from './controller/adminGetMovementHistory';
+import adminGetPallet from './controller/adminGetPallet';
+import adminGetPalletByBarcode from './controller/adminGetPalletByBarcode';
+import adminGetPalletLabel from './controller/adminGetPalletLabel';
+import adminGetPallets from './controller/adminGetPallets';
 import adminGetPartnerRequests from './controller/adminGetPartnerRequests';
 import adminGetPendingShipments from './controller/adminGetPendingShipments';
 import adminGetPickList from './controller/adminGetPickList';
@@ -44,18 +50,21 @@ import adminGetStockByProduct from './controller/adminGetStockByProduct';
 import adminGetStockOverview from './controller/adminGetStockOverview';
 import adminImportStock from './controller/adminImportStock';
 import adminMarkLabelsPrinted from './controller/adminMarkLabelsPrinted';
+import adminMovePallet from './controller/adminMovePallet';
 import adminPickItem from './controller/adminPickItem';
 import adminPutaway from './controller/adminPutaway';
 import adminRebuildStockFromMovements from './controller/adminRebuildStockFromMovements';
 import adminReceiveShipment from './controller/adminReceiveShipment';
 import adminReconcileStock from './controller/adminReconcileStock';
 import adminReleaseReservation from './controller/adminReleaseReservation';
+import adminRemoveCaseFromPallet from './controller/adminRemoveCaseFromPallet';
 import adminRemoveOrderFromBatch from './controller/adminRemoveOrderFromBatch';
 import adminRepack from './controller/adminRepack';
 import adminReprintCaseLabels from './controller/adminReprintCaseLabels';
 import adminReserveStock from './controller/adminReserveStock';
 import adminResolvePartnerRequest from './controller/adminResolvePartnerRequest';
 import adminSaveReceivingDraft from './controller/adminSaveReceivingDraft';
+import adminSealPallet from './controller/adminSealPallet';
 import adminSearchStock from './controller/adminSearchStock';
 import adminSyncStockToZoho from './controller/adminSyncStockToZoho';
 import adminTransferOwnership from './controller/adminTransferOwnership';
@@ -156,6 +165,18 @@ const dispatchRouter = createTRPCRouter({
   generateDeliveryNote: adminGenerateDeliveryNote,
 });
 
+const palletRouter = createTRPCRouter({
+  create: adminCreatePallet,
+  addCase: adminAddCaseToPallet,
+  removeCase: adminRemoveCaseFromPallet,
+  seal: adminSealPallet,
+  move: adminMovePallet,
+  getOne: adminGetPallet,
+  getMany: adminGetPallets,
+  getByBarcode: adminGetPalletByBarcode,
+  getLabel: adminGetPalletLabel,
+});
+
 const adminRouter = createTRPCRouter({
   locations: locationsRouter,
   receiving: receivingRouter,
@@ -165,6 +186,7 @@ const adminRouter = createTRPCRouter({
   ownership: ownershipRouter,
   picking: pickingRouter,
   dispatch: dispatchRouter,
+  pallets: palletRouter,
 });
 
 const partnerRouter = createTRPCRouter({
