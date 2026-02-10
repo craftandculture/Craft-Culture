@@ -20,6 +20,7 @@ import adminDeleteReceivingDraft from './controller/adminDeleteReceivingDraft';
 import adminDeleteStockRecord from './controller/adminDeleteStockRecord';
 import adminGenerateDeliveryNote from './controller/adminGenerateDeliveryNote';
 import adminGetAllStockRecords from './controller/adminGetAllStockRecords';
+import adminGetBayDetails from './controller/adminGetBayDetails';
 import adminGetBayTotems from './controller/adminGetBayTotems';
 import adminGetCaseByBarcode from './controller/adminGetCaseByBarcode';
 import adminGetCaseLabels from './controller/adminGetCaseLabels';
@@ -60,6 +61,7 @@ import adminSyncStockToZoho from './controller/adminSyncStockToZoho';
 import adminTransferOwnership from './controller/adminTransferOwnership';
 import adminTransferStock from './controller/adminTransferStock';
 import adminUpdateBatchStatus from './controller/adminUpdateBatchStatus';
+import adminUpdateBay from './controller/adminUpdateBay';
 import adminUpdateLocation from './controller/adminUpdateLocation';
 import adminUploadReceivingPhoto from './controller/adminUploadReceivingPhoto';
 import deviceGetBayTotems from './controller/deviceGetBayTotems';
@@ -72,6 +74,8 @@ const locationsRouter = createTRPCRouter({
   batchCreate: adminBatchCreateLocations,
   addBay: adminAddBay,
   deleteBay: adminDeleteBay,
+  getBayDetails: adminGetBayDetails,
+  updateBay: adminUpdateBay,
   getMany: adminGetLocations,
   getOne: adminGetLocation,
   update: adminUpdateLocation,
