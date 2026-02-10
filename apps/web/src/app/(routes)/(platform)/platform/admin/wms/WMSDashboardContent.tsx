@@ -11,6 +11,7 @@ import {
   IconMoon,
   IconPackage,
   IconPackages,
+  IconPallet,
   IconPlus,
   IconSun,
   IconTransfer,
@@ -439,6 +440,14 @@ const WMSDashboardContent = () => {
               <CardContent className="flex items-center gap-3 p-4">
                 <Icon icon={IconBox} size="md" className="text-text-muted" />
                 <Typography variant="bodySm" className="font-medium">Stock</Typography>
+              </CardContent>
+            </Card>
+          </Link>
+          <Link href="/platform/admin/wms/pallets">
+            <Card className="cursor-pointer transition-colors hover:border-border-brand">
+              <CardContent className="flex items-center gap-3 p-4">
+                <Icon icon={IconPallet} size="md" className="text-text-muted" />
+                <Typography variant="bodySm" className="font-medium">Pallets</Typography>
               </CardContent>
             </Card>
           </Link>
