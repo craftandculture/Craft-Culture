@@ -260,7 +260,7 @@ const WMSDispatchBatchDetailPage = () => {
           )}
           {batch.status === 'draft' && (
             <Button
-              variant="primary"
+              variant="default"
               onClick={() => handleUpdateStatus('picking')}
               disabled={updateStatusMutation.isPending || batch.orderCount === 0}
             >
@@ -271,7 +271,7 @@ const WMSDispatchBatchDetailPage = () => {
           )}
           {batch.status === 'picking' && (
             <Button
-              variant="primary"
+              variant="default"
               onClick={() => handleUpdateStatus('staged')}
               disabled={updateStatusMutation.isPending}
             >
@@ -282,7 +282,7 @@ const WMSDispatchBatchDetailPage = () => {
           )}
           {canDispatch && (
             <Button
-              variant="primary"
+              variant="default"
               onClick={() => handleUpdateStatus('dispatched')}
               disabled={updateStatusMutation.isPending}
             >
@@ -554,7 +554,7 @@ const WMSDispatchBatchDetailPage = () => {
                   Cancel
                 </Button>
                 <Button
-                  variant="primary"
+                  variant="default"
                   className="flex-1"
                   onClick={handleAddOrders}
                   disabled={selectedOrderIds.length === 0 || addOrdersMutation.isPending}

@@ -367,7 +367,7 @@ const WMSStockImportPage = () => {
                 </div>
               </div>
               <Button
-                variant="primary"
+                variant="default"
                 onClick={handleImport}
                 disabled={!selectedOwnerId || !selectedLocationId || importMutation.isPending}
                 className="w-full"

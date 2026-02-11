@@ -389,7 +389,7 @@ const WMSTransferPage = () => {
                 <ButtonContent iconLeft={IconArrowLeft}>Back</ButtonContent>
               </Button>
               <Button
-                variant="primary"
+                variant="default"
                 size="lg"
                 className="flex-1"
                 onClick={handleConfirm}
@@ -442,7 +442,7 @@ const WMSTransferPage = () => {
               <Button variant="outline" size="lg" className="flex-1" asChild>
                 <Link href="/platform/admin/wms">Done</Link>
               </Button>
-              <Button variant="primary" size="lg" className="flex-1" onClick={handleScanNext}>
+              <Button variant="default" size="lg" className="flex-1" onClick={handleScanNext}>
                 <ButtonContent iconLeft={IconMapPin}>Transfer More</ButtonContent>
               </Button>
             </div>

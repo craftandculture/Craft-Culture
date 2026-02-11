@@ -94,7 +94,7 @@ const ReconcilePage = () => {
             {/* Rebuild button - when stock is missing/under */}
             {(data?.summary.actualStock ?? 0) < (data?.summary.expectedStock ?? 0) && (
               <Button
-                variant="primary"
+                variant="default"
                 size="sm"
                 onClick={() => {
                   if (confirm('Rebuild stock records from movement history? This will create missing stock records.')) {
@@ -111,7 +111,7 @@ const ReconcilePage = () => {
             {/* Auto-fix button - when stock is over */}
             {(data?.summary.actualStock ?? 0) > (data?.summary.expectedStock ?? 0) && (
               <Button
-                variant="primary"
+                variant="default"
                 size="sm"
                 onClick={() => {
                   if (confirm('Auto-fix will delete orphan records and merge duplicates. Continue?')) {

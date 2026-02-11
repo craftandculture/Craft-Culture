@@ -88,7 +88,7 @@ const WMSDispatchBatchesPage = () => {
                 <Icon icon={IconRefresh} size="sm" />
               </Button>
               <Link href="/platform/admin/wms/dispatch/new">
-                <Button variant="primary" size="sm">
+                <Button variant="default" size="sm">
                   <ButtonContent iconLeft={IconPlus}>New</ButtonContent>
                 </Button>
               </Link>
