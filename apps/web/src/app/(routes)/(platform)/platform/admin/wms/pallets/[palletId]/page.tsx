@@ -50,8 +50,8 @@ const WMSPalletDetailPage = () => {
   });
 
   // Fetch locations for move
-  const { data: locationsData } = useQuery({
-    ...api.wms.admin.locations.getMany.queryOptions({ locationType: 'rack', limit: 100 }),
+  const { data: locations } = useQuery({
+    ...api.wms.admin.locations.getMany.queryOptions({ locationType: 'rack' }),
     enabled: showMoveModal,
   });
 
@@ -439,13 +439,13 @@ const WMSPalletDetailPage = () => {
               </div>
             </CardContent>
             <div className="flex-1 overflow-y-auto p-4">
-              {!locationsData?.locations.length ? (
+              {!locations?.length ? (
                 <Typography variant="bodySm" colorRole="muted" className="text-center py-8">
                   No locations available
                 </Typography>
               ) : (
                 <div className="space-y-2">
-                  {locationsData.locations.map((location) => {
+                  {locations.map((location) => {
                     const isSelected = selectedLocationId === location.id;
                     const isCurrent = location.id === pallet.locationId;
                     return (
