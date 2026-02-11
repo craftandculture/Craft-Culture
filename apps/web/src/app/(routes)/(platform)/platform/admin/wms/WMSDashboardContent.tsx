@@ -4,6 +4,7 @@ import {
   IconAlertTriangle,
   IconBarcode,
   IconBox,
+  IconBoxSeam,
   IconBuildingWarehouse,
   IconClipboardCheck,
   IconGripVertical,
@@ -11,7 +12,6 @@ import {
   IconMoon,
   IconPackage,
   IconPackages,
-  IconPallet,
   IconPlus,
   IconSun,
   IconTransfer,
@@ -446,7 +446,7 @@ const WMSDashboardContent = () => {
           <Link href="/platform/admin/wms/pallets">
             <Card className="cursor-pointer transition-colors hover:border-border-brand">
               <CardContent className="flex items-center gap-3 p-4">
-                <Icon icon={IconPallet} size="md" className="text-text-muted" />
+                <Icon icon={IconBoxSeam} size="md" className="text-text-muted" />
                 <Typography variant="bodySm" className="font-medium">Pallets</Typography>
               </CardContent>
             </Card>
