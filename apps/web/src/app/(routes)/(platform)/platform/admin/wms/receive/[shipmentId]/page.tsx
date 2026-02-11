@@ -859,7 +859,7 @@ const WMSReceiveShipmentPage = () => {
             {/* Complete Receiving button at bottom of list */}
             {allComplete && (
               <Button
-                variant="primary"
+                variant="default"
                 size="lg"
                 className="h-14 w-full text-lg"
                 onClick={handleCompleteReceiving}
@@ -1006,7 +1006,7 @@ const WMSReceiveShipmentPage = () => {
                   </div>
 
                   <Button
-                    variant="primary"
+                    variant="default"
                     size="lg"
                     className="h-14 w-full text-lg"
                     onClick={handleVerify}
@@ -1123,7 +1123,7 @@ const WMSReceiveShipmentPage = () => {
                       {/* Download labels button (2-step print: download → Printer Setup Utility) */}
                       {scannedLocationId && (
                         <Button
-                          variant="primary"
+                          variant="default"
                           size="lg"
                           className="h-14 w-full text-lg"
                           onClick={handlePrintLabels}
@@ -1177,7 +1177,7 @@ const WMSReceiveShipmentPage = () => {
 
                       {currentProductIndex < totalProducts - 1 ? (
                         <Button
-                          variant="primary"
+                          variant="default"
                           size="lg"
                           className="h-14 w-full text-lg"
                           onClick={handleNextProduct}
@@ -1186,7 +1186,7 @@ const WMSReceiveShipmentPage = () => {
                         </Button>
                       ) : (
                         <Button
-                          variant="primary"
+                          variant="default"
                           size="lg"
                           className="h-14 w-full text-lg"
                           onClick={handleCompleteReceiving}
@@ -1251,7 +1251,7 @@ const WMSReceiveShipmentPage = () => {
                     {Array.from(receivedItems.values()).reduce((sum, item) => sum + item.receivedCases, 0)} total cases
                   </Typography>
                   <Button
-                    variant="primary"
+                    variant="default"
                     size="lg"
                     className="mt-4 h-14 w-full text-lg"
                     onClick={handleCompleteReceiving}

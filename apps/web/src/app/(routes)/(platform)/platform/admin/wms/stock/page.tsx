@@ -115,7 +115,7 @@ const WMSStockPage = () => {
             </Typography>
             <div className="flex flex-wrap gap-2">
               <Link href="/platform/admin/wms/stock/check">
-                <Button variant="primary" size="sm">
+                <Button variant="default" size="sm">
                   <ButtonContent iconLeft={IconClipboardCheck}>Check</ButtonContent>
                 </Button>
               </Link>

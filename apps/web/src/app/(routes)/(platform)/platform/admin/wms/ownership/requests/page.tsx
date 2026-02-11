@@ -269,7 +269,7 @@ const WMSPartnerRequestsPage = () => {
                       {request.status === 'pending' && (
                         <div className="flex gap-2 sm:flex-col">
                           <Button
-                            variant="primary"
+                            variant="default"
                             size="sm"
                             onClick={() =>
                               handleResolve(request.id, request.requestNumber, request.productName, 'approved')

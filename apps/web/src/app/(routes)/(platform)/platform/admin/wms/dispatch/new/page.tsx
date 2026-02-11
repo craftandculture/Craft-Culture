@@ -158,7 +158,7 @@ const NewDispatchBatchPage = () => {
         {selectedDistributorId && (
           <div className="fixed bottom-0 left-0 right-0 border-t border-border-primary bg-fill-primary p-4 sm:static sm:border-0 sm:bg-transparent sm:p-0">
             <Button
-              variant="primary"
+              variant="default"
               className="w-full"
               onClick={handleCreate}
               disabled={createMutation.isPending}

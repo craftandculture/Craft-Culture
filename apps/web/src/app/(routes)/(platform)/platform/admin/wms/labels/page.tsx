@@ -377,7 +377,7 @@ const WMSLabelsPage = () => {
             {/* Print to Zebra button for location labels, bays, and totems */}
             {(activeTab === 'location' || activeTab === 'bay' || activeTab === 'totem') && (
               <Button
-                variant="primary"
+                variant="default"
                 onClick={handlePrintToZebra}
                 disabled={selectedLabels.size === 0 || (!zebraConnected && !isMobile) || isPrintingToZebra}
               >

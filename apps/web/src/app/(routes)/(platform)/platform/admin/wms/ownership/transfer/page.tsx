@@ -434,7 +434,7 @@ const WMSOwnershipTransferPage = () => {
               <Button variant="outline" className="flex-1" onClick={() => setStep('select-owner')}>
                 <ButtonContent iconLeft={IconX}>Back</ButtonContent>
               </Button>
-              <Button variant="primary" className="flex-1" onClick={() => setStep('confirm')}>
+              <Button variant="default" className="flex-1" onClick={() => setStep('confirm')}>
                 <ButtonContent iconRight={IconArrowRight}>Continue</ButtonContent>
               </Button>
             </div>
@@ -499,7 +499,7 @@ const WMSOwnershipTransferPage = () => {
                 <ButtonContent iconLeft={IconX}>Back</ButtonContent>
               </Button>
               <Button
-                variant="primary"
+                variant="default"
                 className="flex-1"
                 onClick={handleConfirm}
                 disabled={transferMutation.isPending}
@@ -551,7 +551,7 @@ const WMSOwnershipTransferPage = () => {
               <Button variant="outline" className="flex-1" asChild>
                 <Link href="/platform/admin/wms">Done</Link>
               </Button>
-              <Button variant="primary" className="flex-1" onClick={handleReset}>
+              <Button variant="default" className="flex-1" onClick={handleReset}>
                 <ButtonContent iconLeft={IconUser}>Transfer More</ButtonContent>
               </Button>
             </div>

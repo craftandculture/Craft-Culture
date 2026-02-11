@@ -449,7 +449,7 @@ const WMSRepackPage = () => {
                 <ButtonContent iconLeft={IconArrowLeft}>Back</ButtonContent>
               </Button>
               <Button
-                variant="primary"
+                variant="default"
                 size="lg"
                 className="flex-1"
                 onClick={() => setStep('remove-case')}
@@ -496,7 +496,7 @@ const WMSRepackPage = () => {
                 <ButtonContent iconLeft={IconArrowLeft}>Back</ButtonContent>
               </Button>
               <Button
-                variant="primary"
+                variant="default"
                 size="lg"
                 className="flex-1"
                 onClick={() => setStep('physical-repack')}
@@ -567,7 +567,7 @@ const WMSRepackPage = () => {
                 <ButtonContent iconLeft={IconArrowLeft}>Back</ButtonContent>
               </Button>
               <Button
-                variant="primary"
+                variant="default"
                 size="lg"
                 className="flex-1"
                 onClick={() => setStep('scan-destination-bay')}
@@ -692,7 +692,7 @@ const WMSRepackPage = () => {
             </Card>
 
             <Button
-              variant="primary"
+              variant="default"
               size="lg"
               className="w-full"
               onClick={handleDownloadLabels}

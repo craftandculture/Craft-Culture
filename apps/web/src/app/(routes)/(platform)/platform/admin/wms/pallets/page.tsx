@@ -83,7 +83,7 @@ const WMSPalletsPage = () => {
                 <Icon icon={IconRefresh} size="sm" />
               </Button>
               <Link href="/platform/admin/wms/pallets/new">
-                <Button variant="primary" size="sm">
+                <Button variant="default" size="sm">
                   <ButtonContent iconLeft={IconPlus}>New</ButtonContent>
                 </Button>
               </Link>

@@ -2,9 +2,13 @@
 
 import {
   IconArrowLeft,
+  IconBox,
   IconCheck,
+  IconForklift,
   IconLayoutGrid,
   IconLoader2,
+  IconPackages,
+  IconPencil,
   IconPlus,
   IconPrinter,
   IconTrash,
@@ -42,10 +46,16 @@ const BayConfigurationPage = () => {
   const [isMobile, setIsMobile] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
+  // Edit bay state
+  const [editingBay, setEditingBay] = useState<{ aisle: string; bay: string } | null>(null);
+  const [editStorageMethod, setEditStorageMethod] = useState<'shelf' | 'pallet' | 'mixed'>('shelf');
+  const [editForkliftFrom, setEditForkliftFrom] = useState('01');
+
   // Add bay form state
   const [newAisle, setNewAisle] = useState('');
   const [newBay, setNewBay] = useState('');
   const [newLevels, setNewLevels] = useState('00,01,02,03');
+  const [newStorageMethod, setNewStorageMethod] = useState<'shelf' | 'pallet'>('shelf');
   const [forkliftFromLevel, setForkliftFromLevel] = useState('01');
 
   // Print function from ZebraPrint component
@@ -67,6 +77,23 @@ const BayConfigurationPage = () => {
   const { data: bayTotemsData, isLoading } = useQuery({
     ...api.wms.admin.labels.getBayTotems.queryOptions({}),
   });
+
+  // Get bay details when editing
+  const { data: bayDetails, isLoading: bayDetailsLoading } = useQuery({
+    ...api.wms.admin.locations.getBayDetails.queryOptions({
+      aisle: editingBay?.aisle || '',
+      bay: editingBay?.bay || '',
+    }),
+    enabled: !!editingBay,
+  });
+
+  // Update edit form when bay details load
+  useEffect(() => {
+    if (bayDetails) {
+      setEditStorageMethod((bayDetails.settings.storageMethod as 'shelf' | 'pallet' | 'mixed') || 'shelf');
+      setEditForkliftFrom(bayDetails.settings.forkliftFromLevel || '01');
+    }
+  }, [bayDetails]);
 
   // Group bays by aisle for display
   const baysByAisle = useMemo(() => {
@@ -120,7 +147,6 @@ const BayConfigurationPage = () => {
         queryKey: api.wms.admin.locations.getMany.queryKey({}),
       });
       setConfirmDelete(null);
-      // Remove from selection if selected
       setSelectedBays((prev) => {
         const newSet = new Set(prev);
         newSet.delete(`${result.aisle}-${result.bay}`);
@@ -130,6 +156,29 @@ const BayConfigurationPage = () => {
     onError: (error) => {
       toast.error(error.message || 'Failed to delete bay');
       setConfirmDelete(null);
+    },
+  });
+
+  const updateBayMutation = useMutation({
+    ...api.wms.admin.locations.updateBay.mutationOptions(),
+    onSuccess: (result) => {
+      toast.success(`Updated bay ${result.aisle}-${result.bay}`);
+      void queryClient.invalidateQueries({
+        queryKey: api.wms.admin.labels.getBayTotems.queryKey({}),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: api.wms.admin.locations.getMany.queryKey({}),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: api.wms.admin.locations.getBayDetails.queryKey({
+          aisle: result.aisle,
+          bay: result.bay,
+        }),
+      });
+      setEditingBay(null);
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to update bay');
     },
   });
 
@@ -158,6 +207,17 @@ const BayConfigurationPage = () => {
 
   const handleDeleteBay = (aisle: string, bay: string) => {
     deleteBayMutation.mutate({ aisle, bay });
+  };
+
+  const handleUpdateBay = () => {
+    if (!editingBay) return;
+
+    updateBayMutation.mutate({
+      aisle: editingBay.aisle,
+      bay: editingBay.bay,
+      storageMethod: editStorageMethod,
+      forkliftFromLevel: editForkliftFrom,
+    });
   };
 
   const toggleBay = (bayKey: string) => {
@@ -194,12 +254,10 @@ const BayConfigurationPage = () => {
     setIsPrintingToZebra(true);
 
     try {
-      // Filter to only selected totems
       const selectedTotems = bayTotemsData.totems.filter((totem) =>
         selectedBays.has(`${totem.aisle}-${totem.bay}`),
       );
 
-      // Generate ZPL for compact totems (4x2 vertical)
       const compactData: CompactTotemData[] = selectedTotems.map((totem, index) => ({
         aisle: totem.aisle,
         bay: totem.bay,
@@ -286,7 +344,7 @@ const BayConfigurationPage = () => {
 
             {selectedBays.size > 0 && (
               <Button
-                variant="primary"
+                variant="default"
                 onClick={handlePrintToZebra}
                 disabled={(!zebraConnected && !isMobile) || isPrintingToZebra}
               >
@@ -345,7 +403,38 @@ const BayConfigurationPage = () => {
                   placeholder="00,01,02,03"
                   className="w-full rounded-lg border border-border-primary bg-fill-secondary px-3 py-2 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary"
                 />
-                <p className="mt-1 text-xs text-text-muted">00 = floor level</p>
+                <p className="mt-1 text-xs text-text-muted">00 = ground level (no forklift)</p>
+              </div>
+
+              {/* Storage Method */}
+              <div>
+                <label className="mb-2 block text-sm font-medium">Storage Method</label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setNewStorageMethod('shelf')}
+                    className={`flex items-center justify-center gap-2 rounded-lg border-2 p-3 transition-colors ${
+                      newStorageMethod === 'shelf'
+                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30'
+                        : 'border-border-primary hover:border-blue-300'
+                    }`}
+                  >
+                    <Icon icon={IconBox} size="md" className={newStorageMethod === 'shelf' ? 'text-blue-600' : 'text-text-muted'} />
+                    <span className={newStorageMethod === 'shelf' ? 'font-medium text-blue-600' : ''}>Shelf</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setNewStorageMethod('pallet')}
+                    className={`flex items-center justify-center gap-2 rounded-lg border-2 p-3 transition-colors ${
+                      newStorageMethod === 'pallet'
+                        ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/30'
+                        : 'border-border-primary hover:border-purple-300'
+                    }`}
+                  >
+                    <Icon icon={IconPackages} size="md" className={newStorageMethod === 'pallet' ? 'text-purple-600' : 'text-text-muted'} />
+                    <span className={newStorageMethod === 'pallet' ? 'font-medium text-purple-600' : ''}>Pallet</span>
+                  </button>
+                </div>
               </div>
 
               <div>
@@ -358,6 +447,7 @@ const BayConfigurationPage = () => {
                   maxLength={2}
                   className="w-full rounded-lg border border-border-primary bg-fill-secondary px-3 py-2 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary"
                 />
+                <p className="mt-1 text-xs text-text-muted">Levels at or above this require forklift</p>
               </div>
 
               <div className="flex justify-end gap-3 pt-2">
@@ -370,6 +460,121 @@ const BayConfigurationPage = () => {
                   </ButtonContent>
                 </Button>
               </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Edit Bay Panel */}
+        {editingBay && (
+          <Card className="border-blue-300 bg-blue-50/50 dark:border-blue-700 dark:bg-blue-900/20">
+            <div className="flex items-center justify-between border-b border-blue-200 p-4 dark:border-blue-800">
+              <div className="flex items-center gap-3">
+                <Typography variant="headingMd">
+                  Edit Bay {editingBay.aisle}-{editingBay.bay}
+                </Typography>
+              </div>
+              <button
+                onClick={() => setEditingBay(null)}
+                className="rounded-lg p-2 text-text-muted hover:bg-fill-secondary hover:text-text-primary"
+              >
+                <IconX className="h-5 w-5" />
+              </button>
+            </div>
+            <CardContent className="space-y-4 p-4">
+              {bayDetailsLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Icon icon={IconLoader2} className="animate-spin" colorRole="muted" />
+                </div>
+              ) : (
+                <>
+                  {/* Levels display */}
+                  <div>
+                    <Typography variant="labelMd" className="mb-2">
+                      Levels ({bayDetails?.locations.length || 0})
+                    </Typography>
+                    <div className="flex flex-wrap gap-2">
+                      {bayDetails?.locations.map((loc) => (
+                        <div
+                          key={loc.id}
+                          className={`flex items-center gap-1 rounded-lg px-3 py-1.5 text-sm ${
+                            loc.requiresForklift
+                              ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300'
+                              : 'bg-fill-secondary text-text-primary'
+                          }`}
+                        >
+                          <span className="font-mono font-medium">{loc.level}</span>
+                          {loc.requiresForklift && <IconForklift className="h-3.5 w-3.5" />}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Storage Method */}
+                  <div>
+                    <Typography variant="labelMd" className="mb-2">
+                      Storage Method
+                    </Typography>
+                    <div className="grid grid-cols-2 gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setEditStorageMethod('shelf')}
+                        className={`flex items-center justify-center gap-2 rounded-lg border-2 p-3 transition-colors ${
+                          editStorageMethod === 'shelf'
+                            ? 'border-blue-500 bg-blue-100 dark:bg-blue-900/50'
+                            : 'border-border-primary bg-fill-primary hover:border-blue-300'
+                        }`}
+                      >
+                        <Icon icon={IconBox} size="md" className={editStorageMethod === 'shelf' ? 'text-blue-600' : 'text-text-muted'} />
+                        <span className={editStorageMethod === 'shelf' ? 'font-medium text-blue-700 dark:text-blue-300' : ''}>Shelf</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEditStorageMethod('pallet')}
+                        className={`flex items-center justify-center gap-2 rounded-lg border-2 p-3 transition-colors ${
+                          editStorageMethod === 'pallet'
+                            ? 'border-purple-500 bg-purple-100 dark:bg-purple-900/50'
+                            : 'border-border-primary bg-fill-primary hover:border-purple-300'
+                        }`}
+                      >
+                        <Icon icon={IconPackages} size="md" className={editStorageMethod === 'pallet' ? 'text-purple-600' : 'text-text-muted'} />
+                        <span className={editStorageMethod === 'pallet' ? 'font-medium text-purple-700 dark:text-purple-300' : ''}>Pallet</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Forklift From Level */}
+                  <div>
+                    <Typography variant="labelMd" className="mb-2">
+                      Forklift Required From Level
+                    </Typography>
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="text"
+                        value={editForkliftFrom}
+                        onChange={(e) => setEditForkliftFrom(e.target.value)}
+                        placeholder="01"
+                        maxLength={2}
+                        className="w-20 rounded-lg border border-border-primary bg-fill-primary px-3 py-2 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                      />
+                      <Typography variant="bodySm" colorRole="muted">
+                        Level {editForkliftFrom} and above require forklift
+                      </Typography>
+                    </div>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex justify-end gap-3 pt-2">
+                    <Button variant="outline" onClick={() => setEditingBay(null)}>
+                      Cancel
+                    </Button>
+                    <Button onClick={handleUpdateBay} disabled={updateBayMutation.isPending}>
+                      <ButtonContent iconLeft={updateBayMutation.isPending ? IconLoader2 : IconCheck}>
+                        {updateBayMutation.isPending ? 'Saving...' : 'Save Changes'}
+                      </ButtonContent>
+                    </Button>
+                  </div>
+                </>
+              )}
             </CardContent>
           </Card>
         )}
@@ -453,15 +658,18 @@ const BayConfigurationPage = () => {
                       const bayKey = `${totem.aisle}-${totem.bay}`;
                       const isSelected = selectedBays.has(bayKey);
                       const isConfirmingDelete = confirmDelete === bayKey;
+                      const isEditing = editingBay?.aisle === totem.aisle && editingBay?.bay === totem.bay;
 
                       return (
-                        <div key={bayKey} className="relative">
+                        <div key={bayKey} className="group relative">
                           <button
                             onClick={() => toggleBay(bayKey)}
                             className={`w-full rounded-lg border-2 p-3 text-center transition-colors ${
-                              isSelected
-                                ? 'border-brand-primary bg-fill-brand-secondary'
-                                : 'border-border-primary hover:border-brand-primary'
+                              isEditing
+                                ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30'
+                                : isSelected
+                                  ? 'border-brand-primary bg-fill-brand-secondary'
+                                  : 'border-border-primary hover:border-brand-primary'
                             }`}
                           >
                             <Typography variant="headingSm" className="font-mono">
@@ -470,6 +678,17 @@ const BayConfigurationPage = () => {
                             <Typography variant="bodyXs" colorRole="muted">
                               {totem.levels.length} levels
                             </Typography>
+                          </button>
+
+                          {/* Edit button */}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setEditingBay({ aisle: totem.aisle, bay: totem.bay });
+                            }}
+                            className="absolute -left-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-blue-500 text-white opacity-0 shadow transition-opacity hover:bg-blue-600 group-hover:opacity-100"
+                          >
+                            <IconPencil className="h-3 w-3" />
                           </button>
 
                           {/* Delete button */}
@@ -499,7 +718,7 @@ const BayConfigurationPage = () => {
                                 e.stopPropagation();
                                 setConfirmDelete(bayKey);
                               }}
-                              className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-fill-tertiary text-text-muted opacity-0 shadow transition-opacity hover:bg-red-100 hover:text-red-600 group-hover:opacity-100 [div:hover>&]:opacity-100"
+                              className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-fill-tertiary text-text-muted opacity-0 shadow transition-opacity hover:bg-red-100 hover:text-red-600 group-hover:opacity-100"
                             >
                               <IconTrash className="h-3 w-3" />
                             </button>
@@ -515,13 +734,13 @@ const BayConfigurationPage = () => {
         )}
 
         {/* Quick Actions */}
-        {selectedBays.size > 0 && (
+        {selectedBays.size > 0 && !editingBay && (
           <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2">
             <Card className="shadow-xl">
               <CardContent className="flex items-center gap-4 p-4">
                 <Typography variant="labelMd">{selectedBays.size} bay(s) selected</Typography>
                 <Button
-                  variant="primary"
+                  variant="default"
                   onClick={handlePrintToZebra}
                   disabled={(!zebraConnected && !isMobile) || isPrintingToZebra}
                 >

@@ -244,7 +244,7 @@ const WMSPalletDetailPage = () => {
                   </div>
                   <Button
                     type="submit"
-                    variant="primary"
+                    variant="default"
                     disabled={!scanInput.trim() || addCaseMutation.isPending}
                   >
                     <ButtonContent iconLeft={addCaseMutation.isPending ? IconLoader2 : IconCheck}>
@@ -272,7 +272,7 @@ const WMSPalletDetailPage = () => {
         <div className="flex flex-wrap gap-3">
           {canSeal && (
             <Button
-              variant="primary"
+              variant="default"
               onClick={() => sealMutation.mutate({ palletId })}
               disabled={sealMutation.isPending}
             >
@@ -499,7 +499,7 @@ const WMSPalletDetailPage = () => {
                   Cancel
                 </Button>
                 <Button
-                  variant="primary"
+                  variant="default"
                   className="flex-1"
                   onClick={handleMove}
                   disabled={!selectedLocationId || moveMutation.isPending}

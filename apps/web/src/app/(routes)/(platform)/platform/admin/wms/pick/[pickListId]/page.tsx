@@ -404,7 +404,7 @@ const WMSPickListDetailPage = () => {
                   <ButtonContent iconLeft={IconDownload}>Download Case Labels</ButtonContent>
                 </Button>
                 <Button
-                  variant="primary"
+                  variant="default"
                   onClick={handleComplete}
                   disabled={completeMutation.isPending}
                 >
@@ -462,7 +462,7 @@ const WMSPickListDetailPage = () => {
             </Card>
 
             {/* Start Picking Button */}
-            <Button variant="primary" className="w-full py-4" onClick={startPicking}>
+            <Button variant="default" className="w-full py-4" onClick={startPicking}>
               <ButtonContent iconLeft={IconPackage}>Start Picking</ButtonContent>
             </Button>
 
@@ -591,7 +591,7 @@ const WMSPickListDetailPage = () => {
                       autoFocus
                     />
                     <Button
-                      variant="primary"
+                      variant="default"
                       onClick={() => {
                         if (scanInput.trim()) {
                           void handleScan(scanInput.trim());
@@ -652,7 +652,7 @@ const WMSPickListDetailPage = () => {
                       autoFocus
                     />
                     <Button
-                      variant="primary"
+                      variant="default"
                       onClick={() => {
                         if (scanInput.trim()) {
                           void handleScan(scanInput.trim());
@@ -705,7 +705,7 @@ const WMSPickListDetailPage = () => {
                 Cancel
               </Button>
               <Button
-                variant="primary"
+                variant="default"
                 className="flex-1"
                 onClick={confirmPick}
                 disabled={pickItemMutation.isPending || !pickedLocationId || !caseVerified}
