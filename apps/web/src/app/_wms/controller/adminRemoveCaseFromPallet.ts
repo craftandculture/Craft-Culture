@@ -13,14 +13,14 @@ import { removeCaseFromPalletSchema } from '../schemas/palletSchema';
  * @example
  *   await trpcClient.wms.admin.pallets.removeCase.mutate({
  *     palletId: "pallet-uuid",
- *     caseBarcode: "CASE-1010279-2015-06-00750-001",
+ *     caseId: "pallet-case-uuid",
  *     reason: "Wrong product"
  *   });
  */
 const adminRemoveCaseFromPallet = adminProcedure
   .input(removeCaseFromPalletSchema)
   .mutation(async ({ input, ctx }) => {
-    const { palletId, caseBarcode, reason } = input;
+    const { palletId, caseId, reason } = input;
 
     // Get pallet
     const [pallet] = await db
@@ -42,27 +42,14 @@ const adminRemoveCaseFromPallet = adminProcedure
       });
     }
 
-    // Get case label by barcode
-    const [caseLabel] = await db
-      .select()
-      .from(wmsCaseLabels)
-      .where(eq(wmsCaseLabels.barcode, caseBarcode));
-
-    if (!caseLabel) {
-      throw new TRPCError({
-        code: 'NOT_FOUND',
-        message: `Case with barcode ${caseBarcode} not found`,
-      });
-    }
-
     // Find the pallet case record
     const [palletCase] = await db
       .select()
       .from(wmsPalletCases)
       .where(
         and(
+          eq(wmsPalletCases.id, caseId),
           eq(wmsPalletCases.palletId, palletId),
-          eq(wmsPalletCases.caseLabelId, caseLabel.id),
           isNull(wmsPalletCases.removedAt),
         ),
       );
@@ -72,6 +59,15 @@ const adminRemoveCaseFromPallet = adminProcedure
         code: 'NOT_FOUND',
         message: 'This case is not on this pallet',
       });
+    }
+
+    // Get case label for movement record
+    let caseLabel = null;
+    if (palletCase.caseLabelId) {
+      [caseLabel] = await db
+        .select()
+        .from(wmsCaseLabels)
+        .where(eq(wmsCaseLabels.id, palletCase.caseLabelId));
     }
 
     // Mark case as removed
@@ -97,8 +93,8 @@ const adminRemoveCaseFromPallet = adminProcedure
     // Create movement record
     await db.insert(wmsStockMovements).values({
       movementType: 'pallet_remove',
-      lwin18: caseLabel.lwin18,
-      productName: caseLabel.productName,
+      lwin18: palletCase.lwin18,
+      productName: palletCase.productName,
       quantityCases: 1,
       quantityBottles: 0,
       fromLocationId: pallet.locationId,
@@ -106,7 +102,7 @@ const adminRemoveCaseFromPallet = adminProcedure
       ownerName: pallet.ownerName,
       performedBy: ctx.user.id,
       notes: `Removed from pallet ${pallet.palletCode}${reason ? `: ${reason}` : ''}`,
-      scannedBarcodes: [caseBarcode],
+      scannedBarcodes: caseLabel ? [caseLabel.barcode] : [],
     });
 
     // Get updated pallet
@@ -119,11 +115,10 @@ const adminRemoveCaseFromPallet = adminProcedure
       success: true,
       pallet: updatedPallet,
       removedCase: {
-        barcode: caseLabel.barcode,
-        lwin18: caseLabel.lwin18,
-        productName: caseLabel.productName,
+        lwin18: palletCase.lwin18,
+        productName: palletCase.productName,
       },
-      message: `Removed ${caseLabel.productName} from pallet ${pallet.palletCode}`,
+      message: `Removed ${palletCase.productName} from pallet ${pallet.palletCode}`,
     };
   });
 

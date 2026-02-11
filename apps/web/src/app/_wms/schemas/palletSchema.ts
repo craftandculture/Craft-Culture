@@ -26,7 +26,7 @@ export type AddCaseToPalletInput = z.infer<typeof addCaseToPalletSchema>;
  */
 export const removeCaseFromPalletSchema = z.object({
   palletId: z.string().uuid(),
-  caseBarcode: z.string().min(1),
+  caseId: z.string().uuid(),
   reason: z.string().optional(),
 });
 
