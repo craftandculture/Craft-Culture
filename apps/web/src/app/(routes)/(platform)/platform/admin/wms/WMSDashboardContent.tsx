@@ -304,7 +304,7 @@ const WMSDashboardContent = () => {
                     </Typography>
                   </div>
                 </div>
-                <Button variant="destructive" size="sm" asChild>
+                <Button colorRole="danger" size="sm" asChild>
                   <Link href="/platform/admin/wms/stock/reconcile">
                     <ButtonContent>Fix Now</ButtonContent>
                   </Link>
