@@ -21,7 +21,9 @@ const generatePalletCode = async () => {
     WHERE pallet_code LIKE ${prefix + '%'}
   `);
 
-  const maxSeq = result.rows[0]?.max_seq ? parseInt(result.rows[0].max_seq, 10) : 0;
+  // Handle both array and { rows: [] } return formats from db.execute
+  const rows = Array.isArray(result) ? result : result.rows ?? [];
+  const maxSeq = rows[0]?.max_seq ? parseInt(rows[0].max_seq, 10) : 0;
   const nextSeq = (maxSeq + 1).toString().padStart(4, '0');
 
   return `${prefix}${nextSeq}`;
