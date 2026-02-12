@@ -396,7 +396,7 @@ const StockCheckPage = () => {
       setScanError(null);
 
       // Check if it's a pallet barcode - redirect to pallet detail page
-      if (barcode.startsWith('PALLET-')) {
+      if (barcode.startsWith('PALLET')) {
         try {
           const result = await trpcClient.wms.admin.pallets.getByBarcode.query({ barcode });
           if (result.pallet) {
@@ -426,7 +426,7 @@ const StockCheckPage = () => {
       setScanError(null);
 
       // Check if it's a pallet barcode - redirect to pallet detail page
-      if (barcode.startsWith('PALLET-')) {
+      if (barcode.startsWith('PALLET')) {
         try {
           const result = await trpcClient.wms.admin.pallets.getByBarcode.query({ barcode });
           if (result.pallet) {
