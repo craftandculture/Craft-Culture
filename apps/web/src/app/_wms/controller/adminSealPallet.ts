@@ -6,6 +6,7 @@ import { wmsPallets, wmsStockMovements } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
 import { sealPalletSchema } from '../schemas/palletSchema';
+import generateMovementNumber from '../utils/generateMovementNumber';
 
 /**
  * Seal a pallet (lock contents, ready for storage)
@@ -61,7 +62,9 @@ const adminSealPallet = adminProcedure
       .returning();
 
     // Create movement record
+    const movementNumber = await generateMovementNumber();
     await db.insert(wmsStockMovements).values({
+      movementNumber,
       movementType: 'pallet_move',
       lwin18: 'PALLET',
       productName: `Pallet ${pallet.palletCode}`,

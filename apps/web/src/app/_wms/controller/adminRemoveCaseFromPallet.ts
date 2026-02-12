@@ -6,6 +6,7 @@ import { wmsCaseLabels, wmsPalletCases, wmsPallets, wmsStockMovements } from '@/
 import { adminProcedure } from '@/lib/trpc/procedures';
 
 import { removeCaseFromPalletSchema } from '../schemas/palletSchema';
+import generateMovementNumber from '../utils/generateMovementNumber';
 
 /**
  * Remove a case from a pallet
@@ -91,7 +92,9 @@ const adminRemoveCaseFromPallet = adminProcedure
       .where(eq(wmsPallets.id, palletId));
 
     // Create movement record
+    const movementNumber = await generateMovementNumber();
     await db.insert(wmsStockMovements).values({
+      movementNumber,
       movementType: 'pallet_remove',
       lwin18: palletCase.lwin18,
       productName: palletCase.productName,

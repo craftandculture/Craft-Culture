@@ -12,6 +12,7 @@ import {
 import { adminProcedure } from '@/lib/trpc/procedures';
 
 import { dissolvePalletSchema } from '../schemas/palletSchema';
+import generateMovementNumber from '../utils/generateMovementNumber';
 
 /**
  * Dissolve a pallet - return all cases to inventory and archive the pallet
@@ -123,7 +124,9 @@ const adminDissolvePallet = adminProcedure
     ];
 
     // Create movement record
+    const movementNumber = await generateMovementNumber();
     await db.insert(wmsStockMovements).values({
+      movementNumber,
       movementType: 'pallet_dissolve',
       lwin18: 'PALLET',
       productName: `Pallet ${pallet.palletCode}`,

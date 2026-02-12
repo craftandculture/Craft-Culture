@@ -6,6 +6,7 @@ import { wmsLocations, wmsPallets, wmsStockMovements } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
 import { movePalletSchema } from '../schemas/palletSchema';
+import generateMovementNumber from '../utils/generateMovementNumber';
 
 /**
  * Move a sealed pallet to a location (bay)
@@ -74,7 +75,9 @@ const adminMovePallet = adminProcedure
       .returning();
 
     // Create movement record
+    const movementNumber = await generateMovementNumber();
     await db.insert(wmsStockMovements).values({
+      movementNumber,
       movementType: 'pallet_move',
       lwin18: 'PALLET',
       productName: `Pallet ${pallet.palletCode}`,
