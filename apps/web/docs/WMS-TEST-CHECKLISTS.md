@@ -220,7 +220,150 @@ Manual test procedures for UAT testing of WMS flows. Test on Zebra TC27 device a
 
 ---
 
-## Flow 5: Zoho Sync
+## Flow 5: Repack
+
+### 5.1 Initiate Repack
+
+| Step | Action | Expected Result | Pass |
+|------|--------|-----------------|------|
+| 1 | Navigate to WMS → Repack | Repack page opens | [ ] |
+| 2 | Scan source case barcode | Case info loaded | [ ] |
+| 3 | See current pack size (e.g., 12×750ml) | Current config shown | [ ] |
+| 4 | Select new pack size | Options available | [ ] |
+| 5 | Enter repack quantity | Quantity accepted | [ ] |
+
+### 5.2 Complete Repack
+
+| Step | Action | Expected Result | Pass |
+|------|--------|-----------------|------|
+| 1 | Confirm repack operation | Processing spinner | [ ] |
+| 2 | New case labels generated | ZPL downloads | [ ] |
+| 3 | Print new labels | Labels correct for new pack | [ ] |
+| 4 | Original stock reduced | Source depleted | [ ] |
+| 5 | New stock created | Repacked stock visible | [ ] |
+| 6 | Movement recorded | repack_out and repack_in movements | [ ] |
+
+---
+
+## Flow 6: Dispatch
+
+### 6.1 View Dispatch Queue
+
+| Step | Action | Expected Result | Pass |
+|------|--------|-----------------|------|
+| 1 | Navigate to WMS → Dispatch | Dispatch page opens | [ ] |
+| 2 | See list of orders ready for dispatch | Orders listed | [ ] |
+| 3 | Filter by status/date | Filters work | [ ] |
+
+### 6.2 Process Dispatch
+
+| Step | Action | Expected Result | Pass |
+|------|--------|-----------------|------|
+| 1 | Select order to dispatch | Order details shown | [ ] |
+| 2 | Verify all items picked | All items listed | [ ] |
+| 3 | Confirm dispatch | Order marked dispatched | [ ] |
+| 4 | Shipping info updated | Tracking/carrier recorded | [ ] |
+
+---
+
+## Flow 7: Mixed Pallets
+
+### 7.1 Create Pallet
+
+| Step | Action | Expected Result | Pass |
+|------|--------|-----------------|------|
+| 1 | Navigate to WMS → Pallets | Pallet list page opens | [ ] |
+| 2 | See summary cards (Active, Sealed, Retrieved, Total) | Counts displayed | [ ] |
+| 3 | Click "New" button | New pallet form opens | [ ] |
+| 4 | Select owner from dropdown | Partners listed | [ ] |
+| 5 | Add optional notes | Notes field accepts text | [ ] |
+| 6 | Click "Create Pallet" | Pallet created, redirects to detail | [ ] |
+| 7 | See pallet code (e.g., PALLET-2026-0001) | Code generated | [ ] |
+| 8 | See status badge "Active" | Status correct | [ ] |
+
+### 7.2 Add Cases to Pallet
+
+| Step | Action | Expected Result | Pass |
+|------|--------|-----------------|------|
+| 1 | See "Scan case barcode" input | Input focused | [ ] |
+| 2 | Scan a valid case barcode | Spinner shows | [ ] |
+| 3 | See success feedback (beep + vibration) | Audio/haptic works | [ ] |
+| 4 | Case added to pallet | Total cases increases | [ ] |
+| 5 | Product appears in "Contents Summary" | Grouped by product | [ ] |
+| 6 | Case appears in "All Cases" list | Case ID visible | [ ] |
+| 7 | Add another case (different product) | Second product appears | [ ] |
+| 8 | Add third case (same as first product) | First product count increases | [ ] |
+
+### 7.3 Remove Case from Pallet
+
+| Step | Action | Expected Result | Pass |
+|------|--------|-----------------|------|
+| 1 | In "All Cases" section, click trash icon | Confirmation or direct removal | [ ] |
+| 2 | Case removed from list | Case disappears | [ ] |
+| 3 | Total cases count decreases | Count updated | [ ] |
+| 4 | Product count in summary updates | Grouped count correct | [ ] |
+
+### 7.4 Seal Pallet
+
+| Step | Action | Expected Result | Pass |
+|------|--------|-----------------|------|
+| 1 | With cases on pallet, see "Seal Pallet" button | Button enabled | [ ] |
+| 2 | Click "Seal Pallet" | Pallet sealed | [ ] |
+| 3 | Status changes to "Sealed" | Badge updates | [ ] |
+| 4 | Scan input disappears | No more case adding | [ ] |
+| 5 | Remove buttons disappear | Cannot modify contents | [ ] |
+| 6 | Sealed date shown in Pallet Info | Timestamp recorded | [ ] |
+
+### 7.5 Print Pallet Label
+
+| Step | Action | Expected Result | Pass |
+|------|--------|-----------------|------|
+| 1 | Click "Print Label" button | ZPL file downloads | [ ] |
+| 2 | Filename includes pallet code | Named correctly | [ ] |
+| 3 | Print on Zebra printer (4x6) | Label prints | [ ] |
+| 4 | Label shows QR code (scannable) | QR readable | [ ] |
+| 5 | Label shows pallet code | Code visible | [ ] |
+| 6 | Label shows owner name | Owner correct | [ ] |
+| 7 | Label shows total cases | Count correct | [ ] |
+| 8 | Label shows contents summary | First 5 products listed | [ ] |
+
+### 7.6 Move Pallet to Location
+
+| Step | Action | Expected Result | Pass |
+|------|--------|-----------------|------|
+| 1 | Click "Move to Location" | Modal opens | [ ] |
+| 2 | See list of available locations | Rack locations shown | [ ] |
+| 3 | Select a location | Location highlighted | [ ] |
+| 4 | Click "Move Pallet" | Processing spinner | [ ] |
+| 5 | Success message shown | Move confirmed | [ ] |
+| 6 | Location code shown on pallet detail | Code updated | [ ] |
+| 7 | Movement recorded | pallet_move movement logged | [ ] |
+
+### 7.7 View Pallet in List
+
+| Step | Action | Expected Result | Pass |
+|------|--------|-----------------|------|
+| 1 | Go back to Pallets list | List page shown | [ ] |
+| 2 | See pallet with updated status/location | Info correct | [ ] |
+| 3 | Filter by "Sealed" status | Only sealed pallets shown | [ ] |
+| 4 | Filter by "Active" status | Only active pallets shown | [ ] |
+| 5 | Click pallet to view details | Detail page opens | [ ] |
+
+### 7.8 Edge Cases - Pallets
+
+| Step | Action | Expected Result | Pass |
+|------|--------|-----------------|------|
+| 1 | Scan invalid case barcode | Error: "Case not found" with buzz | [ ] |
+| 2 | Scan same case twice | Error: "Case already on pallet" | [ ] |
+| 3 | Try to seal empty pallet | Button disabled or warning | [ ] |
+| 4 | Scan case already on another pallet | Error: "Case on another pallet" | [ ] |
+| 5 | Rapidly scan same barcode (double-scan) | Only processes once | [ ] |
+| 6 | Try to add case to sealed pallet | Not allowed (no scan input) | [ ] |
+| 7 | Scan pallet barcode (lookup) | Pallet found and displayed | [ ] |
+
+---
+
+## Flow 8: Zoho Sync
 
 ### 5.1 Sync Stock to Zoho
 
@@ -266,6 +409,9 @@ Manual test procedures for UAT testing of WMS flows. Test on Zebra TC27 device a
 | Stock Check | | | | | |
 | Picking | | | | | |
 | Transfer | | | | | |
+| Repack | | | | | |
+| Dispatch | | | | | |
+| Mixed Pallets | | | | | |
 | Zoho Sync | | | | | |
 | Mobile UX | | | | | |
 
