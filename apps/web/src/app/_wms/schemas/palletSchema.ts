@@ -79,3 +79,32 @@ export const getPalletsSchema = z.object({
 });
 
 export type GetPalletsInput = z.infer<typeof getPalletsSchema>;
+
+/**
+ * Schema for unsealing a pallet
+ */
+export const unsealPalletSchema = z.object({
+  palletId: z.string().uuid(),
+  reason: z.string().min(1, 'Reason is required'),
+});
+
+export type UnsealPalletInput = z.infer<typeof unsealPalletSchema>;
+
+/**
+ * Schema for dissolving a pallet (return cases to inventory)
+ */
+export const dissolvePalletSchema = z.object({
+  palletId: z.string().uuid(),
+  toLocationId: z.string().uuid(),
+  reason: z.string().optional(),
+});
+
+export type DissolvePalletInput = z.infer<typeof dissolvePalletSchema>;
+
+/**
+ * Schema for dispatching a pallet
+ */
+export const dispatchPalletSchema = z.object({
+  palletId: z.string().uuid(),
+  notes: z.string().optional(),
+});

@@ -3,11 +3,14 @@ import {
   IconBoxSeam,
   IconCheck,
   IconClipboardList,
+  IconLockOpen,
   IconPackage,
   IconPackages,
   IconRefresh,
   IconTransfer,
+  IconTrash,
   IconTruck,
+  IconTruckDelivery,
   IconUserDollar,
 } from '@tabler/icons-react';
 
@@ -28,7 +31,10 @@ export interface MovementTypeBadgeProps {
     | 'repack_in'
     | 'pallet_add'
     | 'pallet_remove'
-    | 'pallet_move';
+    | 'pallet_move'
+    | 'pallet_unseal'
+    | 'pallet_dissolve'
+    | 'pallet_dispatch';
   /** Size variant */
   size?: 'sm' | 'md';
   /** Show label text */
@@ -115,6 +121,24 @@ const movementConfig: Record<
     icon: IconBoxSeam,
     colorClass: 'text-violet-600 dark:text-violet-400',
     bgClass: 'bg-violet-100 dark:bg-violet-900/30',
+  },
+  pallet_unseal: {
+    label: 'Pallet Unseal',
+    icon: IconLockOpen,
+    colorClass: 'text-yellow-600 dark:text-yellow-400',
+    bgClass: 'bg-yellow-100 dark:bg-yellow-900/30',
+  },
+  pallet_dissolve: {
+    label: 'Pallet Dissolve',
+    icon: IconTrash,
+    colorClass: 'text-red-600 dark:text-red-400',
+    bgClass: 'bg-red-100 dark:bg-red-900/30',
+  },
+  pallet_dispatch: {
+    label: 'Pallet Dispatch',
+    icon: IconTruckDelivery,
+    colorClass: 'text-blue-600 dark:text-blue-400',
+    bgClass: 'bg-blue-100 dark:bg-blue-900/30',
   },
 };
 
