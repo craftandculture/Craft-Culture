@@ -202,7 +202,7 @@ const ScannerTestPage = () => {
                       placeholder="Scan barcode or type here..."
                       className="flex-1 text-lg font-mono bg-transparent border-none outline-none placeholder:text-text-muted"
                       autoComplete="off"
-                      autoFocus
+                      inputMode="none"
                     />
                     {inputValue && (
                       <button
