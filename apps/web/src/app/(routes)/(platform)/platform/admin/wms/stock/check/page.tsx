@@ -19,6 +19,7 @@ import {
 } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useCallback, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
@@ -32,7 +33,7 @@ import LocationBadge from '@/app/_wms/components/LocationBadge';
 import OwnerBadge from '@/app/_wms/components/OwnerBadge';
 import ScanInput from '@/app/_wms/components/ScanInput';
 import type { ScanInputHandle } from '@/app/_wms/components/ScanInput';
-import useTRPC from '@/lib/trpc/browser';
+import useTRPC, { useTRPCClient } from '@/lib/trpc/browser';
 
 type CheckMode = 'bay' | 'product';
 
@@ -283,7 +284,9 @@ const StockItemCard = ({
  */
 const StockCheckPage = () => {
   const api = useTRPC();
+  const trpcClient = useTRPCClient();
   const queryClient = useQueryClient();
+  const router = useRouter();
   const scanInputRef = useRef<ScanInputHandle>(null);
 
   // Mode selection
@@ -392,6 +395,20 @@ const StockCheckPage = () => {
     async (barcode: string) => {
       setScanError(null);
 
+      // Check if it's a pallet barcode - redirect to pallet detail page
+      if (barcode.startsWith('PALLET-')) {
+        try {
+          const result = await trpcClient.wms.admin.pallets.getByBarcode.query({ barcode });
+          if (result.pallet) {
+            router.push(`/platform/admin/wms/pallets/${result.pallet.id}`);
+            return;
+          }
+        } catch {
+          setScanError(`Pallet not found: ${barcode}`);
+          return;
+        }
+      }
+
       try {
         const result = await lookupLocation({ barcode });
         setSelectedLocationId(result.location.id);
@@ -400,19 +417,37 @@ const StockCheckPage = () => {
         setScanError(`Location not found: ${barcode}`);
       }
     },
-    [lookupLocation],
+    [lookupLocation, trpcClient, router],
   );
 
   // Handle barcode scan for product mode
-  const handleProductScan = useCallback((barcode: string) => {
-    setScanError(null);
-    const lwin18 = extractLwin18FromBarcode(barcode);
-    if (lwin18) {
-      setSearchedLwin18(lwin18);
-    } else {
-      setScanError('Could not extract product code from barcode');
-    }
-  }, []);
+  const handleProductScan = useCallback(
+    async (barcode: string) => {
+      setScanError(null);
+
+      // Check if it's a pallet barcode - redirect to pallet detail page
+      if (barcode.startsWith('PALLET-')) {
+        try {
+          const result = await trpcClient.wms.admin.pallets.getByBarcode.query({ barcode });
+          if (result.pallet) {
+            router.push(`/platform/admin/wms/pallets/${result.pallet.id}`);
+            return;
+          }
+        } catch {
+          setScanError(`Pallet not found: ${barcode}`);
+          return;
+        }
+      }
+
+      const lwin18 = extractLwin18FromBarcode(barcode);
+      if (lwin18) {
+        setSearchedLwin18(lwin18);
+      } else {
+        setScanError('Could not extract product code from barcode');
+      }
+    },
+    [trpcClient, router],
+  );
 
   // Handle location selection from list
   const handleSelectLocation = useCallback((locationId: string) => {
