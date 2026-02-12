@@ -20,6 +20,8 @@ import adminDeleteBay from './controller/adminDeleteBay';
 import adminDeletePickList from './controller/adminDeletePickList';
 import adminDeleteReceivingDraft from './controller/adminDeleteReceivingDraft';
 import adminDeleteStockRecord from './controller/adminDeleteStockRecord';
+import adminDispatchPallet from './controller/adminDispatchPallet';
+import adminDissolvePallet from './controller/adminDissolvePallet';
 import adminGenerateDeliveryNote from './controller/adminGenerateDeliveryNote';
 import adminGetAllStockRecords from './controller/adminGetAllStockRecords';
 import adminGetBayDetails from './controller/adminGetBayDetails';
@@ -69,6 +71,7 @@ import adminSearchStock from './controller/adminSearchStock';
 import adminSyncStockToZoho from './controller/adminSyncStockToZoho';
 import adminTransferOwnership from './controller/adminTransferOwnership';
 import adminTransferStock from './controller/adminTransferStock';
+import adminUnsealPallet from './controller/adminUnsealPallet';
 import adminUpdateBatchStatus from './controller/adminUpdateBatchStatus';
 import adminUpdateBay from './controller/adminUpdateBay';
 import adminUpdateLocation from './controller/adminUpdateLocation';
@@ -170,6 +173,9 @@ const palletRouter = createTRPCRouter({
   addCase: adminAddCaseToPallet,
   removeCase: adminRemoveCaseFromPallet,
   seal: adminSealPallet,
+  unseal: adminUnsealPallet,
+  dissolve: adminDissolvePallet,
+  dispatch: adminDispatchPallet,
   move: adminMovePallet,
   getOne: adminGetPallet,
   getMany: adminGetPallets,

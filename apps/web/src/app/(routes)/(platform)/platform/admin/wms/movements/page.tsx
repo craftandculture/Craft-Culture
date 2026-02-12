@@ -33,7 +33,10 @@ type MovementType =
   | 'repack_in'
   | 'pallet_add'
   | 'pallet_remove'
-  | 'pallet_move';
+  | 'pallet_move'
+  | 'pallet_unseal'
+  | 'pallet_dissolve'
+  | 'pallet_dispatch';
 
 /**
  * WMS Movement History - audit trail of all warehouse operations
@@ -63,6 +66,9 @@ const WMSMovementsPage = () => {
     { value: 'pallet_add', label: 'Pallet Add' },
     { value: 'pallet_remove', label: 'Pallet Remove' },
     { value: 'pallet_move', label: 'Pallet Move' },
+    { value: 'pallet_unseal', label: 'Pallet Unseal' },
+    { value: 'pallet_dissolve', label: 'Pallet Dissolve' },
+    { value: 'pallet_dispatch', label: 'Pallet Dispatch' },
   ];
 
   const formatDate = (date: Date) => {

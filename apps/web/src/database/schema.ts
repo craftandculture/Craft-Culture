@@ -3811,6 +3811,9 @@ export const wmsMovementType = pgEnum('wms_movement_type', [
   'pallet_add',
   'pallet_remove',
   'pallet_move',
+  'pallet_unseal',
+  'pallet_dissolve',
+  'pallet_dispatch',
 ]);
 
 export const wmsCycleCountStatus = pgEnum('wms_cycle_count_status', [

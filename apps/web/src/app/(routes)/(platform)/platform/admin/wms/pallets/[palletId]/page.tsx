@@ -7,9 +7,11 @@ import {
   IconDownload,
   IconLoader2,
   IconLock,
+  IconLockOpen,
   IconMapPin,
   IconScan,
   IconTrash,
+  IconTruckDelivery,
   IconX,
 } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -38,7 +40,10 @@ const WMSPalletDetailPage = () => {
 
   const [scanInput, setScanInput] = useState('');
   const [showMoveModal, setShowMoveModal] = useState(false);
+  const [showDissolveModal, setShowDissolveModal] = useState(false);
   const [selectedLocationId, setSelectedLocationId] = useState<string | null>(null);
+  const [dissolveLocationId, setDissolveLocationId] = useState<string | null>(null);
+  const [dissolveReason, setDissolveReason] = useState('');
   const [lastScanResult, setLastScanResult] = useState<{
     success: boolean;
     message: string;
@@ -50,10 +55,10 @@ const WMSPalletDetailPage = () => {
     ...api.wms.admin.pallets.getOne.queryOptions({ palletId }),
   });
 
-  // Fetch locations for move
+  // Fetch locations for move and dissolve
   const { data: locations } = useQuery({
     ...api.wms.admin.locations.getMany.queryOptions({ locationType: 'rack' }),
-    enabled: showMoveModal,
+    enabled: showMoveModal || showDissolveModal,
   });
 
   // Add case mutation
@@ -99,6 +104,45 @@ const WMSPalletDetailPage = () => {
       void queryClient.invalidateQueries();
       setShowMoveModal(false);
       setSelectedLocationId(null);
+    },
+  });
+
+  // Unseal pallet mutation
+  const unsealMutation = useMutation({
+    ...api.wms.admin.pallets.unseal.mutationOptions(),
+    onSuccess: (result) => {
+      void queryClient.invalidateQueries();
+      setLastScanResult({ success: true, message: result.message });
+    },
+    onError: (error) => {
+      setLastScanResult({ success: false, message: error.message });
+    },
+  });
+
+  // Dissolve pallet mutation
+  const dissolveMutation = useMutation({
+    ...api.wms.admin.pallets.dissolve.mutationOptions(),
+    onSuccess: (result) => {
+      void queryClient.invalidateQueries();
+      setShowDissolveModal(false);
+      setDissolveLocationId(null);
+      setDissolveReason('');
+      setLastScanResult({ success: true, message: result.message });
+    },
+    onError: (error) => {
+      setLastScanResult({ success: false, message: error.message });
+    },
+  });
+
+  // Dispatch pallet mutation
+  const dispatchMutation = useMutation({
+    ...api.wms.admin.pallets.dispatch.mutationOptions(),
+    onSuccess: (result) => {
+      void queryClient.invalidateQueries();
+      setLastScanResult({ success: true, message: result.message });
+    },
+    onError: (error) => {
+      setLastScanResult({ success: false, message: error.message });
     },
   });
 
@@ -171,6 +215,9 @@ const WMSPalletDetailPage = () => {
   const canAddCases = pallet.status === 'active';
   const canSeal = pallet.status === 'active' && totalCases > 0;
   const canMove = pallet.status === 'sealed' || pallet.status === 'active';
+  const canUnseal = pallet.status === 'sealed';
+  const canDissolve = pallet.status !== 'archived' && totalCases > 0;
+  const canDispatch = pallet.status === 'sealed' && totalCases > 0;
 
   return (
     <div className="container mx-auto max-w-4xl px-4 py-6 sm:px-6 sm:py-8">
@@ -286,9 +333,49 @@ const WMSPalletDetailPage = () => {
               </ButtonContent>
             </Button>
           )}
+          {canUnseal && (
+            <Button
+              variant="outline"
+              onClick={() => {
+                const reason = prompt('Reason for unsealing:');
+                if (reason) {
+                  unsealMutation.mutate({ palletId, reason });
+                }
+              }}
+              disabled={unsealMutation.isPending}
+            >
+              <ButtonContent iconLeft={unsealMutation.isPending ? IconLoader2 : IconLockOpen}>
+                Unseal Pallet
+              </ButtonContent>
+            </Button>
+          )}
+          {canDispatch && (
+            <Button
+              variant="default"
+              onClick={() => {
+                if (confirm(`Dispatch pallet ${pallet.palletCode} with ${totalCases} cases?`)) {
+                  dispatchMutation.mutate({ palletId });
+                }
+              }}
+              disabled={dispatchMutation.isPending}
+            >
+              <ButtonContent iconLeft={dispatchMutation.isPending ? IconLoader2 : IconTruckDelivery}>
+                Dispatch Pallet
+              </ButtonContent>
+            </Button>
+          )}
           {canMove && (
             <Button variant="outline" onClick={() => setShowMoveModal(true)}>
               <ButtonContent iconLeft={IconMapPin}>Move to Location</ButtonContent>
+            </Button>
+          )}
+          {canDissolve && (
+            <Button
+              variant="outline"
+              colorRole="danger"
+              onClick={() => setShowDissolveModal(true)}
+            >
+              <ButtonContent iconLeft={IconTrash}>Dissolve Pallet</ButtonContent>
             </Button>
           )}
           {totalCases > 0 && (
@@ -517,6 +604,125 @@ const WMSPalletDetailPage = () => {
               {moveMutation.isError && (
                 <Typography variant="bodyXs" className="mt-2 text-center text-red-600">
                   {moveMutation.error?.message}
+                </Typography>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Dissolve Modal */}
+      {showDissolveModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          onClick={() => setShowDissolveModal(false)}
+        >
+          <Card
+            className="w-full max-w-lg max-h-[80vh] overflow-hidden flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <CardContent className="p-4 border-b border-border-primary">
+              <div className="flex items-center justify-between">
+                <Typography variant="headingSm">Dissolve Pallet</Typography>
+                <Button variant="ghost" size="sm" type="button" onClick={() => setShowDissolveModal(false)}>
+                  <Icon icon={IconX} size="sm" />
+                </Button>
+              </div>
+              <Typography variant="bodyXs" colorRole="muted" className="mt-1">
+                This will return all {totalCases} cases to inventory and archive the pallet.
+              </Typography>
+            </CardContent>
+            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+              <div>
+                <Typography variant="bodySm" className="mb-2 font-medium">
+                  Select Destination Location
+                </Typography>
+                {!locations?.length ? (
+                  <Typography variant="bodySm" colorRole="muted" className="text-center py-4">
+                    No locations available
+                  </Typography>
+                ) : (
+                  <div className="space-y-2 max-h-48 overflow-y-auto">
+                    {locations.map((location) => {
+                      const isSelected = dissolveLocationId === location.id;
+                      return (
+                        <button
+                          key={location.id}
+                          onClick={() => setDissolveLocationId(location.id)}
+                          className={`w-full rounded-lg p-3 text-left transition-colors ${
+                            isSelected
+                              ? 'bg-brand-100 border-2 border-brand-500 dark:bg-brand-900/30'
+                              : 'bg-fill-secondary hover:bg-fill-secondary/70'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <Typography variant="bodySm" className="font-medium">
+                                {location.locationCode}
+                              </Typography>
+                              <Typography variant="bodyXs" colorRole="muted">
+                                {location.locationType}
+                              </Typography>
+                            </div>
+                            <div
+                              className={`h-5 w-5 rounded border-2 ${
+                                isSelected
+                                  ? 'border-brand-500 bg-brand-500'
+                                  : 'border-border-primary'
+                              }`}
+                            >
+                              {isSelected && (
+                                <Icon icon={IconCheck} size="sm" className="text-white" />
+                              )}
+                            </div>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+              <div>
+                <Typography variant="bodySm" className="mb-2 font-medium">
+                  Reason (optional)
+                </Typography>
+                <input
+                  type="text"
+                  value={dissolveReason}
+                  onChange={(e) => setDissolveReason(e.target.value)}
+                  placeholder="Why are you dissolving this pallet?"
+                  className="w-full rounded-lg border border-border-primary bg-fill-primary py-2 px-3 text-sm focus:border-brand-500 focus:outline-none"
+                />
+              </div>
+            </div>
+            <CardContent className="p-4 border-t border-border-primary">
+              <div className="flex gap-3">
+                <Button variant="outline" className="flex-1" type="button" onClick={() => setShowDissolveModal(false)}>
+                  Cancel
+                </Button>
+                <Button
+                  variant="default"
+                  colorRole="danger"
+                  className="flex-1"
+                  onClick={() => {
+                    if (dissolveLocationId) {
+                      dissolveMutation.mutate({
+                        palletId,
+                        toLocationId: dissolveLocationId,
+                        reason: dissolveReason || undefined,
+                      });
+                    }
+                  }}
+                  disabled={!dissolveLocationId || dissolveMutation.isPending}
+                >
+                  <ButtonContent iconLeft={dissolveMutation.isPending ? IconLoader2 : IconTrash}>
+                    {dissolveMutation.isPending ? 'Dissolving...' : 'Dissolve Pallet'}
+                  </ButtonContent>
+                </Button>
+              </div>
+              {dissolveMutation.isError && (
+                <Typography variant="bodyXs" className="mt-2 text-center text-red-600">
+                  {dissolveMutation.error?.message}
                 </Typography>
               )}
             </CardContent>
