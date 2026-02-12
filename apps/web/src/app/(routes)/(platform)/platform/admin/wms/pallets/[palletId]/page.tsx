@@ -24,7 +24,7 @@ import CardContent from '@/app/_ui/components/Card/CardContent';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import downloadZplFile from '@/app/_wms/utils/downloadZplFile';
-import useTRPC from '@/lib/trpc/browser';
+import useTRPC, { useTRPCClient } from '@/lib/trpc/browser';
 
 /**
  * WMS Pallet Detail - View and manage pallet contents
@@ -32,6 +32,7 @@ import useTRPC from '@/lib/trpc/browser';
 const WMSPalletDetailPage = () => {
   const params = useParams();
   const api = useTRPC();
+  const trpcClient = useTRPCClient();
   const queryClient = useQueryClient();
   const palletId = params.palletId as string;
 
@@ -60,7 +61,7 @@ const WMSPalletDetailPage = () => {
     ...api.wms.admin.pallets.addCase.mutationOptions(),
     onSuccess: (result) => {
       void queryClient.invalidateQueries();
-      setLastScanResult({ success: true, message: result.message });
+      setLastScanResult({ success: true, message: result.message || 'Case added successfully' });
       setScanInput('');
       scanInputRef.current?.focus();
     },
@@ -120,7 +121,7 @@ const WMSPalletDetailPage = () => {
 
   const handlePrintLabel = async () => {
     try {
-      const result = await api.wms.admin.pallets.getLabel.query({ palletId });
+      const result = await trpcClient.wms.admin.pallets.getLabel.query({ palletId });
       downloadZplFile(result.zpl, result.palletCode);
     } catch (error) {
       console.error('Failed to generate label:', error);
@@ -239,7 +240,7 @@ const WMSPalletDetailPage = () => {
                       onChange={(e) => setScanInput(e.target.value)}
                       placeholder="Scan or enter case barcode..."
                       className="w-full rounded-lg border border-border-primary bg-fill-primary py-2 pl-10 pr-4 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
-                      autoFocus
+                      inputMode="none"
                     />
                   </div>
                   <Button
