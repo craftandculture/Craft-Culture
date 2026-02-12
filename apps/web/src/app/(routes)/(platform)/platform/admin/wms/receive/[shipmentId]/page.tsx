@@ -417,7 +417,9 @@ const WMSReceiveShipmentPage = () => {
     try {
       // Generate LWIN-18 from item data
       const lwin18 = currentItem.lwin || `${currentItem.productName.replace(/\s+/g, '-').slice(0, 20)}`;
-      const packSize = `${currentItem.receivedBottlesPerCase}x${currentItem.receivedBottleSizeMl}ml`;
+      // Strip any non-numeric characters from bottle size (in case it includes "ml")
+      const bottleSize = String(currentItem.receivedBottleSizeMl).replace(/\D/g, '');
+      const packSize = `${currentItem.receivedBottlesPerCase}x${bottleSize}ml`;
 
       // Create labels in database and get ZPL
       const result = await createLabelsMutation.mutateAsync({
