@@ -60,6 +60,9 @@ const WMSMovementsPage = () => {
     { value: 'count', label: 'Count' },
     { value: 'repack_out', label: 'Repack Out' },
     { value: 'repack_in', label: 'Repack In' },
+    { value: 'pallet_add', label: 'Pallet Add' },
+    { value: 'pallet_remove', label: 'Pallet Remove' },
+    { value: 'pallet_move', label: 'Pallet Move' },
   ];
 
   const formatDate = (date: Date) => {
