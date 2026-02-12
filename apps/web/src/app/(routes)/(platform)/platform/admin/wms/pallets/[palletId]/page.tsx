@@ -83,8 +83,12 @@ const WMSPalletDetailPage = () => {
   // Seal pallet mutation
   const sealMutation = useMutation({
     ...api.wms.admin.pallets.seal.mutationOptions(),
-    onSuccess: () => {
+    onSuccess: (result) => {
       void queryClient.invalidateQueries();
+      setLastScanResult({ success: true, message: result.message || 'Pallet sealed successfully' });
+    },
+    onError: (error) => {
+      setLastScanResult({ success: false, message: error.message });
     },
   });
 
