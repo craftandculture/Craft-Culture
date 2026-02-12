@@ -6,6 +6,7 @@ import { wmsCaseLabels, wmsPalletCases, wmsPallets, wmsStockMovements } from '@/
 import { adminProcedure } from '@/lib/trpc/procedures';
 
 import { addCaseToPalletSchema } from '../schemas/palletSchema';
+import generateMovementNumber from '../utils/generateMovementNumber';
 
 /**
  * Add a case to a pallet by scanning the case barcode
@@ -101,7 +102,9 @@ const adminAddCaseToPallet = adminProcedure
       .where(eq(wmsPallets.id, palletId));
 
     // Create movement record
+    const movementNumber = await generateMovementNumber();
     await db.insert(wmsStockMovements).values({
+      movementNumber,
       movementType: 'pallet_add',
       lwin18: caseLabel.lwin18,
       productName: caseLabel.productName,

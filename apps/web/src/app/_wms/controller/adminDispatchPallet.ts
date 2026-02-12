@@ -11,6 +11,7 @@ import {
 import { adminProcedure } from '@/lib/trpc/procedures';
 
 import { dispatchPalletSchema } from '../schemas/palletSchema';
+import generateMovementNumber from '../utils/generateMovementNumber';
 
 /**
  * Dispatch a pallet - ship entire pallet to customer
@@ -102,7 +103,9 @@ const adminDispatchPallet = adminProcedure
     ];
 
     // Create movement record
+    const movementNumber = await generateMovementNumber();
     await db.insert(wmsStockMovements).values({
+      movementNumber,
       movementType: 'pallet_dispatch',
       lwin18: 'PALLET',
       productName: `Pallet ${pallet.palletCode}`,

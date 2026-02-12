@@ -6,6 +6,7 @@ import { wmsPallets, wmsStockMovements } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
 import { unsealPalletSchema } from '../schemas/palletSchema';
+import generateMovementNumber from '../utils/generateMovementNumber';
 
 /**
  * Unseal a pallet (allow modifications again)
@@ -55,7 +56,9 @@ const adminUnsealPallet = adminProcedure
       .returning();
 
     // Create movement record
+    const movementNumber = await generateMovementNumber();
     await db.insert(wmsStockMovements).values({
+      movementNumber,
       movementType: 'pallet_unseal',
       lwin18: 'PALLET',
       productName: `Pallet ${pallet.palletCode}`,
