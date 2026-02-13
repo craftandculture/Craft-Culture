@@ -196,12 +196,12 @@ ${productLine2 ? `^FX -- Product name line 2 --
 ${CC_LOGO_GF}^FS
 
 ^FX -- QR code (top-right, mag 3 ~100x100 dots) --
-^FO688,8
+^FO648,10
 ^BQN,2,3
 ^FDQA,https://www.craftculture.xyz/cold-chain.html^FS
 
 ^FX -- "TRACE THIS CASE" below QR --
-^FO672,112
+^FO640,118
 ^A0N,12,12
 ^FDTRACE THIS CASE^FS
 
