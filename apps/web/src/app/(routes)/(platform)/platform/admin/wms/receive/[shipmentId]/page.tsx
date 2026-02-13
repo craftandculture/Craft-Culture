@@ -31,7 +31,7 @@ import Typography from '@/app/_ui/components/Typography/Typography';
 import PhotoCapture from '@/app/_wms/components/PhotoCapture';
 import ScanInput from '@/app/_wms/components/ScanInput';
 import type { ScanInputHandle } from '@/app/_wms/components/ScanInput';
-import ZebraPrint from '@/app/_wms/components/ZebraPrint';
+import ZebraPrint, { useZebraPrint } from '@/app/_wms/components/ZebraPrint';
 import downloadZplFile from '@/app/_wms/utils/downloadZplFile';
 import useTRPC from '@/lib/trpc/browser';
 
@@ -113,6 +113,7 @@ const WMSReceiveShipmentPage = () => {
 
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const scanInputRef = useRef<ScanInputHandle>(null);
+  const { print: wifiPrint, isConnected: isPrinterConnected } = useZebraPrint();
 
   // Get shipment details
   const { data: shipment, isLoading: shipmentLoading } = useQuery({
@@ -406,7 +407,7 @@ const WMSReceiveShipmentPage = () => {
     }
   };
 
-  // Download labels for pending cases at scanned location (2-step print workflow)
+  // Print labels for pending cases at scanned location (WiFi direct or file download fallback)
   const handlePrintLabels = async () => {
     const currentItem = getCurrentItem();
     if (!currentItem || !scannedLocationId || pendingCases <= 0) return;
@@ -434,11 +435,19 @@ const WMSReceiveShipmentPage = () => {
         quantity: pendingCases,
       });
 
-      // Download ZPL file for 2-step print workflow
-      // User opens file with Printer Setup Utility to print
+      // Print labels: try WiFi first, fall back to file download
       if (result.zpl) {
-        const filename = `labels-${currentItem.productName.replace(/[^a-zA-Z0-9]/g, '-').slice(0, 30)}-${scannedLocationCode}`;
-        downloadZplFile(result.zpl, filename);
+        if (isPrinterConnected()) {
+          const printed = await wifiPrint(result.zpl);
+          if (!printed) {
+            // WiFi print failed, fall back to download
+            const filename = `labels-${currentItem.productName.replace(/[^a-zA-Z0-9]/g, '-').slice(0, 30)}-${scannedLocationCode}`;
+            downloadZplFile(result.zpl, filename);
+          }
+        } else {
+          const filename = `labels-${currentItem.productName.replace(/[^a-zA-Z0-9]/g, '-').slice(0, 30)}-${scannedLocationCode}`;
+          downloadZplFile(result.zpl, filename);
+        }
       }
 
       // Update item with new location assignment
@@ -464,7 +473,7 @@ const WMSReceiveShipmentPage = () => {
       setScannedLocationId(null);
       setProductPhase('shelving');
       saveDraft();
-      // Scroll to top after labels downloaded
+      // Scroll to top after labels printed
       requestAnimationFrame(() => {
         window.scrollTo({ top: 0, behavior: 'instant' });
       });
@@ -1122,7 +1131,7 @@ const WMSReceiveShipmentPage = () => {
                         </select>
                       </div>
 
-                      {/* Download labels button (2-step print: download → Printer Setup Utility) */}
+                      {/* Print labels button (WiFi direct or file download fallback) */}
                       {scannedLocationId && (
                         <Button
                           variant="default"
@@ -1132,7 +1141,7 @@ const WMSReceiveShipmentPage = () => {
                           disabled={isPrinting || pendingCases === 0}
                         >
                           <ButtonContent iconLeft={isPrinting ? IconLoader2 : IconPrinter}>
-                            {isPrinting ? 'Downloading...' : `Download ${pendingCases} Labels → ${scannedLocationCode}`}
+                            {isPrinting ? 'Printing...' : `Print ${pendingCases} Labels → ${scannedLocationCode}`}
                           </ButtonContent>
                         </Button>
                       )}
