@@ -249,8 +249,16 @@ ${productLine2 ? `^FO30,228
 ^A0N,22,22
 ^FD@wine.uae^FS
 
+^FX -- Globe icon (circle + crosshair) --
+^FO520,346
+^GE22,22,2,B^FS
+^FO530,346
+^GB1,22,1,B,0^FS
+^FO520,356
+^GB22,1,1,B,0^FS
+
 ^FX -- Website --
-^FO550,348
+^FO548,348
 ^A0N,22,22
 ^FDcraftculture.xyz^FS
 
