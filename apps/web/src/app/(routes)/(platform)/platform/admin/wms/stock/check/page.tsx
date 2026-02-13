@@ -159,7 +159,7 @@ const StockItemCard = ({
             {item.vintage && <span>• {item.vintage}</span>}
             {item.caseConfig && item.bottleSize && (
               <span>
-                • {item.caseConfig}x{item.bottleSize}ml
+                • {item.caseConfig}x{String(item.bottleSize).replace(/\D/g, '')}ml
               </span>
             )}
           </div>
@@ -861,7 +861,7 @@ const StockCheckPage = () => {
                           {product.producer && <span>{product.producer}</span>}
                           {product.vintage && <span>• {product.vintage}</span>}
                           <span>
-                            • {product.caseConfig}x{product.bottleSize}ml
+                            • {product.caseConfig}x{String(product.bottleSize).replace(/\D/g, '')}ml
                           </span>
                         </div>
                         <Typography variant="bodyXs" colorRole="muted" className="mt-1 font-mono">
