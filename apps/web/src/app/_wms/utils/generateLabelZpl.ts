@@ -167,14 +167,15 @@ ${productLine2 ? `^FX -- Product name line 2 --
 ^A0N,24,24
 ^FDOwner: ${owner}^FS
 
-^FX -- Row 3: LWIN and Lot --
-^FO30,340
-^A0N,22,22
-^FDLWIN: ${lwin}^FS
+^FX -- Row 3: Lot/Order (prominent) --
+^FO30,315
+^A0N,30,30
+^FD${lot}^FS
 
-^FO480,340
-^A0N,22,22
-^FDLot: ${lot}^FS
+^FX -- Row 4: LWIN --
+^FO30,355
+^A0N,20,20
+^FDLWIN: ${lwin}^FS
 
 ^XZ`;
 
