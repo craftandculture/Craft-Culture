@@ -29,6 +29,10 @@ const distributorTransitions: Record<string, PrivateClientOrderStatus[]> = {
   // When client has paid, distributor raises PO to C&C
   client_paid: ['awaiting_distributor_payment'],
   awaiting_distributor_payment: ['distributor_paid'],
+  // Payment may complete before delivery - allow delivery flow from payment statuses
+  distributor_paid: ['with_distributor', 'out_for_delivery'],
+  awaiting_partner_payment: ['with_distributor', 'out_for_delivery'],
+  partner_paid: ['with_distributor', 'out_for_delivery'],
   // Distributor waits for C&C to mark stock_in_transit
   // When stock arrives at distributor (after C&C ships)
   stock_in_transit: ['with_distributor'],
