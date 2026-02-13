@@ -191,82 +191,82 @@ ${productLine2 ? `^FX -- Product name line 2 --
 ^XZ`
     : `^XA
 
-^FX -- C&C logo (200x60 dots) --
-^FO30,8
+^FX -- C&C logo (200x60 dots, top-left) --
+^FO30,10
 ${CC_LOGO_GF}^FS
 
+^FX -- QR code (top-right, mag 3 ~100x100 dots) --
+^FO688,8
+^BQN,2,3
+^FDQA,https://www.craftculture.xyz/cold-chain.html^FS
+
+^FX -- "TRACE THIS CASE" below QR --
+^FO672,112
+^A0N,12,12
+^FDTRACE THIS CASE^FS
+
 ^FX -- Horizontal separator --
-^FO30,75
+^FO30,134
 ^GB750,2,2^FS
 
 ^FX -- PCO number (large, own line) --
-^FO30,88
-^A0N,36,36
+^FO30,148
+^A0N,34,34
 ^FD${lotLine1}^FS
 
 ${lotLine2 ? `^FX -- Total order info --
-^FO30,128
+^FO30,186
 ^A0N,22,22
 ^FD${lotLine2}^FS
 ` : ''}
 ^FX -- Owner (prominent) --
-^FO30,158
-^A0N,30,30
+^FO30,214
+^A0N,28,28
 ^FD${owner}^FS
 
 ^FX -- Separator --
-^FO30,196
+^FO30,250
 ^GB750,1,1^FS
 
 ^FX -- Product name --
-^FO30,208
-^A0N,28,28
+^FO30,262
+^A0N,26,26
 ^FD${productLine1}^FS
 
-${productLine2 ? `^FO30,240
-^A0N,28,28
+${productLine2 ? `^FO30,292
+^A0N,26,26
 ^FD${productLine2}^FS
 ` : ''}
 ^FX -- Pack Size / Vintage --
-^FO30,274
-^A0N,24,24
+^FO30,324
+^A0N,22,22
 ^FD${packSize}^FS
 
-^FO400,274
-^A0N,24,24
+^FO400,324
+^A0N,22,22
 ^FD${vintage !== '-' ? 'Vintage: ' + vintage : ''}^FS
 
 ^FX -- Separator --
-^FO30,308
+^FO30,354
 ^GB750,1,1^FS
 
 ^FX -- Instagram icon (24x24 bitmap) --
-^FO30,324
+^FO30,366
 ^GFA,72,72,3,0000000FFFF01FFFF83C003C70000E7000EE607EE660FFE661E7866381C66381C66300C66300C66381C66381C661E78660FF06607E0670000E70000E3C003C1FFFF80FFFF0000000^FS
 
 ^FX -- Instagram handle --
-^FO60,326
+^FO60,368
 ^A0N,18,18
 ^FD@wine.uae^FS
 
 ^FX -- Globe icon (24x24 bitmap) --
-^FO200,324
+^FO200,366
 ^GFA,72,72,3,00000000FF0003FFC007FFE00F7EF01CE73838E71C38C31C71C38E71C38E71C38E7FFFFE7FFFFE71C38E71C38E71C38E38C31C38E71C1CE7380F7EF007FFE003FFC000FF00000000^FS
 
 ^FX -- Website --
-^FO230,326
+^FO230,368
 ^A0N,18,18
 ^FDcraftculture.xyz^FS
-
-^FX -- QR code (bottom right, mag 2 = ~74x74 dots) --
-^FO700,316
-^BQN,2,2
-^FDQA,https://www.craftculture.xyz/cold-chain.html^FS
-
-^FX -- "TRACE THIS CASE" CTA above QR --
-^FO668,300
-^A0N,14,14
-^FDTRACE THIS CASE^FS
 
 ^XZ`;
 
