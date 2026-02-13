@@ -161,17 +161,21 @@ const ScanInput = forwardRef<ScanInputHandle, ScanInputProps>(({
     }
   }, []); // Only run on mount
 
-  // Reset processing state when loading completes, but DON'T auto-focus
-  // User can tap input to focus if they need to scan again
+  // Reset processing state when loading completes and re-focus for next scan
   useEffect(() => {
     if (!isLoading) {
       // Keep processing blocked for cooldown period after scan completes
-      setTimeout(() => {
+      const timer = setTimeout(() => {
         processingRef.current = false;
+        // Re-focus so the user can scan the next item
+        if (!disabled) {
+          inputRef.current?.focus();
+        }
       }, SCAN_COOLDOWN_MS);
       setValue('');
+      return () => clearTimeout(timer);
     }
-  }, [isLoading]);
+  }, [isLoading, disabled]);
 
   // Block input while loading
   useEffect(() => {
@@ -238,6 +242,8 @@ const ScanInput = forwardRef<ScanInputHandle, ScanInputProps>(({
         setValue('');
         if (inputRef.current) {
           inputRef.current.value = '';
+          // Blur immediately so the scanner has nowhere to send a second scan
+          inputRef.current.blur();
         }
 
         // Provide haptic/audio feedback on scan
@@ -324,6 +330,8 @@ const ScanInput = forwardRef<ScanInputHandle, ScanInputProps>(({
     setValue('');
     if (inputRef.current) {
       inputRef.current.value = '';
+      // Blur immediately so the scanner has nowhere to send a second scan
+      inputRef.current.blur();
     }
 
     // Provide haptic/audio feedback on scan
