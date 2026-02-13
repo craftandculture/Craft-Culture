@@ -227,38 +227,33 @@ ${productLine2 ? `^FO30,228
 ^A0N,26,26
 ^FD${vintage !== '-' ? 'Vintage: ' + vintage : ''}^FS
 
-^FX -- LWIN --
-^FO30,305
-^A0N,20,20
-^FDLWIN: ${lwin}^FS
-
 ^FX -- Separator --
-^FO30,335
+^FO30,310
 ^GB750,1,1^FS
 
 ^FX -- Instagram icon (simplified camera outline) --
-^FO30,346
+^FO30,325
 ^GB22,22,2,B,0^FS
-^FO37,352
+^FO37,331
 ^GB8,8,2,B,0^FS
-^FO48,347
+^FO48,326
 ^GB3,3,3,B,0^FS
 
 ^FX -- Instagram handle --
-^FO60,348
+^FO60,327
 ^A0N,22,22
 ^FD@wine.uae^FS
 
 ^FX -- Globe icon (circle + crosshair) --
-^FO520,346
+^FO520,325
 ^GE22,22,2,B^FS
-^FO530,346
+^FO530,325
 ^GB1,22,1,B,0^FS
-^FO520,356
+^FO520,335
 ^GB22,1,1,B,0^FS
 
 ^FX -- Website --
-^FO548,348
+^FO548,327
 ^A0N,22,22
 ^FDcraftculture.xyz^FS
 
