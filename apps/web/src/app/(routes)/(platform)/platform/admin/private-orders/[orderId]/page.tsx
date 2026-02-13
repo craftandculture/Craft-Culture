@@ -12,6 +12,7 @@ import {
   IconLoader2,
   IconPhoto,
   IconPlus,
+  IconPrinter,
   IconRefresh,
   IconTrash,
   IconTruck,
@@ -43,6 +44,8 @@ import SelectItem from '@/app/_ui/components/Select/SelectItem';
 import SelectTrigger from '@/app/_ui/components/Select/SelectTrigger';
 import SelectValue from '@/app/_ui/components/Select/SelectValue';
 import Typography from '@/app/_ui/components/Typography/Typography';
+import { generateBatchLabelsZpl } from '@/app/_wms/utils/generateLabelZpl';
+import wifiPrint from '@/app/_wms/utils/wifiPrint';
 import type { PrivateClientOrder } from '@/database/schema';
 import useTRPC, { useTRPCClient } from '@/lib/trpc/browser';
 
@@ -156,6 +159,7 @@ const AdminPrivateOrderDetailPage = () => {
   const [partnerPaymentRef, setPartnerPaymentRef] = useState('');
   const [distributorPaymentRef, setDistributorPaymentRef] = useState('');
   const [isCompletionExpanded, setIsCompletionExpanded] = useState(true);
+  const [isPrinting, setIsPrinting] = useState(false);
 
   // Fetch order details
   const {
@@ -448,6 +452,40 @@ const AdminPrivateOrderDetailPage = () => {
   const getAmount = (usdAmount: number | string | null | undefined) => {
     const amount = Number(usdAmount) || 0;
     return currency === 'USD' ? amount : amount * usdToAedRate;
+  };
+
+  /** Print case labels for all order items on Zebra ZD421 */
+  const handlePrintLabels = async () => {
+    if (!order.items || order.items.length === 0) return;
+    setIsPrinting(true);
+    try {
+      const labels = order.items.flatMap((item) => {
+        const qty = item.quantity ?? 1;
+        const lwin = item.lwin || 'UNKNOWN';
+        const bottleSizeNum = String(item.bottleSize ?? '750').replace(/\D/g, '');
+        const packSize = `${item.caseConfig ?? 12}x${bottleSizeNum}ml`;
+        return Array.from({ length: qty }, (_, i) => ({
+          barcode: `CASE-${lwin}-${String(i + 1).padStart(3, '0')}`,
+          productName: item.productName || 'Unknown Product',
+          lwin18: lwin,
+          packSize,
+          vintage: item.vintage || undefined,
+          lotNumber: order.orderNumber || undefined,
+          owner: order.partner?.businessName || undefined,
+        }));
+      });
+      const zpl = generateBatchLabelsZpl(labels);
+      const success = await wifiPrint(zpl);
+      if (success) {
+        toast.success(`Printed ${labels.length} case label${labels.length === 1 ? '' : 's'}`);
+      } else {
+        toast.error('Failed to reach printer — check WiFi connection');
+      }
+    } catch {
+      toast.error('Failed to generate labels');
+    } finally {
+      setIsPrinting(false);
+    }
   };
 
   return (
@@ -769,6 +807,17 @@ const AdminPrivateOrderDetailPage = () => {
                   >
                     <Icon icon={IconPlus} size="xs" />
                     <span className="ml-1">Add Item</span>
+                  </Button>
+                )}
+                {order.items && order.items.length > 0 && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => void handlePrintLabels()}
+                    disabled={isPrinting}
+                  >
+                    <Icon icon={isPrinting ? IconLoader2 : IconPrinter} size="xs" className={isPrinting ? 'animate-spin' : ''} />
+                    <span className="ml-1">{isPrinting ? 'Printing...' : 'Print Labels'}</span>
                   </Button>
                 )}
               </div>
