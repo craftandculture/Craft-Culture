@@ -637,7 +637,13 @@ const DistributorOrderDetailPage = () => {
         )}
 
         {/* Delivery Workflow - Schedule Delivery */}
-        {(order.status === 'client_paid' || order.status === 'scheduling_delivery') && (
+        {/* Payment may complete before delivery - show delivery UI for all post-payment statuses */}
+        {(order.status === 'client_paid' ||
+          order.status === 'awaiting_distributor_payment' ||
+          order.status === 'distributor_paid' ||
+          order.status === 'awaiting_partner_payment' ||
+          order.status === 'partner_paid' ||
+          order.status === 'scheduling_delivery') && (
           <Card className="border-2 border-fill-brand/50 bg-fill-brand/5">
             <CardContent className="p-6">
               <div className="flex flex-col gap-4">

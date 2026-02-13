@@ -38,12 +38,18 @@ const ordersScheduleDelivery = distributorProcedure
       });
     }
 
-    // Validate order status - must be client_paid or scheduling_delivery
-    if (
-      order.status !== 'client_paid' &&
-      order.status !== 'scheduling_delivery' &&
-      order.status !== 'delivery_scheduled'
-    ) {
+    // Validate order status - must be in payment or scheduling phase
+    // Payment may complete before delivery, so accept payment statuses too
+    const allowedStatuses = [
+      'client_paid',
+      'awaiting_distributor_payment',
+      'distributor_paid',
+      'awaiting_partner_payment',
+      'partner_paid',
+      'scheduling_delivery',
+      'delivery_scheduled',
+    ];
+    if (!allowedStatuses.includes(order.status)) {
       throw new TRPCError({
         code: 'BAD_REQUEST',
         message: `Cannot schedule delivery for order with status "${order.status}"`,
