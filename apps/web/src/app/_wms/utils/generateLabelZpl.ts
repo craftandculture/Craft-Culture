@@ -191,6 +191,11 @@ ${productLine2 ? `^FX -- Product name line 2 --
 ^FO30,8
 ${CC_LOGO_GF}^FS
 
+^FX -- QR code (upper right, links to cold chain page) --
+^FO700,6
+^BQN,2,3
+^FDQA,https://www.craftculture.xyz/cold-chain^FS
+
 ^FX -- Horizontal separator --
 ^FO30,75
 ^GB750,2,2^FS
