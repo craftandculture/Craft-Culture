@@ -4,11 +4,11 @@ import {
   IconArrowLeft,
   IconBox,
   IconCheck,
-  IconDownload,
   IconLoader2,
   IconLock,
   IconLockOpen,
   IconMapPin,
+  IconPrinter,
   IconScan,
   IconTrash,
   IconTruckDelivery,
@@ -26,6 +26,7 @@ import CardContent from '@/app/_ui/components/Card/CardContent';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import downloadZplFile from '@/app/_wms/utils/downloadZplFile';
+import wifiPrint from '@/app/_wms/utils/wifiPrint';
 import useTRPC, { useTRPCClient } from '@/lib/trpc/browser';
 
 /**
@@ -170,7 +171,8 @@ const WMSPalletDetailPage = () => {
   const handlePrintLabel = async () => {
     try {
       const result = await trpcClient.wms.admin.pallets.getLabel.query({ palletId });
-      downloadZplFile(result.zpl, result.palletCode);
+      const printed = await wifiPrint(result.zpl);
+      if (!printed) downloadZplFile(result.zpl, result.palletCode);
     } catch (error) {
       console.error('Failed to generate label:', error);
     }
@@ -380,7 +382,7 @@ const WMSPalletDetailPage = () => {
           )}
           {totalCases > 0 && (
             <Button variant="outline" onClick={handlePrintLabel}>
-              <ButtonContent iconLeft={IconDownload}>Print Label</ButtonContent>
+              <ButtonContent iconLeft={IconPrinter}>Print Label</ButtonContent>
             </Button>
           )}
           <Button variant="outline" onClick={() => refetch()}>

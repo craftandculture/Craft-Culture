@@ -33,6 +33,8 @@ import LocationBadge from '@/app/_wms/components/LocationBadge';
 import OwnerBadge from '@/app/_wms/components/OwnerBadge';
 import ScanInput from '@/app/_wms/components/ScanInput';
 import type { ScanInputHandle } from '@/app/_wms/components/ScanInput';
+import downloadZplFile from '@/app/_wms/utils/downloadZplFile';
+import wifiPrint from '@/app/_wms/utils/wifiPrint';
 import useTRPC, { useTRPCClient } from '@/lib/trpc/browser';
 
 type CheckMode = 'bay' | 'product';
@@ -360,23 +362,18 @@ const StockCheckPage = () => {
   const [printingStockId, setPrintingStockId] = useState<string | null>(null);
   const { mutate: reprintLabels } = useMutation({
     ...api.wms.admin.labels.reprintCaseLabels.mutationOptions(),
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       setPrintingStockId(null);
       if (!data.success) {
         toast.error(data.error || 'Failed to generate labels');
         return;
       }
-      // Download ZPL file
-      const blob = new Blob([data.zpl], { type: 'application/octet-stream' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `reprint-labels-${data.quantity}.zpl`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      toast.success(`Downloaded ${data.quantity} label${data.quantity !== 1 ? 's' : ''}`);
+      // Print via WiFi, fall back to file download
+      const printed = await wifiPrint(data.zpl);
+      if (!printed) {
+        downloadZplFile(data.zpl, `reprint-labels-${data.quantity}`);
+      }
+      toast.success(`Printed ${data.quantity} label${data.quantity !== 1 ? 's' : ''}`);
     },
     onError: (error) => {
       setPrintingStockId(null);
