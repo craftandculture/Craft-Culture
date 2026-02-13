@@ -463,14 +463,15 @@ const AdminPrivateOrderDetailPage = () => {
       const labels = order.items.map((item) => {
         const lwin = item.lwin || 'UNKNOWN';
         const bottleSizeNum = String(item.bottleSize ?? '750').replace(/\D/g, '');
-        const packSize = `${item.caseConfig ?? 12}x${bottleSizeNum}ml | ${item.quantity ?? 1} cases`;
+        const qty = item.quantity ?? 1;
+        const packSize = `${item.caseConfig ?? 12}x${bottleSizeNum}ml | ${qty} ${qty === 1 ? 'case' : 'cases'}`;
         return {
           showBarcode: false,
           productName: item.productName || 'Unknown Product',
           lwin18: lwin,
           packSize,
           vintage: item.vintage || undefined,
-          lotNumber: `${order.orderNumber || 'PCO'} | Total Order: ${totalCases} Cases`,
+          lotNumber: `${order.orderNumber || 'PCO'} | Total Order: ${totalCases} ${totalCases === 1 ? 'Case' : 'Cases'}`,
           owner: order.partner?.businessName || undefined,
         };
       });
