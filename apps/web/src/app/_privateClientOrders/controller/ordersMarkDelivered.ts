@@ -6,6 +6,7 @@ import db from '@/database/client';
 import { privateClientOrderActivityLogs, privateClientOrderItems, privateClientOrders } from '@/database/schema';
 import { distributorProcedure } from '@/lib/trpc/procedures';
 
+import ensureClientVerified from '../utils/ensureClientVerified';
 import notifyPartnerOfOrderUpdate from '../utils/notifyPartnerOfOrderUpdate';
 
 const markDeliveredSchema = z.object({
@@ -87,6 +88,9 @@ const ordersMarkDelivered = distributorProcedure
         hasPhoto: !!photo,
       },
     });
+
+    // Ensure client contact is marked as CD-verified
+    await ensureClientVerified(order.clientId);
 
     // Notify partner about successful delivery
     if (order.partnerId) {
