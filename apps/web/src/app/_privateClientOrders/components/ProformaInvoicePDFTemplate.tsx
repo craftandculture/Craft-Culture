@@ -160,6 +160,11 @@ const styles = StyleSheet.create({
     color: '#737373',
     lineHeight: 1.3,
   },
+  priceUsd: {
+    fontSize: 7,
+    color: '#737373',
+    marginTop: 1,
+  },
   pricingSection: {
     marginTop: 24,
     alignItems: 'flex-end',
@@ -332,10 +337,15 @@ const ProformaInvoicePDFTemplate = ({
   // Default exchange rate if not provided
   const exchangeRate = order.usdToAedRate ?? 3.6725;
 
-  const formatPrice = (amountUsd: number | null | undefined) => {
+  const formatAed = (amountUsd: number | null | undefined) => {
     if (amountUsd === null || amountUsd === undefined) return 'AED 0.00';
     const amountAed = amountUsd * exchangeRate;
     return `AED ${amountAed.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  };
+
+  const formatUsd = (amountUsd: number | null | undefined) => {
+    if (amountUsd === null || amountUsd === undefined) return '$0.00';
+    return `$${amountUsd.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
   const formatDate = (date: Date) => {
@@ -447,10 +457,26 @@ const ProformaInvoicePDFTemplate = ({
                     </Text>
                   </View>
                   <Text style={styles.colQuantity}>{item.quantity}</Text>
-                  <Text style={styles.colDistCost}>{formatPrice(item.distributorCostPerCaseUsd)}</Text>
-                  <Text style={styles.colDistTotal}>{formatPrice(distTotal)}</Text>
-                  <Text style={styles.colClientPrice}>{formatPrice(item.pricePerCaseUsd)}</Text>
-                  <Text style={styles.colClientTotal}>{formatPrice(item.totalUsd)}</Text>
+                  <Text style={styles.colDistCost}>
+                    {formatAed(item.distributorCostPerCaseUsd)}
+                    {'\n'}
+                    <Text style={styles.priceUsd}>{formatUsd(item.distributorCostPerCaseUsd)}</Text>
+                  </Text>
+                  <Text style={styles.colDistTotal}>
+                    {formatAed(distTotal)}
+                    {'\n'}
+                    <Text style={styles.priceUsd}>{formatUsd(distTotal)}</Text>
+                  </Text>
+                  <Text style={styles.colClientPrice}>
+                    {formatAed(item.pricePerCaseUsd)}
+                    {'\n'}
+                    <Text style={styles.priceUsd}>{formatUsd(item.pricePerCaseUsd)}</Text>
+                  </Text>
+                  <Text style={styles.colClientTotal}>
+                    {formatAed(item.totalUsd)}
+                    {'\n'}
+                    <Text style={styles.priceUsd}>{formatUsd(item.totalUsd)}</Text>
+                  </Text>
                 </View>
               );
             })}
@@ -463,30 +489,38 @@ const ProformaInvoicePDFTemplate = ({
             {order.subtotalUsd !== null && order.subtotalUsd !== undefined && (
               <View style={styles.pricingRow}>
                 <Text style={styles.pricingLabel}>Subtotal:</Text>
-                <Text style={styles.pricingValue}>{formatPrice(order.subtotalUsd)}</Text>
+                <Text style={styles.pricingValue}>
+                  {formatAed(order.subtotalUsd)}
+                  {'\n'}
+                  <Text style={{ fontSize: 8, color: '#737373' }}>{formatUsd(order.subtotalUsd)}</Text>
+                </Text>
               </View>
             )}
             {order.dutyUsd !== null && order.dutyUsd !== undefined && order.dutyUsd > 0 && (
               <View style={styles.pricingRow}>
                 <Text style={styles.pricingLabel}>Import Duty:</Text>
-                <Text style={styles.pricingValue}>{formatPrice(order.dutyUsd)}</Text>
+                <Text style={styles.pricingValue}>{formatAed(order.dutyUsd)}</Text>
               </View>
             )}
             {order.vatUsd !== null && order.vatUsd !== undefined && order.vatUsd > 0 && (
               <View style={styles.pricingRow}>
                 <Text style={styles.pricingLabel}>VAT:</Text>
-                <Text style={styles.pricingValue}>{formatPrice(order.vatUsd)}</Text>
+                <Text style={styles.pricingValue}>{formatAed(order.vatUsd)}</Text>
               </View>
             )}
             {order.logisticsUsd !== null && order.logisticsUsd !== undefined && order.logisticsUsd > 0 && (
               <View style={styles.pricingRow}>
                 <Text style={styles.pricingLabel}>Logistics:</Text>
-                <Text style={styles.pricingValue}>{formatPrice(order.logisticsUsd)}</Text>
+                <Text style={styles.pricingValue}>{formatAed(order.logisticsUsd)}</Text>
               </View>
             )}
             <View style={[styles.pricingRow, styles.totalRow]}>
               <Text style={styles.totalLabel}>Total:</Text>
-              <Text style={styles.totalValue}>{formatPrice(order.totalUsd)}</Text>
+              <Text style={styles.totalValue}>
+                {formatAed(order.totalUsd)}
+                {'\n'}
+                <Text style={{ fontSize: 9, color: '#737373' }}>{formatUsd(order.totalUsd)}</Text>
+              </Text>
             </View>
           </View>
         </View>
