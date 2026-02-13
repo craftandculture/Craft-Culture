@@ -17,7 +17,7 @@
 
 export interface LabelData {
   /** Unique case barcode (e.g., CASE-1010279-2015-06-00750-001) */
-  barcode: string;
+  barcode?: string;
   /** Product name (e.g., Château Margaux 2015) */
   productName: string;
   /** LWIN-18 code */
@@ -32,6 +32,8 @@ export interface LabelData {
   locationCode?: string;
   /** Owner/partner name (e.g., Cru Wine, Cult Wine) */
   owner?: string;
+  /** Whether to show the barcode (default: true) */
+  showBarcode?: boolean;
 }
 
 /**
@@ -126,8 +128,12 @@ const generateLabelZpl = (data: LabelData) => {
   const lot = data.lotNumber ? escapeZpl(data.lotNumber) : '-';
   const owner = data.owner ? escapeZpl(data.owner) : '-';
 
+  const showBarcode = data.showBarcode !== false && data.barcode;
+
   // ZPL code for 4" x 2" label at 203 DPI (812 x 406 dots)
-  const zpl = `^XA
+  // Two layouts: with barcode (WMS) and without barcode (PCO)
+  const zpl = showBarcode
+    ? `^XA
 
 ^FX -- C&C logo (200x60 dots) --
 ^FO30,8
@@ -177,6 +183,63 @@ ${productLine2 ? `^FX -- Product name line 2 --
 ^FO30,355
 ^A0N,20,20
 ^FDLWIN: ${lwin}^FS
+
+^XZ`
+    : `^XA
+
+^FX -- C&C logo (200x60 dots) --
+^FO30,8
+${CC_LOGO_GF}^FS
+
+^FX -- Horizontal separator --
+^FO30,75
+^GB750,2,2^FS
+
+^FX -- PCO number (large, clearly labeled) --
+^FO30,90
+^A0N,40,40
+^FD${lot}^FS
+
+^FX -- Owner (prominent) --
+^FO30,140
+^A0N,34,34
+^FD${owner}^FS
+
+^FX -- Separator --
+^FO30,182
+^GB750,1,1^FS
+
+^FX -- Product name --
+^FO30,195
+^A0N,30,30
+^FD${productLine1}^FS
+
+${productLine2 ? `^FO30,228
+^A0N,30,30
+^FD${productLine2}^FS
+` : ''}
+^FX -- Pack Size / Vintage --
+^FO30,268
+^A0N,26,26
+^FD${packSize}^FS
+
+^FO500,268
+^A0N,26,26
+^FD${vintage !== '-' ? 'Vintage: ' + vintage : ''}^FS
+
+^FX -- LWIN --
+^FO30,305
+^A0N,20,20
+^FDLWIN: ${lwin}^FS
+
+^FX -- Separator --
+^FO30,335
+^GB750,1,1^FS
+
+^FX -- Branding tagline --
+^FO30,350
+^A0N,22,22
+^FDServiced via Craft & Culture^FS
 
 ^XZ`;
 
