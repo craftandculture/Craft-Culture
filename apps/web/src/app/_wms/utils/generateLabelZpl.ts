@@ -195,76 +195,71 @@ ${productLine2 ? `^FX -- Product name line 2 --
 ^FO30,10
 ${CC_LOGO_GF}^FS
 
-^FX -- QR code (top-right, mag 4 ~116x116 dots) --
+^FX -- QR code (top-right, mag 4) --
 ^FO666,8
 ^BQN,2,4
 ^FDQA,https://www.craftculture.xyz/cold-chain.html^FS
 
-^FX -- "TRACE THIS CASE" below QR --
-^FO664,130
-^A0N,12,12
-^FDTRACE THIS CASE^FS
-
-^FX -- Horizontal separator --
-^FO30,150
-^GB750,2,2^FS
+^FX -- Horizontal separator (stops before QR column) --
+^FO30,80
+^GB580,2,2^FS
 
 ^FX -- PCO number (large, own line) --
-^FO30,164
+^FO30,94
 ^A0N,34,34
 ^FD${lotLine1}^FS
 
 ${lotLine2 ? `^FX -- Total order info --
-^FO30,202
+^FO30,134
 ^A0N,22,22
 ^FD${lotLine2}^FS
 ` : ''}
 ^FX -- Owner (prominent) --
-^FO30,230
+^FO30,162
 ^A0N,28,28
 ^FD${owner}^FS
 
 ^FX -- Separator --
-^FO30,266
+^FO30,196
 ^GB750,1,1^FS
 
 ^FX -- Product name --
-^FO30,278
+^FO30,210
 ^A0N,26,26
 ^FD${productLine1}^FS
 
-${productLine2 ? `^FO30,308
+${productLine2 ? `^FO30,240
 ^A0N,26,26
 ^FD${productLine2}^FS
 ` : ''}
 ^FX -- Pack Size / Vintage --
-^FO30,338
+^FO30,270
 ^A0N,22,22
 ^FD${packSize}^FS
 
-^FO400,338
+^FO400,270
 ^A0N,22,22
 ^FD${vintage !== '-' ? 'Vintage: ' + vintage : ''}^FS
 
 ^FX -- Separator --
-^FO30,368
+^FO30,300
 ^GB750,1,1^FS
 
 ^FX -- Instagram icon (24x24 bitmap) --
-^FO30,378
+^FO30,314
 ^GFA,72,72,3,0000000FFFF01FFFF83C003C70000E7000EE607EE660FFE661E7866381C66381C66300C66300C66381C66381C661E78660FF06607E0670000E70000E3C003C1FFFF80FFFF0000000^FS
 
 ^FX -- Instagram handle --
-^FO60,380
+^FO60,310
 ^A0N,18,18
 ^FD@wine.uae^FS
 
 ^FX -- Globe icon (24x24 bitmap) --
-^FO200,378
+^FO200,308
 ^GFA,72,72,3,00000000FF0003FFC007FFE00F7EF01CE73838E71C38C31C71C38E71C38E71C38E7FFFFE7FFFFE71C38E71C38E71C38E38C31C38E71C1CE7380F7EF007FFE003FFC000FF00000000^FS
 
 ^FX -- Website --
-^FO230,380
+^FO230,310
 ^A0N,18,18
 ^FDcraftculture.xyz^FS
 
