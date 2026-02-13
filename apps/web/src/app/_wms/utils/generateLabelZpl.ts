@@ -125,7 +125,11 @@ const generateLabelZpl = (data: LabelData) => {
   // Use provided vintage, or extract from LWIN-18 if not provided
   const vintageValue = data.vintage || extractVintageFromLwin(data.lwin18);
   const vintage = vintageValue ? String(vintageValue) : '-';
-  const lot = data.lotNumber ? escapeZpl(data.lotNumber) : '-';
+  const lotRaw = data.lotNumber ? escapeZpl(data.lotNumber) : '-';
+  // Split lot on ' | ' to separate PCO number from total order info
+  const lotParts = lotRaw.split(' | ');
+  const lotLine1 = lotParts[0] ?? lotRaw;
+  const lotLine2 = lotParts[1] ?? '';
   const owner = data.owner ? escapeZpl(data.owner) : '-';
 
   const showBarcode = data.showBarcode !== false && data.barcode;
@@ -177,7 +181,7 @@ ${productLine2 ? `^FX -- Product name line 2 --
 ^FX -- Row 3: Lot/Order (prominent) --
 ^FO30,315
 ^A0N,30,30
-^FD${lot}^FS
+^FD${lotRaw}^FS
 
 ^FX -- Row 4: LWIN --
 ^FO30,355
@@ -192,66 +196,76 @@ ${productLine2 ? `^FX -- Product name line 2 --
 ${CC_LOGO_GF}^FS
 
 ^FX -- QR code (upper right, links to cold chain page) --
-^FO700,6
+^FO690,8
 ^BQN,2,3
 ^FDQA,https://www.craftculture.xyz/cold-chain^FS
 
-^FX -- Horizontal separator --
+^FX -- "TRACE THIS CASE" call-to-action below QR --
+^FO680,112
+^A0N,18,18
+^FDTRACE THIS CASE^FS
+
+^FX -- Horizontal separator (short, avoids QR zone) --
 ^FO30,75
-^GB750,2,2^FS
+^GB630,2,2^FS
 
-^FX -- PCO number (large, clearly labeled) --
-^FO30,90
-^A0N,40,40
-^FD${lot}^FS
+^FX -- PCO number (large, own line) --
+^FO30,88
+^A0N,36,36
+^FD${lotLine1}^FS
 
+${lotLine2 ? `^FX -- Total order info --
+^FO30,128
+^A0N,22,22
+^FD${lotLine2}^FS
+` : ''}
 ^FX -- Owner (prominent) --
-^FO30,140
-^A0N,34,34
+^FO30,158
+^A0N,30,30
 ^FD${owner}^FS
 
 ^FX -- Separator --
-^FO30,182
+^FO30,196
 ^GB750,1,1^FS
 
 ^FX -- Product name --
-^FO30,195
-^A0N,30,30
+^FO30,208
+^A0N,28,28
 ^FD${productLine1}^FS
 
-${productLine2 ? `^FO30,228
-^A0N,30,30
+${productLine2 ? `^FO30,240
+^A0N,28,28
 ^FD${productLine2}^FS
 ` : ''}
 ^FX -- Pack Size / Vintage --
-^FO30,268
-^A0N,26,26
+^FO30,274
+^A0N,24,24
 ^FD${packSize}^FS
 
-^FO500,268
-^A0N,26,26
+^FO500,274
+^A0N,24,24
 ^FD${vintage !== '-' ? 'Vintage: ' + vintage : ''}^FS
 
 ^FX -- Separator --
-^FO30,310
+^FO30,308
 ^GB750,1,1^FS
 
 ^FX -- Instagram icon (24x24 bitmap) --
-^FO30,324
+^FO30,320
 ^GFA,72,72,3,0000000FFFF01FFFF83C003C70000E7000EE607EE660FFE661E7866381C66381C66300C66300C66381C66381C661E78660FF06607E0670000E70000E3C003C1FFFF80FFFF0000000^FS
 
 ^FX -- Instagram handle --
-^FO60,326
-^A0N,22,22
+^FO60,322
+^A0N,20,20
 ^FD@wine.uae^FS
 
 ^FX -- Globe icon (24x24 bitmap) --
-^FO520,324
+^FO520,320
 ^GFA,72,72,3,00000000FF0003FFC007FFE00F7EF01CE73838E71C38C31C71C38E71C38E71C38E7FFFFE7FFFFE71C38E71C38E71C38E38C31C38E71C1CE7380F7EF007FFE003FFC000FF00000000^FS
 
 ^FX -- Website --
-^FO550,326
-^A0N,22,22
+^FO550,322
+^A0N,20,20
 ^FDcraftculture.xyz^FS
 
 ^XZ`;
