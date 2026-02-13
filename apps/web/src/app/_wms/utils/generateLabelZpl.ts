@@ -198,7 +198,7 @@ ${CC_LOGO_GF}^FS
 ^FX -- QR code (upper right, links to cold chain page) --
 ^FO690,8
 ^BQN,2,3
-^FDQA,https://www.craftculture.xyz/cold-chain^FS
+^FDQA,https://www.craftculture.xyz/cold-chain.html^FS
 
 ^FX -- "TRACE THIS CASE" call-to-action below QR --
 ^FO680,112
