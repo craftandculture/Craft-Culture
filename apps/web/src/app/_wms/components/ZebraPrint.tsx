@@ -86,7 +86,7 @@ const ZebraPrint = ({
   const [error, setError] = useState<string | null>(null);
   const [isSearching, setIsSearching] = useState(false);
   const [connectionType, setConnectionType] = useState<'wifi' | 'eb' | 'ble' | 'desktop' | null>(null);
-  const [debugInfo, setDebugInfo] = useState<string>('');
+  const [_debugInfo, setDebugInfo] = useState<string>('');
 
   // Refs for persistent connections
   const ebPrinterRef = useRef<ReturnType<NonNullable<ReturnType<typeof getEBPrinterZebra>>['getPrinterByID']> | null>(null);
@@ -190,7 +190,7 @@ const ZebraPrint = ({
   // ============================================
   // Web Bluetooth Printing (BLE)
   // ============================================
-  const connectWebBluetooth = useCallback(async () => {
+  const _connectWebBluetooth = useCallback(async () => {
     if (!hasWebBluetooth()) {
       setError('Web Bluetooth not available');
       return;
@@ -451,8 +451,9 @@ const ZebraPrint = ({
   const handleConnect = () => {
     if (isEnterpriseBrowser()) {
       searchEBPrinters();
-    } else if (hasWebBluetooth()) {
-      void connectWebBluetooth();
+    } else {
+      // Retry WiFi check (works after Chrome mixed-content flag is set)
+      void checkWifiPrinter();
     }
   };
 
@@ -489,17 +490,12 @@ const ZebraPrint = ({
             onClick={handleConnect}
             className="text-left text-xs text-blue-500 underline"
           >
-            {hasWebBluetooth() ? 'Connect Printer' : 'Search Again'}
+            {isEnterpriseBrowser() ? 'Search Printers' : 'Retry'}
           </button>
         )}
         {error && (
           <Typography variant="bodyXs" colorRole="muted" className="text-red-500">
             {error}
-          </Typography>
-        )}
-        {debugInfo && (
-          <Typography variant="bodyXs" colorRole="muted" className="text-gray-400">
-            {debugInfo}
           </Typography>
         )}
       </div>
