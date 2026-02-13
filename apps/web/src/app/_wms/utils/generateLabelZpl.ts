@@ -236,10 +236,23 @@ ${productLine2 ? `^FO30,228
 ^FO30,335
 ^GB750,1,1^FS
 
-^FX -- Branding tagline --
-^FO30,350
+^FX -- Instagram icon (simplified camera outline) --
+^FO30,346
+^GB22,22,2,B,0^FS
+^FO37,352
+^GB8,8,2,B,0^FS
+^FO48,347
+^GB3,3,3,B,0^FS
+
+^FX -- Instagram handle --
+^FO60,348
 ^A0N,22,22
-^FDServiced via Craft & Culture^FS
+^FD@wine.uae^FS
+
+^FX -- Website --
+^FO550,348
+^A0N,22,22
+^FDcraftculture.xyz^FS
 
 ^XZ`;
 
