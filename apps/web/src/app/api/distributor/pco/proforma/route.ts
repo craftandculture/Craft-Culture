@@ -122,6 +122,8 @@ export async function GET(request: NextRequest) {
       lineItems: lineItems.map((item) => {
         const clientTotal = calculateClientPrice(item.totalUsd);
         const clientPricePerCase = item.quantity > 0 ? clientTotal / item.quantity : 0;
+        // Distributor cost = supplier price / 0.97 (C&C margin + transfer)
+        const distributorCostPerCase = item.pricePerCaseUsd / 0.97;
         return {
           productName: item.productName ?? 'Unknown Product',
           producer: item.producer,
@@ -129,6 +131,7 @@ export async function GET(request: NextRequest) {
           region: item.region,
           bottleSize: item.bottleSize,
           quantity: item.quantity ?? 0,
+          distributorCostPerCaseUsd: distributorCostPerCase,
           pricePerCaseUsd: clientPricePerCase,
           totalUsd: clientTotal,
         };

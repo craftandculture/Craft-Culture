@@ -905,13 +905,18 @@ const DistributorOrderDetailPage = () => {
                           <th className="px-2 py-1.5 text-center text-[10px] font-medium uppercase tracking-wide text-text-muted">Yr</th>
                           <th className="px-2 py-1.5 text-center text-[10px] font-medium uppercase tracking-wide text-text-muted">Pack</th>
                           <th className="px-2 py-1.5 text-center text-[10px] font-medium uppercase tracking-wide text-text-muted">Qty</th>
-                          <th className="px-2 py-1.5 text-right text-[10px] font-medium uppercase tracking-wide text-text-muted">Total ({currency})</th>
+                          <th className="px-2 py-1.5 text-right text-[10px] font-medium uppercase tracking-wide text-text-muted">Dist. Cost/Case</th>
+                          <th className="px-2 py-1.5 text-right text-[10px] font-medium uppercase tracking-wide text-text-muted">Client Price/Case</th>
+                          <th className="px-2 py-1.5 text-right text-[10px] font-medium uppercase tracking-wide text-text-muted">Client Total ({currency})</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-border-muted/50">
                         {order.items.map((item) => {
                           // Calculate client-facing price by prorating order total
                           const clientTotal = calculateClientPrice(item.totalUsd, totalSupplierCost, orderTotal);
+                          const clientPricePerCase = item.quantity > 0 ? clientTotal / item.quantity : 0;
+                          // Distributor cost = supplier price / 0.97 (C&C margin + transfer)
+                          const distributorCostPerCase = item.pricePerCaseUsd / 0.97;
                           return (
                             <tr key={item.id} className="hover:bg-surface-muted/20">
                               <td className="px-2 py-1.5">
@@ -921,6 +926,12 @@ const DistributorOrderDetailPage = () => {
                               <td className="px-2 py-1.5 text-center text-xs">{item.vintage || '-'}</td>
                               <td className="px-2 py-1.5 text-center text-xs text-text-muted">{item.caseConfig}×{item.bottleSize}</td>
                               <td className="px-2 py-1.5 text-center text-xs font-medium">{item.quantity}</td>
+                              <td className="px-2 py-1.5 text-right text-xs text-text-muted">
+                                {formatPrice(getAmount(distributorCostPerCase), currency)}
+                              </td>
+                              <td className="px-2 py-1.5 text-right text-xs">
+                                {formatPrice(getAmount(clientPricePerCase), currency)}
+                              </td>
                               <td className="px-2 py-1.5 text-right text-xs font-semibold">
                                 {formatPrice(getAmount(clientTotal), currency)}
                               </td>

@@ -128,18 +128,26 @@ const styles = StyleSheet.create({
     backgroundColor: '#fafafa',
   },
   colProduct: {
-    flex: 3,
+    flex: 2.2,
   },
   colQuantity: {
-    flex: 1,
+    flex: 0.5,
     textAlign: 'center',
   },
-  colPrice: {
-    flex: 1.3,
+  colDistCost: {
+    flex: 1,
     textAlign: 'right',
   },
-  colTotal: {
-    flex: 1.3,
+  colDistTotal: {
+    flex: 1,
+    textAlign: 'right',
+  },
+  colClientPrice: {
+    flex: 1,
+    textAlign: 'right',
+  },
+  colClientTotal: {
+    flex: 1,
     textAlign: 'right',
   },
   productName: {
@@ -294,6 +302,7 @@ export interface ProformaInvoicePDFTemplateProps {
     region?: string | null;
     bottleSize?: string | null;
     quantity: number;
+    distributorCostPerCaseUsd?: number | null;
     pricePerCaseUsd?: number | null;
     totalUsd?: number | null;
   }>;
@@ -413,31 +422,38 @@ const ProformaInvoicePDFTemplate = ({
             {/* Table Header */}
             <View style={styles.tableHeader}>
               <Text style={styles.colProduct}>Product</Text>
-              <Text style={styles.colQuantity}>Qty (Cases)</Text>
-              <Text style={styles.colPrice}>Price/Case</Text>
-              <Text style={styles.colTotal}>Total</Text>
+              <Text style={styles.colQuantity}>Qty</Text>
+              <Text style={styles.colDistCost}>Dist. Cost/Case</Text>
+              <Text style={styles.colDistTotal}>Dist. Total</Text>
+              <Text style={styles.colClientPrice}>Client/Case</Text>
+              <Text style={styles.colClientTotal}>Client Total</Text>
             </View>
 
             {/* Table Rows */}
-            {lineItems.map((item, index) => (
-              <View
-                key={index}
-                style={index % 2 === 1 ? [styles.tableRow, styles.tableRowAlt] : styles.tableRow}
-                wrap={false}
-              >
-                <View style={styles.colProduct}>
-                  <Text style={styles.productName}>{item.productName}</Text>
-                  <Text style={styles.productMeta}>
-                    {[item.producer, item.region, item.vintage, item.bottleSize]
-                      .filter(Boolean)
-                      .join(' • ')}
-                  </Text>
+            {lineItems.map((item, index) => {
+              const distTotal = (item.distributorCostPerCaseUsd ?? 0) * item.quantity;
+              return (
+                <View
+                  key={index}
+                  style={index % 2 === 1 ? [styles.tableRow, styles.tableRowAlt] : styles.tableRow}
+                  wrap={false}
+                >
+                  <View style={styles.colProduct}>
+                    <Text style={styles.productName}>{item.productName}</Text>
+                    <Text style={styles.productMeta}>
+                      {[item.producer, item.region, item.vintage, item.bottleSize]
+                        .filter(Boolean)
+                        .join(' • ')}
+                    </Text>
+                  </View>
+                  <Text style={styles.colQuantity}>{item.quantity}</Text>
+                  <Text style={styles.colDistCost}>{formatPrice(item.distributorCostPerCaseUsd)}</Text>
+                  <Text style={styles.colDistTotal}>{formatPrice(distTotal)}</Text>
+                  <Text style={styles.colClientPrice}>{formatPrice(item.pricePerCaseUsd)}</Text>
+                  <Text style={styles.colClientTotal}>{formatPrice(item.totalUsd)}</Text>
                 </View>
-                <Text style={styles.colQuantity}>{item.quantity}</Text>
-                <Text style={styles.colPrice}>{formatPrice(item.pricePerCaseUsd)}</Text>
-                <Text style={styles.colTotal}>{formatPrice(item.totalUsd)}</Text>
-              </View>
-            ))}
+              );
+            })}
           </View>
         </View>
 
