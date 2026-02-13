@@ -29,6 +29,7 @@ import Typography from '@/app/_ui/components/Typography/Typography';
 import ZebraPrint from '@/app/_wms/components/ZebraPrint';
 import type { CompactTotemData } from '@/app/_wms/utils/generateCompactTotemZpl';
 import { generateBatchCompactTotemsZpl } from '@/app/_wms/utils/generateCompactTotemZpl';
+import wifiPrint from '@/app/_wms/utils/wifiPrint';
 import useTRPC from '@/lib/trpc/browser';
 
 /**
@@ -42,8 +43,7 @@ const BayConfigurationPage = () => {
   const [selectedBays, setSelectedBays] = useState<Set<string>>(new Set());
   const [showAddBay, setShowAddBay] = useState(false);
   const [isPrintingToZebra, setIsPrintingToZebra] = useState(false);
-  const [zebraConnected, setZebraConnected] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
+  const [_zebraConnected, setZebraConnected] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
   // Edit bay state
@@ -63,14 +63,6 @@ const BayConfigurationPage = () => {
 
   const handlePrintReady = useCallback((printFn: (zpl: string) => Promise<boolean>) => {
     printFnRef.current = printFn;
-  }, []);
-
-  // Detect mobile device
-  useEffect(() => {
-    const mobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
-      navigator.userAgent,
-    );
-    setIsMobile(mobile);
   }, []);
 
   // Get bay totems data
@@ -272,35 +264,17 @@ const BayConfigurationPage = () => {
       const zpl = generateBatchCompactTotemsZpl(compactData);
 
       if (zpl) {
-        if (isMobile) {
-          try {
-            const blob = new Blob([zpl], { type: 'application/vnd.zebra.zpl' });
-            const fileUrl = URL.createObjectURL(blob);
-            const newWindow = window.open(fileUrl, '_blank');
-
-            if (!newWindow) {
-              const link = document.createElement('a');
-              link.href = fileUrl;
-              link.download = 'bay-labels.zpl';
-              document.body.appendChild(link);
-              link.click();
-              document.body.removeChild(link);
-              toast.info('File downloaded. Open with Printer Setup Utility.');
-            }
-
-            setTimeout(() => URL.revokeObjectURL(fileUrl), 1000);
-            toast.success(`Printed ${selectedBays.size} bay label(s)`);
-            setSelectedBays(new Set());
-          } catch (err) {
-            const message = err instanceof Error ? err.message : 'Print failed';
-            toast.error(`Error: ${message}`);
-          }
-        } else if (printFnRef.current) {
-          const success = await printFnRef.current(zpl);
-          if (success) {
-            toast.success(`Printed ${selectedBays.size} bay label(s)`);
-            setSelectedBays(new Set());
-          }
+        let success = false;
+        if (printFnRef.current) {
+          success = await printFnRef.current(zpl);
+        } else {
+          success = await wifiPrint(zpl);
+        }
+        if (success) {
+          toast.success(`Printed ${selectedBays.size} bay label(s)`);
+          setSelectedBays(new Set());
+        } else {
+          toast.error('Print failed - no printer connected');
         }
       }
     } finally {
@@ -346,7 +320,7 @@ const BayConfigurationPage = () => {
               <Button
                 variant="default"
                 onClick={handlePrintToZebra}
-                disabled={(!zebraConnected && !isMobile) || isPrintingToZebra}
+                disabled={isPrintingToZebra}
               >
                 <ButtonContent iconLeft={isPrintingToZebra ? IconLoader2 : IconPrinter}>
                   {isPrintingToZebra ? 'Printing...' : `Print (${selectedBays.size})`}
@@ -742,7 +716,7 @@ const BayConfigurationPage = () => {
                 <Button
                   variant="default"
                   onClick={handlePrintToZebra}
-                  disabled={(!zebraConnected && !isMobile) || isPrintingToZebra}
+                  disabled={isPrintingToZebra}
                 >
                   <ButtonContent iconLeft={isPrintingToZebra ? IconLoader2 : IconPrinter}>
                     {isPrintingToZebra ? 'Printing...' : 'Print Labels'}

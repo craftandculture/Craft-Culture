@@ -3,11 +3,11 @@
 import {
   IconArrowLeft,
   IconCheck,
-  IconDownload,
   IconFileText,
   IconLoader2,
   IconPackage,
   IconPlus,
+  IconPrinter,
   IconTrash,
   IconTruck,
   IconX,
@@ -25,6 +25,7 @@ import Icon from '@/app/_ui/components/Icon/Icon';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import downloadZplFile from '@/app/_wms/utils/downloadZplFile';
 import { generateBatchLabelsZpl } from '@/app/_wms/utils/generateLabelZpl';
+import wifiPrint from '@/app/_wms/utils/wifiPrint';
 import useTRPC from '@/lib/trpc/browser';
 
 /**
@@ -318,9 +319,8 @@ const WMSDispatchBatchDetailPage = () => {
           {(batch.status === 'staged' || batch.status === 'picking') && batch.totalCases > 0 && (
             <Button
               variant="outline"
-              onClick={() => {
+              onClick={async () => {
                 // Generate labels for dispatch batch
-                // For now, generate placeholder labels - can be enhanced later
                 const labels = Array.from({ length: batch.totalCases }, (_, idx) => ({
                   barcode: `BATCH-${batch.batchNumber}-${String(idx + 1).padStart(3, '0')}`,
                   productName: `Dispatch Batch ${batch.batchNumber}`,
@@ -330,11 +330,12 @@ const WMSDispatchBatchDetailPage = () => {
                   locationCode: batch.distributorName ?? undefined,
                 }));
                 const zpl = generateBatchLabelsZpl(labels);
-                downloadZplFile(zpl, `dispatch-${batch.batchNumber}`);
+                const printed = await wifiPrint(zpl);
+                if (!printed) downloadZplFile(zpl, `dispatch-${batch.batchNumber}`);
               }}
             >
-              <ButtonContent iconLeft={IconDownload}>
-                Download Case Labels ({batch.totalCases})
+              <ButtonContent iconLeft={IconPrinter}>
+                Print Case Labels ({batch.totalCases})
               </ButtonContent>
             </Button>
           )}

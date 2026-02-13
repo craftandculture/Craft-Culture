@@ -27,6 +27,7 @@ import LocationBadge from '@/app/_wms/components/LocationBadge';
 import ScanInput from '@/app/_wms/components/ScanInput';
 import downloadZplFile from '@/app/_wms/utils/downloadZplFile';
 import { generateBatchLabelsZpl } from '@/app/_wms/utils/generateLabelZpl';
+import wifiPrint from '@/app/_wms/utils/wifiPrint';
 import useTRPC, { useTRPCClient } from '@/lib/trpc/browser';
 
 type WorkflowStep =
@@ -236,8 +237,8 @@ const WMSRepackPage = () => {
     setRepackResult(null);
   };
 
-  // Download labels for repacked cases
-  const handleDownloadLabels = () => {
+  // Print labels for repacked cases
+  const handlePrintLabels = async () => {
     if (!repackResult) return;
 
     const labelData = repackResult.target.newCaseLabels.map((label) => ({
@@ -252,7 +253,8 @@ const WMSRepackPage = () => {
 
     const zpl = generateBatchLabelsZpl(labelData);
     const filename = `repack-${repackResult.repackNumber}-labels`;
-    downloadZplFile(zpl, filename);
+    const printed = await wifiPrint(zpl);
+    if (!printed) downloadZplFile(zpl, filename);
   };
 
   // Calculate target cases from source
@@ -695,10 +697,10 @@ const WMSRepackPage = () => {
               variant="default"
               size="lg"
               className="w-full"
-              onClick={handleDownloadLabels}
+              onClick={handlePrintLabels}
             >
               <ButtonContent iconLeft={IconPrinter}>
-                Download {repackResult.target.newCaseLabels.length} Labels
+                Print {repackResult.target.newCaseLabels.length} Labels
               </ButtonContent>
             </Button>
 

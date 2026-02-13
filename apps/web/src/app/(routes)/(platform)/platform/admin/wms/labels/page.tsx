@@ -33,6 +33,7 @@ import type { BayTotemData } from '@/app/_wms/utils/generateBayTotemZpl';
 import { generateBatchBayTotemsZpl } from '@/app/_wms/utils/generateBayTotemZpl';
 import type { LocationLabelData } from '@/app/_wms/utils/generateLocationLabelZpl';
 import { generateBatchLocationLabelsZpl } from '@/app/_wms/utils/generateLocationLabelZpl';
+import wifiPrint from '@/app/_wms/utils/wifiPrint';
 import useTRPC from '@/lib/trpc/browser';
 
 /**
@@ -47,8 +48,7 @@ const WMSLabelsPage = () => {
   const [activeTab, setActiveTab] = useState<'case' | 'location' | 'bay' | 'totem'>(shipmentId ? 'case' : 'bay');
   const [selectedLabels, setSelectedLabels] = useState<Set<string>>(new Set());
   const [isPrintingToZebra, setIsPrintingToZebra] = useState(false);
-  const [zebraConnected, setZebraConnected] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
+  const [_zebraConnected, setZebraConnected] = useState(false);
 
   // Bay editing state
   const [editingBay, setEditingBay] = useState<{ aisle: string; bay: string } | null>(null);
@@ -60,14 +60,6 @@ const WMSLabelsPage = () => {
 
   const handlePrintReady = useCallback((printFn: (zpl: string) => Promise<boolean>) => {
     printFnRef.current = printFn;
-  }, []);
-
-  // Detect mobile device for print button enablement
-  useEffect(() => {
-    const mobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
-      navigator.userAgent
-    );
-    setIsMobile(mobile);
   }, []);
 
   // Get case labels for a shipment
@@ -283,41 +275,17 @@ const WMSLabelsPage = () => {
       }
 
       if (zpl) {
-        // On mobile, try to open file directly with Printer Setup Utility
-        if (isMobile) {
-          try {
-            // Create blob with ZPL content
-            const blob = new Blob([zpl], { type: 'application/vnd.zebra.zpl' });
-            const fileUrl = URL.createObjectURL(blob);
-
-            // Open the file URL - Android should show "Open with" dialog
-            const newWindow = window.open(fileUrl, '_blank');
-
-            if (!newWindow) {
-              // Popup blocked, fall back to download
-              const link = document.createElement('a');
-              link.href = fileUrl;
-              link.download = 'label.zpl';
-              document.body.appendChild(link);
-              link.click();
-              document.body.removeChild(link);
-              toast.info('File downloaded. Open with Printer Setup Utility.');
-            }
-
-            setTimeout(() => URL.revokeObjectURL(fileUrl), 1000);
-            toast.success(`Printed ${labelCount} location label(s)`);
-            setSelectedLabels(new Set());
-          } catch (err) {
-            const message = err instanceof Error ? err.message : 'Print failed';
-            toast.error(`Error: ${message}`);
-          }
-        } else if (printFnRef.current) {
-          // Desktop: use ZebraPrint component
-          const success = await printFnRef.current(zpl);
-          if (success) {
-            toast.success(`Printed ${labelCount} location label(s)`);
-            setSelectedLabels(new Set());
-          }
+        let success = false;
+        if (printFnRef.current) {
+          success = await printFnRef.current(zpl);
+        } else {
+          success = await wifiPrint(zpl);
+        }
+        if (success) {
+          toast.success(`Printed ${labelCount} label(s)`);
+          setSelectedLabels(new Set());
+        } else {
+          toast.error('Print failed - no printer connected');
         }
       }
     } finally {
@@ -379,7 +347,7 @@ const WMSLabelsPage = () => {
               <Button
                 variant="default"
                 onClick={handlePrintToZebra}
-                disabled={selectedLabels.size === 0 || (!zebraConnected && !isMobile) || isPrintingToZebra}
+                disabled={selectedLabels.size === 0 || isPrintingToZebra}
               >
                 <ButtonContent iconLeft={isPrintingToZebra ? IconLoader2 : IconPrinter}>
                   {isPrintingToZebra
