@@ -459,25 +459,25 @@ const AdminPrivateOrderDetailPage = () => {
     if (!order.items || order.items.length === 0) return;
     setIsPrinting(true);
     try {
-      const labels = order.items.flatMap((item) => {
-        const qty = item.quantity ?? 1;
+      const totalCases = order.caseCount ?? order.items.reduce((sum, i) => sum + (i.quantity ?? 1), 0);
+      const labels = order.items.map((item) => {
         const lwin = item.lwin || 'UNKNOWN';
         const bottleSizeNum = String(item.bottleSize ?? '750').replace(/\D/g, '');
-        const packSize = `${item.caseConfig ?? 12}x${bottleSizeNum}ml`;
-        return Array.from({ length: qty }, (_, i) => ({
-          barcode: `CASE-${lwin}-${String(i + 1).padStart(3, '0')}`,
+        const packSize = `${item.caseConfig ?? 12}x${bottleSizeNum}ml | ${item.quantity ?? 1} cases`;
+        return {
+          showBarcode: false,
           productName: item.productName || 'Unknown Product',
           lwin18: lwin,
           packSize,
           vintage: item.vintage || undefined,
-          lotNumber: order.orderNumber || undefined,
+          lotNumber: `${order.orderNumber || 'PCO'} | ${totalCases} cases`,
           owner: order.partner?.businessName || undefined,
-        }));
+        };
       });
       const zpl = generateBatchLabelsZpl(labels);
       const success = await wifiPrint(zpl);
       if (success) {
-        toast.success(`Printed ${labels.length} case label${labels.length === 1 ? '' : 's'}`);
+        toast.success(`Printed ${labels.length} label${labels.length === 1 ? '' : 's'}`);
       } else {
         toast.error('Failed to reach printer — check WiFi connection');
       }
