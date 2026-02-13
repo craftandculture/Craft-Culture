@@ -110,10 +110,13 @@ const WMSPickListDetailPage = () => {
     }
   };
 
-  // Auto-focus scan input
+  // Auto-focus scan input (with delay to avoid re-focus during scan cooldown)
   useEffect(() => {
     if (scanInputRef.current && !pickingItem) {
-      scanInputRef.current.focus();
+      const timer = setTimeout(() => {
+        scanInputRef.current?.focus();
+      }, 500);
+      return () => clearTimeout(timer);
     }
   }, [pickingItem, data]);
 
@@ -187,7 +190,12 @@ const WMSPickListDetailPage = () => {
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && scanInput.trim()) {
-      void handleScan(scanInput.trim());
+      e.preventDefault();
+      const value = scanInput.trim();
+      setScanInput('');
+      // Blur immediately so the scanner can't send a duplicate
+      (e.target as HTMLInputElement).blur();
+      void handleScan(value);
     }
   };
 

@@ -69,12 +69,14 @@ const WMSPalletDetailPage = () => {
       void queryClient.invalidateQueries();
       setLastScanResult({ success: true, message: result.message || 'Case added successfully' });
       setScanInput('');
-      scanInputRef.current?.focus();
+      // Re-focus after cooldown to allow next scan
+      setTimeout(() => scanInputRef.current?.focus(), 1500);
     },
     onError: (error) => {
       setLastScanResult({ success: false, message: error.message });
       setScanInput('');
-      scanInputRef.current?.focus();
+      // Re-focus after cooldown to allow retry
+      setTimeout(() => scanInputRef.current?.focus(), 1500);
     },
   });
 
@@ -150,7 +152,8 @@ const WMSPalletDetailPage = () => {
   // Focus scan input on mount
   useEffect(() => {
     if (data?.pallet.status === 'active') {
-      scanInputRef.current?.focus();
+      const timer = setTimeout(() => scanInputRef.current?.focus(), 300);
+      return () => clearTimeout(timer);
     }
   }, [data?.pallet.status]);
 
@@ -165,7 +168,11 @@ const WMSPalletDetailPage = () => {
   const handleScan = (e: React.FormEvent) => {
     e.preventDefault();
     if (!scanInput.trim()) return;
-    addCaseMutation.mutate({ palletId, caseBarcode: scanInput.trim() });
+    const barcode = scanInput.trim();
+    setScanInput('');
+    // Blur immediately so the scanner can't send a duplicate
+    scanInputRef.current?.blur();
+    addCaseMutation.mutate({ palletId, caseBarcode: barcode });
   };
 
   const handlePrintLabel = async () => {
