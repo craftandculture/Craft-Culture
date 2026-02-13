@@ -470,7 +470,7 @@ const AdminPrivateOrderDetailPage = () => {
           lwin18: lwin,
           packSize,
           vintage: item.vintage || undefined,
-          lotNumber: `${order.orderNumber || 'PCO'} | ${totalCases} cases`,
+          lotNumber: `${order.orderNumber || 'PCO'} | Total Order: ${totalCases} Cases`,
           owner: order.partner?.businessName || undefined,
         };
       });
