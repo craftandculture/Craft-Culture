@@ -13,6 +13,8 @@ import {
 import { distributorProcedure } from '@/lib/trpc/procedures';
 import type { zohoCreateInvoiceJob } from '@/trigger/jobs/zoho-sync';
 
+import ensureClientVerified from '../utils/ensureClientVerified';
+
 type PrivateClientOrderStatus = (typeof privateClientOrderStatus.enumValues)[number];
 
 /**
@@ -173,6 +175,11 @@ const distributorUpdateStatus = distributorProcedure
       .set(updateData)
       .where(eq(privateClientOrders.id, orderId))
       .returning();
+
+    // Ensure client contact is marked as CD-verified on delivery
+    if (status === 'delivered') {
+      await ensureClientVerified(order.clientId);
+    }
 
     // Log activity
     await db.insert(privateClientOrderActivityLogs).values({

@@ -10,6 +10,7 @@ import type { zohoCreateInvoiceJob } from '@/trigger/jobs/zoho-sync';
 import logger from '@/utils/logger';
 
 import { privateClientOrderStatusEnum } from '../schemas/getOrdersSchema';
+import ensureClientVerified from '../utils/ensureClientVerified';
 import notifyPartnerOfOrderUpdate from '../utils/notifyPartnerOfOrderUpdate';
 
 const updateStatusSchema = z.object({
@@ -68,6 +69,11 @@ const adminUpdateStatus = adminProcedure
       })
       .where(eq(privateClientOrders.id, orderId))
       .returning();
+
+    // Ensure client contact is marked as CD-verified on delivery
+    if (status === 'delivered') {
+      await ensureClientVerified(order.clientId);
+    }
 
     // Log the activity
     await db.insert(privateClientOrderActivityLogs).values({
