@@ -4,6 +4,7 @@ import {
   IconCamera,
   IconCheck,
   IconCloudUpload,
+  IconFileTypePdf,
   IconLoader2,
   IconPhoto,
   IconX,
@@ -125,7 +126,7 @@ const DeliveryPhotoUpload = ({
         orderId,
         file: data.file,
         filename: data.filename,
-        fileType: data.fileType as 'image/png' | 'image/jpeg' | 'image/jpg',
+        fileType: data.fileType as 'image/png' | 'image/jpeg' | 'image/jpg' | 'application/pdf',
       });
     },
     onSuccess: () => {
@@ -145,21 +146,35 @@ const DeliveryPhotoUpload = ({
       if (!file) return;
 
       // Validate file type
-      const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg'];
+      const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'application/pdf'];
       if (!allowedTypes.includes(file.type)) {
-        toast.error('Please select an image file (PNG, JPG)');
+        toast.error('Please select an image (PNG, JPG) or PDF file');
         return;
       }
+
+      const isPdf = file.type === 'application/pdf';
 
       try {
         let base64: string;
 
-        // Compress if file is larger than max size
-        if (file.size > MAX_FILE_SIZE) {
+        if (isPdf) {
+          // PDFs cannot be compressed — validate size and read directly
+          if (file.size > MAX_FILE_SIZE) {
+            toast.error(`PDF must be under ${MAX_FILE_SIZE / 1024 / 1024}MB`);
+            return;
+          }
+          base64 = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result as string);
+            reader.onerror = () => reject(new Error('Failed to read file'));
+            reader.readAsDataURL(file);
+          });
+        } else if (file.size > MAX_FILE_SIZE) {
+          // Compress images if larger than max size
           toast.info('Compressing image...');
           base64 = await compressImage(file);
         } else {
-          // Read file directly if small enough
+          // Read image directly if small enough
           base64 = await new Promise<string>((resolve, reject) => {
             const reader = new FileReader();
             reader.onload = () => resolve(reader.result as string);
@@ -168,10 +183,12 @@ const DeliveryPhotoUpload = ({
           });
         }
 
-        setPreviewUrl(base64);
+        if (!isPdf) {
+          setPreviewUrl(base64);
+        }
 
         // Upload immediately (always use JPEG for compressed images)
-        const isCompressed = file.size > MAX_FILE_SIZE;
+        const isCompressed = !isPdf && file.size > MAX_FILE_SIZE;
         uploadPhoto({
           file: base64,
           filename: isCompressed
@@ -181,7 +198,7 @@ const DeliveryPhotoUpload = ({
         });
       } catch (err) {
         console.error('Error processing file:', err);
-        toast.error('Failed to process image');
+        toast.error('Failed to process file');
       }
 
       // Reset input
@@ -202,6 +219,7 @@ const DeliveryPhotoUpload = ({
 
   const hasPhoto = existingPhotoUrl || previewUrl;
   const displayUrl = previewUrl || existingPhotoUrl;
+  const isPdfFile = existingPhotoUrl?.endsWith('.pdf');
 
   return (
     <>
@@ -241,7 +259,7 @@ const DeliveryPhotoUpload = ({
           <input
             ref={fileInputRef}
             type="file"
-            accept="image/png,image/jpeg,image/jpg"
+            accept="image/png,image/jpeg,image/jpg,application/pdf"
             className="hidden"
             onChange={handleFileSelect}
           />
@@ -277,38 +295,55 @@ const DeliveryPhotoUpload = ({
               </Typography>
               <Typography variant="bodySm" colorRole="muted">
                 {hasPhoto
-                  ? 'Proof of delivery photo is on file. You can upload a new photo to replace it.'
-                  : 'Upload a photo showing the package at the delivery location (e.g., on doorstep with ID visible).'}
+                  ? 'Proof of delivery is on file. You can upload a new file to replace it.'
+                  : 'Upload a photo or PDF showing proof of delivery (e.g., signed delivery order, photo on doorstep with ID visible).'}
               </Typography>
 
-              {/* Photo Preview */}
+              {/* File Preview */}
               {displayUrl && (
                 <div className="mt-4 flex items-start gap-4">
-                  <button
-                    type="button"
-                    onClick={() => setShowFullImage(true)}
-                    className="group relative overflow-hidden rounded-lg border border-border-muted"
-                  >
-                    <Image
-                      src={displayUrl}
-                      alt="Proof of delivery"
-                      width={120}
-                      height={90}
-                      className="h-[90px] w-[120px] object-cover transition-transform group-hover:scale-105"
-                      unoptimized
-                    />
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover:bg-black/20">
-                      <IconPhoto className="h-6 w-6 text-white opacity-0 transition-opacity group-hover:opacity-100" />
-                    </div>
-                    {isUploading && (
-                      <div className="absolute inset-0 flex items-center justify-center bg-black/50">
-                        <IconLoader2 className="h-6 w-6 animate-spin text-white" />
+                  {isPdfFile ? (
+                    <a
+                      href={displayUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="group flex items-center gap-3 rounded-lg border border-border-muted px-4 py-3 transition-colors hover:bg-surface-secondary"
+                    >
+                      <IconFileTypePdf className="h-8 w-8 text-red-500" />
+                      <div className="text-xs text-text-muted">
+                        <p className="font-medium text-text-primary">PDF uploaded</p>
+                        <p>Click to view</p>
                       </div>
-                    )}
-                  </button>
-                  <div className="text-xs text-text-muted">
-                    <p>Click to view full size</p>
-                  </div>
+                    </a>
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => setShowFullImage(true)}
+                        className="group relative overflow-hidden rounded-lg border border-border-muted"
+                      >
+                        <Image
+                          src={displayUrl}
+                          alt="Proof of delivery"
+                          width={120}
+                          height={90}
+                          className="h-[90px] w-[120px] object-cover transition-transform group-hover:scale-105"
+                          unoptimized
+                        />
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover:bg-black/20">
+                          <IconPhoto className="h-6 w-6 text-white opacity-0 transition-opacity group-hover:opacity-100" />
+                        </div>
+                        {isUploading && (
+                          <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+                            <IconLoader2 className="h-6 w-6 animate-spin text-white" />
+                          </div>
+                        )}
+                      </button>
+                      <div className="text-xs text-text-muted">
+                        <p>Click to view full size</p>
+                      </div>
+                    </>
+                  )}
                 </div>
               )}
             </div>
@@ -325,7 +360,7 @@ const DeliveryPhotoUpload = ({
                   iconLeft={isUploading ? IconLoader2 : IconCloudUpload}
                   isLoading={isUploading}
                 >
-                  {hasPhoto ? 'Replace Photo' : 'Upload Photo'}
+                  {hasPhoto ? 'Replace File' : 'Upload File'}
                 </ButtonContent>
               </Button>
             </div>
