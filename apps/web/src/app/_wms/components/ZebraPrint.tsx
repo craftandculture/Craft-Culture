@@ -1,6 +1,6 @@
 'use client';
 
-import { IconPrinter, IconPrinterOff } from '@tabler/icons-react';
+import { IconPrinter, IconPrinterOff, IconWifi } from '@tabler/icons-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import Icon from '@/app/_ui/components/Icon/Icon';
@@ -62,12 +62,13 @@ const getEBPrinterZebra = () => {
 };
 
 /**
- * ZebraPrint - Bluetooth printing for Zebra printers
+ * ZebraPrint - Printing for Zebra printers
  *
- * Supports:
- * 1. Enterprise Browser - EB.PrinterZebra API for Bluetooth Classic
- * 2. Web Bluetooth - Direct BLE printing from Chrome (fallback)
- * 3. Desktop - Zebra Browser Print SDK
+ * Supports (in priority order):
+ * 1. WiFi - Direct TCP printing via server API route (fastest, no pairing needed)
+ * 2. Enterprise Browser - EB.PrinterZebra API for Bluetooth Classic
+ * 3. Web Bluetooth - Direct BLE printing from Chrome (fallback)
+ * 4. Desktop - Zebra Browser Print SDK
  */
 const ZebraPrint = ({
   onConnectionChange,
@@ -78,7 +79,7 @@ const ZebraPrint = ({
   const [printerName, setPrinterName] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isSearching, setIsSearching] = useState(false);
-  const [connectionType, setConnectionType] = useState<'eb' | 'ble' | 'desktop' | null>(null);
+  const [connectionType, setConnectionType] = useState<'wifi' | 'eb' | 'ble' | 'desktop' | null>(null);
   const [debugInfo, setDebugInfo] = useState<string>('');
 
   // Refs for persistent connections
@@ -86,6 +87,31 @@ const ZebraPrint = ({
   const bleDeviceRef = useRef<BluetoothDevice | null>(null);
   const bleCharacteristicRef = useRef<BluetoothRemoteGATTCharacteristic | null>(null);
   const desktopDeviceRef = useRef<unknown>(null);
+
+  // ============================================
+  // WiFi Printing (TCP via server API)
+  // ============================================
+  const checkWifiPrinter = useCallback(async () => {
+    try {
+      const res = await fetch('/api/wms/print', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ zpl: '' }),
+      });
+      // 400 = "ZPL data required" means the route exists and works
+      if (res.status === 400) {
+        setPrinterName('Zebra ZD421 (WiFi)');
+        setIsConnected(true);
+        setConnectionType('wifi');
+        setError(null);
+        onConnectionChange?.(true);
+        return true;
+      }
+      return false;
+    } catch {
+      return false;
+    }
+  }, [onConnectionChange]);
 
   // ============================================
   // Enterprise Browser Printing (Bluetooth Classic)
@@ -246,6 +272,30 @@ const ZebraPrint = ({
   // ============================================
   const print = useCallback(
     async (zpl: string): Promise<boolean> => {
+      // WiFi printing (TCP via server)
+      if (connectionType === 'wifi') {
+        try {
+          const res = await fetch('/api/wms/print', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ zpl }),
+          });
+
+          if (!res.ok) {
+            const data = (await res.json()) as { error?: string };
+            onPrintComplete?.(false, data.error || 'WiFi print failed');
+            return false;
+          }
+
+          onPrintComplete?.(true);
+          return true;
+        } catch (err) {
+          const message = err instanceof Error ? err.message : 'WiFi print failed';
+          onPrintComplete?.(false, message);
+          return false;
+        }
+      }
+
       // Enterprise Browser printing
       if (connectionType === 'eb' && ebPrinterRef.current) {
         return new Promise((resolve) => {
@@ -329,22 +379,47 @@ const ZebraPrint = ({
   );
 
   // ============================================
-  // Initialization
+  // Initialization - WiFi first, then fallbacks
   // ============================================
   useEffect(() => {
-    // Try Enterprise Browser first
-    if (isEnterpriseBrowser()) {
-      const timer = setTimeout(() => {
-        searchEBPrinters();
-      }, 1500); // Give EB API time to initialize
-      return () => clearTimeout(timer);
+    let cancelled = false;
+
+    const init = async () => {
+      setIsSearching(true);
+
+      // Try WiFi first (works on all devices)
+      const wifiOk = await checkWifiPrinter();
+      if (wifiOk || cancelled) {
+        setIsSearching(false);
+        return;
+      }
+
+      // Fallback: Enterprise Browser
+      if (isEnterpriseBrowser()) {
+        setTimeout(() => {
+          if (!cancelled) searchEBPrinters();
+        }, 1500);
+        return;
+      }
+
+      // Fallback: Desktop Browser Print
+      setIsSearching(false);
+      void checkDesktopConnection();
+    };
+
+    void init();
+
+    // Re-check desktop connection periodically (if not EB)
+    let interval: ReturnType<typeof setInterval> | undefined;
+    if (!isEnterpriseBrowser()) {
+      interval = setInterval(checkDesktopConnection, 10000);
     }
 
-    // Try desktop Browser Print
-    void checkDesktopConnection();
-    const interval = setInterval(checkDesktopConnection, 10000);
-    return () => clearInterval(interval);
-  }, [searchEBPrinters, checkDesktopConnection]);
+    return () => {
+      cancelled = true;
+      if (interval) clearInterval(interval);
+    };
+  }, [checkWifiPrinter, searchEBPrinters, checkDesktopConnection]);
 
   // Expose print function
   useEffect(() => {
@@ -369,10 +444,18 @@ const ZebraPrint = ({
     }
   };
 
+  const connectionLabel = connectionType === 'wifi'
+    ? 'WiFi'
+    : connectionType === 'eb'
+      ? 'Bluetooth'
+      : connectionType === 'ble'
+        ? 'BLE'
+        : 'USB';
+
   return (
     <div className="flex items-center gap-2 rounded-lg border border-border-primary bg-fill-secondary px-3 py-2">
       <Icon
-        icon={isConnected ? IconPrinter : IconPrinterOff}
+        icon={connectionType === 'wifi' ? IconWifi : isConnected ? IconPrinter : IconPrinterOff}
         size="md"
         className={isConnected ? 'text-emerald-500' : isSearching ? 'text-amber-500' : 'text-red-500'}
       />
@@ -386,7 +469,7 @@ const ZebraPrint = ({
         </Typography>
         {isConnected && connectionType && (
           <Typography variant="bodyXs" colorRole="muted">
-            {connectionType === 'eb' ? 'Bluetooth' : connectionType === 'ble' ? 'BLE' : 'USB'}
+            {connectionLabel}
           </Typography>
         )}
         {!isConnected && !isSearching && (

@@ -25,6 +25,7 @@ const envSchema = z.object({
   ZOHO_REGION: z.enum(['us', 'eu', 'in', 'au']).default('us'),
   WMS_DEVICE_TOKEN: z.string().optional(),
   WMS_DEVICE_USER_EMAIL: z.string().email().optional(),
+  ZEBRA_PRINTER_IP: z.string().optional(),
 });
 
 const rawEnv = {
@@ -45,6 +46,7 @@ const rawEnv = {
   ZOHO_REGION: process.env.ZOHO_REGION,
   WMS_DEVICE_TOKEN: process.env.WMS_DEVICE_TOKEN,
   WMS_DEVICE_USER_EMAIL: process.env.WMS_DEVICE_USER_EMAIL,
+  ZEBRA_PRINTER_IP: process.env.ZEBRA_PRINTER_IP,
 };
 
 /**
