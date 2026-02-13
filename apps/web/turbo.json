@@ -23,7 +23,8 @@
         "ADMIN_PHONE_NUMBER",
         "BLOB_READ_WRITE_TOKEN",
         "GOOGLE_GENERATIVE_AI_API_KEY",
-        "ZEBRA_PRINTER_IP"
+        "ZEBRA_PRINTER_IP",
+        "NEXT_PUBLIC_ZEBRA_PRINTER_IP"
       ]
     },
     "dev": {
