@@ -18,7 +18,7 @@ const uploadDeliveryPhotoSchema = z.object({
   orderId: z.string().uuid(),
   file: z.string().min(1, 'File is required'),
   filename: z.string().min(1, 'Filename is required'),
-  fileType: z.enum(['image/png', 'image/jpeg', 'image/jpg']),
+  fileType: z.enum(['image/png', 'image/jpeg', 'image/jpg', 'application/pdf']),
   notes: z.string().optional(),
 });
 
