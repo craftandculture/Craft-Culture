@@ -17,6 +17,12 @@ const ZEBRA_PARSER_SERVICE = '38eb4a80-c570-11e3-9507-0002a5d5c51b';
 const ZEBRA_WRITE_CHARACTERISTIC = '38eb4a82-c570-11e3-9507-0002a5d5c51b';
 
 /**
+ * Printer IP for direct HTTP printing from browser.
+ * The ZD421 WiFi card exposes an HTTP endpoint at /pstprnt.
+ */
+const PRINTER_IP = process.env.NEXT_PUBLIC_ZEBRA_PRINTER_IP || '192.168.1.111';
+
+/**
  * Detect if running in Zebra Enterprise Browser
  */
 const isEnterpriseBrowser = () => {
@@ -89,25 +95,29 @@ const ZebraPrint = ({
   const desktopDeviceRef = useRef<unknown>(null);
 
   // ============================================
-  // WiFi Printing (TCP via server API)
+  // WiFi Printing (direct HTTP to printer)
   // ============================================
   const checkWifiPrinter = useCallback(async () => {
     try {
-      const res = await fetch('/api/wms/print', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ zpl: '' }),
+      // Try to reach the printer's built-in web server directly from the browser.
+      // Uses no-cors since the printer doesn't set CORS headers.
+      // If the printer is reachable on the local network, the fetch succeeds (opaque response).
+      // If not reachable, it throws a network error.
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 3000);
+
+      await fetch(`http://${PRINTER_IP}/`, {
+        mode: 'no-cors',
+        signal: controller.signal,
       });
-      // 400 = "ZPL data required" means the route exists and works
-      if (res.status === 400) {
-        setPrinterName('Zebra ZD421 (WiFi)');
-        setIsConnected(true);
-        setConnectionType('wifi');
-        setError(null);
-        onConnectionChange?.(true);
-        return true;
-      }
-      return false;
+      clearTimeout(timeout);
+
+      setPrinterName('Zebra ZD421 (WiFi)');
+      setIsConnected(true);
+      setConnectionType('wifi');
+      setError(null);
+      onConnectionChange?.(true);
+      return true;
     } catch {
       return false;
     }
@@ -272,21 +282,23 @@ const ZebraPrint = ({
   // ============================================
   const print = useCallback(
     async (zpl: string): Promise<boolean> => {
-      // WiFi printing (TCP via server)
+      // WiFi printing (direct HTTP POST to printer's /pstprnt endpoint)
       if (connectionType === 'wifi') {
         try {
-          const res = await fetch('/api/wms/print', {
+          const controller = new AbortController();
+          const timeout = setTimeout(() => controller.abort(), 5000);
+
+          await fetch(`http://${PRINTER_IP}/pstprnt`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ zpl }),
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'text/plain' },
+            body: zpl,
+            signal: controller.signal,
           });
+          clearTimeout(timeout);
 
-          if (!res.ok) {
-            const data = (await res.json()) as { error?: string };
-            onPrintComplete?.(false, data.error || 'WiFi print failed');
-            return false;
-          }
-
+          // With no-cors the response is opaque, but if fetch didn't throw
+          // the data was sent to the printer successfully
           onPrintComplete?.(true);
           return true;
         } catch (err) {
