@@ -4,6 +4,7 @@ import {
   IconBuilding,
   IconCheck,
   IconDots,
+  IconDownload,
   IconEye,
   IconPackage,
   IconSearch,
@@ -64,6 +65,8 @@ const DistributorOrdersList = () => {
   const [cursor, setCursor] = useState(0);
   const [currency, setCurrency] = useState<Currency>('AED');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [selectedOrderIds, setSelectedOrderIds] = useState<Set<string>>(new Set());
+  const [isDownloading, setIsDownloading] = useState(false);
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: [
@@ -122,6 +125,53 @@ const DistributorOrdersList = () => {
   };
 
   const orders = filterByStatus(allOrders, statusFilter);
+
+  const toggleOrderSelection = (orderId: string) => {
+    setSelectedOrderIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(orderId)) {
+        next.delete(orderId);
+      } else {
+        next.add(orderId);
+      }
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedOrderIds.size === orders.length) {
+      setSelectedOrderIds(new Set());
+    } else {
+      setSelectedOrderIds(new Set(orders.map((o) => o.id)));
+    }
+  };
+
+  const handleDownloadSummary = async () => {
+    if (selectedOrderIds.size === 0) return;
+    setIsDownloading(true);
+    try {
+      const params = new URLSearchParams({ orderIds: Array.from(selectedOrderIds).join(',') });
+      const response = await fetch(`/api/distributor/pco/summary?${params.toString()}`);
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({ error: 'Download failed' }));
+        throw new Error(err.error ?? 'Download failed');
+      }
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Order-Summary-${new Date().toISOString().slice(0, 10)}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast.success('Summary PDF downloaded');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to download summary');
+    } finally {
+      setIsDownloading(false);
+    }
+  };
 
   const formatCurrencyValue = (order: OrderWithPartner) => {
     const usdAmount = order.totalUsd ?? 0;
@@ -197,6 +247,26 @@ const DistributorOrdersList = () => {
   };
 
   const columns: ColumnDef<OrderWithPartner>[] = [
+    {
+      id: 'select',
+      header: () => (
+        <input
+          type="checkbox"
+          checked={orders.length > 0 && selectedOrderIds.size === orders.length}
+          onChange={toggleSelectAll}
+          className="h-4 w-4 rounded border-border-muted accent-fill-brand"
+        />
+      ),
+      cell: ({ row }) => (
+        <input
+          type="checkbox"
+          checked={selectedOrderIds.has(row.original.id)}
+          onChange={() => toggleOrderSelection(row.original.id)}
+          onClick={(e) => e.stopPropagation()}
+          className="h-4 w-4 rounded border-border-muted accent-fill-brand"
+        />
+      ),
+    },
     {
       accessorKey: 'orderNumber',
       header: 'Order #',
@@ -382,8 +452,23 @@ const DistributorOrdersList = () => {
           />
         </div>
 
-        {/* Currency Toggle */}
-        <div className="inline-flex items-center rounded-lg border border-border-muted bg-surface-secondary/50 p-0.5">
+        <div className="flex items-center gap-2">
+          {/* Download Summary */}
+          {selectedOrderIds.size > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleDownloadSummary}
+              disabled={isDownloading}
+              className="gap-1.5"
+            >
+              <Icon icon={IconDownload} size="sm" />
+              {isDownloading ? 'Generating...' : `Download PDF (${selectedOrderIds.size})`}
+            </Button>
+          )}
+
+          {/* Currency Toggle */}
+          <div className="inline-flex items-center rounded-lg border border-border-muted bg-surface-secondary/50 p-0.5">
           <button
             type="button"
             onClick={() => setCurrency('USD')}
@@ -406,6 +491,7 @@ const DistributorOrdersList = () => {
           >
             AED
           </button>
+          </div>
         </div>
       </div>
 
@@ -438,11 +524,20 @@ const DistributorOrdersList = () => {
           {/* Mobile Cards */}
           <div className="flex flex-col divide-y divide-border-muted rounded-lg border border-border-muted md:hidden">
             {orders.map((order) => (
-              <Link
+              <div
                 key={order.id}
-                href={`/platform/distributor/orders/${order.id}`}
-                className="flex flex-col gap-3 p-4 transition-colors hover:bg-surface-secondary/50"
+                className="flex gap-3 p-4 transition-colors hover:bg-surface-secondary/50"
               >
+                <input
+                  type="checkbox"
+                  checked={selectedOrderIds.has(order.id)}
+                  onChange={() => toggleOrderSelection(order.id)}
+                  className="mt-1 h-4 w-4 shrink-0 rounded border-border-muted accent-fill-brand"
+                />
+                <Link
+                  href={`/platform/distributor/orders/${order.id}`}
+                  className="flex min-w-0 flex-1 flex-col gap-3"
+                >
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3">
                     {order.partner?.logoUrl ? (
@@ -492,7 +587,8 @@ const DistributorOrdersList = () => {
                     {formatCurrencyValue(order)}
                   </Typography>
                 </div>
-              </Link>
+                </Link>
+              </div>
             ))}
           </div>
 
