@@ -124,7 +124,7 @@ const PrivateOrdersList = () => {
                 title="City Drinks Verified"
               >
                 <Icon icon={IconShieldCheck} size="xs" />
-                <span className="text-[10px] font-medium">Verified</span>
+                <span className="text-xs font-medium">Verified</span>
               </span>
             )}
           </div>
@@ -203,7 +203,7 @@ const PrivateOrdersList = () => {
               key={filter.value}
               type="button"
               onClick={() => setStatusFilter(filter.value)}
-              className={`flex shrink-0 items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium transition-all ${
+              className={`flex shrink-0 items-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium transition-all ${
                 isActive
                   ? 'bg-fill-brand text-white'
                   : 'bg-surface-secondary/50 text-text-muted hover:bg-surface-secondary hover:text-text-primary'
@@ -247,7 +247,7 @@ const PrivateOrdersList = () => {
             <button
               type="button"
               onClick={() => setCurrency('USD')}
-              className={`rounded-md px-3 py-1 text-xs font-medium transition-all ${
+              className={`rounded-md px-3 py-1.5 text-sm font-medium transition-all ${
                 currency === 'USD'
                   ? 'bg-background-primary text-text-primary shadow-sm'
                   : 'text-text-muted hover:text-text-primary'
@@ -258,7 +258,7 @@ const PrivateOrdersList = () => {
             <button
               type="button"
               onClick={() => setCurrency('AED')}
-              className={`rounded-md px-3 py-1 text-xs font-medium transition-all ${
+              className={`rounded-md px-3 py-1.5 text-sm font-medium transition-all ${
                 currency === 'AED'
                   ? 'bg-background-primary text-text-primary shadow-sm'
                   : 'text-text-muted hover:text-text-primary'
@@ -356,7 +356,7 @@ const PrivateOrdersList = () => {
             <div className="flex gap-2">
               <Button
                 variant="outline"
-                size="sm"
+                size="md"
                 onClick={() => setCursor(Math.max(0, cursor - 20))}
                 disabled={cursor === 0}
               >
@@ -364,7 +364,7 @@ const PrivateOrdersList = () => {
               </Button>
               <Button
                 variant="outline"
-                size="sm"
+                size="md"
                 onClick={() => setCursor(cursor + 20)}
                 disabled={!hasMore}
               >

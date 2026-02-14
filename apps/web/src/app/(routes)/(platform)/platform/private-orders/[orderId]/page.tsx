@@ -401,7 +401,7 @@ const PrivateOrderDetailPage = () => {
     <div className="container mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8">
       <div className="space-y-4">
         {/* Header - compact */}
-        <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
             <Button variant="ghost" size="sm" asChild>
               <Link href="/platform/private-orders">
@@ -411,7 +411,7 @@ const PrivateOrderDetailPage = () => {
             <Typography variant="headingLg">{order.orderNumber}</Typography>
             <PrivateOrderStatusBadge status={order.status} />
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2">
             {/* Submit for Review button - shown for draft orders */}
             {order.status === 'draft' && (
               <Button
@@ -441,7 +441,7 @@ const PrivateOrderDetailPage = () => {
               <button
                 type="button"
                 onClick={() => setCurrency('USD')}
-                className={`rounded-md px-3 py-1 text-xs font-medium transition-all ${
+                className={`rounded-md px-3 py-1.5 text-sm font-medium transition-all ${
                   currency === 'USD'
                     ? 'bg-background-primary text-text-primary shadow-sm'
                     : 'text-text-muted hover:text-text-primary'
@@ -452,7 +452,7 @@ const PrivateOrderDetailPage = () => {
               <button
                 type="button"
                 onClick={() => setCurrency('AED')}
-                className={`rounded-md px-3 py-1 text-xs font-medium transition-all ${
+                className={`rounded-md px-3 py-1.5 text-sm font-medium transition-all ${
                   currency === 'AED'
                     ? 'bg-background-primary text-text-primary shadow-sm'
                     : 'text-text-muted hover:text-text-primary'
@@ -966,7 +966,7 @@ const PrivateOrderDetailPage = () => {
         {/* Line Items - Full Width, Primary Focus */}
         <Card>
           <CardContent className="p-4">
-            <div className="mb-3 flex items-center justify-between">
+            <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-3">
                 <Typography variant="headingSm">
                   Line Items ({order.items?.length ?? 0})
@@ -1055,14 +1055,14 @@ const PrivateOrderDetailPage = () => {
                 <table className="w-full text-xs">
                   <thead className="border-b border-border-muted bg-surface-secondary/50">
                     <tr>
-                      <th className="px-2 py-1.5 text-left text-[10px] font-medium uppercase tracking-wide text-text-muted">Product</th>
-                      <th className="px-2 py-1.5 text-left text-[10px] font-medium uppercase tracking-wide text-text-muted">Producer</th>
-                      <th className="px-2 py-1.5 text-center text-[10px] font-medium uppercase tracking-wide text-text-muted">Yr</th>
-                      <th className="px-2 py-1.5 text-center text-[10px] font-medium uppercase tracking-wide text-text-muted">Pack</th>
-                      <th className="px-2 py-1.5 text-center text-[10px] font-medium uppercase tracking-wide text-text-muted">Qty</th>
-                      <th className="px-2 py-1.5 text-right text-[10px] font-medium uppercase tracking-wide text-text-muted">{currency}/Case</th>
-                      <th className="px-2 py-1.5 text-right text-[10px] font-medium uppercase tracking-wide text-text-muted">Total ({currency})</th>
-                      {canEditItems && <th className="px-2 py-1.5 text-center text-[10px] font-medium uppercase tracking-wide text-text-muted">Actions</th>}
+                      <th className="px-2 py-1.5 text-left text-xs font-medium uppercase tracking-wide text-text-muted">Product</th>
+                      <th className="px-2 py-1.5 text-left text-xs font-medium uppercase tracking-wide text-text-muted">Producer</th>
+                      <th className="px-2 py-1.5 text-center text-xs font-medium uppercase tracking-wide text-text-muted">Yr</th>
+                      <th className="px-2 py-1.5 text-center text-xs font-medium uppercase tracking-wide text-text-muted">Pack</th>
+                      <th className="px-2 py-1.5 text-center text-xs font-medium uppercase tracking-wide text-text-muted">Qty</th>
+                      <th className="px-2 py-1.5 text-right text-xs font-medium uppercase tracking-wide text-text-muted">{currency}/Case</th>
+                      <th className="px-2 py-1.5 text-right text-xs font-medium uppercase tracking-wide text-text-muted">Total ({currency})</th>
+                      {canEditItems && <th className="px-2 py-1.5 text-center text-xs font-medium uppercase tracking-wide text-text-muted">Actions</th>}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border-muted/50">
@@ -1084,7 +1084,7 @@ const PrivateOrderDetailPage = () => {
                                 min={1}
                                 value={editingItem.quantity}
                                 onChange={(e) => setEditingItem({ ...editingItem, quantity: parseInt(e.target.value) || 1 })}
-                                className="h-7 w-16 text-center text-xs"
+                                className="h-8 w-16 text-center text-sm"
                               />
                             </td>
                             <td className="px-2 py-1.5 text-right">
@@ -1094,7 +1094,7 @@ const PrivateOrderDetailPage = () => {
                                 step={0.01}
                                 value={editingItem.pricePerCaseUsd}
                                 onChange={(e) => setEditingItem({ ...editingItem, pricePerCaseUsd: parseFloat(e.target.value) || 0 })}
-                                className="h-7 w-24 text-right text-xs"
+                                className="h-8 w-24 text-right text-sm"
                               />
                             </td>
                             <td className="px-2 py-1.5 text-right text-xs font-semibold">
@@ -1106,7 +1106,7 @@ const PrivateOrderDetailPage = () => {
                                   type="button"
                                   onClick={handleSaveItem}
                                   disabled={isUpdatingItem}
-                                  className="flex h-6 w-6 items-center justify-center rounded-md bg-fill-success/15 text-fill-success transition-colors hover:bg-fill-success/25 disabled:opacity-50"
+                                  className="flex h-7 w-7 items-center justify-center rounded-md bg-fill-success/15 text-fill-success transition-colors hover:bg-fill-success/25 disabled:opacity-50"
                                   title="Save changes"
                                 >
                                   <Icon icon={IconCheck} size="xs" />
@@ -1114,7 +1114,7 @@ const PrivateOrderDetailPage = () => {
                                 <button
                                   type="button"
                                   onClick={() => setEditingItem(null)}
-                                  className="flex h-6 w-6 items-center justify-center rounded-md bg-fill-muted/30 text-text-muted transition-colors hover:bg-fill-muted/50"
+                                  className="flex h-7 w-7 items-center justify-center rounded-md bg-fill-muted/30 text-text-muted transition-colors hover:bg-fill-muted/50"
                                   title="Cancel"
                                 >
                                   <Icon icon={IconX} size="xs" />
@@ -1130,7 +1130,7 @@ const PrivateOrderDetailPage = () => {
                           <td className="px-2 py-1.5">
                             <span className="text-xs font-medium">{item.productName}</span>
                             {item.lwin && (
-                              <span className="ml-1 text-[10px] text-text-muted">
+                              <span className="ml-1 text-xs text-text-muted">
                                 ({item.lwin})
                               </span>
                             )}
@@ -1151,7 +1151,7 @@ const PrivateOrderDetailPage = () => {
                                 <button
                                   type="button"
                                   onClick={() => handleEditItem(item)}
-                                  className="flex h-6 w-6 items-center justify-center rounded-md bg-fill-brand/10 text-text-brand transition-colors hover:bg-fill-brand/20"
+                                  className="flex h-7 w-7 items-center justify-center rounded-md bg-fill-brand/10 text-text-brand transition-colors hover:bg-fill-brand/20"
                                   title="Edit item"
                                 >
                                   <Icon icon={IconEdit} size="xs" />
@@ -1160,7 +1160,7 @@ const PrivateOrderDetailPage = () => {
                                   type="button"
                                   onClick={() => handleRemoveItem(item.id)}
                                   disabled={isRemovingItem}
-                                  className="flex h-6 w-6 items-center justify-center rounded-md bg-fill-danger/10 text-fill-danger transition-colors hover:bg-fill-danger/20 disabled:opacity-50"
+                                  className="flex h-7 w-7 items-center justify-center rounded-md bg-fill-danger/10 text-fill-danger transition-colors hover:bg-fill-danger/20 disabled:opacity-50"
                                   title="Remove item"
                                 >
                                   <Icon icon={IconTrash} size="xs" />

@@ -254,7 +254,7 @@ const DistributorOrdersList = () => {
           type="checkbox"
           checked={orders.length > 0 && selectedOrderIds.size === orders.length}
           onChange={toggleSelectAll}
-          className="h-4 w-4 rounded border-border-muted accent-fill-brand"
+          className="h-5 w-5 rounded border-border-muted accent-fill-brand"
         />
       ),
       cell: ({ row }) => (
@@ -263,7 +263,7 @@ const DistributorOrdersList = () => {
           checked={selectedOrderIds.has(row.original.id)}
           onChange={() => toggleOrderSelection(row.original.id)}
           onClick={(e) => e.stopPropagation()}
-          className="h-4 w-4 rounded border-border-muted accent-fill-brand"
+          className="h-5 w-5 rounded border-border-muted accent-fill-brand"
         />
       ),
     },
@@ -310,8 +310,8 @@ const DistributorOrdersList = () => {
               {row.original.clientName}
             </Typography>
             {row.original.client?.cityDrinksVerifiedAt && (
-              <span className="inline-flex items-center gap-0.5 rounded-full bg-green-100 px-1.5 py-0.5 text-[9px] font-medium text-green-700 dark:bg-green-900/30 dark:text-green-400">
-                <IconShieldCheck className="h-2.5 w-2.5" />
+              <span className="inline-flex items-center gap-0.5 rounded-full bg-green-100 px-1.5 py-0.5 text-xs font-medium text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                <IconShieldCheck className="h-3 w-3" />
                 CD
               </span>
             )}
@@ -414,7 +414,7 @@ const DistributorOrdersList = () => {
               key={filter.value}
               type="button"
               onClick={() => setStatusFilter(filter.value)}
-              className={`flex shrink-0 items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium transition-all ${
+              className={`flex shrink-0 items-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium transition-all ${
                 isActive
                   ? 'bg-fill-brand text-white'
                   : 'bg-surface-secondary/50 text-text-muted hover:bg-surface-secondary hover:text-text-primary'
@@ -472,7 +472,7 @@ const DistributorOrdersList = () => {
           <button
             type="button"
             onClick={() => setCurrency('USD')}
-            className={`rounded-md px-3 py-1 text-xs font-medium transition-all ${
+            className={`rounded-md px-3 py-1.5 text-sm font-medium transition-all ${
               currency === 'USD'
                 ? 'bg-background-primary text-text-primary shadow-sm'
                 : 'text-text-muted hover:text-text-primary'
@@ -483,7 +483,7 @@ const DistributorOrdersList = () => {
           <button
             type="button"
             onClick={() => setCurrency('AED')}
-            className={`rounded-md px-3 py-1 text-xs font-medium transition-all ${
+            className={`rounded-md px-3 py-1.5 text-sm font-medium transition-all ${
               currency === 'AED'
                 ? 'bg-background-primary text-text-primary shadow-sm'
                 : 'text-text-muted hover:text-text-primary'
@@ -532,7 +532,7 @@ const DistributorOrdersList = () => {
                   type="checkbox"
                   checked={selectedOrderIds.has(order.id)}
                   onChange={() => toggleOrderSelection(order.id)}
-                  className="mt-1 h-4 w-4 shrink-0 rounded border-border-muted accent-fill-brand"
+                  className="mt-0.5 h-5 w-5 shrink-0 rounded border-border-muted accent-fill-brand"
                 />
                 <Link
                   href={`/platform/distributor/orders/${order.id}`}
@@ -600,7 +600,7 @@ const DistributorOrdersList = () => {
             <div className="flex gap-2">
               <Button
                 variant="outline"
-                size="sm"
+                size="md"
                 onClick={() => setCursor(Math.max(0, cursor - 20))}
                 disabled={cursor === 0}
               >
@@ -608,7 +608,7 @@ const DistributorOrdersList = () => {
               </Button>
               <Button
                 variant="outline"
-                size="sm"
+                size="md"
                 onClick={() => setCursor(cursor + 20)}
                 disabled={!hasMore}
               >

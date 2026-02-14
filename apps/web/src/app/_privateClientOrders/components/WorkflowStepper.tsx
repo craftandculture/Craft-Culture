@@ -222,7 +222,7 @@ const WorkflowStepper = ({ order, compact = false }: WorkflowStepperProps) => {
               {/* Step label */}
               <div className="mt-1.5 text-center">
                 <span
-                  className={`block text-[10px] font-medium leading-tight sm:text-xs ${
+                  className={`block text-xs font-medium leading-tight ${
                     status === 'pending' ? 'text-text-muted' : 'text-text-primary'
                   }`}
                 >
@@ -230,7 +230,7 @@ const WorkflowStepper = ({ order, compact = false }: WorkflowStepperProps) => {
                   <span className="hidden sm:inline">{step.label}</span>
                 </span>
                 {step.timestamp && (
-                  <span className="block text-[9px] text-text-muted sm:text-[10px]">
+                  <span className="block text-[10px] text-text-muted sm:text-xs">
                     {formatStepDate(step.timestamp)}
                   </span>
                 )}
