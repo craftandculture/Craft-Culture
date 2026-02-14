@@ -202,7 +202,7 @@ const DocumentUpload = ({
         {/* Drag & Drop Zone */}
         <div
           {...getRootProps()}
-          className={`relative rounded-lg border-2 border-dashed p-6 text-center transition-colors ${
+          className={`relative rounded-lg border-2 border-dashed p-8 text-center transition-colors ${
             isDragActive
               ? 'border-border-brand bg-surface-brand/5'
               : isUploading
@@ -254,7 +254,7 @@ const DocumentUpload = ({
             {documentsQuery.data.map((doc) => (
               <div
                 key={doc.id}
-                className="flex items-center gap-3 rounded-lg border border-border-muted bg-fill-muted/30 px-3 py-2"
+                className="flex items-center gap-3 rounded-lg border border-border-muted bg-fill-muted/30 px-3 py-3"
               >
                 <Icon icon={getFileIcon(doc.mimeType)} size="md" colorRole="muted" />
 

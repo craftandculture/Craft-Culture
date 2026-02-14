@@ -493,7 +493,7 @@ const AdminPrivateOrderDetailPage = () => {
     <div className="container mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8">
       <div className="space-y-4">
         {/* Header - compact */}
-        <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
             <Button variant="ghost" size="sm" asChild>
               <Link href="/platform/admin/private-orders">
@@ -505,13 +505,13 @@ const AdminPrivateOrderDetailPage = () => {
           </div>
 
           {/* Quick actions bar */}
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {/* Currency Toggle */}
             <div className="inline-flex items-center rounded-lg border border-border-muted bg-surface-secondary/50 p-0.5">
               <button
                 type="button"
                 onClick={() => setCurrency('USD')}
-                className={`rounded-md px-3 py-1 text-xs font-medium transition-all ${
+                className={`rounded-md px-3 py-1.5 text-sm font-medium transition-all ${
                   currency === 'USD'
                     ? 'bg-background-primary text-text-primary shadow-sm'
                     : 'text-text-muted hover:text-text-primary'
@@ -522,7 +522,7 @@ const AdminPrivateOrderDetailPage = () => {
               <button
                 type="button"
                 onClick={() => setCurrency('AED')}
-                className={`rounded-md px-3 py-1 text-xs font-medium transition-all ${
+                className={`rounded-md px-3 py-1.5 text-sm font-medium transition-all ${
                   currency === 'AED'
                     ? 'bg-background-primary text-text-primary shadow-sm'
                     : 'text-text-muted hover:text-text-primary'
@@ -537,7 +537,7 @@ const AdminPrivateOrderDetailPage = () => {
               onValueChange={(v) => handleStatusChange(v as OrderStatus)}
               disabled={isUpdating}
             >
-              <SelectTrigger className="w-[200px]">
+              <SelectTrigger className="w-full sm:w-[200px]">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -795,8 +795,8 @@ const AdminPrivateOrderDetailPage = () => {
         {/* Line Items - Full Width, Primary Focus */}
         <Card>
           <CardContent className="p-4">
-            <div className="mb-3 flex items-center justify-between">
-              <div className="flex items-center gap-3">
+            <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                 <Typography variant="headingSm">
                   Line Items ({order.items?.length ?? 0})
                 </Typography>
@@ -835,15 +835,15 @@ const AdminPrivateOrderDetailPage = () => {
                 <table className="w-full text-xs">
                   <thead className="border-b border-border-muted bg-surface-secondary/50">
                     <tr>
-                      <th className="px-2 py-1.5 text-left text-[10px] font-medium uppercase tracking-wide text-text-muted">Product</th>
-                      <th className="px-2 py-1.5 text-left text-[10px] font-medium uppercase tracking-wide text-text-muted">Producer</th>
-                      <th className="px-2 py-1.5 text-center text-[10px] font-medium uppercase tracking-wide text-text-muted">Yr</th>
-                      <th className="px-2 py-1.5 text-center text-[10px] font-medium uppercase tracking-wide text-text-muted">Pack</th>
-                      <th className="px-2 py-1.5 text-center text-[10px] font-medium uppercase tracking-wide text-text-muted">Qty</th>
-                      <th className="px-2 py-1.5 text-right text-[10px] font-medium uppercase tracking-wide text-text-muted">{currency}/Case</th>
-                      <th className="px-2 py-1.5 text-right text-[10px] font-medium uppercase tracking-wide text-text-muted">Total ({currency})</th>
+                      <th className="px-2 py-1.5 text-left text-xs font-medium uppercase tracking-wide text-text-muted">Product</th>
+                      <th className="px-2 py-1.5 text-left text-xs font-medium uppercase tracking-wide text-text-muted">Producer</th>
+                      <th className="px-2 py-1.5 text-center text-xs font-medium uppercase tracking-wide text-text-muted">Yr</th>
+                      <th className="px-2 py-1.5 text-center text-xs font-medium uppercase tracking-wide text-text-muted">Pack</th>
+                      <th className="px-2 py-1.5 text-center text-xs font-medium uppercase tracking-wide text-text-muted">Qty</th>
+                      <th className="px-2 py-1.5 text-right text-xs font-medium uppercase tracking-wide text-text-muted">{currency}/Case</th>
+                      <th className="px-2 py-1.5 text-right text-xs font-medium uppercase tracking-wide text-text-muted">Total ({currency})</th>
                       {canEditItems && (
-                        <th className="px-2 py-1.5 text-center text-[10px] font-medium uppercase tracking-wide text-text-muted"></th>
+                        <th className="px-2 py-1.5 text-center text-xs font-medium uppercase tracking-wide text-text-muted"></th>
                       )}
                     </tr>
                   </thead>
@@ -856,7 +856,7 @@ const AdminPrivateOrderDetailPage = () => {
                             placeholder="Product name *"
                             value={newItem.productName}
                             onChange={(e) => setNewItem({ ...newItem, productName: e.target.value })}
-                            className="h-6 text-xs"
+                            className="h-8 text-sm"
                           />
                         </td>
                         <td className="px-2 py-1">
@@ -864,7 +864,7 @@ const AdminPrivateOrderDetailPage = () => {
                             placeholder="Producer"
                             value={newItem.producer}
                             onChange={(e) => setNewItem({ ...newItem, producer: e.target.value })}
-                            className="h-6 text-xs"
+                            className="h-8 text-sm"
                           />
                         </td>
                         <td className="px-2 py-1">
@@ -872,7 +872,7 @@ const AdminPrivateOrderDetailPage = () => {
                             placeholder="Year"
                             value={newItem.vintage}
                             onChange={(e) => setNewItem({ ...newItem, vintage: e.target.value })}
-                            className="h-6 w-14 text-center text-xs"
+                            className="h-8 w-16 text-center text-sm"
                           />
                         </td>
                         <td className="px-2 py-1 text-center text-xs text-text-muted">
@@ -882,7 +882,7 @@ const AdminPrivateOrderDetailPage = () => {
                             min={1}
                             value={newItem.caseConfig}
                             onChange={(e) => setNewItem({ ...newItem, caseConfig: parseInt(e.target.value) || 12 })}
-                            className="h-6 w-12 text-center text-xs"
+                            className="h-8 w-14 text-center text-sm"
                           />
                         </td>
                         <td className="px-2 py-1">
@@ -891,7 +891,7 @@ const AdminPrivateOrderDetailPage = () => {
                             min={1}
                             value={newItem.quantity}
                             onChange={(e) => setNewItem({ ...newItem, quantity: parseInt(e.target.value) || 1 })}
-                            className="h-6 w-12 text-center text-xs"
+                            className="h-8 w-14 text-center text-sm"
                           />
                         </td>
                         <td className="px-2 py-1">
@@ -902,7 +902,7 @@ const AdminPrivateOrderDetailPage = () => {
                             placeholder="0.00"
                             value={newItem.pricePerCaseUsd || ''}
                             onChange={(e) => setNewItem({ ...newItem, pricePerCaseUsd: parseFloat(e.target.value) || 0 })}
-                            className="h-6 w-20 text-right text-xs"
+                            className="h-8 w-24 text-right text-sm"
                           />
                         </td>
                         <td className="px-2 py-1 text-right text-xs font-medium">
@@ -915,7 +915,7 @@ const AdminPrivateOrderDetailPage = () => {
                               size="xs"
                               onClick={handleAddItem}
                               disabled={isAddingItemPending}
-                              className="h-5 w-5 p-0"
+                              className="h-7 w-7 p-0"
                             >
                               <Icon icon={isAddingItemPending ? IconLoader2 : IconCheck} size="xs" colorRole="brand" className={isAddingItemPending ? 'animate-spin' : ''} />
                             </Button>
@@ -923,7 +923,7 @@ const AdminPrivateOrderDetailPage = () => {
                               variant="ghost"
                               size="xs"
                               onClick={() => setIsAddingItem(false)}
-                              className="h-5 w-5 p-0"
+                              className="h-7 w-7 p-0"
                             >
                               <Icon icon={IconX} size="xs" colorRole="muted" />
                             </Button>
@@ -943,7 +943,7 @@ const AdminPrivateOrderDetailPage = () => {
                                 onChange={(e) =>
                                   setEditingItem({ ...editingItem, productName: e.target.value })
                                 }
-                                className="h-6 text-xs"
+                                className="h-8 text-sm"
                               />
                             </td>
                             <td className="px-2 py-1">
@@ -952,7 +952,7 @@ const AdminPrivateOrderDetailPage = () => {
                                 onChange={(e) =>
                                   setEditingItem({ ...editingItem, producer: e.target.value })
                                 }
-                                className="h-6 text-xs"
+                                className="h-8 text-sm"
                               />
                             </td>
                             <td className="px-2 py-1">
@@ -961,7 +961,7 @@ const AdminPrivateOrderDetailPage = () => {
                                 onChange={(e) =>
                                   setEditingItem({ ...editingItem, vintage: e.target.value })
                                 }
-                                className="h-6 w-14 text-center text-xs"
+                                className="h-8 w-16 text-center text-sm"
                               />
                             </td>
                             <td className="px-2 py-1 text-center text-xs text-text-muted">
@@ -978,7 +978,7 @@ const AdminPrivateOrderDetailPage = () => {
                                     quantity: parseInt(e.target.value) || 1,
                                   })
                                 }
-                                className="h-6 w-12 text-center text-xs"
+                                className="h-8 w-14 text-center text-sm"
                               />
                             </td>
                             <td className="px-2 py-1">
@@ -993,7 +993,7 @@ const AdminPrivateOrderDetailPage = () => {
                                     pricePerCaseUsd: parseFloat(e.target.value) || 0,
                                   })
                                 }
-                                className="h-6 w-20 text-right text-xs"
+                                className="h-8 w-24 text-right text-sm"
                               />
                             </td>
                             <td className="px-2 py-1 text-right text-xs font-medium">
@@ -1006,7 +1006,7 @@ const AdminPrivateOrderDetailPage = () => {
                                   size="xs"
                                   onClick={handleSaveItem}
                                   disabled={isUpdatingItem}
-                                  className="h-5 w-5 p-0"
+                                  className="h-7 w-7 p-0"
                                 >
                                   <Icon icon={IconCheck} size="xs" colorRole="success" />
                                 </Button>
@@ -1014,7 +1014,7 @@ const AdminPrivateOrderDetailPage = () => {
                                   variant="ghost"
                                   size="xs"
                                   onClick={() => setEditingItem(null)}
-                                  className="h-5 w-5 p-0"
+                                  className="h-7 w-7 p-0"
                                 >
                                   <Icon icon={IconX} size="xs" colorRole="muted" />
                                 </Button>
@@ -1029,7 +1029,7 @@ const AdminPrivateOrderDetailPage = () => {
                           <td className="px-2 py-1.5">
                             <span className="text-xs font-medium">{item.productName}</span>
                             {item.lwin && (
-                              <span className="ml-1 text-[10px] text-text-muted">
+                              <span className="ml-1 text-xs text-text-muted">
                                 ({item.lwin})
                               </span>
                             )}
@@ -1051,7 +1051,7 @@ const AdminPrivateOrderDetailPage = () => {
                                   variant="ghost"
                                   size="xs"
                                   onClick={() => handleEditItem(item)}
-                                  className="h-5 w-5 p-0"
+                                  className="h-7 w-7 p-0"
                                 >
                                   <Icon icon={IconEdit} size="xs" colorRole="muted" />
                                 </Button>
@@ -1060,7 +1060,7 @@ const AdminPrivateOrderDetailPage = () => {
                                   size="xs"
                                   onClick={() => handleRemoveItem(item.id)}
                                   disabled={isRemovingItem}
-                                  className="h-5 w-5 p-0"
+                                  className="h-7 w-7 p-0"
                                 >
                                   <Icon icon={IconTrash} size="xs" colorRole="danger" />
                                 </Button>

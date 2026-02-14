@@ -412,8 +412,8 @@ const DistributorOrderDetailPage = () => {
   return (
     <div className="container mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8">
       <div className="space-y-4">
-        {/* Header - compact with action button */}
-        <div className="flex flex-wrap items-center justify-between gap-3">
+        {/* Header */}
+        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
             <Button variant="ghost" size="sm" asChild>
               <Link href="/platform/distributor/orders">
@@ -424,13 +424,13 @@ const DistributorOrderDetailPage = () => {
             <PrivateOrderStatusBadge status={order.status} />
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
             {/* Currency Toggle */}
             <div className="inline-flex items-center rounded-lg border border-border-muted bg-surface-secondary/50 p-0.5">
               <button
                 type="button"
                 onClick={() => setCurrency('USD')}
-                className={`rounded-md px-3 py-1 text-xs font-medium transition-all ${
+                className={`rounded-md px-3 py-1.5 text-sm font-medium transition-all ${
                   currency === 'USD'
                     ? 'bg-background-primary text-text-primary shadow-sm'
                     : 'text-text-muted hover:text-text-primary'
@@ -441,7 +441,7 @@ const DistributorOrderDetailPage = () => {
               <button
                 type="button"
                 onClick={() => setCurrency('AED')}
-                className={`rounded-md px-3 py-1 text-xs font-medium transition-all ${
+                className={`rounded-md px-3 py-1.5 text-sm font-medium transition-all ${
                   currency === 'AED'
                     ? 'bg-background-primary text-text-primary shadow-sm'
                     : 'text-text-muted hover:text-text-primary'
@@ -457,7 +457,7 @@ const DistributorOrderDetailPage = () => {
               onClick={() => window.open(`/api/distributor/pco/proforma?orderId=${orderId}`, '_blank')}
             >
               <ButtonContent iconLeft={IconDownload}>
-                Download PDF
+                <span className="hidden sm:inline">Download</span> PDF
               </ButtonContent>
             </Button>
 
@@ -468,7 +468,7 @@ const DistributorOrderDetailPage = () => {
               disabled={isSendingToFinance}
             >
               <ButtonContent iconLeft={IconMail} isLoading={isSendingToFinance}>
-                Send to Finance
+                <span className="hidden sm:inline">Send to</span> Finance
               </ButtonContent>
             </Button>
 
@@ -676,7 +676,7 @@ const DistributorOrderDetailPage = () => {
 
                 {/* Schedule Form */}
                 {showScheduleDelivery ? (
-                  <div className="ml-16 space-y-3 rounded-lg border border-border-muted bg-surface-secondary/50 p-4">
+                  <div className="space-y-3 rounded-lg border border-border-muted bg-surface-secondary/50 p-4 sm:ml-16">
                     <div>
                       <label className="mb-1 block text-xs font-medium text-text-muted">Delivery Date</label>
                       <input
@@ -712,7 +712,7 @@ const DistributorOrderDetailPage = () => {
                     </div>
                   </div>
                 ) : showContactAttempt ? (
-                  <div className="ml-16 space-y-3 rounded-lg border border-border-muted bg-surface-secondary/50 p-4">
+                  <div className="space-y-3 rounded-lg border border-border-muted bg-surface-secondary/50 p-4 sm:ml-16">
                     <div>
                       <label className="mb-1 block text-xs font-medium text-text-muted">What happened?</label>
                       <textarea
@@ -739,7 +739,7 @@ const DistributorOrderDetailPage = () => {
                     </div>
                   </div>
                 ) : (
-                  <div className="ml-16 flex flex-wrap gap-2">
+                  <div className="flex flex-wrap gap-2 sm:ml-16">
                     <Button onClick={() => setShowScheduleDelivery(true)} colorRole="brand">
                       <ButtonContent iconLeft={IconCalendar}>
                         Schedule Delivery
@@ -896,51 +896,84 @@ const DistributorOrderDetailPage = () => {
                 const orderTotal = order.totalUsd ?? 0;
 
                 return (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-xs">
-                      <thead className="border-b border-border-muted bg-surface-secondary/50">
-                        <tr>
-                          <th className="px-2 py-1.5 text-left text-[10px] font-medium uppercase tracking-wide text-text-muted">Product</th>
-                          <th className="px-2 py-1.5 text-left text-[10px] font-medium uppercase tracking-wide text-text-muted">Producer</th>
-                          <th className="px-2 py-1.5 text-center text-[10px] font-medium uppercase tracking-wide text-text-muted">Yr</th>
-                          <th className="px-2 py-1.5 text-center text-[10px] font-medium uppercase tracking-wide text-text-muted">Pack</th>
-                          <th className="px-2 py-1.5 text-center text-[10px] font-medium uppercase tracking-wide text-text-muted">Qty</th>
-                          <th className="px-2 py-1.5 text-right text-[10px] font-medium uppercase tracking-wide text-text-muted">Dist. Cost/Case</th>
-                          <th className="px-2 py-1.5 text-right text-[10px] font-medium uppercase tracking-wide text-text-muted">Client Price/Case</th>
-                          <th className="px-2 py-1.5 text-right text-[10px] font-medium uppercase tracking-wide text-text-muted">Client Total ({currency})</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-border-muted/50">
-                        {order.items.map((item) => {
-                          // Calculate client-facing price by prorating order total
-                          const clientTotal = calculateClientPrice(item.totalUsd, totalSupplierCost, orderTotal);
-                          const clientPricePerCase = item.quantity > 0 ? clientTotal / item.quantity : 0;
-                          // Distributor cost = supplier price / 0.97 (C&C margin + transfer)
-                          const distributorCostPerCase = item.pricePerCaseUsd / 0.97;
-                          return (
-                            <tr key={item.id} className="hover:bg-surface-muted/20">
-                              <td className="px-2 py-1.5">
-                                <span className="text-xs font-medium">{item.productName}</span>
-                              </td>
-                              <td className="px-2 py-1.5 text-xs">{item.producer || '-'}</td>
-                              <td className="px-2 py-1.5 text-center text-xs">{item.vintage || '-'}</td>
-                              <td className="px-2 py-1.5 text-center text-xs text-text-muted">{item.caseConfig}×{item.bottleSize}</td>
-                              <td className="px-2 py-1.5 text-center text-xs font-medium">{item.quantity}</td>
-                              <td className="px-2 py-1.5 text-right text-xs text-text-muted">
-                                {formatPrice(getAmount(distributorCostPerCase), currency)}
-                              </td>
-                              <td className="px-2 py-1.5 text-right text-xs">
-                                {formatPrice(getAmount(clientPricePerCase), currency)}
-                              </td>
-                              <td className="px-2 py-1.5 text-right text-xs font-semibold">
+                  <>
+                    {/* Mobile: Card layout */}
+                    <div className="flex flex-col divide-y divide-border-muted md:hidden">
+                      {order.items.map((item) => {
+                        const clientTotal = calculateClientPrice(item.totalUsd, totalSupplierCost, orderTotal);
+                        const clientPricePerCase = item.quantity > 0 ? clientTotal / item.quantity : 0;
+                        const distributorCostPerCase = item.pricePerCaseUsd / 0.97;
+                        return (
+                          <div key={item.id} className="py-3">
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="min-w-0 flex-1">
+                                <Typography variant="bodySm" className="font-medium">
+                                  {item.productName}
+                                </Typography>
+                                <Typography variant="bodyXs" colorRole="muted">
+                                  {item.producer || '-'} {item.vintage ? `· ${item.vintage}` : ''}
+                                </Typography>
+                              </div>
+                              <Typography variant="bodySm" className="flex-shrink-0 font-semibold">
                                 {formatPrice(getAmount(clientTotal), currency)}
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
+                              </Typography>
+                            </div>
+                            <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-xs text-text-muted">
+                              <span>{item.caseConfig}×{item.bottleSize}</span>
+                              <span>{item.quantity} {item.quantity === 1 ? 'case' : 'cases'}</span>
+                              <span>Client: {formatPrice(getAmount(clientPricePerCase), currency)}/cs</span>
+                              <span>Dist: {formatPrice(getAmount(distributorCostPerCase), currency)}/cs</span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Desktop: Table layout */}
+                    <div className="hidden overflow-x-auto md:block">
+                      <table className="w-full text-xs">
+                        <thead className="border-b border-border-muted bg-surface-secondary/50">
+                          <tr>
+                            <th className="px-2 py-2 text-left text-xs font-medium uppercase tracking-wide text-text-muted">Product</th>
+                            <th className="px-2 py-2 text-left text-xs font-medium uppercase tracking-wide text-text-muted">Producer</th>
+                            <th className="px-2 py-2 text-center text-xs font-medium uppercase tracking-wide text-text-muted">Yr</th>
+                            <th className="px-2 py-2 text-center text-xs font-medium uppercase tracking-wide text-text-muted">Pack</th>
+                            <th className="px-2 py-2 text-center text-xs font-medium uppercase tracking-wide text-text-muted">Qty</th>
+                            <th className="px-2 py-2 text-right text-xs font-medium uppercase tracking-wide text-text-muted">Dist. Cost/Case</th>
+                            <th className="px-2 py-2 text-right text-xs font-medium uppercase tracking-wide text-text-muted">Client Price/Case</th>
+                            <th className="px-2 py-2 text-right text-xs font-medium uppercase tracking-wide text-text-muted">Client Total ({currency})</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-border-muted/50">
+                          {order.items.map((item) => {
+                            const clientTotal = calculateClientPrice(item.totalUsd, totalSupplierCost, orderTotal);
+                            const clientPricePerCase = item.quantity > 0 ? clientTotal / item.quantity : 0;
+                            const distributorCostPerCase = item.pricePerCaseUsd / 0.97;
+                            return (
+                              <tr key={item.id} className="hover:bg-surface-muted/20">
+                                <td className="px-2 py-2">
+                                  <span className="text-sm font-medium">{item.productName}</span>
+                                </td>
+                                <td className="px-2 py-2 text-sm">{item.producer || '-'}</td>
+                                <td className="px-2 py-2 text-center text-sm">{item.vintage || '-'}</td>
+                                <td className="px-2 py-2 text-center text-sm text-text-muted">{item.caseConfig}×{item.bottleSize}</td>
+                                <td className="px-2 py-2 text-center text-sm font-medium">{item.quantity}</td>
+                                <td className="px-2 py-2 text-right text-sm text-text-muted">
+                                  {formatPrice(getAmount(distributorCostPerCase), currency)}
+                                </td>
+                                <td className="px-2 py-2 text-right text-sm">
+                                  {formatPrice(getAmount(clientPricePerCase), currency)}
+                                </td>
+                                <td className="px-2 py-2 text-right text-sm font-semibold">
+                                  {formatPrice(getAmount(clientTotal), currency)}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </>
                 );
               })()
             ) : (
@@ -1024,8 +1057,8 @@ const DistributorOrderDetailPage = () => {
                   Client
                 </Typography>
                 {order.client?.cityDrinksVerifiedAt && (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-medium text-green-700 dark:bg-green-900/30 dark:text-green-400">
-                    <IconShieldCheck className="h-3 w-3" />
+                  <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                    <IconShieldCheck className="h-3.5 w-3.5" />
                     Verified by CD
                   </span>
                 )}

@@ -205,7 +205,7 @@ const PartnerDashboard = () => {
             <button
               type="button"
               onClick={() => setCurrency('USD')}
-              className={`rounded-md px-3 py-1 text-xs font-medium transition-all ${
+              className={`rounded-md px-3 py-1.5 text-sm font-medium transition-all ${
                 currency === 'USD'
                   ? 'bg-background-primary text-text-primary shadow-sm'
                   : 'text-text-muted hover:text-text-primary'
@@ -216,7 +216,7 @@ const PartnerDashboard = () => {
             <button
               type="button"
               onClick={() => setCurrency('AED')}
-              className={`rounded-md px-3 py-1 text-xs font-medium transition-all ${
+              className={`rounded-md px-3 py-1.5 text-sm font-medium transition-all ${
                 currency === 'AED'
                   ? 'bg-background-primary text-text-primary shadow-sm'
                   : 'text-text-muted hover:text-text-primary'
@@ -556,7 +556,7 @@ const PartnerDashboard = () => {
                                   title="City Drinks Verified"
                                 >
                                   <Icon icon={IconShieldCheck} size="xs" />
-                                  <span className="text-[10px] font-medium">Verified</span>
+                                  <span className="text-xs font-medium">Verified</span>
                                 </span>
                               )}
                             </div>
@@ -588,28 +588,28 @@ const PartnerDashboard = () => {
       <div className="flex flex-wrap items-center justify-center gap-2 text-sm">
         <Link
           href="/platform/private-orders/orders?status=draft"
-          className="flex items-center gap-1.5 rounded-full border border-border-muted bg-surface-secondary/50 px-3 py-1.5 text-text-muted transition-colors hover:bg-surface-secondary hover:text-text-primary"
+          className="flex items-center gap-1.5 rounded-full border border-border-muted bg-surface-secondary/50 px-4 py-2 text-text-muted transition-colors hover:bg-surface-secondary hover:text-text-primary"
         >
           <Icon icon={IconFileCheck} size="xs" />
           <span>{statusBreakdown.drafts} Drafts</span>
         </Link>
         <Link
           href="/platform/private-orders/orders"
-          className="flex items-center gap-1.5 rounded-full border border-border-muted bg-surface-secondary/50 px-3 py-1.5 text-text-muted transition-colors hover:bg-surface-secondary hover:text-text-primary"
+          className="flex items-center gap-1.5 rounded-full border border-border-muted bg-surface-secondary/50 px-4 py-2 text-text-muted transition-colors hover:bg-surface-secondary hover:text-text-primary"
         >
           <Icon icon={IconPackage} size="xs" />
           <span>All Orders</span>
         </Link>
         <Link
           href="/platform/clients"
-          className="flex items-center gap-1.5 rounded-full border border-border-muted bg-surface-secondary/50 px-3 py-1.5 text-text-muted transition-colors hover:bg-surface-secondary hover:text-text-primary"
+          className="flex items-center gap-1.5 rounded-full border border-border-muted bg-surface-secondary/50 px-4 py-2 text-text-muted transition-colors hover:bg-surface-secondary hover:text-text-primary"
         >
           <Icon icon={IconUsers} size="xs" />
           <span>Manage Clients</span>
         </Link>
         <Link
           href="/docs/pco-flows"
-          className="flex items-center gap-1.5 rounded-full border border-border-brand bg-fill-brand/5 px-3 py-1.5 text-text-brand transition-colors hover:bg-fill-brand/10"
+          className="flex items-center gap-1.5 rounded-full border border-border-brand bg-fill-brand/5 px-4 py-2 text-text-brand transition-colors hover:bg-fill-brand/10"
         >
           <Icon icon={IconBook} size="xs" />
           <span>Process Guide</span>
