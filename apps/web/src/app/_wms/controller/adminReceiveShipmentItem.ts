@@ -96,8 +96,6 @@ const adminReceiveShipmentItem = adminProcedure
       });
     }
 
-    const locationCodeMap = new Map(locations.map((l) => [l.id, l.locationCode]));
-
     // 3. Get the shipment item
     const [shipmentItem] = await db
       .select()
@@ -143,17 +141,9 @@ const adminReceiveShipmentItem = adminProcedure
       stockNotes = `Pack changed: expected ${shipmentItem.bottlesPerCase ?? 12}x${shipmentItem.bottleSizeMl ?? 750}ml, received ${actualBottlesPerCase}x${actualBottleSizeMl}ml. ${stockNotes}`;
     }
 
-    // 5. Build movement notes with split context
+    // 5. Precompute split info for movement notes
     const totalReceivedCases = receivedItem.locationAssignments.reduce((sum, a) => sum + a.cases, 0);
     const isSplit = receivedItem.locationAssignments.length > 1;
-    const splitParts = receivedItem.locationAssignments.map((a) => {
-      const locCode = locationCodeMap.get(a.locationId) ?? a.locationId;
-      const palletTag = a.isPalletized ? ' (pallet)' : '';
-      return `${a.cases} → ${locCode}${palletTag}`;
-    });
-    const splitContext = isSplit
-      ? `Received ${totalReceivedCases} cases: ${splitParts.join(', ')}`
-      : null;
 
     // 6. Process each location assignment (same product, split across locations)
     const createdStock: Array<{
@@ -261,12 +251,13 @@ const adminReceiveShipmentItem = adminProcedure
       if (!existingStock) {
         const movementNumber = await generateMovementNumber();
         const palletTag = assignment.isPalletized ? ' (pallet)' : '';
-        const defaultNote = `Received from shipment ${shipment.shipmentNumber}${palletTag}`;
-        const movementNote = notes
+        const baseNote = notes
           ? `${notes}${palletTag}`
-          : splitContext
-            ? `${splitContext}`
-            : defaultNote;
+          : `Received from shipment ${shipment.shipmentNumber}${palletTag}`;
+        const splitSuffix = isSplit
+          ? ` [${assignmentCases} of ${totalReceivedCases} cases]`
+          : '';
+        const movementNote = `${baseNote}${splitSuffix}`;
 
         await db.insert(wmsStockMovements).values({
           movementNumber,
