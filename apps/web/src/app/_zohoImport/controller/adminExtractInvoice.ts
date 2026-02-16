@@ -1,6 +1,6 @@
 import { createAnthropic } from '@ai-sdk/anthropic';
 import { TRPCError } from '@trpc/server';
-import { type CoreMessage, generateObject } from 'ai';
+import { type ModelMessage, generateObject } from 'ai';
 import { sql } from 'drizzle-orm';
 import { z } from 'zod';
 
@@ -167,7 +167,7 @@ Focus on extracting:
 
     if (fileType.startsWith('image/')) {
       // Image file - use Claude vision
-      const messages: CoreMessage[] = [
+      const messages: ModelMessage[] = [
         {
           role: 'user',
           content: [
@@ -205,7 +205,7 @@ This is a TRANSCRIPTION task. Copy product names exactly as written.`,
       // PDF file - use Claude vision with native PDF support
       logger.info('[ZohoImport] Processing PDF with Claude vision');
 
-      const messages: CoreMessage[] = [
+      const messages: ModelMessage[] = [
         {
           role: 'user',
           content: [
@@ -226,7 +226,7 @@ This is a TRANSCRIPTION task. Copy product names exactly as written. Extract ALL
             {
               type: 'file',
               data: file,
-              mimeType: 'application/pdf',
+              mediaType: 'application/pdf',
             },
           ],
         },
