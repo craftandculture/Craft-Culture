@@ -189,8 +189,16 @@ const WMSMovementsPage = () => {
                 </CardContent>
               </Card>
             ) : (
-              data.movements.map((movement) => (
-                <Card key={movement.id} className="hover:border-border-brand">
+              data.movements.map((movement) => {
+                const isPallet = movement.notes?.includes('(pallet)');
+                return (
+                <Card key={movement.id} className={`hover:border-border-brand ${isPallet ? 'border-l-4 border-l-indigo-500' : ''}`}>
+                  {isPallet && (
+                    <div className="flex items-center gap-2 bg-indigo-50 px-4 py-2">
+                      <IconBoxSeam size={20} className="text-indigo-600" />
+                      <span className="text-sm font-bold text-indigo-700">PALLET</span>
+                    </div>
+                  )}
                   <CardContent className="p-4">
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                       <div className="flex-1">
@@ -199,12 +207,6 @@ const WMSMovementsPage = () => {
                             movementType={movement.movementType as MovementType}
                             size="sm"
                           />
-                          {movement.notes?.includes('(pallet)') && (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-semibold text-indigo-700">
-                              <IconBoxSeam size={12} />
-                              Pallet
-                            </span>
-                          )}
                           <Typography variant="bodySm" className="font-mono text-text-muted">
                             {movement.movementNumber}
                           </Typography>
@@ -262,7 +264,8 @@ const WMSMovementsPage = () => {
                     </div>
                   </CardContent>
                 </Card>
-              ))
+                );
+              })
             )}
 
             {/* Pagination info */}
