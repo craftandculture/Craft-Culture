@@ -4,6 +4,7 @@ import {
   IconArrowLeft,
   IconLoader2,
   IconPlus,
+  IconRefresh,
   IconSearch,
 } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -76,6 +77,15 @@ const NewPickListPage = () => {
     },
   });
 
+  // Sync Zoho orders
+  const syncMutation = useMutation({
+    ...api.zohoSalesOrders.sync.mutationOptions(),
+    onSuccess: (data) => {
+      void queryClient.invalidateQueries();
+      alert(data.message);
+    },
+  });
+
   const isCreating =
     releaseToPickMutation.isPending || createPcoMutation.isPending;
   const createError =
@@ -132,12 +142,26 @@ const NewPickListPage = () => {
               <Icon icon={IconArrowLeft} size="sm" />
             </Button>
           </Link>
-          <div>
+          <div className="flex-1">
             <Typography variant="headingMd">New Pick List</Typography>
             <Typography variant="bodySm" colorRole="muted">
               Select an order to create a pick list
             </Typography>
           </div>
+          {activeTab === 'sales' && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => syncMutation.mutate()}
+              disabled={syncMutation.isPending}
+            >
+              <Icon
+                icon={syncMutation.isPending ? IconLoader2 : IconRefresh}
+                size="sm"
+                className={syncMutation.isPending ? 'animate-spin' : ''}
+              />
+            </Button>
+          )}
         </div>
 
         {/* Tabs */}
