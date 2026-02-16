@@ -216,6 +216,8 @@ const adminTransferStock = adminProcedure
       productName: sourceStock.productName,
       movementNumber,
       destStockId,
+      sourceStockId: newSourceQuantity > 0 ? stockId : null,
+      sourceRemaining: newSourceQuantity,
     };
   });
 

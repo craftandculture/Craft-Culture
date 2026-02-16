@@ -3,6 +3,7 @@
 import {
   IconArrowLeft,
   IconBox,
+  IconBoxSeam,
   IconCheck,
   IconChevronLeft,
   IconChevronRight,
@@ -125,6 +126,7 @@ interface StockItemCardProps {
   adjustmentReason: string;
   isAdjusting: boolean;
   isPrinting: boolean;
+  isPrintingStockLabel: boolean;
   onStartEditing: () => void;
   onCancelEditing: () => void;
   onAdjustQty: (delta: number) => void;
@@ -132,6 +134,7 @@ interface StockItemCardProps {
   onSetReason: (reason: string) => void;
   onSave: () => void;
   onPrintLabels: () => void;
+  onPrintStockLabel: () => void;
 }
 
 const StockItemCard = ({
@@ -141,6 +144,7 @@ const StockItemCard = ({
   adjustmentReason,
   isAdjusting,
   isPrinting,
+  isPrintingStockLabel,
   onStartEditing,
   onCancelEditing,
   onAdjustQty,
@@ -148,6 +152,7 @@ const StockItemCard = ({
   onSetReason,
   onSave,
   onPrintLabels,
+  onPrintStockLabel,
 }: StockItemCardProps) => {
   return (
     <Card className={isEditing ? 'border-blue-500 ring-2 ring-blue-500/20' : ''}>
@@ -189,12 +194,25 @@ const StockItemCard = ({
                 onClick={onPrintLabels}
                 disabled={isPrinting}
                 className="flex h-9 w-9 items-center justify-center rounded-lg border border-border-primary text-text-muted transition-colors hover:bg-fill-secondary hover:text-text-primary disabled:opacity-50"
-                title="Reprint labels"
+                title="Reprint case labels"
               >
                 {isPrinting ? (
                   <IconLoader2 className="h-4 w-4 animate-spin" />
                 ) : (
                   <IconPrinter className="h-4 w-4" />
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={onPrintStockLabel}
+                disabled={isPrintingStockLabel}
+                className="flex h-9 w-9 items-center justify-center rounded-lg border border-indigo-300 text-indigo-500 transition-colors hover:bg-indigo-50 hover:text-indigo-700 disabled:opacity-50"
+                title="Print stock label"
+              >
+                {isPrintingStockLabel ? (
+                  <IconLoader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <IconBoxSeam className="h-4 w-4" />
                 )}
               </button>
               <Button variant="outline" size="sm" onClick={onStartEditing}>
@@ -381,11 +399,39 @@ const StockCheckPage = () => {
     },
   });
 
-  // Handle print labels for a stock item
+  // Handle print case labels for a stock item
   const handlePrintLabels = useCallback((stockId: string) => {
     setPrintingStockId(stockId);
     reprintLabels({ stockId });
   }, [reprintLabels]);
+
+  // Print stock summary label mutation
+  const [printingStockLabelId, setPrintingStockLabelId] = useState<string | null>(null);
+  const { mutate: printStockLabel } = useMutation({
+    ...api.wms.admin.labels.printStockLabel.mutationOptions(),
+    onSuccess: async (data) => {
+      setPrintingStockLabelId(null);
+      if (!data.success) {
+        toast.error(data.error || 'Failed to generate label');
+        return;
+      }
+      const printed = await wifiPrint(data.zpl);
+      if (!printed) {
+        downloadZplFile(data.zpl, `stock-label-${data.quantityCases}cs`);
+      }
+      toast.success(`Printed stock label: ${data.quantityCases} cases`);
+    },
+    onError: (error) => {
+      setPrintingStockLabelId(null);
+      toast.error(`Failed to print stock label: ${error.message}`);
+    },
+  });
+
+  // Handle print stock label for a stock item
+  const handlePrintStockLabel = useCallback((stockId: string) => {
+    setPrintingStockLabelId(stockId);
+    printStockLabel({ stockId });
+  }, [printStockLabel]);
 
   // Handle barcode scan for bay mode
   const handleBayScan = useCallback(
@@ -747,6 +793,7 @@ const StockCheckPage = () => {
                       adjustmentReason={adjustmentReason}
                       isAdjusting={isAdjusting}
                       isPrinting={printingStockId === item.id}
+                      isPrintingStockLabel={printingStockLabelId === item.id}
                       onStartEditing={() => startEditing(item)}
                       onCancelEditing={cancelEditing}
                       onAdjustQty={adjustQty}
@@ -754,6 +801,7 @@ const StockCheckPage = () => {
                       onSetReason={setAdjustmentReason}
                       onSave={saveAdjustment}
                       onPrintLabels={() => handlePrintLabels(item.id)}
+                      onPrintStockLabel={() => handlePrintStockLabel(item.id)}
                     />
                   );
                 })}
