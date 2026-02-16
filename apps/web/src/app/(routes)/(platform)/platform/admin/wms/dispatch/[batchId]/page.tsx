@@ -309,7 +309,7 @@ const WMSDispatchBatchDetailPage = () => {
               </ButtonContent>
             </Button>
           )}
-          {(batch.status === 'dispatched' || batch.status === 'staged') && batch.orderCount > 0 && (
+          {batch.orderCount > 0 && (
             <Button
               variant="outline"
               onClick={async () => {
