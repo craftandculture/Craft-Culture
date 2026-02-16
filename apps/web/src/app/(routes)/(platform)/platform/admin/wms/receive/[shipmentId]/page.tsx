@@ -431,16 +431,16 @@ const WMSReceiveShipmentPage = () => {
       let labelCount: number;
 
       if (isPalletMode) {
-        // Pallet mode: generate 1 summary label client-side (no individual case labels in DB)
+        // Pallet mode: generate 1 summary label with barcode (no individual case labels in DB)
+        const palletBarcode = `PLT-${lwin18}-${casesForThisBay}C`;
         zpl = generateLabelZpl({
+          barcode: palletBarcode,
           productName: currentItem.productName,
           lwin18,
           packSize,
           vintage: currentItem.vintage ?? undefined,
           lotNumber: `PALLET | ${casesForThisBay} Cases`,
           owner: shipment?.partnerName ?? undefined,
-          showBarcode: false,
-          showQr: false,
         });
         labelCount = 1;
       } else {
