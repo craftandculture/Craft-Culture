@@ -1,5 +1,5 @@
 import { TRPCError } from '@trpc/server';
-import { and, eq, like, notInArray } from 'drizzle-orm';
+import { and, eq, inArray, like } from 'drizzle-orm';
 
 import db from '@/database/client';
 import {
@@ -74,39 +74,29 @@ const adminReceiveShipmentItem = adminProcedure
       });
     }
 
-    // 2. Validate all locations exist
+    // 2. Validate all locations exist and build a code lookup map
     const locationIds = receivedItem.locationAssignments.map((a) => a.locationId);
     const uniqueLocationIds = [...new Set(locationIds)];
 
     const locations = await db
-      .select()
+      .select({ id: wmsLocations.id, locationCode: wmsLocations.locationCode })
       .from(wmsLocations)
       .where(
         uniqueLocationIds.length === 1
           ? eq(wmsLocations.id, uniqueLocationIds[0]!)
-          : notInArray(wmsLocations.id, []),
+          : inArray(wmsLocations.id, uniqueLocationIds),
       );
 
-    // For multiple locations, validate each one exists
-    if (uniqueLocationIds.length > 1) {
-      const validLocations = await db
-        .select({ id: wmsLocations.id })
-        .from(wmsLocations);
-      const validIds = new Set(validLocations.map((l) => l.id));
-      for (const locId of uniqueLocationIds) {
-        if (!validIds.has(locId)) {
-          throw new TRPCError({
-            code: 'NOT_FOUND',
-            message: `Location ${locId} not found`,
-          });
-        }
-      }
-    } else if (locations.length === 0) {
+    if (locations.length !== uniqueLocationIds.length) {
+      const foundIds = new Set(locations.map((l) => l.id));
+      const missing = uniqueLocationIds.find((id) => !foundIds.has(id));
       throw new TRPCError({
         code: 'NOT_FOUND',
-        message: 'Receiving location not found',
+        message: `Location ${missing} not found`,
       });
     }
+
+    const locationCodeMap = new Map(locations.map((l) => [l.id, l.locationCode]));
 
     // 3. Get the shipment item
     const [shipmentItem] = await db
@@ -153,7 +143,19 @@ const adminReceiveShipmentItem = adminProcedure
       stockNotes = `Pack changed: expected ${shipmentItem.bottlesPerCase ?? 12}x${shipmentItem.bottleSizeMl ?? 750}ml, received ${actualBottlesPerCase}x${actualBottleSizeMl}ml. ${stockNotes}`;
     }
 
-    // 5. Process each location assignment (same product, split across locations)
+    // 5. Build movement notes with split context
+    const totalReceivedCases = receivedItem.locationAssignments.reduce((sum, a) => sum + a.cases, 0);
+    const isSplit = receivedItem.locationAssignments.length > 1;
+    const splitParts = receivedItem.locationAssignments.map((a) => {
+      const locCode = locationCodeMap.get(a.locationId) ?? a.locationId;
+      const palletTag = a.isPalletized ? ' (pallet)' : '';
+      return `${a.cases} → ${locCode}${palletTag}`;
+    });
+    const splitContext = isSplit
+      ? `Received ${totalReceivedCases} cases: ${splitParts.join(', ')}`
+      : null;
+
+    // 6. Process each location assignment (same product, split across locations)
     const createdStock: Array<{
       stockId: string;
       locationId: string;
@@ -258,6 +260,14 @@ const adminReceiveShipmentItem = adminProcedure
       // Create movement record (only for new stock)
       if (!existingStock) {
         const movementNumber = await generateMovementNumber();
+        const palletTag = assignment.isPalletized ? ' (pallet)' : '';
+        const defaultNote = `Received from shipment ${shipment.shipmentNumber}${palletTag}`;
+        const movementNote = notes
+          ? `${notes}${palletTag}`
+          : splitContext
+            ? `${splitContext}`
+            : defaultNote;
+
         await db.insert(wmsStockMovements).values({
           movementNumber,
           movementType: 'receive',
@@ -269,7 +279,7 @@ const adminReceiveShipmentItem = adminProcedure
           lotNumber,
           shipmentId,
           scannedBarcodes: caseLabels.map((l) => l.barcode),
-          notes: notes ?? `Received from shipment ${shipment.shipmentNumber}`,
+          notes: movementNote,
           performedBy: ctx.user.id,
           performedAt: new Date(),
         });
@@ -283,7 +293,7 @@ const adminReceiveShipmentItem = adminProcedure
       });
     }
 
-    // 6. Update shipment status to 'partially_received' if not already
+    // 7. Update shipment status to 'partially_received' if not already
     if (
       shipment.status !== 'partially_received' &&
       shipment.status !== 'delivered'
@@ -297,7 +307,7 @@ const adminReceiveShipmentItem = adminProcedure
         .where(eq(logisticsShipments.id, shipmentId));
     }
 
-    // 7. Sync product to Zoho (non-blocking)
+    // 8. Sync product to Zoho (non-blocking)
     try {
       await findOrCreateWineItem({
         lwin18,
