@@ -3,6 +3,7 @@
 import {
   IconArrowLeft,
   IconArrowRight,
+  IconBoxSeam,
   IconFilter,
   IconLoader2,
   IconTransfer,
@@ -198,6 +199,12 @@ const WMSMovementsPage = () => {
                             movementType={movement.movementType as MovementType}
                             size="sm"
                           />
+                          {movement.notes?.includes('(pallet)') && (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-semibold text-indigo-700">
+                              <IconBoxSeam size={12} />
+                              Pallet
+                            </span>
+                          )}
                           <Typography variant="bodySm" className="font-mono text-text-muted">
                             {movement.movementNumber}
                           </Typography>
