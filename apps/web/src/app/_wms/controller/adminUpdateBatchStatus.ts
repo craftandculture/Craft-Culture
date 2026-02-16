@@ -6,6 +6,7 @@ import {
   privateClientOrders,
   wmsDispatchBatchOrders,
   wmsDispatchBatches,
+  zohoSalesOrders,
 } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
@@ -102,6 +103,18 @@ const adminUpdateBatchStatus = adminProcedure
             updatedAt: new Date(),
           })
           .where(inArray(privateClientOrders.id, orderIds));
+
+        // Update Zoho orders (IDs that don't match Zoho rows are no-ops)
+        const newZohoStatus =
+          status === 'dispatched' ? 'dispatched' : 'delivered';
+
+        await db
+          .update(zohoSalesOrders)
+          .set({
+            status: newZohoStatus,
+            updatedAt: new Date(),
+          })
+          .where(inArray(zohoSalesOrders.id, orderIds));
       }
     }
 
