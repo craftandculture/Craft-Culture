@@ -963,13 +963,28 @@ const StockCheckPage = () => {
                               <OwnerBadge ownerName={loc.ownerName} size="sm" />
                             )}
                           </div>
-                          <div className="text-right">
-                            <Typography variant="headingMd" className="text-blue-600">
-                              {loc.quantityCases}
-                            </Typography>
-                            <Typography variant="bodyXs" colorRole="muted">
-                              cases
-                            </Typography>
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handlePrintStockLabel(loc.stockId)}
+                              disabled={printingStockLabelId === loc.stockId}
+                              className="flex h-9 w-9 items-center justify-center rounded-lg border border-indigo-300 text-indigo-500 transition-colors hover:bg-indigo-50 hover:text-indigo-700 disabled:opacity-50"
+                              title="Print stock label"
+                            >
+                              {printingStockLabelId === loc.stockId ? (
+                                <IconLoader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <IconBoxSeam className="h-4 w-4" />
+                              )}
+                            </button>
+                            <div className="text-right">
+                              <Typography variant="headingMd" className="text-blue-600">
+                                {loc.quantityCases}
+                              </Typography>
+                              <Typography variant="bodyXs" colorRole="muted">
+                                cases
+                              </Typography>
+                            </div>
                           </div>
                         </div>
                       </CardContent>

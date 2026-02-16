@@ -116,6 +116,7 @@ const adminGetStockByProduct = adminProcedure
       products.map(async (product) => {
         const locations = await db
           .select({
+            stockId: wmsStock.id,
             locationId: wmsStock.locationId,
             locationCode: wmsLocations.locationCode,
             locationType: wmsLocations.locationType,
