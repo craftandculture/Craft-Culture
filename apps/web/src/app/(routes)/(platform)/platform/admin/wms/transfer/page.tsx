@@ -8,11 +8,13 @@ import {
   IconMapPin,
   IconMinus,
   IconPlus,
+  IconPrinter,
   IconX,
 } from '@tabler/icons-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useState } from 'react';
+import { toast } from 'sonner';
 
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
@@ -22,6 +24,8 @@ import Icon from '@/app/_ui/components/Icon/Icon';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import LocationBadge from '@/app/_wms/components/LocationBadge';
 import ScanInput from '@/app/_wms/components/ScanInput';
+import downloadZplFile from '@/app/_wms/utils/downloadZplFile';
+import wifiPrint from '@/app/_wms/utils/wifiPrint';
 import useTRPC, { useTRPCClient } from '@/lib/trpc/browser';
 
 type WorkflowStep = 'scan-source' | 'select-stock' | 'scan-dest' | 'confirm' | 'success';
@@ -63,6 +67,9 @@ const WMSTransferPage = () => {
     quantity: number;
     fromLocation: string;
     toLocation: string;
+    sourceStockId: string | null;
+    destStockId: string;
+    sourceRemaining: number;
   } | null>(null);
 
   // Transfer mutation
@@ -75,11 +82,33 @@ const WMSTransferPage = () => {
         quantity: data.quantityCases,
         fromLocation: data.fromLocation.locationCode,
         toLocation: data.toLocation.locationCode,
+        sourceStockId: data.sourceStockId,
+        destStockId: data.destStockId,
+        sourceRemaining: data.sourceRemaining,
       });
       setStep('success');
     },
     onError: (err) => {
       setError(err.message);
+    },
+  });
+
+  // Print stock label mutation
+  const { mutate: printLabel, isPending: isPrinting } = useMutation({
+    ...api.wms.admin.labels.printStockLabel.mutationOptions(),
+    onSuccess: async (data) => {
+      if (!data.success) {
+        toast.error(data.error || 'Failed to generate label');
+        return;
+      }
+      const printed = await wifiPrint(data.zpl);
+      if (!printed) {
+        downloadZplFile(data.zpl, `stock-label-${data.quantityCases}cs`);
+      }
+      toast.success(`Printed label: ${data.productName} (${data.quantityCases} cases)`);
+    },
+    onError: (error) => {
+      toast.error(`Failed to print label: ${error.message}`);
     },
   });
 
@@ -437,6 +466,34 @@ const WMSTransferPage = () => {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Print label buttons */}
+            <div className="space-y-2">
+              {lastSuccess.sourceStockId && (
+                <Button
+                  variant="outline"
+                  size="lg"
+                  className="w-full"
+                  disabled={isPrinting}
+                  onClick={() => printLabel({ stockId: lastSuccess.sourceStockId! })}
+                >
+                  <ButtonContent iconLeft={isPrinting ? IconLoader2 : IconPrinter}>
+                    Print Label — {lastSuccess.sourceRemaining} cases at {lastSuccess.fromLocation}
+                  </ButtonContent>
+                </Button>
+              )}
+              <Button
+                variant="outline"
+                size="lg"
+                className="w-full"
+                disabled={isPrinting}
+                onClick={() => printLabel({ stockId: lastSuccess.destStockId })}
+              >
+                <ButtonContent iconLeft={isPrinting ? IconLoader2 : IconPrinter}>
+                  Print Label — {lastSuccess.quantity} cases at {lastSuccess.toLocation}
+                </ButtonContent>
+              </Button>
+            </div>
 
             <div className="flex gap-3">
               <Button variant="outline" size="lg" className="flex-1" asChild>
