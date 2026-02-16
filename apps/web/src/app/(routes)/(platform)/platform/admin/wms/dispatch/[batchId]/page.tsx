@@ -7,7 +7,6 @@ import {
   IconLoader2,
   IconPackage,
   IconPlus,
-  IconPrinter,
   IconTrash,
   IconTruck,
   IconX,
@@ -23,9 +22,6 @@ import Card from '@/app/_ui/components/Card/Card';
 import CardContent from '@/app/_ui/components/Card/CardContent';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Typography from '@/app/_ui/components/Typography/Typography';
-import downloadZplFile from '@/app/_wms/utils/downloadZplFile';
-import { generateBatchLabelsZpl } from '@/app/_wms/utils/generateLabelZpl';
-import wifiPrint from '@/app/_wms/utils/wifiPrint';
 import useTRPC from '@/lib/trpc/browser';
 
 /**
@@ -319,29 +315,6 @@ const WMSDispatchBatchDetailPage = () => {
                 {generateDeliveryNoteMutation.isPending
                   ? 'Generating...'
                   : `Generate Delivery Note (${batch.ordersWithoutDeliveryNote})`}
-              </ButtonContent>
-            </Button>
-          )}
-          {(batch.status === 'staged' || batch.status === 'picking') && batch.totalCases > 0 && (
-            <Button
-              variant="outline"
-              onClick={async () => {
-                // Generate labels for dispatch batch
-                const labels = Array.from({ length: batch.totalCases }, (_, idx) => ({
-                  barcode: `BATCH-${batch.batchNumber}-${String(idx + 1).padStart(3, '0')}`,
-                  productName: `Dispatch Batch ${batch.batchNumber}`,
-                  lwin18: batch.batchNumber,
-                  packSize: '',
-                  lotNumber: batch.batchNumber,
-                  locationCode: batch.distributorName ?? undefined,
-                }));
-                const zpl = generateBatchLabelsZpl(labels);
-                const printed = await wifiPrint(zpl);
-                if (!printed) downloadZplFile(zpl, `dispatch-${batch.batchNumber}`);
-              }}
-            >
-              <ButtonContent iconLeft={IconPrinter}>
-                Print Case Labels ({batch.totalCases})
               </ButtonContent>
             </Button>
           )}

@@ -6,7 +6,6 @@ import {
   IconLoader2,
   IconMapPin,
   IconPackage,
-  IconPrinter,
   IconTrash,
 } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -22,9 +21,6 @@ import CardContent from '@/app/_ui/components/Card/CardContent';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import LocationBadge from '@/app/_wms/components/LocationBadge';
-import downloadZplFile from '@/app/_wms/utils/downloadZplFile';
-import { generateBatchLabelsZpl } from '@/app/_wms/utils/generateLabelZpl';
-import wifiPrint from '@/app/_wms/utils/wifiPrint';
 import useTRPC from '@/lib/trpc/browser';
 
 /**
@@ -355,28 +351,9 @@ const WMSPickListDetailPage = () => {
               <Typography variant="headingSm" className="mb-2">
                 Pick List Complete
               </Typography>
-              <Typography variant="bodySm" colorRole="muted" className="mb-4">
+              <Typography variant="bodySm" colorRole="muted">
                 All items have been picked and the pick list is complete.
               </Typography>
-              <Button
-                variant="outline"
-                onClick={async () => {
-                  // Generate labels for all picked items
-                  const labels = data.items.map((item, idx) => ({
-                    barcode: `PICK-${data.pickListNumber}-${String(idx + 1).padStart(3, '0')}`,
-                    productName: item.productName,
-                    lwin18: item.lwin18,
-                    packSize: '',
-                    lotNumber: data.pickListNumber,
-                    locationCode: item.suggestedLocationCode ?? undefined,
-                  }));
-                  const zpl = generateBatchLabelsZpl(labels);
-                  const printed = await wifiPrint(zpl);
-                  if (!printed) downloadZplFile(zpl, `pick-${data.pickListNumber}`);
-                }}
-              >
-                <ButtonContent iconLeft={IconPrinter}>Print Case Labels</ButtonContent>
-              </Button>
             </CardContent>
           </Card>
         )}
@@ -394,36 +371,15 @@ const WMSPickListDetailPage = () => {
               <Typography variant="bodySm" colorRole="muted" className="mb-4">
                 Ready to complete the pick list
               </Typography>
-              <div className="flex flex-col gap-3">
-                <Button
-                  variant="outline"
-                  onClick={async () => {
-                    // Generate labels for all picked items
-                    const labels = data.items.map((item, idx) => ({
-                      barcode: `PICK-${data.pickListNumber}-${String(idx + 1).padStart(3, '0')}`,
-                      productName: item.productName,
-                      lwin18: item.lwin18,
-                      packSize: '',
-                      lotNumber: data.pickListNumber,
-                      locationCode: item.suggestedLocationCode ?? undefined,
-                    }));
-                    const zpl = generateBatchLabelsZpl(labels);
-                    const printed = await wifiPrint(zpl);
-                    if (!printed) downloadZplFile(zpl, `pick-${data.pickListNumber}`);
-                  }}
-                >
-                  <ButtonContent iconLeft={IconPrinter}>Print Case Labels</ButtonContent>
-                </Button>
-                <Button
-                  variant="default"
-                  onClick={handleComplete}
-                  disabled={completeMutation.isPending}
-                >
-                  <ButtonContent iconLeft={completeMutation.isPending ? IconLoader2 : IconCheck}>
-                    {completeMutation.isPending ? 'Completing...' : 'Complete Pick List'}
-                  </ButtonContent>
-                </Button>
-              </div>
+              <Button
+                variant="default"
+                onClick={handleComplete}
+                disabled={completeMutation.isPending}
+              >
+                <ButtonContent iconLeft={completeMutation.isPending ? IconLoader2 : IconCheck}>
+                  {completeMutation.isPending ? 'Completing...' : 'Complete Pick List'}
+                </ButtonContent>
+              </Button>
             </CardContent>
           </Card>
         )}
