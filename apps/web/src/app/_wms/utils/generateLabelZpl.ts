@@ -34,6 +34,8 @@ export interface LabelData {
   owner?: string;
   /** Whether to show the barcode (default: true) */
   showBarcode?: boolean;
+  /** Whether to show the QR code on non-barcode labels (default: true) */
+  showQr?: boolean;
 }
 
 /**
@@ -133,6 +135,7 @@ const generateLabelZpl = (data: LabelData) => {
   const owner = data.owner ? escapeZpl(data.owner) : '-';
 
   const showBarcode = data.showBarcode !== false && data.barcode;
+  const showQr = data.showQr !== false;
 
   // ZPL code for 4" x 2" label at 203 DPI (812 x 406 dots)
   // Two layouts: with barcode (WMS) and without barcode (PCO)
@@ -145,46 +148,46 @@ ${CC_LOGO_GF}^FS
 
 ^FX -- Large barcode --
 ^FO30,75
-^BY2,3,55
-^BCN,55,Y,N,N
+^BY2,3,70
+^BCN,70,Y,N,N
 ^FD${data.barcode}^FS
 
 ^FX -- Horizontal separator --
-^FO30,155
+^FO30,170
 ^GB750,2,2^FS
 
 ^FX -- Product name line 1 (prominent) --
-^FO30,168
+^FO30,183
 ^A0N,30,30
 ^FD${productLine1}^FS
 
 ${productLine2 ? `^FX -- Product name line 2 --
-^FO30,200
+^FO30,215
 ^A0N,30,30
 ^FD${productLine2}^FS
 ` : ''}
 ^FX -- Data fields section --
 ^FX -- Row 1: Pack Size (LARGE, prominent) --
-^FO30,236
+^FO30,251
 ^A0N,34,34
 ^FD${packSize}^FS
 
 ^FX -- Row 2: Vintage and Owner --
-^FO30,280
+^FO30,295
 ^A0N,22,22
 ^FDVintage: ${vintage}^FS
 
-^FO400,280
+^FO400,295
 ^A0N,22,22
 ^FDOwner: ${owner}^FS
 
 ^FX -- Row 3: Lot/Order (prominent) --
-^FO30,315
+^FO30,330
 ^A0N,30,30
 ^FD${lotRaw}^FS
 
 ^FX -- Row 4: LWIN --
-^FO30,355
+^FO30,370
 ^A0N,20,20
 ^FDLWIN: ${lwin}^FS
 
@@ -195,14 +198,14 @@ ${productLine2 ? `^FX -- Product name line 2 --
 ^FO30,10
 ${CC_LOGO_GF}^FS
 
-^FX -- QR code (top-right, mag 4) --
+${showQr ? `^FX -- QR code (top-right, mag 4) --
 ^FO666,8
 ^BQN,2,4
 ^FDQA,https://www.craftculture.xyz/cold-chain.html^FS
-
-^FX -- Horizontal separator (stops before QR column) --
+` : ''}
+^FX -- Horizontal separator --
 ^FO30,80
-^GB580,2,2^FS
+^GB${showQr ? '580' : '750'},2,2^FS
 
 ^FX -- PCO number (large, own line) --
 ^FO30,94
