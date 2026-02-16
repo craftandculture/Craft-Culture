@@ -7,6 +7,7 @@ import {
   IconLoader2,
   IconPackage,
   IconPlus,
+  IconPrinter,
   IconTrash,
   IconTruck,
   IconX,
@@ -22,6 +23,9 @@ import Card from '@/app/_ui/components/Card/Card';
 import CardContent from '@/app/_ui/components/Card/CardContent';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Typography from '@/app/_ui/components/Typography/Typography';
+import downloadZplFile from '@/app/_wms/utils/downloadZplFile';
+import generateDispatchLabelZpl from '@/app/_wms/utils/generateDispatchLabelZpl';
+import wifiPrint from '@/app/_wms/utils/wifiPrint';
 import useTRPC from '@/lib/trpc/browser';
 
 /**
@@ -302,6 +306,27 @@ const WMSDispatchBatchDetailPage = () => {
             >
               <ButtonContent iconLeft={updateStatusMutation.isPending ? IconLoader2 : IconCheck}>
                 Mark Delivered
+              </ButtonContent>
+            </Button>
+          )}
+          {(batch.status === 'dispatched' || batch.status === 'staged') && batch.orderCount > 0 && (
+            <Button
+              variant="outline"
+              onClick={async () => {
+                const zpl = generateDispatchLabelZpl({
+                  batchNumber: batch.batchNumber,
+                  distributorName: batch.distributorName ?? 'Unknown',
+                  totalCases: batch.totalCases,
+                  orderNumbers: batch.orders.map((o) => o.orderNumber),
+                  dispatchedAt: batch.dispatchedAt ? new Date(batch.dispatchedAt) : new Date(),
+                  notes: batch.notes,
+                });
+                const printed = await wifiPrint(zpl);
+                if (!printed) downloadZplFile(zpl, `dispatch-${batch.batchNumber}`);
+              }}
+            >
+              <ButtonContent iconLeft={IconPrinter}>
+                Print Pallet Label
               </ButtonContent>
             </Button>
           )}
