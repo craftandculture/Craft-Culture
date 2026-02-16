@@ -6,6 +6,7 @@ import { z } from 'zod';
 const locationAssignmentSchema = z.object({
   locationId: z.string().uuid(),
   cases: z.number().int().min(1),
+  isPalletized: z.boolean().optional(),
 });
 
 /**

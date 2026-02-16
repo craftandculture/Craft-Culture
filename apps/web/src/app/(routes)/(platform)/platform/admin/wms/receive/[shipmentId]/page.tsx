@@ -5,6 +5,7 @@ import {
   IconAlertTriangle,
   IconArrowRight,
   IconBan,
+  IconBoxSeam,
   IconCheck,
   IconChevronRight,
   IconCloudUpload,
@@ -42,6 +43,7 @@ interface LocationAssignment {
   locationCode: string;
   cases: number;
   labelsPrinted: boolean;
+  isPalletized?: boolean;
 }
 
 interface ReceivedItem {
@@ -444,6 +446,13 @@ const WMSReceiveShipmentPage = () => {
     setPrintError(null);
 
     try {
+      // Generate lot number on first print (shared across entire session)
+      let currentLotNumber = lotNumber;
+      if (!currentLotNumber) {
+        currentLotNumber = generateLotNumber(1);
+        setLotNumber(currentLotNumber);
+      }
+
       // Generate LWIN-18 from item data
       const lwin18 = currentItem.lwin || `${currentItem.productName.replace(/\s+/g, '-').slice(0, 20)}`;
       // Strip any non-numeric characters from bottle size (in case it includes "ml")
@@ -454,7 +463,7 @@ const WMSReceiveShipmentPage = () => {
       let labelCount: number;
 
       if (isPalletMode) {
-        // Pallet mode: generate 1 summary label with barcode (no individual case labels in DB)
+        // Pallet mode: generate 1 label with PALLET banner (no individual case labels in DB)
         const palletBarcode = `PLT-${lwin18}-${casesForThisBay}C`;
         zpl = generateLabelZpl({
           barcode: palletBarcode,
@@ -462,8 +471,10 @@ const WMSReceiveShipmentPage = () => {
           lwin18,
           packSize,
           vintage: currentItem.vintage ?? undefined,
-          lotNumber: `PALLET | ${casesForThisBay} Cases`,
+          lotNumber: currentLotNumber,
           owner: shipment?.partnerName ?? undefined,
+          labelType: 'pallet',
+          palletCaseCount: casesForThisBay,
         });
         labelCount = 1;
       } else {
@@ -474,7 +485,7 @@ const WMSReceiveShipmentPage = () => {
           lwin18,
           packSize,
           vintage: currentItem.vintage ?? undefined,
-          lotNumber: new Date().toISOString().split('T')[0],
+          lotNumber: currentLotNumber,
           locationId: scannedLocationId,
           owner: shipment?.partnerName ?? undefined,
           quantity: casesForThisBay,
@@ -502,6 +513,7 @@ const WMSReceiveShipmentPage = () => {
         locationCode: scannedLocationCode || '',
         cases: casesForThisBay,
         labelsPrinted: true,
+        isPalletized: isPalletMode,
       };
 
       const updatedItem = {
@@ -614,7 +626,7 @@ const WMSReceiveShipmentPage = () => {
 
     setIsCommitting(true);
     try {
-      // Generate lot number on first commit (shared across session)
+      // Lot number is normally set during first label print; fallback if not set
       let currentLotNumber = lotNumber;
       if (!currentLotNumber) {
         currentLotNumber = generateLotNumber(1);
@@ -641,6 +653,7 @@ const WMSReceiveShipmentPage = () => {
           locationAssignments: currentItem.locationAssignments.map((a) => ({
             locationId: a.locationId,
             cases: a.cases,
+            isPalletized: a.isPalletized,
           })),
         },
       });
@@ -1134,16 +1147,31 @@ const WMSReceiveShipmentPage = () => {
                       {currentItem.locationAssignments.map((assignment, index) => (
                         <div
                           key={index}
-                          className="flex items-center justify-between rounded-lg bg-emerald-50 p-3 dark:bg-emerald-900/20"
+                          className={`flex items-center justify-between rounded-lg p-3 ${
+                            assignment.isPalletized
+                              ? 'bg-indigo-50 dark:bg-indigo-900/20'
+                              : 'bg-emerald-50 dark:bg-emerald-900/20'
+                          }`}
                         >
                           <div className="flex items-center gap-3">
-                            <Icon icon={IconMapPin} className="text-emerald-600" />
+                            <Icon
+                              icon={assignment.isPalletized ? IconBoxSeam : IconMapPin}
+                              className={assignment.isPalletized ? 'text-indigo-600' : 'text-emerald-600'}
+                            />
                             <div>
-                              <Typography variant="headingSm" className="text-emerald-800 dark:text-emerald-200">
+                              <Typography variant="headingSm" className={
+                                assignment.isPalletized
+                                  ? 'text-indigo-800 dark:text-indigo-200'
+                                  : 'text-emerald-800 dark:text-emerald-200'
+                              }>
                                 {assignment.locationCode}
                               </Typography>
-                              <Typography variant="bodyXs" className="text-emerald-700 dark:text-emerald-300">
-                                {assignment.cases} cases • Labels printed
+                              <Typography variant="bodyXs" className={
+                                assignment.isPalletized
+                                  ? 'text-indigo-700 dark:text-indigo-300'
+                                  : 'text-emerald-700 dark:text-emerald-300'
+                              }>
+                                {assignment.cases} cases{assignment.isPalletized ? ' (pallet)' : ''} • Labels printed
                               </Typography>
                             </div>
                           </div>
@@ -1397,16 +1425,31 @@ const WMSReceiveShipmentPage = () => {
                       {currentItem.locationAssignments.map((assignment, index) => (
                         <div
                           key={index}
-                          className="flex items-center justify-between rounded-lg bg-emerald-50 p-3 dark:bg-emerald-900/20"
+                          className={`flex items-center justify-between rounded-lg p-3 ${
+                            assignment.isPalletized
+                              ? 'bg-indigo-50 dark:bg-indigo-900/20'
+                              : 'bg-emerald-50 dark:bg-emerald-900/20'
+                          }`}
                         >
                           <div className="flex items-center gap-3">
-                            <Icon icon={IconMapPin} className="text-emerald-600" />
+                            <Icon
+                              icon={assignment.isPalletized ? IconBoxSeam : IconMapPin}
+                              className={assignment.isPalletized ? 'text-indigo-600' : 'text-emerald-600'}
+                            />
                             <div>
-                              <Typography variant="headingSm" className="text-emerald-800 dark:text-emerald-200">
+                              <Typography variant="headingSm" className={
+                                assignment.isPalletized
+                                  ? 'text-indigo-800 dark:text-indigo-200'
+                                  : 'text-emerald-800 dark:text-emerald-200'
+                              }>
                                 {assignment.locationCode}
                               </Typography>
-                              <Typography variant="bodyXs" className="text-emerald-700 dark:text-emerald-300">
-                                {assignment.cases} cases
+                              <Typography variant="bodyXs" className={
+                                assignment.isPalletized
+                                  ? 'text-indigo-700 dark:text-indigo-300'
+                                  : 'text-emerald-700 dark:text-emerald-300'
+                              }>
+                                {assignment.cases} cases{assignment.isPalletized ? ' (pallet)' : ''}
                               </Typography>
                             </div>
                           </div>

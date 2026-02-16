@@ -36,6 +36,10 @@ export interface LabelData {
   showBarcode?: boolean;
   /** Whether to show the QR code on non-barcode labels (default: true) */
   showQr?: boolean;
+  /** Label type: 'case' (default) or 'pallet' (adds PALLET banner + case count) */
+  labelType?: 'case' | 'pallet';
+  /** Number of cases on a pallet (only used when labelType is 'pallet') */
+  palletCaseCount?: number;
 }
 
 /**
@@ -136,6 +140,8 @@ const generateLabelZpl = (data: LabelData) => {
 
   const showBarcode = data.showBarcode !== false && data.barcode;
   const showQr = data.showQr !== false;
+  const isPalletLabel = data.labelType === 'pallet';
+  const palletCases = data.palletCaseCount ?? 0;
 
   // ZPL code for 4" x 2" label at 203 DPI (812 x 406 dots)
   // Two layouts: with barcode (WMS) and without barcode (PCO)
@@ -146,6 +152,10 @@ const generateLabelZpl = (data: LabelData) => {
 ^FO30,8
 ${CC_LOGO_GF}^FS
 
+${isPalletLabel ? `^FX -- PALLET banner (white on black, top-right) --
+^FO510,10^GB270,55,55^FS
+^FO545,18^A0N,36,36^FR^FDPALLET^FS
+` : ''}
 ^FX -- Large barcode --
 ^FO30,75
 ^BY2,3,70
@@ -170,7 +180,7 @@ ${productLine2 ? `^FX -- Product name line 2 --
 ^FX -- Row 1: Pack Size (LARGE, prominent) --
 ^FO30,251
 ^A0N,34,34
-^FD${packSize}^FS
+^FD${packSize}${isPalletLabel ? ` | ${palletCases} Cases` : ''}^FS
 
 ^FX -- Row 2: Vintage and Owner --
 ^FO30,295

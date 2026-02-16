@@ -32,6 +32,7 @@ const draftItemSchema = z.object({
     locationCode: z.string(),
     cases: z.number().int().min(0),
     labelsPrinted: z.boolean(),
+    isPalletized: z.boolean().optional(),
   })).optional(),
   lotNumber: z.string().optional(),
   locationId: z.string().uuid().optional(),
