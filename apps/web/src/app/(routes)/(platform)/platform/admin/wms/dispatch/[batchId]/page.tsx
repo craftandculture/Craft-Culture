@@ -129,14 +129,10 @@ const WMSDispatchBatchDetailPage = () => {
   // Generate delivery note mutation
   const generateDeliveryNoteMutation = useMutation({
     ...api.wms.admin.dispatch.generateDeliveryNote.mutationOptions(),
-    onSuccess: (data) => {
+    onSuccess: () => {
       void queryClient.invalidateQueries({
         queryKey: api.wms.admin.dispatch.getOne.getQueryKey({ batchId }),
       });
-      // Open the PDF in a new tab
-      if (data.deliveryNote.pdfUrl) {
-        window.open(data.deliveryNote.pdfUrl, '_blank');
-      }
     },
   });
 

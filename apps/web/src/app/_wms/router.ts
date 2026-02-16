@@ -57,6 +57,7 @@ import adminMovePallet from './controller/adminMovePallet';
 import adminPickItem from './controller/adminPickItem';
 import adminPrintStockLabel from './controller/adminPrintStockLabel';
 import adminPutaway from './controller/adminPutaway';
+import adminQuickDispatch from './controller/adminQuickDispatch';
 import adminRebuildStockFromMovements from './controller/adminRebuildStockFromMovements';
 import adminReceiveShipment from './controller/adminReceiveShipment';
 import adminReceiveShipmentItem from './controller/adminReceiveShipmentItem';
@@ -172,6 +173,7 @@ const dispatchRouter = createTRPCRouter({
   removeOrder: adminRemoveOrderFromBatch,
   updateStatus: adminUpdateBatchStatus,
   generateDeliveryNote: adminGenerateDeliveryNote,
+  quickDispatch: adminQuickDispatch,
 });
 
 const palletRouter = createTRPCRouter({
