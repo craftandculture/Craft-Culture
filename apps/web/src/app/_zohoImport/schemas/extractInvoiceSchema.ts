@@ -5,7 +5,15 @@ import { z } from 'zod';
  */
 const extractInvoiceSchema = z.object({
   file: z.string().describe('Base64 encoded file content'),
-  fileType: z.enum(['application/pdf', 'image/png', 'image/jpeg', 'image/jpg']).describe('MIME type of the file'),
+  fileType: z
+    .enum([
+      'application/pdf',
+      'image/png',
+      'image/jpeg',
+      'image/jpg',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    ])
+    .describe('MIME type of the file'),
   supplierName: z.string().min(1).describe('Supplier/vendor name for the Zoho import'),
 });
 

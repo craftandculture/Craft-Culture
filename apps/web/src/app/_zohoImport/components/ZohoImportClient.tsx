@@ -128,9 +128,20 @@ const ZohoImportClient = () => {
         const base64Content = arrayBufferToBase64(arrayBuffer);
 
         // Determine file type
-        let fileType: 'application/pdf' | 'image/png' | 'image/jpeg' | 'image/jpg' = 'application/pdf';
+        type FileType =
+          | 'application/pdf'
+          | 'image/png'
+          | 'image/jpeg'
+          | 'image/jpg'
+          | 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+        let fileType: FileType = 'application/pdf';
         if (file.type.startsWith('image/')) {
           fileType = file.type as 'image/png' | 'image/jpeg' | 'image/jpg';
+        } else if (
+          file.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
+          file.name.endsWith('.xlsx')
+        ) {
+          fileType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
         }
 
         extractInvoice({
@@ -382,14 +393,14 @@ const ZohoImportClient = () => {
             <>
               <IconCloudUpload className="h-10 w-10 text-text-muted mx-auto mb-3" />
               <Typography variant="bodyMd" className="font-medium">
-                Drop invoice PDF here
+                Drop invoice here
               </Typography>
               <Typography variant="bodyXs" colorRole="muted" className="mb-3">
-                or click to browse (PDF, PNG, JPG)
+                or click to browse (PDF, Excel, PNG, JPG)
               </Typography>
               <input
                 type="file"
-                accept=".pdf,image/png,image/jpeg,image/jpg"
+                accept=".pdf,.xlsx,image/png,image/jpeg,image/jpg"
                 onChange={handleFileChange}
                 className={`absolute inset-0 w-full h-full opacity-0 cursor-pointer ${isDragOver ? 'pointer-events-none' : ''}`}
                 disabled={!supplierName.trim()}

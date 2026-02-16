@@ -2,6 +2,7 @@ import { createAnthropic } from '@ai-sdk/anthropic';
 import { TRPCError } from '@trpc/server';
 import { type ModelMessage, generateObject } from 'ai';
 import { sql } from 'drizzle-orm';
+import XLSX from 'xlsx';
 import { z } from 'zod';
 
 import db from '@/database/client';
@@ -229,6 +230,61 @@ This is a TRANSCRIPTION task. Copy product names exactly as written. Extract ALL
               mediaType: 'application/pdf',
             },
           ],
+        },
+      ];
+
+      const result = await generateObject({
+        model: anthropic('claude-sonnet-4-20250514'),
+        schema: extractedInvoiceSchema,
+        system: systemPrompt,
+        messages,
+      });
+
+      extractedData = result.object;
+    } else if (fileType === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet') {
+      // Excel file - parse with xlsx library, then use Claude to extract structured data
+      logger.info('[ZohoImport] Processing Excel file');
+
+      const buffer = Buffer.from(file, 'base64');
+      const workbook = XLSX.read(buffer, { type: 'buffer' });
+
+      // Convert all sheets to readable text
+      const sheetTexts: string[] = [];
+      for (const sheetName of workbook.SheetNames) {
+        const sheet = workbook.Sheets[sheetName];
+        if (!sheet) continue;
+        const csv = XLSX.utils.sheet_to_csv(sheet);
+        if (csv.trim()) {
+          sheetTexts.push(`--- Sheet: ${sheetName} ---\n${csv}`);
+        }
+      }
+
+      if (sheetTexts.length === 0) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Excel file contains no data',
+        });
+      }
+
+      const spreadsheetContent = sheetTexts.join('\n\n');
+
+      const messages: ModelMessage[] = [
+        {
+          role: 'user',
+          content: `Extract all wine line items from this supplier invoice spreadsheet data.
+
+For each product, extract:
+- Full product name (producer + wine + region)
+- Vintage year
+- Quantity (number of cases)
+- Case configuration (bottles per case, default 6 for Burgundy, 12 for Bordeaux)
+- Bottle size (ml, default 750)
+- LWIN code if present
+
+This is a TRANSCRIPTION task. Copy product names exactly as written. Extract ALL items.
+
+Spreadsheet content:
+${spreadsheetContent}`,
         },
       ];
 
