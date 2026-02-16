@@ -37,6 +37,10 @@ const statusConfig: Record<ShipmentStatus, { label: string; className: string }>
     label: 'At Warehouse',
     className: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
   },
+  partially_received: {
+    label: 'Receiving',
+    className: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
+  },
   dispatched: {
     label: 'Dispatched',
     className: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
