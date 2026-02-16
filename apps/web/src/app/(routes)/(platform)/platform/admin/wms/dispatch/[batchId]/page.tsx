@@ -86,7 +86,9 @@ const WMSDispatchBatchDetailPage = () => {
   const addPcoOrdersMutation = useMutation({
     ...api.wms.admin.dispatch.addOrders.mutationOptions(),
     onSuccess: () => {
-      void queryClient.invalidateQueries();
+      void queryClient.invalidateQueries({
+        queryKey: api.wms.admin.dispatch.getOne.getQueryKey({ batchId }),
+      });
       setShowAddOrders(false);
       setSelectedOrderIds([]);
     },
@@ -96,7 +98,9 @@ const WMSDispatchBatchDetailPage = () => {
   const addZohoOrdersMutation = useMutation({
     ...api.wms.admin.dispatch.addZohoOrders.mutationOptions(),
     onSuccess: () => {
-      void queryClient.invalidateQueries();
+      void queryClient.invalidateQueries({
+        queryKey: api.wms.admin.dispatch.getOne.getQueryKey({ batchId }),
+      });
       setShowAddOrders(false);
       setSelectedOrderIds([]);
     },
@@ -106,7 +110,9 @@ const WMSDispatchBatchDetailPage = () => {
   const updateStatusMutation = useMutation({
     ...api.wms.admin.dispatch.updateStatus.mutationOptions(),
     onSuccess: () => {
-      void queryClient.invalidateQueries();
+      void queryClient.invalidateQueries({
+        queryKey: api.wms.admin.dispatch.getOne.getQueryKey({ batchId }),
+      });
     },
   });
 
@@ -114,7 +120,9 @@ const WMSDispatchBatchDetailPage = () => {
   const removeOrderMutation = useMutation({
     ...api.wms.admin.dispatch.removeOrder.mutationOptions(),
     onSuccess: () => {
-      void queryClient.invalidateQueries();
+      void queryClient.invalidateQueries({
+        queryKey: api.wms.admin.dispatch.getOne.getQueryKey({ batchId }),
+      });
     },
   });
 
@@ -122,7 +130,9 @@ const WMSDispatchBatchDetailPage = () => {
   const generateDeliveryNoteMutation = useMutation({
     ...api.wms.admin.dispatch.generateDeliveryNote.mutationOptions(),
     onSuccess: (data) => {
-      void queryClient.invalidateQueries();
+      void queryClient.invalidateQueries({
+        queryKey: api.wms.admin.dispatch.getOne.getQueryKey({ batchId }),
+      });
       // Open the PDF in a new tab
       if (data.deliveryNote.pdfUrl) {
         window.open(data.deliveryNote.pdfUrl, '_blank');
