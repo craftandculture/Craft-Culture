@@ -10,7 +10,7 @@ import generateLabelZpl from '../utils/generateLabelZpl';
 /**
  * Print a single stock summary label for a stock record
  *
- * Generates a pallet-style label (4"x2") showing the product name,
+ * Generates a standard WMS label (4"x2") showing the product name,
  * current case count, location, owner, and lot number. Used after
  * transfers or from stock check to get an updated label.
  *
@@ -60,11 +60,14 @@ const adminPrintStockLabel = adminProcedure
       .from(wmsLocations)
       .where(eq(wmsLocations.id, stock.locationId));
 
-    // Build pack size
-    const packSize =
+    // Build pack size with case count
+    const basePack =
       stock.caseConfig && stock.bottleSize
         ? `${stock.caseConfig}x${stock.bottleSize}`
         : '';
+    const packSize = basePack
+      ? `${basePack} | ${stock.quantityCases} Cases`
+      : `${stock.quantityCases} Cases`;
 
     // Build barcode for the label
     const safeName = stock.productName
@@ -73,7 +76,7 @@ const adminPrintStockLabel = adminProcedure
       .replace(/[^a-zA-Z0-9]/g, '-')
       .replace(/-+/g, '-')
       .slice(0, 20);
-    const barcode = `PLT-${safeName}-${stock.quantityCases}C`;
+    const barcode = `STK-${safeName}-${stock.quantityCases}C`;
 
     const zpl = generateLabelZpl({
       barcode,
@@ -84,8 +87,6 @@ const adminPrintStockLabel = adminProcedure
       lotNumber: stock.lotNumber ?? undefined,
       locationCode: location?.locationCode ?? undefined,
       owner: stock.ownerName ?? undefined,
-      labelType: 'pallet',
-      palletCaseCount: stock.quantityCases,
     });
 
     return {
