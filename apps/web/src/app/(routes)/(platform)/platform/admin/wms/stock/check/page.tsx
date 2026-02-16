@@ -3,7 +3,6 @@
 import {
   IconArrowLeft,
   IconBox,
-  IconBoxSeam,
   IconCheck,
   IconChevronLeft,
   IconChevronRight,
@@ -212,7 +211,7 @@ const StockItemCard = ({
                 {isPrintingStockLabel ? (
                   <IconLoader2 className="h-4 w-4 animate-spin" />
                 ) : (
-                  <IconBoxSeam className="h-4 w-4" />
+                  <IconPrinter className="h-4 w-4" />
                 )}
               </button>
               <Button variant="outline" size="sm" onClick={onStartEditing}>
@@ -966,15 +965,15 @@ const StockCheckPage = () => {
                           <div className="flex items-center gap-2">
                             <button
                               type="button"
-                              onClick={() => handlePrintStockLabel(loc.stockId)}
-                              disabled={printingStockLabelId === loc.stockId}
-                              className="flex h-9 w-9 items-center justify-center rounded-lg border border-indigo-300 text-indigo-500 transition-colors hover:bg-indigo-50 hover:text-indigo-700 disabled:opacity-50"
-                              title="Print stock label"
+                              onClick={() => handlePrintLabels(loc.stockId)}
+                              disabled={printingStockId === loc.stockId}
+                              className="flex h-9 w-9 items-center justify-center rounded-lg border border-border-primary text-text-muted transition-colors hover:bg-fill-secondary hover:text-text-primary disabled:opacity-50"
+                              title="Print case labels"
                             >
-                              {printingStockLabelId === loc.stockId ? (
+                              {printingStockId === loc.stockId ? (
                                 <IconLoader2 className="h-4 w-4 animate-spin" />
                               ) : (
-                                <IconBoxSeam className="h-4 w-4" />
+                                <IconPrinter className="h-4 w-4" />
                               )}
                             </button>
                             <div className="text-right">
