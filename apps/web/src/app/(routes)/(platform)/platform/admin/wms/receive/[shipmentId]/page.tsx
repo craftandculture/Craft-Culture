@@ -1167,12 +1167,20 @@ const WMSReceiveShipmentPage = () => {
                               </label>
                               <input
                                 type="number"
+                                inputMode="numeric"
                                 min={1}
                                 max={pendingCases}
-                                value={casesForThisBay}
+                                value={casesForThisBay || ''}
                                 onChange={(e) => {
-                                  const val = Math.min(Math.max(1, parseInt(e.target.value) || 0), pendingCases);
-                                  setCasesForThisBay(val);
+                                  const parsed = parseInt(e.target.value);
+                                  if (isNaN(parsed)) {
+                                    setCasesForThisBay(0);
+                                  } else {
+                                    setCasesForThisBay(Math.min(parsed, pendingCases));
+                                  }
+                                }}
+                                onBlur={() => {
+                                  if (casesForThisBay < 1) setCasesForThisBay(1);
                                 }}
                                 className="h-12 w-full rounded-lg border-2 border-border-primary bg-fill-primary px-3 text-center text-lg font-semibold focus:border-border-brand focus:outline-none"
                               />
