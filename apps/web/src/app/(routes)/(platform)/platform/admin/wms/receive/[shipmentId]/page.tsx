@@ -34,6 +34,7 @@ import type { ScanInputHandle } from '@/app/_wms/components/ScanInput';
 import ZebraPrint, { useZebraPrint } from '@/app/_wms/components/ZebraPrint';
 import downloadZplFile from '@/app/_wms/utils/downloadZplFile';
 import generateLabelZpl from '@/app/_wms/utils/generateLabelZpl';
+import generateLotNumber from '@/app/_wms/utils/generateLotNumber';
 import useTRPC from '@/lib/trpc/browser';
 
 interface LocationAssignment {
@@ -63,6 +64,10 @@ interface ReceivedItem {
   isVerified: boolean;
   /** Item was skipped during receiving (not found, 0 cases) */
   isSkipped?: boolean;
+  /** Item has been committed to the backend (stock + movements created) */
+  isCommitted?: boolean;
+  /** ISO timestamp when the item was committed */
+  committedAt?: string;
   locationAssignments: LocationAssignment[];
   totalLabelsPrinted: number;
   notes?: string;
@@ -103,6 +108,8 @@ const WMSReceiveShipmentPage = () => {
   const [initialized, setInitialized] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [lotNumber, setLotNumber] = useState('');
+  const [isCommitting, setIsCommitting] = useState(false);
 
   // Current bay assignment state (for the current product)
   const [pendingCases, setPendingCases] = useState(0);
@@ -175,9 +182,14 @@ const WMSReceiveShipmentPage = () => {
     },
   });
 
-  // Complete receiving mutation
-  const receiveMutation = useMutation({
-    ...api.wms.admin.receiving.receiveShipment.mutationOptions(),
+  // Commit single item mutation (incremental receiving)
+  const commitItemMutation = useMutation({
+    ...api.wms.admin.receiving.receiveShipmentItem.mutationOptions(),
+  });
+
+  // Finalize receiving mutation (mark shipment as delivered)
+  const finalizeMutation = useMutation({
+    ...api.wms.admin.receiving.finalizeReceiving.mutationOptions(),
     onSuccess: () => {
       deleteDraftMutate({ shipmentId });
       void queryClient.invalidateQueries();
@@ -214,6 +226,10 @@ const WMSReceiveShipmentPage = () => {
         packChanged: item.packChanged,
         isAddedItem: item.isAddedItem,
         isChecked: item.isVerified,
+        isCommitted: item.isCommitted,
+        committedAt: item.committedAt,
+        locationAssignments: item.locationAssignments,
+        lotNumber: lotNumber || undefined,
         locationId: item.locationAssignments[0]?.locationId,
         notes: item.notes,
         photos: item.photos,
@@ -225,7 +241,7 @@ const WMSReceiveShipmentPage = () => {
         notes: notes || undefined,
       });
     }, 1000);
-  }, [receivedItems, notes, shipmentId, saveDraftMutate]);
+  }, [receivedItems, notes, lotNumber, shipmentId, saveDraftMutate]);
 
   // Get current item - defined early so it can be used in effects
   const getCurrentItem = useCallback((): ReceivedItem | undefined => {
@@ -244,9 +260,13 @@ const WMSReceiveShipmentPage = () => {
         loadedItems.set(item.id, {
           ...item,
           isVerified: item.isChecked,
-          locationAssignments: item.locationId
-            ? [{ locationId: item.locationId, locationCode: '', cases: item.receivedCases, labelsPrinted: true }]
-            : [],
+          isCommitted: item.isCommitted ?? false,
+          committedAt: item.committedAt,
+          locationAssignments: item.locationAssignments?.length
+            ? item.locationAssignments
+            : item.locationId
+              ? [{ locationId: item.locationId, locationCode: '', cases: item.receivedCases, labelsPrinted: true }]
+              : [],
           totalLabelsPrinted: item.isChecked ? item.receivedCases : 0,
         });
       });
@@ -255,6 +275,9 @@ const WMSReceiveShipmentPage = () => {
       if (savedDraft.lastModifiedAt) {
         setLastSaved(new Date(savedDraft.lastModifiedAt));
       }
+      // Restore lot number from draft
+      const savedLotNumber = savedDraft.items.find((i) => i.lotNumber)?.lotNumber;
+      if (savedLotNumber) setLotNumber(savedLotNumber);
       setInitialized(true);
       return;
     }
@@ -509,10 +532,10 @@ const WMSReceiveShipmentPage = () => {
     }
   };
 
-  // Remove a location assignment
+  // Remove a location assignment (not allowed for committed items)
   const removeLocationAssignment = (assignmentIndex: number) => {
     const currentItem = getCurrentItem();
-    if (!currentItem) return;
+    if (!currentItem || currentItem.isCommitted) return;
 
     const assignment = currentItem.locationAssignments[assignmentIndex];
     if (!assignment) return;
@@ -531,25 +554,19 @@ const WMSReceiveShipmentPage = () => {
     saveDraft();
   };
 
-  // Move to next incomplete product (skip completed/skipped ones)
+  // Move to next incomplete product (skip committed/skipped ones)
   const handleNextProduct = () => {
     if (!shipment?.items) return;
 
-    // Find next incomplete product
+    // Find next product that needs work (not committed, not skipped)
     for (let i = currentProductIndex + 1; i < shipment.items.length; i++) {
       const item = shipment.items[i];
       if (!item) continue;
       const receivedItem = receivedItems.get(item.id);
-      const isComplete =
-        receivedItem &&
-        (receivedItem.isSkipped ||
-          (receivedItem.locationAssignments.length > 0 &&
-            receivedItem.locationAssignments.reduce((sum, a) => sum + a.cases, 0) >= receivedItem.receivedCases));
-      if (!isComplete) {
-        setCurrentProductIndex(i);
-        setProductPhase('verifying');
-        return;
-      }
+      if (receivedItem?.isCommitted || receivedItem?.isSkipped) continue;
+      setCurrentProductIndex(i);
+      setProductPhase('verifying');
+      return;
     }
 
     // If no incomplete found after current, check from beginning
@@ -557,16 +574,10 @@ const WMSReceiveShipmentPage = () => {
       const item = shipment.items[i];
       if (!item) continue;
       const receivedItem = receivedItems.get(item.id);
-      const isComplete =
-        receivedItem &&
-        (receivedItem.isSkipped ||
-          (receivedItem.locationAssignments.length > 0 &&
-            receivedItem.locationAssignments.reduce((sum, a) => sum + a.cases, 0) >= receivedItem.receivedCases));
-      if (!isComplete) {
-        setCurrentProductIndex(i);
-        setProductPhase('verifying');
-        return;
-      }
+      if (receivedItem?.isCommitted || receivedItem?.isSkipped) continue;
+      setCurrentProductIndex(i);
+      setProductPhase('verifying');
+      return;
     }
 
     // All complete - go back to list view
@@ -596,43 +607,75 @@ const WMSReceiveShipmentPage = () => {
     handleNextProduct();
   };
 
-  // Complete all receiving
+  // Commit a single product to the backend (incremental receiving)
+  const handleCommitProduct = async () => {
+    const currentItem = getCurrentItem();
+    if (!currentItem || !currentItem.shipmentItemId || currentItem.isCommitted || isCommitting) return;
+
+    setIsCommitting(true);
+    try {
+      // Generate lot number on first commit (shared across session)
+      let currentLotNumber = lotNumber;
+      if (!currentLotNumber) {
+        currentLotNumber = generateLotNumber(1);
+        setLotNumber(currentLotNumber);
+      }
+
+      await commitItemMutation.mutateAsync({
+        shipmentId,
+        lotNumber: currentLotNumber,
+        notes: currentItem.notes,
+        item: {
+          shipmentItemId: currentItem.shipmentItemId,
+          expectedCases: currentItem.expectedCases,
+          receivedCases: currentItem.receivedCases,
+          receivedBottlesPerCase: currentItem.receivedBottlesPerCase,
+          receivedBottleSizeMl: currentItem.receivedBottleSizeMl,
+          packChanged: currentItem.packChanged,
+          isAddedItem: currentItem.isAddedItem,
+          productName: currentItem.productName,
+          producer: currentItem.producer,
+          vintage: currentItem.vintage,
+          lwin: currentItem.lwin,
+          supplierSku: currentItem.supplierSku,
+          locationAssignments: currentItem.locationAssignments.map((a) => ({
+            locationId: a.locationId,
+            cases: a.cases,
+          })),
+        },
+      });
+
+      // Mark item as committed
+      const updatedItem = {
+        ...currentItem,
+        isCommitted: true,
+        committedAt: new Date().toISOString(),
+      };
+      const newMap = new Map(receivedItems.set(currentItem.id, updatedItem));
+      setReceivedItems(newMap);
+      saveDraft();
+
+      // Auto-advance to next product
+      handleNextProduct();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to save to warehouse');
+    } finally {
+      setIsCommitting(false);
+    }
+  };
+
+  // Finalize receiving (all products already committed individually)
   const handleCompleteReceiving = () => {
-    const itemsToReceive = Array.from(receivedItems.values()).filter(
-      (item) => item.receivedCases > 0 && item.locationAssignments.length > 0,
+    const uncommitted = Array.from(receivedItems.values()).filter(
+      (item) => !item.isCommitted && !item.isSkipped && item.receivedCases > 0,
     );
 
-    if (itemsToReceive.length === 0) {
-      alert('No items ready to receive. Each product needs at least one bay assignment.');
+    if (uncommitted.length > 0) {
+      alert(`${uncommitted.length} product(s) not yet saved to warehouse. Please confirm each product before finishing.`);
       return;
     }
 
-    // Flatten location assignments: one item per location for split receiving
-    const items = itemsToReceive.flatMap((item) =>
-      item.locationAssignments.map((assignment) => ({
-        shipmentItemId: item.shipmentItemId ?? item.baseItemId ?? '',
-        expectedCases: item.expectedCases,
-        receivedCases: assignment.cases,
-        receivedBottlesPerCase: item.receivedBottlesPerCase,
-        receivedBottleSizeMl: item.receivedBottleSizeMl,
-        packChanged: item.packChanged,
-        isAddedItem: item.isAddedItem,
-        productName: item.productName,
-        producer: item.producer,
-        vintage: item.vintage,
-        lwin: item.lwin,
-        supplierSku: item.supplierSku,
-        locationId: assignment.locationId,
-        notes: item.notes,
-      })),
-    );
-
-    receiveMutation.mutate({
-      shipmentId,
-      receivingLocationId: items[0]?.locationId ?? '',
-      items,
-      notes: notes || undefined,
-    });
+    finalizeMutation.mutate({ shipmentId });
   };
 
   // Reset handler
@@ -676,7 +719,7 @@ const WMSReceiveShipmentPage = () => {
   const currentItem = getCurrentItem();
   const totalProducts = shipment.items.length;
   const completedProducts = Array.from(receivedItems.values()).filter(
-    (item) => item.locationAssignments.length > 0 && item.locationAssignments.reduce((sum, a) => sum + a.cases, 0) >= item.receivedCases,
+    (item) => item.isCommitted || item.isSkipped,
   ).length;
   const progressPercent = Math.round((completedProducts / totalProducts) * 100);
   const allComplete = completedProducts === totalProducts;
@@ -706,7 +749,10 @@ const WMSReceiveShipmentPage = () => {
       document.activeElement.blur();
     }
     setCurrentProductIndex(index);
-    setProductPhase('verifying');
+    // Committed items go straight to complete phase (read-only)
+    const item = shipment?.items?.[index];
+    const receivedItem = item ? receivedItems.get(item.id) : undefined;
+    setProductPhase(receivedItem?.isCommitted ? 'complete' : 'verifying');
     setViewMode('detail');
     // Scroll to top after React renders the detail view
     requestAnimationFrame(() => {
@@ -811,12 +857,13 @@ const WMSReceiveShipmentPage = () => {
               ) : (
                 filteredProducts.map(({ item, index, receivedItem }) => {
                   const isSkipped = receivedItem?.isSkipped;
-                  const isComplete =
+                  const isCommitted = receivedItem?.isCommitted;
+                  const isFullyAssigned =
                     receivedItem &&
-                    (receivedItem.isSkipped ||
-                      (receivedItem.locationAssignments.length > 0 &&
-                        receivedItem.locationAssignments.reduce((sum, a) => sum + a.cases, 0) >=
-                          receivedItem.receivedCases));
+                    !receivedItem.isCommitted &&
+                    receivedItem.locationAssignments.length > 0 &&
+                    receivedItem.locationAssignments.reduce((sum, a) => sum + a.cases, 0) >=
+                      receivedItem.receivedCases;
                   const isVerified = receivedItem?.isVerified;
 
                   return (
@@ -828,15 +875,20 @@ const WMSReceiveShipmentPage = () => {
                       {/* Top row: Status badge and case count */}
                       <div className="mb-2 flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          {isSkipped ? (
+                          {isCommitted ? (
+                            <span className="flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-1 text-xs font-medium text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
+                              <IconCheck className="h-3 w-3" />
+                              Saved
+                            </span>
+                          ) : isSkipped ? (
                             <span className="flex items-center gap-1 rounded-full bg-gray-200 px-2 py-1 text-xs font-medium text-gray-600 dark:bg-gray-700 dark:text-gray-300">
                               <IconBan className="h-3 w-3" />
                               Skipped
                             </span>
-                          ) : isComplete ? (
-                            <span className="flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-1 text-xs font-medium text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
+                          ) : isFullyAssigned ? (
+                            <span className="flex items-center gap-1 rounded-full bg-amber-100 px-2 py-1 text-xs font-medium text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
                               <IconCheck className="h-3 w-3" />
-                              Done
+                              Ready
                             </span>
                           ) : isVerified ? (
                             <span className="rounded-full bg-amber-100 px-2 py-1 text-xs font-medium text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
@@ -892,17 +944,17 @@ const WMSReceiveShipmentPage = () => {
               )}
             </div>
 
-            {/* Complete Receiving button at bottom of list */}
+            {/* Finish Receiving button at bottom of list */}
             {allComplete && (
               <Button
                 variant="default"
                 size="lg"
                 className="h-14 w-full text-lg"
                 onClick={handleCompleteReceiving}
-                disabled={receiveMutation.isPending}
+                disabled={finalizeMutation.isPending}
               >
-                <ButtonContent iconLeft={receiveMutation.isPending ? IconLoader2 : IconCheck}>
-                  {receiveMutation.isPending ? 'Completing...' : 'Complete Receiving'}
+                <ButtonContent iconLeft={finalizeMutation.isPending ? IconLoader2 : IconCheck}>
+                  {finalizeMutation.isPending ? 'Finishing...' : 'Finish Receiving'}
                 </ButtonContent>
               </Button>
             )}
@@ -1095,12 +1147,14 @@ const WMSReceiveShipmentPage = () => {
                               </Typography>
                             </div>
                           </div>
-                          <button
-                            onClick={() => removeLocationAssignment(index)}
-                            className="rounded-lg p-2 text-red-500 hover:bg-red-100 dark:hover:bg-red-900/30"
-                          >
-                            <IconTrash className="h-5 w-5" />
-                          </button>
+                          {!currentItem.isCommitted && (
+                            <button
+                              onClick={() => removeLocationAssignment(index)}
+                              className="rounded-lg p-2 text-red-500 hover:bg-red-100 dark:hover:bg-red-900/30"
+                            >
+                              <IconTrash className="h-5 w-5" />
+                            </button>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -1252,8 +1306,8 @@ const WMSReceiveShipmentPage = () => {
                     </>
                   )}
 
-                  {/* All cases assigned - ready for next */}
-                  {pendingCases === 0 && currentItem.locationAssignments.length > 0 && (
+                  {/* All cases assigned but not committed - show confirm button */}
+                  {pendingCases === 0 && currentItem.locationAssignments.length > 0 && !currentItem.isCommitted && (
                     <div className="space-y-4">
                       <div className="flex items-center gap-3 rounded-lg bg-emerald-100 p-4 dark:bg-emerald-900/30">
                         <Icon icon={IconCheck} size="lg" className="text-emerald-600" />
@@ -1266,6 +1320,28 @@ const WMSReceiveShipmentPage = () => {
                           </Typography>
                         </div>
                       </div>
+
+                      {/* Confirm & Save to warehouse */}
+                      <Button
+                        variant="default"
+                        size="lg"
+                        className="h-14 w-full text-lg"
+                        onClick={handleCommitProduct}
+                        disabled={isCommitting}
+                      >
+                        <ButtonContent iconLeft={isCommitting ? IconLoader2 : IconCheck}>
+                          {isCommitting ? 'Saving...' : 'Confirm & Save to Warehouse'}
+                        </ButtonContent>
+                      </Button>
+
+                      {commitItemMutation.isError && (
+                        <div className="flex items-center gap-2 rounded-lg bg-red-50 p-3 dark:bg-red-900/20">
+                          <Icon icon={IconAlertCircle} className="text-red-600" />
+                          <Typography variant="bodySm" className="text-red-800 dark:text-red-300">
+                            {commitItemMutation.error?.message ?? 'Failed to save'}
+                          </Typography>
+                        </div>
+                      )}
 
                       {/* Add another bay button */}
                       <Button
@@ -1280,31 +1356,85 @@ const WMSReceiveShipmentPage = () => {
                       >
                         <ButtonContent iconLeft={IconPlus}>Add Another Bay (Split)</ButtonContent>
                       </Button>
-
-                      {currentProductIndex < totalProducts - 1 ? (
-                        <Button
-                          variant="default"
-                          size="lg"
-                          className="h-14 w-full text-lg"
-                          onClick={handleNextProduct}
-                        >
-                          <ButtonContent iconRight={IconArrowRight}>Next Product</ButtonContent>
-                        </Button>
-                      ) : (
-                        <Button
-                          variant="default"
-                          size="lg"
-                          className="h-14 w-full text-lg"
-                          onClick={handleCompleteReceiving}
-                          disabled={receiveMutation.isPending || !allComplete}
-                        >
-                          <ButtonContent iconLeft={receiveMutation.isPending ? IconLoader2 : IconCheck}>
-                            {receiveMutation.isPending ? 'Completing...' : 'Complete Receiving'}
-                          </ButtonContent>
-                        </Button>
-                      )}
                     </div>
                   )}
+
+                  {/* Committed item - read-only view */}
+                  {currentItem.isCommitted && (
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-3 rounded-lg bg-emerald-100 p-4 dark:bg-emerald-900/30">
+                        <Icon icon={IconCheck} size="lg" className="text-emerald-600" />
+                        <div>
+                          <Typography variant="headingSm" className="text-emerald-800 dark:text-emerald-200">
+                            Saved to Warehouse
+                          </Typography>
+                          <Typography variant="bodyXs" className="text-emerald-700 dark:text-emerald-300">
+                            {currentItem.receivedCases} cases • Stock & movements created
+                          </Typography>
+                        </div>
+                      </div>
+
+                      <Button
+                        variant="default"
+                        size="lg"
+                        className="h-14 w-full text-lg"
+                        onClick={handleNextProduct}
+                      >
+                        <ButtonContent iconRight={IconArrowRight}>Next Product</ButtonContent>
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Phase: Complete (committed items - read-only) */}
+              {productPhase === 'complete' && currentItem.isCommitted && (
+                <div className="space-y-4">
+                  {/* Location assignments (read-only) */}
+                  {currentItem.locationAssignments.length > 0 && (
+                    <div className="space-y-2">
+                      <Typography variant="headingSm">Assigned Bays</Typography>
+                      {currentItem.locationAssignments.map((assignment, index) => (
+                        <div
+                          key={index}
+                          className="flex items-center justify-between rounded-lg bg-emerald-50 p-3 dark:bg-emerald-900/20"
+                        >
+                          <div className="flex items-center gap-3">
+                            <Icon icon={IconMapPin} className="text-emerald-600" />
+                            <div>
+                              <Typography variant="headingSm" className="text-emerald-800 dark:text-emerald-200">
+                                {assignment.locationCode}
+                              </Typography>
+                              <Typography variant="bodyXs" className="text-emerald-700 dark:text-emerald-300">
+                                {assignment.cases} cases
+                              </Typography>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="flex items-center gap-3 rounded-lg bg-emerald-100 p-4 dark:bg-emerald-900/30">
+                    <Icon icon={IconCheck} size="lg" className="text-emerald-600" />
+                    <div>
+                      <Typography variant="headingSm" className="text-emerald-800 dark:text-emerald-200">
+                        Saved to Warehouse
+                      </Typography>
+                      <Typography variant="bodyXs" className="text-emerald-700 dark:text-emerald-300">
+                        {currentItem.receivedCases} cases • Stock & movements created
+                      </Typography>
+                    </div>
+                  </div>
+
+                  <Button
+                    variant="default"
+                    size="lg"
+                    className="h-14 w-full text-lg"
+                    onClick={handleNextProduct}
+                  >
+                    <ButtonContent iconRight={IconArrowRight}>Next Product</ButtonContent>
+                  </Button>
                 </div>
               )}
 
@@ -1350,7 +1480,7 @@ const WMSReceiveShipmentPage = () => {
                 <Icon icon={IconCheck} size="lg" className="text-emerald-600" />
                 <div className="flex-1">
                   <Typography variant="headingSm" className="text-emerald-800 dark:text-emerald-200">
-                    All Products Received
+                    All Products Saved
                   </Typography>
                   <Typography variant="bodySm" className="mt-1 text-emerald-700 dark:text-emerald-300">
                     {completedProducts} products with{' '}
@@ -1361,10 +1491,10 @@ const WMSReceiveShipmentPage = () => {
                     size="lg"
                     className="mt-4 h-14 w-full text-lg"
                     onClick={handleCompleteReceiving}
-                    disabled={receiveMutation.isPending}
+                    disabled={finalizeMutation.isPending}
                   >
-                    <ButtonContent iconLeft={receiveMutation.isPending ? IconLoader2 : IconCheck}>
-                      {receiveMutation.isPending ? 'Completing...' : 'Complete Receiving'}
+                    <ButtonContent iconLeft={finalizeMutation.isPending ? IconLoader2 : IconCheck}>
+                      {finalizeMutation.isPending ? 'Finishing...' : 'Finish Receiving'}
                     </ButtonContent>
                   </Button>
                 </div>
@@ -1374,13 +1504,13 @@ const WMSReceiveShipmentPage = () => {
         )}
 
         {/* Error Display */}
-        {receiveMutation.isError && (
+        {finalizeMutation.isError && (
           <Card className="border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-900/20">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
                 <Icon icon={IconAlertCircle} size="md" className="flex-shrink-0 text-red-600" />
                 <Typography variant="bodySm" className="text-red-800 dark:text-red-300">
-                  {receiveMutation.error?.message ?? 'Failed to receive shipment'}
+                  {finalizeMutation.error?.message ?? 'Failed to finalize receiving'}
                 </Typography>
               </div>
             </CardContent>

@@ -2688,6 +2688,7 @@ export const logisticsShipmentStatus = pgEnum('logistics_shipment_status', [
   'customs_clearance', // Going through customs
   'cleared', // Customs cleared
   'at_warehouse', // At RAK Port warehouse
+  'partially_received', // Some items received, receiving in progress
   'dispatched', // Sent out for delivery (outbound)
   'delivered', // Final delivery complete
   'cancelled', // Cancelled

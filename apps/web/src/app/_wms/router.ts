@@ -22,6 +22,7 @@ import adminDeleteReceivingDraft from './controller/adminDeleteReceivingDraft';
 import adminDeleteStockRecord from './controller/adminDeleteStockRecord';
 import adminDispatchPallet from './controller/adminDispatchPallet';
 import adminDissolvePallet from './controller/adminDissolvePallet';
+import adminFinalizeReceiving from './controller/adminFinalizeReceiving';
 import adminGenerateDeliveryNote from './controller/adminGenerateDeliveryNote';
 import adminGetAllStockRecords from './controller/adminGetAllStockRecords';
 import adminGetBayDetails from './controller/adminGetBayDetails';
@@ -57,6 +58,7 @@ import adminPickItem from './controller/adminPickItem';
 import adminPutaway from './controller/adminPutaway';
 import adminRebuildStockFromMovements from './controller/adminRebuildStockFromMovements';
 import adminReceiveShipment from './controller/adminReceiveShipment';
+import adminReceiveShipmentItem from './controller/adminReceiveShipmentItem';
 import adminReconcileStock from './controller/adminReconcileStock';
 import adminReleaseReservation from './controller/adminReleaseReservation';
 import adminRemoveCaseFromPallet from './controller/adminRemoveCaseFromPallet';
@@ -97,6 +99,8 @@ const receivingRouter = createTRPCRouter({
   getPendingShipments: adminGetPendingShipments,
   getShipmentForReceiving: adminGetShipmentForReceiving,
   receiveShipment: adminReceiveShipment,
+  receiveShipmentItem: adminReceiveShipmentItem,
+  finalizeReceiving: adminFinalizeReceiving,
   getDraft: adminGetReceivingDraft,
   saveDraft: adminSaveReceivingDraft,
   deleteDraft: adminDeleteReceivingDraft,

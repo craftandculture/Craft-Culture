@@ -40,6 +40,7 @@ const adminGetPendingShipments = adminProcedure.query(async () => {
         'cleared',
         'customs_clearance',
         'arrived_port',
+        'partially_received',
       ])
     )
     .groupBy(
