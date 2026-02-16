@@ -4,6 +4,7 @@ import {
   IconAlertTriangle,
   IconCheck,
   IconCloudUpload,
+  IconCopy,
   IconDownload,
   IconEdit,
   IconLoader2,
@@ -198,6 +199,36 @@ const ZohoImportClient = () => {
   const handleRemoveItem = (itemId: string) => {
     if (!extractedItems) return;
     const newItems = extractedItems.filter((i) => i.id !== itemId);
+    setExtractedItems(newItems);
+    setStats((prev) =>
+      prev
+        ? {
+            ...prev,
+            total: newItems.length,
+            matched: newItems.filter((i) => i.hasLwinMatch).length,
+            unmatched: newItems.filter((i) => !i.hasLwinMatch).length,
+            needsReview: newItems.filter((i) => i.needsReview).length,
+          }
+        : null,
+    );
+  };
+
+  // Clone an item (for creating pack size variations)
+  const handleCloneItem = (itemId: string) => {
+    if (!extractedItems) return;
+    const sourceItem = extractedItems.find((i) => i.id === itemId);
+    if (!sourceItem) return;
+
+    const clonedItem: ZohoItem = {
+      ...sourceItem,
+      id: crypto.randomUUID(),
+    };
+
+    // Insert the clone right after the source item
+    const sourceIndex = extractedItems.findIndex((i) => i.id === itemId);
+    const newItems = [...extractedItems];
+    newItems.splice(sourceIndex + 1, 0, clonedItem);
+
     setExtractedItems(newItems);
     setStats((prev) =>
       prev
@@ -441,7 +472,7 @@ const ZohoImportClient = () => {
                     <th className="w-[90px] px-2 py-2 text-left text-xs font-medium text-text-muted">Country</th>
                     <th className="w-[90px] px-2 py-2 text-left text-xs font-medium text-text-muted">HS Code</th>
                     <th className="w-[70px] px-2 py-2 text-left text-xs font-medium text-text-muted">LWIN</th>
-                    <th className="w-[50px] px-2 py-2 text-left text-xs font-medium text-text-muted"></th>
+                    <th className="w-[70px] px-2 py-2 text-left text-xs font-medium text-text-muted"></th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border-muted">
@@ -609,14 +640,24 @@ const ZohoImportClient = () => {
 
                       {/* Actions */}
                       <td className="px-2 py-2">
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveItem(item.id)}
-                          className="p-1 hover:bg-red-50 rounded"
-                          title="Remove"
-                        >
-                          <IconTrash className="h-3.5 w-3.5 text-red-500" />
-                        </button>
+                        <div className="flex items-center gap-0.5">
+                          <button
+                            type="button"
+                            onClick={() => handleCloneItem(item.id)}
+                            className="p-1 hover:bg-blue-50 rounded"
+                            title="Duplicate item"
+                          >
+                            <IconCopy className="h-3.5 w-3.5 text-blue-500" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveItem(item.id)}
+                            className="p-1 hover:bg-red-50 rounded"
+                            title="Remove"
+                          >
+                            <IconTrash className="h-3.5 w-3.5 text-red-500" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
