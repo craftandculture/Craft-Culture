@@ -39,9 +39,15 @@ const NewPickListPage = () => {
   const { data: zohoOrders, isLoading: isLoadingZoho } = useQuery({
     ...api.zohoSalesOrders.list.queryOptions(),
     select: (orders) =>
-      orders.filter(
-        (o) => o.status === 'synced' && o.zohoStatus === 'invoiced',
-      ),
+      orders
+        .filter(
+          (o) => o.status === 'synced' && o.zohoStatus === 'invoiced',
+        )
+        .sort((a, b) =>
+          (b.salesOrderNumber ?? '').localeCompare(
+            a.salesOrderNumber ?? '',
+          ),
+        ),
   });
 
   // Fetch PCO orders (cc_approved status, no pick list yet)
