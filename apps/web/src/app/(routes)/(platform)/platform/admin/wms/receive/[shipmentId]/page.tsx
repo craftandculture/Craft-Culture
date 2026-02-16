@@ -440,6 +440,7 @@ const WMSReceiveShipmentPage = () => {
           lotNumber: `PALLET | ${casesForThisBay} Cases`,
           owner: shipment?.partnerName ?? undefined,
           showBarcode: false,
+          showQr: false,
         });
         labelCount = 1;
       } else {
