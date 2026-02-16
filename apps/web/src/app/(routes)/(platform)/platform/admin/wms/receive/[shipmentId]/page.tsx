@@ -33,6 +33,7 @@ import ScanInput from '@/app/_wms/components/ScanInput';
 import type { ScanInputHandle } from '@/app/_wms/components/ScanInput';
 import ZebraPrint, { useZebraPrint } from '@/app/_wms/components/ZebraPrint';
 import downloadZplFile from '@/app/_wms/utils/downloadZplFile';
+import generateLabelZpl from '@/app/_wms/utils/generateLabelZpl';
 import useTRPC from '@/lib/trpc/browser';
 
 interface LocationAssignment {
@@ -105,6 +106,8 @@ const WMSReceiveShipmentPage = () => {
 
   // Current bay assignment state (for the current product)
   const [pendingCases, setPendingCases] = useState(0);
+  const [casesForThisBay, setCasesForThisBay] = useState(0);
+  const [isPalletMode, setIsPalletMode] = useState(false);
   const [scannedLocationCode, setScannedLocationCode] = useState<string | null>(null);
   const [scannedLocationId, setScannedLocationId] = useState<string | null>(null);
   const [scanError, setScanError] = useState<string | null>(null);
@@ -399,6 +402,8 @@ const WMSReceiveShipmentPage = () => {
         }
         setScannedLocationCode(result.location.locationCode);
         setScannedLocationId(result.location.id);
+        setCasesForThisBay(pendingCases);
+        setIsPalletMode(false);
       } else {
         setScanError('Location not found');
       }
@@ -407,10 +412,10 @@ const WMSReceiveShipmentPage = () => {
     }
   };
 
-  // Print labels for pending cases at scanned location (WiFi direct or file download fallback)
+  // Print labels for cases at scanned location (WiFi direct or file download fallback)
   const handlePrintLabels = async () => {
     const currentItem = getCurrentItem();
-    if (!currentItem || !scannedLocationId || pendingCases <= 0) return;
+    if (!currentItem || !scannedLocationId || casesForThisBay <= 0) return;
 
     setIsPrinting(true);
     setPrintError(null);
@@ -422,31 +427,48 @@ const WMSReceiveShipmentPage = () => {
       const bottleSize = String(currentItem.receivedBottleSizeMl).replace(/\D/g, '');
       const packSize = `${currentItem.receivedBottlesPerCase}x${bottleSize}ml`;
 
-      // Create labels in database and get ZPL
-      const result = await createLabelsMutation.mutateAsync({
-        shipmentId,
-        productName: currentItem.productName,
-        lwin18,
-        packSize,
-        vintage: currentItem.vintage ?? undefined,
-        lotNumber: new Date().toISOString().split('T')[0],
-        locationId: scannedLocationId,
-        owner: shipment?.partnerName ?? undefined,
-        quantity: pendingCases,
-      });
+      let zpl: string;
+      let labelCount: number;
+
+      if (isPalletMode) {
+        // Pallet mode: generate 1 summary label client-side (no individual case labels in DB)
+        zpl = generateLabelZpl({
+          productName: currentItem.productName,
+          lwin18,
+          packSize,
+          vintage: currentItem.vintage ?? undefined,
+          lotNumber: `PALLET | ${casesForThisBay} Cases`,
+          owner: shipment?.partnerName ?? undefined,
+          showBarcode: false,
+        });
+        labelCount = 1;
+      } else {
+        // Normal mode: create individual case labels in DB
+        const result = await createLabelsMutation.mutateAsync({
+          shipmentId,
+          productName: currentItem.productName,
+          lwin18,
+          packSize,
+          vintage: currentItem.vintage ?? undefined,
+          lotNumber: new Date().toISOString().split('T')[0],
+          locationId: scannedLocationId,
+          owner: shipment?.partnerName ?? undefined,
+          quantity: casesForThisBay,
+        });
+        zpl = result.zpl;
+        labelCount = casesForThisBay;
+      }
 
       // Print labels: try WiFi first, fall back to file download
-      if (result.zpl) {
+      if (zpl) {
+        const filename = `labels-${currentItem.productName.replace(/[^a-zA-Z0-9]/g, '-').slice(0, 30)}-${scannedLocationCode}`;
         if (isPrinterConnected()) {
-          const printed = await wifiPrint(result.zpl);
+          const printed = await wifiPrint(zpl);
           if (!printed) {
-            // WiFi print failed, fall back to download
-            const filename = `labels-${currentItem.productName.replace(/[^a-zA-Z0-9]/g, '-').slice(0, 30)}-${scannedLocationCode}`;
-            downloadZplFile(result.zpl, filename);
+            downloadZplFile(zpl, filename);
           }
         } else {
-          const filename = `labels-${currentItem.productName.replace(/[^a-zA-Z0-9]/g, '-').slice(0, 30)}-${scannedLocationCode}`;
-          downloadZplFile(result.zpl, filename);
+          downloadZplFile(zpl, filename);
         }
       }
 
@@ -454,21 +476,23 @@ const WMSReceiveShipmentPage = () => {
       const newAssignment: LocationAssignment = {
         locationId: scannedLocationId,
         locationCode: scannedLocationCode || '',
-        cases: pendingCases,
+        cases: casesForThisBay,
         labelsPrinted: true,
       };
 
       const updatedItem = {
         ...currentItem,
         locationAssignments: [...currentItem.locationAssignments, newAssignment],
-        totalLabelsPrinted: currentItem.totalLabelsPrinted + pendingCases,
+        totalLabelsPrinted: currentItem.totalLabelsPrinted + labelCount,
       };
 
       const newMap = new Map(receivedItems.set(currentItem.id, updatedItem));
       setReceivedItems(newMap);
 
-      // Reset state
-      setPendingCases(0);
+      // Update pending cases
+      const remaining = pendingCases - casesForThisBay;
+      setPendingCases(remaining);
+      setCasesForThisBay(remaining);
       setScannedLocationCode(null);
       setScannedLocationId(null);
       setProductPhase('shelving');
@@ -582,24 +606,25 @@ const WMSReceiveShipmentPage = () => {
       return;
     }
 
-    // Convert to receive format - use first location assignment for now
-    // TODO: Support multiple locations per item in receiveShipment
-    const items = itemsToReceive.map((item) => ({
-      shipmentItemId: item.shipmentItemId ?? item.baseItemId ?? '',
-      expectedCases: item.expectedCases,
-      receivedCases: item.receivedCases,
-      receivedBottlesPerCase: item.receivedBottlesPerCase,
-      receivedBottleSizeMl: item.receivedBottleSizeMl,
-      packChanged: item.packChanged,
-      isAddedItem: item.isAddedItem,
-      productName: item.productName,
-      producer: item.producer,
-      vintage: item.vintage,
-      lwin: item.lwin,
-      supplierSku: item.supplierSku,
-      locationId: item.locationAssignments[0]?.locationId ?? '',
-      notes: item.notes,
-    }));
+    // Flatten location assignments: one item per location for split receiving
+    const items = itemsToReceive.flatMap((item) =>
+      item.locationAssignments.map((assignment) => ({
+        shipmentItemId: item.shipmentItemId ?? item.baseItemId ?? '',
+        expectedCases: item.expectedCases,
+        receivedCases: assignment.cases,
+        receivedBottlesPerCase: item.receivedBottlesPerCase,
+        receivedBottleSizeMl: item.receivedBottleSizeMl,
+        packChanged: item.packChanged,
+        isAddedItem: item.isAddedItem,
+        productName: item.productName,
+        producer: item.producer,
+        vintage: item.vintage,
+        lwin: item.lwin,
+        supplierSku: item.supplierSku,
+        locationId: assignment.locationId,
+        notes: item.notes,
+      })),
+    );
 
     receiveMutation.mutate({
       shipmentId,
@@ -767,7 +792,6 @@ const WMSReceiveShipmentPage = () => {
               <IconSearch className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-text-muted" />
               <input
                 type="text"
-                inputMode="none"
                 placeholder="Search products by name, producer, or LWIN..."
                 className="h-12 w-full rounded-lg border-2 border-border-primary bg-fill-primary pl-10 pr-4 text-base focus:border-border-brand focus:outline-none"
                 value={searchTerm}
@@ -1119,6 +1143,8 @@ const WMSReceiveShipmentPage = () => {
                               setScannedLocationId(loc.id);
                               setScannedLocationCode(loc.locationCode);
                               setScanError(null);
+                              setCasesForThisBay(pendingCases);
+                              setIsPalletMode(false);
                             }
                           }}
                         >
@@ -1131,19 +1157,79 @@ const WMSReceiveShipmentPage = () => {
                         </select>
                       </div>
 
-                      {/* Print labels button (WiFi direct or file download fallback) */}
+                      {/* Cases for this bay + pallet toggle */}
                       {scannedLocationId && (
-                        <Button
-                          variant="default"
-                          size="lg"
-                          className="h-14 w-full text-lg"
-                          onClick={handlePrintLabels}
-                          disabled={isPrinting || pendingCases === 0}
-                        >
-                          <ButtonContent iconLeft={isPrinting ? IconLoader2 : IconPrinter}>
-                            {isPrinting ? 'Printing...' : `Print ${pendingCases} Labels → ${scannedLocationCode}`}
-                          </ButtonContent>
-                        </Button>
+                        <div className="space-y-3">
+                          <div className="flex items-center gap-3">
+                            <div className="flex-1">
+                              <label className="mb-1 block text-sm font-medium text-text-secondary">
+                                Cases for this bay
+                              </label>
+                              <input
+                                type="number"
+                                min={1}
+                                max={pendingCases}
+                                value={casesForThisBay}
+                                onChange={(e) => {
+                                  const val = Math.min(Math.max(1, parseInt(e.target.value) || 0), pendingCases);
+                                  setCasesForThisBay(val);
+                                }}
+                                className="h-12 w-full rounded-lg border-2 border-border-primary bg-fill-primary px-3 text-center text-lg font-semibold focus:border-border-brand focus:outline-none"
+                              />
+                            </div>
+                            <div className="text-center text-sm text-text-muted">
+                              of {pendingCases}
+                            </div>
+                          </div>
+
+                          {/* Pallet toggle */}
+                          <button
+                            type="button"
+                            onClick={() => setIsPalletMode(!isPalletMode)}
+                            className={`flex w-full items-center justify-between rounded-lg border-2 p-3 ${
+                              isPalletMode
+                                ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                                : 'border-border-primary bg-fill-primary'
+                            }`}
+                          >
+                            <div className="text-left">
+                              <Typography variant="headingSm">
+                                Palletise
+                              </Typography>
+                              <Typography variant="bodyXs" colorRole="muted">
+                                Print 1 pallet label instead of {casesForThisBay} individual labels
+                              </Typography>
+                            </div>
+                            <div
+                              className={`flex h-6 w-11 items-center rounded-full transition-colors ${
+                                isPalletMode ? 'bg-blue-500' : 'bg-gray-300 dark:bg-gray-600'
+                              }`}
+                            >
+                              <div
+                                className={`h-5 w-5 rounded-full bg-white shadow transition-transform ${
+                                  isPalletMode ? 'translate-x-5' : 'translate-x-0.5'
+                                }`}
+                              />
+                            </div>
+                          </button>
+
+                          {/* Print button */}
+                          <Button
+                            variant="default"
+                            size="lg"
+                            className="h-14 w-full text-lg"
+                            onClick={handlePrintLabels}
+                            disabled={isPrinting || casesForThisBay === 0}
+                          >
+                            <ButtonContent iconLeft={isPrinting ? IconLoader2 : IconPrinter}>
+                              {isPrinting
+                                ? 'Printing...'
+                                : isPalletMode
+                                  ? `Print Pallet Label (${casesForThisBay} cases) → ${scannedLocationCode}`
+                                  : `Print ${casesForThisBay} Labels → ${scannedLocationCode}`}
+                            </ButtonContent>
+                          </Button>
+                        </div>
                       )}
 
                       {printError && (
