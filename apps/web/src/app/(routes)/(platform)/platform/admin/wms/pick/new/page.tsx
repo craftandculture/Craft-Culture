@@ -19,26 +19,50 @@ import Icon from '@/app/_ui/components/Icon/Icon';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import useTRPC from '@/lib/trpc/browser';
 
+type Tab = 'sales' | 'private';
+
 /**
  * Create new pick list from order
+ *
+ * Shows two tabs: Sales Orders (Zoho) and Private Orders (PCO).
+ * Sales Orders tab is the default — shows invoiced Zoho orders ready for picking.
  */
 const NewPickListPage = () => {
   const router = useRouter();
   const api = useTRPC();
   const queryClient = useQueryClient();
+  const [activeTab, setActiveTab] = useState<Tab>('sales');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
 
-  // Fetch orders that need picking (cc_approved status, no pick list yet)
-  const { data: orders, isLoading } = useQuery({
+  // Fetch Zoho sales orders
+  const { data: zohoOrders, isLoading: isLoadingZoho } = useQuery({
+    ...api.zohoSalesOrders.list.queryOptions(),
+    select: (orders) =>
+      orders.filter(
+        (o) => o.status === 'synced' && o.zohoStatus === 'invoiced',
+      ),
+  });
+
+  // Fetch PCO orders (cc_approved status, no pick list yet)
+  const { data: pcoOrders, isLoading: isLoadingPco } = useQuery({
     ...api.privateClientOrders.admin.getMany.queryOptions({
       status: 'cc_approved',
       limit: 50,
     }),
   });
 
-  // Create pick list mutation
-  const createMutation = useMutation({
+  // Release Zoho order to pick (creates pick list)
+  const releaseToPickMutation = useMutation({
+    ...api.zohoSalesOrders.releaseToPick.mutationOptions(),
+    onSuccess: (data) => {
+      void queryClient.invalidateQueries();
+      router.push(`/platform/admin/wms/pick/${data.pickList.id}`);
+    },
+  });
+
+  // Create PCO pick list
+  const createPcoMutation = useMutation({
     ...api.wms.admin.picking.create.mutationOptions(),
     onSuccess: (data) => {
       void queryClient.invalidateQueries();
@@ -46,17 +70,51 @@ const NewPickListPage = () => {
     },
   });
 
+  const isCreating =
+    releaseToPickMutation.isPending || createPcoMutation.isPending;
+  const createError =
+    releaseToPickMutation.error ?? createPcoMutation.error;
+
   const handleCreate = () => {
     if (!selectedOrderId) return;
-    createMutation.mutate({ orderId: selectedOrderId });
+    if (activeTab === 'sales') {
+      releaseToPickMutation.mutate({ salesOrderId: selectedOrderId });
+    } else {
+      createPcoMutation.mutate({ orderId: selectedOrderId });
+    }
   };
 
-  const filteredOrders = orders?.orders.filter((order) =>
+  const handleTabChange = (tab: Tab) => {
+    setActiveTab(tab);
+    setSelectedOrderId(null);
+    setSearchQuery('');
+  };
+
+  // Filter Zoho orders by search
+  const filteredZohoOrders = zohoOrders?.filter((order) =>
     searchQuery
-      ? order.orderNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        order.clientName?.toLowerCase().includes(searchQuery.toLowerCase())
+      ? order.salesOrderNumber
+          ?.toLowerCase()
+          .includes(searchQuery.toLowerCase()) ||
+        order.customerName
+          ?.toLowerCase()
+          .includes(searchQuery.toLowerCase())
       : true,
   );
+
+  // Filter PCO orders by search
+  const filteredPcoOrders = pcoOrders?.orders.filter((order) =>
+    searchQuery
+      ? order.orderNumber
+          .toLowerCase()
+          .includes(searchQuery.toLowerCase()) ||
+        order.clientName
+          ?.toLowerCase()
+          .includes(searchQuery.toLowerCase())
+      : true,
+  );
+
+  const isLoading = activeTab === 'sales' ? isLoadingZoho : isLoadingPco;
 
   return (
     <div className="container mx-auto max-w-2xl px-4 py-6 sm:px-6 sm:py-8">
@@ -74,6 +132,32 @@ const NewPickListPage = () => {
               Select an order to create a pick list
             </Typography>
           </div>
+        </div>
+
+        {/* Tabs */}
+        <div className="flex gap-1 rounded-lg bg-fill-secondary p-1">
+          <button
+            type="button"
+            onClick={() => handleTabChange('sales')}
+            className={`flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+              activeTab === 'sales'
+                ? 'bg-fill-primary text-text-primary shadow-sm'
+                : 'text-text-muted hover:text-text-primary'
+            }`}
+          >
+            Sales Orders
+          </button>
+          <button
+            type="button"
+            onClick={() => handleTabChange('private')}
+            className={`flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+              activeTab === 'private'
+                ? 'bg-fill-primary text-text-primary shadow-sm'
+                : 'text-text-muted hover:text-text-primary'
+            }`}
+          >
+            Private Orders
+          </button>
         </div>
 
         {/* Search */}
@@ -95,26 +179,31 @@ const NewPickListPage = () => {
         {/* Loading */}
         {isLoading && (
           <div className="flex items-center justify-center p-12">
-            <Icon icon={IconLoader2} className="animate-spin" colorRole="muted" size="lg" />
+            <Icon
+              icon={IconLoader2}
+              className="animate-spin"
+              colorRole="muted"
+              size="lg"
+            />
           </div>
         )}
 
-        {/* Orders List */}
-        {!isLoading && (
+        {/* Sales Orders List (Zoho) */}
+        {activeTab === 'sales' && !isLoadingZoho && (
           <div className="space-y-2">
-            {filteredOrders?.length === 0 ? (
+            {filteredZohoOrders?.length === 0 ? (
               <Card>
                 <CardContent className="p-8 text-center">
                   <Typography variant="headingSm" className="mb-2">
-                    No Orders Available
+                    No Sales Orders Available
                   </Typography>
                   <Typography variant="bodySm" colorRole="muted">
-                    There are no approved orders ready for picking
+                    There are no invoiced sales orders ready for picking
                   </Typography>
                 </CardContent>
               </Card>
             ) : (
-              filteredOrders?.map((order) => (
+              filteredZohoOrders?.map((order) => (
                 <Card
                   key={order.id}
                   className={`cursor-pointer transition-all ${
@@ -127,7 +216,74 @@ const NewPickListPage = () => {
                   <CardContent className="p-4">
                     <div className="flex items-center justify-between">
                       <div>
-                        <Typography variant="bodySm" className="font-semibold">
+                        <Typography
+                          variant="bodySm"
+                          className="font-semibold"
+                        >
+                          {order.salesOrderNumber}
+                        </Typography>
+                        <Typography variant="bodyXs" colorRole="muted">
+                          {order.customerName ?? 'Unknown customer'}
+                        </Typography>
+                        <div className="mt-1 flex items-center gap-3 text-xs text-text-muted">
+                          <span>{order.itemCount} items</span>
+                          <span>{order.totalQuantity} cases</span>
+                          <span>
+                            {new Date(order.createdAt).toLocaleDateString()}
+                          </span>
+                        </div>
+                      </div>
+                      <div
+                        className={`flex h-6 w-6 items-center justify-center rounded-full border-2 ${
+                          selectedOrderId === order.id
+                            ? 'border-brand-500 bg-brand-500'
+                            : 'border-border-primary'
+                        }`}
+                      >
+                        {selectedOrderId === order.id && (
+                          <div className="h-2 w-2 rounded-full bg-white" />
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            )}
+          </div>
+        )}
+
+        {/* Private Orders List (PCO) */}
+        {activeTab === 'private' && !isLoadingPco && (
+          <div className="space-y-2">
+            {filteredPcoOrders?.length === 0 ? (
+              <Card>
+                <CardContent className="p-8 text-center">
+                  <Typography variant="headingSm" className="mb-2">
+                    No Orders Available
+                  </Typography>
+                  <Typography variant="bodySm" colorRole="muted">
+                    There are no approved orders ready for picking
+                  </Typography>
+                </CardContent>
+              </Card>
+            ) : (
+              filteredPcoOrders?.map((order) => (
+                <Card
+                  key={order.id}
+                  className={`cursor-pointer transition-all ${
+                    selectedOrderId === order.id
+                      ? 'border-2 border-brand-500 ring-2 ring-brand-500/20'
+                      : 'hover:border-border-brand'
+                  }`}
+                  onClick={() => setSelectedOrderId(order.id)}
+                >
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Typography
+                          variant="bodySm"
+                          className="font-semibold"
+                        >
                           {order.orderNumber}
                         </Typography>
                         <Typography variant="bodyXs" colorRole="muted">
@@ -137,7 +293,9 @@ const NewPickListPage = () => {
                           <span>{order.totalItems ?? 0} items</span>
                           <span>{order.totalCases ?? 0} cases</span>
                           <span>
-                            {new Date(order.createdAt).toLocaleDateString()}
+                            {new Date(
+                              order.createdAt,
+                            ).toLocaleDateString()}
                           </span>
                         </div>
                       </div>
@@ -167,15 +325,20 @@ const NewPickListPage = () => {
               variant="default"
               className="w-full"
               onClick={handleCreate}
-              disabled={createMutation.isPending}
+              disabled={isCreating}
             >
-              <ButtonContent iconLeft={createMutation.isPending ? IconLoader2 : IconPlus}>
-                {createMutation.isPending ? 'Creating...' : 'Create Pick List'}
+              <ButtonContent
+                iconLeft={isCreating ? IconLoader2 : IconPlus}
+              >
+                {isCreating ? 'Creating...' : 'Create Pick List'}
               </ButtonContent>
             </Button>
-            {createMutation.isError && (
-              <Typography variant="bodyXs" className="mt-2 text-center text-red-600">
-                {createMutation.error?.message}
+            {createError && (
+              <Typography
+                variant="bodyXs"
+                className="mt-2 text-center text-red-600"
+              >
+                {createError.message}
               </Typography>
             )}
           </div>
