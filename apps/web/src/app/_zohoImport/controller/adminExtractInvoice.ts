@@ -2,7 +2,7 @@ import { createAnthropic } from '@ai-sdk/anthropic';
 import { TRPCError } from '@trpc/server';
 import { type ModelMessage, generateObject } from 'ai';
 import { sql } from 'drizzle-orm';
-import XLSX from 'xlsx';
+import * as XLSX from 'xlsx';
 import { z } from 'zod';
 
 import db from '@/database/client';
