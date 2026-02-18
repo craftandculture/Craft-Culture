@@ -141,6 +141,7 @@ const ScanInput = forwardRef<ScanInputHandle, ScanInputProps>(({
     },
   }));
   const [value, setValue] = useState('');
+  const valueRef = useRef(''); // Sync mirror of value — avoids stale closure reads
   const processingRef = useRef(false);
   const cooldownTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastScanTimeRef = useRef(0);
@@ -151,17 +152,25 @@ const ScanInput = forwardRef<ScanInputHandle, ScanInputProps>(({
   // Cooldown after successful scan - ignore all input during this period
   const SCAN_COOLDOWN_MS = 2000;
 
-  // Guaranteed cooldown: resets processingRef after SCAN_COOLDOWN_MS
+  // Guaranteed cooldown: disables input during cooldown, then re-enables and re-focuses.
   // This runs after EVERY scan regardless of whether isLoading is passed.
-  // Prevents processingRef from getting stuck when isLoading never changes.
   const startCooldown = useCallback(() => {
     if (cooldownTimerRef.current) {
       clearTimeout(cooldownTimerRef.current);
     }
+    // Synchronously disable the DOM input — a disabled input cannot receive
+    // ANY events (keydown, keypress, input, change). This is the nuclear option
+    // that definitively prevents double-scans from the TC27 scanner.
+    if (inputRef.current) {
+      inputRef.current.disabled = true;
+    }
     cooldownTimerRef.current = setTimeout(() => {
       processingRef.current = false;
       cooldownTimerRef.current = null;
-      // Re-focus so the user can scan the next item
+      // Re-enable and re-focus so the user can scan the next item
+      if (inputRef.current) {
+        inputRef.current.disabled = !!disabled;
+      }
       if (!disabled) {
         inputRef.current?.focus();
       }
@@ -200,6 +209,7 @@ const ScanInput = forwardRef<ScanInputHandle, ScanInputProps>(({
         }
       }, SCAN_COOLDOWN_MS);
       setValue('');
+      valueRef.current = '';
       return () => clearTimeout(timer);
     }
   }, [isLoading, disabled]);
@@ -226,27 +236,32 @@ const ScanInput = forwardRef<ScanInputHandle, ScanInputProps>(({
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>) => {
-      if (e.key === 'Enter' && value.trim()) {
+      // Read from ref (always current) instead of stale closure state
+      const currentValue = valueRef.current.trim();
+      if (e.key === 'Enter' && currentValue) {
         e.preventDefault();
 
-        const scannedValue = value.trim();
+        const scannedValue = currentValue;
         const now = Date.now();
 
         // Debounce rapid scans (but allow after 1.5 seconds)
         if (now - lastScanTimeRef.current < SCAN_DEBOUNCE_MS) {
           setValue('');
+          valueRef.current = '';
           return;
         }
 
         // Prevent scanning the exact same value twice in a row within 3 seconds
         if (scannedValue === lastScannedValueRef.current && now - lastScanTimeRef.current < 3000) {
           setValue('');
+          valueRef.current = '';
           return;
         }
 
         // If currently loading, don't allow new submissions
         if (isLoading) {
           setValue('');
+          valueRef.current = '';
           return;
         }
 
@@ -258,6 +273,7 @@ const ScanInput = forwardRef<ScanInputHandle, ScanInputProps>(({
         // Prevent double-processing (but with safety reset above)
         if (processingRef.current) {
           setValue('');
+          valueRef.current = '';
           return;
         }
 
@@ -267,6 +283,7 @@ const ScanInput = forwardRef<ScanInputHandle, ScanInputProps>(({
 
         // Clear both React state AND DOM directly to prevent any character accumulation
         setValue('');
+        valueRef.current = '';
         if (inputRef.current) {
           inputRef.current.value = '';
           // Blur immediately so the scanner has nowhere to send a second scan
@@ -279,13 +296,13 @@ const ScanInput = forwardRef<ScanInputHandle, ScanInputProps>(({
           triggerVibration(100);
         }
 
-        // Guaranteed cooldown — resets processingRef even if isLoading is never passed
+        // Guaranteed cooldown — disables input so scanner cannot send anything
         startCooldown();
 
         onScan(scannedValue);
       }
     },
-    [value, onScan, isLoading, enableFeedback, startCooldown],
+    [onScan, isLoading, enableFeedback, startCooldown],
   );
 
   const handleChange = useCallback(
@@ -300,6 +317,7 @@ const ScanInput = forwardRef<ScanInputHandle, ScanInputProps>(({
           inputRef.current.value = '';
         }
         setValue('');
+        valueRef.current = '';
         return;
       }
 
@@ -310,34 +328,40 @@ const ScanInput = forwardRef<ScanInputHandle, ScanInputProps>(({
           inputRef.current.value = '';
         }
         setValue('');
+        valueRef.current = '';
         return;
       }
       setValue(e.target.value);
+      valueRef.current = e.target.value;
     },
     [isLoading],
   );
 
   const handleSubmit = useCallback(() => {
-    if (!value.trim()) return;
+    const currentValue = valueRef.current.trim();
+    if (!currentValue) return;
 
-    const scannedValue = value.trim();
+    const scannedValue = currentValue;
     const now = Date.now();
 
     // Debounce rapid submissions (but allow after 1.5 seconds)
     if (now - lastScanTimeRef.current < SCAN_DEBOUNCE_MS) {
       setValue('');
+      valueRef.current = '';
       return;
     }
 
     // Prevent scanning the exact same value twice in a row within 3 seconds
     if (scannedValue === lastScannedValueRef.current && now - lastScanTimeRef.current < 3000) {
       setValue('');
+      valueRef.current = '';
       return;
     }
 
     // If currently loading, don't allow new submissions
     if (isLoading) {
       setValue('');
+      valueRef.current = '';
       return;
     }
 
@@ -349,6 +373,7 @@ const ScanInput = forwardRef<ScanInputHandle, ScanInputProps>(({
     // Prevent double-processing (but with safety reset above)
     if (processingRef.current) {
       setValue('');
+      valueRef.current = '';
       return;
     }
 
@@ -358,6 +383,7 @@ const ScanInput = forwardRef<ScanInputHandle, ScanInputProps>(({
 
     // Clear both React state AND DOM directly to prevent any character accumulation
     setValue('');
+    valueRef.current = '';
     if (inputRef.current) {
       inputRef.current.value = '';
       // Blur immediately so the scanner has nowhere to send a second scan
@@ -370,11 +396,11 @@ const ScanInput = forwardRef<ScanInputHandle, ScanInputProps>(({
       triggerVibration(100);
     }
 
-    // Guaranteed cooldown — resets processingRef even if isLoading is never passed
+    // Guaranteed cooldown — disables input so scanner cannot send anything
     startCooldown();
 
     onScan(scannedValue);
-  }, [value, onScan, isLoading, enableFeedback, startCooldown]);
+  }, [onScan, isLoading, enableFeedback, startCooldown]);
 
   return (
     <div className="w-full">
