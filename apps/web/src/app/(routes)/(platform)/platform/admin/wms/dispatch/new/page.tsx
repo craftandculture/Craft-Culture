@@ -14,6 +14,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+import { toast } from 'sonner';
 
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
@@ -75,7 +76,7 @@ const DispatchWizardPage = () => {
       void queryClient.invalidateQueries({
         queryKey: api.zohoSalesOrders.getPickedForDispatch.getQueryKey({}),
       });
-      alert(data.message);
+      toast.success(data.message);
     },
   });
 

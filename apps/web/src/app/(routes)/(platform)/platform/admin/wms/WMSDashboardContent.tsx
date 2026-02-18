@@ -9,11 +9,9 @@ import {
   IconClipboardCheck,
   IconGripVertical,
   IconMapPin,
-  IconMoon,
   IconPackage,
   IconPackages,
   IconPlus,
-  IconSun,
   IconTransfer,
   IconTruck,
   IconUserDollar,
@@ -60,9 +58,6 @@ const WMSDashboardContent = () => {
   const api = useTRPC();
   const router = useRouter();
 
-  // Dark mode toggle state
-  const [isDarkMode, setIsDarkMode] = useState(false);
-
   // Quick actions order (customizable)
   const [quickActionsOrder, setQuickActionsOrder] = useState<string[]>(() => {
     if (typeof window !== 'undefined') {
@@ -81,30 +76,6 @@ const WMSDashboardContent = () => {
   // Dragging state for reordering
   const [isDragging, setIsDragging] = useState(false);
   const [draggedId, setDraggedId] = useState<string | null>(null);
-
-  // Initialize dark mode from system preference or saved preference
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('wms-dark-mode');
-      if (saved !== null) {
-        setIsDarkMode(saved === 'true');
-      } else {
-        setIsDarkMode(window.matchMedia('(prefers-color-scheme: dark)').matches);
-      }
-    }
-  }, []);
-
-  // Apply dark mode class to document
-  useEffect(() => {
-    if (typeof document !== 'undefined') {
-      if (isDarkMode) {
-        document.documentElement.classList.add('dark');
-      } else {
-        document.documentElement.classList.remove('dark');
-      }
-      localStorage.setItem('wms-dark-mode', String(isDarkMode));
-    }
-  }, [isDarkMode]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -133,10 +104,6 @@ const WMSDashboardContent = () => {
         case 's':
           e.preventDefault();
           router.push('/platform/admin/wms/stock');
-          break;
-        case 'd':
-          e.preventDefault();
-          setIsDarkMode((prev) => !prev);
           break;
       }
     };
@@ -230,13 +197,6 @@ const WMSDashboardContent = () => {
             WMS
           </Typography>
           <div className="flex items-center gap-2">
-            <button
-              onClick={() => setIsDarkMode(!isDarkMode)}
-              className="flex h-9 w-9 items-center justify-center rounded-lg border border-border-primary bg-fill-primary text-text-muted transition-colors hover:bg-fill-secondary hover:text-text-primary"
-              title={isDarkMode ? 'Switch to light mode (Ctrl+D)' : 'Switch to dark mode (Ctrl+D)'}
-            >
-              <Icon icon={isDarkMode ? IconSun : IconMoon} size="sm" />
-            </button>
             <Button variant="outline" size="sm" asChild>
               <Link href="/platform/admin/wms/scanner-test">
                 <Icon icon={IconBarcode} size="sm" />
@@ -248,7 +208,7 @@ const WMSDashboardContent = () => {
         {/* Keyboard Shortcuts Hint */}
         <div className="hidden sm:block">
           <Typography variant="bodyXs" colorRole="muted" className="text-center">
-            Shortcuts: Ctrl+R (Receive) · Ctrl+P (Pick) · Ctrl+C (Check) · Ctrl+T (Transfer) · Ctrl+D (Dark Mode)
+            Shortcuts: Ctrl+R (Receive) · Ctrl+P (Pick) · Ctrl+C (Check) · Ctrl+T (Transfer) · Ctrl+S (Stock)
           </Typography>
         </div>
 

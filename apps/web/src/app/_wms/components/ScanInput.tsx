@@ -234,117 +234,16 @@ const ScanInput = forwardRef<ScanInputHandle, ScanInputProps>(({
     }
   }, [error, enableFeedback]);
 
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent<HTMLInputElement>) => {
-      // Read from ref (always current) instead of stale closure state
-      const currentValue = valueRef.current.trim();
-      if (e.key === 'Enter' && currentValue) {
-        e.preventDefault();
-
-        const scannedValue = currentValue;
-        const now = Date.now();
-
-        // Debounce rapid scans (but allow after 1.5 seconds)
-        if (now - lastScanTimeRef.current < SCAN_DEBOUNCE_MS) {
-          setValue('');
-          valueRef.current = '';
-          return;
-        }
-
-        // Prevent scanning the exact same value twice in a row within 3 seconds
-        if (scannedValue === lastScannedValueRef.current && now - lastScanTimeRef.current < 3000) {
-          setValue('');
-          valueRef.current = '';
-          return;
-        }
-
-        // If currently loading, don't allow new submissions
-        if (isLoading) {
-          setValue('');
-          valueRef.current = '';
-          return;
-        }
-
-        // Safety reset: if processingRef has been stuck for more than 5 seconds, reset it
-        if (processingRef.current && now - lastScanTimeRef.current > 5000) {
-          processingRef.current = false;
-        }
-
-        // Prevent double-processing (but with safety reset above)
-        if (processingRef.current) {
-          setValue('');
-          valueRef.current = '';
-          return;
-        }
-
-        lastScanTimeRef.current = now;
-        lastScannedValueRef.current = scannedValue;
-        processingRef.current = true;
-
-        // Clear both React state AND DOM directly to prevent any character accumulation
-        setValue('');
-        valueRef.current = '';
-        if (inputRef.current) {
-          inputRef.current.value = '';
-          // Blur immediately so the scanner has nowhere to send a second scan
-          inputRef.current.blur();
-        }
-
-        // Provide haptic/audio feedback on scan
-        if (enableFeedback) {
-          playSuccessBeep();
-          triggerVibration(100);
-        }
-
-        // Guaranteed cooldown — disables input so scanner cannot send anything
-        startCooldown();
-
-        onScan(scannedValue);
-      }
-    },
-    [onScan, isLoading, enableFeedback, startCooldown],
-  );
-
-  const handleChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const now = Date.now();
-
-      // Ignore ALL input during cooldown period after a scan
-      // This prevents rapid double-scans from accumulating characters
-      if (now - lastScanTimeRef.current < SCAN_COOLDOWN_MS) {
-        // Force clear the DOM input directly (React state may be async)
-        if (inputRef.current) {
-          inputRef.current.value = '';
-        }
-        setValue('');
-        valueRef.current = '';
-        return;
-      }
-
-      // Ignore input while processing to prevent double-scan accumulation
-      if (processingRef.current || isLoading) {
-        // Force clear the DOM input directly
-        if (inputRef.current) {
-          inputRef.current.value = '';
-        }
-        setValue('');
-        valueRef.current = '';
-        return;
-      }
-      setValue(e.target.value);
-      valueRef.current = e.target.value;
-    },
-    [isLoading],
-  );
-
-  const handleSubmit = useCallback(() => {
+  // Core scan-processing logic shared by handleKeyDown (Enter) and handleSubmit (button click).
+  // Handles debounce, duplicate detection, loading/processing guards, DOM cleanup, feedback, and cooldown.
+  const processScan = useCallback(() => {
     const currentValue = valueRef.current.trim();
     if (!currentValue) return;
 
     const scannedValue = currentValue;
     const now = Date.now();
 
-    // Debounce rapid submissions (but allow after 1.5 seconds)
+    // Debounce rapid scans (but allow after 1.5 seconds)
     if (now - lastScanTimeRef.current < SCAN_DEBOUNCE_MS) {
       setValue('');
       valueRef.current = '';
@@ -402,6 +301,48 @@ const ScanInput = forwardRef<ScanInputHandle, ScanInputProps>(({
     onScan(scannedValue);
   }, [onScan, isLoading, enableFeedback, startCooldown]);
 
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === 'Enter' && valueRef.current.trim()) {
+        e.preventDefault();
+        processScan();
+      }
+    },
+    [processScan],
+  );
+
+  const handleChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const now = Date.now();
+
+      // Ignore ALL input during cooldown period after a scan
+      // This prevents rapid double-scans from accumulating characters
+      if (now - lastScanTimeRef.current < SCAN_COOLDOWN_MS) {
+        // Force clear the DOM input directly (React state may be async)
+        if (inputRef.current) {
+          inputRef.current.value = '';
+        }
+        setValue('');
+        valueRef.current = '';
+        return;
+      }
+
+      // Ignore input while processing to prevent double-scan accumulation
+      if (processingRef.current || isLoading) {
+        // Force clear the DOM input directly
+        if (inputRef.current) {
+          inputRef.current.value = '';
+        }
+        setValue('');
+        valueRef.current = '';
+        return;
+      }
+      setValue(e.target.value);
+      valueRef.current = e.target.value;
+    },
+    [isLoading],
+  );
+
   return (
     <div className="w-full">
       {label && (
@@ -443,7 +384,7 @@ const ScanInput = forwardRef<ScanInputHandle, ScanInputProps>(({
           {value.trim() && !isLoading && (
             <button
               type="button"
-              onClick={handleSubmit}
+              onClick={processScan}
               className="ml-2 flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white transition-colors hover:bg-blue-700 active:bg-blue-800"
               aria-label="Submit barcode"
             >

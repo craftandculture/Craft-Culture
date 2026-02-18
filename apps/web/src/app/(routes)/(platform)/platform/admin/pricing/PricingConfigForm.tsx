@@ -160,13 +160,13 @@ const TAB_CONFIG = {
   exchange_rates: { label: 'Exchange Rates', variables: EXCHANGE_RATE_VARIABLES },
   b2b: { label: 'B2B Quote Tool', variables: B2B_VARIABLES },
   pco: { label: 'PCO Module', variables: PCO_VARIABLES },
-  pocket_cellar: { label: 'Pocket Cellar', variables: POCKET_CELLAR_VARIABLES },
+  pocket_cellar: { label: 'Craft & Culture', variables: POCKET_CELLAR_VARIABLES },
 };
 
 /**
  * Form for managing pricing configuration across modules
  *
- * Features tabbed interface for B2B, PCO, and Pocket Cellar pricing.
+ * Features tabbed interface for B2B, PCO, and Craft & Culture pricing.
  */
 const PricingConfigForm = () => {
   const api = useTRPC();
