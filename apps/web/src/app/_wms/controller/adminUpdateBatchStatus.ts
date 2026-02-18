@@ -3,14 +3,18 @@ import { eq, inArray } from 'drizzle-orm';
 
 import db from '@/database/client';
 import {
+  privateClientOrderItems,
   privateClientOrders,
   wmsDispatchBatchOrders,
   wmsDispatchBatches,
+  wmsStockMovements,
+  zohoSalesOrderItems,
   zohoSalesOrders,
 } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
 import { updateBatchStatusSchema } from '../schemas/dispatchBatchSchema';
+import generateMovementNumber from '../utils/generateMovementNumber';
 
 /**
  * Update dispatch batch status
@@ -85,7 +89,10 @@ const adminUpdateBatchStatus = adminProcedure
     if (status === 'dispatched' || status === 'delivered') {
       // Get all order IDs in this batch
       const batchOrders = await db
-        .select({ orderId: wmsDispatchBatchOrders.orderId })
+        .select({
+          orderId: wmsDispatchBatchOrders.orderId,
+          orderNumber: wmsDispatchBatchOrders.orderNumber,
+        })
         .from(wmsDispatchBatchOrders)
         .where(eq(wmsDispatchBatchOrders.batchId, batchId));
 
@@ -115,6 +122,55 @@ const adminUpdateBatchStatus = adminProcedure
             updatedAt: new Date(),
           })
           .where(inArray(zohoSalesOrders.id, orderIds));
+
+        // Create dispatch movement records for audit trail
+        if (status === 'dispatched') {
+          // Get line items from Zoho orders
+          const zohoItems = await db
+            .select({
+              lwin18: zohoSalesOrderItems.lwin18,
+              productName: zohoSalesOrderItems.name,
+              quantity: zohoSalesOrderItems.quantity,
+              orderId: zohoSalesOrderItems.salesOrderId,
+            })
+            .from(zohoSalesOrderItems)
+            .where(inArray(zohoSalesOrderItems.salesOrderId, orderIds));
+
+          // Get line items from PCO orders
+          const pcoItems = await db
+            .select({
+              lwin18: privateClientOrderItems.lwin,
+              productName: privateClientOrderItems.productName,
+              quantity: privateClientOrderItems.quantity,
+              orderId: privateClientOrderItems.orderId,
+            })
+            .from(privateClientOrderItems)
+            .where(inArray(privateClientOrderItems.orderId, orderIds));
+
+          const allItems = [...zohoItems, ...pcoItems].filter(
+            (item) => item.lwin18 && item.quantity > 0,
+          );
+
+          // Build order number lookup
+          const orderNumberMap = new Map(
+            batchOrders.map((o) => [o.orderId, o.orderNumber]),
+          );
+
+          for (const item of allItems) {
+            const movementNumber = await generateMovementNumber();
+            await db.insert(wmsStockMovements).values({
+              movementNumber,
+              movementType: 'dispatch',
+              lwin18: item.lwin18 ?? 'UNKNOWN',
+              productName: item.productName ?? 'Unknown Product',
+              quantityCases: item.quantity,
+              orderId: item.orderId,
+              notes: `Batch ${batch.batchNumber} → ${batch.distributorName} (${orderNumberMap.get(item.orderId) ?? ''})`,
+              performedBy: ctx.user.id,
+              performedAt: new Date(),
+            });
+          }
+        }
       }
     }
 
