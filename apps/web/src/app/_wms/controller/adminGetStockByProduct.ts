@@ -52,15 +52,16 @@ const adminGetStockByProduct = adminProcedure
       conditions.push(sql`${wmsStock.vintage} <= ${vintageTo}`);
     }
 
-    // Get products with aggregated stock info
+    // Get products with aggregated stock info, grouped by LWIN18 only
+    // (same product received from different shipments may have slightly different names)
     const products = await db
       .select({
         lwin18: wmsStock.lwin18,
-        productName: wmsStock.productName,
-        producer: wmsStock.producer,
-        vintage: wmsStock.vintage,
-        bottleSize: wmsStock.bottleSize,
-        caseConfig: wmsStock.caseConfig,
+        productName: sql<string>`MAX(${wmsStock.productName})`,
+        producer: sql<string | null>`MAX(${wmsStock.producer})`,
+        vintage: sql<string | null>`MAX(${wmsStock.vintage})`,
+        bottleSize: sql<string | null>`MAX(${wmsStock.bottleSize})`,
+        caseConfig: sql<number | null>`MAX(${wmsStock.caseConfig})`,
         totalCases: sql<number>`SUM(${wmsStock.quantityCases})::int`,
         availableCases: sql<number>`SUM(${wmsStock.availableCases})::int`,
         reservedCases: sql<number>`SUM(${wmsStock.reservedCases})::int`,
@@ -71,32 +72,25 @@ const adminGetStockByProduct = adminProcedure
       })
       .from(wmsStock)
       .where(conditions.length > 0 ? and(...conditions) : undefined)
-      .groupBy(
-        wmsStock.lwin18,
-        wmsStock.productName,
-        wmsStock.producer,
-        wmsStock.vintage,
-        wmsStock.bottleSize,
-        wmsStock.caseConfig,
-      )
+      .groupBy(wmsStock.lwin18)
       .orderBy(
         sortOrder === 'desc'
           ? desc(
               sortBy === 'totalCases'
                 ? sql`SUM(${wmsStock.quantityCases})`
                 : sortBy === 'productName'
-                  ? wmsStock.productName
+                  ? sql`MAX(${wmsStock.productName})`
                   : sortBy === 'vintage'
-                    ? wmsStock.vintage
+                    ? sql`MAX(${wmsStock.vintage})`
                     : sql`MAX(${wmsStock.receivedAt})`,
             )
           : asc(
               sortBy === 'totalCases'
                 ? sql`SUM(${wmsStock.quantityCases})`
                 : sortBy === 'productName'
-                  ? wmsStock.productName
+                  ? sql`MAX(${wmsStock.productName})`
                   : sortBy === 'vintage'
-                    ? wmsStock.vintage
+                    ? sql`MAX(${wmsStock.vintage})`
                     : sql`MAX(${wmsStock.receivedAt})`,
             ),
       )
