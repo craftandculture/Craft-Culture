@@ -12,7 +12,7 @@ import PricingConfigForm from './PricingConfigForm';
 /**
  * Admin pricing configuration page
  *
- * Configure pricing variables for B2B, PCO, and Pocket Cellar modules.
+ * Configure pricing variables for B2B, PCO, and Craft & Culture modules.
  */
 const PricingAdminPage = () => {
   return (

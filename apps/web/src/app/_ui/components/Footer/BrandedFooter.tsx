@@ -9,13 +9,9 @@ export interface BrandedFooterProps {
 }
 
 /**
- * Footer component with conditional branding
- *
- * - B2C: Shows "Powered by Craft & Culture"
- * - B2B: Shows full Craft & Culture branding
+ * Footer component with conditional branding based on customer type
  *
  * @param props - The footer props including customerType
- * @returns The branded footer
  */
 const BrandedFooter = ({ customerType, partnerType }: BrandedFooterProps) => {
   const currentYear = new Date().getFullYear();
@@ -43,7 +39,7 @@ const BrandedFooter = ({ customerType, partnerType }: BrandedFooterProps) => {
           {/* Company Info - Conditional */}
           <div className="space-y-2">
             <h3 className="text-text-primary text-sm font-semibold">
-              {isB2C ? 'Pocket Cellar' : 'Craft & Culture'}
+              Craft & Culture
             </h3>
             <p className="text-text-muted text-xs leading-relaxed">
               {isB2C

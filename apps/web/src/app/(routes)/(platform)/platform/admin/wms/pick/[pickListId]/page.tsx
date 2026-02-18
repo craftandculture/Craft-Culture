@@ -21,6 +21,8 @@ import CardContent from '@/app/_ui/components/Card/CardContent';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import LocationBadge from '@/app/_wms/components/LocationBadge';
+import ScanInput from '@/app/_wms/components/ScanInput';
+import type { ScanInputHandle } from '@/app/_wms/components/ScanInput';
 import useTRPC from '@/lib/trpc/browser';
 
 /**
@@ -34,7 +36,6 @@ const WMSPickListDetailPage = () => {
   const pickListId = params.pickListId as string;
 
   const [currentItemIndex, setCurrentItemIndex] = useState(0);
-  const [scanInput, setScanInput] = useState('');
   const [pickingItem, setPickingItem] = useState<{
     itemId: string;
     productName: string;
@@ -49,10 +50,9 @@ const WMSPickListDetailPage = () => {
   const [scanStep, setScanStep] = useState<'location' | 'case'>('location');
   const [scannedBarcodes, setScannedBarcodes] = useState<Set<string>>(new Set());
   const [duplicateScanError, setDuplicateScanError] = useState<string | null>(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
-  const scanInputRef = useRef<HTMLInputElement>(null);
-  const lastScanTimeRef = useRef(0);
-  const scanProcessingRef = useRef(false);
+  const scanInputRef = useRef<ScanInputHandle>(null);
 
   // Fetch pick list
   const { data, isLoading } = useQuery({
@@ -67,12 +67,8 @@ const WMSPickListDetailPage = () => {
       setPickingItem(null);
       setPickedLocationCode('');
       setPickedQuantity(0);
-      setScanInput('');
-      // Move to next unpicked item
-      const unpickedItems = data?.items.filter((i) => !i.isPicked) ?? [];
-      if (unpickedItems.length > 1) {
-        setCurrentItemIndex((prev) => prev);
-      }
+      // Reset to first unpicked item (list re-sorts after invalidation)
+      setCurrentItemIndex(0);
     },
   });
 
@@ -90,7 +86,7 @@ const WMSPickListDetailPage = () => {
     ...api.wms.admin.picking.delete.mutationOptions(),
     onSuccess: (result) => {
       toast.success(result.message);
-      router.push('/platform/admin/zoho-sales-orders');
+      router.push('/platform/admin/wms/pick');
     },
     onError: (error) => {
       toast.error(error.message || 'Failed to delete pick list');
@@ -103,12 +99,15 @@ const WMSPickListDetailPage = () => {
   });
 
   const handleDelete = () => {
-    if (confirm('Delete this pick list? The order will be reset so you can release it again.')) {
-      deleteMutation.mutate({ pickListId });
-    }
+    setShowDeleteModal(true);
   };
 
-  // Auto-focus scan input (with delay to avoid re-focus during scan cooldown)
+  const confirmDelete = () => {
+    setShowDeleteModal(false);
+    deleteMutation.mutate({ pickListId });
+  };
+
+  // Auto-focus scan input
   useEffect(() => {
     if (scanInputRef.current && !pickingItem) {
       const timer = setTimeout(() => {
@@ -121,89 +120,51 @@ const WMSPickListDetailPage = () => {
   const [locationError, setLocationError] = useState<string | null>(null);
   const [isLookingUpLocation, setIsLookingUpLocation] = useState(false);
 
-  // Handle scan/barcode input
-  const handleScan = async (value: string) => {
+  // Handle location barcode scan
+  const handleLocationScan = async (barcode: string) => {
     setDuplicateScanError(null);
 
     // Check for duplicate scan
-    if (scannedBarcodes.has(value.toUpperCase())) {
-      setDuplicateScanError(`Barcode already scanned: ${value}`);
-      setScanInput('');
+    if (scannedBarcodes.has(barcode.toUpperCase())) {
+      setDuplicateScanError(`Barcode already scanned: ${barcode}`);
       return;
     }
 
-    if (scanStep === 'location') {
-      // Look up location by barcode using mutation
-      setIsLookingUpLocation(true);
-      setLocationError(null);
-      try {
-        const result = await locationLookupMutation.mutateAsync({ barcode: value });
-        setPickedLocationId(result.location.id);
-        setPickedLocationCode(result.location.locationCode);
-        setScanStep('case');
-        // Track scanned barcode
-        setScannedBarcodes((prev) => new Set(prev).add(value.toUpperCase()));
-      } catch (err) {
-        const errorMsg = err instanceof Error ? err.message : 'Location not found';
-        setLocationError(errorMsg);
-      } finally {
-        setIsLookingUpLocation(false);
-        setScanInput('');
-      }
-      return;
+    setIsLookingUpLocation(true);
+    setLocationError(null);
+    try {
+      const result = await locationLookupMutation.mutateAsync({ barcode });
+      setPickedLocationId(result.location.id);
+      setPickedLocationCode(result.location.locationCode);
+      setScanStep('case');
+      setScannedBarcodes((prev) => new Set(prev).add(barcode.toUpperCase()));
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : 'Location not found';
+      setLocationError(errorMsg);
+    } finally {
+      setIsLookingUpLocation(false);
     }
-
-    if (scanStep === 'case' && pickingItem) {
-      // Verify case barcode matches the item's LWIN
-      // Accept if it contains the LWIN or matches exactly
-      const normalizedScan = value.replace(/-/g, '').toLowerCase();
-      const normalizedLwin = pickingItem.lwin18.replace(/-/g, '').toLowerCase();
-
-      if (normalizedScan.includes(normalizedLwin) || normalizedLwin.includes(normalizedScan) || value.length > 5) {
-        // Accept scan if it's reasonably long (barcode was scanned)
-        setCaseVerified(true);
-        // Track scanned barcode
-        setScannedBarcodes((prev) => new Set(prev).add(value.toUpperCase()));
-        setScanInput('');
-      } else {
-        setScanInput('');
-      }
-      return;
-    }
-
-    setScanInput('');
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' && scanInput.trim()) {
-      e.preventDefault();
-      const now = Date.now();
+  // Handle case barcode scan
+  const handleCaseScan = (barcode: string) => {
+    setDuplicateScanError(null);
 
-      // Debounce rapid scans (1.5s cooldown)
-      if (now - lastScanTimeRef.current < 1500) {
-        setScanInput('');
-        return;
-      }
+    // Check for duplicate scan
+    if (scannedBarcodes.has(barcode.toUpperCase())) {
+      setDuplicateScanError(`Barcode already scanned: ${barcode}`);
+      return;
+    }
 
-      // Prevent double-processing
-      if (scanProcessingRef.current) {
-        setScanInput('');
-        return;
-      }
+    if (!pickingItem) return;
 
-      const value = scanInput.trim();
-      lastScanTimeRef.current = now;
-      scanProcessingRef.current = true;
-      setScanInput('');
-      // Blur immediately so the scanner can't send a duplicate
-      (e.target as HTMLInputElement).blur();
+    // Verify case barcode matches the item's LWIN
+    const normalizedScan = barcode.replace(/-/g, '').toLowerCase();
+    const normalizedLwin = pickingItem.lwin18.replace(/-/g, '').toLowerCase();
 
-      // Reset processing after cooldown
-      setTimeout(() => {
-        scanProcessingRef.current = false;
-      }, 2000);
-
-      void handleScan(value);
+    if (normalizedScan.includes(normalizedLwin) || normalizedLwin.includes(normalizedScan) || barcode.length > 5) {
+      setCaseVerified(true);
+      setScannedBarcodes((prev) => new Set(prev).add(barcode.toUpperCase()));
     }
   };
 
@@ -540,51 +501,20 @@ const WMSPickListDetailPage = () => {
                   )}
                 </div>
                 {scanStep === 'location' ? (
-                  <div className="flex gap-2">
-                    <input
-                      ref={scanInputRef}
-                      type="text"
-                      value={scanInput}
-                      onChange={(e) => setScanInput(e.target.value)}
-                      onKeyDown={handleKeyDown}
-                      placeholder="Scan bay barcode..."
-                      className="flex-1 rounded-lg border border-border-primary bg-fill-primary p-3 text-center font-mono text-lg focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
-                      inputMode="none"
-                      autoFocus
-                    />
-                    <Button
-                      variant="default"
-                      onClick={() => {
-                        if (scanInput.trim()) {
-                          void handleScan(scanInput.trim());
-                        }
-                      }}
-                      disabled={!scanInput.trim() || isLookingUpLocation}
-                    >
-                      {isLookingUpLocation ? <Icon icon={IconLoader2} size="sm" className="animate-spin" /> : 'OK'}
-                    </Button>
-                  </div>
+                  <ScanInput
+                    ref={scanInputRef}
+                    onScan={handleLocationScan}
+                    isLoading={isLookingUpLocation}
+                    placeholder="Scan bay barcode..."
+                    error={locationError ?? (duplicateScanError && scanStep === 'location' ? duplicateScanError : undefined)}
+                    autoFocus
+                  />
                 ) : (
                   <div className="flex items-center justify-center gap-2 rounded-lg bg-emerald-50 p-3 dark:bg-emerald-900/20">
                     <Icon icon={IconMapPin} size="sm" className="text-emerald-600" />
                     <Typography variant="bodySm" className="font-semibold text-emerald-700 dark:text-emerald-400">
                       {pickedLocationCode}
                     </Typography>
-                  </div>
-                )}
-                {locationError && (
-                  <Typography variant="bodyXs" className="mt-2 text-center text-red-600">
-                    {locationError} - try again
-                  </Typography>
-                )}
-                {duplicateScanError && scanStep === 'location' && (
-                  <Typography variant="bodyXs" className="mt-2 text-center text-amber-600">
-                    {duplicateScanError}
-                  </Typography>
-                )}
-                {isLookingUpLocation && (
-                  <div className="mt-2 flex items-center justify-center">
-                    <Icon icon={IconLoader2} size="sm" className="animate-spin" />
                   </div>
                 )}
               </CardContent>
@@ -602,29 +532,12 @@ const WMSPickListDetailPage = () => {
                   )}
                 </div>
                 {scanStep === 'case' && !caseVerified ? (
-                  <div className="flex gap-2">
-                    <input
-                      ref={scanInputRef}
-                      type="text"
-                      value={scanInput}
-                      onChange={(e) => setScanInput(e.target.value)}
-                      onKeyDown={handleKeyDown}
-                      placeholder="Scan case barcode..."
-                      className="flex-1 rounded-lg border border-border-primary bg-fill-primary p-3 text-center font-mono text-lg focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
-                      autoFocus
-                    />
-                    <Button
-                      variant="default"
-                      onClick={() => {
-                        if (scanInput.trim()) {
-                          void handleScan(scanInput.trim());
-                        }
-                      }}
-                      disabled={!scanInput.trim()}
-                    >
-                      OK
-                    </Button>
-                  </div>
+                  <ScanInput
+                    onScan={handleCaseScan}
+                    placeholder="Scan case barcode..."
+                    error={duplicateScanError && scanStep === 'case' ? duplicateScanError : undefined}
+                    autoFocus
+                  />
                 ) : caseVerified ? (
                   <div className="flex items-center justify-center gap-2 rounded-lg bg-emerald-50 p-3 dark:bg-emerald-900/20">
                     <Icon icon={IconPackage} size="sm" className="text-emerald-600" />
@@ -638,11 +551,6 @@ const WMSPickListDetailPage = () => {
                       Scan location first
                     </Typography>
                   </div>
-                )}
-                {duplicateScanError && scanStep === 'case' && (
-                  <Typography variant="bodyXs" className="mt-2 text-center text-amber-600">
-                    {duplicateScanError}
-                  </Typography>
                 )}
               </CardContent>
             </Card>
@@ -740,6 +648,40 @@ const WMSPickListDetailPage = () => {
               </Card>
             ))}
           </div>
+        )}
+
+        {/* Delete Confirmation Modal */}
+        {showDeleteModal && (
+          <>
+            <div className="fixed inset-0 z-50 bg-black/50" onClick={() => setShowDeleteModal(false)} />
+            <div className="fixed inset-x-4 top-1/2 z-50 -translate-y-1/2 sm:inset-x-auto sm:left-1/2 sm:w-full sm:max-w-sm sm:-translate-x-1/2">
+              <Card>
+                <CardContent className="p-6">
+                  <Typography variant="headingSm" className="mb-2">
+                    Delete Pick List?
+                  </Typography>
+                  <Typography variant="bodySm" colorRole="muted" className="mb-6">
+                    The order will be reset so you can release it again.
+                  </Typography>
+                  <div className="flex gap-3">
+                    <Button variant="outline" className="flex-1" onClick={() => setShowDeleteModal(false)}>
+                      Cancel
+                    </Button>
+                    <Button
+                      colorRole="danger"
+                      className="flex-1"
+                      onClick={confirmDelete}
+                      disabled={deleteMutation.isPending}
+                    >
+                      <ButtonContent iconLeft={deleteMutation.isPending ? IconLoader2 : IconTrash}>
+                        Delete
+                      </ButtonContent>
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </>
         )}
       </div>
     </div>

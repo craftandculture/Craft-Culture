@@ -9,7 +9,7 @@ import {
   IconLockOpen,
   IconMapPin,
   IconPrinter,
-  IconScan,
+  IconRefresh,
   IconTrash,
   IconTruckDelivery,
   IconX,
@@ -18,6 +18,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
+import { toast } from 'sonner';
 
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
@@ -25,6 +26,8 @@ import Card from '@/app/_ui/components/Card/Card';
 import CardContent from '@/app/_ui/components/Card/CardContent';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Typography from '@/app/_ui/components/Typography/Typography';
+import ScanInput from '@/app/_wms/components/ScanInput';
+import type { ScanInputHandle } from '@/app/_wms/components/ScanInput';
 import downloadZplFile from '@/app/_wms/utils/downloadZplFile';
 import wifiPrint from '@/app/_wms/utils/wifiPrint';
 import useTRPC, { useTRPCClient } from '@/lib/trpc/browser';
@@ -39,19 +42,17 @@ const WMSPalletDetailPage = () => {
   const queryClient = useQueryClient();
   const palletId = params.palletId as string;
 
-  const [scanInput, setScanInput] = useState('');
   const [showMoveModal, setShowMoveModal] = useState(false);
   const [showDissolveModal, setShowDissolveModal] = useState(false);
+  const [showUnsealModal, setShowUnsealModal] = useState(false);
+  const [showDispatchModal, setShowDispatchModal] = useState(false);
+  const [unsealReason, setUnsealReason] = useState('');
   const [selectedLocationId, setSelectedLocationId] = useState<string | null>(null);
   const [dissolveLocationId, setDissolveLocationId] = useState<string | null>(null);
   const [dissolveReason, setDissolveReason] = useState('');
-  const [lastScanResult, setLastScanResult] = useState<{
-    success: boolean;
-    message: string;
-  } | null>(null);
-  const scanInputRef = useRef<HTMLInputElement>(null);
-  const lastScanTimeRef = useRef(0);
-  const scanProcessingRef = useRef(false);
+  const [scanError, setScanError] = useState('');
+  const [scanSuccess, setScanSuccess] = useState('');
+  const scanInputRef = useRef<ScanInputHandle>(null);
 
   // Fetch pallet
   const { data, isLoading, refetch } = useQuery({
@@ -69,16 +70,12 @@ const WMSPalletDetailPage = () => {
     ...api.wms.admin.pallets.addCase.mutationOptions(),
     onSuccess: (result) => {
       void queryClient.invalidateQueries();
-      setLastScanResult({ success: true, message: result.message || 'Case added successfully' });
-      setScanInput('');
-      // Re-focus after cooldown to allow next scan
-      setTimeout(() => scanInputRef.current?.focus(), 1500);
+      setScanError('');
+      setScanSuccess(result.message || 'Case added successfully');
     },
     onError: (error) => {
-      setLastScanResult({ success: false, message: error.message });
-      setScanInput('');
-      // Re-focus after cooldown to allow retry
-      setTimeout(() => scanInputRef.current?.focus(), 1500);
+      setScanSuccess('');
+      setScanError(error.message);
     },
   });
 
@@ -95,10 +92,10 @@ const WMSPalletDetailPage = () => {
     ...api.wms.admin.pallets.seal.mutationOptions(),
     onSuccess: (result) => {
       void queryClient.invalidateQueries();
-      setLastScanResult({ success: true, message: result.message || 'Pallet sealed successfully' });
+      toast.success(result.message || 'Pallet sealed successfully');
     },
     onError: (error) => {
-      setLastScanResult({ success: false, message: error.message });
+      toast.error(error.message);
     },
   });
 
@@ -117,10 +114,12 @@ const WMSPalletDetailPage = () => {
     ...api.wms.admin.pallets.unseal.mutationOptions(),
     onSuccess: (result) => {
       void queryClient.invalidateQueries();
-      setLastScanResult({ success: true, message: result.message });
+      setShowUnsealModal(false);
+      setUnsealReason('');
+      toast.success(result.message);
     },
     onError: (error) => {
-      setLastScanResult({ success: false, message: error.message });
+      toast.error(error.message);
     },
   });
 
@@ -132,10 +131,10 @@ const WMSPalletDetailPage = () => {
       setShowDissolveModal(false);
       setDissolveLocationId(null);
       setDissolveReason('');
-      setLastScanResult({ success: true, message: result.message });
+      toast.success(result.message);
     },
     onError: (error) => {
-      setLastScanResult({ success: false, message: error.message });
+      toast.error(error.message);
     },
   });
 
@@ -144,59 +143,32 @@ const WMSPalletDetailPage = () => {
     ...api.wms.admin.pallets.dispatch.mutationOptions(),
     onSuccess: (result) => {
       void queryClient.invalidateQueries();
-      setLastScanResult({ success: true, message: result.message });
+      setShowDispatchModal(false);
+      toast.success(result.message);
     },
     onError: (error) => {
-      setLastScanResult({ success: false, message: error.message });
+      toast.error(error.message);
     },
   });
 
-  // Focus scan input on mount
+  // Clear scan feedback after 3 seconds
   useEffect(() => {
-    if (data?.pallet.status === 'active') {
-      const timer = setTimeout(() => scanInputRef.current?.focus(), 300);
+    if (scanSuccess) {
+      const timer = setTimeout(() => setScanSuccess(''), 3000);
       return () => clearTimeout(timer);
     }
-  }, [data?.pallet.status]);
+  }, [scanSuccess]);
 
-  // Clear scan result after 3 seconds
   useEffect(() => {
-    if (lastScanResult) {
-      const timer = setTimeout(() => setLastScanResult(null), 3000);
+    if (scanError) {
+      const timer = setTimeout(() => setScanError(''), 5000);
       return () => clearTimeout(timer);
     }
-  }, [lastScanResult]);
+  }, [scanError]);
 
-  const handleScan = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!scanInput.trim()) return;
-
-    const now = Date.now();
-
-    // Debounce rapid scans (1.5s cooldown)
-    if (now - lastScanTimeRef.current < 1500) {
-      setScanInput('');
-      return;
-    }
-
-    // Prevent double-processing
-    if (scanProcessingRef.current || addCaseMutation.isPending) {
-      setScanInput('');
-      return;
-    }
-
-    const barcode = scanInput.trim();
-    lastScanTimeRef.current = now;
-    scanProcessingRef.current = true;
-    setScanInput('');
-    // Blur immediately so the scanner can't send a duplicate
-    scanInputRef.current?.blur();
-
-    // Reset processing after cooldown
-    setTimeout(() => {
-      scanProcessingRef.current = false;
-    }, 2000);
-
+  const handleCaseScan = (barcode: string) => {
+    setScanError('');
+    setScanSuccess('');
     addCaseMutation.mutate({ palletId, caseBarcode: barcode });
   };
 
@@ -207,6 +179,7 @@ const WMSPalletDetailPage = () => {
       if (!printed) downloadZplFile(result.zpl, result.palletCode);
     } catch (error) {
       console.error('Failed to generate label:', error);
+      toast.error('Failed to print label');
     }
   };
 
@@ -309,47 +282,15 @@ const WMSPalletDetailPage = () => {
         {canAddCases && (
           <Card>
             <CardContent className="p-4">
-              <form onSubmit={handleScan} className="space-y-3">
-                <Typography variant="headingSm">Scan Case Barcode</Typography>
-                <div className="flex gap-2">
-                  <div className="relative flex-1">
-                    <Icon
-                      icon={IconScan}
-                      size="sm"
-                      className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted"
-                    />
-                    <input
-                      ref={scanInputRef}
-                      type="text"
-                      value={scanInput}
-                      onChange={(e) => setScanInput(e.target.value)}
-                      placeholder="Scan or enter case barcode..."
-                      className="w-full rounded-lg border border-border-primary bg-fill-primary py-2 pl-10 pr-4 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
-                      inputMode="none"
-                    />
-                  </div>
-                  <Button
-                    type="submit"
-                    variant="default"
-                    disabled={!scanInput.trim() || addCaseMutation.isPending}
-                  >
-                    <ButtonContent iconLeft={addCaseMutation.isPending ? IconLoader2 : IconCheck}>
-                      Add
-                    </ButtonContent>
-                  </Button>
-                </div>
-                {lastScanResult && (
-                  <div
-                    className={`rounded-lg p-3 text-sm ${
-                      lastScanResult.success
-                        ? 'bg-emerald-50 text-emerald-800 dark:bg-emerald-900/20 dark:text-emerald-300'
-                        : 'bg-red-50 text-red-800 dark:bg-red-900/20 dark:text-red-300'
-                    }`}
-                  >
-                    {lastScanResult.message}
-                  </div>
-                )}
-              </form>
+              <ScanInput
+                ref={scanInputRef}
+                label="Scan Case Barcode"
+                placeholder="Scan or enter case barcode..."
+                onScan={handleCaseScan}
+                isLoading={addCaseMutation.isPending}
+                error={scanError}
+                success={scanSuccess}
+              />
             </CardContent>
           </Card>
         )}
@@ -370,12 +311,7 @@ const WMSPalletDetailPage = () => {
           {canUnseal && (
             <Button
               variant="outline"
-              onClick={() => {
-                const reason = prompt('Reason for unsealing:');
-                if (reason) {
-                  unsealMutation.mutate({ palletId, reason });
-                }
-              }}
+              onClick={() => setShowUnsealModal(true)}
               disabled={unsealMutation.isPending}
             >
               <ButtonContent iconLeft={unsealMutation.isPending ? IconLoader2 : IconLockOpen}>
@@ -386,11 +322,7 @@ const WMSPalletDetailPage = () => {
           {canDispatch && (
             <Button
               variant="default"
-              onClick={() => {
-                if (confirm(`Dispatch pallet ${pallet.palletCode} with ${totalCases} cases?`)) {
-                  dispatchMutation.mutate({ palletId });
-                }
-              }}
+              onClick={() => setShowDispatchModal(true)}
               disabled={dispatchMutation.isPending}
             >
               <ButtonContent iconLeft={dispatchMutation.isPending ? IconLoader2 : IconTruckDelivery}>
@@ -417,8 +349,8 @@ const WMSPalletDetailPage = () => {
               <ButtonContent iconLeft={IconPrinter}>Print Label</ButtonContent>
             </Button>
           )}
-          <Button variant="outline" onClick={() => refetch()}>
-            <Icon icon={IconLoader2} size="sm" />
+          <Button variant="outline" onClick={() => refetch()} aria-label="Refresh pallet">
+            <Icon icon={IconRefresh} size="sm" />
           </Button>
         </div>
 
@@ -640,6 +572,101 @@ const WMSPalletDetailPage = () => {
                   {moveMutation.error?.message}
                 </Typography>
               )}
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Unseal Modal */}
+      {showUnsealModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          onClick={() => setShowUnsealModal(false)}
+        >
+          <Card className="w-full max-w-md" onClick={(e) => e.stopPropagation()}>
+            <CardContent className="p-4 border-b border-border-primary">
+              <div className="flex items-center justify-between">
+                <Typography variant="headingSm">Unseal Pallet</Typography>
+                <Button variant="ghost" size="sm" type="button" onClick={() => setShowUnsealModal(false)}>
+                  <Icon icon={IconX} size="sm" />
+                </Button>
+              </div>
+              <Typography variant="bodyXs" colorRole="muted" className="mt-1">
+                This will unseal {pallet.palletCode} so cases can be added or removed.
+              </Typography>
+            </CardContent>
+            <CardContent className="p-4 space-y-4">
+              <div>
+                <Typography variant="bodySm" className="mb-2 font-medium">
+                  Reason for unsealing
+                </Typography>
+                <input
+                  type="text"
+                  value={unsealReason}
+                  onChange={(e) => setUnsealReason(e.target.value)}
+                  placeholder="e.g. Need to add more cases"
+                  className="w-full rounded-lg border border-border-primary bg-fill-primary py-2 px-3 text-sm focus:border-brand-500 focus:outline-none"
+                  autoFocus
+                />
+              </div>
+              <div className="flex gap-3">
+                <Button variant="outline" className="flex-1" type="button" onClick={() => setShowUnsealModal(false)}>
+                  Cancel
+                </Button>
+                <Button
+                  variant="default"
+                  className="flex-1"
+                  onClick={() => {
+                    if (unsealReason.trim()) {
+                      unsealMutation.mutate({ palletId, reason: unsealReason.trim() });
+                    }
+                  }}
+                  disabled={!unsealReason.trim() || unsealMutation.isPending}
+                >
+                  <ButtonContent iconLeft={unsealMutation.isPending ? IconLoader2 : IconLockOpen}>
+                    {unsealMutation.isPending ? 'Unsealing...' : 'Unseal'}
+                  </ButtonContent>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Dispatch Modal */}
+      {showDispatchModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          onClick={() => setShowDispatchModal(false)}
+        >
+          <Card className="w-full max-w-md" onClick={(e) => e.stopPropagation()}>
+            <CardContent className="p-4 border-b border-border-primary">
+              <div className="flex items-center justify-between">
+                <Typography variant="headingSm">Dispatch Pallet</Typography>
+                <Button variant="ghost" size="sm" type="button" onClick={() => setShowDispatchModal(false)}>
+                  <Icon icon={IconX} size="sm" />
+                </Button>
+              </div>
+            </CardContent>
+            <CardContent className="p-4 space-y-4">
+              <Typography variant="bodySm">
+                Dispatch pallet <strong>{pallet.palletCode}</strong> with <strong>{totalCases} cases</strong>?
+              </Typography>
+              <div className="flex gap-3">
+                <Button variant="outline" className="flex-1" type="button" onClick={() => setShowDispatchModal(false)}>
+                  Cancel
+                </Button>
+                <Button
+                  variant="default"
+                  className="flex-1"
+                  onClick={() => dispatchMutation.mutate({ palletId })}
+                  disabled={dispatchMutation.isPending}
+                >
+                  <ButtonContent iconLeft={dispatchMutation.isPending ? IconLoader2 : IconTruckDelivery}>
+                    {dispatchMutation.isPending ? 'Dispatching...' : 'Dispatch'}
+                  </ButtonContent>
+                </Button>
+              </div>
             </CardContent>
           </Card>
         </div>

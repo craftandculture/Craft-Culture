@@ -5,7 +5,7 @@ import api from '@/lib/trpc/server';
 import tryCatch from '@/utils/tryCatch';
 
 /**
- * Layout for Pocket Cellar support page
+ * Layout for B2C support page
  * Redirects partners and distributors to their respective support pages
  */
 const SupportLayout = async ({ children }: React.PropsWithChildren) => {

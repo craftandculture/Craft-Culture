@@ -311,11 +311,11 @@ const StockExplorerPage = () => {
       csvSafe(p.vintage),
       csvSafe(p.bottleSize),
       csvSafe(p.caseConfig),
-      p.totalCases,
-      p.availableCases,
-      p.reservedCases,
-      p.locationCount,
-      p.ownerCount,
+      csvSafe(p.totalCases),
+      csvSafe(p.availableCases),
+      csvSafe(p.reservedCases),
+      csvSafe(p.locationCount),
+      csvSafe(p.ownerCount),
     ]);
     const csv = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });
