@@ -9,6 +9,7 @@ import {
   IconChevronRight,
   IconCoin,
   IconCurrencyDollar,
+  IconDatabaseSearch,
   IconFileImport,
   IconMenu2,
   IconPackage,
@@ -57,6 +58,7 @@ const navGroups: NavGroup[] = [
       { label: 'Source', href: '/platform/admin/source', icon: IconSearch },
       { label: 'Logistics', href: '/platform/admin/logistics', icon: IconShip },
       { label: 'WMS', href: '/platform/admin/wms', icon: IconBuildingWarehouse },
+      { label: 'Stock Explorer', href: '/platform/admin/stock-explorer', icon: IconDatabaseSearch },
     ],
   },
   {
