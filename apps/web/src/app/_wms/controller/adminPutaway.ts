@@ -1,5 +1,5 @@
 import { TRPCError } from '@trpc/server';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, isNull } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { wmsCaseLabels, wmsLocations, wmsStock, wmsStockMovements } from '@/database/schema';
@@ -119,7 +119,9 @@ const adminPutaway = adminProcedure
         and(
           eq(wmsStock.locationId, toLocationId),
           eq(wmsStock.lwin18, caseLabel.lwin18),
-          eq(wmsStock.lotNumber, caseLabel.lotNumber ?? ''),
+          caseLabel.lotNumber === null
+            ? isNull(wmsStock.lotNumber)
+            : eq(wmsStock.lotNumber, caseLabel.lotNumber),
         ),
       );
 

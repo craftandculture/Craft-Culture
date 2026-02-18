@@ -1,5 +1,5 @@
 import { TRPCError } from '@trpc/server';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, isNull } from 'drizzle-orm';
 
 import db from '@/database/client';
 import {
@@ -103,7 +103,9 @@ const adminRepack = adminProcedure
           eq(wmsStock.locationId, targetLocationId),
           eq(wmsStock.lwin18, targetLwin18),
           eq(wmsStock.ownerId, sourceStock.ownerId),
-          eq(wmsStock.lotNumber, sourceStock.lotNumber ?? ''),
+          sourceStock.lotNumber === null
+            ? isNull(wmsStock.lotNumber)
+            : eq(wmsStock.lotNumber, sourceStock.lotNumber),
         ),
       );
 
@@ -156,7 +158,9 @@ const adminRepack = adminProcedure
         and(
           eq(wmsCaseLabels.currentLocationId, sourceStock.locationId),
           eq(wmsCaseLabels.lwin18, sourceStock.lwin18),
-          eq(wmsCaseLabels.lotNumber, sourceStock.lotNumber ?? ''),
+          sourceStock.lotNumber === null
+            ? isNull(wmsCaseLabels.lotNumber)
+            : eq(wmsCaseLabels.lotNumber, sourceStock.lotNumber),
           eq(wmsCaseLabels.isActive, true),
         ),
       )

@@ -3934,6 +3934,11 @@ export const wmsStock = pgTable(
     index('wms_stock_owner_id_idx').on(table.ownerId),
     index('wms_stock_lwin18_idx').on(table.lwin18),
     index('wms_stock_shipment_id_idx').on(table.shipmentId),
+    index('wms_stock_lwin18_location_owner_idx').on(
+      table.lwin18,
+      table.locationId,
+      table.ownerId,
+    ),
     // Prevent duplicate stock records for same product at same location from same shipment
     uniqueIndex('wms_stock_lwin18_location_shipment_unique').on(
       table.lwin18,
@@ -4529,6 +4534,7 @@ export const zohoSalesOrders = pgTable(
     index('zoho_sales_orders_zoho_id_idx').on(table.zohoSalesOrderId),
     index('zoho_sales_orders_status_idx').on(table.status),
     index('zoho_sales_orders_customer_idx').on(table.zohoCustomerId),
+    index('zoho_sales_orders_dispatch_batch_idx').on(table.dispatchBatchId),
   ],
 );
 
