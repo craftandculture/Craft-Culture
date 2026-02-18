@@ -132,6 +132,7 @@ const WMSRepackPage = () => {
   const [selectedStock, setSelectedStock] = useState<StockItem | null>(null);
   const [targetCaseConfig, setTargetCaseConfig] = useState<number>(6);
   const [error, setError] = useState<string>('');
+  const [isSourceScanning, setIsSourceScanning] = useState(false);
   const [repackResult, setRepackResult] = useState<RepackResult | null>(null);
 
   // Repack mutation
@@ -169,6 +170,7 @@ const WMSRepackPage = () => {
 
   const handleSourceLocationScan = async (barcode: string) => {
     setError('');
+    setIsSourceScanning(true);
     try {
       const result = await trpcClient.wms.admin.operations.getLocationByBarcode.mutate({ barcode });
       setSourceLocation({
@@ -191,6 +193,8 @@ const WMSRepackPage = () => {
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Location not found');
+    } finally {
+      setIsSourceScanning(false);
     }
   };
 
@@ -322,6 +326,7 @@ const WMSRepackPage = () => {
                 label="Location barcode"
                 placeholder="LOC-..."
                 onScan={handleSourceLocationScan}
+                isLoading={isSourceScanning}
                 error={error}
               />
             </CardContent>
@@ -608,6 +613,7 @@ const WMSRepackPage = () => {
                 label="Destination bay barcode"
                 placeholder="LOC-..."
                 onScan={handleDestinationLocationScan}
+                isLoading={repackMutation.isPending}
                 error={error}
                 disabled={repackMutation.isPending}
               />

@@ -50,6 +50,8 @@ const WMSPalletDetailPage = () => {
     message: string;
   } | null>(null);
   const scanInputRef = useRef<HTMLInputElement>(null);
+  const lastScanTimeRef = useRef(0);
+  const scanProcessingRef = useRef(false);
 
   // Fetch pallet
   const { data, isLoading, refetch } = useQuery({
@@ -168,10 +170,33 @@ const WMSPalletDetailPage = () => {
   const handleScan = (e: React.FormEvent) => {
     e.preventDefault();
     if (!scanInput.trim()) return;
+
+    const now = Date.now();
+
+    // Debounce rapid scans (1.5s cooldown)
+    if (now - lastScanTimeRef.current < 1500) {
+      setScanInput('');
+      return;
+    }
+
+    // Prevent double-processing
+    if (scanProcessingRef.current || addCaseMutation.isPending) {
+      setScanInput('');
+      return;
+    }
+
     const barcode = scanInput.trim();
+    lastScanTimeRef.current = now;
+    scanProcessingRef.current = true;
     setScanInput('');
     // Blur immediately so the scanner can't send a duplicate
     scanInputRef.current?.blur();
+
+    // Reset processing after cooldown
+    setTimeout(() => {
+      scanProcessingRef.current = false;
+    }, 2000);
+
     addCaseMutation.mutate({ palletId, caseBarcode: barcode });
   };
 

@@ -142,6 +142,7 @@ const ScanInput = forwardRef<ScanInputHandle, ScanInputProps>(({
   }));
   const [value, setValue] = useState('');
   const processingRef = useRef(false);
+  const cooldownTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastScanTimeRef = useRef(0);
   const lastScannedValueRef = useRef('');
 
@@ -149,6 +150,32 @@ const ScanInput = forwardRef<ScanInputHandle, ScanInputProps>(({
   const SCAN_DEBOUNCE_MS = 1500;
   // Cooldown after successful scan - ignore all input during this period
   const SCAN_COOLDOWN_MS = 2000;
+
+  // Guaranteed cooldown: resets processingRef after SCAN_COOLDOWN_MS
+  // This runs after EVERY scan regardless of whether isLoading is passed.
+  // Prevents processingRef from getting stuck when isLoading never changes.
+  const startCooldown = useCallback(() => {
+    if (cooldownTimerRef.current) {
+      clearTimeout(cooldownTimerRef.current);
+    }
+    cooldownTimerRef.current = setTimeout(() => {
+      processingRef.current = false;
+      cooldownTimerRef.current = null;
+      // Re-focus so the user can scan the next item
+      if (!disabled) {
+        inputRef.current?.focus();
+      }
+    }, SCAN_COOLDOWN_MS);
+  }, [disabled]);
+
+  // Clean up cooldown timer on unmount
+  useEffect(() => {
+    return () => {
+      if (cooldownTimerRef.current) {
+        clearTimeout(cooldownTimerRef.current);
+      }
+    };
+  }, []);
 
   // Auto-focus on mount only (not on re-renders)
   useEffect(() => {
@@ -252,10 +279,13 @@ const ScanInput = forwardRef<ScanInputHandle, ScanInputProps>(({
           triggerVibration(100);
         }
 
+        // Guaranteed cooldown — resets processingRef even if isLoading is never passed
+        startCooldown();
+
         onScan(scannedValue);
       }
     },
-    [value, onScan, isLoading, enableFeedback],
+    [value, onScan, isLoading, enableFeedback, startCooldown],
   );
 
   const handleChange = useCallback(
@@ -340,8 +370,11 @@ const ScanInput = forwardRef<ScanInputHandle, ScanInputProps>(({
       triggerVibration(100);
     }
 
+    // Guaranteed cooldown — resets processingRef even if isLoading is never passed
+    startCooldown();
+
     onScan(scannedValue);
-  }, [value, onScan, isLoading, enableFeedback]);
+  }, [value, onScan, isLoading, enableFeedback, startCooldown]);
 
   return (
     <div className="w-full">

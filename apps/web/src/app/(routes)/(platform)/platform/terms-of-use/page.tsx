@@ -24,9 +24,9 @@ const TermsOfUsePage = () => {
                 1. Introduction
               </Typography>
               <Typography variant="bodySm" colorRole="muted" className="mb-3 leading-relaxed">
-                Welcome to Pocket Cellar, a service operated by Craft & Culture FZ-LLC (&quot;we,&quot;
+                Welcome to Craft &amp; Culture, a service operated by Craft & Culture FZ-LLC (&quot;we,&quot;
                 &quot;our,&quot; or &quot;us&quot;). These Terms of Use (&quot;Terms&quot;) govern your
-                access to and use of the Pocket Cellar platform (the &quot;Platform&quot; or
+                access to and use of the Craft &amp; Culture platform (the &quot;Platform&quot; or
                 &quot;Service&quot;), including any content, features, and services offered through
                 wine.craftculture.xyz.
               </Typography>
@@ -102,7 +102,7 @@ const TermsOfUsePage = () => {
                 4. Platform Services
               </Typography>
               <Typography variant="bodySm" colorRole="muted" className="mb-3 leading-relaxed">
-                Pocket Cellar provides a platform for browsing, selecting, and ordering wine and
+                Craft &amp; Culture provides a platform for browsing, selecting, and ordering wine and
                 spirits products. Our services include:
               </Typography>
               <ul className="ml-6 space-y-2">
@@ -419,7 +419,7 @@ const TermsOfUsePage = () => {
             {/* Footer */}
             <section className="border-t border-border-primary pt-6">
               <Typography variant="bodySm" colorRole="muted" className="italic">
-                By using Pocket Cellar, you acknowledge that you have read, understood, and agree to
+                By using Craft &amp; Culture, you acknowledge that you have read, understood, and agree to
                 be bound by these Terms of Use.
               </Typography>
             </section>

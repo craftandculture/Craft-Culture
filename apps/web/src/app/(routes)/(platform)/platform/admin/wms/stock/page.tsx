@@ -134,9 +134,11 @@ const WMSStockPage = () => {
                   <ButtonContent iconLeft={IconPackageImport}>Import</ButtonContent>
                 </Button>
               </Link>
-              <Button variant="outline" size="sm">
-                <ButtonContent iconLeft={IconDownload}>Export</ButtonContent>
-              </Button>
+              <Link href="/platform/admin/stock-explorer">
+                <Button variant="outline" size="sm">
+                  <ButtonContent iconLeft={IconDownload}>Export</ButtonContent>
+                </Button>
+              </Link>
             </div>
           </div>
         </div>

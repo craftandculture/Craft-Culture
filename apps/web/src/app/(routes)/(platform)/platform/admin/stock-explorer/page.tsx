@@ -300,13 +300,17 @@ const StockExplorerPage = () => {
       'Locations',
       'Owners',
     ];
+    const csvSafe = (val: string | number | null | undefined) => {
+      const str = String(val ?? '');
+      return `"${str.replace(/"/g, '""')}"`;
+    };
     const rows = products.map((p) => [
-      `"${(p.productName ?? '').replace(/"/g, '""')}"`,
-      `"${(p.producer ?? '').replace(/"/g, '""')}"`,
-      p.lwin18,
-      p.vintage ?? '',
-      p.bottleSize ?? '',
-      p.caseConfig ?? '',
+      csvSafe(p.productName),
+      csvSafe(p.producer),
+      csvSafe(p.lwin18),
+      csvSafe(p.vintage),
+      csvSafe(p.bottleSize),
+      csvSafe(p.caseConfig),
       p.totalCases,
       p.availableCases,
       p.reservedCases,
