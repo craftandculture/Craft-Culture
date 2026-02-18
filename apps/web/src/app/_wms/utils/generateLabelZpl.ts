@@ -160,7 +160,7 @@ ${isPalletLabel ? `^FX -- PALLET banner (white on black, top-right) --
 ^FO30,75
 ^BY2,3,70
 ^BCN,70,Y,N,N
-^FD${data.barcode}^FS
+^FD${escapeZpl(data.barcode ?? '')}^FS
 
 ^FX -- Horizontal separator --
 ^FO30,170

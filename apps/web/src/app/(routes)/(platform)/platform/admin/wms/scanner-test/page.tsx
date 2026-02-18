@@ -143,7 +143,7 @@ const ScannerTestPage = () => {
         {/* Header */}
         <div className="flex items-center gap-4">
           <Button asChild variant="ghost" size="sm">
-            <Link href="/platform/admin/logistics">
+            <Link href="/platform/admin/wms">
               <Icon icon={IconArrowLeft} size="sm" />
             </Link>
           </Button>

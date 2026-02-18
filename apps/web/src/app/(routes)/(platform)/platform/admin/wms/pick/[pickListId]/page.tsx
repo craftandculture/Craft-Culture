@@ -51,6 +51,8 @@ const WMSPickListDetailPage = () => {
   const [duplicateScanError, setDuplicateScanError] = useState<string | null>(null);
 
   const scanInputRef = useRef<HTMLInputElement>(null);
+  const lastScanTimeRef = useRef(0);
+  const scanProcessingRef = useRef(false);
 
   // Fetch pick list
   const { data, isLoading } = useQuery({
@@ -121,33 +123,27 @@ const WMSPickListDetailPage = () => {
 
   // Handle scan/barcode input
   const handleScan = async (value: string) => {
-    console.log('[SCAN] handleScan called with:', value);
-    console.log('[SCAN] Current state:', { scanStep, pickingItem, scannedBarcodes: Array.from(scannedBarcodes) });
     setDuplicateScanError(null);
 
     // Check for duplicate scan
     if (scannedBarcodes.has(value.toUpperCase())) {
-      console.log('[SCAN] Duplicate barcode detected:', value);
       setDuplicateScanError(`Barcode already scanned: ${value}`);
       setScanInput('');
       return;
     }
 
     if (scanStep === 'location') {
-      console.log('[SCAN] Location scan step - looking up barcode:', value);
       // Look up location by barcode using mutation
       setIsLookingUpLocation(true);
       setLocationError(null);
       try {
         const result = await locationLookupMutation.mutateAsync({ barcode: value });
-        console.log('[SCAN] Location found:', result);
         setPickedLocationId(result.location.id);
         setPickedLocationCode(result.location.locationCode);
         setScanStep('case');
         // Track scanned barcode
         setScannedBarcodes((prev) => new Set(prev).add(value.toUpperCase()));
       } catch (err) {
-        console.log('[SCAN] Location lookup error:', err);
         const errorMsg = err instanceof Error ? err.message : 'Location not found';
         setLocationError(errorMsg);
       } finally {
@@ -158,39 +154,55 @@ const WMSPickListDetailPage = () => {
     }
 
     if (scanStep === 'case' && pickingItem) {
-      console.log('[SCAN] Case scan step - verifying barcode:', value);
       // Verify case barcode matches the item's LWIN
       // Accept if it contains the LWIN or matches exactly
       const normalizedScan = value.replace(/-/g, '').toLowerCase();
       const normalizedLwin = pickingItem.lwin18.replace(/-/g, '').toLowerCase();
 
-      console.log('[SCAN] Comparing:', { normalizedScan, normalizedLwin, valueLength: value.length });
-
       if (normalizedScan.includes(normalizedLwin) || normalizedLwin.includes(normalizedScan) || value.length > 5) {
         // Accept scan if it's reasonably long (barcode was scanned)
-        console.log('[SCAN] Case barcode accepted!');
         setCaseVerified(true);
         // Track scanned barcode
         setScannedBarcodes((prev) => new Set(prev).add(value.toUpperCase()));
         setScanInput('');
       } else {
-        console.log('[SCAN] Case barcode rejected');
         setScanInput('');
       }
       return;
     }
 
-    console.log('[SCAN] No matching scan step, clearing input');
     setScanInput('');
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && scanInput.trim()) {
       e.preventDefault();
+      const now = Date.now();
+
+      // Debounce rapid scans (1.5s cooldown)
+      if (now - lastScanTimeRef.current < 1500) {
+        setScanInput('');
+        return;
+      }
+
+      // Prevent double-processing
+      if (scanProcessingRef.current) {
+        setScanInput('');
+        return;
+      }
+
       const value = scanInput.trim();
+      lastScanTimeRef.current = now;
+      scanProcessingRef.current = true;
       setScanInput('');
       // Blur immediately so the scanner can't send a duplicate
       (e.target as HTMLInputElement).blur();
+
+      // Reset processing after cooldown
+      setTimeout(() => {
+        scanProcessingRef.current = false;
+      }, 2000);
+
       void handleScan(value);
     }
   };
@@ -230,33 +242,16 @@ const WMSPickListDetailPage = () => {
 
   // Confirm pick
   const confirmPick = () => {
-    console.log('[CONFIRM] confirmPick called');
-    console.log('[CONFIRM] State:', {
-      pickingItem,
-      pickedLocationId,
-      caseVerified,
-      pickedQuantity
-    });
-
     if (!pickingItem) {
-      console.log('[CONFIRM] No pickingItem, returning');
       return;
     }
 
     // Use scanned location or fall back to suggested
     const locationId = pickedLocationId ?? pickingItem.suggestedLocationId;
-    console.log('[CONFIRM] Location ID resolved to:', locationId);
 
     if (!locationId) {
-      console.log('[CONFIRM] No locationId, returning');
       return;
     }
-
-    console.log('[CONFIRM] Calling mutation with:', {
-      pickListItemId: pickingItem.itemId,
-      pickedFromLocationId: locationId,
-      pickedQuantity: pickedQuantity,
-    });
 
     pickItemMutation.mutate({
       pickListItemId: pickingItem.itemId,

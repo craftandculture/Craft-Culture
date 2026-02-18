@@ -62,6 +62,8 @@ const WMSTransferPage = () => {
   const [transferQuantity, setTransferQuantity] = useState(1);
   const [destLocation, setDestLocation] = useState<LocationInfo | null>(null);
   const [error, setError] = useState<string>('');
+  const [isSourceScanning, setIsSourceScanning] = useState(false);
+  const [isDestScanning, setIsDestScanning] = useState(false);
   const [lastSuccess, setLastSuccess] = useState<{
     productName: string;
     quantity: number;
@@ -114,6 +116,7 @@ const WMSTransferPage = () => {
 
   const handleSourceScan = async (barcode: string) => {
     setError('');
+    setIsSourceScanning(true);
     try {
       const result = await trpcClient.wms.admin.operations.getLocationByBarcode.mutate({ barcode });
       setSourceLocation({
@@ -136,6 +139,8 @@ const WMSTransferPage = () => {
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Location not found');
+    } finally {
+      setIsSourceScanning(false);
     }
   };
 
@@ -147,6 +152,7 @@ const WMSTransferPage = () => {
 
   const handleDestScan = async (barcode: string) => {
     setError('');
+    setIsDestScanning(true);
     try {
       const result = await trpcClient.wms.admin.operations.getLocationByBarcode.mutate({ barcode });
 
@@ -164,6 +170,8 @@ const WMSTransferPage = () => {
       setStep('confirm');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Location not found');
+    } finally {
+      setIsDestScanning(false);
     }
   };
 
@@ -235,6 +243,7 @@ const WMSTransferPage = () => {
                 label="Source location barcode"
                 placeholder="LOC-..."
                 onScan={handleSourceScan}
+                isLoading={isSourceScanning}
                 error={error}
               />
             </CardContent>
@@ -364,6 +373,7 @@ const WMSTransferPage = () => {
                   label="Destination location barcode"
                   placeholder="LOC-..."
                   onScan={handleDestScan}
+                  isLoading={isDestScanning}
                   error={error}
                 />
               </CardContent>

@@ -320,6 +320,7 @@ const StockCheckPage = () => {
   const [searchedLwin18, setSearchedLwin18] = useState<string | null>(null);
 
   // Shared state
+  const [isProductScanning, setIsProductScanning] = useState(false);
   const [scanError, setScanError] = useState<string | null>(null);
   const [editingItem, setEditingItem] = useState<EditingItem | null>(null);
   const [adjustmentReason, setAdjustmentReason] = useState('');
@@ -466,26 +467,31 @@ const StockCheckPage = () => {
   const handleProductScan = useCallback(
     async (barcode: string) => {
       setScanError(null);
+      setIsProductScanning(true);
 
-      // Check if it's a pallet barcode - redirect to pallet detail page
-      if (barcode.startsWith('PALLET')) {
-        try {
-          const result = await trpcClient.wms.admin.pallets.getByBarcode.query({ barcode });
-          if (result.pallet) {
-            router.push(`/platform/admin/wms/pallets/${result.pallet.id}`);
+      try {
+        // Check if it's a pallet barcode - redirect to pallet detail page
+        if (barcode.startsWith('PALLET')) {
+          try {
+            const result = await trpcClient.wms.admin.pallets.getByBarcode.query({ barcode });
+            if (result.pallet) {
+              router.push(`/platform/admin/wms/pallets/${result.pallet.id}`);
+              return;
+            }
+          } catch {
+            setScanError(`Pallet not found: ${barcode}`);
             return;
           }
-        } catch {
-          setScanError(`Pallet not found: ${barcode}`);
-          return;
         }
-      }
 
-      const lwin18 = extractLwin18FromBarcode(barcode);
-      if (lwin18) {
-        setSearchedLwin18(lwin18);
-      } else {
-        setScanError('Could not extract product code from barcode');
+        const lwin18 = extractLwin18FromBarcode(barcode);
+        if (lwin18) {
+          setSearchedLwin18(lwin18);
+        } else {
+          setScanError('Could not extract product code from barcode');
+        }
+      } finally {
+        setIsProductScanning(false);
       }
     },
     [trpcClient, router],
@@ -720,6 +726,7 @@ const StockCheckPage = () => {
               label="Scan case barcode or enter SKU"
               placeholder="CASE-1002720... or 1002720..."
               onScan={handleProductScan}
+              isLoading={isProductScanning}
               error={scanError ?? undefined}
               showKeyboard={false}
             />

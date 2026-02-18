@@ -71,7 +71,7 @@ const SupportPage = () => {
             Help Center
           </Typography>
           <Typography variant="bodySm" colorRole="muted">
-            Everything you need to know about using Pocket Cellar
+            Everything you need to know about using our platform
           </Typography>
         </div>
 
@@ -104,7 +104,7 @@ const SupportPage = () => {
           {/* Getting Started */}
           <HelpSection id="getting-started" icon={IconRocket} title="Getting Started">
             <Typography variant="bodySm" colorRole="muted" className="leading-relaxed">
-              Welcome to Pocket Cellar, your personal wine concierge for the GCC region. Here is how
+              Welcome to Craft &amp; Culture, your personal wine concierge for the GCC region. Here is how
               to get started:
             </Typography>
 
