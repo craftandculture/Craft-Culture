@@ -215,25 +215,28 @@
     <div class="phase-number">1</div>
     <div>
       <div class="phase-title">Receiving</div>
-      <div class="phase-desc">Receive a shipment into the warehouse</div>
+      <div class="phase-desc">Unload pallet, verify count, scan destination bay, print labels, shelve directly</div>
     </div>
   </div>
 
-  <div class="note info"><strong>Available shipments:</strong> SHP-2026-0003 (Cult Wines) and HB-2026-0014 &mdash; both at "at_warehouse" status, ready to receive. No barcodes needed &mdash; you select from dropdowns.</div>
+  <div class="note info"><strong>Available shipments:</strong> SHP-2026-0003 (Cult Wines) and HB-2026-0014 &mdash; both at "at_warehouse" status, ready to receive. You scan a rack barcode to shelve directly &mdash; no need to stage at GOODS INBOUND first.</div>
 
   <div class="steps">
     <div class="step"><div class="step-num">1</div><div class="step-text"><span class="action">Navigate</span> to <code>/platform/admin/wms/receiving</code></div></div>
     <div class="step"><div class="step-num">2</div><div class="step-text"><span class="action">Select</span> shipment <code>SHP-2026-0003</code> or <code>HB-2026-0014</code></div></div>
-    <div class="step"><div class="step-num">3</div><div class="step-text"><span class="action">Select</span> receiving location: <code>GOODS INBOUND</code> (or <span class="scan">scan</span> <code>LOC-GOODS INBOUND</code>)</div></div>
-    <div class="step"><div class="step-num">4</div><div class="step-text"><span class="action">Enter</span> received quantities for each line item</div></div>
-    <div class="step"><div class="step-num">5</div><div class="step-text"><span class="action">Click</span> "Receive Shipment"</div></div>
-    <div class="step"><div class="step-num">6</div><div class="step-text"><span class="check">Verify:</span> Success message, stock created at GOODS INBOUND</div></div>
+    <div class="step"><div class="step-num">3</div><div class="step-text">For each product in the shipment:</div></div>
+    <div class="step"><div class="step-num">3a</div><div class="step-text"><span class="action">Verify</span> case count &mdash; enter how many cases you actually received</div></div>
+    <div class="step"><div class="step-num">3b</div><div class="step-text"><span class="scan">Scan destination bay</span> barcode (e.g. <code>LOC-A-02-01</code>) &mdash; this is where the cases go on the shelf</div></div>
+    <div class="step"><div class="step-num">3c</div><div class="step-text"><span class="action">Print labels</span> &mdash; case labels print for that bay</div></div>
+    <div class="step"><div class="step-num">3d</div><div class="step-text"><span class="action">Confirm &amp; Save</span> &mdash; stock created at the scanned bay</div></div>
+    <div class="step"><div class="step-num">4</div><div class="step-text">Repeat step 3 for each product (different products can go to different bays)</div></div>
+    <div class="step"><div class="step-num">5</div><div class="step-text"><span class="action">Finalize</span> &mdash; shipment marked as delivered</div></div>
   </div>
 
   <ul class="checklist">
-    <li>New stock rows appear at GOODS INBOUND (check Stock page)</li>
-    <li>Case labels created (check Labels page or Movements)</li>
-    <li>Movement record with type "receive"</li>
+    <li>Stock rows created directly at scanned rack locations (not GOODS INBOUND)</li>
+    <li>Case labels printed with correct bay assignment</li>
+    <li>Movement records with type "receive"</li>
     <li>Shipment status changed to "delivered"</li>
   </ul>
 
@@ -247,11 +250,11 @@
     <div class="phase-number">2</div>
     <div>
       <div class="phase-title">Transfer</div>
-      <div class="phase-desc">Move stock between locations using location + case barcodes</div>
+      <div class="phase-desc">Move existing stock between rack locations (reorganise shelves, consolidate, etc.)</div>
     </div>
   </div>
 
-  <div class="note info"><strong>Uses barcodes above.</strong> Scan a source location to see stock, select quantity, then scan a destination. Case barcodes are optional (only needed if the transfer page prompts for case scanning).</div>
+  <div class="note info"><strong>For reorganising existing stock.</strong> Scan a source location to see what's there, select quantity, then scan a destination rack. This is separate from receiving &mdash; use it to move stock between shelves, consolidate, or clear a bay.</div>
 
   <h3>Test A: Bulk transfer by location scan</h3>
   <div class="steps">
@@ -360,7 +363,7 @@
 <div class="steps">
   <div class="step"><div class="step-num">1</div><div class="step-text"><span class="action">Stock Overview</span> <code>/platform/admin/wms/stock</code> &mdash; totals should match movements</div></div>
   <div class="step"><div class="step-num">2</div><div class="step-text"><span class="action">Movements</span> <code>/platform/admin/wms/movements</code> &mdash; should see receive, transfer, pick entries</div></div>
-  <div class="step"><div class="step-num">3</div><div class="step-text"><span class="action">Location Detail</span> &mdash; click on A-02-01 / A-03-01 to verify transferred cases</div></div>
+  <div class="step"><div class="step-num">3</div><div class="step-text"><span class="action">Location Detail</span> &mdash; click on rack locations to verify received and transferred cases</div></div>
   <div class="step"><div class="step-num">4</div><div class="step-text"><span class="action">Dispatch List</span> <code>/platform/admin/wms/dispatch</code> &mdash; new batch visible</div></div>
 </div>
 
