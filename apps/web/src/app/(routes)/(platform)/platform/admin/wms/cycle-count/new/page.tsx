@@ -58,20 +58,15 @@ const NewCycleCountPage = () => {
         });
 
         setLocation({
-          id: result.id,
-          locationCode: result.locationCode,
-          locationType: result.locationType,
-        });
-
-        // Get stock at this location
-        const stockResult = await trpcClient.wms.admin.operations.getStockAtLocation.query({
-          locationId: result.id,
+          id: result.location.id,
+          locationCode: result.location.locationCode,
+          locationType: result.location.locationType,
         });
 
         setStockSummary({
-          totalCases: stockResult.totalCases,
-          totalAvailable: stockResult.totalAvailable,
-          stockCount: stockResult.stock.length,
+          totalCases: result.totalCases,
+          totalAvailable: result.totalCases,
+          stockCount: result.stock.length,
         });
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Failed to look up location';
