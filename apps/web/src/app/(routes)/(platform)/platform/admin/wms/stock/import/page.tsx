@@ -26,6 +26,7 @@ interface ParsedItem {
   unit: 'case' | 'bottle';
   bottlesPerCase: number;
   bottleSizeMl: number;
+  locationCode: string;
 }
 
 /**
@@ -102,6 +103,10 @@ const WMSStockImportPage = () => {
         const nameIndex = headers.indexOf('item_name');
         const qtyIndex = headers.indexOf('quantity_available');
         const unitIndex = headers.indexOf('unit');
+        const locationIndex = Math.max(
+          headers.indexOf('location_code'),
+          headers.indexOf('location'),
+        );
 
         if (nameIndex === -1 || qtyIndex === -1) {
           setParseError('Missing required columns: item_name, quantity_available');
@@ -147,6 +152,10 @@ const WMSStockImportPage = () => {
             }
           }
 
+          const locationCode = locationIndex >= 0
+            ? row[locationIndex]?.toString().trim() ?? ''
+            : '';
+
           items.push({
             sku,
             productName,
@@ -154,6 +163,7 @@ const WMSStockImportPage = () => {
             unit,
             bottlesPerCase,
             bottleSizeMl,
+            locationCode,
           });
         }
 
@@ -175,30 +185,34 @@ const WMSStockImportPage = () => {
     }
   };
 
+  const caseItems = parsedItems.filter((item) => item.unit === 'case');
+  const bottleItems = parsedItems.filter((item) => item.unit === 'bottle');
+  const totalCases = caseItems.reduce((sum, item) => sum + item.quantity, 0);
+  const hasLocationColumn = caseItems.some((item) => item.locationCode);
+
   const handleImport = () => {
-    if (!selectedOwnerId || !selectedLocationId || parsedItems.length === 0) return;
+    if (!selectedOwnerId || parsedItems.length === 0) return;
+    // Need either per-row locations or a global location selected
+    if (!hasLocationColumn && !selectedLocationId) return;
 
     // Filter to only cases (bottles handled separately if needed)
-    const caseItems = parsedItems.filter((item) => item.unit === 'case');
+    const filteredCaseItems = parsedItems.filter((item) => item.unit === 'case');
 
     importMutation.mutate({
       ownerId: selectedOwnerId,
-      locationId: selectedLocationId,
-      items: caseItems.map((item) => ({
+      locationId: selectedLocationId || undefined,
+      items: filteredCaseItems.map((item) => ({
         sku: item.sku,
         productName: item.productName,
         quantity: item.quantity,
         unit: item.unit,
         bottlesPerCase: item.bottlesPerCase,
         bottleSizeMl: item.bottleSizeMl,
+        locationCode: item.locationCode || undefined,
       })),
       notes: `Imported from ${file?.name}`,
     });
   };
-
-  const caseItems = parsedItems.filter((item) => item.unit === 'case');
-  const bottleItems = parsedItems.filter((item) => item.unit === 'bottle');
-  const totalCases = caseItems.reduce((sum, item) => sum + item.quantity, 0);
 
   return (
     <div className="container mx-auto max-w-4xl px-4 py-6 sm:px-6 sm:py-8">
@@ -290,6 +304,36 @@ const WMSStockImportPage = () => {
                   <Typography variant="bodyXs" colorRole="muted">Bottle Items (skipped)</Typography>
                 </div>
               </div>
+              {/* Location distribution stats */}
+              {hasLocationColumn && (
+                <div className="mb-4 rounded-lg border border-border-primary p-3">
+                  <Typography variant="bodyXs" className="mb-2 font-medium">
+                    Location Distribution
+                  </Typography>
+                  <div className="flex flex-wrap gap-2">
+                    {Object.entries(
+                      caseItems.reduce<Record<string, number>>((acc, item) => {
+                        const loc = item.locationCode || 'No location';
+                        acc[loc] = (acc[loc] ?? 0) + item.quantity;
+                        return acc;
+                      }, {}),
+                    )
+                      .sort(([a], [b]) => a.localeCompare(b))
+                      .map(([loc, qty]) => (
+                        <span
+                          key={loc}
+                          className={`rounded-full px-2 py-0.5 text-xs ${
+                            loc === 'No location'
+                              ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'
+                              : 'bg-fill-secondary text-text-primary'
+                          }`}
+                        >
+                          {loc}: {qty} cases
+                        </span>
+                      ))}
+                  </div>
+                </div>
+              )}
               <div className="max-h-64 overflow-y-auto rounded border border-border-primary">
                 <table className="w-full text-sm">
                   <thead className="bg-fill-secondary sticky top-0">
@@ -297,6 +341,9 @@ const WMSStockImportPage = () => {
                       <th className="px-3 py-2 text-left">Product</th>
                       <th className="px-3 py-2 text-center">Qty</th>
                       <th className="px-3 py-2 text-center">Pack</th>
+                      {hasLocationColumn && (
+                        <th className="px-3 py-2 text-center">Location</th>
+                      )}
                     </tr>
                   </thead>
                   <tbody>
@@ -307,11 +354,21 @@ const WMSStockImportPage = () => {
                         <td className="px-3 py-2 text-center">
                           {item.bottlesPerCase}x{item.bottleSizeMl}ml
                         </td>
+                        {hasLocationColumn && (
+                          <td className="px-3 py-2 text-center">
+                            {item.locationCode || (
+                              <span className="text-red-500">-</span>
+                            )}
+                          </td>
+                        )}
                       </tr>
                     ))}
                     {caseItems.length > 50 && (
                       <tr className="border-t border-border-primary">
-                        <td colSpan={3} className="px-3 py-2 text-center text-text-muted">
+                        <td
+                          colSpan={hasLocationColumn ? 4 : 3}
+                          className="px-3 py-2 text-center text-text-muted"
+                        >
                           ... and {caseItems.length - 50} more items
                         </td>
                       </tr>
@@ -350,26 +407,37 @@ const WMSStockImportPage = () => {
                 </div>
                 <div>
                   <Typography variant="bodyXs" className="mb-1 font-medium">
-                    Receiving Location
+                    {hasLocationColumn ? 'Fallback Location (optional)' : 'Receiving Location'}
                   </Typography>
                   <select
                     value={selectedLocationId}
                     onChange={(e) => setSelectedLocationId(e.target.value)}
                     className="w-full rounded-lg border border-border-primary bg-fill-primary px-3 py-2"
                   >
-                    <option value="">Select location...</option>
+                    <option value="">
+                      {hasLocationColumn ? 'Using per-row locations...' : 'Select location...'}
+                    </option>
                     {locationsData?.locations.map((location) => (
                       <option key={location.id} value={location.id}>
-                        {location.locationCode} - {location.name}
+                        {location.locationCode}
                       </option>
                     ))}
                   </select>
+                  {hasLocationColumn && (
+                    <Typography variant="bodyXs" colorRole="muted" className="mt-1">
+                      CSV has location_code column. Global location is only used for rows without one.
+                    </Typography>
+                  )}
                 </div>
               </div>
               <Button
                 variant="default"
                 onClick={handleImport}
-                disabled={!selectedOwnerId || !selectedLocationId || importMutation.isPending}
+                disabled={
+                  !selectedOwnerId ||
+                  (!hasLocationColumn && !selectedLocationId) ||
+                  importMutation.isPending
+                }
                 className="w-full"
               >
                 <ButtonContent iconLeft={importMutation.isPending ? IconLoader2 : IconPackageImport}>
