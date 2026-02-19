@@ -120,6 +120,7 @@ export const POST = async (request: Request) => {
       const blob = await put(blobFilename, pdfBuffer, {
         access: 'public',
         contentType: 'application/pdf',
+        allowOverwrite: true,
       });
 
       // Update the PDF URL
