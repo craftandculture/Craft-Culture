@@ -107,12 +107,33 @@ const CompetitorUpload = () => {
                 'Description',
                 'Item',
                 'Wine Name',
+                'Château / Estate / Brand',
+                'Chateau / Estate / Brand',
+                'Château / Estate / Brand_1',
+                'Chateau',
+                'Estate',
+                'Brand',
               ]) ?? '';
 
             if (!rawProductName) continue;
 
+            // Skip section header rows (e.g. "CHAMPAGNE", "St Estephe") that have
+            // a name but no price, vintage, country, or product code
+            const hasPrice = getNum([
+              'Price AED', 'AED', 'Selling Price AED', 'Price (AED)',
+              'Selling Price Bottle', 'Selling Price', 'Price', 'Unit Price',
+              'Al Hamra AED Price incl VAT', 'Al Hamra AED Price ex VAT',
+              'AED Price incl VAT', 'AED Price ex VAT',
+              'Price USD', 'USD',
+            ]);
+            const hasVintage = get(['Vintage', 'Year', 'Yr']);
+            const hasCountry = get(['Country', 'Origin']);
+            const hasProductCode = get(['Product Code', 'SKU', 'Code', 'Item Code']);
+
+            if (!hasPrice && !hasVintage && !hasCountry && !hasProductCode) continue;
+
             // Extract vintage from wine name if no dedicated Vintage column
-            let vintage = get(['Vintage', 'Year', 'Yr']);
+            let vintage = hasVintage;
             let cleanedProductName = rawProductName;
 
             if (!vintage) {
@@ -129,6 +150,7 @@ const CompetitorUpload = () => {
               'Bottle Size',
               'BottleSize',
               'Format',
+              'Format CL',
               'Volume',
             ]);
 
@@ -160,6 +182,10 @@ const CompetitorUpload = () => {
                 'Selling Price',
                 'Price',
                 'Unit Price',
+                'Al Hamra AED Price incl VAT',
+                'Al Hamra AED Price ex VAT',
+                'AED Price incl VAT',
+                'AED Price ex VAT',
               ]),
               sellingPriceUsd: getNum(['Price USD', 'USD']),
               quantity: getNum([
@@ -169,6 +195,7 @@ const CompetitorUpload = () => {
                 'Available',
                 'Bottle volume available',
                 'Volume Available',
+                'RAK shop stocks',
               ]),
             });
           }
