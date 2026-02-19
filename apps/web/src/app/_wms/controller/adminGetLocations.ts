@@ -53,6 +53,7 @@ const adminGetLocations = adminProcedure
         bay: wmsLocations.bay,
         level: wmsLocations.level,
         locationType: wmsLocations.locationType,
+        storageMethod: wmsLocations.storageMethod,
         capacityCases: wmsLocations.capacityCases,
         requiresForklift: wmsLocations.requiresForklift,
         isActive: wmsLocations.isActive,
