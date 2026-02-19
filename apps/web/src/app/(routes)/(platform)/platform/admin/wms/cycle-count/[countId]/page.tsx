@@ -317,51 +317,52 @@ const CycleCountDetailPage = () => {
                 return (
                   <Card key={item.id} className={hasBeenCounted ? 'border-green-200 dark:border-green-800' : ''}>
                     <CardContent className="p-4">
-                      <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-center gap-2">
+                        {hasBeenCounted && (
+                          <Icon icon={IconCheck} size="sm" className="text-green-600" />
+                        )}
                         <div className="flex-1">
-                          <div className="flex items-center gap-2">
-                            {hasBeenCounted && (
-                              <Icon icon={IconCheck} size="xs" className="text-green-600" />
-                            )}
-                            <Typography variant="bodySm" className="font-medium">
-                              {item.productName}
-                            </Typography>
-                          </div>
+                          <Typography variant="bodySm" className="font-medium">
+                            {item.productName}
+                          </Typography>
                           <Typography variant="bodySm" colorRole="muted" className="font-mono text-xs">
                             {item.lwin18}
                           </Typography>
-                          <Typography variant="bodySm" colorRole="muted">
-                            Expected: {item.expectedQuantity} cases
-                          </Typography>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="number"
-                            min={0}
-                            inputMode="numeric"
-                            value={currentValue}
-                            onChange={(e) =>
-                              setCountedValues((prev) => ({
-                                ...prev,
-                                [item.id]: e.target.value,
-                              }))
-                            }
-                            placeholder="Qty"
-                            className="w-20 rounded-lg border border-border-muted bg-fill-primary p-2 text-center text-sm font-semibold focus:border-border-brand focus:outline-none"
-                          />
-                          <Button
-                            size="sm"
-                            variant={hasBeenCounted ? 'ghost' : 'primary'}
-                            onClick={() => handleSaveItem(item.id)}
-                            disabled={isSaving || currentValue === ''}
-                          >
-                            {isSaving ? (
-                              <Icon icon={IconLoader2} size="xs" className="animate-spin" />
-                            ) : (
-                              <Icon icon={IconCheck} size="xs" />
-                            )}
-                          </Button>
-                        </div>
+                      </div>
+                      <div className="mt-3 flex items-center gap-3">
+                        <Typography variant="bodySm" colorRole="muted" className="whitespace-nowrap">
+                          Expected: {item.expectedQuantity}
+                        </Typography>
+                        <input
+                          type="number"
+                          min={0}
+                          inputMode="numeric"
+                          value={currentValue}
+                          onChange={(e) =>
+                            setCountedValues((prev) => ({
+                              ...prev,
+                              [item.id]: e.target.value,
+                            }))
+                          }
+                          placeholder="Qty"
+                          className="h-12 w-24 rounded-lg border border-border-muted bg-fill-primary px-3 text-center text-lg font-semibold focus:border-border-brand focus:outline-none"
+                        />
+                        <button
+                          onClick={() => handleSaveItem(item.id)}
+                          disabled={isSaving || currentValue === ''}
+                          className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-lg transition-colors disabled:opacity-40 ${
+                            hasBeenCounted
+                              ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                              : 'bg-fill-brand text-white'
+                          }`}
+                        >
+                          {isSaving ? (
+                            <Icon icon={IconLoader2} size="md" className="animate-spin" />
+                          ) : (
+                            <Icon icon={IconCheck} size="md" />
+                          )}
+                        </button>
                       </div>
                     </CardContent>
                   </Card>
