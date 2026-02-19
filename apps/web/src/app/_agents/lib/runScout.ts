@@ -135,6 +135,7 @@ const runScout = async () => {
         year: products.year,
         offerPrice: productOffers.price,
         offerCurrency: productOffers.currency,
+        unitCount: productOffers.unitCount,
       })
       .from(products)
       .leftJoin(productOffers, eq(productOffers.productId, products.id))
@@ -159,10 +160,16 @@ const runScout = async () => {
       .join('\n');
 
     const catalogCtx = ourProducts
-      .map(
-        (p) =>
-          `${p.name} (${p.year ?? 'NV'}) by ${p.producer ?? 'Unknown'} — ${p.offerPrice ? `${p.offerPrice} ${p.offerCurrency}` : 'no offer'}${p.lwin18 ? ` [LWIN: ${p.lwin18}]` : ''}`,
-      )
+      .map((p) => {
+        let priceStr = 'no offer';
+        if (p.offerPrice) {
+          const perBottle = p.unitCount && p.unitCount > 1
+            ? (p.offerPrice / p.unitCount).toFixed(2)
+            : p.offerPrice.toFixed(2);
+          priceStr = `${perBottle} ${p.offerCurrency}/bottle${p.unitCount && p.unitCount > 1 ? ` (${p.offerPrice} per ${p.unitCount}-pack)` : ''}`;
+        }
+        return `${p.name} (${p.year ?? 'NV'}) by ${p.producer ?? 'Unknown'} — ${priceStr}${p.lwin18 ? ` [LWIN: ${p.lwin18}]` : ''}`;
+      })
       .join('\n');
 
     const stockCtx = stockSummary
@@ -181,7 +188,10 @@ CRITICAL CONTEXT: C&C is a young company competing against established players (
 Your job is to analyze competitor pricing and identify where C&C can win on price — either by undercutting competitors on wines we already carry, or by sourcing wines they sell at high margins and offering better prices.
 
 Key context:
-- Prices are in AED (UAE Dirham) or USD. 1 USD ≈ 3.67 AED
+- ALL prices (both competitor and ours) are PER BOTTLE. Never compare case prices vs bottle prices
+- Competitor prices are always per-bottle retail in AED
+- Our catalog prices are shown as per-bottle (already normalized from case pricing)
+- Prices are in AED (UAE Dirham) or USD. 1 USD ≈ 3.67 AED. Convert USD to AED when comparing
 - Match products using LWIN codes when available, otherwise by name/vintage similarity
 - Focus on commercially significant price gaps (>10% difference)
 - Prioritize high-value wines and popular regions (Burgundy, Bordeaux, Champagne, Tuscany, Piedmont)
@@ -192,11 +202,12 @@ Key context:
         {
           role: 'user',
           content: `Analyze today's competitive pricing landscape. Focus on where we can WIN on price.
+IMPORTANT: All prices below are PER BOTTLE. Compare bottle-to-bottle only.
 
-COMPETITOR WINE LISTS (${competitors.length} wines):
+COMPETITOR WINE LISTS — per-bottle retail prices (${competitors.length} wines):
 ${competitorCtx}
 
-OUR CATALOG (${ourProducts.length} products):
+OUR CATALOG — per-bottle prices (${ourProducts.length} products):
 ${catalogCtx}
 
 OUR CURRENT STOCK (${stockSummary.length} SKUs):
