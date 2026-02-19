@@ -18,10 +18,10 @@ const scoutOutputSchema = z.object({
   priceGaps: z.array(
     z.object({
       productName: z.string(),
-      ourPriceAed: z.number(),
-      competitorPriceAed: z.number(),
+      ourCostAed: z.number(),
+      competitorRetailAed: z.number(),
       competitorName: z.string(),
-      gapPercent: z.number(),
+      marginPercent: z.number(),
       recommendation: z.string(),
     }),
   ),
@@ -53,12 +53,11 @@ const buildMarkdown = (data: z.infer<typeof scoutOutputSchema>) => {
 
   if (data.priceGaps.length > 0) {
     lines.push('## Price Gaps\n');
-    lines.push('| Product | Our Price | Competitor | Their Price | Gap |');
-    lines.push('|---------|----------|------------|------------|-----|');
+    lines.push('| Product | Our IB Cost | Competitor Retail | Competitor | Margin |');
+    lines.push('|---------|-----------|-----------------|------------|--------|');
     for (const gap of data.priceGaps) {
-      const sign = gap.gapPercent > 0 ? '+' : '';
       lines.push(
-        `| ${gap.productName} | ${gap.ourPriceAed.toFixed(0)} AED | ${gap.competitorName} | ${gap.competitorPriceAed.toFixed(0)} AED | ${sign}${gap.gapPercent.toFixed(1)}% |`,
+        `| ${gap.productName} | ${gap.ourCostAed.toFixed(0)} AED | ${gap.competitorRetailAed.toFixed(0)} AED | ${gap.competitorName} | ${gap.marginPercent.toFixed(0)}% |`,
       );
     }
     lines.push('');
@@ -159,14 +158,23 @@ const runScout = async () => {
       )
       .join('\n');
 
+    // Currency to AED conversion rates
+    const toAed: Record<string, number> = {
+      AED: 1,
+      USD: 3.67,
+      GBP: 4.67,
+      EUR: 4.00,
+    };
+
     const catalogCtx = ourProducts
       .map((p) => {
         let priceStr = 'no offer';
-        if (p.offerPrice) {
-          const perBottle = p.unitCount && p.unitCount > 1
-            ? (p.offerPrice / p.unitCount).toFixed(2)
-            : p.offerPrice.toFixed(2);
-          priceStr = `${perBottle} ${p.offerCurrency}/bottle${p.unitCount && p.unitCount > 1 ? ` (${p.offerPrice} per ${p.unitCount}-pack)` : ''}`;
+        if (p.offerPrice && p.offerCurrency) {
+          const units = p.unitCount && p.unitCount > 0 ? p.unitCount : 1;
+          const perBottle = p.offerPrice / units;
+          const rate = toAed[p.offerCurrency.toUpperCase()] ?? 3.67;
+          const perBottleAed = perBottle * rate;
+          priceStr = `IB cost ${perBottleAed.toFixed(0)} AED/bottle (${perBottle.toFixed(0)} ${p.offerCurrency} x${units})`;
         }
         return `${p.name} (${p.year ?? 'NV'}) by ${p.producer ?? 'Unknown'} — ${priceStr}${p.lwin18 ? ` [LWIN: ${p.lwin18}]` : ''}`;
       })
@@ -188,10 +196,12 @@ CRITICAL CONTEXT: C&C is a young company competing against established players (
 Your job is to analyze competitor pricing and identify where C&C can win on price — either by undercutting competitors on wines we already carry, or by sourcing wines they sell at high margins and offering better prices.
 
 Key context:
-- ALL prices (both competitor and ours) are PER BOTTLE. Never compare case prices vs bottle prices
-- Competitor prices are always per-bottle retail in AED
-- Our catalog prices are shown as per-bottle (already normalized from case pricing)
-- Prices are in AED (UAE Dirham) or USD. 1 USD ≈ 3.67 AED. Convert USD to AED when comparing
+- ALL prices are PER BOTTLE in AED. Never compare case prices vs bottle prices
+- Competitor prices = per-bottle RETAIL price in AED (what they charge customers)
+- Our prices = per-bottle IN-BOND COST in AED (what we pay, already converted from GBP/EUR)
+- The gap between our IB cost and their retail price is our potential GROSS MARGIN
+- A healthy wine margin in UAE is 30-50%. If competitor retails at 500 AED and our IB cost is 200 AED, that's a 60% margin — excellent opportunity
+- 1 USD ≈ 3.67 AED, 1 GBP ≈ 4.67 AED. All conversions are already done for you
 - Match products using LWIN codes when available, otherwise by name/vintage similarity
 - Focus on commercially significant price gaps (>10% difference)
 - Prioritize high-value wines and popular regions (Burgundy, Bordeaux, Champagne, Tuscany, Piedmont)
@@ -202,12 +212,12 @@ Key context:
         {
           role: 'user',
           content: `Analyze today's competitive pricing landscape. Focus on where we can WIN on price.
-IMPORTANT: All prices below are PER BOTTLE. Compare bottle-to-bottle only.
+IMPORTANT: All prices below are PER BOTTLE in AED.
 
-COMPETITOR WINE LISTS — per-bottle retail prices (${competitors.length} wines):
+COMPETITOR RETAIL PRICES — what they charge customers (${competitors.length} wines):
 ${competitorCtx}
 
-OUR CATALOG — per-bottle prices (${ourProducts.length} products):
+OUR IN-BOND COST — what we pay per bottle in AED (${ourProducts.length} products):
 ${catalogCtx}
 
 OUR CURRENT STOCK (${stockSummary.length} SKUs):
