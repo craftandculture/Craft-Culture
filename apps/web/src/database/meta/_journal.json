@@ -169,6 +169,13 @@
       "when": 1771389715045,
       "tag": "0023_fair_rocket_raccoon",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1771494299617,
+      "tag": "0024_fuzzy_cobalt_man",
+      "breakpoints": true
     }
   ]
 }
