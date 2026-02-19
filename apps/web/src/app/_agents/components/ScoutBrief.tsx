@@ -8,7 +8,7 @@ import {
   IconTargetArrow,
   IconTrendingUp,
 } from '@tabler/icons-react';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import Badge from '@/app/_ui/components/Badge/Badge';
 import Button from '@/app/_ui/components/Button/Button';
@@ -60,9 +60,19 @@ const priorityColor = {
  */
 const ScoutBrief = () => {
   const api = useTRPC();
+  const queryClient = useQueryClient();
   const { data, isLoading, refetch } = useQuery({
     ...api.agents.getLatestBrief.queryOptions({ agentId: 'scout' }),
     refetchInterval: 60000,
+  });
+
+  const triggerMutation = useMutation({
+    ...api.agents.triggerAgent.mutationOptions(),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: api.agents.getLatestBrief.queryKey({ agentId: 'scout' }),
+      });
+    },
   });
 
   const brief = data?.[0];
@@ -86,10 +96,23 @@ const ScoutBrief = () => {
           <Typography variant="headingSm" className="mb-2">
             No Scout Brief Yet
           </Typography>
-          <Typography variant="bodySm" colorRole="muted">
+          <Typography variant="bodySm" colorRole="muted" className="mb-4">
             The Scout runs daily at 06:00 GST. Upload competitor wine lists in the Upload tab to
             enable competitive analysis.
           </Typography>
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={() => triggerMutation.mutate({ agentId: 'scout' })}
+            disabled={triggerMutation.isPending}
+          >
+            {triggerMutation.isPending ? 'Triggering...' : 'Run Now'}
+          </Button>
+          {triggerMutation.isSuccess && (
+            <Typography variant="bodyXs" colorRole="muted" className="mt-2">
+              Agent triggered. Results will appear shortly.
+            </Typography>
+          )}
         </CardContent>
       </Card>
     );
