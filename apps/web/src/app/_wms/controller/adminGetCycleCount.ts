@@ -6,6 +6,7 @@ import {
   wmsCycleCountItems,
   wmsCycleCounts,
   wmsLocations,
+  wmsStock,
 } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
@@ -61,8 +62,11 @@ const adminGetCycleCount = adminProcedure
         discrepancy: wmsCycleCountItems.discrepancy,
         notes: wmsCycleCountItems.notes,
         countedAt: wmsCycleCountItems.countedAt,
+        bottleSize: wmsStock.bottleSize,
+        caseConfig: wmsStock.caseConfig,
       })
       .from(wmsCycleCountItems)
+      .leftJoin(wmsStock, eq(wmsCycleCountItems.stockId, wmsStock.id))
       .where(eq(wmsCycleCountItems.cycleCountId, countId))
       .orderBy(wmsCycleCountItems.productName);
 

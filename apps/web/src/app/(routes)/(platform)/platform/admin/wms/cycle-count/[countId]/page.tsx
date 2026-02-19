@@ -168,6 +168,13 @@ const CycleCountDetailPage = () => {
     );
   }
 
+  const formatPack = (item: { caseConfig?: number | null; bottleSize?: string | null }) => {
+    const parts: string[] = [];
+    if (item.caseConfig) parts.push(`${item.caseConfig}x`);
+    if (item.bottleSize) parts.push(item.bottleSize);
+    return parts.length > 0 ? parts.join('') : null;
+  };
+
   const status = data.status ?? 'pending';
   const countedCount = data.items.filter((i) => i.countedQuantity !== null).length;
   const totalItems = data.items.length;
@@ -263,9 +270,16 @@ const CycleCountDetailPage = () => {
                       <div key={item.id} className="flex items-center justify-between rounded-lg bg-fill-secondary p-3">
                         <div>
                           <Typography variant="bodySm" className="font-medium">{item.productName}</Typography>
-                          <Typography variant="bodySm" colorRole="muted" className="font-mono text-xs">
-                            {item.lwin18}
-                          </Typography>
+                          <div className="flex items-center gap-2">
+                            <Typography variant="bodySm" colorRole="muted" className="font-mono text-xs">
+                              {item.lwin18}
+                            </Typography>
+                            {formatPack(item) && (
+                              <Typography variant="bodySm" colorRole="muted" className="text-xs">
+                                {formatPack(item)}
+                              </Typography>
+                            )}
+                          </div>
                         </div>
                         <Typography variant="bodySm" className="font-semibold">
                           {item.expectedQuantity} cases
@@ -325,9 +339,16 @@ const CycleCountDetailPage = () => {
                           <Typography variant="bodySm" className="font-medium">
                             {item.productName}
                           </Typography>
-                          <Typography variant="bodySm" colorRole="muted" className="font-mono text-xs">
-                            {item.lwin18}
-                          </Typography>
+                          <div className="flex items-center gap-2">
+                            <Typography variant="bodySm" colorRole="muted" className="font-mono text-xs">
+                              {item.lwin18}
+                            </Typography>
+                            {formatPack(item) && (
+                              <Typography variant="bodySm" colorRole="muted" className="text-xs">
+                                {formatPack(item)}
+                              </Typography>
+                            )}
+                          </div>
                         </div>
                       </div>
                       <div className="mt-3 flex items-center gap-3">
@@ -438,9 +459,16 @@ const CycleCountDetailPage = () => {
                               <Typography variant="bodySm" className="font-medium">
                                 {item.productName}
                               </Typography>
-                              <Typography variant="bodySm" colorRole="muted" className="font-mono text-xs">
-                                {item.lwin18}
-                              </Typography>
+                              <div className="flex items-center gap-2">
+                                <Typography variant="bodySm" colorRole="muted" className="font-mono text-xs">
+                                  {item.lwin18}
+                                </Typography>
+                                {formatPack(item) && (
+                                  <Typography variant="bodySm" colorRole="muted" className="text-xs">
+                                    {formatPack(item)}
+                                  </Typography>
+                                )}
+                              </div>
                               <div className="mt-1 flex gap-4 text-xs">
                                 <span className="text-text-muted">Expected: {item.expectedQuantity}</span>
                                 <span className="font-medium">Counted: {item.countedQuantity}</span>
@@ -534,9 +562,16 @@ const CycleCountDetailPage = () => {
                       <div key={item.id} className="flex items-center justify-between rounded-lg bg-fill-secondary p-3">
                         <div>
                           <Typography variant="bodySm" className="font-medium">{item.productName}</Typography>
-                          <Typography variant="bodySm" colorRole="muted" className="font-mono text-xs">
-                            {item.lwin18}
-                          </Typography>
+                          <div className="flex items-center gap-2">
+                            <Typography variant="bodySm" colorRole="muted" className="font-mono text-xs">
+                              {item.lwin18}
+                            </Typography>
+                            {formatPack(item) && (
+                              <Typography variant="bodySm" colorRole="muted" className="text-xs">
+                                {formatPack(item)}
+                              </Typography>
+                            )}
+                          </div>
                         </div>
                         <div className="text-right">
                           <Typography variant="bodySm" className="font-semibold">
