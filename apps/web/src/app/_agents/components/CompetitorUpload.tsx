@@ -1,7 +1,7 @@
 'use client';
 
 import { IconFileSpreadsheet, IconUpload } from '@tabler/icons-react';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { useCallback, useRef, useState } from 'react';
 import * as XLSX from 'xlsx';
 
@@ -10,7 +10,7 @@ import Button from '@/app/_ui/components/Button/Button';
 import Card from '@/app/_ui/components/Card/Card';
 import CardContent from '@/app/_ui/components/Card/CardContent';
 import Typography from '@/app/_ui/components/Typography/Typography';
-import useTRPC from '@/lib/trpc/browser';
+import useTRPC, { useTRPCClient } from '@/lib/trpc/browser';
 
 interface ParsedRow {
   productName: string;
@@ -26,27 +26,31 @@ interface ParsedRow {
 /**
  * Competitor wine list upload - parse CSV/Excel client-side and upload structured data
  */
+const UPLOAD_CHUNK_SIZE = 500;
+
 const CompetitorUpload = () => {
   const api = useTRPC();
+  const trpcClient = useTRPCClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [competitorName, setCompetitorName] = useState('');
   const [parsedRows, setParsedRows] = useState<ParsedRow[]>([]);
   const [fileName, setFileName] = useState('');
   const [parseError, setParseError] = useState('');
+  const [uploadProgress, setUploadProgress] = useState<{
+    current: number;
+    total: number;
+    matched: number;
+    unmatched: number;
+  } | null>(null);
+  const [uploadResult, setUploadResult] = useState<{
+    matched: number;
+    unmatched: number;
+  } | null>(null);
+  const [uploadError, setUploadError] = useState('');
 
   // Fetch existing competitor wines (enough to summarize by competitor)
   const { data: existingWines, refetch: refetchWines } = useQuery({
     ...api.agents.getCompetitorWines.queryOptions({ limit: 500 }),
-  });
-
-  const uploadMutation = useMutation({
-    ...api.agents.uploadCompetitorList.mutationOptions(),
-    onSuccess: () => {
-      setParsedRows([]);
-      setFileName('');
-      setCompetitorName('');
-      void refetchWines();
-    },
   });
 
   const handleFileSelect = useCallback(
@@ -218,13 +222,51 @@ const CompetitorUpload = () => {
     [],
   );
 
-  const handleUpload = () => {
+  const handleUpload = async () => {
     if (!competitorName.trim() || parsedRows.length === 0) return;
-    uploadMutation.mutate({
-      competitorName: competitorName.trim(),
-      source: fileName,
-      rows: parsedRows,
-    });
+
+    const chunks: ParsedRow[][] = [];
+    for (let i = 0; i < parsedRows.length; i += UPLOAD_CHUNK_SIZE) {
+      chunks.push(parsedRows.slice(i, i + UPLOAD_CHUNK_SIZE));
+    }
+
+    setUploadError('');
+    setUploadResult(null);
+    setUploadProgress({ current: 0, total: parsedRows.length, matched: 0, unmatched: 0 });
+
+    let totalMatched = 0;
+    let totalUnmatched = 0;
+
+    try {
+      for (let i = 0; i < chunks.length; i++) {
+        const result = await trpcClient.agents.uploadCompetitorList.mutate({
+          competitorName: competitorName.trim(),
+          source: fileName,
+          rows: chunks[i]!,
+          appendMode: i > 0,
+        });
+
+        totalMatched += result.matched;
+        totalUnmatched += result.unmatched;
+
+        setUploadProgress({
+          current: Math.min((i + 1) * UPLOAD_CHUNK_SIZE, parsedRows.length),
+          total: parsedRows.length,
+          matched: totalMatched,
+          unmatched: totalUnmatched,
+        });
+      }
+
+      setUploadResult({ matched: totalMatched, unmatched: totalUnmatched });
+      setUploadProgress(null);
+      setParsedRows([]);
+      setFileName('');
+      setCompetitorName('');
+      void refetchWines();
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : 'Upload failed');
+      setUploadProgress(null);
+    }
   };
 
   return (
@@ -323,25 +365,39 @@ const CompetitorUpload = () => {
           {/* Upload button */}
           <Button
             onClick={handleUpload}
-            disabled={!competitorName.trim() || parsedRows.length === 0 || uploadMutation.isPending}
+            disabled={!competitorName.trim() || parsedRows.length === 0 || !!uploadProgress}
             className="w-full"
           >
             <IconUpload size={16} className="mr-2" />
-            {uploadMutation.isPending
-              ? 'Uploading...'
+            {uploadProgress
+              ? `Uploading ${uploadProgress.current}/${uploadProgress.total}...`
               : `Upload ${parsedRows.length} wines`}
           </Button>
 
-          {uploadMutation.isSuccess && (
+          {uploadProgress && (
+            <div>
+              <div className="mb-1 h-2 w-full overflow-hidden rounded-full bg-surface-secondary">
+                <div
+                  className="h-full rounded-full bg-fill-brand transition-all"
+                  style={{ width: `${(uploadProgress.current / uploadProgress.total) * 100}%` }}
+                />
+              </div>
+              <Typography variant="bodyXs" colorRole="muted">
+                {uploadProgress.matched} matched, {uploadProgress.unmatched} unmatched so far
+              </Typography>
+            </div>
+          )}
+
+          {uploadResult && (
             <Typography variant="bodySm" className="text-green-600">
-              Uploaded successfully! {uploadMutation.data.matched} wines matched to LWIN database,{' '}
-              {uploadMutation.data.unmatched} unmatched.
+              Uploaded successfully! {uploadResult.matched} wines matched to LWIN database,{' '}
+              {uploadResult.unmatched} unmatched.
             </Typography>
           )}
 
-          {uploadMutation.isError && (
+          {uploadError && (
             <Typography variant="bodySm" className="text-red-600">
-              Upload failed: {uploadMutation.error.message}
+              Upload failed: {uploadError}
             </Typography>
           )}
         </CardContent>

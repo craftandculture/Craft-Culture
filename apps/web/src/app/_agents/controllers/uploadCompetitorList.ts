@@ -41,18 +41,21 @@ const matchLwin = async (productName: string) => {
 const uploadCompetitorList = adminProcedure
   .input(uploadCompetitorListSchema)
   .mutation(async ({ input, ctx }) => {
-    const { competitorName, source, rows } = input;
+    const { competitorName, source, rows, appendMode } = input;
 
     logger.info('[Agents] Uploading competitor list', {
       competitor: competitorName,
       rowCount: rows.length,
+      appendMode: !!appendMode,
     });
 
-    // Deactivate previous entries for this competitor
-    await db
-      .update(competitorWines)
-      .set({ isActive: false, updatedAt: new Date() })
-      .where(eq(competitorWines.competitorName, competitorName));
+    // Deactivate previous entries (skip in append mode for chunked uploads)
+    if (!appendMode) {
+      await db
+        .update(competitorWines)
+        .set({ isActive: false, updatedAt: new Date() })
+        .where(eq(competitorWines.competitorName, competitorName));
+    }
 
     // Process rows with parallel LWIN matching in batches
     const MATCH_BATCH = 50;

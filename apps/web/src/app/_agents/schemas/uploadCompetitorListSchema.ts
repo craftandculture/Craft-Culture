@@ -21,6 +21,8 @@ const uploadCompetitorListSchema = z.object({
   competitorName: z.string().min(1),
   source: z.string().optional(),
   rows: z.array(competitorWineRowSchema).min(1),
+  /** When true, skip deactivating previous entries (used for chunked uploads) */
+  appendMode: z.boolean().optional(),
 });
 
 export type CompetitorWineRow = z.infer<typeof competitorWineRowSchema>;
