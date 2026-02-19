@@ -66,6 +66,10 @@ const adminUpdateStatus = adminProcedure
         timestampUpdates.deliveredAt = now;
       }
 
+      if (status === 'at_warehouse' && !existing.ata) {
+        timestampUpdates.ata = now;
+      }
+
       // Update the shipment status
       const [shipment] = await db
         .update(logisticsShipments)

@@ -23,8 +23,6 @@ const statusSteps: StatusStep[] = [
   { status: 'customs_clearance', label: 'Customs', shortLabel: 'Customs' },
   { status: 'cleared', label: 'Cleared', shortLabel: 'Cleared' },
   { status: 'at_warehouse', label: 'At Warehouse', shortLabel: 'Warehouse' },
-  { status: 'dispatched', label: 'Dispatched', shortLabel: 'Dispatched' },
-  { status: 'delivered', label: 'Delivered', shortLabel: 'Delivered' },
 ];
 
 export interface ShipmentStatusStepperProps {

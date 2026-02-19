@@ -172,8 +172,7 @@ const adminGetDashboardMetrics = adminProcedure.query(async () => {
     (statusCounts['arrived_port'] || 0) +
     (statusCounts['customs_clearance'] || 0) +
     (statusCounts['cleared'] || 0) +
-    (statusCounts['at_warehouse'] || 0) +
-    (statusCounts['dispatched'] || 0);
+    (statusCounts['at_warehouse'] || 0);
 
   // Document compliance rate
   const complianceRate =
@@ -185,6 +184,7 @@ const adminGetDashboardMetrics = adminProcedure.query(async () => {
     shipments: {
       active: activeCount,
       inTransit: statusCounts['in_transit'] || 0,
+      arrivedPort: statusCounts['arrived_port'] || 0,
       customsClearance: statusCounts['customs_clearance'] || 0,
       atWarehouse: statusCounts['at_warehouse'] || 0,
       delivered: statusCounts['delivered'] || 0,

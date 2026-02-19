@@ -9,6 +9,7 @@ import adminCreate from './controller/adminCreate';
 import adminCreateQuote from './controller/adminCreateQuote';
 import adminCreateQuoteRequest from './controller/adminCreateQuoteRequest';
 import adminDeleteDocument from './controller/adminDeleteDocument';
+import adminDeleteShipment from './controller/adminDeleteShipment';
 import adminExportCompliancePdf from './controller/adminExportCompliancePdf';
 import adminExportLandedCostExcel from './controller/adminExportLandedCostExcel';
 import adminExtractDocument from './controller/adminExtractDocument';
@@ -16,6 +17,7 @@ import adminFixShipmentItemCases from './controller/adminFixShipmentItemCases';
 import adminGetDashboardMetrics from './controller/adminGetDashboardMetrics';
 import adminGetDocumentCompliance from './controller/adminGetDocumentCompliance';
 import adminGetHillebrandEvents from './controller/adminGetHillebrandEvents';
+import adminGetInvoices from './controller/adminGetInvoices';
 import adminGetLandedCostReport from './controller/adminGetLandedCostReport';
 import adminGetMany from './controller/adminGetMany';
 import adminGetOne from './controller/adminGetOne';
@@ -52,6 +54,7 @@ const adminRouter = createTRPCRouter({
   getOne: adminGetOne,
   update: adminUpdate,
   updateStatus: adminUpdateStatus,
+  delete: adminDeleteShipment,
 
   // Items
   addItem: adminAddItem,
@@ -65,6 +68,9 @@ const adminRouter = createTRPCRouter({
 
   // Landed cost
   calculateLandedCost: adminCalculateLandedCost,
+
+  // Invoices
+  getInvoices: adminGetInvoices,
 
   // Hillebrand sync
   syncHillebrand: adminSyncHillebrand,

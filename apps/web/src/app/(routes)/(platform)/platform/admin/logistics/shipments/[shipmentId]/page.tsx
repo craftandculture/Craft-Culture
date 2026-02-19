@@ -17,7 +17,7 @@ import {
 } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
@@ -55,8 +55,6 @@ const statusOptions: { value: ShipmentStatus; label: string }[] = [
   { value: 'customs_clearance', label: 'Customs Clearance' },
   { value: 'cleared', label: 'Cleared' },
   { value: 'at_warehouse', label: 'At Warehouse' },
-  { value: 'dispatched', label: 'Dispatched' },
-  { value: 'delivered', label: 'Delivered' },
   { value: 'cancelled', label: 'Cancelled' },
 ];
 
@@ -69,9 +67,11 @@ const ShipmentDetailPage = () => {
   const params = useParams();
   const shipmentId = params.shipmentId as string;
   const api = useTRPC();
+  const router = useRouter();
   const _queryClient = useQueryClient();
 
   const [activeTab, setActiveTab] = useState<TabType>('overview');
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isAddingItem, setIsAddingItem] = useState(false);
   const [newItem, setNewItem] = useState({
     productName: '',
@@ -173,6 +173,18 @@ const ShipmentDetailPage = () => {
       onSuccess: (result) => {
         toast.success(`Landed cost calculated: ${formatPrice(result.landedCostPerBottle, 'USD')}/bottle`);
         void refetch();
+      },
+      onError: (error) => {
+        toast.error(error.message);
+      },
+    }),
+  );
+
+  const { mutate: deleteShipment, isPending: isDeleting } = useMutation(
+    api.logistics.admin.delete.mutationOptions({
+      onSuccess: () => {
+        toast.success('Shipment deleted');
+        router.push('/platform/admin/logistics/shipments');
       },
       onError: (error) => {
         toast.error(error.message);
@@ -332,6 +344,25 @@ const ShipmentDetailPage = () => {
                 ))}
               </SelectContent>
             </Select>
+            {showDeleteConfirm ? (
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => deleteShipment({ id: shipmentId })}
+                  disabled={isDeleting}
+                >
+                  <ButtonContent iconLeft={IconTrash}>Confirm</ButtonContent>
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => setShowDeleteConfirm(false)}>
+                  <Icon icon={IconX} size="sm" />
+                </Button>
+              </div>
+            ) : (
+              <Button variant="outline" size="sm" onClick={() => setShowDeleteConfirm(true)}>
+                <Icon icon={IconTrash} size="sm" />
+              </Button>
+            )}
           </div>
         </div>
 
