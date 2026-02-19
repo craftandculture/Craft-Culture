@@ -1,5 +1,5 @@
 import { TRPCError } from '@trpc/server';
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 
 import db from '@/database/client';
 import {
@@ -12,6 +12,7 @@ import {
 import { adminProcedure } from '@/lib/trpc/procedures';
 
 import { pickItemSchema } from '../schemas/pickListSchema';
+import convertReservationToPick from '../utils/convertReservationToPick';
 import generateMovementNumber from '../utils/generateMovementNumber';
 
 /**
@@ -135,15 +136,13 @@ const adminPickItem = adminProcedure
       .where(eq(wmsPickListItems.id, pickListItemId))
       .returning();
 
-    // Update stock (decrement available)
-    await db
-      .update(wmsStock)
-      .set({
-        quantityCases: sql`${wmsStock.quantityCases} - ${pickedQuantity}`,
-        availableCases: sql`${wmsStock.availableCases} - ${pickedQuantity}`,
-        updatedAt: new Date(),
-      })
-      .where(eq(wmsStock.id, stock.id));
+    // Update stock — reservation-aware decrement
+    await convertReservationToPick({
+      stockId: stock.id,
+      orderId: pickList.orderId ?? '',
+      quantityCases: pickedQuantity,
+      db,
+    });
 
     // Record movement
     const movementNumber = await generateMovementNumber();

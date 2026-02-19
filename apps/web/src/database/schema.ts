@@ -3818,6 +3818,12 @@ export const wmsMovementType = pgEnum('wms_movement_type', [
   'dispatch',
 ]);
 
+export const wmsReservationStatus = pgEnum('wms_reservation_status', [
+  'active',
+  'picked',
+  'released',
+]);
+
 export const wmsCycleCountStatus = pgEnum('wms_cycle_count_status', [
   'pending',
   'in_progress',
@@ -3988,6 +3994,40 @@ export const wmsStockMovements = pgTable(
 );
 
 export type WmsStockMovement = typeof wmsStockMovements.$inferSelect;
+
+/**
+ * WMS Stock Reservations - track stock reserved for confirmed orders
+ */
+export const wmsStockReservations = pgTable(
+  'wms_stock_reservations',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    stockId: uuid('stock_id')
+      .references(() => wmsStock.id)
+      .notNull(),
+    orderType: text('order_type').notNull(), // 'zoho' | 'pco'
+    orderId: uuid('order_id').notNull(),
+    orderItemId: uuid('order_item_id').notNull(),
+    orderNumber: text('order_number').notNull(),
+    lwin18: text('lwin18').notNull(),
+    productName: text('product_name').notNull(),
+    quantityCases: integer('quantity_cases').notNull(),
+    status: wmsReservationStatus('status').notNull().default('active'),
+    releasedAt: timestamp('released_at', { mode: 'date' }),
+    releaseReason: text('release_reason'),
+    pickedAt: timestamp('picked_at', { mode: 'date' }),
+    ...timestamps,
+  },
+  (table) => [
+    index('wms_stock_reservations_stock_id_idx').on(table.stockId),
+    index('wms_stock_reservations_order_id_idx').on(table.orderId),
+    index('wms_stock_reservations_order_item_id_idx').on(table.orderItemId),
+    index('wms_stock_reservations_status_idx').on(table.status),
+    index('wms_stock_reservations_order_type_idx').on(table.orderType),
+  ],
+);
+
+export type WmsStockReservation = typeof wmsStockReservations.$inferSelect;
 
 /**
  * WMS Case Labels - individual case barcode tracking

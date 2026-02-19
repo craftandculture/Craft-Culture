@@ -41,6 +41,7 @@ import adminGetLocationByBarcode from './controller/adminGetLocationByBarcode';
 import adminGetLocationLabels from './controller/adminGetLocationLabels';
 import adminGetLocations from './controller/adminGetLocations';
 import adminGetMovementHistory from './controller/adminGetMovementHistory';
+import adminGetOrderReservations from './controller/adminGetOrderReservations';
 import adminGetPallet from './controller/adminGetPallet';
 import adminGetPalletByBarcode from './controller/adminGetPalletByBarcode';
 import adminGetPalletLabel from './controller/adminGetPalletLabel';
@@ -157,6 +158,7 @@ const ownershipRouter = createTRPCRouter({
   transfer: adminTransferOwnership,
   reserve: adminReserveStock,
   release: adminReleaseReservation,
+  getReservations: adminGetOrderReservations,
   getRequests: adminGetPartnerRequests,
   resolve: adminResolvePartnerRequest,
 });

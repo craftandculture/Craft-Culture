@@ -1,6 +1,6 @@
 import { TRPCError } from '@trpc/server';
 import { put } from '@vercel/blob';
-import { eq, inArray, sql } from 'drizzle-orm';
+import { and, eq, gt, inArray, like, sql } from 'drizzle-orm';
 import { z } from 'zod';
 
 import db from '@/database/client';
@@ -11,13 +11,17 @@ import {
   wmsDeliveryNotes,
   wmsDispatchBatchOrders,
   wmsDispatchBatches,
+  wmsStock,
+  wmsStockMovements,
   zohoSalesOrderItems,
   zohoSalesOrders,
 } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
+import convertReservationToPick from '../utils/convertReservationToPick';
 import generateBatchNumber from '../utils/generateBatchNumber';
 import generateDeliveryNoteNumber from '../utils/generateDeliveryNoteNumber';
+import generateMovementNumber from '../utils/generateMovementNumber';
 import renderDeliveryNotePDF from '../utils/renderDeliveryNotePDF';
 
 /**
@@ -192,7 +196,7 @@ const adminQuickDispatch = adminProcedure
         // Calculate cases
         const [casesResult] = await db
           .select({
-            total: sql<number>`COALESCE(SUM(${privateClientOrderItems.quantityCases}), 0)::int`,
+            total: sql<number>`COALESCE(SUM(${privateClientOrderItems.quantity}), 0)::int`,
           })
           .from(privateClientOrderItems)
           .where(
@@ -217,6 +221,142 @@ const adminQuickDispatch = adminProcedure
     // Insert batch order records
     if (batchOrderInserts.length > 0) {
       await db.insert(wmsDispatchBatchOrders).values(batchOrderInserts);
+    }
+
+    // Decrement stock — Quick Dispatch skips picking so stock must be decremented here
+    for (const orderRef of orderIds) {
+      if (orderRef.type === 'zoho') {
+        const items = await db
+          .select({
+            lwin18: zohoSalesOrderItems.lwin18,
+            sku: zohoSalesOrderItems.sku,
+            name: zohoSalesOrderItems.name,
+            quantity: zohoSalesOrderItems.quantity,
+          })
+          .from(zohoSalesOrderItems)
+          .where(eq(zohoSalesOrderItems.salesOrderId, orderRef.id));
+
+        for (const item of items) {
+          const lwin = item.lwin18 ?? item.sku;
+          if (!lwin || item.quantity <= 0) continue;
+
+          const stockRecords = await db
+            .select({
+              id: wmsStock.id,
+              quantityCases: wmsStock.quantityCases,
+            })
+            .from(wmsStock)
+            .where(
+              and(eq(wmsStock.lwin18, lwin), gt(wmsStock.quantityCases, 0)),
+            );
+
+          let remaining = item.quantity;
+          for (const stock of stockRecords) {
+            if (remaining <= 0) break;
+            const toPick = Math.min(remaining, stock.quantityCases);
+
+            const result = await convertReservationToPick({
+              stockId: stock.id,
+              orderId: orderRef.id,
+              quantityCases: toPick,
+              db,
+            });
+
+            remaining -= result.totalPicked;
+          }
+
+          const picked = item.quantity - remaining;
+          if (picked > 0) {
+            const movementNumber = await generateMovementNumber();
+            await db.insert(wmsStockMovements).values({
+              movementNumber,
+              movementType: 'pick',
+              lwin18: lwin,
+              productName: item.name,
+              quantityCases: picked,
+              orderId: orderRef.id,
+              notes: `Quick dispatch ${batchNumber}`,
+              performedBy: ctx.user.id,
+              performedAt: now,
+            });
+          }
+        }
+      } else {
+        // PCO order
+        const items = await db
+          .select({
+            lwin: privateClientOrderItems.lwin,
+            productName: privateClientOrderItems.productName,
+            quantity: privateClientOrderItems.quantity,
+          })
+          .from(privateClientOrderItems)
+          .where(eq(privateClientOrderItems.orderId, orderRef.id));
+
+        for (const item of items) {
+          if (!item.lwin || item.quantity <= 0) continue;
+
+          // Exact LWIN match first
+          let stockRecords = await db
+            .select({
+              id: wmsStock.id,
+              quantityCases: wmsStock.quantityCases,
+            })
+            .from(wmsStock)
+            .where(
+              and(
+                eq(wmsStock.lwin18, item.lwin),
+                gt(wmsStock.quantityCases, 0),
+              ),
+            );
+
+          // Prefix match for short LWINs
+          if (stockRecords.length === 0) {
+            stockRecords = await db
+              .select({
+                id: wmsStock.id,
+                quantityCases: wmsStock.quantityCases,
+              })
+              .from(wmsStock)
+              .where(
+                and(
+                  like(wmsStock.lwin18, `${item.lwin}%`),
+                  gt(wmsStock.quantityCases, 0),
+                ),
+              );
+          }
+
+          let remaining = item.quantity;
+          for (const stock of stockRecords) {
+            if (remaining <= 0) break;
+            const toPick = Math.min(remaining, stock.quantityCases);
+
+            const result = await convertReservationToPick({
+              stockId: stock.id,
+              orderId: orderRef.id,
+              quantityCases: toPick,
+              db,
+            });
+
+            remaining -= result.totalPicked;
+          }
+
+          const picked = item.quantity - remaining;
+          if (picked > 0) {
+            const movementNumber = await generateMovementNumber();
+            await db.insert(wmsStockMovements).values({
+              movementNumber,
+              movementType: 'pick',
+              lwin18: item.lwin,
+              productName: item.productName,
+              quantityCases: picked,
+              orderId: orderRef.id,
+              notes: `Quick dispatch ${batchNumber}`,
+              performedBy: ctx.user.id,
+              performedAt: now,
+            });
+          }
+        }
+      }
     }
 
     // Update batch totals

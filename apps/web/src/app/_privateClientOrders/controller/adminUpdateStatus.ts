@@ -3,6 +3,7 @@ import { TRPCError } from '@trpc/server';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 
+import releaseStockReservations from '@/app/_wms/utils/releaseStockReservations';
 import db from '@/database/client';
 import { privateClientOrderActivityLogs, privateClientOrders } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
@@ -69,6 +70,16 @@ const adminUpdateStatus = adminProcedure
       })
       .where(eq(privateClientOrders.id, orderId))
       .returning();
+
+    // Release stock reservations on cancellation
+    if (status === 'cancelled') {
+      await releaseStockReservations({
+        orderId,
+        orderType: 'pco',
+        reason: 'Order cancelled',
+        db,
+      });
+    }
 
     // Ensure client contact is marked as CD-verified on delivery
     if (status === 'delivered') {
