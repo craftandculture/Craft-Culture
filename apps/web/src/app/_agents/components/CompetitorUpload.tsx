@@ -5,6 +5,7 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { useCallback, useRef, useState } from 'react';
 import * as XLSX from 'xlsx';
 
+import extractVintageFromName from '@/app/_pricingCalculator/utils/extractVintageFromName';
 import Button from '@/app/_ui/components/Button/Button';
 import Card from '@/app/_ui/components/Card/Card';
 import CardContent from '@/app/_ui/components/Card/CardContent';
@@ -69,10 +70,19 @@ const CompetitorUpload = () => {
 
           const json = XLSX.utils.sheet_to_json<Record<string, unknown>>(firstSheet);
 
+          // Normalize row keys — Excel headers may contain \r\n line breaks
+          const normalizedJson = json.map((row) => {
+            const normalized: Record<string, unknown> = {};
+            for (const [key, value] of Object.entries(row)) {
+              normalized[key.replace(/[\r\n]+/g, ' ').trim()] = value;
+            }
+            return normalized;
+          });
+
           // Map columns — handle common header variations
           const rows: ParsedRow[] = [];
 
-          for (const row of json) {
+          for (const row of normalizedJson) {
             const get = (keys: string[]) => {
               for (const key of keys) {
                 const val = row[key] ?? row[key.toLowerCase()] ?? row[key.toUpperCase()];
@@ -88,7 +98,7 @@ const CompetitorUpload = () => {
               return isNaN(num) ? undefined : num;
             };
 
-            const productName =
+            const rawProductName =
               get([
                 'Product Name',
                 'Wine',
@@ -99,17 +109,67 @@ const CompetitorUpload = () => {
                 'Wine Name',
               ]) ?? '';
 
-            if (!productName) continue;
+            if (!rawProductName) continue;
+
+            // Extract vintage from wine name if no dedicated Vintage column
+            let vintage = get(['Vintage', 'Year', 'Yr']);
+            let cleanedProductName = rawProductName;
+
+            if (!vintage) {
+              const extracted = extractVintageFromName(rawProductName);
+              if (extracted.vintage) {
+                vintage = extracted.vintage;
+                cleanedProductName = extracted.cleanedName;
+              }
+            }
+
+            // Extract bottle size from wine name if no dedicated Size column
+            let bottleSize = get([
+              'Size',
+              'Bottle Size',
+              'BottleSize',
+              'Format',
+              'Volume',
+            ]);
+
+            if (!bottleSize) {
+              const sizeMatch = rawProductName.match(
+                /\b(\d+x)?(\d+(?:\.\d+)?)\s*(cl|ml|l|ltr)\b/i,
+              );
+              if (sizeMatch) {
+                bottleSize = sizeMatch[0];
+                cleanedProductName = cleanedProductName
+                  .replace(sizeMatch[0], '')
+                  .replace(/\s+/g, ' ')
+                  .trim();
+              }
+            }
 
             rows.push({
-              productName,
-              vintage: get(['Vintage', 'Year', 'Yr']),
+              productName: cleanedProductName,
+              vintage,
               country: get(['Country', 'Origin']),
               region: get(['Region', 'Appellation', 'Area']),
-              bottleSize: get(['Size', 'Bottle Size', 'BottleSize', 'Format']),
-              sellingPriceAed: getNum(['Price AED', 'AED', 'Selling Price AED', 'Price (AED)']),
-              sellingPriceUsd: getNum(['Price USD', 'USD', 'Price', 'Selling Price', 'Unit Price']),
-              quantity: getNum(['Qty', 'Quantity', 'Stock', 'Available']),
+              bottleSize,
+              sellingPriceAed: getNum([
+                'Price AED',
+                'AED',
+                'Selling Price AED',
+                'Price (AED)',
+                'Selling Price Bottle',
+                'Selling Price',
+                'Price',
+                'Unit Price',
+              ]),
+              sellingPriceUsd: getNum(['Price USD', 'USD']),
+              quantity: getNum([
+                'Qty',
+                'Quantity',
+                'Stock',
+                'Available',
+                'Bottle volume available',
+                'Volume Available',
+              ]),
             });
           }
 
@@ -199,6 +259,9 @@ const CompetitorUpload = () => {
                     <tr>
                       <th className="px-2 py-1.5 text-left">Wine</th>
                       <th className="px-2 py-1.5 text-left">Vintage</th>
+                      <th className="px-2 py-1.5 text-left">Size</th>
+                      <th className="px-2 py-1.5 text-left">Country</th>
+                      <th className="px-2 py-1.5 text-right">Qty</th>
                       <th className="px-2 py-1.5 text-right">Price</th>
                     </tr>
                   </thead>
@@ -207,6 +270,9 @@ const CompetitorUpload = () => {
                       <tr key={i} className="border-t border-border-muted">
                         <td className="max-w-[200px] truncate px-2 py-1.5">{row.productName}</td>
                         <td className="px-2 py-1.5">{row.vintage ?? '-'}</td>
+                        <td className="px-2 py-1.5">{row.bottleSize ?? '-'}</td>
+                        <td className="px-2 py-1.5">{row.country ?? '-'}</td>
+                        <td className="px-2 py-1.5 text-right">{row.quantity ?? '-'}</td>
                         <td className="px-2 py-1.5 text-right">
                           {row.sellingPriceAed
                             ? `${row.sellingPriceAed.toFixed(0)} AED`
