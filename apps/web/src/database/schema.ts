@@ -4642,3 +4642,89 @@ export const zohoSalesOrderItems = pgTable(
 );
 
 export type ZohoSalesOrderItem = typeof zohoSalesOrderItems.$inferSelect;
+
+// ---------------------------------------------------------------------------
+// AI Agents
+// ---------------------------------------------------------------------------
+
+export const agentRunStatus = pgEnum('agent_run_status', ['running', 'completed', 'failed']);
+
+/**
+ * Agent Runs - tracks each AI agent execution
+ */
+export const agentRuns = pgTable(
+  'agent_runs',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    agentId: text('agent_id').notNull(),
+    status: agentRunStatus('status').notNull().default('running'),
+    startedAt: timestamp('started_at', { mode: 'date' }).notNull().defaultNow(),
+    completedAt: timestamp('completed_at', { mode: 'date' }),
+    error: text('error'),
+    metadata: jsonb('metadata'),
+    ...timestamps,
+  },
+  (table) => [
+    index('agent_runs_agent_id_idx').on(table.agentId),
+    index('agent_runs_status_idx').on(table.status),
+  ],
+).enableRLS();
+
+export type AgentRun = typeof agentRuns.$inferSelect;
+
+/**
+ * Agent Outputs - briefing output stored per run
+ */
+export const agentOutputs = pgTable(
+  'agent_outputs',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    agentId: text('agent_id').notNull(),
+    runId: uuid('run_id')
+      .references(() => agentRuns.id, { onDelete: 'cascade' })
+      .notNull(),
+    type: text('type').notNull(),
+    title: text('title').notNull(),
+    content: text('content').notNull(),
+    data: jsonb('data'),
+    ...timestamps,
+  },
+  (table) => [
+    index('agent_outputs_agent_id_idx').on(table.agentId),
+    index('agent_outputs_run_id_idx').on(table.runId),
+  ],
+).enableRLS();
+
+export type AgentOutput = typeof agentOutputs.$inferSelect;
+
+/**
+ * Competitor Wines - uploaded competitor price data for Scout analysis
+ */
+export const competitorWines = pgTable(
+  'competitor_wines',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    competitorName: text('competitor_name').notNull(),
+    productName: text('product_name').notNull(),
+    vintage: text('vintage'),
+    country: text('country'),
+    region: text('region'),
+    bottleSize: text('bottle_size'),
+    sellingPriceAed: doublePrecision('selling_price_aed'),
+    sellingPriceUsd: doublePrecision('selling_price_usd'),
+    quantity: integer('quantity'),
+    source: text('source'),
+    uploadedAt: timestamp('uploaded_at', { mode: 'date' }).notNull().defaultNow(),
+    uploadedBy: uuid('uploaded_by').references(() => users.id),
+    isActive: boolean('is_active').notNull().default(true),
+    lwin18Match: text('lwin18_match'),
+    ...timestamps,
+  },
+  (table) => [
+    index('competitor_wines_competitor_idx').on(table.competitorName),
+    index('competitor_wines_active_idx').on(table.isActive),
+    index('competitor_wines_lwin18_idx').on(table.lwin18Match),
+  ],
+).enableRLS();
+
+export type CompetitorWine = typeof competitorWines.$inferSelect;
