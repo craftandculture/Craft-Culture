@@ -27,10 +27,13 @@ interface ScoutData {
   executiveSummary?: string;
   priceGaps?: Array<{
     productName: string;
-    ourCostAed: number;
-    competitorRetailAed: number;
+    ourCostAed?: number;
+    ourPriceAed?: number; // legacy field name
+    competitorRetailAed?: number;
+    competitorPriceAed?: number; // legacy field name
     competitorName: string;
-    marginPercent: number;
+    marginPercent?: number;
+    gapPercent?: number; // legacy field name
     recommendation: string;
   }>;
   pricingOpportunities?: Array<{
@@ -130,7 +133,7 @@ const ScoutBrief = () => {
   );
 
   const revenueAed = priceGaps.reduce(
-    (sum, g) => sum + Math.max(0, g.competitorRetailAed - g.ourCostAed),
+    (sum, g) => sum + Math.max(0, (g.competitorRetailAed ?? g.competitorPriceAed ?? 0) - (g.ourCostAed ?? g.ourPriceAed ?? 0)),
     0,
   );
   const revenueUsd = Math.round(revenueAed / 3.67);
@@ -279,26 +282,26 @@ const ScoutBrief = () => {
                         <span className="font-semibold">{gap.productName}</span>
                       </TableCell>
                       <TableCell>
-                        <div>{gap.competitorRetailAed.toFixed(0)} AED</div>
+                        <div>{(gap.competitorRetailAed ?? gap.competitorPriceAed ?? 0).toFixed(0)} AED</div>
                         <Typography variant="bodyXs" colorRole="muted">
                           {gap.competitorName}
                         </Typography>
                       </TableCell>
-                      <TableCell>{gap.ourCostAed.toFixed(0)} AED</TableCell>
+                      <TableCell>{(gap.ourCostAed ?? gap.ourPriceAed ?? 0).toFixed(0)} AED</TableCell>
                       <TableCell className="text-right">
                         <Badge
                           size="xs"
                           colorRole={
-                            gap.marginPercent > 50
+                            (gap.marginPercent ?? gap.gapPercent ?? 0) > 50
                               ? 'success'
-                              : gap.marginPercent > 30
+                              : (gap.marginPercent ?? gap.gapPercent ?? 0) > 30
                                 ? 'info'
-                                : gap.marginPercent > 0
+                                : (gap.marginPercent ?? gap.gapPercent ?? 0) > 0
                                   ? 'warning'
                                   : 'danger'
                           }
                         >
-                          {gap.marginPercent.toFixed(0)}%
+                          {(gap.marginPercent ?? gap.gapPercent ?? 0).toFixed(0)}%
                         </Badge>
                       </TableCell>
                     </TableRow>
