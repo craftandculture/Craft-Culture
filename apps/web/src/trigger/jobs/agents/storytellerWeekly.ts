@@ -1,5 +1,5 @@
 import { createAnthropic } from '@ai-sdk/anthropic';
-import { logger, schedules } from '@trigger.dev/sdk';
+import { logger, schedules, task } from '@trigger.dev/sdk';
 import { generateObject } from 'ai';
 import { desc, eq, sql } from 'drizzle-orm';
 import { z } from 'zod';
@@ -82,114 +82,97 @@ const buildStorytellerMarkdown = (data: z.infer<typeof storytellerOutputSchema>)
 };
 
 /**
- * The Storyteller — Weekly marketing content agent
- *
- * Generates social media content, WhatsApp blasts, and LinkedIn posts
- * based on available inventory, recent sales trends, and market positioning.
- *
- * Runs weekly on Monday at 06:05 GST.
+ * Core Storyteller content generation logic shared between scheduled and on-demand runs
  */
-export const storytellerWeeklyJob = schedules.task({
-  id: 'storyteller-weekly',
-  cron: {
-    pattern: '5 6 * * 1',
-    timezone: 'Asia/Dubai',
-  },
-  async run() {
-    logger.info('Storyteller agent starting weekly content generation');
+const runStorytellerGeneration = async () => {
+  logger.info('Storyteller agent starting weekly content generation');
 
-    const [run] = await triggerDb
-      .insert(agentRuns)
-      .values({ agentId: 'storyteller', status: 'running' })
-      .returning({ id: agentRuns.id });
+  const [run] = await triggerDb
+    .insert(agentRuns)
+    .values({ agentId: 'storyteller', status: 'running' })
+    .returning({ id: agentRuns.id });
 
-    if (!run) {
-      logger.error('Failed to create agent run');
-      return { success: false };
-    }
+  if (!run) {
+    logger.error('Failed to create agent run');
+    return { success: false };
+  }
 
-    try {
-      // 1. Fetch recent orders for trending wines
-      const twoWeeksAgo = new Date();
-      twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
+  try {
+    const twoWeeksAgo = new Date();
+    twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
 
-      const recentOrders = await triggerDb
-        .select({
-          clientName: privateClientOrders.clientName,
-          totalUsd: privateClientOrders.totalUsd,
-          createdAt: privateClientOrders.createdAt,
-        })
-        .from(privateClientOrders)
-        .where(sql`${privateClientOrders.createdAt} > ${twoWeeksAgo}`)
-        .orderBy(desc(privateClientOrders.createdAt))
-        .limit(30);
+    const recentOrders = await triggerDb
+      .select({
+        clientName: privateClientOrders.clientName,
+        totalUsd: privateClientOrders.totalUsd,
+        createdAt: privateClientOrders.createdAt,
+      })
+      .from(privateClientOrders)
+      .where(sql`${privateClientOrders.createdAt} > ${twoWeeksAgo}`)
+      .orderBy(desc(privateClientOrders.createdAt))
+      .limit(30);
 
-      // 2. Fetch featured-worthy products (from current stock)
-      const featuredStock = await triggerDb
-        .select({
-          productName: wmsStock.productName,
-          producer: wmsStock.producer,
-          vintage: wmsStock.vintage,
-          availableCases: wmsStock.availableCases,
-          lwin18: wmsStock.lwin18,
-          bottleSize: wmsStock.bottleSize,
-        })
-        .from(wmsStock)
-        .where(sql`${wmsStock.availableCases} > 0`)
-        .orderBy(desc(wmsStock.availableCases))
-        .limit(30);
+    const featuredStock = await triggerDb
+      .select({
+        productName: wmsStock.productName,
+        producer: wmsStock.producer,
+        vintage: wmsStock.vintage,
+        availableCases: wmsStock.availableCases,
+        lwin18: wmsStock.lwin18,
+        bottleSize: wmsStock.bottleSize,
+      })
+      .from(wmsStock)
+      .where(sql`${wmsStock.availableCases} > 0`)
+      .orderBy(desc(wmsStock.availableCases))
+      .limit(30);
 
-      // 3. Fetch product catalog for richer descriptions
-      const catalog = await triggerDb
-        .select({
-          name: products.name,
-          producer: products.producer,
-          country: products.country,
-          region: products.region,
-          year: products.year,
-        })
-        .from(products)
-        .limit(50);
+    const catalog = await triggerDb
+      .select({
+        name: products.name,
+        producer: products.producer,
+        country: products.country,
+        region: products.region,
+        year: products.year,
+      })
+      .from(products)
+      .limit(50);
 
-      // 4. Fetch competitor names for positioning context
-      const competitorNames = await triggerDb
-        .select({
-          competitorName: competitorWines.competitorName,
-          count: sql<number>`COUNT(*)`,
-        })
-        .from(competitorWines)
-        .where(eq(competitorWines.isActive, true))
-        .groupBy(competitorWines.competitorName)
-        .limit(10);
+    const competitorNames = await triggerDb
+      .select({
+        competitorName: competitorWines.competitorName,
+        count: sql<number>`COUNT(*)`,
+      })
+      .from(competitorWines)
+      .where(eq(competitorWines.isActive, true))
+      .groupBy(competitorWines.competitorName)
+      .limit(10);
 
-      // 5. Build context
-      const stockContext = featuredStock
-        .map(
-          (s) =>
-            `${s.productName} (${s.vintage ?? 'NV'}) by ${s.producer ?? 'Unknown'} — ${s.availableCases} cases, ${s.bottleSize ?? '750ml'}`,
-        )
-        .join('\n');
+    const stockContext = featuredStock
+      .map(
+        (s) =>
+          `${s.productName} (${s.vintage ?? 'NV'}) by ${s.producer ?? 'Unknown'} — ${s.availableCases} cases, ${s.bottleSize ?? '750ml'}`,
+      )
+      .join('\n');
 
-      const catalogContext = catalog
-        .map(
-          (p) =>
-            `${p.name} by ${p.producer ?? 'Unknown'}, ${p.region ?? ''} ${p.country ?? ''} (${p.year ?? 'NV'})`,
-        )
-        .join('\n');
+    const catalogContext = catalog
+      .map(
+        (p) =>
+          `${p.name} by ${p.producer ?? 'Unknown'}, ${p.region ?? ''} ${p.country ?? ''} (${p.year ?? 'NV'})`,
+      )
+      .join('\n');
 
-      const orderTrend = `${recentOrders.length} orders in the last 2 weeks`;
+    const orderTrend = `${recentOrders.length} orders in the last 2 weeks`;
 
-      const competitorContext = competitorNames
-        .map((c) => `${c.competitorName} (${c.count} wines)`)
-        .join(', ');
+    const competitorContext = competitorNames
+      .map((c) => `${c.competitorName} (${c.count} wines)`)
+      .join(', ');
 
-      // 6. Call Claude
-      const anthropic = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
+    const anthropic = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
 
-      const result = await generateObject({
-        model: anthropic('claude-sonnet-4-5-20250929'),
-        schema: storytellerOutputSchema,
-        system: `You are The Storyteller, a luxury wine marketing content creator for Craft & Culture, a premium wine distributor in the UAE/GCC market.
+    const result = await generateObject({
+      model: anthropic('claude-sonnet-4-5-20250929'),
+      schema: storytellerOutputSchema,
+      system: `You are The Storyteller, a luxury wine marketing content creator for Craft & Culture, a premium wine distributor in the UAE/GCC market.
 
 Your brand voice: sophisticated but approachable, knowledgeable without being pretentious, warm and inviting. You understand Dubai's luxury lifestyle, dining scene, and high-net-worth tastes.
 
@@ -201,10 +184,10 @@ Content guidelines:
 - Seasonal awareness: UAE weather, events (Art Dubai, F1, Dubai Food Festival), Ramadan
 - Competitors exist but never mention them by name — focus on what makes C&C unique
 - Today's date: ${new Date().toISOString().slice(0, 10)}`,
-        messages: [
-          {
-            role: 'user',
-            content: `Generate this week's marketing content.
+      messages: [
+        {
+          role: 'user',
+          content: `Generate this week's marketing content.
 
 AVAILABLE INVENTORY (${featuredStock.length} SKUs):
 ${stockContext || 'No stock data available.'}
@@ -220,55 +203,79 @@ Generate:
 1. 3 Instagram post ideas (with captions and image briefs)
 2. 2 WhatsApp broadcast messages
 3. 1 LinkedIn thought leadership post`,
-          },
-        ],
-      });
+        },
+      ],
+    });
 
-      // 7. Build markdown and store
-      const data = result.object;
-      const markdown = buildStorytellerMarkdown(data);
+    const data = result.object;
+    const markdown = buildStorytellerMarkdown(data);
 
-      await triggerDb.insert(agentOutputs).values({
-        agentId: 'storyteller',
-        runId: run.id,
-        type: 'weekly-content',
-        title: `Storyteller Brief — Week of ${new Date().toISOString().slice(0, 10)}`,
-        content: markdown,
-        data: data as Record<string, unknown>,
-      });
+    await triggerDb.insert(agentOutputs).values({
+      agentId: 'storyteller',
+      runId: run.id,
+      type: 'weekly-content',
+      title: `Storyteller Brief — Week of ${new Date().toISOString().slice(0, 10)}`,
+      content: markdown,
+      data: data as Record<string, unknown>,
+    });
 
-      await triggerDb
-        .update(agentRuns)
-        .set({ status: 'completed', completedAt: new Date() })
-        .where(eq(agentRuns.id, run.id));
+    await triggerDb
+      .update(agentRuns)
+      .set({ status: 'completed', completedAt: new Date() })
+      .where(eq(agentRuns.id, run.id));
 
-      logger.info('Storyteller weekly content complete', {
-        instagram: data.instagramPosts.length,
-        whatsapp: data.whatsappBlasts.length,
-        linkedin: 1,
-      });
+    logger.info('Storyteller weekly content complete', {
+      instagram: data.instagramPosts.length,
+      whatsapp: data.whatsappBlasts.length,
+      linkedin: 1,
+    });
 
-      return {
-        success: true,
-        instagram: data.instagramPosts.length,
-        whatsapp: data.whatsappBlasts.length,
-        linkedin: 1,
-      };
-    } catch (error) {
-      logger.error('Storyteller agent failed', {
+    return {
+      success: true,
+      instagram: data.instagramPosts.length,
+      whatsapp: data.whatsappBlasts.length,
+      linkedin: 1,
+    };
+  } catch (error) {
+    logger.error('Storyteller agent failed', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+
+    await triggerDb
+      .update(agentRuns)
+      .set({
+        status: 'failed',
+        completedAt: new Date(),
         error: error instanceof Error ? error.message : 'Unknown error',
-      });
+      })
+      .where(eq(agentRuns.id, run.id));
 
-      await triggerDb
-        .update(agentRuns)
-        .set({
-          status: 'failed',
-          completedAt: new Date(),
-          error: error instanceof Error ? error.message : 'Unknown error',
-        })
-        .where(eq(agentRuns.id, run.id));
+    return { success: false, error: String(error) };
+  }
+};
 
-      return { success: false, error: String(error) };
-    }
+/**
+ * On-demand Storyteller task — triggered via REST API from the dashboard "Run Now" button
+ */
+export const storytellerRunTask = task({
+  id: 'storyteller-run',
+  async run() {
+    return runStorytellerGeneration();
+  },
+});
+
+/**
+ * The Storyteller — Weekly marketing content agent (scheduled)
+ *
+ * Runs weekly on Monday at 06:05 GST.
+ */
+export const storytellerWeeklyJob = schedules.task({
+  id: 'storyteller-weekly',
+  cron: {
+    pattern: '5 6 * * 1',
+    timezone: 'Asia/Dubai',
+  },
+  async run() {
+    return runStorytellerGeneration();
   },
 });

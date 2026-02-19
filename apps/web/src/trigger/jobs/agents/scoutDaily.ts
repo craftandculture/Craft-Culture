@@ -1,5 +1,5 @@
 import { createAnthropic } from '@ai-sdk/anthropic';
-import { logger, schedules } from '@trigger.dev/sdk';
+import { logger, schedules, task } from '@trigger.dev/sdk';
 import { generateObject } from 'ai';
 import { eq, gt, sql } from 'drizzle-orm';
 import { z } from 'zod';
@@ -99,113 +99,96 @@ const buildScoutMarkdown = (data: z.infer<typeof scoutOutputSchema>) => {
 };
 
 /**
- * The Scout — Daily competitive intelligence agent
- *
- * Compares C&C product catalog and pricing against uploaded competitor
- * wine lists, identifies price gaps, blind spots, and opportunities.
- *
- * Runs daily at 06:00 GST.
+ * Core Scout analysis logic shared between scheduled and on-demand runs
  */
-export const scoutDailyJob = schedules.task({
-  id: 'scout-daily',
-  cron: {
-    pattern: '0 6 * * *',
-    timezone: 'Asia/Dubai',
-  },
-  async run() {
-    logger.info('Scout agent starting daily analysis');
+const runScoutAnalysis = async () => {
+  logger.info('Scout agent starting daily analysis');
 
-    // Create run record
-    const [run] = await triggerDb
-      .insert(agentRuns)
-      .values({ agentId: 'scout', status: 'running' })
-      .returning({ id: agentRuns.id });
+  const [run] = await triggerDb
+    .insert(agentRuns)
+    .values({ agentId: 'scout', status: 'running' })
+    .returning({ id: agentRuns.id });
 
-    if (!run) {
-      logger.error('Failed to create agent run');
-      return { success: false };
+  if (!run) {
+    logger.error('Failed to create agent run');
+    return { success: false };
+  }
+
+  try {
+    const competitors = await triggerDb
+      .select({
+        id: competitorWines.id,
+        competitorName: competitorWines.competitorName,
+        productName: competitorWines.productName,
+        vintage: competitorWines.vintage,
+        sellingPriceAed: competitorWines.sellingPriceAed,
+        sellingPriceUsd: competitorWines.sellingPriceUsd,
+        region: competitorWines.region,
+        lwin18Match: competitorWines.lwin18Match,
+      })
+      .from(competitorWines)
+      .where(eq(competitorWines.isActive, true))
+      .limit(50);
+
+    if (competitors.length === 0) {
+      logger.warn('No competitor wines found — skipping Scout run');
+      await triggerDb
+        .update(agentRuns)
+        .set({ status: 'completed', completedAt: new Date() })
+        .where(eq(agentRuns.id, run.id));
+      return { success: true, skipped: true, reason: 'no_competitor_data' };
     }
 
-    try {
-      // 1. Fetch active competitor wines (limit 50)
-      const competitors = await triggerDb
-        .select({
-          id: competitorWines.id,
-          competitorName: competitorWines.competitorName,
-          productName: competitorWines.productName,
-          vintage: competitorWines.vintage,
-          sellingPriceAed: competitorWines.sellingPriceAed,
-          sellingPriceUsd: competitorWines.sellingPriceUsd,
-          region: competitorWines.region,
-          lwin18Match: competitorWines.lwin18Match,
-        })
-        .from(competitorWines)
-        .where(eq(competitorWines.isActive, true))
-        .limit(50);
+    const ourProducts = await triggerDb
+      .select({
+        lwin18: products.lwin18,
+        name: products.name,
+        producer: products.producer,
+        country: products.country,
+        region: products.region,
+        year: products.year,
+        offerPrice: productOffers.price,
+        offerCurrency: productOffers.currency,
+      })
+      .from(products)
+      .leftJoin(productOffers, eq(productOffers.productId, products.id))
+      .limit(200);
 
-      if (competitors.length === 0) {
-        logger.warn('No competitor wines found — skipping Scout run');
-        await triggerDb
-          .update(agentRuns)
-          .set({ status: 'completed', completedAt: new Date() })
-          .where(eq(agentRuns.id, run.id));
-        return { success: true, skipped: true, reason: 'no_competitor_data' };
-      }
+    const stockSummary = await triggerDb
+      .select({
+        lwin18: wmsStock.lwin18,
+        productName: wmsStock.productName,
+        totalCases: sql<number>`SUM(${wmsStock.availableCases})`,
+      })
+      .from(wmsStock)
+      .where(gt(wmsStock.availableCases, 0))
+      .groupBy(wmsStock.lwin18, wmsStock.productName)
+      .limit(100);
 
-      // 2. Fetch our products with latest offers
-      const ourProducts = await triggerDb
-        .select({
-          lwin18: products.lwin18,
-          name: products.name,
-          producer: products.producer,
-          country: products.country,
-          region: products.region,
-          year: products.year,
-          offerPrice: productOffers.price,
-          offerCurrency: productOffers.currency,
-        })
-        .from(products)
-        .leftJoin(productOffers, eq(productOffers.productId, products.id))
-        .limit(200);
+    const competitorContext = competitors
+      .map(
+        (c) =>
+          `${c.competitorName}: ${c.productName} (${c.vintage ?? 'NV'}) — ${c.sellingPriceAed ? `${c.sellingPriceAed} AED` : `${c.sellingPriceUsd} USD`}${c.lwin18Match ? ` [LWIN: ${c.lwin18Match}]` : ''}`,
+      )
+      .join('\n');
 
-      // 3. Fetch current stock summary
-      const stockSummary = await triggerDb
-        .select({
-          lwin18: wmsStock.lwin18,
-          productName: wmsStock.productName,
-          totalCases: sql<number>`SUM(${wmsStock.availableCases})`,
-        })
-        .from(wmsStock)
-        .where(gt(wmsStock.availableCases, 0))
-        .groupBy(wmsStock.lwin18, wmsStock.productName)
-        .limit(100);
+    const ourCatalogContext = ourProducts
+      .map(
+        (p) =>
+          `${p.name} (${p.year ?? 'NV'}) by ${p.producer ?? 'Unknown'} — ${p.offerPrice ? `${p.offerPrice} ${p.offerCurrency}` : 'no offer'}${p.lwin18 ? ` [LWIN: ${p.lwin18}]` : ''}`,
+      )
+      .join('\n');
 
-      // 4. Build context for Claude
-      const competitorContext = competitors
-        .map(
-          (c) =>
-            `${c.competitorName}: ${c.productName} (${c.vintage ?? 'NV'}) — ${c.sellingPriceAed ? `${c.sellingPriceAed} AED` : `${c.sellingPriceUsd} USD`}${c.lwin18Match ? ` [LWIN: ${c.lwin18Match}]` : ''}`,
-        )
-        .join('\n');
+    const stockContext = stockSummary
+      .map((s) => `${s.productName} [${s.lwin18}]: ${s.totalCases} cases available`)
+      .join('\n');
 
-      const ourCatalogContext = ourProducts
-        .map(
-          (p) =>
-            `${p.name} (${p.year ?? 'NV'}) by ${p.producer ?? 'Unknown'} — ${p.offerPrice ? `${p.offerPrice} ${p.offerCurrency}` : 'no offer'}${p.lwin18 ? ` [LWIN: ${p.lwin18}]` : ''}`,
-        )
-        .join('\n');
+    const anthropic = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
 
-      const stockContext = stockSummary
-        .map((s) => `${s.productName} [${s.lwin18}]: ${s.totalCases} cases available`)
-        .join('\n');
-
-      // 5. Call Claude
-      const anthropic = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
-
-      const result = await generateObject({
-        model: anthropic('claude-sonnet-4-5-20250929'),
-        schema: scoutOutputSchema,
-        system: `You are The Scout, a competitive intelligence analyst for Craft & Culture, a wine distributor in the UAE/GCC market.
+    const result = await generateObject({
+      model: anthropic('claude-sonnet-4-5-20250929'),
+      schema: scoutOutputSchema,
+      system: `You are The Scout, a competitive intelligence analyst for Craft & Culture, a wine distributor in the UAE/GCC market.
 
 Your job is to analyze competitor wine lists against our own catalog and pricing, identify pricing gaps, blind spots (wines they carry that we don't), and generate actionable recommendations.
 
@@ -216,10 +199,10 @@ Key context:
 - Match products using LWIN codes when available, otherwise by name/vintage similarity
 - Focus on commercially significant gaps (>10% price difference)
 - Prioritize high-value wines and popular regions (Burgundy, Bordeaux, Champagne, Tuscany, Piedmont)`,
-        messages: [
-          {
-            role: 'user',
-            content: `Analyze today's competitive landscape.
+      messages: [
+        {
+          role: 'user',
+          content: `Analyze today's competitive landscape.
 
 COMPETITOR WINE LISTS (${competitors.length} wines):
 ${competitorContext}
@@ -235,57 +218,79 @@ Generate a daily Scout brief with:
 2. Top price gaps (where competitors undercut or overcharge vs us)
 3. Blind spots (competitor wines we don't carry)
 4. Prioritized action items`,
-          },
-        ],
-      });
+        },
+      ],
+    });
 
-      // 6. Build markdown content
-      const data = result.object;
-      const markdown = buildScoutMarkdown(data);
+    const data = result.object;
+    const markdown = buildScoutMarkdown(data);
 
-      // 7. Store output
-      await triggerDb.insert(agentOutputs).values({
-        agentId: 'scout',
-        runId: run.id,
-        type: 'daily-brief',
-        title: `Scout Brief — ${new Date().toISOString().slice(0, 10)}`,
-        content: markdown,
-        data: data as Record<string, unknown>,
-      });
+    await triggerDb.insert(agentOutputs).values({
+      agentId: 'scout',
+      runId: run.id,
+      type: 'daily-brief',
+      title: `Scout Brief — ${new Date().toISOString().slice(0, 10)}`,
+      content: markdown,
+      data: data as Record<string, unknown>,
+    });
 
-      // 8. Complete run
-      await triggerDb
-        .update(agentRuns)
-        .set({ status: 'completed', completedAt: new Date() })
-        .where(eq(agentRuns.id, run.id));
+    await triggerDb
+      .update(agentRuns)
+      .set({ status: 'completed', completedAt: new Date() })
+      .where(eq(agentRuns.id, run.id));
 
-      logger.info('Scout daily brief complete', {
-        priceGaps: data.priceGaps.length,
-        blindSpots: data.blindSpots.length,
-        actionItems: data.actionItems.length,
-      });
+    logger.info('Scout daily brief complete', {
+      priceGaps: data.priceGaps.length,
+      blindSpots: data.blindSpots.length,
+      actionItems: data.actionItems.length,
+    });
 
-      return {
-        success: true,
-        priceGaps: data.priceGaps.length,
-        blindSpots: data.blindSpots.length,
-        actionItems: data.actionItems.length,
-      };
-    } catch (error) {
-      logger.error('Scout agent failed', {
+    return {
+      success: true,
+      priceGaps: data.priceGaps.length,
+      blindSpots: data.blindSpots.length,
+      actionItems: data.actionItems.length,
+    };
+  } catch (error) {
+    logger.error('Scout agent failed', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+
+    await triggerDb
+      .update(agentRuns)
+      .set({
+        status: 'failed',
+        completedAt: new Date(),
         error: error instanceof Error ? error.message : 'Unknown error',
-      });
+      })
+      .where(eq(agentRuns.id, run.id));
 
-      await triggerDb
-        .update(agentRuns)
-        .set({
-          status: 'failed',
-          completedAt: new Date(),
-          error: error instanceof Error ? error.message : 'Unknown error',
-        })
-        .where(eq(agentRuns.id, run.id));
+    return { success: false, error: String(error) };
+  }
+};
 
-      return { success: false, error: String(error) };
-    }
+/**
+ * On-demand Scout task — triggered via REST API from the dashboard "Run Now" button
+ */
+export const scoutRunTask = task({
+  id: 'scout-run',
+  async run() {
+    return runScoutAnalysis();
+  },
+});
+
+/**
+ * The Scout — Daily competitive intelligence agent (scheduled)
+ *
+ * Runs daily at 06:00 GST.
+ */
+export const scoutDailyJob = schedules.task({
+  id: 'scout-daily',
+  cron: {
+    pattern: '0 6 * * *',
+    timezone: 'Asia/Dubai',
+  },
+  async run() {
+    return runScoutAnalysis();
   },
 });
