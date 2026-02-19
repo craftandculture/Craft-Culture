@@ -383,15 +383,14 @@ const CompetitorUpload = () => {
                 />
               </div>
               <Typography variant="bodyXs" colorRole="muted">
-                {uploadProgress.matched} matched, {uploadProgress.unmatched} unmatched so far
+                {uploadProgress.current} of {uploadProgress.total} wines uploaded
               </Typography>
             </div>
           )}
 
           {uploadResult && (
             <Typography variant="bodySm" className="text-green-600">
-              Uploaded successfully! {uploadResult.matched} wines matched to LWIN database,{' '}
-              {uploadResult.unmatched} unmatched.
+              Uploaded {uploadResult.matched + uploadResult.unmatched} wines successfully!
             </Typography>
           )}
 
