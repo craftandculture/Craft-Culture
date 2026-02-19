@@ -1,9 +1,9 @@
-import { tasks } from '@trigger.dev/sdk/v3';
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 
 import { adminProcedure } from '@/lib/trpc/procedures';
 import logger from '@/utils/logger';
+import tryCatch from '@/utils/tryCatch';
 
 const agentTaskIds = {
   scout: 'scout-daily',
@@ -12,7 +12,7 @@ const agentTaskIds = {
 } as const;
 
 /**
- * Manually trigger an agent job via Trigger.dev
+ * Manually trigger an agent job via the Trigger.dev REST API
  */
 const triggerAgent = adminProcedure
   .input(
@@ -22,22 +22,31 @@ const triggerAgent = adminProcedure
   )
   .mutation(async ({ input }) => {
     const taskId = agentTaskIds[input.agentId];
+    const secretKey = process.env.TRIGGER_SECRET_KEY;
 
-    try {
-      const handle = await tasks.trigger(taskId, {});
-
-      logger.info('Agent triggered manually', {
-        agentId: input.agentId,
-        taskId,
-        runId: handle.id,
+    if (!secretKey) {
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'TRIGGER_SECRET_KEY is not configured',
       });
+    }
 
-      return { success: true, runId: handle.id };
-    } catch (error) {
+    const [response, fetchError] = await tryCatch(
+      fetch(`https://api.trigger.dev/api/v1/tasks/${taskId}/trigger`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${secretKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ payload: {} }),
+      }),
+    );
+
+    if (fetchError) {
       logger.error('Failed to trigger agent', {
         agentId: input.agentId,
         taskId,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: fetchError.message,
       });
 
       throw new TRPCError({
@@ -45,6 +54,32 @@ const triggerAgent = adminProcedure
         message: `Failed to trigger ${input.agentId} agent`,
       });
     }
+
+    const [body, parseError] = await tryCatch(response.json() as Promise<Record<string, unknown>>);
+
+    if (!response.ok || parseError) {
+      logger.error('Trigger.dev API error', {
+        agentId: input.agentId,
+        taskId,
+        status: response.status,
+        body: body ?? parseError?.message,
+      });
+
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: `Trigger.dev returned ${response.status} for ${input.agentId}`,
+      });
+    }
+
+    const runId = (body as { id?: string }).id ?? 'unknown';
+
+    logger.info('Agent triggered manually via REST API', {
+      agentId: input.agentId,
+      taskId,
+      runId,
+    });
+
+    return { success: true, runId };
   });
 
 export default triggerAgent;

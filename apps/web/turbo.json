@@ -24,7 +24,8 @@
         "BLOB_READ_WRITE_TOKEN",
         "GOOGLE_GENERATIVE_AI_API_KEY",
         "ZEBRA_PRINTER_IP",
-        "NEXT_PUBLIC_ZEBRA_PRINTER_IP"
+        "NEXT_PUBLIC_ZEBRA_PRINTER_IP",
+        "TRIGGER_SECRET_KEY"
       ]
     },
     "dev": {
