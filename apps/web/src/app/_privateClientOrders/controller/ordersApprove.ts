@@ -2,6 +2,7 @@ import { TRPCError } from '@trpc/server';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 
+import reserveStockForOrderItems from '@/app/_wms/utils/reserveStockForOrderItems';
 import db from '@/database/client';
 import {
   orderPricingOverrides,
@@ -92,6 +93,49 @@ const ordersApprove = adminProcedure.input(approveOrderSchema).mutation(async ({
           updatedAt: new Date(),
         })
         .where(eq(privateClientOrderItems.id, item.itemId));
+    }
+  }
+
+  // Reserve WMS stock for cc_inventory items
+  if (lineItems && lineItems.length > 0) {
+    const ccInventoryItemIds = lineItems
+      .filter((item) => item.source === 'cc_inventory')
+      .map((item) => item.itemId);
+
+    if (ccInventoryItemIds.length > 0) {
+      const ccItems = await db
+        .select({
+          id: privateClientOrderItems.id,
+          lwin: privateClientOrderItems.lwin,
+          productName: privateClientOrderItems.productName,
+          quantity: privateClientOrderItems.quantity,
+        })
+        .from(privateClientOrderItems)
+        .where(
+          eq(privateClientOrderItems.orderId, orderId),
+        );
+
+      const reservationItems = ccItems
+        .filter(
+          (item) =>
+            item.lwin && ccInventoryItemIds.includes(item.id),
+        )
+        .map((item) => ({
+          orderItemId: item.id,
+          lwin18: item.lwin!,
+          productName: item.productName,
+          quantityCases: item.quantity,
+        }));
+
+      if (reservationItems.length > 0) {
+        await reserveStockForOrderItems({
+          orderType: 'pco',
+          orderId,
+          orderNumber: order.orderNumber ?? orderId,
+          items: reservationItems,
+          db,
+        });
+      }
     }
   }
 
