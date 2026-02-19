@@ -27,10 +27,10 @@ interface ScoutData {
   executiveSummary?: string;
   priceGaps?: Array<{
     productName: string;
-    ourPriceAed: number;
-    competitorPriceAed: number;
+    ourCostAed: number;
+    competitorRetailAed: number;
     competitorName: string;
-    gapPercent: number;
+    marginPercent: number;
     recommendation: string;
   }>;
   pricingOpportunities?: Array<{
@@ -130,7 +130,7 @@ const ScoutBrief = () => {
   );
 
   const revenueAed = priceGaps.reduce(
-    (sum, g) => sum + Math.abs(g.competitorPriceAed - g.ourPriceAed),
+    (sum, g) => sum + Math.max(0, g.competitorRetailAed - g.ourCostAed),
     0,
   );
   const revenueUsd = Math.round(revenueAed / 3.67);
@@ -193,7 +193,7 @@ const ScoutBrief = () => {
           <CardContent className="flex items-start justify-between p-4">
             <div>
               <Typography variant="bodyXs" colorRole="muted" className="text-[11px] font-medium uppercase tracking-wider">
-                Revenue Opportunity
+                Margin Potential
               </Typography>
               <Typography variant="headingLg" className="mt-1 text-text-brand">
                 {revenueAed > 0 ? `AED ${Math.round(revenueAed / 1000)}k` : '—'}
@@ -254,7 +254,7 @@ const ScoutBrief = () => {
           <CardContent className="p-5">
             <div className="mb-3 flex items-center justify-between">
               <Typography variant="bodySm" className="font-semibold">
-                Price Gaps vs Competitors
+                Margin Opportunities
               </Typography>
               {priceGaps.length > 0 && (
                 <Badge colorRole="brand" size="xs">
@@ -267,9 +267,9 @@ const ScoutBrief = () => {
                 <TableHeader>
                   <TableRow isHeaderRow>
                     <TableHead>Wine</TableHead>
-                    <TableHead>Competitor</TableHead>
-                    <TableHead>Our Price</TableHead>
-                    <TableHead className="text-right">Gap</TableHead>
+                    <TableHead>Competitor Retail</TableHead>
+                    <TableHead>Our IB Cost</TableHead>
+                    <TableHead className="text-right">Margin</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -279,27 +279,26 @@ const ScoutBrief = () => {
                         <span className="font-semibold">{gap.productName}</span>
                       </TableCell>
                       <TableCell>
-                        <div>{gap.competitorName}</div>
+                        <div>{gap.competitorRetailAed.toFixed(0)} AED</div>
                         <Typography variant="bodyXs" colorRole="muted">
-                          {gap.competitorPriceAed.toFixed(0)} AED
+                          {gap.competitorName}
                         </Typography>
                       </TableCell>
-                      <TableCell>{gap.ourPriceAed.toFixed(0)} AED</TableCell>
+                      <TableCell>{gap.ourCostAed.toFixed(0)} AED</TableCell>
                       <TableCell className="text-right">
                         <Badge
                           size="xs"
                           colorRole={
-                            gap.gapPercent > 100
+                            gap.marginPercent > 50
                               ? 'success'
-                              : gap.gapPercent > 50
-                                ? 'warning'
-                                : gap.gapPercent > 0
-                                  ? 'info'
+                              : gap.marginPercent > 30
+                                ? 'info'
+                                : gap.marginPercent > 0
+                                  ? 'warning'
                                   : 'danger'
                           }
                         >
-                          {gap.gapPercent > 0 ? '+' : ''}
-                          {gap.gapPercent.toFixed(0)}%
+                          {gap.marginPercent.toFixed(0)}%
                         </Badge>
                       </TableCell>
                     </TableRow>
