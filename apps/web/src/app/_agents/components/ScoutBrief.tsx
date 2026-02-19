@@ -4,8 +4,8 @@ import {
   IconAlertTriangle,
   IconChartBar,
   IconClock,
+  IconRadar,
   IconRefresh,
-  IconSignal,
   IconTargetArrow,
   IconTrendingUp,
 } from '@tabler/icons-react';
@@ -288,7 +288,7 @@ const ScoutBrief = () => {
               </Typography>
             </div>
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-100 text-amber-600">
-              <IconSignal size={18} />
+              <IconRadar size={18} />
             </div>
           </CardContent>
         </Card>
