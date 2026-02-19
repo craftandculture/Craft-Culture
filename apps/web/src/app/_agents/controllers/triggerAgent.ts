@@ -6,9 +6,9 @@ import logger from '@/utils/logger';
 import tryCatch from '@/utils/tryCatch';
 
 const agentTaskIds = {
-  scout: 'scout-daily',
-  concierge: 'concierge-daily',
-  storyteller: 'storyteller-weekly',
+  scout: 'scout-run',
+  concierge: 'concierge-run',
+  storyteller: 'storyteller-run',
 } as const;
 
 /**
