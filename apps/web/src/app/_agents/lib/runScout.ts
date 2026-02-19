@@ -43,6 +43,14 @@ const scoutOutputSchema = z.object({
       rationale: z.string(),
     }),
   ),
+  marketSignals: z.array(
+    z.object({
+      type: z.enum(['opportunity', 'market_move', 'blind_spot', 'fx_alert']),
+      title: z.string(),
+      body: z.string(),
+      relatedProduct: z.string().optional(),
+    }),
+  ),
 });
 
 const buildMarkdown = (data: z.infer<typeof scoutOutputSchema>) => {
@@ -68,6 +76,22 @@ const buildMarkdown = (data: z.infer<typeof scoutOutputSchema>) => {
     for (const opp of data.pricingOpportunities) {
       lines.push(
         `- **${opp.productName}** (${opp.vintage ?? 'NV'}) — ${opp.competitorName} sells at ${opp.competitorPriceAed.toFixed(0)} AED, est. cost ${opp.estimatedCostAed.toFixed(0)} AED (~${opp.potentialMarginPercent.toFixed(0)}% margin). _${opp.rationale}_`,
+      );
+    }
+    lines.push('');
+  }
+
+  if (data.marketSignals.length > 0) {
+    lines.push('## Market Signals\n');
+    const typeLabel = {
+      opportunity: 'Opportunity',
+      market_move: 'Market Move',
+      blind_spot: 'Blind Spot',
+      fx_alert: 'FX Alert',
+    } as const;
+    for (const signal of data.marketSignals) {
+      lines.push(
+        `- **[${typeLabel[signal.type]}]** ${signal.title} — ${signal.body}${signal.relatedProduct ? ` _(${signal.relatedProduct})_` : ''}`,
       );
     }
     lines.push('');
@@ -219,7 +243,8 @@ Key context:
 - Prioritize high-value wines and popular regions (Burgundy, Bordeaux, Champagne, Tuscany, Piedmont)
 - For "pricing opportunities" — estimate what C&C could source a wine for (use industry standard ~40-50% wholesale margin below competitor retail) and flag wines where the margin opportunity is attractive
 - Be honest and realistic. Don't sugarcoat — if competitors have better prices on something, say so
-- Action items should be specific and price-focused: which wines to source, what price to target, who to undercut`,
+- Action items should be specific and price-focused: which wines to source, what price to target, who to undercut
+- Generate market signals in 4 categories: "opportunity" (price gaps, sourcing wins), "market_move" (competitor price changes, new listings, delistings), "blind_spot" (regions or categories where competitors have coverage but C&C doesn't), "fx_alert" (currency movements that affect IB cost competitiveness)`,
       messages: [
         {
           role: 'user',
@@ -239,7 +264,8 @@ Generate a daily Scout brief with:
 1. Executive summary (2-3 sentences, focus on price positioning)
 2. Top price gaps — where we're cheaper OR more expensive than competitors. Be honest about both directions
 3. Pricing opportunities — competitor wines selling at high prices where C&C could source and undercut. Estimate sourcing cost and potential margin
-4. Prioritized action items focused on price wins — specific wines to source, prices to target, deals to chase`,
+4. Prioritized action items focused on price wins — specific wines to source, prices to target, deals to chase
+5. Market signals — categorize observations as: opportunity (price wins), market_move (competitor changes), blind_spot (gaps in our range), fx_alert (currency impact). Aim for 4-8 signals across the categories`,
         },
       ],
     });

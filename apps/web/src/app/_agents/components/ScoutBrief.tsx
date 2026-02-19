@@ -3,8 +3,9 @@
 import {
   IconAlertTriangle,
   IconChartBar,
-  IconEye,
+  IconClock,
   IconRefresh,
+  IconSignal,
   IconTargetArrow,
   IconTrendingUp,
 } from '@tabler/icons-react';
@@ -23,17 +24,24 @@ import TableRow from '@/app/_ui/components/Table/TableRow';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import useTRPC from '@/lib/trpc/browser';
 
+interface MarketSignal {
+  type: 'opportunity' | 'market_move' | 'blind_spot' | 'fx_alert';
+  title: string;
+  body: string;
+  relatedProduct?: string;
+}
+
 interface ScoutData {
   executiveSummary?: string;
   priceGaps?: Array<{
     productName: string;
     ourCostAed?: number;
-    ourPriceAed?: number; // legacy field name
+    ourPriceAed?: number;
     competitorRetailAed?: number;
-    competitorPriceAed?: number; // legacy field name
+    competitorPriceAed?: number;
     competitorName: string;
     marginPercent?: number;
-    gapPercent?: number; // legacy field name
+    gapPercent?: number;
     recommendation: string;
   }>;
   pricingOpportunities?: Array<{
@@ -51,6 +59,7 @@ interface ScoutData {
     action: string;
     rationale: string;
   }>;
+  marketSignals?: MarketSignal[];
 }
 
 const priorityOrder = { high: 0, medium: 1, low: 2 } as const;
@@ -61,14 +70,28 @@ const priorityColor = {
   low: 'bg-blue-100 text-blue-600',
 } as const;
 
+const signalConfig = {
+  opportunity: { label: 'Opportunity', border: 'border-l-emerald-500', text: 'text-emerald-600' },
+  market_move: { label: 'Market Move', border: 'border-l-amber-500', text: 'text-amber-600' },
+  blind_spot: { label: 'Blind Spot', border: 'border-l-red-500', text: 'text-red-600' },
+  fx_alert: { label: 'FX Alert', border: 'border-l-blue-500', text: 'text-blue-600' },
+} as const;
+
+/** Format a delta as "+N" or "-N" */
+const formatDelta = (delta: number) => {
+  if (delta === 0) return null;
+  return delta > 0 ? `+${delta}` : `${delta}`;
+};
+
 /**
  * Renders the latest Scout agent brief with price gaps table, market signals, and action items
  */
 const ScoutBrief = () => {
   const api = useTRPC();
   const queryClient = useQueryClient();
-  const { data, isLoading } = useQuery({
-    ...api.agents.getLatestBrief.queryOptions({ agentId: 'scout' }),
+
+  const { data: outputs, isLoading } = useQuery({
+    ...api.agents.getAgentOutputs.queryOptions({ agentId: 'scout', limit: 10 }),
     refetchInterval: 60000,
   });
 
@@ -76,12 +99,13 @@ const ScoutBrief = () => {
     ...api.agents.triggerAgent.mutationOptions(),
     onSuccess: () => {
       void queryClient.invalidateQueries({
-        queryKey: api.agents.getLatestBrief.queryKey({ agentId: 'scout' }),
+        queryKey: api.agents.getAgentOutputs.queryKey({ agentId: 'scout', limit: 10 }),
       });
     },
   });
 
-  const brief = data?.[0];
+  const brief = outputs?.[0];
+  const prevBrief = outputs?.[1];
 
   if (isLoading) {
     return (
@@ -125,12 +149,21 @@ const ScoutBrief = () => {
   }
 
   const d = brief.data as ScoutData | null;
+  const prevD = prevBrief?.data as ScoutData | null;
+
   const priceGaps = d?.priceGaps ?? [];
-  const pricingOpps = d?.pricingOpportunities ?? [];
   const actionItems = d?.actionItems ?? [];
   const sortedActions = [...actionItems].sort(
     (a, b) => (priorityOrder[a.priority] ?? 2) - (priorityOrder[b.priority] ?? 2),
   );
+
+  // Build market signals — use new field if available, fall back to legacy pricingOpportunities
+  const signals: MarketSignal[] = d?.marketSignals ?? (d?.pricingOpportunities ?? []).map((opp) => ({
+    type: 'opportunity' as const,
+    title: opp.productName,
+    body: `${opp.competitorName} at ${opp.competitorPriceAed.toFixed(0)} AED${opp.vintage ? ` (${opp.vintage})` : ''}${opp.region ? ` — ${opp.region}` : ''}. Est. cost ${opp.estimatedCostAed.toFixed(0)} AED (~${opp.potentialMarginPercent.toFixed(0)}% margin). ${opp.rationale}`,
+    relatedProduct: opp.productName,
+  }));
 
   const revenueAed = priceGaps.reduce(
     (sum, g) => sum + Math.max(0, (g.competitorRetailAed ?? g.competitorPriceAed ?? 0) - (g.ourCostAed ?? g.ourPriceAed ?? 0)),
@@ -138,11 +171,35 @@ const ScoutBrief = () => {
   );
   const revenueUsd = Math.round(revenueAed / 3.67);
 
+  // KPI deltas vs previous brief
+  const prevPriceGaps = prevD?.priceGaps ?? [];
+  const prevSignals: MarketSignal[] = prevD?.marketSignals ?? (prevD?.pricingOpportunities ?? []).map((opp) => ({
+    type: 'opportunity' as const,
+    title: opp.productName,
+    body: '',
+  }));
+  const prevActions = prevD?.actionItems ?? [];
+
+  const priceGapDelta = prevBrief ? priceGaps.length - prevPriceGaps.length : null;
+  const signalDelta = prevBrief ? signals.length - prevSignals.length : null;
+  const actionDelta = prevBrief ? actionItems.length - prevActions.length : null;
+
+  const prevRevenueAed = prevPriceGaps.reduce(
+    (sum, g) => sum + Math.max(0, (g.competitorRetailAed ?? g.competitorPriceAed ?? 0) - (g.ourCostAed ?? g.ourPriceAed ?? 0)),
+    0,
+  );
+  const revenueDelta = prevBrief && revenueAed > 0 && prevRevenueAed > 0
+    ? Math.round(((revenueAed - prevRevenueAed) / prevRevenueAed) * 100)
+    : null;
+
   const highCount = actionItems.filter((a) => a.priority === 'high').length;
   const medCount = actionItems.filter((a) => a.priority === 'medium').length;
   const prioritySub = [highCount && `${highCount} high`, medCount && `${medCount} med`]
     .filter(Boolean)
     .join(', ') || 'None';
+
+  // History items (skip the first which is current)
+  const historyItems = (outputs ?? []).slice(1);
 
   return (
     <div className="space-y-5">
@@ -183,7 +240,9 @@ const ScoutBrief = () => {
                 {priceGaps.length}
               </Typography>
               <Typography variant="bodyXs" colorRole="muted" className="mt-0.5">
-                found today
+                {priceGapDelta !== null && formatDelta(priceGapDelta)
+                  ? <span className={priceGapDelta > 0 ? 'text-emerald-600' : 'text-red-500'}>{formatDelta(priceGapDelta)} vs prev</span>
+                  : 'found today'}
               </Typography>
             </div>
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-100 text-emerald-600">
@@ -199,10 +258,12 @@ const ScoutBrief = () => {
                 Margin Potential
               </Typography>
               <Typography variant="headingLg" className="mt-1 text-text-brand">
-                {revenueAed > 0 ? `AED ${Math.round(revenueAed / 1000)}k` : '—'}
+                {revenueAed > 0 ? `AED ${Math.round(revenueAed / 1000)}k` : '\u2014'}
               </Typography>
               <Typography variant="bodyXs" colorRole="muted" className="mt-0.5">
-                {revenueUsd > 0 ? `$${revenueUsd.toLocaleString()} USD` : 'No data'}
+                {revenueDelta !== null && revenueDelta !== 0
+                  ? <span className={revenueDelta > 0 ? 'text-emerald-600' : 'text-red-500'}>{revenueDelta > 0 ? '+' : ''}{revenueDelta}% vs prev</span>
+                  : revenueUsd > 0 ? `$${revenueUsd.toLocaleString()} USD` : 'No data'}
               </Typography>
             </div>
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-fill-brand/10 text-text-brand">
@@ -215,17 +276,19 @@ const ScoutBrief = () => {
           <CardContent className="flex items-start justify-between p-4">
             <div>
               <Typography variant="bodyXs" colorRole="muted" className="text-[11px] font-medium uppercase tracking-wider">
-                Price Opportunities
+                Signals
               </Typography>
               <Typography variant="headingLg" className="mt-1 text-amber-600">
-                {pricingOpps.length}
+                {signals.length}
               </Typography>
               <Typography variant="bodyXs" colorRole="muted" className="mt-0.5">
-                Wines to source &amp; undercut
+                {signalDelta !== null && formatDelta(signalDelta)
+                  ? <span className={signalDelta > 0 ? 'text-emerald-600' : 'text-red-500'}>{formatDelta(signalDelta)} vs prev</span>
+                  : 'market observations'}
               </Typography>
             </div>
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-100 text-amber-600">
-              <IconEye size={18} />
+              <IconSignal size={18} />
             </div>
           </CardContent>
         </Card>
@@ -240,7 +303,9 @@ const ScoutBrief = () => {
                 {actionItems.length}
               </Typography>
               <Typography variant="bodyXs" colorRole="muted" className="mt-0.5">
-                {prioritySub}
+                {actionDelta !== null && formatDelta(actionDelta)
+                  ? <span className={actionDelta > 0 ? 'text-emerald-600' : 'text-red-500'}>{formatDelta(actionDelta)} vs prev</span>
+                  : prioritySub}
               </Typography>
             </div>
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-100 text-blue-600">
@@ -332,32 +397,27 @@ const ScoutBrief = () => {
             </Card>
           )}
 
-          {/* Pricing Opportunities as signal cards */}
-          {pricingOpps.map((opp, i) => (
-            <Card key={i}>
-              <CardContent className="border-l-3 border-l-amber-500 p-4">
-                <Typography variant="bodyXs" className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-amber-600">
-                  Price Opportunity
-                </Typography>
-                <Typography variant="bodySm" className="font-semibold">
-                  {opp.productName}
-                </Typography>
-                <Typography variant="bodyXs" colorRole="muted" className="mt-1">
-                  {opp.competitorName} at {opp.competitorPriceAed.toFixed(0)} AED
-                  {opp.vintage ? ` (${opp.vintage})` : ''}
-                  {opp.region ? ` — ${opp.region}` : ''}
-                </Typography>
-                <Typography variant="bodyXs" className="mt-1 text-emerald-600">
-                  Est. cost {opp.estimatedCostAed.toFixed(0)} AED — ~{opp.potentialMarginPercent.toFixed(0)}% margin
-                </Typography>
-                <Typography variant="bodyXs" colorRole="muted" className="mt-1 italic">
-                  {opp.rationale}
-                </Typography>
-              </CardContent>
-            </Card>
-          ))}
+          {/* Signal cards with type-based styling */}
+          {signals.map((signal, i) => {
+            const config = signalConfig[signal.type];
+            return (
+              <Card key={i}>
+                <CardContent className={`border-l-3 ${config.border} p-4`}>
+                  <Typography variant="bodyXs" className={`mb-1 text-[10px] font-semibold uppercase tracking-wider ${config.text}`}>
+                    {config.label}
+                  </Typography>
+                  <Typography variant="bodySm" className="font-semibold">
+                    {signal.title}
+                  </Typography>
+                  <Typography variant="bodyXs" colorRole="muted" className="mt-1">
+                    {signal.body}
+                  </Typography>
+                </CardContent>
+              </Card>
+            );
+          })}
 
-          {pricingOpps.length === 0 && !d?.executiveSummary && (
+          {signals.length === 0 && !d?.executiveSummary && (
             <Card>
               <CardContent className="p-4">
                 <Typography variant="bodyXs" colorRole="muted">
@@ -404,6 +464,45 @@ const ScoutBrief = () => {
                   </Badge>
                 </div>
               ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Previous Briefs */}
+      {historyItems.length > 0 && (
+        <Card>
+          <CardContent className="p-5">
+            <div className="mb-3 flex items-center gap-2">
+              <IconClock size={16} className="text-text-muted" />
+              <Typography variant="bodySm" className="font-semibold">
+                Previous Briefs
+              </Typography>
+            </div>
+            <div className="flex flex-col divide-y divide-border-muted">
+              {historyItems.map((item) => {
+                const hd = item.data as ScoutData | null;
+                const hGaps = hd?.priceGaps?.length ?? 0;
+                const hSignals = (hd?.marketSignals ?? hd?.pricingOpportunities ?? []).length;
+                const hActions = hd?.actionItems?.length ?? 0;
+                return (
+                  <div key={item.id} className="flex items-center justify-between py-2.5 first:pt-0 last:pb-0">
+                    <div className="min-w-0 flex-1">
+                      <Typography variant="bodySm" className="font-medium">
+                        {item.title}
+                      </Typography>
+                      <Typography variant="bodyXs" colorRole="muted">
+                        {item.createdAt.toLocaleDateString()}
+                      </Typography>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge size="xs" colorRole="brand">{hGaps} gaps</Badge>
+                      <Badge size="xs" colorRole="warning">{hSignals} signals</Badge>
+                      <Badge size="xs" colorRole="info">{hActions} actions</Badge>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </CardContent>
         </Card>
