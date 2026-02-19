@@ -1,42 +1,19 @@
 import { eq, sql } from 'drizzle-orm';
 
 import db from '@/database/client';
-import { competitorWines, lwinWines } from '@/database/schema';
+import { competitorWines } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
 import logger from '@/utils/logger';
 
 import uploadCompetitorListSchema from '../schemas/uploadCompetitorListSchema';
 
-/**
- * Try to match a product name to the LWIN database using pg_trgm similarity
- */
-const matchLwin = async (productName: string) => {
-  const cleaned = productName.replace(/\b(19|20)\d{2}\b/g, '').trim();
-
-  try {
-    const results = await db
-      .select({
-        lwin: lwinWines.lwin,
-        displayName: lwinWines.displayName,
-        similarity: sql<number>`similarity(${lwinWines.displayName}, ${cleaned})`,
-      })
-      .from(lwinWines)
-      .where(sql`similarity(${lwinWines.displayName}, ${cleaned}) > 0.25`)
-      .orderBy(sql`similarity(${lwinWines.displayName}, ${cleaned}) DESC`)
-      .limit(1);
-
-    if (results.length === 0 || !results[0]) return null;
-    return results[0];
-  } catch {
-    return null;
-  }
-};
+const INSERT_BATCH = 500;
 
 /**
  * Upload a competitor wine price list
  *
- * Deactivates previous entries for the same competitor, then inserts
- * new rows with optional LWIN matching.
+ * Inserts rows immediately, then runs a single bulk LWIN match query.
+ * Much faster than per-row matching for large lists (4000+ wines).
  */
 const uploadCompetitorList = adminProcedure
   .input(uploadCompetitorListSchema)
@@ -57,43 +34,21 @@ const uploadCompetitorList = adminProcedure
         .where(eq(competitorWines.competitorName, competitorName));
     }
 
-    // Process rows with parallel LWIN matching in batches
-    const MATCH_BATCH = 50;
-    const INSERT_BATCH = 500;
-    let matchedCount = 0;
-    const insertValues = [];
-
-    for (let i = 0; i < rows.length; i += MATCH_BATCH) {
-      const batch = rows.slice(i, i + MATCH_BATCH);
-      const matches = await Promise.all(
-        batch.map((row) => matchLwin(row.productName)),
-      );
-
-      for (let j = 0; j < batch.length; j++) {
-        const row = batch[j]!;
-        const lwinMatch = matches[j];
-        const lwin18Match =
-          lwinMatch && lwinMatch.similarity >= 0.3 ? lwinMatch.lwin : null;
-
-        if (lwin18Match) matchedCount++;
-
-        insertValues.push({
-          competitorName,
-          productName: row.productName,
-          vintage: row.vintage ?? null,
-          country: row.country ?? null,
-          region: row.region ?? null,
-          bottleSize: row.bottleSize ?? null,
-          sellingPriceAed: row.sellingPriceAed ?? null,
-          sellingPriceUsd: row.sellingPriceUsd ?? null,
-          quantity: row.quantity ?? null,
-          source: source ?? null,
-          uploadedBy: ctx.user.id,
-          isActive: true,
-          lwin18Match,
-        });
-      }
-    }
+    // Build insert values without LWIN matching (fast)
+    const insertValues = rows.map((row) => ({
+      competitorName,
+      productName: row.productName,
+      vintage: row.vintage ?? null,
+      country: row.country ?? null,
+      region: row.region ?? null,
+      bottleSize: row.bottleSize ?? null,
+      sellingPriceAed: row.sellingPriceAed ?? null,
+      sellingPriceUsd: row.sellingPriceUsd ?? null,
+      quantity: row.quantity ?? null,
+      source: source ?? null,
+      uploadedBy: ctx.user.id,
+      isActive: true,
+    }));
 
     // Batch insert in chunks to stay under Postgres parameter limits
     for (let i = 0; i < insertValues.length; i += INSERT_BATCH) {
@@ -101,6 +56,39 @@ const uploadCompetitorList = adminProcedure
         .insert(competitorWines)
         .values(insertValues.slice(i, i + INSERT_BATCH));
     }
+
+    // Bulk LWIN match — single SQL query instead of thousands of individual ones
+    const [matchResult] = await db.execute<{ matched: number }>(sql`
+      WITH matches AS (
+        UPDATE competitor_wines cw
+        SET lwin18_match = sub.lwin
+        FROM (
+          SELECT DISTINCT ON (cw2.id) cw2.id, lw.lwin
+          FROM competitor_wines cw2
+          CROSS JOIN LATERAL (
+            SELECT lw.lwin
+            FROM lwin_wines lw
+            WHERE similarity(
+              lw.display_name,
+              regexp_replace(cw2.product_name, '\y(19|20)\d{2}\y', '', 'g')
+            ) > 0.25
+            ORDER BY similarity(
+              lw.display_name,
+              regexp_replace(cw2.product_name, '\y(19|20)\d{2}\y', '', 'g')
+            ) DESC
+            LIMIT 1
+          ) lw
+          WHERE cw2.competitor_name = ${competitorName}
+            AND cw2.is_active = true
+            AND cw2.lwin18_match IS NULL
+        ) sub
+        WHERE cw.id = sub.id
+        RETURNING cw.id
+      )
+      SELECT COUNT(*)::int AS matched FROM matches
+    `);
+
+    const matchedCount = matchResult?.matched ?? 0;
 
     logger.info('[Agents] Competitor list uploaded', {
       competitor: competitorName,
