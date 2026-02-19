@@ -4,7 +4,6 @@ import {
   IconAlertTriangle,
   IconAnchor,
   IconArrowRight,
-  IconBox,
   IconChartBar,
   IconChevronRight,
   IconClipboardList,
@@ -15,6 +14,7 @@ import {
   IconPackageImport,
   IconPlane,
   IconPlus,
+  IconReceipt,
   IconRefresh,
   IconShip,
   IconTruck,
@@ -291,14 +291,14 @@ const LogisticsDashboardPage = () => {
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-full bg-orange-100 dark:bg-orange-900/30">
-                  <Icon icon={IconBox} size="md" className="text-orange-600" />
+                  <Icon icon={IconAnchor} size="md" className="text-orange-600" />
                 </div>
                 <div>
                   <Typography variant="bodyXs" colorRole="muted">
-                    Customs
+                    At Port
                   </Typography>
                   <Typography variant="headingMd" className="text-orange-600">
-                    {metrics?.shipments.customsClearance ?? 0}
+                    {metrics?.shipments.arrivedPort ?? 0}
                   </Typography>
                 </div>
               </div>
@@ -647,14 +647,14 @@ const LogisticsDashboardPage = () => {
               </CardContent>
             </Card>
           </Link>
-          <Link href="/platform/admin/logistics/tools/pdf-extract">
+          <Link href="/platform/admin/logistics/invoices">
             <Card className="cursor-pointer transition-colors hover:border-border-brand">
               <CardContent className="flex items-center gap-3 p-4">
-                <Icon icon={IconFileText} size="md" className="text-text-muted" />
+                <Icon icon={IconReceipt} size="md" className="text-text-muted" />
                 <div>
-                  <Typography variant="headingSm">PDF Extractor</Typography>
+                  <Typography variant="headingSm">Invoices</Typography>
                   <Typography variant="bodyXs" colorRole="muted">
-                    AI document extraction
+                    Hillebrand invoices
                   </Typography>
                 </div>
                 <IconChevronRight className="ml-auto h-5 w-5 text-text-muted" />
