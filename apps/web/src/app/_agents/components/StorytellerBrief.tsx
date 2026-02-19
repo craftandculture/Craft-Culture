@@ -7,7 +7,7 @@ import {
   IconCopy,
   IconRefresh,
 } from '@tabler/icons-react';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import Badge from '@/app/_ui/components/Badge/Badge';
 import Button from '@/app/_ui/components/Button/Button';
@@ -46,9 +46,19 @@ const copyToClipboard = (text: string) => {
  */
 const StorytellerBrief = () => {
   const api = useTRPC();
+  const queryClient = useQueryClient();
   const { data, isLoading, refetch } = useQuery({
     ...api.agents.getLatestBrief.queryOptions({ agentId: 'storyteller' }),
     refetchInterval: 60000,
+  });
+
+  const triggerMutation = useMutation({
+    ...api.agents.triggerAgent.mutationOptions(),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: api.agents.getLatestBrief.queryKey({ agentId: 'storyteller' }),
+      });
+    },
   });
 
   const brief = data?.[0];
@@ -72,10 +82,23 @@ const StorytellerBrief = () => {
           <Typography variant="headingSm" className="mb-2">
             No Storyteller Brief Yet
           </Typography>
-          <Typography variant="bodySm" colorRole="muted">
+          <Typography variant="bodySm" colorRole="muted" className="mb-4">
             The Storyteller runs every Monday at 06:05 GST. It generates weekly marketing content
             based on your inventory and recent sales.
           </Typography>
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={() => triggerMutation.mutate({ agentId: 'storyteller' })}
+            disabled={triggerMutation.isPending}
+          >
+            {triggerMutation.isPending ? 'Triggering...' : 'Run Now'}
+          </Button>
+          {triggerMutation.isSuccess && (
+            <Typography variant="bodyXs" colorRole="muted" className="mt-2">
+              Agent triggered. Results will appear shortly.
+            </Typography>
+          )}
         </CardContent>
       </Card>
     );

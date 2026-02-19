@@ -8,7 +8,7 @@ import {
   IconUserStar,
   IconZzz,
 } from '@tabler/icons-react';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import Badge from '@/app/_ui/components/Badge/Badge';
 import Button from '@/app/_ui/components/Button/Button';
@@ -59,9 +59,19 @@ const dormancyColor = (days: number) => {
  */
 const ConciergeBrief = () => {
   const api = useTRPC();
+  const queryClient = useQueryClient();
   const { data, isLoading, refetch } = useQuery({
     ...api.agents.getLatestBrief.queryOptions({ agentId: 'concierge' }),
     refetchInterval: 60000,
+  });
+
+  const triggerMutation = useMutation({
+    ...api.agents.triggerAgent.mutationOptions(),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: api.agents.getLatestBrief.queryKey({ agentId: 'concierge' }),
+      });
+    },
   });
 
   const brief = data?.[0];
@@ -85,10 +95,23 @@ const ConciergeBrief = () => {
           <Typography variant="headingSm" className="mb-2">
             No Concierge Brief Yet
           </Typography>
-          <Typography variant="bodySm" colorRole="muted">
+          <Typography variant="bodySm" colorRole="muted" className="mb-4">
             The Concierge runs daily at 06:15 GST. It analyzes client contacts and order history to
             generate personalized outreach suggestions.
           </Typography>
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={() => triggerMutation.mutate({ agentId: 'concierge' })}
+            disabled={triggerMutation.isPending}
+          >
+            {triggerMutation.isPending ? 'Triggering...' : 'Run Now'}
+          </Button>
+          {triggerMutation.isSuccess && (
+            <Typography variant="bodyXs" colorRole="muted" className="mt-2">
+              Agent triggered. Results will appear shortly.
+            </Typography>
+          )}
         </CardContent>
       </Card>
     );
