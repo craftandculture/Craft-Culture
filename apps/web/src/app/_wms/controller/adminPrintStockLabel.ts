@@ -69,14 +69,8 @@ const adminPrintStockLabel = adminProcedure
       ? `${basePack} | ${stock.quantityCases} Cases`
       : `${stock.quantityCases} Cases`;
 
-    // Build barcode for the label
-    const safeName = stock.productName
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .replace(/[^a-zA-Z0-9]/g, '-')
-      .replace(/-+/g, '-')
-      .slice(0, 20);
-    const barcode = `STK-${safeName}-${stock.quantityCases}C`;
+    // Use LWIN18 as barcode — stable product identifier scannable across the system
+    const barcode = stock.lwin18;
 
     const zpl = generateLabelZpl({
       barcode,
