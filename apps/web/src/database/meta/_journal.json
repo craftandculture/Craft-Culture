@@ -162,6 +162,13 @@
       "when": 1770578744906,
       "tag": "0022_add-storage-method-to-locations",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1771389715045,
+      "tag": "0023_fair_rocket_raccoon",
+      "breakpoints": true
     }
   ]
 }
