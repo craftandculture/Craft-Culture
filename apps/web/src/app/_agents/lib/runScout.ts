@@ -7,7 +7,6 @@ import db from '@/database/client';
 import {
   agentOutputs,
   agentRuns,
-  competitorWines,
   productOffers,
   products,
   wmsStock,
@@ -97,24 +96,37 @@ const runScout = async () => {
   if (!run) throw new Error('Failed to create agent run');
 
   try {
-    // Prioritize LWIN-matched wines (direct price comparison) then highest-priced
-    const competitors = await db
-      .select({
-        competitorName: competitorWines.competitorName,
-        productName: competitorWines.productName,
-        vintage: competitorWines.vintage,
-        sellingPriceAed: competitorWines.sellingPriceAed,
-        sellingPriceUsd: competitorWines.sellingPriceUsd,
-        region: competitorWines.region,
-        lwin18Match: competitorWines.lwin18Match,
-      })
-      .from(competitorWines)
-      .where(eq(competitorWines.isActive, true))
-      .orderBy(
-        sql`CASE WHEN ${competitorWines.lwin18Match} IS NOT NULL THEN 0 ELSE 1 END`,
-        sql`COALESCE(${competitorWines.sellingPriceAed}, 0) DESC`,
-      )
-      .limit(200);
+    // Sample top wines from EACH competitor (ranked by LWIN match, then price)
+    // Using window function to ensure all competitors are represented
+    const competitors = await db.execute<{
+      competitorName: string;
+      productName: string;
+      vintage: string | null;
+      sellingPriceAed: number | null;
+      sellingPriceUsd: number | null;
+      region: string | null;
+      lwin18Match: string | null;
+    }>(sql`
+      SELECT competitor_name AS "competitorName",
+             product_name AS "productName",
+             vintage,
+             selling_price_aed AS "sellingPriceAed",
+             selling_price_usd AS "sellingPriceUsd",
+             region,
+             lwin18_match AS "lwin18Match"
+      FROM (
+        SELECT *,
+               ROW_NUMBER() OVER (
+                 PARTITION BY competitor_name
+                 ORDER BY CASE WHEN lwin18_match IS NOT NULL THEN 0 ELSE 1 END,
+                          COALESCE(selling_price_aed, 0) DESC
+               ) AS rn
+        FROM competitor_wines
+        WHERE is_active = true
+      ) ranked
+      WHERE rn <= 100
+      ORDER BY competitor_name, rn
+    `);
 
     if (competitors.length === 0) {
       await db
