@@ -103,6 +103,8 @@ const adminGenerateDeliveryNote = adminProcedure
             name: zohoSalesOrderItems.name,
             sku: zohoSalesOrderItems.sku,
             quantity: zohoSalesOrderItems.quantity,
+            unit: zohoSalesOrderItems.unit,
+            lwin18: zohoSalesOrderItems.lwin18,
           })
           .from(zohoSalesOrderItems)
           .where(eq(zohoSalesOrderItems.salesOrderId, order.id));

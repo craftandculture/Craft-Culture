@@ -1,4 +1,4 @@
-import { Document, Font, Page, StyleSheet, Text, View } from '@react-pdf/renderer';
+import { Document, Font, Image, Page, StyleSheet, Text, View } from '@react-pdf/renderer';
 
 // Register fonts
 Font.register({
@@ -12,94 +12,65 @@ Font.register({
   ],
 });
 
-// PDF Styles - Matching Craft & Culture brand colors
+const BRAND_TEAL = '#6BBFBF';
+const BRAND_TEAL_LIGHT = '#f0fafa';
+const TEXT_PRIMARY = '#0a0a0a';
+const TEXT_MUTED = '#737373';
+const BORDER_LIGHT = '#e5e5e5';
+
+// PDF Styles
 const styles = StyleSheet.create({
   page: {
-    paddingTop: 40,
-    paddingHorizontal: 40,
-    paddingBottom: 100,
+    paddingTop: 36,
+    paddingHorizontal: 36,
+    paddingBottom: 90,
     fontFamily: 'Roboto',
-    fontSize: 10,
-    color: '#0a0a0a',
+    fontSize: 9,
+    color: TEXT_PRIMARY,
     backgroundColor: '#ffffff',
   },
+  // Header
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 30,
-    paddingBottom: 20,
-    borderBottom: '2px solid #6BBFBF',
+    marginBottom: 24,
+    paddingBottom: 16,
+    borderBottom: `2px solid ${BRAND_TEAL}`,
   },
   headerLeft: {
     maxWidth: '50%',
   },
-  brandName: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#6BBFBF',
+  logo: {
+    width: 160,
+    height: 42,
   },
   brandTagline: {
-    fontSize: 8,
-    color: '#737373',
+    fontSize: 7,
+    color: TEXT_MUTED,
     marginTop: 4,
   },
   headerRight: {
     alignItems: 'flex-end',
   },
   title: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: 'bold',
-    color: '#0a0a0a',
-    marginBottom: 12,
+    color: TEXT_PRIMARY,
+    marginBottom: 10,
     letterSpacing: 1,
   },
   docInfo: {
-    fontSize: 9,
-    color: '#737373',
-    marginBottom: 3,
-    lineHeight: 1.3,
+    fontSize: 8,
+    color: TEXT_MUTED,
+    marginBottom: 2,
+    lineHeight: 1.4,
   },
-  section: {
-    marginBottom: 20,
-  },
-  sectionTitle: {
-    fontSize: 10,
-    fontWeight: 'bold',
-    marginBottom: 10,
-    color: '#0a0a0a',
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-    paddingBottom: 4,
-    borderBottom: '1px solid #e5e5e5',
-  },
-  infoBox: {
-    backgroundColor: '#f5f5f5',
-    padding: 16,
-    borderRadius: 4,
-    borderLeft: '3px solid #6BBFBF',
-  },
-  infoText: {
-    fontSize: 9,
-    marginBottom: 5,
-    lineHeight: 1.5,
-    color: '#0a0a0a',
-  },
-  infoLabel: {
-    fontWeight: 'bold',
-    color: '#737373',
-  },
-  twoColumn: {
-    flexDirection: 'row',
-    gap: 20,
-  },
-  column: {
-    flex: 1,
-  },
+  // Summary
   summaryBox: {
     flexDirection: 'row',
-    backgroundColor: '#f0fafa',
-    padding: 12,
+    backgroundColor: BRAND_TEAL_LIGHT,
+    padding: 10,
     borderRadius: 4,
     marginBottom: 20,
     justifyContent: 'space-around',
@@ -108,90 +79,204 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   summaryValue: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: 'bold',
-    color: '#6BBFBF',
+    color: BRAND_TEAL,
   },
   summaryLabel: {
-    fontSize: 8,
-    color: '#737373',
+    fontSize: 7,
+    color: TEXT_MUTED,
     marginTop: 2,
   },
+  // Address columns
+  addressRow: {
+    flexDirection: 'row',
+    gap: 16,
+    marginBottom: 20,
+  },
+  addressCol: {
+    flex: 1,
+  },
+  addressBox: {
+    backgroundColor: '#f5f5f5',
+    padding: 12,
+    borderRadius: 4,
+    borderLeft: `3px solid ${BRAND_TEAL}`,
+    minHeight: 60,
+  },
+  addressLabel: {
+    fontSize: 8,
+    fontWeight: 'bold',
+    color: TEXT_MUTED,
+    marginBottom: 6,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  addressText: {
+    fontSize: 9,
+    lineHeight: 1.5,
+    color: TEXT_PRIMARY,
+  },
+  addressBold: {
+    fontWeight: 'bold',
+  },
+  // Section
+  section: {
+    marginBottom: 16,
+  },
+  sectionTitle: {
+    fontSize: 9,
+    fontWeight: 'bold',
+    color: TEXT_PRIMARY,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    paddingBottom: 4,
+    borderBottom: `1px solid ${BORDER_LIGHT}`,
+    marginBottom: 8,
+  },
+  // Items table
   table: {
     width: '100%',
   },
   tableHeader: {
     flexDirection: 'row',
-    backgroundColor: '#6BBFBF',
+    backgroundColor: BRAND_TEAL,
     color: '#ffffff',
-    padding: 10,
+    paddingVertical: 7,
+    paddingHorizontal: 10,
     fontWeight: 'bold',
-    fontSize: 9,
+    fontSize: 7.5,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   tableRow: {
     flexDirection: 'row',
-    borderBottom: '1px solid #e5e5e5',
-    padding: 10,
-    fontSize: 9,
+    borderBottom: `1px solid ${BORDER_LIGHT}`,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    fontSize: 8,
   },
   tableRowAlt: {
     backgroundColor: '#fafafa',
   },
-  colOrder: {
-    flex: 1.5,
+  // Order group header
+  orderGroupHeader: {
+    flexDirection: 'row',
+    backgroundColor: '#f0f0f0',
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderBottom: `1px solid ${BORDER_LIGHT}`,
   },
-  colCustomer: {
-    flex: 2,
+  orderGroupText: {
+    fontSize: 8,
+    fontWeight: 'bold',
+    color: TEXT_PRIMARY,
   },
-  colItems: {
-    flex: 1,
+  orderGroupMeta: {
+    fontSize: 8,
+    color: TEXT_MUTED,
+    marginLeft: 'auto',
+  },
+  // Column widths
+  colNo: {
+    width: 24,
     textAlign: 'center',
   },
-  colCases: {
-    flex: 1,
+  colProduct: {
+    flex: 3,
+  },
+  colSku: {
+    flex: 1.5,
+  },
+  colQty: {
+    width: 50,
+    textAlign: 'center',
+  },
+  colUnit: {
+    width: 50,
     textAlign: 'center',
   },
   productName: {
+    fontSize: 8.5,
     fontWeight: 'bold',
-    marginBottom: 2,
-    color: '#0a0a0a',
+    color: TEXT_PRIMARY,
   },
   productMeta: {
-    fontSize: 8,
-    color: '#737373',
-    lineHeight: 1.3,
+    fontSize: 7,
+    color: TEXT_MUTED,
+    marginTop: 1,
   },
+  // Totals row
+  totalsRow: {
+    flexDirection: 'row',
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderTop: `2px solid ${BRAND_TEAL}`,
+    backgroundColor: BRAND_TEAL_LIGHT,
+  },
+  totalsLabel: {
+    flex: 1,
+    fontSize: 9,
+    fontWeight: 'bold',
+    color: TEXT_PRIMARY,
+  },
+  totalsValue: {
+    width: 50,
+    textAlign: 'center',
+    fontSize: 9,
+    fontWeight: 'bold',
+    color: TEXT_PRIMARY,
+  },
+  // Notes
+  notesSection: {
+    marginTop: 16,
+    padding: 10,
+    backgroundColor: '#fef3c7',
+    borderRadius: 4,
+    borderLeft: '3px solid #f59e0b',
+  },
+  notesHeader: {
+    fontSize: 8,
+    fontWeight: 'bold',
+    color: '#92400e',
+    marginBottom: 3,
+  },
+  notesText: {
+    fontSize: 8,
+    color: '#78350f',
+    lineHeight: 1.4,
+  },
+  // Signature
   signatureSection: {
-    marginTop: 30,
-    paddingTop: 20,
-    borderTop: '1px solid #e5e5e5',
+    marginTop: 24,
+    paddingTop: 16,
+    borderTop: `1px solid ${BORDER_LIGHT}`,
   },
   signatureRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 20,
+    marginTop: 16,
   },
   signatureBox: {
     width: '45%',
   },
   signatureLine: {
-    borderBottom: '1px solid #0a0a0a',
-    marginTop: 40,
-    marginBottom: 5,
+    borderBottom: `1px solid ${TEXT_PRIMARY}`,
+    marginTop: 36,
+    marginBottom: 4,
   },
   signatureLabel: {
-    fontSize: 8,
-    color: '#737373',
+    fontSize: 7,
+    color: TEXT_MUTED,
   },
+  // Footer
   footer: {
     position: 'absolute',
-    bottom: 30,
-    left: 40,
-    right: 40,
-    borderTop: '1px solid #e5e5e5',
-    paddingTop: 10,
+    bottom: 24,
+    left: 36,
+    right: 36,
+    borderTop: `1px solid ${BORDER_LIGHT}`,
+    paddingTop: 8,
     backgroundColor: '#ffffff',
   },
   footerContent: {
@@ -199,44 +284,20 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'flex-end',
   },
-  footerLeft: {
-    flex: 1,
-  },
-  footerRight: {
-    alignItems: 'flex-end',
-  },
   footerText: {
-    fontSize: 7,
+    fontSize: 6.5,
     color: '#a3a3a3',
   },
-  footerBrandingBold: {
-    fontSize: 7,
+  footerBrand: {
+    fontSize: 6.5,
     fontWeight: 'bold',
-    color: '#6BBFBF',
+    color: BRAND_TEAL,
   },
   footerDisclaimer: {
     fontSize: 6,
     color: '#a3a3a3',
-    marginTop: 6,
+    marginTop: 4,
     textAlign: 'center',
-  },
-  notesSection: {
-    marginTop: 20,
-    padding: 12,
-    backgroundColor: '#fef3c7',
-    borderRadius: 4,
-    borderLeft: '3px solid #f59e0b',
-  },
-  notesHeader: {
-    fontSize: 9,
-    fontWeight: 'bold',
-    color: '#92400e',
-    marginBottom: 4,
-  },
-  notesText: {
-    fontSize: 9,
-    color: '#78350f',
-    lineHeight: 1.4,
   },
 });
 
@@ -262,6 +323,8 @@ export interface DeliveryNotePDFTemplateProps {
       name: string;
       sku?: string | null;
       quantity: number;
+      unit?: string | null;
+      lwin18?: string | null;
     }>;
   }>;
 }
@@ -270,7 +333,7 @@ export interface DeliveryNotePDFTemplateProps {
  * PDF template for WMS delivery notes
  *
  * Generated when dispatching goods to a distributor.
- * Contains batch details, order list, and signature areas
+ * Contains batch details, full item manifest, and signature areas
  * for proof of delivery.
  */
 const DeliveryNotePDFTemplate = ({
@@ -293,14 +356,24 @@ const DeliveryNotePDFTemplate = ({
     });
   };
 
+  // Flatten all items for the manifest with a running line number
+  let lineNumber = 0;
+  const totalItems = orders.reduce((sum, o) => sum + o.items.reduce((s, i) => s + i.quantity, 0), 0);
+
   return (
     <Document>
       <Page size="A4" style={styles.page}>
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerLeft}>
-            <Text style={styles.brandName}>Craft & Culture</Text>
-            <Text style={styles.brandTagline}>The bridge to the Middle East wine & spirits market</Text>
+            {/* eslint-disable-next-line jsx-a11y/alt-text -- @react-pdf/renderer Image */}
+            <Image
+              style={styles.logo}
+              src="https://wine.craftculture.xyz/images/cc-logo-cropped.png"
+            />
+            <Text style={styles.brandTagline}>
+              The bridge to the Middle East wine & spirits market
+            </Text>
           </View>
           <View style={styles.headerRight}>
             <Text style={styles.title}>DELIVERY NOTE</Text>
@@ -311,15 +384,19 @@ const DeliveryNotePDFTemplate = ({
           </View>
         </View>
 
-        {/* Summary Box */}
+        {/* Summary Counts */}
         <View style={styles.summaryBox}>
           <View style={styles.summaryItem}>
             <Text style={styles.summaryValue}>{batch.orderCount}</Text>
             <Text style={styles.summaryLabel}>ORDERS</Text>
           </View>
           <View style={styles.summaryItem}>
-            <Text style={styles.summaryValue}>{batch.totalCases}</Text>
+            <Text style={styles.summaryValue}>{totalItems}</Text>
             <Text style={styles.summaryLabel}>CASES</Text>
+          </View>
+          <View style={styles.summaryItem}>
+            <Text style={styles.summaryValue}>{orders.reduce((s, o) => s + o.items.length, 0)}</Text>
+            <Text style={styles.summaryLabel}>LINE ITEMS</Text>
           </View>
           <View style={styles.summaryItem}>
             <Text style={styles.summaryValue}>{batch.palletCount}</Text>
@@ -327,44 +404,78 @@ const DeliveryNotePDFTemplate = ({
           </View>
         </View>
 
-        {/* Recipient Info */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Delivery To</Text>
-          <View style={styles.infoBox}>
-            <Text style={styles.infoText}>
-              <Text style={styles.infoLabel}>Distributor: </Text>
-              {batch.distributorName}
-            </Text>
+        {/* Ship From / Deliver To */}
+        <View style={styles.addressRow}>
+          <View style={styles.addressCol}>
+            <Text style={styles.addressLabel}>Ship From</Text>
+            <View style={styles.addressBox}>
+              <Text style={[styles.addressText, styles.addressBold]}>Craft & Culture FZE</Text>
+              <Text style={styles.addressText}>JAFZA Warehouse</Text>
+              <Text style={styles.addressText}>Jebel Ali Free Zone</Text>
+              <Text style={styles.addressText}>Dubai, UAE</Text>
+            </View>
+          </View>
+          <View style={styles.addressCol}>
+            <Text style={styles.addressLabel}>Deliver To</Text>
+            <View style={styles.addressBox}>
+              <Text style={[styles.addressText, styles.addressBold]}>{batch.distributorName}</Text>
+            </View>
           </View>
         </View>
 
-        {/* Orders List */}
+        {/* Item Manifest */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Orders Included</Text>
+          <Text style={styles.sectionTitle}>Item Manifest</Text>
           <View style={styles.table}>
             {/* Table Header */}
             <View style={styles.tableHeader}>
-              <Text style={styles.colOrder}>Order #</Text>
-              <Text style={styles.colCustomer}>Customer</Text>
-              <Text style={styles.colItems}>Items</Text>
-              <Text style={styles.colCases}>Cases</Text>
+              <Text style={styles.colNo}>#</Text>
+              <Text style={styles.colProduct}>Product</Text>
+              <Text style={styles.colSku}>SKU / LWIN</Text>
+              <Text style={styles.colQty}>Qty</Text>
+              <Text style={styles.colUnit}>Unit</Text>
             </View>
 
-            {/* Table Rows */}
-            {orders.map((order, index) => (
-              <View
-                key={order.orderNumber}
-                style={index % 2 === 1 ? [styles.tableRow, styles.tableRowAlt] : styles.tableRow}
-                wrap={false}
-              >
-                <View style={styles.colOrder}>
-                  <Text style={styles.productName}>{order.orderNumber}</Text>
+            {/* Orders grouped with items */}
+            {orders.map((order) => (
+              <View key={order.orderNumber} wrap={false}>
+                {/* Order group header */}
+                <View style={styles.orderGroupHeader}>
+                  <Text style={styles.orderGroupText}>
+                    {order.orderNumber} — {order.customerName}
+                  </Text>
+                  <Text style={styles.orderGroupMeta}>
+                    {order.items.length} item{order.items.length !== 1 ? 's' : ''} • {order.totalCases} cases
+                  </Text>
                 </View>
-                <Text style={styles.colCustomer}>{order.customerName}</Text>
-                <Text style={styles.colItems}>{order.itemCount}</Text>
-                <Text style={styles.colCases}>{order.totalCases}</Text>
+
+                {/* Item rows */}
+                {order.items.map((item, idx) => {
+                  lineNumber++;
+                  return (
+                    <View
+                      key={`${order.orderNumber}-${idx}`}
+                      style={lineNumber % 2 === 0 ? [styles.tableRow, styles.tableRowAlt] : styles.tableRow}
+                    >
+                      <Text style={styles.colNo}>{lineNumber}</Text>
+                      <View style={styles.colProduct}>
+                        <Text style={styles.productName}>{item.name}</Text>
+                      </View>
+                      <Text style={styles.colSku}>{item.lwin18 || item.sku || '—'}</Text>
+                      <Text style={styles.colQty}>{item.quantity}</Text>
+                      <Text style={styles.colUnit}>{item.unit || 'Cases'}</Text>
+                    </View>
+                  );
+                })}
               </View>
             ))}
+
+            {/* Totals Row */}
+            <View style={styles.totalsRow}>
+              <Text style={styles.totalsLabel}>Total</Text>
+              <Text style={styles.totalsValue}>{totalItems}</Text>
+              <Text style={{ width: 50 }} />
+            </View>
           </View>
         </View>
 
@@ -404,20 +515,20 @@ const DeliveryNotePDFTemplate = ({
         {/* Footer */}
         <View style={styles.footer} fixed>
           <View style={styles.footerContent}>
-            <View style={styles.footerLeft}>
+            <View>
               <Text style={styles.footerText}>
-                Delivery Note {deliveryNote.deliveryNoteNumber} • {batch.batchNumber}
+                {deliveryNote.deliveryNoteNumber} • {batch.batchNumber}
               </Text>
             </View>
-            <View style={styles.footerRight}>
+            <View style={{ alignItems: 'flex-end' }}>
               <Text style={styles.footerText}>
-                Generated by <Text style={styles.footerBrandingBold}>C&C Index</Text>
+                Generated by <Text style={styles.footerBrand}>C&C Index</Text>
               </Text>
               <Text style={styles.footerText}>craftculture.xyz</Text>
             </View>
           </View>
           <Text style={styles.footerDisclaimer}>
-            © Craft & Culture FZE - Warehouse Management System
+            This document confirms the dispatch of goods listed above. Please verify all items upon receipt.
           </Text>
         </View>
       </Page>
