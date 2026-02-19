@@ -1,5 +1,5 @@
 import { TRPCError } from '@trpc/server';
-import { eq } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
 import { z } from 'zod';
 
 import db from '@/database/client';
@@ -27,11 +27,12 @@ const importItemSchema = z.object({
   bottlesPerCase: z.number().int().positive().default(6),
   bottleSizeMl: z.number().int().positive().default(750),
   category: z.string().optional(),
+  locationCode: z.string().optional(),
 });
 
 const importStockSchema = z.object({
   ownerId: z.string().uuid(),
-  locationId: z.string().uuid(),
+  locationId: z.string().uuid().optional(),
   items: z.array(importItemSchema).min(1).max(500),
   notes: z.string().optional(),
 });
@@ -69,16 +70,54 @@ const adminImportStock = adminProcedure
       });
     }
 
-    // Validate location exists
-    const [location] = await db
-      .select()
-      .from(wmsLocations)
-      .where(eq(wmsLocations.id, locationId));
+    // Build location code → id map for per-row locations
+    const locationCodes = [
+      ...new Set(items.map((i) => i.locationCode).filter(Boolean) as string[]),
+    ];
+    const locationCodeMap = new Map<string, { id: string; locationCode: string }>();
 
-    if (!location) {
+    if (locationCodes.length > 0) {
+      const matchedLocations = await db
+        .select({ id: wmsLocations.id, locationCode: wmsLocations.locationCode })
+        .from(wmsLocations)
+        .where(inArray(wmsLocations.locationCode, locationCodes));
+
+      for (const loc of matchedLocations) {
+        locationCodeMap.set(loc.locationCode, loc);
+      }
+
+      // Check for unrecognized codes
+      const unrecognized = locationCodes.filter((c) => !locationCodeMap.has(c));
+      if (unrecognized.length > 0) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: `Unrecognized location codes: ${unrecognized.join(', ')}`,
+        });
+      }
+    }
+
+    // Validate global location if provided
+    let globalLocation: { id: string; locationCode: string } | null = null;
+    if (locationId) {
+      const [loc] = await db
+        .select({ id: wmsLocations.id, locationCode: wmsLocations.locationCode })
+        .from(wmsLocations)
+        .where(eq(wmsLocations.id, locationId));
+
+      if (!loc) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Location not found',
+        });
+      }
+      globalLocation = loc;
+    }
+
+    // Ensure every item has a location (either per-row or global)
+    if (!globalLocation && locationCodes.length === 0) {
       throw new TRPCError({
-        code: 'NOT_FOUND',
-        message: 'Location not found',
+        code: 'BAD_REQUEST',
+        message: 'Each item must have a location_code, or select a global location',
       });
     }
 
@@ -150,11 +189,23 @@ const adminImportStock = adminProcedure
           bottleSizeMl,
         });
 
+        // Resolve location for this item
+        const itemLocation = item.locationCode
+          ? locationCodeMap.get(item.locationCode)
+          : globalLocation;
+
+        if (!itemLocation) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: `No location for item "${item.productName}". Provide a location_code or select a global location.`,
+          });
+        }
+
         // Create stock record
         await tx
           .insert(wmsStock)
           .values({
-            locationId,
+            locationId: itemLocation.id,
             ownerId: owner.id,
             ownerName: owner.businessName,
             lwin18,
@@ -185,7 +236,7 @@ const adminImportStock = adminProcedure
               lwin18,
               productName: item.productName,
               lotNumber,
-              currentLocationId: locationId,
+              currentLocationId: itemLocation.id,
               isActive: true,
             })
             .returning();
@@ -201,7 +252,7 @@ const adminImportStock = adminProcedure
           lwin18,
           productName: item.productName,
           quantityCases: item.quantity,
-          toLocationId: locationId,
+          toLocationId: itemLocation.id,
           lotNumber,
           scannedBarcodes: caseLabels.map((l) => l.barcode),
           notes: 'Bulk import from Zoho Inventory',
@@ -226,10 +277,10 @@ const adminImportStock = adminProcedure
     return {
       success: true,
       lotNumber,
-      location: {
-        id: location.id,
-        locationCode: location.locationCode,
-      },
+      location: globalLocation
+        ? { id: globalLocation.id, locationCode: globalLocation.locationCode }
+        : null,
+      locationCount: locationCodes.length || (globalLocation ? 1 : 0),
       owner: {
         id: owner.id,
         name: owner.businessName,

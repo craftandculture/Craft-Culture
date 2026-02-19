@@ -8,6 +8,7 @@ import adminAdjustStockQuantity from './controller/adminAdjustStockQuantity';
 import adminAssignPickList from './controller/adminAssignPickList';
 import adminAutoFixStock from './controller/adminAutoFixStock';
 import adminBatchCreateLocations from './controller/adminBatchCreateLocations';
+import adminClearAllStock from './controller/adminClearAllStock';
 import adminCompleteCycleCount from './controller/adminCompleteCycleCount';
 import adminCompletePickList from './controller/adminCompletePickList';
 import adminCreateCaseLabels from './controller/adminCreateCaseLabels';
@@ -152,6 +153,7 @@ const stockRouter = createTRPCRouter({
   import: adminImportStock,
   adjustQuantity: adminAdjustStockQuantity,
   syncToZoho: adminSyncStockToZoho,
+  clearAll: adminClearAllStock,
 });
 
 const ownershipRouter = createTRPCRouter({
