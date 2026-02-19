@@ -34,9 +34,9 @@ const CompetitorUpload = () => {
   const [fileName, setFileName] = useState('');
   const [parseError, setParseError] = useState('');
 
-  // Fetch existing competitor wines
+  // Fetch existing competitor wines (enough to summarize by competitor)
   const { data: existingWines, refetch: refetchWines } = useQuery({
-    ...api.agents.getCompetitorWines.queryOptions({ limit: 10 }),
+    ...api.agents.getCompetitorWines.queryOptions({ limit: 500 }),
   });
 
   const uploadMutation = useMutation({
@@ -347,16 +347,30 @@ const CompetitorUpload = () => {
         </CardContent>
       </Card>
 
-      {/* Existing competitor wines */}
+      {/* Existing competitor wines summary */}
       {existingWines && existingWines.length > 0 && (
         <Card>
           <CardContent className="p-4">
             <Typography variant="headingSm" className="mb-2">
               Uploaded Competitor Wines
             </Typography>
-            <Typography variant="bodyXs" colorRole="muted">
+            <Typography variant="bodyXs" colorRole="muted" className="mb-3">
               {existingWines.length} active competitor wines in the database
             </Typography>
+            <div className="space-y-1">
+              {Object.entries(
+                existingWines.reduce<Record<string, number>>((acc, w) => {
+                  const name = w.competitorName ?? 'Unknown';
+                  acc[name] = (acc[name] ?? 0) + 1;
+                  return acc;
+                }, {}),
+              ).map(([name, count]) => (
+                <div key={name} className="flex items-center justify-between text-xs">
+                  <span className="font-medium">{name}</span>
+                  <span className="text-text-muted">{count} wines</span>
+                </div>
+              ))}
+            </div>
           </CardContent>
         </Card>
       )}
