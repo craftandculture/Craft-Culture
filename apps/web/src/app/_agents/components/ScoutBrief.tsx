@@ -1,53 +1,62 @@
 'use client';
 
-import { IconRefresh } from '@tabler/icons-react';
+import {
+  IconAlertTriangle,
+  IconChartBar,
+  IconEye,
+  IconRefresh,
+  IconTargetArrow,
+  IconTrendingUp,
+} from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 
+import Badge from '@/app/_ui/components/Badge/Badge';
 import Button from '@/app/_ui/components/Button/Button';
 import Card from '@/app/_ui/components/Card/Card';
 import CardContent from '@/app/_ui/components/Card/CardContent';
+import Table from '@/app/_ui/components/Table/Table';
+import TableBody from '@/app/_ui/components/Table/TableBody';
+import TableCell from '@/app/_ui/components/Table/TableCell';
+import TableHead from '@/app/_ui/components/Table/TableHead';
+import TableHeader from '@/app/_ui/components/Table/TableHeader';
+import TableRow from '@/app/_ui/components/Table/TableRow';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import useTRPC from '@/lib/trpc/browser';
 
-/**
- * Simple markdown to HTML conversion for brief content
- */
-const markdownToHtml = (md: string) => {
-  return md
-    .replace(/^### (.+)$/gm, '<h3>$1</h3>')
-    .replace(/^## (.+)$/gm, '<h2>$1</h2>')
-    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    .replace(/_(.+?)_/g, '<em>$1</em>')
-    .replace(/^- (.+)$/gm, '<li>$1</li>')
-    .replace(/(<li>.*<\/li>\n?)+/g, '<ul>$&</ul>')
-    .replace(/\n\n/g, '<br/><br/>')
-    .replace(
-      /\|(.+)\|\n\|[-| ]+\|\n((\|.+\|\n?)+)/g,
-      (_match, header: string, body: string) => {
-        const headers = header
-          .split('|')
-          .filter(Boolean)
-          .map((h: string) => `<th class="px-3 py-2 text-left text-xs font-medium">${h.trim()}</th>`)
-          .join('');
-        const rows = body
-          .trim()
-          .split('\n')
-          .map((row: string) => {
-            const cells = row
-              .split('|')
-              .filter(Boolean)
-              .map((c: string) => `<td class="px-3 py-2 text-sm">${c.trim()}</td>`)
-              .join('');
-            return `<tr>${cells}</tr>`;
-          })
-          .join('');
-        return `<table class="w-full border-collapse"><thead><tr>${headers}</tr></thead><tbody>${rows}</tbody></table>`;
-      },
-    );
-};
+interface ScoutData {
+  executiveSummary?: string;
+  priceGaps?: Array<{
+    productName: string;
+    ourPriceAed: number;
+    competitorPriceAed: number;
+    competitorName: string;
+    gapPercent: number;
+    recommendation: string;
+  }>;
+  blindSpots?: Array<{
+    productName: string;
+    competitorName: string;
+    priceAed: number;
+    region?: string;
+    vintage?: string;
+  }>;
+  actionItems?: Array<{
+    priority: 'high' | 'medium' | 'low';
+    action: string;
+    rationale: string;
+  }>;
+}
+
+const priorityOrder = { high: 0, medium: 1, low: 2 } as const;
+
+const priorityColor = {
+  high: 'bg-red-100 text-red-600',
+  medium: 'bg-amber-100 text-amber-600',
+  low: 'bg-blue-100 text-blue-600',
+} as const;
 
 /**
- * Renders the latest Scout agent brief with price gaps, blind spots, and action items
+ * Renders the latest Scout agent brief with price gaps table, market signals, and action items
  */
 const ScoutBrief = () => {
   const api = useTRPC();
@@ -86,85 +95,291 @@ const ScoutBrief = () => {
     );
   }
 
-  const structuredData = brief.data as {
-    priceGaps?: Array<{
-      productName: string;
-      ourPriceAed: number;
-      competitorPriceAed: number;
-      competitorName: string;
-      gapPercent: number;
-    }>;
-    blindSpots?: Array<{
-      productName: string;
-      competitorName: string;
-      priceAed: number;
-    }>;
-    actionItems?: Array<{
-      priority: string;
-      action: string;
-      rationale: string;
-    }>;
-  } | null;
+  const d = brief.data as ScoutData | null;
+  const priceGaps = d?.priceGaps ?? [];
+  const blindSpots = d?.blindSpots ?? [];
+  const actionItems = d?.actionItems ?? [];
+  const sortedActions = [...actionItems].sort(
+    (a, b) => (priorityOrder[a.priority] ?? 2) - (priorityOrder[b.priority] ?? 2),
+  );
+
+  const revenueAed = priceGaps.reduce(
+    (sum, g) => sum + Math.abs(g.competitorPriceAed - g.ourPriceAed),
+    0,
+  );
+  const revenueUsd = Math.round(revenueAed / 3.67);
+
+  const highCount = actionItems.filter((a) => a.priority === 'high').length;
+  const medCount = actionItems.filter((a) => a.priority === 'medium').length;
+  const prioritySub = [highCount && `${highCount} high`, medCount && `${medCount} med`]
+    .filter(Boolean)
+    .join(', ') || 'None';
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
+    <div className="space-y-5">
+      {/* Status Bar */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <Typography variant="headingSm">
-            {brief.title}
-          </Typography>
+          <Typography variant="headingSm">The Scout</Typography>
           <Typography variant="bodyXs" colorRole="muted">
-            {brief.createdAt.toLocaleString()}
+            Competitive intelligence &amp; market monitoring
           </Typography>
         </div>
-        <Button variant="ghost" size="sm" onClick={() => refetch()}>
-          <IconRefresh size={16} />
-        </Button>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 rounded-full bg-emerald-100 px-3 py-1.5 text-xs font-medium text-emerald-700">
+            <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-600" />
+            Last run: {brief.createdAt.toLocaleString()}
+          </div>
+          <Button variant="ghost" size="sm" onClick={() => refetch()}>
+            <IconRefresh size={16} className="mr-1" />
+            Refresh
+          </Button>
+        </div>
       </div>
 
-      {/* Markdown content */}
-      <Card>
-        <CardContent className="prose prose-sm max-w-none p-6 dark:prose-invert">
-          <div
-            dangerouslySetInnerHTML={{ __html: markdownToHtml(brief.content) }}
-          />
-        </CardContent>
-      </Card>
-
-      {/* Structured KPI cards */}
-      {structuredData && (
-        <div className="grid grid-cols-3 gap-3">
-          <Card>
-            <CardContent className="p-4 text-center">
-              <Typography variant="headingLg" className="text-orange-600">
-                {structuredData.priceGaps?.length ?? 0}
-              </Typography>
-              <Typography variant="bodyXs" colorRole="muted">
+      {/* KPI Cards */}
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+        <Card>
+          <CardContent className="flex items-start justify-between p-4">
+            <div>
+              <Typography variant="bodyXs" colorRole="muted" className="text-[11px] font-medium uppercase tracking-wider">
                 Price Gaps
               </Typography>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4 text-center">
-              <Typography variant="headingLg" className="text-red-600">
-                {structuredData.blindSpots?.length ?? 0}
+              <Typography variant="headingLg" className="mt-1 text-emerald-600">
+                {priceGaps.length}
               </Typography>
-              <Typography variant="bodyXs" colorRole="muted">
+              <Typography variant="bodyXs" colorRole="muted" className="mt-0.5">
+                found today
+              </Typography>
+            </div>
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-100 text-emerald-600">
+              <IconTrendingUp size={18} />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="flex items-start justify-between p-4">
+            <div>
+              <Typography variant="bodyXs" colorRole="muted" className="text-[11px] font-medium uppercase tracking-wider">
+                Revenue Opportunity
+              </Typography>
+              <Typography variant="headingLg" className="mt-1 text-text-brand">
+                {revenueAed > 0 ? `AED ${Math.round(revenueAed / 1000)}k` : '—'}
+              </Typography>
+              <Typography variant="bodyXs" colorRole="muted" className="mt-0.5">
+                {revenueUsd > 0 ? `$${revenueUsd.toLocaleString()} USD` : 'No data'}
+              </Typography>
+            </div>
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-fill-brand/10 text-text-brand">
+              <IconChartBar size={18} />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="flex items-start justify-between p-4">
+            <div>
+              <Typography variant="bodyXs" colorRole="muted" className="text-[11px] font-medium uppercase tracking-wider">
                 Blind Spots
               </Typography>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4 text-center">
-              <Typography variant="headingLg" className="text-blue-600">
-                {structuredData.actionItems?.length ?? 0}
+              <Typography variant="headingLg" className="mt-1 text-amber-600">
+                {blindSpots.length}
               </Typography>
-              <Typography variant="bodyXs" colorRole="muted">
+              <Typography variant="bodyXs" colorRole="muted" className="mt-0.5">
+                Wines they carry, you don&apos;t
+              </Typography>
+            </div>
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-100 text-amber-600">
+              <IconEye size={18} />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="flex items-start justify-between p-4">
+            <div>
+              <Typography variant="bodyXs" colorRole="muted" className="text-[11px] font-medium uppercase tracking-wider">
                 Action Items
               </Typography>
-            </CardContent>
-          </Card>
+              <Typography variant="headingLg" className="mt-1 text-blue-600">
+                {actionItems.length}
+              </Typography>
+              <Typography variant="bodyXs" colorRole="muted" className="mt-0.5">
+                {prioritySub}
+              </Typography>
+            </div>
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-100 text-blue-600">
+              <IconTargetArrow size={18} />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Two-Column: Price Gaps Table + Market Signals */}
+      <div className="grid grid-cols-1 gap-5 md:grid-cols-[7fr_5fr]">
+        {/* Price Gaps Table */}
+        <Card>
+          <CardContent className="p-5">
+            <div className="mb-3 flex items-center justify-between">
+              <Typography variant="bodySm" className="font-semibold">
+                Price Gaps vs Competitors
+              </Typography>
+              {priceGaps.length > 0 && (
+                <Badge colorRole="brand" size="xs">
+                  {priceGaps.length} found
+                </Badge>
+              )}
+            </div>
+            {priceGaps.length > 0 ? (
+              <Table>
+                <TableHeader>
+                  <TableRow isHeaderRow>
+                    <TableHead>Wine</TableHead>
+                    <TableHead>Competitor</TableHead>
+                    <TableHead>Our Price</TableHead>
+                    <TableHead className="text-right">Gap</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {priceGaps.slice(0, 8).map((gap, i) => (
+                    <TableRow key={i}>
+                      <TableCell>
+                        <span className="font-semibold">{gap.productName}</span>
+                      </TableCell>
+                      <TableCell>
+                        <div>{gap.competitorName}</div>
+                        <Typography variant="bodyXs" colorRole="muted">
+                          {gap.competitorPriceAed.toFixed(0)} AED
+                        </Typography>
+                      </TableCell>
+                      <TableCell>{gap.ourPriceAed.toFixed(0)} AED</TableCell>
+                      <TableCell className="text-right">
+                        <Badge
+                          size="xs"
+                          colorRole={
+                            gap.gapPercent > 100
+                              ? 'success'
+                              : gap.gapPercent > 50
+                                ? 'warning'
+                                : gap.gapPercent > 0
+                                  ? 'info'
+                                  : 'danger'
+                          }
+                        >
+                          {gap.gapPercent > 0 ? '+' : ''}
+                          {gap.gapPercent.toFixed(0)}%
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            ) : (
+              <Typography variant="bodyXs" colorRole="muted">
+                No price gaps detected.
+              </Typography>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Market Signals */}
+        <div className="flex flex-col gap-4">
+          {/* Executive Summary */}
+          {d?.executiveSummary && (
+            <Card>
+              <CardContent className="border-l-3 border-l-blue-500 p-4">
+                <Typography variant="bodyXs" className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-blue-600">
+                  Summary
+                </Typography>
+                <Typography variant="bodySm">
+                  {d.executiveSummary}
+                </Typography>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Blind Spots as signal cards */}
+          {blindSpots.map((spot, i) => (
+            <Card key={i}>
+              <CardContent className="border-l-3 border-l-red-500 p-4">
+                <Typography variant="bodyXs" className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-red-600">
+                  Blind Spot
+                </Typography>
+                <Typography variant="bodySm" className="font-semibold">
+                  {spot.productName}
+                </Typography>
+                <Typography variant="bodyXs" colorRole="muted" className="mt-1">
+                  {spot.competitorName} sells at {spot.priceAed.toFixed(0)} AED
+                  {spot.region ? ` — ${spot.region}` : ''}
+                  {spot.vintage ? ` (${spot.vintage})` : ''}
+                </Typography>
+              </CardContent>
+            </Card>
+          ))}
+
+          {blindSpots.length === 0 && !d?.executiveSummary && (
+            <Card>
+              <CardContent className="p-4">
+                <Typography variant="bodyXs" colorRole="muted">
+                  No market signals to display.
+                </Typography>
+              </CardContent>
+            </Card>
+          )}
         </div>
+      </div>
+
+      {/* Action Items */}
+      {sortedActions.length > 0 && (
+        <Card>
+          <CardContent className="p-5">
+            <div className="mb-3 flex items-center justify-between">
+              <Typography variant="bodySm" className="font-semibold">
+                Recommended Actions
+              </Typography>
+              <Typography variant="bodyXs" colorRole="muted">
+                Sorted by priority
+              </Typography>
+            </div>
+            <div className="flex flex-col divide-y divide-border-muted">
+              {sortedActions.map((item, i) => (
+                <div key={i} className="flex items-start gap-3 py-3.5 first:pt-0 last:pb-0">
+                  <div
+                    className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-bold ${priorityColor[item.priority]}`}
+                  >
+                    {i + 1}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <Typography variant="bodySm" className="font-semibold">
+                      {item.action}
+                    </Typography>
+                    <Typography variant="bodyXs" colorRole="muted" className="mt-0.5">
+                      {item.rationale}
+                    </Typography>
+                  </div>
+                  <Badge size="xs" colorRole={
+                    item.priority === 'high' ? 'danger' : item.priority === 'medium' ? 'warning' : 'info'
+                  }>
+                    {item.priority}
+                  </Badge>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Alert for no data */}
+      {!d && (
+        <Card>
+          <CardContent className="flex items-center gap-3 p-4">
+            <IconAlertTriangle size={18} className="text-amber-500" />
+            <Typography variant="bodySm" colorRole="muted">
+              Brief data could not be parsed. Raw content available below.
+            </Typography>
+          </CardContent>
+        </Card>
       )}
     </div>
   );
