@@ -8,8 +8,10 @@ import adminAdjustStockQuantity from './controller/adminAdjustStockQuantity';
 import adminAssignPickList from './controller/adminAssignPickList';
 import adminAutoFixStock from './controller/adminAutoFixStock';
 import adminBatchCreateLocations from './controller/adminBatchCreateLocations';
+import adminCompleteCycleCount from './controller/adminCompleteCycleCount';
 import adminCompletePickList from './controller/adminCompletePickList';
 import adminCreateCaseLabels from './controller/adminCreateCaseLabels';
+import adminCreateCycleCount from './controller/adminCreateCycleCount';
 import adminCreateDispatchBatch from './controller/adminCreateDispatchBatch';
 import adminCreateLocation from './controller/adminCreateLocation';
 import adminCreatePallet from './controller/adminCreatePallet';
@@ -29,6 +31,8 @@ import adminGetBayDetails from './controller/adminGetBayDetails';
 import adminGetBayTotems from './controller/adminGetBayTotems';
 import adminGetCaseByBarcode from './controller/adminGetCaseByBarcode';
 import adminGetCaseLabels from './controller/adminGetCaseLabels';
+import adminGetCycleCount from './controller/adminGetCycleCount';
+import adminGetCycleCounts from './controller/adminGetCycleCounts';
 import adminGetDispatchBatch from './controller/adminGetDispatchBatch';
 import adminGetDispatchBatches from './controller/adminGetDispatchBatches';
 import adminGetExpiringStock from './controller/adminGetExpiringStock';
@@ -61,7 +65,9 @@ import adminQuickDispatch from './controller/adminQuickDispatch';
 import adminRebuildStockFromMovements from './controller/adminRebuildStockFromMovements';
 import adminReceiveShipment from './controller/adminReceiveShipment';
 import adminReceiveShipmentItem from './controller/adminReceiveShipmentItem';
+import adminReconcileCycleCount from './controller/adminReconcileCycleCount';
 import adminReconcileStock from './controller/adminReconcileStock';
+import adminRecordCycleCountItem from './controller/adminRecordCycleCountItem';
 import adminReleaseReservation from './controller/adminReleaseReservation';
 import adminRemoveCaseFromPallet from './controller/adminRemoveCaseFromPallet';
 import adminRemoveOrderFromBatch from './controller/adminRemoveOrderFromBatch';
@@ -72,6 +78,7 @@ import adminResolvePartnerRequest from './controller/adminResolvePartnerRequest'
 import adminSaveReceivingDraft from './controller/adminSaveReceivingDraft';
 import adminSealPallet from './controller/adminSealPallet';
 import adminSearchStock from './controller/adminSearchStock';
+import adminStartCycleCount from './controller/adminStartCycleCount';
 import adminSyncStockToZoho from './controller/adminSyncStockToZoho';
 import adminTransferOwnership from './controller/adminTransferOwnership';
 import adminTransferStock from './controller/adminTransferStock';
@@ -191,6 +198,16 @@ const palletRouter = createTRPCRouter({
   getLabel: adminGetPalletLabel,
 });
 
+const cycleCountRouter = createTRPCRouter({
+  create: adminCreateCycleCount,
+  getMany: adminGetCycleCounts,
+  getOne: adminGetCycleCount,
+  start: adminStartCycleCount,
+  recordItem: adminRecordCycleCountItem,
+  complete: adminCompleteCycleCount,
+  reconcile: adminReconcileCycleCount,
+});
+
 const adminRouter = createTRPCRouter({
   locations: locationsRouter,
   receiving: receivingRouter,
@@ -201,6 +218,7 @@ const adminRouter = createTRPCRouter({
   picking: pickingRouter,
   dispatch: dispatchRouter,
   pallets: palletRouter,
+  cycleCounts: cycleCountRouter,
 });
 
 const partnerRouter = createTRPCRouter({

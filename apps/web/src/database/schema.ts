@@ -4030,6 +4030,7 @@ export const wmsCycleCounts = pgTable(
     discrepancyCount: integer('discrepancy_count').default(0),
     createdBy: uuid('created_by').references(() => users.id),
     completedAt: timestamp('completed_at', { mode: 'date' }),
+    notes: text('notes'),
     ...timestamps,
   },
   (table) => [
@@ -4039,6 +4040,36 @@ export const wmsCycleCounts = pgTable(
 );
 
 export type WmsCycleCount = typeof wmsCycleCounts.$inferSelect;
+
+/**
+ * WMS Cycle Count Items - individual stock items tracked during a cycle count
+ */
+export const wmsCycleCountItems = pgTable(
+  'wms_cycle_count_items',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    cycleCountId: uuid('cycle_count_id')
+      .notNull()
+      .references(() => wmsCycleCounts.id),
+    stockId: uuid('stock_id').references(() => wmsStock.id),
+    locationId: uuid('location_id')
+      .notNull()
+      .references(() => wmsLocations.id),
+    lwin18: text('lwin18').notNull(),
+    productName: text('product_name').notNull(),
+    expectedQuantity: integer('expected_quantity').notNull().default(0),
+    countedQuantity: integer('counted_quantity'),
+    discrepancy: integer('discrepancy'),
+    notes: text('notes'),
+    countedAt: timestamp('counted_at', { mode: 'date' }),
+    ...timestamps,
+  },
+  (table) => [
+    index('wms_cycle_count_items_count_id_idx').on(table.cycleCountId),
+  ],
+);
+
+export type WmsCycleCountItem = typeof wmsCycleCountItems.$inferSelect;
 
 /**
  * WMS Repacks - case splitting/repacking tracking
