@@ -25,13 +25,16 @@ const scoutOutputSchema = z.object({
       recommendation: z.string(),
     }),
   ),
-  blindSpots: z.array(
+  pricingOpportunities: z.array(
     z.object({
       productName: z.string(),
       competitorName: z.string(),
-      priceAed: z.number(),
+      competitorPriceAed: z.number(),
+      estimatedCostAed: z.number(),
+      potentialMarginPercent: z.number(),
       region: z.string().optional(),
       vintage: z.string().optional(),
+      rationale: z.string(),
     }),
   ),
   actionItems: z.array(
@@ -61,11 +64,12 @@ const buildMarkdown = (data: z.infer<typeof scoutOutputSchema>) => {
     lines.push('');
   }
 
-  if (data.blindSpots.length > 0) {
-    lines.push('## Blind Spots\n');
-    for (const spot of data.blindSpots) {
+  if (data.pricingOpportunities.length > 0) {
+    lines.push('## Pricing Opportunities\n');
+    lines.push('Wines where C&C can source and undercut competitors:\n');
+    for (const opp of data.pricingOpportunities) {
       lines.push(
-        `- **${spot.productName}** (${spot.vintage ?? 'NV'}) — ${spot.competitorName} at ${spot.priceAed.toFixed(0)} AED`,
+        `- **${opp.productName}** (${opp.vintage ?? 'NV'}) — ${opp.competitorName} sells at ${opp.competitorPriceAed.toFixed(0)} AED, est. cost ${opp.estimatedCostAed.toFixed(0)} AED (~${opp.potentialMarginPercent.toFixed(0)}% margin). _${opp.rationale}_`,
       );
     }
     lines.push('');
@@ -94,6 +98,7 @@ const runScout = async () => {
   if (!run) throw new Error('Failed to create agent run');
 
   try {
+    // Prioritize LWIN-matched wines (direct price comparison) then highest-priced
     const competitors = await db
       .select({
         competitorName: competitorWines.competitorName,
@@ -106,7 +111,11 @@ const runScout = async () => {
       })
       .from(competitorWines)
       .where(eq(competitorWines.isActive, true))
-      .limit(50);
+      .orderBy(
+        sql`CASE WHEN ${competitorWines.lwin18Match} IS NOT NULL THEN 0 ELSE 1 END`,
+        sql`COALESCE(${competitorWines.sellingPriceAed}, 0) DESC`,
+      )
+      .limit(200);
 
     if (competitors.length === 0) {
       await db
@@ -165,21 +174,24 @@ const runScout = async () => {
     const result = await generateObject({
       model: anthropic('claude-sonnet-4-5-20250929'),
       schema: scoutOutputSchema,
-      system: `You are The Scout, a competitive intelligence analyst for Craft & Culture, a wine distributor in the UAE/GCC market.
+      system: `You are The Scout, a competitive pricing analyst for Craft & Culture (C&C), a wine distributor in the UAE/GCC market.
 
-Your job is to analyze competitor wine lists against our own catalog and pricing, identify pricing gaps, blind spots (wines they carry that we don't), and generate actionable recommendations.
+CRITICAL CONTEXT: C&C is a young company competing against established players (MMI, JY Wine, etc.) who have 30+ years and massive scale. C&C CANNOT compete on range — these companies carry thousands of SKUs. But C&C CAN source from anywhere in the world (Bordeaux, Burgundy, Italy, New World, etc.) through its supplier network. The competitive weapon is PRICE. C&C wins business by undercutting on price for wines that matter.
+
+Your job is to analyze competitor pricing and identify where C&C can win on price — either by undercutting competitors on wines we already carry, or by sourcing wines they sell at high margins and offering better prices.
 
 Key context:
-- Prices are in AED (UAE Dirham) or USD
-- 1 USD ≈ 3.67 AED
-- A "blind spot" means a competitor carries a wine we don't have in our catalog at all
+- Prices are in AED (UAE Dirham) or USD. 1 USD ≈ 3.67 AED
 - Match products using LWIN codes when available, otherwise by name/vintage similarity
-- Focus on commercially significant gaps (>10% price difference)
-- Prioritize high-value wines and popular regions (Burgundy, Bordeaux, Champagne, Tuscany, Piedmont)`,
+- Focus on commercially significant price gaps (>10% difference)
+- Prioritize high-value wines and popular regions (Burgundy, Bordeaux, Champagne, Tuscany, Piedmont)
+- For "pricing opportunities" — estimate what C&C could source a wine for (use industry standard ~40-50% wholesale margin below competitor retail) and flag wines where the margin opportunity is attractive
+- Be honest and realistic. Don't sugarcoat — if competitors have better prices on something, say so
+- Action items should be specific and price-focused: which wines to source, what price to target, who to undercut`,
       messages: [
         {
           role: 'user',
-          content: `Analyze today's competitive landscape.
+          content: `Analyze today's competitive pricing landscape. Focus on where we can WIN on price.
 
 COMPETITOR WINE LISTS (${competitors.length} wines):
 ${competitorCtx}
@@ -191,10 +203,10 @@ OUR CURRENT STOCK (${stockSummary.length} SKUs):
 ${stockCtx}
 
 Generate a daily Scout brief with:
-1. Executive summary (2-3 sentences)
-2. Top price gaps (where competitors undercut or overcharge vs us)
-3. Blind spots (competitor wines we don't carry)
-4. Prioritized action items`,
+1. Executive summary (2-3 sentences, focus on price positioning)
+2. Top price gaps — where we're cheaper OR more expensive than competitors. Be honest about both directions
+3. Pricing opportunities — competitor wines selling at high prices where C&C could source and undercut. Estimate sourcing cost and potential margin
+4. Prioritized action items focused on price wins — specific wines to source, prices to target, deals to chase`,
         },
       ],
     });
@@ -219,7 +231,7 @@ Generate a daily Scout brief with:
     return {
       success: true,
       priceGaps: data.priceGaps.length,
-      blindSpots: data.blindSpots.length,
+      pricingOpportunities: data.pricingOpportunities.length,
       actionItems: data.actionItems.length,
     };
   } catch (error) {

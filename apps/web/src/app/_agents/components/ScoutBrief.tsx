@@ -33,12 +33,15 @@ interface ScoutData {
     gapPercent: number;
     recommendation: string;
   }>;
-  blindSpots?: Array<{
+  pricingOpportunities?: Array<{
     productName: string;
     competitorName: string;
-    priceAed: number;
+    competitorPriceAed: number;
+    estimatedCostAed: number;
+    potentialMarginPercent: number;
     region?: string;
     vintage?: string;
+    rationale: string;
   }>;
   actionItems?: Array<{
     priority: 'high' | 'medium' | 'low';
@@ -120,7 +123,7 @@ const ScoutBrief = () => {
 
   const d = brief.data as ScoutData | null;
   const priceGaps = d?.priceGaps ?? [];
-  const blindSpots = d?.blindSpots ?? [];
+  const pricingOpps = d?.pricingOpportunities ?? [];
   const actionItems = d?.actionItems ?? [];
   const sortedActions = [...actionItems].sort(
     (a, b) => (priorityOrder[a.priority] ?? 2) - (priorityOrder[b.priority] ?? 2),
@@ -204,13 +207,13 @@ const ScoutBrief = () => {
           <CardContent className="flex items-start justify-between p-4">
             <div>
               <Typography variant="bodyXs" colorRole="muted" className="text-[11px] font-medium uppercase tracking-wider">
-                Blind Spots
+                Price Opportunities
               </Typography>
               <Typography variant="headingLg" className="mt-1 text-amber-600">
-                {blindSpots.length}
+                {pricingOpps.length}
               </Typography>
               <Typography variant="bodyXs" colorRole="muted" className="mt-0.5">
-                Wines they carry, you don&apos;t
+                Wines to source &amp; undercut
               </Typography>
             </div>
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-100 text-amber-600">
@@ -322,26 +325,32 @@ const ScoutBrief = () => {
             </Card>
           )}
 
-          {/* Blind Spots as signal cards */}
-          {blindSpots.map((spot, i) => (
+          {/* Pricing Opportunities as signal cards */}
+          {pricingOpps.map((opp, i) => (
             <Card key={i}>
-              <CardContent className="border-l-3 border-l-red-500 p-4">
-                <Typography variant="bodyXs" className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-red-600">
-                  Blind Spot
+              <CardContent className="border-l-3 border-l-amber-500 p-4">
+                <Typography variant="bodyXs" className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-amber-600">
+                  Price Opportunity
                 </Typography>
                 <Typography variant="bodySm" className="font-semibold">
-                  {spot.productName}
+                  {opp.productName}
                 </Typography>
                 <Typography variant="bodyXs" colorRole="muted" className="mt-1">
-                  {spot.competitorName} sells at {spot.priceAed.toFixed(0)} AED
-                  {spot.region ? ` — ${spot.region}` : ''}
-                  {spot.vintage ? ` (${spot.vintage})` : ''}
+                  {opp.competitorName} at {opp.competitorPriceAed.toFixed(0)} AED
+                  {opp.vintage ? ` (${opp.vintage})` : ''}
+                  {opp.region ? ` — ${opp.region}` : ''}
+                </Typography>
+                <Typography variant="bodyXs" className="mt-1 text-emerald-600">
+                  Est. cost {opp.estimatedCostAed.toFixed(0)} AED — ~{opp.potentialMarginPercent.toFixed(0)}% margin
+                </Typography>
+                <Typography variant="bodyXs" colorRole="muted" className="mt-1 italic">
+                  {opp.rationale}
                 </Typography>
               </CardContent>
             </Card>
           ))}
 
-          {blindSpots.length === 0 && !d?.executiveSummary && (
+          {pricingOpps.length === 0 && !d?.executiveSummary && (
             <Card>
               <CardContent className="p-4">
                 <Typography variant="bodyXs" colorRole="muted">

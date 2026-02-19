@@ -54,36 +54,50 @@ const uploadCompetitorList = adminProcedure
       .set({ isActive: false, updatedAt: new Date() })
       .where(eq(competitorWines.competitorName, competitorName));
 
-    // Process rows with LWIN matching
+    // Process rows with parallel LWIN matching in batches
+    const MATCH_BATCH = 50;
+    const INSERT_BATCH = 500;
     let matchedCount = 0;
     const insertValues = [];
 
-    for (const row of rows) {
-      const lwinMatch = await matchLwin(row.productName);
-      const lwin18Match =
-        lwinMatch && lwinMatch.similarity >= 0.3 ? lwinMatch.lwin : null;
+    for (let i = 0; i < rows.length; i += MATCH_BATCH) {
+      const batch = rows.slice(i, i + MATCH_BATCH);
+      const matches = await Promise.all(
+        batch.map((row) => matchLwin(row.productName)),
+      );
 
-      if (lwin18Match) matchedCount++;
+      for (let j = 0; j < batch.length; j++) {
+        const row = batch[j]!;
+        const lwinMatch = matches[j];
+        const lwin18Match =
+          lwinMatch && lwinMatch.similarity >= 0.3 ? lwinMatch.lwin : null;
 
-      insertValues.push({
-        competitorName,
-        productName: row.productName,
-        vintage: row.vintage ?? null,
-        country: row.country ?? null,
-        region: row.region ?? null,
-        bottleSize: row.bottleSize ?? null,
-        sellingPriceAed: row.sellingPriceAed ?? null,
-        sellingPriceUsd: row.sellingPriceUsd ?? null,
-        quantity: row.quantity ?? null,
-        source: source ?? null,
-        uploadedBy: ctx.user.id,
-        isActive: true,
-        lwin18Match,
-      });
+        if (lwin18Match) matchedCount++;
+
+        insertValues.push({
+          competitorName,
+          productName: row.productName,
+          vintage: row.vintage ?? null,
+          country: row.country ?? null,
+          region: row.region ?? null,
+          bottleSize: row.bottleSize ?? null,
+          sellingPriceAed: row.sellingPriceAed ?? null,
+          sellingPriceUsd: row.sellingPriceUsd ?? null,
+          quantity: row.quantity ?? null,
+          source: source ?? null,
+          uploadedBy: ctx.user.id,
+          isActive: true,
+          lwin18Match,
+        });
+      }
     }
 
-    // Batch insert
-    await db.insert(competitorWines).values(insertValues);
+    // Batch insert in chunks to stay under Postgres parameter limits
+    for (let i = 0; i < insertValues.length; i += INSERT_BATCH) {
+      await db
+        .insert(competitorWines)
+        .values(insertValues.slice(i, i + INSERT_BATCH));
+    }
 
     logger.info('[Agents] Competitor list uploaded', {
       competitor: competitorName,
