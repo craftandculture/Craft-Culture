@@ -70,13 +70,13 @@ const navGroups: NavGroup[] = [
     ],
   },
   {
-    title: 'Intelligence',
+    title: 'Agents',
     items: [
       { label: 'Agents', href: '/platform/admin/agents', icon: IconBolt },
     ],
   },
   {
-    title: 'System',
+    title: 'Settings',
     items: [
       { label: 'Activity', href: '/platform/admin/activity', icon: IconActivity },
       { label: 'Zoho Import', href: '/platform/admin/zoho-import', icon: IconFileImport },
