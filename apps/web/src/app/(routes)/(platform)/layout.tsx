@@ -206,9 +206,9 @@ const PlatformLayout = async ({ children }: React.PropsWithChildren) => {
         </div>
       </header>
       {user.role === 'admin' ? (
-        <div className="flex-1">
+        <div className="flex flex-1 flex-col">
           <AdminSectionTabs />
-          <div className="flex-1 overflow-auto">{children}</div>
+          <div className="flex-1">{children}</div>
         </div>
       ) : (
         <div className="flex-1">{children}</div>
