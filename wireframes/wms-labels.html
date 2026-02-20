@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WMS Labels — Craft & Culture</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-primary: #fafafa;
+      --surface-primary: #ffffff;
+      --surface-secondary: #f5f5f5;
+      --text-primary: #0a0a0a;
+      --text-muted: #737373;
+      --text-brand: #2a9d8f;
+      --fill-brand: #6BBFBF;
+      --fill-brand-10: rgba(107, 191, 191, 0.1);
+      --fill-brand-20: rgba(107, 191, 191, 0.2);
+      --border-primary: #e5e5e5;
+      --border-muted: #f0f0f0;
+      --amber-100: #fef3c7;
+      --amber-600: #d97706;
+      --emerald-100: #d1fae5;
+      --emerald-600: #059669;
+      --red-100: #fee2e2;
+      --red-600: #dc2626;
+      --violet-100: #ede9fe;
+      --violet-600: #7c3aed;
+      --blue-100: #dbeafe;
+      --blue-600: #2563eb;
+      --radius-xl: 12px;
+      --radius-lg: 8px;
+      --radius-md: 6px;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.5;
+      padding-bottom: 100px;
+    }
+
+    .wireframe-banner {
+      background: #1a1a1a;
+      color: white;
+      padding: 8px 16px;
+      text-align: center;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .wireframe-banner span {
+      color: var(--fill-brand);
+    }
+
+    .wms-header {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: #1a1a1a;
+      color: white;
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .wms-brand {
+      font-weight: 700;
+      font-size: 16px;
+      color: var(--fill-brand);
+    }
+
+    .wms-brand span {
+      color: #a3a3a3;
+      font-weight: 400;
+      font-size: 13px;
+      margin-left: 6px;
+    }
+
+    .wms-status {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: #a3a3a3;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+
+    .status-dot.online {
+      background: var(--emerald-600);
+    }
+
+    .wms-nav {
+      background: white;
+      border-bottom: 1px solid var(--border-primary);
+      padding: 12px 16px;
+    }
+
+    .nav-breadcrumb {
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .nav-breadcrumb span {
+      color: var(--text-primary);
+      font-weight: 600;
+    }
+
+    .mobile-container {
+      max-width: 420px;
+      margin: 0 auto;
+      padding: 16px;
+    }
+
+    .tab-pills {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      margin-bottom: 16px;
+      padding-bottom: 4px;
+    }
+
+    .tab-pill {
+      background: var(--surface-primary);
+      border: 2px solid var(--border-primary);
+      border-radius: 20px;
+      padding: 8px 14px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-muted);
+      cursor: pointer;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .tab-pill.active {
+      background: var(--fill-brand);
+      color: white;
+      border-color: var(--fill-brand);
+    }
+
+    .search-input {
+      width: 100%;
+      height: 48px;
+      border: 2px solid var(--border-primary);
+      border-radius: var(--radius-lg);
+      padding: 0 16px;
+      font-size: 15px;
+      background: var(--surface-primary);
+      margin-bottom: 16px;
+    }
+
+    .search-input:focus {
+      border-color: var(--fill-brand);
+      outline: none;
+    }
+
+    .select-all-row {
+      background: var(--surface-primary);
+      border: 2px solid var(--border-primary);
+      border-radius: var(--radius-lg);
+      padding: 12px 14px;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      cursor: pointer;
+    }
+
+    .checkbox {
+      width: 22px;
+      height: 22px;
+      border: 2px solid var(--border-primary);
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      flex-shrink: 0;
+    }
+
+    .checkbox.checked {
+      background: var(--fill-brand);
+      border-color: var(--fill-brand);
+      color: white;
+    }
+
+    .select-all-text {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .label-card {
+      background: var(--surface-primary);
+      border: 2px solid var(--border-primary);
+      border-radius: var(--radius-lg);
+      padding: 12px 14px;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      cursor: pointer;
+    }
+
+    .label-card.selected {
+      border-color: var(--fill-brand);
+      background: var(--fill-brand-10);
+    }
+
+    .label-content {
+      flex: 1;
+    }
+
+    .label-barcode {
+      font-size: 12px;
+      font-family: 'Courier New', monospace;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+
+    .label-product {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 2px;
+    }
+
+    .label-location {
+      font-size: 12px;
+      color: var(--text-muted);
+      font-family: 'Courier New', monospace;
+    }
+
+    .preview-card {
+      background: var(--surface-primary);
+      border: 2px solid var(--border-primary);
+      border-radius: var(--radius-lg);
+      padding: 16px;
+      margin-top: 20px;
+      margin-bottom: 20px;
+    }
+
+    .preview-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .preview-label {
+      background: white;
+      border: 2px solid var(--border-primary);
+      border-radius: var(--radius-md);
+      padding: 20px;
+      text-align: center;
+    }
+
+    .preview-text {
+      font-size: 16px;
+      font-weight: 700;
+      font-family: 'Courier New', monospace;
+      color: var(--text-primary);
+      margin-bottom: 12px;
+    }
+
+    .preview-barcode {
+      height: 60px;
+      background: linear-gradient(90deg,
+        #000 0%, #000 10%, transparent 10%, transparent 15%,
+        #000 15%, #000 18%, transparent 18%, transparent 20%,
+        #000 20%, #000 25%, transparent 25%, transparent 28%,
+        #000 28%, #000 32%, transparent 32%, transparent 36%,
+        #000 36%, #000 38%, transparent 38%, transparent 42%,
+        #000 42%, #000 48%, transparent 48%, transparent 50%,
+        #000 50%, #000 52%, transparent 52%, transparent 58%,
+        #000 58%, #000 60%, transparent 60%, transparent 64%,
+        #000 64%, #000 70%, transparent 70%, transparent 72%,
+        #000 72%, #000 78%, transparent 78%, transparent 82%,
+        #000 82%, #000 85%, transparent 85%, transparent 88%,
+        #000 88%, #000 92%, transparent 92%, transparent 95%,
+        #000 95%, #000 100%
+      );
+      margin-bottom: 8px;
+    }
+
+    .preview-code {
+      font-size: 11px;
+      font-family: 'Courier New', monospace;
+      color: var(--text-muted);
+    }
+
+    .preview-note {
+      font-size: 11px;
+      color: var(--text-muted);
+      text-align: center;
+      margin-top: 8px;
+    }
+
+    .print-status {
+      background: var(--blue-100);
+      border: 1px solid var(--blue-600);
+      border-radius: var(--radius-lg);
+      padding: 10px 14px;
+      margin-bottom: 16px;
+      font-size: 12px;
+      color: var(--blue-600);
+      text-align: center;
+    }
+
+    .bottom-action {
+      position: fixed;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 100%;
+      max-width: 420px;
+      padding: 16px;
+      background: white;
+      border-top: 1px solid var(--border-primary);
+      box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.08);
+    }
+
+    .btn-mobile {
+      width: 100%;
+      height: 52px;
+      border-radius: var(--radius-lg);
+      font-size: 16px;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .btn-mobile-brand {
+      background: var(--fill-brand);
+      color: white;
+    }
+
+    .tab-hint {
+      background: var(--surface-secondary);
+      border: 1px solid var(--border-primary);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+      text-align: center;
+      margin-top: 20px;
+    }
+
+    .hint-text {
+      font-size: 14px;
+      color: var(--text-muted);
+    }
+  </style>
+</head>
+<body>
+  <div class="wireframe-banner">Wireframe — <span>Print Labels</span> — WMS Mobile — Craft &amp; Culture</div>
+
+  <header class="wms-header">
+    <div class="wms-brand">C&amp;C <span>Warehouse</span></div>
+    <div class="wms-status">
+      <span class="status-dot online"></span>
+      <span>Connected</span>
+    </div>
+  </header>
+
+  <nav class="wms-nav">
+    <div class="nav-breadcrumb">← <span>Print Labels</span></div>
+  </nav>
+
+  <div class="mobile-container">
+    <div class="tab-pills">
+      <div class="tab-pill active">Case Labels</div>
+      <div class="tab-pill">Bay Labels</div>
+      <div class="tab-pill">Location Labels</div>
+      <div class="tab-pill">Totem Labels</div>
+    </div>
+
+    <input type="text" class="search-input" placeholder="Scan or type product name">
+
+    <div class="select-all-row">
+      <div class="checkbox checked">✓</div>
+      <div class="select-all-text">Select All</div>
+    </div>
+
+    <div class="label-card selected">
+      <div class="checkbox checked">✓</div>
+      <div class="label-content">
+        <div class="label-barcode">CASE-1010279-2015-06-00750-001</div>
+        <div class="label-product">Sassicaia 2020</div>
+        <div class="label-location">LOC-A-02-03</div>
+      </div>
+    </div>
+
+    <div class="label-card selected">
+      <div class="checkbox checked">✓</div>
+      <div class="label-content">
+        <div class="label-barcode">CASE-1010279-2015-06-00750-002</div>
+        <div class="label-product">Sassicaia 2020</div>
+        <div class="label-location">LOC-A-02-03</div>
+      </div>
+    </div>
+
+    <div class="label-card selected">
+      <div class="checkbox checked">✓</div>
+      <div class="label-content">
+        <div class="label-barcode">CASE-3045122-2019-06-00750-001</div>
+        <div class="label-product">Opus One 2019</div>
+        <div class="label-location">LOC-B-01-02</div>
+      </div>
+    </div>
+
+    <div class="label-card">
+      <div class="checkbox"></div>
+      <div class="label-content">
+        <div class="label-barcode">CASE-3045122-2019-06-00750-002</div>
+        <div class="label-product">Opus One 2019</div>
+        <div class="label-location">LOC-B-01-02</div>
+      </div>
+    </div>
+
+    <div class="label-card">
+      <div class="checkbox"></div>
+      <div class="label-content">
+        <div class="label-barcode">CASE-3045122-2019-06-00750-003</div>
+        <div class="label-product">Opus One 2019</div>
+        <div class="label-location">LOC-B-01-02</div>
+      </div>
+    </div>
+
+    <div class="preview-card">
+      <div class="preview-title">Label Preview (4x6")</div>
+      <div class="preview-label">
+        <div class="preview-text">SASSICAIA 2020</div>
+        <div class="preview-barcode"></div>
+        <div class="preview-code">1010279-2015-06-00750</div>
+        <div style="margin-top: 12px; font-size: 13px; font-weight: 600;">LOC-A-02-03</div>
+      </div>
+      <div class="preview-note">Thermal printer: 4x6 inch label</div>
+    </div>
+
+    <div class="print-status">Last printed: 5 labels at 14:32</div>
+
+    <div class="tab-hint">
+      <div class="hint-text">Bay Labels tab: Select bay range to generate labels</div>
+    </div>
+
+    <div style="height: 80px;"></div>
+  </div>
+
+  <div class="bottom-action">
+    <button class="btn-mobile btn-mobile-brand">
+      <span>🖨️</span>
+      <span>Print 3 Selected Labels</span>
+    </button>
+  </div>
+</body>
+</html>

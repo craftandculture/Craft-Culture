@@ -1,0 +1,851 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Product Catalog — Craft & Culture Platform</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* CSS Reset */
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        /* Design Tokens */
+        :root {
+            --bg-primary: #fafafa;
+            --surface-primary: #ffffff;
+            --surface-secondary: #f5f5f5;
+            --text-primary: #0a0a0a;
+            --text-muted: #737373;
+            --text-brand: #2a9d8f;
+            --fill-brand: #6BBFBF;
+            --fill-brand-10: rgba(107, 191, 191, 0.1);
+            --fill-brand-20: rgba(107, 191, 191, 0.2);
+            --border-primary: #e5e5e5;
+            --border-muted: #f0f0f0;
+            --amber-100: #fef3c7; --amber-600: #d97706;
+            --emerald-100: #d1fae5; --emerald-600: #059669;
+            --red-100: #fee2e2; --red-600: #dc2626;
+            --violet-100: #ede9fe; --violet-600: #7c3aed;
+            --blue-100: #dbeafe; --blue-600: #2563eb;
+            --radius-xl: 12px; --radius-lg: 8px; --radius-md: 6px;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        /* Wireframe Banner */
+        .wireframe-banner {
+            background: #2d3748;
+            color: #fff;
+            text-align: center;
+            padding: 8px 16px;
+            font-size: 13px;
+            font-weight: 500;
+            letter-spacing: 0.3px;
+        }
+
+        /* Container */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 24px;
+        }
+
+        /* Header */
+        .platform-header {
+            background: var(--surface-primary);
+            border-bottom: 1px solid var(--border-primary);
+            padding: 16px 0;
+            margin-bottom: 32px;
+        }
+
+        .header-content {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .brand {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text-brand);
+        }
+
+        .nav-pills {
+            display: flex;
+            gap: 8px;
+        }
+
+        .nav-pill {
+            padding: 8px 16px;
+            border-radius: var(--radius-lg);
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-muted);
+            background: transparent;
+            transition: all 0.2s;
+            text-decoration: none;
+        }
+
+        .nav-pill.active {
+            background: var(--fill-brand-20);
+            color: var(--text-brand);
+        }
+
+        .avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--fill-brand);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            font-weight: 600;
+            color: white;
+        }
+
+        /* Page Header */
+        .page-header {
+            margin-bottom: 32px;
+        }
+
+        .page-title-row {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+
+        .page-title {
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin: 0;
+        }
+
+        .page-subtitle {
+            font-size: 15px;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        .page-actions {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 10px 20px;
+            border-radius: var(--radius-lg);
+            font-size: 14px;
+            font-weight: 500;
+            border: 1px solid var(--border-primary);
+            background: var(--surface-primary);
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn:hover {
+            background: var(--surface-secondary);
+        }
+
+        .btn-brand {
+            background: var(--fill-brand);
+            color: white;
+            border-color: var(--fill-brand);
+        }
+
+        .btn-brand:hover {
+            background: #5aafaf;
+        }
+
+        /* Toggle Group */
+        .toggle-group {
+            display: inline-flex;
+            background: var(--surface-secondary);
+            border-radius: var(--radius-md);
+            padding: 4px;
+            gap: 4px;
+        }
+
+        .toggle-btn {
+            padding: 6px 16px;
+            border-radius: var(--radius-md);
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-muted);
+            background: transparent;
+            border: none;
+            cursor: pointer;
+        }
+
+        .toggle-btn.active {
+            background: var(--surface-primary);
+            color: var(--text-primary);
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+
+        /* KPI Strip */
+        .kpi-strip {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            margin-bottom: 32px;
+        }
+
+        .kpi-card {
+            background: var(--surface-primary);
+            border: 1px solid var(--border-primary);
+            border-radius: var(--radius-xl);
+            padding: 20px;
+        }
+
+        .kpi-label {
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            margin-bottom: 8px;
+        }
+
+        .kpi-value {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        /* Main Layout */
+        .main-layout {
+            display: grid;
+            grid-template-columns: 280px 1fr;
+            gap: 24px;
+            margin-bottom: 32px;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            background: var(--surface-primary);
+            border: 1px solid var(--border-primary);
+            border-radius: var(--radius-xl);
+            padding: 24px;
+            height: fit-content;
+        }
+
+        .sidebar-section {
+            margin-bottom: 24px;
+        }
+
+        .sidebar-section:last-child {
+            margin-bottom: 0;
+        }
+
+        .sidebar-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 12px;
+        }
+
+        .filter-input {
+            width: 100%;
+            padding: 10px 14px;
+            border: 1px solid var(--border-primary);
+            border-radius: var(--radius-md);
+            font-size: 14px;
+            background: var(--surface-primary);
+            color: var(--text-primary);
+            margin-bottom: 16px;
+        }
+
+        .filter-input:focus {
+            outline: none;
+            border-color: var(--fill-brand);
+        }
+
+        .checkbox-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            color: var(--text-primary);
+            cursor: pointer;
+        }
+
+        .checkbox-label input {
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+        }
+
+        .filter-select {
+            width: 100%;
+            padding: 10px 14px;
+            border: 1px solid var(--border-primary);
+            border-radius: var(--radius-md);
+            font-size: 14px;
+            background: var(--surface-primary);
+            color: var(--text-primary);
+        }
+
+        .range-inputs {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        .range-input {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid var(--border-primary);
+            border-radius: var(--radius-md);
+            font-size: 13px;
+            background: var(--surface-primary);
+            color: var(--text-primary);
+        }
+
+        .clear-link {
+            font-size: 13px;
+            color: var(--text-brand);
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        /* Product Grid */
+        .product-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin-bottom: 24px;
+        }
+
+        .product-card {
+            background: var(--surface-primary);
+            border: 1px solid var(--border-primary);
+            border-radius: var(--radius-xl);
+            padding: 20px;
+            transition: all 0.2s;
+        }
+
+        .product-card:hover {
+            border-color: var(--fill-brand);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+
+        .product-image {
+            width: 100%;
+            height: 200px;
+            background: var(--fill-brand-10);
+            border-radius: var(--radius-lg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 16px;
+        }
+
+        .bottle-icon {
+            width: 60px;
+            height: 120px;
+            background: var(--fill-brand);
+            border-radius: 4px;
+            opacity: 0.3;
+        }
+
+        .product-name {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+        }
+
+        .product-producer {
+            font-size: 14px;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+        }
+
+        .product-region {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-bottom: 12px;
+        }
+
+        .product-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding-top: 12px;
+            border-top: 1px solid var(--border-muted);
+        }
+
+        .product-price {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text-brand);
+        }
+
+        .product-stock {
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+
+        .product-actions {
+            margin-top: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* Badge */
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .badge-green {
+            background: var(--emerald-100);
+            color: var(--emerald-600);
+        }
+
+        .badge-amber {
+            background: var(--amber-100);
+            color: var(--amber-600);
+        }
+
+        .badge-red {
+            background: var(--red-100);
+            color: var(--red-600);
+        }
+
+        /* Pagination */
+        .pagination {
+            background: var(--surface-primary);
+            border: 1px solid var(--border-primary);
+            border-radius: var(--radius-xl);
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .pagination-info {
+            font-size: 14px;
+            color: var(--text-muted);
+        }
+
+        .pagination-controls {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn-sm {
+            padding: 8px 16px;
+            font-size: 13px;
+        }
+
+        /* Footer */
+        .page-footer {
+            margin-top: 64px;
+            padding: 24px 0;
+            border-top: 1px solid var(--border-primary);
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 13px;
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .product-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .main-layout {
+                grid-template-columns: 1fr;
+            }
+
+            .product-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .kpi-strip {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .header-content {
+                flex-direction: column;
+                gap: 16px;
+            }
+
+            .nav-pills {
+                flex-wrap: wrap;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Wireframe Banner -->
+    <div class="wireframe-banner">
+        WIREFRAME — Product Catalog
+    </div>
+
+    <!-- Platform Header -->
+    <header class="platform-header">
+        <div class="container">
+            <div class="header-content">
+                <div class="brand">Craft & Culture Platform</div>
+                <nav class="nav-pills">
+                    <a href="#" class="nav-pill">Dashboard</a>
+                    <a href="#" class="nav-pill">Pricing</a>
+                    <a href="#" class="nav-pill active">Products</a>
+                    <a href="#" class="nav-pill">Quotes</a>
+                    <a href="#" class="nav-pill">Private Orders</a>
+                    <a href="#" class="nav-pill">Agents</a>
+                </nav>
+                <div class="avatar">KB</div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container">
+        <!-- Page Header -->
+        <div class="page-header">
+            <div class="page-title-row">
+                <div>
+                    <h1 class="page-title">Product Catalog</h1>
+                    <p class="page-subtitle">Browse and manage your wine portfolio</p>
+                </div>
+                <div class="page-actions">
+                    <div class="toggle-group">
+                        <button class="toggle-btn active">Grid</button>
+                        <button class="toggle-btn">List</button>
+                    </div>
+                    <button class="btn">Import CSV</button>
+                    <button class="btn btn-brand">+ Add Product</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- KPI Strip -->
+        <div class="kpi-strip">
+            <div class="kpi-card">
+                <div class="kpi-label">Total SKUs</div>
+                <div class="kpi-value">186</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-label">In Stock</div>
+                <div class="kpi-value">142</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-label">Low Stock</div>
+                <div class="kpi-value">12</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-label">Out of Stock</div>
+                <div class="kpi-value">32</div>
+            </div>
+        </div>
+
+        <!-- Main Layout -->
+        <div class="main-layout">
+            <!-- Sidebar Filters -->
+            <aside class="sidebar">
+                <div class="sidebar-section">
+                    <div class="sidebar-title">Search</div>
+                    <input type="text" class="filter-input" placeholder="Search products...">
+                </div>
+
+                <div class="sidebar-section">
+                    <div class="sidebar-title">Category</div>
+                    <div class="checkbox-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" checked>
+                            <span>Red Wine</span>
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox">
+                            <span>White Wine</span>
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox">
+                            <span>Sparkling</span>
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox">
+                            <span>Rosé</span>
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox">
+                            <span>Spirits</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="sidebar-section">
+                    <div class="sidebar-title">Region</div>
+                    <select class="filter-select">
+                        <option>All Regions</option>
+                        <option>Bordeaux</option>
+                        <option>Burgundy</option>
+                        <option>Tuscany</option>
+                        <option>Piedmont</option>
+                        <option>Napa Valley</option>
+                        <option>Champagne</option>
+                        <option>Bolgheri</option>
+                    </select>
+                </div>
+
+                <div class="sidebar-section">
+                    <div class="sidebar-title">Vintage</div>
+                    <div class="range-inputs">
+                        <input type="number" class="range-input" placeholder="Min" min="1950" max="2024">
+                        <input type="number" class="range-input" placeholder="Max" min="1950" max="2024">
+                    </div>
+                </div>
+
+                <div class="sidebar-section">
+                    <div class="sidebar-title">Price (AED)</div>
+                    <div class="range-inputs">
+                        <input type="number" class="range-input" placeholder="Min">
+                        <input type="number" class="range-input" placeholder="Max">
+                    </div>
+                </div>
+
+                <div class="sidebar-section">
+                    <a href="#" class="clear-link">Clear All Filters</a>
+                </div>
+            </aside>
+
+            <!-- Product Grid -->
+            <div>
+                <div class="product-grid">
+                    <!-- Product 1 -->
+                    <div class="product-card">
+                        <div class="product-image">
+                            <div class="bottle-icon"></div>
+                        </div>
+                        <h3 class="product-name">Sassicaia 2020</h3>
+                        <p class="product-producer">Tenuta San Guido</p>
+                        <p class="product-region">Bolgheri, Italy • 2020</p>
+                        <div class="product-footer">
+                            <div>
+                                <div class="product-price">AED 413/btl</div>
+                                <div class="product-stock">72 bottles</div>
+                            </div>
+                        </div>
+                        <div class="product-actions">
+                            <span class="badge badge-green">In Stock</span>
+                            <button class="btn btn-sm">View</button>
+                        </div>
+                    </div>
+
+                    <!-- Product 2 -->
+                    <div class="product-card">
+                        <div class="product-image">
+                            <div class="bottle-icon"></div>
+                        </div>
+                        <h3 class="product-name">Opus One 2019</h3>
+                        <p class="product-producer">Opus One Winery</p>
+                        <p class="product-region">Napa Valley, USA • 2019</p>
+                        <div class="product-footer">
+                            <div>
+                                <div class="product-price">AED 980/btl</div>
+                                <div class="product-stock">36 bottles</div>
+                            </div>
+                        </div>
+                        <div class="product-actions">
+                            <span class="badge badge-green">In Stock</span>
+                            <button class="btn btn-sm">View</button>
+                        </div>
+                    </div>
+
+                    <!-- Product 3 -->
+                    <div class="product-card">
+                        <div class="product-image">
+                            <div class="bottle-icon"></div>
+                        </div>
+                        <h3 class="product-name">Tignanello 2019</h3>
+                        <p class="product-producer">Antinori</p>
+                        <p class="product-region">Tuscany, Italy • 2019</p>
+                        <div class="product-footer">
+                            <div>
+                                <div class="product-price">AED 280/btl</div>
+                                <div class="product-stock">144 bottles</div>
+                            </div>
+                        </div>
+                        <div class="product-actions">
+                            <span class="badge badge-green">In Stock</span>
+                            <button class="btn btn-sm">View</button>
+                        </div>
+                    </div>
+
+                    <!-- Product 4 -->
+                    <div class="product-card">
+                        <div class="product-image">
+                            <div class="bottle-icon"></div>
+                        </div>
+                        <h3 class="product-name">Barolo Monfortino 2016</h3>
+                        <p class="product-producer">Giacomo Conterno</p>
+                        <p class="product-region">Piedmont, Italy • 2016</p>
+                        <div class="product-footer">
+                            <div>
+                                <div class="product-price">AED 1,850/btl</div>
+                                <div class="product-stock">24 bottles</div>
+                            </div>
+                        </div>
+                        <div class="product-actions">
+                            <span class="badge badge-green">In Stock</span>
+                            <button class="btn btn-sm">View</button>
+                        </div>
+                    </div>
+
+                    <!-- Product 5 -->
+                    <div class="product-card">
+                        <div class="product-image">
+                            <div class="bottle-icon"></div>
+                        </div>
+                        <h3 class="product-name">Penfolds Grange 2018</h3>
+                        <p class="product-producer">Penfolds</p>
+                        <p class="product-region">South Australia • 2018</p>
+                        <div class="product-footer">
+                            <div>
+                                <div class="product-price">AED 1,650/btl</div>
+                                <div class="product-stock">48 bottles</div>
+                            </div>
+                        </div>
+                        <div class="product-actions">
+                            <span class="badge badge-green">In Stock</span>
+                            <button class="btn btn-sm">View</button>
+                        </div>
+                    </div>
+
+                    <!-- Product 6 -->
+                    <div class="product-card">
+                        <div class="product-image">
+                            <div class="bottle-icon"></div>
+                        </div>
+                        <h3 class="product-name">Krug Grande Cuvée NV</h3>
+                        <p class="product-producer">Krug</p>
+                        <p class="product-region">Champagne, France • NV</p>
+                        <div class="product-footer">
+                            <div>
+                                <div class="product-price">AED 520/btl</div>
+                                <div class="product-stock">60 bottles</div>
+                            </div>
+                        </div>
+                        <div class="product-actions">
+                            <span class="badge badge-green">In Stock</span>
+                            <button class="btn btn-sm">View</button>
+                        </div>
+                    </div>
+
+                    <!-- Product 7 -->
+                    <div class="product-card">
+                        <div class="product-image">
+                            <div class="bottle-icon"></div>
+                        </div>
+                        <h3 class="product-name">Dom Pérignon 2013</h3>
+                        <p class="product-producer">Dom Pérignon</p>
+                        <p class="product-region">Champagne, France • 2013</p>
+                        <div class="product-footer">
+                            <div>
+                                <div class="product-price">AED 890/btl</div>
+                                <div class="product-stock">18 bottles</div>
+                            </div>
+                        </div>
+                        <div class="product-actions">
+                            <span class="badge badge-green">In Stock</span>
+                            <button class="btn btn-sm">View</button>
+                        </div>
+                    </div>
+
+                    <!-- Product 8 -->
+                    <div class="product-card">
+                        <div class="product-image">
+                            <div class="bottle-icon"></div>
+                        </div>
+                        <h3 class="product-name">Château Margaux 2015</h3>
+                        <p class="product-producer">Château Margaux</p>
+                        <p class="product-region">Bordeaux, France • 2015</p>
+                        <div class="product-footer">
+                            <div>
+                                <div class="product-price">AED 2,200/btl</div>
+                                <div class="product-stock">12 bottles</div>
+                            </div>
+                        </div>
+                        <div class="product-actions">
+                            <span class="badge badge-amber">Low Stock</span>
+                            <button class="btn btn-sm">View</button>
+                        </div>
+                    </div>
+
+                    <!-- Product 9 -->
+                    <div class="product-card">
+                        <div class="product-image">
+                            <div class="bottle-icon"></div>
+                        </div>
+                        <h3 class="product-name">Screaming Eagle 2019</h3>
+                        <p class="product-producer">Screaming Eagle</p>
+                        <p class="product-region">Napa Valley, USA • 2019</p>
+                        <div class="product-footer">
+                            <div>
+                                <div class="product-price">AED 12,500/btl</div>
+                                <div class="product-stock">6 bottles</div>
+                            </div>
+                        </div>
+                        <div class="product-actions">
+                            <span class="badge badge-amber">Low Stock</span>
+                            <button class="btn btn-sm">View</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pagination -->
+                <div class="pagination">
+                    <div class="pagination-info">Showing 1-9 of 186 products</div>
+                    <div class="pagination-controls">
+                        <button class="btn btn-sm" disabled style="opacity: 0.5; cursor: not-allowed;">Previous</button>
+                        <button class="btn btn-sm">Next</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="page-footer">
+        <div class="container">
+            Wireframe — Craft & Culture — Product Catalog
+        </div>
+    </footer>
+</body>
+</html>

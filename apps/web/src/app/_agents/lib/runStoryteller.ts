@@ -168,7 +168,7 @@ const runStoryteller = async () => {
     const result = await generateObject({
       model: anthropic('claude-sonnet-4-5-20250929'),
       schema: storytellerOutputSchema,
-      system: `You are The Storyteller, a luxury wine marketing content creator for Craft & Culture, a premium wine distributor in the UAE/GCC market.
+      system: `You are Socials, a luxury wine marketing content creator for Craft & Culture, a premium wine distributor in the UAE/GCC market.
 
 Your brand voice: sophisticated but approachable, knowledgeable without being pretentious, warm and inviting. You understand Dubai's luxury lifestyle, dining scene, and high-net-worth tastes.
 
@@ -210,7 +210,7 @@ Generate:
       agentId: 'storyteller',
       runId: run.id,
       type: 'weekly-content',
-      title: `Storyteller Brief — Week of ${new Date().toISOString().slice(0, 10)}`,
+      title: `Socials Brief — Week of ${new Date().toISOString().slice(0, 10)}`,
       content: markdown,
       data: data as Record<string, unknown>,
     });

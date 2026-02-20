@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Scout — Agent Dashboard Wireframe</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-primary: #fafafa;
+    --surface-primary: #ffffff;
+    --surface-secondary: #f5f5f5;
+    --text-primary: #0a0a0a;
+    --text-muted: #737373;
+    --text-brand: #2a9d8f;
+    --fill-brand: #6BBFBF;
+    --fill-brand-10: rgba(107, 191, 191, 0.1);
+    --fill-brand-20: rgba(107, 191, 191, 0.2);
+    --border-primary: #e5e5e5;
+    --border-muted: #f0f0f0;
+    --amber-100: #fef3c7;
+    --amber-600: #d97706;
+    --amber-900-30: rgba(120, 53, 15, 0.3);
+    --emerald-100: #d1fae5;
+    --emerald-600: #059669;
+    --red-100: #fee2e2;
+    --red-600: #dc2626;
+    --violet-100: #ede9fe;
+    --violet-600: #7c3aed;
+    --blue-100: #dbeafe;
+    --blue-600: #2563eb;
+    --radius-xl: 12px;
+    --radius-lg: 8px;
+    --radius-md: 6px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Inter', -apple-system, sans-serif;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-size: 15px;
+    line-height: 1.5;
+  }
+
+  /* ── Platform chrome ──────────────────────────── */
+  .platform-header {
+    position: sticky; top: 0; z-index: 50;
+    background: rgba(250,250,250,0.8);
+    backdrop-filter: blur(16px);
+    border-bottom: 1px solid var(--border-primary);
+    height: 56px;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 1rem;
+  }
+  .platform-header .brand {
+    font-size: 18px; font-weight: 700; color: var(--fill-brand);
+    letter-spacing: -0.3px;
+  }
+  .platform-header .brand span { color: var(--text-muted); font-weight: 400; font-size: 13px; margin-left: 12px; }
+  .nav-pills { display: flex; gap: 6px; }
+  .nav-pill {
+    font-size: 12px; font-weight: 500; padding: 6px 14px;
+    border-radius: var(--radius-lg); color: var(--text-muted);
+    border: 1px solid var(--border-muted); background: transparent;
+    cursor: pointer; transition: all 0.15s;
+  }
+  .nav-pill:hover { color: var(--text-primary); border-color: var(--border-primary); }
+  .nav-pill.active {
+    background: var(--fill-brand); color: white; border-color: var(--fill-brand);
+  }
+  .header-right { display: flex; align-items: center; gap: 12px; }
+  .avatar {
+    width: 32px; height: 32px; border-radius: 50%;
+    background: var(--fill-brand-20); display: flex; align-items: center;
+    justify-content: center; font-size: 12px; font-weight: 600; color: var(--text-brand);
+  }
+
+  /* ── Main container ───────────────────────────── */
+  .container {
+    max-width: 1200px; margin: 0 auto; padding: 2rem 1rem;
+  }
+
+  /* ── Page header ──────────────────────────────── */
+  .page-header {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    margin-bottom: 24px; gap: 16px; flex-wrap: wrap;
+  }
+  .page-header h1 {
+    font-size: 24px; font-weight: 600; letter-spacing: -0.5px;
+  }
+  .page-header .subtitle {
+    font-size: 13px; color: var(--text-muted); margin-top: 2px;
+  }
+  .header-actions { display: flex; gap: 8px; align-items: center; }
+
+  /* ── Agent status bar ─────────────────────────── */
+  .agent-status {
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px 12px; border-radius: 20px;
+    background: var(--emerald-100); font-size: 12px; font-weight: 500; color: var(--emerald-600);
+  }
+  .agent-status .dot {
+    width: 8px; height: 8px; border-radius: 50%; background: var(--emerald-600);
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+  .btn {
+    padding: 8px 16px; border-radius: var(--radius-lg);
+    font-size: 13px; font-weight: 500; cursor: pointer;
+    border: 1px solid var(--border-primary); background: var(--surface-primary);
+    color: var(--text-primary); transition: all 0.15s;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .btn:hover { border-color: var(--text-muted); }
+  .btn-brand {
+    background: var(--fill-brand); color: white; border-color: var(--fill-brand);
+  }
+  .btn-brand:hover { opacity: 0.9; border-color: var(--fill-brand); }
+  .btn-ghost {
+    background: transparent; border-color: transparent; color: var(--text-brand);
+  }
+
+  /* ── Cards ────────────────────────────────────── */
+  .card {
+    background: var(--surface-primary);
+    border: 1px solid var(--border-primary);
+    border-bottom-width: 2px;
+    border-radius: var(--radius-xl);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+    overflow: hidden;
+  }
+  .card-content { padding: 16px; }
+  .card-content-lg { padding: 24px; }
+
+  /* ── KPI Grid ─────────────────────────────────── */
+  .kpi-grid {
+    display: grid; grid-template-columns: repeat(2, 1fr);
+    gap: 12px; margin-bottom: 24px;
+  }
+  @media (min-width: 768px) {
+    .kpi-grid { grid-template-columns: repeat(4, 1fr); gap: 16px; }
+  }
+  .kpi-card .card-content {
+    display: flex; align-items: flex-start; justify-content: space-between;
+  }
+  .kpi-label {
+    font-size: 11px; font-weight: 500; text-transform: uppercase;
+    letter-spacing: 0.8px; color: var(--text-muted);
+  }
+  .kpi-value {
+    font-size: 24px; font-weight: 600; margin-top: 4px;
+    letter-spacing: -0.5px;
+  }
+  .kpi-sub { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+  .kpi-icon {
+    width: 36px; height: 36px; border-radius: var(--radius-lg);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; flex-shrink: 0;
+  }
+
+  /* ── Tabs ─────────────────────────────────────── */
+  .tabs {
+    display: flex; gap: 0; border-bottom: 1px solid var(--border-primary);
+    margin-bottom: 20px;
+  }
+  .tab {
+    padding: 10px 20px; font-size: 13px; font-weight: 500;
+    color: var(--text-muted); cursor: pointer; border-bottom: 2px solid transparent;
+    transition: all 0.15s; background: none; border-top: none; border-left: none; border-right: none;
+  }
+  .tab:hover { color: var(--text-primary); }
+  .tab.active { color: var(--text-brand); border-bottom-color: var(--fill-brand); }
+
+  /* ── Two-col layout ───────────────────────────── */
+  .two-col {
+    display: grid; grid-template-columns: 1fr;
+    gap: 20px; margin-bottom: 24px;
+  }
+  @media (min-width: 768px) {
+    .two-col { grid-template-columns: 7fr 5fr; }
+  }
+
+  /* ── Price gaps table ─────────────────────────── */
+  .section-title {
+    font-size: 14px; font-weight: 600; margin-bottom: 12px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .section-title .count {
+    background: var(--fill-brand-10); color: var(--text-brand);
+    font-size: 11px; font-weight: 600; padding: 2px 8px;
+    border-radius: 12px;
+  }
+  table { width: 100%; border-collapse: collapse; }
+  thead th {
+    font-size: 11px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.5px; color: var(--text-muted);
+    padding: 8px 12px; text-align: left;
+    border-bottom: 1px solid var(--border-primary);
+  }
+  thead th:last-child { text-align: right; }
+  tbody td {
+    padding: 10px 12px; font-size: 13px;
+    border-bottom: 1px solid var(--border-muted);
+    vertical-align: top;
+  }
+  tbody tr:hover { background: var(--surface-secondary); }
+  .wine-name { font-weight: 600; color: var(--text-primary); }
+  .wine-meta { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
+  .price-cell { text-align: right; font-variant-numeric: tabular-nums; }
+  .gap-badge {
+    display: inline-flex; align-items: center; gap: 3px;
+    padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600;
+    white-space: nowrap;
+  }
+  .gap-high { background: var(--emerald-100); color: var(--emerald-600); }
+  .gap-medium { background: var(--amber-100); color: var(--amber-600); }
+
+  /* ── Signal cards ─────────────────────────────── */
+  .signal-list { display: flex; flex-direction: column; gap: 12px; }
+  .signal-card {
+    padding: 14px; border-radius: var(--radius-lg);
+    border-left: 3px solid; background: var(--surface-primary);
+    border: 1px solid var(--border-muted); border-left-width: 3px;
+  }
+  .signal-card.opportunity { border-left-color: var(--emerald-600); }
+  .signal-card.warning { border-left-color: var(--amber-600); }
+  .signal-card.gap { border-left-color: var(--red-600); }
+  .signal-card.info { border-left-color: var(--blue-600); }
+  .signal-type {
+    font-size: 10px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.8px; margin-bottom: 4px;
+  }
+  .signal-type.opportunity { color: var(--emerald-600); }
+  .signal-type.warning { color: var(--amber-600); }
+  .signal-type.gap { color: var(--red-600); }
+  .signal-type.info { color: var(--blue-600); }
+  .signal-title { font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+  .signal-body { font-size: 12px; color: var(--text-muted); line-height: 1.5; }
+
+  /* ── Action items ─────────────────────────────── */
+  .action-list { display: flex; flex-direction: column; gap: 0; }
+  .action-item {
+    display: flex; align-items: flex-start; gap: 12px;
+    padding: 14px 0; border-bottom: 1px solid var(--border-muted);
+  }
+  .action-item:last-child { border-bottom: none; }
+  .action-priority {
+    width: 24px; height: 24px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 700; flex-shrink: 0; margin-top: 1px;
+  }
+  .priority-high { background: var(--red-100); color: var(--red-600); }
+  .priority-medium { background: var(--amber-100); color: var(--amber-600); }
+  .priority-low { background: var(--blue-100); color: var(--blue-600); }
+  .action-content { flex: 1; min-width: 0; }
+  .action-title { font-size: 13px; font-weight: 600; }
+  .action-desc { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+  .action-est {
+    font-size: 11px; color: var(--text-brand); font-weight: 500; margin-top: 4px;
+  }
+  .action-btn {
+    padding: 5px 12px; border-radius: var(--radius-md);
+    font-size: 11px; font-weight: 600; cursor: pointer;
+    border: 1px solid var(--border-primary); background: var(--surface-primary);
+    color: var(--text-primary); white-space: nowrap; flex-shrink: 0; margin-top: 2px;
+  }
+  .action-btn:hover { background: var(--surface-secondary); }
+
+  /* ── Brief history list ───────────────────────── */
+  .brief-list { display: flex; flex-direction: column; }
+  .brief-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 0; border-bottom: 1px solid var(--border-muted);
+    cursor: pointer; transition: background 0.1s;
+  }
+  .brief-row:hover { background: rgba(0,0,0,0.01); }
+  .brief-row:last-child { border-bottom: none; }
+  .brief-date {
+    font-size: 12px; font-weight: 600; color: var(--text-muted);
+    min-width: 48px; text-align: center;
+  }
+  .brief-date .day { font-size: 18px; color: var(--text-primary); display: block; line-height: 1; }
+  .brief-date .month { font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .brief-content { flex: 1; min-width: 0; }
+  .brief-title { font-size: 13px; font-weight: 600; }
+  .brief-summary { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+  .brief-badges { display: flex; gap: 6px; margin-top: 6px; }
+  .mini-badge {
+    font-size: 10px; font-weight: 600; padding: 1px 8px;
+    border-radius: 10px; white-space: nowrap;
+  }
+  .mini-badge.opp { background: var(--emerald-100); color: var(--emerald-600); }
+  .mini-badge.alert { background: var(--amber-100); color: var(--amber-600); }
+  .mini-badge.gap-b { background: var(--red-100); color: var(--red-600); }
+  .chevron { color: var(--text-muted); opacity: 0; transition: opacity 0.15s; font-size: 18px; }
+  .brief-row:hover .chevron { opacity: 1; }
+
+  /* ── Confidence meter ─────────────────────────── */
+  .confidence {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 12px; color: var(--text-muted);
+  }
+  .confidence-bar {
+    width: 60px; height: 6px; border-radius: 3px;
+    background: var(--border-muted); overflow: hidden;
+  }
+  .confidence-fill {
+    height: 100%; border-radius: 3px; background: var(--emerald-600);
+  }
+
+  /* ── Wireframe label ──────────────────────────── */
+  .wireframe-banner {
+    background: #1a1a1a; color: #a3a3a3; text-align: center;
+    padding: 8px; font-size: 11px; letter-spacing: 1px;
+    text-transform: uppercase; font-weight: 600;
+  }
+  .wireframe-banner span { color: var(--fill-brand); }
+
+  /* ── Footer ───────────────────────────────────── */
+  .page-footer {
+    text-align: center; padding: 32px 16px; color: var(--text-muted);
+    font-size: 12px; border-top: 1px solid var(--border-muted); margin-top: 40px;
+  }
+
+  /* ── Responsive ───────────────────────────────── */
+  @media (max-width: 767px) {
+    .platform-header .brand span { display: none; }
+    .nav-pills { display: none; }
+    .page-header { flex-direction: column; }
+    .kpi-value { font-size: 20px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="wireframe-banner">
+  Wireframe &mdash; <span>The Scout</span> Agent Dashboard &mdash; Craft &amp; Culture Platform
+</div>
+
+<!-- ── Platform Header (simulated) ────────────────── -->
+<header class="platform-header">
+  <div style="display:flex;align-items:center;gap:20px;">
+    <div class="brand">Craft &amp; Culture <span>Platform</span></div>
+    <nav class="nav-pills">
+      <button class="nav-pill">Quotes</button>
+      <button class="nav-pill">Private Orders</button>
+      <button class="nav-pill">Pricing</button>
+      <button class="nav-pill active">Agents</button>
+      <button class="nav-pill">WMS</button>
+    </nav>
+  </div>
+  <div class="header-right">
+    <div style="font-size:18px;cursor:pointer;" title="Notifications">&#128276;</div>
+    <div class="avatar">KB</div>
+  </div>
+</header>
+
+<!-- ── Main Content ──────────────────────────────── -->
+<div class="container">
+
+  <!-- Agent sub-nav tabs -->
+  <div class="tabs">
+    <button class="tab active">The Scout</button>
+    <button class="tab">The Concierge</button>
+    <button class="tab">The Storyteller</button>
+    <button class="tab">The Buyer</button>
+    <button class="tab">The Pricer</button>
+    <button class="tab">The Advisor</button>
+    <button class="tab" style="color:#a3a3a3;">All Agents</button>
+  </div>
+
+  <!-- Page Header -->
+  <div class="page-header">
+    <div>
+      <h1>The Scout</h1>
+      <div class="subtitle">Competitive intelligence &amp; market monitoring &mdash; runs daily at 06:00 GST</div>
+    </div>
+    <div class="header-actions">
+      <div class="agent-status">
+        <div class="dot"></div>
+        Last run: Today 06:00
+      </div>
+      <button class="btn">&#8635; Run Now</button>
+      <button class="btn btn-ghost">&#9881; Configure</button>
+    </div>
+  </div>
+
+  <!-- KPI Cards -->
+  <div class="kpi-grid">
+    <div class="card kpi-card">
+      <div class="card-content">
+        <div>
+          <div class="kpi-label">Price Gaps Found</div>
+          <div class="kpi-value">12</div>
+          <div class="kpi-sub">vs 8 yesterday</div>
+        </div>
+        <div class="kpi-icon" style="background:var(--emerald-100);color:var(--emerald-600);">&#9650;</div>
+      </div>
+    </div>
+    <div class="card kpi-card">
+      <div class="card-content">
+        <div>
+          <div class="kpi-label">Revenue Opportunity</div>
+          <div class="kpi-value" style="color:var(--text-brand);">AED 68k</div>
+          <div class="kpi-sub">$18,520 USD</div>
+        </div>
+        <div class="kpi-icon" style="background:var(--fill-brand-10);color:var(--text-brand);">&#9733;</div>
+      </div>
+    </div>
+    <div class="card kpi-card">
+      <div class="card-content">
+        <div>
+          <div class="kpi-label">Blind Spots</div>
+          <div class="kpi-value" style="color:var(--amber-600);">3</div>
+          <div class="kpi-sub">Categories you're missing</div>
+        </div>
+        <div class="kpi-icon" style="background:var(--amber-100);color:var(--amber-600);">&#9888;</div>
+      </div>
+    </div>
+    <div class="card kpi-card">
+      <div class="card-content">
+        <div>
+          <div class="kpi-label">Confidence</div>
+          <div class="kpi-value">87%</div>
+          <div class="kpi-sub">
+            <div class="confidence">
+              <div class="confidence-bar"><div class="confidence-fill" style="width:87%"></div></div>
+              High
+            </div>
+          </div>
+        </div>
+        <div class="kpi-icon" style="background:var(--violet-100);color:var(--violet-600);">&#9878;</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Two Column: Price Gaps + Signals -->
+  <div class="two-col">
+
+    <!-- Price Gaps Table -->
+    <div class="card">
+      <div class="card-content-lg">
+        <div class="section-title">
+          Price Gaps vs Competitors
+          <span class="count">12 found</span>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Wine</th>
+              <th>Competitor</th>
+              <th>Your Price</th>
+              <th style="text-align:right">Gap</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>
+                <div class="wine-name">Sassicaia 2020</div>
+                <div class="wine-meta">Bolgheri &bull; 750ml &bull; 6 cases available</div>
+              </td>
+              <td class="price-cell" style="text-align:left">AED 1,250/btl</td>
+              <td class="price-cell" style="text-align:left">AED 413/btl</td>
+              <td class="price-cell"><span class="gap-badge gap-high">+203%</span></td>
+            </tr>
+            <tr>
+              <td>
+                <div class="wine-name">Opus One 2019</div>
+                <div class="wine-meta">Napa Valley &bull; 750ml &bull; 3 cases</div>
+              </td>
+              <td class="price-cell" style="text-align:left">AED 2,400/btl</td>
+              <td class="price-cell" style="text-align:left">AED 980/btl</td>
+              <td class="price-cell"><span class="gap-badge gap-high">+145%</span></td>
+            </tr>
+            <tr>
+              <td>
+                <div class="wine-name">Tignanello 2019</div>
+                <div class="wine-meta">Tuscany &bull; 750ml &bull; 12 cases</div>
+              </td>
+              <td class="price-cell" style="text-align:left">AED 650/btl</td>
+              <td class="price-cell" style="text-align:left">AED 280/btl</td>
+              <td class="price-cell"><span class="gap-badge gap-high">+132%</span></td>
+            </tr>
+            <tr>
+              <td>
+                <div class="wine-name">Barolo Monfortino 2016</div>
+                <div class="wine-meta">Piedmont &bull; 750ml &bull; 2 cases</div>
+              </td>
+              <td class="price-cell" style="text-align:left">AED 4,200/btl</td>
+              <td class="price-cell" style="text-align:left">AED 1,850/btl</td>
+              <td class="price-cell"><span class="gap-badge gap-high">+127%</span></td>
+            </tr>
+            <tr>
+              <td>
+                <div class="wine-name">Penfolds Grange 2018</div>
+                <div class="wine-meta">South Australia &bull; 750ml &bull; 4 cases</div>
+              </td>
+              <td class="price-cell" style="text-align:left">AED 3,100/btl</td>
+              <td class="price-cell" style="text-align:left">AED 1,650/btl</td>
+              <td class="price-cell"><span class="gap-badge gap-medium">+88%</span></td>
+            </tr>
+            <tr>
+              <td>
+                <div class="wine-name">Amarone Bertani 2012</div>
+                <div class="wine-meta">Veneto &bull; 750ml &bull; 8 cases</div>
+              </td>
+              <td class="price-cell" style="text-align:left">AED 890/btl</td>
+              <td class="price-cell" style="text-align:left">AED 520/btl</td>
+              <td class="price-cell"><span class="gap-badge gap-medium">+71%</span></td>
+            </tr>
+          </tbody>
+        </table>
+        <div style="text-align:center;padding-top:12px;">
+          <button class="btn btn-ghost" style="font-size:12px;">View all 12 gaps &rarr;</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Market Signals -->
+    <div style="display:flex;flex-direction:column;gap:20px;">
+      <div class="card">
+        <div class="card-content-lg">
+          <div class="section-title">Market Signals</div>
+          <div class="signal-list">
+            <div class="signal-card opportunity">
+              <div class="signal-type opportunity">Opportunity</div>
+              <div class="signal-title">Petrus 2018 supply increasing</div>
+              <div class="signal-body">Appeared on 3 UAE competitor lists this week. You hold 6 bottles in Spotlight. Consider proactive outreach to Petrus collectors before supply saturates market pricing.</div>
+            </div>
+            <div class="signal-card warning">
+              <div class="signal-type warning">Market Move</div>
+              <div class="signal-title">Burgundy 2022 futures closing</div>
+              <div class="signal-body">Domaine Leflaive Puligny-Montrachet allocations down 30% from 2021. Expect secondary market lift in 6-8 months. Buy window closing.</div>
+            </div>
+            <div class="signal-card gap">
+              <div class="signal-type gap">Blind Spot</div>
+              <div class="signal-title">Champagne gap critical</div>
+              <div class="signal-body">JY lists 14 Champagne SKUs (Krug, Salon, Dom Perignon). You carry 0 in UAE Held. This is their strongest category you can't compete in.</div>
+            </div>
+            <div class="signal-card info">
+              <div class="signal-type info">FX Alert</div>
+              <div class="signal-title">GBP/USD down to 1.293</div>
+              <div class="signal-body">Down from 1.31 last week. 1.3% saving on UK-sourced stock. Good window for Krug/DP purchase if approved by The Buyer.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Action Items -->
+  <div class="card" style="margin-bottom:24px;">
+    <div class="card-content-lg">
+      <div class="section-title">
+        Recommended Actions
+        <span style="font-size:12px;color:var(--text-muted);font-weight:400;">Sorted by impact</span>
+      </div>
+      <div class="action-list">
+        <div class="action-item">
+          <div class="action-priority priority-high">1</div>
+          <div class="action-content">
+            <div class="action-title">Price Sassicaia 2020 &amp; Tignanello 2019 for private client push</div>
+            <div class="action-desc">Both wines have 130%+ competitor markup. You have 18 cases total. Targeting top 5 Italian collectors could generate estimated AED 45,000.</div>
+            <div class="action-est">Est. revenue: AED 45,000 &bull; Sent to: The Concierge</div>
+          </div>
+          <button class="action-btn">Send to Concierge</button>
+        </div>
+        <div class="action-item">
+          <div class="action-priority priority-high">2</div>
+          <div class="action-content">
+            <div class="action-title">Source 3-5 prestige Champagne labels for Q2</div>
+            <div class="action-desc">Krug Grande Cuvee and Dom Perignon 2013 are JY's top Champagne sellers. ExW cost: ~&pound;95/btl (Krug), ~&pound;185/btl (DP). Fill your biggest blind spot.</div>
+            <div class="action-est">Est. investment: AED 35,000 &bull; Sent to: The Buyer</div>
+          </div>
+          <button class="action-btn">Send to Buyer</button>
+        </div>
+        <div class="action-item">
+          <div class="action-priority priority-medium">3</div>
+          <div class="action-content">
+            <div class="action-title">Flag Petrus 2018 to client matching</div>
+            <div class="action-desc">Supply is increasing and you hold 6 bottles. Move proactively before market price softens. Target: known Pomerol/Right Bank collectors.</div>
+            <div class="action-est">Est. revenue: AED 28,000 &bull; Sent to: The Concierge</div>
+          </div>
+          <button class="action-btn">Send to Concierge</button>
+        </div>
+        <div class="action-item">
+          <div class="action-priority priority-low">4</div>
+          <div class="action-content">
+            <div class="action-title">Monitor Barolo Monfortino 2016 on Liv-Ex</div>
+            <div class="action-desc">Currently at &pound;310/btl, above your &pound;280 threshold. Set alert for when it drops below target. Only 2 cases available — scarcity play.</div>
+            <div class="action-est">Action: Price watch &bull; Auto-alert when target hit</div>
+          </div>
+          <button class="action-btn">Set Alert</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Brief History -->
+  <div class="card">
+    <div class="card-content-lg">
+      <div class="section-title">
+        Previous Briefs
+        <button class="btn btn-ghost" style="font-size:12px;">View All &rarr;</button>
+      </div>
+      <div class="brief-list">
+        <div class="brief-row">
+          <div class="brief-date">
+            <span class="day">13</span>
+            <span class="month">Feb</span>
+          </div>
+          <div class="brief-content">
+            <div class="brief-title">Daily Brief &mdash; 12 price gaps, Champagne blind spot flagged</div>
+            <div class="brief-summary">Sassicaia +203%, Opus One +145%. Petrus 2018 supply rising. GBP/USD at 1.293.</div>
+            <div class="brief-badges">
+              <span class="mini-badge opp">4 opportunities</span>
+              <span class="mini-badge alert">1 FX alert</span>
+              <span class="mini-badge gap-b">1 blind spot</span>
+            </div>
+          </div>
+          <span class="chevron">&rsaquo;</span>
+        </div>
+        <div class="brief-row">
+          <div class="brief-date">
+            <span class="day">12</span>
+            <span class="month">Feb</span>
+          </div>
+          <div class="brief-content">
+            <div class="brief-title">Daily Brief &mdash; 8 price gaps, Burgundy futures alert</div>
+            <div class="brief-summary">New JY list detected with 3 additional Napa labels. Barolo Cannubi pricing shifted.</div>
+            <div class="brief-badges">
+              <span class="mini-badge opp">3 opportunities</span>
+              <span class="mini-badge alert">2 market moves</span>
+            </div>
+          </div>
+          <span class="chevron">&rsaquo;</span>
+        </div>
+        <div class="brief-row">
+          <div class="brief-date">
+            <span class="day">11</span>
+            <span class="month">Feb</span>
+          </div>
+          <div class="brief-content">
+            <div class="brief-title">Daily Brief &mdash; 10 price gaps, quiet market day</div>
+            <div class="brief-summary">No new competitor movements. Stable pricing across all categories. AED/USD steady.</div>
+            <div class="brief-badges">
+              <span class="mini-badge opp">2 opportunities</span>
+            </div>
+          </div>
+          <span class="chevron">&rsaquo;</span>
+        </div>
+        <div class="brief-row">
+          <div class="brief-date">
+            <span class="day">10</span>
+            <span class="month">Feb</span>
+          </div>
+          <div class="brief-content">
+            <div class="brief-title">Daily Brief &mdash; 9 price gaps, DRC price spike detected</div>
+            <div class="brief-summary">DRC Romanee-Conti 2019 jumped 12% on Liv-Ex. JY raised Screaming Eagle by AED 400.</div>
+            <div class="brief-badges">
+              <span class="mini-badge opp">3 opportunities</span>
+              <span class="mini-badge alert">1 price spike</span>
+              <span class="mini-badge gap-b">1 blind spot</span>
+            </div>
+          </div>
+          <span class="chevron">&rsaquo;</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="page-footer">
+  Wireframe &mdash; Craft &amp; Culture &mdash; The Scout Agent Dashboard<br>
+  Built with existing design tokens: Card, Typography, Badge, Button, Icon patterns
+</div>
+
+</body>
+</html>

@@ -88,7 +88,7 @@ const BuyerBrief = () => {
       <Card>
         <CardContent className="p-6">
           <Typography variant="bodySm" colorRole="muted">
-            Loading Buyer brief...
+            Loading Purchasing brief...
           </Typography>
         </CardContent>
       </Card>
@@ -100,10 +100,10 @@ const BuyerBrief = () => {
       <Card>
         <CardContent className="p-6 text-center">
           <Typography variant="headingSm" className="mb-2">
-            No Buyer Brief Yet
+            No Purchasing Brief Yet
           </Typography>
           <Typography variant="bodySm" colorRole="muted" className="mb-4">
-            The Buyer runs daily at 06:30 GST. It analyzes stock levels, velocity, and supplier
+            Purchasing runs daily at 06:30 GST. It analyzes stock levels, velocity, and supplier
             availability to generate purchasing recommendations.
           </Typography>
           <Button
@@ -135,7 +135,7 @@ const BuyerBrief = () => {
       {/* Status Bar */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <Typography variant="headingSm">The Buyer</Typography>
+          <Typography variant="headingSm">Purchasing</Typography>
           <Typography variant="bodyXs" colorRole="muted">
             Purchasing intelligence &amp; reorder recommendations
           </Typography>

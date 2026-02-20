@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WMS Transfer — Craft & Culture</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-primary: #fafafa;
+      --surface-primary: #ffffff;
+      --surface-secondary: #f5f5f5;
+      --text-primary: #0a0a0a;
+      --text-muted: #737373;
+      --text-brand: #2a9d8f;
+      --fill-brand: #6BBFBF;
+      --fill-brand-10: rgba(107, 191, 191, 0.1);
+      --fill-brand-20: rgba(107, 191, 191, 0.2);
+      --border-primary: #e5e5e5;
+      --border-muted: #f0f0f0;
+      --amber-100: #fef3c7;
+      --amber-600: #d97706;
+      --emerald-100: #d1fae5;
+      --emerald-600: #059669;
+      --red-100: #fee2e2;
+      --red-600: #dc2626;
+      --violet-100: #ede9fe;
+      --violet-600: #7c3aed;
+      --blue-100: #dbeafe;
+      --blue-600: #2563eb;
+      --radius-xl: 12px;
+      --radius-lg: 8px;
+      --radius-md: 6px;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.5;
+      padding-bottom: 100px;
+    }
+
+    .wireframe-banner {
+      background: #1a1a1a;
+      color: white;
+      padding: 8px 16px;
+      text-align: center;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .wireframe-banner span {
+      color: var(--fill-brand);
+    }
+
+    .wms-header {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: #1a1a1a;
+      color: white;
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .wms-brand {
+      font-weight: 700;
+      font-size: 16px;
+      color: var(--fill-brand);
+    }
+
+    .wms-brand span {
+      color: #a3a3a3;
+      font-weight: 400;
+      font-size: 13px;
+      margin-left: 6px;
+    }
+
+    .wms-status {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: #a3a3a3;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+
+    .status-dot.online {
+      background: var(--emerald-600);
+    }
+
+    .wms-nav {
+      background: white;
+      border-bottom: 1px solid var(--border-primary);
+      padding: 12px 16px;
+    }
+
+    .nav-breadcrumb {
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .nav-breadcrumb span {
+      color: var(--text-primary);
+      font-weight: 600;
+    }
+
+    .mobile-container {
+      max-width: 420px;
+      margin: 0 auto;
+      padding: 16px;
+    }
+
+    .step-indicator {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 20px;
+      overflow-x: auto;
+    }
+
+    .step-dot {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    .step-dot.active {
+      background: var(--fill-brand);
+      color: white;
+    }
+
+    .step-dot.pending {
+      background: var(--surface-secondary);
+      color: var(--text-muted);
+    }
+
+    .step-line {
+      flex: 1;
+      height: 2px;
+      background: var(--border-muted);
+      min-width: 20px;
+    }
+
+    .step-label {
+      font-size: 10px;
+      color: var(--text-muted);
+      text-align: center;
+      margin-top: 4px;
+      white-space: nowrap;
+    }
+
+    .scan-input-group {
+      position: relative;
+      margin-bottom: 16px;
+    }
+
+    .scan-input {
+      width: 100%;
+      height: 56px;
+      border: 2px solid var(--border-primary);
+      border-radius: var(--radius-lg);
+      padding: 0 16px 0 48px;
+      font-size: 16px;
+      font-family: 'Courier New', monospace;
+      background: var(--surface-primary);
+    }
+
+    .scan-input:focus {
+      border-color: var(--fill-brand);
+      outline: none;
+    }
+
+    .scan-icon {
+      position: absolute;
+      left: 16px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 22px;
+      color: var(--text-muted);
+    }
+
+    .quick-buttons {
+      margin-bottom: 20px;
+    }
+
+    .quick-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 10px;
+    }
+
+    .button-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .quick-btn {
+      background: var(--surface-primary);
+      border: 1px solid var(--border-primary);
+      border-radius: var(--radius-lg);
+      padding: 12px;
+      font-size: 13px;
+      font-weight: 600;
+      font-family: 'Courier New', monospace;
+      color: var(--text-primary);
+      cursor: pointer;
+      text-align: center;
+    }
+
+    .quick-btn:active {
+      background: var(--fill-brand-10);
+      border-color: var(--fill-brand);
+    }
+
+    .divider {
+      margin: 32px 0;
+      padding: 12px 0;
+      border-top: 2px dashed var(--border-primary);
+      border-bottom: 2px dashed var(--border-primary);
+      background: var(--surface-secondary);
+      text-align: center;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-muted);
+    }
+
+    .location-header {
+      background: var(--blue-100);
+      border: 1px solid var(--blue-600);
+      border-radius: var(--radius-lg);
+      padding: 12px 14px;
+      margin-bottom: 16px;
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .stock-card {
+      background: var(--surface-primary);
+      border: 2px solid var(--border-primary);
+      border-radius: var(--radius-lg);
+      padding: 14px;
+      margin-bottom: 12px;
+      cursor: pointer;
+    }
+
+    .stock-card:active {
+      background: var(--fill-brand-10);
+      border-color: var(--fill-brand);
+    }
+
+    .stock-name {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 4px;
+    }
+
+    .stock-details {
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .quantity-section {
+      margin-bottom: 20px;
+    }
+
+    .selected-label {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+
+    .selected-product {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 16px;
+    }
+
+    .quantity-input-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .qty-btn {
+      width: 48px;
+      height: 48px;
+      border-radius: var(--radius-lg);
+      background: var(--surface-primary);
+      border: 2px solid var(--border-primary);
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--text-primary);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .qty-input {
+      width: 96px;
+      height: 48px;
+      border: 2px solid var(--border-primary);
+      border-radius: var(--radius-lg);
+      text-align: center;
+      font-size: 18px;
+      font-weight: 700;
+      background: var(--surface-primary);
+    }
+
+    .qty-input:focus {
+      border-color: var(--fill-brand);
+      outline: none;
+    }
+
+    .available-text {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+    }
+
+    .toggle-group {
+      display: flex;
+      gap: 8px;
+    }
+
+    .toggle-btn {
+      flex: 1;
+      height: 44px;
+      border-radius: var(--radius-lg);
+      background: var(--surface-primary);
+      border: 2px solid var(--border-primary);
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .toggle-btn.active {
+      background: var(--fill-brand);
+      color: white;
+      border-color: var(--fill-brand);
+    }
+
+    .summary-card {
+      background: var(--violet-100);
+      border: 1px solid var(--violet-600);
+      border-radius: var(--radius-lg);
+      padding: 14px;
+      margin-bottom: 16px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .transfer-summary {
+      background: var(--surface-primary);
+      border: 1px solid var(--border-primary);
+      border-radius: var(--radius-lg);
+      padding: 16px;
+      margin-bottom: 20px;
+    }
+
+    .summary-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      font-size: 13px;
+    }
+
+    .summary-label {
+      color: var(--text-muted);
+    }
+
+    .summary-value {
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .summary-arrow {
+      text-align: center;
+      font-size: 18px;
+      margin: 8px 0;
+    }
+
+    .btn-mobile {
+      width: 100%;
+      height: 52px;
+      border-radius: var(--radius-lg);
+      font-size: 16px;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .btn-mobile-brand {
+      background: var(--fill-brand);
+      color: white;
+    }
+  </style>
+</head>
+<body>
+  <div class="wireframe-banner">Wireframe — <span>Stock Transfer</span> — WMS Mobile — Craft &amp; Culture</div>
+
+  <header class="wms-header">
+    <div class="wms-brand">C&amp;C <span>Warehouse</span></div>
+    <div class="wms-status">
+      <span class="status-dot online"></span>
+      <span>Connected</span>
+    </div>
+  </header>
+
+  <nav class="wms-nav">
+    <div class="nav-breadcrumb">← <span>Stock Transfer</span></div>
+  </nav>
+
+  <div class="mobile-container">
+    <div class="step-indicator">
+      <div>
+        <div class="step-dot active">1</div>
+        <div class="step-label">Source</div>
+      </div>
+      <div class="step-line"></div>
+      <div>
+        <div class="step-dot pending">2</div>
+        <div class="step-label">Stock</div>
+      </div>
+      <div class="step-line"></div>
+      <div>
+        <div class="step-dot pending">3</div>
+        <div class="step-label">Qty</div>
+      </div>
+      <div class="step-line"></div>
+      <div>
+        <div class="step-dot pending">4</div>
+        <div class="step-label">Dest</div>
+      </div>
+      <div class="step-line"></div>
+      <div>
+        <div class="step-dot pending">5</div>
+        <div class="step-label">OK</div>
+      </div>
+    </div>
+
+    <div class="scan-input-group">
+      <div class="scan-icon">📍</div>
+      <input type="text" class="scan-input" placeholder="Scan source location barcode">
+    </div>
+
+    <div class="quick-buttons">
+      <div class="quick-title">Popular locations</div>
+      <div class="button-grid">
+        <button class="quick-btn">LOC-A-01-01</button>
+        <button class="quick-btn">LOC-A-02-03</button>
+        <button class="quick-btn">LOC-B-01-01</button>
+        <button class="quick-btn">LOC-C-01-02</button>
+      </div>
+    </div>
+
+    <div class="divider">Step 2 — Select Stock</div>
+
+    <div class="location-header">LOC-A-02-03 — Aisle A, Bay 2, Level 3</div>
+
+    <div class="stock-card">
+      <div class="stock-name">Sassicaia 2020</div>
+      <div class="stock-details">18 bottles (3 cases) — Owner: C&C</div>
+    </div>
+
+    <div class="stock-card">
+      <div class="stock-name">Tignanello 2019</div>
+      <div class="stock-details">24 bottles (4 cases) — Owner: C&C</div>
+    </div>
+
+    <div class="stock-card">
+      <div class="stock-name">Amarone Bertani 2012</div>
+      <div class="stock-details">12 bottles (2 cases) — Owner: Spotlight</div>
+    </div>
+
+    <div class="divider">Step 3 — Quantity</div>
+
+    <div class="quantity-section">
+      <div class="selected-label">Selected</div>
+      <div class="selected-product">Sassicaia 2020</div>
+
+      <div class="quantity-input-group">
+        <button class="qty-btn">-</button>
+        <input type="number" class="qty-input" value="6">
+        <button class="qty-btn">+</button>
+      </div>
+
+      <div class="available-text">Available: 18 bottles / 3 cases</div>
+
+      <div class="toggle-group">
+        <button class="toggle-btn">Cases</button>
+        <button class="toggle-btn active">Bottles</button>
+      </div>
+    </div>
+
+    <div class="divider">Step 4 — Scan Destination</div>
+
+    <div class="summary-card">Moving 6 btl Sassicaia 2020 from LOC-A-02-03</div>
+
+    <div class="scan-input-group">
+      <div class="scan-icon">📍</div>
+      <input type="text" class="scan-input" placeholder="Scan destination location">
+    </div>
+
+    <div class="divider">Step 5 — Confirm</div>
+
+    <div class="transfer-summary">
+      <div class="summary-row">
+        <div class="summary-label">Product</div>
+        <div class="summary-value">Sassicaia 2020</div>
+      </div>
+      <div class="summary-row">
+        <div class="summary-label">Quantity</div>
+        <div class="summary-value">6 bottles</div>
+      </div>
+      <div class="summary-arrow">↓</div>
+      <div class="summary-row">
+        <div class="summary-label">From</div>
+        <div class="summary-value">LOC-A-02-03</div>
+      </div>
+      <div class="summary-arrow">↓</div>
+      <div class="summary-row">
+        <div class="summary-label">To</div>
+        <div class="summary-value">LOC-B-01-02</div>
+      </div>
+    </div>
+
+    <button class="btn-mobile btn-mobile-brand">Confirm Transfer</button>
+  </div>
+</body>
+</html>

@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Zoho Sales Orders — Admin — Craft & Culture Platform</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-primary: #fafafa;
+      --surface-primary: #ffffff;
+      --surface-secondary: #f5f5f5;
+      --text-primary: #0a0a0a;
+      --text-muted: #737373;
+      --text-brand: #2a9d8f;
+      --fill-brand: #6BBFBF;
+      --fill-brand-10: rgba(107, 191, 191, 0.1);
+      --fill-brand-20: rgba(107, 191, 191, 0.2);
+      --border-primary: #e5e5e5;
+      --border-muted: #f0f0f0;
+      --amber-100: #fef3c7;
+      --amber-600: #d97706;
+      --emerald-100: #d1fae5;
+      --emerald-600: #059669;
+      --red-100: #fee2e2;
+      --red-600: #dc2626;
+      --violet-100: #ede9fe;
+      --violet-600: #7c3aed;
+      --blue-100: #dbeafe;
+      --blue-600: #2563eb;
+      --radius-xl: 12px;
+      --radius-lg: 8px;
+      --radius-md: 6px;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      font-size: 15px;
+      line-height: 1.5;
+    }
+
+    .wireframe-banner {
+      background: #1a1a1a;
+      color: #a3a3a3;
+      text-align: center;
+      padding: 8px;
+      font-size: 11px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      font-weight: 600;
+    }
+
+    .wireframe-banner span {
+      color: var(--fill-brand);
+    }
+
+    .platform-header {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: rgba(250, 250, 250, 0.8);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border-primary);
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 1rem;
+    }
+
+    .platform-header .brand {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--fill-brand);
+      letter-spacing: -0.3px;
+    }
+
+    .platform-header .brand span {
+      color: var(--text-muted);
+      font-weight: 400;
+      font-size: 13px;
+      margin-left: 12px;
+    }
+
+    .nav-pills {
+      display: flex;
+      gap: 6px;
+    }
+
+    .nav-pill {
+      font-size: 12px;
+      font-weight: 500;
+      padding: 6px 14px;
+      border-radius: var(--radius-lg);
+      color: var(--text-muted);
+      border: 1px solid var(--border-muted);
+      background: transparent;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .nav-pill:hover {
+      color: var(--text-primary);
+      border-color: var(--border-primary);
+    }
+
+    .nav-pill.active {
+      background: var(--fill-brand);
+      color: white;
+      border-color: var(--fill-brand);
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--fill-brand-20);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-brand);
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 2rem 1rem;
+    }
+
+    .page-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 24px;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .page-header h1 {
+      font-size: 24px;
+      font-weight: 600;
+      letter-spacing: -0.5px;
+    }
+
+    .page-header .subtitle {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .card {
+      background: var(--surface-primary);
+      border: 1px solid var(--border-primary);
+      border-bottom-width: 2px;
+      border-radius: var(--radius-xl);
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+      overflow: hidden;
+    }
+
+    .card-content {
+      padding: 16px;
+    }
+
+    .card-content-lg {
+      padding: 24px;
+    }
+
+    .btn {
+      padding: 8px 16px;
+      border-radius: var(--radius-lg);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      border: 1px solid var(--border-primary);
+      background: var(--surface-primary);
+      color: var(--text-primary);
+      transition: all 0.15s;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn:hover {
+      border-color: var(--text-muted);
+    }
+
+    .btn-brand {
+      background: var(--fill-brand);
+      color: white;
+      border-color: var(--fill-brand);
+    }
+
+    .btn-brand:hover {
+      opacity: 0.9;
+      border-color: var(--fill-brand);
+    }
+
+    .btn-brand:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    .btn-ghost {
+      background: transparent;
+      border-color: transparent;
+      color: var(--text-brand);
+    }
+
+    .btn-danger {
+      background: var(--red-100);
+      color: var(--red-600);
+      border-color: var(--red-600);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    thead th {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+      padding: 8px 12px;
+      text-align: left;
+      border-bottom: 1px solid var(--border-primary);
+    }
+
+    tbody td {
+      padding: 10px 12px;
+      font-size: 13px;
+      border-bottom: 1px solid var(--border-muted);
+      vertical-align: middle;
+    }
+
+    tbody tr:hover {
+      background: var(--surface-secondary);
+    }
+
+    .section-title {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .page-footer {
+      text-align: center;
+      padding: 32px 16px;
+      color: var(--text-muted);
+      font-size: 12px;
+      border-top: 1px solid var(--border-muted);
+      margin-top: 40px;
+    }
+
+    .sync-indicator {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      background: var(--emerald-100);
+      border: 1px solid var(--emerald-600);
+      border-radius: var(--radius-lg);
+      font-size: 12px;
+      color: var(--emerald-600);
+      font-weight: 500;
+      margin-bottom: 16px;
+    }
+
+    .sync-indicator .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--emerald-600);
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% {
+        opacity: 1;
+      }
+      50% {
+        opacity: 0.5;
+      }
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .status-tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+      border-bottom: 1px solid var(--border-primary);
+      padding-bottom: 16px;
+    }
+
+    .status-tab {
+      padding: 6px 14px;
+      border-radius: var(--radius-lg);
+      font-size: 12px;
+      font-weight: 500;
+      background: transparent;
+      border: 1px solid var(--border-muted);
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.15s;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .status-tab:hover {
+      border-color: var(--border-primary);
+      color: var(--text-primary);
+    }
+
+    .status-tab.active {
+      background: var(--fill-brand-10);
+      border-color: var(--fill-brand);
+      color: var(--text-brand);
+    }
+
+    .status-tab .count {
+      background: var(--surface-secondary);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    .status-tab.active .count {
+      background: var(--fill-brand-20);
+      color: var(--text-brand);
+    }
+
+    .badge {
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .badge-gray {
+      background: var(--surface-secondary);
+      color: var(--text-muted);
+    }
+
+    .badge-blue {
+      background: var(--blue-100);
+      color: var(--blue-600);
+    }
+
+    .badge-amber {
+      background: var(--amber-100);
+      color: var(--amber-600);
+    }
+
+    .badge-emerald {
+      background: var(--emerald-100);
+      color: var(--emerald-600);
+    }
+
+    .badge-red {
+      background: var(--red-100);
+      color: var(--red-600);
+    }
+
+    .pagination {
+      padding: 12px 16px;
+      border-top: 1px solid var(--border-primary);
+      font-size: 13px;
+      color: var(--text-muted);
+      text-align: center;
+    }
+
+    .sync-log {
+      margin-top: 32px;
+    }
+
+    .sync-log-item {
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border-muted);
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .sync-log-item:last-child {
+      border-bottom: none;
+    }
+
+    .sync-log-item strong {
+      color: var(--text-primary);
+      font-weight: 500;
+    }
+
+    input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      accent-color: var(--fill-brand);
+      cursor: pointer;
+    }
+
+    @media (max-width: 767px) {
+      .platform-header .brand span {
+        display: none;
+      }
+
+      .nav-pills {
+        display: none;
+      }
+
+      .page-header {
+        flex-direction: column;
+      }
+
+      .status-tabs {
+        overflow-x: auto;
+        flex-wrap: nowrap;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="wireframe-banner">
+    Wireframe — <span>Zoho Sales Orders</span> — Admin — Craft &amp; Culture Platform
+  </div>
+
+  <header class="platform-header">
+    <div class="brand">
+      Craft &amp; Culture <span>Platform</span>
+    </div>
+    <nav class="nav-pills">
+      <button class="nav-pill">Quotes</button>
+      <button class="nav-pill">Private Orders</button>
+      <button class="nav-pill">Pricing</button>
+      <button class="nav-pill active">Admin</button>
+      <button class="nav-pill">Agents</button>
+      <button class="nav-pill">WMS</button>
+    </nav>
+    <div class="header-right">
+      <div class="avatar">KB</div>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="page-header">
+      <div>
+        <h1>Zoho Sales Orders</h1>
+        <p class="subtitle">Synced orders from Zoho Books — auto-syncs every 2 minutes</p>
+      </div>
+      <div class="header-actions">
+        <button class="btn">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/>
+          </svg>
+          Sync Now
+        </button>
+        <button class="btn btn-brand" disabled>Release Selected</button>
+      </div>
+    </div>
+
+    <div class="sync-indicator">
+      <span class="dot"></span>
+      <span><strong>Last sync:</strong> 1 min ago — 48 orders synced</span>
+    </div>
+
+    <div class="card">
+      <div class="card-content">
+        <div class="status-tabs">
+          <button class="status-tab active">
+            All <span class="count">48</span>
+          </button>
+          <button class="status-tab">
+            Open <span class="count">8</span>
+          </button>
+          <button class="status-tab">
+            Approved <span class="count">12</span>
+          </button>
+          <button class="status-tab">
+            Picking <span class="count">3</span>
+          </button>
+          <button class="status-tab">
+            Invoiced <span class="count">22</span>
+          </button>
+          <button class="status-tab">
+            Cancelled <span class="count">3</span>
+          </button>
+        </div>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th style="width: 40px;"></th>
+            <th>SO #</th>
+            <th>Customer</th>
+            <th>Distributor</th>
+            <th>Items</th>
+            <th>Total (AED)</th>
+            <th>Zoho Status</th>
+            <th>WMS Status</th>
+            <th>Date</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><input type="checkbox"></td>
+            <td><strong>SO-04521</strong></td>
+            <td>Al Rashid Trading</td>
+            <td>City Drinks</td>
+            <td>4</td>
+            <td><strong>18,400</strong></td>
+            <td><span class="badge badge-emerald">Confirmed</span></td>
+            <td><span class="badge badge-blue">Approved</span></td>
+            <td>Feb 13</td>
+            <td>
+              <button class="btn btn-ghost">Pick</button>
+              <button class="btn btn-ghost">View</button>
+            </td>
+          </tr>
+          <tr>
+            <td><input type="checkbox"></td>
+            <td><strong>SO-04520</strong></td>
+            <td>Jumeirah Hotels</td>
+            <td>Maritime &amp; Mercantile</td>
+            <td>6</td>
+            <td><strong>34,200</strong></td>
+            <td><span class="badge badge-emerald">Confirmed</span></td>
+            <td><span class="badge badge-blue">Approved</span></td>
+            <td>Feb 13</td>
+            <td>
+              <button class="btn btn-ghost">Pick</button>
+              <button class="btn btn-ghost">View</button>
+            </td>
+          </tr>
+          <tr>
+            <td><input type="checkbox"></td>
+            <td><strong>SO-04519</strong></td>
+            <td>Emirates Palace</td>
+            <td>Direct</td>
+            <td>3</td>
+            <td><strong>12,800</strong></td>
+            <td><span class="badge badge-emerald">Confirmed</span></td>
+            <td><span class="badge badge-gray">Open</span></td>
+            <td>Feb 12</td>
+            <td>
+              <button class="btn btn-brand" style="font-size: 12px; padding: 6px 12px;">Approve</button>
+              <button class="btn btn-ghost">View</button>
+            </td>
+          </tr>
+          <tr>
+            <td><input type="checkbox"></td>
+            <td><strong>SO-04518</strong></td>
+            <td>Four Seasons</td>
+            <td>City Drinks</td>
+            <td>2</td>
+            <td><strong>8,600</strong></td>
+            <td><span class="badge badge-emerald">Confirmed</span></td>
+            <td><span class="badge badge-gray">Open</span></td>
+            <td>Feb 12</td>
+            <td>
+              <button class="btn btn-brand" style="font-size: 12px; padding: 6px 12px;">Approve</button>
+              <button class="btn btn-ghost">View</button>
+            </td>
+          </tr>
+          <tr>
+            <td><input type="checkbox"></td>
+            <td><strong>SO-04517</strong></td>
+            <td>Atlantis F&amp;B</td>
+            <td>Maritime &amp; Mercantile</td>
+            <td>8</td>
+            <td><strong>42,100</strong></td>
+            <td><span class="badge badge-emerald">Confirmed</span></td>
+            <td><span class="badge badge-amber">Picking</span></td>
+            <td>Feb 11</td>
+            <td><button class="btn btn-ghost">View</button></td>
+          </tr>
+          <tr>
+            <td><input type="checkbox"></td>
+            <td><strong>SO-04516</strong></td>
+            <td>Burj Al Arab</td>
+            <td>Direct</td>
+            <td>5</td>
+            <td><strong>28,900</strong></td>
+            <td><span class="badge badge-emerald">Invoiced</span></td>
+            <td><span class="badge badge-emerald">Invoiced</span></td>
+            <td>Feb 10</td>
+            <td><button class="btn btn-ghost">View</button></td>
+          </tr>
+          <tr>
+            <td><input type="checkbox"></td>
+            <td><strong>SO-04515</strong></td>
+            <td>Hilton Dubai</td>
+            <td>City Drinks</td>
+            <td>3</td>
+            <td><strong>15,200</strong></td>
+            <td><span class="badge badge-emerald">Invoiced</span></td>
+            <td><span class="badge badge-emerald">Invoiced</span></td>
+            <td>Feb 9</td>
+            <td><button class="btn btn-ghost">View</button></td>
+          </tr>
+          <tr>
+            <td><input type="checkbox"></td>
+            <td><strong>SO-04514</strong></td>
+            <td>Ritz Carlton</td>
+            <td>Maritime &amp; Mercantile</td>
+            <td>4</td>
+            <td><strong>22,500</strong></td>
+            <td><span class="badge badge-red">Cancelled</span></td>
+            <td><span class="badge badge-red">Cancelled</span></td>
+            <td>Feb 8</td>
+            <td><button class="btn btn-ghost">View</button></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="pagination">
+        Showing 1-8 of 48 orders
+      </div>
+    </div>
+
+    <div class="sync-log">
+      <div class="card">
+        <div class="card-content-lg">
+          <div class="section-title">Sync Log</div>
+          <div class="sync-log-item">
+            <strong>Feb 13, 14:32</strong> — Synced 48 orders (2 new, 3 status changes)
+          </div>
+          <div class="sync-log-item">
+            <strong>Feb 13, 14:30</strong> — Synced 48 orders (no changes)
+          </div>
+          <div class="sync-log-item">
+            <strong>Feb 13, 14:28</strong> — Synced 47 orders (1 new order: SO-04521)
+          </div>
+          <div class="sync-log-item">
+            <strong>Feb 13, 14:26</strong> — Synced 46 orders (no changes)
+          </div>
+          <div class="sync-log-item">
+            <strong>Feb 13, 14:24</strong> — Synced 46 orders (1 status change: SO-04516 → Invoiced)
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer class="page-footer">
+    Wireframe — Craft &amp; Culture — Zoho Sales Orders
+  </footer>
+</body>
+</html>

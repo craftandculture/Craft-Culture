@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Concierge — Agent Dashboard — Craft & Culture Platform</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #fafafa;
+            --surface-primary: #ffffff;
+            --surface-secondary: #f5f5f5;
+            --text-primary: #0a0a0a;
+            --text-muted: #737373;
+            --text-brand: #2a9d8f;
+            --fill-brand: #6BBFBF;
+            --fill-brand-10: rgba(107, 191, 191, 0.1);
+            --fill-brand-20: rgba(107, 191, 191, 0.2);
+            --border-primary: #e5e5e5;
+            --border-muted: #f0f0f0;
+            --amber-100: #fef3c7; --amber-600: #d97706;
+            --emerald-100: #d1fae5; --emerald-600: #059669;
+            --red-100: #fee2e2; --red-600: #dc2626;
+            --violet-100: #ede9fe; --violet-600: #7c3aed;
+            --blue-100: #dbeafe; --blue-600: #2563eb;
+            --radius-xl: 12px; --radius-lg: 8px; --radius-md: 6px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+
+        .wireframe-banner {
+            background: #000;
+            color: #fff;
+            padding: 8px 16px;
+            text-align: center;
+            font-size: 13px;
+            font-weight: 500;
+        }
+        .wireframe-banner span { color: var(--fill-brand); }
+
+        .platform-header {
+            background: var(--surface-primary);
+            border-bottom: 1px solid var(--border-primary);
+            padding: 16px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .platform-brand {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text-brand);
+        }
+        .platform-nav {
+            display: flex;
+            gap: 8px;
+        }
+        .nav-pill {
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-muted);
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+        .nav-pill:hover { background: var(--surface-secondary); color: var(--text-primary); }
+        .nav-pill.active { background: var(--fill-brand-10); color: var(--text-brand); }
+        .platform-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: var(--fill-brand);
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .agent-subnav {
+            background: var(--surface-primary);
+            border-bottom: 1px solid var(--border-primary);
+            padding: 0 24px;
+            overflow-x: auto;
+        }
+        .agent-tabs {
+            display: flex;
+            gap: 32px;
+        }
+        .agent-tab {
+            padding: 16px 0;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-muted);
+            text-decoration: none;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        .agent-tab:hover { color: var(--text-primary); }
+        .agent-tab.active {
+            color: var(--text-brand);
+            border-bottom-color: var(--fill-brand);
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 32px 24px;
+        }
+
+        .page-header {
+            margin-bottom: 32px;
+        }
+        .page-title-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 8px;
+        }
+        .page-title {
+            font-size: 32px;
+            font-weight: 700;
+        }
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 13px;
+            font-weight: 500;
+        }
+        .status-badge.active {
+            background: var(--emerald-100);
+            color: var(--emerald-600);
+        }
+        .page-subtitle {
+            font-size: 16px;
+            color: var(--text-muted);
+            margin-bottom: 16px;
+        }
+        .page-actions {
+            display: flex;
+            gap: 12px;
+        }
+        .btn {
+            padding: 10px 20px;
+            border-radius: var(--radius-lg);
+            font-size: 14px;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-primary {
+            background: var(--fill-brand);
+            color: #fff;
+        }
+        .btn-primary:hover { opacity: 0.9; }
+        .btn-secondary {
+            background: var(--surface-primary);
+            color: var(--text-primary);
+            border: 1px solid var(--border-primary);
+        }
+        .btn-secondary:hover { background: var(--surface-secondary); }
+
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 16px;
+            margin-bottom: 32px;
+        }
+        .kpi-card {
+            background: var(--surface-primary);
+            border: 1px solid var(--border-primary);
+            border-radius: var(--radius-xl);
+            padding: 20px;
+        }
+        .kpi-label {
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+        }
+        .kpi-value {
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+        .kpi-change {
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--emerald-600);
+            margin-top: 4px;
+        }
+
+        .content-grid {
+            display: grid;
+            grid-template-columns: 1fr 380px;
+            gap: 24px;
+            margin-bottom: 32px;
+        }
+        @media (max-width: 1024px) {
+            .content-grid { grid-template-columns: 1fr; }
+        }
+
+        .card {
+            background: var(--surface-primary);
+            border: 1px solid var(--border-primary);
+            border-radius: var(--radius-xl);
+            padding: 24px;
+        }
+        .card-header {
+            margin-bottom: 20px;
+        }
+        .card-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        .card-subtitle {
+            font-size: 14px;
+            color: var(--text-muted);
+        }
+
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .table th {
+            text-align: left;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-muted);
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border-primary);
+        }
+        .table td {
+            padding: 16px;
+            border-bottom: 1px solid var(--border-muted);
+            font-size: 14px;
+        }
+        .table tr:last-child td { border-bottom: none; }
+
+        .client-name {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        .score-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            font-size: 14px;
+            font-weight: 700;
+        }
+        .score-hot {
+            background: var(--red-100);
+            color: var(--red-600);
+        }
+        .score-warm {
+            background: var(--amber-100);
+            color: var(--amber-600);
+        }
+        .score-cool {
+            background: var(--blue-100);
+            color: var(--blue-600);
+        }
+
+        .signal-card {
+            background: var(--surface-secondary);
+            border-radius: var(--radius-lg);
+            padding: 16px;
+            margin-bottom: 12px;
+        }
+        .signal-card:last-child { margin-bottom: 0; }
+        .signal-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+        .signal-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+        }
+        .signal-title {
+            font-size: 14px;
+            font-weight: 600;
+        }
+        .signal-body {
+            font-size: 13px;
+            color: var(--text-muted);
+            line-height: 1.5;
+        }
+        .signal-action {
+            margin-top: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-brand);
+        }
+
+        .upsell-grid {
+            display: grid;
+            gap: 16px;
+        }
+        .upsell-card {
+            background: var(--surface-secondary);
+            border-radius: var(--radius-lg);
+            padding: 16px;
+        }
+        .upsell-from-to {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+        .wine-label {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        .arrow {
+            color: var(--text-muted);
+            font-size: 18px;
+        }
+        .upsell-revenue {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--emerald-600);
+        }
+
+        .action-items {
+            margin-bottom: 32px;
+        }
+        .action-list {
+            display: grid;
+            gap: 12px;
+        }
+        .action-item {
+            background: var(--surface-primary);
+            border: 1px solid var(--border-primary);
+            border-radius: var(--radius-lg);
+            padding: 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .action-checkbox {
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--border-primary);
+            border-radius: 4px;
+        }
+        .action-priority {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        .priority-high {
+            background: var(--red-100);
+            color: var(--red-600);
+        }
+        .priority-medium {
+            background: var(--amber-100);
+            color: var(--amber-600);
+        }
+        .priority-low {
+            background: var(--blue-100);
+            color: var(--blue-600);
+        }
+        .action-text {
+            flex: 1;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .brief-history {
+            margin-bottom: 32px;
+        }
+        .brief-list {
+            display: grid;
+            gap: 12px;
+        }
+        .brief-item {
+            background: var(--surface-primary);
+            border: 1px solid var(--border-primary);
+            border-radius: var(--radius-lg);
+            padding: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .brief-date {
+            font-size: 14px;
+            font-weight: 600;
+        }
+        .brief-summary {
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+        .brief-link {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-brand);
+            text-decoration: none;
+        }
+
+        .page-footer {
+            border-top: 1px solid var(--border-primary);
+            padding: 24px;
+            text-align: center;
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+    </style>
+</head>
+<body>
+    <div class="wireframe-banner">Wireframe — <span>The Concierge</span> Agent Dashboard — Craft &amp; Culture Platform</div>
+
+    <header class="platform-header">
+        <div class="platform-brand">Craft & Culture Platform</div>
+        <nav class="platform-nav">
+            <a href="#" class="nav-pill">Quotes</a>
+            <a href="#" class="nav-pill">Private Orders</a>
+            <a href="#" class="nav-pill">Pricing</a>
+            <a href="#" class="nav-pill active">Agents</a>
+            <a href="#" class="nav-pill">WMS</a>
+        </nav>
+        <div class="platform-avatar">KB</div>
+    </header>
+
+    <nav class="agent-subnav">
+        <div class="agent-tabs">
+            <a href="#" class="agent-tab">The Scout</a>
+            <a href="#" class="agent-tab active">The Concierge</a>
+            <a href="#" class="agent-tab">The Storyteller</a>
+            <a href="#" class="agent-tab">The Buyer</a>
+            <a href="#" class="agent-tab">The Pricer</a>
+            <a href="#" class="agent-tab">The Advisor</a>
+            <a href="#" class="agent-tab">All Agents</a>
+        </div>
+    </nav>
+
+    <main class="container">
+        <div class="page-header">
+            <div class="page-title-row">
+                <h1 class="page-title">The Concierge</h1>
+                <span class="status-badge active">Active</span>
+            </div>
+            <p class="page-subtitle">Client relationship management & upsell automation — runs daily at 07:00 GST</p>
+            <div class="page-actions">
+                <button class="btn btn-primary">Run Now</button>
+                <button class="btn btn-secondary">Configure</button>
+            </div>
+        </div>
+
+        <div class="kpi-grid">
+            <div class="kpi-card">
+                <div class="kpi-label">Active Clients</div>
+                <div class="kpi-value">47</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-label">Hot Leads</div>
+                <div class="kpi-value">8</div>
+                <div class="kpi-change">3 new this week</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-label">Upsell Pipeline</div>
+                <div class="kpi-value">AED 124k</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-label">Response Rate</div>
+                <div class="kpi-value">92%</div>
+            </div>
+        </div>
+
+        <div class="content-grid">
+            <div>
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">Hot Leads</h2>
+                        <p class="card-subtitle">High-value clients showing strong engagement signals</p>
+                    </div>
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Client</th>
+                                <th>Last Order</th>
+                                <th>Interests</th>
+                                <th>Score</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>
+                                    <div class="client-name">Mohammed Al-Rashid</div>
+                                </td>
+                                <td>3 days ago</td>
+                                <td>Bordeaux, Burgundy</td>
+                                <td><div class="score-badge score-hot">95</div></td>
+                                <td><a href="#" class="brief-link">Send 2015 Pauillac offer</a></td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <div class="client-name">Sarah Chen</div>
+                                </td>
+                                <td>1 week ago</td>
+                                <td>Italian wines, Barolo</td>
+                                <td><div class="score-badge score-hot">88</div></td>
+                                <td><a href="#" class="brief-link">Invite to Piedmont tasting</a></td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <div class="client-name">James Patterson</div>
+                                </td>
+                                <td>2 weeks ago</td>
+                                <td>Champagne, luxury gifts</td>
+                                <td><div class="score-badge score-warm">82</div></td>
+                                <td><a href="#" class="brief-link">Send Dom Pérignon allocation</a></td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <div class="client-name">Fatima Al-Mansoori</div>
+                                </td>
+                                <td>10 days ago</td>
+                                <td>Rhône, Châteauneuf-du-Pape</td>
+                                <td><div class="score-badge score-warm">79</div></td>
+                                <td><a href="#" class="brief-link">Share 2019 vintage notes</a></td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <div class="client-name">David Sharma</div>
+                                </td>
+                                <td>5 days ago</td>
+                                <td>Napa Valley, Opus One</td>
+                                <td><div class="score-badge score-warm">76</div></td>
+                                <td><a href="#" class="brief-link">Schedule cellar consultation</a></td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <div class="client-name">Layla Hassan</div>
+                                </td>
+                                <td>1 week ago</td>
+                                <td>Rosé, Provence</td>
+                                <td><div class="score-badge score-cool">71</div></td>
+                                <td><a href="#" class="brief-link">Summer collection preview</a></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="card" style="margin-top: 24px;">
+                    <div class="card-header">
+                        <h2 class="card-title">Upsell Opportunities</h2>
+                        <p class="card-subtitle">Personalized recommendations based on purchase history</p>
+                    </div>
+                    <div class="upsell-grid">
+                        <div class="upsell-card">
+                            <div class="upsell-from-to">
+                                <div>
+                                    <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 4px;">Client bought</div>
+                                    <div class="wine-label">Sassicaia 2018</div>
+                                </div>
+                                <div class="arrow">→</div>
+                                <div>
+                                    <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 4px;">Recommend</div>
+                                    <div class="wine-label">Ornellaia 2018</div>
+                                </div>
+                            </div>
+                            <div class="upsell-revenue">Est. Revenue: AED 18,500</div>
+                        </div>
+                        <div class="upsell-card">
+                            <div class="upsell-from-to">
+                                <div>
+                                    <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 4px;">Client bought</div>
+                                    <div class="wine-label">Veuve Clicquot Brut</div>
+                                </div>
+                                <div class="arrow">→</div>
+                                <div>
+                                    <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 4px;">Recommend</div>
+                                    <div class="wine-label">Krug Grande Cuvée</div>
+                                </div>
+                            </div>
+                            <div class="upsell-revenue">Est. Revenue: AED 12,300</div>
+                        </div>
+                        <div class="upsell-card">
+                            <div class="upsell-from-to">
+                                <div>
+                                    <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 4px;">Client bought</div>
+                                    <div class="wine-label">Château Margaux 2015</div>
+                                </div>
+                                <div class="arrow">→</div>
+                                <div>
+                                    <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 4px;">Recommend</div>
+                                    <div class="wine-label">Château Lafite 2015</div>
+                                </div>
+                            </div>
+                            <div class="upsell-revenue">Est. Revenue: AED 28,400</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <aside>
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">Dormant Clients</h2>
+                        <p class="card-subtitle">No orders in 30+ days</p>
+                    </div>
+                    <div class="signal-card">
+                        <div class="signal-header">
+                            <div class="signal-icon" style="background: var(--amber-100); color: var(--amber-600);">👤</div>
+                            <div class="signal-title">Ahmed Al-Thani</div>
+                        </div>
+                        <div class="signal-body">Last order: 42 days ago. Previously ordered monthly. Average order: AED 8,500.</div>
+                        <div class="signal-action">→ Send "We miss you" email with 10% discount</div>
+                    </div>
+                    <div class="signal-card">
+                        <div class="signal-header">
+                            <div class="signal-icon" style="background: var(--amber-100); color: var(--amber-600);">👤</div>
+                            <div class="signal-title">Nina Patel</div>
+                        </div>
+                        <div class="signal-body">Last order: 38 days ago. Interested in Italian wines. Birthday next month.</div>
+                        <div class="signal-action">→ Send birthday gift + Brunello recommendation</div>
+                    </div>
+                    <div class="signal-card">
+                        <div class="signal-header">
+                            <div class="signal-icon" style="background: var(--amber-100); color: var(--amber-600);">👤</div>
+                            <div class="signal-title">Thomas Wright</div>
+                        </div>
+                        <div class="signal-body">Last order: 55 days ago. High-value client (AED 45k YTD). Champagne enthusiast.</div>
+                        <div class="signal-action">→ Personal call + exclusive Salon allocation offer</div>
+                    </div>
+                    <div class="signal-card">
+                        <div class="signal-header">
+                            <div class="signal-icon" style="background: var(--amber-100); color: var(--amber-600);">👤</div>
+                            <div class="signal-title">Reem Al-Zaabi</div>
+                        </div>
+                        <div class="signal-body">Last order: 61 days ago. Rosé collector. Active on Instagram.</div>
+                        <div class="signal-action">→ DM about new Provence arrivals</div>
+                    </div>
+                </div>
+            </aside>
+        </div>
+
+        <div class="action-items">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Priority Actions</h2>
+                    <p class="card-subtitle">Recommended next steps for today</p>
+                </div>
+                <div class="action-list">
+                    <div class="action-item">
+                        <div class="action-checkbox"></div>
+                        <div class="action-priority priority-high">High</div>
+                        <div class="action-text">Reach out to Mohammed Al-Rashid with 2015 Bordeaux allocation offer</div>
+                    </div>
+                    <div class="action-item">
+                        <div class="action-checkbox"></div>
+                        <div class="action-priority priority-high">High</div>
+                        <div class="action-text">Send re-engagement email to Thomas Wright (dormant 55 days, high-value)</div>
+                    </div>
+                    <div class="action-item">
+                        <div class="action-checkbox"></div>
+                        <div class="action-priority priority-medium">Medium</div>
+                        <div class="action-text">Send Piedmont tasting invite to Sarah Chen and 4 other Italian wine enthusiasts</div>
+                    </div>
+                    <div class="action-item">
+                        <div class="action-checkbox"></div>
+                        <div class="action-priority priority-low">Low</div>
+                        <div class="action-text">Prepare Q1 portfolio review for top 10 clients (due next week)</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="brief-history">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Brief History</h2>
+                    <p class="card-subtitle">Previous daily relationship briefs</p>
+                </div>
+                <div class="brief-list">
+                    <div class="brief-item">
+                        <div>
+                            <div class="brief-date">Yesterday, 07:00 GST</div>
+                            <div class="brief-summary">6 hot leads, 4 dormant clients, AED 98k upsell pipeline</div>
+                        </div>
+                        <a href="#" class="brief-link">View →</a>
+                    </div>
+                    <div class="brief-item">
+                        <div>
+                            <div class="brief-date">2 days ago, 07:00 GST</div>
+                            <div class="brief-summary">7 hot leads, 3 dormant clients, AED 112k upsell pipeline</div>
+                        </div>
+                        <a href="#" class="brief-link">View →</a>
+                    </div>
+                    <div class="brief-item">
+                        <div>
+                            <div class="brief-date">3 days ago, 07:00 GST</div>
+                            <div class="brief-summary">5 hot leads, 5 dormant clients, AED 87k upsell pipeline</div>
+                        </div>
+                        <a href="#" class="brief-link">View →</a>
+                    </div>
+                    <div class="brief-item">
+                        <div>
+                            <div class="brief-date">4 days ago, 07:00 GST</div>
+                            <div class="brief-summary">8 hot leads, 2 dormant clients, AED 134k upsell pipeline</div>
+                        </div>
+                        <a href="#" class="brief-link">View →</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="page-footer">
+        Craft & Culture Platform — Agent Wireframe — February 2026
+    </footer>
+</body>
+</html>

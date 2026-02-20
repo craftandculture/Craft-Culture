@@ -94,7 +94,7 @@ const PricerBrief = () => {
       <Card>
         <CardContent className="p-6">
           <Typography variant="bodySm" colorRole="muted">
-            Loading Pricer brief...
+            Loading Pricing brief...
           </Typography>
         </CardContent>
       </Card>
@@ -106,10 +106,10 @@ const PricerBrief = () => {
       <Card>
         <CardContent className="p-6 text-center">
           <Typography variant="headingSm" className="mb-2">
-            No Pricer Brief Yet
+            No Pricing Brief Yet
           </Typography>
           <Typography variant="bodySm" colorRole="muted" className="mb-4">
-            The Pricer runs daily at 06:45 GST. It analyzes competitive pricing, margins, and
+            Pricing runs daily at 06:45 GST. It analyzes competitive pricing, margins, and
             stock velocity to optimize your pricing strategy.
           </Typography>
           <Button
@@ -145,7 +145,7 @@ const PricerBrief = () => {
       {/* Status Bar */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <Typography variant="headingSm">The Pricer</Typography>
+          <Typography variant="headingSm">Pricing</Typography>
           <Typography variant="bodyXs" colorRole="muted">
             Dynamic pricing optimization &amp; margin analysis
           </Typography>

@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WMS Receiving — Craft & Culture</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-primary: #fafafa;
+      --surface-primary: #ffffff;
+      --surface-secondary: #f5f5f5;
+      --text-primary: #0a0a0a;
+      --text-muted: #737373;
+      --text-brand: #2a9d8f;
+      --fill-brand: #6BBFBF;
+      --fill-brand-10: rgba(107, 191, 191, 0.1);
+      --fill-brand-20: rgba(107, 191, 191, 0.2);
+      --border-primary: #e5e5e5;
+      --border-muted: #f0f0f0;
+      --amber-100: #fef3c7;
+      --amber-600: #d97706;
+      --emerald-100: #d1fae5;
+      --emerald-600: #059669;
+      --red-100: #fee2e2;
+      --red-600: #dc2626;
+      --violet-100: #ede9fe;
+      --violet-600: #7c3aed;
+      --blue-100: #dbeafe;
+      --blue-600: #2563eb;
+      --radius-xl: 12px;
+      --radius-lg: 8px;
+      --radius-md: 6px;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.5;
+    }
+
+    .wireframe-banner {
+      background: #1a1a1a;
+      color: white;
+      padding: 8px 16px;
+      text-align: center;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .wireframe-banner span {
+      color: var(--fill-brand);
+    }
+
+    .wms-header {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: #1a1a1a;
+      color: white;
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .wms-brand {
+      font-weight: 700;
+      font-size: 16px;
+      color: var(--fill-brand);
+    }
+
+    .wms-brand span {
+      color: #a3a3a3;
+      font-weight: 400;
+      font-size: 13px;
+      margin-left: 6px;
+    }
+
+    .wms-status {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: #a3a3a3;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+
+    .status-dot.online {
+      background: var(--emerald-600);
+    }
+
+    .wms-nav {
+      background: white;
+      border-bottom: 1px solid var(--border-primary);
+      padding: 12px 16px;
+    }
+
+    .nav-breadcrumb {
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .nav-breadcrumb span {
+      color: var(--text-primary);
+      font-weight: 600;
+    }
+
+    .mobile-container {
+      max-width: 420px;
+      margin: 0 auto;
+      padding: 16px;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+
+    .section-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .count-badge {
+      background: var(--fill-brand);
+      color: white;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 4px 8px;
+      border-radius: 12px;
+    }
+
+    .shipment-card {
+      background: var(--surface-primary);
+      border: 2px solid var(--border-primary);
+      border-radius: var(--radius-lg);
+      padding: 14px;
+      margin-bottom: 12px;
+    }
+
+    .shipment-card.highlighted {
+      border-color: var(--fill-brand);
+      background: var(--fill-brand-10);
+    }
+
+    .shipment-supplier {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 6px;
+    }
+
+    .shipment-details {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-bottom: 10px;
+    }
+
+    .btn-mobile {
+      width: 100%;
+      height: 48px;
+      border-radius: var(--radius-lg);
+      font-size: 15px;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .btn-mobile-brand {
+      background: var(--fill-brand);
+      color: white;
+    }
+
+    .divider {
+      margin: 32px 0;
+      padding: 12px 0;
+      border-top: 2px dashed var(--border-primary);
+      border-bottom: 2px dashed var(--border-primary);
+      background: var(--surface-secondary);
+      text-align: center;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-muted);
+    }
+
+    .step-indicator {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 20px;
+    }
+
+    .step-dot {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    .step-dot.active {
+      background: var(--fill-brand);
+      color: white;
+    }
+
+    .step-dot.pending {
+      background: var(--surface-secondary);
+      color: var(--text-muted);
+    }
+
+    .step-line {
+      flex: 1;
+      height: 2px;
+      background: var(--border-muted);
+    }
+
+    .step-label {
+      font-size: 11px;
+      color: var(--text-muted);
+      text-align: center;
+      margin-top: 4px;
+    }
+
+    .info-bar {
+      background: var(--blue-100);
+      border: 1px solid var(--blue-600);
+      border-radius: var(--radius-lg);
+      padding: 12px 14px;
+      margin-bottom: 16px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--blue-600);
+    }
+
+    .scan-input-group {
+      position: relative;
+      margin-bottom: 20px;
+    }
+
+    .scan-input {
+      width: 100%;
+      height: 52px;
+      border: 2px solid var(--border-primary);
+      border-radius: var(--radius-lg);
+      padding: 0 16px 0 44px;
+      font-size: 16px;
+      font-family: 'Courier New', monospace;
+      background: var(--surface-primary);
+    }
+
+    .scan-input:focus {
+      border-color: var(--fill-brand);
+      outline: none;
+    }
+
+    .scan-icon {
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 20px;
+      color: var(--text-muted);
+    }
+
+    .verified-items {
+      margin-bottom: 16px;
+    }
+
+    .item-row {
+      background: var(--surface-primary);
+      border: 1px solid var(--border-primary);
+      border-radius: var(--radius-lg);
+      padding: 12px 14px;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .item-icon {
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+
+    .item-content {
+      flex: 1;
+    }
+
+    .item-name {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 2px;
+    }
+
+    .item-status {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .progress-bar-container {
+      background: var(--surface-primary);
+      border: 1px solid var(--border-primary);
+      border-radius: var(--radius-lg);
+      padding: 12px 14px;
+      margin-bottom: 20px;
+    }
+
+    .progress-text {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 8px;
+    }
+
+    .progress-bar {
+      width: 100%;
+      height: 8px;
+      background: var(--surface-secondary);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: var(--fill-brand);
+      width: 71%;
+    }
+
+    .bottom-action {
+      position: fixed;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 100%;
+      max-width: 420px;
+      padding: 16px;
+      background: white;
+      border-top: 1px solid var(--border-primary);
+      box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.08);
+    }
+  </style>
+</head>
+<body>
+  <div class="wireframe-banner">Wireframe — <span>Receiving</span> — WMS Mobile — Craft &amp; Culture</div>
+
+  <header class="wms-header">
+    <div class="wms-brand">C&amp;C <span>Warehouse</span></div>
+    <div class="wms-status">
+      <span class="status-dot online"></span>
+      <span>Connected</span>
+    </div>
+  </header>
+
+  <nav class="wms-nav">
+    <div class="nav-breadcrumb">← <span>Receiving</span></div>
+  </nav>
+
+  <div class="mobile-container">
+    <div class="section-header">
+      <div class="section-title">Expected Shipments</div>
+      <div class="count-badge">3</div>
+    </div>
+
+    <div class="shipment-card highlighted">
+      <div class="shipment-supplier">Berry Bros & Rudd</div>
+      <div class="shipment-details">PO-2024-0156 • 24 cases • Expected today</div>
+      <button class="btn-mobile btn-mobile-brand">Start Receiving</button>
+    </div>
+
+    <div class="shipment-card">
+      <div class="shipment-supplier">Justerini & Brooks</div>
+      <div class="shipment-details">PO-2024-0157 • 12 cases • Expected Feb 15</div>
+      <button class="btn-mobile btn-mobile-brand">Start Receiving</button>
+    </div>
+
+    <div class="shipment-card">
+      <div class="shipment-supplier">Enoteca Pinchiorri</div>
+      <div class="shipment-details">PO-2024-0158 • 8 cases • Expected Feb 17</div>
+      <button class="btn-mobile btn-mobile-brand">Start Receiving</button>
+    </div>
+
+    <div class="divider">Receiving State</div>
+
+    <div class="step-indicator">
+      <div>
+        <div class="step-dot active">1</div>
+        <div class="step-label">Verify</div>
+      </div>
+      <div class="step-line"></div>
+      <div>
+        <div class="step-dot pending">2</div>
+        <div class="step-label">Print</div>
+      </div>
+      <div class="step-line"></div>
+      <div>
+        <div class="step-dot pending">3</div>
+        <div class="step-label">Shelve</div>
+      </div>
+    </div>
+
+    <div class="info-bar">Berry Bros & Rudd — PO-2024-0156</div>
+
+    <div class="scan-input-group">
+      <div class="scan-icon">📷</div>
+      <input type="text" class="scan-input" placeholder="Scan or enter product barcode">
+    </div>
+
+    <div class="verified-items">
+      <div class="item-row">
+        <div class="item-icon">✅</div>
+        <div class="item-content">
+          <div class="item-name">Sassicaia 2020</div>
+          <div class="item-status">6 of 6 cases — All verified</div>
+        </div>
+      </div>
+
+      <div class="item-row">
+        <div class="item-icon">✅</div>
+        <div class="item-content">
+          <div class="item-name">Opus One 2019</div>
+          <div class="item-status">3 of 3 cases — All verified</div>
+        </div>
+      </div>
+
+      <div class="item-row">
+        <div class="item-icon">⏳</div>
+        <div class="item-content">
+          <div class="item-name">Tignanello 2019</div>
+          <div class="item-status">8 of 12 cases — 4 remaining</div>
+        </div>
+      </div>
+
+      <div class="item-row">
+        <div class="item-icon">○</div>
+        <div class="item-content">
+          <div class="item-name">Barolo Monfortino 2016</div>
+          <div class="item-status">0 of 3 cases — Not started</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="progress-bar-container">
+      <div class="progress-text">17 of 24 cases verified (71%)</div>
+      <div class="progress-bar">
+        <div class="progress-fill"></div>
+      </div>
+    </div>
+
+    <div style="height: 80px;"></div>
+  </div>
+
+  <div class="bottom-action">
+    <button class="btn-mobile btn-mobile-brand">Print Labels & Continue →</button>
+  </div>
+</body>
+</html>

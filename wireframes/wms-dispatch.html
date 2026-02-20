@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WMS Dispatch — Craft & Culture</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-primary: #fafafa;
+      --surface-primary: #ffffff;
+      --surface-secondary: #f5f5f5;
+      --text-primary: #0a0a0a;
+      --text-muted: #737373;
+      --text-brand: #2a9d8f;
+      --fill-brand: #6BBFBF;
+      --fill-brand-10: rgba(107, 191, 191, 0.1);
+      --fill-brand-20: rgba(107, 191, 191, 0.2);
+      --border-primary: #e5e5e5;
+      --border-muted: #f0f0f0;
+      --amber-100: #fef3c7;
+      --amber-600: #d97706;
+      --emerald-100: #d1fae5;
+      --emerald-600: #059669;
+      --red-100: #fee2e2;
+      --red-600: #dc2626;
+      --violet-100: #ede9fe;
+      --violet-600: #7c3aed;
+      --blue-100: #dbeafe;
+      --blue-600: #2563eb;
+      --radius-xl: 12px;
+      --radius-lg: 8px;
+      --radius-md: 6px;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.5;
+    }
+
+    .wireframe-banner {
+      background: #1a1a1a;
+      color: white;
+      padding: 8px 16px;
+      text-align: center;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .wireframe-banner span {
+      color: var(--fill-brand);
+    }
+
+    .wms-header {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: #1a1a1a;
+      color: white;
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .wms-brand {
+      font-weight: 700;
+      font-size: 16px;
+      color: var(--fill-brand);
+    }
+
+    .wms-brand span {
+      color: #a3a3a3;
+      font-weight: 400;
+      font-size: 13px;
+      margin-left: 6px;
+    }
+
+    .wms-status {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: #a3a3a3;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+
+    .status-dot.online {
+      background: var(--emerald-600);
+    }
+
+    .wms-nav {
+      background: white;
+      border-bottom: 1px solid var(--border-primary);
+      padding: 12px 16px;
+    }
+
+    .nav-breadcrumb {
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .nav-breadcrumb span {
+      color: var(--text-primary);
+      font-weight: 600;
+    }
+
+    .mobile-container {
+      max-width: 420px;
+      margin: 0 auto;
+      padding: 16px;
+    }
+
+    .filter-pills {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      margin-bottom: 16px;
+      padding-bottom: 4px;
+    }
+
+    .filter-pill {
+      background: var(--surface-primary);
+      border: 2px solid var(--border-primary);
+      border-radius: 20px;
+      padding: 8px 14px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-muted);
+      cursor: pointer;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .filter-pill.active {
+      background: var(--fill-brand);
+      color: white;
+      border-color: var(--fill-brand);
+    }
+
+    .batch-card {
+      background: var(--surface-primary);
+      border: 2px solid var(--border-primary);
+      border-radius: var(--radius-lg);
+      padding: 14px;
+      margin-bottom: 12px;
+      cursor: pointer;
+    }
+
+    .batch-card:active {
+      background: var(--fill-brand-10);
+      border-color: var(--fill-brand);
+    }
+
+    .batch-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+
+    .batch-id {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .status-badge {
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    .status-badge.draft {
+      background: var(--surface-secondary);
+      color: var(--text-muted);
+    }
+
+    .status-badge.staged {
+      background: var(--emerald-100);
+      color: var(--emerald-600);
+    }
+
+    .status-badge.dispatched {
+      background: var(--violet-100);
+      color: var(--violet-600);
+    }
+
+    .batch-distributor {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 4px;
+    }
+
+    .batch-details {
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .btn-mobile {
+      width: 100%;
+      height: 52px;
+      border-radius: var(--radius-lg);
+      font-size: 16px;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-top: 16px;
+    }
+
+    .btn-mobile-brand {
+      background: var(--fill-brand);
+      color: white;
+    }
+
+    .divider {
+      margin: 32px 0;
+      padding: 12px 0;
+      border-top: 2px dashed var(--border-primary);
+      border-bottom: 2px dashed var(--border-primary);
+      background: var(--surface-secondary);
+      text-align: center;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-muted);
+    }
+
+    .detail-header {
+      background: var(--blue-100);
+      border: 1px solid var(--blue-600);
+      border-radius: var(--radius-lg);
+      padding: 12px 14px;
+      margin-bottom: 16px;
+    }
+
+    .detail-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .workflow-bar {
+      background: var(--surface-primary);
+      border: 1px solid var(--border-primary);
+      border-radius: var(--radius-lg);
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+
+    .workflow-steps {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      margin-bottom: 8px;
+    }
+
+    .workflow-step {
+      flex: 1;
+      text-align: center;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    .workflow-step.active {
+      color: var(--fill-brand);
+    }
+
+    .workflow-dots {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .workflow-dot {
+      flex: 1;
+      height: 6px;
+      background: var(--surface-secondary);
+      border-radius: 3px;
+    }
+
+    .workflow-dot.active {
+      background: var(--fill-brand);
+    }
+
+    .section-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 12px;
+    }
+
+    .order-card {
+      background: var(--surface-primary);
+      border: 1px solid var(--border-primary);
+      border-radius: var(--radius-lg);
+      padding: 12px 14px;
+      margin-bottom: 10px;
+    }
+
+    .order-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 6px;
+    }
+
+    .order-id {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .order-amount {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text-brand);
+    }
+
+    .order-customer {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-bottom: 2px;
+    }
+
+    .order-items {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .totals-card {
+      background: var(--violet-100);
+      border: 1px solid var(--violet-600);
+      border-radius: var(--radius-lg);
+      padding: 14px;
+      margin-bottom: 16px;
+    }
+
+    .totals-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--violet-600);
+      margin-bottom: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .totals-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 13px;
+      color: var(--text-primary);
+      margin-bottom: 4px;
+    }
+
+    .totals-value {
+      font-weight: 700;
+    }
+
+    .action-buttons {
+      display: flex;
+      gap: 8px;
+      margin-top: 16px;
+    }
+
+    .btn-secondary {
+      flex: 1;
+      height: 48px;
+      border-radius: var(--radius-lg);
+      background: var(--surface-primary);
+      border: 2px solid var(--border-primary);
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-primary);
+      cursor: pointer;
+    }
+
+    .btn-primary {
+      flex: 1;
+      height: 48px;
+      border-radius: var(--radius-lg);
+      background: var(--fill-brand);
+      border: none;
+      font-size: 14px;
+      font-weight: 600;
+      color: white;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div class="wireframe-banner">Wireframe — <span>Dispatch</span> — WMS Mobile — Craft &amp; Culture</div>
+
+  <header class="wms-header">
+    <div class="wms-brand">C&amp;C <span>Warehouse</span></div>
+    <div class="wms-status">
+      <span class="status-dot online"></span>
+      <span>Connected</span>
+    </div>
+  </header>
+
+  <nav class="wms-nav">
+    <div class="nav-breadcrumb">← <span>Dispatch</span></div>
+  </nav>
+
+  <div class="mobile-container">
+    <div class="filter-pills">
+      <div class="filter-pill active">All (8)</div>
+      <div class="filter-pill">Draft (2)</div>
+      <div class="filter-pill">Picking (1)</div>
+      <div class="filter-pill">Staged (2)</div>
+      <div class="filter-pill">Dispatched (3)</div>
+    </div>
+
+    <div class="batch-card">
+      <div class="batch-header">
+        <div class="batch-id">DB-0036</div>
+        <div class="status-badge draft">Draft</div>
+      </div>
+      <div class="batch-distributor">City Drinks</div>
+      <div class="batch-details">3 orders, 18 cases</div>
+    </div>
+
+    <div class="batch-card">
+      <div class="batch-header">
+        <div class="batch-id">DB-0035</div>
+        <div class="status-badge staged">Staged</div>
+      </div>
+      <div class="batch-distributor">Maritime & Mercantile</div>
+      <div class="batch-details">2 orders, 12 cases</div>
+    </div>
+
+    <div class="batch-card">
+      <div class="batch-header">
+        <div class="batch-id">DB-0034</div>
+        <div class="status-badge dispatched">Dispatched</div>
+      </div>
+      <div class="batch-distributor">City Drinks</div>
+      <div class="batch-details">4 orders, 24 cases</div>
+    </div>
+
+    <button class="btn-mobile btn-mobile-brand">+ New Batch</button>
+
+    <div class="divider">Batch Detail — DB-0036</div>
+
+    <div class="detail-header">
+      <div class="detail-title">DB-0036 — City Drinks</div>
+    </div>
+
+    <div class="workflow-bar">
+      <div class="workflow-steps">
+        <div class="workflow-step active">Draft</div>
+        <div class="workflow-step">Picking</div>
+        <div class="workflow-step">Staged</div>
+        <div class="workflow-step">Dispatched</div>
+        <div class="workflow-step">Delivered</div>
+      </div>
+      <div class="workflow-dots">
+        <div class="workflow-dot active"></div>
+        <div class="workflow-dot"></div>
+        <div class="workflow-dot"></div>
+        <div class="workflow-dot"></div>
+        <div class="workflow-dot"></div>
+      </div>
+    </div>
+
+    <div class="section-title">Orders in Batch</div>
+
+    <div class="order-card">
+      <div class="order-header">
+        <div class="order-id">PCO-0234</div>
+        <div class="order-amount">AED 12,400</div>
+      </div>
+      <div class="order-customer">Mohammed Al-Rashid</div>
+      <div class="order-items">4 items</div>
+    </div>
+
+    <div class="order-card">
+      <div class="order-header">
+        <div class="order-id">PCO-0233</div>
+        <div class="order-amount">AED 5,600</div>
+      </div>
+      <div class="order-customer">Sarah Chen</div>
+      <div class="order-items">2 items</div>
+    </div>
+
+    <div class="order-card">
+      <div class="order-header">
+        <div class="order-id">ZSO-4521</div>
+        <div class="order-amount">AED 8,200</div>
+      </div>
+      <div class="order-customer">Zoho Order</div>
+      <div class="order-items">3 items</div>
+    </div>
+
+    <div class="totals-card">
+      <div class="totals-title">Batch Totals</div>
+      <div class="totals-row">
+        <div>Orders</div>
+        <div class="totals-value">3</div>
+      </div>
+      <div class="totals-row">
+        <div>Items</div>
+        <div class="totals-value">9</div>
+      </div>
+      <div class="totals-row">
+        <div>Cases</div>
+        <div class="totals-value">26</div>
+      </div>
+      <div class="totals-row">
+        <div>Total Value</div>
+        <div class="totals-value">AED 26,200</div>
+      </div>
+    </div>
+
+    <div class="action-buttons">
+      <button class="btn-secondary">Add Orders</button>
+      <button class="btn-primary">Update Status →</button>
+    </div>
+
+    <button class="btn-secondary" style="width: 100%; margin-top: 8px;">Generate Delivery Note</button>
+  </div>
+</body>
+</html>

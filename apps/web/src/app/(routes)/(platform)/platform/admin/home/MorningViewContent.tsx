@@ -83,10 +83,10 @@ const getStatusColor = (status: string) => {
 const agentConfig: Record<string, { icon: typeof IconBinoculars; bgColor: string; iconColor: string; label: string }> = {
   scout: { icon: IconBinoculars, bgColor: 'bg-emerald-100', iconColor: 'text-emerald-600', label: 'Market Scout' },
   concierge: { icon: IconSparkles, bgColor: 'bg-blue-100', iconColor: 'text-blue-600', label: 'PCO Concierge' },
-  storyteller: { icon: IconPencil, bgColor: 'bg-violet-100', iconColor: 'text-violet-600', label: 'The Storyteller' },
-  buyer: { icon: IconShoppingCart, bgColor: 'bg-amber-100', iconColor: 'text-amber-600', label: 'The Buyer' },
-  pricer: { icon: IconCurrencyDollar, bgColor: 'bg-cyan-100', iconColor: 'text-cyan-600', label: 'The Pricer' },
-  advisor: { icon: IconBrain, bgColor: 'bg-indigo-100', iconColor: 'text-indigo-600', label: 'The Advisor' },
+  storyteller: { icon: IconPencil, bgColor: 'bg-violet-100', iconColor: 'text-violet-600', label: 'Socials' },
+  buyer: { icon: IconShoppingCart, bgColor: 'bg-amber-100', iconColor: 'text-amber-600', label: 'Purchasing' },
+  pricer: { icon: IconCurrencyDollar, bgColor: 'bg-cyan-100', iconColor: 'text-cyan-600', label: 'Pricing' },
+  advisor: { icon: IconBrain, bgColor: 'bg-indigo-100', iconColor: 'text-indigo-600', label: 'Business' },
 };
 
 /** Quick action definitions */
@@ -321,12 +321,12 @@ const MorningViewContent = () => {
           <Card>
             <CardContent className="p-0">
               <div className="flex items-center justify-between px-6 py-4">
-                <p className="text-[15px] font-bold">Agent Briefing</p>
+                <p className="text-[15px] font-bold">Intelligence Briefing</p>
                 <Link
                   href="/platform/admin/agents"
                   className="text-[12px] font-medium text-text-brand transition-opacity hover:opacity-80"
                 >
-                  View all agents &rarr;
+                  View all &rarr;
                 </Link>
               </div>
 
@@ -373,7 +373,7 @@ const MorningViewContent = () => {
               ) : (
                 <div className="border-t border-border-muted px-6 py-10 text-center">
                   <p className="text-sm text-text-muted">
-                    No briefs yet. Agents run daily &mdash; check back soon.
+                    No briefs yet. Intelligence runs daily &mdash; check back soon.
                   </p>
                 </div>
               )}

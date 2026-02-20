@@ -28,7 +28,7 @@ interface ParsedRow {
 const UPLOAD_CHUNK_SIZE = 500;
 
 /**
- * Supplier wine list upload - parse CSV/Excel client-side and upload structured data for The Buyer agent
+ * Supplier wine list upload - parse CSV/Excel client-side and upload structured data for Purchasing
  */
 const SupplierUpload = () => {
   const api = useTRPC();
@@ -255,7 +255,7 @@ const SupplierUpload = () => {
     <div className="space-y-4">
       <Typography variant="headingSm">Upload Supplier Wine List</Typography>
       <Typography variant="bodySm" colorRole="muted">
-        Upload a CSV or Excel file with supplier pricing. The Buyer agent will use this data for
+        Upload a CSV or Excel file with supplier pricing. Purchasing will use this data for
         daily purchasing recommendations.
       </Typography>
 

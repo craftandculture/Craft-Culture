@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WMS Put Away — Craft & Culture</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-primary: #fafafa;
+      --surface-primary: #ffffff;
+      --surface-secondary: #f5f5f5;
+      --text-primary: #0a0a0a;
+      --text-muted: #737373;
+      --text-brand: #2a9d8f;
+      --fill-brand: #6BBFBF;
+      --fill-brand-10: rgba(107, 191, 191, 0.1);
+      --fill-brand-20: rgba(107, 191, 191, 0.2);
+      --border-primary: #e5e5e5;
+      --border-muted: #f0f0f0;
+      --amber-100: #fef3c7;
+      --amber-600: #d97706;
+      --emerald-100: #d1fae5;
+      --emerald-600: #059669;
+      --red-100: #fee2e2;
+      --red-600: #dc2626;
+      --violet-100: #ede9fe;
+      --violet-600: #7c3aed;
+      --blue-100: #dbeafe;
+      --blue-600: #2563eb;
+      --radius-xl: 12px;
+      --radius-lg: 8px;
+      --radius-md: 6px;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.5;
+    }
+
+    .wireframe-banner {
+      background: #1a1a1a;
+      color: white;
+      padding: 8px 16px;
+      text-align: center;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .wireframe-banner span {
+      color: var(--fill-brand);
+    }
+
+    .wms-header {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: #1a1a1a;
+      color: white;
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .wms-brand {
+      font-weight: 700;
+      font-size: 16px;
+      color: var(--fill-brand);
+    }
+
+    .wms-brand span {
+      color: #a3a3a3;
+      font-weight: 400;
+      font-size: 13px;
+      margin-left: 6px;
+    }
+
+    .wms-status {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: #a3a3a3;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+
+    .status-dot.online {
+      background: var(--emerald-600);
+    }
+
+    .wms-nav {
+      background: white;
+      border-bottom: 1px solid var(--border-primary);
+      padding: 12px 16px;
+    }
+
+    .nav-breadcrumb {
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .nav-breadcrumb span {
+      color: var(--text-primary);
+      font-weight: 600;
+    }
+
+    .mobile-container {
+      max-width: 420px;
+      margin: 0 auto;
+      padding: 16px;
+    }
+
+    .step-indicator {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 20px;
+    }
+
+    .step-dot {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    .step-dot.active {
+      background: var(--fill-brand);
+      color: white;
+    }
+
+    .step-dot.pending {
+      background: var(--surface-secondary);
+      color: var(--text-muted);
+    }
+
+    .step-line {
+      flex: 1;
+      height: 2px;
+      background: var(--border-muted);
+    }
+
+    .step-label {
+      font-size: 11px;
+      color: var(--text-muted);
+      text-align: center;
+      margin-top: 4px;
+    }
+
+    .scan-input-group {
+      position: relative;
+      margin-bottom: 16px;
+    }
+
+    .scan-input {
+      width: 100%;
+      height: 56px;
+      border: 2px solid var(--border-primary);
+      border-radius: var(--radius-lg);
+      padding: 0 16px 0 48px;
+      font-size: 18px;
+      font-family: 'Courier New', monospace;
+      background: var(--surface-primary);
+    }
+
+    .scan-input:focus {
+      border-color: var(--fill-brand);
+      outline: none;
+    }
+
+    .scan-icon {
+      position: absolute;
+      left: 16px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 22px;
+      color: var(--text-muted);
+    }
+
+    .manual-link {
+      text-align: center;
+      font-size: 13px;
+      color: var(--text-brand);
+      text-decoration: underline;
+      cursor: pointer;
+      margin-bottom: 20px;
+    }
+
+    .pending-count {
+      background: var(--amber-100);
+      border: 1px solid var(--amber-600);
+      border-radius: var(--radius-lg);
+      padding: 10px 14px;
+      margin-bottom: 16px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--amber-600);
+      text-align: center;
+    }
+
+    .case-list {
+      margin-bottom: 16px;
+    }
+
+    .case-card {
+      background: var(--surface-primary);
+      border: 1px solid var(--border-primary);
+      border-radius: var(--radius-lg);
+      padding: 12px 14px;
+      margin-bottom: 10px;
+    }
+
+    .case-barcode {
+      font-size: 12px;
+      font-family: 'Courier New', monospace;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+
+    .case-name {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 4px;
+    }
+
+    .case-time {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .divider {
+      margin: 32px 0;
+      padding: 12px 0;
+      border-top: 2px dashed var(--border-primary);
+      border-bottom: 2px dashed var(--border-primary);
+      background: var(--surface-secondary);
+      text-align: center;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-muted);
+    }
+
+    .info-card {
+      background: var(--blue-100);
+      border: 1px solid var(--blue-600);
+      border-radius: var(--radius-lg);
+      padding: 12px 14px;
+      margin-bottom: 16px;
+    }
+
+    .info-title {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--blue-600);
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .info-content {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .suggestion-card {
+      background: var(--emerald-100);
+      border: 2px solid var(--emerald-600);
+      border-radius: var(--radius-lg);
+      padding: 12px 14px;
+      margin-bottom: 16px;
+    }
+
+    .suggestion-label {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--emerald-600);
+      margin-bottom: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .suggestion-location {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .recent-locations {
+      margin-bottom: 16px;
+    }
+
+    .location-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+
+    .location-chips {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .location-chip {
+      background: var(--surface-secondary);
+      border: 1px solid var(--border-primary);
+      border-radius: var(--radius-md);
+      padding: 8px 12px;
+      font-size: 12px;
+      font-weight: 600;
+      font-family: 'Courier New', monospace;
+      color: var(--text-primary);
+    }
+
+    .feedback-card {
+      padding: 16px;
+      border-radius: var(--radius-lg);
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .feedback-card.success {
+      background: var(--emerald-100);
+      border: 1px solid var(--emerald-600);
+    }
+
+    .feedback-icon {
+      font-size: 24px;
+      flex-shrink: 0;
+    }
+
+    .feedback-text {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .summary-card {
+      background: var(--surface-primary);
+      border: 1px solid var(--border-primary);
+      border-radius: var(--radius-lg);
+      padding: 14px;
+      margin-bottom: 16px;
+    }
+
+    .summary-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .btn-mobile {
+      width: 100%;
+      height: 52px;
+      border-radius: var(--radius-lg);
+      font-size: 16px;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .btn-mobile-brand {
+      background: var(--fill-brand);
+      color: white;
+    }
+  </style>
+</head>
+<body>
+  <div class="wireframe-banner">Wireframe — <span>Put Away</span> — WMS Mobile — Craft &amp; Culture</div>
+
+  <header class="wms-header">
+    <div class="wms-brand">C&amp;C <span>Warehouse</span></div>
+    <div class="wms-status">
+      <span class="status-dot online"></span>
+      <span>Connected</span>
+    </div>
+  </header>
+
+  <nav class="wms-nav">
+    <div class="nav-breadcrumb">← <span>Put Away</span></div>
+  </nav>
+
+  <div class="mobile-container">
+    <div class="step-indicator">
+      <div>
+        <div class="step-dot active">1</div>
+        <div class="step-label">Scan Case</div>
+      </div>
+      <div class="step-line"></div>
+      <div>
+        <div class="step-dot pending">2</div>
+        <div class="step-label">Scan Dest</div>
+      </div>
+      <div class="step-line"></div>
+      <div>
+        <div class="step-dot pending">3</div>
+        <div class="step-label">Confirm</div>
+      </div>
+    </div>
+
+    <div class="scan-input-group">
+      <div class="scan-icon">📷</div>
+      <input type="text" class="scan-input" placeholder="Scan case barcode">
+    </div>
+
+    <div class="manual-link">Or enter manually</div>
+
+    <div class="pending-count">8 cases awaiting putaway</div>
+
+    <div class="case-list">
+      <div class="case-card">
+        <div class="case-barcode">CASE-1010279-2015-06-00750-001</div>
+        <div class="case-name">Sassicaia 2020</div>
+        <div class="case-time">Received 10 min ago</div>
+      </div>
+
+      <div class="case-card">
+        <div class="case-barcode">CASE-1010279-2015-06-00750-002</div>
+        <div class="case-name">Sassicaia 2020</div>
+        <div class="case-time">Received 10 min ago</div>
+      </div>
+
+      <div class="case-card">
+        <div class="case-barcode">CASE-3045122-2019-06-00750-001</div>
+        <div class="case-name">Opus One 2019</div>
+        <div class="case-time">Received 25 min ago</div>
+      </div>
+    </div>
+
+    <div class="divider">Step 2 — Scan Destination</div>
+
+    <div class="info-card">
+      <div class="info-title">Case Scanned</div>
+      <div class="info-content">CASE-1010279-2015-06-00750-001<br>Sassicaia 2020 — 6x750ml</div>
+    </div>
+
+    <div class="suggestion-card">
+      <div class="suggestion-label">Suggested Location</div>
+      <div class="suggestion-location">LOC-A-02-03 (Red — Tuscany)</div>
+    </div>
+
+    <div class="scan-input-group">
+      <div class="scan-icon">📍</div>
+      <input type="text" class="scan-input" placeholder="Scan destination location">
+    </div>
+
+    <div class="recent-locations">
+      <div class="location-title">Recent locations</div>
+      <div class="location-chips">
+        <div class="location-chip">LOC-A-02-03</div>
+        <div class="location-chip">LOC-A-02-04</div>
+        <div class="location-chip">LOC-B-01-01</div>
+      </div>
+    </div>
+
+    <div class="divider">Step 3 — Confirm</div>
+
+    <div class="feedback-card success">
+      <div class="feedback-icon">✅</div>
+      <div class="feedback-text">Case put away successfully</div>
+    </div>
+
+    <div class="summary-card">
+      <div class="summary-row">
+        CASE-1010279-2015-06-00750-001 → LOC-A-02-03
+      </div>
+    </div>
+
+    <button class="btn-mobile btn-mobile-brand">Put Away Next Case</button>
+  </div>
+</body>
+</html>

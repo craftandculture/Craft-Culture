@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Private Client Orders — Craft & Culture Platform</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* CSS Reset */
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        /* Design Tokens */
+        :root {
+            --bg-primary: #fafafa;
+            --surface-primary: #ffffff;
+            --surface-secondary: #f5f5f5;
+            --text-primary: #0a0a0a;
+            --text-muted: #737373;
+            --text-brand: #2a9d8f;
+            --fill-brand: #6BBFBF;
+            --fill-brand-10: rgba(107, 191, 191, 0.1);
+            --fill-brand-20: rgba(107, 191, 191, 0.2);
+            --border-primary: #e5e5e5;
+            --border-muted: #f0f0f0;
+            --amber-100: #fef3c7; --amber-600: #d97706;
+            --emerald-100: #d1fae5; --emerald-600: #059669;
+            --red-100: #fee2e2; --red-600: #dc2626;
+            --violet-100: #ede9fe; --violet-600: #7c3aed;
+            --blue-100: #dbeafe; --blue-600: #2563eb;
+            --gray-100: #f3f4f6; --gray-600: #4b5563;
+            --radius-xl: 12px; --radius-lg: 8px; --radius-md: 6px;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        /* Wireframe Banner */
+        .wireframe-banner {
+            background: #2d3748;
+            color: #fff;
+            text-align: center;
+            padding: 8px 16px;
+            font-size: 13px;
+            font-weight: 500;
+            letter-spacing: 0.3px;
+        }
+
+        /* Container */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 24px;
+        }
+
+        /* Header */
+        .platform-header {
+            background: var(--surface-primary);
+            border-bottom: 1px solid var(--border-primary);
+            padding: 16px 0;
+            margin-bottom: 32px;
+        }
+
+        .header-content {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .brand {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text-brand);
+        }
+
+        .nav-pills {
+            display: flex;
+            gap: 8px;
+        }
+
+        .nav-pill {
+            padding: 8px 16px;
+            border-radius: var(--radius-lg);
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-muted);
+            background: transparent;
+            transition: all 0.2s;
+            text-decoration: none;
+        }
+
+        .nav-pill.active {
+            background: var(--fill-brand-20);
+            color: var(--text-brand);
+        }
+
+        .avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--fill-brand);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            font-weight: 600;
+            color: white;
+        }
+
+        /* Page Header */
+        .page-header {
+            margin-bottom: 32px;
+        }
+
+        .page-title-row {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+
+        .page-title {
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin: 0;
+        }
+
+        .page-subtitle {
+            font-size: 15px;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        .page-actions {
+            display: flex;
+            gap: 12px;
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 10px 20px;
+            border-radius: var(--radius-lg);
+            font-size: 14px;
+            font-weight: 500;
+            border: 1px solid var(--border-primary);
+            background: var(--surface-primary);
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn:hover {
+            background: var(--surface-secondary);
+        }
+
+        .btn-brand {
+            background: var(--fill-brand);
+            color: white;
+            border-color: var(--fill-brand);
+        }
+
+        .btn-brand:hover {
+            background: #5aafaf;
+        }
+
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 13px;
+        }
+
+        /* Status Pipeline */
+        .status-pipeline {
+            background: var(--surface-primary);
+            border: 1px solid var(--border-primary);
+            border-radius: var(--radius-xl);
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+
+        .pipeline-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            margin-bottom: 16px;
+        }
+
+        .pipeline-stages {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 12px;
+        }
+
+        .pipeline-stage {
+            text-align: center;
+            padding: 16px 12px;
+            background: var(--surface-secondary);
+            border-radius: var(--radius-lg);
+            border: 2px solid transparent;
+        }
+
+        .pipeline-stage.active {
+            border-color: var(--fill-brand);
+            background: var(--fill-brand-10);
+        }
+
+        .stage-count {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+        }
+
+        .stage-label {
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.2px;
+        }
+
+        /* Filters Bar */
+        .filters-bar {
+            background: var(--surface-primary);
+            border: 1px solid var(--border-primary);
+            border-radius: var(--radius-xl);
+            padding: 20px;
+            margin-bottom: 24px;
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .filter-input {
+            flex: 1;
+            min-width: 200px;
+            padding: 10px 14px;
+            border: 1px solid var(--border-primary);
+            border-radius: var(--radius-md);
+            font-size: 14px;
+            background: var(--surface-primary);
+            color: var(--text-primary);
+        }
+
+        .filter-input:focus {
+            outline: none;
+            border-color: var(--fill-brand);
+        }
+
+        .filter-select {
+            min-width: 150px;
+            padding: 10px 14px;
+            border: 1px solid var(--border-primary);
+            border-radius: var(--radius-md);
+            font-size: 14px;
+            background: var(--surface-primary);
+            color: var(--text-primary);
+        }
+
+        /* Badge */
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .badge-gray {
+            background: var(--gray-100);
+            color: var(--gray-600);
+        }
+
+        .badge-amber {
+            background: var(--amber-100);
+            color: var(--amber-600);
+        }
+
+        .badge-blue {
+            background: var(--blue-100);
+            color: var(--blue-600);
+        }
+
+        .badge-green {
+            background: var(--emerald-100);
+            color: var(--emerald-600);
+        }
+
+        .badge-red {
+            background: var(--red-100);
+            color: var(--red-600);
+        }
+
+        .badge-violet {
+            background: var(--violet-100);
+            color: var(--violet-600);
+        }
+
+        .badge-brand {
+            background: var(--fill-brand-20);
+            color: var(--text-brand);
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .badge-icon {
+            width: 14px;
+            height: 14px;
+        }
+
+        /* Card */
+        .card {
+            background: var(--surface-primary);
+            border: 1px solid var(--border-primary);
+            border-radius: var(--radius-xl);
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+
+        /* Table */
+        .table-wrapper {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            text-align: left;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            padding: 12px;
+            border-bottom: 1px solid var(--border-primary);
+        }
+
+        td {
+            padding: 16px 12px;
+            font-size: 14px;
+            color: var(--text-primary);
+            border-bottom: 1px solid var(--border-muted);
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        tr.expandable {
+            cursor: pointer;
+        }
+
+        tr.expandable:hover {
+            background: var(--surface-secondary);
+        }
+
+        .expanded-row {
+            background: var(--surface-secondary);
+        }
+
+        .expanded-row td {
+            padding: 24px;
+            border-bottom: 1px solid var(--border-primary);
+        }
+
+        .expanded-content {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 24px;
+        }
+
+        .expanded-section h4 {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            margin-bottom: 12px;
+        }
+
+        .line-item {
+            padding: 8px 0;
+            border-bottom: 1px solid var(--border-muted);
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .line-item:last-child {
+            border-bottom: none;
+        }
+
+        .item-name {
+            font-size: 13px;
+            color: var(--text-primary);
+        }
+
+        .item-qty {
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+
+        .address-text {
+            font-size: 13px;
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+
+        .notes-text {
+            font-size: 13px;
+            color: var(--text-primary);
+            font-style: italic;
+            line-height: 1.6;
+        }
+
+        /* Pagination */
+        .pagination {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 20px;
+        }
+
+        .pagination-info {
+            font-size: 14px;
+            color: var(--text-muted);
+        }
+
+        .pagination-controls {
+            display: flex;
+            gap: 8px;
+        }
+
+        /* Footer */
+        .page-footer {
+            margin-top: 64px;
+            padding: 24px 0;
+            border-top: 1px solid var(--border-primary);
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 13px;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .pipeline-stages {
+                grid-template-columns: repeat(3, 1fr);
+            }
+
+            .filters-bar {
+                flex-direction: column;
+            }
+
+            .filter-input, .filter-select {
+                width: 100%;
+            }
+
+            .expanded-content {
+                grid-template-columns: 1fr;
+            }
+
+            .header-content {
+                flex-direction: column;
+                gap: 16px;
+            }
+
+            .nav-pills {
+                flex-wrap: wrap;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Wireframe Banner -->
+    <div class="wireframe-banner">
+        WIREFRAME — Private Client Orders
+    </div>
+
+    <!-- Platform Header -->
+    <header class="platform-header">
+        <div class="container">
+            <div class="header-content">
+                <div class="brand">Craft & Culture Platform</div>
+                <nav class="nav-pills">
+                    <a href="#" class="nav-pill">Dashboard</a>
+                    <a href="#" class="nav-pill">Pricing</a>
+                    <a href="#" class="nav-pill">Products</a>
+                    <a href="#" class="nav-pill">Quotes</a>
+                    <a href="#" class="nav-pill active">Private Orders</a>
+                    <a href="#" class="nav-pill">Agents</a>
+                </nav>
+                <div class="avatar">KB</div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container">
+        <!-- Page Header -->
+        <div class="page-header">
+            <div class="page-title-row">
+                <div>
+                    <h1 class="page-title">Private Client Orders</h1>
+                    <p class="page-subtitle">Manage orders from private clients and distributors</p>
+                </div>
+                <div class="page-actions">
+                    <button class="btn">Export CSV</button>
+                    <button class="btn btn-brand">+ New Order</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Status Pipeline -->
+        <div class="status-pipeline">
+            <div class="pipeline-title">Order Pipeline</div>
+            <div class="pipeline-stages">
+                <div class="pipeline-stage">
+                    <div class="stage-count">3</div>
+                    <div class="stage-label">Draft</div>
+                </div>
+                <div class="pipeline-stage active">
+                    <div class="stage-count">5</div>
+                    <div class="stage-label">Confirmed</div>
+                </div>
+                <div class="pipeline-stage">
+                    <div class="stage-count">2</div>
+                    <div class="stage-label">Picking</div>
+                </div>
+                <div class="pipeline-stage">
+                    <div class="stage-count">4</div>
+                    <div class="stage-label">Dispatched</div>
+                </div>
+                <div class="pipeline-stage">
+                    <div class="stage-count">12</div>
+                    <div class="stage-label">Delivered</div>
+                </div>
+                <div class="pipeline-stage">
+                    <div class="stage-count">1</div>
+                    <div class="stage-label">Cancelled</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filters Bar -->
+        <div class="filters-bar">
+            <input type="text" class="filter-input" placeholder="Search by order #, client, or distributor...">
+            <select class="filter-select">
+                <option>All Statuses</option>
+                <option>Draft</option>
+                <option>Confirmed</option>
+                <option>Picking</option>
+                <option>Dispatched</option>
+                <option>Delivered</option>
+                <option>Cancelled</option>
+            </select>
+            <select class="filter-select">
+                <option>All Distributors</option>
+                <option>City Drinks</option>
+                <option>Maritime & Mercantile</option>
+                <option>Direct</option>
+            </select>
+            <input type="date" class="filter-select" style="min-width: 140px;">
+            <button class="btn btn-sm">Clear Filters</button>
+        </div>
+
+        <!-- Orders Table -->
+        <div class="card">
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Order #</th>
+                            <th>Client</th>
+                            <th>Distributor</th>
+                            <th>Items</th>
+                            <th>Total</th>
+                            <th>Status</th>
+                            <th>Created</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="expandable">
+                            <td style="font-weight: 600; color: var(--text-brand);">PCO-0234</td>
+                            <td>Mohammed Al-Rashid</td>
+                            <td>City Drinks</td>
+                            <td>4 items</td>
+                            <td style="font-weight: 600;">AED 12,400</td>
+                            <td><span class="badge badge-blue">Confirmed</span></td>
+                            <td>Feb 13</td>
+                            <td><button class="btn btn-sm">View</button></td>
+                        </tr>
+                        <tr class="expanded-row">
+                            <td colspan="8">
+                                <div class="expanded-content">
+                                    <div class="expanded-section">
+                                        <h4>Line Items</h4>
+                                        <div class="line-item">
+                                            <span class="item-name">Sassicaia 2020</span>
+                                            <span class="item-qty">6 btl</span>
+                                        </div>
+                                        <div class="line-item">
+                                            <span class="item-name">Opus One 2019</span>
+                                            <span class="item-qty">3 btl</span>
+                                        </div>
+                                        <div class="line-item">
+                                            <span class="item-name">Tignanello 2019</span>
+                                            <span class="item-qty">12 btl</span>
+                                        </div>
+                                        <div class="line-item">
+                                            <span class="item-name">Barolo Monfortino 2016</span>
+                                            <span class="item-qty">2 btl</span>
+                                        </div>
+                                    </div>
+                                    <div class="expanded-section">
+                                        <h4>Delivery Address</h4>
+                                        <p class="address-text">
+                                            Mohammed Al-Rashid<br>
+                                            Emirates Hills, Villa 42<br>
+                                            Dubai, UAE<br>
+                                            +971 50 123 4567
+                                        </p>
+                                        <div style="margin-top: 12px;">
+                                            <span class="badge badge-brand">
+                                                <svg class="badge-icon" viewBox="0 0 20 20" fill="currentColor">
+                                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                                                </svg>
+                                                CD Verified
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div class="expanded-section">
+                                        <h4>Notes</h4>
+                                        <p class="notes-text">
+                                            Client requested delivery before 2pm. Handle with care - rare vintage Barolo included.
+                                        </p>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr class="expandable">
+                            <td style="font-weight: 600; color: var(--text-brand);">PCO-0233</td>
+                            <td>Sarah Chen</td>
+                            <td>Maritime & Mercantile</td>
+                            <td>2 items</td>
+                            <td style="font-weight: 600;">AED 5,600</td>
+                            <td><span class="badge badge-violet">Dispatched</span></td>
+                            <td>Feb 12</td>
+                            <td><button class="btn btn-sm">View</button></td>
+                        </tr>
+                        <tr class="expandable">
+                            <td style="font-weight: 600; color: var(--text-brand);">PCO-0232</td>
+                            <td>Emirates Palace Hotel</td>
+                            <td>Direct</td>
+                            <td>8 items</td>
+                            <td style="font-weight: 600;">AED 34,200</td>
+                            <td><span class="badge badge-amber">Picking</span></td>
+                            <td>Feb 12</td>
+                            <td><button class="btn btn-sm">View</button></td>
+                        </tr>
+                        <tr class="expandable">
+                            <td style="font-weight: 600; color: var(--text-brand);">PCO-0231</td>
+                            <td>Atlantis F&B</td>
+                            <td>City Drinks</td>
+                            <td>3 items</td>
+                            <td style="font-weight: 600;">AED 8,900</td>
+                            <td><span class="badge badge-green">Delivered</span></td>
+                            <td>Feb 11</td>
+                            <td><button class="btn btn-sm">View</button></td>
+                        </tr>
+                        <tr class="expandable">
+                            <td style="font-weight: 600; color: var(--text-brand);">PCO-0230</td>
+                            <td>Four Seasons Dubai</td>
+                            <td>Maritime & Mercantile</td>
+                            <td>6 items</td>
+                            <td style="font-weight: 600;">AED 22,100</td>
+                            <td><span class="badge badge-blue">Confirmed</span></td>
+                            <td>Feb 10</td>
+                            <td><button class="btn btn-sm">View</button></td>
+                        </tr>
+                        <tr class="expandable">
+                            <td style="font-weight: 600; color: var(--text-brand);">PCO-0229</td>
+                            <td>Jumeirah Group</td>
+                            <td>City Drinks</td>
+                            <td>5 items</td>
+                            <td style="font-weight: 600;">AED 15,750</td>
+                            <td><span class="badge badge-green">Delivered</span></td>
+                            <td>Feb 9</td>
+                            <td><button class="btn btn-sm">View</button></td>
+                        </tr>
+                        <tr class="expandable">
+                            <td style="font-weight: 600; color: var(--text-brand);">PCO-0228</td>
+                            <td>Burj Al Arab</td>
+                            <td>Direct</td>
+                            <td>1 item</td>
+                            <td style="font-weight: 600;">AED 4,200</td>
+                            <td><span class="badge badge-gray">Draft</span></td>
+                            <td>Feb 8</td>
+                            <td><button class="btn btn-sm">View</button></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="pagination">
+                <div class="pagination-info">Showing 1-7 of 27 orders</div>
+                <div class="pagination-controls">
+                    <button class="btn btn-sm" disabled style="opacity: 0.5; cursor: not-allowed;">Previous</button>
+                    <button class="btn btn-sm">Next</button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="page-footer">
+        <div class="container">
+            Wireframe — Craft & Culture — Private Client Orders
+        </div>
+    </footer>
+</body>
+</html>

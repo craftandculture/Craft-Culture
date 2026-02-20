@@ -28,7 +28,7 @@ import StorytellerConfig from './StorytellerConfig';
 import SupplierUpload from './SupplierUpload';
 
 /**
- * Agent Dashboard - tabbed view for all agent briefs, data uploads, and config
+ * Intelligence Dashboard - tabbed view for all agent briefs, data uploads, and config
  */
 const AgentDashboard = () => {
   return (
@@ -45,19 +45,19 @@ const AgentDashboard = () => {
           </TabsTrigger>
           <TabsTrigger value="storyteller">
             <Icon icon={IconPencil} size="sm" className="mr-2" />
-            The Storyteller
+            Socials
           </TabsTrigger>
           <TabsTrigger value="buyer">
             <Icon icon={IconShoppingCart} size="sm" className="mr-2" />
-            The Buyer
+            Purchasing
           </TabsTrigger>
           <TabsTrigger value="pricer">
             <Icon icon={IconCurrencyDollar} size="sm" className="mr-2" />
-            The Pricer
+            Pricing
           </TabsTrigger>
           <TabsTrigger value="advisor">
             <Icon icon={IconBrain} size="sm" className="mr-2" />
-            The Advisor
+            Business
           </TabsTrigger>
           <TabsTrigger value="data">
             <Icon icon={IconDatabase} size="sm" className="mr-2" />
