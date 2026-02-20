@@ -67,7 +67,7 @@ const stockColor = (weeks: number) => {
 const BuyerBrief = () => {
   const api = useTRPC();
   const queryClient = useQueryClient();
-  const { data, isLoading, refetch } = useQuery({
+  const { data, isLoading } = useQuery({
     ...api.agents.getLatestBrief.queryOptions({ agentId: 'buyer' }),
     refetchInterval: 60000,
   });
@@ -145,9 +145,9 @@ const BuyerBrief = () => {
             <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-600" />
             Last run: {brief.createdAt.toLocaleString()}
           </div>
-          <Button variant="ghost" size="sm" onClick={() => refetch()}>
-            <IconRefresh size={16} className="mr-1" />
-            Refresh
+          <Button variant="ghost" size="sm" onClick={() => triggerMutation.mutate({ agentId: 'buyer' })} disabled={triggerMutation.isPending}>
+            <IconRefresh size={16} className={triggerMutation.isPending ? 'mr-1 animate-spin' : 'mr-1'} />
+            {triggerMutation.isPending ? 'Running...' : 'Run Now'}
           </Button>
         </div>
       </div>

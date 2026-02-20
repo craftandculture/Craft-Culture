@@ -77,7 +77,7 @@ const agentLabels: Record<string, string> = {
 const AdvisorBrief = () => {
   const api = useTRPC();
   const queryClient = useQueryClient();
-  const { data, isLoading, refetch } = useQuery({
+  const { data, isLoading } = useQuery({
     ...api.agents.getLatestBrief.queryOptions({ agentId: 'advisor' }),
     refetchInterval: 60000,
   });
@@ -156,9 +156,9 @@ const AdvisorBrief = () => {
             <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-600" />
             Last run: {brief.createdAt.toLocaleString()}
           </div>
-          <Button variant="ghost" size="sm" onClick={() => refetch()}>
-            <IconRefresh size={16} className="mr-1" />
-            Refresh
+          <Button variant="ghost" size="sm" onClick={() => triggerMutation.mutate({ agentId: 'advisor' })} disabled={triggerMutation.isPending}>
+            <IconRefresh size={16} className={triggerMutation.isPending ? 'mr-1 animate-spin' : 'mr-1'} />
+            {triggerMutation.isPending ? 'Running...' : 'Run Now'}
           </Button>
         </div>
       </div>

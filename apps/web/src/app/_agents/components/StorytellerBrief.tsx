@@ -47,7 +47,7 @@ const copyToClipboard = (text: string) => {
 const StorytellerBrief = () => {
   const api = useTRPC();
   const queryClient = useQueryClient();
-  const { data, isLoading, refetch } = useQuery({
+  const { data, isLoading } = useQuery({
     ...api.agents.getLatestBrief.queryOptions({ agentId: 'storyteller' }),
     refetchInterval: 60000,
   });
@@ -124,9 +124,9 @@ const StorytellerBrief = () => {
             <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-600" />
             Last run: {brief.createdAt.toLocaleString()}
           </div>
-          <Button variant="ghost" size="sm" onClick={() => refetch()}>
-            <IconRefresh size={16} className="mr-1" />
-            Refresh
+          <Button variant="ghost" size="sm" onClick={() => triggerMutation.mutate({ agentId: 'storyteller' })} disabled={triggerMutation.isPending}>
+            <IconRefresh size={16} className={triggerMutation.isPending ? 'mr-1 animate-spin' : 'mr-1'} />
+            {triggerMutation.isPending ? 'Running...' : 'Run Now'}
           </Button>
         </div>
       </div>
