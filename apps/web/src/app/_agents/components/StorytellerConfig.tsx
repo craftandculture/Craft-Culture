@@ -2,7 +2,7 @@
 
 import { IconCheck, IconDeviceFloppy } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import Button from '@/app/_ui/components/Button/Button';
 import Card from '@/app/_ui/components/Card/Card';
@@ -53,16 +53,13 @@ const StorytellerConfig = () => {
     },
   });
 
-  const handleSave = useCallback(
-    (configKey: string, configValue: string) => {
-      upsertConfig({
-        agentId: 'storyteller',
-        configKey,
-        configValue,
-      });
-    },
-    [upsertConfig],
-  );
+  const handleSave = (configKey: string, configValue: string) => {
+    upsertConfig({
+      agentId: 'storyteller',
+      configKey,
+      configValue,
+    });
+  };
 
   if (isLoading) {
     return (
