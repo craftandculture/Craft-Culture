@@ -15,10 +15,17 @@ const sectionTabs: Record<string, TabItem[]> = {
     { label: 'Private Orders', href: '/platform/admin/private-orders' },
     { label: 'Zoho Sales', href: '/platform/admin/zoho-sales-orders' },
     { label: 'Source', href: '/platform/admin/source' },
-    { label: 'Logistics', href: '/platform/admin/logistics' },
     { label: 'Approvals', href: '/platform/admin/quote-approvals' },
     { label: 'Quotes', href: '/platform/quotes' },
     { label: 'My Quotes', href: '/platform/my-quotes' },
+  ],
+  logistics: [
+    { label: 'Dashboard', href: '/platform/admin/logistics' },
+    { label: 'Shipments', href: '/platform/admin/logistics/shipments' },
+    { label: 'Quotes', href: '/platform/admin/logistics/quotes' },
+    { label: 'Requests', href: '/platform/admin/logistics/requests' },
+    { label: 'Invoices', href: '/platform/admin/logistics/invoices' },
+    { label: 'Reports', href: '/platform/admin/logistics/reports' },
   ],
   warehouse: [
     { label: 'Dashboard', href: '/platform/admin/wms' },
@@ -60,7 +67,7 @@ const AdminSectionTabs = () => {
   if (!tabs) return null;
 
   return (
-    <div className="sticky top-14 z-40 border-b border-border-muted bg-white dark:bg-background-secondary">
+    <div className="border-b border-border-muted bg-white dark:bg-background-secondary">
       <div className="container">
         <nav className="-mb-px flex gap-0 overflow-x-auto">
           {tabs.map((tab) => {

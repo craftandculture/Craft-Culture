@@ -60,8 +60,8 @@ const PlatformLayout = async ({ children }: React.PropsWithChildren) => {
       {user.isImpersonated && (
         <ImpersonationBanner userName={user.name} userEmail={user.email} />
       )}
-      <header className="border-border-primary sticky top-0 z-50 border-b bg-background-primary/80 backdrop-blur-xl">
-        <div className="container flex h-14 items-center justify-between gap-4">
+      <header className="border-border-primary sticky top-0 z-50 bg-background-primary/80 backdrop-blur-xl">
+        <div className="container flex h-14 items-center justify-between gap-4 border-b border-border-primary">
           <div className="flex items-center gap-3 md:gap-6">
             <PlatformMobileNav user={{ role: user.role, customerType: user.customerType, partner: user.partner }} />
             <Link
@@ -204,15 +204,9 @@ const PlatformLayout = async ({ children }: React.PropsWithChildren) => {
             <UserDropdown user={user} />
           </div>
         </div>
+        {user.role === 'admin' && <AdminSectionTabs />}
       </header>
-      {user.role === 'admin' ? (
-        <div className="flex flex-1 flex-col">
-          <AdminSectionTabs />
-          <div className="flex-1">{children}</div>
-        </div>
-      ) : (
-        <div className="flex-1">{children}</div>
-      )}
+      <div className="flex-1">{children}</div>
       <BrandedFooter customerType={user.customerType} partnerType={user.partner?.type as 'wine_partner' | 'distributor' | undefined} />
     </div>
   );
