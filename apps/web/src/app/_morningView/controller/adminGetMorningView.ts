@@ -5,6 +5,7 @@ import {
   agentOutputs,
   privateClientOrders,
   wmsDispatchBatches,
+  zohoInvoices,
   zohoSalesOrders,
 } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
@@ -12,8 +13,8 @@ import { adminProcedure } from '@/lib/trpc/procedures';
 /** USD to AED peg rate */
 const USD_TO_AED = 3.6725;
 
-/** Zoho statuses that represent invoiced orders (invoices made) */
-const invoicedStatuses = ['invoiced', 'overdue', 'partially_invoiced'];
+/** Invoice statuses that represent real revenue (exclude draft/void) */
+const revenueStatuses = ['sent', 'viewed', 'overdue', 'paid', 'partially_paid'];
 
 /** Statuses that count as "open" PCO — excludes draft, delivered, cancelled */
 const activeStatuses = [
@@ -93,60 +94,60 @@ const adminGetMorningView = adminProcedure.query(async () => {
       )
       .then((r) => r[0]),
 
-    // 3. Revenue this calendar month (Zoho invoiced, USD)
+    // 3. Revenue this calendar month (Zoho invoices, USD)
     db
       .select({
-        total: sql<number>`coalesce(sum(${zohoSalesOrders.total}), 0)`,
+        total: sql<number>`coalesce(sum(${zohoInvoices.total}), 0)`,
       })
-      .from(zohoSalesOrders)
+      .from(zohoInvoices)
       .where(
         and(
-          inArray(zohoSalesOrders.zohoStatus, invoicedStatuses),
-          gte(zohoSalesOrders.orderDate, thisMonthStart),
+          inArray(zohoInvoices.status, revenueStatuses),
+          gte(zohoInvoices.invoiceDate, thisMonthStart),
         ),
       )
       .then((r) => r[0]),
 
-    // 4. Revenue last calendar month (Zoho invoiced, USD)
+    // 4. Revenue last calendar month (Zoho invoices, USD)
     db
       .select({
-        total: sql<number>`coalesce(sum(${zohoSalesOrders.total}), 0)`,
+        total: sql<number>`coalesce(sum(${zohoInvoices.total}), 0)`,
       })
-      .from(zohoSalesOrders)
+      .from(zohoInvoices)
       .where(
         and(
-          inArray(zohoSalesOrders.zohoStatus, invoicedStatuses),
-          gte(zohoSalesOrders.orderDate, lastMonthStart),
-          lt(zohoSalesOrders.orderDate, lastMonthEnd),
+          inArray(zohoInvoices.status, revenueStatuses),
+          gte(zohoInvoices.invoiceDate, lastMonthStart),
+          lt(zohoInvoices.invoiceDate, lastMonthEnd),
         ),
       )
       .then((r) => r[0]),
 
-    // 5. Revenue this calendar year (Zoho invoiced, USD)
+    // 5. Revenue this calendar year (Zoho invoices, USD)
     db
       .select({
-        total: sql<number>`coalesce(sum(${zohoSalesOrders.total}), 0)`,
+        total: sql<number>`coalesce(sum(${zohoInvoices.total}), 0)`,
       })
-      .from(zohoSalesOrders)
+      .from(zohoInvoices)
       .where(
         and(
-          inArray(zohoSalesOrders.zohoStatus, invoicedStatuses),
-          gte(zohoSalesOrders.orderDate, thisYearStart),
+          inArray(zohoInvoices.status, revenueStatuses),
+          gte(zohoInvoices.invoiceDate, thisYearStart),
         ),
       )
       .then((r) => r[0]),
 
-    // 6. Revenue last calendar year (Zoho invoiced, USD)
+    // 6. Revenue last calendar year (Zoho invoices, USD)
     db
       .select({
-        total: sql<number>`coalesce(sum(${zohoSalesOrders.total}), 0)`,
+        total: sql<number>`coalesce(sum(${zohoInvoices.total}), 0)`,
       })
-      .from(zohoSalesOrders)
+      .from(zohoInvoices)
       .where(
         and(
-          inArray(zohoSalesOrders.zohoStatus, invoicedStatuses),
-          gte(zohoSalesOrders.orderDate, lastYearStart),
-          lt(zohoSalesOrders.orderDate, lastYearEnd),
+          inArray(zohoInvoices.status, revenueStatuses),
+          gte(zohoInvoices.invoiceDate, lastYearStart),
+          lt(zohoInvoices.invoiceDate, lastYearEnd),
         ),
       )
       .then((r) => r[0]),
@@ -165,14 +166,14 @@ const adminGetMorningView = adminProcedure.query(async () => {
       .where(eq(wmsDispatchBatches.status, 'staged'))
       .then((r) => r[0]),
 
-    // 9. Overdue invoices (Zoho — zoho_status = 'overdue')
+    // 9. Overdue invoices (Zoho invoices with status = 'overdue')
     db
       .select({
         count: sql<number>`count(*)`,
-        totalAmount: sql<number>`coalesce(sum(${zohoSalesOrders.total}), 0)`,
+        totalAmount: sql<number>`coalesce(sum(${zohoInvoices.balance}), 0)`,
       })
-      .from(zohoSalesOrders)
-      .where(eq(zohoSalesOrders.zohoStatus, 'overdue'))
+      .from(zohoInvoices)
+      .where(eq(zohoInvoices.status, 'overdue'))
       .then((r) => r[0]),
 
     // 10. Latest Scout brief

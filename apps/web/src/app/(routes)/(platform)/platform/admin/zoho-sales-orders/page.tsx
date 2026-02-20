@@ -5,6 +5,7 @@ import {
   IconCloudDownload,
   IconLoader2,
   IconPackage,
+  IconReceipt,
   IconRefresh,
   IconTruckDelivery,
 } from '@tabler/icons-react';
@@ -67,6 +68,17 @@ const ZohoSalesOrdersPage = () => {
       },
       onError: (error) => {
         toast.error(error.message || 'Failed to sync from Zoho');
+      },
+    }),
+  );
+
+  const { mutate: syncInvoices, isPending: isSyncingInvoices } = useMutation(
+    api.zohoSalesOrders.syncInvoices.mutationOptions({
+      onSuccess: (result) => {
+        toast.success(result.message);
+      },
+      onError: (error) => {
+        toast.error(error.message || 'Failed to sync invoices');
       },
     }),
   );
@@ -194,11 +206,21 @@ const ZohoSalesOrdersPage = () => {
             <Button
               variant="outline"
               size="sm"
+              onClick={() => syncInvoices()}
+              disabled={isSyncingInvoices}
+            >
+              <ButtonContent iconLeft={isSyncingInvoices ? IconLoader2 : IconReceipt}>
+                {isSyncingInvoices ? 'Syncing...' : 'Sync Invoices'}
+              </ButtonContent>
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
               onClick={() => syncOrders()}
               disabled={isSyncing}
             >
               <ButtonContent iconLeft={isSyncing ? IconLoader2 : IconCloudDownload}>
-                {isSyncing ? 'Syncing...' : 'Sync from Zoho'}
+                {isSyncing ? 'Syncing...' : 'Sync Orders'}
               </ButtonContent>
             </Button>
             <Button
