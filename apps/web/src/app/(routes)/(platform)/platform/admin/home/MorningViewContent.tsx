@@ -40,12 +40,13 @@ const formatDate = () =>
   });
 
 /** Format currency for display */
-const formatCurrency = (amount: number, currency: Currency) => {
+const formatCurrency = (amount: number | null | undefined, currency: Currency) => {
   const prefix = currency === 'USD' ? 'USD' : 'AED';
-  if (amount >= 1000) {
-    return `${prefix} ${(amount / 1000).toFixed(1)}k`;
+  const val = amount ?? 0;
+  if (val >= 1000) {
+    return `${prefix} ${(val / 1000).toFixed(1)}k`;
   }
-  return `${prefix} ${amount.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
+  return `${prefix} ${val.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
 };
 
 /** Format relative time */
@@ -156,13 +157,13 @@ const MorningViewContent = () => {
 
       {/* KPI Cards */}
       {isLoading ? (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-          {Array.from({ length: 5 }).map((_, i) => (
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+          {Array.from({ length: 6 }).map((_, i) => (
             <Skeleton key={i} className="h-24" />
           ))}
         </div>
       ) : data ? (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
           {/* Open Orders */}
           <div className="rounded-xl border border-border-muted bg-white p-4 dark:bg-background-secondary">
             <Typography variant="bodyXs" className="font-semibold uppercase tracking-wider text-text-muted">
@@ -181,7 +182,7 @@ const MorningViewContent = () => {
           {/* Revenue (Month) */}
           <div className="rounded-xl border border-border-muted bg-white p-4 dark:bg-background-secondary">
             <Typography variant="bodyXs" className="font-semibold uppercase tracking-wider text-text-muted">
-              Revenue (Month)
+              Invoiced (Month)
             </Typography>
             <Typography variant="headingLg" className="mt-1 text-text-brand">
               {formatCurrency(
@@ -206,6 +207,39 @@ const MorningViewContent = () => {
               return (
                 <Typography variant="bodyXs" className="mt-0.5 text-text-muted">
                   No data last month
+                </Typography>
+              );
+            })()}
+          </div>
+
+          {/* Invoiced (Year) */}
+          <div className="rounded-xl border border-border-muted bg-white p-4 dark:bg-background-secondary">
+            <Typography variant="bodyXs" className="font-semibold uppercase tracking-wider text-text-muted">
+              Invoiced (Year)
+            </Typography>
+            <Typography variant="headingLg" className="mt-1 text-text-brand">
+              {formatCurrency(
+                currency === 'USD' ? data.kpis.revenueYearUsd : data.kpis.revenueYearAed,
+                currency,
+              )}
+            </Typography>
+            {(() => {
+              const current = currency === 'USD' ? data.kpis.revenueYearUsd : data.kpis.revenueYearAed;
+              const previous = currency === 'USD' ? data.kpis.revenueLastYearUsd : data.kpis.revenueLastYearAed;
+              if (previous > 0) {
+                const pctChange = Math.round(((current - previous) / previous) * 100);
+                return (
+                  <Typography
+                    variant="bodyXs"
+                    className={`mt-0.5 ${pctChange >= 0 ? 'text-emerald-600' : 'text-red-600'}`}
+                  >
+                    {pctChange >= 0 ? '+' : ''}{pctChange}% vs last year
+                  </Typography>
+                );
+              }
+              return (
+                <Typography variant="bodyXs" className="mt-0.5 text-text-muted">
+                  No data last year
                 </Typography>
               );
             })()}
