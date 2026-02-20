@@ -3,7 +3,6 @@ import { and, desc, eq, gte, inArray, lt, not, sql } from 'drizzle-orm';
 import db from '@/database/client';
 import {
   agentOutputs,
-  logisticsInvoices,
   privateClientOrders,
   wmsDispatchBatches,
   zohoSalesOrders,
@@ -13,7 +12,10 @@ import { adminProcedure } from '@/lib/trpc/procedures';
 /** USD to AED peg rate */
 const USD_TO_AED = 3.6725;
 
-/** Statuses that count as "open" — excludes draft, delivered, cancelled */
+/** Zoho statuses that represent invoiced orders (invoices made) */
+const invoicedStatuses = ['invoiced', 'overdue', 'partially_invoiced'];
+
+/** Statuses that count as "open" PCO — excludes draft, delivered, cancelled */
 const activeStatuses = [
   'submitted',
   'under_cc_review',
@@ -37,23 +39,32 @@ const activeStatuses = [
 
 /**
  * Get all data for the admin Morning View dashboard in a single call.
- * Revenue and financial metrics sourced from Zoho Sales Orders (USD).
+ * Revenue and financial metrics sourced from Zoho invoiced orders (USD).
  * Runs queries in parallel for performance.
  */
 const adminGetMorningView = adminProcedure.query(async () => {
   const now = new Date();
-  const thirtyDaysAgo = new Date(now);
-  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-  const sixtyDaysAgo = new Date(now);
-  sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
+
+  // Calendar month boundaries
+  const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const lastMonthEnd = thisMonthStart;
+
+  // Calendar year boundaries
+  const thisYearStart = new Date(now.getFullYear(), 0, 1);
+  const lastYearStart = new Date(now.getFullYear() - 1, 0, 1);
+  const lastYearEnd = thisYearStart;
+
   const sevenDaysAgo = new Date(now);
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
   const [
     openOrdersResult,
     openOrdersThisWeekResult,
-    revenueMonthResult,
-    revenueLastMonthResult,
+    revenueThisMonth,
+    revenueLastMonth,
+    revenueThisYear,
+    revenueLastYear,
     pendingDispatchResult,
     stagedResult,
     overdueResult,
@@ -82,7 +93,7 @@ const adminGetMorningView = adminProcedure.query(async () => {
       )
       .then((r) => r[0]),
 
-    // 3. Revenue this month (Zoho — USD, source of truth for financials)
+    // 3. Revenue this calendar month (Zoho invoiced, USD)
     db
       .select({
         total: sql<number>`coalesce(sum(${zohoSalesOrders.total}), 0)`,
@@ -90,13 +101,13 @@ const adminGetMorningView = adminProcedure.query(async () => {
       .from(zohoSalesOrders)
       .where(
         and(
-          not(inArray(zohoSalesOrders.status, ['cancelled'])),
-          gte(zohoSalesOrders.createdAt, thirtyDaysAgo),
+          inArray(zohoSalesOrders.zohoStatus, invoicedStatuses),
+          gte(zohoSalesOrders.orderDate, thisMonthStart),
         ),
       )
       .then((r) => r[0]),
 
-    // 4. Revenue last month (Zoho — USD, for delta %)
+    // 4. Revenue last calendar month (Zoho invoiced, USD)
     db
       .select({
         total: sql<number>`coalesce(sum(${zohoSalesOrders.total}), 0)`,
@@ -104,38 +115,67 @@ const adminGetMorningView = adminProcedure.query(async () => {
       .from(zohoSalesOrders)
       .where(
         and(
-          not(inArray(zohoSalesOrders.status, ['cancelled'])),
-          gte(zohoSalesOrders.createdAt, sixtyDaysAgo),
-          lt(zohoSalesOrders.createdAt, thirtyDaysAgo),
+          inArray(zohoSalesOrders.zohoStatus, invoicedStatuses),
+          gte(zohoSalesOrders.orderDate, lastMonthStart),
+          lt(zohoSalesOrders.orderDate, lastMonthEnd),
         ),
       )
       .then((r) => r[0]),
 
-    // 5. Pending dispatch (draft + picking + staged)
+    // 5. Revenue this calendar year (Zoho invoiced, USD)
+    db
+      .select({
+        total: sql<number>`coalesce(sum(${zohoSalesOrders.total}), 0)`,
+      })
+      .from(zohoSalesOrders)
+      .where(
+        and(
+          inArray(zohoSalesOrders.zohoStatus, invoicedStatuses),
+          gte(zohoSalesOrders.orderDate, thisYearStart),
+        ),
+      )
+      .then((r) => r[0]),
+
+    // 6. Revenue last calendar year (Zoho invoiced, USD)
+    db
+      .select({
+        total: sql<number>`coalesce(sum(${zohoSalesOrders.total}), 0)`,
+      })
+      .from(zohoSalesOrders)
+      .where(
+        and(
+          inArray(zohoSalesOrders.zohoStatus, invoicedStatuses),
+          gte(zohoSalesOrders.orderDate, lastYearStart),
+          lt(zohoSalesOrders.orderDate, lastYearEnd),
+        ),
+      )
+      .then((r) => r[0]),
+
+    // 7. Pending dispatch (draft + picking + staged)
     db
       .select({ count: sql<number>`count(*)` })
       .from(wmsDispatchBatches)
       .where(inArray(wmsDispatchBatches.status, ['draft', 'picking', 'staged']))
       .then((r) => r[0]),
 
-    // 6. Staged batches only
+    // 8. Staged batches only
     db
       .select({ count: sql<number>`count(*)` })
       .from(wmsDispatchBatches)
       .where(eq(wmsDispatchBatches.status, 'staged'))
       .then((r) => r[0]),
 
-    // 7. Overdue logistics invoices (USD)
+    // 9. Overdue invoices (Zoho — zoho_status = 'overdue')
     db
       .select({
         count: sql<number>`count(*)`,
-        totalAmount: sql<number>`coalesce(sum(${logisticsInvoices.openAmount}), 0)`,
+        totalAmount: sql<number>`coalesce(sum(${zohoSalesOrders.total}), 0)`,
       })
-      .from(logisticsInvoices)
-      .where(eq(logisticsInvoices.status, 'overdue'))
+      .from(zohoSalesOrders)
+      .where(eq(zohoSalesOrders.zohoStatus, 'overdue'))
       .then((r) => r[0]),
 
-    // 8. Latest Scout brief
+    // 10. Latest Scout brief
     db
       .select()
       .from(agentOutputs)
@@ -144,7 +184,7 @@ const adminGetMorningView = adminProcedure.query(async () => {
       .limit(1)
       .then((r) => r[0] ?? null),
 
-    // 9. Latest Concierge brief
+    // 11. Latest Concierge brief
     db
       .select()
       .from(agentOutputs)
@@ -153,7 +193,7 @@ const adminGetMorningView = adminProcedure.query(async () => {
       .limit(1)
       .then((r) => r[0] ?? null),
 
-    // 10. Latest Storyteller brief
+    // 12. Latest Storyteller brief
     db
       .select()
       .from(agentOutputs)
@@ -162,7 +202,7 @@ const adminGetMorningView = adminProcedure.query(async () => {
       .limit(1)
       .then((r) => r[0] ?? null),
 
-    // 11. Recent PCO orders (5)
+    // 13. Recent PCO orders (5)
     db
       .select({
         id: privateClientOrders.id,
@@ -180,7 +220,7 @@ const adminGetMorningView = adminProcedure.query(async () => {
       .orderBy(desc(privateClientOrders.createdAt))
       .limit(5),
 
-    // 12. Recent Zoho orders (5)
+    // 14. Recent Zoho orders (5)
     db
       .select({
         id: zohoSalesOrders.id,
@@ -255,9 +295,12 @@ const adminGetMorningView = adminProcedure.query(async () => {
       (item as { priority: string }).priority === 'high',
   ).length;
 
-  // Revenue in USD (source of truth) and AED (converted at peg rate)
-  const revenueMonthUsd = Number(revenueMonthResult?.total ?? 0);
-  const revenueLastMonthUsd = Number(revenueLastMonthResult?.total ?? 0);
+  // Revenue figures in USD
+  const monthUsd = Number(revenueThisMonth?.total ?? 0);
+  const lastMonthUsd = Number(revenueLastMonth?.total ?? 0);
+  const yearUsd = Number(revenueThisYear?.total ?? 0);
+  const lastYearUsd = Number(revenueLastYear?.total ?? 0);
+  const overdueUsd = Number(overdueResult?.totalAmount ?? 0);
 
   // Merge + sort recent orders (both currencies for toggle)
   const mergedOrders = [
@@ -300,16 +343,20 @@ const adminGetMorningView = adminProcedure.query(async () => {
     kpis: {
       openOrders: Number(openOrdersResult?.count ?? 0),
       openOrdersThisWeek: Number(openOrdersThisWeekResult?.count ?? 0),
-      revenueMonthUsd,
-      revenueMonthAed: revenueMonthUsd * USD_TO_AED,
-      revenueLastMonthUsd,
-      revenueLastMonthAed: revenueLastMonthUsd * USD_TO_AED,
+      revenueMonthUsd: monthUsd,
+      revenueMonthAed: monthUsd * USD_TO_AED,
+      revenueLastMonthUsd: lastMonthUsd,
+      revenueLastMonthAed: lastMonthUsd * USD_TO_AED,
+      revenueYearUsd: yearUsd,
+      revenueYearAed: yearUsd * USD_TO_AED,
+      revenueLastYearUsd: lastYearUsd,
+      revenueLastYearAed: lastYearUsd * USD_TO_AED,
       pendingDispatch: Number(pendingDispatchResult?.count ?? 0),
       stagedBatches: Number(stagedResult?.count ?? 0),
       agentAlerts: highPriorityAlerts,
       overdueInvoices: Number(overdueResult?.count ?? 0),
-      overdueAmountUsd: Number(overdueResult?.totalAmount ?? 0),
-      overdueAmountAed: Number(overdueResult?.totalAmount ?? 0) * USD_TO_AED,
+      overdueAmountUsd: overdueUsd,
+      overdueAmountAed: overdueUsd * USD_TO_AED,
     },
     agentBriefs,
     recentOrders: mergedOrders,
