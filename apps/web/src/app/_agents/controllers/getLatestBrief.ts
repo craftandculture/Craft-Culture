@@ -17,7 +17,7 @@ const getLatestBrief = adminProcedure
   .query(async ({ input }) => {
     const agentIds = input.agentId
       ? [input.agentId]
-      : ['scout', 'concierge', 'storyteller'];
+      : ['scout', 'concierge', 'storyteller', 'buyer', 'pricer', 'advisor'];
 
     const briefs = [];
 
