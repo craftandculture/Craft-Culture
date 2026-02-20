@@ -1,7 +1,8 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 
-import AdminSidebarWrapper from '@/app/_admin/components/AdminSidebarWrapper';
+import AdminSectionTabs from '@/app/_admin/components/AdminSectionTabs';
+import AdminTopNav from '@/app/_admin/components/AdminTopNav';
 import ImpersonationBanner from '@/app/_auth/components/ImpersonationBanner';
 import UserDropdown from '@/app/_auth/components/UserDropdown';
 import NotificationBell from '@/app/_notifications/components/NotificationBell';
@@ -64,14 +65,14 @@ const PlatformLayout = async ({ children }: React.PropsWithChildren) => {
           <div className="flex items-center gap-3 md:gap-6">
             <PlatformMobileNav user={{ role: user.role, customerType: user.customerType, partner: user.partner }} />
             <Link
-              href={user.customerType === 'private_clients' && user.partner?.type === 'wine_partner' ? '/platform/local-stock' : '/platform/quotes'}
+              href={user.role === 'admin' ? '/platform/admin/home' : user.customerType === 'private_clients' && user.partner?.type === 'wine_partner' ? '/platform/local-stock' : '/platform/quotes'}
               className="transition-opacity duration-200 hover:opacity-80"
             >
               <BrandedLogo customerType={user.customerType} height={144} />
             </Link>
             <nav className="hidden items-center gap-2 md:flex">
-              {/* Quotes section - hidden for wine partners */}
-              {!(user.customerType === 'private_clients' && user.partner?.type === 'wine_partner') && (
+              {/* Quotes section - hidden for wine partners and admins (admins have it in section tabs) */}
+              {!(user.customerType === 'private_clients' && user.partner?.type === 'wine_partner') && user.role !== 'admin' && (
                 <div className="flex items-center rounded-lg border border-border-muted/50 px-1.5 py-1">
                   <Link
                     href="/platform/quotes"
@@ -193,48 +194,8 @@ const PlatformLayout = async ({ children }: React.PropsWithChildren) => {
                   </Link>
                 </div>
               )}
-              {/* Admin sections */}
-              {user.role === 'admin' && (
-                <>
-                  {/* Private Orders - admin management */}
-                  <div className="flex items-center rounded-lg border border-border-muted/50 bg-surface-secondary/40 px-1.5 py-1">
-                    <Link
-                      href="/platform/admin"
-                      className="border-r border-border-muted/50 pr-2 text-[10px] font-medium uppercase tracking-wider text-text-muted hover:text-text-primary transition-colors"
-                    >
-                      Private Orders
-                    </Link>
-                    <Link
-                      href="/platform/admin"
-                      className="text-text-primary hover:bg-fill-muted ml-1 rounded-md px-2.5 py-1 text-sm font-medium transition-all duration-200 hover:shadow-sm active:scale-[0.98]"
-                    >
-                      Dashboard
-                    </Link>
-                    <span className="text-border-muted">|</span>
-                    <Link
-                      href="/platform/admin/private-orders"
-                      className="text-text-primary hover:bg-fill-muted rounded-md px-2.5 py-1 text-sm font-medium transition-all duration-200 hover:shadow-sm active:scale-[0.98]"
-                    >
-                      Manage
-                    </Link>
-                  </div>
-                  {/* Pricing section */}
-                  <div className="flex items-center rounded-lg border border-border-muted/50 bg-surface-secondary/40 px-1.5 py-1">
-                    <Link
-                      href="/platform/admin/pricing-calculator"
-                      className="border-r border-border-muted/50 pr-2 text-[10px] font-medium uppercase tracking-wider text-text-muted hover:text-text-primary transition-colors"
-                    >
-                      Pricing
-                    </Link>
-                    <Link
-                      href="/platform/admin/pricing-calculator"
-                      className="text-text-primary hover:bg-fill-muted ml-1 rounded-md px-2.5 py-1 text-sm font-medium transition-all duration-200 hover:shadow-sm active:scale-[0.98]"
-                    >
-                      Calculator
-                    </Link>
-                  </div>
-                </>
-              )}
+              {/* Admin top nav - 6 section items */}
+              {user.role === 'admin' && <AdminTopNav />}
             </nav>
           </div>
           <div className="flex items-center gap-2 sm:gap-3">
@@ -245,8 +206,8 @@ const PlatformLayout = async ({ children }: React.PropsWithChildren) => {
         </div>
       </header>
       {user.role === 'admin' ? (
-        <div className="flex flex-1">
-          <AdminSidebarWrapper />
+        <div className="flex-1">
+          <AdminSectionTabs />
           <div className="flex-1 overflow-auto">{children}</div>
         </div>
       ) : (
