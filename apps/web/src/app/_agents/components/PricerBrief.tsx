@@ -4,8 +4,10 @@ import {
   IconArrowDown,
   IconArrowUp,
   IconCurrencyDollar,
+  IconPlane,
   IconRefresh,
   IconScale,
+  IconShip,
   IconTarget,
 } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -53,6 +55,16 @@ interface PricerData {
     action: string;
     rationale: string;
   }>;
+  ibPricing?: Array<{
+    productName: string;
+    vintage?: string;
+    supplierName: string;
+    costPerBottleUsd: number;
+    ibAirUsd: number;
+    ibSeaUsd: number;
+    ibAirAed: number;
+    ibSeaAed: number;
+  }>;
 }
 
 /**
@@ -61,7 +73,7 @@ interface PricerData {
 const PricerBrief = () => {
   const api = useTRPC();
   const queryClient = useQueryClient();
-  const { data, isLoading, refetch } = useQuery({
+  const { data, isLoading } = useQuery({
     ...api.agents.getLatestBrief.queryOptions({ agentId: 'pricer' }),
     refetchInterval: 60000,
   });
@@ -123,6 +135,7 @@ const PricerBrief = () => {
   const marginAlerts = d?.marginAlerts ?? [];
   const gaps = d?.competitiveGaps ?? [];
   const actionItems = d?.actionItems ?? [];
+  const ibPricing = d?.ibPricing ?? [];
 
   const increases = adjustments.filter((a) => a.changePercent > 0).length;
   const decreases = adjustments.filter((a) => a.changePercent < 0).length;
@@ -142,9 +155,9 @@ const PricerBrief = () => {
             <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-600" />
             Last run: {brief.createdAt.toLocaleString()}
           </div>
-          <Button variant="ghost" size="sm" onClick={() => refetch()}>
-            <IconRefresh size={16} className="mr-1" />
-            Refresh
+          <Button variant="ghost" size="sm" onClick={() => triggerMutation.mutate({ agentId: 'pricer' })} disabled={triggerMutation.isPending}>
+            <IconRefresh size={16} className={triggerMutation.isPending ? 'mr-1 animate-spin' : 'mr-1'} />
+            {triggerMutation.isPending ? 'Running...' : 'Run Now'}
           </Button>
         </div>
       </div>
@@ -238,6 +251,68 @@ const PricerBrief = () => {
             <Typography variant="bodySm">
               {d.executiveSummary}
             </Typography>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* UAE In-Bond Pricing */}
+      {ibPricing.length > 0 && (
+        <Card>
+          <CardContent className="p-5">
+            <div className="mb-3 flex items-center justify-between">
+              <Typography variant="bodySm" className="font-semibold">
+                UAE In-Bond Pricing
+              </Typography>
+              <Badge colorRole="brand" size="xs">
+                {ibPricing.length} products
+              </Badge>
+            </div>
+            <div className="max-h-[400px] overflow-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow isHeaderRow>
+                    <TableHead>Product</TableHead>
+                    <TableHead>Vintage</TableHead>
+                    <TableHead>Supplier</TableHead>
+                    <TableHead>Cost/Bottle</TableHead>
+                    <TableHead>
+                      <span className="inline-flex items-center gap-1">
+                        <IconPlane size={13} />
+                        IB Air
+                      </span>
+                    </TableHead>
+                    <TableHead>
+                      <span className="inline-flex items-center gap-1">
+                        <IconShip size={13} />
+                        IB Sea
+                      </span>
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {ibPricing.map((ib, i) => (
+                    <TableRow key={i}>
+                      <TableCell>
+                        <span className="font-semibold">{ib.productName}</span>
+                      </TableCell>
+                      <TableCell>{ib.vintage ?? 'NV'}</TableCell>
+                      <TableCell>
+                        <Typography variant="bodyXs" colorRole="muted">{ib.supplierName}</Typography>
+                      </TableCell>
+                      <TableCell>${ib.costPerBottleUsd.toFixed(2)}</TableCell>
+                      <TableCell>
+                        <div className="text-sm font-semibold">${ib.ibAirUsd.toFixed(2)}</div>
+                        <div className="text-[11px] text-text-muted">{ib.ibAirAed.toFixed(0)} AED</div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm font-semibold text-emerald-600">${ib.ibSeaUsd.toFixed(2)}</div>
+                        <div className="text-[11px] text-text-muted">{ib.ibSeaAed.toFixed(0)} AED</div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           </CardContent>
         </Card>
       )}

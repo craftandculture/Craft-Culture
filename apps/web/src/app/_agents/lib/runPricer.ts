@@ -11,9 +11,41 @@ import {
   logisticsShipmentItems,
   privateClientOrderItems,
   privateClientOrders,
+  supplierWines,
   wmsStock,
   wmsStockMovements,
 } from '@/database/schema';
+
+const AIR_FREIGHT_USD = 20;
+const SEA_FREIGHT_USD = 5;
+const GBP_TO_USD = 1.27;
+const EUR_TO_USD = 1.09;
+const USD_TO_AED = 3.6725;
+
+/**
+ * Parse bottle size string for case multiplier (e.g. "6x75cl" → 6, "750" → 1)
+ */
+const parseCaseMultiplier = (bottleSize?: string | null) => {
+  if (!bottleSize) return 1;
+  const match = bottleSize.match(/^(\d+)\s*x/i);
+  return match ? parseInt(match[1]!, 10) : 1;
+};
+
+/**
+ * Normalize supplier cost to per-bottle USD
+ */
+const toCostPerBottleUsd = (row: {
+  costPriceUsd?: number | null;
+  costPriceGbp?: number | null;
+  costPriceEur?: number | null;
+  bottleSize?: string | null;
+}) => {
+  const multiplier = parseCaseMultiplier(row.bottleSize);
+  if (row.costPriceUsd) return row.costPriceUsd / multiplier;
+  if (row.costPriceGbp) return (row.costPriceGbp * GBP_TO_USD) / multiplier;
+  if (row.costPriceEur) return (row.costPriceEur * EUR_TO_USD) / multiplier;
+  return null;
+};
 
 const pricerOutputSchema = z.object({
   executiveSummary: z.string(),
@@ -51,6 +83,18 @@ const pricerOutputSchema = z.object({
       priority: z.enum(['high', 'medium', 'low']),
       action: z.string(),
       rationale: z.string(),
+    }),
+  ),
+  ibPricing: z.array(
+    z.object({
+      productName: z.string(),
+      vintage: z.string().optional(),
+      supplierName: z.string(),
+      costPerBottleUsd: z.number(),
+      ibAirUsd: z.number(),
+      ibSeaUsd: z.number(),
+      ibAirAed: z.number(),
+      ibSeaAed: z.number(),
     }),
   ),
 });
@@ -105,6 +149,22 @@ const buildMarkdown = (data: z.infer<typeof pricerOutputSchema>) => {
     for (const gap of data.competitiveGaps) {
       lines.push(
         `| ${gap.productName} | ${gap.ourPriceAed.toFixed(0)} AED | ${gap.competitorPriceAed.toFixed(0)} AED | ${gap.competitorName} | ${gap.gapPercent > 0 ? '+' : ''}${gap.gapPercent.toFixed(1)}% |`,
+      );
+    }
+    lines.push('');
+  }
+
+  if (data.ibPricing.length > 0) {
+    lines.push('## UAE In-Bond Pricing\n');
+    lines.push(
+      '| Product | Vintage | Supplier | Cost/Bottle (USD) | IB Air (USD) | IB Sea (USD) | IB Air (AED) | IB Sea (AED) |',
+    );
+    lines.push(
+      '|---------|---------|----------|-------------------|-------------|-------------|-------------|-------------|',
+    );
+    for (const ib of data.ibPricing) {
+      lines.push(
+        `| ${ib.productName} | ${ib.vintage ?? 'NV'} | ${ib.supplierName} | $${ib.costPerBottleUsd.toFixed(2)} | $${ib.ibAirUsd.toFixed(2)} | $${ib.ibSeaUsd.toFixed(2)} | ${ib.ibAirAed.toFixed(0)} AED | ${ib.ibSeaAed.toFixed(0)} AED |`,
       );
     }
     lines.push('');
@@ -228,6 +288,41 @@ const runPricer = async () => {
       .orderBy(desc(logisticsShipmentItems.createdAt))
       .limit(100);
 
+    // 6. Supplier wines — cost prices from uploaded lists
+    const suppliers = await db
+      .select({
+        productName: supplierWines.productName,
+        vintage: supplierWines.vintage,
+        partnerName: supplierWines.partnerName,
+        costPriceUsd: supplierWines.costPriceUsd,
+        costPriceGbp: supplierWines.costPriceGbp,
+        costPriceEur: supplierWines.costPriceEur,
+        bottleSize: supplierWines.bottleSize,
+        lwin18Match: supplierWines.lwin18Match,
+      })
+      .from(supplierWines)
+      .where(eq(supplierWines.isActive, true))
+      .orderBy(desc(supplierWines.createdAt))
+      .limit(300);
+
+    // Pre-compute IB prices for supplier wines
+    const ibRows = suppliers
+      .map((s) => {
+        const costUsd = toCostPerBottleUsd(s);
+        if (!costUsd) return null;
+        return {
+          productName: s.productName,
+          vintage: s.vintage ?? undefined,
+          supplierName: s.partnerName ?? 'Unknown',
+          costPerBottleUsd: Math.round(costUsd * 100) / 100,
+          ibAirUsd: Math.round((costUsd + AIR_FREIGHT_USD) * 100) / 100,
+          ibSeaUsd: Math.round((costUsd + SEA_FREIGHT_USD) * 100) / 100,
+          ibAirAed: Math.round((costUsd + AIR_FREIGHT_USD) * USD_TO_AED * 100) / 100,
+          ibSeaAed: Math.round((costUsd + SEA_FREIGHT_USD) * USD_TO_AED * 100) / 100,
+        };
+      })
+      .filter((r): r is NonNullable<typeof r> => r !== null);
+
     // Build context strings
     const competitorCtx = competitors
       .map(
@@ -263,6 +358,13 @@ const runPricer = async () => {
       )
       .join('\n');
 
+    const supplierCtx = ibRows
+      .map(
+        (s) =>
+          `${s.productName} (${s.vintage ?? 'NV'}) [${s.supplierName}]: cost $${s.costPerBottleUsd.toFixed(2)}/bottle → IB Air $${s.ibAirUsd.toFixed(2)} (${s.ibAirAed.toFixed(0)} AED) | IB Sea $${s.ibSeaUsd.toFixed(2)} (${s.ibSeaAed.toFixed(0)} AED)`,
+      )
+      .join('\n');
+
     const anthropic = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
 
     const result = await generateObject({
@@ -278,6 +380,8 @@ Target margins:
 
 Key pricing factors:
 - LANDED COST: The true cost per bottle after freight, duty, handling. This is the floor — never price below landed cost
+- IN-BOND (IB) PRICING: Supplier cost + freight = UAE IB price. Air freight adds $20/bottle, sea freight adds $5/bottle. IB price is the cost floor for all pricing decisions. Use IB Sea for standard margins, IB Air when air freight is required for urgency
+- SUPPLIER COSTS: Sourcing costs from uploaded supplier lists (RARE Wine, CultX, etc). Combined with freight to calculate IB prices
 - COMPETITOR RETAIL: What MMI, JY Wine, and others charge. C&C should undercut where possible
 - STOCK LEVELS: Overstock (>20 cases of a single SKU) = consider discount incentives. Low stock (<5 cases) = premium pricing acceptable
 - VELOCITY: High velocity (>10 cases/month) = price is working, be careful with changes. Low velocity = consider price reduction to move stock
@@ -315,12 +419,16 @@ ${velocityCtx || 'No movement data available.'}
 LANDED COSTS (${landedCosts.length} items — most recent shipments):
 ${landedCostCtx || 'No landed cost data available.'}
 
+SUPPLIER COSTS & UAE IN-BOND PRICING (${ibRows.length} products — cost + freight):
+${supplierCtx || 'No supplier cost data available. Upload supplier lists to enable IB pricing.'}
+
 Generate a daily Pricer brief with:
 1. Executive summary (2-3 sentences on pricing health and key opportunities)
 2. Price adjustments — specific products that need repricing, with current vs suggested price, change %, and reasoning
 3. Margin alerts — products where current margin is outside target range
 4. Competitive gaps — where our price vs competitor price has a significant gap (>10%)
-5. Prioritized action items — specific pricing actions to take today`,
+5. Prioritized action items — specific pricing actions to take today
+6. ibPricing — return the full list of supplier wines with their pre-calculated IB prices. Use EXACTLY the cost/IB values provided above (do not recalculate). Include all ${ibRows.length} products`,
         },
       ],
     });
@@ -348,6 +456,7 @@ Generate a daily Pricer brief with:
       marginAlerts: data.marginAlerts.length,
       competitiveGaps: data.competitiveGaps.length,
       actionItems: data.actionItems.length,
+      ibPricing: data.ibPricing.length,
     };
   } catch (error) {
     await db
