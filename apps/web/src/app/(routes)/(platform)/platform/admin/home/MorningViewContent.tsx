@@ -1,23 +1,28 @@
 'use client';
 
 import {
+  IconAlertTriangle,
   IconBinoculars,
   IconBolt,
   IconBuildingWarehouse,
   IconChartBar,
+  IconChevronRight,
   IconClipboardCheck,
+  IconClock,
   IconFileText,
   IconPencil,
   IconPlus,
   IconSparkles,
+  IconStarFilled,
   IconTruck,
 } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useState } from 'react';
 
+import Card from '@/app/_ui/components/Card/Card';
+import CardContent from '@/app/_ui/components/Card/CardContent';
 import Icon from '@/app/_ui/components/Icon/Icon';
-import Typography from '@/app/_ui/components/Typography/Typography';
 import useTRPC from '@/lib/trpc/browser';
 
 type Currency = 'USD' | 'AED';
@@ -76,16 +81,11 @@ const getStatusColor = (status: string) => {
   return 'bg-emerald-500';
 };
 
-/** Skeleton pulse block */
-const Skeleton = ({ className }: { className?: string }) => (
-  <div className={`animate-pulse rounded-lg bg-fill-primary-hover ${className ?? ''}`} />
-);
-
 /** Agent icon + color config */
 const agentConfig: Record<string, { icon: typeof IconBinoculars; bgColor: string; iconColor: string }> = {
-  scout: { icon: IconBinoculars, bgColor: 'bg-emerald-100 dark:bg-emerald-900/30', iconColor: 'text-emerald-600' },
-  concierge: { icon: IconSparkles, bgColor: 'bg-blue-100 dark:bg-blue-900/30', iconColor: 'text-blue-600' },
-  storyteller: { icon: IconPencil, bgColor: 'bg-violet-100 dark:bg-violet-900/30', iconColor: 'text-violet-600' },
+  scout: { icon: IconBinoculars, bgColor: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+  concierge: { icon: IconSparkles, bgColor: 'bg-blue-100', iconColor: 'text-blue-600' },
+  storyteller: { icon: IconPencil, bgColor: 'bg-violet-100', iconColor: 'text-violet-600' },
 };
 
 /** Quick action definitions */
@@ -117,19 +117,57 @@ const MorningViewContent = () => {
 
   const firstName = user?.firstName ?? user?.name?.split(' ')[0] ?? '';
 
-  return (
-    <div className="container space-y-5 py-6">
-      {/* Greeting + Currency Toggle */}
-      <div className="flex items-start justify-between">
-        <div>
-          <Typography variant="headingLg" className="font-bold">
-            {getGreeting()}{firstName ? `, ${firstName}` : ''}
-          </Typography>
-          <Typography variant="bodySm" colorRole="muted">
-            {formatDate()} — Here&apos;s what needs your attention today
-          </Typography>
+  // Loading skeleton matching layout
+  if (isLoading) {
+    return (
+      <div className="container space-y-6 py-6">
+        {/* Skeleton header */}
+        <div className="flex items-start justify-between">
+          <div>
+            <div className="h-7 w-56 animate-pulse rounded-lg bg-surface-secondary" />
+            <div className="mt-2 h-4 w-80 animate-pulse rounded bg-surface-secondary" />
+          </div>
+          <div className="h-8 w-28 animate-pulse rounded-lg bg-surface-secondary" />
         </div>
-        <div className="flex items-center rounded-lg border border-border-muted bg-white p-0.5 dark:bg-background-secondary">
+        {/* Skeleton KPIs */}
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+          {[1, 2, 3, 4, 5, 6].map((n) => (
+            <Card key={n}>
+              <CardContent className="p-4">
+                <div className="h-3 w-16 animate-pulse rounded bg-surface-secondary" />
+                <div className="mt-3 h-7 w-14 animate-pulse rounded bg-surface-secondary" />
+                <div className="mt-2 h-3 w-24 animate-pulse rounded bg-surface-secondary" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+        {/* Skeleton two-col */}
+        <div className="grid gap-5 lg:grid-cols-5">
+          <Card className="lg:col-span-3">
+            <CardContent className="h-72 animate-pulse p-6" />
+          </Card>
+          <div className="space-y-5 lg:col-span-2">
+            <Card><CardContent className="h-48 animate-pulse p-6" /></Card>
+            <Card><CardContent className="h-24 animate-pulse p-6" /></Card>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="container space-y-6 py-6">
+      {/* ── Greeting + Currency Toggle ──────────── */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">
+            {getGreeting()}{firstName ? `, ${firstName}` : ''}
+          </h1>
+          <p className="mt-0.5 text-[13px] text-text-muted">
+            {formatDate()} &mdash; Here&apos;s what needs your attention today
+          </p>
+        </div>
+        <div className="flex items-center rounded-lg border border-border-muted bg-surface-primary p-0.5">
           <button
             type="button"
             onClick={() => setCurrency('USD')}
@@ -155,300 +193,300 @@ const MorningViewContent = () => {
         </div>
       </div>
 
-      {/* KPI Cards */}
-      {isLoading ? (
+      {/* ── KPI Cards ────────────────────────────── */}
+      {data && (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <Skeleton key={i} className="h-24" />
-          ))}
-        </div>
-      ) : data ? (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-          {/* Open Orders */}
-          <div className="rounded-xl border border-border-muted bg-white p-4 dark:bg-background-secondary">
-            <Typography variant="bodyXs" className="font-semibold uppercase tracking-wider text-text-muted">
-              PCO Orders
-            </Typography>
-            <Typography variant="headingLg" className="mt-1">
-              {data.kpis.openOrders}
-            </Typography>
-            {data.kpis.openOrdersThisWeek > 0 && (
-              <Typography variant="bodyXs" className="mt-0.5 text-emerald-600">
-                +{data.kpis.openOrdersThisWeek} this week
-              </Typography>
-            )}
-          </div>
+          {/* PCO Orders */}
+          <Card>
+            <CardContent className="flex items-start justify-between p-4">
+              <div>
+                <p className="text-[11px] font-medium uppercase tracking-wider text-text-muted">
+                  PCO Orders
+                </p>
+                <p className="mt-1 text-2xl font-semibold tracking-tight">
+                  {data.kpis.openOrders}
+                </p>
+                <p className="mt-0.5 text-[11px] text-text-muted">
+                  {data.kpis.openOrdersThisWeek > 0
+                    ? <span className="text-emerald-600">+{data.kpis.openOrdersThisWeek} this week</span>
+                    : 'Active orders'}
+                </p>
+              </div>
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-100 text-blue-600">
+                <IconFileText size={18} />
+              </div>
+            </CardContent>
+          </Card>
 
-          {/* Revenue (Month) */}
-          <div className="rounded-xl border border-border-muted bg-white p-4 dark:bg-background-secondary">
-            <Typography variant="bodyXs" className="font-semibold uppercase tracking-wider text-text-muted">
-              Invoiced (Month)
-            </Typography>
-            <Typography variant="headingLg" className="mt-1 text-text-brand">
-              {formatCurrency(
-                currency === 'USD' ? data.kpis.revenueMonthUsd : data.kpis.revenueMonthAed,
-                currency,
-              )}
-            </Typography>
-            {(() => {
-              const current = currency === 'USD' ? data.kpis.revenueMonthUsd : data.kpis.revenueMonthAed;
-              const previous = currency === 'USD' ? data.kpis.revenueLastMonthUsd : data.kpis.revenueLastMonthAed;
-              if (previous > 0) {
-                const pctChange = Math.round(((current - previous) / previous) * 100);
-                return (
-                  <Typography
-                    variant="bodyXs"
-                    className={`mt-0.5 ${pctChange >= 0 ? 'text-emerald-600' : 'text-red-600'}`}
-                  >
-                    {pctChange >= 0 ? '+' : ''}{pctChange}% vs last month
-                  </Typography>
-                );
-              }
-              return (
-                <Typography variant="bodyXs" className="mt-0.5 text-text-muted">
-                  No data last month
-                </Typography>
-              );
-            })()}
-          </div>
+          {/* Invoiced (Month) */}
+          <Card>
+            <CardContent className="flex items-start justify-between p-4">
+              <div>
+                <p className="text-[11px] font-medium uppercase tracking-wider text-text-muted">
+                  Invoiced (Month)
+                </p>
+                <p className="mt-1 text-2xl font-semibold tracking-tight text-text-brand">
+                  {formatCurrency(
+                    currency === 'USD' ? data.kpis.revenueMonthUsd : data.kpis.revenueMonthAed,
+                    currency,
+                  )}
+                </p>
+                <p className="mt-0.5 text-[11px] text-text-muted">
+                  {(() => {
+                    const current = currency === 'USD' ? data.kpis.revenueMonthUsd : data.kpis.revenueMonthAed;
+                    const previous = currency === 'USD' ? data.kpis.revenueLastMonthUsd : data.kpis.revenueLastMonthAed;
+                    if (previous > 0) {
+                      const pct = Math.round(((current - previous) / previous) * 100);
+                      return <span className={pct >= 0 ? 'text-emerald-600' : 'text-red-600'}>{pct >= 0 ? '+' : ''}{pct}% vs last month</span>;
+                    }
+                    return 'No data last month';
+                  })()}
+                </p>
+              </div>
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-fill-brand/10 text-text-brand">
+                <IconStarFilled size={18} />
+              </div>
+            </CardContent>
+          </Card>
 
           {/* Invoiced (Year) */}
-          <div className="rounded-xl border border-border-muted bg-white p-4 dark:bg-background-secondary">
-            <Typography variant="bodyXs" className="font-semibold uppercase tracking-wider text-text-muted">
-              Invoiced (Year)
-            </Typography>
-            <Typography variant="headingLg" className="mt-1 text-text-brand">
-              {formatCurrency(
-                currency === 'USD' ? data.kpis.revenueYearUsd : data.kpis.revenueYearAed,
-                currency,
-              )}
-            </Typography>
-            {(() => {
-              const current = currency === 'USD' ? data.kpis.revenueYearUsd : data.kpis.revenueYearAed;
-              const previous = currency === 'USD' ? data.kpis.revenueLastYearUsd : data.kpis.revenueLastYearAed;
-              if (previous > 0) {
-                const pctChange = Math.round(((current - previous) / previous) * 100);
-                return (
-                  <Typography
-                    variant="bodyXs"
-                    className={`mt-0.5 ${pctChange >= 0 ? 'text-emerald-600' : 'text-red-600'}`}
-                  >
-                    {pctChange >= 0 ? '+' : ''}{pctChange}% vs last year
-                  </Typography>
-                );
-              }
-              return (
-                <Typography variant="bodyXs" className="mt-0.5 text-text-muted">
-                  No data last year
-                </Typography>
-              );
-            })()}
-          </div>
+          <Card>
+            <CardContent className="flex items-start justify-between p-4">
+              <div>
+                <p className="text-[11px] font-medium uppercase tracking-wider text-text-muted">
+                  Invoiced (Year)
+                </p>
+                <p className="mt-1 text-2xl font-semibold tracking-tight text-text-brand">
+                  {formatCurrency(
+                    currency === 'USD' ? data.kpis.revenueYearUsd : data.kpis.revenueYearAed,
+                    currency,
+                  )}
+                </p>
+                <p className="mt-0.5 text-[11px] text-text-muted">
+                  {(() => {
+                    const current = currency === 'USD' ? data.kpis.revenueYearUsd : data.kpis.revenueYearAed;
+                    const previous = currency === 'USD' ? data.kpis.revenueLastYearUsd : data.kpis.revenueLastYearAed;
+                    if (previous > 0) {
+                      const pct = Math.round(((current - previous) / previous) * 100);
+                      return <span className={pct >= 0 ? 'text-emerald-600' : 'text-red-600'}>{pct >= 0 ? '+' : ''}{pct}% vs last year</span>;
+                    }
+                    return 'No data last year';
+                  })()}
+                </p>
+              </div>
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-fill-brand/10 text-text-brand">
+                <IconChartBar size={18} />
+              </div>
+            </CardContent>
+          </Card>
 
           {/* Pending Dispatch */}
-          <div className="rounded-xl border border-border-muted bg-white p-4 dark:bg-background-secondary">
-            <Typography variant="bodyXs" className="font-semibold uppercase tracking-wider text-text-muted">
-              Pending Dispatch
-            </Typography>
-            <Typography variant="headingLg" className="mt-1">
-              {data.kpis.pendingDispatch}
-            </Typography>
-            <Typography variant="bodyXs" className="mt-0.5 text-text-muted">
-              {data.kpis.stagedBatches} batches staged
-            </Typography>
-          </div>
+          <Card>
+            <CardContent className="flex items-start justify-between p-4">
+              <div>
+                <p className="text-[11px] font-medium uppercase tracking-wider text-text-muted">
+                  Pending Dispatch
+                </p>
+                <p className="mt-1 text-2xl font-semibold tracking-tight">
+                  {data.kpis.pendingDispatch}
+                </p>
+                <p className="mt-0.5 text-[11px] text-text-muted">
+                  {data.kpis.stagedBatches} batches staged
+                </p>
+              </div>
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-100 text-amber-600">
+                <IconTruck size={18} />
+              </div>
+            </CardContent>
+          </Card>
 
           {/* Agent Alerts */}
-          <div className="rounded-xl border border-border-muted bg-white p-4 dark:bg-background-secondary">
-            <Typography variant="bodyXs" className="font-semibold uppercase tracking-wider text-text-muted">
-              Agent Alerts
-            </Typography>
-            <Typography
-              variant="headingLg"
-              className={`mt-1 ${data.kpis.agentAlerts > 0 ? 'text-amber-600' : ''}`}
-            >
-              {data.kpis.agentAlerts}
-            </Typography>
-            <Typography variant="bodyXs" className="mt-0.5 text-text-muted">
-              {data.kpis.agentAlerts > 0
-                ? `${data.kpis.agentAlerts} high priority`
-                : 'No alerts'}
-            </Typography>
-          </div>
+          <Card>
+            <CardContent className="flex items-start justify-between p-4">
+              <div>
+                <p className="text-[11px] font-medium uppercase tracking-wider text-text-muted">
+                  Agent Alerts
+                </p>
+                <p className={`mt-1 text-2xl font-semibold tracking-tight ${data.kpis.agentAlerts > 0 ? 'text-amber-600' : ''}`}>
+                  {data.kpis.agentAlerts}
+                </p>
+                <p className="mt-0.5 text-[11px] text-text-muted">
+                  {data.kpis.agentAlerts > 0
+                    ? `${data.kpis.agentAlerts} high priority`
+                    : 'No alerts'}
+                </p>
+              </div>
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-violet-100 text-violet-600">
+                <IconBinoculars size={18} />
+              </div>
+            </CardContent>
+          </Card>
 
           {/* Overdue Invoice */}
-          <div className="rounded-xl border border-border-muted bg-white p-4 dark:bg-background-secondary">
-            <Typography variant="bodyXs" className="font-semibold uppercase tracking-wider text-text-muted">
-              Overdue Invoice
-            </Typography>
-            <Typography
-              variant="headingLg"
-              className={`mt-1 ${data.kpis.overdueInvoices > 0 ? 'text-red-600' : 'text-emerald-600'}`}
-            >
-              {data.kpis.overdueInvoices}
-            </Typography>
-            <Typography variant="bodyXs" className="mt-0.5 text-text-muted">
-              {data.kpis.overdueInvoices > 0
-                ? formatCurrency(
-                    currency === 'USD' ? data.kpis.overdueAmountUsd : data.kpis.overdueAmountAed,
-                    currency,
-                  )
-                : 'All clear'}
-            </Typography>
-          </div>
+          <Card>
+            <CardContent className="flex items-start justify-between p-4">
+              <div>
+                <p className="text-[11px] font-medium uppercase tracking-wider text-text-muted">
+                  Overdue Invoice
+                </p>
+                <p className={`mt-1 text-2xl font-semibold tracking-tight ${data.kpis.overdueInvoices > 0 ? 'text-red-600' : 'text-emerald-600'}`}>
+                  {data.kpis.overdueInvoices}
+                </p>
+                <p className="mt-0.5 text-[11px] text-text-muted">
+                  {data.kpis.overdueInvoices > 0
+                    ? formatCurrency(
+                        currency === 'USD' ? data.kpis.overdueAmountUsd : data.kpis.overdueAmountAed,
+                        currency,
+                      )
+                    : 'All clear'}
+                </p>
+              </div>
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-red-100 text-red-600">
+                <IconAlertTriangle size={18} />
+              </div>
+            </CardContent>
+          </Card>
         </div>
-      ) : null}
+      )}
 
-      {/* Two-column layout: Agent Briefing + Recent Orders / Quick Actions */}
-      <div className="grid gap-4 lg:grid-cols-5">
+      {/* ── Two-column layout ────────────────────── */}
+      <div className="grid gap-5 lg:grid-cols-5">
         {/* Agent Briefing — left 3 cols */}
         <div className="lg:col-span-3">
-          <div className="rounded-xl border border-border-muted bg-white dark:bg-background-secondary">
-            <div className="flex items-center justify-between border-b border-border-muted px-4 py-3">
-              <Typography variant="bodyMd" className="font-semibold">
-                Agent Briefing
-              </Typography>
-              <Link
-                href="/platform/admin/agents"
-                className="text-xs font-medium text-text-brand hover:underline"
-              >
-                View all agents →
-              </Link>
-            </div>
+          <Card>
+            <CardContent className="p-0">
+              <div className="flex items-center justify-between px-6 py-4">
+                <p className="text-sm font-semibold">Agent Briefing</p>
+                <Link
+                  href="/platform/admin/agents"
+                  className="text-[12px] font-medium text-text-brand transition-opacity hover:opacity-80"
+                >
+                  View all agents &rarr;
+                </Link>
+              </div>
 
-            {isLoading ? (
-              <div className="space-y-2 p-4">
-                {Array.from({ length: 3 }).map((_, i) => (
-                  <Skeleton key={i} className="h-20" />
-                ))}
-              </div>
-            ) : data?.agentBriefs && data.agentBriefs.length > 0 ? (
-              <div className="divide-y divide-border-muted">
-                {data.agentBriefs.map((brief) => {
-                  const config = agentConfig[brief.agentId] ?? agentConfig.scout;
-                  return (
-                    <div
-                      key={brief.agentId}
-                      className="flex items-start gap-3 px-4 py-3 transition-colors hover:bg-fill-primary-hover"
-                    >
-                      <div
-                        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${config.bgColor}`}
-                      >
-                        <Icon icon={config.icon} size="sm" className={config.iconColor} />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <Typography variant="bodySm" className="font-semibold">
-                          The {brief.agentId.charAt(0).toUpperCase() + brief.agentId.slice(1)} — {brief.highlight}
-                        </Typography>
-                        <Typography variant="bodyXs" className="mt-0.5 line-clamp-2 text-text-muted">
-                          {brief.summary.length > 150
-                            ? `${brief.summary.slice(0, 150)}...`
-                            : brief.summary}
-                        </Typography>
-                        {brief.createdAt && (
-                          <Typography variant="bodyXs" className="mt-1 text-text-muted">
-                            {formatRelativeTime(brief.createdAt)}
-                          </Typography>
-                        )}
-                      </div>
+              {data?.agentBriefs && data.agentBriefs.length > 0 ? (
+                <div className="flex flex-col">
+                  {data.agentBriefs.map((brief) => {
+                    const config = agentConfig[brief.agentId] ?? agentConfig.scout;
+                    return (
                       <Link
+                        key={brief.agentId}
                         href="/platform/admin/agents"
-                        className="shrink-0 text-xs font-medium text-text-brand hover:underline"
+                        className="group flex items-start gap-3 border-t border-border-muted px-6 py-4 transition-colors hover:bg-surface-secondary/50"
                       >
-                        View →
+                        <div
+                          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${config.bgColor}`}
+                        >
+                          <Icon icon={config.icon} size="sm" className={config.iconColor} />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-[13px] font-semibold">
+                            The {brief.agentId.charAt(0).toUpperCase() + brief.agentId.slice(1)}
+                            <span className="ml-1.5 font-normal text-text-muted">&mdash; {brief.highlight}</span>
+                          </p>
+                          <p className="mt-0.5 line-clamp-2 text-xs text-text-muted">
+                            {brief.summary.length > 150
+                              ? `${brief.summary.slice(0, 150)}...`
+                              : brief.summary}
+                          </p>
+                          {brief.createdAt && (
+                            <p className="mt-1 flex items-center gap-1 text-[11px] text-text-muted">
+                              <IconClock size={12} />
+                              {formatRelativeTime(brief.createdAt)}
+                            </p>
+                          )}
+                        </div>
+                        <IconChevronRight
+                          size={16}
+                          className="mt-0.5 shrink-0 text-text-muted opacity-0 transition-opacity group-hover:opacity-100"
+                        />
                       </Link>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="p-6 text-center">
-                <Typography variant="bodySm" colorRole="muted">
-                  No briefs yet. Agents run daily — check back soon.
-                </Typography>
-              </div>
-            )}
-          </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="border-t border-border-muted px-6 py-8 text-center">
+                  <p className="text-sm text-text-muted">
+                    No briefs yet. Agents run daily &mdash; check back soon.
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
 
         {/* Right column — Recent Orders + Quick Actions */}
-        <div className="space-y-4 lg:col-span-2">
+        <div className="space-y-5 lg:col-span-2">
           {/* Recent Orders */}
-          <div className="rounded-xl border border-border-muted bg-white dark:bg-background-secondary">
-            <div className="flex items-center justify-between border-b border-border-muted px-4 py-3">
-              <Typography variant="bodyMd" className="font-semibold">
-                Recent Orders
-              </Typography>
-              <Link
-                href="/platform/admin/private-orders"
-                className="text-xs font-medium text-text-brand hover:underline"
-              >
-                All orders →
-              </Link>
-            </div>
-
-            {isLoading ? (
-              <div className="space-y-2 p-4">
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <Skeleton key={i} className="h-8" />
-                ))}
+          <Card>
+            <CardContent className="p-0">
+              <div className="flex items-center justify-between px-6 py-4">
+                <p className="text-sm font-semibold">Recent Orders</p>
+                <Link
+                  href="/platform/admin/private-orders"
+                  className="text-[12px] font-medium text-text-brand transition-opacity hover:opacity-80"
+                >
+                  All orders &rarr;
+                </Link>
               </div>
-            ) : data?.recentOrders && data.recentOrders.length > 0 ? (
-              <div className="divide-y divide-border-muted">
-                {data.recentOrders.map((order) => (
+
+              {data?.recentOrders && data.recentOrders.length > 0 ? (
+                <div className="flex flex-col">
+                  {data.recentOrders.map((order) => (
+                    <Link
+                      key={order.id}
+                      href={
+                        order.source === 'pco'
+                          ? `/platform/admin/private-orders/${order.id}`
+                          : `/platform/admin/zoho-sales-orders`
+                      }
+                      className="group flex items-center gap-3 border-t border-border-muted px-6 py-3 transition-colors hover:bg-surface-secondary/50"
+                    >
+                      <span className={`h-2 w-2 shrink-0 rounded-full ${getStatusColor(order.status)}`} />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-[13px] font-medium">
+                          {order.orderNumber}
+                          <span className="ml-1.5 font-normal text-text-muted">&mdash; {order.customerName}</span>
+                        </p>
+                      </div>
+                      <p className="shrink-0 tabular-nums text-[13px] font-semibold">
+                        {formatCurrency(
+                          currency === 'USD' ? order.totalUsd : order.totalAed,
+                          currency,
+                        )}
+                      </p>
+                    </Link>
+                  ))}
+                </div>
+              ) : (
+                <div className="border-t border-border-muted px-6 py-8 text-center">
+                  <p className="text-sm text-text-muted">No recent orders</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Quick Actions */}
+          <Card>
+            <CardContent className="p-0">
+              <div className="px-6 py-4">
+                <p className="text-sm font-semibold">Quick Actions</p>
+              </div>
+              <div className="flex flex-wrap gap-2 border-t border-border-muted px-6 py-4">
+                {quickActions.map((action) => (
                   <Link
-                    key={order.id}
-                    href={
-                      order.source === 'pco'
-                        ? `/platform/admin/private-orders/${order.id}`
-                        : `/platform/admin/zoho-sales-orders`
-                    }
-                    className="flex items-center gap-3 px-4 py-2.5 transition-colors hover:bg-fill-primary-hover"
+                    key={action.href}
+                    href={action.href}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-border-primary bg-surface-primary px-3 py-2 text-[13px] font-medium transition-colors hover:border-text-muted"
                   >
-                    <span className={`h-2 w-2 shrink-0 rounded-full ${getStatusColor(order.status)}`} />
-                    <div className="min-w-0 flex-1">
-                      <Typography variant="bodyXs" className="truncate font-medium">
-                        {order.orderNumber} — {order.customerName}
-                      </Typography>
-                    </div>
-                    <Typography variant="bodyXs" className="shrink-0 font-semibold">
-                      {formatCurrency(
-                        currency === 'USD' ? order.totalUsd : order.totalAed,
-                        currency,
-                      )}
-                    </Typography>
+                    <Icon icon={action.icon} size="sm" />
+                    {action.label}
                   </Link>
                 ))}
               </div>
-            ) : (
-              <div className="p-6 text-center">
-                <Typography variant="bodySm" colorRole="muted">
-                  No recent orders
-                </Typography>
-              </div>
-            )}
-          </div>
-
-          {/* Quick Actions */}
-          <div className="rounded-xl border border-border-muted bg-white dark:bg-background-secondary">
-            <div className="border-b border-border-muted px-4 py-3">
-              <Typography variant="bodyMd" className="font-semibold">
-                Quick Actions
-              </Typography>
-            </div>
-            <div className="flex flex-wrap gap-2 p-4">
-              {quickActions.map((action) => (
-                <Link
-                  key={action.href}
-                  href={action.href}
-                  className="flex items-center gap-1.5 rounded-lg border border-border-muted px-3 py-2 text-sm font-medium text-text-secondary transition-colors hover:border-fill-brand/30 hover:text-text-brand"
-                >
-                  <Icon icon={action.icon} size="sm" />
-                  {action.label}
-                </Link>
-              ))}
-            </div>
-          </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>
