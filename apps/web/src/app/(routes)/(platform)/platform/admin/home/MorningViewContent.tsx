@@ -14,10 +14,13 @@ import {
 } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
+import { useState } from 'react';
 
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import useTRPC from '@/lib/trpc/browser';
+
+type Currency = 'USD' | 'AED';
 
 /** Time-based greeting */
 const getGreeting = () => {
@@ -37,8 +40,13 @@ const formatDate = () =>
   });
 
 /** Format currency for display */
-const formatAed = (amount: number) =>
-  `AED ${amount >= 1000 ? `${(amount / 1000).toFixed(1)}k` : amount.toLocaleString()}`;
+const formatCurrency = (amount: number, currency: Currency) => {
+  const prefix = currency === 'USD' ? 'USD' : 'AED';
+  if (amount >= 1000) {
+    return `${prefix} ${(amount / 1000).toFixed(1)}k`;
+  }
+  return `${prefix} ${amount.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
+};
 
 /** Format relative time */
 const formatRelativeTime = (date: Date | string) => {
@@ -95,6 +103,7 @@ const quickActions = [
  */
 const MorningViewContent = () => {
   const api = useTRPC();
+  const [currency, setCurrency] = useState<Currency>('USD');
 
   const { data: user } = useQuery({
     ...api.users.getMe.queryOptions(),
@@ -109,14 +118,40 @@ const MorningViewContent = () => {
 
   return (
     <div className="container space-y-5 py-6">
-      {/* Greeting */}
-      <div>
-        <Typography variant="headingLg" className="font-bold">
-          {getGreeting()}{firstName ? `, ${firstName}` : ''}
-        </Typography>
-        <Typography variant="bodySm" colorRole="muted">
-          {formatDate()} — Here&apos;s what needs your attention today
-        </Typography>
+      {/* Greeting + Currency Toggle */}
+      <div className="flex items-start justify-between">
+        <div>
+          <Typography variant="headingLg" className="font-bold">
+            {getGreeting()}{firstName ? `, ${firstName}` : ''}
+          </Typography>
+          <Typography variant="bodySm" colorRole="muted">
+            {formatDate()} — Here&apos;s what needs your attention today
+          </Typography>
+        </div>
+        <div className="flex items-center rounded-lg border border-border-muted bg-white p-0.5 dark:bg-background-secondary">
+          <button
+            type="button"
+            onClick={() => setCurrency('USD')}
+            className={`rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
+              currency === 'USD'
+                ? 'bg-fill-brand text-white'
+                : 'text-text-muted hover:text-text-primary'
+            }`}
+          >
+            USD
+          </button>
+          <button
+            type="button"
+            onClick={() => setCurrency('AED')}
+            className={`rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
+              currency === 'AED'
+                ? 'bg-fill-brand text-white'
+                : 'text-text-muted hover:text-text-primary'
+            }`}
+          >
+            AED
+          </button>
+        </div>
       </div>
 
       {/* KPI Cards */}
@@ -143,36 +178,37 @@ const MorningViewContent = () => {
             )}
           </div>
 
-          {/* Revenue (Week) */}
+          {/* Revenue (Month) */}
           <div className="rounded-xl border border-border-muted bg-white p-4 dark:bg-background-secondary">
             <Typography variant="bodyXs" className="font-semibold uppercase tracking-wider text-text-muted">
-              Revenue (Week)
+              Revenue (Month)
             </Typography>
             <Typography variant="headingLg" className="mt-1 text-text-brand">
-              {formatAed(data.kpis.revenueWeekAed)}
+              {formatCurrency(
+                currency === 'USD' ? data.kpis.revenueMonthUsd : data.kpis.revenueMonthAed,
+                currency,
+              )}
             </Typography>
-            {data.kpis.revenueLastWeekAed > 0 ? (
-              <Typography
-                variant="bodyXs"
-                className={`mt-0.5 ${
-                  data.kpis.revenueWeekAed >= data.kpis.revenueLastWeekAed
-                    ? 'text-emerald-600'
-                    : 'text-red-600'
-                }`}
-              >
-                {data.kpis.revenueWeekAed >= data.kpis.revenueLastWeekAed ? '+' : ''}
-                {Math.round(
-                  ((data.kpis.revenueWeekAed - data.kpis.revenueLastWeekAed) /
-                    data.kpis.revenueLastWeekAed) *
-                    100,
-                )}
-                % vs last week
-              </Typography>
-            ) : (
-              <Typography variant="bodyXs" className="mt-0.5 text-text-muted">
-                No data last week
-              </Typography>
-            )}
+            {(() => {
+              const current = currency === 'USD' ? data.kpis.revenueMonthUsd : data.kpis.revenueMonthAed;
+              const previous = currency === 'USD' ? data.kpis.revenueLastMonthUsd : data.kpis.revenueLastMonthAed;
+              if (previous > 0) {
+                const pctChange = Math.round(((current - previous) / previous) * 100);
+                return (
+                  <Typography
+                    variant="bodyXs"
+                    className={`mt-0.5 ${pctChange >= 0 ? 'text-emerald-600' : 'text-red-600'}`}
+                  >
+                    {pctChange >= 0 ? '+' : ''}{pctChange}% vs last month
+                  </Typography>
+                );
+              }
+              return (
+                <Typography variant="bodyXs" className="mt-0.5 text-text-muted">
+                  No data last month
+                </Typography>
+              );
+            })()}
           </div>
 
           {/* Pending Dispatch */}
@@ -219,7 +255,10 @@ const MorningViewContent = () => {
             </Typography>
             <Typography variant="bodyXs" className="mt-0.5 text-text-muted">
               {data.kpis.overdueInvoices > 0
-                ? `USD ${data.kpis.overdueAmountUsd.toLocaleString(undefined, { maximumFractionDigits: 0 })}`
+                ? formatCurrency(
+                    currency === 'USD' ? data.kpis.overdueAmountUsd : data.kpis.overdueAmountAed,
+                    currency,
+                  )
                 : 'All clear'}
             </Typography>
           </div>
@@ -339,9 +378,10 @@ const MorningViewContent = () => {
                       </Typography>
                     </div>
                     <Typography variant="bodyXs" className="shrink-0 font-semibold">
-                      {order.totalAed
-                        ? `AED ${order.totalAed.toLocaleString(undefined, { maximumFractionDigits: 0 })}`
-                        : 'Pending'}
+                      {formatCurrency(
+                        currency === 'USD' ? order.totalUsd : order.totalAed,
+                        currency,
+                      )}
                     </Typography>
                   </Link>
                 ))}
