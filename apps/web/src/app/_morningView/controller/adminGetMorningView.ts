@@ -51,10 +51,10 @@ const adminGetMorningView = adminProcedure.query(async () => {
   const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
   const lastMonthEnd = thisMonthStart;
 
-  // Calendar year boundaries
+  // Calendar year boundaries (compare same period YTD)
   const thisYearStart = new Date(now.getFullYear(), 0, 1);
   const lastYearStart = new Date(now.getFullYear() - 1, 0, 1);
-  const lastYearEnd = thisYearStart;
+  const lastYearEnd = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
 
   const sevenDaysAgo = new Date(now);
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
@@ -140,7 +140,7 @@ const adminGetMorningView = adminProcedure.query(async () => {
       )
       .then((r) => r[0]),
 
-    // 6. Revenue last calendar year (Zoho invoices, normalized to USD)
+    // 6. Revenue same period last year (Zoho invoices, normalized to USD)
     db
       .select({
         total: sql<number>`coalesce(sum(CASE WHEN ${zohoInvoices.currencyCode} = 'AED' THEN ${zohoInvoices.total} / ${USD_TO_AED} ELSE ${zohoInvoices.total} END), 0)`,
