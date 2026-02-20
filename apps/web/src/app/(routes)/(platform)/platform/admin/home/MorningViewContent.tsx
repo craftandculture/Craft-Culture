@@ -118,34 +118,31 @@ const MorningViewContent = () => {
   // Loading skeleton matching layout
   if (isLoading) {
     return (
-      <div className="container space-y-6 py-6">
-        {/* Skeleton header */}
+      <div className="container space-y-6 py-8">
         <div className="flex items-start justify-between">
           <div>
-            <div className="h-7 w-56 animate-pulse rounded-lg bg-surface-secondary" />
+            <div className="h-8 w-64 animate-pulse rounded-lg bg-surface-secondary" />
             <div className="mt-2 h-4 w-80 animate-pulse rounded bg-surface-secondary" />
           </div>
-          <div className="h-8 w-28 animate-pulse rounded-lg bg-surface-secondary" />
+          <div className="h-9 w-28 animate-pulse rounded-lg bg-surface-secondary" />
         </div>
-        {/* Skeleton KPIs */}
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
           {[1, 2, 3, 4, 5, 6].map((n) => (
             <Card key={n}>
-              <CardContent className="p-4">
-                <div className="h-3 w-16 animate-pulse rounded bg-surface-secondary" />
-                <div className="mt-3 h-7 w-14 animate-pulse rounded bg-surface-secondary" />
-                <div className="mt-2 h-3 w-24 animate-pulse rounded bg-surface-secondary" />
+              <CardContent className="p-5">
+                <div className="mx-auto h-3 w-20 animate-pulse rounded bg-surface-secondary" />
+                <div className="mx-auto mt-4 h-8 w-16 animate-pulse rounded bg-surface-secondary" />
+                <div className="mx-auto mt-3 h-3 w-24 animate-pulse rounded bg-surface-secondary" />
               </CardContent>
             </Card>
           ))}
         </div>
-        {/* Skeleton two-col */}
         <div className="grid gap-5 lg:grid-cols-5">
           <Card className="lg:col-span-3">
-            <CardContent className="h-72 animate-pulse p-6" />
+            <CardContent className="h-80 animate-pulse p-6" />
           </Card>
           <div className="space-y-5 lg:col-span-2">
-            <Card><CardContent className="h-48 animate-pulse p-6" /></Card>
+            <Card><CardContent className="h-56 animate-pulse p-6" /></Card>
             <Card><CardContent className="h-24 animate-pulse p-6" /></Card>
           </div>
         </div>
@@ -154,14 +151,14 @@ const MorningViewContent = () => {
   }
 
   return (
-    <div className="container space-y-6 py-6">
+    <div className="container space-y-6 py-8">
       {/* ── Greeting + Currency Toggle ──────────── */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">
+          <h1 className="text-[28px] font-bold tracking-tight">
             {getGreeting()}{firstName ? `, ${firstName}` : ''}
           </h1>
-          <p className="mt-0.5 text-[13px] text-text-muted">
+          <p className="mt-1 text-sm text-text-muted">
             {formatDate()} &mdash; Here&apos;s what needs your attention today
           </p>
         </div>
@@ -169,7 +166,7 @@ const MorningViewContent = () => {
           <button
             type="button"
             onClick={() => setCurrency('USD')}
-            className={`rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
+            className={`rounded-md px-3.5 py-1.5 text-xs font-semibold transition-colors ${
               currency === 'USD'
                 ? 'bg-fill-brand text-white'
                 : 'text-text-muted hover:text-text-primary'
@@ -180,7 +177,7 @@ const MorningViewContent = () => {
           <button
             type="button"
             onClick={() => setCurrency('AED')}
-            className={`rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
+            className={`rounded-md px-3.5 py-1.5 text-xs font-semibold transition-colors ${
               currency === 'AED'
                 ? 'bg-fill-brand text-white'
                 : 'text-text-muted hover:text-text-primary'
@@ -191,39 +188,39 @@ const MorningViewContent = () => {
         </div>
       </div>
 
-      {/* ── KPI Cards ────────────────────────────── */}
+      {/* ── KPI Cards — centered text ──────────── */}
       {data && (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
           {/* PCO Orders */}
           <Card>
-            <CardContent className="p-4">
-              <p className="text-[11px] font-medium uppercase tracking-wider text-text-muted">
-                PCO Orders
+            <CardContent className="flex flex-col items-center px-4 py-5 text-center">
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-text-muted">
+                Open Orders
               </p>
-              <p className="mt-1.5 text-3xl font-bold tracking-tight">
+              <p className="mt-2 text-3xl font-bold tracking-tight">
                 {data.kpis.openOrders}
               </p>
-              <p className="mt-1 text-[12px] font-semibold">
+              <p className="mt-1.5 text-[12px] font-semibold">
                 {data.kpis.openOrdersThisWeek > 0
                   ? <span className="text-emerald-600">+{data.kpis.openOrdersThisWeek} this week</span>
-                  : <span className="text-text-muted">Active orders</span>}
+                  : <span className="font-normal text-text-muted">Active orders</span>}
               </p>
             </CardContent>
           </Card>
 
           {/* Invoiced (Month) */}
           <Card>
-            <CardContent className="p-4">
-              <p className="text-[11px] font-medium uppercase tracking-wider text-text-muted">
+            <CardContent className="flex flex-col items-center px-4 py-5 text-center">
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-text-muted">
                 Invoiced (Month)
               </p>
-              <p className="mt-1.5 text-3xl font-bold tracking-tight text-text-brand">
+              <p className="mt-2 text-3xl font-bold tracking-tight text-text-brand">
                 {formatCurrency(
                   currency === 'USD' ? data.kpis.revenueMonthUsd : data.kpis.revenueMonthAed,
                   currency,
                 )}
               </p>
-              <p className="mt-1 text-[12px] font-semibold">
+              <p className="mt-1.5 text-[12px] font-semibold">
                 {(() => {
                   const current = currency === 'USD' ? data.kpis.revenueMonthUsd : data.kpis.revenueMonthAed;
                   const previous = currency === 'USD' ? data.kpis.revenueLastMonthUsd : data.kpis.revenueLastMonthAed;
@@ -231,7 +228,7 @@ const MorningViewContent = () => {
                     const pct = Math.round(((current - previous) / previous) * 100);
                     return <span className={pct >= 0 ? 'text-emerald-600' : 'text-red-600'}>{pct >= 0 ? '+' : ''}{pct}% vs last month</span>;
                   }
-                  return <span className="text-text-muted">No data last month</span>;
+                  return <span className="font-normal text-text-muted">No data last month</span>;
                 })()}
               </p>
             </CardContent>
@@ -239,17 +236,17 @@ const MorningViewContent = () => {
 
           {/* Invoiced (Year) */}
           <Card>
-            <CardContent className="p-4">
-              <p className="text-[11px] font-medium uppercase tracking-wider text-text-muted">
+            <CardContent className="flex flex-col items-center px-4 py-5 text-center">
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-text-muted">
                 Invoiced (Year)
               </p>
-              <p className="mt-1.5 text-3xl font-bold tracking-tight text-text-brand">
+              <p className="mt-2 text-3xl font-bold tracking-tight text-text-brand">
                 {formatCurrency(
                   currency === 'USD' ? data.kpis.revenueYearUsd : data.kpis.revenueYearAed,
                   currency,
                 )}
               </p>
-              <p className="mt-1 text-[12px] font-semibold">
+              <p className="mt-1.5 text-[12px] font-semibold">
                 {(() => {
                   const current = currency === 'USD' ? data.kpis.revenueYearUsd : data.kpis.revenueYearAed;
                   const previous = currency === 'USD' ? data.kpis.revenueLastYearUsd : data.kpis.revenueLastYearAed;
@@ -257,7 +254,7 @@ const MorningViewContent = () => {
                     const pct = Math.round(((current - previous) / previous) * 100);
                     return <span className={pct >= 0 ? 'text-emerald-600' : 'text-red-600'}>{pct >= 0 ? '+' : ''}{pct}% vs last year</span>;
                   }
-                  return <span className="text-text-muted">No data last year</span>;
+                  return <span className="font-normal text-text-muted">No data last year</span>;
                 })()}
               </p>
             </CardContent>
@@ -265,14 +262,14 @@ const MorningViewContent = () => {
 
           {/* Pending Dispatch */}
           <Card>
-            <CardContent className="p-4">
-              <p className="text-[11px] font-medium uppercase tracking-wider text-text-muted">
+            <CardContent className="flex flex-col items-center px-4 py-5 text-center">
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-text-muted">
                 Pending Dispatch
               </p>
-              <p className="mt-1.5 text-3xl font-bold tracking-tight">
+              <p className="mt-2 text-3xl font-bold tracking-tight">
                 {data.kpis.pendingDispatch}
               </p>
-              <p className="mt-1 text-[12px] text-text-muted">
+              <p className="mt-1.5 text-[12px] text-text-muted">
                 {data.kpis.stagedBatches} batches staged
               </p>
             </CardContent>
@@ -280,14 +277,14 @@ const MorningViewContent = () => {
 
           {/* Agent Alerts */}
           <Card>
-            <CardContent className="p-4">
-              <p className="text-[11px] font-medium uppercase tracking-wider text-text-muted">
+            <CardContent className="flex flex-col items-center px-4 py-5 text-center">
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-text-muted">
                 Agent Alerts
               </p>
-              <p className={`mt-1.5 text-3xl font-bold tracking-tight ${data.kpis.agentAlerts > 0 ? 'text-amber-600' : ''}`}>
+              <p className={`mt-2 text-3xl font-bold tracking-tight ${data.kpis.agentAlerts > 0 ? 'text-amber-600' : ''}`}>
                 {data.kpis.agentAlerts}
               </p>
-              <p className="mt-1 text-[12px] text-text-muted">
+              <p className="mt-1.5 text-[12px] text-text-muted">
                 {data.kpis.agentAlerts > 0
                   ? `${data.kpis.agentAlerts} high priority`
                   : 'No alerts'}
@@ -297,14 +294,14 @@ const MorningViewContent = () => {
 
           {/* Overdue Invoice */}
           <Card>
-            <CardContent className="p-4">
-              <p className="text-[11px] font-medium uppercase tracking-wider text-text-muted">
+            <CardContent className="flex flex-col items-center px-4 py-5 text-center">
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-text-muted">
                 Overdue Invoice
               </p>
-              <p className={`mt-1.5 text-3xl font-bold tracking-tight ${data.kpis.overdueInvoices > 0 ? 'text-red-600' : 'text-emerald-600'}`}>
+              <p className={`mt-2 text-3xl font-bold tracking-tight ${data.kpis.overdueInvoices > 0 ? 'text-red-600' : 'text-emerald-600'}`}>
                 {data.kpis.overdueInvoices}
               </p>
-              <p className="mt-1 text-[12px] text-text-muted">
+              <p className="mt-1.5 text-[12px] text-text-muted">
                 {data.kpis.overdueInvoices > 0
                   ? formatCurrency(
                       currency === 'USD' ? data.kpis.overdueAmountUsd : data.kpis.overdueAmountAed,
@@ -324,7 +321,7 @@ const MorningViewContent = () => {
           <Card>
             <CardContent className="p-0">
               <div className="flex items-center justify-between px-6 py-4">
-                <p className="text-sm font-semibold">Agent Briefing</p>
+                <p className="text-[15px] font-bold">Agent Briefing</p>
                 <Link
                   href="/platform/admin/agents"
                   className="text-[12px] font-medium text-text-brand transition-opacity hover:opacity-80"
@@ -341,40 +338,40 @@ const MorningViewContent = () => {
                       <Link
                         key={brief.agentId}
                         href="/platform/admin/agents"
-                        className="group flex items-start gap-3 border-t border-border-muted px-6 py-4 transition-colors hover:bg-surface-secondary/50"
+                        className="group flex items-start gap-3.5 border-t border-border-muted px-6 py-4 transition-colors hover:bg-surface-secondary/50"
                       >
                         <div
-                          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${config.bgColor}`}
+                          className={`mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${config.bgColor}`}
                         >
                           <Icon icon={config.icon} size="sm" className={config.iconColor} />
                         </div>
                         <div className="min-w-0 flex-1">
-                          <p className="text-[13px] font-semibold">
-                            {config.label}
-                            <span className="ml-1.5 font-semibold text-text-primary">&mdash; {brief.highlight}</span>
+                          <p className="text-[13px]">
+                            <span className="font-bold">{config.label}</span>
+                            <span className="ml-1.5 font-semibold">&mdash; {brief.highlight}</span>
                           </p>
-                          <p className="mt-0.5 line-clamp-2 text-xs text-text-muted">
+                          <p className="mt-1 line-clamp-2 text-[12px] leading-relaxed text-text-muted">
                             {brief.summary.length > 150
                               ? `${brief.summary.slice(0, 150)}...`
                               : brief.summary}
                           </p>
                           {brief.createdAt && (
-                            <p className="mt-1 flex items-center gap-1 text-[11px] text-text-muted">
-                              <IconClock size={12} />
+                            <p className="mt-1.5 flex items-center gap-1 text-[11px] text-text-muted/70">
+                              <IconClock size={11} />
                               {formatRelativeTime(brief.createdAt)}
                             </p>
                           )}
                         </div>
                         <IconChevronRight
                           size={16}
-                          className="mt-0.5 shrink-0 text-text-muted opacity-0 transition-opacity group-hover:opacity-100"
+                          className="mt-1 shrink-0 text-text-muted opacity-0 transition-opacity group-hover:opacity-100"
                         />
                       </Link>
                     );
                   })}
                 </div>
               ) : (
-                <div className="border-t border-border-muted px-6 py-8 text-center">
+                <div className="border-t border-border-muted px-6 py-10 text-center">
                   <p className="text-sm text-text-muted">
                     No briefs yet. Agents run daily &mdash; check back soon.
                   </p>
@@ -390,7 +387,7 @@ const MorningViewContent = () => {
           <Card>
             <CardContent className="p-0">
               <div className="flex items-center justify-between px-6 py-4">
-                <p className="text-sm font-semibold">Recent Orders</p>
+                <p className="text-[15px] font-bold">Recent Orders</p>
                 <Link
                   href="/platform/admin/private-orders"
                   className="text-[12px] font-medium text-text-brand transition-opacity hover:opacity-80"
@@ -409,16 +406,16 @@ const MorningViewContent = () => {
                           ? `/platform/admin/private-orders/${order.id}`
                           : `/platform/admin/zoho-sales-orders`
                       }
-                      className="group flex items-center gap-3 border-t border-border-muted px-6 py-3 transition-colors hover:bg-surface-secondary/50"
+                      className="group flex items-center gap-3 border-t border-border-muted px-6 py-3.5 transition-colors hover:bg-surface-secondary/50"
                     >
                       <span className={`h-2 w-2 shrink-0 rounded-full ${getStatusColor(order.status)}`} />
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-[13px] font-medium">
-                          {order.orderNumber}
-                          <span className="ml-1.5 font-normal text-text-muted">&mdash; {order.customerName}</span>
+                        <p className="truncate text-[13px]">
+                          <span className="font-semibold">{order.orderNumber}</span>
+                          <span className="ml-1.5 text-text-muted">&mdash; {order.customerName}</span>
                         </p>
                       </div>
-                      <p className="shrink-0 tabular-nums text-[13px] font-semibold">
+                      <p className="shrink-0 tabular-nums text-[13px] font-bold">
                         {formatCurrency(
                           currency === 'USD' ? order.totalUsd : order.totalAed,
                           currency,
@@ -428,7 +425,7 @@ const MorningViewContent = () => {
                   ))}
                 </div>
               ) : (
-                <div className="border-t border-border-muted px-6 py-8 text-center">
+                <div className="border-t border-border-muted px-6 py-10 text-center">
                   <p className="text-sm text-text-muted">No recent orders</p>
                 </div>
               )}
@@ -439,16 +436,16 @@ const MorningViewContent = () => {
           <Card>
             <CardContent className="p-0">
               <div className="px-6 py-4">
-                <p className="text-sm font-semibold">Quick Actions</p>
+                <p className="text-[15px] font-bold">Quick Actions</p>
               </div>
-              <div className="flex flex-wrap gap-2 border-t border-border-muted px-6 py-4">
+              <div className="flex flex-wrap gap-2.5 border-t border-border-muted px-6 py-5">
                 {quickActions.map((action) => (
                   <Link
                     key={action.href}
                     href={action.href}
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-border-primary bg-surface-primary px-3 py-2 text-[13px] font-medium transition-colors hover:border-text-muted"
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-border-primary bg-surface-primary px-4 py-2.5 text-[13px] font-semibold transition-colors hover:border-text-muted hover:bg-surface-secondary/50"
                   >
-                    <Icon icon={action.icon} size="sm" />
+                    <Icon icon={action.icon} size="sm" className="text-text-muted" />
                     {action.label}
                   </Link>
                 ))}
