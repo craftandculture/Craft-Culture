@@ -96,7 +96,7 @@ const ConciergeBrief = () => {
             No Concierge Brief Yet
           </Typography>
           <Typography variant="bodySm" colorRole="muted" className="mb-4">
-            The Concierge runs daily at 06:15 GST. It analyzes client contacts and order history to
+            PCO Concierge runs daily at 06:15 GST. It analyzes client contacts and order history to
             generate personalized outreach suggestions.
           </Typography>
           <Button
@@ -127,7 +127,7 @@ const ConciergeBrief = () => {
       {/* Status Bar */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <Typography variant="headingSm">The Concierge</Typography>
+          <Typography variant="headingSm">PCO Concierge</Typography>
           <Typography variant="bodyXs" colorRole="muted">
             Client relationship intelligence &amp; outreach
           </Typography>

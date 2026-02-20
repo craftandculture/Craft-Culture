@@ -1,6 +1,6 @@
 import { createAnthropic } from '@ai-sdk/anthropic';
 import { generateObject } from 'ai';
-import { desc, eq, sql } from 'drizzle-orm';
+import { desc, eq, gt, sql } from 'drizzle-orm';
 import { z } from 'zod';
 
 import db from '@/database/client';
@@ -90,7 +90,7 @@ const runStoryteller = async () => {
         createdAt: privateClientOrders.createdAt,
       })
       .from(privateClientOrders)
-      .where(sql`${privateClientOrders.createdAt} > ${twoWeeksAgo}`)
+      .where(gt(privateClientOrders.createdAt, twoWeeksAgo))
       .orderBy(desc(privateClientOrders.createdAt))
       .limit(30);
 
@@ -103,7 +103,7 @@ const runStoryteller = async () => {
         bottleSize: wmsStock.bottleSize,
       })
       .from(wmsStock)
-      .where(sql`${wmsStock.availableCases} > 0`)
+      .where(gt(wmsStock.availableCases, 0))
       .orderBy(desc(wmsStock.availableCases))
       .limit(30);
 
