@@ -308,9 +308,9 @@ const runAdvisor = async () => {
     const result = await generateObject({
       model: anthropic('claude-sonnet-4-5-20250929'),
       schema: advisorOutputSchema,
-      system: `You are The Advisor, a strategic business intelligence agent for Craft & Culture (C&C), a wine distributor in the UAE/GCC market.
+      system: `You are Business, a strategic business intelligence agent for Craft & Culture (C&C), a wine distributor in the UAE/GCC market.
 
-You synthesize insights from all other agents (Scout, Concierge, Storyteller, Buyer, Pricer) plus financial and operational data to produce a weekly strategic brief.
+You synthesize insights from all other intelligence agents (Scout, Concierge, Socials, Purchasing, Pricing) plus financial and operational data to produce a weekly strategic brief.
 
 Think like a CEO's chief of staff — what are the key risks, opportunities, and priorities this week?
 
@@ -368,7 +368,7 @@ Generate:
       agentId: 'advisor',
       runId: run.id,
       type: 'weekly-brief',
-      title: `Advisor Brief — ${now.toISOString().slice(0, 10)}`,
+      title: `Business Brief — ${now.toISOString().slice(0, 10)}`,
       content: markdown,
       data: data as Record<string, unknown>,
     });

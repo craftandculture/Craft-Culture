@@ -68,7 +68,7 @@ const StorytellerBrief = () => {
       <Card>
         <CardContent className="p-6">
           <Typography variant="bodySm" colorRole="muted">
-            Loading Storyteller brief...
+            Loading Socials brief...
           </Typography>
         </CardContent>
       </Card>
@@ -80,10 +80,10 @@ const StorytellerBrief = () => {
       <Card>
         <CardContent className="p-6 text-center">
           <Typography variant="headingSm" className="mb-2">
-            No Storyteller Brief Yet
+            No Socials Brief Yet
           </Typography>
           <Typography variant="bodySm" colorRole="muted" className="mb-4">
-            The Storyteller runs every Monday at 06:05 GST. It generates weekly marketing content
+            Socials runs every Monday at 06:05 GST. It generates weekly marketing content
             based on your inventory and recent sales.
           </Typography>
           <Button
@@ -114,7 +114,7 @@ const StorytellerBrief = () => {
       {/* Status Bar */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <Typography variant="headingSm">The Storyteller</Typography>
+          <Typography variant="headingSm">Socials</Typography>
           <Typography variant="bodyXs" colorRole="muted">
             Weekly marketing content generation
           </Typography>

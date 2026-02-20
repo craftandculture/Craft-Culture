@@ -13,7 +13,7 @@ const INSERT_BATCH = 500;
  * Upload a supplier wine price list
  *
  * Inserts rows immediately without LWIN matching for speed.
- * LWIN matching happens separately when The Buyer agent runs.
+ * LWIN matching happens separately when Purchasing runs.
  */
 const uploadSupplierList = adminProcedure
   .input(uploadSupplierListSchema)

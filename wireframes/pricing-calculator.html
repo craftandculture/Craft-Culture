@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pricing Calculator — Craft & Culture Platform</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* CSS Reset */
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        /* Design Tokens */
+        :root {
+            --bg-primary: #fafafa;
+            --surface-primary: #ffffff;
+            --surface-secondary: #f5f5f5;
+            --text-primary: #0a0a0a;
+            --text-muted: #737373;
+            --text-brand: #2a9d8f;
+            --fill-brand: #6BBFBF;
+            --fill-brand-10: rgba(107, 191, 191, 0.1);
+            --fill-brand-20: rgba(107, 191, 191, 0.2);
+            --border-primary: #e5e5e5;
+            --border-muted: #f0f0f0;
+            --amber-100: #fef3c7; --amber-600: #d97706;
+            --emerald-100: #d1fae5; --emerald-600: #059669;
+            --red-100: #fee2e2; --red-600: #dc2626;
+            --violet-100: #ede9fe; --violet-600: #7c3aed;
+            --blue-100: #dbeafe; --blue-600: #2563eb;
+            --radius-xl: 12px; --radius-lg: 8px; --radius-md: 6px;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        /* Wireframe Banner */
+        .wireframe-banner {
+            background: #2d3748;
+            color: #fff;
+            text-align: center;
+            padding: 8px 16px;
+            font-size: 13px;
+            font-weight: 500;
+            letter-spacing: 0.3px;
+        }
+
+        /* Container */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 24px;
+        }
+
+        /* Header */
+        .platform-header {
+            background: var(--surface-primary);
+            border-bottom: 1px solid var(--border-primary);
+            padding: 16px 0;
+            margin-bottom: 32px;
+        }
+
+        .header-content {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .brand {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text-brand);
+        }
+
+        .nav-pills {
+            display: flex;
+            gap: 8px;
+        }
+
+        .nav-pill {
+            padding: 8px 16px;
+            border-radius: var(--radius-lg);
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-muted);
+            background: transparent;
+            transition: all 0.2s;
+            text-decoration: none;
+        }
+
+        .nav-pill.active {
+            background: var(--fill-brand-20);
+            color: var(--text-brand);
+        }
+
+        .avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--fill-brand);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            font-weight: 600;
+            color: white;
+        }
+
+        /* Page Header */
+        .page-header {
+            margin-bottom: 32px;
+        }
+
+        .page-title-row {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+
+        .page-title {
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin: 0;
+        }
+
+        .page-subtitle {
+            font-size: 15px;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        .page-actions {
+            display: flex;
+            gap: 12px;
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 10px 20px;
+            border-radius: var(--radius-lg);
+            font-size: 14px;
+            font-weight: 500;
+            border: 1px solid var(--border-primary);
+            background: var(--surface-primary);
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn:hover {
+            background: var(--surface-secondary);
+        }
+
+        .btn-brand {
+            background: var(--fill-brand);
+            color: white;
+            border-color: var(--fill-brand);
+        }
+
+        .btn-brand:hover {
+            background: #5aafaf;
+        }
+
+        /* Two Column Layout */
+        .two-column {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 24px;
+            margin-bottom: 32px;
+        }
+
+        /* Card */
+        .card {
+            background: var(--surface-primary);
+            border: 1px solid var(--border-primary);
+            border-radius: var(--radius-xl);
+            padding: 24px;
+        }
+
+        .card-header {
+            margin-bottom: 24px;
+        }
+
+        .card-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 16px;
+        }
+
+        /* Product Selector */
+        .product-selector {
+            margin-bottom: 24px;
+        }
+
+        .product-select {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1px solid var(--border-primary);
+            border-radius: var(--radius-lg);
+            font-size: 15px;
+            font-weight: 500;
+            background: var(--surface-primary);
+            color: var(--text-primary);
+        }
+
+        /* Pricing Table */
+        .pricing-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            margin-bottom: 24px;
+        }
+
+        .pricing-table th {
+            text-align: left;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            padding: 12px;
+            background: var(--surface-secondary);
+            border-bottom: 1px solid var(--border-primary);
+        }
+
+        .pricing-table th:first-child {
+            border-top-left-radius: var(--radius-lg);
+        }
+
+        .pricing-table th:last-child {
+            border-top-right-radius: var(--radius-lg);
+        }
+
+        .pricing-table td {
+            padding: 14px 12px;
+            font-size: 14px;
+            border-bottom: 1px solid var(--border-muted);
+        }
+
+        .pricing-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .param-label {
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+
+        .param-input {
+            width: 140px;
+            padding: 8px 12px;
+            border: 1px solid var(--border-primary);
+            border-radius: var(--radius-md);
+            font-size: 14px;
+            background: var(--surface-primary);
+            color: var(--text-primary);
+            text-align: right;
+            font-weight: 500;
+        }
+
+        .param-input:focus {
+            outline: none;
+            border-color: var(--fill-brand);
+        }
+
+        .param-unit {
+            color: var(--text-muted);
+            font-size: 13px;
+        }
+
+        .calculated-row {
+            background: var(--fill-brand-10);
+        }
+
+        .calculated-value {
+            font-weight: 700;
+            color: var(--text-brand);
+            font-size: 15px;
+        }
+
+        /* Breakdown Section */
+        .breakdown-section {
+            margin-bottom: 24px;
+        }
+
+        .breakdown-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            margin-bottom: 16px;
+        }
+
+        .breakdown-bar {
+            margin-bottom: 8px;
+        }
+
+        .bar-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 13px;
+            margin-bottom: 4px;
+        }
+
+        .bar-label-name {
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+
+        .bar-label-value {
+            color: var(--text-muted);
+        }
+
+        .bar-track {
+            height: 24px;
+            background: var(--surface-secondary);
+            border-radius: var(--radius-md);
+            overflow: hidden;
+        }
+
+        .bar-fill {
+            height: 100%;
+            background: var(--fill-brand);
+            opacity: 0.3;
+            transition: width 0.3s;
+        }
+
+        .bar-fill.margin {
+            background: var(--fill-brand);
+            opacity: 1;
+        }
+
+        /* Summary Card */
+        .summary-card {
+            background: var(--surface-secondary);
+            border-radius: var(--radius-lg);
+            padding: 20px;
+            margin-bottom: 24px;
+        }
+
+        .summary-text {
+            font-size: 15px;
+            line-height: 1.6;
+            color: var(--text-primary);
+        }
+
+        .summary-highlight {
+            color: var(--text-brand);
+            font-weight: 700;
+        }
+
+        /* Chart Placeholder */
+        .chart-placeholder {
+            height: 200px;
+            background: var(--surface-secondary);
+            border-radius: var(--radius-lg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 24px;
+        }
+
+        .chart-content {
+            text-align: center;
+        }
+
+        .chart-label {
+            font-size: 12px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            margin-bottom: 8px;
+        }
+
+        .chart-line {
+            width: 280px;
+            height: 120px;
+            background: linear-gradient(to right, var(--fill-brand-10) 0%, var(--fill-brand-20) 100%);
+            border-radius: var(--radius-md);
+            position: relative;
+            margin: 0 auto;
+        }
+
+        .chart-trend {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            right: 20px;
+            height: 2px;
+            background: var(--fill-brand);
+        }
+
+        /* Recent Pricing Table */
+        .recent-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .recent-table th {
+            text-align: left;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            padding: 12px;
+            border-bottom: 1px solid var(--border-primary);
+        }
+
+        .recent-table td {
+            padding: 16px 12px;
+            font-size: 14px;
+            color: var(--text-primary);
+            border-bottom: 1px solid var(--border-muted);
+        }
+
+        .recent-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .td-right {
+            text-align: right;
+        }
+
+        /* Footer */
+        .page-footer {
+            margin-top: 64px;
+            padding: 24px 0;
+            border-top: 1px solid var(--border-primary);
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 13px;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .two-column {
+                grid-template-columns: 1fr;
+            }
+
+            .header-content {
+                flex-direction: column;
+                gap: 16px;
+            }
+
+            .nav-pills {
+                flex-wrap: wrap;
+            }
+
+            .param-input {
+                width: 100px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Wireframe Banner -->
+    <div class="wireframe-banner">
+        WIREFRAME — Pricing Calculator
+    </div>
+
+    <!-- Platform Header -->
+    <header class="platform-header">
+        <div class="container">
+            <div class="header-content">
+                <div class="brand">Craft & Culture Platform</div>
+                <nav class="nav-pills">
+                    <a href="#" class="nav-pill">Dashboard</a>
+                    <a href="#" class="nav-pill active">Pricing</a>
+                    <a href="#" class="nav-pill">Products</a>
+                    <a href="#" class="nav-pill">Quotes</a>
+                    <a href="#" class="nav-pill">Private Orders</a>
+                    <a href="#" class="nav-pill">Agents</a>
+                </nav>
+                <div class="avatar">KB</div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container">
+        <!-- Page Header -->
+        <div class="page-header">
+            <div class="page-title-row">
+                <div>
+                    <h1 class="page-title">Pricing Calculator</h1>
+                    <p class="page-subtitle">Spreadsheet-style pricing with formula-driven cost breakdown</p>
+                </div>
+                <div class="page-actions">
+                    <button class="btn">Reset</button>
+                    <button class="btn">Export</button>
+                    <button class="btn btn-brand">Save Model</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Two Column Layout -->
+        <div class="two-column">
+            <!-- Left: Pricing Calculator -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Pricing Sheet</h2>
+                    <div class="product-selector">
+                        <select class="product-select">
+                            <option>Sassicaia 2020 — Tenuta San Guido</option>
+                            <option>Opus One 2019 — Opus One Winery</option>
+                            <option>Tignanello 2019 — Antinori</option>
+                            <option>Barolo Monfortino 2016 — Giacomo Conterno</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Input Parameters -->
+                <table class="pricing-table">
+                    <thead>
+                        <tr>
+                            <th>Parameter</th>
+                            <th style="text-align: right;">Value</th>
+                            <th>Unit</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="param-label">Ex-Works Price</td>
+                            <td style="text-align: right;">
+                                <input type="text" class="param-input" value="£85.00">
+                            </td>
+                            <td class="param-unit">per bottle</td>
+                        </tr>
+                        <tr>
+                            <td class="param-label">Exchange Rate (GBP/AED)</td>
+                            <td style="text-align: right;">
+                                <input type="text" class="param-input" value="4.75">
+                            </td>
+                            <td class="param-unit">—</td>
+                        </tr>
+                        <tr>
+                            <td class="param-label">Shipping (per case)</td>
+                            <td style="text-align: right;">
+                                <input type="text" class="param-input" value="AED 45.00">
+                            </td>
+                            <td class="param-unit">per case of 6</td>
+                        </tr>
+                        <tr>
+                            <td class="param-label">Insurance</td>
+                            <td style="text-align: right;">
+                                <input type="text" class="param-input" value="1.5%">
+                            </td>
+                            <td class="param-unit">of ExW value</td>
+                        </tr>
+                        <tr>
+                            <td class="param-label">Import Duty</td>
+                            <td style="text-align: right;">
+                                <input type="text" class="param-input" value="50%">
+                            </td>
+                            <td class="param-unit">of CIF value</td>
+                        </tr>
+                        <tr>
+                            <td class="param-label">Municipality Tax</td>
+                            <td style="text-align: right;">
+                                <input type="text" class="param-input" value="0%">
+                            </td>
+                            <td class="param-unit">of CIF+Duty</td>
+                        </tr>
+                        <tr>
+                            <td class="param-label">Clearance & Handling</td>
+                            <td style="text-align: right;">
+                                <input type="text" class="param-input" value="AED 15.00">
+                            </td>
+                            <td class="param-unit">per case</td>
+                        </tr>
+                        <tr>
+                            <td class="param-label">Warehouse Storage (monthly)</td>
+                            <td style="text-align: right;">
+                                <input type="text" class="param-input" value="AED 2.00">
+                            </td>
+                            <td class="param-unit">per case</td>
+                        </tr>
+                        <tr>
+                            <td class="param-label">Target Margin</td>
+                            <td style="text-align: right;">
+                                <input type="text" class="param-input" value="35%">
+                            </td>
+                            <td class="param-unit">—</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <!-- Calculated Fields -->
+                <table class="pricing-table">
+                    <thead>
+                        <tr>
+                            <th colspan="3">Calculated Results</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="calculated-row">
+                            <td class="param-label">Landing Cost (AED)</td>
+                            <td style="text-align: right;" class="calculated-value">AED 342.50</td>
+                            <td class="param-unit">per bottle</td>
+                        </tr>
+                        <tr class="calculated-row">
+                            <td class="param-label">Suggested Retail</td>
+                            <td style="text-align: right;" class="calculated-value">AED 527.00</td>
+                            <td class="param-unit">per bottle</td>
+                        </tr>
+                        <tr class="calculated-row">
+                            <td class="param-label">Margin Amount</td>
+                            <td style="text-align: right;" class="calculated-value">AED 184.50</td>
+                            <td class="param-unit">per bottle</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <button class="btn btn-brand" style="width: 100%; margin-top: 20px;">Apply to Product</button>
+            </div>
+
+            <!-- Right: Cost Breakdown -->
+            <div>
+                <div class="card" style="margin-bottom: 24px;">
+                    <h3 class="breakdown-title">Cost Breakdown</h3>
+
+                    <div class="breakdown-bar">
+                        <div class="bar-label">
+                            <span class="bar-label-name">Ex-Works</span>
+                            <span class="bar-label-value">65%</span>
+                        </div>
+                        <div class="bar-track">
+                            <div class="bar-fill" style="width: 65%;"></div>
+                        </div>
+                    </div>
+
+                    <div class="breakdown-bar">
+                        <div class="bar-label">
+                            <span class="bar-label-name">Shipping</span>
+                            <span class="bar-label-value">5%</span>
+                        </div>
+                        <div class="bar-track">
+                            <div class="bar-fill" style="width: 5%;"></div>
+                        </div>
+                    </div>
+
+                    <div class="breakdown-bar">
+                        <div class="bar-label">
+                            <span class="bar-label-name">Insurance</span>
+                            <span class="bar-label-value">1%</span>
+                        </div>
+                        <div class="bar-track">
+                            <div class="bar-fill" style="width: 1%;"></div>
+                        </div>
+                    </div>
+
+                    <div class="breakdown-bar">
+                        <div class="bar-label">
+                            <span class="bar-label-name">Import Duty</span>
+                            <span class="bar-label-value">22%</span>
+                        </div>
+                        <div class="bar-track">
+                            <div class="bar-fill" style="width: 22%;"></div>
+                        </div>
+                    </div>
+
+                    <div class="breakdown-bar">
+                        <div class="bar-label">
+                            <span class="bar-label-name">Handling</span>
+                            <span class="bar-label-value">3%</span>
+                        </div>
+                        <div class="bar-track">
+                            <div class="bar-fill" style="width: 3%;"></div>
+                        </div>
+                    </div>
+
+                    <div class="breakdown-bar">
+                        <div class="bar-label">
+                            <span class="bar-label-name">Storage</span>
+                            <span class="bar-label-value">1%</span>
+                        </div>
+                        <div class="bar-track">
+                            <div class="bar-fill" style="width: 1%;"></div>
+                        </div>
+                    </div>
+
+                    <div class="breakdown-bar" style="margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border-primary);">
+                        <div class="bar-label">
+                            <span class="bar-label-name" style="color: var(--text-brand); font-weight: 600;">Target Margin</span>
+                            <span class="bar-label-value" style="color: var(--text-brand); font-weight: 600;">35%</span>
+                        </div>
+                        <div class="bar-track">
+                            <div class="bar-fill margin" style="width: 35%;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="summary-card">
+                    <p class="summary-text">
+                        This wine lands at <span class="summary-highlight">AED 342.50/btl</span> and sells at <span class="summary-highlight">AED 527/btl</span> for a <span class="summary-highlight">35% margin</span>.
+                    </p>
+                </div>
+
+                <div class="card">
+                    <h3 class="breakdown-title">Price History</h3>
+                    <div class="chart-placeholder">
+                        <div class="chart-content">
+                            <div class="chart-label">3-Month Trend</div>
+                            <div class="chart-line">
+                                <div class="chart-trend"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recently Priced Products -->
+        <div class="card">
+            <h3 class="card-title">Recently Priced Products</h3>
+            <table class="recent-table">
+                <thead>
+                    <tr>
+                        <th>Product</th>
+                        <th class="td-right">Landing Cost</th>
+                        <th class="td-right">Selling Price</th>
+                        <th class="td-right">Margin %</th>
+                        <th>Last Updated</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td style="font-weight: 500;">Opus One 2019</td>
+                        <td class="td-right" style="font-weight: 600;">AED 735.00</td>
+                        <td class="td-right" style="font-weight: 600; color: var(--text-brand);">AED 980.00</td>
+                        <td class="td-right" style="font-weight: 600; color: var(--emerald-600);">33%</td>
+                        <td style="color: var(--text-muted);">Feb 13, 2024</td>
+                    </tr>
+                    <tr>
+                        <td style="font-weight: 500;">Tignanello 2019</td>
+                        <td class="td-right" style="font-weight: 600;">AED 210.00</td>
+                        <td class="td-right" style="font-weight: 600; color: var(--text-brand);">AED 280.00</td>
+                        <td class="td-right" style="font-weight: 600; color: var(--emerald-600);">33%</td>
+                        <td style="color: var(--text-muted);">Feb 12, 2024</td>
+                    </tr>
+                    <tr>
+                        <td style="font-weight: 500;">Barolo Monfortino 2016</td>
+                        <td class="td-right" style="font-weight: 600;">AED 1,387.00</td>
+                        <td class="td-right" style="font-weight: 600; color: var(--text-brand);">AED 1,850.00</td>
+                        <td class="td-right" style="font-weight: 600; color: var(--emerald-600);">33%</td>
+                        <td style="color: var(--text-muted);">Feb 11, 2024</td>
+                    </tr>
+                    <tr>
+                        <td style="font-weight: 500;">Penfolds Grange 2018</td>
+                        <td class="td-right" style="font-weight: 600;">AED 1,237.00</td>
+                        <td class="td-right" style="font-weight: 600; color: var(--text-brand);">AED 1,650.00</td>
+                        <td class="td-right" style="font-weight: 600; color: var(--emerald-600);">33%</td>
+                        <td style="color: var(--text-muted);">Feb 10, 2024</td>
+                    </tr>
+                    <tr>
+                        <td style="font-weight: 500;">Krug Grande Cuvée NV</td>
+                        <td class="td-right" style="font-weight: 600;">AED 390.00</td>
+                        <td class="td-right" style="font-weight: 600; color: var(--text-brand);">AED 520.00</td>
+                        <td class="td-right" style="font-weight: 600; color: var(--emerald-600);">33%</td>
+                        <td style="color: var(--text-muted);">Feb 9, 2024</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="page-footer">
+        <div class="container">
+            Wireframe — Craft & Culture — Pricing Calculator
+        </div>
+    </footer>
+</body>
+</html>

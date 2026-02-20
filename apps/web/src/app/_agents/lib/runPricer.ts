@@ -370,7 +370,7 @@ const runPricer = async () => {
     const result = await generateObject({
       model: anthropic('claude-sonnet-4-5-20250929'),
       schema: pricerOutputSchema,
-      system: `You are The Pricer, a dynamic pricing optimization agent for Craft & Culture (C&C), a wine distributor in the UAE/GCC market.
+      system: `You are Pricing, a dynamic pricing optimization agent for Craft & Culture (C&C), a wine distributor in the UAE/GCC market.
 
 CRITICAL CONTEXT: C&C wins on PRICE — that's the competitive edge. Every pricing decision should maximize competitiveness while protecting margins. You analyze landed costs, competitor retail prices, stock levels, and sales velocity to recommend optimal pricing.
 
@@ -440,7 +440,7 @@ Generate a daily Pricer brief with:
       agentId: 'pricer',
       runId: run.id,
       type: 'daily-brief',
-      title: `Pricer Brief — ${new Date().toISOString().slice(0, 10)}`,
+      title: `Pricing Brief — ${new Date().toISOString().slice(0, 10)}`,
       content: markdown,
       data: data as Record<string, unknown>,
     });

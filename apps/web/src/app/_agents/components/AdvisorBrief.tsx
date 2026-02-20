@@ -66,9 +66,9 @@ const agentIcons: Record<string, typeof IconBrain> = {
 const agentLabels: Record<string, string> = {
   scout: 'Market Scout',
   concierge: 'PCO Concierge',
-  storyteller: 'The Storyteller',
-  buyer: 'The Buyer',
-  pricer: 'The Pricer',
+  storyteller: 'Socials',
+  buyer: 'Purchasing',
+  pricer: 'Pricing',
 };
 
 /**
@@ -98,7 +98,7 @@ const AdvisorBrief = () => {
       <Card>
         <CardContent className="p-6">
           <Typography variant="bodySm" colorRole="muted">
-            Loading Advisor brief...
+            Loading Business brief...
           </Typography>
         </CardContent>
       </Card>
@@ -110,10 +110,10 @@ const AdvisorBrief = () => {
       <Card>
         <CardContent className="p-6 text-center">
           <Typography variant="headingSm" className="mb-2">
-            No Advisor Brief Yet
+            No Business Brief Yet
           </Typography>
           <Typography variant="bodySm" colorRole="muted" className="mb-4">
-            The Advisor runs weekly on Monday at 07:00 GST. It synthesizes all agent insights,
+            Business runs weekly on Monday at 07:00 GST. It synthesizes all intelligence insights,
             financial data, and operational metrics into a strategic brief.
           </Typography>
           <Button
@@ -146,7 +146,7 @@ const AdvisorBrief = () => {
       {/* Status Bar */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <Typography variant="headingSm">The Advisor</Typography>
+          <Typography variant="headingSm">Business</Typography>
           <Typography variant="bodyXs" colorRole="muted">
             Strategic intelligence &amp; weekly priorities
           </Typography>

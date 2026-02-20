@@ -15,7 +15,7 @@ import {
 import triggerDb from '@/trigger/triggerDb';
 
 /**
- * Structured output schema for The Storyteller's weekly content
+ * Structured output schema for Socials weekly content
  */
 const storytellerOutputSchema = z.object({
   executiveSummary: z.string().describe('1-2 sentence overview of this week\'s content theme'),
@@ -47,7 +47,7 @@ const storytellerOutputSchema = z.object({
 });
 
 /**
- * Build a readable markdown brief from Storyteller output data
+ * Build a readable markdown brief from Socials output data
  */
 const buildStorytellerMarkdown = (data: z.infer<typeof storytellerOutputSchema>) => {
   const lines: string[] = [];
@@ -82,10 +82,10 @@ const buildStorytellerMarkdown = (data: z.infer<typeof storytellerOutputSchema>)
 };
 
 /**
- * Core Storyteller content generation logic shared between scheduled and on-demand runs
+ * Core Socials content generation logic shared between scheduled and on-demand runs
  */
 const runStorytellerGeneration = async () => {
-  logger.info('Storyteller agent starting weekly content generation');
+  logger.info('Socials agent starting weekly content generation');
 
   const [run] = await triggerDb
     .insert(agentRuns)
@@ -172,7 +172,7 @@ const runStorytellerGeneration = async () => {
     const result = await generateObject({
       model: anthropic('claude-sonnet-4-5-20250929'),
       schema: storytellerOutputSchema,
-      system: `You are The Storyteller, a luxury wine marketing content creator for Craft & Culture, a premium wine distributor in the UAE/GCC market.
+      system: `You are Socials, a luxury wine marketing content creator for Craft & Culture, a premium wine distributor in the UAE/GCC market.
 
 Your brand voice: sophisticated but approachable, knowledgeable without being pretentious, warm and inviting. You understand Dubai's luxury lifestyle, dining scene, and high-net-worth tastes.
 
@@ -214,7 +214,7 @@ Generate:
       agentId: 'storyteller',
       runId: run.id,
       type: 'weekly-content',
-      title: `Storyteller Brief — Week of ${new Date().toISOString().slice(0, 10)}`,
+      title: `Socials Brief — Week of ${new Date().toISOString().slice(0, 10)}`,
       content: markdown,
       data: data as Record<string, unknown>,
     });
@@ -224,7 +224,7 @@ Generate:
       .set({ status: 'completed', completedAt: new Date() })
       .where(eq(agentRuns.id, run.id));
 
-    logger.info('Storyteller weekly content complete', {
+    logger.info('Socials weekly content complete', {
       instagram: data.instagramPosts.length,
       whatsapp: data.whatsappBlasts.length,
       linkedin: 1,
@@ -237,7 +237,7 @@ Generate:
       linkedin: 1,
     };
   } catch (error) {
-    logger.error('Storyteller agent failed', {
+    logger.error('Socials agent failed', {
       error: error instanceof Error ? error.message : 'Unknown error',
     });
 
@@ -255,7 +255,7 @@ Generate:
 };
 
 /**
- * On-demand Storyteller task — triggered via REST API from the dashboard "Run Now" button
+ * On-demand Socials task — triggered via REST API from the dashboard "Run Now" button
  */
 export const storytellerRunTask = task({
   id: 'storyteller-run',
@@ -265,7 +265,7 @@ export const storytellerRunTask = task({
 });
 
 /**
- * The Storyteller — Weekly marketing content agent (scheduled)
+ * Socials — Weekly marketing content agent (scheduled)
  *
  * Runs weekly on Monday at 06:05 GST.
  */

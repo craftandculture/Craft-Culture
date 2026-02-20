@@ -29,7 +29,7 @@ const adminNavItems: AdminNavItem[] = [
   { label: 'Warehouse', href: '/platform/admin/wms', icon: IconBuildingWarehouse, section: 'warehouse' },
   { label: 'Partners', href: '/platform/admin/users', icon: IconUsers, section: 'partners' },
   { label: 'Finance', href: '/platform/admin/commissions', icon: IconCoin, section: 'finance' },
-  { label: 'Agents', href: '/platform/admin/agents', icon: IconBinoculars, section: 'agents' },
+  { label: 'Intelligence', href: '/platform/admin/agents', icon: IconBinoculars, section: 'agents' },
 ];
 
 /** Detect which top-level section the current pathname belongs to */

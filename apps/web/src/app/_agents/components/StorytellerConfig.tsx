@@ -66,7 +66,7 @@ const StorytellerConfig = () => {
       <Card>
         <CardContent className="p-6">
           <Typography variant="bodySm" colorRole="muted">
-            Loading Storyteller config...
+            Loading Socials config...
           </Typography>
         </CardContent>
       </Card>
@@ -76,10 +76,10 @@ const StorytellerConfig = () => {
   return (
     <div className="space-y-5">
       <div>
-        <Typography variant="headingSm">Storyteller Configuration</Typography>
+        <Typography variant="headingSm">Socials Configuration</Typography>
         <Typography variant="bodySm" colorRole="muted">
-          Customize brand voice, feed content ideas, and add calendar context to guide the
-          Storyteller&apos;s weekly content generation.
+          Customize brand voice, feed content ideas, and add calendar context to guide
+          Socials&apos; weekly content generation.
         </Typography>
       </div>
 
@@ -131,7 +131,7 @@ const StorytellerConfig = () => {
               Content Ideas &amp; Topics
             </Typography>
             <Typography variant="bodyXs" colorRole="muted">
-              List topics, themes, or specific content ideas you want the Storyteller to focus on.
+              List topics, themes, or specific content ideas you want Socials to focus on.
               One per line works well.
             </Typography>
           </div>
@@ -171,7 +171,7 @@ const StorytellerConfig = () => {
               Calendar &amp; Context
             </Typography>
             <Typography variant="bodyXs" colorRole="muted">
-              Upcoming events, seasonal themes, promotions, or anything the Storyteller should
+              Upcoming events, seasonal themes, promotions, or anything Socials should
               factor into this week&apos;s content.
             </Typography>
           </div>

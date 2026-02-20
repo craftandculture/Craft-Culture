@@ -1,0 +1,801 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Pricer — Agent Dashboard — Craft & Culture Platform</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #fafafa;
+            --surface-primary: #ffffff;
+            --surface-secondary: #f5f5f5;
+            --text-primary: #0a0a0a;
+            --text-muted: #737373;
+            --text-brand: #2a9d8f;
+            --fill-brand: #6BBFBF;
+            --fill-brand-10: rgba(107, 191, 191, 0.1);
+            --fill-brand-20: rgba(107, 191, 191, 0.2);
+            --border-primary: #e5e5e5;
+            --border-muted: #f0f0f0;
+            --amber-100: #fef3c7; --amber-600: #d97706;
+            --emerald-100: #d1fae5; --emerald-600: #059669;
+            --red-100: #fee2e2; --red-600: #dc2626;
+            --violet-100: #ede9fe; --violet-600: #7c3aed;
+            --blue-100: #dbeafe; --blue-600: #2563eb;
+            --radius-xl: 12px; --radius-lg: 8px; --radius-md: 6px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+
+        .wireframe-banner {
+            background: #000;
+            color: #fff;
+            padding: 8px 16px;
+            text-align: center;
+            font-size: 13px;
+            font-weight: 500;
+        }
+        .wireframe-banner span { color: var(--fill-brand); }
+
+        .platform-header {
+            background: var(--surface-primary);
+            border-bottom: 1px solid var(--border-primary);
+            padding: 16px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .platform-brand {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text-brand);
+        }
+        .platform-nav {
+            display: flex;
+            gap: 8px;
+        }
+        .nav-pill {
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-muted);
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+        .nav-pill:hover { background: var(--surface-secondary); color: var(--text-primary); }
+        .nav-pill.active { background: var(--fill-brand-10); color: var(--text-brand); }
+        .platform-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: var(--fill-brand);
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .agent-subnav {
+            background: var(--surface-primary);
+            border-bottom: 1px solid var(--border-primary);
+            padding: 0 24px;
+            overflow-x: auto;
+        }
+        .agent-tabs {
+            display: flex;
+            gap: 32px;
+        }
+        .agent-tab {
+            padding: 16px 0;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-muted);
+            text-decoration: none;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        .agent-tab:hover { color: var(--text-primary); }
+        .agent-tab.active {
+            color: var(--text-brand);
+            border-bottom-color: var(--fill-brand);
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 32px 24px;
+        }
+
+        .page-header {
+            margin-bottom: 32px;
+        }
+        .page-title-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 8px;
+        }
+        .page-title {
+            font-size: 32px;
+            font-weight: 700;
+        }
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 13px;
+            font-weight: 500;
+        }
+        .status-badge.on-demand {
+            background: var(--violet-100);
+            color: var(--violet-600);
+        }
+        .page-subtitle {
+            font-size: 16px;
+            color: var(--text-muted);
+            margin-bottom: 16px;
+        }
+        .page-actions {
+            display: flex;
+            gap: 12px;
+        }
+        .btn {
+            padding: 10px 20px;
+            border-radius: var(--radius-lg);
+            font-size: 14px;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-primary {
+            background: var(--fill-brand);
+            color: #fff;
+        }
+        .btn-primary:hover { opacity: 0.9; }
+        .btn-secondary {
+            background: var(--surface-primary);
+            color: var(--text-primary);
+            border: 1px solid var(--border-primary);
+        }
+        .btn-secondary:hover { background: var(--surface-secondary); }
+
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 16px;
+            margin-bottom: 32px;
+        }
+        .kpi-card {
+            background: var(--surface-primary);
+            border: 1px solid var(--border-primary);
+            border-radius: var(--radius-xl);
+            padding: 20px;
+        }
+        .kpi-label {
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+        }
+        .kpi-value {
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+        .kpi-change {
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--emerald-600);
+            margin-top: 4px;
+        }
+
+        .content-grid {
+            display: grid;
+            grid-template-columns: 1fr 380px;
+            gap: 24px;
+            margin-bottom: 32px;
+        }
+        @media (max-width: 1024px) {
+            .content-grid { grid-template-columns: 1fr; }
+        }
+
+        .card {
+            background: var(--surface-primary);
+            border: 1px solid var(--border-primary);
+            border-radius: var(--radius-xl);
+            padding: 24px;
+        }
+        .card-header {
+            margin-bottom: 20px;
+        }
+        .card-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        .card-subtitle {
+            font-size: 14px;
+            color: var(--text-muted);
+        }
+
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .table th {
+            text-align: left;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-muted);
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border-primary);
+        }
+        .table td {
+            padding: 16px;
+            border-bottom: 1px solid var(--border-muted);
+            font-size: 14px;
+        }
+        .table tr:last-child td { border-bottom: none; }
+
+        .wine-name {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        .price {
+            font-weight: 600;
+        }
+        .price-change {
+            font-size: 13px;
+            font-weight: 600;
+        }
+        .price-up { color: var(--emerald-600); }
+        .price-down { color: var(--red-600); }
+        .margin-good { color: var(--emerald-600); }
+        .margin-poor { color: var(--red-600); }
+        .reason-badge {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .margin-chart {
+            background: var(--surface-secondary);
+            border-radius: var(--radius-lg);
+            padding: 16px;
+        }
+        .margin-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        .margin-row:last-child { margin-bottom: 0; }
+        .margin-label {
+            font-size: 14px;
+            color: var(--text-muted);
+        }
+        .margin-count {
+            font-size: 14px;
+            font-weight: 600;
+        }
+        .margin-bar {
+            height: 8px;
+            background: var(--surface-primary);
+            border-radius: 4px;
+            margin-top: 4px;
+            overflow: hidden;
+        }
+        .margin-fill {
+            height: 100%;
+        }
+
+        .signal-card {
+            background: var(--surface-secondary);
+            border-radius: var(--radius-lg);
+            padding: 16px;
+            margin-bottom: 12px;
+        }
+        .signal-card:last-child { margin-bottom: 0; }
+        .signal-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+        .signal-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+        }
+        .signal-title {
+            font-size: 14px;
+            font-weight: 600;
+        }
+        .signal-body {
+            font-size: 13px;
+            color: var(--text-muted);
+            line-height: 1.5;
+        }
+        .signal-action {
+            margin-top: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-brand);
+        }
+
+        .competitor-table {
+            margin-top: 12px;
+        }
+        .competitor-row {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr 1fr;
+            gap: 12px;
+            padding: 12px;
+            background: var(--surface-secondary);
+            border-radius: var(--radius-md);
+            margin-bottom: 8px;
+            font-size: 13px;
+        }
+        .competitor-row:last-child { margin-bottom: 0; }
+        .competitor-header {
+            background: transparent;
+            font-weight: 600;
+            color: var(--text-muted);
+        }
+        .competitor-wine {
+            font-weight: 600;
+        }
+        .competitor-price {
+            font-weight: 600;
+        }
+        .our-price {
+            color: var(--text-brand);
+        }
+
+        .action-items {
+            margin-bottom: 32px;
+        }
+        .action-list {
+            display: grid;
+            gap: 12px;
+        }
+        .action-item {
+            background: var(--surface-primary);
+            border: 1px solid var(--border-primary);
+            border-radius: var(--radius-lg);
+            padding: 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .action-checkbox {
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--border-primary);
+            border-radius: 4px;
+        }
+        .action-priority {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        .priority-high {
+            background: var(--red-100);
+            color: var(--red-600);
+        }
+        .priority-medium {
+            background: var(--amber-100);
+            color: var(--amber-600);
+        }
+        .priority-low {
+            background: var(--blue-100);
+            color: var(--blue-600);
+        }
+        .action-text {
+            flex: 1;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .brief-history {
+            margin-bottom: 32px;
+        }
+        .brief-list {
+            display: grid;
+            gap: 12px;
+        }
+        .brief-item {
+            background: var(--surface-primary);
+            border: 1px solid var(--border-primary);
+            border-radius: var(--radius-lg);
+            padding: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .brief-date {
+            font-size: 14px;
+            font-weight: 600;
+        }
+        .brief-summary {
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+        .brief-link {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-brand);
+            text-decoration: none;
+        }
+
+        .page-footer {
+            border-top: 1px solid var(--border-primary);
+            padding: 24px;
+            text-align: center;
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+    </style>
+</head>
+<body>
+    <div class="wireframe-banner">Wireframe — <span>The Pricer</span> Agent Dashboard — Craft &amp; Culture Platform</div>
+
+    <header class="platform-header">
+        <div class="platform-brand">Craft & Culture Platform</div>
+        <nav class="platform-nav">
+            <a href="#" class="nav-pill">Quotes</a>
+            <a href="#" class="nav-pill">Private Orders</a>
+            <a href="#" class="nav-pill">Pricing</a>
+            <a href="#" class="nav-pill active">Agents</a>
+            <a href="#" class="nav-pill">WMS</a>
+        </nav>
+        <div class="platform-avatar">KB</div>
+    </header>
+
+    <nav class="agent-subnav">
+        <div class="agent-tabs">
+            <a href="#" class="agent-tab">The Scout</a>
+            <a href="#" class="agent-tab">The Concierge</a>
+            <a href="#" class="agent-tab">The Storyteller</a>
+            <a href="#" class="agent-tab">The Buyer</a>
+            <a href="#" class="agent-tab active">The Pricer</a>
+            <a href="#" class="agent-tab">The Advisor</a>
+            <a href="#" class="agent-tab">All Agents</a>
+        </div>
+    </nav>
+
+    <main class="container">
+        <div class="page-header">
+            <div class="page-title-row">
+                <h1 class="page-title">The Pricer</h1>
+                <span class="status-badge on-demand">On Demand</span>
+            </div>
+            <p class="page-subtitle">Dynamic pricing optimization & margin analysis — runs on demand</p>
+            <div class="page-actions">
+                <button class="btn btn-primary">Run Now</button>
+                <button class="btn btn-secondary">Configure</button>
+            </div>
+        </div>
+
+        <div class="kpi-grid">
+            <div class="kpi-card">
+                <div class="kpi-label">Products Priced</div>
+                <div class="kpi-value">186</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-label">Avg Margin</div>
+                <div class="kpi-value">34%</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-label">Price Alerts</div>
+                <div class="kpi-value">5</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-label">Revenue Impact</div>
+                <div class="kpi-value">AED +42k</div>
+            </div>
+        </div>
+
+        <div class="content-grid">
+            <div>
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">Pricing Recommendations</h2>
+                        <p class="card-subtitle">Data-driven price adjustments for optimal margins</p>
+                    </div>
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Wine</th>
+                                <th>Current Price</th>
+                                <th>Suggested Price</th>
+                                <th>Change</th>
+                                <th>Margin Before</th>
+                                <th>Margin After</th>
+                                <th>Reason</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>
+                                    <div class="wine-name">Opus One 2019</div>
+                                </td>
+                                <td class="price">AED 980</td>
+                                <td class="price">AED 1,150</td>
+                                <td class="price-change price-up">+17%</td>
+                                <td>28%</td>
+                                <td class="margin-good">34%</td>
+                                <td class="reason-badge">Competitor gap</td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <div class="wine-name">Tignanello 2019</div>
+                                </td>
+                                <td class="price">AED 280</td>
+                                <td class="price">AED 320</td>
+                                <td class="price-change price-up">+14%</td>
+                                <td>31%</td>
+                                <td class="margin-good">38%</td>
+                                <td class="reason-badge">Below market</td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <div class="wine-name">Krug Grande Cuvée</div>
+                                </td>
+                                <td class="price">AED 850</td>
+                                <td class="price">AED 780</td>
+                                <td class="price-change price-down">-8%</td>
+                                <td>48%</td>
+                                <td class="margin-good">42%</td>
+                                <td class="reason-badge">Inventory aging</td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <div class="wine-name">Dom Pérignon 2013</div>
+                                </td>
+                                <td class="price">AED 1,200</td>
+                                <td class="price">AED 1,350</td>
+                                <td class="price-change price-up">+12%</td>
+                                <td>32%</td>
+                                <td class="margin-good">40%</td>
+                                <td class="reason-badge">Liv-Ex uptick</td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <div class="wine-name">Sassicaia 2018</div>
+                                </td>
+                                <td class="price">AED 620</td>
+                                <td class="price">AED 650</td>
+                                <td class="price-change price-up">+5%</td>
+                                <td>38%</td>
+                                <td class="margin-good">41%</td>
+                                <td class="reason-badge">Strong demand</td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <div class="wine-name">Château Margaux 2015</div>
+                                </td>
+                                <td class="price">AED 2,800</td>
+                                <td class="price">AED 2,950</td>
+                                <td class="price-change price-up">+5%</td>
+                                <td>30%</td>
+                                <td class="margin-good">34%</td>
+                                <td class="reason-badge">Allocation scarcity</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="card" style="margin-top: 24px;">
+                    <div class="card-header">
+                        <h2 class="card-title">Competitor Price Comparison</h2>
+                        <p class="card-subtitle">Your pricing vs key competitors</p>
+                    </div>
+                    <div class="competitor-table">
+                        <div class="competitor-row competitor-header">
+                            <div>Wine</div>
+                            <div>You</div>
+                            <div>MMI</div>
+                            <div>A&E</div>
+                        </div>
+                        <div class="competitor-row">
+                            <div class="competitor-wine">Opus One 2019</div>
+                            <div class="competitor-price our-price">AED 980</div>
+                            <div class="competitor-price">AED 1,180</div>
+                            <div class="competitor-price">AED 1,150</div>
+                        </div>
+                        <div class="competitor-row">
+                            <div class="competitor-wine">Dom Pérignon 2013</div>
+                            <div class="competitor-price our-price">AED 1,200</div>
+                            <div class="competitor-price">AED 1,380</div>
+                            <div class="competitor-price">AED 1,420</div>
+                        </div>
+                        <div class="competitor-row">
+                            <div class="competitor-wine">Sassicaia 2018</div>
+                            <div class="competitor-price our-price">AED 620</div>
+                            <div class="competitor-price">AED 680</div>
+                            <div class="competitor-price">AED 650</div>
+                        </div>
+                        <div class="competitor-row">
+                            <div class="competitor-wine">Krug Grande Cuvée</div>
+                            <div class="competitor-price our-price">AED 850</div>
+                            <div class="competitor-price">AED 780</div>
+                            <div class="competitor-price">AED 820</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <aside>
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">Margin Distribution</h2>
+                        <p class="card-subtitle">Products by margin bracket</p>
+                    </div>
+                    <div class="margin-chart">
+                        <div class="margin-row">
+                            <div class="margin-label">&lt;20% margin</div>
+                            <div class="margin-count">12 products</div>
+                        </div>
+                        <div class="margin-bar">
+                            <div class="margin-fill" style="width: 6%; background: var(--red-600);"></div>
+                        </div>
+                        <div class="margin-row" style="margin-top: 16px;">
+                            <div class="margin-label">20-30% margin</div>
+                            <div class="margin-count">48 products</div>
+                        </div>
+                        <div class="margin-bar">
+                            <div class="margin-fill" style="width: 26%; background: var(--amber-600);"></div>
+                        </div>
+                        <div class="margin-row" style="margin-top: 16px;">
+                            <div class="margin-label">30-40% margin</div>
+                            <div class="margin-count">94 products</div>
+                        </div>
+                        <div class="margin-bar">
+                            <div class="margin-fill" style="width: 51%; background: var(--emerald-600);"></div>
+                        </div>
+                        <div class="margin-row" style="margin-top: 16px;">
+                            <div class="margin-label">40%+ margin</div>
+                            <div class="margin-count">32 products</div>
+                        </div>
+                        <div class="margin-bar">
+                            <div class="margin-fill" style="width: 17%; background: var(--fill-brand);"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card" style="margin-top: 24px;">
+                    <div class="card-header">
+                        <h2 class="card-title">Price Watch Alerts</h2>
+                        <p class="card-subtitle">Market movements & competitor changes</p>
+                    </div>
+                    <div class="signal-card">
+                        <div class="signal-header">
+                            <div class="signal-icon" style="background: var(--amber-100); color: var(--amber-600);">📊</div>
+                            <div class="signal-title">Competitor Price Drop</div>
+                        </div>
+                        <div class="signal-body">MMI reduced Krug Grande Cuvée from AED 890 to AED 780 (12% drop). You're now 9% higher.</div>
+                        <div class="signal-action">→ Review pricing strategy</div>
+                    </div>
+                    <div class="signal-card">
+                        <div class="signal-header">
+                            <div class="signal-icon" style="background: var(--emerald-100); color: var(--emerald-600);">📈</div>
+                            <div class="signal-title">Liv-Ex Index Movement</div>
+                        </div>
+                        <div class="signal-body">Bordeaux 2015 vintage up 8% this month. Dom Pérignon 2013 up 6%. Strong upward trend.</div>
+                        <div class="signal-action">→ Consider price increases</div>
+                    </div>
+                    <div class="signal-card">
+                        <div class="signal-header">
+                            <div class="signal-icon" style="background: var(--blue-100); color: var(--blue-600);">🎯</div>
+                            <div class="signal-title">Pricing Opportunity</div>
+                        </div>
+                        <div class="signal-body">Opus One 2019: You're 17% below market avg. Demand strong, stock limited. Safe to increase.</div>
+                        <div class="signal-action">→ Apply recommended price</div>
+                    </div>
+                    <div class="signal-card">
+                        <div class="signal-header">
+                            <div class="signal-icon" style="background: var(--violet-100); color: var(--violet-600);">⏰</div>
+                            <div class="signal-title">Slow Mover Alert</div>
+                        </div>
+                        <div class="signal-body">Châteauneuf-du-Pape 2017 (15 bottles, 180 days no sales). Consider 10-15% discount.</div>
+                        <div class="signal-action">→ Create promotional offer</div>
+                    </div>
+                </div>
+            </aside>
+        </div>
+
+        <div class="action-items">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Priority Actions</h2>
+                    <p class="card-subtitle">Recommended pricing decisions</p>
+                </div>
+                <div class="action-list">
+                    <div class="action-item">
+                        <div class="action-checkbox"></div>
+                        <div class="action-priority priority-high">High</div>
+                        <div class="action-text">Apply recommended prices to 6 wines (est. +AED 42k annual revenue)</div>
+                    </div>
+                    <div class="action-item">
+                        <div class="action-checkbox"></div>
+                        <div class="action-priority priority-high">High</div>
+                        <div class="action-text">Set price watch alert for DRC 2020 allocation (market uncertain)</div>
+                    </div>
+                    <div class="action-item">
+                        <div class="action-checkbox"></div>
+                        <div class="action-priority priority-medium">Medium</div>
+                        <div class="action-text">Review margin strategy for Italian portfolio (avg 32%, target 35%)</div>
+                    </div>
+                    <div class="action-item">
+                        <div class="action-checkbox"></div>
+                        <div class="action-priority priority-low">Low</div>
+                        <div class="action-text">Update Champagne pricing based on Feb supplier price increases</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="brief-history">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Brief History</h2>
+                    <p class="card-subtitle">Previous pricing analysis runs</p>
+                </div>
+                <div class="brief-list">
+                    <div class="brief-item">
+                        <div>
+                            <div class="brief-date">Feb 15, 2026</div>
+                            <div class="brief-summary">198 products, 33% avg margin, AED +38k impact, 7 alerts</div>
+                        </div>
+                        <a href="#" class="brief-link">View →</a>
+                    </div>
+                    <div class="brief-item">
+                        <div>
+                            <div class="brief-date">Feb 8, 2026</div>
+                            <div class="brief-summary">192 products, 32% avg margin, AED +29k impact, 4 alerts</div>
+                        </div>
+                        <a href="#" class="brief-link">View →</a>
+                    </div>
+                    <div class="brief-item">
+                        <div>
+                            <div class="brief-date">Feb 1, 2026</div>
+                            <div class="brief-summary">186 products, 34% avg margin, AED +51k impact, 9 alerts</div>
+                        </div>
+                        <a href="#" class="brief-link">View →</a>
+                    </div>
+                    <div class="brief-item">
+                        <div>
+                            <div class="brief-date">Jan 25, 2026</div>
+                            <div class="brief-summary">184 products, 33% avg margin, AED +44k impact, 6 alerts</div>
+                        </div>
+                        <a href="#" class="brief-link">View →</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="page-footer">
+        Craft & Culture Platform — Agent Wireframe — February 2026
+    </footer>
+</body>
+</html>

@@ -1,0 +1,820 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quotes — Craft & Culture Platform</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* CSS Reset */
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        /* Design Tokens */
+        :root {
+            --bg-primary: #fafafa;
+            --surface-primary: #ffffff;
+            --surface-secondary: #f5f5f5;
+            --text-primary: #0a0a0a;
+            --text-muted: #737373;
+            --text-brand: #2a9d8f;
+            --fill-brand: #6BBFBF;
+            --fill-brand-10: rgba(107, 191, 191, 0.1);
+            --fill-brand-20: rgba(107, 191, 191, 0.2);
+            --border-primary: #e5e5e5;
+            --border-muted: #f0f0f0;
+            --amber-100: #fef3c7; --amber-600: #d97706;
+            --emerald-100: #d1fae5; --emerald-600: #059669;
+            --red-100: #fee2e2; --red-600: #dc2626;
+            --violet-100: #ede9fe; --violet-600: #7c3aed;
+            --blue-100: #dbeafe; --blue-600: #2563eb;
+            --radius-xl: 12px; --radius-lg: 8px; --radius-md: 6px;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        /* Wireframe Banner */
+        .wireframe-banner {
+            background: #2d3748;
+            color: #fff;
+            text-align: center;
+            padding: 8px 16px;
+            font-size: 13px;
+            font-weight: 500;
+            letter-spacing: 0.3px;
+        }
+
+        /* Container */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 24px;
+        }
+
+        /* Header */
+        .platform-header {
+            background: var(--surface-primary);
+            border-bottom: 1px solid var(--border-primary);
+            padding: 16px 0;
+            margin-bottom: 32px;
+        }
+
+        .header-content {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .brand {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text-brand);
+        }
+
+        .nav-pills {
+            display: flex;
+            gap: 8px;
+        }
+
+        .nav-pill {
+            padding: 8px 16px;
+            border-radius: var(--radius-lg);
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-muted);
+            background: transparent;
+            transition: all 0.2s;
+            text-decoration: none;
+        }
+
+        .nav-pill.active {
+            background: var(--fill-brand-20);
+            color: var(--text-brand);
+        }
+
+        .avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--fill-brand);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            font-weight: 600;
+            color: white;
+        }
+
+        /* Page Header */
+        .page-header {
+            margin-bottom: 32px;
+        }
+
+        .page-title-row {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+
+        .page-title {
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin: 0;
+        }
+
+        .page-subtitle {
+            font-size: 15px;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        .page-actions {
+            display: flex;
+            gap: 12px;
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 10px 20px;
+            border-radius: var(--radius-lg);
+            font-size: 14px;
+            font-weight: 500;
+            border: 1px solid var(--border-primary);
+            background: var(--surface-primary);
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn:hover {
+            background: var(--surface-secondary);
+        }
+
+        .btn-brand {
+            background: var(--fill-brand);
+            color: white;
+            border-color: var(--fill-brand);
+        }
+
+        .btn-brand:hover {
+            background: #5aafaf;
+        }
+
+        /* KPI Strip */
+        .kpi-strip {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            margin-bottom: 32px;
+        }
+
+        .kpi-card {
+            background: var(--surface-primary);
+            border: 1px solid var(--border-primary);
+            border-radius: var(--radius-xl);
+            padding: 20px;
+        }
+
+        .kpi-label {
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            margin-bottom: 8px;
+        }
+
+        .kpi-value {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .kpi-trend {
+            font-size: 13px;
+            color: var(--emerald-600);
+            margin-top: 4px;
+        }
+
+        /* Two Column Layout */
+        .two-column {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 24px;
+            margin-bottom: 32px;
+        }
+
+        /* Card */
+        .card {
+            background: var(--surface-primary);
+            border: 1px solid var(--border-primary);
+            border-radius: var(--radius-xl);
+            padding: 24px;
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 20px;
+            background: var(--surface-secondary);
+            border-radius: var(--radius-lg);
+            margin-bottom: 20px;
+        }
+
+        .card-header h3 {
+            font-size: 16px;
+            font-weight: 600;
+            margin: 0;
+        }
+
+        .card-section {
+            margin-bottom: 24px;
+        }
+
+        .card-section:last-child {
+            margin-bottom: 0;
+        }
+
+        .card-section-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 12px;
+        }
+
+        /* Badge */
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .badge-amber {
+            background: var(--amber-100);
+            color: var(--amber-600);
+        }
+
+        .badge-blue {
+            background: var(--blue-100);
+            color: var(--blue-600);
+        }
+
+        .badge-green {
+            background: var(--emerald-100);
+            color: var(--emerald-600);
+        }
+
+        .badge-red {
+            background: var(--red-100);
+            color: var(--red-600);
+        }
+
+        /* Form Elements */
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-primary);
+            margin-bottom: 6px;
+        }
+
+        .form-select, .form-input {
+            width: 100%;
+            padding: 10px 14px;
+            border: 1px solid var(--border-primary);
+            border-radius: var(--radius-md);
+            font-size: 14px;
+            background: var(--surface-primary);
+            color: var(--text-primary);
+        }
+
+        .form-select:focus, .form-input:focus {
+            outline: none;
+            border-color: var(--fill-brand);
+        }
+
+        textarea.form-input {
+            resize: vertical;
+            min-height: 80px;
+            font-family: inherit;
+        }
+
+        /* Toggle */
+        .toggle-group {
+            display: inline-flex;
+            background: var(--surface-secondary);
+            border-radius: var(--radius-md);
+            padding: 4px;
+            gap: 4px;
+        }
+
+        .toggle-btn {
+            padding: 6px 16px;
+            border-radius: var(--radius-md);
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-muted);
+            background: transparent;
+            border: none;
+            cursor: pointer;
+        }
+
+        .toggle-btn.active {
+            background: var(--surface-primary);
+            color: var(--text-primary);
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+
+        /* Table */
+        .table-wrapper {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            text-align: left;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            padding: 12px;
+            border-bottom: 1px solid var(--border-primary);
+        }
+
+        td {
+            padding: 16px 12px;
+            font-size: 14px;
+            color: var(--text-primary);
+            border-bottom: 1px solid var(--border-muted);
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        .td-right {
+            text-align: right;
+        }
+
+        .add-item-row {
+            padding: 16px 12px;
+        }
+
+        .btn-add-item {
+            color: var(--text-brand);
+            font-size: 14px;
+            font-weight: 500;
+            background: none;
+            border: none;
+            cursor: pointer;
+        }
+
+        /* Totals Box */
+        .totals-box {
+            background: var(--surface-secondary);
+            border-radius: var(--radius-lg);
+            padding: 20px;
+            margin-top: 20px;
+        }
+
+        .totals-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            font-size: 14px;
+        }
+
+        .totals-row.total {
+            font-weight: 700;
+            font-size: 16px;
+            border-top: 2px solid var(--border-primary);
+            padding-top: 12px;
+            margin-top: 8px;
+        }
+
+        /* Catalog List */
+        .catalog-list {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .catalog-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px;
+            border-bottom: 1px solid var(--border-muted);
+        }
+
+        .catalog-item:last-child {
+            border-bottom: none;
+        }
+
+        .catalog-info h4 {
+            font-size: 14px;
+            font-weight: 500;
+            margin: 0 0 4px 0;
+        }
+
+        .catalog-info p {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin: 0;
+        }
+
+        .catalog-price {
+            font-weight: 600;
+            color: var(--text-brand);
+        }
+
+        .btn-icon {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: var(--fill-brand-20);
+            color: var(--text-brand);
+            border: none;
+            font-size: 16px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Sidebar Actions */
+        .sidebar-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-top: 24px;
+        }
+
+        /* Footer */
+        .page-footer {
+            margin-top: 64px;
+            padding: 24px 0;
+            border-top: 1px solid var(--border-primary);
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 13px;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .two-column {
+                grid-template-columns: 1fr;
+            }
+
+            .kpi-strip {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .header-content {
+                flex-direction: column;
+                gap: 16px;
+            }
+
+            .nav-pills {
+                flex-wrap: wrap;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Wireframe Banner -->
+    <div class="wireframe-banner">
+        WIREFRAME — Quote Builder
+    </div>
+
+    <!-- Platform Header -->
+    <header class="platform-header">
+        <div class="container">
+            <div class="header-content">
+                <div class="brand">Craft & Culture Platform</div>
+                <nav class="nav-pills">
+                    <a href="#" class="nav-pill">Dashboard</a>
+                    <a href="#" class="nav-pill">Pricing</a>
+                    <a href="#" class="nav-pill">Products</a>
+                    <a href="#" class="nav-pill active">Quotes</a>
+                    <a href="#" class="nav-pill">Private Orders</a>
+                    <a href="#" class="nav-pill">Agents</a>
+                </nav>
+                <div class="avatar">KB</div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container">
+        <!-- Page Header -->
+        <div class="page-header">
+            <div class="page-title-row">
+                <div>
+                    <h1 class="page-title">Quotes</h1>
+                    <p class="page-subtitle">Create and manage customer quotes</p>
+                </div>
+                <div class="page-actions">
+                    <button class="btn">Export</button>
+                    <button class="btn btn-brand">+ New Quote</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- KPI Strip -->
+        <div class="kpi-strip">
+            <div class="kpi-card">
+                <div class="kpi-label">Open Quotes</div>
+                <div class="kpi-value">12</div>
+                <div class="kpi-trend">+3 this week</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-label">Total Value</div>
+                <div class="kpi-value">AED 340k</div>
+                <div class="kpi-trend">+12% vs last month</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-label">Conversion Rate</div>
+                <div class="kpi-value">68%</div>
+                <div class="kpi-trend">+5% vs last month</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-label">Avg Quote Value</div>
+                <div class="kpi-value">AED 28k</div>
+                <div class="kpi-trend">+8% vs last month</div>
+            </div>
+        </div>
+
+        <!-- Two Column Layout -->
+        <div class="two-column">
+            <!-- Left: Quote Form -->
+            <div class="card">
+                <div class="card-header">
+                    <h3>Quote #QT-2024-0089</h3>
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <span class="badge badge-amber">Draft</span>
+                        <span style="font-size: 13px; color: var(--text-muted);">Created: Feb 14, 2024</span>
+                        <span style="font-size: 13px; color: var(--text-muted);">Expires: Mar 14, 2024</span>
+                    </div>
+                </div>
+
+                <div class="card-section">
+                    <div class="form-group">
+                        <label class="form-label">Customer</label>
+                        <select class="form-select">
+                            <option>Al Rashid Trading LLC</option>
+                            <option>Emirates Palace Hotel</option>
+                            <option>Four Seasons Dubai</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Currency</label>
+                        <div class="toggle-group">
+                            <button class="toggle-btn active">AED</button>
+                            <button class="toggle-btn">USD</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card-section">
+                    <div class="card-section-title">Line Items</div>
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th style="width: 40px;">#</th>
+                                    <th>Product</th>
+                                    <th style="width: 80px;">Vintage</th>
+                                    <th style="width: 80px;">Qty</th>
+                                    <th style="width: 120px;">Unit Price</th>
+                                    <th style="width: 100px;">Discount</th>
+                                    <th style="width: 120px;" class="td-right">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>1</td>
+                                    <td>Sassicaia, Bolgheri</td>
+                                    <td>2020</td>
+                                    <td>6</td>
+                                    <td>AED 413</td>
+                                    <td>—</td>
+                                    <td class="td-right" style="font-weight: 600;">AED 2,478</td>
+                                </tr>
+                                <tr>
+                                    <td>2</td>
+                                    <td>Opus One, Napa Valley</td>
+                                    <td>2019</td>
+                                    <td>3</td>
+                                    <td>AED 980</td>
+                                    <td>5%</td>
+                                    <td class="td-right" style="font-weight: 600;">AED 2,793</td>
+                                </tr>
+                                <tr>
+                                    <td>3</td>
+                                    <td>Tignanello, Tuscany</td>
+                                    <td>2019</td>
+                                    <td>12</td>
+                                    <td>AED 280</td>
+                                    <td>10%</td>
+                                    <td class="td-right" style="font-weight: 600;">AED 3,024</td>
+                                </tr>
+                                <tr>
+                                    <td>4</td>
+                                    <td>Barolo Monfortino, Piedmont</td>
+                                    <td>2016</td>
+                                    <td>2</td>
+                                    <td>AED 1,850</td>
+                                    <td>—</td>
+                                    <td class="td-right" style="font-weight: 600;">AED 3,700</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="add-item-row">
+                        <button class="btn-add-item">+ Add Line Item</button>
+                    </div>
+                </div>
+
+                <div class="totals-box">
+                    <div class="totals-row">
+                        <span>Subtotal</span>
+                        <span>AED 11,995</span>
+                    </div>
+                    <div class="totals-row">
+                        <span>Discount</span>
+                        <span>AED 540</span>
+                    </div>
+                    <div class="totals-row">
+                        <span>VAT (5%)</span>
+                        <span>AED 573</span>
+                    </div>
+                    <div class="totals-row total">
+                        <span>Total</span>
+                        <span>AED 12,028</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right: Sidebar -->
+            <div>
+                <div class="card" style="margin-bottom: 24px;">
+                    <div class="card-section-title">Add from Catalog</div>
+                    <input type="text" class="form-input" placeholder="Search products..." style="margin-bottom: 16px;">
+
+                    <div class="catalog-list">
+                        <div class="catalog-item">
+                            <div class="catalog-info">
+                                <h4>Château Margaux 2015</h4>
+                                <p class="catalog-price">AED 2,200</p>
+                            </div>
+                            <button class="btn-icon">+</button>
+                        </div>
+                        <div class="catalog-item">
+                            <div class="catalog-info">
+                                <h4>Penfolds Grange 2018</h4>
+                                <p class="catalog-price">AED 1,650</p>
+                            </div>
+                            <button class="btn-icon">+</button>
+                        </div>
+                        <div class="catalog-item">
+                            <div class="catalog-info">
+                                <h4>Krug Grande Cuvée NV</h4>
+                                <p class="catalog-price">AED 520</p>
+                            </div>
+                            <button class="btn-icon">+</button>
+                        </div>
+                        <div class="catalog-item">
+                            <div class="catalog-info">
+                                <h4>Dom Pérignon 2013</h4>
+                                <p class="catalog-price">AED 890</p>
+                            </div>
+                            <button class="btn-icon">+</button>
+                        </div>
+                        <div class="catalog-item">
+                            <div class="catalog-info">
+                                <h4>Screaming Eagle 2019</h4>
+                                <p class="catalog-price">AED 12,500</p>
+                            </div>
+                            <button class="btn-icon">+</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-section-title">Quote Notes</div>
+                    <textarea class="form-input" placeholder="Add internal notes or special instructions..."></textarea>
+
+                    <div class="sidebar-actions">
+                        <button class="btn">Save Draft</button>
+                        <button class="btn btn-brand">Send to Client</button>
+                        <button class="btn">Download PDF</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Quotes -->
+        <div class="card">
+            <h3 style="font-size: 18px; font-weight: 600; margin-bottom: 20px;">Recent Quotes</h3>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Quote #</th>
+                            <th>Client</th>
+                            <th>Date</th>
+                            <th>Items</th>
+                            <th>Value</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td style="font-weight: 500;">QT-2024-0088</td>
+                            <td>Emirates Palace Hotel</td>
+                            <td>Feb 13, 2024</td>
+                            <td>6 items</td>
+                            <td style="font-weight: 600;">AED 24,800</td>
+                            <td><span class="badge badge-blue">Sent</span></td>
+                            <td><button class="btn" style="padding: 6px 12px; font-size: 13px;">View</button></td>
+                        </tr>
+                        <tr>
+                            <td style="font-weight: 500;">QT-2024-0087</td>
+                            <td>Four Seasons Dubai</td>
+                            <td>Feb 12, 2024</td>
+                            <td>8 items</td>
+                            <td style="font-weight: 600;">AED 32,100</td>
+                            <td><span class="badge badge-green">Accepted</span></td>
+                            <td><button class="btn" style="padding: 6px 12px; font-size: 13px;">View</button></td>
+                        </tr>
+                        <tr>
+                            <td style="font-weight: 500;">QT-2024-0086</td>
+                            <td>Jumeirah Group</td>
+                            <td>Feb 10, 2024</td>
+                            <td>4 items</td>
+                            <td style="font-weight: 600;">AED 15,600</td>
+                            <td><span class="badge badge-red">Expired</span></td>
+                            <td><button class="btn" style="padding: 6px 12px; font-size: 13px;">View</button></td>
+                        </tr>
+                        <tr>
+                            <td style="font-weight: 500;">QT-2024-0085</td>
+                            <td>Atlantis F&B</td>
+                            <td>Feb 9, 2024</td>
+                            <td>5 items</td>
+                            <td style="font-weight: 600;">AED 18,900</td>
+                            <td><span class="badge badge-amber">Draft</span></td>
+                            <td><button class="btn" style="padding: 6px 12px; font-size: 13px;">View</button></td>
+                        </tr>
+                        <tr>
+                            <td style="font-weight: 500;">QT-2024-0084</td>
+                            <td>Burj Al Arab</td>
+                            <td>Feb 8, 2024</td>
+                            <td>12 items</td>
+                            <td style="font-weight: 600;">AED 56,400</td>
+                            <td><span class="badge badge-blue">Sent</span></td>
+                            <td><button class="btn" style="padding: 6px 12px; font-size: 13px;">View</button></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="page-footer">
+        <div class="container">
+            Wireframe — Craft & Culture — Quote Builder
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Users — Admin — Craft & Culture Platform</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-primary: #fafafa;
+      --surface-primary: #ffffff;
+      --surface-secondary: #f5f5f5;
+      --text-primary: #0a0a0a;
+      --text-muted: #737373;
+      --text-brand: #2a9d8f;
+      --fill-brand: #6BBFBF;
+      --fill-brand-10: rgba(107, 191, 191, 0.1);
+      --fill-brand-20: rgba(107, 191, 191, 0.2);
+      --border-primary: #e5e5e5;
+      --border-muted: #f0f0f0;
+      --amber-100: #fef3c7;
+      --amber-600: #d97706;
+      --emerald-100: #d1fae5;
+      --emerald-600: #059669;
+      --red-100: #fee2e2;
+      --red-600: #dc2626;
+      --violet-100: #ede9fe;
+      --violet-600: #7c3aed;
+      --blue-100: #dbeafe;
+      --blue-600: #2563eb;
+      --radius-xl: 12px;
+      --radius-lg: 8px;
+      --radius-md: 6px;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      font-size: 15px;
+      line-height: 1.5;
+    }
+
+    .wireframe-banner {
+      background: #1a1a1a;
+      color: #a3a3a3;
+      text-align: center;
+      padding: 8px;
+      font-size: 11px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      font-weight: 600;
+    }
+
+    .wireframe-banner span {
+      color: var(--fill-brand);
+    }
+
+    .platform-header {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: rgba(250, 250, 250, 0.8);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border-primary);
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 1rem;
+    }
+
+    .platform-header .brand {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--fill-brand);
+      letter-spacing: -0.3px;
+    }
+
+    .platform-header .brand span {
+      color: var(--text-muted);
+      font-weight: 400;
+      font-size: 13px;
+      margin-left: 12px;
+    }
+
+    .nav-pills {
+      display: flex;
+      gap: 6px;
+    }
+
+    .nav-pill {
+      font-size: 12px;
+      font-weight: 500;
+      padding: 6px 14px;
+      border-radius: var(--radius-lg);
+      color: var(--text-muted);
+      border: 1px solid var(--border-muted);
+      background: transparent;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .nav-pill:hover {
+      color: var(--text-primary);
+      border-color: var(--border-primary);
+    }
+
+    .nav-pill.active {
+      background: var(--fill-brand);
+      color: white;
+      border-color: var(--fill-brand);
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--fill-brand-20);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-brand);
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 2rem 1rem;
+    }
+
+    .page-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 24px;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .page-header h1 {
+      font-size: 24px;
+      font-weight: 600;
+      letter-spacing: -0.5px;
+    }
+
+    .page-header .subtitle {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .card {
+      background: var(--surface-primary);
+      border: 1px solid var(--border-primary);
+      border-bottom-width: 2px;
+      border-radius: var(--radius-xl);
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+      overflow: hidden;
+    }
+
+    .card-content {
+      padding: 16px;
+    }
+
+    .card-content-lg {
+      padding: 24px;
+    }
+
+    .btn {
+      padding: 8px 16px;
+      border-radius: var(--radius-lg);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      border: 1px solid var(--border-primary);
+      background: var(--surface-primary);
+      color: var(--text-primary);
+      transition: all 0.15s;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn:hover {
+      border-color: var(--text-muted);
+    }
+
+    .btn-brand {
+      background: var(--fill-brand);
+      color: white;
+      border-color: var(--fill-brand);
+    }
+
+    .btn-brand:hover {
+      opacity: 0.9;
+      border-color: var(--fill-brand);
+    }
+
+    .btn-ghost {
+      background: transparent;
+      border-color: transparent;
+      color: var(--text-brand);
+    }
+
+    .btn-danger {
+      background: var(--red-100);
+      color: var(--red-600);
+      border-color: var(--red-600);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    thead th {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+      padding: 8px 12px;
+      text-align: left;
+      border-bottom: 1px solid var(--border-primary);
+    }
+
+    tbody td {
+      padding: 10px 12px;
+      font-size: 13px;
+      border-bottom: 1px solid var(--border-muted);
+      vertical-align: middle;
+    }
+
+    tbody tr:hover {
+      background: var(--surface-secondary);
+    }
+
+    .section-title {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .page-footer {
+      text-align: center;
+      padding: 32px 16px;
+      color: var(--text-muted);
+      font-size: 12px;
+      border-top: 1px solid var(--border-muted);
+      margin-top: 40px;
+    }
+
+    .kpi-strip {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+
+    .kpi-badge {
+      background: var(--surface-primary);
+      border: 1px solid var(--border-primary);
+      border-radius: var(--radius-lg);
+      padding: 10px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 140px;
+    }
+
+    .kpi-badge .label {
+      font-size: 11px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-weight: 600;
+    }
+
+    .kpi-badge .value {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .filter-bar {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .filter-bar input,
+    .filter-bar select {
+      padding: 8px 12px;
+      border: 1px solid var(--border-primary);
+      border-radius: var(--radius-lg);
+      font-size: 13px;
+      background: var(--surface-primary);
+      color: var(--text-primary);
+      font-family: 'Inter', sans-serif;
+    }
+
+    .filter-bar input {
+      min-width: 240px;
+    }
+
+    .filter-bar select {
+      min-width: 160px;
+    }
+
+    .badge {
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .badge-violet {
+      background: var(--violet-100);
+      color: var(--violet-600);
+    }
+
+    .badge-blue {
+      background: var(--blue-100);
+      color: var(--blue-600);
+    }
+
+    .badge-amber {
+      background: var(--amber-100);
+      color: var(--amber-600);
+    }
+
+    .badge-emerald {
+      background: var(--emerald-100);
+      color: var(--emerald-600);
+    }
+
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    .status-dot.green {
+      background: var(--emerald-600);
+    }
+
+    .status-dot.amber {
+      background: var(--amber-600);
+    }
+
+    .status-dot.red {
+      background: var(--red-600);
+    }
+
+    .pending-row {
+      background: rgba(217, 119, 6, 0.03);
+    }
+
+    .pagination {
+      padding: 12px 16px;
+      border-top: 1px solid var(--border-primary);
+      font-size: 13px;
+      color: var(--text-muted);
+      text-align: center;
+    }
+
+    .dialog-mockup {
+      margin-top: 32px;
+    }
+
+    .dialog-mockup .card-content-lg {
+      max-width: 480px;
+    }
+
+    .form-grid {
+      display: grid;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    .form-field label {
+      display: block;
+      font-size: 13px;
+      font-weight: 500;
+      margin-bottom: 4px;
+      color: var(--text-primary);
+    }
+
+    .form-field input,
+    .form-field select {
+      width: 100%;
+      padding: 8px 12px;
+      border: 1px solid var(--border-primary);
+      border-radius: var(--radius-lg);
+      font-size: 13px;
+      background: var(--surface-primary);
+      color: var(--text-primary);
+      font-family: 'Inter', sans-serif;
+    }
+
+    .form-field input:focus,
+    .form-field select:focus {
+      outline: none;
+      border-color: var(--fill-brand);
+    }
+
+    .checkbox-field {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .checkbox-field input {
+      width: 16px;
+      height: 16px;
+      accent-color: var(--fill-brand);
+    }
+
+    .checkbox-field label {
+      font-size: 13px;
+      margin: 0;
+    }
+
+    .dialog-actions {
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+    }
+
+    @media (max-width: 767px) {
+      .platform-header .brand span {
+        display: none;
+      }
+
+      .nav-pills {
+        display: none;
+      }
+
+      .page-header {
+        flex-direction: column;
+      }
+
+      .kpi-strip {
+        flex-direction: column;
+      }
+
+      .kpi-badge {
+        min-width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="wireframe-banner">
+    Wireframe — <span>Users</span> — Admin — Craft &amp; Culture Platform
+  </div>
+
+  <header class="platform-header">
+    <div class="brand">
+      Craft &amp; Culture <span>Platform</span>
+    </div>
+    <nav class="nav-pills">
+      <button class="nav-pill">Quotes</button>
+      <button class="nav-pill">Private Orders</button>
+      <button class="nav-pill">Pricing</button>
+      <button class="nav-pill active">Admin</button>
+      <button class="nav-pill">Agents</button>
+      <button class="nav-pill">WMS</button>
+    </nav>
+    <div class="header-right">
+      <div class="avatar">KB</div>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="page-header">
+      <div>
+        <h1>Users</h1>
+        <p class="subtitle">Manage platform users, roles, and access</p>
+      </div>
+      <button class="btn btn-brand">+ Invite User</button>
+    </div>
+
+    <div class="kpi-strip">
+      <div class="kpi-badge">
+        <div class="label">Total Users</div>
+        <div class="value">34</div>
+      </div>
+      <div class="kpi-badge">
+        <div class="label">Active</div>
+        <div class="value">28</div>
+      </div>
+      <div class="kpi-badge">
+        <div class="label">Pending Approval</div>
+        <div class="value">4</div>
+      </div>
+      <div class="kpi-badge">
+        <div class="label">WMS Operators</div>
+        <div class="value">6</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-content">
+        <div class="filter-bar">
+          <input type="text" placeholder="Search by name or email...">
+          <select>
+            <option>All Roles</option>
+            <option>Admin</option>
+            <option>Client</option>
+            <option>Distributor</option>
+            <option>WMS Operator</option>
+          </select>
+          <select>
+            <option>All Statuses</option>
+            <option>Active</option>
+            <option>Pending</option>
+            <option>Suspended</option>
+          </select>
+        </div>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Role</th>
+            <th>Organization</th>
+            <th>Status</th>
+            <th>Last Active</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Kevin Bradford</strong></td>
+            <td>kevin@craftculture.xyz</td>
+            <td><span class="badge badge-violet">Admin</span></td>
+            <td>Craft &amp; Culture</td>
+            <td>
+              <span class="badge badge-emerald">
+                <span class="status-dot green"></span> Active
+              </span>
+            </td>
+            <td>Now</td>
+            <td><button class="btn btn-ghost">Edit</button></td>
+          </tr>
+          <tr>
+            <td><strong>Ahmed Al-Mansoori</strong></td>
+            <td>ahmed@citydrinks.ae</td>
+            <td><span class="badge badge-amber">Distributor</span></td>
+            <td>City Drinks</td>
+            <td>
+              <span class="badge badge-emerald">
+                <span class="status-dot green"></span> Active
+              </span>
+            </td>
+            <td>2 hrs ago</td>
+            <td><button class="btn btn-ghost">Edit</button></td>
+          </tr>
+          <tr>
+            <td><strong>Sarah Chen</strong></td>
+            <td>sarah.chen@mmint.ae</td>
+            <td><span class="badge badge-amber">Distributor</span></td>
+            <td>Maritime &amp; Mercantile</td>
+            <td>
+              <span class="badge badge-emerald">
+                <span class="status-dot green"></span> Active
+              </span>
+            </td>
+            <td>1 day ago</td>
+            <td><button class="btn btn-ghost">Edit</button></td>
+          </tr>
+          <tr>
+            <td><strong>Mohammed Al-Rashid</strong></td>
+            <td>m.rashid@gmail.com</td>
+            <td><span class="badge badge-blue">Client</span></td>
+            <td>—</td>
+            <td>
+              <span class="badge badge-emerald">
+                <span class="status-dot green"></span> Active
+              </span>
+            </td>
+            <td>3 days ago</td>
+            <td><button class="btn btn-ghost">Edit</button></td>
+          </tr>
+          <tr>
+            <td><strong>Omar Hassan</strong></td>
+            <td>omar@craftculture.xyz</td>
+            <td><span class="badge badge-emerald">WMS Operator</span></td>
+            <td>Craft &amp; Culture</td>
+            <td>
+              <span class="badge badge-emerald">
+                <span class="status-dot green"></span> Active
+              </span>
+            </td>
+            <td>5 min ago</td>
+            <td><button class="btn btn-ghost">Edit</button></td>
+          </tr>
+          <tr>
+            <td><strong>Fatima Al-Zahra</strong></td>
+            <td>fatima@craftculture.xyz</td>
+            <td><span class="badge badge-emerald">WMS Operator</span></td>
+            <td>Craft &amp; Culture</td>
+            <td>
+              <span class="badge badge-emerald">
+                <span class="status-dot green"></span> Active
+              </span>
+            </td>
+            <td>20 min ago</td>
+            <td><button class="btn btn-ghost">Edit</button></td>
+          </tr>
+          <tr class="pending-row">
+            <td><strong>James Patterson</strong></td>
+            <td>j.patterson@hotel.com</td>
+            <td><span class="badge badge-blue">Client</span></td>
+            <td>Emirates Palace</td>
+            <td>
+              <span class="badge badge-amber">
+                <span class="status-dot amber"></span> Pending
+              </span>
+            </td>
+            <td>—</td>
+            <td>
+              <button class="btn btn-brand" style="margin-right: 4px;">Approve</button>
+              <button class="btn btn-danger">Reject</button>
+            </td>
+          </tr>
+          <tr class="pending-row">
+            <td><strong>Li Wei</strong></td>
+            <td>li.wei@trading.cn</td>
+            <td><span class="badge badge-blue">Client</span></td>
+            <td>—</td>
+            <td>
+              <span class="badge badge-amber">
+                <span class="status-dot amber"></span> Pending
+              </span>
+            </td>
+            <td>—</td>
+            <td>
+              <button class="btn btn-brand" style="margin-right: 4px;">Approve</button>
+              <button class="btn btn-danger">Reject</button>
+            </td>
+          </tr>
+          <tr>
+            <td><strong>Thomas Mueller</strong></td>
+            <td>t.mueller@wine.de</td>
+            <td><span class="badge badge-blue">Client</span></td>
+            <td>—</td>
+            <td>
+              <span class="badge" style="background: var(--red-100); color: var(--red-600);">
+                <span class="status-dot red"></span> Suspended
+              </span>
+            </td>
+            <td>30 days ago</td>
+            <td><button class="btn">Reactivate</button></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="pagination">
+        Showing 1-9 of 34 users
+      </div>
+    </div>
+
+    <div class="dialog-mockup">
+      <div class="card">
+        <div class="card-content-lg">
+          <h2 style="font-size: 18px; font-weight: 600; margin-bottom: 16px;">Invite New User</h2>
+
+          <div class="form-grid">
+            <div class="form-field">
+              <label>Email</label>
+              <input type="email" placeholder="user@example.com">
+            </div>
+
+            <div class="form-field">
+              <label>Name</label>
+              <input type="text" placeholder="Full name">
+            </div>
+
+            <div class="form-field">
+              <label>Role</label>
+              <select>
+                <option>Select role...</option>
+                <option>Admin</option>
+                <option>Client</option>
+                <option>Distributor</option>
+                <option>WMS Operator</option>
+              </select>
+            </div>
+
+            <div class="form-field">
+              <label>Organization (optional)</label>
+              <input type="text" placeholder="Company or organization name">
+            </div>
+
+            <div class="checkbox-field">
+              <input type="checkbox" id="send-magic-link" checked>
+              <label for="send-magic-link">Send magic link for immediate access</label>
+            </div>
+          </div>
+
+          <div class="dialog-actions">
+            <button class="btn">Cancel</button>
+            <button class="btn btn-brand">Send Invite</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer class="page-footer">
+    Wireframe — Craft &amp; Culture — Users
+  </footer>
+</body>
+</html>

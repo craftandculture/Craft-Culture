@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Advisor — Agent Dashboard — Craft & Culture Platform</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #fafafa;
+            --surface-primary: #ffffff;
+            --surface-secondary: #f5f5f5;
+            --text-primary: #0a0a0a;
+            --text-muted: #737373;
+            --text-brand: #2a9d8f;
+            --fill-brand: #6BBFBF;
+            --fill-brand-10: rgba(107, 191, 191, 0.1);
+            --fill-brand-20: rgba(107, 191, 191, 0.2);
+            --border-primary: #e5e5e5;
+            --border-muted: #f0f0f0;
+            --amber-100: #fef3c7; --amber-600: #d97706;
+            --emerald-100: #d1fae5; --emerald-600: #059669;
+            --red-100: #fee2e2; --red-600: #dc2626;
+            --violet-100: #ede9fe; --violet-600: #7c3aed;
+            --blue-100: #dbeafe; --blue-600: #2563eb;
+            --radius-xl: 12px; --radius-lg: 8px; --radius-md: 6px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+
+        .wireframe-banner {
+            background: #000;
+            color: #fff;
+            padding: 8px 16px;
+            text-align: center;
+            font-size: 13px;
+            font-weight: 500;
+        }
+        .wireframe-banner span { color: var(--fill-brand); }
+
+        .platform-header {
+            background: var(--surface-primary);
+            border-bottom: 1px solid var(--border-primary);
+            padding: 16px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .platform-brand {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text-brand);
+        }
+        .platform-nav {
+            display: flex;
+            gap: 8px;
+        }
+        .nav-pill {
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-muted);
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+        .nav-pill:hover { background: var(--surface-secondary); color: var(--text-primary); }
+        .nav-pill.active { background: var(--fill-brand-10); color: var(--text-brand); }
+        .platform-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: var(--fill-brand);
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .agent-subnav {
+            background: var(--surface-primary);
+            border-bottom: 1px solid var(--border-primary);
+            padding: 0 24px;
+            overflow-x: auto;
+        }
+        .agent-tabs {
+            display: flex;
+            gap: 32px;
+        }
+        .agent-tab {
+            padding: 16px 0;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-muted);
+            text-decoration: none;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        .agent-tab:hover { color: var(--text-primary); }
+        .agent-tab.active {
+            color: var(--text-brand);
+            border-bottom-color: var(--fill-brand);
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 32px 24px;
+        }
+
+        .page-header {
+            margin-bottom: 32px;
+        }
+        .page-title-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 8px;
+        }
+        .page-title {
+            font-size: 32px;
+            font-weight: 700;
+        }
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 13px;
+            font-weight: 500;
+        }
+        .status-badge.active {
+            background: var(--emerald-100);
+            color: var(--emerald-600);
+        }
+        .page-subtitle {
+            font-size: 16px;
+            color: var(--text-muted);
+            margin-bottom: 16px;
+        }
+        .page-actions {
+            display: flex;
+            gap: 12px;
+        }
+        .btn {
+            padding: 10px 20px;
+            border-radius: var(--radius-lg);
+            font-size: 14px;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-primary {
+            background: var(--fill-brand);
+            color: #fff;
+        }
+        .btn-primary:hover { opacity: 0.9; }
+        .btn-secondary {
+            background: var(--surface-primary);
+            color: var(--text-primary);
+            border: 1px solid var(--border-primary);
+        }
+        .btn-secondary:hover { background: var(--surface-secondary); }
+
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 16px;
+            margin-bottom: 32px;
+        }
+        .kpi-card {
+            background: var(--surface-primary);
+            border: 1px solid var(--border-primary);
+            border-radius: var(--radius-xl);
+            padding: 20px;
+        }
+        .kpi-label {
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+        }
+        .kpi-value {
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+        .kpi-change {
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--emerald-600);
+            margin-top: 4px;
+        }
+
+        .content-grid {
+            display: grid;
+            grid-template-columns: 1fr 380px;
+            gap: 24px;
+            margin-bottom: 32px;
+        }
+        @media (max-width: 1024px) {
+            .content-grid { grid-template-columns: 1fr; }
+        }
+
+        .card {
+            background: var(--surface-primary);
+            border: 1px solid var(--border-primary);
+            border-radius: var(--radius-xl);
+            padding: 24px;
+        }
+        .card-header {
+            margin-bottom: 20px;
+        }
+        .card-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        .card-subtitle {
+            font-size: 14px;
+            color: var(--text-muted);
+        }
+
+        .timeline {
+            position: relative;
+            padding-left: 32px;
+        }
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 8px;
+            top: 8px;
+            bottom: 8px;
+            width: 2px;
+            background: var(--border-primary);
+        }
+        .timeline-item {
+            position: relative;
+            margin-bottom: 24px;
+        }
+        .timeline-item:last-child { margin-bottom: 0; }
+        .timeline-dot {
+            position: absolute;
+            left: -27px;
+            top: 4px;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            border: 3px solid var(--surface-primary);
+        }
+        .timeline-dot.amber { background: var(--amber-600); }
+        .timeline-dot.green { background: var(--emerald-600); }
+        .timeline-dot.blue { background: var(--blue-600); }
+        .timeline-date {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+        }
+        .timeline-title {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        .timeline-desc {
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+        .timeline-status {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            margin-top: 4px;
+        }
+        .status-due-soon {
+            background: var(--amber-100);
+            color: var(--amber-600);
+        }
+        .status-on-track {
+            background: var(--emerald-100);
+            color: var(--emerald-600);
+        }
+        .status-upcoming {
+            background: var(--blue-100);
+            color: var(--blue-600);
+        }
+
+        .checklist {
+            display: grid;
+            gap: 12px;
+        }
+        .checklist-item {
+            background: var(--surface-secondary);
+            border-radius: var(--radius-lg);
+            padding: 12px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .checklist-icon {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+        }
+        .icon-complete {
+            background: var(--emerald-100);
+            color: var(--emerald-600);
+        }
+        .icon-pending {
+            background: var(--amber-100);
+            color: var(--amber-600);
+        }
+        .checklist-text {
+            flex: 1;
+            font-size: 13px;
+        }
+        .checklist-label {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        .checklist-due {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        .briefing-card {
+            background: var(--surface-secondary);
+            border-radius: var(--radius-lg);
+            padding: 16px;
+            margin-top: 12px;
+        }
+        .briefing-header {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: var(--text-primary);
+        }
+        .briefing-section {
+            margin-bottom: 16px;
+        }
+        .briefing-section:last-child { margin-bottom: 0; }
+        .briefing-section-title {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+            text-transform: uppercase;
+        }
+        .briefing-text {
+            font-size: 13px;
+            line-height: 1.6;
+            color: var(--text-primary);
+        }
+        .briefing-list {
+            font-size: 13px;
+            line-height: 1.6;
+            color: var(--text-primary);
+            padding-left: 18px;
+        }
+
+        .action-items {
+            margin-bottom: 32px;
+        }
+        .action-list {
+            display: grid;
+            gap: 12px;
+        }
+        .action-item {
+            background: var(--surface-primary);
+            border: 1px solid var(--border-primary);
+            border-radius: var(--radius-lg);
+            padding: 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .action-checkbox {
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--border-primary);
+            border-radius: 4px;
+        }
+        .action-priority {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        .priority-high {
+            background: var(--red-100);
+            color: var(--red-600);
+        }
+        .priority-medium {
+            background: var(--amber-100);
+            color: var(--amber-600);
+        }
+        .priority-low {
+            background: var(--blue-100);
+            color: var(--blue-600);
+        }
+        .action-text {
+            flex: 1;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .brief-history {
+            margin-bottom: 32px;
+        }
+        .brief-list {
+            display: grid;
+            gap: 12px;
+        }
+        .brief-item {
+            background: var(--surface-primary);
+            border: 1px solid var(--border-primary);
+            border-radius: var(--radius-lg);
+            padding: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .brief-date {
+            font-size: 14px;
+            font-weight: 600;
+        }
+        .brief-summary {
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+        .brief-link {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-brand);
+            text-decoration: none;
+        }
+
+        .page-footer {
+            border-top: 1px solid var(--border-primary);
+            padding: 24px;
+            text-align: center;
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+    </style>
+</head>
+<body>
+    <div class="wireframe-banner">Wireframe — <span>The Advisor</span> Agent Dashboard — Craft &amp; Culture Platform</div>
+
+    <header class="platform-header">
+        <div class="platform-brand">Craft & Culture Platform</div>
+        <nav class="platform-nav">
+            <a href="#" class="nav-pill">Quotes</a>
+            <a href="#" class="nav-pill">Private Orders</a>
+            <a href="#" class="nav-pill">Pricing</a>
+            <a href="#" class="nav-pill active">Agents</a>
+            <a href="#" class="nav-pill">WMS</a>
+        </nav>
+        <div class="platform-avatar">KB</div>
+    </header>
+
+    <nav class="agent-subnav">
+        <div class="agent-tabs">
+            <a href="#" class="agent-tab">The Scout</a>
+            <a href="#" class="agent-tab">The Concierge</a>
+            <a href="#" class="agent-tab">The Storyteller</a>
+            <a href="#" class="agent-tab">The Buyer</a>
+            <a href="#" class="agent-tab">The Pricer</a>
+            <a href="#" class="agent-tab active">The Advisor</a>
+            <a href="#" class="agent-tab">All Agents</a>
+        </div>
+    </nav>
+
+    <main class="container">
+        <div class="page-header">
+            <div class="page-title-row">
+                <h1 class="page-title">The Advisor</h1>
+                <span class="status-badge active">Active</span>
+            </div>
+            <p class="page-subtitle">Compliance, licensing & market intelligence — updated weekly</p>
+            <div class="page-actions">
+                <button class="btn btn-primary">Run Now</button>
+                <button class="btn btn-secondary">Configure</button>
+            </div>
+        </div>
+
+        <div class="kpi-grid">
+            <div class="kpi-card">
+                <div class="kpi-label">Compliance Score</div>
+                <div class="kpi-value">94%</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-label">Active Licenses</div>
+                <div class="kpi-value">3</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-label">Pending Actions</div>
+                <div class="kpi-value">2</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-label">Market Reports</div>
+                <div class="kpi-value">8</div>
+            </div>
+        </div>
+
+        <div class="content-grid">
+            <div>
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">Regulatory Timeline</h2>
+                        <p class="card-subtitle">Upcoming compliance deadlines and renewals</p>
+                    </div>
+                    <div class="timeline">
+                        <div class="timeline-item">
+                            <div class="timeline-dot amber"></div>
+                            <div class="timeline-date">March 15, 2026</div>
+                            <div class="timeline-title">Trade License Renewal</div>
+                            <div class="timeline-desc">Dubai Department of Economic Development — Commercial license #748291</div>
+                            <div class="timeline-status status-due-soon">Due in 23 days</div>
+                        </div>
+                        <div class="timeline-item">
+                            <div class="timeline-dot green"></div>
+                            <div class="timeline-date">April 1, 2026</div>
+                            <div class="timeline-title">Annual Import Permit (Q2)</div>
+                            <div class="timeline-desc">Dubai Customs — Alcohol import authorization for April-June quarter</div>
+                            <div class="timeline-status status-on-track">On track</div>
+                        </div>
+                        <div class="timeline-item">
+                            <div class="timeline-dot green"></div>
+                            <div class="timeline-date">April 30, 2026</div>
+                            <div class="timeline-title">Product Registration Renewal</div>
+                            <div class="timeline-desc">TDRA — 186 SKUs registered, annual renewal required</div>
+                            <div class="timeline-status status-on-track">On track</div>
+                        </div>
+                        <div class="timeline-item">
+                            <div class="timeline-dot blue"></div>
+                            <div class="timeline-date">May 15, 2026</div>
+                            <div class="timeline-title">Customs Bond Review</div>
+                            <div class="timeline-desc">Annual review and renewal of customs bond (AED 250,000)</div>
+                            <div class="timeline-status status-upcoming">Not due yet</div>
+                        </div>
+                        <div class="timeline-item">
+                            <div class="timeline-dot blue"></div>
+                            <div class="timeline-date">June 30, 2026</div>
+                            <div class="timeline-title">Warehouse License Renewal</div>
+                            <div class="timeline-desc">Dubai Municipality — Food storage and warehouse operating license</div>
+                            <div class="timeline-status status-upcoming">Not due yet</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card" style="margin-top: 24px;">
+                    <div class="card-header">
+                        <h2 class="card-title">Market Entry Briefing</h2>
+                        <p class="card-subtitle">UAE wine market intelligence summary</p>
+                    </div>
+                    <div class="briefing-card">
+                        <div class="briefing-header">UAE Wine Market — February 2026</div>
+                        <div class="briefing-section">
+                            <div class="briefing-section-title">Market Conditions</div>
+                            <div class="briefing-text">
+                                The UAE wine market continues strong growth trajectory with 38% YoY increase in premium segment. Dubai remains GCC's largest market, accounting for 64% of regional volume. Tourist arrivals up 22%, driving on-premise consumption.
+                            </div>
+                        </div>
+                        <div class="briefing-section">
+                            <div class="briefing-section-title">Regulatory Updates</div>
+                            <ul class="briefing-list">
+                                <li>ESMA updated labeling requirements (effective April 1) — must include Arabic translations for allergen warnings</li>
+                                <li>Dubai Customs streamlined duty payment process — 48-hour clearance now standard</li>
+                                <li>New TDRA product registration portal launched (beta) — 30% faster processing</li>
+                            </ul>
+                        </div>
+                        <div class="briefing-section">
+                            <div class="briefing-section-title">Competitive Landscape</div>
+                            <div class="briefing-text">
+                                MMI remains market leader (42% share), African + Eastern at 28%, independent retailers growing (18%, +6pp YoY). E-commerce penetration reached 14% of total market, up from 9% last year.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <aside>
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">Compliance Checklist</h2>
+                        <p class="card-subtitle">Current regulatory status</p>
+                    </div>
+                    <div class="checklist">
+                        <div class="checklist-item">
+                            <div class="checklist-icon icon-complete">✓</div>
+                            <div class="checklist-text">
+                                <div class="checklist-label">TDRA Product Registration</div>
+                                <div class="checklist-due">Valid until Apr 30, 2026</div>
+                            </div>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="checklist-icon icon-complete">✓</div>
+                            <div class="checklist-text">
+                                <div class="checklist-label">Dubai Municipality Food Safety</div>
+                                <div class="checklist-due">Valid until Jun 30, 2026</div>
+                            </div>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="checklist-icon icon-pending">⏳</div>
+                            <div class="checklist-text">
+                                <div class="checklist-label">Alcohol Import Permit (Q1)</div>
+                                <div class="checklist-due">Pending renewal — Due Mar 1</div>
+                            </div>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="checklist-icon icon-complete">✓</div>
+                            <div class="checklist-text">
+                                <div class="checklist-label">Warehouse Operating License</div>
+                                <div class="checklist-due">Valid until Jun 30, 2026</div>
+                            </div>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="checklist-icon icon-pending">⏳</div>
+                            <div class="checklist-text">
+                                <div class="checklist-label">ESMA Labeling Compliance</div>
+                                <div class="checklist-due">Update required — Due Mar 1</div>
+                            </div>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="checklist-icon icon-complete">✓</div>
+                            <div class="checklist-text">
+                                <div class="checklist-label">VAT Registration</div>
+                                <div class="checklist-due">Active — TRN 100451273400003</div>
+                            </div>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="checklist-icon icon-complete">✓</div>
+                            <div class="checklist-text">
+                                <div class="checklist-label">Customs Bond</div>
+                                <div class="checklist-due">Valid until May 15, 2026</div>
+                            </div>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="checklist-icon icon-complete">✓</div>
+                            <div class="checklist-text">
+                                <div class="checklist-label">Business Insurance</div>
+                                <div class="checklist-due">Valid until Aug 31, 2026</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </aside>
+        </div>
+
+        <div class="action-items">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Priority Actions</h2>
+                    <p class="card-subtitle">Compliance tasks requiring attention</p>
+                </div>
+                <div class="action-list">
+                    <div class="action-item">
+                        <div class="action-checkbox"></div>
+                        <div class="action-priority priority-high">High</div>
+                        <div class="action-text">Renew trade license with Dubai DED before March 15 (23 days remaining)</div>
+                    </div>
+                    <div class="action-item">
+                        <div class="action-checkbox"></div>
+                        <div class="action-priority priority-high">High</div>
+                        <div class="action-text">File Q2 alcohol import permit application with Dubai Customs by March 1</div>
+                    </div>
+                    <div class="action-item">
+                        <div class="action-checkbox"></div>
+                        <div class="action-priority priority-medium">Medium</div>
+                        <div class="action-text">Update product labels for ESMA Arabic allergen requirements (effective April 1)</div>
+                    </div>
+                    <div class="action-item">
+                        <div class="action-checkbox"></div>
+                        <div class="action-priority priority-low">Low</div>
+                        <div class="action-text">Schedule annual compliance audit with external auditor for Q2</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="brief-history">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Brief History</h2>
+                    <p class="card-subtitle">Previous compliance & market briefs</p>
+                </div>
+                <div class="brief-list">
+                    <div class="brief-item">
+                        <div>
+                            <div class="brief-date">Last week</div>
+                            <div class="brief-summary">93% compliance score, 3 active licenses, 3 pending actions</div>
+                        </div>
+                        <a href="#" class="brief-link">View →</a>
+                    </div>
+                    <div class="brief-item">
+                        <div>
+                            <div class="brief-date">2 weeks ago</div>
+                            <div class="brief-summary">94% compliance score, 3 active licenses, 2 pending actions</div>
+                        </div>
+                        <a href="#" class="brief-link">View →</a>
+                    </div>
+                    <div class="brief-item">
+                        <div>
+                            <div class="brief-date">3 weeks ago</div>
+                            <div class="brief-summary">96% compliance score, 3 active licenses, 1 pending action</div>
+                        </div>
+                        <a href="#" class="brief-link">View →</a>
+                    </div>
+                    <div class="brief-item">
+                        <div>
+                            <div class="brief-date">4 weeks ago</div>
+                            <div class="brief-summary">95% compliance score, 3 active licenses, 2 pending actions</div>
+                        </div>
+                        <a href="#" class="brief-link">View →</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="page-footer">
+        Craft & Culture Platform — Agent Wireframe — February 2026
+    </footer>
+</body>
+</html>

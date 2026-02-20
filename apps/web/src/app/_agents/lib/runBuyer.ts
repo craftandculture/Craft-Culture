@@ -267,7 +267,7 @@ const runBuyer = async () => {
     const result = await generateObject({
       model: anthropic('claude-sonnet-4-5-20250929'),
       schema: buyerOutputSchema,
-      system: `You are The Buyer, a purchasing intelligence agent for Craft & Culture (C&C), a wine distributor in the UAE/GCC market sourcing from UK/EU suppliers.
+      system: `You are Purchasing, a purchasing intelligence agent for Craft & Culture (C&C), a wine distributor in the UAE/GCC market sourcing from UK/EU suppliers.
 
 Your job is to analyze current inventory levels, movement velocity, supplier availability, and demand signals to generate actionable purchasing recommendations.
 
@@ -315,7 +315,7 @@ Generate:
       agentId: 'buyer',
       runId: run.id,
       type: 'daily-brief',
-      title: `Buyer Brief — ${new Date().toISOString().slice(0, 10)}`,
+      title: `Purchasing Brief — ${new Date().toISOString().slice(0, 10)}`,
       content: markdown,
       data: data as Record<string, unknown>,
     });

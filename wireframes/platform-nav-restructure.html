@@ -1,0 +1,1085 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>C&amp;C Platform — Nav Restructure Wireframe</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #fafafa;
+    --surface: #ffffff;
+    --surface-2: #f5f5f5;
+    --text: #0a0a0a;
+    --text-muted: #737373;
+    --text-faint: #a3a3a3;
+    --brand: #6BBFBF;
+    --brand-text: #2a9d8f;
+    --brand-10: rgba(107,191,191,0.1);
+    --brand-20: rgba(107,191,191,0.2);
+    --border: #e5e5e5;
+    --border-muted: #f0f0f0;
+    --emerald-100: #d1fae5; --emerald-600: #059669;
+    --amber-100: #fef3c7; --amber-600: #d97706;
+    --red-100: #fee2e2; --red-600: #dc2626;
+    --violet-100: #ede9fe; --violet-600: #7c3aed;
+    --blue-100: #dbeafe; --blue-600: #2563eb;
+    --r: 12px;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'Inter',-apple-system,sans-serif; background:var(--bg); color:var(--text); font-size:14px; line-height:1.5; }
+
+  /* ── Wireframe chrome ─────────────────────── */
+  .wf-banner { background:#111; color:#666; text-align:center; padding:10px; font-size:11px; letter-spacing:1.5px; text-transform:uppercase; font-weight:600; position:sticky; top:0; z-index:100; }
+  .wf-banner span { color:var(--brand); }
+  .wf-banner .role-switch { display:inline-flex; gap:4px; margin-left:20px; }
+  .wf-banner .role-btn { background:#222; border:1px solid #333; color:#888; padding:4px 12px; border-radius:4px; font-size:10px; cursor:pointer; font-family:inherit; text-transform:uppercase; letter-spacing:0.5px; transition:all .15s; }
+  .wf-banner .role-btn:hover { border-color:#555; color:#ccc; }
+  .wf-banner .role-btn.active { background:var(--brand); color:#fff; border-color:var(--brand); }
+
+  /* ── Sections ─────────────────────────────── */
+  .section { max-width:1280px; margin:0 auto; padding:40px 20px; }
+  .section + .section { border-top:2px dashed var(--border); }
+  .section-label { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:2px; color:var(--brand-text); margin-bottom:8px; }
+  .section h2 { font-size:24px; font-weight:700; margin-bottom:6px; letter-spacing:-0.5px; }
+  .section .desc { font-size:14px; color:var(--text-muted); margin-bottom:32px; max-width:600px; }
+
+  /* ── IA Diagram ───────────────────────────── */
+  .ia-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:16px; margin-bottom:40px; }
+  .ia-card { background:var(--surface); border:1px solid var(--border); border-bottom-width:2px; border-radius:var(--r); overflow:hidden; }
+  .ia-card-header { padding:12px 16px; font-size:13px; font-weight:700; display:flex; align-items:center; gap:8px; border-bottom:1px solid var(--border-muted); }
+  .ia-card-header .icon { width:28px; height:28px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:14px; flex-shrink:0; }
+  .ia-card-body { padding:8px 0; }
+  .ia-item { padding:6px 16px; font-size:12px; color:var(--text-muted); display:flex; align-items:center; gap:6px; }
+  .ia-item:hover { background:var(--surface-2); color:var(--text); }
+  .ia-item .dot { width:5px; height:5px; border-radius:50%; flex-shrink:0; }
+  .ia-item.new { color:var(--brand-text); font-weight:500; }
+  .ia-badge { font-size:9px; font-weight:600; padding:1px 6px; border-radius:8px; margin-left:auto; }
+
+  /* ── Platform mockup ──────────────────────── */
+  .mockup { background:var(--surface); border:1px solid var(--border); border-radius:var(--r); overflow:hidden; box-shadow:0 4px 24px rgba(0,0,0,0.08); margin-bottom:32px; }
+
+  /* Header bar */
+  .mock-header { display:flex; align-items:center; justify-content:space-between; padding:0 20px; height:56px; border-bottom:1px solid var(--border); background:rgba(255,255,255,0.9); backdrop-filter:blur(12px); }
+  .mock-brand { font-size:17px; font-weight:700; color:var(--brand); letter-spacing:-0.3px; }
+  .mock-nav { display:flex; gap:2px; align-items:center; }
+  .mock-nav-item { padding:8px 16px; font-size:13px; font-weight:500; color:var(--text-muted); border-radius:8px; cursor:pointer; transition:all .15s; position:relative; white-space:nowrap; }
+  .mock-nav-item:hover { color:var(--text); background:var(--surface-2); }
+  .mock-nav-item.active { color:var(--brand-text); background:var(--brand-10); }
+  .mock-nav-item .badge { position:absolute; top:4px; right:6px; width:8px; height:8px; border-radius:50%; background:var(--red-600); }
+  .mock-right { display:flex; align-items:center; gap:10px; }
+  .mock-avatar { width:32px; height:32px; border-radius:50%; background:var(--brand-20); display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:600; color:var(--brand-text); }
+  .mock-icon-btn { width:32px; height:32px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:16px; color:var(--text-muted); cursor:pointer; }
+  .mock-icon-btn:hover { background:var(--surface-2); }
+
+  /* Sub-tabs bar */
+  .mock-tabs { display:flex; gap:0; padding:0 20px; border-bottom:1px solid var(--border); background:var(--surface); }
+  .mock-tab { padding:12px 18px; font-size:12px; font-weight:500; color:var(--text-muted); border-bottom:2px solid transparent; cursor:pointer; transition:all .15s; white-space:nowrap; }
+  .mock-tab:hover { color:var(--text); }
+  .mock-tab.active { color:var(--brand-text); border-bottom-color:var(--brand); }
+  .mock-tab .tab-badge { font-size:10px; font-weight:600; padding:1px 6px; border-radius:8px; background:var(--brand-10); color:var(--brand-text); margin-left:6px; }
+
+  /* Content area */
+  .mock-content { padding:24px 20px; min-height:400px; }
+
+  /* ── Dashboard mockup ─────────────────────── */
+  .dash-greeting { margin-bottom:24px; }
+  .dash-greeting h1 { font-size:22px; font-weight:600; letter-spacing:-0.5px; }
+  .dash-greeting p { font-size:13px; color:var(--text-muted); margin-top:2px; }
+
+  .kpi-row { display:grid; grid-template-columns:repeat(5,1fr); gap:12px; margin-bottom:24px; }
+  .kpi { background:var(--surface); border:1px solid var(--border-muted); border-radius:var(--r); padding:14px; }
+  .kpi-label { font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:0.8px; color:var(--text-muted); }
+  .kpi-val { font-size:22px; font-weight:600; margin-top:4px; letter-spacing:-0.5px; }
+  .kpi-sub { font-size:11px; color:var(--text-muted); margin-top:2px; }
+  .kpi-trend { font-size:11px; font-weight:600; }
+  .kpi-trend.up { color:var(--emerald-600); }
+  .kpi-trend.down { color:var(--red-600); }
+
+  .two-col { display:grid; grid-template-columns:3fr 2fr; gap:20px; }
+
+  /* Agent alerts on home */
+  .agent-alerts { display:flex; flex-direction:column; gap:10px; }
+  .agent-alert { display:flex; gap:12px; padding:12px; border-radius:var(--r); border:1px solid var(--border-muted); background:var(--surface); cursor:pointer; transition:all .15s; }
+  .agent-alert:hover { border-color:var(--border); box-shadow:0 2px 8px rgba(0,0,0,0.04); }
+  .agent-icon { width:36px; height:36px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0; }
+  .agent-alert-content { flex:1; min-width:0; }
+  .agent-alert-title { font-size:12px; font-weight:600; }
+  .agent-alert-body { font-size:11px; color:var(--text-muted); margin-top:2px; line-height:1.4; }
+  .agent-alert-time { font-size:10px; color:var(--text-faint); margin-top:4px; }
+  .agent-alert-action { font-size:11px; color:var(--brand-text); font-weight:600; flex-shrink:0; align-self:center; }
+
+  /* Quick list */
+  .quick-list { display:flex; flex-direction:column; }
+  .quick-item { display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--border-muted); }
+  .quick-item:last-child { border-bottom:none; }
+  .quick-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+  .quick-text { flex:1; font-size:12px; }
+  .quick-text strong { font-weight:600; }
+  .quick-value { font-size:12px; font-weight:600; text-align:right; white-space:nowrap; }
+  .quick-time { font-size:10px; color:var(--text-faint); white-space:nowrap; }
+
+  .card { background:var(--surface); border:1px solid var(--border); border-bottom-width:2px; border-radius:var(--r); overflow:hidden; }
+  .card-head { padding:14px 16px; font-size:13px; font-weight:600; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid var(--border-muted); }
+  .card-body { padding:14px 16px; }
+  .view-all { font-size:11px; color:var(--brand-text); font-weight:500; cursor:pointer; }
+
+  /* ── Mobile mockup ────────────────────────── */
+  .mobile-frame { width:375px; margin:0 auto; background:var(--surface); border:1px solid var(--border); border-radius:24px; overflow:hidden; box-shadow:0 4px 24px rgba(0,0,0,0.1); }
+  .mobile-status { height:44px; background:#000; display:flex; align-items:flex-end; justify-content:center; padding-bottom:6px; }
+  .mobile-status span { color:#fff; font-size:11px; font-weight:600; }
+  .mobile-header { display:flex; align-items:center; justify-content:space-between; padding:0 16px; height:52px; border-bottom:1px solid var(--border); }
+  .mobile-hamburger { width:32px; height:32px; display:flex; flex-direction:column; justify-content:center; gap:4px; cursor:pointer; }
+  .mobile-hamburger span { display:block; width:18px; height:2px; background:var(--text); border-radius:1px; }
+  .mobile-brand { font-size:16px; font-weight:700; color:var(--brand); }
+  .mobile-tabs { display:flex; overflow-x:auto; padding:0 16px; border-bottom:1px solid var(--border); gap:0; }
+  .mobile-tab { padding:10px 14px; font-size:11px; font-weight:500; color:var(--text-muted); border-bottom:2px solid transparent; white-space:nowrap; flex-shrink:0; }
+  .mobile-tab.active { color:var(--brand-text); border-bottom-color:var(--brand); }
+  .mobile-content { padding:16px; }
+  .mobile-kpi-row { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:16px; }
+  .mobile-kpi { padding:12px; border:1px solid var(--border-muted); border-radius:10px; }
+  .mobile-kpi .kpi-label { font-size:9px; }
+  .mobile-kpi .kpi-val { font-size:18px; }
+  .mobile-alert { display:flex; gap:10px; padding:12px; border:1px solid var(--border-muted); border-radius:10px; margin-bottom:10px; }
+  .mobile-home { height:4px; width:120px; background:#222; border-radius:2px; margin:8px auto 6px; }
+
+  /* ── Drawer mockup ────────────────────────── */
+  .drawer-overlay { position:relative; width:375px; margin:0 auto; }
+  .drawer-panel { background:var(--surface); border-right:1px solid var(--border); width:300px; min-height:580px; padding:20px 0; }
+  .drawer-section-label { padding:8px 20px; font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:1.5px; color:var(--text-faint); }
+  .drawer-item { padding:10px 20px; font-size:14px; font-weight:500; color:var(--text); display:flex; align-items:center; gap:10px; cursor:pointer; }
+  .drawer-item:hover { background:var(--surface-2); }
+  .drawer-item.active { color:var(--brand-text); background:var(--brand-10); }
+  .drawer-item .di-icon { font-size:18px; width:24px; text-align:center; }
+  .drawer-item .di-badge { margin-left:auto; font-size:10px; font-weight:600; padding:2px 8px; border-radius:10px; background:var(--brand-10); color:var(--brand-text); }
+  .drawer-divider { height:1px; background:var(--border-muted); margin:8px 0; }
+  .drawer-user { padding:16px 20px; display:flex; align-items:center; gap:10px; border-bottom:1px solid var(--border-muted); margin-bottom:8px; }
+  .drawer-user-name { font-size:14px; font-weight:600; }
+  .drawer-user-role { font-size:11px; color:var(--text-muted); }
+
+  /* ── Comparison ───────────────────────────── */
+  .compare { display:grid; grid-template-columns:1fr 1fr; gap:24px; margin:32px 0; }
+  .compare-col { }
+  .compare-label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:1px; margin-bottom:12px; padding:6px 12px; border-radius:6px; display:inline-block; }
+  .compare-label.before { background:var(--red-100); color:var(--red-600); }
+  .compare-label.after { background:var(--emerald-100); color:var(--emerald-600); }
+
+  /* ── Annotation ───────────────────────────── */
+  .annotation { font-size:11px; color:var(--text-muted); padding:8px 12px; border-left:3px solid var(--brand); background:var(--brand-10); border-radius:0 8px 8px 0; margin:12px 0; line-height:1.5; }
+  .annotation strong { color:var(--text); }
+
+  /* ── Role views ───────────────────────────── */
+  .role-view { display:none; }
+  .role-view.visible { display:block; }
+
+  @media (max-width: 900px) {
+    .kpi-row { grid-template-columns: repeat(2, 1fr); }
+    .two-col { grid-template-columns: 1fr; }
+    .compare { grid-template-columns: 1fr; }
+    .ia-grid { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ── Wireframe Banner + Role Switcher ──────── -->
+<div class="wf-banner">
+  <span>Craft &amp; Culture</span> — Platform Nav Restructure
+  <div class="role-switch">
+    <button class="role-btn active" onclick="switchRole('admin')">Admin</button>
+    <button class="role-btn" onclick="switchRole('wine')">Wine Partner</button>
+    <button class="role-btn" onclick="switchRole('dist')">Distributor</button>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════ -->
+<!--  SECTION 1: Information Architecture Map    -->
+<!-- ════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-label">Section 1</div>
+  <h2>Proposed Information Architecture</h2>
+  <p>100 routes reorganised into 5-6 top-level groups per role. Every page reachable in 2 clicks max.</p>
+
+  <!-- Admin IA -->
+  <div class="role-view visible" id="ia-admin">
+    <div class="ia-grid">
+      <div class="ia-card">
+        <div class="ia-card-header">
+          <div class="icon" style="background:var(--brand-10);color:var(--brand);">&#9751;</div>
+          Home
+        </div>
+        <div class="ia-card-body">
+          <div class="ia-item"><div class="dot" style="background:var(--brand);"></div> Morning Dashboard</div>
+          <div class="ia-item"><div class="dot" style="background:var(--brand);"></div> Agent Alerts Feed</div>
+          <div class="ia-item"><div class="dot" style="background:var(--brand);"></div> Quick Actions</div>
+          <div class="ia-item"><div class="dot" style="background:var(--text-faint);"></div> Activity Log</div>
+        </div>
+      </div>
+      <div class="ia-card">
+        <div class="ia-card-header">
+          <div class="icon" style="background:var(--violet-100);color:var(--violet-600);">&#9998;</div>
+          Orders
+        </div>
+        <div class="ia-card-body">
+          <div class="ia-item"><div class="dot" style="background:var(--violet-600);"></div> Private Client Orders</div>
+          <div class="ia-item"><div class="dot" style="background:var(--violet-600);"></div> Zoho Sales Orders</div>
+          <div class="ia-item"><div class="dot" style="background:var(--violet-600);"></div> Quote Approvals</div>
+          <div class="ia-item"><div class="dot" style="background:var(--violet-600);"></div> Source / RFQs</div>
+          <div class="ia-item"><div class="dot" style="background:var(--violet-600);"></div> Customer POs</div>
+          <div class="ia-item"><div class="dot" style="background:var(--text-faint);"></div> Create Quote</div>
+          <div class="ia-item"><div class="dot" style="background:var(--text-faint);"></div> My Quotes</div>
+        </div>
+      </div>
+      <div class="ia-card">
+        <div class="ia-card-header">
+          <div class="icon" style="background:var(--emerald-100);color:var(--emerald-600);">&#9878;</div>
+          Warehouse
+        </div>
+        <div class="ia-card-body">
+          <div class="ia-item"><div class="dot" style="background:var(--emerald-600);"></div> WMS Dashboard</div>
+          <div class="ia-item"><div class="dot" style="background:var(--emerald-600);"></div> Stock Explorer</div>
+          <div class="ia-item"><div class="dot" style="background:var(--emerald-600);"></div> Dispatch</div>
+          <div class="ia-item"><div class="dot" style="background:var(--emerald-600);"></div> Logistics &amp; Shipments</div>
+          <div class="ia-item"><div class="dot" style="background:var(--emerald-600);"></div> Pallets</div>
+          <div class="ia-item"><div class="dot" style="background:var(--text-faint);"></div> Locations &amp; Labels</div>
+          <div class="ia-item"><div class="dot" style="background:var(--text-faint);"></div> Movements</div>
+        </div>
+      </div>
+      <div class="ia-card">
+        <div class="ia-card-header">
+          <div class="icon" style="background:var(--blue-100);color:var(--blue-600);">&#9823;</div>
+          Partners
+        </div>
+        <div class="ia-card-body">
+          <div class="ia-item"><div class="dot" style="background:var(--blue-600);"></div> Distributors</div>
+          <div class="ia-item"><div class="dot" style="background:var(--blue-600);"></div> Wine Partners</div>
+          <div class="ia-item"><div class="dot" style="background:var(--blue-600);"></div> Users</div>
+          <div class="ia-item"><div class="dot" style="background:var(--blue-600);"></div> Clients (CRM)</div>
+        </div>
+      </div>
+      <div class="ia-card">
+        <div class="ia-card-header">
+          <div class="icon" style="background:var(--amber-100);color:var(--amber-600);">&#9733;</div>
+          Finance
+        </div>
+        <div class="ia-card-body">
+          <div class="ia-item"><div class="dot" style="background:var(--amber-600);"></div> Commissions</div>
+          <div class="ia-item"><div class="dot" style="background:var(--amber-600);"></div> Pricing Calculator</div>
+          <div class="ia-item"><div class="dot" style="background:var(--amber-600);"></div> Pricing Config</div>
+        </div>
+      </div>
+      <div class="ia-card">
+        <div class="ia-card-header">
+          <div class="icon" style="background:var(--brand-10);color:var(--brand-text);">&#9672;</div>
+          Agents
+          <span class="ia-badge" style="background:var(--brand-10);color:var(--brand-text);">NEW</span>
+        </div>
+        <div class="ia-card-body">
+          <div class="ia-item new"><div class="dot" style="background:var(--brand);"></div> The Scout</div>
+          <div class="ia-item new"><div class="dot" style="background:var(--brand);"></div> The Concierge</div>
+          <div class="ia-item new"><div class="dot" style="background:var(--brand);"></div> The Storyteller</div>
+          <div class="ia-item new"><div class="dot" style="background:var(--brand);"></div> The Buyer</div>
+          <div class="ia-item new"><div class="dot" style="background:var(--brand);"></div> The Pricer</div>
+          <div class="ia-item new"><div class="dot" style="background:var(--brand);"></div> The Advisor</div>
+        </div>
+      </div>
+    </div>
+    <div class="annotation">
+      <strong>Key change:</strong> Current admin sidebar (14 items) and header nav (15+ conditional links) collapse into <strong>6 top-level items</strong>. Every sub-page lives behind a tab. The sidebar is removed — it was fighting the header for attention.
+    </div>
+  </div>
+
+  <!-- Wine Partner IA -->
+  <div class="role-view" id="ia-wine">
+    <div class="ia-grid">
+      <div class="ia-card">
+        <div class="ia-card-header">
+          <div class="icon" style="background:var(--brand-10);color:var(--brand);">&#9751;</div>
+          Home
+        </div>
+        <div class="ia-card-body">
+          <div class="ia-item"><div class="dot" style="background:var(--brand);"></div> Dashboard</div>
+          <div class="ia-item"><div class="dot" style="background:var(--brand);"></div> Agent Alerts</div>
+        </div>
+      </div>
+      <div class="ia-card">
+        <div class="ia-card-header">
+          <div class="icon" style="background:var(--violet-100);color:var(--violet-600);">&#9998;</div>
+          Orders
+        </div>
+        <div class="ia-card-body">
+          <div class="ia-item"><div class="dot" style="background:var(--violet-600);"></div> My Orders</div>
+          <div class="ia-item"><div class="dot" style="background:var(--violet-600);"></div> Create Order</div>
+          <div class="ia-item"><div class="dot" style="background:var(--violet-600);"></div> Source / RFQs</div>
+          <div class="ia-item"><div class="dot" style="background:var(--violet-600);"></div> Confirmations</div>
+        </div>
+      </div>
+      <div class="ia-card">
+        <div class="ia-card-header">
+          <div class="icon" style="background:var(--emerald-100);color:var(--emerald-600);">&#9878;</div>
+          Inventory
+        </div>
+        <div class="ia-card-body">
+          <div class="ia-item"><div class="dot" style="background:var(--emerald-600);"></div> Local Stock</div>
+          <div class="ia-item"><div class="dot" style="background:var(--emerald-600);"></div> Partner Stock</div>
+          <div class="ia-item"><div class="dot" style="background:var(--emerald-600);"></div> Shipments</div>
+        </div>
+      </div>
+      <div class="ia-card">
+        <div class="ia-card-header">
+          <div class="icon" style="background:var(--blue-100);color:var(--blue-600);">&#9823;</div>
+          Clients
+        </div>
+        <div class="ia-card-body">
+          <div class="ia-item"><div class="dot" style="background:var(--blue-600);"></div> All Clients</div>
+          <div class="ia-item"><div class="dot" style="background:var(--blue-600);"></div> Add Client</div>
+        </div>
+      </div>
+      <div class="ia-card">
+        <div class="ia-card-header">
+          <div class="icon" style="background:var(--brand-10);color:var(--brand-text);">&#9672;</div>
+          Agents
+          <span class="ia-badge" style="background:var(--brand-10);color:var(--brand-text);">NEW</span>
+        </div>
+        <div class="ia-card-body">
+          <div class="ia-item new"><div class="dot" style="background:var(--brand);"></div> The Scout</div>
+          <div class="ia-item new"><div class="dot" style="background:var(--brand);"></div> The Concierge</div>
+          <div class="ia-item new"><div class="dot" style="background:var(--brand);"></div> The Storyteller</div>
+        </div>
+      </div>
+    </div>
+    <div class="annotation">
+      <strong>Wine Partner view:</strong> 5 top-level items. Current scattered nav (Inventory pill + Private Clients pill + CRM pill + Source pill) collapses into <strong>Orders</strong>, <strong>Inventory</strong>, <strong>Clients</strong>. Clean.
+    </div>
+  </div>
+
+  <!-- Distributor IA -->
+  <div class="role-view" id="ia-dist">
+    <div class="ia-grid">
+      <div class="ia-card">
+        <div class="ia-card-header">
+          <div class="icon" style="background:var(--brand-10);color:var(--brand);">&#9751;</div>
+          Home
+        </div>
+        <div class="ia-card-body">
+          <div class="ia-item"><div class="dot" style="background:var(--brand);"></div> Dashboard</div>
+          <div class="ia-item"><div class="dot" style="background:var(--brand);"></div> Performance</div>
+        </div>
+      </div>
+      <div class="ia-card">
+        <div class="ia-card-header">
+          <div class="icon" style="background:var(--violet-100);color:var(--violet-600);">&#9998;</div>
+          Orders
+        </div>
+        <div class="ia-card-body">
+          <div class="ia-item"><div class="dot" style="background:var(--violet-600);"></div> Assigned Orders</div>
+          <div class="ia-item"><div class="dot" style="background:var(--violet-600);"></div> Summary Export</div>
+        </div>
+      </div>
+      <div class="ia-card">
+        <div class="ia-card-header">
+          <div class="icon" style="background:var(--emerald-100);color:var(--emerald-600);">&#9998;</div>
+          Quotes
+        </div>
+        <div class="ia-card-body">
+          <div class="ia-item"><div class="dot" style="background:var(--emerald-600);"></div> Create Quote</div>
+          <div class="ia-item"><div class="dot" style="background:var(--emerald-600);"></div> My Quotes</div>
+        </div>
+      </div>
+      <div class="ia-card">
+        <div class="ia-card-header">
+          <div class="icon" style="background:var(--brand-10);color:var(--brand-text);">&#9672;</div>
+          Agents
+          <span class="ia-badge" style="background:var(--brand-10);color:var(--brand-text);">NEW</span>
+        </div>
+        <div class="ia-card-body">
+          <div class="ia-item new"><div class="dot" style="background:var(--brand);"></div> The Scout</div>
+        </div>
+      </div>
+    </div>
+    <div class="annotation">
+      <strong>Distributor view:</strong> Simplest nav — 4 items. Currently they see a "Private Clients" pill with Dashboard + Assigned Orders. Now it's just <strong>Home</strong> and <strong>Orders</strong>.
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════ -->
+<!--  SECTION 2: Desktop Nav — Before/After      -->
+<!-- ════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-label">Section 2</div>
+  <h2>Desktop Header — Before &amp; After</h2>
+  <p>Current header vs proposed. Same platform, dramatically less visual noise.</p>
+
+  <div class="compare">
+    <div class="compare-col">
+      <div class="compare-label before">Current</div>
+      <!-- Current nav mockup -->
+      <div class="mockup">
+        <div class="mock-header" style="gap:8px;flex-wrap:wrap;height:auto;padding:10px 16px;">
+          <div class="mock-brand" style="font-size:15px;">Craft &amp; Culture</div>
+          <div style="display:flex;gap:4px;flex-wrap:wrap;flex:1;justify-content:flex-start;">
+            <!-- Quotes pill group -->
+            <div style="display:flex;align-items:center;gap:2px;border:1px solid var(--border-muted);border-radius:8px;padding:2px 6px;font-size:10px;">
+              <span style="color:var(--text-faint);font-size:8px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;border-right:1px solid var(--border-muted);padding-right:6px;">Quotes</span>
+              <span style="padding:3px 6px;font-size:11px;cursor:pointer;">Create</span>
+              <span style="color:var(--border);">|</span>
+              <span style="padding:3px 6px;font-size:11px;cursor:pointer;">My Quotes</span>
+              <span style="color:var(--border);">|</span>
+              <span style="padding:3px 6px;font-size:11px;cursor:pointer;">Approvals</span>
+            </div>
+            <!-- Private Orders pill group -->
+            <div style="display:flex;align-items:center;gap:2px;border:1px solid var(--border-muted);border-radius:8px;padding:2px 6px;background:var(--surface-2);font-size:10px;">
+              <span style="color:var(--text-faint);font-size:8px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;border-right:1px solid var(--border-muted);padding-right:6px;">Private Orders</span>
+              <span style="padding:3px 6px;font-size:11px;cursor:pointer;">Dashboard</span>
+              <span style="color:var(--border);">|</span>
+              <span style="padding:3px 6px;font-size:11px;cursor:pointer;">Manage</span>
+            </div>
+            <!-- Pricing pill group -->
+            <div style="display:flex;align-items:center;gap:2px;border:1px solid var(--border-muted);border-radius:8px;padding:2px 6px;background:var(--surface-2);font-size:10px;">
+              <span style="color:var(--text-faint);font-size:8px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;border-right:1px solid var(--border-muted);padding-right:6px;">Pricing</span>
+              <span style="padding:3px 6px;font-size:11px;cursor:pointer;">Calculator</span>
+            </div>
+          </div>
+          <div class="mock-right">
+            <div class="mock-icon-btn">&#128276;</div>
+            <div class="mock-avatar">KB</div>
+          </div>
+        </div>
+        <!-- sidebar -->
+        <div style="display:flex;min-height:280px;">
+          <div style="width:200px;border-right:1px solid var(--border);padding:12px 0;font-size:12px;background:var(--surface);">
+            <div style="padding:4px 16px;font-size:9px;font-weight:700;color:var(--text-faint);text-transform:uppercase;letter-spacing:1px;">People</div>
+            <div style="padding:6px 16px;color:var(--text-muted);cursor:pointer;">Users</div>
+            <div style="padding:6px 16px;color:var(--text-muted);cursor:pointer;">Distributors</div>
+            <div style="padding:6px 16px;color:var(--text-muted);cursor:pointer;">Partners (Wine)</div>
+            <div style="padding:4px 16px;font-size:9px;font-weight:700;color:var(--text-faint);text-transform:uppercase;letter-spacing:1px;margin-top:8px;">Orders</div>
+            <div style="padding:6px 16px;color:var(--brand-text);font-weight:500;background:var(--brand-10);">Private Clients</div>
+            <div style="padding:6px 16px;color:var(--text-muted);cursor:pointer;">Zoho Sales</div>
+            <div style="padding:6px 16px;color:var(--text-muted);cursor:pointer;">Source</div>
+            <div style="padding:6px 16px;color:var(--text-muted);cursor:pointer;">Logistics</div>
+            <div style="padding:6px 16px;color:var(--text-muted);cursor:pointer;">WMS</div>
+            <div style="padding:6px 16px;color:var(--text-muted);cursor:pointer;">Stock Explorer</div>
+            <div style="padding:4px 16px;font-size:9px;font-weight:700;color:var(--text-faint);text-transform:uppercase;letter-spacing:1px;margin-top:8px;">Finance</div>
+            <div style="padding:6px 16px;color:var(--text-muted);cursor:pointer;">Commissions</div>
+            <div style="padding:6px 16px;color:var(--text-muted);cursor:pointer;">Pricing</div>
+            <div style="padding:4px 16px;font-size:9px;font-weight:700;color:var(--text-faint);text-transform:uppercase;letter-spacing:1px;margin-top:8px;">System</div>
+            <div style="padding:6px 16px;color:var(--text-muted);cursor:pointer;">Activity</div>
+            <div style="padding:6px 16px;color:var(--text-muted);cursor:pointer;">Zoho Import</div>
+            <div style="padding:6px 16px;color:var(--text-muted);cursor:pointer;">Settings</div>
+          </div>
+          <div style="flex:1;padding:20px;color:var(--text-muted);font-size:12px;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:4px;">
+            <div style="font-size:32px;opacity:0.3;">&#9785;</div>
+            <div>Header nav + sidebar + pill groups</div>
+            <div style="font-size:11px;">3 layers of navigation competing</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="compare-col">
+      <div class="compare-label after">Proposed</div>
+      <!-- Proposed nav mockup -->
+      <div class="mockup">
+        <div class="mock-header">
+          <div style="display:flex;align-items:center;gap:20px;">
+            <div class="mock-brand">Craft &amp; Culture</div>
+            <div class="mock-nav">
+              <div class="mock-nav-item active">Home</div>
+              <div class="mock-nav-item">Orders <span class="badge"></span></div>
+              <div class="mock-nav-item">Warehouse</div>
+              <div class="mock-nav-item">Partners</div>
+              <div class="mock-nav-item">Finance</div>
+              <div class="mock-nav-item">Agents</div>
+            </div>
+          </div>
+          <div class="mock-right">
+            <div class="mock-icon-btn" title="Search">&#8984;</div>
+            <div class="mock-icon-btn">&#128276;</div>
+            <div class="mock-icon-btn" title="Settings">&#9881;</div>
+            <div class="mock-avatar">KB</div>
+          </div>
+        </div>
+        <!-- No sidebar. Tabs only when on a sub-section -->
+        <div style="min-height:280px;padding:24px;display:flex;flex-direction:column;gap:16px;">
+          <div>
+            <div style="font-size:20px;font-weight:600;letter-spacing:-0.3px;">Good morning, Kevin</div>
+            <div style="font-size:13px;color:var(--text-muted);">Thursday 13 Feb 2026 &mdash; 3 agent alerts, 2 orders need attention</div>
+          </div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;">
+            <div style="flex:1;min-width:140px;padding:14px;border:1px solid var(--border-muted);border-radius:10px;">
+              <div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Open Orders</div>
+              <div style="font-size:22px;font-weight:600;margin-top:4px;">14</div>
+            </div>
+            <div style="flex:1;min-width:140px;padding:14px;border:1px solid var(--border-muted);border-radius:10px;">
+              <div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">This Week</div>
+              <div style="font-size:22px;font-weight:600;margin-top:4px;color:var(--brand-text);">AED 48k</div>
+            </div>
+            <div style="flex:1;min-width:140px;padding:14px;border:1px solid var(--border-muted);border-radius:10px;">
+              <div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Agent Alerts</div>
+              <div style="font-size:22px;font-weight:600;margin-top:4px;color:var(--amber-600);">3</div>
+            </div>
+            <div style="flex:1;min-width:140px;padding:14px;border:1px solid var(--border-muted);border-radius:10px;">
+              <div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">WMS Pending</div>
+              <div style="font-size:22px;font-weight:600;margin-top:4px;">6</div>
+            </div>
+          </div>
+          <div style="font-size:11px;color:var(--text-faint);text-align:center;margin-top:auto;">
+            &#10003; No sidebar. No pill groups. 6 nav items. Tabs appear when you click into a section.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════ -->
+<!--  SECTION 3: Orders section with tabs         -->
+<!-- ════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-label">Section 3</div>
+  <h2>Inside a Section — Orders (Admin)</h2>
+  <p>Click "Orders" in the nav and tabs appear. No sidebar, no pill groups — just horizontal tabs under the header.</p>
+
+  <div class="mockup">
+    <div class="mock-header">
+      <div style="display:flex;align-items:center;gap:20px;">
+        <div class="mock-brand">Craft &amp; Culture</div>
+        <div class="mock-nav">
+          <div class="mock-nav-item">Home</div>
+          <div class="mock-nav-item active">Orders <span class="badge"></span></div>
+          <div class="mock-nav-item">Warehouse</div>
+          <div class="mock-nav-item">Partners</div>
+          <div class="mock-nav-item">Finance</div>
+          <div class="mock-nav-item">Agents</div>
+        </div>
+      </div>
+      <div class="mock-right">
+        <div class="mock-icon-btn">&#8984;</div>
+        <div class="mock-icon-btn">&#128276;</div>
+        <div class="mock-icon-btn">&#9881;</div>
+        <div class="mock-avatar">KB</div>
+      </div>
+    </div>
+    <div class="mock-tabs">
+      <div class="mock-tab active">Private Orders <span class="tab-badge">14</span></div>
+      <div class="mock-tab">Zoho Sales <span class="tab-badge">8</span></div>
+      <div class="mock-tab">Quote Approvals <span class="tab-badge">3</span></div>
+      <div class="mock-tab">Source / RFQ</div>
+      <div class="mock-tab">Customer POs</div>
+      <div class="mock-tab" style="border-left:1px solid var(--border-muted);margin-left:8px;padding-left:24px;color:var(--text-faint);">Create Quote</div>
+      <div class="mock-tab" style="color:var(--text-faint);">My Quotes</div>
+    </div>
+    <div class="mock-content" style="min-height:200px;display:flex;align-items:center;justify-content:center;">
+      <div style="text-align:center;color:var(--text-muted);font-size:13px;">
+        <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:4px;">Private Client Orders</div>
+        Existing order table renders here — no layout changes needed.<br>
+        Just the navigation wrapper changes.
+      </div>
+    </div>
+  </div>
+
+  <div class="annotation" style="margin-top:16px;">
+    <strong>Pattern:</strong> Top nav selects the section. Tabs select the page within that section. Content area stays the same — existing components drop in unchanged. The tab bar replaces both the sidebar and the pill groups.
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════ -->
+<!--  SECTION 4: Warehouse section                -->
+<!-- ════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-label">Section 4</div>
+  <h2>Warehouse Section (Admin)</h2>
+  <p>WMS keeps its card-based dashboard for scanner workflows. But it lives cleanly under the Warehouse tab now.</p>
+
+  <div class="mockup">
+    <div class="mock-header">
+      <div style="display:flex;align-items:center;gap:20px;">
+        <div class="mock-brand">Craft &amp; Culture</div>
+        <div class="mock-nav">
+          <div class="mock-nav-item">Home</div>
+          <div class="mock-nav-item">Orders</div>
+          <div class="mock-nav-item active">Warehouse</div>
+          <div class="mock-nav-item">Partners</div>
+          <div class="mock-nav-item">Finance</div>
+          <div class="mock-nav-item">Agents</div>
+        </div>
+      </div>
+      <div class="mock-right">
+        <div class="mock-icon-btn">&#8984;</div>
+        <div class="mock-icon-btn">&#128276;</div>
+        <div class="mock-icon-btn">&#9881;</div>
+        <div class="mock-avatar">KB</div>
+      </div>
+    </div>
+    <div class="mock-tabs">
+      <div class="mock-tab active">WMS Operations</div>
+      <div class="mock-tab">Stock Explorer</div>
+      <div class="mock-tab">Dispatch <span class="tab-badge">2</span></div>
+      <div class="mock-tab">Logistics</div>
+      <div class="mock-tab">Pallets</div>
+      <div class="mock-tab">Movements</div>
+    </div>
+    <div class="mock-content" style="min-height:240px;">
+      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;">
+        <div style="padding:20px;border:1px solid var(--border-muted);border-radius:10px;text-align:center;cursor:pointer;">
+          <div style="font-size:24px;margin-bottom:6px;">&#128230;</div>
+          <div style="font-size:12px;font-weight:600;">Receive</div>
+          <div style="font-size:10px;color:var(--text-muted);">Ctrl+R</div>
+        </div>
+        <div style="padding:20px;border:1px solid var(--border-muted);border-radius:10px;text-align:center;cursor:pointer;">
+          <div style="font-size:24px;margin-bottom:6px;">&#128269;</div>
+          <div style="font-size:12px;font-weight:600;">Check</div>
+          <div style="font-size:10px;color:var(--text-muted);">Ctrl+C</div>
+        </div>
+        <div style="padding:20px;border:1px solid var(--border-muted);border-radius:10px;text-align:center;cursor:pointer;">
+          <div style="font-size:24px;margin-bottom:6px;">&#9745;</div>
+          <div style="font-size:12px;font-weight:600;">Pick</div>
+          <div style="font-size:10px;color:var(--text-muted);">Ctrl+P</div>
+        </div>
+        <div style="padding:20px;border:1px solid var(--border-muted);border-radius:10px;text-align:center;cursor:pointer;">
+          <div style="font-size:24px;margin-bottom:6px;">&#8644;</div>
+          <div style="font-size:12px;font-weight:600;">Transfer</div>
+          <div style="font-size:10px;color:var(--text-muted);">Ctrl+T</div>
+        </div>
+        <div style="padding:20px;border:1px solid var(--border-muted);border-radius:10px;text-align:center;cursor:pointer;">
+          <div style="font-size:24px;margin-bottom:6px;">&#128230;</div>
+          <div style="font-size:12px;font-weight:600;">Repack</div>
+        </div>
+      </div>
+      <div style="margin-top:16px;display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">
+        <div style="padding:14px;border:1px solid var(--border-muted);border-radius:10px;text-align:center;cursor:pointer;font-size:12px;color:var(--text-muted);">
+          &#127991; Labels
+        </div>
+        <div style="padding:14px;border:1px solid var(--border-muted);border-radius:10px;text-align:center;cursor:pointer;font-size:12px;color:var(--text-muted);">
+          &#128205; Locations
+        </div>
+        <div style="padding:14px;border:1px solid var(--border-muted);border-radius:10px;text-align:center;cursor:pointer;font-size:12px;color:var(--text-muted);">
+          &#128200; Cycle Count
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="annotation" style="margin-top:16px;">
+    <strong>WMS operations card grid preserved</strong> — it works well for scanner workflows. The difference: you reach it from the top nav, not from a sidebar item buried under "Orders". Dispatch, Stock Explorer, and Logistics get their own tabs instead of competing for sidebar space.
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════ -->
+<!--  SECTION 5: Home Dashboard with Agent Feed  -->
+<!-- ════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-label">Section 5</div>
+  <h2>Home Dashboard — The Morning View</h2>
+  <p>This is what you see when you log in. KPIs across the top, agent alerts in the main column, recent orders on the right. One screen that tells you what needs attention today.</p>
+
+  <div class="mockup">
+    <div class="mock-header">
+      <div style="display:flex;align-items:center;gap:20px;">
+        <div class="mock-brand">Craft &amp; Culture</div>
+        <div class="mock-nav">
+          <div class="mock-nav-item active">Home</div>
+          <div class="mock-nav-item">Orders <span class="badge"></span></div>
+          <div class="mock-nav-item">Warehouse</div>
+          <div class="mock-nav-item">Partners</div>
+          <div class="mock-nav-item">Finance</div>
+          <div class="mock-nav-item">Agents</div>
+        </div>
+      </div>
+      <div class="mock-right">
+        <div class="mock-icon-btn">&#8984;</div>
+        <div class="mock-icon-btn">&#128276;</div>
+        <div class="mock-icon-btn">&#9881;</div>
+        <div class="mock-avatar">KB</div>
+      </div>
+    </div>
+    <div class="mock-content">
+      <!-- Greeting -->
+      <div class="dash-greeting">
+        <h1>Good morning, Kevin</h1>
+        <p>Thursday 13 Feb 2026 &mdash; Here's what needs your attention today</p>
+      </div>
+
+      <!-- KPIs -->
+      <div class="kpi-row">
+        <div class="kpi">
+          <div class="kpi-label">Open Orders</div>
+          <div class="kpi-val">14</div>
+          <div class="kpi-sub kpi-trend up">+3 this week</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-label">Revenue (Week)</div>
+          <div class="kpi-val" style="color:var(--brand-text);">AED 48.2k</div>
+          <div class="kpi-sub kpi-trend up">+53% vs last week</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-label">Pending Dispatch</div>
+          <div class="kpi-val">6</div>
+          <div class="kpi-sub">2 batches staged</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-label">Agent Alerts</div>
+          <div class="kpi-val" style="color:var(--amber-600);">3</div>
+          <div class="kpi-sub">1 high priority</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-label">Overdue Invoice</div>
+          <div class="kpi-val" style="color:var(--red-600);">1</div>
+          <div class="kpi-sub">AED 8,400 &bull; 14 days</div>
+        </div>
+      </div>
+
+      <!-- Two columns -->
+      <div class="two-col">
+        <!-- Agent Alerts -->
+        <div>
+          <div class="card">
+            <div class="card-head">
+              Agent Briefing
+              <span class="view-all">View all agents &rarr;</span>
+            </div>
+            <div class="card-body">
+              <div class="agent-alerts">
+                <div class="agent-alert">
+                  <div class="agent-icon" style="background:var(--emerald-100);">&#128065;</div>
+                  <div class="agent-alert-content">
+                    <div class="agent-alert-title">The Scout &mdash; 12 price gaps detected</div>
+                    <div class="agent-alert-body">Sassicaia 2020 at +203% vs JY. Champagne blind spot flagged. GBP/USD down to 1.293 — sourcing window open.</div>
+                    <div class="agent-alert-time">Today 06:00</div>
+                  </div>
+                  <div class="agent-alert-action">View &rarr;</div>
+                </div>
+                <div class="agent-alert">
+                  <div class="agent-icon" style="background:var(--blue-100);">&#128172;</div>
+                  <div class="agent-alert-content">
+                    <div class="agent-alert-title">The Concierge &mdash; 3 clients need outreach</div>
+                    <div class="agent-alert-body">Mohammed Al-Rashid is 26 days since last order (typical: 21-28 days). Giacosa Falletto 2019 matches his profile. Draft WhatsApp ready.</div>
+                    <div class="agent-alert-time">Today 06:15</div>
+                  </div>
+                  <div class="agent-alert-action">View &rarr;</div>
+                </div>
+                <div class="agent-alert">
+                  <div class="agent-icon" style="background:var(--violet-100);">&#9997;</div>
+                  <div class="agent-alert-content">
+                    <div class="agent-alert-title">The Storyteller &mdash; Weekly content ready</div>
+                    <div class="agent-alert-body">Instagram post (Sassicaia story), WhatsApp broadcast (3 wines), LinkedIn draft (UAE market trends). Review and publish.</div>
+                    <div class="agent-alert-time">Monday 06:00</div>
+                  </div>
+                  <div class="agent-alert-action">Review &rarr;</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Recent Activity -->
+        <div>
+          <div class="card" style="margin-bottom:16px;">
+            <div class="card-head">
+              Recent Orders
+              <span class="view-all">All orders &rarr;</span>
+            </div>
+            <div class="card-body">
+              <div class="quick-list">
+                <div class="quick-item">
+                  <div class="quick-dot" style="background:var(--emerald-600);"></div>
+                  <div class="quick-text"><strong>PCO-0047</strong> &mdash; Mohammed Al-Rashid</div>
+                  <div class="quick-value" style="color:var(--brand-text);">AED 12,400</div>
+                </div>
+                <div class="quick-item">
+                  <div class="quick-dot" style="background:var(--amber-600);"></div>
+                  <div class="quick-text"><strong>PCO-0046</strong> &mdash; Sarah Chen</div>
+                  <div class="quick-value">AED 8,200</div>
+                </div>
+                <div class="quick-item">
+                  <div class="quick-dot" style="background:var(--emerald-600);"></div>
+                  <div class="quick-text"><strong>SO-1284</strong> &mdash; City Drinks (Zoho)</div>
+                  <div class="quick-value">AED 34,500</div>
+                </div>
+                <div class="quick-item">
+                  <div class="quick-dot" style="background:var(--violet-600);"></div>
+                  <div class="quick-text"><strong>PCO-0045</strong> &mdash; David Park</div>
+                  <div class="quick-value">AED 6,800</div>
+                </div>
+                <div class="quick-item">
+                  <div class="quick-dot" style="background:var(--emerald-600);"></div>
+                  <div class="quick-text"><strong>RFQ-0023</strong> &mdash; Leflaive request</div>
+                  <div class="quick-value" style="font-size:11px;color:var(--text-muted);">Pending</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-head">
+              Quick Actions
+            </div>
+            <div class="card-body" style="display:flex;flex-wrap:wrap;gap:8px;">
+              <button style="padding:8px 14px;font-size:12px;font-weight:500;border:1px solid var(--border);border-radius:8px;background:var(--surface);cursor:pointer;font-family:inherit;">+ New Order</button>
+              <button style="padding:8px 14px;font-size:12px;font-weight:500;border:1px solid var(--border);border-radius:8px;background:var(--surface);cursor:pointer;font-family:inherit;">+ Create Quote</button>
+              <button style="padding:8px 14px;font-size:12px;font-weight:500;border:1px solid var(--border);border-radius:8px;background:var(--surface);cursor:pointer;font-family:inherit;">Open WMS</button>
+              <button style="padding:8px 14px;font-size:12px;font-weight:500;border:1px solid var(--border);border-radius:8px;background:var(--surface);cursor:pointer;font-family:inherit;">Run Scout</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════ -->
+<!--  SECTION 6: Mobile                           -->
+<!-- ════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-label">Section 6</div>
+  <h2>Mobile — Drawer Nav + Home</h2>
+  <p>Hamburger opens a clean drawer. Scrollable tabs for sub-navigation. Same IA, touch-friendly.</p>
+
+  <div style="display:flex;gap:40px;justify-content:center;flex-wrap:wrap;">
+    <!-- Drawer open -->
+    <div>
+      <div style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;text-align:center;">Drawer Nav (Admin)</div>
+      <div class="mobile-frame">
+        <div class="mobile-status"><span>9:41</span></div>
+        <div class="drawer-panel">
+          <div class="drawer-user">
+            <div class="mock-avatar" style="width:40px;height:40px;font-size:14px;">KB</div>
+            <div>
+              <div class="drawer-user-name">Kevin Bradford</div>
+              <div class="drawer-user-role">Admin</div>
+            </div>
+          </div>
+          <div class="drawer-item active">
+            <span class="di-icon">&#9751;</span> Home
+          </div>
+          <div class="drawer-item">
+            <span class="di-icon">&#9998;</span> Orders
+            <span class="di-badge">14</span>
+          </div>
+          <div class="drawer-item">
+            <span class="di-icon">&#9878;</span> Warehouse
+          </div>
+          <div class="drawer-item">
+            <span class="di-icon">&#9823;</span> Partners
+          </div>
+          <div class="drawer-item">
+            <span class="di-icon">&#9733;</span> Finance
+          </div>
+          <div class="drawer-divider"></div>
+          <div class="drawer-item">
+            <span class="di-icon">&#9672;</span> Agents
+            <span class="di-badge">3 alerts</span>
+          </div>
+          <div class="drawer-divider"></div>
+          <div class="drawer-section-label">Account</div>
+          <div class="drawer-item" style="color:var(--text-muted);font-size:13px;">
+            <span class="di-icon">&#9881;</span> Settings
+          </div>
+          <div class="drawer-item" style="color:var(--text-muted);font-size:13px;">
+            <span class="di-icon">&#63;</span> Support
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Mobile home -->
+    <div>
+      <div style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;text-align:center;">Home (Mobile)</div>
+      <div class="mobile-frame">
+        <div class="mobile-status"><span>9:41</span></div>
+        <div class="mobile-header">
+          <div class="mobile-hamburger"><span></span><span></span><span></span></div>
+          <div class="mobile-brand">Craft &amp; Culture</div>
+          <div class="mock-avatar" style="width:28px;height:28px;font-size:10px;">KB</div>
+        </div>
+        <div class="mobile-content">
+          <div style="font-size:17px;font-weight:600;margin-bottom:4px;">Good morning, Kevin</div>
+          <div style="font-size:11px;color:var(--text-muted);margin-bottom:16px;">3 alerts &bull; 2 orders need attention</div>
+
+          <div class="mobile-kpi-row">
+            <div class="mobile-kpi">
+              <div class="kpi-label">Open Orders</div>
+              <div class="kpi-val">14</div>
+            </div>
+            <div class="mobile-kpi">
+              <div class="kpi-label">Revenue</div>
+              <div class="kpi-val" style="color:var(--brand-text);">AED 48k</div>
+            </div>
+          </div>
+
+          <div style="font-size:11px;font-weight:600;margin-bottom:8px;">Agent Alerts</div>
+          <div class="mobile-alert">
+            <div class="agent-icon" style="background:var(--emerald-100);width:32px;height:32px;font-size:15px;">&#128065;</div>
+            <div style="flex:1;">
+              <div style="font-size:12px;font-weight:600;">The Scout</div>
+              <div style="font-size:11px;color:var(--text-muted);">12 price gaps &bull; Champagne blind spot</div>
+            </div>
+          </div>
+          <div class="mobile-alert">
+            <div class="agent-icon" style="background:var(--blue-100);width:32px;height:32px;font-size:15px;">&#128172;</div>
+            <div style="flex:1;">
+              <div style="font-size:12px;font-weight:600;">The Concierge</div>
+              <div style="font-size:11px;color:var(--text-muted);">3 clients need outreach</div>
+            </div>
+          </div>
+          <div class="mobile-alert">
+            <div class="agent-icon" style="background:var(--violet-100);width:32px;height:32px;font-size:15px;">&#9997;</div>
+            <div style="flex:1;">
+              <div style="font-size:12px;font-weight:600;">The Storyteller</div>
+              <div style="font-size:11px;color:var(--text-muted);">Weekly content ready to review</div>
+            </div>
+          </div>
+
+          <div style="margin-top:12px;font-size:11px;font-weight:600;margin-bottom:8px;">Recent Orders</div>
+          <div style="font-size:12px;padding:8px 0;border-bottom:1px solid var(--border-muted);display:flex;justify-content:space-between;">
+            <span><strong>PCO-0047</strong> Al-Rashid</span>
+            <span style="color:var(--brand-text);font-weight:600;">AED 12.4k</span>
+          </div>
+          <div style="font-size:12px;padding:8px 0;border-bottom:1px solid var(--border-muted);display:flex;justify-content:space-between;">
+            <span><strong>PCO-0046</strong> Chen</span>
+            <span style="font-weight:600;">AED 8.2k</span>
+          </div>
+        </div>
+        <div class="mobile-home"></div>
+      </div>
+    </div>
+
+    <!-- Mobile orders with tabs -->
+    <div>
+      <div style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;text-align:center;">Orders (Scrollable Tabs)</div>
+      <div class="mobile-frame">
+        <div class="mobile-status"><span>9:41</span></div>
+        <div class="mobile-header">
+          <div class="mobile-hamburger"><span></span><span></span><span></span></div>
+          <div class="mobile-brand">Craft &amp; Culture</div>
+          <div class="mock-avatar" style="width:28px;height:28px;font-size:10px;">KB</div>
+        </div>
+        <div class="mobile-tabs">
+          <div class="mobile-tab active">Private</div>
+          <div class="mobile-tab">Zoho</div>
+          <div class="mobile-tab">Approvals</div>
+          <div class="mobile-tab">RFQ</div>
+          <div class="mobile-tab">POs</div>
+          <div class="mobile-tab">Quotes</div>
+        </div>
+        <div class="mobile-content">
+          <div style="font-size:15px;font-weight:600;margin-bottom:12px;">Private Orders</div>
+          <div style="padding:12px;border:1px solid var(--border-muted);border-radius:10px;margin-bottom:8px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <div>
+                <div style="font-size:13px;font-weight:600;">PCO-0047</div>
+                <div style="font-size:11px;color:var(--text-muted);">Mohammed Al-Rashid</div>
+              </div>
+              <div style="text-align:right;">
+                <div style="font-size:13px;font-weight:600;color:var(--brand-text);">AED 12,400</div>
+                <div style="font-size:10px;padding:2px 8px;background:var(--emerald-100);color:var(--emerald-600);border-radius:8px;display:inline-block;">Confirmed</div>
+              </div>
+            </div>
+          </div>
+          <div style="padding:12px;border:1px solid var(--border-muted);border-radius:10px;margin-bottom:8px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <div>
+                <div style="font-size:13px;font-weight:600;">PCO-0046</div>
+                <div style="font-size:11px;color:var(--text-muted);">Sarah Chen</div>
+              </div>
+              <div style="text-align:right;">
+                <div style="font-size:13px;font-weight:600;">AED 8,200</div>
+                <div style="font-size:10px;padding:2px 8px;background:var(--amber-100);color:var(--amber-600);border-radius:8px;display:inline-block;">Processing</div>
+              </div>
+            </div>
+          </div>
+          <div style="padding:12px;border:1px solid var(--border-muted);border-radius:10px;margin-bottom:8px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <div>
+                <div style="font-size:13px;font-weight:600;">PCO-0045</div>
+                <div style="font-size:11px;color:var(--text-muted);">David Park</div>
+              </div>
+              <div style="text-align:right;">
+                <div style="font-size:13px;font-weight:600;">AED 6,800</div>
+                <div style="font-size:10px;padding:2px 8px;background:var(--blue-100);color:var(--blue-600);border-radius:8px;display:inline-block;">Dispatched</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="mobile-home"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════ -->
+<!--  SECTION 7: Summary of Changes               -->
+<!-- ════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-label">Section 7</div>
+  <h2>What Changes, What Stays</h2>
+  <p>The nav restructure is a wrapper change. Existing page components don't change at all.</p>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:24px;">
+    <div class="card">
+      <div class="card-head" style="background:var(--red-100);color:var(--red-600);">Remove</div>
+      <div class="card-body">
+        <div style="font-size:13px;display:flex;flex-direction:column;gap:6px;">
+          <div>&#10060; Admin sidebar (14 items in a permanent column)</div>
+          <div>&#10060; Header pill groups with pipe separators</div>
+          <div>&#10060; Conditional nav rendering in layout.tsx (200+ lines)</div>
+          <div>&#10060; AdminNav.tsx (legacy horizontal bar)</div>
+          <div>&#10060; Duplicate navigation paths (same page reachable 3 ways)</div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-head" style="background:var(--emerald-100);color:var(--emerald-600);">Add</div>
+      <div class="card-body">
+        <div style="font-size:13px;display:flex;flex-direction:column;gap:6px;">
+          <div>&#10003; Top nav with 5-6 role-aware items</div>
+          <div>&#10003; Tab bar per section (replaces sidebar + pills)</div>
+          <div>&#10003; Home dashboard with agent briefing feed</div>
+          <div>&#10003; Mobile drawer with same IA</div>
+          <div>&#10003; Command bar (&#8984;K) for power-user navigation</div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-head" style="background:var(--amber-100);color:var(--amber-600);">Keep Unchanged</div>
+      <div class="card-body">
+        <div style="font-size:13px;display:flex;flex-direction:column;gap:6px;">
+          <div>&#8594; All existing page components (tables, forms, dashboards)</div>
+          <div>&#8594; WMS card grid dashboard (works well)</div>
+          <div>&#8594; WMS scanner mode layout (separate concern)</div>
+          <div>&#8594; All tRPC routes and API endpoints</div>
+          <div>&#8594; Design tokens, Card, Typography, Badge, Button</div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-head" style="background:var(--blue-100);color:var(--blue-600);">Effort Estimate</div>
+      <div class="card-body">
+        <div style="font-size:13px;display:flex;flex-direction:column;gap:8px;">
+          <div><strong>New components:</strong> ~4 (TopNav, TabBar, MobileDrawer, HomeDashboard)</div>
+          <div><strong>Modified files:</strong> ~3 (platform layout, mobile nav, footer)</div>
+          <div><strong>Deleted files:</strong> ~2 (AdminSidebar, AdminNav)</div>
+          <div><strong>Net lines:</strong> Likely negative (removing more than adding)</div>
+          <div><strong>Risk:</strong> Low — wrapper-only changes, no business logic touched</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div style="text-align:center;padding:40px 20px;color:var(--text-faint);font-size:12px;border-top:2px solid var(--border);">
+  Craft &amp; Culture &mdash; Platform Nav Restructure Wireframe &mdash; Feb 2026<br>
+  <span style="color:var(--brand);">6 sections</span> &bull; Desktop + Mobile &bull; Admin / Wine Partner / Distributor views
+</div>
+
+<script>
+function switchRole(role) {
+  document.querySelectorAll('.role-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.role-view').forEach(v => v.classList.remove('visible'));
+  event.target.classList.add('active');
+  document.getElementById('ia-' + role).classList.add('visible');
+}
+</script>
+</body>
+</html>

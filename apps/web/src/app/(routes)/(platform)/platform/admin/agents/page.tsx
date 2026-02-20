@@ -4,7 +4,7 @@ import AgentDashboard from '@/app/_agents/components/AgentDashboard';
 import getQueryClient from '@/lib/react-query';
 
 /**
- * AI Agents Dashboard - Scout, Concierge, Storyteller briefs + competitor upload
+ * Intelligence Dashboard - Scout, Concierge, Socials briefs + competitor upload
  */
 const AgentsDashboardPage = async () => {
   const queryClient = getQueryClient();
