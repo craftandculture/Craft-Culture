@@ -12,7 +12,6 @@ import Tabs from '@/app/_ui/components/Tabs/Tabs';
 import TabsContent from '@/app/_ui/components/Tabs/TabsContent';
 import TabsList from '@/app/_ui/components/Tabs/TabsList';
 import TabsTrigger from '@/app/_ui/components/Tabs/TabsTrigger';
-import Typography from '@/app/_ui/components/Typography/Typography';
 
 import CompetitorUpload from './CompetitorUpload';
 import ConciergeBrief from './ConciergeBrief';
@@ -25,28 +24,19 @@ import StorytellerBrief from './StorytellerBrief';
 const AgentDashboard = () => {
   return (
     <div className="container space-y-6 py-6">
-      <div>
-        <Typography variant="headingLg" className="font-bold">
-          AI Agents
-        </Typography>
-        <Typography variant="bodySm" colorRole="muted">
-          Automated intelligence briefs from Scout, Concierge, and Storyteller
-        </Typography>
-      </div>
-
       <Tabs defaultValue="scout">
         <TabsList>
           <TabsTrigger value="scout">
             <Icon icon={IconBinoculars} size="sm" className="mr-2" />
-            Scout
+            The Scout
           </TabsTrigger>
           <TabsTrigger value="concierge">
             <Icon icon={IconSparkles} size="sm" className="mr-2" />
-            Concierge
+            The Concierge
           </TabsTrigger>
           <TabsTrigger value="storyteller">
             <Icon icon={IconPencil} size="sm" className="mr-2" />
-            Storyteller
+            The Storyteller
           </TabsTrigger>
           <TabsTrigger value="upload">
             <Icon icon={IconUpload} size="sm" className="mr-2" />
