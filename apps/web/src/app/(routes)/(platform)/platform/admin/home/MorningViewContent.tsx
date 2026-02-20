@@ -167,7 +167,7 @@ const MorningViewContent = () => {
           {/* Open Orders */}
           <div className="rounded-xl border border-border-muted bg-white p-4 dark:bg-background-secondary">
             <Typography variant="bodyXs" className="font-semibold uppercase tracking-wider text-text-muted">
-              Open Orders
+              PCO Orders
             </Typography>
             <Typography variant="headingLg" className="mt-1">
               {data.kpis.openOrders}
