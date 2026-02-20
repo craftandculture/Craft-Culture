@@ -82,9 +82,15 @@ const SupplierUpload = () => {
           const rows: ParsedRow[] = [];
 
           for (const row of normalizedJson) {
+            // Build case-insensitive lookup map
+            const lowerMap: Record<string, unknown> = {};
+            for (const [key, value] of Object.entries(row)) {
+              lowerMap[key.toLowerCase()] = value;
+            }
+
             const get = (keys: string[]) => {
               for (const key of keys) {
-                const val = row[key] ?? row[key.toLowerCase()] ?? row[key.toUpperCase()];
+                const val = row[key] ?? lowerMap[key.toLowerCase()];
                 if (val !== undefined && val !== null && val !== '') return String(val);
               }
               return undefined;
@@ -101,11 +107,12 @@ const SupplierUpload = () => {
               get([
                 'Product Name',
                 'Wine',
+                'Wine name',
+                'Wine Name',
                 'Name',
                 'Product',
                 'Description',
                 'Item',
-                'Wine Name',
                 'Château / Estate / Brand',
                 'Chateau / Estate / Brand',
                 'Estate',
@@ -119,6 +126,7 @@ const SupplierUpload = () => {
               'Cost Price USD', 'Cost USD', 'Price USD', 'USD', 'Cost',
               'Price', 'Unit Price', 'FOB', 'Ex-Cellar',
               'Cost Price GBP', 'Cost GBP', 'GBP', 'Price GBP',
+              'Market value', 'Lowest offer', 'Last trade price',
               'Cost Price EUR', 'Cost EUR', 'EUR', 'Price EUR',
             ]);
             const hasVintage = get(['Vintage', 'Year', 'Yr']);
@@ -140,6 +148,7 @@ const SupplierUpload = () => {
 
             let bottleSize = get([
               'Size', 'Bottle Size', 'BottleSize', 'Format', 'Format CL', 'Volume',
+              'Unit size', 'Unit Size',
             ]);
 
             if (!bottleSize) {
@@ -167,6 +176,7 @@ const SupplierUpload = () => {
               ]),
               costPriceGbp: getNum([
                 'Cost Price GBP', 'Cost GBP', 'GBP', 'Price GBP',
+                'Market value', 'Lowest offer', 'Last trade price',
               ]),
               costPriceEur: getNum([
                 'Cost Price EUR', 'Cost EUR', 'EUR', 'Price EUR',
@@ -174,7 +184,8 @@ const SupplierUpload = () => {
               moq: getNum(['MOQ', 'Min Order', 'Minimum Order', 'Min Qty']),
               availableQuantity: getNum([
                 'Qty', 'Quantity', 'Stock', 'Available',
-                'Available Quantity', 'Volume Available',
+                'Available Quantity', 'Available quantity',
+                'Volume Available',
               ]),
             });
           }
