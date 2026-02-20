@@ -1,14 +1,11 @@
 'use client';
 
 import {
-  IconAlertTriangle,
   IconBinoculars,
   IconBolt,
   IconBrain,
   IconBuildingWarehouse,
-  IconChartBar,
   IconChevronRight,
-  IconClipboardCheck,
   IconClock,
   IconCurrencyDollar,
   IconFileText,
@@ -16,8 +13,6 @@ import {
   IconPlus,
   IconShoppingCart,
   IconSparkles,
-  IconStarFilled,
-  IconTruck,
 } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
@@ -97,11 +92,8 @@ const agentConfig: Record<string, { icon: typeof IconBinoculars; bgColor: string
 /** Quick action definitions */
 const quickActions = [
   { label: '+ New Order', href: '/platform/admin/private-orders/new', icon: IconPlus },
-  { label: 'Create Quote', href: '/platform/quotes', icon: IconFileText },
+  { label: '+ Create Quote', href: '/platform/quotes', icon: IconFileText },
   { label: 'Open WMS', href: '/platform/admin/wms', icon: IconBuildingWarehouse },
-  { label: 'Logistics', href: '/platform/admin/logistics', icon: IconTruck },
-  { label: 'Stock Check', href: '/platform/admin/wms/stock/check', icon: IconClipboardCheck },
-  { label: 'Stock Explorer', href: '/platform/admin/stock-explorer', icon: IconChartBar },
   { label: 'Run Scout', href: '/platform/admin/agents', icon: IconBolt },
 ];
 
@@ -204,152 +196,122 @@ const MorningViewContent = () => {
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
           {/* PCO Orders */}
           <Card>
-            <CardContent className="flex items-start justify-between p-4">
-              <div>
-                <p className="text-[11px] font-medium uppercase tracking-wider text-text-muted">
-                  PCO Orders
-                </p>
-                <p className="mt-1 text-2xl font-semibold tracking-tight">
-                  {data.kpis.openOrders}
-                </p>
-                <p className="mt-0.5 text-[11px] text-text-muted">
-                  {data.kpis.openOrdersThisWeek > 0
-                    ? <span className="text-emerald-600">+{data.kpis.openOrdersThisWeek} this week</span>
-                    : 'Active orders'}
-                </p>
-              </div>
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-100 text-blue-600">
-                <IconFileText size={18} />
-              </div>
+            <CardContent className="p-4">
+              <p className="text-[11px] font-medium uppercase tracking-wider text-text-muted">
+                PCO Orders
+              </p>
+              <p className="mt-1.5 text-3xl font-bold tracking-tight">
+                {data.kpis.openOrders}
+              </p>
+              <p className="mt-1 text-[12px] font-semibold">
+                {data.kpis.openOrdersThisWeek > 0
+                  ? <span className="text-emerald-600">+{data.kpis.openOrdersThisWeek} this week</span>
+                  : <span className="text-text-muted">Active orders</span>}
+              </p>
             </CardContent>
           </Card>
 
           {/* Invoiced (Month) */}
           <Card>
-            <CardContent className="flex items-start justify-between p-4">
-              <div>
-                <p className="text-[11px] font-medium uppercase tracking-wider text-text-muted">
-                  Invoiced (Month)
-                </p>
-                <p className="mt-1 text-2xl font-semibold tracking-tight text-text-brand">
-                  {formatCurrency(
-                    currency === 'USD' ? data.kpis.revenueMonthUsd : data.kpis.revenueMonthAed,
-                    currency,
-                  )}
-                </p>
-                <p className="mt-0.5 text-[11px] text-text-muted">
-                  {(() => {
-                    const current = currency === 'USD' ? data.kpis.revenueMonthUsd : data.kpis.revenueMonthAed;
-                    const previous = currency === 'USD' ? data.kpis.revenueLastMonthUsd : data.kpis.revenueLastMonthAed;
-                    if (previous > 0) {
-                      const pct = Math.round(((current - previous) / previous) * 100);
-                      return <span className={pct >= 0 ? 'text-emerald-600' : 'text-red-600'}>{pct >= 0 ? '+' : ''}{pct}% vs last month</span>;
-                    }
-                    return 'No data last month';
-                  })()}
-                </p>
-              </div>
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-fill-brand/10 text-text-brand">
-                <IconStarFilled size={18} />
-              </div>
+            <CardContent className="p-4">
+              <p className="text-[11px] font-medium uppercase tracking-wider text-text-muted">
+                Invoiced (Month)
+              </p>
+              <p className="mt-1.5 text-3xl font-bold tracking-tight text-text-brand">
+                {formatCurrency(
+                  currency === 'USD' ? data.kpis.revenueMonthUsd : data.kpis.revenueMonthAed,
+                  currency,
+                )}
+              </p>
+              <p className="mt-1 text-[12px] font-semibold">
+                {(() => {
+                  const current = currency === 'USD' ? data.kpis.revenueMonthUsd : data.kpis.revenueMonthAed;
+                  const previous = currency === 'USD' ? data.kpis.revenueLastMonthUsd : data.kpis.revenueLastMonthAed;
+                  if (previous > 0) {
+                    const pct = Math.round(((current - previous) / previous) * 100);
+                    return <span className={pct >= 0 ? 'text-emerald-600' : 'text-red-600'}>{pct >= 0 ? '+' : ''}{pct}% vs last month</span>;
+                  }
+                  return <span className="text-text-muted">No data last month</span>;
+                })()}
+              </p>
             </CardContent>
           </Card>
 
           {/* Invoiced (Year) */}
           <Card>
-            <CardContent className="flex items-start justify-between p-4">
-              <div>
-                <p className="text-[11px] font-medium uppercase tracking-wider text-text-muted">
-                  Invoiced (Year)
-                </p>
-                <p className="mt-1 text-2xl font-semibold tracking-tight text-text-brand">
-                  {formatCurrency(
-                    currency === 'USD' ? data.kpis.revenueYearUsd : data.kpis.revenueYearAed,
-                    currency,
-                  )}
-                </p>
-                <p className="mt-0.5 text-[11px] text-text-muted">
-                  {(() => {
-                    const current = currency === 'USD' ? data.kpis.revenueYearUsd : data.kpis.revenueYearAed;
-                    const previous = currency === 'USD' ? data.kpis.revenueLastYearUsd : data.kpis.revenueLastYearAed;
-                    if (previous > 0) {
-                      const pct = Math.round(((current - previous) / previous) * 100);
-                      return <span className={pct >= 0 ? 'text-emerald-600' : 'text-red-600'}>{pct >= 0 ? '+' : ''}{pct}% vs last year</span>;
-                    }
-                    return 'No data last year';
-                  })()}
-                </p>
-              </div>
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-fill-brand/10 text-text-brand">
-                <IconChartBar size={18} />
-              </div>
+            <CardContent className="p-4">
+              <p className="text-[11px] font-medium uppercase tracking-wider text-text-muted">
+                Invoiced (Year)
+              </p>
+              <p className="mt-1.5 text-3xl font-bold tracking-tight text-text-brand">
+                {formatCurrency(
+                  currency === 'USD' ? data.kpis.revenueYearUsd : data.kpis.revenueYearAed,
+                  currency,
+                )}
+              </p>
+              <p className="mt-1 text-[12px] font-semibold">
+                {(() => {
+                  const current = currency === 'USD' ? data.kpis.revenueYearUsd : data.kpis.revenueYearAed;
+                  const previous = currency === 'USD' ? data.kpis.revenueLastYearUsd : data.kpis.revenueLastYearAed;
+                  if (previous > 0) {
+                    const pct = Math.round(((current - previous) / previous) * 100);
+                    return <span className={pct >= 0 ? 'text-emerald-600' : 'text-red-600'}>{pct >= 0 ? '+' : ''}{pct}% vs last year</span>;
+                  }
+                  return <span className="text-text-muted">No data last year</span>;
+                })()}
+              </p>
             </CardContent>
           </Card>
 
           {/* Pending Dispatch */}
           <Card>
-            <CardContent className="flex items-start justify-between p-4">
-              <div>
-                <p className="text-[11px] font-medium uppercase tracking-wider text-text-muted">
-                  Pending Dispatch
-                </p>
-                <p className="mt-1 text-2xl font-semibold tracking-tight">
-                  {data.kpis.pendingDispatch}
-                </p>
-                <p className="mt-0.5 text-[11px] text-text-muted">
-                  {data.kpis.stagedBatches} batches staged
-                </p>
-              </div>
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-100 text-amber-600">
-                <IconTruck size={18} />
-              </div>
+            <CardContent className="p-4">
+              <p className="text-[11px] font-medium uppercase tracking-wider text-text-muted">
+                Pending Dispatch
+              </p>
+              <p className="mt-1.5 text-3xl font-bold tracking-tight">
+                {data.kpis.pendingDispatch}
+              </p>
+              <p className="mt-1 text-[12px] text-text-muted">
+                {data.kpis.stagedBatches} batches staged
+              </p>
             </CardContent>
           </Card>
 
           {/* Agent Alerts */}
           <Card>
-            <CardContent className="flex items-start justify-between p-4">
-              <div>
-                <p className="text-[11px] font-medium uppercase tracking-wider text-text-muted">
-                  Agent Alerts
-                </p>
-                <p className={`mt-1 text-2xl font-semibold tracking-tight ${data.kpis.agentAlerts > 0 ? 'text-amber-600' : ''}`}>
-                  {data.kpis.agentAlerts}
-                </p>
-                <p className="mt-0.5 text-[11px] text-text-muted">
-                  {data.kpis.agentAlerts > 0
-                    ? `${data.kpis.agentAlerts} high priority`
-                    : 'No alerts'}
-                </p>
-              </div>
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-violet-100 text-violet-600">
-                <IconBinoculars size={18} />
-              </div>
+            <CardContent className="p-4">
+              <p className="text-[11px] font-medium uppercase tracking-wider text-text-muted">
+                Agent Alerts
+              </p>
+              <p className={`mt-1.5 text-3xl font-bold tracking-tight ${data.kpis.agentAlerts > 0 ? 'text-amber-600' : ''}`}>
+                {data.kpis.agentAlerts}
+              </p>
+              <p className="mt-1 text-[12px] text-text-muted">
+                {data.kpis.agentAlerts > 0
+                  ? `${data.kpis.agentAlerts} high priority`
+                  : 'No alerts'}
+              </p>
             </CardContent>
           </Card>
 
           {/* Overdue Invoice */}
           <Card>
-            <CardContent className="flex items-start justify-between p-4">
-              <div>
-                <p className="text-[11px] font-medium uppercase tracking-wider text-text-muted">
-                  Overdue Invoice
-                </p>
-                <p className={`mt-1 text-2xl font-semibold tracking-tight ${data.kpis.overdueInvoices > 0 ? 'text-red-600' : 'text-emerald-600'}`}>
-                  {data.kpis.overdueInvoices}
-                </p>
-                <p className="mt-0.5 text-[11px] text-text-muted">
-                  {data.kpis.overdueInvoices > 0
-                    ? formatCurrency(
-                        currency === 'USD' ? data.kpis.overdueAmountUsd : data.kpis.overdueAmountAed,
-                        currency,
-                      )
-                    : 'All clear'}
-                </p>
-              </div>
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-red-100 text-red-600">
-                <IconAlertTriangle size={18} />
-              </div>
+            <CardContent className="p-4">
+              <p className="text-[11px] font-medium uppercase tracking-wider text-text-muted">
+                Overdue Invoice
+              </p>
+              <p className={`mt-1.5 text-3xl font-bold tracking-tight ${data.kpis.overdueInvoices > 0 ? 'text-red-600' : 'text-emerald-600'}`}>
+                {data.kpis.overdueInvoices}
+              </p>
+              <p className="mt-1 text-[12px] text-text-muted">
+                {data.kpis.overdueInvoices > 0
+                  ? formatCurrency(
+                      currency === 'USD' ? data.kpis.overdueAmountUsd : data.kpis.overdueAmountAed,
+                      currency,
+                    )
+                  : 'All clear'}
+              </p>
             </CardContent>
           </Card>
         </div>
@@ -389,7 +351,7 @@ const MorningViewContent = () => {
                         <div className="min-w-0 flex-1">
                           <p className="text-[13px] font-semibold">
                             {config.label}
-                            <span className="ml-1.5 font-normal text-text-muted">&mdash; {brief.highlight}</span>
+                            <span className="ml-1.5 font-semibold text-text-primary">&mdash; {brief.highlight}</span>
                           </p>
                           <p className="mt-0.5 line-clamp-2 text-xs text-text-muted">
                             {brief.summary.length > 150
