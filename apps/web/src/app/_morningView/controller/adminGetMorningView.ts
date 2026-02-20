@@ -72,6 +72,9 @@ const adminGetMorningView = adminProcedure.query(async () => {
     scoutBrief,
     conciergeBrief,
     storytellerBrief,
+    buyerBrief,
+    pricerBrief,
+    advisorBrief,
     recentPco,
     recentZoho,
   ] = await Promise.all([
@@ -94,10 +97,10 @@ const adminGetMorningView = adminProcedure.query(async () => {
       )
       .then((r) => r[0]),
 
-    // 3. Revenue this calendar month (Zoho invoices, USD)
+    // 3. Revenue this calendar month (Zoho invoices, normalized to USD)
     db
       .select({
-        total: sql<number>`coalesce(sum(${zohoInvoices.total}), 0)`,
+        total: sql<number>`coalesce(sum(CASE WHEN ${zohoInvoices.currencyCode} = 'AED' THEN ${zohoInvoices.total} / ${USD_TO_AED} ELSE ${zohoInvoices.total} END), 0)`,
       })
       .from(zohoInvoices)
       .where(
@@ -108,10 +111,10 @@ const adminGetMorningView = adminProcedure.query(async () => {
       )
       .then((r) => r[0]),
 
-    // 4. Revenue last calendar month (Zoho invoices, USD)
+    // 4. Revenue last calendar month (Zoho invoices, normalized to USD)
     db
       .select({
-        total: sql<number>`coalesce(sum(${zohoInvoices.total}), 0)`,
+        total: sql<number>`coalesce(sum(CASE WHEN ${zohoInvoices.currencyCode} = 'AED' THEN ${zohoInvoices.total} / ${USD_TO_AED} ELSE ${zohoInvoices.total} END), 0)`,
       })
       .from(zohoInvoices)
       .where(
@@ -123,10 +126,10 @@ const adminGetMorningView = adminProcedure.query(async () => {
       )
       .then((r) => r[0]),
 
-    // 5. Revenue this calendar year (Zoho invoices, USD)
+    // 5. Revenue this calendar year (Zoho invoices, normalized to USD)
     db
       .select({
-        total: sql<number>`coalesce(sum(${zohoInvoices.total}), 0)`,
+        total: sql<number>`coalesce(sum(CASE WHEN ${zohoInvoices.currencyCode} = 'AED' THEN ${zohoInvoices.total} / ${USD_TO_AED} ELSE ${zohoInvoices.total} END), 0)`,
       })
       .from(zohoInvoices)
       .where(
@@ -137,10 +140,10 @@ const adminGetMorningView = adminProcedure.query(async () => {
       )
       .then((r) => r[0]),
 
-    // 6. Revenue last calendar year (Zoho invoices, USD)
+    // 6. Revenue last calendar year (Zoho invoices, normalized to USD)
     db
       .select({
-        total: sql<number>`coalesce(sum(${zohoInvoices.total}), 0)`,
+        total: sql<number>`coalesce(sum(CASE WHEN ${zohoInvoices.currencyCode} = 'AED' THEN ${zohoInvoices.total} / ${USD_TO_AED} ELSE ${zohoInvoices.total} END), 0)`,
       })
       .from(zohoInvoices)
       .where(
@@ -170,7 +173,7 @@ const adminGetMorningView = adminProcedure.query(async () => {
     db
       .select({
         count: sql<number>`count(*)`,
-        totalAmount: sql<number>`coalesce(sum(${zohoInvoices.balance}), 0)`,
+        totalAmount: sql<number>`coalesce(sum(CASE WHEN ${zohoInvoices.currencyCode} = 'AED' THEN ${zohoInvoices.balance} / ${USD_TO_AED} ELSE ${zohoInvoices.balance} END), 0)`,
       })
       .from(zohoInvoices)
       .where(eq(zohoInvoices.status, 'overdue'))
@@ -203,7 +206,34 @@ const adminGetMorningView = adminProcedure.query(async () => {
       .limit(1)
       .then((r) => r[0] ?? null),
 
-    // 13. Recent PCO orders (5)
+    // 13. Latest Buyer brief
+    db
+      .select()
+      .from(agentOutputs)
+      .where(eq(agentOutputs.agentId, 'buyer'))
+      .orderBy(desc(agentOutputs.createdAt))
+      .limit(1)
+      .then((r) => r[0] ?? null),
+
+    // 14. Latest Pricer brief
+    db
+      .select()
+      .from(agentOutputs)
+      .where(eq(agentOutputs.agentId, 'pricer'))
+      .orderBy(desc(agentOutputs.createdAt))
+      .limit(1)
+      .then((r) => r[0] ?? null),
+
+    // 15. Latest Advisor brief
+    db
+      .select()
+      .from(agentOutputs)
+      .where(eq(agentOutputs.agentId, 'advisor'))
+      .orderBy(desc(agentOutputs.createdAt))
+      .limit(1)
+      .then((r) => r[0] ?? null),
+
+    // 16. Recent PCO orders (5)
     db
       .select({
         id: privateClientOrders.id,
@@ -272,6 +302,19 @@ const adminGetMorningView = adminProcedure.query(async () => {
       highlight = posts.length > 0
         ? `${posts.length} posts ready`
         : 'Weekly content ready';
+    } else if (agentId === 'buyer') {
+      const reorderAlerts = Array.isArray(data?.reorderAlerts)
+        ? data.reorderAlerts
+        : [];
+      highlight = `${reorderAlerts.length} reorder alerts`;
+    } else if (agentId === 'pricer') {
+      const priceAdjustments = Array.isArray(data?.priceAdjustments)
+        ? data.priceAdjustments
+        : [];
+      highlight = `${priceAdjustments.length} price suggestions`;
+    } else if (agentId === 'advisor') {
+      const risks = Array.isArray(data?.risks) ? data.risks : [];
+      highlight = `${risks.length} risks flagged`;
     }
 
     return {
@@ -338,6 +381,9 @@ const adminGetMorningView = adminProcedure.query(async () => {
     parseBrief(scoutBrief, 'scout'),
     parseBrief(conciergeBrief, 'concierge'),
     parseBrief(storytellerBrief, 'storyteller'),
+    parseBrief(buyerBrief, 'buyer'),
+    parseBrief(pricerBrief, 'pricer'),
+    parseBrief(advisorBrief, 'advisor'),
   ].filter(Boolean);
 
   return {
