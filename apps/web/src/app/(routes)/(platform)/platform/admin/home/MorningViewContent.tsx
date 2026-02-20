@@ -4,6 +4,7 @@ import {
   IconBinoculars,
   IconBolt,
   IconBuildingWarehouse,
+  IconChartBar,
   IconClipboardCheck,
   IconFileText,
   IconPencil,
@@ -85,6 +86,7 @@ const quickActions = [
   { label: 'Open WMS', href: '/platform/admin/wms', icon: IconBuildingWarehouse },
   { label: 'Logistics', href: '/platform/admin/logistics', icon: IconTruck },
   { label: 'Stock Check', href: '/platform/admin/wms/stock/check', icon: IconClipboardCheck },
+  { label: 'Stock Explorer', href: '/platform/admin/stock-explorer', icon: IconChartBar },
   { label: 'Run Scout', href: '/platform/admin/agents', icon: IconBolt },
 ];
 
