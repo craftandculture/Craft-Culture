@@ -4,7 +4,10 @@ import { z } from 'zod';
 import { adminProcedure } from '@/lib/trpc/procedures';
 import logger from '@/utils/logger';
 
+import runAdvisor from '../lib/runAdvisor';
+import runBuyer from '../lib/runBuyer';
 import runConcierge from '../lib/runConcierge';
+import runPricer from '../lib/runPricer';
 import runScout from '../lib/runScout';
 import runStoryteller from '../lib/runStoryteller';
 
@@ -12,6 +15,9 @@ const agentRunners = {
   scout: runScout,
   concierge: runConcierge,
   storyteller: runStoryteller,
+  buyer: runBuyer,
+  pricer: runPricer,
+  advisor: runAdvisor,
 } as const;
 
 /**
@@ -20,7 +26,7 @@ const agentRunners = {
 const triggerAgent = adminProcedure
   .input(
     z.object({
-      agentId: z.enum(['scout', 'concierge', 'storyteller']),
+      agentId: z.enum(['scout', 'concierge', 'storyteller', 'buyer', 'pricer', 'advisor']),
     }),
   )
   .mutation(async ({ input }) => {

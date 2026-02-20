@@ -4,14 +4,17 @@ import {
   IconAlertTriangle,
   IconBinoculars,
   IconBolt,
+  IconBrain,
   IconBuildingWarehouse,
   IconChartBar,
   IconChevronRight,
   IconClipboardCheck,
   IconClock,
+  IconCurrencyDollar,
   IconFileText,
   IconPencil,
   IconPlus,
+  IconShoppingCart,
   IconSparkles,
   IconStarFilled,
   IconTruck,
@@ -82,10 +85,13 @@ const getStatusColor = (status: string) => {
 };
 
 /** Agent icon + color config */
-const agentConfig: Record<string, { icon: typeof IconBinoculars; bgColor: string; iconColor: string }> = {
-  scout: { icon: IconBinoculars, bgColor: 'bg-emerald-100', iconColor: 'text-emerald-600' },
-  concierge: { icon: IconSparkles, bgColor: 'bg-blue-100', iconColor: 'text-blue-600' },
-  storyteller: { icon: IconPencil, bgColor: 'bg-violet-100', iconColor: 'text-violet-600' },
+const agentConfig: Record<string, { icon: typeof IconBinoculars; bgColor: string; iconColor: string; label: string }> = {
+  scout: { icon: IconBinoculars, bgColor: 'bg-emerald-100', iconColor: 'text-emerald-600', label: 'Market Scout' },
+  concierge: { icon: IconSparkles, bgColor: 'bg-blue-100', iconColor: 'text-blue-600', label: 'PCO Concierge' },
+  storyteller: { icon: IconPencil, bgColor: 'bg-violet-100', iconColor: 'text-violet-600', label: 'The Storyteller' },
+  buyer: { icon: IconShoppingCart, bgColor: 'bg-amber-100', iconColor: 'text-amber-600', label: 'The Buyer' },
+  pricer: { icon: IconCurrencyDollar, bgColor: 'bg-cyan-100', iconColor: 'text-cyan-600', label: 'The Pricer' },
+  advisor: { icon: IconBrain, bgColor: 'bg-indigo-100', iconColor: 'text-indigo-600', label: 'The Advisor' },
 };
 
 /** Quick action definitions */
@@ -382,7 +388,7 @@ const MorningViewContent = () => {
                         </div>
                         <div className="min-w-0 flex-1">
                           <p className="text-[13px] font-semibold">
-                            The {brief.agentId.charAt(0).toUpperCase() + brief.agentId.slice(1)}
+                            {config.label}
                             <span className="ml-1.5 font-normal text-text-muted">&mdash; {brief.highlight}</span>
                           </p>
                           <p className="mt-0.5 line-clamp-2 text-xs text-text-muted">

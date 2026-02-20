@@ -5,6 +5,7 @@ import { z } from 'zod';
 
 import db from '@/database/client';
 import {
+  agentConfigs,
   agentOutputs,
   agentRuns,
   competitorWines,
@@ -148,6 +149,20 @@ const runStoryteller = async () => {
       .map((c) => `${c.competitorName} (${c.count} wines)`)
       .join(', ');
 
+    // Load Storyteller config (brand voice, content ideas, calendar context)
+    const configRows = await db
+      .select({
+        configKey: agentConfigs.configKey,
+        configValue: agentConfigs.configValue,
+      })
+      .from(agentConfigs)
+      .where(eq(agentConfigs.agentId, 'storyteller'));
+
+    const configMap = new Map(configRows.map((c) => [c.configKey, c.configValue]));
+    const brandVoice = configMap.get('brand_voice') ?? '';
+    const contentIdeas = configMap.get('content_ideas') ?? '';
+    const calendarContext = configMap.get('calendar_context') ?? '';
+
     const anthropic = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
 
     const result = await generateObject({
@@ -164,7 +179,7 @@ Content guidelines:
 - Reference specific wines from our inventory when possible
 - Seasonal awareness: UAE weather, events (Art Dubai, F1, Dubai Food Festival), Ramadan
 - Competitors exist but never mention them by name — focus on what makes C&C unique
-- Today's date: ${new Date().toISOString().slice(0, 10)}`,
+- Today's date: ${new Date().toISOString().slice(0, 10)}${brandVoice ? `\n\nBRAND VOICE GUIDELINES:\n${brandVoice}` : ''}${contentIdeas ? `\n\nCONTENT IDEAS TO INCORPORATE:\n${contentIdeas}` : ''}${calendarContext ? `\n\nCALENDAR & CONTEXT:\n${calendarContext}` : ''}`,
       messages: [
         {
           role: 'user',

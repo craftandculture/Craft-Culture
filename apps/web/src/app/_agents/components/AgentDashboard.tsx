@@ -2,9 +2,13 @@
 
 import {
   IconBinoculars,
+  IconBrain,
+  IconCurrencyDollar,
+  IconDatabase,
   IconPencil,
+  IconSettings,
+  IconShoppingCart,
   IconSparkles,
-  IconUpload,
 } from '@tabler/icons-react';
 
 import Icon from '@/app/_ui/components/Icon/Icon';
@@ -13,13 +17,18 @@ import TabsContent from '@/app/_ui/components/Tabs/TabsContent';
 import TabsList from '@/app/_ui/components/Tabs/TabsList';
 import TabsTrigger from '@/app/_ui/components/Tabs/TabsTrigger';
 
+import AdvisorBrief from './AdvisorBrief';
+import BuyerBrief from './BuyerBrief';
 import CompetitorUpload from './CompetitorUpload';
 import ConciergeBrief from './ConciergeBrief';
+import PricerBrief from './PricerBrief';
 import ScoutBrief from './ScoutBrief';
 import StorytellerBrief from './StorytellerBrief';
+import StorytellerConfig from './StorytellerConfig';
+import SupplierUpload from './SupplierUpload';
 
 /**
- * Agent Dashboard - tabbed view for Scout, Concierge, Storyteller briefs + competitor upload
+ * Agent Dashboard - tabbed view for all agent briefs, data uploads, and config
  */
 const AgentDashboard = () => {
   return (
@@ -38,9 +47,25 @@ const AgentDashboard = () => {
             <Icon icon={IconPencil} size="sm" className="mr-2" />
             The Storyteller
           </TabsTrigger>
-          <TabsTrigger value="upload">
-            <Icon icon={IconUpload} size="sm" className="mr-2" />
-            Upload
+          <TabsTrigger value="buyer">
+            <Icon icon={IconShoppingCart} size="sm" className="mr-2" />
+            The Buyer
+          </TabsTrigger>
+          <TabsTrigger value="pricer">
+            <Icon icon={IconCurrencyDollar} size="sm" className="mr-2" />
+            The Pricer
+          </TabsTrigger>
+          <TabsTrigger value="advisor">
+            <Icon icon={IconBrain} size="sm" className="mr-2" />
+            The Advisor
+          </TabsTrigger>
+          <TabsTrigger value="data">
+            <Icon icon={IconDatabase} size="sm" className="mr-2" />
+            Data
+          </TabsTrigger>
+          <TabsTrigger value="config">
+            <Icon icon={IconSettings} size="sm" className="mr-2" />
+            Config
           </TabsTrigger>
         </TabsList>
 
@@ -56,8 +81,27 @@ const AgentDashboard = () => {
           <StorytellerBrief />
         </TabsContent>
 
-        <TabsContent value="upload" className="mt-6">
-          <CompetitorUpload />
+        <TabsContent value="buyer" className="mt-6">
+          <BuyerBrief />
+        </TabsContent>
+
+        <TabsContent value="pricer" className="mt-6">
+          <PricerBrief />
+        </TabsContent>
+
+        <TabsContent value="advisor" className="mt-6">
+          <AdvisorBrief />
+        </TabsContent>
+
+        <TabsContent value="data" className="mt-6">
+          <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
+            <CompetitorUpload />
+            <SupplierUpload />
+          </div>
+        </TabsContent>
+
+        <TabsContent value="config" className="mt-6">
+          <StorytellerConfig />
         </TabsContent>
       </Tabs>
     </div>

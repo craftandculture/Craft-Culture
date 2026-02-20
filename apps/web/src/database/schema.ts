@@ -4759,3 +4759,58 @@ export const competitorWines = pgTable(
 ).enableRLS();
 
 export type CompetitorWine = typeof competitorWines.$inferSelect;
+
+/**
+ * Agent Configs - key-value configuration store for agent customization
+ */
+export const agentConfigs = pgTable(
+  'agent_configs',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    agentId: text('agent_id').notNull(),
+    configKey: text('config_key').notNull(),
+    configValue: text('config_value').notNull(),
+    updatedAt: timestamp('updated_at', { mode: 'date' }).notNull().defaultNow(),
+    updatedBy: uuid('updated_by').references(() => users.id),
+  },
+  (table) => [
+    uniqueIndex('agent_configs_agent_key_idx').on(table.agentId, table.configKey),
+  ],
+).enableRLS();
+
+export type AgentConfig = typeof agentConfigs.$inferSelect;
+
+/**
+ * Supplier Wines - uploaded supplier price data for Buyer analysis
+ */
+export const supplierWines = pgTable(
+  'supplier_wines',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    partnerId: uuid('partner_id').references(() => partners.id),
+    partnerName: text('partner_name').notNull(),
+    productName: text('product_name').notNull(),
+    vintage: text('vintage'),
+    country: text('country'),
+    region: text('region'),
+    bottleSize: text('bottle_size'),
+    costPriceUsd: doublePrecision('cost_price_usd'),
+    costPriceGbp: doublePrecision('cost_price_gbp'),
+    costPriceEur: doublePrecision('cost_price_eur'),
+    moq: integer('moq'),
+    availableQuantity: integer('available_quantity'),
+    source: text('source'),
+    uploadedAt: timestamp('uploaded_at', { mode: 'date' }).notNull().defaultNow(),
+    uploadedBy: uuid('uploaded_by').references(() => users.id),
+    isActive: boolean('is_active').notNull().default(true),
+    lwin18Match: text('lwin18_match'),
+    ...timestamps,
+  },
+  (table) => [
+    index('supplier_wines_partner_idx').on(table.partnerId),
+    index('supplier_wines_active_idx').on(table.isActive),
+    index('supplier_wines_lwin18_idx').on(table.lwin18Match),
+  ],
+).enableRLS();
+
+export type SupplierWine = typeof supplierWines.$inferSelect;
