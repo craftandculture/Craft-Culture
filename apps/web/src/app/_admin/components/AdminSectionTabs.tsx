@@ -47,9 +47,11 @@ const sectionTabs: Record<string, TabItem[]> = {
     { label: 'Pricing', href: '/platform/admin/pricing' },
     { label: 'Calculator', href: '/platform/admin/pricing-calculator' },
   ],
-  system: [
+  agents: [
+    { label: 'Dashboard', href: '/platform/admin/agents' },
+  ],
+  settings: [
     { label: 'Activity', href: '/platform/admin/activity' },
-    { label: 'Agents', href: '/platform/admin/agents' },
     { label: 'Zoho Import', href: '/platform/admin/zoho-import' },
     { label: 'Settings', href: '/platform/admin/settings' },
   ],

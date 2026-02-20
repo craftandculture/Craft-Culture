@@ -1,11 +1,11 @@
 'use client';
 
 import {
+  IconBinoculars,
   IconBuildingWarehouse,
   IconCoin,
   IconHome2,
   IconPackage,
-  IconSettings,
   IconShip,
   IconUsers,
 } from '@tabler/icons-react';
@@ -29,7 +29,7 @@ const adminNavItems: AdminNavItem[] = [
   { label: 'Warehouse', href: '/platform/admin/wms', icon: IconBuildingWarehouse, section: 'warehouse' },
   { label: 'Partners', href: '/platform/admin/users', icon: IconUsers, section: 'partners' },
   { label: 'Finance', href: '/platform/admin/commissions', icon: IconCoin, section: 'finance' },
-  { label: 'System', href: '/platform/admin/activity', icon: IconSettings, section: 'system' },
+  { label: 'Agents', href: '/platform/admin/agents', icon: IconBinoculars, section: 'agents' },
 ];
 
 /** Detect which top-level section the current pathname belongs to */
@@ -69,14 +69,17 @@ const getSectionFromPathname = (pathname: string) => {
   )
     return 'finance';
 
-  // System
+  // Agents
+  if (pathname.startsWith('/platform/admin/agents'))
+    return 'agents';
+
+  // Settings (gear icon — no top nav item, but still a section for tabs)
   if (
     pathname.startsWith('/platform/admin/activity') ||
     pathname.startsWith('/platform/admin/zoho-import') ||
-    pathname.startsWith('/platform/admin/settings') ||
-    pathname.startsWith('/platform/admin/agents')
+    pathname.startsWith('/platform/admin/settings')
   )
-    return 'system';
+    return 'settings';
 
   return 'home';
 };

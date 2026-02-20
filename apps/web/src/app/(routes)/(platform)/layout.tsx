@@ -1,3 +1,4 @@
+import { IconSettings } from '@tabler/icons-react';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 
@@ -9,6 +10,7 @@ import NotificationBell from '@/app/_notifications/components/NotificationBell';
 import BrandedTitleProvider from '@/app/_ui/components/BrandedTitleProvider/BrandedTitleProvider';
 import CommandBar from '@/app/_ui/components/CommandBar/CommandBar';
 import BrandedFooter from '@/app/_ui/components/Footer/BrandedFooter';
+import Icon from '@/app/_ui/components/Icon/Icon';
 import LayoutModeProvider from '@/app/_ui/components/LayoutModeProvider/LayoutModeProvider';
 import BrandedLogo from '@/app/_ui/components/Logo/BrandedLogo';
 import PlatformMobileNav from '@/app/_ui/components/MobileNav/PlatformMobileNav';
@@ -200,6 +202,15 @@ const PlatformLayout = async ({ children }: React.PropsWithChildren) => {
           </div>
           <div className="flex items-center gap-2 sm:gap-3">
             <NotificationBell />
+            {user.role === 'admin' && (
+              <Link
+                href="/platform/admin/settings"
+                className="flex h-9 w-9 items-center justify-center rounded-lg transition-colors hover:bg-fill-muted"
+                aria-label="Settings"
+              >
+                <Icon icon={IconSettings} size="md" colorRole="muted" />
+              </Link>
+            )}
             <ThemeToggle />
             <UserDropdown user={user} />
           </div>
