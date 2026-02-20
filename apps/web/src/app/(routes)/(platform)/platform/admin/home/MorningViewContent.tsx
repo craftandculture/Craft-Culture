@@ -108,7 +108,7 @@ const MorningViewContent = () => {
   const firstName = user?.firstName ?? user?.name?.split(' ')[0] ?? '';
 
   return (
-    <div className="container space-y-6 py-6">
+    <div className="container space-y-5 py-6">
       {/* Greeting */}
       <div>
         <Typography variant="headingLg" className="font-bold">
@@ -227,81 +227,79 @@ const MorningViewContent = () => {
       ) : null}
 
       {/* Two-column layout: Agent Briefing + Recent Orders / Quick Actions */}
-      <div className="grid gap-6 lg:grid-cols-5">
+      <div className="grid gap-4 lg:grid-cols-5">
         {/* Agent Briefing — left 3 cols */}
-        <div className="space-y-3 lg:col-span-3">
-          <div className="flex items-center justify-between">
-            <Typography variant="bodyMd" className="font-semibold">
-              Agent Briefing
-            </Typography>
-            <Link
-              href="/platform/admin/agents"
-              className="text-sm font-medium text-text-brand hover:underline"
-            >
-              View all agents →
-            </Link>
-          </div>
-
-          {isLoading ? (
-            <div className="space-y-3">
-              {Array.from({ length: 3 }).map((_, i) => (
-                <Skeleton key={i} className="h-28" />
-              ))}
-            </div>
-          ) : data?.agentBriefs && data.agentBriefs.length > 0 ? (
-            <div className="space-y-3">
-              {data.agentBriefs.map((brief) => {
-                const config = agentConfig[brief.agentId] ?? agentConfig.scout;
-                return (
-                  <div
-                    key={brief.agentId}
-                    className="flex items-start gap-4 rounded-xl border border-border-muted bg-white p-4 dark:bg-background-secondary"
-                  >
-                    <div
-                      className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${config.bgColor}`}
-                    >
-                      <Icon icon={config.icon} size="md" className={config.iconColor} />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="min-w-0">
-                          <Typography variant="bodySm" className="font-semibold">
-                            The {brief.agentId.charAt(0).toUpperCase() + brief.agentId.slice(1)} — {brief.highlight}
-                          </Typography>
-                          <Typography variant="bodyXs" className="mt-1 line-clamp-2 text-text-muted">
-                            {brief.summary.length > 150
-                              ? `${brief.summary.slice(0, 150)}...`
-                              : brief.summary}
-                          </Typography>
-                        </div>
-                        <Link
-                          href="/platform/admin/agents"
-                          className="shrink-0 text-sm font-medium text-text-brand hover:underline"
-                        >
-                          View →
-                        </Link>
-                      </div>
-                      {brief.createdAt && (
-                        <Typography variant="bodyXs" className="mt-1.5 text-text-muted">
-                          {formatRelativeTime(brief.createdAt)}
-                        </Typography>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="rounded-xl border border-border-muted bg-white p-6 text-center dark:bg-background-secondary">
-              <Typography variant="bodySm" colorRole="muted">
-                No briefs yet. Agents run daily — check back soon.
+        <div className="lg:col-span-3">
+          <div className="rounded-xl border border-border-muted bg-white dark:bg-background-secondary">
+            <div className="flex items-center justify-between border-b border-border-muted px-4 py-3">
+              <Typography variant="bodyMd" className="font-semibold">
+                Agent Briefing
               </Typography>
+              <Link
+                href="/platform/admin/agents"
+                className="text-xs font-medium text-text-brand hover:underline"
+              >
+                View all agents →
+              </Link>
             </div>
-          )}
+
+            {isLoading ? (
+              <div className="space-y-2 p-4">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <Skeleton key={i} className="h-20" />
+                ))}
+              </div>
+            ) : data?.agentBriefs && data.agentBriefs.length > 0 ? (
+              <div className="divide-y divide-border-muted">
+                {data.agentBriefs.map((brief) => {
+                  const config = agentConfig[brief.agentId] ?? agentConfig.scout;
+                  return (
+                    <div
+                      key={brief.agentId}
+                      className="flex items-start gap-3 px-4 py-3 transition-colors hover:bg-fill-primary-hover"
+                    >
+                      <div
+                        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${config.bgColor}`}
+                      >
+                        <Icon icon={config.icon} size="sm" className={config.iconColor} />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <Typography variant="bodySm" className="font-semibold">
+                          The {brief.agentId.charAt(0).toUpperCase() + brief.agentId.slice(1)} — {brief.highlight}
+                        </Typography>
+                        <Typography variant="bodyXs" className="mt-0.5 line-clamp-2 text-text-muted">
+                          {brief.summary.length > 150
+                            ? `${brief.summary.slice(0, 150)}...`
+                            : brief.summary}
+                        </Typography>
+                        {brief.createdAt && (
+                          <Typography variant="bodyXs" className="mt-1 text-text-muted">
+                            {formatRelativeTime(brief.createdAt)}
+                          </Typography>
+                        )}
+                      </div>
+                      <Link
+                        href="/platform/admin/agents"
+                        className="shrink-0 text-xs font-medium text-text-brand hover:underline"
+                      >
+                        View →
+                      </Link>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="p-6 text-center">
+                <Typography variant="bodySm" colorRole="muted">
+                  No briefs yet. Agents run daily — check back soon.
+                </Typography>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Right column — Recent Orders + Quick Actions */}
-        <div className="space-y-6 lg:col-span-2">
+        <div className="space-y-4 lg:col-span-2">
           {/* Recent Orders */}
           <div className="rounded-xl border border-border-muted bg-white dark:bg-background-secondary">
             <div className="flex items-center justify-between border-b border-border-muted px-4 py-3">
@@ -310,7 +308,7 @@ const MorningViewContent = () => {
               </Typography>
               <Link
                 href="/platform/admin/private-orders"
-                className="text-sm font-medium text-text-brand hover:underline"
+                className="text-xs font-medium text-text-brand hover:underline"
               >
                 All orders →
               </Link>
@@ -358,11 +356,13 @@ const MorningViewContent = () => {
           </div>
 
           {/* Quick Actions */}
-          <div className="rounded-xl border border-border-muted bg-white p-4 dark:bg-background-secondary">
-            <Typography variant="bodyMd" className="mb-3 font-semibold">
-              Quick Actions
-            </Typography>
-            <div className="flex flex-wrap gap-2">
+          <div className="rounded-xl border border-border-muted bg-white dark:bg-background-secondary">
+            <div className="border-b border-border-muted px-4 py-3">
+              <Typography variant="bodyMd" className="font-semibold">
+                Quick Actions
+              </Typography>
+            </div>
+            <div className="flex flex-wrap gap-2 p-4">
               {quickActions.map((action) => (
                 <Link
                   key={action.href}
