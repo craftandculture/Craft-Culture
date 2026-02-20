@@ -29,7 +29,7 @@ const sectionTabs: Record<string, TabItem[]> = {
   ],
   warehouse: [
     { label: 'Dashboard', href: '/platform/admin/wms' },
-    { label: 'Receiving', href: '/platform/admin/wms/receiving' },
+    { label: 'Receiving', href: '/platform/admin/wms/receive' },
     { label: 'Pick', href: '/platform/admin/wms/pick' },
     { label: 'Dispatch', href: '/platform/admin/wms/dispatch' },
     { label: 'Labels', href: '/platform/admin/wms/labels' },

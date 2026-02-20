@@ -67,17 +67,27 @@ const PlatformMobileNav = ({ user }: PlatformMobileNavProps) => {
         { href: '/platform/admin/private-orders', label: 'Private Orders' },
         { href: '/platform/admin/zoho-sales-orders', label: 'Zoho Sales' },
         { href: '/platform/admin/source', label: 'Source' },
-        { href: '/platform/admin/logistics', label: 'Logistics' },
         { href: '/platform/admin/quote-approvals', label: 'Approvals' },
         { href: '/platform/quotes', label: 'Quotes' },
         { href: '/platform/my-quotes', label: 'My Quotes' },
       ],
     });
     sections.push({
+      title: 'Logistics',
+      links: [
+        { href: '/platform/admin/logistics', label: 'Dashboard' },
+        { href: '/platform/admin/logistics/shipments', label: 'Shipments' },
+        { href: '/platform/admin/logistics/quotes', label: 'Quotes' },
+        { href: '/platform/admin/logistics/requests', label: 'Requests' },
+        { href: '/platform/admin/logistics/invoices', label: 'Invoices' },
+        { href: '/platform/admin/logistics/reports', label: 'Reports' },
+      ],
+    });
+    sections.push({
       title: 'Warehouse',
       links: [
         { href: '/platform/admin/wms', label: 'WMS Dashboard' },
-        { href: '/platform/admin/wms/receiving', label: 'Receiving' },
+        { href: '/platform/admin/wms/receive', label: 'Receiving' },
         { href: '/platform/admin/wms/pick', label: 'Pick' },
         { href: '/platform/admin/wms/dispatch', label: 'Dispatch' },
         { href: '/platform/admin/wms/labels', label: 'Labels' },

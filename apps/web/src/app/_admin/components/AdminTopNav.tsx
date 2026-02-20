@@ -6,6 +6,7 @@ import {
   IconHome2,
   IconPackage,
   IconSettings,
+  IconShip,
   IconUsers,
 } from '@tabler/icons-react';
 import Link from 'next/link';
@@ -24,6 +25,7 @@ interface AdminNavItem {
 const adminNavItems: AdminNavItem[] = [
   { label: 'Home', href: '/platform/admin/home', icon: IconHome2, section: 'home' },
   { label: 'Orders', href: '/platform/admin/private-orders', icon: IconPackage, section: 'orders' },
+  { label: 'Logistics', href: '/platform/admin/logistics', icon: IconShip, section: 'logistics' },
   { label: 'Warehouse', href: '/platform/admin/wms', icon: IconBuildingWarehouse, section: 'warehouse' },
   { label: 'Partners', href: '/platform/admin/users', icon: IconUsers, section: 'partners' },
   { label: 'Finance', href: '/platform/admin/commissions', icon: IconCoin, section: 'finance' },
@@ -39,12 +41,14 @@ const getSectionFromPathname = (pathname: string) => {
     pathname.startsWith('/platform/admin/private-orders') ||
     pathname.startsWith('/platform/admin/zoho-sales-orders') ||
     pathname.startsWith('/platform/admin/source') ||
-    pathname.startsWith('/platform/admin/logistics') ||
     pathname.startsWith('/platform/admin/quote-approvals') ||
     pathname.startsWith('/platform/quotes') ||
     pathname.startsWith('/platform/my-quotes')
   )
     return 'orders';
+
+  // Logistics
+  if (pathname.startsWith('/platform/admin/logistics')) return 'logistics';
 
   // Warehouse
   if (pathname.startsWith('/platform/admin/wms') || pathname.startsWith('/platform/admin/stock-explorer'))
