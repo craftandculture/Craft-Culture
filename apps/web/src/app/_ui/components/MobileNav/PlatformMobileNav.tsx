@@ -23,15 +23,12 @@ const PlatformMobileNav = ({ user }: PlatformMobileNavProps) => {
       title: 'Inventory',
       links: [{ href: '/platform/local-stock', label: 'Local Stock' }],
     });
-  } else {
-    // Quotes section - for non-wine partners
+  } else if (user.role !== 'admin') {
+    // Quotes section - for non-wine partners, non-admins (admins get Quotes under Orders section)
     const quotesLinks = [
       { href: '/platform/quotes', label: 'Create Quote' },
       { href: '/platform/my-quotes', label: 'My Quotes' },
     ];
-    if (user.role === 'admin') {
-      quotesLinks.push({ href: '/platform/admin/quote-approvals', label: 'Approvals' });
-    }
     sections.push({ title: 'Quotes', links: quotesLinks });
   }
 
@@ -58,27 +55,59 @@ const PlatformMobileNav = ({ user }: PlatformMobileNavProps) => {
     });
   }
 
-  // Admin sections
+  // Admin sections — 6-section IA matching top nav
   if (user.role === 'admin') {
     sections.push({
-      title: 'Private Orders',
+      title: 'Home',
+      links: [{ href: '/platform/admin/home', label: 'Home' }],
+    });
+    sections.push({
+      title: 'Orders',
       links: [
-        { href: '/platform/admin', label: 'Dashboard' },
-        { href: '/platform/admin/private-orders', label: 'Manage Orders' },
+        { href: '/platform/admin/private-orders', label: 'Private Orders' },
+        { href: '/platform/admin/zoho-sales-orders', label: 'Zoho Sales' },
+        { href: '/platform/admin/source', label: 'Source' },
+        { href: '/platform/admin/logistics', label: 'Logistics' },
+        { href: '/platform/admin/quote-approvals', label: 'Approvals' },
+        { href: '/platform/quotes', label: 'Quotes' },
+        { href: '/platform/my-quotes', label: 'My Quotes' },
       ],
     });
     sections.push({
-      title: 'Pricing',
-      links: [{ href: '/platform/admin/pricing-calculator', label: 'Calculator' }],
+      title: 'Warehouse',
+      links: [
+        { href: '/platform/admin/wms', label: 'WMS Dashboard' },
+        { href: '/platform/admin/wms/receiving', label: 'Receiving' },
+        { href: '/platform/admin/wms/pick', label: 'Pick' },
+        { href: '/platform/admin/wms/dispatch', label: 'Dispatch' },
+        { href: '/platform/admin/wms/labels', label: 'Labels' },
+        { href: '/platform/admin/wms/movements', label: 'Movements' },
+        { href: '/platform/admin/stock-explorer', label: 'Stock Explorer' },
+        { href: '/platform/admin/wms/cycle-count', label: 'Cycle Count' },
+      ],
     });
     sections.push({
-      title: 'Admin',
+      title: 'Partners',
       links: [
         { href: '/platform/admin/users', label: 'Users' },
         { href: '/platform/admin/partners', label: 'Distributors' },
         { href: '/platform/admin/wine-partners', label: 'Wine Partners' },
-        { href: '/platform/admin/logistics', label: 'Logistics' },
-        { href: '/platform/admin/wms', label: 'WMS' },
+      ],
+    });
+    sections.push({
+      title: 'Finance',
+      links: [
+        { href: '/platform/admin/commissions', label: 'Commissions' },
+        { href: '/platform/admin/pricing', label: 'Pricing' },
+        { href: '/platform/admin/pricing-calculator', label: 'Calculator' },
+      ],
+    });
+    sections.push({
+      title: 'System',
+      links: [
+        { href: '/platform/admin/activity', label: 'Activity' },
+        { href: '/platform/admin/agents', label: 'Agents' },
+        { href: '/platform/admin/zoho-import', label: 'Zoho Import' },
         { href: '/platform/admin/settings', label: 'Settings' },
       ],
     });
