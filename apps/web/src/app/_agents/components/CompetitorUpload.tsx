@@ -273,7 +273,7 @@ const CompetitorUpload = () => {
     <div className="space-y-4">
       <Typography variant="headingSm">Upload Competitor Wine List</Typography>
       <Typography variant="bodySm" colorRole="muted">
-        Upload a CSV or Excel file with competitor pricing. The Scout agent will use this data for
+        Upload a CSV or Excel file with competitor pricing. The Market Scout agent will use this data for
         daily competitive analysis.
       </Typography>
 

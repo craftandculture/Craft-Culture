@@ -151,7 +151,7 @@ const ScoutBrief = () => {
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">The Scout</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">Market Scout</h1>
           <p className="mt-0.5 text-[13px] text-text-muted">
             Competitive intelligence &amp; market monitoring &mdash; runs daily at 06:00 GST
           </p>
@@ -161,7 +161,7 @@ const ScoutBrief = () => {
             <IconRadar size={40} className="mx-auto mb-3 text-text-muted" />
             <p className="text-base font-semibold">No Scout Brief Yet</p>
             <p className="mx-auto mt-1 max-w-md text-sm text-text-muted">
-              The Scout runs daily at 06:00 GST. Upload competitor wine lists in the Upload tab to
+              Market Scout runs daily at 06:00 GST. Upload competitor wine lists in the Upload tab to
               enable competitive analysis.
             </p>
             <Button
@@ -240,7 +240,7 @@ const ScoutBrief = () => {
       {/* ── Page Header ──────────────────────────── */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">The Scout</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">Market Scout</h1>
           <p className="mt-0.5 text-[13px] text-text-muted">
             Competitive intelligence &amp; market monitoring &mdash; runs daily at 06:00 GST
           </p>

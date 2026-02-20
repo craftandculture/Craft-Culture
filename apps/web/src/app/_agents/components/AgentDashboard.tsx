@@ -28,11 +28,11 @@ const AgentDashboard = () => {
         <TabsList>
           <TabsTrigger value="scout">
             <Icon icon={IconBinoculars} size="sm" className="mr-2" />
-            The Scout
+            Market Scout
           </TabsTrigger>
           <TabsTrigger value="concierge">
             <Icon icon={IconSparkles} size="sm" className="mr-2" />
-            The Concierge
+            PCO Concierge
           </TabsTrigger>
           <TabsTrigger value="storyteller">
             <Icon icon={IconPencil} size="sm" className="mr-2" />
