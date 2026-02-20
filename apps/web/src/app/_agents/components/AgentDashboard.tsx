@@ -24,7 +24,7 @@ import StorytellerBrief from './StorytellerBrief';
  */
 const AgentDashboard = () => {
   return (
-    <div className="space-y-6">
+    <div className="container space-y-6 py-6">
       <div>
         <Typography variant="headingLg" className="font-bold">
           AI Agents
