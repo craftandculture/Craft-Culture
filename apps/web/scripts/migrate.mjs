@@ -94,6 +94,45 @@ const runMigrations = async () => {
       console.log('✅ LOGISTICS module tables already exist');
     }
 
+    // Create zoho_invoices table if it doesn't exist
+    const zohoInvoicesCheck = await client`
+      SELECT EXISTS (
+        SELECT FROM pg_tables
+        WHERE schemaname = 'public'
+        AND tablename = 'zoho_invoices'
+      ) as exists
+    `;
+
+    if (!zohoInvoicesCheck[0].exists) {
+      console.log('🔄 Creating zoho_invoices table...');
+      await client.unsafe(`
+        CREATE TABLE IF NOT EXISTS "zoho_invoices" (
+          "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+          "zoho_invoice_id" text NOT NULL UNIQUE,
+          "invoice_number" text NOT NULL,
+          "zoho_customer_id" text NOT NULL,
+          "customer_name" text NOT NULL,
+          "status" text NOT NULL,
+          "invoice_date" date NOT NULL,
+          "due_date" date,
+          "reference_number" text,
+          "sub_total" double precision NOT NULL,
+          "total" double precision NOT NULL,
+          "balance" double precision NOT NULL DEFAULT 0,
+          "currency_code" text DEFAULT 'USD',
+          "last_sync_at" timestamp,
+          "created_at" timestamp DEFAULT now() NOT NULL,
+          "updated_at" timestamp DEFAULT now() NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS "zoho_invoices_zoho_id_idx" ON "zoho_invoices" ("zoho_invoice_id");
+        CREATE INDEX IF NOT EXISTS "zoho_invoices_date_idx" ON "zoho_invoices" ("invoice_date");
+        CREATE INDEX IF NOT EXISTS "zoho_invoices_status_idx" ON "zoho_invoices" ("status");
+      `);
+      console.log('✅ zoho_invoices table created');
+    } else {
+      console.log('✅ zoho_invoices table already exists');
+    }
+
     // Legacy migration: Add local_inventory enum value if needed
     const enumCheck = await client`
       SELECT EXISTS (

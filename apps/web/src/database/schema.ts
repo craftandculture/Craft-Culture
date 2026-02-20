@@ -4643,6 +4643,37 @@ export const zohoSalesOrderItems = pgTable(
 
 export type ZohoSalesOrderItem = typeof zohoSalesOrderItems.$inferSelect;
 
+/**
+ * Zoho Invoices - synced from Zoho Books for revenue KPIs
+ */
+export const zohoInvoices = pgTable(
+  'zoho_invoices',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    zohoInvoiceId: text('zoho_invoice_id').notNull().unique(),
+    invoiceNumber: text('invoice_number').notNull(),
+    zohoCustomerId: text('zoho_customer_id').notNull(),
+    customerName: text('customer_name').notNull(),
+    status: text('status').notNull(),
+    invoiceDate: date('invoice_date', { mode: 'date' }).notNull(),
+    dueDate: date('due_date', { mode: 'date' }),
+    referenceNumber: text('reference_number'),
+    subTotal: doublePrecision('sub_total').notNull(),
+    total: doublePrecision('total').notNull(),
+    balance: doublePrecision('balance').notNull().default(0),
+    currencyCode: text('currency_code').default('USD'),
+    lastSyncAt: timestamp('last_sync_at', { mode: 'date' }),
+    ...timestamps,
+  },
+  (table) => [
+    index('zoho_invoices_zoho_id_idx').on(table.zohoInvoiceId),
+    index('zoho_invoices_date_idx').on(table.invoiceDate),
+    index('zoho_invoices_status_idx').on(table.status),
+  ],
+);
+
+export type ZohoInvoice = typeof zohoInvoices.$inferSelect;
+
 // ---------------------------------------------------------------------------
 // AI Agents
 // ---------------------------------------------------------------------------
