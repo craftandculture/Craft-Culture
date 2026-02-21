@@ -23,6 +23,7 @@ import Typography from '@/app/_ui/components/Typography/Typography';
 import LocationBadge from '@/app/_wms/components/LocationBadge';
 import ScanInput from '@/app/_wms/components/ScanInput';
 import type { ScanInputHandle } from '@/app/_wms/components/ScanInput';
+import useWmsApi from '@/app/_wms/hooks/useWmsApi';
 import useTRPC from '@/lib/trpc/browser';
 
 /**
@@ -32,6 +33,7 @@ const WMSPickListDetailPage = () => {
   const params = useParams();
   const router = useRouter();
   const api = useTRPC();
+  const wmsApi = useWmsApi();
   const queryClient = useQueryClient();
   const pickListId = params.pickListId as string;
 
@@ -54,14 +56,14 @@ const WMSPickListDetailPage = () => {
 
   const scanInputRef = useRef<ScanInputHandle>(null);
 
-  // Fetch pick list
+  // Fetch pick list — routes through local NUC when available
   const { data, isLoading } = useQuery({
-    ...api.wms.admin.picking.getOne.queryOptions({ pickListId }),
+    ...wmsApi.pickListQueryOptions(pickListId),
   });
 
-  // Pick item mutation
+  // Pick item mutation — routes through local NUC when available
   const pickItemMutation = useMutation({
-    ...api.wms.admin.picking.pickItem.mutationOptions(),
+    ...wmsApi.pickItemMutationOptions(),
     onSuccess: () => {
       void queryClient.invalidateQueries();
       setPickingItem(null);
@@ -72,9 +74,9 @@ const WMSPickListDetailPage = () => {
     },
   });
 
-  // Complete pick list mutation
+  // Complete pick list mutation — routes through local NUC when available
   const completeMutation = useMutation({
-    ...api.wms.admin.picking.complete.mutationOptions(),
+    ...wmsApi.pickCompleteMutationOptions(),
     onSuccess: () => {
       void queryClient.invalidateQueries();
       router.push('/platform/admin/wms/pick');
@@ -93,9 +95,9 @@ const WMSPickListDetailPage = () => {
     },
   });
 
-  // Location lookup mutation
+  // Location lookup mutation — routes through local NUC when available
   const locationLookupMutation = useMutation({
-    ...api.wms.admin.operations.getLocationByBarcode.mutationOptions(),
+    ...wmsApi.scanLocationMutationOptions(),
   });
 
   const handleDelete = () => {
