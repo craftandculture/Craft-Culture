@@ -25,10 +25,11 @@ import Icon from '@/app/_ui/components/Icon/Icon';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import LocationBadge from '@/app/_wms/components/LocationBadge';
 import ScanInput from '@/app/_wms/components/ScanInput';
+import useWmsApi from '@/app/_wms/hooks/useWmsApi';
 import downloadZplFile from '@/app/_wms/utils/downloadZplFile';
 import { generateBatchLabelsZpl } from '@/app/_wms/utils/generateLabelZpl';
 import wifiPrint from '@/app/_wms/utils/wifiPrint';
-import useTRPC, { useTRPCClient } from '@/lib/trpc/browser';
+import useTRPC from '@/lib/trpc/browser';
 
 type WorkflowStep =
   | 'scan-source-bay'
@@ -122,7 +123,7 @@ const getStepNumber = (step: WorkflowStep): number => {
  */
 const WMSRepackPage = () => {
   const api = useTRPC();
-  const trpcClient = useTRPCClient();
+  const wmsApi = useWmsApi();
   const queryClient = useQueryClient();
 
   const [step, setStep] = useState<WorkflowStep>('scan-source-bay');
@@ -172,7 +173,7 @@ const WMSRepackPage = () => {
     setError('');
     setIsSourceScanning(true);
     try {
-      const result = await trpcClient.wms.admin.operations.getLocationByBarcode.mutate({ barcode });
+      const result = await wmsApi.scanLocation(barcode);
       setSourceLocation({
         id: result.location.id,
         locationCode: result.location.locationCode,
@@ -201,7 +202,7 @@ const WMSRepackPage = () => {
   const handleDestinationLocationScan = async (barcode: string) => {
     setError('');
     try {
-      const result = await trpcClient.wms.admin.operations.getLocationByBarcode.mutate({ barcode });
+      const result = await wmsApi.scanLocation(barcode);
       setDestinationLocation({
         id: result.location.id,
         locationCode: result.location.locationCode,

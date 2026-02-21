@@ -24,9 +24,10 @@ import Icon from '@/app/_ui/components/Icon/Icon';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import LocationBadge from '@/app/_wms/components/LocationBadge';
 import ScanInput from '@/app/_wms/components/ScanInput';
+import useWmsApi from '@/app/_wms/hooks/useWmsApi';
 import downloadZplFile from '@/app/_wms/utils/downloadZplFile';
 import wifiPrint from '@/app/_wms/utils/wifiPrint';
-import useTRPC, { useTRPCClient } from '@/lib/trpc/browser';
+import useTRPC from '@/lib/trpc/browser';
 
 type WorkflowStep = 'scan-source' | 'select-stock' | 'scan-dest' | 'confirm' | 'success';
 
@@ -52,7 +53,7 @@ interface StockItem {
  */
 const WMSTransferPage = () => {
   const api = useTRPC();
-  const trpcClient = useTRPCClient();
+  const wmsApi = useWmsApi();
   const queryClient = useQueryClient();
 
   const [step, setStep] = useState<WorkflowStep>('scan-source');
@@ -74,9 +75,9 @@ const WMSTransferPage = () => {
     sourceRemaining: number;
   } | null>(null);
 
-  // Transfer mutation
+  // Transfer mutation — routes through local NUC when available
   const transferMutation = useMutation({
-    ...api.wms.admin.operations.transfer.mutationOptions(),
+    ...wmsApi.transferMutationOptions(),
     onSuccess: (data) => {
       void queryClient.invalidateQueries();
       setLastSuccess({
@@ -118,7 +119,7 @@ const WMSTransferPage = () => {
     setError('');
     setIsSourceScanning(true);
     try {
-      const result = await trpcClient.wms.admin.operations.getLocationByBarcode.mutate({ barcode });
+      const result = await wmsApi.scanLocation(barcode);
       setSourceLocation({
         id: result.location.id,
         locationCode: result.location.locationCode,
@@ -154,7 +155,7 @@ const WMSTransferPage = () => {
     setError('');
     setIsDestScanning(true);
     try {
-      const result = await trpcClient.wms.admin.operations.getLocationByBarcode.mutate({ barcode });
+      const result = await wmsApi.scanLocation(barcode);
 
       if (result.location.id === sourceLocation?.id) {
         setError('Destination cannot be the same as source');
