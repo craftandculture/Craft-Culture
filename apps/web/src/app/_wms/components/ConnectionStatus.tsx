@@ -1,7 +1,7 @@
 'use client';
 
 import { IconServer, IconWifi, IconWifiOff } from '@tabler/icons-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Typography from '@/app/_ui/components/Typography/Typography';
@@ -16,6 +16,7 @@ const ConnectionStatus = () => {
   const [isOnline, setIsOnline] = useState(true);
   const [showBanner, setShowBanner] = useState(false);
   const { isAvailable: isLocalAvailable } = useLocalServer();
+  const bannerTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     setIsOnline(navigator.onLine);
@@ -23,7 +24,8 @@ const ConnectionStatus = () => {
     const handleOnline = () => {
       setIsOnline(true);
       setShowBanner(true);
-      setTimeout(() => setShowBanner(false), 3000);
+      if (bannerTimerRef.current) clearTimeout(bannerTimerRef.current);
+      bannerTimerRef.current = setTimeout(() => setShowBanner(false), 3000);
     };
 
     const handleOffline = () => {
@@ -37,6 +39,7 @@ const ConnectionStatus = () => {
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
+      if (bannerTimerRef.current) clearTimeout(bannerTimerRef.current);
     };
   }, []);
 
