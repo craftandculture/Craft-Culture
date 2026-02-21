@@ -150,65 +150,141 @@ const runBuyer = async () => {
       return { success: true, skipped: true, reason: 'no_stock_data' };
     }
 
-    // 2. Velocity: dispatch + pick movements in last 30 days
+    // 2. Run all independent data queries in parallel
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-    const velocity = await db.execute<{
-      lwin18: string;
-      totalDispatched: number;
-    }>(sql`
-      SELECT lwin18,
-             SUM(quantity_cases) AS "totalDispatched"
-      FROM wms_stock_movements
-      WHERE movement_type IN ('dispatch', 'pick')
-        AND performed_at > ${thirtyDaysAgo.toISOString()}
-      GROUP BY lwin18
-    `);
+    const ninetyDaysAgo = new Date();
+    ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+
+    const sixMonthsAgo = new Date();
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+
+    const [
+      velocity,
+      suppliers,
+      demandSignal,
+      zohoSalesHistory,
+      pcoSalesHistory,
+      monthlyRevenue,
+    ] = await Promise.all([
+      // 2a. Velocity: dispatch + pick movements in last 30 days
+      db.execute<{
+        lwin18: string;
+        totalDispatched: number;
+      }>(sql`
+        SELECT lwin18,
+               SUM(quantity_cases) AS "totalDispatched"
+        FROM wms_stock_movements
+        WHERE movement_type IN ('dispatch', 'pick')
+          AND performed_at > ${thirtyDaysAgo.toISOString()}
+        GROUP BY lwin18
+      `),
+
+      // 2b. Supplier availability
+      db
+        .select({
+          id: supplierWines.id,
+          partnerName: supplierWines.partnerName,
+          productName: supplierWines.productName,
+          vintage: supplierWines.vintage,
+          country: supplierWines.country,
+          region: supplierWines.region,
+          costPriceUsd: supplierWines.costPriceUsd,
+          costPriceGbp: supplierWines.costPriceGbp,
+          costPriceEur: supplierWines.costPriceEur,
+          moq: supplierWines.moq,
+          availableQuantity: supplierWines.availableQuantity,
+          lwin18Match: supplierWines.lwin18Match,
+        })
+        .from(supplierWines)
+        .where(eq(supplierWines.isActive, true))
+        .limit(200),
+
+      // 2c. PCO demand signal (last 90 days)
+      db.execute<{
+        productName: string;
+        totalQuantity: number;
+      }>(sql`
+        SELECT oi.product_name AS "productName",
+               SUM(oi.quantity) AS "totalQuantity"
+        FROM private_client_order_items oi
+        JOIN private_client_orders o ON o.id = oi.order_id
+        WHERE o.created_at > ${ninetyDaysAgo.toISOString()}
+          AND o.status NOT IN ('draft', 'cancelled')
+        GROUP BY oi.product_name
+        ORDER BY SUM(oi.quantity) DESC
+        LIMIT 50
+      `),
+
+      // 2d. Zoho sales order history — product-level revenue (all time)
+      db.execute<{
+        productName: string;
+        lwin18: string | null;
+        totalQuantity: number;
+        totalRevenue: number;
+        orderCount: number;
+        lastSaleDate: string;
+      }>(sql`
+        SELECT zoi.name AS "productName",
+               zoi.lwin18,
+               COALESCE(SUM(zoi.quantity), 0) AS "totalQuantity",
+               COALESCE(SUM(zoi.item_total), 0) AS "totalRevenue",
+               COUNT(DISTINCT zoi.sales_order_id) AS "orderCount",
+               MAX(zo.order_date)::text AS "lastSaleDate"
+        FROM zoho_sales_order_items zoi
+        JOIN zoho_sales_orders zo ON zo.id = zoi.sales_order_id
+        WHERE zo.status NOT IN ('cancelled')
+        GROUP BY zoi.name, zoi.lwin18
+        ORDER BY SUM(zoi.item_total) DESC NULLS LAST
+        LIMIT 100
+      `),
+
+      // 2e. PCO sales history with revenue (all time)
+      db.execute<{
+        productName: string;
+        lwin: string | null;
+        totalCases: number;
+        totalRevenue: number;
+        orderCount: number;
+        lastSaleDate: string;
+      }>(sql`
+        SELECT oi.product_name AS "productName",
+               oi.lwin,
+               COALESCE(SUM(oi.quantity), 0) AS "totalCases",
+               COALESCE(SUM(oi.total_usd), 0) AS "totalRevenue",
+               COUNT(DISTINCT oi.order_id) AS "orderCount",
+               MAX(o.created_at)::text AS "lastSaleDate"
+        FROM private_client_order_items oi
+        JOIN private_client_orders o ON o.id = oi.order_id
+        WHERE o.status NOT IN ('draft', 'cancelled')
+        GROUP BY oi.product_name, oi.lwin
+        ORDER BY SUM(oi.total_usd) DESC NULLS LAST
+        LIMIT 100
+      `),
+
+      // 2f. Monthly revenue trend (last 6 months from Zoho invoices)
+      db.execute<{
+        month: string;
+        totalRevenue: number;
+        invoiceCount: number;
+      }>(sql`
+        SELECT TO_CHAR(invoice_date, 'YYYY-MM') AS "month",
+               COALESCE(SUM(total), 0) AS "totalRevenue",
+               COUNT(*) AS "invoiceCount"
+        FROM zoho_invoices
+        WHERE status IN ('sent', 'viewed', 'overdue', 'paid', 'partially_paid')
+          AND invoice_date >= ${sixMonthsAgo.toISOString().slice(0, 10)}
+        GROUP BY TO_CHAR(invoice_date, 'YYYY-MM')
+        ORDER BY "month"
+      `),
+    ]);
 
     const velocityMap = new Map(
       velocity.map((v) => [v.lwin18, Number(v.totalDispatched)]),
     );
 
-    // 3. Supplier availability
-    const suppliers = await db
-      .select({
-        id: supplierWines.id,
-        partnerName: supplierWines.partnerName,
-        productName: supplierWines.productName,
-        vintage: supplierWines.vintage,
-        country: supplierWines.country,
-        region: supplierWines.region,
-        costPriceUsd: supplierWines.costPriceUsd,
-        costPriceGbp: supplierWines.costPriceGbp,
-        costPriceEur: supplierWines.costPriceEur,
-        moq: supplierWines.moq,
-        availableQuantity: supplierWines.availableQuantity,
-        lwin18Match: supplierWines.lwin18Match,
-      })
-      .from(supplierWines)
-      .where(eq(supplierWines.isActive, true))
-      .limit(200);
-
-    // 4. Demand signal from PCO orders in last 90 days
-    const ninetyDaysAgo = new Date();
-    ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
-
-    const demandSignal = await db.execute<{
-      productName: string;
-      totalQuantity: number;
-    }>(sql`
-      SELECT oi.product_name AS "productName",
-             SUM(oi.quantity) AS "totalQuantity"
-      FROM private_client_order_items oi
-      JOIN private_client_orders o ON o.id = oi.order_id
-      WHERE o.created_at > ${ninetyDaysAgo.toISOString()}
-      GROUP BY oi.product_name
-      ORDER BY SUM(oi.quantity) DESC
-      LIMIT 50
-    `);
-
-    // 5. Compute weeks of stock for each product
+    // 3. Compute weeks of stock for each product
     const stockWithVelocity = stockSummary.map((s) => {
       const dispatched30d = velocityMap.get(s.lwin18) ?? 0;
       const weeklyVelocity = dispatched30d / 4.3;
@@ -255,6 +331,32 @@ const runBuyer = async () => {
       .map((d) => `${d.productName}: ${d.totalQuantity} cases ordered (last 90 days)`)
       .join('\n');
 
+    // Build sales history context — Zoho B2B sales (top sellers by revenue)
+    const zohoSalesCtx = zohoSalesHistory
+      .filter((s) => Number(s.totalRevenue) > 0)
+      .map(
+        (s) =>
+          `${s.productName}${s.lwin18 ? ` [${s.lwin18}]` : ''}: ${Number(s.totalQuantity)} units across ${Number(s.orderCount)} orders, $${Number(s.totalRevenue).toFixed(0)} revenue, last sale ${s.lastSaleDate ?? 'unknown'}`,
+      )
+      .join('\n');
+
+    // Build PCO sales history context
+    const pcoSalesCtx = pcoSalesHistory
+      .filter((s) => Number(s.totalRevenue) > 0)
+      .map(
+        (s) =>
+          `${s.productName}${s.lwin ? ` [${s.lwin}]` : ''}: ${Number(s.totalCases)} cases across ${Number(s.orderCount)} orders, $${Number(s.totalRevenue).toFixed(0)} revenue, last sale ${s.lastSaleDate ? s.lastSaleDate.slice(0, 10) : 'unknown'}`,
+      )
+      .join('\n');
+
+    // Build monthly revenue trend
+    const revenueCtx = monthlyRevenue
+      .map(
+        (m) =>
+          `${m.month}: $${Number(m.totalRevenue).toFixed(0)} (${Number(m.invoiceCount)} invoices)`,
+      )
+      .join('\n');
+
     const lowStockCount = stockWithVelocity.filter(
       (s) => s.weeksOfStock < 4 && s.weeksOfStock < 999,
     ).length;
@@ -269,7 +371,7 @@ const runBuyer = async () => {
       schema: buyerOutputSchema,
       system: `You are Purchasing, a purchasing intelligence agent for Craft & Culture (C&C), a wine distributor in the UAE/GCC market sourcing from UK/EU suppliers.
 
-Your job is to analyze current inventory levels, movement velocity, supplier availability, and demand signals to generate actionable purchasing recommendations.
+Your job is to analyze current inventory levels, movement velocity, supplier availability, sales history, and demand signals to generate actionable purchasing recommendations.
 
 Key context:
 - C&C sources wine from UK and EU suppliers and distributes in the GCC
@@ -280,6 +382,8 @@ Key context:
 - Products with no recent movement (velocity = 0) may be slow movers or new additions — don't flag as overstock unless they have significant quantities
 - When suggesting reorder quantities, consider: supplier MOQs, typical order sizes (6-case or 12-case multiples), and lead time (~2-4 weeks from UK/EU)
 - When identifying new opportunities, look at supplier wines that match demand patterns but aren't currently in stock
+- SALES HISTORY is your memory — use it to identify proven sellers, seasonal patterns, and revenue impact. Prioritize reordering products with strong historical sales.
+- Revenue trend shows the business trajectory — factor this into purchasing aggressiveness
 - Be practical and specific. Include supplier names, estimated costs, and quantities
 - Today's date: ${new Date().toISOString().slice(0, 10)}`,
       messages: [
@@ -296,13 +400,22 @@ ${supplierCtx || 'No supplier data available.'}
 DEMAND SIGNAL — Top products ordered in last 90 days (${demandSignal.length} products):
 ${demandCtx || 'No recent order data.'}
 
+SALES HISTORY — B2B Sales Orders (top ${zohoSalesHistory.length} products by revenue, all time):
+${zohoSalesCtx || 'No Zoho sales order history yet.'}
+
+SALES HISTORY — Private Client Orders (top ${pcoSalesHistory.length} products by revenue, all time):
+${pcoSalesCtx || 'No private client order history yet.'}
+
+MONTHLY REVENUE TREND (last 6 months):
+${revenueCtx || 'No invoice data available yet.'}
+
 SUMMARY: ${lowStockCount} products below 4-week threshold, ${overStockCount} products above 16-week threshold.
 
 Generate:
-1. Executive summary (2-3 sentences on inventory health and purchasing priorities)
-2. Reorder alerts for products below 4 weeks of stock — include suggested supplier, quantity, and estimated cost
-3. New sourcing opportunities — supplier wines that match demand patterns but we don't currently stock
-4. Overstock warnings for products above 16 weeks of stock — include recommendation (promote, discount, return to supplier)
+1. Executive summary (2-3 sentences on inventory health and purchasing priorities, informed by sales history)
+2. Reorder alerts for products below 4 weeks of stock — prioritize proven sellers with strong historical revenue. Include suggested supplier, quantity, and estimated cost
+3. New sourcing opportunities — supplier wines that match demand patterns or historical best-sellers but we don't currently stock
+4. Overstock warnings for products above 16 weeks of stock — cross-reference with sales history. If a product has strong historical sales, it may be seasonal rather than truly overstocked
 5. Prioritized action items — specific purchasing decisions to make today`,
         },
       ],
