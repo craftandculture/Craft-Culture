@@ -21,8 +21,18 @@ import { getStockByProductSchema } from '../schemas/stockQuerySchema';
 const adminGetStockByProduct = adminProcedure
   .input(getStockByProductSchema)
   .query(async ({ input }) => {
-    const { search, ownerId, hasExpiry, vintageFrom, vintageTo, sortBy, sortOrder, limit, offset } =
-      input;
+    const {
+      search,
+      ownerId,
+      hasExpiry,
+      quickFilter,
+      vintageFrom,
+      vintageTo,
+      sortBy,
+      sortOrder,
+      limit,
+      offset,
+    } = input;
 
     const conditions = [];
 
@@ -52,9 +62,27 @@ const adminGetStockByProduct = adminProcedure
       conditions.push(sql`${wmsStock.vintage} <= ${vintageTo}`);
     }
 
+    // Quick filter presets
+    if (quickFilter === 'reserved') {
+      conditions.push(sql`${wmsStock.reservedCases} > 0`);
+    } else if (quickFilter === 'expiring') {
+      const ninetyDays = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString();
+      conditions.push(sql`${wmsStock.expiryDate} IS NOT NULL AND ${wmsStock.expiryDate} <= ${ninetyDays}`);
+    } else if (quickFilter === 'ownStock') {
+      conditions.push(eq(wmsStock.ownerName, 'Craft & Culture'));
+    } else if (quickFilter === 'consignment') {
+      conditions.push(sql`${wmsStock.ownerName} != 'Craft & Culture'`);
+    }
+
+    // HAVING conditions for aggregate-level filters
+    const havingConditions = [];
+    if (quickFilter === 'lowStock') {
+      havingConditions.push(sql`SUM(${wmsStock.availableCases}) <= 5`);
+    }
+
     // Get products with aggregated stock info, grouped by LWIN18 only
     // (same product received from different shipments may have slightly different names)
-    const products = await db
+    const baseQuery = db
       .select({
         lwin18: wmsStock.lwin18,
         productName: sql<string>`MAX(${wmsStock.productName})`,
@@ -72,7 +100,15 @@ const adminGetStockByProduct = adminProcedure
       })
       .from(wmsStock)
       .where(conditions.length > 0 ? and(...conditions) : undefined)
-      .groupBy(wmsStock.lwin18)
+      .groupBy(wmsStock.lwin18);
+
+    // Apply HAVING clause if needed
+    const queryWithHaving =
+      havingConditions.length > 0
+        ? baseQuery.having(and(...havingConditions))
+        : baseQuery;
+
+    const products = await queryWithHaving
       .orderBy(
         sortOrder === 'desc'
           ? desc(
@@ -97,13 +133,26 @@ const adminGetStockByProduct = adminProcedure
       .limit(limit)
       .offset(offset);
 
-    // Get total count for pagination
-    const [countResult] = await db
-      .select({
-        count: sql<number>`COUNT(DISTINCT ${wmsStock.lwin18})::int`,
-      })
-      .from(wmsStock)
-      .where(conditions.length > 0 ? and(...conditions) : undefined);
+    // Get total count for pagination (use subquery when HAVING is active)
+    let totalCount: number;
+    if (havingConditions.length > 0) {
+      const countQuery = db
+        .select({ lwin18: wmsStock.lwin18 })
+        .from(wmsStock)
+        .where(conditions.length > 0 ? and(...conditions) : undefined)
+        .groupBy(wmsStock.lwin18)
+        .having(and(...havingConditions));
+      const subResults = await countQuery;
+      totalCount = subResults.length;
+    } else {
+      const [countResult] = await db
+        .select({
+          count: sql<number>`COUNT(DISTINCT ${wmsStock.lwin18})::int`,
+        })
+        .from(wmsStock)
+        .where(conditions.length > 0 ? and(...conditions) : undefined);
+      totalCount = countResult?.count ?? 0;
+    }
 
     // For each product, get location breakdown
     const productsWithLocations = await Promise.all(
@@ -155,10 +204,10 @@ const adminGetStockByProduct = adminProcedure
     return {
       products: productsWithLocations,
       pagination: {
-        total: countResult?.count ?? 0,
+        total: totalCount,
         limit,
         offset,
-        hasMore: offset + products.length < (countResult?.count ?? 0),
+        hasMore: offset + products.length < totalCount,
       },
     };
   });
