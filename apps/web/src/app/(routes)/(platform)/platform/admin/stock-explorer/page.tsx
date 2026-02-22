@@ -1,23 +1,31 @@
 'use client';
 
 import {
+  IconAdjustments,
+  IconArrowsExchange,
+  IconBuildingWarehouse,
   IconChevronDown,
   IconChevronLeft,
   IconChevronRight,
   IconChevronsLeft,
   IconChevronsRight,
+  IconCircleCheck,
+  IconColumns3,
   IconDownload,
-  IconLoader2,
+  IconLayoutRows,
+  IconLock,
+  IconPackage,
   IconSearch,
   IconSortAscending,
   IconSortDescending,
+  IconTags,
+  IconUsers,
   IconX,
 } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import Badge from '@/app/_ui/components/Badge/Badge';
 import Button from '@/app/_ui/components/Button/Button';
 import Card from '@/app/_ui/components/Card/Card';
 import CardContent from '@/app/_ui/components/Card/CardContent';
@@ -26,8 +34,147 @@ import useTRPC from '@/lib/trpc/browser';
 
 type SortField = 'productName' | 'totalCases' | 'vintage' | 'receivedAt';
 type SortOrder = 'asc' | 'desc';
+type QuickFilter = 'all' | 'lowStock' | 'reserved' | 'expiring' | 'ownStock' | 'consignment';
+type RowDensity = 'compact' | 'normal' | 'relaxed';
 
-/** Pagination button */
+const DENSITY_CLASSES: Record<RowDensity, { td: string; text: string }> = {
+  compact: { td: 'px-3 py-1.5', text: 'text-xs' },
+  normal: { td: 'px-4 py-3', text: 'text-sm' },
+  relaxed: { td: 'px-4 py-4', text: 'text-sm' },
+};
+
+const DEFAULT_COLUMNS = {
+  producer: true,
+  lwin18: true,
+  vintage: true,
+  size: false,
+  pack: false,
+  cases: true,
+  available: true,
+  reserved: true,
+  locations: true,
+  owners: true,
+  status: true,
+  bottles: true,
+};
+
+/** Load persisted preference from localStorage */
+const loadPreference = <T,>(key: string, fallback: T): T => {
+  if (typeof window === 'undefined') return fallback;
+  try {
+    const stored = localStorage.getItem(key);
+    return stored ? (JSON.parse(stored) as T) : fallback;
+  } catch {
+    return fallback;
+  }
+};
+
+/** Save preference to localStorage */
+const savePreference = (key: string, value: unknown) => {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    // Silently fail if storage is full
+  }
+};
+
+// ─── Skeleton Row ───────────────────────────────────────────────────────────
+
+const SkeletonRow = ({ density }: { density: RowDensity }) => {
+  const cls = DENSITY_CLASSES[density].td;
+  return (
+    <tr className="border-b border-border-muted">
+      <td className={cls}><div className="h-4 w-4 animate-pulse rounded bg-surface-muted" /></td>
+      <td className={cls}><div className="h-4 w-48 animate-pulse rounded bg-surface-muted" /></td>
+      <td className={cls}><div className="h-4 w-28 animate-pulse rounded bg-surface-muted" /></td>
+      <td className={cls}><div className="h-4 w-36 animate-pulse rounded bg-surface-muted" /></td>
+      <td className={cls}><div className="h-4 w-12 animate-pulse rounded bg-surface-muted" /></td>
+      <td className={cls}><div className="h-4 w-10 animate-pulse rounded bg-surface-muted" /></td>
+      <td className={cls}><div className="h-4 w-10 animate-pulse rounded bg-surface-muted" /></td>
+      <td className={cls}><div className="h-4 w-10 animate-pulse rounded bg-surface-muted" /></td>
+      <td className={cls}><div className="h-4 w-8 animate-pulse rounded bg-surface-muted" /></td>
+      <td className={cls}><div className="h-4 w-8 animate-pulse rounded bg-surface-muted" /></td>
+      <td className={cls}><div className="h-4 w-16 animate-pulse rounded bg-surface-muted" /></td>
+    </tr>
+  );
+};
+
+// ─── Status Dot ─────────────────────────────────────────────────────────────
+
+interface StatusIndicatorProps {
+  expiryStatus: string;
+  availableCases: number;
+}
+
+const StatusIndicator = ({ expiryStatus, availableCases }: StatusIndicatorProps) => {
+  // Priority: expired > expiring > low stock > healthy
+  if (expiryStatus === 'expired') {
+    return (
+      <span className="flex items-center gap-1.5">
+        <span className="h-2 w-2 rounded-full bg-red-500" />
+        <span className="text-red-600">Expired</span>
+      </span>
+    );
+  }
+  if (expiryStatus === 'critical') {
+    return (
+      <span className="flex items-center gap-1.5">
+        <span className="h-2 w-2 rounded-full bg-orange-500" />
+        <span className="text-orange-600">Expiring</span>
+      </span>
+    );
+  }
+  if (expiryStatus === 'warning') {
+    return (
+      <span className="flex items-center gap-1.5">
+        <span className="h-2 w-2 rounded-full bg-amber-500" />
+        <span className="text-amber-600">Expiring</span>
+      </span>
+    );
+  }
+  if (availableCases <= 5 && availableCases > 0) {
+    return (
+      <span className="flex items-center gap-1.5">
+        <span className="h-2 w-2 rounded-full bg-amber-400" />
+        <span className="text-amber-600">Low</span>
+      </span>
+    );
+  }
+  if (availableCases === 0) {
+    return (
+      <span className="flex items-center gap-1.5">
+        <span className="h-2 w-2 rounded-full bg-gray-400" />
+        <span className="text-text-muted">None</span>
+      </span>
+    );
+  }
+  return (
+    <span className="flex items-center gap-1.5">
+      <span className="h-2 w-2 rounded-full bg-emerald-500" />
+      <span className="text-emerald-600">OK</span>
+    </span>
+  );
+};
+
+// ─── Owner Badge ────────────────────────────────────────────────────────────
+
+const OwnerBadge = ({ name }: { name: string }) => {
+  const isCnC = name === 'Craft & Culture';
+  return (
+    <span
+      className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium ${
+        isCnC
+          ? 'bg-fill-brand/10 text-text-brand'
+          : 'bg-surface-muted text-text-secondary'
+      }`}
+    >
+      {name}
+    </span>
+  );
+};
+
+// ─── Pagination Button ──────────────────────────────────────────────────────
+
 const PaginationButton = ({
   onClick,
   disabled,
@@ -46,7 +193,8 @@ const PaginationButton = ({
   </button>
 );
 
-/** Single product row with expandable location breakdown */
+// ─── Product Row ────────────────────────────────────────────────────────────
+
 interface ProductRowProps {
   product: {
     lwin18: string;
@@ -61,6 +209,7 @@ interface ProductRowProps {
     locationCount: number;
     ownerCount: number;
     expiryStatus: string;
+    totalBottles: number;
     locations: {
       stockId: string;
       locationCode: string;
@@ -75,77 +224,164 @@ interface ProductRowProps {
   };
   isExpanded: boolean;
   onToggle: () => void;
+  density: RowDensity;
+  visibleColumns: Record<string, boolean>;
 }
 
-const ProductRow = ({ product, isExpanded, onToggle }: ProductRowProps) => {
-  const tdClass = 'px-4 py-3';
-  const tdClassRight = 'px-4 py-3 text-right tabular-nums';
-
-  const expiryBadge = () => {
-    switch (product.expiryStatus) {
-      case 'expired':
-        return <Badge colorRole="danger">Expired</Badge>;
-      case 'critical':
-        return <Badge colorRole="warning">Critical</Badge>;
-      case 'warning':
-        return <Badge colorRole="warning">Warning</Badge>;
-      case 'ok':
-        return <Badge colorRole="success">OK</Badge>;
-      default:
-        return <span className="text-text-muted">—</span>;
-    }
-  };
+const ProductRow = ({ product, isExpanded, onToggle, density, visibleColumns }: ProductRowProps) => {
+  const dc = DENSITY_CLASSES[density];
+  const tdClass = dc.td;
+  const tdClassRight = `${dc.td} text-right tabular-nums`;
 
   return (
     <>
       <tr
         onClick={onToggle}
-        className="cursor-pointer border-b border-border-muted transition-colors hover:bg-surface-muted"
+        className={`cursor-pointer border-b border-border-muted transition-colors hover:bg-surface-muted ${dc.text}`}
       >
-        <td className="px-4 py-3 text-text-muted">
-          {isExpanded ? (
-            <IconChevronDown className="h-4 w-4 text-text-brand" />
-          ) : (
-            <IconChevronRight className="h-4 w-4" />
-          )}
+        {/* Expand chevron */}
+        <td className={`${tdClass} w-8 text-text-muted`}>
+          <IconChevronDown
+            className={`h-4 w-4 transition-transform ${isExpanded ? 'text-text-brand' : '-rotate-90'}`}
+          />
         </td>
-        <td className={`${tdClass} max-w-[300px] truncate font-medium text-text-primary`}>
+
+        {/* Product name */}
+        <td className={`${tdClass} max-w-[280px] truncate font-medium text-text-primary`}>
           {product.productName}
         </td>
-        <td className={`${tdClass} hidden max-w-[180px] truncate text-text-muted lg:table-cell`}>
-          {product.producer ?? '—'}
-        </td>
-        <td className={`${tdClass} font-mono text-xs text-text-muted`}>{product.lwin18}</td>
-        <td className={`${tdClass} text-text-primary`}>{product.vintage ?? '—'}</td>
-        <td className={`${tdClass} hidden text-text-muted xl:table-cell`}>
-          {product.bottleSize ?? '750ml'}
-        </td>
-        <td className={`${tdClass} hidden text-text-muted xl:table-cell`}>
-          {product.caseConfig ?? 12}
-        </td>
-        <td className={`${tdClassRight} font-semibold text-text-primary`}>{product.totalCases}</td>
-        <td className={`${tdClassRight} font-medium text-text-brand`}>{product.availableCases}</td>
-        <td className={tdClassRight}>
-          {product.reservedCases > 0 ? (
-            <span className="font-medium text-text-warning">{product.reservedCases}</span>
-          ) : (
-            <span className="text-text-muted">0</span>
-          )}
-        </td>
-        <td className={`${tdClassRight} hidden text-text-muted md:table-cell`}>
-          {product.locationCount}
-        </td>
-        <td className={`${tdClassRight} hidden text-text-muted md:table-cell`}>
-          {product.ownerCount}
-        </td>
-        <td className={`${tdClass} hidden lg:table-cell`}>{expiryBadge()}</td>
+
+        {/* Producer */}
+        {visibleColumns.producer && (
+          <td className={`${tdClass} hidden max-w-[160px] truncate text-text-muted lg:table-cell`}>
+            {product.producer ?? '—'}
+          </td>
+        )}
+
+        {/* LWIN18 */}
+        {visibleColumns.lwin18 && (
+          <td className={`${tdClass} hidden font-mono text-xs text-text-muted xl:table-cell`}>
+            {product.lwin18}
+          </td>
+        )}
+
+        {/* Vintage */}
+        {visibleColumns.vintage && (
+          <td className={`${tdClass} text-text-primary`}>{product.vintage ?? '—'}</td>
+        )}
+
+        {/* Size */}
+        {visibleColumns.size && (
+          <td className={`${tdClass} hidden text-text-muted 2xl:table-cell`}>
+            {product.bottleSize ?? '750ml'}
+          </td>
+        )}
+
+        {/* Pack */}
+        {visibleColumns.pack && (
+          <td className={`${tdClass} hidden text-text-muted 2xl:table-cell`}>
+            {product.caseConfig ?? 12}
+          </td>
+        )}
+
+        {/* Cases */}
+        {visibleColumns.cases && (
+          <td className={`${tdClassRight} text-base font-bold text-text-primary`}>
+            {product.totalCases}
+          </td>
+        )}
+
+        {/* Available */}
+        {visibleColumns.available && (
+          <td className={tdClassRight}>
+            <span className={product.availableCases > 0 ? 'font-semibold text-text-brand' : 'text-text-muted'}>
+              {product.availableCases}
+            </span>
+          </td>
+        )}
+
+        {/* Reserved */}
+        {visibleColumns.reserved && (
+          <td className={tdClassRight}>
+            {product.reservedCases > 0 ? (
+              <span className="font-medium text-amber-600">{product.reservedCases}</span>
+            ) : (
+              <span className="text-text-muted">—</span>
+            )}
+          </td>
+        )}
+
+        {/* Bottles */}
+        {visibleColumns.bottles && (
+          <td className={`${tdClassRight} hidden text-text-muted md:table-cell`}>
+            {product.totalBottles}
+          </td>
+        )}
+
+        {/* Locations */}
+        {visibleColumns.locations && (
+          <td className={`${tdClassRight} hidden text-text-muted md:table-cell`}>
+            {product.locationCount}
+          </td>
+        )}
+
+        {/* Owners */}
+        {visibleColumns.owners && (
+          <td className={`${tdClassRight} hidden text-text-muted lg:table-cell`}>
+            {product.ownerCount}
+          </td>
+        )}
+
+        {/* Status */}
+        {visibleColumns.status && (
+          <td className={`${tdClass} hidden lg:table-cell`}>
+            <StatusIndicator
+              expiryStatus={product.expiryStatus}
+              availableCases={product.availableCases}
+            />
+          </td>
+        )}
       </tr>
 
       {/* Expanded location breakdown */}
       {isExpanded && product.locations.length > 0 && (
         <tr>
-          <td colSpan={13} className="bg-surface-muted px-0 py-0">
-            <div className="border-b border-border-muted px-8 py-3">
+          <td colSpan={20} className="bg-surface-muted px-0 py-0">
+            <div className="border-b border-border-muted px-8 py-4">
+              <div className="mb-3 flex items-center justify-between">
+                <Typography variant="bodyXs" className="font-semibold uppercase tracking-wider text-text-muted">
+                  Location Breakdown — {product.locations.length} record{product.locations.length !== 1 ? 's' : ''}
+                </Typography>
+                <div className="flex gap-2">
+                  <Link
+                    href={`/platform/admin/wms/transfer?lwin18=${product.lwin18}`}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <Button variant="outline" size="xs">
+                      <IconArrowsExchange className="mr-1 h-3 w-3" />
+                      Transfer
+                    </Button>
+                  </Link>
+                  <Link
+                    href={`/platform/admin/wms/labels?search=${product.lwin18}`}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <Button variant="outline" size="xs">
+                      <IconTags className="mr-1 h-3 w-3" />
+                      Labels
+                    </Button>
+                  </Link>
+                  <Link
+                    href={`/platform/admin/wms/stock/adjust?lwin18=${product.lwin18}`}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <Button variant="outline" size="xs">
+                      <IconAdjustments className="mr-1 h-3 w-3" />
+                      Adjust
+                    </Button>
+                  </Link>
+                </div>
+              </div>
               <table className="w-full text-[13px]">
                 <thead>
                   <tr className="text-[11px] uppercase tracking-wider text-text-muted">
@@ -153,35 +389,52 @@ const ProductRow = ({ product, isExpanded, onToggle }: ProductRowProps) => {
                     <th className="px-3 py-1.5 text-left">Type</th>
                     <th className="px-3 py-1.5 text-right">Qty</th>
                     <th className="px-3 py-1.5 text-right">Avail</th>
+                    <th className="w-[120px] px-3 py-1.5 text-left" />
                     <th className="px-3 py-1.5 text-left">Owner</th>
                     <th className="px-3 py-1.5 text-left">Lot</th>
                     <th className="px-3 py-1.5 text-left">Expiry</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {product.locations.map((loc) => (
-                    <tr key={loc.stockId} className="border-t border-border-muted">
-                      <td className="px-3 py-1.5 font-mono text-xs font-medium text-text-brand">
-                        {loc.locationCode}
-                      </td>
-                      <td className="px-3 py-1.5 text-text-muted">{loc.locationType}</td>
-                      <td className="px-3 py-1.5 text-right tabular-nums text-text-primary">
-                        {loc.quantityCases}
-                      </td>
-                      <td className="px-3 py-1.5 text-right tabular-nums text-text-primary">
-                        {loc.availableCases}
-                      </td>
-                      <td className="px-3 py-1.5 text-text-primary">{loc.ownerName}</td>
-                      <td className="px-3 py-1.5 font-mono text-xs text-text-muted">
-                        {loc.lotNumber ?? '—'}
-                      </td>
-                      <td className="px-3 py-1.5 text-text-muted">
-                        {loc.expiryDate
-                          ? new Date(loc.expiryDate).toLocaleDateString('en-GB')
-                          : '—'}
-                      </td>
-                    </tr>
-                  ))}
+                  {product.locations.map((loc) => {
+                    const proportion = product.totalCases > 0
+                      ? (loc.quantityCases / product.totalCases) * 100
+                      : 0;
+
+                    return (
+                      <tr key={loc.stockId} className="border-t border-border-muted">
+                        <td className="px-3 py-2 font-mono text-xs font-medium text-text-brand">
+                          {loc.locationCode}
+                        </td>
+                        <td className="px-3 py-2 text-text-muted">{loc.locationType}</td>
+                        <td className="px-3 py-2 text-right tabular-nums font-medium text-text-primary">
+                          {loc.quantityCases}
+                        </td>
+                        <td className="px-3 py-2 text-right tabular-nums text-text-primary">
+                          {loc.availableCases}
+                        </td>
+                        <td className="px-3 py-2">
+                          <div className="h-1.5 w-full overflow-hidden rounded-full bg-border-muted">
+                            <div
+                              className="h-full rounded-full bg-fill-brand transition-all"
+                              style={{ width: `${Math.min(proportion, 100)}%` }}
+                            />
+                          </div>
+                        </td>
+                        <td className="px-3 py-2">
+                          <OwnerBadge name={loc.ownerName} />
+                        </td>
+                        <td className="px-3 py-2 font-mono text-xs text-text-muted">
+                          {loc.lotNumber ?? '—'}
+                        </td>
+                        <td className="px-3 py-2 text-text-muted">
+                          {loc.expiryDate
+                            ? new Date(loc.expiryDate).toLocaleDateString('en-GB')
+                            : '—'}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -192,9 +445,79 @@ const ProductRow = ({ product, isExpanded, onToggle }: ProductRowProps) => {
   );
 };
 
+// ─── Column Toggle Popover ──────────────────────────────────────────────────
+
+interface ColumnToggleProps {
+  columns: Record<string, boolean>;
+  onChange: (columns: Record<string, boolean>) => void;
+}
+
+const COLUMN_LABELS: Record<string, string> = {
+  producer: 'Producer',
+  lwin18: 'LWIN18',
+  vintage: 'Vintage',
+  size: 'Bottle Size',
+  pack: 'Case Pack',
+  cases: 'Total Cases',
+  available: 'Available',
+  reserved: 'Reserved',
+  bottles: 'Bottles',
+  locations: 'Locations',
+  owners: 'Owners',
+  status: 'Status',
+};
+
+const ColumnToggle = ({ columns, onChange }: ColumnToggleProps) => {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    if (open) document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [open]);
+
+  return (
+    <div className="relative" ref={ref}>
+      <Button variant="ghost" size="sm" onClick={() => setOpen(!open)}>
+        <IconColumns3 className="h-4 w-4" />
+      </Button>
+      {open && (
+        <div className="absolute right-0 top-full z-20 mt-1 w-48 rounded-lg border border-border-muted bg-background-primary p-2 shadow-lg">
+          <Typography variant="bodyXs" className="mb-2 px-2 font-semibold uppercase tracking-wider text-text-muted">
+            Columns
+          </Typography>
+          {Object.entries(COLUMN_LABELS).map(([key, label]) => (
+            <label
+              key={key}
+              className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-surface-muted"
+            >
+              <input
+                type="checkbox"
+                checked={columns[key] ?? true}
+                onChange={(e) => {
+                  const next = { ...columns, [key]: e.target.checked };
+                  onChange(next);
+                }}
+                className="rounded border-border-primary accent-fill-brand"
+              />
+              {label}
+            </label>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ─── Main Page ──────────────────────────────────────────────────────────────
+
 /**
- * Stock Explorer — desktop-optimized stock search within admin dashboard
- * Full granularity view of all warehouse stock with filters and CSV export
+ * Stock Explorer — best-in-class warehouse inventory search, filter, and analysis tool
  */
 const StockExplorerPage = () => {
   const api = useTRPC();
@@ -205,11 +528,18 @@ const StockExplorerPage = () => {
   const [ownerId, setOwnerId] = useState<string>('');
   const [vintageFrom, setVintageFrom] = useState('');
   const [vintageTo, setVintageTo] = useState('');
-  const [sortBy, setSortBy] = useState<SortField>('productName');
-  const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
+  const [quickFilter, setQuickFilter] = useState<QuickFilter>('all');
+  const [sortBy, setSortBy] = useState<SortField>('totalCases');
+  const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
   const [page, setPage] = useState(0);
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const limit = 50;
+
+  // Persisted preferences
+  const [density, setDensity] = useState<RowDensity>(() => loadPreference('se-density', 'normal'));
+  const [visibleColumns, setVisibleColumns] = useState<Record<string, boolean>>(() =>
+    loadPreference('se-columns', DEFAULT_COLUMNS),
+  );
 
   // Debounce search
   useEffect(() => {
@@ -223,13 +553,22 @@ const StockExplorerPage = () => {
   // Reset page on filter change
   useEffect(() => {
     setPage(0);
-  }, [ownerId, vintageFrom, vintageTo, sortBy, sortOrder]);
+  }, [ownerId, vintageFrom, vintageTo, sortBy, sortOrder, quickFilter]);
+
+  // Persist preferences
+  useEffect(() => {
+    savePreference('se-density', density);
+  }, [density]);
+  useEffect(() => {
+    savePreference('se-columns', visibleColumns);
+  }, [visibleColumns]);
 
   // Fetch stock data
   const { data: stockData, isLoading } = useQuery({
     ...api.wms.admin.stock.getByProduct.queryOptions({
       search: debouncedSearch || undefined,
       ownerId: ownerId || undefined,
+      quickFilter: quickFilter !== 'all' ? quickFilter : undefined,
       vintageFrom: vintageFrom ? Number(vintageFrom) : undefined,
       vintageTo: vintageTo ? Number(vintageTo) : undefined,
       sortBy,
@@ -239,7 +578,7 @@ const StockExplorerPage = () => {
     }),
   });
 
-  // Fetch overview for stats
+  // Fetch overview for KPI cards
   const { data: overview } = useQuery({
     ...api.wms.admin.stock.getOverview.queryOptions({}),
   });
@@ -297,8 +636,10 @@ const StockExplorerPage = () => {
       'Total Cases',
       'Available',
       'Reserved',
+      'Bottles',
       'Locations',
       'Owners',
+      'Status',
     ];
     const csvSafe = (val: string | number | null | undefined) => {
       const str = String(val ?? '');
@@ -314,8 +655,10 @@ const StockExplorerPage = () => {
       csvSafe(p.totalCases),
       csvSafe(p.availableCases),
       csvSafe(p.reservedCases),
+      csvSafe(p.totalBottles),
       csvSafe(p.locationCount),
       csvSafe(p.ownerCount),
+      csvSafe(p.expiryStatus),
     ]);
     const csv = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });
@@ -334,12 +677,19 @@ const StockExplorerPage = () => {
     setOwnerId('');
     setVintageFrom('');
     setVintageTo('');
-    setSortBy('productName');
-    setSortOrder('asc');
+    setQuickFilter('all');
+    setSortBy('totalCases');
+    setSortOrder('desc');
     setPage(0);
   }, []);
 
-  const hasActiveFilters = debouncedSearch || ownerId || vintageFrom || vintageTo;
+  const hasActiveFilters = debouncedSearch || ownerId || vintageFrom || vintageTo || quickFilter !== 'all';
+
+  // Find the selected owner name for filter chips
+  const selectedOwnerName = useMemo(() => {
+    if (!ownerId) return '';
+    return owners.find((o) => o.ownerId === ownerId)?.ownerName ?? '';
+  }, [ownerId, owners]);
 
   const renderSortIcon = (field: SortField) => {
     if (sortBy !== field) return null;
@@ -350,15 +700,27 @@ const StockExplorerPage = () => {
     );
   };
 
-  const thClass =
-    'px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-text-muted cursor-pointer select-none transition-colors hover:text-text-brand';
-  const thClassRight =
-    'px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-text-muted cursor-pointer select-none transition-colors hover:text-text-brand';
+  const thBase =
+    'text-xs font-medium uppercase tracking-wider text-text-muted cursor-pointer select-none transition-colors hover:text-text-brand';
+  const dc = DENSITY_CLASSES[density];
+
+  // Quick filter definitions
+  const quickFilters: { key: QuickFilter; label: string }[] = [
+    { key: 'all', label: 'All' },
+    { key: 'lowStock', label: 'Low Stock' },
+    { key: 'reserved', label: 'Reserved' },
+    { key: 'expiring', label: 'Expiring' },
+    { key: 'ownStock', label: 'C&C Only' },
+    { key: 'consignment', label: 'Consignment' },
+  ];
+
+  // Compute col count for colSpan
+  const visibleColCount = 2 + Object.values(visibleColumns).filter(Boolean).length;
 
   return (
     <div className="container mx-auto max-w-[1600px] px-4 py-6 sm:px-6 sm:py-8">
-      <div className="space-y-6">
-        {/* Breadcrumb + Header */}
+      <div className="space-y-5">
+        {/* Header */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <div className="mb-2 flex items-center gap-2">
@@ -375,39 +737,161 @@ const StockExplorerPage = () => {
               Stock Explorer
             </Typography>
             <Typography variant="bodySm" colorRole="muted">
-              Full warehouse inventory — search, filter, and export
+              Full warehouse inventory — search, filter, analyze, and export
             </Typography>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleExport}
-            disabled={!products.length}
-          >
-            <IconDownload className="h-4 w-4" />
-            Export CSV
-          </Button>
+          <div className="flex items-center gap-2">
+            {/* Density toggle */}
+            <div className="flex items-center rounded-lg border border-border-muted">
+              {(['compact', 'normal', 'relaxed'] as RowDensity[]).map((d) => (
+                <button
+                  key={d}
+                  onClick={() => setDensity(d)}
+                  className={`px-2 py-1.5 transition-colors ${
+                    density === d
+                      ? 'bg-fill-brand/10 text-text-brand'
+                      : 'text-text-muted hover:text-text-primary'
+                  }`}
+                  title={`${d} density`}
+                >
+                  <IconLayoutRows
+                    className="h-4 w-4"
+                    strokeWidth={d === 'compact' ? 2.5 : d === 'normal' ? 2 : 1.5}
+                  />
+                </button>
+              ))}
+            </div>
+
+            {/* Column toggle */}
+            <ColumnToggle columns={visibleColumns} onChange={setVisibleColumns} />
+
+            {/* Export */}
+            <Button variant="outline" size="sm" onClick={handleExport} disabled={!products.length}>
+              <IconDownload className="h-4 w-4" />
+              Export
+            </Button>
+          </div>
         </div>
 
-        {/* Stats Bar */}
+        {/* KPI Cards */}
         {overview && (
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
-            {[
-              { label: 'Products', value: overview.summary.uniqueProducts },
-              { label: 'Total Cases', value: overview.summary.totalCases },
-              { label: 'Available', value: overview.summary.availableCases },
-              { label: 'Reserved', value: overview.summary.reservedCases },
-              { label: 'Owners', value: overview.summary.uniqueOwners },
-            ].map((stat) => (
-              <Card key={stat.label}>
-                <CardContent className="p-4 text-center">
-                  <Typography variant="headingLg">{stat.value.toLocaleString()}</Typography>
-                  <Typography variant="bodyXs" colorRole="muted">
-                    {stat.label}
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+            {/* Total Stock */}
+            <Card>
+              <CardContent className="p-4">
+                <div className="mb-2 flex h-8 w-8 items-center justify-center rounded-lg bg-blue-100 text-blue-600">
+                  <IconPackage size={16} />
+                </div>
+                <Typography variant="headingLg">{overview.summary.totalCases.toLocaleString()}</Typography>
+                <Typography variant="bodyXs" colorRole="muted">
+                  Total Cases
+                </Typography>
+                <Typography variant="bodyXs" colorRole="muted" className="mt-0.5">
+                  {overview.summary.uniqueProducts} products
+                </Typography>
+              </CardContent>
+            </Card>
+
+            {/* Available */}
+            <Card>
+              <CardContent className="p-4">
+                <div className="mb-2 flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-100 text-emerald-600">
+                  <IconCircleCheck size={16} />
+                </div>
+                <Typography variant="headingLg" className="text-emerald-600">
+                  {overview.summary.availableCases.toLocaleString()}
+                </Typography>
+                <Typography variant="bodyXs" colorRole="muted">
+                  Available
+                </Typography>
+                <Typography variant="bodyXs" colorRole="muted" className="mt-0.5">
+                  {overview.summary.totalCases > 0
+                    ? `${Math.round((overview.summary.availableCases / overview.summary.totalCases) * 100)}% of total`
+                    : '—'}
+                </Typography>
+              </CardContent>
+            </Card>
+
+            {/* Reserved */}
+            <Card>
+              <CardContent className="p-4">
+                <div className={`mb-2 flex h-8 w-8 items-center justify-center rounded-lg ${
+                  overview.summary.reservedCases > 0 ? 'bg-amber-100 text-amber-600' : 'bg-gray-100 text-gray-400'
+                }`}>
+                  <IconLock size={16} />
+                </div>
+                <Typography
+                  variant="headingLg"
+                  className={overview.summary.reservedCases > 0 ? 'text-amber-600' : ''}
+                >
+                  {overview.summary.reservedCases.toLocaleString()}
+                </Typography>
+                <Typography variant="bodyXs" colorRole="muted">
+                  Reserved
+                </Typography>
+                <Typography variant="bodyXs" colorRole="muted" className="mt-0.5">
+                  {overview.summary.reservedCases > 0 ? 'Allocated to orders' : 'None allocated'}
+                </Typography>
+              </CardContent>
+            </Card>
+
+            {/* Warehouse Usage */}
+            <Card>
+              <CardContent className="p-4">
+                <div className="mb-2 flex h-8 w-8 items-center justify-center rounded-lg bg-purple-100 text-purple-600">
+                  <IconBuildingWarehouse size={16} />
+                </div>
+                <Typography variant="headingLg">{overview.locations.utilizationPercent}%</Typography>
+                <Typography variant="bodyXs" colorRole="muted">
+                  Utilization
+                </Typography>
+                <div className="mt-1.5">
+                  <div className="h-1.5 w-full overflow-hidden rounded-full bg-border-muted">
+                    <div
+                      className="h-full rounded-full bg-purple-500 transition-all"
+                      style={{ width: `${overview.locations.utilizationPercent}%` }}
+                    />
+                  </div>
+                  <Typography variant="bodyXs" colorRole="muted" className="mt-0.5">
+                    {overview.locations.occupied} / {overview.locations.active} locations
                   </Typography>
-                </CardContent>
-              </Card>
-            ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Movements */}
+            <Card>
+              <CardContent className="p-4">
+                <div className="mb-2 flex h-8 w-8 items-center justify-center rounded-lg bg-cyan-100 text-cyan-600">
+                  <IconArrowsExchange size={16} />
+                </div>
+                <Typography variant="headingLg">{overview.movements.last7Days}</Typography>
+                <Typography variant="bodyXs" colorRole="muted">
+                  Movements (7d)
+                </Typography>
+                <Typography variant="bodyXs" colorRole="muted" className="mt-0.5">
+                  {overview.movements.last24Hours} today
+                </Typography>
+              </CardContent>
+            </Card>
+
+            {/* Owners */}
+            <Card>
+              <CardContent className="p-4">
+                <div className="mb-2 flex h-8 w-8 items-center justify-center rounded-lg bg-rose-100 text-rose-600">
+                  <IconUsers size={16} />
+                </div>
+                <Typography variant="headingLg">{overview.summary.uniqueOwners}</Typography>
+                <Typography variant="bodyXs" colorRole="muted">
+                  Owners
+                </Typography>
+                <Typography variant="bodyXs" colorRole="muted" className="mt-0.5">
+                  {overview.topOwners[0]
+                    ? `${overview.topOwners[0].ownerName}: ${overview.topOwners[0].totalCases}`
+                    : '—'}
+                </Typography>
+              </CardContent>
+            </Card>
           </div>
         )}
 
@@ -461,18 +945,68 @@ const StockExplorerPage = () => {
               className="w-20 rounded-lg border border-border-primary bg-background-primary px-3 py-2.5 text-sm text-text-primary placeholder:text-text-muted focus:border-border-brand focus:outline-none"
             />
           </div>
+        </div>
 
-          {/* Clear filters */}
-          {hasActiveFilters && (
+        {/* Quick Filters */}
+        <div className="flex flex-wrap items-center gap-2">
+          {quickFilters.map((qf) => (
+            <button
+              key={qf.key}
+              onClick={() => setQuickFilter(qf.key)}
+              className={`rounded-full px-3.5 py-1.5 text-xs font-medium transition-colors ${
+                quickFilter === qf.key
+                  ? 'bg-fill-brand text-white'
+                  : 'bg-surface-muted text-text-secondary hover:bg-fill-primary-hover hover:text-text-primary'
+              }`}
+            >
+              {qf.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Active Filter Chips */}
+        {hasActiveFilters && (
+          <div className="flex flex-wrap items-center gap-2">
+            {debouncedSearch && (
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-border-muted bg-background-primary px-3 py-1 text-xs text-text-secondary">
+                Search: &ldquo;{debouncedSearch}&rdquo;
+                <button onClick={() => { setSearch(''); setDebouncedSearch(''); }} className="text-text-muted hover:text-text-primary">
+                  <IconX className="h-3 w-3" />
+                </button>
+              </span>
+            )}
+            {selectedOwnerName && (
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-border-muted bg-background-primary px-3 py-1 text-xs text-text-secondary">
+                Owner: {selectedOwnerName}
+                <button onClick={() => setOwnerId('')} className="text-text-muted hover:text-text-primary">
+                  <IconX className="h-3 w-3" />
+                </button>
+              </span>
+            )}
+            {(vintageFrom || vintageTo) && (
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-border-muted bg-background-primary px-3 py-1 text-xs text-text-secondary">
+                Vintage: {vintageFrom || '...'} — {vintageTo || '...'}
+                <button onClick={() => { setVintageFrom(''); setVintageTo(''); }} className="text-text-muted hover:text-text-primary">
+                  <IconX className="h-3 w-3" />
+                </button>
+              </span>
+            )}
+            {quickFilter !== 'all' && (
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-border-muted bg-background-primary px-3 py-1 text-xs text-text-secondary">
+                Filter: {quickFilters.find((q) => q.key === quickFilter)?.label}
+                <button onClick={() => setQuickFilter('all')} className="text-text-muted hover:text-text-primary">
+                  <IconX className="h-3 w-3" />
+                </button>
+              </span>
+            )}
             <button
               onClick={clearFilters}
-              className="flex items-center gap-1.5 rounded-lg px-3 py-2.5 text-sm text-text-muted transition-colors hover:text-text-primary"
+              className="text-xs font-medium text-text-muted transition-colors hover:text-text-primary"
             >
-              <IconX className="h-3.5 w-3.5" />
-              Clear
+              Clear all
             </button>
-          )}
-        </div>
+          </div>
+        )}
 
         {/* Results count + pagination info */}
         <div className="flex items-center justify-between text-xs text-text-muted">
@@ -497,47 +1031,118 @@ const StockExplorerPage = () => {
         <Card>
           <CardContent className="p-0">
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="border-b border-border-muted">
+              <table className={`w-full ${dc.text}`}>
+                <thead className="sticky top-0 z-10 border-b border-border-muted bg-background-primary">
                   <tr>
-                    <th className="w-8 px-4 py-3" />
-                    <th className={thClass} onClick={() => handleSort('productName')}>
+                    <th className={`${dc.td} w-8`} />
+                    <th
+                      className={`${dc.td} text-left ${thBase}`}
+                      onClick={() => handleSort('productName')}
+                    >
                       <span className="flex items-center gap-1">
                         Product {renderSortIcon('productName')}
                       </span>
                     </th>
-                    <th className={`${thClass} hidden lg:table-cell`}>Producer</th>
-                    <th className={thClass}>LWIN18</th>
-                    <th className={thClass} onClick={() => handleSort('vintage')}>
-                      <span className="flex items-center gap-1">
-                        Vintage {renderSortIcon('vintage')}
-                      </span>
-                    </th>
-                    <th className={`${thClass} hidden xl:table-cell`}>Size</th>
-                    <th className={`${thClass} hidden xl:table-cell`}>Pack</th>
-                    <th className={thClassRight} onClick={() => handleSort('totalCases')}>
-                      <span className="flex items-center justify-end gap-1">
-                        Cases {renderSortIcon('totalCases')}
-                      </span>
-                    </th>
-                    <th className={thClassRight}>Avail</th>
-                    <th className={thClassRight}>Rsvd</th>
-                    <th className={`${thClassRight} hidden md:table-cell`}>Locs</th>
-                    <th className={`${thClassRight} hidden md:table-cell`}>Owners</th>
-                    <th className={`${thClass} hidden lg:table-cell`}>Expiry</th>
+                    {visibleColumns.producer && (
+                      <th className={`${dc.td} hidden text-left lg:table-cell ${thBase}`}>
+                        Producer
+                      </th>
+                    )}
+                    {visibleColumns.lwin18 && (
+                      <th className={`${dc.td} hidden text-left xl:table-cell ${thBase}`}>
+                        LWIN18
+                      </th>
+                    )}
+                    {visibleColumns.vintage && (
+                      <th
+                        className={`${dc.td} text-left ${thBase}`}
+                        onClick={() => handleSort('vintage')}
+                      >
+                        <span className="flex items-center gap-1">
+                          Vintage {renderSortIcon('vintage')}
+                        </span>
+                      </th>
+                    )}
+                    {visibleColumns.size && (
+                      <th className={`${dc.td} hidden text-left 2xl:table-cell ${thBase}`}>
+                        Size
+                      </th>
+                    )}
+                    {visibleColumns.pack && (
+                      <th className={`${dc.td} hidden text-left 2xl:table-cell ${thBase}`}>
+                        Pack
+                      </th>
+                    )}
+                    {visibleColumns.cases && (
+                      <th
+                        className={`${dc.td} text-right ${thBase}`}
+                        onClick={() => handleSort('totalCases')}
+                      >
+                        <span className="flex items-center justify-end gap-1">
+                          Cases {renderSortIcon('totalCases')}
+                        </span>
+                      </th>
+                    )}
+                    {visibleColumns.available && (
+                      <th className={`${dc.td} text-right ${thBase}`}>Avail</th>
+                    )}
+                    {visibleColumns.reserved && (
+                      <th className={`${dc.td} text-right ${thBase}`}>Rsvd</th>
+                    )}
+                    {visibleColumns.bottles && (
+                      <th className={`${dc.td} hidden text-right md:table-cell ${thBase}`}>
+                        Btls
+                      </th>
+                    )}
+                    {visibleColumns.locations && (
+                      <th className={`${dc.td} hidden text-right md:table-cell ${thBase}`}>
+                        Locs
+                      </th>
+                    )}
+                    {visibleColumns.owners && (
+                      <th className={`${dc.td} hidden text-right lg:table-cell ${thBase}`}>
+                        Owners
+                      </th>
+                    )}
+                    {visibleColumns.status && (
+                      <th className={`${dc.td} hidden text-left lg:table-cell ${thBase}`}>
+                        Status
+                      </th>
+                    )}
                   </tr>
                 </thead>
                 <tbody>
                   {isLoading ? (
-                    <tr>
-                      <td colSpan={13} className="py-20 text-center">
-                        <IconLoader2 className="mx-auto h-6 w-6 animate-spin text-text-brand" />
-                      </td>
-                    </tr>
+                    Array.from({ length: 6 }).map((_, i) => (
+                      <SkeletonRow key={i} density={density} />
+                    ))
                   ) : products.length === 0 ? (
                     <tr>
-                      <td colSpan={13} className="py-20 text-center text-text-muted">
-                        No stock found
+                      <td colSpan={visibleColCount} className="py-20 text-center">
+                        <div className="flex flex-col items-center gap-3">
+                          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-surface-muted">
+                            <IconSearch className="h-6 w-6 text-text-muted" />
+                          </div>
+                          <div>
+                            <Typography variant="bodySm" className="font-medium">
+                              {hasActiveFilters ? 'No stock matches your filters' : 'No inventory yet'}
+                            </Typography>
+                            <Typography variant="bodyXs" colorRole="muted" className="mt-1">
+                              {hasActiveFilters
+                                ? 'Try adjusting your search or clearing filters'
+                                : 'Import stock from Zoho or receive a shipment to get started'}
+                            </Typography>
+                          </div>
+                          {hasActiveFilters ? (
+                            <Button variant="outline" size="sm" onClick={clearFilters}>
+                              Clear Filters
+                            </Button>
+                          ) : (
+                            <Link href="/platform/admin/wms/receive">
+                              <Button variant="primary" size="sm">Go to Receiving</Button>
+                            </Link>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ) : (
@@ -549,6 +1154,8 @@ const StockExplorerPage = () => {
                           product={product}
                           isExpanded={isExpanded}
                           onToggle={() => toggleRow(product.lwin18)}
+                          density={density}
+                          visibleColumns={visibleColumns}
                         />
                       );
                     })

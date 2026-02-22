@@ -13,6 +13,9 @@ export const getStockByProductSchema = z.object({
   ownerId: z.string().uuid().optional(),
   hasExpiry: z.boolean().optional(),
   lowStock: z.boolean().optional(),
+  quickFilter: z
+    .enum(['all', 'lowStock', 'reserved', 'expiring', 'ownStock', 'consignment'])
+    .optional(),
   vintageFrom: z.number().min(1900).max(2100).optional(),
   vintageTo: z.number().min(1900).max(2100).optional(),
   sortBy: z
