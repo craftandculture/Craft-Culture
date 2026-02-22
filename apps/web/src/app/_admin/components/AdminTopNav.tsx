@@ -4,6 +4,7 @@ import {
   IconBinoculars,
   IconBuildingWarehouse,
   IconCoin,
+  IconDatabaseSearch,
   IconHome2,
   IconPackage,
   IconShip,
@@ -26,6 +27,7 @@ const adminNavItems: AdminNavItem[] = [
   { label: 'Home', href: '/platform/admin/home', icon: IconHome2, section: 'home' },
   { label: 'Orders', href: '/platform/admin/private-orders', icon: IconPackage, section: 'orders' },
   { label: 'Logistics', href: '/platform/admin/logistics', icon: IconShip, section: 'logistics' },
+  { label: 'Stock', href: '/platform/admin/stock-explorer', icon: IconDatabaseSearch, section: 'stock' },
   { label: 'Warehouse', href: '/platform/admin/wms', icon: IconBuildingWarehouse, section: 'warehouse' },
   { label: 'Partners', href: '/platform/admin/users', icon: IconUsers, section: 'partners' },
   { label: 'Finance', href: '/platform/admin/commissions', icon: IconCoin, section: 'finance' },
@@ -50,8 +52,11 @@ const getSectionFromPathname = (pathname: string) => {
   // Logistics
   if (pathname.startsWith('/platform/admin/logistics')) return 'logistics';
 
+  // Stock
+  if (pathname.startsWith('/platform/admin/stock-explorer')) return 'stock';
+
   // Warehouse
-  if (pathname.startsWith('/platform/admin/wms') || pathname.startsWith('/platform/admin/stock-explorer'))
+  if (pathname.startsWith('/platform/admin/wms'))
     return 'warehouse';
 
   // Partners
