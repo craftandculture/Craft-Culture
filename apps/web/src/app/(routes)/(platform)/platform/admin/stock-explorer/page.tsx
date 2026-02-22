@@ -214,6 +214,7 @@ interface ProductRowProps {
       stockId: string;
       locationCode: string;
       locationType: string;
+      storageMethod: string | null;
       quantityCases: number;
       availableCases: number;
       ownerId: string;
@@ -386,10 +387,10 @@ const ProductRow = ({ product, isExpanded, onToggle, density, visibleColumns }: 
                 <thead>
                   <tr className="text-[11px] uppercase tracking-wider text-text-muted">
                     <th className="px-3 py-1.5 text-left">Location</th>
-                    <th className="px-3 py-1.5 text-left">Type</th>
+                    <th className="px-3 py-1.5 text-left">Storage</th>
                     <th className="px-3 py-1.5 text-right">Qty</th>
                     <th className="px-3 py-1.5 text-right">Avail</th>
-                    <th className="w-[120px] px-3 py-1.5 text-left" />
+                    <th className="w-[100px] px-3 py-1.5 text-left" />
                     <th className="px-3 py-1.5 text-left">Owner</th>
                     <th className="px-3 py-1.5 text-left">Lot</th>
                     <th className="px-3 py-1.5 text-left">Expiry</th>
@@ -397,16 +398,37 @@ const ProductRow = ({ product, isExpanded, onToggle, density, visibleColumns }: 
                 </thead>
                 <tbody>
                   {product.locations.map((loc) => {
-                    const proportion = product.totalCases > 0
-                      ? (loc.quantityCases / product.totalCases) * 100
+                    // Availability ratio: how much of this location's stock is available
+                    const availPercent = loc.quantityCases > 0
+                      ? (loc.availableCases / loc.quantityCases) * 100
                       : 0;
+                    const barColor = availPercent === 100
+                      ? 'bg-emerald-500'
+                      : availPercent >= 50
+                        ? 'bg-fill-brand'
+                        : availPercent > 0
+                          ? 'bg-amber-500'
+                          : 'bg-gray-300';
+                    const storageLabel = loc.storageMethod === 'pallet'
+                      ? 'Pallet'
+                      : loc.storageMethod === 'mixed'
+                        ? 'Mixed'
+                        : 'Shelf';
 
                     return (
                       <tr key={loc.stockId} className="border-t border-border-muted">
                         <td className="px-3 py-2 font-mono text-xs font-medium text-text-brand">
                           {loc.locationCode}
                         </td>
-                        <td className="px-3 py-2 text-text-muted">{loc.locationType}</td>
+                        <td className="px-3 py-2">
+                          <span className={`inline-flex items-center rounded px-1.5 py-0.5 text-[11px] font-medium ${
+                            loc.storageMethod === 'pallet'
+                              ? 'bg-purple-100 text-purple-700'
+                              : 'bg-blue-50 text-blue-600'
+                          }`}>
+                            {storageLabel}
+                          </span>
+                        </td>
                         <td className="px-3 py-2 text-right tabular-nums font-medium text-text-primary">
                           {loc.quantityCases}
                         </td>
@@ -416,8 +438,8 @@ const ProductRow = ({ product, isExpanded, onToggle, density, visibleColumns }: 
                         <td className="px-3 py-2">
                           <div className="h-1.5 w-full overflow-hidden rounded-full bg-border-muted">
                             <div
-                              className="h-full rounded-full bg-fill-brand transition-all"
-                              style={{ width: `${Math.min(proportion, 100)}%` }}
+                              className={`h-full rounded-full ${barColor} transition-all`}
+                              style={{ width: `${Math.min(availPercent, 100)}%` }}
                             />
                           </div>
                         </td>
@@ -775,123 +797,92 @@ const StockExplorerPage = () => {
 
         {/* KPI Cards */}
         {overview && (
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+          <div className="grid grid-cols-3 gap-2 lg:grid-cols-6">
             {/* Total Stock */}
-            <Card>
-              <CardContent className="p-4">
-                <div className="mb-2 flex h-8 w-8 items-center justify-center rounded-lg bg-blue-100 text-blue-600">
-                  <IconPackage size={16} />
-                </div>
-                <Typography variant="headingLg">{overview.summary.totalCases.toLocaleString()}</Typography>
-                <Typography variant="bodyXs" colorRole="muted">
-                  Total Cases
-                </Typography>
-                <Typography variant="bodyXs" colorRole="muted" className="mt-0.5">
-                  {overview.summary.uniqueProducts} products
-                </Typography>
-              </CardContent>
-            </Card>
+            <div className="rounded-lg border border-border-muted bg-background-primary px-3 py-2.5 text-center">
+              <div className="mx-auto mb-1 flex h-6 w-6 items-center justify-center rounded-md bg-blue-50 text-blue-500">
+                <IconPackage size={13} />
+              </div>
+              <div className="text-lg font-bold leading-tight">{overview.summary.totalCases.toLocaleString()}</div>
+              <div className="text-[11px] text-text-muted">Cases</div>
+              <div className="text-[10px] text-text-muted">{overview.summary.uniqueProducts} products</div>
+            </div>
 
             {/* Available */}
-            <Card>
-              <CardContent className="p-4">
-                <div className="mb-2 flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-100 text-emerald-600">
-                  <IconCircleCheck size={16} />
-                </div>
-                <Typography variant="headingLg" className="text-emerald-600">
-                  {overview.summary.availableCases.toLocaleString()}
-                </Typography>
-                <Typography variant="bodyXs" colorRole="muted">
-                  Available
-                </Typography>
-                <Typography variant="bodyXs" colorRole="muted" className="mt-0.5">
-                  {overview.summary.totalCases > 0
-                    ? `${Math.round((overview.summary.availableCases / overview.summary.totalCases) * 100)}% of total`
-                    : '—'}
-                </Typography>
-              </CardContent>
-            </Card>
+            <div className="rounded-lg border border-border-muted bg-background-primary px-3 py-2.5 text-center">
+              <div className="mx-auto mb-1 flex h-6 w-6 items-center justify-center rounded-md bg-emerald-50 text-emerald-500">
+                <IconCircleCheck size={13} />
+              </div>
+              <div className="text-lg font-bold leading-tight text-emerald-600">
+                {overview.summary.availableCases.toLocaleString()}
+              </div>
+              <div className="text-[11px] text-text-muted">Available</div>
+              <div className="text-[10px] text-text-muted">
+                {overview.summary.totalCases > 0
+                  ? `${Math.round((overview.summary.availableCases / overview.summary.totalCases) * 100)}%`
+                  : '—'}
+              </div>
+            </div>
 
             {/* Reserved */}
-            <Card>
-              <CardContent className="p-4">
-                <div className={`mb-2 flex h-8 w-8 items-center justify-center rounded-lg ${
-                  overview.summary.reservedCases > 0 ? 'bg-amber-100 text-amber-600' : 'bg-gray-100 text-gray-400'
-                }`}>
-                  <IconLock size={16} />
-                </div>
-                <Typography
-                  variant="headingLg"
-                  className={overview.summary.reservedCases > 0 ? 'text-amber-600' : ''}
-                >
-                  {overview.summary.reservedCases.toLocaleString()}
-                </Typography>
-                <Typography variant="bodyXs" colorRole="muted">
-                  Reserved
-                </Typography>
-                <Typography variant="bodyXs" colorRole="muted" className="mt-0.5">
-                  {overview.summary.reservedCases > 0 ? 'Allocated to orders' : 'None allocated'}
-                </Typography>
-              </CardContent>
-            </Card>
+            <div className="rounded-lg border border-border-muted bg-background-primary px-3 py-2.5 text-center">
+              <div className={`mx-auto mb-1 flex h-6 w-6 items-center justify-center rounded-md ${
+                overview.summary.reservedCases > 0 ? 'bg-amber-50 text-amber-500' : 'bg-gray-50 text-gray-300'
+              }`}>
+                <IconLock size={13} />
+              </div>
+              <div className={`text-lg font-bold leading-tight ${overview.summary.reservedCases > 0 ? 'text-amber-600' : ''}`}>
+                {overview.summary.reservedCases.toLocaleString()}
+              </div>
+              <div className="text-[11px] text-text-muted">Reserved</div>
+              <div className="text-[10px] text-text-muted">
+                {overview.summary.reservedCases > 0 ? 'Allocated' : 'None'}
+              </div>
+            </div>
 
-            {/* Warehouse Usage */}
-            <Card>
-              <CardContent className="p-4">
-                <div className="mb-2 flex h-8 w-8 items-center justify-center rounded-lg bg-purple-100 text-purple-600">
-                  <IconBuildingWarehouse size={16} />
+            {/* Utilization */}
+            <div className="rounded-lg border border-border-muted bg-background-primary px-3 py-2.5 text-center">
+              <div className="mx-auto mb-1 flex h-6 w-6 items-center justify-center rounded-md bg-purple-50 text-purple-500">
+                <IconBuildingWarehouse size={13} />
+              </div>
+              <div className="text-lg font-bold leading-tight">{overview.locations.utilizationPercent}%</div>
+              <div className="text-[11px] text-text-muted">Utilization</div>
+              <div className="mt-1 flex items-center gap-1.5">
+                <div className="h-1 flex-1 overflow-hidden rounded-full bg-border-muted">
+                  <div
+                    className="h-full rounded-full bg-purple-500 transition-all"
+                    style={{ width: `${overview.locations.utilizationPercent}%` }}
+                  />
                 </div>
-                <Typography variant="headingLg">{overview.locations.utilizationPercent}%</Typography>
-                <Typography variant="bodyXs" colorRole="muted">
-                  Utilization
-                </Typography>
-                <div className="mt-1.5">
-                  <div className="h-1.5 w-full overflow-hidden rounded-full bg-border-muted">
-                    <div
-                      className="h-full rounded-full bg-purple-500 transition-all"
-                      style={{ width: `${overview.locations.utilizationPercent}%` }}
-                    />
-                  </div>
-                  <Typography variant="bodyXs" colorRole="muted" className="mt-0.5">
-                    {overview.locations.occupied} / {overview.locations.active} locations
-                  </Typography>
-                </div>
-              </CardContent>
-            </Card>
+                <span className="text-[10px] tabular-nums text-text-muted">
+                  {overview.locations.occupied}/{overview.locations.active}
+                </span>
+              </div>
+            </div>
 
             {/* Movements */}
-            <Card>
-              <CardContent className="p-4">
-                <div className="mb-2 flex h-8 w-8 items-center justify-center rounded-lg bg-cyan-100 text-cyan-600">
-                  <IconArrowsExchange size={16} />
-                </div>
-                <Typography variant="headingLg">{overview.movements.last7Days}</Typography>
-                <Typography variant="bodyXs" colorRole="muted">
-                  Movements (7d)
-                </Typography>
-                <Typography variant="bodyXs" colorRole="muted" className="mt-0.5">
-                  {overview.movements.last24Hours} today
-                </Typography>
-              </CardContent>
-            </Card>
+            <div className="rounded-lg border border-border-muted bg-background-primary px-3 py-2.5 text-center">
+              <div className="mx-auto mb-1 flex h-6 w-6 items-center justify-center rounded-md bg-cyan-50 text-cyan-500">
+                <IconArrowsExchange size={13} />
+              </div>
+              <div className="text-lg font-bold leading-tight">{overview.movements.last7Days}</div>
+              <div className="text-[11px] text-text-muted">Moves (7d)</div>
+              <div className="text-[10px] text-text-muted">{overview.movements.last24Hours} today</div>
+            </div>
 
             {/* Owners */}
-            <Card>
-              <CardContent className="p-4">
-                <div className="mb-2 flex h-8 w-8 items-center justify-center rounded-lg bg-rose-100 text-rose-600">
-                  <IconUsers size={16} />
-                </div>
-                <Typography variant="headingLg">{overview.summary.uniqueOwners}</Typography>
-                <Typography variant="bodyXs" colorRole="muted">
-                  Owners
-                </Typography>
-                <Typography variant="bodyXs" colorRole="muted" className="mt-0.5">
-                  {overview.topOwners[0]
-                    ? `${overview.topOwners[0].ownerName}: ${overview.topOwners[0].totalCases}`
-                    : '—'}
-                </Typography>
-              </CardContent>
-            </Card>
+            <div className="rounded-lg border border-border-muted bg-background-primary px-3 py-2.5 text-center">
+              <div className="mx-auto mb-1 flex h-6 w-6 items-center justify-center rounded-md bg-rose-50 text-rose-500">
+                <IconUsers size={13} />
+              </div>
+              <div className="text-lg font-bold leading-tight">{overview.summary.uniqueOwners}</div>
+              <div className="text-[11px] text-text-muted">Owners</div>
+              <div className="truncate text-[10px] text-text-muted">
+                {overview.topOwners[0]
+                  ? `${overview.topOwners[0].ownerName}: ${overview.topOwners[0].totalCases}`
+                  : '—'}
+              </div>
+            </div>
           </div>
         )}
 

@@ -163,6 +163,7 @@ const adminGetStockByProduct = adminProcedure
             locationId: wmsStock.locationId,
             locationCode: wmsLocations.locationCode,
             locationType: wmsLocations.locationType,
+            storageMethod: wmsLocations.storageMethod,
             quantityCases: wmsStock.quantityCases,
             availableCases: wmsStock.availableCases,
             ownerId: wmsStock.ownerId,
