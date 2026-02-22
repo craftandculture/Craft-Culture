@@ -34,7 +34,6 @@ const sectionTabs: Record<string, TabItem[]> = {
     { label: 'Dispatch', href: '/platform/admin/wms/dispatch' },
     { label: 'Labels', href: '/platform/admin/wms/labels' },
     { label: 'Movements', href: '/platform/admin/wms/movements' },
-    { label: 'Stock Explorer', href: '/platform/admin/stock-explorer' },
     { label: 'Cycle Count', href: '/platform/admin/wms/cycle-count' },
   ],
   partners: [

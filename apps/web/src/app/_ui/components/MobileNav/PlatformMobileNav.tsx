@@ -84,6 +84,12 @@ const PlatformMobileNav = ({ user }: PlatformMobileNavProps) => {
       ],
     });
     sections.push({
+      title: 'Stock',
+      links: [
+        { href: '/platform/admin/stock-explorer', label: 'Stock Explorer' },
+      ],
+    });
+    sections.push({
       title: 'Warehouse',
       links: [
         { href: '/platform/admin/wms', label: 'WMS Dashboard' },
@@ -92,7 +98,6 @@ const PlatformMobileNav = ({ user }: PlatformMobileNavProps) => {
         { href: '/platform/admin/wms/dispatch', label: 'Dispatch' },
         { href: '/platform/admin/wms/labels', label: 'Labels' },
         { href: '/platform/admin/wms/movements', label: 'Movements' },
-        { href: '/platform/admin/stock-explorer', label: 'Stock Explorer' },
         { href: '/platform/admin/wms/cycle-count', label: 'Cycle Count' },
       ],
     });
