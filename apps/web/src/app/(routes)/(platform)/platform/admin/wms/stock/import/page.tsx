@@ -24,6 +24,8 @@ import useTRPC from '@/lib/trpc/browser';
 interface ParsedItem {
   sku: string;
   productName: string;
+  producer: string;
+  vintage: string;
   quantity: number;
   unit: 'case' | 'bottle';
   bottlesPerCase: number;
@@ -109,6 +111,8 @@ const WMSStockImportPage = () => {
           headers.indexOf('location_code'),
           headers.indexOf('location'),
         );
+        const producerIndex = headers.indexOf('producer');
+        const vintageIndex = headers.indexOf('vintage');
         const bpcIndex = headers.indexOf('bottles_per_case');
         const sizeIndex = headers.indexOf('bottle_size_ml');
 
@@ -130,6 +134,8 @@ const WMSStockImportPage = () => {
 
           const productName = row[nameIndex]?.toString() ?? '';
           const sku = skuIndex >= 0 ? row[skuIndex]?.toString() ?? '' : '';
+          const producer = producerIndex >= 0 ? row[producerIndex]?.toString().trim() ?? '' : '';
+          const vintage = vintageIndex >= 0 ? row[vintageIndex]?.toString().trim() ?? '' : '';
 
           // Parse case config: explicit columns > product name > SKU > defaults
           let bottlesPerCase = 6;
@@ -175,6 +181,8 @@ const WMSStockImportPage = () => {
           items.push({
             sku,
             productName,
+            producer,
+            vintage,
             quantity: Math.floor(quantity),
             unit,
             bottlesPerCase,
@@ -230,6 +238,8 @@ const WMSStockImportPage = () => {
       items: caseItems.map((item) => ({
         sku: item.sku,
         productName: item.productName,
+        producer: item.producer || undefined,
+        vintage: item.vintage || undefined,
         quantity: item.quantity,
         unit: item.unit,
         bottlesPerCase: item.bottlesPerCase,
@@ -350,10 +360,12 @@ const WMSStockImportPage = () => {
                 <Typography variant="bodyXs" colorRole="muted" className="mb-4">
                   CSV or Excel with columns: <code className="rounded bg-surface-muted px-1 py-0.5 text-[11px]">item_name</code>,{' '}
                   <code className="rounded bg-surface-muted px-1 py-0.5 text-[11px]">quantity_available</code>.
-                  Optional: <code className="rounded bg-surface-muted px-1 py-0.5 text-[11px]">sku</code>,{' '}
+                  Optional: <code className="rounded bg-surface-muted px-1 py-0.5 text-[11px]">producer</code>,{' '}
+                  <code className="rounded bg-surface-muted px-1 py-0.5 text-[11px]">vintage</code>,{' '}
                   <code className="rounded bg-surface-muted px-1 py-0.5 text-[11px]">bottles_per_case</code>,{' '}
                   <code className="rounded bg-surface-muted px-1 py-0.5 text-[11px]">bottle_size_ml</code>,{' '}
                   <code className="rounded bg-surface-muted px-1 py-0.5 text-[11px]">location_code</code>,{' '}
+                  <code className="rounded bg-surface-muted px-1 py-0.5 text-[11px]">sku</code>,{' '}
                   <code className="rounded bg-surface-muted px-1 py-0.5 text-[11px]">unit</code>
                 </Typography>
                 <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-border-primary p-6">
@@ -465,6 +477,8 @@ const WMSStockImportPage = () => {
                       <thead className="sticky top-0 bg-fill-secondary">
                         <tr>
                           <th className="px-3 py-2 text-left text-xs font-medium text-text-muted">Product</th>
+                          <th className="px-3 py-2 text-left text-xs font-medium text-text-muted">Producer</th>
+                          <th className="px-3 py-2 text-center text-xs font-medium text-text-muted">Vintage</th>
                           <th className="px-3 py-2 text-center text-xs font-medium text-text-muted">Qty</th>
                           <th className="px-3 py-2 text-center text-xs font-medium text-text-muted">Pack</th>
                           <th className="px-3 py-2 text-center text-xs font-medium text-text-muted">Size</th>
@@ -477,6 +491,8 @@ const WMSStockImportPage = () => {
                         {caseItems.slice(0, 50).map((item, i) => (
                           <tr key={i} className="border-t border-border-primary">
                             <td className="px-3 py-2">{item.productName}</td>
+                            <td className="px-3 py-2 text-text-muted">{item.producer || '—'}</td>
+                            <td className="px-3 py-2 text-center tabular-nums text-text-muted">{item.vintage || '—'}</td>
                             <td className="px-3 py-2 text-center tabular-nums font-medium">{item.quantity}</td>
                             <td className="px-3 py-2 text-center tabular-nums text-text-muted">
                               {item.bottlesPerCase}
@@ -496,7 +512,7 @@ const WMSStockImportPage = () => {
                         {caseItems.length > 50 && (
                           <tr className="border-t border-border-primary">
                             <td
-                              colSpan={hasLocationColumn ? 5 : 4}
+                              colSpan={hasLocationColumn ? 7 : 6}
                               className="px-3 py-2 text-center text-text-muted"
                             >
                               ... and {caseItems.length - 50} more
