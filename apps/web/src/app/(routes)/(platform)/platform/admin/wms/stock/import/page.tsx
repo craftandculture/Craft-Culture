@@ -379,9 +379,13 @@ const WMSStockImportPage = () => {
                     disabled={!selectedOwnerId}
                   />
                   <label htmlFor="file-upload">
-                    <Button variant="outline" as="span" className={selectedOwnerId ? 'cursor-pointer' : 'pointer-events-none'}>
-                      <ButtonContent iconLeft={IconUpload}>Select File</ButtonContent>
-                    </Button>
+                    <span className={`${selectedOwnerId ? 'cursor-pointer' : 'pointer-events-none'}`}>
+                      <Button variant="outline" asChild>
+                        <span>
+                          <ButtonContent iconLeft={IconUpload}>Select File</ButtonContent>
+                        </span>
+                      </Button>
+                    </span>
                   </label>
                   {file && (
                     <Typography variant="bodyXs" colorRole="muted" className="mt-2">
