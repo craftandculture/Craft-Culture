@@ -619,14 +619,21 @@ const StockExplorerPage = () => {
   const totalCount = stockData?.pagination?.total ?? 0;
   const totalPages = Math.ceil(totalCount / limit);
 
+  // Composite key for rows: lwin18 + caseConfig to distinguish pack sizes
+  const rowKey = useCallback(
+    (product: { lwin18: string; caseConfig: number | null }) =>
+      `${product.lwin18}-${product.caseConfig ?? 0}`,
+    [],
+  );
+
   // Toggle row expansion
-  const toggleRow = useCallback((lwin18: string) => {
+  const toggleRow = useCallback((key: string) => {
     setExpandedRows((prev) => {
       const next = new Set(prev);
-      if (next.has(lwin18)) {
-        next.delete(lwin18);
+      if (next.has(key)) {
+        next.delete(key);
       } else {
-        next.add(lwin18);
+        next.add(key);
       }
       return next;
     });
@@ -1138,13 +1145,14 @@ const StockExplorerPage = () => {
                     </tr>
                   ) : (
                     products.map((product) => {
-                      const isExpanded = expandedRows.has(product.lwin18);
+                      const key = rowKey(product);
+                      const isExpanded = expandedRows.has(key);
                       return (
                         <ProductRow
-                          key={product.lwin18}
+                          key={key}
                           product={product}
                           isExpanded={isExpanded}
-                          onToggle={() => toggleRow(product.lwin18)}
+                          onToggle={() => toggleRow(key)}
                           density={density}
                           visibleColumns={visibleColumns}
                         />
