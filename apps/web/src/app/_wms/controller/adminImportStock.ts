@@ -143,42 +143,9 @@ const adminImportStock = adminProcedure
           continue;
         }
 
-        // Parse case config from SKU if it looks like LWIN
-        let bottlesPerCase = item.bottlesPerCase;
-        let bottleSizeMl = item.bottleSizeMl;
-
-        if (item.sku && /^\d{15,18}$/.test(item.sku)) {
-          // SKU looks like LWIN - extract pack config
-          // Format: LWIN7 + VVVV + PP + SSSS (7 + 4 + 2 + 4 = 17-18 digits)
-          // PP = bottles per case (2 digits)
-          // SSSS = bottle size (4 digits, e.g., 0750 for 750ml)
-          const packConfig = item.sku.slice(-6); // Last 6 digits
-          const extractedBpc = parseInt(packConfig.slice(0, 2), 10);
-          const extractedSize = parseInt(packConfig.slice(2), 10);
-
-          if (extractedBpc > 0 && extractedBpc <= 24) {
-            bottlesPerCase = extractedBpc;
-          }
-          if (extractedSize > 0) {
-            bottleSizeMl = extractedSize;
-          }
-        }
-
-        // Also try to extract from product name (e.g., "6x75cl", "12x750ml")
-        const packMatch = item.productName.match(/(\d+)\s*x\s*(\d+)\s*(cl|ml)/i);
-        if (packMatch) {
-          const extractedBpc = parseInt(packMatch[1], 10);
-          let extractedSize = parseInt(packMatch[2], 10);
-          if (packMatch[3].toLowerCase() === 'cl') {
-            extractedSize *= 10; // Convert cl to ml
-          }
-          if (extractedBpc > 0 && extractedBpc <= 24) {
-            bottlesPerCase = extractedBpc;
-          }
-          if (extractedSize > 0) {
-            bottleSizeMl = extractedSize;
-          }
-        }
+        // Case config is already parsed by the frontend (explicit columns > name > SKU > defaults)
+        const bottlesPerCase = item.bottlesPerCase;
+        const bottleSizeMl = item.bottleSizeMl;
 
         // Generate LWIN18
         const lwin18 = generateLwin18({

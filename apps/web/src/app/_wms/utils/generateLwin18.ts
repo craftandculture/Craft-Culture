@@ -14,7 +14,7 @@
 const generateLwin18 = (params: {
   productName: string;
   producer?: string;
-  vintage?: number;
+  vintage?: string | number;
   bottlesPerCase?: number;
   bottleSizeMl?: number;
 }) => {
