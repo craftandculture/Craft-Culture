@@ -80,8 +80,8 @@ const adminGetStockByProduct = adminProcedure
       havingConditions.push(sql`SUM(${wmsStock.availableCases}) <= 5`);
     }
 
-    // Get products with aggregated stock info, grouped by LWIN18 only
-    // (same product received from different shipments may have slightly different names)
+    // Group by LWIN18 + caseConfig so different pack sizes (6x75cl vs 12x75cl)
+    // show as separate rows even if they share the same underlying wine
     const baseQuery = db
       .select({
         lwin18: wmsStock.lwin18,
@@ -89,7 +89,7 @@ const adminGetStockByProduct = adminProcedure
         producer: sql<string | null>`MAX(${wmsStock.producer})`,
         vintage: sql<string | null>`MAX(${wmsStock.vintage})`,
         bottleSize: sql<string | null>`MAX(${wmsStock.bottleSize})`,
-        caseConfig: sql<number | null>`MAX(${wmsStock.caseConfig})`,
+        caseConfig: wmsStock.caseConfig,
         totalCases: sql<number>`SUM(${wmsStock.quantityCases})::int`,
         availableCases: sql<number>`SUM(${wmsStock.availableCases})::int`,
         reservedCases: sql<number>`SUM(${wmsStock.reservedCases})::int`,
@@ -100,7 +100,7 @@ const adminGetStockByProduct = adminProcedure
       })
       .from(wmsStock)
       .where(conditions.length > 0 ? and(...conditions) : undefined)
-      .groupBy(wmsStock.lwin18);
+      .groupBy(wmsStock.lwin18, wmsStock.caseConfig);
 
     // Apply HAVING clause if needed
     const queryWithHaving =
@@ -137,17 +137,18 @@ const adminGetStockByProduct = adminProcedure
     let totalCount: number;
     if (havingConditions.length > 0) {
       const countQuery = db
-        .select({ lwin18: wmsStock.lwin18 })
+        .select({ lwin18: wmsStock.lwin18, caseConfig: wmsStock.caseConfig })
         .from(wmsStock)
         .where(conditions.length > 0 ? and(...conditions) : undefined)
-        .groupBy(wmsStock.lwin18)
+        .groupBy(wmsStock.lwin18, wmsStock.caseConfig)
         .having(and(...havingConditions));
       const subResults = await countQuery;
       totalCount = subResults.length;
     } else {
       const [countResult] = await db
         .select({
-          count: sql<number>`COUNT(DISTINCT ${wmsStock.lwin18})::int`,
+          count:
+            sql<number>`COUNT(DISTINCT (${wmsStock.lwin18} || '-' || COALESCE(${wmsStock.caseConfig}::text, '0')))::int`,
         })
         .from(wmsStock)
         .where(conditions.length > 0 ? and(...conditions) : undefined);
@@ -157,6 +158,11 @@ const adminGetStockByProduct = adminProcedure
     // For each product, get location breakdown
     const productsWithLocations = await Promise.all(
       products.map(async (product) => {
+        const locationConditions = [eq(wmsStock.lwin18, product.lwin18)];
+        if (product.caseConfig !== null) {
+          locationConditions.push(eq(wmsStock.caseConfig, product.caseConfig));
+        }
+
         const locations = await db
           .select({
             stockId: wmsStock.id,
@@ -173,7 +179,7 @@ const adminGetStockByProduct = adminProcedure
           })
           .from(wmsStock)
           .innerJoin(wmsLocations, eq(wmsLocations.id, wmsStock.locationId))
-          .where(eq(wmsStock.lwin18, product.lwin18))
+          .where(and(...locationConditions))
           .orderBy(asc(wmsLocations.locationCode));
 
         // Calculate expiry status
