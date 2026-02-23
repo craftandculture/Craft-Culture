@@ -1,8 +1,9 @@
-sku,item_name,quantity_available,unit,location_code
-W-001,Chateau Margaux 2015 6x75cl,12,case,A-01-01
-W-002,Opus One 2018 6x75cl,5,case,A-01-02
-W-003,Dom Perignon 2012 6x75cl,10,case,A-02-01
-W-004,Sassicaia 2019 Bolgheri 12x75cl,8,case,B-01-01
-W-005,Penfolds Grange 2017 6x75cl,3,case,B-01-02
-W-006,Cloudy Bay Sauvignon Blanc 2023 12x75cl,20,case,
-W-007,Hennessy XO 1x70cl,15,case,
+sku,item_name,quantity_available,unit,bottles_per_case,bottle_size_ml,location_code
+W-001,Chateau Margaux 2015,12,case,6,750,A-01-01
+W-002,Opus One 2018,5,case,6,750,A-01-02
+W-003,Dom Perignon 2012,10,case,6,750,A-02-01
+W-004,Sassicaia 2019 Bolgheri,8,case,12,750,B-01-01
+W-005,Penfolds Grange 2017 Magnum,3,case,6,1500,B-01-02
+W-006,Cloudy Bay Sauvignon Blanc 2023,20,case,12,750,
+W-007,Hennessy XO,15,case,1,700,
+W-008,Chateau Margaux 2015,4,case,3,1500,A-01-03

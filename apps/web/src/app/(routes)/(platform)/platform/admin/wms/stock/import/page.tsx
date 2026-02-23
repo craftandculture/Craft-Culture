@@ -109,6 +109,8 @@ const WMSStockImportPage = () => {
           headers.indexOf('location_code'),
           headers.indexOf('location'),
         );
+        const bpcIndex = headers.indexOf('bottles_per_case');
+        const sizeIndex = headers.indexOf('bottle_size_ml');
 
         if (nameIndex === -1 || qtyIndex === -1) {
           setParseError('Missing required columns: item_name, quantity_available');
@@ -129,26 +131,40 @@ const WMSStockImportPage = () => {
           const productName = row[nameIndex]?.toString() ?? '';
           const sku = skuIndex >= 0 ? row[skuIndex]?.toString() ?? '' : '';
 
-          // Parse case config from product name or SKU
+          // Parse case config: explicit columns > product name > SKU > defaults
           let bottlesPerCase = 6;
           let bottleSizeMl = 750;
 
-          const packMatch = productName.match(/(\d+)\s*x\s*(\d+)\s*(cl|ml)/i);
-          if (packMatch) {
-            bottlesPerCase = parseInt(packMatch[1], 10);
-            bottleSizeMl = parseInt(packMatch[2], 10);
-            if (packMatch[3].toLowerCase() === 'cl') {
-              bottleSizeMl *= 10;
-            }
-          } else if (sku && /^\d{15,18}$/.test(sku)) {
-            const packConfig = sku.slice(-6);
-            const extractedBpc = parseInt(packConfig.slice(0, 2), 10);
-            const extractedSize = parseInt(packConfig.slice(2), 10);
-            if (extractedBpc > 0 && extractedBpc <= 24) {
-              bottlesPerCase = extractedBpc;
-            }
-            if (extractedSize > 0) {
-              bottleSizeMl = extractedSize;
+          // 1. Check explicit columns first
+          const explicitBpc = bpcIndex >= 0 ? parseInt(row[bpcIndex]?.toString() ?? '', 10) : NaN;
+          const explicitSize = sizeIndex >= 0 ? parseInt(row[sizeIndex]?.toString() ?? '', 10) : NaN;
+
+          if (!isNaN(explicitBpc) && explicitBpc > 0 && explicitBpc <= 24) {
+            bottlesPerCase = explicitBpc;
+          }
+          if (!isNaN(explicitSize) && explicitSize > 0) {
+            bottleSizeMl = explicitSize;
+          }
+
+          // 2. Fall back to product name detection if not explicitly set
+          if (isNaN(explicitBpc) || isNaN(explicitSize)) {
+            const packMatch = productName.match(/(\d+)\s*x\s*(\d+)\s*(cl|ml)/i);
+            if (packMatch) {
+              if (isNaN(explicitBpc)) bottlesPerCase = parseInt(packMatch[1], 10);
+              let parsedSize = parseInt(packMatch[2], 10);
+              if (packMatch[3].toLowerCase() === 'cl') parsedSize *= 10;
+              if (isNaN(explicitSize)) bottleSizeMl = parsedSize;
+            } else if (sku && /^\d{15,18}$/.test(sku)) {
+              // 3. Fall back to SKU-based extraction
+              const packConfig = sku.slice(-6);
+              const extractedBpc = parseInt(packConfig.slice(0, 2), 10);
+              const extractedSize = parseInt(packConfig.slice(2), 10);
+              if (isNaN(explicitBpc) && extractedBpc > 0 && extractedBpc <= 24) {
+                bottlesPerCase = extractedBpc;
+              }
+              if (isNaN(explicitSize) && extractedSize > 0) {
+                bottleSizeMl = extractedSize;
+              }
             }
           }
 
@@ -335,6 +351,8 @@ const WMSStockImportPage = () => {
                   CSV or Excel with columns: <code className="rounded bg-surface-muted px-1 py-0.5 text-[11px]">item_name</code>,{' '}
                   <code className="rounded bg-surface-muted px-1 py-0.5 text-[11px]">quantity_available</code>.
                   Optional: <code className="rounded bg-surface-muted px-1 py-0.5 text-[11px]">sku</code>,{' '}
+                  <code className="rounded bg-surface-muted px-1 py-0.5 text-[11px]">bottles_per_case</code>,{' '}
+                  <code className="rounded bg-surface-muted px-1 py-0.5 text-[11px]">bottle_size_ml</code>,{' '}
                   <code className="rounded bg-surface-muted px-1 py-0.5 text-[11px]">location_code</code>,{' '}
                   <code className="rounded bg-surface-muted px-1 py-0.5 text-[11px]">unit</code>
                 </Typography>
@@ -449,6 +467,7 @@ const WMSStockImportPage = () => {
                           <th className="px-3 py-2 text-left text-xs font-medium text-text-muted">Product</th>
                           <th className="px-3 py-2 text-center text-xs font-medium text-text-muted">Qty</th>
                           <th className="px-3 py-2 text-center text-xs font-medium text-text-muted">Pack</th>
+                          <th className="px-3 py-2 text-center text-xs font-medium text-text-muted">Size</th>
                           {hasLocationColumn && (
                             <th className="px-3 py-2 text-center text-xs font-medium text-text-muted">Location</th>
                           )}
@@ -459,8 +478,11 @@ const WMSStockImportPage = () => {
                           <tr key={i} className="border-t border-border-primary">
                             <td className="px-3 py-2">{item.productName}</td>
                             <td className="px-3 py-2 text-center tabular-nums font-medium">{item.quantity}</td>
-                            <td className="px-3 py-2 text-center text-text-muted">
-                              {item.bottlesPerCase}x{item.bottleSizeMl}ml
+                            <td className="px-3 py-2 text-center tabular-nums text-text-muted">
+                              {item.bottlesPerCase}
+                            </td>
+                            <td className="px-3 py-2 text-center tabular-nums text-text-muted">
+                              {item.bottleSizeMl}ml
                             </td>
                             {hasLocationColumn && (
                               <td className="px-3 py-2 text-center font-mono text-xs">
@@ -474,7 +496,7 @@ const WMSStockImportPage = () => {
                         {caseItems.length > 50 && (
                           <tr className="border-t border-border-primary">
                             <td
-                              colSpan={hasLocationColumn ? 4 : 3}
+                              colSpan={hasLocationColumn ? 5 : 4}
                               className="px-3 py-2 text-center text-text-muted"
                             >
                               ... and {caseItems.length - 50} more
