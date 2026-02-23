@@ -44,8 +44,8 @@ import SelectItem from '@/app/_ui/components/Select/SelectItem';
 import SelectTrigger from '@/app/_ui/components/Select/SelectTrigger';
 import SelectValue from '@/app/_ui/components/Select/SelectValue';
 import Typography from '@/app/_ui/components/Typography/Typography';
+import usePrint from '@/app/_wms/hooks/usePrint';
 import { generateBatchLabelsZpl } from '@/app/_wms/utils/generateLabelZpl';
-import wifiPrint from '@/app/_wms/utils/wifiPrint';
 import type { PrivateClientOrder } from '@/database/schema';
 import useTRPC, { useTRPCClient } from '@/lib/trpc/browser';
 
@@ -139,6 +139,7 @@ const AdminPrivateOrderDetailPage = () => {
   const api = useTRPC();
   const trpcClient = useTRPCClient();
   const queryClient = useQueryClient();
+  const { print } = usePrint();
   const [isUpdating, setIsUpdating] = useState(false);
   const [isAssigningDistributor, setIsAssigningDistributor] = useState(false);
   const [editingItem, setEditingItem] = useState<EditingItem | null>(null);
@@ -476,7 +477,7 @@ const AdminPrivateOrderDetailPage = () => {
         };
       });
       const zpl = generateBatchLabelsZpl(labels);
-      const success = await wifiPrint(zpl);
+      const success = await print(zpl, '4x2');
       if (success) {
         toast.success(`Printed ${labels.length} label${labels.length === 1 ? '' : 's'}`);
       } else {

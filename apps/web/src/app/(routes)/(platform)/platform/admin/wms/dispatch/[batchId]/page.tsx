@@ -23,9 +23,9 @@ import Card from '@/app/_ui/components/Card/Card';
 import CardContent from '@/app/_ui/components/Card/CardContent';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Typography from '@/app/_ui/components/Typography/Typography';
+import usePrint from '@/app/_wms/hooks/usePrint';
 import downloadZplFile from '@/app/_wms/utils/downloadZplFile';
 import generateDispatchLabelZpl from '@/app/_wms/utils/generateDispatchLabelZpl';
-import wifiPrint from '@/app/_wms/utils/wifiPrint';
 import useTRPC from '@/lib/trpc/browser';
 
 /**
@@ -35,6 +35,7 @@ const WMSDispatchBatchDetailPage = () => {
   const params = useParams();
   const api = useTRPC();
   const queryClient = useQueryClient();
+  const { print } = usePrint();
   const batchId = params.batchId as string;
 
   const [showAddOrders, setShowAddOrders] = useState(false);
@@ -321,7 +322,7 @@ const WMSDispatchBatchDetailPage = () => {
                   dispatchedAt: batch.dispatchedAt ? new Date(batch.dispatchedAt) : new Date(),
                   notes: batch.notes,
                 });
-                const printed = await wifiPrint(zpl);
+                const printed = await print(zpl, '4x6');
                 if (!printed) downloadZplFile(zpl, `dispatch-${batch.batchNumber}`);
               }}
             >

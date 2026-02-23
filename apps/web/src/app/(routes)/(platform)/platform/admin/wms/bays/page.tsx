@@ -16,7 +16,7 @@ import {
 } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
 import Button from '@/app/_ui/components/Button/Button';
@@ -27,9 +27,9 @@ import CardTitle from '@/app/_ui/components/Card/CardTitle';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import ZebraPrint from '@/app/_wms/components/ZebraPrint';
+import usePrint from '@/app/_wms/hooks/usePrint';
 import type { CompactTotemData } from '@/app/_wms/utils/generateCompactTotemZpl';
 import { generateBatchCompactTotemsZpl } from '@/app/_wms/utils/generateCompactTotemZpl';
-import wifiPrint from '@/app/_wms/utils/wifiPrint';
 import useTRPC from '@/lib/trpc/browser';
 
 /**
@@ -43,7 +43,6 @@ const BayConfigurationPage = () => {
   const [selectedBays, setSelectedBays] = useState<Set<string>>(new Set());
   const [showAddBay, setShowAddBay] = useState(false);
   const [isPrintingToZebra, setIsPrintingToZebra] = useState(false);
-  const [_zebraConnected, setZebraConnected] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
   // Edit bay state
@@ -58,12 +57,7 @@ const BayConfigurationPage = () => {
   const [newStorageMethod, setNewStorageMethod] = useState<'shelf' | 'pallet'>('shelf');
   const [forkliftFromLevel, setForkliftFromLevel] = useState('01');
 
-  // Print function from ZebraPrint component
-  const printFnRef = useRef<((zpl: string) => Promise<boolean>) | null>(null);
-
-  const handlePrintReady = useCallback((printFn: (zpl: string) => Promise<boolean>) => {
-    printFnRef.current = printFn;
-  }, []);
+  const { print } = usePrint();
 
   // Get bay totems data
   const { data: bayTotemsData, isLoading } = useQuery({
@@ -264,12 +258,7 @@ const BayConfigurationPage = () => {
       const zpl = generateBatchCompactTotemsZpl(compactData);
 
       if (zpl) {
-        let success = false;
-        if (printFnRef.current) {
-          success = await printFnRef.current(zpl);
-        } else {
-          success = await wifiPrint(zpl);
-        }
+        const success = await print(zpl, '4x2');
         if (success) {
           toast.success(`Printed ${selectedBays.size} bay label(s)`);
           setSelectedBays(new Set());
@@ -314,7 +303,7 @@ const BayConfigurationPage = () => {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <ZebraPrint onConnectionChange={setZebraConnected} onPrintReady={handlePrintReady} />
+            <ZebraPrint />
 
             {selectedBays.size > 0 && (
               <Button

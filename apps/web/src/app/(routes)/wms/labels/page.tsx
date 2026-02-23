@@ -8,7 +8,7 @@ import {
 } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import { useSearchParams } from 'next/navigation';
-import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
@@ -17,6 +17,7 @@ import CardContent from '@/app/_ui/components/Card/CardContent';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import ZebraPrint from '@/app/_wms/components/ZebraPrint';
+import usePrint from '@/app/_wms/hooks/usePrint';
 import type { BayTotemData } from '@/app/_wms/utils/generateBayTotemZpl';
 import { generateBatchBayTotemsZpl } from '@/app/_wms/utils/generateBayTotemZpl';
 import type { LocationLabelData } from '@/app/_wms/utils/generateLocationLabelZpl';
@@ -34,14 +35,8 @@ const WMSDeviceLabelsContent = () => {
   const [activeTab, setActiveTab] = useState<'location' | 'totem'>('totem');
   const [selectedLabels, setSelectedLabels] = useState<Set<string>>(new Set());
   const [isPrintingToZebra, setIsPrintingToZebra] = useState(false);
-  const [zebraConnected, setZebraConnected] = useState(false);
 
-  // Store print function from ZebraPrint component
-  const printFnRef = useRef<((zpl: string) => Promise<boolean>) | null>(null);
-
-  const handlePrintReady = useCallback((printFn: (zpl: string) => Promise<boolean>) => {
-    printFnRef.current = printFn;
-  }, []);
+  const { print } = usePrint();
 
   // Get location labels - pass device_token for auth
   const { data: locationLabelsData, isLoading: locationLabelsLoading, error: locationError } = useQuery({
@@ -129,12 +124,10 @@ const WMSDeviceLabelsContent = () => {
       }
 
       if (zpl) {
-        // Try ZebraPrint component (EB.PrinterZebra or Web Bluetooth)
-        if (printFnRef.current && zebraConnected) {
-          const success = await printFnRef.current(zpl);
-          if (success) {
-            setSelectedLabels(new Set());
-          }
+        const labelSize = activeTab === 'totem' ? '4x6' : '4x2';
+        const success = await print(zpl, labelSize);
+        if (success) {
+          setSelectedLabels(new Set());
         } else {
           // Fallback: use server-side download endpoint
           const zplBase64 = btoa(zpl);
@@ -189,7 +182,7 @@ const WMSDeviceLabelsContent = () => {
             WMS Labels
           </Typography>
           <div className="flex items-center gap-3">
-            <ZebraPrint onConnectionChange={setZebraConnected} onPrintReady={handlePrintReady} />
+            <ZebraPrint />
             <Button
               variant="primary"
               size="lg"
