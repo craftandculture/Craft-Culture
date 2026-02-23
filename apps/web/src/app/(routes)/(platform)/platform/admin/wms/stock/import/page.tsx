@@ -55,12 +55,12 @@ const WMSStockImportPage = () => {
 
   // Fetch partners for owner selection
   const { data: partnersData } = useQuery({
-    ...api.partners.listSimple.queryOptions({}),
+    ...api.partners.list.queryOptions({}),
   });
 
   // Fetch locations
   const { data: locationsData } = useQuery({
-    ...api.wms.admin.locations.getMany.queryOptions({ limit: 200 }),
+    ...api.wms.admin.locations.getMany.queryOptions({}),
   });
 
   // Import mutation
@@ -221,7 +221,7 @@ const WMSStockImportPage = () => {
   const totalCases = caseItems.reduce((sum, item) => sum + item.quantity, 0);
   const hasLocationColumn = caseItems.some((item) => item.locationCode);
 
-  const selectedOwnerName = partnersData?.partners.find((p) => p.id === selectedOwnerId)?.name ?? '';
+  const selectedOwnerName = partnersData?.find((p) => p.id === selectedOwnerId)?.name ?? '';
 
   const canImport =
     selectedOwnerId &&
@@ -314,7 +314,7 @@ const WMSStockImportPage = () => {
                       className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2.5 text-sm focus:border-border-brand focus:outline-none focus:ring-1 focus:ring-border-brand"
                     >
                       <option value="">Select owner...</option>
-                      {partnersData?.partners.map((partner) => (
+                      {partnersData?.map((partner) => (
                         <option key={partner.id} value={partner.id}>
                           {partner.name}
                         </option>
@@ -331,7 +331,7 @@ const WMSStockImportPage = () => {
                       className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2.5 text-sm focus:border-border-brand focus:outline-none focus:ring-1 focus:ring-border-brand"
                     >
                       <option value="">Select location...</option>
-                      {locationsData?.locations.map((location) => (
+                      {locationsData?.map((location) => (
                         <option key={location.id} value={location.id}>
                           {location.locationCode} ({location.locationType})
                         </option>
@@ -438,7 +438,7 @@ const WMSStockImportPage = () => {
                         <span className="font-medium">
                           {hasLocationColumn
                             ? 'Per-row (from file)'
-                            : locationsData?.locations.find((l) => l.id === selectedLocationId)?.locationCode ?? '—'}
+                            : locationsData?.find((l) => l.id === selectedLocationId)?.locationCode ?? '—'}
                         </span>
                       </div>
                     </div>
