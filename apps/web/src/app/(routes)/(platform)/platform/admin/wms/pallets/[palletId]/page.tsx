@@ -28,8 +28,8 @@ import Icon from '@/app/_ui/components/Icon/Icon';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import ScanInput from '@/app/_wms/components/ScanInput';
 import type { ScanInputHandle } from '@/app/_wms/components/ScanInput';
+import usePrint from '@/app/_wms/hooks/usePrint';
 import downloadZplFile from '@/app/_wms/utils/downloadZplFile';
-import wifiPrint from '@/app/_wms/utils/wifiPrint';
 import useTRPC, { useTRPCClient } from '@/lib/trpc/browser';
 
 /**
@@ -40,6 +40,7 @@ const WMSPalletDetailPage = () => {
   const api = useTRPC();
   const trpcClient = useTRPCClient();
   const queryClient = useQueryClient();
+  const { print } = usePrint();
   const palletId = params.palletId as string;
 
   const [showMoveModal, setShowMoveModal] = useState(false);
@@ -175,7 +176,7 @@ const WMSPalletDetailPage = () => {
   const handlePrintLabel = async () => {
     try {
       const result = await trpcClient.wms.admin.pallets.getLabel.query({ palletId });
-      const printed = await wifiPrint(result.zpl);
+      const printed = await print(result.zpl, '4x6');
       if (!printed) downloadZplFile(result.zpl, result.palletCode);
     } catch (error) {
       console.error('Failed to generate label:', error);

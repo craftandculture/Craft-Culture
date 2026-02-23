@@ -25,10 +25,10 @@ import Icon from '@/app/_ui/components/Icon/Icon';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import LocationBadge from '@/app/_wms/components/LocationBadge';
 import ScanInput from '@/app/_wms/components/ScanInput';
+import usePrint from '@/app/_wms/hooks/usePrint';
 import useWmsApi from '@/app/_wms/hooks/useWmsApi';
 import downloadZplFile from '@/app/_wms/utils/downloadZplFile';
 import { generateBatchLabelsZpl } from '@/app/_wms/utils/generateLabelZpl';
-import wifiPrint from '@/app/_wms/utils/wifiPrint';
 import useTRPC from '@/lib/trpc/browser';
 
 type WorkflowStep =
@@ -125,6 +125,7 @@ const WMSRepackPage = () => {
   const api = useTRPC();
   const wmsApi = useWmsApi();
   const queryClient = useQueryClient();
+  const { print } = usePrint();
 
   const [step, setStep] = useState<WorkflowStep>('scan-source-bay');
   const [sourceLocation, setSourceLocation] = useState<LocationInfo | null>(null);
@@ -258,7 +259,7 @@ const WMSRepackPage = () => {
 
     const zpl = generateBatchLabelsZpl(labelData);
     const filename = `repack-${repackResult.repackNumber}-labels`;
-    const printed = await wifiPrint(zpl);
+    const printed = await print(zpl, '4x2');
     if (!printed) downloadZplFile(zpl, filename);
   };
 

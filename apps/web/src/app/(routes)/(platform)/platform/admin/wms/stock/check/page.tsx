@@ -33,8 +33,8 @@ import LocationBadge from '@/app/_wms/components/LocationBadge';
 import OwnerBadge from '@/app/_wms/components/OwnerBadge';
 import ScanInput from '@/app/_wms/components/ScanInput';
 import type { ScanInputHandle } from '@/app/_wms/components/ScanInput';
+import usePrint from '@/app/_wms/hooks/usePrint';
 import downloadZplFile from '@/app/_wms/utils/downloadZplFile';
-import wifiPrint from '@/app/_wms/utils/wifiPrint';
 import useTRPC, { useTRPCClient } from '@/lib/trpc/browser';
 
 type CheckMode = 'bay' | 'product';
@@ -306,6 +306,7 @@ const StockCheckPage = () => {
   const trpcClient = useTRPCClient();
   const queryClient = useQueryClient();
   const router = useRouter();
+  const { print } = usePrint();
   const scanInputRef = useRef<ScanInputHandle>(null);
 
   // Mode selection
@@ -387,7 +388,7 @@ const StockCheckPage = () => {
         return;
       }
       // Print via WiFi, fall back to file download
-      const printed = await wifiPrint(data.zpl);
+      const printed = await print(data.zpl, '4x2');
       if (!printed) {
         downloadZplFile(data.zpl, `reprint-labels-${data.quantity}`);
       }
@@ -416,7 +417,7 @@ const StockCheckPage = () => {
         toast.error(data.error || 'Failed to generate label');
         return;
       }
-      const printed = await wifiPrint(data.zpl);
+      const printed = await print(data.zpl, '4x2');
       if (!printed) {
         downloadZplFile(data.zpl, `stock-label-${data.quantityCases}cs`);
       }

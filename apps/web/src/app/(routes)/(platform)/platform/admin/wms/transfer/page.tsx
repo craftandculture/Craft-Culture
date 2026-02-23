@@ -24,9 +24,9 @@ import Icon from '@/app/_ui/components/Icon/Icon';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import LocationBadge from '@/app/_wms/components/LocationBadge';
 import ScanInput from '@/app/_wms/components/ScanInput';
+import usePrint from '@/app/_wms/hooks/usePrint';
 import useWmsApi from '@/app/_wms/hooks/useWmsApi';
 import downloadZplFile from '@/app/_wms/utils/downloadZplFile';
-import wifiPrint from '@/app/_wms/utils/wifiPrint';
 import useTRPC from '@/lib/trpc/browser';
 
 type WorkflowStep = 'scan-source' | 'select-stock' | 'scan-dest' | 'confirm' | 'success';
@@ -55,6 +55,7 @@ const WMSTransferPage = () => {
   const api = useTRPC();
   const wmsApi = useWmsApi();
   const queryClient = useQueryClient();
+  const { print } = usePrint();
 
   const [step, setStep] = useState<WorkflowStep>('scan-source');
   const [sourceLocation, setSourceLocation] = useState<LocationInfo | null>(null);
@@ -104,7 +105,7 @@ const WMSTransferPage = () => {
         toast.error(data.error || 'Failed to generate label');
         return;
       }
-      const printed = await wifiPrint(data.zpl);
+      const printed = await print(data.zpl, '4x2');
       if (!printed) {
         downloadZplFile(data.zpl, `stock-label-${data.quantityCases}cs`);
       }

@@ -19,7 +19,7 @@ import {
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
 import Button from '@/app/_ui/components/Button/Button';
@@ -29,11 +29,11 @@ import CardContent from '@/app/_ui/components/Card/CardContent';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import ZebraPrint from '@/app/_wms/components/ZebraPrint';
+import usePrint from '@/app/_wms/hooks/usePrint';
 import type { BayTotemData } from '@/app/_wms/utils/generateBayTotemZpl';
 import { generateBatchBayTotemsZpl } from '@/app/_wms/utils/generateBayTotemZpl';
 import type { LocationLabelData } from '@/app/_wms/utils/generateLocationLabelZpl';
 import { generateBatchLocationLabelsZpl } from '@/app/_wms/utils/generateLocationLabelZpl';
-import wifiPrint from '@/app/_wms/utils/wifiPrint';
 import useTRPC from '@/lib/trpc/browser';
 
 /**
@@ -48,19 +48,13 @@ const WMSLabelsPage = () => {
   const [activeTab, setActiveTab] = useState<'case' | 'location' | 'bay' | 'totem'>(shipmentId ? 'case' : 'bay');
   const [selectedLabels, setSelectedLabels] = useState<Set<string>>(new Set());
   const [isPrintingToZebra, setIsPrintingToZebra] = useState(false);
-  const [_zebraConnected, setZebraConnected] = useState(false);
 
   // Bay editing state
   const [editingBay, setEditingBay] = useState<{ aisle: string; bay: string } | null>(null);
   const [editStorageMethod, setEditStorageMethod] = useState<'shelf' | 'pallet' | 'mixed'>('shelf');
   const [editForkliftFrom, setEditForkliftFrom] = useState('01');
 
-  // Store print function from ZebraPrint component
-  const printFnRef = useRef<((zpl: string) => Promise<boolean>) | null>(null);
-
-  const handlePrintReady = useCallback((printFn: (zpl: string) => Promise<boolean>) => {
-    printFnRef.current = printFn;
-  }, []);
+  const { print } = usePrint();
 
   // Get case labels for a shipment
   const { data: caseLabelsData, isLoading: caseLabelsLoading } = useQuery({
@@ -275,12 +269,8 @@ const WMSLabelsPage = () => {
       }
 
       if (zpl) {
-        let success = false;
-        if (printFnRef.current) {
-          success = await printFnRef.current(zpl);
-        } else {
-          success = await wifiPrint(zpl);
-        }
+        const labelSize = activeTab === 'totem' ? '4x6' : '4x2';
+        const success = await print(zpl, labelSize);
         if (success) {
           toast.success(`Printed ${labelCount} label(s)`);
           setSelectedLabels(new Set());
@@ -329,7 +319,7 @@ const WMSLabelsPage = () => {
           </div>
           <div className="flex items-center gap-2">
             {/* Zebra Printer Status */}
-            <ZebraPrint onConnectionChange={setZebraConnected} onPrintReady={handlePrintReady} />
+            <ZebraPrint />
 
             {selectedLabels.size > 0 && activeTab === 'case' && (
               <Button

@@ -32,7 +32,8 @@ import Typography from '@/app/_ui/components/Typography/Typography';
 import PhotoCapture from '@/app/_wms/components/PhotoCapture';
 import ScanInput from '@/app/_wms/components/ScanInput';
 import type { ScanInputHandle } from '@/app/_wms/components/ScanInput';
-import ZebraPrint, { useZebraPrint } from '@/app/_wms/components/ZebraPrint';
+import ZebraPrint from '@/app/_wms/components/ZebraPrint';
+import usePrint from '@/app/_wms/hooks/usePrint';
 import downloadZplFile from '@/app/_wms/utils/downloadZplFile';
 import generateLabelZpl from '@/app/_wms/utils/generateLabelZpl';
 import generateLotNumber from '@/app/_wms/utils/generateLotNumber';
@@ -125,7 +126,7 @@ const WMSReceiveShipmentPage = () => {
 
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const scanInputRef = useRef<ScanInputHandle>(null);
-  const { print: wifiPrint, isConnected: isPrinterConnected } = useZebraPrint();
+  const { print } = usePrint();
 
   // Get shipment details
   const { data: shipment, isLoading: shipmentLoading } = useQuery({
@@ -497,12 +498,8 @@ const WMSReceiveShipmentPage = () => {
       // Print labels: try WiFi first, fall back to file download
       if (zpl) {
         const filename = `labels-${currentItem.productName.replace(/[^a-zA-Z0-9]/g, '-').slice(0, 30)}-${scannedLocationCode}`;
-        if (isPrinterConnected()) {
-          const printed = await wifiPrint(zpl);
-          if (!printed) {
-            downloadZplFile(zpl, filename);
-          }
-        } else {
+        const printed = await print(zpl, '4x2');
+        if (!printed) {
           downloadZplFile(zpl, filename);
         }
       }
