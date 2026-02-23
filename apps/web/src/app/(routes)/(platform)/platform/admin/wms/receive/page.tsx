@@ -100,7 +100,7 @@ const WMSReceivePage = () => {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto max-w-lg px-4 py-6">
+      <div className="container mx-auto max-w-lg md:max-w-3xl lg:max-w-5xl px-4 py-6">
         <div className="flex items-center justify-center p-12">
           <Icon icon={IconLoader2} className="animate-spin" colorRole="muted" size="lg" />
         </div>
@@ -109,7 +109,7 @@ const WMSReceivePage = () => {
   }
 
   return (
-    <div className="container mx-auto max-w-lg px-4 py-6">
+    <div className="container mx-auto max-w-lg md:max-w-3xl lg:max-w-5xl px-4 py-6">
       <div className="space-y-4">
         {/* Header */}
         <div className="flex items-start gap-3">
@@ -131,7 +131,7 @@ const WMSReceivePage = () => {
 
         {/* Pending Shipments */}
         {shipments && shipments.length > 0 ? (
-          <div className="space-y-3">
+          <div className="grid gap-3 md:grid-cols-2">
             {shipments.map((shipment) => {
               const transportConfig = getTransportConfig(shipment.transportMode);
               const statusConfig = getStatusConfig(shipment.status);

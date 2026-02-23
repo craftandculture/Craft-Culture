@@ -66,7 +66,7 @@ const WMSCycleCountsPage = () => {
   };
 
   return (
-    <div className="container mx-auto max-w-2xl px-4 py-6 sm:px-6 sm:py-8">
+    <div className="container mx-auto max-w-2xl md:max-w-3xl lg:max-w-5xl px-4 py-6 sm:px-6 sm:py-8">
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">

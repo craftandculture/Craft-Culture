@@ -138,7 +138,7 @@ const ScannerTestPage = () => {
   const locationScans = scanHistory.filter((s) => s.type === 'location').length;
 
   return (
-    <div className="container mx-auto max-w-3xl px-4 py-6 sm:px-6 sm:py-8" onClick={handlePageClick}>
+    <div className="container mx-auto max-w-3xl lg:max-w-5xl px-4 py-6 sm:px-6 sm:py-8" onClick={handlePageClick}>
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center gap-4">

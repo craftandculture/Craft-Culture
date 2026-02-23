@@ -297,7 +297,7 @@ const WMSLabelsPage = () => {
         : bayTotemsLoading; // bay and totem use bayTotemsData
 
   return (
-    <div className="container mx-auto max-w-lg px-4 py-6">
+    <div className="container mx-auto max-w-lg md:max-w-3xl lg:max-w-5xl px-4 py-6">
       <div className="space-y-6 print:space-y-0">
         {/* Header - Hidden when printing */}
         <div className="flex flex-col gap-4 print:hidden sm:flex-row sm:items-start sm:justify-between">
@@ -452,7 +452,7 @@ const WMSLabelsPage = () => {
               </div>
 
               {/* Labels Grid - Printable */}
-              <div className="grid grid-cols-1 gap-4 print:grid-cols-2 print:gap-0 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="grid grid-cols-1 gap-4 print:grid-cols-2 print:gap-0 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
                 {caseLabelsData.labels.map((label) => (
                   <div
                     key={label.id}
@@ -541,7 +541,7 @@ const WMSLabelsPage = () => {
               </div>
 
               {/* Labels Grid - Printable */}
-              <div className="grid grid-cols-1 gap-4 print:grid-cols-2 print:gap-0 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="grid grid-cols-1 gap-4 print:grid-cols-2 print:gap-0 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
                 {locationLabelsData.locations.map((location) => (
                   <div
                     key={location.id}

@@ -590,7 +590,7 @@ const StockCheckPage = () => {
   const showingProductResults = mode === 'product' && searchedLwin18 && productStockData;
 
   return (
-    <div className="container mx-auto max-w-lg px-4 py-6">
+    <div className="container mx-auto max-w-lg md:max-w-3xl lg:max-w-5xl px-4 py-6">
       <div className="space-y-4">
         {/* Header */}
         <div className="flex items-start gap-3">
@@ -790,7 +790,7 @@ const StockCheckPage = () => {
             )}
 
             {!stockLoading && stockData.stock.length > 0 && (
-              <div className="space-y-3">
+              <div className="grid gap-3 md:grid-cols-2">
                 {stockData.stock.map((item) => {
                   const isEditing = editingItem?.stockId === item.id;
                   return (
@@ -957,7 +957,7 @@ const StockCheckPage = () => {
                   By Location
                 </Typography>
 
-                <div className="space-y-3">
+                <div className="grid gap-3 md:grid-cols-2">
                   {product.locations.map((loc, idx) => (
                     <Card key={`${loc.locationId}-${idx}`}>
                       <CardContent className="p-4">

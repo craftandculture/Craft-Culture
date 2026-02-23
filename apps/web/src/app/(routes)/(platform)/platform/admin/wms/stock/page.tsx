@@ -99,7 +99,7 @@ const WMSStockPage = () => {
   ];
 
   return (
-    <div className="container mx-auto max-w-lg px-4 py-6">
+    <div className="container mx-auto max-w-lg md:max-w-3xl lg:max-w-5xl px-4 py-6">
       <div className="space-y-4">
         {/* Header */}
         <div className="flex items-start gap-3">
