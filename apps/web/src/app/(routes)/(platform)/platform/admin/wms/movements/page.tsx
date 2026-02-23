@@ -92,7 +92,7 @@ const WMSMovementsPage = () => {
   };
 
   return (
-    <div className="container mx-auto max-w-lg px-4 py-6">
+    <div className="container mx-auto max-w-lg md:max-w-3xl lg:max-w-5xl px-4 py-6">
       <div className="space-y-4">
         {/* Header */}
         <div className="flex items-start gap-3">
@@ -173,9 +173,9 @@ const WMSMovementsPage = () => {
 
         {/* Movement list */}
         {!isLoading && data && (
-          <div className="space-y-2">
+          <div className="grid gap-2 md:grid-cols-2">
             {data.movements.length === 0 ? (
-              <Card>
+              <Card className="md:col-span-2">
                 <CardContent className="p-8 text-center">
                   <Icon icon={IconTransfer} size="xl" colorRole="muted" className="mx-auto mb-4" />
                   <Typography variant="headingSm" className="mb-2">

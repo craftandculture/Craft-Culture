@@ -153,7 +153,7 @@ const CycleCountDetailPage = () => {
 
   if (!data) {
     return (
-      <div className="container mx-auto max-w-lg px-4 py-6">
+      <div className="container mx-auto max-w-lg md:max-w-3xl lg:max-w-5xl px-4 py-6">
         <Card>
           <CardContent className="flex flex-col items-center gap-3 py-12">
             <Typography variant="bodySm" colorRole="muted">Cycle count not found</Typography>
@@ -202,7 +202,7 @@ const CycleCountDetailPage = () => {
   };
 
   return (
-    <div className="container mx-auto max-w-2xl px-4 py-6 sm:px-6 sm:py-8">
+    <div className="container mx-auto max-w-2xl md:max-w-3xl lg:max-w-5xl px-4 py-6 sm:px-6 sm:py-8">
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center gap-3">

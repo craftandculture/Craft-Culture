@@ -138,7 +138,7 @@ const LocationsPage = () => {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto max-w-lg px-4 py-6">
+      <div className="container mx-auto max-w-lg md:max-w-3xl lg:max-w-5xl px-4 py-6">
         <div className="flex items-center justify-center p-12">
           <Icon icon={IconLoader2} className="animate-spin" colorRole="muted" size="lg" />
         </div>
@@ -149,7 +149,7 @@ const LocationsPage = () => {
   const sortedAisles = [...aisleGroups.keys()].sort();
 
   return (
-    <div className="container mx-auto max-w-lg px-4 py-6">
+    <div className="container mx-auto max-w-lg md:max-w-3xl lg:max-w-5xl px-4 py-6">
       <div className="space-y-4">
         {/* Header */}
         <div className="flex items-start gap-3">

@@ -189,7 +189,7 @@ const WMSDashboardContent = () => {
       {/* Offline/Online Status Banner */}
       <ConnectionStatus />
 
-      <div className="container mx-auto max-w-lg px-4 py-6">
+      <div className="container mx-auto max-w-lg md:max-w-3xl lg:max-w-5xl px-4 py-6">
         <div className="space-y-4">
           {/* Header */}
         <div className="flex items-center justify-between">
@@ -358,7 +358,7 @@ const WMSDashboardContent = () => {
         )}
 
         {/* Quick Actions - Large touch targets for mobile, draggable for customization */}
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
           {orderedQuickActions.map((action) => (
             <div
               key={action.id}
@@ -386,7 +386,7 @@ const WMSDashboardContent = () => {
         </div>
 
         {/* Secondary Actions */}
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
           <Link href="/platform/admin/wms/dispatch">
             <Card className="cursor-pointer transition-colors hover:border-border-brand">
               <CardContent className="flex items-center gap-3 p-4">
@@ -448,7 +448,7 @@ const WMSDashboardContent = () => {
             </div>
             <CardContent className="p-3 pt-0">
               <div className="space-y-2">
-                {movements.movements.slice(0, 3).map((movement) => (
+                {movements.movements.slice(0, 6).map((movement) => (
                   <div key={movement.id} className="flex items-center gap-2 text-sm">
                     <MovementTypeBadge
                       movementType={movement.movementType as 'receive' | 'putaway' | 'transfer' | 'pick' | 'adjust' | 'count' | 'ownership_transfer' | 'repack_out' | 'repack_in' | 'pallet_add' | 'pallet_remove' | 'pallet_move'}
@@ -469,7 +469,7 @@ const WMSDashboardContent = () => {
         {/* More Options */}
         <Card>
           <CardContent className="p-3">
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 gap-2 md:grid-cols-3 lg:grid-cols-4">
               <Link href="/platform/admin/wms/movements" className="flex items-center gap-2 rounded-lg p-2 transition-colors hover:bg-fill-secondary">
                 <Icon icon={IconTransfer} size="sm" colorRole="muted" />
                 <Typography variant="bodySm">Movements</Typography>

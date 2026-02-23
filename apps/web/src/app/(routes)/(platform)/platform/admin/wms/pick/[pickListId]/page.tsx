@@ -239,7 +239,7 @@ const WMSPickListDetailPage = () => {
 
   if (!data) {
     return (
-      <div className="container mx-auto max-w-lg px-4 py-6">
+      <div className="container mx-auto max-w-lg md:max-w-3xl lg:max-w-5xl px-4 py-6">
         <Typography variant="headingMd">Pick list not found</Typography>
       </div>
     );
@@ -249,7 +249,7 @@ const WMSPickListDetailPage = () => {
   const allPicked = unpickedItems.length === 0;
 
   return (
-    <div className="container mx-auto max-w-lg px-4 py-6">
+    <div className="container mx-auto max-w-lg md:max-w-3xl lg:max-w-5xl px-4 py-6">
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center gap-4">
