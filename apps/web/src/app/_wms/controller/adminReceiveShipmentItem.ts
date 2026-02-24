@@ -1,5 +1,5 @@
 import { TRPCError } from '@trpc/server';
-import { and, eq, inArray, like } from 'drizzle-orm';
+import { and, eq, inArray, like, sql } from 'drizzle-orm';
 
 import db from '@/database/client';
 import {
@@ -202,50 +202,57 @@ const adminReceiveShipmentItem = adminProcedure
         stock = newStock;
       }
 
-      // Check for existing case labels
-      const barcodePrefix = `CASE-${lwin18}-`;
-      const existingLabels = await db
-        .select({ id: wmsCaseLabels.id, barcode: wmsCaseLabels.barcode })
-        .from(wmsCaseLabels)
-        .where(like(wmsCaseLabels.barcode, `${barcodePrefix}%`));
+      // Create case labels inside a transaction with advisory lock to prevent duplicate barcodes
+      const caseLabels = await db.transaction(async (tx) => {
+        const lockKey = Buffer.from(lwin18).reduce((acc, byte) => acc + byte, 0) % 2147483647;
+        await tx.execute(sql`SELECT pg_advisory_xact_lock(${lockKey})`);
 
-      const caseLabels: Array<{ id: string; barcode: string }> = [];
+        const barcodePrefix = `CASE-${lwin18}-`;
+        const existingLabels = await tx
+          .select({ id: wmsCaseLabels.id, barcode: wmsCaseLabels.barcode })
+          .from(wmsCaseLabels)
+          .where(like(wmsCaseLabels.barcode, `${barcodePrefix}%`));
 
-      if (existingLabels.length >= assignmentCases) {
-        caseLabels.push(...existingLabels.slice(0, assignmentCases));
-      } else {
-        let maxSeq = 0;
-        for (const label of existingLabels) {
-          const match = label.barcode.match(/(\d+)$/);
-          if (match) {
-            const seq = parseInt(match[1], 10);
-            if (seq > maxSeq) maxSeq = seq;
+        const labels: Array<{ id: string; barcode: string }> = [];
+
+        if (existingLabels.length >= assignmentCases) {
+          labels.push(...existingLabels.slice(0, assignmentCases));
+        } else {
+          let maxSeq = 0;
+          for (const label of existingLabels) {
+            const match = label.barcode.match(/(\d+)$/);
+            if (match) {
+              const seq = parseInt(match[1], 10);
+              if (seq > maxSeq) maxSeq = seq;
+            }
+          }
+
+          labels.push(...existingLabels);
+
+          const labelsNeeded = assignmentCases - existingLabels.length;
+          for (let i = 0; i < labelsNeeded; i++) {
+            maxSeq++;
+            const barcode = generateCaseLabelBarcode(lwin18, maxSeq);
+
+            const [caseLabel] = await tx
+              .insert(wmsCaseLabels)
+              .values({
+                barcode,
+                lwin18,
+                productName,
+                lotNumber,
+                shipmentId,
+                currentLocationId: itemLocationId,
+                isActive: true,
+              })
+              .returning();
+
+            labels.push({ id: caseLabel.id, barcode: caseLabel.barcode });
           }
         }
 
-        caseLabels.push(...existingLabels);
-
-        const labelsNeeded = assignmentCases - existingLabels.length;
-        for (let i = 0; i < labelsNeeded; i++) {
-          maxSeq++;
-          const barcode = generateCaseLabelBarcode(lwin18, maxSeq);
-
-          const [caseLabel] = await db
-            .insert(wmsCaseLabels)
-            .values({
-              barcode,
-              lwin18,
-              productName,
-              lotNumber,
-              shipmentId,
-              currentLocationId: itemLocationId,
-              isActive: true,
-            })
-            .returning();
-
-          caseLabels.push({ id: caseLabel.id, barcode: caseLabel.barcode });
-        }
-      }
+        return labels;
+      });
 
       // Create movement record (only for new stock)
       if (!existingStock) {
