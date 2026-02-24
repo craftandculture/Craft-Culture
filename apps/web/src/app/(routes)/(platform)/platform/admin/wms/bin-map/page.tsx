@@ -8,7 +8,6 @@ import {
   IconChevronUp,
   IconForklift,
   IconLoader2,
-  IconPackages,
 } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
@@ -301,157 +300,187 @@ const BinMapPage = () => {
           </CardContent>
         </Card>
 
-        {/* Elevation View - Selected Bay */}
+        {/* Elevation View - Visual Racking */}
         {selectedBayGroup && (
           <Card>
-            <CardContent className="p-0">
+            <CardContent className="p-4">
               {/* Bay header */}
-              <div className="flex items-center justify-between border-b border-border-primary bg-fill-secondary p-4 rounded-t-xl">
+              <div className="mb-4 flex items-center justify-between">
                 <div>
                   <Typography variant="headingSm">
                     Bay {selectedBayGroup.aisle}-{selectedBayGroup.bay}
                   </Typography>
                   <Typography variant="bodyXs" colorRole="muted">
-                    {selectedBayGroup.levels.length} levels · {selectedBayGroup.totalCases} cases · {selectedBayGroup.totalProducts} products
+                    Side elevation · {selectedBayGroup.totalCases} cases · {selectedBayGroup.totalProducts} products
                   </Typography>
                 </div>
                 <button
                   onClick={() => { setSelectedBay(null); setExpandedLevel(null); }}
-                  className="rounded-lg p-2 text-text-muted transition-colors hover:bg-fill-primary"
+                  className="rounded-lg p-2 text-text-muted transition-colors hover:bg-fill-secondary"
                 >
                   <IconChevronUp className="h-5 w-5" />
                 </button>
               </div>
 
-              {/* Level cards (top to bottom: 03, 02, 01, 00) */}
-              <div className="divide-y divide-border-primary">
-                {selectedBayGroup.levels.map((level) => {
-                  const isExpanded = expandedLevel === level.id;
-                  const hasStock = level.totalCases > 0;
-                  const isPallet = level.storageMethod === 'pallet';
-
-                  return (
-                    <div key={level.id}>
-                      {/* Level row */}
-                      <button
-                        onClick={() => handleLevelTap(level.id)}
-                        className="flex w-full items-center gap-3 p-4 text-left transition-colors hover:bg-fill-secondary active:bg-fill-secondary"
-                      >
-                        {/* Level number */}
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-fill-secondary">
-                          <Typography variant="headingSm" className="font-mono">
+              {/* Visual racking structure */}
+              <div className="flex gap-2">
+                {/* Level labels (left side) */}
+                <div className="flex flex-col-reverse gap-0">
+                  {selectedBayGroup.levels
+                    .slice()
+                    .sort((a, b) => a.level.localeCompare(b.level))
+                    .map((level) => {
+                      const isPallet = level.storageMethod === 'pallet';
+                      return (
+                        <div
+                          key={`label-${level.id}`}
+                          className="flex flex-col items-center justify-center"
+                          style={{ height: isPallet ? 100 : 72 }}
+                        >
+                          <Typography variant="bodyXs" className="font-mono font-bold">
                             {level.level}
                           </Typography>
-                        </div>
-
-                        {/* Storage badge */}
-                        {isPallet ? (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-900/20 dark:text-amber-400">
-                            <IconPackages className="h-3.5 w-3.5" />
-                            Pallet
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-900/20 dark:text-blue-400">
-                            <IconBox className="h-3.5 w-3.5" />
-                            Shelf
-                          </span>
-                        )}
-
-                        {/* Forklift */}
-                        {level.requiresForklift && (
-                          <IconForklift className="h-4 w-4 text-orange-500" />
-                        )}
-
-                        {/* Spacer */}
-                        <span className="flex-1" />
-
-                        {/* Cases */}
-                        <div className="text-right">
-                          {hasStock ? (
-                            <>
-                              <Typography variant="bodySm" className="font-semibold text-emerald-600 dark:text-emerald-400">
-                                {level.totalCases} cases
-                              </Typography>
-                              <Typography variant="bodyXs" colorRole="muted">
-                                {level.productCount} products
-                              </Typography>
-                            </>
+                          {isPallet ? (
+                            <IconForklift className="h-3.5 w-3.5 text-amber-500" />
                           ) : (
-                            <Typography variant="bodySm" colorRole="muted">
-                              empty
-                            </Typography>
+                            <IconBox className="h-3.5 w-3.5 text-blue-500" />
                           )}
                         </div>
+                      );
+                    })}
+                </div>
 
-                        {/* Expand indicator */}
-                        {hasStock && (
-                          <Icon
-                            icon={isExpanded ? IconChevronUp : IconChevronDown}
-                            size="sm"
-                            colorRole="muted"
-                          />
-                        )}
-                      </button>
+                {/* Racking frame + shelves */}
+                <div className="flex flex-1 flex-col-reverse rounded border-2 border-stone-400 dark:border-stone-600">
+                  {selectedBayGroup.levels
+                    .slice()
+                    .sort((a, b) => a.level.localeCompare(b.level))
+                    .map((level, idx) => {
+                      const isExpanded = expandedLevel === level.id;
+                      const hasStock = level.totalCases > 0;
+                      const isPallet = level.storageMethod === 'pallet';
+                      const isTop = idx === selectedBayGroup.levels.length - 1;
+                      const fillPercent = hasStock ? Math.min(100, Math.max(15, (level.totalCases / 50) * 100)) : 0;
 
-                      {/* Expanded stock detail */}
-                      {isExpanded && (
-                        <div className="border-t border-border-primary bg-fill-secondary px-4 py-3">
-                          {isLoadingDetail ? (
-                            <div className="flex items-center justify-center py-4">
-                              <Icon icon={IconLoader2} className="animate-spin" colorRole="muted" size="md" />
-                            </div>
-                          ) : levelDetail?.stock && levelDetail.stock.length > 0 ? (
-                            <div className="space-y-2">
-                              <Typography variant="bodyXs" className="font-semibold uppercase tracking-wide" colorRole="muted">
-                                Contents ({levelDetail.stock.length} items)
-                              </Typography>
-                              {levelDetail.stock.map((item) => (
-                                <div
-                                  key={item.id}
-                                  className="flex items-center justify-between rounded-lg bg-fill-primary p-3"
-                                >
-                                  <div className="min-w-0 flex-1">
-                                    <Typography variant="bodySm" className="font-medium truncate">
-                                      {item.productName || 'Unknown Product'}
-                                    </Typography>
-                                    <div className="flex flex-wrap items-center gap-2">
-                                      <Typography variant="bodyXs" colorRole="muted" className="font-mono">
-                                        {item.lwin18}
-                                      </Typography>
-                                      {item.vintage && (
-                                        <Badge colorRole="muted" size="sm">
-                                          {item.vintage}
-                                        </Badge>
-                                      )}
-                                      {item.ownerName && (
-                                        <Typography variant="bodyXs" colorRole="muted">
-                                          {item.ownerName}
-                                        </Typography>
-                                      )}
-                                    </div>
-                                  </div>
-                                  <div className="shrink-0 pl-3 text-right">
-                                    <Typography variant="headingSm" className="text-emerald-600 dark:text-emerald-400">
-                                      {item.quantityCases}
-                                    </Typography>
-                                    <Typography variant="bodyXs" colorRole="muted">
-                                      cases
-                                    </Typography>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          ) : (
-                            <Typography variant="bodySm" colorRole="muted" className="py-2 text-center">
-                              No stock at this location
-                            </Typography>
+                      return (
+                        <button
+                          key={level.id}
+                          onClick={() => handleLevelTap(level.id)}
+                          className={`relative flex items-end transition-colors ${
+                            !isTop ? 'border-t-[3px] border-stone-400 dark:border-stone-600' : ''
+                          } ${
+                            isExpanded
+                              ? 'ring-2 ring-inset ring-purple-500 dark:ring-purple-400'
+                              : ''
+                          }`}
+                          style={{ height: isPallet ? 100 : 72 }}
+                        >
+                          {/* Stock fill bar (bottom-aligned like boxes on a shelf) */}
+                          {hasStock && (
+                            <div
+                              className="absolute inset-x-0 bottom-0 bg-emerald-100 dark:bg-emerald-900/30"
+                              style={{ height: `${fillPercent}%` }}
+                            />
                           )}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
+
+                          {/* Level content overlay */}
+                          <div className="relative z-10 flex w-full items-center justify-between px-3 py-1.5">
+                            <div className="flex items-center gap-2">
+                              <Typography variant="bodyXs" className="font-mono font-semibold" colorRole="muted">
+                                {selectedBayGroup.aisle}-{selectedBayGroup.bay}-{level.level}
+                              </Typography>
+                              {isPallet ? (
+                                <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+                                  PALLET
+                                </span>
+                              ) : (
+                                <span className="rounded bg-blue-100 px-1.5 py-0.5 text-[10px] font-semibold text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+                                  SHELF
+                                </span>
+                              )}
+                            </div>
+                            {hasStock ? (
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400">
+                                  {level.totalCases} cs
+                                </span>
+                                <span className="text-[10px] text-text-muted">
+                                  {level.productCount} SKU
+                                </span>
+                                <Icon
+                                  icon={isExpanded ? IconChevronUp : IconChevronDown}
+                                  size="sm"
+                                  colorRole="muted"
+                                />
+                              </div>
+                            ) : (
+                              <span className="text-xs italic text-text-muted">empty</span>
+                            )}
+                          </div>
+                        </button>
+                      );
+                    })}
+                </div>
               </div>
+
+              {/* Concrete floor */}
+              <div className="mt-1 h-2 rounded-b bg-stone-300 dark:bg-stone-700" />
+
+              {/* Stock detail panel (below the racking) */}
+              {expandedLevel && (
+                <div className="mt-4 rounded-lg border border-border-primary bg-fill-secondary p-4">
+                  {isLoadingDetail ? (
+                    <div className="flex items-center justify-center py-4">
+                      <Icon icon={IconLoader2} className="animate-spin" colorRole="muted" size="md" />
+                    </div>
+                  ) : levelDetail?.stock && levelDetail.stock.length > 0 ? (
+                    <div className="space-y-2">
+                      <Typography variant="bodyXs" className="font-semibold uppercase tracking-wide" colorRole="muted">
+                        {levelDetail.locationCode} — {levelDetail.stock.length} items
+                      </Typography>
+                      {levelDetail.stock.map((item) => (
+                        <div
+                          key={item.id}
+                          className="flex items-center justify-between rounded-lg bg-fill-primary p-3"
+                        >
+                          <div className="min-w-0 flex-1">
+                            <Typography variant="bodySm" className="font-medium truncate">
+                              {item.productName || 'Unknown Product'}
+                            </Typography>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <Typography variant="bodyXs" colorRole="muted" className="font-mono">
+                                {item.lwin18}
+                              </Typography>
+                              {item.vintage && (
+                                <Badge colorRole="muted" size="sm">
+                                  {item.vintage}
+                                </Badge>
+                              )}
+                              {item.ownerName && (
+                                <Typography variant="bodyXs" colorRole="muted">
+                                  {item.ownerName}
+                                </Typography>
+                              )}
+                            </div>
+                          </div>
+                          <div className="shrink-0 pl-3 text-right">
+                            <Typography variant="headingSm" className="text-emerald-600 dark:text-emerald-400">
+                              {item.quantityCases}
+                            </Typography>
+                            <Typography variant="bodyXs" colorRole="muted">
+                              cases
+                            </Typography>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <Typography variant="bodySm" colorRole="muted" className="py-2 text-center">
+                      No stock at this location
+                    </Typography>
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
         )}
