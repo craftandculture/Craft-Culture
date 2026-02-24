@@ -11,7 +11,7 @@
  *   });
  */
 
-import { and, eq, ilike, inArray, or, sql } from 'drizzle-orm';
+import { and, desc, eq, ilike, inArray, or, sql } from 'drizzle-orm';
 import { z } from 'zod';
 
 import db from '@/database/client';
@@ -160,7 +160,7 @@ const adminValidateImportItems = adminProcedure
         ),
       );
 
-      const candidates = await db
+      let candidates = await db
         .select({
           lwin: lwinWines.lwin,
           displayName: lwinWines.displayName,
@@ -182,6 +182,38 @@ const adminValidateImportItems = adminProcedure
           sql`LENGTH(${lwinWines.displayName})`,
         )
         .limit(5);
+
+      // Fuzzy fallback: use word_similarity when ILIKE finds nothing (handles typos)
+      if (candidates.length === 0) {
+        const productNameLower = item.productName.toLowerCase();
+        const producerLower = (item.producer ?? '').toLowerCase();
+
+        candidates = await db
+          .select({
+            lwin: lwinWines.lwin,
+            displayName: lwinWines.displayName,
+            producerName: lwinWines.producerName,
+            country: lwinWines.country,
+            region: lwinWines.region,
+            type: lwinWines.type,
+          })
+          .from(lwinWines)
+          .where(
+            and(
+              eq(lwinWines.status, 'live'),
+              or(
+                sql`word_similarity(${productNameLower}, ${lwinWines.displayName}) > 0.4`,
+                sql`word_similarity(${productNameLower}, ${lwinWines.wine}) > 0.4`,
+              ),
+            ),
+          )
+          .orderBy(
+            desc(
+              sql`word_similarity(${productNameLower}, ${lwinWines.displayName}) + CASE WHEN ${producerLower} != '' THEN similarity(${producerLower}, LOWER(COALESCE(${lwinWines.producerName}, ''))) * 0.5 ELSE 0 END`,
+            ),
+          )
+          .limit(5);
+      }
 
       if (candidates.length === 0) {
         results.push({
@@ -205,9 +237,12 @@ const adminValidateImportItems = adminProcedure
         // Multiple matches — check if the top result is a strong match
         // (producer matches AND name is short → likely unique)
         const top = candidates[0]!;
+        const producerLc = item.producer?.toLowerCase() ?? '';
+        const topProducerLc = top.producerName?.toLowerCase() ?? '';
         const producerMatch =
           item.producer &&
-          top.producerName?.toLowerCase().includes(item.producer.toLowerCase());
+          (topProducerLc.includes(producerLc) ||
+            producerLc.includes(topProducerLc));
         const nameMatch =
           top.displayName
             .toLowerCase()
