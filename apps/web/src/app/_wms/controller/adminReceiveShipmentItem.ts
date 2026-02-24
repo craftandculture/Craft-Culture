@@ -230,11 +230,12 @@ const adminReceiveShipmentItem = adminProcedure
           labels.push(...existingLabels);
 
           const labelsNeeded = assignmentCases - existingLabels.length;
-          for (let i = 0; i < labelsNeeded; i++) {
+          let created = 0;
+          while (created < labelsNeeded) {
             maxSeq++;
             const barcode = generateCaseLabelBarcode(lwin18, maxSeq);
 
-            const [caseLabel] = await tx
+            const inserted = await tx
               .insert(wmsCaseLabels)
               .values({
                 barcode,
@@ -245,9 +246,13 @@ const adminReceiveShipmentItem = adminProcedure
                 currentLocationId: itemLocationId,
                 isActive: true,
               })
+              .onConflictDoNothing({ target: wmsCaseLabels.barcode })
               .returning();
 
-            labels.push({ id: caseLabel.id, barcode: caseLabel.barcode });
+            if (inserted.length > 0) {
+              labels.push({ id: inserted[0].id, barcode: inserted[0].barcode });
+              created++;
+            }
           }
         }
 
