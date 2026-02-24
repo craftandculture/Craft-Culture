@@ -77,14 +77,22 @@ const matchSingleItem = async (
       )
       .orderBy(
         sql`similarity(${lwinWines.displayName}, ${searchQuery}) DESC`,
+        sql`length(${lwinWines.displayName}) ASC`,
       )
-      .limit(1);
+      .limit(5);
 
     if (results.length === 0) {
       return null;
     }
 
-    const match = results[0];
+    // Among results with similar scores (within 0.05), prefer the shortest
+    // display name — "Dom Perignon" should win over "Dom Perignon Oenotheque Side By Side"
+    const topScore = results[0]!.similarity;
+    const closeMatches = results.filter((r) => topScore - r.similarity < 0.05);
+    const match = closeMatches.sort(
+      (a, b) => a.displayName.length - b.displayName.length,
+    )[0];
+
     if (!match) {
       return null;
     }
