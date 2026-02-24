@@ -125,6 +125,12 @@ const adminImportStock = adminProcedure
     const lotNumber = generateLotNumber(1);
     const importedAt = new Date();
 
+    // Pre-generate the base movement number before the transaction
+    // so each item gets a unique sequential number
+    const baseMovementNumber = await generateMovementNumber();
+    const basePrefix = baseMovementNumber.slice(0, baseMovementNumber.lastIndexOf('-') + 1);
+    const baseSequence = parseInt(baseMovementNumber.slice(baseMovementNumber.lastIndexOf('-') + 1), 10);
+
     // Wrap all stock writes in a transaction to prevent partial imports
     const { results, totalCases, totalLabels } = await db.transaction(async (tx) => {
       const txResults: Array<{
@@ -136,6 +142,7 @@ const adminImportStock = adminProcedure
 
       let txTotalCases = 0;
       let txTotalLabels = 0;
+      let movementOffset = 0;
 
       for (const item of items) {
         // Skip bottles for now - only import cases
@@ -212,7 +219,8 @@ const adminImportStock = adminProcedure
         }
 
         // Create movement record
-        const movementNumber = await generateMovementNumber();
+        const movementNumber = `${basePrefix}${(baseSequence + movementOffset).toString().padStart(4, '0')}`;
+        movementOffset++;
         await tx.insert(wmsStockMovements).values({
           movementNumber,
           movementType: 'receive',
