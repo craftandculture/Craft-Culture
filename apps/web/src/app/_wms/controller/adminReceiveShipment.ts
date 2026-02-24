@@ -1,5 +1,5 @@
 import { TRPCError } from '@trpc/server';
-import { and, eq, like } from 'drizzle-orm';
+import { and, eq, like, sql } from 'drizzle-orm';
 
 import db from '@/database/client';
 import {
@@ -216,6 +216,10 @@ const adminReceiveShipment = adminProcedure
             .returning();
           stock = newStock;
         }
+
+        // Advisory lock on LWIN18 to prevent duplicate barcode sequences
+        const lockKey = Buffer.from(lwin18).reduce((acc, byte) => acc + byte, 0) % 2147483647;
+        await tx.execute(sql`SELECT pg_advisory_xact_lock(${lockKey})`);
 
         // Check for existing case labels with this barcode prefix
         // Labels may have been created during the print step
