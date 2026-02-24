@@ -11,7 +11,7 @@
  *   });
  */
 
-import { and, desc, eq, ilike, inArray, or, sql } from 'drizzle-orm';
+import { and, desc, eq, ilike, inArray, sql } from 'drizzle-orm';
 import { z } from 'zod';
 
 import db from '@/database/client';
@@ -130,16 +130,25 @@ const adminValidateImportItems = adminProcedure
       }
 
       // 3. Search lwin_wines for wine products
-      const searchQuery = [item.productName, item.producer]
-        .filter(Boolean)
-        .join(' ');
+      // Extract wine keywords from product name (strip vintage, producer words, filler words)
+      let cleanedName = item.productName.replace(/\b(19|20)\d{2}\b/g, '').trim();
 
-      const searchTerms = searchQuery
-        .toLowerCase()
-        .split(/\s+/)
-        .filter((term) => term.length >= 2);
+      // Remove producer words from product name to avoid double-matching
+      if (item.producer) {
+        const producerLower = item.producer.toLowerCase();
+        cleanedName = cleanedName
+          .split(/\s+/)
+          .filter((word) => !producerLower.includes(word.toLowerCase()) || word.length <= 2)
+          .join(' ');
+      }
 
-      if (searchTerms.length === 0) {
+      const fillers = new Set(['the', 'de', 'du', 'des', 'le', 'la', 'les', 'di', 'del', 'and', '&', '-', ',', '.']);
+      const wineKeywords = cleanedName
+        .split(/[\s,]+/)
+        .map((w) => w.replace(/[^a-zA-Z0-9À-ÿ]/g, '').trim())
+        .filter((w) => w.length >= 2 && !fillers.has(w.toLowerCase()));
+
+      if (wineKeywords.length === 0) {
         results.push({
           rowIndex: i,
           status: 'no_match',
@@ -151,66 +160,68 @@ const adminValidateImportItems = adminProcedure
         continue;
       }
 
-      // Build ILIKE conditions for each search term
-      const searchConditions = searchTerms.map((term) =>
-        or(
-          ilike(lwinWines.displayName, `%${term}%`),
-          ilike(lwinWines.producerName, `%${term}%`),
-          ilike(lwinWines.wine, `%${term}%`),
-        ),
-      );
+      const selectFields = {
+        lwin: lwinWines.lwin,
+        displayName: lwinWines.displayName,
+        producerName: lwinWines.producerName,
+        country: lwinWines.country,
+        region: lwinWines.region,
+        type: lwinWines.type,
+      };
+
+      // Step 1: Exact keyword match on wine column — all keywords must appear
+      // This is the most precise match since the wine column is just the wine name without producer
+      const wineConditions = wineKeywords.map((kw) => ilike(lwinWines.wine, `%${kw}%`));
+      const producerCondition = item.producer
+        ? ilike(lwinWines.producerName, `%${item.producer}%`)
+        : undefined;
 
       let candidates = await db
-        .select({
-          lwin: lwinWines.lwin,
-          displayName: lwinWines.displayName,
-          producerName: lwinWines.producerName,
-          country: lwinWines.country,
-          region: lwinWines.region,
-          type: lwinWines.type,
-        })
+        .select(selectFields)
         .from(lwinWines)
         .where(
           and(
-            ...searchConditions,
+            ...wineConditions,
+            ...(producerCondition ? [producerCondition] : []),
             eq(lwinWines.status, 'live'),
           ),
         )
-        .orderBy(
-          // Prioritize exact producer matches
-          sql`CASE WHEN LOWER(${lwinWines.producerName}) = ${(item.producer ?? '').toLowerCase()} THEN 0 ELSE 1 END`,
-          sql`LENGTH(${lwinWines.displayName})`,
-        )
+        .orderBy(sql`LENGTH(${lwinWines.displayName}) ASC`)
         .limit(5);
 
-      // Fuzzy fallback: use word_similarity when ILIKE finds nothing (handles typos)
+      // Step 2: Exact keyword match on displayName — broader search
       if (candidates.length === 0) {
-        const productNameLower = item.productName.toLowerCase();
-        const producerLower = (item.producer ?? '').toLowerCase();
+        const displayConditions = wineKeywords.map((kw) => ilike(lwinWines.displayName, `%${kw}%`));
 
         candidates = await db
-          .select({
-            lwin: lwinWines.lwin,
-            displayName: lwinWines.displayName,
-            producerName: lwinWines.producerName,
-            country: lwinWines.country,
-            region: lwinWines.region,
-            type: lwinWines.type,
-          })
+          .select(selectFields)
+          .from(lwinWines)
+          .where(
+            and(
+              ...displayConditions,
+              eq(lwinWines.status, 'live'),
+            ),
+          )
+          .orderBy(sql`LENGTH(${lwinWines.displayName}) ASC`)
+          .limit(5);
+      }
+
+      // Step 3: Fuzzy fallback — only when exact matching finds nothing (handles typos)
+      if (candidates.length === 0) {
+        const fuzzyQuery = [item.producer, ...wineKeywords].filter(Boolean).join(' ');
+
+        candidates = await db
+          .select(selectFields)
           .from(lwinWines)
           .where(
             and(
               eq(lwinWines.status, 'live'),
-              or(
-                sql`word_similarity(${productNameLower}, ${lwinWines.displayName}) > 0.4`,
-                sql`word_similarity(${productNameLower}, ${lwinWines.wine}) > 0.4`,
-              ),
+              sql`similarity(${lwinWines.displayName}, ${fuzzyQuery}) > 0.3`,
             ),
           )
           .orderBy(
-            desc(
-              sql`word_similarity(${productNameLower}, ${lwinWines.displayName}) + CASE WHEN ${producerLower} != '' THEN similarity(${producerLower}, LOWER(COALESCE(${lwinWines.producerName}, ''))) * 0.5 ELSE 0 END`,
-            ),
+            desc(sql`similarity(${lwinWines.displayName}, ${fuzzyQuery})`),
+            sql`LENGTH(${lwinWines.displayName}) ASC`,
           )
           .limit(5);
       }
