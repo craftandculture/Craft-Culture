@@ -24,43 +24,15 @@ interface LwinMatch {
 }
 
 /**
- * Extract meaningful wine keywords from a product name
- *
- * Strips vintage, common filler words, and punctuation to get the core
- * wine identity for keyword matching.
- */
-const extractWineKeywords = (productName: string, producer?: string) => {
-  // Remove vintage years
-  let cleaned = productName.replace(/\b(19|20)\d{2}\b/g, '').trim();
-
-  // Remove producer name from product name if it's embedded (avoids double-matching)
-  if (producer) {
-    const producerLower = producer.toLowerCase();
-    cleaned = cleaned
-      .split(/\s+/)
-      .filter((word) => !producerLower.includes(word.toLowerCase()) || word.length <= 2)
-      .join(' ');
-  }
-
-  // Remove common filler words and punctuation
-  const fillers = new Set(['the', 'de', 'du', 'des', 'le', 'la', 'les', 'di', 'del', 'and', '&', '-', ',', '.']);
-  const keywords = cleaned
-    .split(/[\s,]+/)
-    .map((w) => w.replace(/[^a-zA-Z0-9À-ÿ]/g, '').trim())
-    .filter((w) => w.length >= 2 && !fillers.has(w.toLowerCase()));
-
-  return keywords;
-};
-
-/**
  * Match a single parsed item to the LWIN database
  *
  * Strategy (in order):
- * 1. Exact keyword match on the wine column — all wine keywords must appear
- * 2. Exact keyword match on displayName — all keywords must appear
- * 3. Fuzzy trigram fallback — only if steps 1-2 find nothing
+ * 1. Exact keyword match on displayName — all keywords must appear
+ * 2. Fuzzy trigram fallback — only if step 1 finds nothing
  *
- * In all cases, picks the shortest displayName (most generic match).
+ * Always picks the shortest displayName (most generic match).
+ * We search displayName (which is "Producer, Wine") rather than the wine column
+ * because some entries have wine=NULL (e.g., "Dom Perignon" where the producer IS the wine).
  */
 const matchSingleItem = async (
   item: ParsedItem,
@@ -69,8 +41,15 @@ const matchSingleItem = async (
     return null;
   }
 
-  const wineKeywords = extractWineKeywords(item.productName, item.producer);
-  if (wineKeywords.length === 0) {
+  // Use raw product name keywords (don't strip producer — displayName includes producer)
+  const cleanedName = item.productName.replace(/\b(19|20)\d{2}\b/g, '').trim();
+  const fillers = new Set(['the', 'de', 'du', 'des', 'le', 'la', 'les', 'di', 'del', 'and', '&', '-', ',', '.']);
+  const allKeywords = cleanedName
+    .split(/[\s,]+/)
+    .map((w) => w.replace(/[^a-zA-Z0-9À-ÿ]/g, '').trim())
+    .filter((w) => w.length >= 2 && !fillers.has(w.toLowerCase()));
+
+  if (allKeywords.length === 0) {
     return null;
   }
 
@@ -83,35 +62,10 @@ const matchSingleItem = async (
     region: lwinWines.region,
   };
 
-  // --- Step 1: Exact keyword match on wine column ---
-  // Every keyword must appear in the wine name (e.g., "Dom Perignon" + "P2")
-  // This is the most precise match — the wine column is just the wine name without producer
-  const wineConditions = wineKeywords.map((kw) => ilike(lwinWines.wine, `%${kw}%`));
-  const producerCondition = item.producer
-    ? ilike(lwinWines.producerName, `%${item.producer}%`)
-    : undefined;
-
-  const wineResults = await db
-    .select(selectFields)
-    .from(lwinWines)
-    .where(
-      and(
-        ...wineConditions,
-        ...(producerCondition ? [producerCondition] : []),
-        eq(lwinWines.status, 'live'),
-      ),
-    )
-    .orderBy(sql`length(${lwinWines.displayName}) ASC`)
-    .limit(10);
-
-  if (wineResults.length > 0) {
-    const match = wineResults[0]!;
-    return { ...match, similarity: 1.0 };
-  }
-
-  // --- Step 2: Exact keyword match on displayName ---
-  // Broader — displayName includes producer, so "Moet & Chandon, Dom Perignon P2"
-  const displayConditions = wineKeywords.map((kw) => ilike(lwinWines.displayName, `%${kw}%`));
+  // --- Step 1: Exact keyword match on displayName ---
+  // displayName is "Producer, Wine" so it's the most reliable single field.
+  // All keywords must appear. Sorted by shortest displayName (most generic match).
+  const displayConditions = allKeywords.map((kw) => ilike(lwinWines.displayName, `%${kw}%`));
 
   const displayResults = await db
     .select(selectFields)
@@ -127,12 +81,12 @@ const matchSingleItem = async (
 
   if (displayResults.length > 0) {
     const match = displayResults[0]!;
-    return { ...match, similarity: 0.9 };
+    return { ...match, similarity: 1.0 };
   }
 
-  // --- Step 3: Fuzzy trigram fallback ---
+  // --- Step 2: Fuzzy trigram fallback ---
   // Only used when exact keyword matching finds nothing (handles typos, alternate spellings)
-  const searchQuery = [item.producer, ...wineKeywords].filter(Boolean).join(' ');
+  const searchQuery = [item.producer, ...allKeywords].filter(Boolean).join(' ');
 
   try {
     const fuzzyResults = await db
