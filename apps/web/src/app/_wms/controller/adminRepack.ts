@@ -261,9 +261,9 @@ const adminRepack = adminProcedure
       performedAt: new Date(),
     });
 
-    // Calculate pack size for labels (e.g., "6x750ml")
-    const bottleSize = sourceStock.bottleSize ?? 750;
-    const packSize = `${targetCaseConfig}x${bottleSize}ml`;
+    // Calculate pack size for labels (e.g., "6x75cl")
+    const bottleSize = sourceStock.bottleSize ?? '75cl';
+    const packSize = `${targetCaseConfig}x${bottleSize}`;
 
     return {
       success: true,

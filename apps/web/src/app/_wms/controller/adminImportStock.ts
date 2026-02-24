@@ -179,7 +179,7 @@ const adminImportStock = adminProcedure
             productName: item.productName,
             producer: item.producer,
             vintage: item.vintage,
-            bottleSize: `${bottleSizeMl}ml`,
+            bottleSize: `${bottleSizeMl / 10}cl`,
             caseConfig: bottlesPerCase,
             quantityCases: item.quantity,
             reservedCases: 0,

@@ -139,9 +139,97 @@ wms.admin.dispatch.updateStatus    // Change batch status
 - **Location:** `LOC-{aisle}-{bay}-{level}` (e.g., `LOC-A-01-02`)
 - **Case Label:** `CASE-{lwin18}-{sequence}` (e.g., `CASE-1010279-2015-06-00750-001`)
 
+### WMS Local Server (NUC)
+
+Scanner-critical WMS operations route through a local NUC server for low-latency responses (~15ms vs ~200ms cloud). The system uses a **local-first routing** pattern — same UI, automatic fallback to cloud tRPC when the NUC is unreachable.
+
+**Hardware:** Intel NUC 11, Ubuntu Server 24.04, Bun 1.3.9 + Hono + bun:sqlite
+**IP:** `192.168.1.39:3000`
+**SSH:** `ssh -i ~/.ssh/github_ed25519 kevin@192.168.1.39`
+**Service:** `wms-server.service` (systemd, auto-starts on boot)
+
+**Architecture:**
+```
+TC27 Scanner → warehouse.craftculture.xyz (Vercel)
+                    ↓
+             useWmsApi() hook
+              ↙         ↘
+    NUC (local)     Cloud tRPC (fallback)
+    ~15ms           ~200ms
+         ↓
+    bun:sqlite → sync_queue → push to Neon every 30s
+```
+
+**Sync Engine:** Pulls 6 tables from Neon cloud every 30s (products, locations, stock, case labels, pick lists, pick list items). Write operations (transfer, putaway, pick) execute locally in SQLite AND queue to `sync_queue` for push to cloud.
+
+**Local REST Endpoints (v2.0.0):**
+
+| Endpoint | Method | Mirrors tRPC Procedure |
+|----------|--------|------------------------|
+| `/api/wms/scan-location` | POST | `wms.admin.operations.getLocationByBarcode` |
+| `/api/wms/scan-case` | POST | `wms.admin.operations.getCaseByBarcode` |
+| `/api/wms/transfer` | POST | `wms.admin.operations.transfer` |
+| `/api/wms/putaway` | POST | `wms.admin.operations.putaway` |
+| `/api/wms/pick-lists` | GET | `wms.admin.picking.getMany` |
+| `/api/wms/pick-list/:id` | GET | `wms.admin.picking.getOne` |
+| `/api/wms/pick-item` | POST | `wms.admin.picking.pickItem` |
+| `/api/wms/pick-complete` | POST | `wms.admin.picking.complete` |
+
+**Key Frontend Files:**
+```
+apps/web/src/app/_wms/
+├── providers/LocalServerProvider.tsx  # Health check context (30s ping, 2s timeout)
+├── hooks/useWmsApi.ts                # Local-first routing hook
+└── components/ConnectionStatus.tsx   # Green "Local" / amber "Offline" indicator
+```
+
+**Pages using local-first routing:** Transfer, Pick detail, Repack
+**Pages still cloud-only:** Receiving, Dispatch, Labels, Stock Explorer (not latency-sensitive)
+
+**NUC Server Files (on NUC at `/home/kevin/wms-local-server/`):**
+```
+src/
+├── index.ts       # Hono app entry, routes
+├── api/wms.ts     # 8 REST endpoints matching tRPC response shapes
+├── db/client.ts   # bun:sqlite connection
+├── db/schema.sql  # SQLite table definitions
+└── sync/          # pull.ts, push.ts, engine.ts
+```
+
+**Environment:** `NEXT_PUBLIC_WMS_LOCAL_SERVER_URL=http://192.168.1.39:3000` (set on Vercel production)
+
+**TC27 Chrome Setup:** `chrome://flags/#unsafely-treat-insecure-origin-as-secure` → add `http://192.168.1.39:3000` → relaunch (allows HTTPS page to call HTTP local server)
+
 ### tRPC Pattern for WMS Pages
 
-WMS mobile pages use imperative queries with `useTRPCClient()`:
+WMS scanner pages use the `useWmsApi()` hook for local-first routing. For pages that don't need local routing, use the standard tRPC pattern.
+
+**Local-first pattern (scanner-critical pages):**
+
+```typescript
+import useWmsApi from '@/app/_wms/hooks/useWmsApi';
+import useTRPC from '@/lib/trpc/browser';
+
+const WMSPage = () => {
+  const api = useTRPC();           // For cloud-only operations
+  const wmsApi = useWmsApi();      // For local-first operations
+
+  const handleScan = async (barcode: string) => {
+    // Routes through NUC when available, falls back to cloud
+    const result = await wmsApi.scanLocation(barcode);
+  };
+
+  // Local-first mutation
+  const transfer = useMutation(wmsApi.transferMutationOptions());
+
+  // Cloud-only mutation (not on NUC)
+  const printLabel = useMutation({
+    ...api.wms.admin.labels.printStockLabel.mutationOptions(),
+  });
+};
+```
+
+**Standard tRPC pattern (non-scanner pages):**
 
 ```typescript
 import useTRPC, { useTRPCClient } from '@/lib/trpc/browser';
@@ -151,11 +239,9 @@ const WMSPage = () => {
   const trpcClient = useTRPCClient(); // For imperative .query() calls
 
   const handleScan = async (barcode: string) => {
-    // Use trpcClient for async operations in event handlers
     const result = await trpcClient.wms.admin.operations.getLocationByBarcode.query({ barcode });
   };
 
-  // Use api for TanStack Query hooks
   const mutation = useMutation({
     ...api.wms.admin.operations.transfer.mutationOptions(),
   });
@@ -209,6 +295,9 @@ zohoSalesOrderItems  - Line items for each order
 ## Current Development State
 
 ### Recently Completed
+- WMS Local Server (NUC) — local-first routing for scanner operations (~15ms vs ~200ms)
+- `useWmsApi()` hook with automatic NUC/cloud fallback on Transfer, Pick, Repack pages
+- NUC sync engine — pulls from Neon every 30s, pushes local writes back
 - WMS scanner integration with Zebra TC27
 - Transfer, putaway, and repack page fixes (trpcClient pattern)
 - Zoho Sales Order sync with approval workflow
@@ -220,13 +309,13 @@ zohoSalesOrderItems  - Line items for each order
 - Delivery note PDF generation
 
 ### In Progress
+- Full end-to-end WMS testing with local-first routing
 - Optimizing mobile printing workflow for high-volume label printing
-- Full end-to-end WMS testing
 
 ### Pending
+- Add Receiving and Dispatch endpoints to NUC local server
 - Investigate faster mobile printing options (Enterprise Browser license vs current share workflow)
 - Print case labels during receiving
-- Pick list workflow with scanner
 - Dispatch confirmation workflow
 
 ---

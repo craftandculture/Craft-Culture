@@ -185,7 +185,7 @@ const adminReceiveShipmentItem = adminProcedure
             productName,
             producer,
             vintage,
-            bottleSize: `${actualBottleSizeMl}ml`,
+            bottleSize: `${actualBottleSizeMl / 10}cl`,
             caseConfig: actualBottlesPerCase,
             quantityCases: assignmentCases,
             reservedCases: 0,

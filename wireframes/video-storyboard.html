@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>C&C Index — Video Storyboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: #0a0a0a;
+      color: #e5e5e5;
+      line-height: 1.6;
+      padding: 40px 24px 80px;
+      max-width: 960px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      font-family: 'Instrument Serif', serif;
+      font-size: 2.5rem;
+      font-weight: 400;
+      color: #fff;
+      margin-bottom: 8px;
+    }
+
+    h1 span { color: #3DB3AA; }
+
+    .subtitle {
+      font-size: 0.95rem;
+      color: #888;
+      margin-bottom: 48px;
+    }
+
+    /* ── Setup Section ── */
+    .setup {
+      background: #141414;
+      border: 1px solid #222;
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 48px;
+    }
+
+    .setup h2 {
+      font-size: 0.85rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #3DB3AA;
+      margin-bottom: 16px;
+    }
+
+    .setup-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+    }
+
+    .setup-item {
+      background: #1a1a1a;
+      border-radius: 8px;
+      padding: 14px 16px;
+    }
+
+    .setup-item .label {
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #666;
+      margin-bottom: 4px;
+    }
+
+    .setup-item .value {
+      font-size: 0.85rem;
+      color: #ccc;
+    }
+
+    /* ── Timeline ── */
+    .timeline {
+      position: relative;
+      padding-left: 40px;
+    }
+
+    .timeline::before {
+      content: '';
+      position: absolute;
+      left: 15px;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      background: linear-gradient(to bottom, #3DB3AA, #3DB3AA 80%, transparent);
+    }
+
+    /* ── Frame Card ── */
+    .frame {
+      position: relative;
+      margin-bottom: 40px;
+    }
+
+    .frame::before {
+      content: '';
+      position: absolute;
+      left: -33px;
+      top: 24px;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #3DB3AA;
+      border: 3px solid #0a0a0a;
+      z-index: 1;
+    }
+
+    .frame-card {
+      background: #141414;
+      border: 1px solid #222;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    .frame-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 16px 20px;
+      border-bottom: 1px solid #1e1e1e;
+    }
+
+    .frame-number {
+      background: #3DB3AA;
+      color: #0a0a0a;
+      font-weight: 700;
+      font-size: 0.75rem;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .frame-title {
+      font-weight: 600;
+      font-size: 1rem;
+      color: #fff;
+      flex: 1;
+    }
+
+    .frame-duration {
+      background: #1e1e1e;
+      color: #3DB3AA;
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 20px;
+      white-space: nowrap;
+    }
+
+    .frame-body {
+      padding: 20px;
+    }
+
+    /* Screen placeholder */
+    .screen-preview {
+      background: #1a1a1a;
+      border: 1px dashed #333;
+      border-radius: 8px;
+      padding: 32px 20px;
+      text-align: center;
+      margin-bottom: 16px;
+      position: relative;
+    }
+
+    .screen-preview .screen-label {
+      font-family: 'Instrument Serif', serif;
+      font-size: 1.25rem;
+      color: #555;
+    }
+
+    .screen-preview .screen-url {
+      font-size: 0.7rem;
+      color: #444;
+      margin-top: 6px;
+      font-family: monospace;
+    }
+
+    /* Overlay text preview */
+    .overlay-preview {
+      background: rgba(61, 179, 170, 0.08);
+      border-left: 3px solid #3DB3AA;
+      padding: 12px 16px;
+      border-radius: 0 8px 8px 0;
+      margin-bottom: 16px;
+    }
+
+    .overlay-label {
+      font-size: 0.65rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #3DB3AA;
+      margin-bottom: 4px;
+    }
+
+    .overlay-text {
+      font-family: 'Instrument Serif', serif;
+      font-size: 1.15rem;
+      color: #fff;
+      font-style: italic;
+    }
+
+    /* Recording notes */
+    .recording-notes {
+      background: #111;
+      border-radius: 8px;
+      padding: 12px 16px;
+    }
+
+    .recording-notes .notes-label {
+      font-size: 0.65rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #666;
+      margin-bottom: 8px;
+    }
+
+    .recording-notes ul {
+      list-style: none;
+      padding: 0;
+    }
+
+    .recording-notes li {
+      font-size: 0.8rem;
+      color: #999;
+      padding: 3px 0;
+      padding-left: 16px;
+      position: relative;
+    }
+
+    .recording-notes li::before {
+      content: '>';
+      position: absolute;
+      left: 0;
+      color: #3DB3AA;
+      font-weight: 700;
+      font-family: monospace;
+    }
+
+    /* ── Export Section ── */
+    .export {
+      background: #141414;
+      border: 1px solid #222;
+      border-radius: 12px;
+      padding: 24px;
+      margin-top: 48px;
+    }
+
+    .export h2 {
+      font-size: 0.85rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #3DB3AA;
+      margin-bottom: 16px;
+    }
+
+    .export-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .export-card {
+      background: #1a1a1a;
+      border-radius: 8px;
+      padding: 16px;
+    }
+
+    .export-card .platform {
+      font-weight: 600;
+      font-size: 0.9rem;
+      color: #fff;
+      margin-bottom: 8px;
+    }
+
+    .export-card .spec {
+      font-size: 0.75rem;
+      color: #888;
+      margin-bottom: 2px;
+    }
+
+    /* ── Total ── */
+    .total-bar {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      padding: 20px;
+      background: linear-gradient(135deg, rgba(61,179,170,0.12), rgba(61,179,170,0.04));
+      border: 1px solid rgba(61,179,170,0.2);
+      border-radius: 12px;
+      margin-top: 8px;
+      margin-bottom: 48px;
+    }
+
+    .total-bar .total-label {
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #888;
+    }
+
+    .total-bar .total-value {
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: #3DB3AA;
+    }
+  </style>
+</head>
+<body>
+
+  <h1><span>C&C Index</span> Video Storyboard</h1>
+  <p class="subtitle">30-60 second intro video &mdash; LinkedIn + Website hero</p>
+
+  <!-- ── Recording Setup ── -->
+  <div class="setup">
+    <h2>Recording Setup</h2>
+    <div class="setup-grid">
+      <div class="setup-item">
+        <div class="label">Tool</div>
+        <div class="value">QuickTime &rarr; New Screen Recording</div>
+      </div>
+      <div class="setup-item">
+        <div class="label">Browser</div>
+        <div class="value">Chrome, 1440px wide, 100% zoom</div>
+      </div>
+      <div class="setup-item">
+        <div class="label">Sidebar</div>
+        <div class="value">Collapsed for wider content area</div>
+      </div>
+      <div class="setup-item">
+        <div class="label">Tabs / Bookmarks</div>
+        <div class="value">Hidden (Cmd+Shift+B)</div>
+      </div>
+      <div class="setup-item">
+        <div class="label">Mouse</div>
+        <div class="value">Slow, deliberate movements</div>
+      </div>
+      <div class="setup-item">
+        <div class="label">Editor</div>
+        <div class="value">CapCut (free) &mdash; add overlays in post</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Storyboard Frames ── -->
+  <div class="timeline">
+
+    <!-- FRAME 1 -->
+    <div class="frame">
+      <div class="frame-card">
+        <div class="frame-header">
+          <div class="frame-number">1</div>
+          <div class="frame-title">Morning View &mdash; The Dashboard</div>
+          <div class="frame-duration">5 sec</div>
+        </div>
+        <div class="frame-body">
+          <div class="screen-preview">
+            <div class="screen-label">Morning View</div>
+            <div class="screen-url">/platform/admin</div>
+          </div>
+          <div class="overlay-preview">
+            <div class="overlay-label">Text Overlay</div>
+            <div class="overlay-text">"Your morning starts here"</div>
+          </div>
+          <div class="recording-notes">
+            <div class="notes-label">Recording Notes</div>
+            <ul>
+              <li>Start recording on the Morning View dashboard</li>
+              <li>Let it sit for a beat so KPI cards are visible (revenue, orders, dispatch)</li>
+              <li>Slowly scroll down to show agent brief cards below the fold</li>
+              <li>This is the "hook" frame &mdash; sets the tone</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FRAME 2 -->
+    <div class="frame">
+      <div class="frame-card">
+        <div class="frame-header">
+          <div class="frame-number">2</div>
+          <div class="frame-title">Intelligence &mdash; AI Market Briefs</div>
+          <div class="frame-duration">10 sec</div>
+        </div>
+        <div class="frame-body">
+          <div class="screen-preview">
+            <div class="screen-label">Intelligence Dashboard</div>
+            <div class="screen-url">/platform/admin/agents</div>
+          </div>
+          <div class="overlay-preview">
+            <div class="overlay-label">Text Overlay</div>
+            <div class="overlay-text">"AI-powered market intelligence, delivered overnight"</div>
+          </div>
+          <div class="recording-notes">
+            <div class="notes-label">Recording Notes</div>
+            <ul>
+              <li>Click "Intelligence" in the sidebar</li>
+              <li>Show the 6 agent cards grid (Scout, Concierge, Socials, Purchasing, Pricing, Business)</li>
+              <li>Click into the Scout brief &mdash; show the market analysis content</li>
+              <li>Scroll through the brief slowly so text is visible</li>
+              <li>Click back and quickly open the Purchasing brief to show variety</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FRAME 3 -->
+    <div class="frame">
+      <div class="frame-card">
+        <div class="frame-header">
+          <div class="frame-number">3</div>
+          <div class="frame-title">Private Orders &mdash; Order Pipeline</div>
+          <div class="frame-duration">10 sec</div>
+        </div>
+        <div class="frame-body">
+          <div class="screen-preview">
+            <div class="screen-label">Private Client Orders</div>
+            <div class="screen-url">/platform/admin/private-orders</div>
+          </div>
+          <div class="overlay-preview">
+            <div class="overlay-label">Text Overlay</div>
+            <div class="overlay-text">"End-to-end order management"</div>
+          </div>
+          <div class="recording-notes">
+            <div class="notes-label">Recording Notes</div>
+            <ul>
+              <li>Navigate to Private Orders</li>
+              <li>Show the order list with mixed statuses (pending, confirmed, dispatched, delivered)</li>
+              <li>Click into one order to show the detail view (line items, status, client info)</li>
+              <li>If visible, show the status update dropdown to demonstrate the workflow</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FRAME 4 -->
+    <div class="frame">
+      <div class="frame-card">
+        <div class="frame-header">
+          <div class="frame-number">4</div>
+          <div class="frame-title">Warehouse &mdash; WMS Dashboard</div>
+          <div class="frame-duration">10 sec</div>
+        </div>
+        <div class="frame-body">
+          <div class="screen-preview">
+            <div class="screen-label">WMS Dashboard + Stock Explorer</div>
+            <div class="screen-url">/platform/admin/wms &rarr; /platform/admin/stock-explorer</div>
+          </div>
+          <div class="overlay-preview">
+            <div class="overlay-label">Text Overlay</div>
+            <div class="overlay-text">"Real-time warehouse visibility"</div>
+          </div>
+          <div class="recording-notes">
+            <div class="notes-label">Recording Notes</div>
+            <ul>
+              <li>Open WMS dashboard &mdash; show the overview cards (stock totals, movements)</li>
+              <li>Quick scroll through recent movements feed</li>
+              <li>Switch to Stock Explorer &mdash; show the product grid with expandable rows</li>
+              <li>Expand one product to show location breakdown</li>
+              <li>This is the "operational power" frame</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FRAME 5 -->
+    <div class="frame">
+      <div class="frame-card">
+        <div class="frame-header">
+          <div class="frame-number">5</div>
+          <div class="frame-title">Dispatch &mdash; Outbound Logistics</div>
+          <div class="frame-duration">8 sec</div>
+        </div>
+        <div class="frame-body">
+          <div class="screen-preview">
+            <div class="screen-label">Dispatch Batches</div>
+            <div class="screen-url">/platform/admin/wms/dispatch</div>
+          </div>
+          <div class="overlay-preview">
+            <div class="overlay-label">Text Overlay</div>
+            <div class="overlay-text">"Every bottle tracked from warehouse to delivery"</div>
+          </div>
+          <div class="recording-notes">
+            <div class="notes-label">Recording Notes</div>
+            <ul>
+              <li>Show dispatch batches list with status badges (draft, picking, staged, dispatched)</li>
+              <li>Click into one batch to show orders grouped inside</li>
+              <li>Quick and punchy &mdash; don't linger, just show the pipeline</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FRAME 6 -->
+    <div class="frame">
+      <div class="frame-card">
+        <div class="frame-header">
+          <div class="frame-number">6</div>
+          <div class="frame-title">Closing Card</div>
+          <div class="frame-duration">5 sec</div>
+        </div>
+        <div class="frame-body">
+          <div class="screen-preview">
+            <div class="screen-label" style="color: #3DB3AA; font-size: 1.5rem;">Craft &amp; Culture</div>
+            <div class="screen-url">Static card &mdash; add in CapCut</div>
+          </div>
+          <div class="overlay-preview">
+            <div class="overlay-label">Text Overlay</div>
+            <div class="overlay-text">"Wine distribution, simplified."</div>
+          </div>
+          <div class="recording-notes">
+            <div class="notes-label">Recording Notes</div>
+            <ul>
+              <li>This is NOT a screen recording &mdash; add as a static frame in CapCut</li>
+              <li>Dark background (#0a0a0a), C&C logo centred, tagline below</li>
+              <li>Fade in, hold 3 seconds, fade out</li>
+              <li>Optional: add website URL below tagline (craftculture.xyz)</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── Total Duration ── -->
+  <div class="total-bar">
+    <span class="total-label">Total Duration</span>
+    <span class="total-value">~48 sec</span>
+    <span class="total-label">(aim for 30-60s after editing)</span>
+  </div>
+
+  <!-- ── Export Specs ── -->
+  <div class="export">
+    <h2>Export Specs</h2>
+    <div class="export-grid">
+      <div class="export-card">
+        <div class="platform">LinkedIn</div>
+        <div class="spec">Resolution: 1080 x 1350 (4:5 portrait)</div>
+        <div class="spec">Format: MP4, H.264</div>
+        <div class="spec">Max length: 90 seconds</div>
+        <div class="spec">Captions: burn-in (auto-play is muted)</div>
+        <div class="spec">Text overlays: large, bottom-third safe</div>
+      </div>
+      <div class="export-card">
+        <div class="platform">Website Hero</div>
+        <div class="spec">Resolution: 1920 x 1080 (16:9)</div>
+        <div class="spec">Format: MP4, H.264</div>
+        <div class="spec">Compress to &lt; 10MB for fast loading</div>
+        <div class="spec">Consider autoplay loop (muted) for hero</div>
+        <div class="spec">Same footage, wider crop in CapCut</div>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>

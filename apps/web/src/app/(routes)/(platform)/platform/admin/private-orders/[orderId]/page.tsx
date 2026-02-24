@@ -463,9 +463,10 @@ const AdminPrivateOrderDetailPage = () => {
       const totalCases = order.caseCount ?? order.items.reduce((sum, i) => sum + (i.quantity ?? 1), 0);
       const labels = order.items.map((item) => {
         const lwin = item.lwin || 'UNKNOWN';
-        const bottleSizeNum = String(item.bottleSize ?? '750').replace(/\D/g, '');
+        const bottleSizeNum = parseInt(String(item.bottleSize ?? '75').replace(/\D/g, ''), 10);
+        const bottleSizeCl = bottleSizeNum > 200 ? bottleSizeNum / 10 : bottleSizeNum;
         const qty = item.quantity ?? 1;
-        const packSize = `${item.caseConfig ?? 12}x${bottleSizeNum}ml | ${qty} ${qty === 1 ? 'case' : 'cases'}`;
+        const packSize = `${item.caseConfig ?? 12}x${bottleSizeCl}cl | ${qty} ${qty === 1 ? 'case' : 'cases'}`;
         return {
           showBarcode: false,
           productName: item.productName || 'Unknown Product',
