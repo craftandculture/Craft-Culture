@@ -786,8 +786,18 @@ const WMSStockImportPage = () => {
                                         <td className="px-3 py-2 text-sm">
                                           <div>{item.productName}</div>
                                           {validation?.status === 'matched' && validation.lwin && (
-                                            <div className="text-[10px] text-emerald-600 dark:text-emerald-400">
-                                              LWIN: {validation.lwin.lwin} — {validation.lwin.displayName}
+                                            <div className="flex items-center gap-1.5 text-[10px] text-emerald-600 dark:text-emerald-400">
+                                              <span>LWIN: {validation.lwin.lwin} — {validation.lwin.displayName}</span>
+                                              <button
+                                                onClick={() => {
+                                                  setSearchingRowIndex(i);
+                                                  setLwinSearchQuery(item.productName);
+                                                  void handleLwinSearch(item.productName);
+                                                }}
+                                                className="rounded px-1 py-0.5 text-[10px] text-text-muted hover:bg-fill-secondary hover:text-text-primary"
+                                              >
+                                                edit
+                                              </button>
                                             </div>
                                           )}
                                         </td>
@@ -809,8 +819,8 @@ const WMSStockImportPage = () => {
                                   </table>
                                 </div>
 
-                                {/* Action row for ambiguous/no_match */}
-                                {needsAction && (
+                                {/* Action row for ambiguous/no_match/editing matched */}
+                                {(needsAction || isExpanded || manualLwinRowIndex === i) && (
                                   <div className="border-t border-dashed border-amber-300 bg-amber-50/80 px-4 py-2 dark:border-amber-700 dark:bg-amber-900/20">
                                     {validation?.status === 'ambiguous' && validation.candidates.length > 0 && !isExpanded && (
                                       <div className="space-y-1">
