@@ -2,6 +2,7 @@ import { TRPCError } from '@trpc/server';
 import { eq, inArray } from 'drizzle-orm';
 import { z } from 'zod';
 
+import buildLwin18 from '@/app/_lwin/utils/buildLwin18';
 import db from '@/database/client';
 import {
   partners,
@@ -14,7 +15,6 @@ import { adminProcedure } from '@/lib/trpc/procedures';
 
 import generateCaseLabelBarcode from '../utils/generateCaseLabelBarcode';
 import generateLotNumber from '../utils/generateLotNumber';
-import generateLwin18 from '../utils/generateLwin18';
 import generateMovementNumber from '../utils/generateMovementNumber';
 
 const importItemSchema = z.object({
@@ -27,6 +27,7 @@ const importItemSchema = z.object({
   bottlesPerCase: z.number().int().positive().default(6),
   bottleSizeMl: z.number().int().positive().default(750),
   category: z.string().optional(),
+  lwin7: z.string().regex(/^\d{7}$/).optional(),
   locationCode: z.string().optional(),
 });
 
@@ -154,14 +155,28 @@ const adminImportStock = adminProcedure
         const bottlesPerCase = item.bottlesPerCase;
         const bottleSizeMl = item.bottleSizeMl;
 
-        // Generate LWIN18
-        const lwin18 = generateLwin18({
-          productName: item.productName,
-          producer: item.producer,
-          vintage: item.vintage,
-          bottlesPerCase,
-          bottleSizeMl,
-        });
+        // Generate identifier: real LWIN18 for wines, SKU-based for spirits
+        let lwin18: string;
+        if (item.lwin7) {
+          // Wine with real LWIN from validation step
+          const vintageNum = item.vintage ? parseInt(item.vintage, 10) : null;
+          const result = buildLwin18({
+            lwin7: item.lwin7,
+            vintage: isNaN(vintageNum as number) ? null : vintageNum,
+            caseSize: bottlesPerCase,
+            bottleSizeMl,
+          });
+          lwin18 = result.lwin18;
+        } else {
+          // Spirit/non-wine: SKU-based identifier
+          const skuPart = item.sku
+            ? item.sku.replace(/[^a-zA-Z0-9]/g, '').slice(0, 10).toUpperCase()
+            : item.productName.replace(/[^a-zA-Z0-9]/g, '').slice(0, 10).toUpperCase();
+          const vintagePart = item.vintage ?? '0000';
+          const casePart = bottlesPerCase.toString().padStart(2, '0');
+          const sizePart = bottleSizeMl.toString().padStart(5, '0');
+          lwin18 = `SKU-${skuPart}-${vintagePart}-${casePart}-${sizePart}`;
+        }
 
         // Resolve location for this item
         const itemLocation = item.locationCode
@@ -193,6 +208,7 @@ const adminImportStock = adminProcedure
             availableCases: item.quantity,
             lotNumber,
             receivedAt: importedAt,
+            category: item.category,
             salesArrangement: 'consignment',
             notes: notes ?? 'Bulk import from Zoho Inventory',
           })

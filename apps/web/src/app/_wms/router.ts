@@ -89,6 +89,7 @@ import adminUpdateBatchStatus from './controller/adminUpdateBatchStatus';
 import adminUpdateBay from './controller/adminUpdateBay';
 import adminUpdateLocation from './controller/adminUpdateLocation';
 import adminUploadReceivingPhoto from './controller/adminUploadReceivingPhoto';
+import adminValidateImportItems from './controller/adminValidateImportItems';
 import deviceGetBayTotems from './controller/deviceGetBayTotems';
 import deviceGetLocationLabels from './controller/deviceGetLocationLabels';
 import partnerGetStock from './controller/partnerGetStock';
@@ -151,6 +152,7 @@ const stockRouter = createTRPCRouter({
   autoFix: adminAutoFixStock,
   rebuildFromMovements: adminRebuildStockFromMovements,
   import: adminImportStock,
+  validateImport: adminValidateImportItems,
   adjustQuantity: adminAdjustStockQuantity,
   syncToZoho: adminSyncStockToZoho,
   clearAll: adminClearAllStock,

@@ -2,10 +2,16 @@
 
 import {
   IconAlertCircle,
+  IconAlertTriangle,
+  IconBottle,
   IconCheck,
+  IconCircleCheck,
+  IconCircleX,
   IconDownload,
   IconLoader2,
+  IconMapPin,
   IconPackageImport,
+  IconSearch,
   IconUpload,
 } from '@tabler/icons-react';
 import { useMutation, useQuery } from '@tanstack/react-query';
@@ -19,7 +25,7 @@ import Card from '@/app/_ui/components/Card/Card';
 import CardContent from '@/app/_ui/components/Card/CardContent';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Typography from '@/app/_ui/components/Typography/Typography';
-import useTRPC from '@/lib/trpc/browser';
+import useTRPC, { useTRPCClient } from '@/lib/trpc/browser';
 
 interface ParsedItem {
   sku: string;
@@ -31,14 +37,34 @@ interface ParsedItem {
   bottlesPerCase: number;
   bottleSizeMl: number;
   locationCode: string;
+  category: string;
+}
+
+interface LwinCandidate {
+  lwin: string;
+  displayName: string;
+  producerName: string | null;
+  country: string | null;
+  region: string | null;
+  type: string | null;
+}
+
+interface ValidationResult {
+  rowIndex: number;
+  status: 'matched' | 'ambiguous' | 'no_match' | 'spirit' | 'error';
+  lwin: LwinCandidate | null;
+  candidates: LwinCandidate[];
+  locationValid: boolean | null;
+  errors: string[];
 }
 
 /**
  * WMS Stock Import Page
- * Upload CSV/Excel to bulk import stock into the WMS
+ * Upload CSV/Excel to bulk import stock into the WMS with LWIN validation
  */
 const WMSStockImportPage = () => {
   const api = useTRPC();
+  const trpcClient = useTRPCClient();
 
   const [file, setFile] = useState<File | null>(null);
   const [parsedItems, setParsedItems] = useState<ParsedItem[]>([]);
@@ -52,6 +78,17 @@ const WMSStockImportPage = () => {
     totalLabels: number;
     lotNumber: string;
   } | null>(null);
+
+  // Validation state
+  const [validationResults, setValidationResults] = useState<ValidationResult[]>([]);
+  const [isValidating, setIsValidating] = useState(false);
+  const [validationComplete, setValidationComplete] = useState(false);
+
+  // LWIN search for manual resolution
+  const [searchingRowIndex, setSearchingRowIndex] = useState<number | null>(null);
+  const [lwinSearchQuery, setLwinSearchQuery] = useState('');
+  const [lwinSearchResults, setLwinSearchResults] = useState<LwinCandidate[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
 
   // Fetch partners for owner selection
   const { data: partnersData } = useQuery({
@@ -119,6 +156,7 @@ const WMSStockImportPage = () => {
           headers.indexOf('bottle_size_ml'),
         );
         const sizeIsCl = headers.indexOf('bottle_size_cl') >= 0;
+        const categoryIndex = headers.indexOf('category');
 
         if (nameIndex === -1 || qtyIndex === -1) {
           setParseError('Missing required columns: item_name, quantity_available');
@@ -140,12 +178,12 @@ const WMSStockImportPage = () => {
           const sku = skuIndex >= 0 ? row[skuIndex]?.toString() ?? '' : '';
           const producer = producerIndex >= 0 ? row[producerIndex]?.toString().trim() ?? '' : '';
           const vintage = vintageIndex >= 0 ? row[vintageIndex]?.toString().trim() ?? '' : '';
+          const category = categoryIndex >= 0 ? row[categoryIndex]?.toString().trim() ?? '' : '';
 
           // Parse case config: explicit columns > product name > SKU > defaults
           let bottlesPerCase = 6;
           let bottleSizeMl = 750;
 
-          // 1. Check explicit columns first
           const explicitBpc = bpcIndex >= 0 ? parseInt(row[bpcIndex]?.toString() ?? '', 10) : NaN;
           const explicitSize = sizeIndex >= 0 ? parseInt(row[sizeIndex]?.toString() ?? '', 10) : NaN;
 
@@ -156,7 +194,6 @@ const WMSStockImportPage = () => {
             bottleSizeMl = sizeIsCl ? explicitSize * 10 : explicitSize;
           }
 
-          // 2. Fall back to product name detection if not explicitly set
           if (isNaN(explicitBpc) || isNaN(explicitSize)) {
             const packMatch = productName.match(/(\d+)\s*x\s*(\d+)\s*(cl|ml)/i);
             if (packMatch) {
@@ -165,7 +202,6 @@ const WMSStockImportPage = () => {
               if (packMatch[3].toLowerCase() === 'cl') parsedSize *= 10;
               if (isNaN(explicitSize)) bottleSizeMl = parsedSize;
             } else if (sku && /^\d{15,18}$/.test(sku)) {
-              // 3. Fall back to SKU-based extraction
               const packConfig = sku.slice(-6);
               const extractedBpc = parseInt(packConfig.slice(0, 2), 10);
               const extractedSize = parseInt(packConfig.slice(2), 10);
@@ -192,11 +228,15 @@ const WMSStockImportPage = () => {
             bottlesPerCase,
             bottleSizeMl,
             locationCode,
+            category,
           });
         }
 
         setParsedItems(items);
         setParseError(null);
+        // Reset validation when new file is parsed
+        setValidationResults([]);
+        setValidationComplete(false);
       } catch (err) {
         setParseError(`Error parsing file: ${err instanceof Error ? err.message : 'Unknown error'}`);
       }
@@ -218,6 +258,9 @@ const WMSStockImportPage = () => {
     setParsedItems([]);
     setParseError(null);
     setImportResult(null);
+    setValidationResults([]);
+    setValidationComplete(false);
+    setSearchingRowIndex(null);
   };
 
   const caseItems = parsedItems.filter((item) => item.unit === 'case');
@@ -225,12 +268,98 @@ const WMSStockImportPage = () => {
   const totalCases = caseItems.reduce((sum, item) => sum + item.quantity, 0);
   const hasLocationColumn = caseItems.some((item) => item.locationCode);
 
+  // Run validation against LWIN database
+  const handleValidate = async () => {
+    setIsValidating(true);
+    try {
+      const result = await trpcClient.wms.admin.stock.validateImport.mutate({
+        items: caseItems.map((item) => ({
+          productName: item.productName,
+          producer: item.producer || undefined,
+          vintage: item.vintage || undefined,
+          sku: item.sku || undefined,
+          locationCode: item.locationCode || undefined,
+          category: item.category || undefined,
+        })),
+      });
+      setValidationResults(result.results);
+      setValidationComplete(true);
+    } catch (err) {
+      setParseError(`Validation error: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    } finally {
+      setIsValidating(false);
+    }
+  };
+
+  // Resolve an ambiguous/no_match row by selecting a candidate
+  const handleSelectLwin = (rowIndex: number, candidate: LwinCandidate) => {
+    setValidationResults((prev) =>
+      prev.map((r) =>
+        r.rowIndex === rowIndex
+          ? { ...r, status: 'matched' as const, lwin: candidate }
+          : r,
+      ),
+    );
+    setSearchingRowIndex(null);
+    setLwinSearchQuery('');
+    setLwinSearchResults([]);
+  };
+
+  // Mark a row as spirit (no LWIN needed)
+  const handleMarkAsSpirit = (rowIndex: number) => {
+    setValidationResults((prev) =>
+      prev.map((r) =>
+        r.rowIndex === rowIndex
+          ? { ...r, status: 'spirit' as const, lwin: null }
+          : r,
+      ),
+    );
+  };
+
+  // Manual LWIN search for a specific row
+  const handleLwinSearch = async (query: string) => {
+    setLwinSearchQuery(query);
+    if (query.length < 2) {
+      setLwinSearchResults([]);
+      return;
+    }
+    setIsSearching(true);
+    try {
+      const result = await trpcClient.lwin.search.query({ query, limit: 5 });
+      setLwinSearchResults(
+        result.results.map((r) => ({
+          lwin: r.lwin,
+          displayName: r.displayName,
+          producerName: r.producerName,
+          country: r.country,
+          region: r.region,
+          type: r.type,
+        })),
+      );
+    } catch {
+      setLwinSearchResults([]);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
   const selectedOwnerName = partnersData?.find((p) => p.id === selectedOwnerId)?.name ?? '';
 
+  // Validation summary counts
+  const matchedCount = validationResults.filter((r) => r.status === 'matched').length;
+  const ambiguousCount = validationResults.filter((r) => r.status === 'ambiguous').length;
+  const noMatchCount = validationResults.filter((r) => r.status === 'no_match').length;
+  const spiritCount = validationResults.filter((r) => r.status === 'spirit').length;
+  const locationErrorCount = validationResults.filter((r) => r.locationValid === false).length;
+  const needsAttention = ambiguousCount + noMatchCount + locationErrorCount;
+
+  // Can only import when validated and all issues resolved
   const canImport =
     selectedOwnerId &&
     caseItems.length > 0 &&
     (hasLocationColumn || selectedLocationId) &&
+    validationComplete &&
+    needsAttention === 0 &&
     !importMutation.isPending;
 
   const handleImport = () => {
@@ -239,23 +368,70 @@ const WMSStockImportPage = () => {
     importMutation.mutate({
       ownerId: selectedOwnerId,
       locationId: selectedLocationId || undefined,
-      items: caseItems.map((item) => ({
-        sku: item.sku,
-        productName: item.productName,
-        producer: item.producer || undefined,
-        vintage: item.vintage || undefined,
-        quantity: item.quantity,
-        unit: item.unit,
-        bottlesPerCase: item.bottlesPerCase,
-        bottleSizeMl: item.bottleSizeMl,
-        locationCode: item.locationCode || undefined,
-      })),
+      items: caseItems.map((item, i) => {
+        const validation = validationResults[i];
+        return {
+          sku: item.sku || undefined,
+          productName: item.productName,
+          producer: item.producer || undefined,
+          vintage: item.vintage || undefined,
+          quantity: item.quantity,
+          unit: item.unit,
+          bottlesPerCase: item.bottlesPerCase,
+          bottleSizeMl: item.bottleSizeMl,
+          locationCode: item.locationCode || undefined,
+          category: item.category || undefined,
+          lwin7: validation?.lwin?.lwin || undefined,
+        };
+      }),
       notes: `Imported from ${file?.name}`,
     });
   };
 
+  // Status icon for validation results
+  const StatusIcon = ({ result }: { result: ValidationResult | undefined }) => {
+    if (!result) return null;
+
+    if (result.locationValid === false) {
+      return (
+        <span title={`Invalid location: ${result.errors.join(', ')}`}>
+          <IconMapPin className="h-4 w-4 text-red-500" />
+        </span>
+      );
+    }
+
+    switch (result.status) {
+      case 'matched':
+        return (
+          <span title={`LWIN: ${result.lwin?.lwin} — ${result.lwin?.displayName}`}>
+            <IconCircleCheck className="h-4 w-4 text-emerald-500" />
+          </span>
+        );
+      case 'ambiguous':
+        return (
+          <span title="Multiple LWIN matches — select one">
+            <IconAlertTriangle className="h-4 w-4 text-amber-500" />
+          </span>
+        );
+      case 'no_match':
+        return (
+          <span title="No LWIN match found">
+            <IconCircleX className="h-4 w-4 text-red-500" />
+          </span>
+        );
+      case 'spirit':
+        return (
+          <span title="Spirit/non-wine — SKU identifier">
+            <IconBottle className="h-4 w-4 text-blue-500" />
+          </span>
+        );
+      default:
+        return null;
+    }
+  };
+
   return (
-    <div className="container mx-auto max-w-4xl px-4 py-6 sm:px-6 sm:py-8">
+    <div className="container mx-auto max-w-5xl px-4 py-6 sm:px-6 sm:py-8">
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-start justify-between">
@@ -369,8 +545,8 @@ const WMSStockImportPage = () => {
                   <code className="rounded bg-surface-muted px-1 py-0.5 text-[11px]">bottles_per_case</code>,{' '}
                   <code className="rounded bg-surface-muted px-1 py-0.5 text-[11px]">bottle_size_cl</code>,{' '}
                   <code className="rounded bg-surface-muted px-1 py-0.5 text-[11px]">location_code</code>,{' '}
-                  <code className="rounded bg-surface-muted px-1 py-0.5 text-[11px]">sku</code>,{' '}
-                  <code className="rounded bg-surface-muted px-1 py-0.5 text-[11px]">unit</code>
+                  <code className="rounded bg-surface-muted px-1 py-0.5 text-[11px]">category</code>,{' '}
+                  <code className="rounded bg-surface-muted px-1 py-0.5 text-[11px]">sku</code>
                 </Typography>
                 <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-border-primary p-6">
                   <Icon icon={IconUpload} size="lg" colorRole="muted" className="mb-2" />
@@ -406,13 +582,27 @@ const WMSStockImportPage = () => {
               </CardContent>
             </Card>
 
-            {/* Step 3: Preview & Confirm */}
+            {/* Step 3: Validate & Review */}
             {caseItems.length > 0 && (
               <Card>
                 <CardContent className="p-4">
-                  <Typography variant="headingSm" className="mb-4">
-                    3. Review & Import
-                  </Typography>
+                  <div className="mb-4 flex items-center justify-between">
+                    <Typography variant="headingSm">
+                      3. Validate & Review
+                    </Typography>
+                    {!validationComplete && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleValidate}
+                        disabled={isValidating}
+                      >
+                        <ButtonContent iconLeft={isValidating ? IconLoader2 : IconSearch}>
+                          {isValidating ? 'Validating...' : 'Validate Products'}
+                        </ButtonContent>
+                      </Button>
+                    )}
+                  </div>
 
                   {/* Summary stats */}
                   <div className="mb-4 grid grid-cols-3 gap-3">
@@ -430,7 +620,48 @@ const WMSStockImportPage = () => {
                     </div>
                   </div>
 
-                  {/* Owner confirmation */}
+                  {/* Validation summary */}
+                  {validationComplete && (
+                    <div className="mb-4 grid grid-cols-5 gap-2">
+                      <div className="flex items-center gap-1.5 rounded-lg bg-emerald-50 px-2.5 py-2 dark:bg-emerald-900/20">
+                        <IconCircleCheck className="h-4 w-4 text-emerald-500" />
+                        <div>
+                          <div className="text-sm font-bold text-emerald-700 dark:text-emerald-300">{matchedCount}</div>
+                          <div className="text-[10px] text-emerald-600 dark:text-emerald-400">Matched</div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1.5 rounded-lg bg-blue-50 px-2.5 py-2 dark:bg-blue-900/20">
+                        <IconBottle className="h-4 w-4 text-blue-500" />
+                        <div>
+                          <div className="text-sm font-bold text-blue-700 dark:text-blue-300">{spiritCount}</div>
+                          <div className="text-[10px] text-blue-600 dark:text-blue-400">Spirits</div>
+                        </div>
+                      </div>
+                      <div className={`flex items-center gap-1.5 rounded-lg px-2.5 py-2 ${ambiguousCount > 0 ? 'bg-amber-50 dark:bg-amber-900/20' : 'bg-fill-secondary'}`}>
+                        <IconAlertTriangle className={`h-4 w-4 ${ambiguousCount > 0 ? 'text-amber-500' : 'text-text-muted'}`} />
+                        <div>
+                          <div className={`text-sm font-bold ${ambiguousCount > 0 ? 'text-amber-700 dark:text-amber-300' : 'text-text-muted'}`}>{ambiguousCount}</div>
+                          <div className={`text-[10px] ${ambiguousCount > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-text-muted'}`}>Ambiguous</div>
+                        </div>
+                      </div>
+                      <div className={`flex items-center gap-1.5 rounded-lg px-2.5 py-2 ${noMatchCount > 0 ? 'bg-red-50 dark:bg-red-900/20' : 'bg-fill-secondary'}`}>
+                        <IconCircleX className={`h-4 w-4 ${noMatchCount > 0 ? 'text-red-500' : 'text-text-muted'}`} />
+                        <div>
+                          <div className={`text-sm font-bold ${noMatchCount > 0 ? 'text-red-700 dark:text-red-300' : 'text-text-muted'}`}>{noMatchCount}</div>
+                          <div className={`text-[10px] ${noMatchCount > 0 ? 'text-red-600 dark:text-red-400' : 'text-text-muted'}`}>No Match</div>
+                        </div>
+                      </div>
+                      <div className={`flex items-center gap-1.5 rounded-lg px-2.5 py-2 ${locationErrorCount > 0 ? 'bg-red-50 dark:bg-red-900/20' : 'bg-fill-secondary'}`}>
+                        <IconMapPin className={`h-4 w-4 ${locationErrorCount > 0 ? 'text-red-500' : 'text-text-muted'}`} />
+                        <div>
+                          <div className={`text-sm font-bold ${locationErrorCount > 0 ? 'text-red-700 dark:text-red-300' : 'text-text-muted'}`}>{locationErrorCount}</div>
+                          <div className={`text-[10px] ${locationErrorCount > 0 ? 'text-red-600 dark:text-red-400' : 'text-text-muted'}`}>Bad Loc.</div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Owner + location confirmation */}
                   <div className="mb-4 rounded-lg border border-border-primary p-3">
                     <div className="grid grid-cols-2 gap-3 text-xs">
                       <div>
@@ -463,73 +694,232 @@ const WMSStockImportPage = () => {
                           }, {}),
                         )
                           .sort(([a], [b]) => a.localeCompare(b))
-                          .map(([loc, qty]) => (
-                            <span
-                              key={loc}
-                              className={`rounded-full px-2 py-0.5 text-xs ${
-                                loc === 'No location'
-                                  ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'
-                                  : 'bg-fill-secondary text-text-primary'
-                              }`}
-                            >
-                              {loc}: {qty} cs
-                            </span>
-                          ))}
+                          .map(([loc, qty]) => {
+                            const isInvalid = validationComplete && loc !== 'No location' &&
+                              validationResults.some((r) => r.locationValid === false && caseItems[r.rowIndex]?.locationCode === loc);
+                            return (
+                              <span
+                                key={loc}
+                                className={`rounded-full px-2 py-0.5 text-xs ${
+                                  loc === 'No location' || isInvalid
+                                    ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'
+                                    : 'bg-fill-secondary text-text-primary'
+                                }`}
+                              >
+                                {loc}: {qty} cs
+                              </span>
+                            );
+                          })}
                       </div>
                     </div>
                   )}
 
-                  {/* Item preview table */}
-                  <div className="mb-4 max-h-64 overflow-y-auto rounded border border-border-primary">
+                  {/* Item preview table with validation */}
+                  <div className="mb-4 max-h-[500px] overflow-y-auto rounded border border-border-primary">
                     <table className="w-full text-sm">
-                      <thead className="sticky top-0 bg-fill-secondary">
+                      <thead className="sticky top-0 z-10 bg-fill-secondary">
                         <tr>
+                          {validationComplete && (
+                            <th className="w-8 px-2 py-2 text-center text-xs font-medium text-text-muted">ID</th>
+                          )}
                           <th className="px-3 py-2 text-left text-xs font-medium text-text-muted">Product</th>
                           <th className="px-3 py-2 text-left text-xs font-medium text-text-muted">Producer</th>
-                          <th className="px-3 py-2 text-center text-xs font-medium text-text-muted">Vintage</th>
-                          <th className="px-3 py-2 text-center text-xs font-medium text-text-muted">Qty</th>
-                          <th className="px-3 py-2 text-center text-xs font-medium text-text-muted">Pack</th>
-                          <th className="px-3 py-2 text-center text-xs font-medium text-text-muted">Size</th>
+                          <th className="px-2 py-2 text-center text-xs font-medium text-text-muted">Vnt</th>
+                          <th className="px-2 py-2 text-center text-xs font-medium text-text-muted">Qty</th>
+                          <th className="px-2 py-2 text-center text-xs font-medium text-text-muted">Pack</th>
+                          <th className="px-2 py-2 text-center text-xs font-medium text-text-muted">Size</th>
+                          <th className="px-2 py-2 text-center text-xs font-medium text-text-muted">Cat</th>
                           {hasLocationColumn && (
-                            <th className="px-3 py-2 text-center text-xs font-medium text-text-muted">Location</th>
+                            <th className="px-2 py-2 text-center text-xs font-medium text-text-muted">Loc</th>
                           )}
                         </tr>
                       </thead>
                       <tbody>
-                        {caseItems.slice(0, 50).map((item, i) => (
-                          <tr key={i} className="border-t border-border-primary">
-                            <td className="px-3 py-2">{item.productName}</td>
-                            <td className="px-3 py-2 text-text-muted">{item.producer || '—'}</td>
-                            <td className="px-3 py-2 text-center tabular-nums text-text-muted">{item.vintage || '—'}</td>
-                            <td className="px-3 py-2 text-center tabular-nums font-medium">{item.quantity}</td>
-                            <td className="px-3 py-2 text-center tabular-nums text-text-muted">
-                              {item.bottlesPerCase}
-                            </td>
-                            <td className="px-3 py-2 text-center tabular-nums text-text-muted">
-                              {item.bottleSizeMl / 10}cl
-                            </td>
-                            {hasLocationColumn && (
-                              <td className="px-3 py-2 text-center font-mono text-xs">
-                                {item.locationCode || (
-                                  <span className="text-text-muted">default</span>
+                        {caseItems.map((item, i) => {
+                          const validation = validationComplete ? validationResults[i] : undefined;
+                          const needsAction = validation?.status === 'ambiguous' || validation?.status === 'no_match';
+                          const isExpanded = searchingRowIndex === i;
+
+                          return (
+                            <tr key={i} className="group">
+                              <td colSpan={validationComplete ? (hasLocationColumn ? 9 : 8) : (hasLocationColumn ? 8 : 7)} className="p-0">
+                                {/* Main row */}
+                                <div
+                                  className={`flex items-center border-t border-border-primary ${
+                                    needsAction ? 'bg-amber-50/50 dark:bg-amber-900/10' : ''
+                                  } ${validation?.locationValid === false ? 'bg-red-50/50 dark:bg-red-900/10' : ''}`}
+                                >
+                                  <table className="w-full">
+                                    <tbody>
+                                      <tr>
+                                        {validationComplete && (
+                                          <td className="w-8 px-2 py-2 text-center">
+                                            <StatusIcon result={validation} />
+                                          </td>
+                                        )}
+                                        <td className="px-3 py-2 text-sm">
+                                          <div>{item.productName}</div>
+                                          {validation?.status === 'matched' && validation.lwin && (
+                                            <div className="text-[10px] text-emerald-600 dark:text-emerald-400">
+                                              LWIN: {validation.lwin.lwin} — {validation.lwin.displayName}
+                                            </div>
+                                          )}
+                                        </td>
+                                        <td className="px-3 py-2 text-sm text-text-muted">{item.producer || '—'}</td>
+                                        <td className="px-2 py-2 text-center tabular-nums text-sm text-text-muted">{item.vintage || '—'}</td>
+                                        <td className="px-2 py-2 text-center tabular-nums text-sm font-medium">{item.quantity}</td>
+                                        <td className="px-2 py-2 text-center tabular-nums text-sm text-text-muted">{item.bottlesPerCase}</td>
+                                        <td className="px-2 py-2 text-center tabular-nums text-sm text-text-muted">{item.bottleSizeMl / 10}cl</td>
+                                        <td className="px-2 py-2 text-center text-xs text-text-muted">{item.category || '—'}</td>
+                                        {hasLocationColumn && (
+                                          <td className={`px-2 py-2 text-center font-mono text-xs ${validation?.locationValid === false ? 'text-red-600 font-medium' : ''}`}>
+                                            {item.locationCode || (
+                                              <span className="text-text-muted">default</span>
+                                            )}
+                                          </td>
+                                        )}
+                                      </tr>
+                                    </tbody>
+                                  </table>
+                                </div>
+
+                                {/* Action row for ambiguous/no_match */}
+                                {needsAction && (
+                                  <div className="border-t border-dashed border-amber-300 bg-amber-50/80 px-4 py-2 dark:border-amber-700 dark:bg-amber-900/20">
+                                    {validation?.status === 'ambiguous' && validation.candidates.length > 0 && !isExpanded && (
+                                      <div className="space-y-1">
+                                        <div className="text-xs font-medium text-amber-700 dark:text-amber-300">
+                                          Select LWIN match:
+                                        </div>
+                                        <div className="flex flex-wrap gap-1.5">
+                                          {validation.candidates.map((c) => (
+                                            <button
+                                              key={c.lwin}
+                                              onClick={() => handleSelectLwin(i, c)}
+                                              className="rounded-md border border-amber-300 bg-white px-2 py-1 text-xs transition-colors hover:border-emerald-400 hover:bg-emerald-50 dark:border-amber-600 dark:bg-amber-900/30 dark:hover:border-emerald-500 dark:hover:bg-emerald-900/30"
+                                            >
+                                              <span className="font-mono text-[10px] text-text-muted">{c.lwin}</span>{' '}
+                                              <span>{c.displayName}</span>
+                                              {c.country && <span className="text-text-muted"> ({c.country})</span>}
+                                            </button>
+                                          ))}
+                                          <button
+                                            onClick={() => {
+                                              setSearchingRowIndex(i);
+                                              setLwinSearchQuery('');
+                                              setLwinSearchResults([]);
+                                            }}
+                                            className="rounded-md border border-border-primary bg-white px-2 py-1 text-xs text-text-muted hover:bg-fill-secondary dark:bg-transparent"
+                                          >
+                                            Search...
+                                          </button>
+                                          <button
+                                            onClick={() => handleMarkAsSpirit(i)}
+                                            className="rounded-md border border-blue-300 bg-white px-2 py-1 text-xs text-blue-600 hover:bg-blue-50 dark:border-blue-600 dark:bg-transparent dark:hover:bg-blue-900/30"
+                                          >
+                                            Not a wine
+                                          </button>
+                                        </div>
+                                      </div>
+                                    )}
+
+                                    {validation?.status === 'no_match' && !isExpanded && (
+                                      <div className="flex items-center gap-2">
+                                        <span className="text-xs text-red-600 dark:text-red-400">
+                                          No LWIN match found.
+                                        </span>
+                                        <button
+                                          onClick={() => {
+                                            setSearchingRowIndex(i);
+                                            setLwinSearchQuery(item.productName);
+                                            void handleLwinSearch(item.productName);
+                                          }}
+                                          className="rounded-md border border-border-primary bg-white px-2 py-1 text-xs hover:bg-fill-secondary dark:bg-transparent"
+                                        >
+                                          Search LWIN
+                                        </button>
+                                        <button
+                                          onClick={() => handleMarkAsSpirit(i)}
+                                          className="rounded-md border border-blue-300 bg-white px-2 py-1 text-xs text-blue-600 hover:bg-blue-50 dark:border-blue-600 dark:bg-transparent dark:hover:bg-blue-900/30"
+                                        >
+                                          Not a wine
+                                        </button>
+                                      </div>
+                                    )}
+
+                                    {/* Inline LWIN search */}
+                                    {isExpanded && (
+                                      <div className="space-y-2">
+                                        <div className="flex items-center gap-2">
+                                          <input
+                                            type="text"
+                                            value={lwinSearchQuery}
+                                            onChange={(e) => handleLwinSearch(e.target.value)}
+                                            placeholder="Search LWIN database..."
+                                            className="flex-1 rounded-md border border-border-primary bg-white px-2.5 py-1.5 text-xs focus:border-border-brand focus:outline-none dark:bg-transparent"
+                                            autoFocus
+                                          />
+                                          <button
+                                            onClick={() => {
+                                              setSearchingRowIndex(null);
+                                              setLwinSearchQuery('');
+                                              setLwinSearchResults([]);
+                                            }}
+                                            className="text-xs text-text-muted hover:text-text-primary"
+                                          >
+                                            Cancel
+                                          </button>
+                                        </div>
+                                        {isSearching && (
+                                          <div className="flex items-center gap-1 text-xs text-text-muted">
+                                            <IconLoader2 className="h-3 w-3 animate-spin" /> Searching...
+                                          </div>
+                                        )}
+                                        {lwinSearchResults.length > 0 && (
+                                          <div className="flex flex-wrap gap-1.5">
+                                            {lwinSearchResults.map((c) => (
+                                              <button
+                                                key={c.lwin}
+                                                onClick={() => handleSelectLwin(i, c)}
+                                                className="rounded-md border border-border-primary bg-white px-2 py-1 text-xs transition-colors hover:border-emerald-400 hover:bg-emerald-50 dark:bg-transparent dark:hover:border-emerald-500 dark:hover:bg-emerald-900/30"
+                                              >
+                                                <span className="font-mono text-[10px] text-text-muted">{c.lwin}</span>{' '}
+                                                <span>{c.displayName}</span>
+                                                {c.country && <span className="text-text-muted"> ({c.country})</span>}
+                                              </button>
+                                            ))}
+                                          </div>
+                                        )}
+                                        {lwinSearchQuery.length >= 2 && !isSearching && lwinSearchResults.length === 0 && (
+                                          <div className="text-xs text-text-muted">No results. Try a different search term.</div>
+                                        )}
+                                      </div>
+                                    )}
+                                  </div>
                                 )}
                               </td>
-                            )}
-                          </tr>
-                        ))}
-                        {caseItems.length > 50 && (
-                          <tr className="border-t border-border-primary">
-                            <td
-                              colSpan={hasLocationColumn ? 7 : 6}
-                              className="px-3 py-2 text-center text-text-muted"
-                            >
-                              ... and {caseItems.length - 50} more
-                            </td>
-                          </tr>
-                        )}
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>
+
+                  {/* Needs attention banner */}
+                  {validationComplete && needsAttention > 0 && (
+                    <div className="mb-3 flex items-center gap-2 rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-700 dark:bg-amber-900/20 dark:text-amber-300">
+                      <IconAlertTriangle className="h-3.5 w-3.5" />
+                      {needsAttention} item{needsAttention > 1 ? 's' : ''} need attention before importing
+                    </div>
+                  )}
+
+                  {/* Not yet validated prompt */}
+                  {!validationComplete && !isValidating && (
+                    <div className="mb-3 flex items-center gap-2 rounded-md bg-blue-50 px-3 py-2 text-xs text-blue-700 dark:bg-blue-900/20 dark:text-blue-300">
+                      <IconSearch className="h-3.5 w-3.5" />
+                      Click &quot;Validate Products&quot; to match wines against the LWIN database before importing
+                    </div>
+                  )}
 
                   {/* Import button */}
                   <Button
