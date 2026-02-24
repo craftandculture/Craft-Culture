@@ -151,29 +151,47 @@ const adminCreateCaseLabels = adminProcedure
         barcodes: labelsToInsert.map((l) => l.barcode),
       });
 
-      // Insert all labels within the transaction
-      try {
-        const insertedLabels = await tx.insert(wmsCaseLabels).values(labelsToInsert).returning({
-          id: wmsCaseLabels.id,
-          barcode: wmsCaseLabels.barcode,
-        });
+      // Insert labels with conflict handling — skip duplicates and retry with next sequence
+      const insertedLabels: Array<{ id: string; barcode: string }> = [];
 
-        console.log('[createCaseLabels] Successfully inserted labels', {
-          count: insertedLabels.length,
-          barcodes: insertedLabels.map((l) => l.barcode),
-        });
+      for (const labelToInsert of labelsToInsert) {
+        const inserted = await tx
+          .insert(wmsCaseLabels)
+          .values(labelToInsert)
+          .onConflictDoNothing({ target: wmsCaseLabels.barcode })
+          .returning({ id: wmsCaseLabels.id, barcode: wmsCaseLabels.barcode });
 
-        return { insertedLabels, labelDataForZpl };
-      } catch (insertError) {
-        console.error('[createCaseLabels] INSERT FAILED', {
-          error: insertError,
-          attemptedBarcodes: labelsToInsert.map((l) => l.barcode),
-          lwin18,
-          existingBarcodes: existingLabels.map((l) => l.barcode),
-          maxSeqFound: maxSeqResult?.maxSeq,
-        });
-        throw insertError;
+        if (inserted.length > 0) {
+          insertedLabels.push(inserted[0]);
+        } else {
+          // Barcode already exists — generate a new one with next sequence
+          currentSeq += 1;
+          const retryBarcode = generateCaseLabelBarcode(lwin18, currentSeq);
+          const retryLabel = { ...labelToInsert, barcode: retryBarcode };
+          // Update the ZPL data too
+          const zplIdx = labelsToInsert.indexOf(labelToInsert);
+          if (zplIdx >= 0 && labelDataForZpl[zplIdx]) {
+            labelDataForZpl[zplIdx].barcode = retryBarcode;
+          }
+
+          const retryInserted = await tx
+            .insert(wmsCaseLabels)
+            .values(retryLabel)
+            .onConflictDoNothing({ target: wmsCaseLabels.barcode })
+            .returning({ id: wmsCaseLabels.id, barcode: wmsCaseLabels.barcode });
+
+          if (retryInserted.length > 0) {
+            insertedLabels.push(retryInserted[0]);
+          }
+        }
       }
+
+      console.log('[createCaseLabels] Successfully inserted labels', {
+        count: insertedLabels.length,
+        barcodes: insertedLabels.map((l) => l.barcode),
+      });
+
+      return { insertedLabels, labelDataForZpl };
     });
 
     // Generate ZPL for all labels (outside transaction for performance)
