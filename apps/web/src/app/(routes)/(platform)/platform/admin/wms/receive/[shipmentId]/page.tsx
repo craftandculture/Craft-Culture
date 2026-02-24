@@ -456,9 +456,9 @@ const WMSReceiveShipmentPage = () => {
 
       // Generate LWIN-18 from item data
       const lwin18 = currentItem.lwin || `${currentItem.productName.replace(/\s+/g, '-').slice(0, 20)}`;
-      // Strip any non-numeric characters from bottle size (in case it includes "ml")
-      const bottleSize = String(currentItem.receivedBottleSizeMl).replace(/\D/g, '');
-      const packSize = `${currentItem.receivedBottlesPerCase}x${bottleSize}ml`;
+      // Convert ml to cl for display
+      const bottleSizeCl = Math.round(currentItem.receivedBottleSizeMl / 10);
+      const packSize = `${currentItem.receivedBottlesPerCase}x${bottleSizeCl}cl`;
 
       let zpl: string;
       let labelCount: number;
@@ -940,7 +940,7 @@ const WMSReceiveShipmentPage = () => {
                       {/* Pack size and expected cases */}
                       <div className="mt-2 flex flex-wrap items-center gap-2">
                         <span className="rounded bg-fill-tertiary px-1.5 py-0.5 text-xs font-medium">
-                          {item.bottlesPerCase ?? 12}×{item.bottleSizeMl ?? 750}ml
+                          {item.bottlesPerCase ?? 12}×{(item.bottleSizeMl ?? 750) / 10}cl
                         </span>
                         {item.lwin && (
                           <span className="font-mono text-xs text-text-muted">
@@ -1000,7 +1000,7 @@ const WMSReceiveShipmentPage = () => {
                     </Typography>
                     <div className="mt-2 flex flex-wrap items-center gap-2">
                       <span className="rounded bg-fill-secondary px-2 py-1 text-sm font-medium">
-                        {currentItem.receivedBottlesPerCase}×{currentItem.receivedBottleSizeMl}ml
+                        {currentItem.receivedBottlesPerCase}×{currentItem.receivedBottleSizeMl / 10}cl
                   </span>
                   {currentItem.supplierSku && (
                     <span className="rounded bg-purple-100 px-2 py-1 text-xs font-medium text-purple-700 dark:bg-purple-900/30 dark:text-purple-400">

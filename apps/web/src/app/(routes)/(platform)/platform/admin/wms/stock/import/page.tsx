@@ -114,7 +114,11 @@ const WMSStockImportPage = () => {
         const producerIndex = headers.indexOf('producer');
         const vintageIndex = headers.indexOf('vintage');
         const bpcIndex = headers.indexOf('bottles_per_case');
-        const sizeIndex = headers.indexOf('bottle_size_ml');
+        const sizeIndex = Math.max(
+          headers.indexOf('bottle_size_cl'),
+          headers.indexOf('bottle_size_ml'),
+        );
+        const sizeIsCl = headers.indexOf('bottle_size_cl') >= 0;
 
         if (nameIndex === -1 || qtyIndex === -1) {
           setParseError('Missing required columns: item_name, quantity_available');
@@ -149,7 +153,7 @@ const WMSStockImportPage = () => {
             bottlesPerCase = explicitBpc;
           }
           if (!isNaN(explicitSize) && explicitSize > 0) {
-            bottleSizeMl = explicitSize;
+            bottleSizeMl = sizeIsCl ? explicitSize * 10 : explicitSize;
           }
 
           // 2. Fall back to product name detection if not explicitly set
@@ -363,7 +367,7 @@ const WMSStockImportPage = () => {
                   Optional: <code className="rounded bg-surface-muted px-1 py-0.5 text-[11px]">producer</code>,{' '}
                   <code className="rounded bg-surface-muted px-1 py-0.5 text-[11px]">vintage</code>,{' '}
                   <code className="rounded bg-surface-muted px-1 py-0.5 text-[11px]">bottles_per_case</code>,{' '}
-                  <code className="rounded bg-surface-muted px-1 py-0.5 text-[11px]">bottle_size_ml</code>,{' '}
+                  <code className="rounded bg-surface-muted px-1 py-0.5 text-[11px]">bottle_size_cl</code>,{' '}
                   <code className="rounded bg-surface-muted px-1 py-0.5 text-[11px]">location_code</code>,{' '}
                   <code className="rounded bg-surface-muted px-1 py-0.5 text-[11px]">sku</code>,{' '}
                   <code className="rounded bg-surface-muted px-1 py-0.5 text-[11px]">unit</code>
@@ -502,7 +506,7 @@ const WMSStockImportPage = () => {
                               {item.bottlesPerCase}
                             </td>
                             <td className="px-3 py-2 text-center tabular-nums text-text-muted">
-                              {item.bottleSizeMl}ml
+                              {item.bottleSizeMl / 10}cl
                             </td>
                             {hasLocationColumn && (
                               <td className="px-3 py-2 text-center font-mono text-xs">

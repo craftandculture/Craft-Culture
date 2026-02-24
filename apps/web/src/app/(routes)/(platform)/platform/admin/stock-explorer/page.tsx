@@ -274,7 +274,7 @@ const ProductRow = ({ product, isExpanded, onToggle, density, visibleColumns }: 
         {/* Size */}
         {visibleColumns.size && (
           <td className={`${tdClass} hidden text-text-muted 2xl:table-cell`}>
-            {product.bottleSize ?? '750ml'}
+            {product.bottleSize ?? '75cl'}
           </td>
         )}
 

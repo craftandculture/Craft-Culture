@@ -725,7 +725,7 @@ const ShipmentDetailPage = () => {
                           </td>
                           <td className="py-3 pr-4 text-center">
                             <span className="text-xs">
-                              {item.bottlesPerCase || 12}x{item.bottleSizeMl || 750}ml
+                              {item.bottlesPerCase || 12}x{(item.bottleSizeMl || 750) / 10}cl
                             </span>
                           </td>
                           <td className="py-3 pr-4 text-right">{item.cases}</td>
