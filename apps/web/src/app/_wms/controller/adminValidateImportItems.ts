@@ -130,25 +130,16 @@ const adminValidateImportItems = adminProcedure
       }
 
       // 3. Search lwin_wines for wine products
-      // Extract wine keywords from product name (strip vintage, producer words, filler words)
-      let cleanedName = item.productName.replace(/\b(19|20)\d{2}\b/g, '').trim();
-
-      // Remove producer words from product name to avoid double-matching
-      if (item.producer) {
-        const producerLower = item.producer.toLowerCase();
-        cleanedName = cleanedName
-          .split(/\s+/)
-          .filter((word) => !producerLower.includes(word.toLowerCase()) || word.length <= 2)
-          .join(' ');
-      }
+      // Extract all meaningful keywords from product name (strip vintage, filler words)
+      const cleanedName = item.productName.replace(/\b(19|20)\d{2}\b/g, '').trim();
 
       const fillers = new Set(['the', 'de', 'du', 'des', 'le', 'la', 'les', 'di', 'del', 'and', '&', '-', ',', '.']);
-      const wineKeywords = cleanedName
+      const allKeywords = cleanedName
         .split(/[\s,]+/)
         .map((w) => w.replace(/[^a-zA-Z0-9À-ÿ]/g, '').trim())
         .filter((w) => w.length >= 2 && !fillers.has(w.toLowerCase()));
 
-      if (wineKeywords.length === 0) {
+      if (allKeywords.length === 0) {
         results.push({
           rowIndex: i,
           status: 'no_match',
@@ -169,46 +160,27 @@ const adminValidateImportItems = adminProcedure
         type: lwinWines.type,
       };
 
-      // Step 1: Exact keyword match on wine column — all keywords must appear
-      // This is the most precise match since the wine column is just the wine name without producer
-      const wineConditions = wineKeywords.map((kw) => ilike(lwinWines.wine, `%${kw}%`));
-      const producerCondition = item.producer
-        ? ilike(lwinWines.producerName, `%${item.producer}%`)
-        : undefined;
+      // Step 1: Exact keyword match on displayName — all keywords must appear
+      // displayName is "Producer, Wine" so it's the most reliable single field to search.
+      // Sorted by shortest displayName to prefer the most generic match
+      // (e.g., "Dom Perignon" over "Dom Perignon Oenotheque Side By Side")
+      const displayConditions = allKeywords.map((kw) => ilike(lwinWines.displayName, `%${kw}%`));
 
       let candidates = await db
         .select(selectFields)
         .from(lwinWines)
         .where(
           and(
-            ...wineConditions,
-            ...(producerCondition ? [producerCondition] : []),
+            ...displayConditions,
             eq(lwinWines.status, 'live'),
           ),
         )
         .orderBy(sql`LENGTH(${lwinWines.displayName}) ASC`)
         .limit(5);
 
-      // Step 2: Exact keyword match on displayName — broader search
+      // Step 2: Fuzzy fallback — only when exact matching finds nothing (handles typos)
       if (candidates.length === 0) {
-        const displayConditions = wineKeywords.map((kw) => ilike(lwinWines.displayName, `%${kw}%`));
-
-        candidates = await db
-          .select(selectFields)
-          .from(lwinWines)
-          .where(
-            and(
-              ...displayConditions,
-              eq(lwinWines.status, 'live'),
-            ),
-          )
-          .orderBy(sql`LENGTH(${lwinWines.displayName}) ASC`)
-          .limit(5);
-      }
-
-      // Step 3: Fuzzy fallback — only when exact matching finds nothing (handles typos)
-      if (candidates.length === 0) {
-        const fuzzyQuery = [item.producer, ...wineKeywords].filter(Boolean).join(' ');
+        const fuzzyQuery = [item.producer, ...allKeywords].filter(Boolean).join(' ');
 
         candidates = await db
           .select(selectFields)
