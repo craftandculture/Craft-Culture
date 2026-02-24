@@ -198,25 +198,20 @@ const adminImportStock = adminProcedure
           })
           .returning();
 
-        // Create case labels
-        const caseLabels: Array<{ id: string; barcode: string }> = [];
-        for (let i = 1; i <= item.quantity; i++) {
-          const barcode = generateCaseLabelBarcode(lwin18, i);
+        // Create case labels in batch
+        const caseLabelValues = Array.from({ length: item.quantity }, (_, i) => ({
+          barcode: generateCaseLabelBarcode(lwin18, i + 1),
+          lwin18,
+          productName: item.productName,
+          lotNumber,
+          currentLocationId: itemLocation.id,
+          isActive: true,
+        }));
 
-          const [caseLabel] = await tx
-            .insert(wmsCaseLabels)
-            .values({
-              barcode,
-              lwin18,
-              productName: item.productName,
-              lotNumber,
-              currentLocationId: itemLocation.id,
-              isActive: true,
-            })
-            .returning();
-
-          caseLabels.push({ id: caseLabel.id, barcode: caseLabel.barcode });
-        }
+        const caseLabels = await tx
+          .insert(wmsCaseLabels)
+          .values(caseLabelValues)
+          .returning({ id: wmsCaseLabels.id, barcode: wmsCaseLabels.barcode });
 
         // Create movement record
         const movementNumber = `${basePrefix}${(baseSequence + movementOffset).toString().padStart(4, '0')}`;
