@@ -90,6 +90,10 @@ const WMSStockImportPage = () => {
   const [lwinSearchResults, setLwinSearchResults] = useState<LwinCandidate[]>([]);
   const [isSearching, setIsSearching] = useState(false);
 
+  // Manual LWIN entry
+  const [manualLwinRowIndex, setManualLwinRowIndex] = useState<number | null>(null);
+  const [manualLwinValue, setManualLwinValue] = useState('');
+
   // Fetch partners for owner selection
   const { data: partnersData } = useQuery({
     ...api.partners.list.queryOptions({}),
@@ -261,6 +265,8 @@ const WMSStockImportPage = () => {
     setValidationResults([]);
     setValidationComplete(false);
     setSearchingRowIndex(null);
+    setManualLwinRowIndex(null);
+    setManualLwinValue('');
   };
 
   const caseItems = parsedItems.filter((item) => item.unit === 'case');
@@ -341,6 +347,26 @@ const WMSStockImportPage = () => {
     } finally {
       setIsSearching(false);
     }
+  };
+
+  // Manually enter an LWIN7 or LWIN18 code for a row
+  const handleManualLwin = (rowIndex: number, lwinInput: string) => {
+    const cleaned = lwinInput.trim().replace(/[^0-9]/g, '');
+    const lwin7 = cleaned.slice(0, 7);
+
+    if (lwin7.length !== 7) return;
+
+    const item = caseItems[rowIndex];
+    handleSelectLwin(rowIndex, {
+      lwin: lwin7,
+      displayName: item?.productName ?? 'Manual LWIN entry',
+      producerName: item?.producer || null,
+      country: null,
+      region: null,
+      type: null,
+    });
+    setManualLwinRowIndex(null);
+    setManualLwinValue('');
   };
 
   const selectedOwnerName = partnersData?.find((p) => p.id === selectedOwnerId)?.name ?? '';
@@ -814,6 +840,15 @@ const WMSStockImportPage = () => {
                                             Search...
                                           </button>
                                           <button
+                                            onClick={() => {
+                                              setManualLwinRowIndex(i);
+                                              setManualLwinValue('');
+                                            }}
+                                            className="rounded-md border border-border-primary bg-white px-2 py-1 text-xs text-text-muted hover:bg-fill-secondary dark:bg-transparent"
+                                          >
+                                            Enter LWIN
+                                          </button>
+                                          <button
                                             onClick={() => handleMarkAsSpirit(i)}
                                             className="rounded-md border border-blue-300 bg-white px-2 py-1 text-xs text-blue-600 hover:bg-blue-50 dark:border-blue-600 dark:bg-transparent dark:hover:bg-blue-900/30"
                                           >
@@ -823,7 +858,7 @@ const WMSStockImportPage = () => {
                                       </div>
                                     )}
 
-                                    {validation?.status === 'no_match' && !isExpanded && (
+                                    {validation?.status === 'no_match' && !isExpanded && manualLwinRowIndex !== i && (
                                       <div className="flex items-center gap-2">
                                         <span className="text-xs text-red-600 dark:text-red-400">
                                           No LWIN match found.
@@ -839,10 +874,51 @@ const WMSStockImportPage = () => {
                                           Search LWIN
                                         </button>
                                         <button
+                                          onClick={() => {
+                                            setManualLwinRowIndex(i);
+                                            setManualLwinValue('');
+                                          }}
+                                          className="rounded-md border border-border-primary bg-white px-2 py-1 text-xs hover:bg-fill-secondary dark:bg-transparent"
+                                        >
+                                          Enter LWIN
+                                        </button>
+                                        <button
                                           onClick={() => handleMarkAsSpirit(i)}
                                           className="rounded-md border border-blue-300 bg-white px-2 py-1 text-xs text-blue-600 hover:bg-blue-50 dark:border-blue-600 dark:bg-transparent dark:hover:bg-blue-900/30"
                                         >
                                           Not a wine
+                                        </button>
+                                      </div>
+                                    )}
+
+                                    {/* Manual LWIN entry */}
+                                    {manualLwinRowIndex === i && (
+                                      <div className="flex items-center gap-2">
+                                        <span className="text-xs text-text-muted">LWIN:</span>
+                                        <input
+                                          type="text"
+                                          value={manualLwinValue}
+                                          onChange={(e) => setManualLwinValue(e.target.value)}
+                                          onKeyDown={(e) => {
+                                            if (e.key === 'Enter') handleManualLwin(i, manualLwinValue);
+                                            if (e.key === 'Escape') { setManualLwinRowIndex(null); setManualLwinValue(''); }
+                                          }}
+                                          placeholder="e.g. 1870592 or full LWIN18"
+                                          className="w-56 rounded-md border border-border-primary bg-white px-2.5 py-1.5 font-mono text-xs focus:border-border-brand focus:outline-none dark:bg-transparent"
+                                          autoFocus
+                                        />
+                                        <button
+                                          onClick={() => handleManualLwin(i, manualLwinValue)}
+                                          disabled={manualLwinValue.replace(/[^0-9]/g, '').length < 7}
+                                          className="rounded-md border border-emerald-400 bg-emerald-50 px-2 py-1 text-xs text-emerald-700 hover:bg-emerald-100 disabled:opacity-40 dark:border-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-300"
+                                        >
+                                          Apply
+                                        </button>
+                                        <button
+                                          onClick={() => { setManualLwinRowIndex(null); setManualLwinValue(''); }}
+                                          className="text-xs text-text-muted hover:text-text-primary"
+                                        >
+                                          Cancel
                                         </button>
                                       </div>
                                     )}
