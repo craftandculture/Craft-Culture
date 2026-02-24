@@ -3933,6 +3933,7 @@ export const wmsStock = pgTable(
     consignmentCommissionPercent: doublePrecision('consignment_commission_percent'),
     expiryDate: timestamp('expiry_date', { mode: 'date' }),
     isPerishable: boolean('is_perishable').default(false),
+    category: text('category'),
     notes: text('notes'),
     ...timestamps,
   },

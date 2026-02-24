@@ -1,9 +1,9 @@
-sku,item_name,producer,vintage,quantity_available,unit,bottles_per_case,bottle_size_cl,location_code
-W-001,Chateau Margaux,Chateau Margaux,2015,12,case,6,75,A-01-01
-W-002,Opus One,Opus One Winery,2018,5,case,6,75,A-01-02
-W-003,Dom Perignon,Moet & Chandon,2012,10,case,6,75,A-02-01
-W-004,Sassicaia Bolgheri,Tenuta San Guido,2019,8,case,12,75,B-01-01
-W-005,Penfolds Grange Magnum,Penfolds,2017,3,case,6,150,B-01-02
-W-006,Cloudy Bay Sauvignon Blanc,Cloudy Bay,2023,20,case,12,75,
-W-007,Hennessy XO,Hennessy,,15,case,1,70,
-W-008,Chateau Margaux,Chateau Margaux,2015,4,case,3,150,A-01-03
+sku,item_name,producer,vintage,quantity_available,unit,bottles_per_case,bottle_size_cl,location_code,category
+W-001,Chateau Margaux,Chateau Margaux,2015,12,case,6,75,A-01-01,Wine
+W-002,Opus One,Opus One Winery,2018,5,case,6,75,A-01-02,Wine
+W-003,Dom Perignon,Moet & Chandon,2012,10,case,6,75,A-02-01,Sparkling Wine
+W-004,Sassicaia Bolgheri,Tenuta San Guido,2019,8,case,12,75,B-01-01,Wine
+W-005,Penfolds Grange Magnum,Penfolds,2017,3,case,6,150,B-01-02,Wine
+W-006,Cloudy Bay Sauvignon Blanc,Cloudy Bay,2023,20,case,12,75,,Wine
+W-007,Hennessy XO,Hennessy,,15,case,1,70,,Brandy
+W-008,Macallan 18yr,The Macallan,,5,case,6,70,GEN-01-00,Whisky
