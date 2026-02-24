@@ -427,6 +427,14 @@ const WMSDashboardContent = () => {
               </CardContent>
             </Card>
           </Link>
+          <Link href="/platform/admin/wms/bin-map">
+            <Card className="cursor-pointer transition-colors hover:border-border-brand">
+              <CardContent className="flex items-center gap-3 p-4">
+                <Icon icon={IconBuildingWarehouse} size="md" className="text-text-muted" />
+                <Typography variant="bodySm" className="font-medium">Bin Map</Typography>
+              </CardContent>
+            </Card>
+          </Link>
           <Link href="/platform/admin/wms/cycle-count">
             <Card className="cursor-pointer transition-colors hover:border-border-brand">
               <CardContent className="flex items-center gap-3 p-4">
