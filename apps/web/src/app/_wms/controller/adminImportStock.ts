@@ -1,5 +1,5 @@
 import { TRPCError } from '@trpc/server';
-import { eq, inArray } from 'drizzle-orm';
+import { eq, inArray, like, sql } from 'drizzle-orm';
 import { z } from 'zod';
 
 import buildLwin18 from '@/app/_lwin/utils/buildLwin18';
@@ -214,20 +214,50 @@ const adminImportStock = adminProcedure
           })
           .returning();
 
-        // Create case labels in batch
-        const caseLabelValues = Array.from({ length: item.quantity }, (_, i) => ({
-          barcode: generateCaseLabelBarcode(lwin18, i + 1),
-          lwin18,
-          productName: item.productName,
-          lotNumber,
-          currentLocationId: itemLocation.id,
-          isActive: true,
-        }));
+        // Create case labels with advisory lock to prevent duplicate barcodes
+        const lockKey = Buffer.from(lwin18).reduce((acc, byte) => acc + byte, 0) % 2147483647;
+        await tx.execute(sql`SELECT pg_advisory_xact_lock(${lockKey})`);
 
-        const caseLabels = await tx
-          .insert(wmsCaseLabels)
-          .values(caseLabelValues)
-          .returning({ id: wmsCaseLabels.id, barcode: wmsCaseLabels.barcode });
+        // Find max existing sequence for this LWIN18
+        const barcodePrefix = `CASE-${lwin18}-`;
+        const existingLabels = await tx
+          .select({ barcode: wmsCaseLabels.barcode })
+          .from(wmsCaseLabels)
+          .where(like(wmsCaseLabels.barcode, `${barcodePrefix}%`));
+
+        let maxSeq = 0;
+        for (const label of existingLabels) {
+          const seqMatch = label.barcode.match(/(\d+)$/);
+          if (seqMatch) {
+            const seq = parseInt(seqMatch[1], 10);
+            if (seq > maxSeq) maxSeq = seq;
+          }
+        }
+
+        // Insert labels one-by-one with conflict handling
+        const caseLabels: Array<{ id: string; barcode: string }> = [];
+        let created = 0;
+        while (created < item.quantity) {
+          maxSeq++;
+          const barcode = generateCaseLabelBarcode(lwin18, maxSeq);
+          const inserted = await tx
+            .insert(wmsCaseLabels)
+            .values({
+              barcode,
+              lwin18,
+              productName: item.productName,
+              lotNumber,
+              currentLocationId: itemLocation.id,
+              isActive: true,
+            })
+            .onConflictDoNothing({ target: wmsCaseLabels.barcode })
+            .returning({ id: wmsCaseLabels.id, barcode: wmsCaseLabels.barcode });
+
+          if (inserted.length > 0) {
+            caseLabels.push(inserted[0]!);
+            created++;
+          }
+        }
 
         // Create movement record
         const movementNumber = `${basePrefix}${(baseSequence + movementOffset).toString().padStart(4, '0')}`;
