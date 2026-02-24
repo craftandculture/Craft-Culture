@@ -10,7 +10,7 @@
  * Returns matching wines with their LWIN7 codes for building LWIN18.
  */
 
-import { and, eq, ilike, or, sql } from 'drizzle-orm';
+import { and, desc, eq, ilike, or, sql } from 'drizzle-orm';
 import { z } from 'zod';
 
 import db from '@/database/client';
@@ -69,23 +69,25 @@ const adminSearchLwin = adminProcedure
     const whereClause = and(...searchConditions, ...filterConditions);
 
     // Execute search with ranking
-    const results = await db
-      .select({
-        lwin: lwinWines.lwin,
-        displayName: lwinWines.displayName,
-        producerTitle: lwinWines.producerTitle,
-        producerName: lwinWines.producerName,
-        wine: lwinWines.wine,
-        country: lwinWines.country,
-        region: lwinWines.region,
-        subRegion: lwinWines.subRegion,
-        colour: lwinWines.colour,
-        type: lwinWines.type,
-        subType: lwinWines.subType,
-        designation: lwinWines.designation,
-        classification: lwinWines.classification,
-        vintageConfig: lwinWines.vintageConfig,
-      })
+    const selectFields = {
+      lwin: lwinWines.lwin,
+      displayName: lwinWines.displayName,
+      producerTitle: lwinWines.producerTitle,
+      producerName: lwinWines.producerName,
+      wine: lwinWines.wine,
+      country: lwinWines.country,
+      region: lwinWines.region,
+      subRegion: lwinWines.subRegion,
+      colour: lwinWines.colour,
+      type: lwinWines.type,
+      subType: lwinWines.subType,
+      designation: lwinWines.designation,
+      classification: lwinWines.classification,
+      vintageConfig: lwinWines.vintageConfig,
+    };
+
+    let results = await db
+      .select(selectFields)
       .from(lwinWines)
       .where(whereClause)
       .orderBy(
@@ -95,6 +97,30 @@ const adminSearchLwin = adminProcedure
         sql`LENGTH(${lwinWines.displayName})`,
       )
       .limit(limit);
+
+    // Fuzzy fallback: use word_similarity when ILIKE finds nothing (handles typos)
+    if (results.length === 0) {
+      const queryLower = query.toLowerCase();
+
+      results = await db
+        .select(selectFields)
+        .from(lwinWines)
+        .where(
+          and(
+            ...filterConditions,
+            or(
+              sql`word_similarity(${queryLower}, ${lwinWines.displayName}) > 0.35`,
+              sql`word_similarity(${queryLower}, ${lwinWines.wine}) > 0.35`,
+            ),
+          ),
+        )
+        .orderBy(
+          desc(
+            sql`word_similarity(${queryLower}, ${lwinWines.displayName})`,
+          ),
+        )
+        .limit(limit);
+    }
 
     return {
       results,
