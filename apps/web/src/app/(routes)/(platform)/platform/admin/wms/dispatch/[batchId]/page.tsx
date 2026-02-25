@@ -24,6 +24,7 @@ import Card from '@/app/_ui/components/Card/Card';
 import CardContent from '@/app/_ui/components/Card/CardContent';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Typography from '@/app/_ui/components/Typography/Typography';
+import ZebraPrint from '@/app/_wms/components/ZebraPrint';
 import usePrint from '@/app/_wms/hooks/usePrint';
 import downloadZplFile from '@/app/_wms/utils/downloadZplFile';
 import generateDispatchLabelZpl from '@/app/_wms/utils/generateDispatchLabelZpl';
@@ -231,6 +232,7 @@ const WMSDispatchBatchDetailPage = () => {
               {batch.distributorName}
             </Typography>
           </div>
+          <ZebraPrint />
         </div>
 
         {/* Summary Cards */}
