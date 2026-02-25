@@ -128,7 +128,7 @@ const CC_LOGO_GF = '^GFA,1500,1500,25,000000000000000000000000000000000000000000
  */
 const generateLabelZpl = (data: LabelData) => {
   const [productLine1, productLine2] = splitToTwoLines(escapeZpl(data.productName), 38);
-  const lwin = escapeZpl(data.lwin18);
+  const lwin = escapeZpl(data.lwin18.replace(/^SKU-/, ''));
   const packSize = escapeZpl(data.packSize || '-');
   // Use provided vintage, or extract from LWIN-18 if not provided
   const vintageValue = data.vintage || extractVintageFromLwin(data.lwin18);
@@ -141,6 +141,8 @@ const generateLabelZpl = (data: LabelData) => {
   const owner = data.owner ? escapeZpl(data.owner) : '-';
   const producer = data.producer ? escapeZpl(data.producer) : '';
 
+  // Strip legacy 'SKU-' prefix from barcode values for shorter barcodes
+  const barcodeValue = data.barcode?.replace(/^SKU-/, '') ?? '';
   const showBarcode = data.showBarcode !== false && data.barcode;
   const showQr = data.showQr !== false;
   const isPalletLabel = data.labelType === 'pallet';
@@ -161,9 +163,9 @@ ${isPalletLabel ? `^FX -- PALLET banner (white on black, top-right) --
 ` : ''}
 ^FX -- Barcode --
 ^FO30,75
-^BY2,3,55
+^BY${barcodeValue.length > 25 ? '1' : '2'},3,55
 ^BCN,55,Y,N,N
-^FD${escapeZpl(data.barcode ?? '')}^FS
+^FD${escapeZpl(barcodeValue)}^FS
 
 ^FX -- QR code (top-right, mag 4, alongside barcode) --
 ^FO630,80
