@@ -805,6 +805,7 @@ const StockExplorerPage = () => {
       const labels: LabelData[] = Array.from({ length: qty }, () => ({
         barcode: product.lwin18,
         productName: product.productName,
+        producer: product.producer ?? undefined,
         lwin18: product.lwin18,
         packSize,
         vintage: product.vintage ?? undefined,
