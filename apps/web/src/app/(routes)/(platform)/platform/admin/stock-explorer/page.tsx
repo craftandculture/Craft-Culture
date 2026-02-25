@@ -15,6 +15,7 @@ import {
   IconLayoutRows,
   IconLock,
   IconPackage,
+  IconPrinter,
   IconSearch,
   IconSortAscending,
   IconSortDescending,
@@ -25,11 +26,16 @@ import {
 import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { toast } from 'sonner';
 
 import Button from '@/app/_ui/components/Button/Button';
 import Card from '@/app/_ui/components/Card/Card';
 import CardContent from '@/app/_ui/components/Card/CardContent';
 import Typography from '@/app/_ui/components/Typography/Typography';
+import usePrint from '@/app/_wms/hooks/usePrint';
+import PrinterProvider from '@/app/_wms/providers/PrinterProvider';
+import { generateBatchLabelsZpl } from '@/app/_wms/utils/generateLabelZpl';
+import type { LabelData } from '@/app/_wms/utils/generateLabelZpl';
 import useTRPC from '@/lib/trpc/browser';
 
 type SortField = 'productName' | 'totalCases' | 'vintage' | 'receivedAt';
@@ -194,6 +200,71 @@ const PaginationButton = ({
   </button>
 );
 
+// ─── Print Cell ─────────────────────────────────────────────────────────────
+
+interface PrintCellProps {
+  maxQty: number;
+  onPrint: (qty: number) => void;
+}
+
+const PrintCell = ({ maxQty, onPrint }: PrintCellProps) => {
+  const [editing, setEditing] = useState(false);
+  const [qty, setQty] = useState(maxQty);
+
+  if (!editing) {
+    return (
+      <td className="px-3 py-2 text-right">
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            setQty(maxQty);
+            setEditing(true);
+          }}
+          className="rounded p-1 text-text-muted transition-colors hover:bg-surface-muted hover:text-text-brand"
+          title="Print labels"
+        >
+          <IconPrinter className="h-4 w-4" />
+        </button>
+      </td>
+    );
+  }
+
+  return (
+    <td className="px-3 py-2 text-right">
+      <div className="flex items-center justify-end gap-1.5">
+        <input
+          type="number"
+          min={1}
+          max={maxQty}
+          value={qty}
+          onChange={(e) => setQty(Math.max(1, Math.min(maxQty, Number(e.target.value) || 1)))}
+          onClick={(e) => e.stopPropagation()}
+          className="w-12 rounded border border-border-primary bg-background-primary px-1.5 py-0.5 text-center text-xs tabular-nums focus:border-border-brand focus:outline-none"
+        />
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onPrint(qty);
+            setEditing(false);
+          }}
+          className="rounded bg-fill-brand px-2 py-0.5 text-[11px] font-medium text-white transition-colors hover:bg-fill-brand/90"
+        >
+          Print
+        </button>
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            setEditing(false);
+          }}
+          className="rounded p-0.5 text-text-muted hover:text-text-primary"
+        >
+          <IconX className="h-3 w-3" />
+        </button>
+      </div>
+    </td>
+  );
+};
+
 // ─── Product Row ────────────────────────────────────────────────────────────
 
 interface ProductRowProps {
@@ -228,9 +299,10 @@ interface ProductRowProps {
   onToggle: () => void;
   density: RowDensity;
   visibleColumns: Record<string, boolean>;
+  onPrintLabels: (product: ProductRowProps['product'], loc: ProductRowProps['product']['locations'][number], qty: number) => void;
 }
 
-const ProductRow = ({ product, isExpanded, onToggle, density, visibleColumns }: ProductRowProps) => {
+const ProductRow = ({ product, isExpanded, onToggle, density, visibleColumns, onPrintLabels }: ProductRowProps) => {
   const dc = DENSITY_CLASSES[density];
   const tdClass = dc.td;
   const tdClassRight = `${dc.td} text-right tabular-nums`;
@@ -395,6 +467,7 @@ const ProductRow = ({ product, isExpanded, onToggle, density, visibleColumns }: 
                     <th className="px-3 py-1.5 text-left">Owner</th>
                     <th className="px-3 py-1.5 text-left">Lot</th>
                     <th className="px-3 py-1.5 text-left">Expiry</th>
+                    <th className="px-3 py-1.5 text-right">Print</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -455,6 +528,10 @@ const ProductRow = ({ product, isExpanded, onToggle, density, visibleColumns }: 
                             ? new Date(loc.expiryDate).toLocaleDateString('en-GB')
                             : '—'}
                         </td>
+                        <PrintCell
+                          maxQty={loc.quantityCases}
+                          onPrint={(qty) => onPrintLabels(product, loc, qty)}
+                        />
                       </tr>
                     );
                   })}
@@ -544,6 +621,7 @@ const ColumnToggle = ({ columns, onChange }: ColumnToggleProps) => {
  */
 const StockExplorerPage = () => {
   const api = useTRPC();
+  const { print } = usePrint();
 
   // Search & filters
   const [search, setSearch] = useState('');
@@ -715,6 +793,36 @@ const StockExplorerPage = () => {
     setSortOrder('desc');
     setPage(0);
   }, []);
+
+  // Print labels handler
+  const handlePrintLabels = useCallback(
+    async (
+      product: ProductRowProps['product'],
+      loc: ProductRowProps['product']['locations'][number],
+      qty: number,
+    ) => {
+      const packSize = `${product.caseConfig ?? 12}x${((Number(product.bottleSize?.replace(/[^\d]/g, '')) || 750) / 10).toFixed(0)}cl`;
+      const labels: LabelData[] = Array.from({ length: qty }, () => ({
+        productName: product.productName,
+        lwin18: product.lwin18,
+        packSize,
+        vintage: product.vintage ?? undefined,
+        locationCode: loc.locationCode,
+        owner: loc.ownerName,
+        lotNumber: loc.lotNumber ?? undefined,
+        showBarcode: false,
+        showQr: true,
+      }));
+      const zpl = generateBatchLabelsZpl(labels);
+      const success = await print(zpl, '4x2');
+      if (success) {
+        toast.success(`Printing ${qty} label${qty !== 1 ? 's' : ''} for ${product.productName}`);
+      } else {
+        toast.error('Print failed — check printer connection');
+      }
+    },
+    [print],
+  );
 
   const hasActiveFilters = debouncedSearch || ownerId || vintageFrom || vintageTo || quickFilter !== 'all';
 
@@ -1182,6 +1290,7 @@ const StockExplorerPage = () => {
                           onToggle={() => toggleRow(key)}
                           density={density}
                           visibleColumns={visibleColumns}
+                          onPrintLabels={handlePrintLabels}
                         />
                       );
                     })
@@ -1246,4 +1355,11 @@ const StockExplorerPage = () => {
   );
 };
 
-export default StockExplorerPage;
+/** Wrap in PrinterProvider since Stock Explorer is outside the WMS layout */
+const StockExplorerWithPrinter = () => (
+  <PrinterProvider>
+    <StockExplorerPage />
+  </PrinterProvider>
+);
+
+export default StockExplorerWithPrinter;
