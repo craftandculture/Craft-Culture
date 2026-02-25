@@ -168,14 +168,18 @@ const adminImportStock = adminProcedure
           });
           lwin18 = result.lwin18;
         } else {
-          // Spirit/non-wine: SKU-based identifier
-          const skuPart = item.sku
-            ? item.sku.replace(/[^a-zA-Z0-9]/g, '').slice(0, 10).toUpperCase()
-            : item.productName.replace(/[^a-zA-Z0-9]/g, '').slice(0, 10).toUpperCase();
+          // Spirit/non-wine: product-name-based identifier
+          // Always derive from productName (not SKU) because multiple
+          // products from the same producer often share an SKU prefix,
+          // causing collisions at short truncation lengths.
+          const namePart = item.productName
+            .replace(/[^a-zA-Z0-9]/g, '')
+            .slice(0, 20)
+            .toUpperCase();
           const vintagePart = item.vintage ?? '0000';
           const casePart = bottlesPerCase.toString().padStart(2, '0');
           const sizePart = bottleSizeMl.toString().padStart(5, '0');
-          lwin18 = `SKU-${skuPart}-${vintagePart}-${casePart}-${sizePart}`;
+          lwin18 = `SKU-${namePart}-${vintagePart}-${casePart}-${sizePart}`;
         }
 
         // Resolve location for this item
