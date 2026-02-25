@@ -195,25 +195,25 @@ ${productLine2 ? `^FX -- Product name line 2 --
 ^BQN,2,3
 ^FDQA,https://www.craftculture.xyz/cold-chain.html^FS
 
-^FX -- SCAN TO TRACE YOUR CASE --
-^FO648,278
+^FX -- Separator (short, avoids QR area) --
+^FO30,316
+^GB600,1,1^FS
+
+^FX -- SCAN TO TRACE YOUR CASE (below QR) --
+^FO648,310
 ^A0N,14,14
 ^FDSCAN TO TRACE^FS
-^FO656,294
+^FO656,326
 ^A0N,14,14
 ^FDYOUR CASE^FS
 
-^FX -- Separator --
-^FO30,316
-^GB750,1,1^FS
-
 ^FX -- Lot/Order --
-^FO30,328
+^FO30,332
 ^A0N,26,26
 ^FD${lotRaw}^FS
 
 ^FX -- LWIN --
-^FO30,362
+^FO30,368
 ^A0N,18,18
 ^FDLWIN: ${lwin}^FS
 
