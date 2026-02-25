@@ -256,11 +256,6 @@ ${showQr ? `^FX -- QR code (mid-right, mag 4) --
 ^FO590,88
 ^BQN,2,4
 ^FDQA,https://www.craftculture.xyz/cold-chain.html^FS
-
-^FX -- SCAN TO TRACE YOUR CASE (single line below QR) --
-^FO566,244
-^A0N,16,16
-^FDSCAN TO TRACE YOUR CASE^FS
 ` : ''}
 ^FX -- Separator --
 ^FO30,196
@@ -305,6 +300,12 @@ ${productLine2 ? `^FO30,240
 ^FO230,310
 ^A0N,18,18
 ^FDcraftculture.xyz^FS
+
+${showQr ? `^FX -- Scan to trace (footer right, next to QR above) --
+^FO580,316
+^A0N,14,14
+^FDSCAN TO TRACE^FS
+` : ''}
 
 ^XZ`;
 
