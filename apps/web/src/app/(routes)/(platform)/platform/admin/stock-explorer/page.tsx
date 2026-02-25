@@ -801,8 +801,9 @@ const StockExplorerPage = () => {
       loc: ProductRowProps['product']['locations'][number],
       qty: number,
     ) => {
-      const packSize = `${product.caseConfig ?? 12}x${((Number(product.bottleSize?.replace(/[^\d]/g, '')) || 750) / 10).toFixed(0)}cl`;
+      const packSize = `${product.caseConfig ?? 12}x${product.bottleSize ?? '75cl'}`;
       const labels: LabelData[] = Array.from({ length: qty }, () => ({
+        barcode: product.lwin18,
         productName: product.productName,
         lwin18: product.lwin18,
         packSize,
@@ -810,8 +811,7 @@ const StockExplorerPage = () => {
         locationCode: loc.locationCode,
         owner: loc.ownerName,
         lotNumber: loc.lotNumber ?? undefined,
-        showBarcode: false,
-        showQr: true,
+        showBarcode: true,
       }));
       const zpl = generateBatchLabelsZpl(labels);
       const success = await print(zpl, '4x2');
