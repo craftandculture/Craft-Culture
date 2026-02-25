@@ -141,8 +141,15 @@ const generateLabelZpl = (data: LabelData) => {
   const owner = data.owner ? escapeZpl(data.owner) : '-';
   const producer = data.producer ? escapeZpl(data.producer) : '';
 
-  // Strip legacy 'SKU-' prefix from barcode values for shorter barcodes
-  const barcodeValue = data.barcode?.replace(/^SKU-/, '') ?? '';
+  // Strip legacy 'SKU-' prefix and truncate long spirit name parts for barcode fit
+  let barcodeValue = data.barcode?.replace(/^SKU-/, '') ?? '';
+  if (barcodeValue.length > 32) {
+    const parts = barcodeValue.split('-');
+    if (parts[0] && parts[0].length > 10) {
+      parts[0] = parts[0].slice(0, 10);
+      barcodeValue = parts.join('-');
+    }
+  }
   const showBarcode = data.showBarcode !== false && data.barcode;
   const showQr = data.showQr !== false;
   const isPalletLabel = data.labelType === 'pallet';
