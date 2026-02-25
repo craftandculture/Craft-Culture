@@ -43,7 +43,7 @@ const adminHealthCheckZoho = adminProcedure.query(async () => {
   // Step 2: Test API call (fetch organization info - lightweight)
   let apiReachable = false;
   try {
-    await zohoFetch<{ code: number }>('/organization');
+    await zohoFetch<{ code: number }>('/organizations');
     apiReachable = true;
   } catch {
     // Token works but API call failed
