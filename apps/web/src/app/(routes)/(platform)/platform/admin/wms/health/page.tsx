@@ -47,7 +47,7 @@ const StatusDot = ({ status }: { status: 'green' | 'amber' | 'red' | 'gray' }) =
  * Format latency with color coding
  */
 const LatencyBadge = ({ ms }: { ms: number }) => {
-  const color = ms < 100 ? 'text-emerald-600' : ms < 500 ? 'text-amber-600' : 'text-red-600';
+  const color = ms < 100 ? 'text-emerald-600' : ms < 750 ? 'text-amber-600' : 'text-red-600';
   return <span className={`text-sm font-mono ${color}`}>{ms}ms</span>;
 };
 
