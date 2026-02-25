@@ -174,12 +174,12 @@ const adminImportStock = adminProcedure
           // causing collisions at short truncation lengths.
           const namePart = item.productName
             .replace(/[^a-zA-Z0-9]/g, '')
-            .slice(0, 20)
+            .slice(0, 10)
             .toUpperCase();
           const vintagePart = item.vintage ?? '0000';
           const casePart = bottlesPerCase.toString().padStart(2, '0');
           const sizePart = bottleSizeMl.toString().padStart(5, '0');
-          lwin18 = `SKU-${namePart}-${vintagePart}-${casePart}-${sizePart}`;
+          lwin18 = `${namePart}-${vintagePart}-${casePart}-${sizePart}`;
         }
 
         // Resolve location for this item
