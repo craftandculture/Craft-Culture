@@ -57,6 +57,8 @@ import adminGetStockAtLocation from './controller/adminGetStockAtLocation';
 import adminGetStockByOwner from './controller/adminGetStockByOwner';
 import adminGetStockByProduct from './controller/adminGetStockByProduct';
 import adminGetStockOverview from './controller/adminGetStockOverview';
+import adminHealthCheckDb from './controller/adminHealthCheckDb';
+import adminHealthCheckZoho from './controller/adminHealthCheckZoho';
 import adminImportStock from './controller/adminImportStock';
 import adminMarkLabelsPrinted from './controller/adminMarkLabelsPrinted';
 import adminMovePallet from './controller/adminMovePallet';
@@ -214,6 +216,11 @@ const cycleCountRouter = createTRPCRouter({
   reconcile: adminReconcileCycleCount,
 });
 
+const healthRouter = createTRPCRouter({
+  checkDb: adminHealthCheckDb,
+  checkZoho: adminHealthCheckZoho,
+});
+
 const adminRouter = createTRPCRouter({
   locations: locationsRouter,
   receiving: receivingRouter,
@@ -225,6 +232,7 @@ const adminRouter = createTRPCRouter({
   dispatch: dispatchRouter,
   pallets: palletRouter,
   cycleCounts: cycleCountRouter,
+  health: healthRouter,
 });
 
 const partnerRouter = createTRPCRouter({
