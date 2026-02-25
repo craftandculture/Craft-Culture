@@ -106,7 +106,7 @@ const AdminSidebar = ({ isCollapsed, onToggleCollapse }: AdminSidebarProps) => {
       <Link
         key={item.href}
         href={item.href}
-        className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+        className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
           isActive
             ? 'bg-fill-brand/10 text-text-brand'
             : 'text-text-secondary hover:bg-fill-primary-hover hover:text-text-primary'
