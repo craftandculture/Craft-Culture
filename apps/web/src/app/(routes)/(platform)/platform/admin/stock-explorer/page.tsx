@@ -194,7 +194,7 @@ const PaginationButton = ({
   <button
     onClick={onClick}
     disabled={disabled}
-    className="rounded-md p-2 text-text-muted transition-colors hover:bg-fill-primary-hover hover:text-text-primary disabled:opacity-30 disabled:hover:bg-transparent"
+    className="rounded-md p-2.5 text-text-muted transition-colors hover:bg-fill-primary-hover hover:text-text-primary disabled:opacity-30 disabled:hover:bg-transparent"
   >
     {icon}
   </button>
@@ -421,8 +421,8 @@ const ProductRow = ({ product, isExpanded, onToggle, density, visibleColumns, on
       {isExpanded && product.locations.length > 0 && (
         <tr>
           <td colSpan={20} className="bg-surface-muted px-0 py-0">
-            <div className="border-b border-border-muted px-8 py-4">
-              <div className="mb-3 flex items-center justify-between">
+            <div className="border-b border-border-muted px-4 py-4 sm:px-8">
+              <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <Typography variant="bodyXs" className="font-semibold uppercase tracking-wider text-text-muted">
                   Location Breakdown — {product.locations.length} record{product.locations.length !== 1 ? 's' : ''}
                 </Typography>
@@ -456,6 +456,7 @@ const ProductRow = ({ product, isExpanded, onToggle, density, visibleColumns, on
                   </Link>
                 </div>
               </div>
+              <div className="overflow-x-auto">
               <table className="w-full text-[13px]">
                 <thead>
                   <tr className="text-[11px] uppercase tracking-wider text-text-muted">
@@ -465,8 +466,8 @@ const ProductRow = ({ product, isExpanded, onToggle, density, visibleColumns, on
                     <th className="px-3 py-1.5 text-right">Avail</th>
                     <th className="w-[100px] px-3 py-1.5 text-left" />
                     <th className="px-3 py-1.5 text-left">Owner</th>
-                    <th className="px-3 py-1.5 text-left">Lot</th>
-                    <th className="px-3 py-1.5 text-left">Expiry</th>
+                    <th className="hidden px-3 py-1.5 text-left sm:table-cell">Lot</th>
+                    <th className="hidden px-3 py-1.5 text-left sm:table-cell">Expiry</th>
                     <th className="px-3 py-1.5 text-right">Print</th>
                   </tr>
                 </thead>
@@ -520,10 +521,10 @@ const ProductRow = ({ product, isExpanded, onToggle, density, visibleColumns, on
                         <td className="px-3 py-2">
                           <OwnerBadge name={loc.ownerName} />
                         </td>
-                        <td className="px-3 py-2 font-mono text-xs text-text-muted">
+                        <td className="hidden px-3 py-2 font-mono text-xs text-text-muted sm:table-cell">
                           {loc.lotNumber ?? '—'}
                         </td>
-                        <td className="px-3 py-2 text-text-muted">
+                        <td className="hidden px-3 py-2 text-text-muted sm:table-cell">
                           {loc.expiryDate
                             ? new Date(loc.expiryDate).toLocaleDateString('en-GB')
                             : '—'}
@@ -537,6 +538,7 @@ const ProductRow = ({ product, isExpanded, onToggle, density, visibleColumns, on
                   })}
                 </tbody>
               </table>
+              </div>
             </div>
           </td>
         </tr>
@@ -889,7 +891,7 @@ const StockExplorerPage = () => {
                 <button
                   key={d}
                   onClick={() => setDensity(d)}
-                  className={`px-2 py-1.5 transition-colors ${
+                  className={`px-3 py-2 transition-colors ${
                     density === d
                       ? 'bg-fill-brand/10 text-text-brand'
                       : 'text-text-muted hover:text-text-primary'
@@ -1007,9 +1009,9 @@ const StockExplorerPage = () => {
         )}
 
         {/* Search & Filters */}
-        <div className="flex flex-wrap items-center gap-3">
-          {/* Search */}
-          <div className="relative min-w-[280px] flex-1">
+        <div className="space-y-3">
+          {/* Search - full width on mobile */}
+          <div className="relative">
             <IconSearch className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" />
             <input
               type="text"
@@ -1020,41 +1022,44 @@ const StockExplorerPage = () => {
             />
           </div>
 
-          {/* Owner filter */}
-          <select
-            value={ownerId}
-            onChange={(e) => setOwnerId(e.target.value)}
-            className="rounded-lg border border-border-primary bg-background-primary px-3 py-2.5 text-sm text-text-primary focus:border-border-brand focus:outline-none"
-          >
-            <option value="">All Owners</option>
-            {owners.map((o) => (
-              <option key={o.ownerId} value={o.ownerId}>
-                {o.ownerName} ({o.totalCases})
-              </option>
-            ))}
-          </select>
+          {/* Owner + Vintage row */}
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Owner filter */}
+            <select
+              value={ownerId}
+              onChange={(e) => setOwnerId(e.target.value)}
+              className="flex-1 rounded-lg border border-border-primary bg-background-primary px-3 py-2.5 text-sm text-text-primary focus:border-border-brand focus:outline-none sm:flex-none"
+            >
+              <option value="">All Owners</option>
+              {owners.map((o) => (
+                <option key={o.ownerId} value={o.ownerId}>
+                  {o.ownerName} ({o.totalCases})
+                </option>
+              ))}
+            </select>
 
-          {/* Vintage range */}
-          <div className="flex items-center gap-1.5">
-            <input
-              type="number"
-              value={vintageFrom}
-              onChange={(e) => setVintageFrom(e.target.value)}
-              placeholder="From"
-              min={1900}
-              max={2100}
-              className="w-20 rounded-lg border border-border-primary bg-background-primary px-3 py-2.5 text-sm text-text-primary placeholder:text-text-muted focus:border-border-brand focus:outline-none"
-            />
-            <span className="text-text-muted">—</span>
-            <input
-              type="number"
-              value={vintageTo}
-              onChange={(e) => setVintageTo(e.target.value)}
-              placeholder="To"
-              min={1900}
-              max={2100}
-              className="w-20 rounded-lg border border-border-primary bg-background-primary px-3 py-2.5 text-sm text-text-primary placeholder:text-text-muted focus:border-border-brand focus:outline-none"
-            />
+            {/* Vintage range */}
+            <div className="flex items-center gap-1.5">
+              <input
+                type="number"
+                value={vintageFrom}
+                onChange={(e) => setVintageFrom(e.target.value)}
+                placeholder="From"
+                min={1900}
+                max={2100}
+                className="w-20 rounded-lg border border-border-primary bg-background-primary px-3 py-2.5 text-sm text-text-primary placeholder:text-text-muted focus:border-border-brand focus:outline-none"
+              />
+              <span className="text-text-muted">—</span>
+              <input
+                type="number"
+                value={vintageTo}
+                onChange={(e) => setVintageTo(e.target.value)}
+                placeholder="To"
+                min={1900}
+                max={2100}
+                className="w-20 rounded-lg border border-border-primary bg-background-primary px-3 py-2.5 text-sm text-text-primary placeholder:text-text-muted focus:border-border-brand focus:outline-none"
+              />
+            </div>
           </div>
         </div>
 
@@ -1069,7 +1074,7 @@ const StockExplorerPage = () => {
             <button
               key={cat.key}
               onClick={() => setCategory(category === cat.key ? undefined : cat.key)}
-              className={`rounded-full px-3.5 py-1.5 text-xs font-medium transition-colors ${
+              className={`rounded-full px-4 py-2 text-sm font-medium transition-colors ${
                 category === cat.key
                   ? 'bg-text-primary text-white'
                   : 'bg-surface-muted text-text-secondary hover:bg-fill-primary-hover hover:text-text-primary'
@@ -1087,7 +1092,7 @@ const StockExplorerPage = () => {
             <button
               key={qf.key}
               onClick={() => setQuickFilter(qf.key)}
-              className={`rounded-full px-3.5 py-1.5 text-xs font-medium transition-colors ${
+              className={`rounded-full px-4 py-2 text-sm font-medium transition-colors ${
                 quickFilter === qf.key
                   ? 'bg-fill-brand text-white'
                   : 'bg-surface-muted text-text-secondary hover:bg-fill-primary-hover hover:text-text-primary'
@@ -1303,9 +1308,9 @@ const StockExplorerPage = () => {
         </Card>
 
         {/* Pagination + page size */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-1.5">
-            <span className="text-xs text-text-muted">Show</span>
+        <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-between">
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-text-muted">Show</span>
             {[50, 100, 200].map((size) => (
               <button
                 key={size}
@@ -1313,7 +1318,7 @@ const StockExplorerPage = () => {
                   setLimit(size);
                   setPage(0);
                 }}
-                className={`rounded px-2 py-0.5 text-xs font-medium transition-colors ${
+                className={`rounded px-3 py-1.5 text-sm font-medium transition-colors ${
                   limit === size
                     ? 'bg-text-primary text-white'
                     : 'bg-fill-secondary text-text-secondary hover:bg-fill-tertiary'
