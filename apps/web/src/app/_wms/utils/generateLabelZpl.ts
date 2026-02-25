@@ -159,9 +159,9 @@ ${isPalletLabel ? `^FX -- PALLET banner (white on black, top-right) --
 ^FO510,10^GB270,55,55^FS
 ^FO545,18^A0N,36,36^FR^FDPALLET^FS
 ` : ''}
-^FX -- Barcode --
+^FX -- Barcode (BY2 for standard LWINs, BY1 for long SKUs) --
 ^FO30,75
-^BY2,3,55
+^BY${(data.barcode ?? '').length > 25 ? '1' : '2'},3,55
 ^BCN,55,Y,N,N
 ^FD${escapeZpl(data.barcode ?? '')}^FS
 
