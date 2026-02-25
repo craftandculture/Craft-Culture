@@ -286,7 +286,7 @@ const WMSTransferPage = () => {
                     <button
                       key={stock.id}
                       onClick={() => handleSelectStock(stock)}
-                      className="w-full rounded-lg border border-border-primary bg-fill-primary p-3 text-left transition-colors hover:border-border-brand"
+                      className="w-full rounded-lg border border-border-primary bg-fill-primary p-4 text-left transition-colors hover:border-border-brand"
                     >
                       <Typography variant="bodySm" className="font-medium">
                         {stock.productName}

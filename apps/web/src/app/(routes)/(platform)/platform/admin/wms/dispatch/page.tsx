@@ -146,7 +146,7 @@ const WMSDispatchBatchesPage = () => {
             <button
               key={filter.id}
               onClick={() => setStatusFilter(filter.id)}
-              className={`whitespace-nowrap rounded-md px-4 py-2 text-sm font-medium transition-colors ${
+              className={`whitespace-nowrap rounded-md px-4 py-3 text-sm font-medium transition-colors ${
                 statusFilter === filter.id
                   ? 'bg-fill-primary text-text-primary shadow-sm'
                   : 'text-text-muted hover:text-text-primary'

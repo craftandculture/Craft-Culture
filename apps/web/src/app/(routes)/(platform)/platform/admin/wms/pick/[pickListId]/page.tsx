@@ -392,10 +392,11 @@ const WMSPickListDetailPage = () => {
             </Button>
 
             {/* Skip / Next buttons */}
-            <div className="flex gap-2">
+            <div className="flex gap-3">
               {currentItemIndex > 0 && (
                 <Button
                   variant="outline"
+                  size="lg"
                   className="flex-1"
                   onClick={() => setCurrentItemIndex((prev) => prev - 1)}
                 >
@@ -405,6 +406,7 @@ const WMSPickListDetailPage = () => {
               {currentItemIndex < unpickedItems.length - 1 && (
                 <Button
                   variant="outline"
+                  size="lg"
                   className="flex-1"
                   onClick={() => setCurrentItemIndex((prev) => prev + 1)}
                 >
@@ -471,18 +473,18 @@ const WMSPickListDetailPage = () => {
                 <div className="flex items-center justify-center gap-4">
                   <Button
                     variant="outline"
-                    size="sm"
+                    className="h-12 w-12 text-lg"
                     onClick={() => setPickedQuantity((prev) => Math.max(1, prev - 1))}
                     disabled={pickedQuantity <= 1}
                   >
                     -
                   </Button>
-                  <Typography variant="headingMd" className="w-16 text-center">
+                  <Typography variant="headingLg" className="w-20 text-center">
                     {pickedQuantity}
                   </Typography>
                   <Button
                     variant="outline"
-                    size="sm"
+                    className="h-12 w-12 text-lg"
                     onClick={() => setPickedQuantity((prev) => prev + 1)}
                   >
                     +
@@ -578,6 +580,7 @@ const WMSPickListDetailPage = () => {
               </Button>
               <Button
                 variant="default"
+                size="lg"
                 className="flex-1"
                 onClick={confirmPick}
                 disabled={pickItemMutation.isPending || !pickedLocationId || !caseVerified}
