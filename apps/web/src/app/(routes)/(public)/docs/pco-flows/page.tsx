@@ -510,6 +510,49 @@ const PartnerTab = () => (
         ))}
       </div>
     </div>
+
+    {/* Cold Chain Verification */}
+    <div className="rounded-xl border border-cyan-500/30 bg-cyan-500/5 p-6">
+      <div className="mb-3 flex items-center gap-2">
+        <Icon icon={IconSnowflake} size="sm" className="text-cyan-500" />
+        <Typography variant="headingSm">Cold Chain Verification</Typography>
+      </div>
+      <Typography variant="bodyXs" colorRole="muted" className="mb-4">
+        Every case shipped to your client includes a branded thermal label with a QR code. When
+        scanned, it opens a provenance page showing live cold room conditions, humidity data, and the
+        full journey from winery to delivery.
+      </Typography>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div className="flex items-start gap-2 rounded-lg bg-fill-secondary/50 p-3">
+          <Icon icon={IconQrcode} size="sm" className="mt-0.5 text-cyan-500" />
+          <div>
+            <Typography variant="bodySm" className="font-medium">
+              QR-Coded Labels
+            </Typography>
+            <Typography variant="bodyXs" colorRole="muted">
+              Unique per-order QR code on every case linking to live provenance data
+            </Typography>
+          </div>
+        </div>
+        <div className="flex items-start gap-2 rounded-lg bg-fill-secondary/50 p-3">
+          <Icon icon={IconTemperature} size="sm" className="mt-0.5 text-cyan-500" />
+          <div>
+            <Typography variant="bodySm" className="font-medium">
+              12-14°C Cold Storage
+            </Typography>
+            <Typography variant="bodyXs" colorRole="muted">
+              4-zone sensor monitoring with real-time temperature and humidity tracking
+            </Typography>
+          </div>
+        </div>
+      </div>
+      <Typography variant="bodyXs" colorRole="muted" className="mt-3">
+        This gives your clients confidence that their wine has been properly stored and handled
+        throughout the entire supply chain. See the{' '}
+        <span className="font-medium text-cyan-600 dark:text-cyan-400">Cold Chain</span> tab for
+        full details.
+      </Typography>
+    </div>
   </div>
 );
 
@@ -565,7 +608,7 @@ const DistributorTab = () => (
       <FlowStep
         number={5}
         title="Confirm Stock Receipt"
-        description="When stock items arrive at your warehouse, confirm receipt on the platform. This updates the stock status to 'At Distributor'."
+        description="When stock items arrive at your warehouse, confirm receipt on the platform. Each case arrives with a branded cold chain label and QR code for provenance verification."
         actor="distributor"
       />
 
@@ -644,6 +687,62 @@ const DistributorTab = () => (
           </div>
         ))}
       </div>
+    </div>
+
+    {/* Cold Chain Labels */}
+    <div className="rounded-xl border border-cyan-500/30 bg-cyan-500/5 p-6">
+      <div className="mb-3 flex items-center gap-2">
+        <Icon icon={IconSnowflake} size="sm" className="text-cyan-500" />
+        <Typography variant="headingSm">Cold Chain Labels on Every Case</Typography>
+      </div>
+      <Typography variant="bodyXs" colorRole="muted" className="mb-4">
+        All cases dispatched through C&C arrive with a branded thermal label featuring a scannable QR
+        code. This links to a live provenance page showing cold room conditions, storage history, and
+        the full chain of custody.
+      </Typography>
+      <div className="space-y-3">
+        <div className="flex items-start gap-2 rounded-lg bg-fill-secondary/50 p-3">
+          <Icon icon={IconQrcode} size="sm" className="mt-0.5 text-cyan-500" />
+          <div>
+            <Typography variant="bodySm" className="font-medium">
+              Per-Order QR Code
+            </Typography>
+            <Typography variant="bodyXs" colorRole="muted">
+              Each label includes order number, product details, and a unique QR code. Scanning with
+              any smartphone opens the provenance verification page — no app required.
+            </Typography>
+          </div>
+        </div>
+        <div className="flex items-start gap-2 rounded-lg bg-fill-secondary/50 p-3">
+          <Icon icon={IconTemperature} size="sm" className="mt-0.5 text-cyan-500" />
+          <div>
+            <Typography variant="bodySm" className="font-medium">
+              Live Cold Room Data
+            </Typography>
+            <Typography variant="bodyXs" colorRole="muted">
+              The scan page shows real-time 4-zone temperature (12-14°C), humidity (50-75% RH), and
+              CO₂ monitoring from C&C&apos;s licensed & bonded warehouse.
+            </Typography>
+          </div>
+        </div>
+        <div className="flex items-start gap-2 rounded-lg bg-fill-secondary/50 p-3">
+          <Icon icon={IconShieldCheck} size="sm" className="mt-0.5 text-cyan-500" />
+          <div>
+            <Typography variant="bodySm" className="font-medium">
+              Provenance Assurance
+            </Typography>
+            <Typography variant="bodyXs" colorRole="muted">
+              Full traceability from winery to delivery. Gives your end clients confidence in the
+              handling and storage of their wine.
+            </Typography>
+          </div>
+        </div>
+      </div>
+      <Typography variant="bodyXs" colorRole="muted" className="mt-3">
+        See the{' '}
+        <span className="font-medium text-cyan-600 dark:text-cyan-400">Cold Chain</span> tab for
+        the full label design, scan experience, and technical specifications.
+      </Typography>
     </div>
   </div>
 );
