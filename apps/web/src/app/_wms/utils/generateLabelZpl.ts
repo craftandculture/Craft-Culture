@@ -162,9 +162,14 @@ ${isPalletLabel ? `^FX -- PALLET banner (white on black, top-right) --
 ^BCN,55,Y,N,N
 ^FD${escapeZpl(data.barcode ?? '')}^FS
 
-^FX -- Separator --
+^FX -- QR code (top-right, mag 4, alongside barcode) --
+^FO630,90
+^BQN,2,4
+^FDQA,https://www.craftculture.xyz/cold-chain.html^FS
+
+^FX -- Separator (short, avoids QR) --
 ^FO30,158
-^GB750,2,2^FS
+^GB590,2,2^FS
 
 ^FX -- Product name line 1 --
 ^FO30,170
@@ -181,6 +186,11 @@ ${productLine2 ? `^FX -- Product name line 2 --
 ^A0N,30,30
 ^FD${packSize}${isPalletLabel ? ` | ${palletCases} Cases` : ''}^FS
 
+^FX -- SCAN TO TRACE YOUR CASE (below QR) --
+^FO596,244
+^A0N,16,16
+^FDSCAN TO TRACE YOUR CASE^FS
+
 ^FX -- Vintage and Owner --
 ^FO30,264
 ^A0N,18,18
@@ -190,19 +200,9 @@ ${productLine2 ? `^FX -- Product name line 2 --
 ^A0N,18,18
 ^FDOwner: ${owner}^FS
 
-^FX -- QR code (mid-right, mag 4, prominent) --
-^FO610,166
-^BQN,2,4
-^FDQA,https://www.craftculture.xyz/cold-chain.html^FS
-
-^FX -- SCAN TO TRACE YOUR CASE (single line below QR) --
-^FO586,322
-^A0N,16,16
-^FDSCAN TO TRACE YOUR CASE^FS
-
 ^FX -- Separator --
 ^FO30,296
-^GB540,1,1^FS
+^GB750,1,1^FS
 
 ^FX -- Lot/Order --
 ^FO30,308
