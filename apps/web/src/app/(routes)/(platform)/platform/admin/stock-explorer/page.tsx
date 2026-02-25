@@ -35,6 +35,7 @@ import useTRPC from '@/lib/trpc/browser';
 type SortField = 'productName' | 'totalCases' | 'vintage' | 'receivedAt';
 type SortOrder = 'asc' | 'desc';
 type QuickFilter = 'all' | 'lowStock' | 'reserved' | 'expiring' | 'ownStock' | 'consignment';
+type CategoryFilter = 'Wine' | 'Spirits' | 'RTD';
 type RowDensity = 'compact' | 'normal' | 'relaxed';
 
 const DENSITY_CLASSES: Record<RowDensity, { td: string; text: string }> = {
@@ -107,7 +108,7 @@ interface StatusIndicatorProps {
 }
 
 const StatusIndicator = ({ expiryStatus, availableCases }: StatusIndicatorProps) => {
-  // Priority: expired > expiring > low stock > healthy
+  // Priority: expired > expiring (90 days) > stock level
   if (expiryStatus === 'expired') {
     return (
       <span className="flex items-center gap-1.5">
@@ -116,7 +117,7 @@ const StatusIndicator = ({ expiryStatus, availableCases }: StatusIndicatorProps)
       </span>
     );
   }
-  if (expiryStatus === 'critical') {
+  if (expiryStatus === 'warning') {
     return (
       <span className="flex items-center gap-1.5">
         <span className="h-2 w-2 rounded-full bg-orange-500" />
@@ -124,34 +125,34 @@ const StatusIndicator = ({ expiryStatus, availableCases }: StatusIndicatorProps)
       </span>
     );
   }
-  if (expiryStatus === 'warning') {
-    return (
-      <span className="flex items-center gap-1.5">
-        <span className="h-2 w-2 rounded-full bg-amber-500" />
-        <span className="text-amber-600">Expiring</span>
-      </span>
-    );
-  }
-  if (availableCases <= 5 && availableCases > 0) {
-    return (
-      <span className="flex items-center gap-1.5">
-        <span className="h-2 w-2 rounded-full bg-amber-400" />
-        <span className="text-amber-600">Low</span>
-      </span>
-    );
-  }
   if (availableCases === 0) {
     return (
       <span className="flex items-center gap-1.5">
         <span className="h-2 w-2 rounded-full bg-gray-400" />
-        <span className="text-text-muted">None</span>
+        <span className="text-text-muted">Out of Stock</span>
+      </span>
+    );
+  }
+  if (availableCases === 1) {
+    return (
+      <span className="flex items-center gap-1.5">
+        <span className="h-2 w-2 rounded-full bg-red-400" />
+        <span className="text-red-600">Final Case</span>
+      </span>
+    );
+  }
+  if (availableCases === 2) {
+    return (
+      <span className="flex items-center gap-1.5">
+        <span className="h-2 w-2 rounded-full bg-amber-400" />
+        <span className="text-amber-600">Low Stock</span>
       </span>
     );
   }
   return (
     <span className="flex items-center gap-1.5">
       <span className="h-2 w-2 rounded-full bg-emerald-500" />
-      <span className="text-emerald-600">OK</span>
+      <span className="text-emerald-600">Good</span>
     </span>
   );
 };
@@ -551,6 +552,7 @@ const StockExplorerPage = () => {
   const [vintageFrom, setVintageFrom] = useState('');
   const [vintageTo, setVintageTo] = useState('');
   const [quickFilter, setQuickFilter] = useState<QuickFilter>('all');
+  const [category, setCategory] = useState<CategoryFilter | undefined>('Wine');
   const [sortBy, setSortBy] = useState<SortField>('totalCases');
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
   const [page, setPage] = useState(0);
@@ -575,7 +577,7 @@ const StockExplorerPage = () => {
   // Reset page on filter change
   useEffect(() => {
     setPage(0);
-  }, [ownerId, vintageFrom, vintageTo, sortBy, sortOrder, quickFilter]);
+  }, [ownerId, vintageFrom, vintageTo, sortBy, sortOrder, quickFilter, category]);
 
   // Persist preferences
   useEffect(() => {
@@ -590,6 +592,7 @@ const StockExplorerPage = () => {
     ...api.wms.admin.stock.getByProduct.queryOptions({
       search: debouncedSearch || undefined,
       ownerId: ownerId || undefined,
+      category: category || undefined,
       quickFilter: quickFilter !== 'all' ? quickFilter : undefined,
       vintageFrom: vintageFrom ? Number(vintageFrom) : undefined,
       vintageTo: vintageTo ? Number(vintageTo) : undefined,
@@ -704,6 +707,7 @@ const StockExplorerPage = () => {
     setSearch('');
     setDebouncedSearch('');
     setOwnerId('');
+    setCategory('Wine');
     setVintageFrom('');
     setVintageTo('');
     setQuickFilter('all');
@@ -945,8 +949,31 @@ const StockExplorerPage = () => {
           </div>
         </div>
 
-        {/* Quick Filters */}
+        {/* Category + Quick Filters */}
         <div className="flex flex-wrap items-center gap-2">
+          {/* Category pills */}
+          {([
+            { key: 'Wine' as const, label: 'Wine' },
+            { key: 'Spirits' as const, label: 'Spirits' },
+            { key: 'RTD' as const, label: 'RTD' },
+          ]).map((cat) => (
+            <button
+              key={cat.key}
+              onClick={() => setCategory(category === cat.key ? undefined : cat.key)}
+              className={`rounded-full px-3.5 py-1.5 text-xs font-medium transition-colors ${
+                category === cat.key
+                  ? 'bg-text-primary text-white'
+                  : 'bg-surface-muted text-text-secondary hover:bg-fill-primary-hover hover:text-text-primary'
+              }`}
+            >
+              {cat.label}
+            </button>
+          ))}
+
+          {/* Divider */}
+          <div className="mx-1 h-4 w-px bg-border-muted" />
+
+          {/* Quick filters */}
           {quickFilters.map((qf) => (
             <button
               key={qf.key}

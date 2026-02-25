@@ -11,6 +11,7 @@ export const getStockOverviewSchema = z.object({});
 export const getStockByProductSchema = z.object({
   search: z.string().optional(),
   ownerId: z.string().uuid().optional(),
+  category: z.enum(['Wine', 'Spirits', 'RTD']).optional(),
   hasExpiry: z.boolean().optional(),
   lowStock: z.boolean().optional(),
   quickFilter: z

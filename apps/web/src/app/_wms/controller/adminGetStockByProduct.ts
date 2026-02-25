@@ -24,6 +24,7 @@ const adminGetStockByProduct = adminProcedure
     const {
       search,
       ownerId,
+      category,
       hasExpiry,
       quickFilter,
       vintageFrom,
@@ -48,6 +49,10 @@ const adminGetStockByProduct = adminProcedure
 
     if (ownerId) {
       conditions.push(eq(wmsStock.ownerId, ownerId));
+    }
+
+    if (category) {
+      conditions.push(eq(wmsStock.category, category));
     }
 
     if (hasExpiry) {
@@ -77,7 +82,7 @@ const adminGetStockByProduct = adminProcedure
     // HAVING conditions for aggregate-level filters
     const havingConditions = [];
     if (quickFilter === 'lowStock') {
-      havingConditions.push(sql`SUM(${wmsStock.availableCases}) <= 5`);
+      havingConditions.push(sql`SUM(${wmsStock.availableCases}) <= 2`);
     }
 
     // Group by LWIN18 + caseConfig so different pack sizes (6x75cl vs 12x75cl)
@@ -95,6 +100,7 @@ const adminGetStockByProduct = adminProcedure
         reservedCases: sql<number>`SUM(${wmsStock.reservedCases})::int`,
         locationCount: sql<number>`COUNT(DISTINCT ${wmsStock.locationId})::int`,
         ownerCount: sql<number>`COUNT(DISTINCT ${wmsStock.ownerId})::int`,
+        category: sql<string | null>`MAX(${wmsStock.category})`,
         earliestExpiry: sql<Date | null>`MIN(${wmsStock.expiryDate})`,
         hasPerishable: sql<boolean>`BOOL_OR(${wmsStock.isPerishable})`,
       })
@@ -184,16 +190,16 @@ const adminGetStockByProduct = adminProcedure
 
         // Calculate expiry status
         const now = new Date();
-        const thirtyDays = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
-        let expiryStatus: 'none' | 'ok' | 'warning' | 'critical' | 'expired' = 'none';
+        const ninetyDays = new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000);
+        let expiryStatus: 'none' | 'ok' | 'warning' | 'expired' = 'none';
 
         if (product.earliestExpiry) {
           if (product.earliestExpiry < now) {
             expiryStatus = 'expired';
-          } else if (product.earliestExpiry <= thirtyDays) {
-            expiryStatus = 'critical';
-          } else {
+          } else if (product.earliestExpiry <= ninetyDays) {
             expiryStatus = 'warning';
+          } else {
+            expiryStatus = 'ok';
           }
         } else if (!product.hasPerishable) {
           expiryStatus = 'ok';
