@@ -160,6 +160,7 @@ const generateLabelZpl = (data: LabelData) => {
   const zpl = showBarcode
     ? `^XA
 ^PR3
+~SD20
 
 ^FX -- C&C logo (200x60 dots) --
 ^FO30,8
@@ -230,6 +231,7 @@ ${producer ? `^FO${vintage !== '-' ? '300' : '30'},232
 ^XZ`
     : `^XA
 ^PR3
+~SD20
 
 ^FX -- C&C logo (200x60 dots, top-left) --
 ^FO30,10

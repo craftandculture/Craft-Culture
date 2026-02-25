@@ -48,6 +48,7 @@ const DEFAULT_QUICK_ACTIONS: QuickAction[] = [
   { id: 'check', href: '/platform/admin/wms/stock/check', icon: IconClipboardCheck, label: 'Check', color: 'text-cyan-600', bgColor: 'bg-cyan-100 dark:bg-cyan-900/30' },
   { id: 'pick', href: '/platform/admin/wms/pick', icon: IconBox, label: 'Pick', color: 'text-blue-600', bgColor: 'bg-blue-100 dark:bg-blue-900/30' },
   { id: 'transfer', href: '/platform/admin/wms/transfer', icon: IconTransfer, label: 'Transfer', color: 'text-purple-600', bgColor: 'bg-purple-100 dark:bg-purple-900/30' },
+  { id: 'dispatch', href: '/platform/admin/wms/dispatch', icon: IconTruck, label: 'Dispatch', color: 'text-rose-600', bgColor: 'bg-rose-100 dark:bg-rose-900/30' },
   { id: 'repack', href: '/platform/admin/wms/repack', icon: IconPackages, label: 'Repack', color: 'text-orange-600', bgColor: 'bg-orange-100 dark:bg-orange-900/30' },
 ];
 
@@ -102,6 +103,10 @@ const WMSDashboardContent = () => {
           e.preventDefault();
           router.push('/platform/admin/wms/stock/check');
           break;
+        case 'd':
+          e.preventDefault();
+          router.push('/platform/admin/wms/dispatch');
+          break;
         case 's':
           e.preventDefault();
           router.push('/platform/admin/wms/stock');
@@ -148,10 +153,15 @@ const WMSDashboardContent = () => {
     setIsDragging(false);
   }, []);
 
-  // Get ordered quick actions
-  const orderedQuickActions = quickActionsOrder
-    .map((id) => DEFAULT_QUICK_ACTIONS.find((a) => a.id === id))
-    .filter((a): a is QuickAction => a !== undefined);
+  // Get ordered quick actions (append any new actions not in saved order)
+  const orderedQuickActions = (() => {
+    const allIds = DEFAULT_QUICK_ACTIONS.map((a) => a.id);
+    const missingIds = allIds.filter((id) => !quickActionsOrder.includes(id));
+    const fullOrder = [...quickActionsOrder, ...missingIds];
+    return fullOrder
+      .map((id) => DEFAULT_QUICK_ACTIONS.find((a) => a.id === id))
+      .filter((a): a is QuickAction => a !== undefined);
+  })();
 
   // Fetch comprehensive overview (will use prefetched data)
   const { data: overview } = useQuery({
@@ -209,7 +219,7 @@ const WMSDashboardContent = () => {
         {/* Keyboard Shortcuts Hint */}
         <div className="hidden sm:block">
           <Typography variant="bodyXs" colorRole="muted" className="text-center">
-            Shortcuts: Ctrl+R (Receive) · Ctrl+P (Pick) · Ctrl+C (Check) · Ctrl+T (Transfer) · Ctrl+S (Stock)
+            Shortcuts: Ctrl+R (Receive) · Ctrl+P (Pick) · Ctrl+C (Check) · Ctrl+T (Transfer) · Ctrl+D (Dispatch) · Ctrl+S (Stock)
           </Typography>
         </div>
 
@@ -359,7 +369,7 @@ const WMSDashboardContent = () => {
         )}
 
         {/* Quick Actions - Large touch targets for mobile, draggable for customization */}
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
           {orderedQuickActions.map((action) => (
             <div
               key={action.id}
@@ -388,14 +398,6 @@ const WMSDashboardContent = () => {
 
         {/* Secondary Actions */}
         <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
-          <Link href="/platform/admin/wms/dispatch">
-            <Card className="cursor-pointer transition-colors hover:border-border-brand">
-              <CardContent className="flex items-center gap-3 p-4">
-                <Icon icon={IconTruck} size="md" className="text-text-muted" />
-                <Typography variant="bodySm" className="font-medium">Dispatch</Typography>
-              </CardContent>
-            </Card>
-          </Link>
           <Link href="/platform/admin/wms/stock">
             <Card className="cursor-pointer transition-colors hover:border-border-brand">
               <CardContent className="flex items-center gap-3 p-4">
