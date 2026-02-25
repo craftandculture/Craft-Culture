@@ -18,6 +18,7 @@ import Icon from '@/app/_ui/components/Icon/Icon';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import ZebraPrint from '@/app/_wms/components/ZebraPrint';
 import usePrint from '@/app/_wms/hooks/usePrint';
+import PrinterProvider from '@/app/_wms/providers/PrinterProvider';
 import type { BayTotemData } from '@/app/_wms/utils/generateBayTotemZpl';
 import { generateBatchBayTotemsZpl } from '@/app/_wms/utils/generateBayTotemZpl';
 import type { LocationLabelData } from '@/app/_wms/utils/generateLocationLabelZpl';
@@ -342,17 +343,20 @@ const WMSDeviceLabelsContent = () => {
 /**
  * WMS Device Labels Page - wrapped in Suspense for useSearchParams
  */
+/** Wrap in PrinterProvider since standalone WMS labels page is outside the WMS layout */
 const WMSDeviceLabelsPage = () => {
   return (
-    <Suspense
-      fallback={
-        <div className="flex min-h-screen items-center justify-center bg-background-primary">
-          <Icon icon={IconLoader2} className="animate-spin" colorRole="muted" size="xl" />
-        </div>
-      }
-    >
-      <WMSDeviceLabelsContent />
-    </Suspense>
+    <PrinterProvider>
+      <Suspense
+        fallback={
+          <div className="flex min-h-screen items-center justify-center bg-background-primary">
+            <Icon icon={IconLoader2} className="animate-spin" colorRole="muted" size="xl" />
+          </div>
+        }
+      >
+        <WMSDeviceLabelsContent />
+      </Suspense>
+    </PrinterProvider>
   );
 };
 
