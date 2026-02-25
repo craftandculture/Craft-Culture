@@ -1050,44 +1050,60 @@ const ColdChainTab = () => (
         What goes on every case
       </Typography>
 
-      <div className="rounded-lg border-2 border-dashed border-border-primary bg-fill-secondary/30 p-6">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div className="space-y-2">
-            <Typography variant="bodySm" className="font-mono font-bold">
-              PCO-2026-042
-            </Typography>
-            <Typography variant="bodyXs" colorRole="muted">
-              Total Order: 12 Cases
-            </Typography>
-            <div className="h-px w-full bg-border-primary" />
-            <Typography variant="bodySm" className="font-semibold">
-              Ornellaia Bolgheri Superiore 2019
-            </Typography>
-            <Typography variant="bodyXs" colorRole="muted">
-              6x750ml | 1 x case
-            </Typography>
-            <Typography variant="bodyXs" colorRole="muted">
-              Vintage: 2019
-            </Typography>
+      {/* Thermal Label Mockup */}
+      <div className="mx-auto max-w-lg rounded-xl bg-white p-6 shadow-lg">
+        {/* Logo */}
+        <div className="flex items-center gap-2">
+          <div className="flex h-7 w-7 items-center justify-center rounded-md bg-gray-900 text-xs font-bold text-white">
+            C
           </div>
-          <div className="flex flex-col items-center gap-2">
-            <div className="flex h-24 w-24 items-center justify-center rounded-lg border border-border-primary bg-fill-primary">
-              <Icon icon={IconQrcode} size="lg" colorRole="muted" />
-            </div>
-            <Typography variant="bodyXs" colorRole="muted">
-              Scan to trace your case
-            </Typography>
+          <div className="text-xs font-bold uppercase tracking-wider text-gray-900">
+            Craft &<br />Culture
           </div>
         </div>
-        <div className="mt-4 flex items-center justify-between border-t border-border-primary pt-3">
-          <Typography variant="bodyXs" colorRole="muted">
-            @wine.uae
-          </Typography>
-          <Typography variant="bodyXs" colorRole="muted">
-            craftculture.xyz
-          </Typography>
+
+        {/* Divider */}
+        <div className="my-3 h-px bg-gray-300" />
+
+        {/* Order + QR */}
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-xl font-bold text-gray-900">PCO-2026-042</p>
+            <p className="text-xs text-gray-500">Total Order: 12 Cases</p>
+            <p className="mt-2 text-sm font-bold text-gray-900">Distribution Partner</p>
+          </div>
+          <div className="flex flex-col items-center gap-1">
+            <div className="flex h-20 w-20 items-center justify-center rounded border border-gray-200 bg-gray-50">
+              <Icon icon={IconQrcode} size="lg" className="text-gray-900" />
+            </div>
+            <p className="text-center text-[9px] font-semibold uppercase tracking-wider text-gray-500">
+              Scan to trace your case
+            </p>
+          </div>
+        </div>
+
+        {/* Product divider */}
+        <div className="my-3 h-px bg-gray-200" />
+
+        {/* Product details */}
+        <div className="flex items-end justify-between">
+          <div>
+            <p className="text-sm font-medium text-gray-900">Ornellaia Bolgheri Superiore 2019</p>
+            <p className="text-xs text-gray-500">6x750ml | 1 x case</p>
+          </div>
+          <p className="text-xs text-gray-500">Vintage: 2019</p>
+        </div>
+
+        {/* Footer */}
+        <div className="mt-4 flex items-center gap-4">
+          <p className="text-xs text-gray-400">@wine.uae</p>
+          <p className="text-xs text-gray-400">craftculture.xyz</p>
         </div>
       </div>
+
+      <Typography variant="bodyXs" colorRole="muted" className="mt-3 text-center">
+        Example Thermal Label
+      </Typography>
     </div>
 
     {/* What the Customer Sees */}
