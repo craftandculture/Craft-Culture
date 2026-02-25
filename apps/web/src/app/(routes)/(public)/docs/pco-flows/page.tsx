@@ -6,9 +6,14 @@ import {
   IconCheck,
   IconClock,
   IconCreditCard,
+  IconDroplet,
   IconFileInvoice,
   IconGlassFull,
   IconPackage,
+  IconQrcode,
+  IconShieldCheck,
+  IconSnowflake,
+  IconTemperature,
   IconTruck,
   IconUser,
   IconUserCheck,
@@ -19,7 +24,7 @@ import { useState } from 'react';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Typography from '@/app/_ui/components/Typography/Typography';
 
-type TabId = 'overview' | 'partner' | 'distributor' | 'admin' | 'client';
+type TabId = 'overview' | 'partner' | 'distributor' | 'admin' | 'client' | 'cold-chain';
 
 interface Tab {
   id: TabId;
@@ -34,6 +39,7 @@ const tabs: Tab[] = [
   { id: 'distributor', label: 'Distributor', icon: IconBuilding, color: 'bg-blue-500' },
   { id: 'admin', label: 'C&C Admin', icon: IconUserCheck, color: 'bg-amber-500' },
   { id: 'client', label: 'Client', icon: IconUser, color: 'bg-pink-500' },
+  { id: 'cold-chain', label: 'Cold Chain', icon: IconSnowflake, color: 'bg-cyan-500' },
 ];
 
 interface FlowStepProps {
@@ -866,6 +872,345 @@ const ClientTab = () => (
   </div>
 );
 
+const ColdChainTab = () => (
+  <div className="space-y-8">
+    {/* Intro */}
+    <div className="rounded-xl border border-cyan-500/30 bg-cyan-500/5 p-4">
+      <Typography variant="bodySm" className="font-semibold text-cyan-600 dark:text-cyan-400">
+        Cold Chain Verification
+      </Typography>
+      <Typography variant="bodyXs" colorRole="muted" className="mt-1">
+        Every PCO case ships with a QR-coded label linking to live cold chain data. One scan tells
+        your customer exactly how their wine was stored, handled, and delivered.
+      </Typography>
+    </div>
+
+    {/* How It Works - 3 Steps */}
+    <div className="rounded-xl border border-border-primary bg-fill-primary p-6">
+      <Typography variant="headingSm" className="mb-2">
+        How It Works
+      </Typography>
+      <Typography variant="bodyXs" colorRole="muted" className="mb-6">
+        Three steps to verified provenance
+      </Typography>
+
+      <div className="relative overflow-x-auto pb-4">
+        <div className="flex min-w-max items-center gap-2">
+          <div className="flex flex-col items-center">
+            <div className="rounded-lg border-2 border-cyan-500 bg-cyan-500/10 p-3">
+              <Icon icon={IconQrcode} size="lg" className="text-cyan-500" />
+            </div>
+            <span className="mt-2 text-xs font-medium text-cyan-500">Step 1</span>
+            <span className="text-xs text-text-muted">Label Printed</span>
+          </div>
+          <Icon icon={IconArrowRight} size="sm" colorRole="muted" />
+
+          <div className="flex flex-col items-center">
+            <div className="rounded-lg border-2 border-cyan-500 bg-cyan-500/10 p-3">
+              <Icon icon={IconUser} size="lg" className="text-cyan-500" />
+            </div>
+            <span className="mt-2 text-xs font-medium text-cyan-500">Step 2</span>
+            <span className="text-xs text-text-muted">Customer Scans</span>
+          </div>
+          <Icon icon={IconArrowRight} size="sm" colorRole="muted" />
+
+          <div className="flex flex-col items-center">
+            <div className="rounded-lg border-2 border-emerald-500 bg-emerald-500/10 p-3">
+              <Icon icon={IconShieldCheck} size="lg" className="text-emerald-500" />
+            </div>
+            <span className="mt-2 text-xs font-medium text-emerald-500">Step 3</span>
+            <span className="text-xs text-text-muted">Provenance Verified</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-4 space-y-3">
+        <div className="rounded-lg bg-fill-secondary/50 p-4">
+          <Typography variant="bodySm" className="mb-1 font-medium">
+            1. Label is Printed
+          </Typography>
+          <Typography variant="bodyXs" colorRole="muted">
+            When an order is packed, thermal labels are generated with order details, product info,
+            and a QR code unique to that case.
+          </Typography>
+        </div>
+        <div className="rounded-lg bg-fill-secondary/50 p-4">
+          <Typography variant="bodySm" className="mb-1 font-medium">
+            2. Customer Scans QR
+          </Typography>
+          <Typography variant="bodyXs" colorRole="muted">
+            On receiving the case, the customer or distributor scans the QR code with any smartphone
+            camera. No app required.
+          </Typography>
+        </div>
+        <div className="rounded-lg bg-fill-secondary/50 p-4">
+          <Typography variant="bodySm" className="mb-1 font-medium">
+            3. Provenance Verified
+          </Typography>
+          <Typography variant="bodyXs" colorRole="muted">
+            A branded page shows live cold room data, facility details, and the full provenance
+            journey from winery to delivery.
+          </Typography>
+        </div>
+      </div>
+    </div>
+
+    {/* PCO Integration - 4 Pillars */}
+    <div className="rounded-xl border border-border-primary bg-fill-primary p-6">
+      <Typography variant="headingSm" className="mb-2">
+        Built into Every PCO Shipment
+      </Typography>
+      <Typography variant="bodyXs" colorRole="muted" className="mb-6">
+        PCOs are bespoke wine sourcing requests handled end-to-end by Craft & Culture. Each order
+        gets full traceability from quote to delivery.
+      </Typography>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-4">
+          <div className="mb-2 flex items-center gap-2">
+            <Icon icon={IconGlassFull} size="sm" className="text-emerald-500" />
+            <Typography variant="bodySm" className="font-semibold">
+              Sourcing
+            </Typography>
+          </div>
+          <Typography variant="bodyXs" colorRole="muted">
+            Source from our curated partner network across Europe and the New World. Any wine, any
+            volume.
+          </Typography>
+        </div>
+
+        <div className="rounded-lg border border-blue-500/30 bg-blue-500/5 p-4">
+          <div className="mb-2 flex items-center gap-2">
+            <Icon icon={IconTruck} size="sm" className="text-blue-500" />
+            <Typography variant="bodySm" className="font-semibold">
+              Logistics
+            </Typography>
+          </div>
+          <Typography variant="bodyXs" colorRole="muted">
+            Reefer containers with data loggers, customs clearance, and direct-to-cold-room
+            receiving.
+          </Typography>
+        </div>
+
+        <div className="rounded-lg border border-cyan-500/30 bg-cyan-500/5 p-4">
+          <div className="mb-2 flex items-center gap-2">
+            <Icon icon={IconSnowflake} size="sm" className="text-cyan-500" />
+            <Typography variant="bodySm" className="font-semibold">
+              Warehousing
+            </Typography>
+          </div>
+          <Typography variant="bodyXs" colorRole="muted">
+            12-14°C storage in our licensed & bonded warehouse. Every case barcoded and tracked in
+            our WMS.
+          </Typography>
+        </div>
+
+        <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-4">
+          <div className="mb-2 flex items-center gap-2">
+            <Icon icon={IconPackage} size="sm" className="text-amber-500" />
+            <Typography variant="bodySm" className="font-semibold">
+              Dispatch
+            </Typography>
+          </div>
+          <Typography variant="bodyXs" colorRole="muted">
+            Each case gets a branded label with a QR code for cold chain verification. Delivered to
+            your door or distributor.
+          </Typography>
+        </div>
+      </div>
+
+      <div className="mt-4 rounded-lg border border-violet-500/30 bg-violet-500/5 p-4">
+        <Typography variant="bodyXs" className="mb-2 font-semibold text-violet-600 dark:text-violet-400">
+          PCO Features
+        </Typography>
+        <div className="grid grid-cols-2 gap-2">
+          {[
+            'Order tracking dashboard',
+            'Per-item stock status visibility',
+            'Document management (invoices, proofs)',
+            'Cold chain label on every case',
+          ].map((feature) => (
+            <div key={feature} className="flex items-center gap-2">
+              <Icon icon={IconCheck} size="xs" className="text-violet-500" />
+              <Typography variant="bodyXs" colorRole="muted">
+                {feature}
+              </Typography>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+
+    {/* The Label */}
+    <div className="rounded-xl border border-border-primary bg-fill-primary p-6">
+      <Typography variant="headingSm" className="mb-2">
+        The Label
+      </Typography>
+      <Typography variant="bodyXs" colorRole="muted" className="mb-6">
+        What goes on every case
+      </Typography>
+
+      <div className="rounded-lg border-2 border-dashed border-border-primary bg-fill-secondary/30 p-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="space-y-2">
+            <Typography variant="bodySm" className="font-mono font-bold">
+              PCO-2026-042
+            </Typography>
+            <Typography variant="bodyXs" colorRole="muted">
+              Total Order: 12 Cases
+            </Typography>
+            <div className="h-px w-full bg-border-primary" />
+            <Typography variant="bodySm" className="font-semibold">
+              Ornellaia Bolgheri Superiore 2019
+            </Typography>
+            <Typography variant="bodyXs" colorRole="muted">
+              6x750ml | 1 x case
+            </Typography>
+            <Typography variant="bodyXs" colorRole="muted">
+              Vintage: 2019
+            </Typography>
+          </div>
+          <div className="flex flex-col items-center gap-2">
+            <div className="flex h-24 w-24 items-center justify-center rounded-lg border border-border-primary bg-fill-primary">
+              <Icon icon={IconQrcode} size="lg" colorRole="muted" />
+            </div>
+            <Typography variant="bodyXs" colorRole="muted">
+              Scan to trace your case
+            </Typography>
+          </div>
+        </div>
+        <div className="mt-4 flex items-center justify-between border-t border-border-primary pt-3">
+          <Typography variant="bodyXs" colorRole="muted">
+            @wine.uae
+          </Typography>
+          <Typography variant="bodyXs" colorRole="muted">
+            craftculture.xyz
+          </Typography>
+        </div>
+      </div>
+    </div>
+
+    {/* What the Customer Sees */}
+    <div className="rounded-xl border border-border-primary bg-fill-primary p-6">
+      <Typography variant="headingSm" className="mb-2">
+        What Your Customer Sees
+      </Typography>
+      <Typography variant="bodyXs" colorRole="muted" className="mb-6">
+        Scanning the QR code opens a branded provenance page showing real-time cold room conditions
+        and the full journey of their wine.
+      </Typography>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="rounded-lg bg-fill-secondary/50 p-4">
+          <div className="mb-2 flex items-center gap-2">
+            <Icon icon={IconTemperature} size="sm" className="text-cyan-500" />
+            <Typography variant="bodySm" className="font-medium">
+              Live Temperature Dashboard
+            </Typography>
+          </div>
+          <Typography variant="bodyXs" colorRole="muted">
+            4-zone sensor data (front, rear, liquid, door) updating in real time. Current average:
+            13.5°C.
+          </Typography>
+        </div>
+
+        <div className="rounded-lg bg-fill-secondary/50 p-4">
+          <div className="mb-2 flex items-center gap-2">
+            <Icon icon={IconDroplet} size="sm" className="text-blue-500" />
+            <Typography variant="bodySm" className="font-medium">
+              Humidity & Air Quality
+            </Typography>
+          </div>
+          <Typography variant="bodyXs" colorRole="muted">
+            50-75% RH and CO₂ monitoring shown live. Proves conditions are right for fine wine
+            storage.
+          </Typography>
+        </div>
+
+        <div className="rounded-lg bg-fill-secondary/50 p-4">
+          <div className="mb-2 flex items-center gap-2">
+            <Icon icon={IconTruck} size="sm" className="text-amber-500" />
+            <Typography variant="bodySm" className="font-medium">
+              Provenance Journey
+            </Typography>
+          </div>
+          <Typography variant="bodyXs" colorRole="muted">
+            4-step visual timeline: sourcing, inspection, storage, delivery. Full chain of custody
+            from winery to your door.
+          </Typography>
+        </div>
+
+        <div className="rounded-lg bg-fill-secondary/50 p-4">
+          <div className="mb-2 flex items-center gap-2">
+            <Icon icon={IconBuilding} size="sm" className="text-violet-500" />
+            <Typography variant="bodySm" className="font-medium">
+              Facility Details
+            </Typography>
+          </div>
+          <Typography variant="bodyXs" colorRole="muted">
+            12-14°C storage, dual compressor redundancy, licensed & bonded warehouse. Full spec
+            transparency.
+          </Typography>
+        </div>
+      </div>
+    </div>
+
+    {/* Technical Specifications */}
+    <div className="rounded-xl border border-border-primary bg-fill-primary p-6">
+      <Typography variant="headingSm" className="mb-4">
+        Technical Specifications
+      </Typography>
+
+      <div className="grid gap-3 sm:grid-cols-2">
+        {[
+          { icon: IconQrcode, label: 'QR Code', value: 'Per-order scannable, linked to provenance page' },
+          { icon: IconSnowflake, label: 'Cold Room', value: '12-14°C, 24/7 monitored' },
+          { icon: IconTemperature, label: 'Sensors', value: '4-zone: temp, humidity, CO₂, air quality' },
+          { icon: IconClock, label: 'Monitoring', value: 'Real-time alerts on threshold breach' },
+          { icon: IconShieldCheck, label: 'Compliance', value: 'Licensed & bonded facility' },
+          { icon: IconDroplet, label: 'Humidity', value: '50-75% RH, actively controlled' },
+          { icon: IconCheck, label: 'Security', value: '24/7 CCTV & access control' },
+          { icon: IconArrowRight, label: 'Traceability', value: 'Full chain: winery to delivery' },
+        ].map((spec) => (
+          <div key={spec.label} className="flex items-start gap-3 rounded-lg bg-fill-secondary/50 p-3">
+            <Icon icon={spec.icon} size="sm" className="mt-0.5 text-cyan-500" />
+            <div>
+              <Typography variant="bodySm" className="font-medium">
+                {spec.label}
+              </Typography>
+              <Typography variant="bodyXs" colorRole="muted">
+                {spec.value}
+              </Typography>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+
+    {/* CTA */}
+    <div className="rounded-xl border border-cyan-500/30 bg-cyan-500/5 p-6 text-center">
+      <Typography variant="headingSm" className="mb-2">
+        Fine Wine Logistics, Done Right
+      </Typography>
+      <Typography variant="bodyXs" colorRole="muted" className="mb-4">
+        Cold chain storage, digital warehouse management, and provenance verification for wine &
+        spirits in the UAE and GCC.
+      </Typography>
+      <div className="flex flex-wrap justify-center gap-3">
+        <a
+          href="https://www.craftculture.xyz/cold-chain"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-2 rounded-lg bg-cyan-500 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-cyan-600"
+        >
+          <Icon icon={IconTemperature} size="sm" />
+          View Live Cold Chain Page
+        </a>
+      </div>
+    </div>
+  </div>
+);
+
 const PcoFlowsPage = () => {
   const [activeTab, setActiveTab] = useState<TabId>('overview');
 
@@ -881,6 +1226,8 @@ const PcoFlowsPage = () => {
         return <AdminTab />;
       case 'client':
         return <ClientTab />;
+      case 'cold-chain':
+        return <ColdChainTab />;
       default:
         return <OverviewTab />;
     }
