@@ -13,7 +13,7 @@
  * @returns true if print succeeded, false otherwise
  */
 const wifiPrint = async (zpl: string, printerIp?: string): Promise<boolean> => {
-  const ip = printerIp || process.env.NEXT_PUBLIC_ZEBRA_PRINTER_IP || '192.168.1.237';
+  const ip = printerIp || process.env.NEXT_PUBLIC_ZEBRA_PRINTER_IP || '192.168.1.111';
 
   try {
     const controller = new AbortController();

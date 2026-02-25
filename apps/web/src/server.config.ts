@@ -22,7 +22,7 @@ const serverConfig = {
   // TODO: Move to env var WMS_DEVICE_TOKEN after fixing Vercel config
   wmsDeviceToken: 'wms_device_2026_CraftCulture_TC27',
   wmsDeviceUserEmail: serverEnv.WMS_DEVICE_USER_EMAIL,
-  zebraPrinterIp: serverEnv.ZEBRA_PRINTER_IP || '192.168.1.237',
+  zebraPrinterIp: serverEnv.ZEBRA_PRINTER_IP || '192.168.1.111',
   zebraPrinterPort: 9100,
 } as const;
 
