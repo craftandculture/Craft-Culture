@@ -403,7 +403,7 @@ const ScanInput = forwardRef<ScanInputHandle, ScanInputProps>(({
                   inputRef.current?.focus();
                 }, 50);
               }}
-              className={`ml-2 flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg border transition-colors ${
+              className={`ml-2 flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg border transition-colors ${
                 keyboardEnabled
                   ? 'border-blue-500 bg-blue-50 text-blue-600 dark:bg-blue-900/30'
                   : 'border-border-primary bg-fill-secondary text-text-muted hover:bg-fill-tertiary'

@@ -236,7 +236,7 @@ const WMSDispatchBatchDetailPage = () => {
         </div>
 
         {/* Summary Cards */}
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-3 gap-3 sm:gap-4">
           <Card>
             <CardContent className="p-4 text-center">
               <Typography variant="headingLg">{batch.orderCount}</Typography>

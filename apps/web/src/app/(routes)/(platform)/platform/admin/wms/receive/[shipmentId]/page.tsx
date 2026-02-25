@@ -783,7 +783,7 @@ const WMSReceiveShipmentPage = () => {
         <div className="flex items-center justify-between gap-3">
           <Link
             href="/platform/admin/wms/receive"
-            className="flex h-10 w-10 items-center justify-center rounded-lg bg-fill-secondary text-text-muted hover:text-text-primary"
+            className="flex h-12 w-12 items-center justify-center rounded-lg bg-fill-secondary text-text-muted hover:text-text-primary"
           >
             <IconChevronRight className="h-5 w-5 rotate-180" />
           </Link>
