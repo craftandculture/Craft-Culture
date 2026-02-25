@@ -46,7 +46,7 @@ const ConnectionStatus = () => {
   // Show local mode indicator as a small pill (always visible when local)
   if (isLocalAvailable && isOnline && !showBanner) {
     return (
-      <div className="fixed right-3 top-3 z-50 flex items-center gap-1.5 rounded-full bg-emerald-600 px-3 py-1 shadow-sm">
+      <div className="fixed right-4 top-16 z-40 flex items-center gap-1.5 rounded-full bg-emerald-600 px-3 py-1 shadow-sm">
         <Icon icon={IconServer} size="xs" className="text-white" />
         <Typography variant="bodyXs" className="font-medium text-white">
           Local
