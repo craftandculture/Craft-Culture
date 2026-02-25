@@ -8,6 +8,7 @@ import {
   IconBuildingWarehouse,
   IconClipboardCheck,
   IconGripVertical,
+  IconHeartbeat,
   IconMapPin,
   IconPackage,
   IconPackages,
@@ -498,6 +499,10 @@ const WMSDashboardContent = () => {
               <Link href="/platform/admin/wms/stock/reconcile" className="flex items-center gap-2 rounded-lg p-2 transition-colors hover:bg-fill-secondary">
                 <Icon icon={IconAlertTriangle} size="sm" colorRole="muted" />
                 <Typography variant="bodySm">Reconcile</Typography>
+              </Link>
+              <Link href="/platform/admin/wms/health" className="flex items-center gap-2 rounded-lg p-2 transition-colors hover:bg-fill-secondary">
+                <Icon icon={IconHeartbeat} size="sm" colorRole="muted" />
+                <Typography variant="bodySm">Health</Typography>
               </Link>
             </div>
           </CardContent>
