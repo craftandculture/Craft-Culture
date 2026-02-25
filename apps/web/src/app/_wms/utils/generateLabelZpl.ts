@@ -199,11 +199,11 @@ ${productLine2 ? `^FX -- Product name line 2 --
 ^FO30,316
 ^GB600,1,1^FS
 
-^FX -- SCAN TO TRACE YOUR CASE (below QR) --
-^FO648,310
+^FX -- SCAN TO TRACE YOUR CASE (below QR, right-aligned with lot/LWIN) --
+^FO648,338
 ^A0N,14,14
 ^FDSCAN TO TRACE^FS
-^FO656,326
+^FO656,354
 ^A0N,14,14
 ^FDYOUR CASE^FS
 
