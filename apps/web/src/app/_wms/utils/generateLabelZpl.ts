@@ -20,6 +20,8 @@ export interface LabelData {
   barcode?: string;
   /** Product name (e.g., Château Margaux 2015) */
   productName: string;
+  /** Producer/winery name (e.g., Kumeu River) */
+  producer?: string;
   /** LWIN-18 code */
   lwin18: string;
   /** Pack size (e.g., 6x75cl) */
@@ -137,6 +139,7 @@ const generateLabelZpl = (data: LabelData) => {
   const lotLine1 = lotParts[0] ?? lotRaw;
   const lotLine2 = lotParts[1] ?? '';
   const owner = data.owner ? escapeZpl(data.owner) : '-';
+  const producer = data.producer ? escapeZpl(data.producer) : '';
 
   const showBarcode = data.showBarcode !== false && data.barcode;
   const showQr = data.showQr !== false;
@@ -156,9 +159,9 @@ ${isPalletLabel ? `^FX -- PALLET banner (white on black, top-right) --
 ^FO510,10^GB270,55,55^FS
 ^FO545,18^A0N,36,36^FR^FDPALLET^FS
 ` : ''}
-^FX -- Barcode --
+^FX -- Barcode (narrower module for long barcodes) --
 ^FO30,75
-^BY2,3,55
+^BY1,3,55
 ^BCN,55,Y,N,N
 ^FD${escapeZpl(data.barcode ?? '')}^FS
 
@@ -181,24 +184,24 @@ ${productLine2 ? `^FX -- Product name line 2 --
 ^A0N,26,26
 ^FD${productLine2}^FS
 ` : ''}
-^FX -- Pack size (prominent) --
-^FO30,228
-^A0N,30,30
-^FD${packSize}${isPalletLabel ? ` | ${palletCases} Cases` : ''}^FS
+^FX -- Vintage (prominent) + Producer --
+${vintage !== '-' ? `^FO30,228
+^A0N,28,28
+^FDVintage: ${vintage}^FS
+` : ''}
+${producer ? `^FO${vintage !== '-' ? '300' : '30'},232
+^A0N,20,20
+^FD${producer}^FS
+` : ''}
+^FX -- Pack size + Owner --
+^FO30,264
+^A0N,20,20
+^FD${packSize}${isPalletLabel ? ` | ${palletCases} Cases` : ''} | Owner: ${owner}^FS
 
 ^FX -- SCAN TO TRACE YOUR CASE (below QR) --
 ^FO596,276
 ^A0N,16,16
 ^FDSCAN TO TRACE YOUR CASE^FS
-
-^FX -- Vintage and Owner --
-^FO30,264
-^A0N,18,18
-^FDVintage: ${vintage}^FS
-
-^FO260,264
-^A0N,18,18
-^FDOwner: ${owner}^FS
 
 ^FX -- Separator --
 ^FO30,308
