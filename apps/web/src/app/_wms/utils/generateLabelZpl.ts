@@ -158,60 +158,60 @@ ${isPalletLabel ? `^FX -- PALLET banner (white on black, top-right) --
 ` : ''}
 ^FX -- Barcode --
 ^FO30,75
-^BY2,3,60
-^BCN,60,Y,N,N
+^BY2,3,55
+^BCN,55,Y,N,N
 ^FD${escapeZpl(data.barcode ?? '')}^FS
 
-^FX -- QR code (top-right, alongside barcode) --
-^FO660,80
-^BQN,2,3
-^FDQA,https://www.craftculture.xyz/cold-chain.html^FS
-
-^FX -- Separator (short, avoids QR area) --
-^FO30,162
-^GB600,2,2^FS
+^FX -- Separator --
+^FO30,158
+^GB750,2,2^FS
 
 ^FX -- Product name line 1 --
-^FO30,176
-^A0N,28,28
+^FO30,170
+^A0N,26,26
 ^FD${productLine1}^FS
 
 ${productLine2 ? `^FX -- Product name line 2 --
-^FO30,206
-^A0N,28,28
+^FO30,198
+^A0N,26,26
 ^FD${productLine2}^FS
 ` : ''}
 ^FX -- Pack size (prominent) --
-^FO30,240
-^A0N,32,32
+^FO30,228
+^A0N,30,30
 ^FD${packSize}${isPalletLabel ? ` | ${palletCases} Cases` : ''}^FS
 
-^FX -- TRACE YOUR CASE (below QR, bold) --
-^FO640,280
-^A0N,20,20
-^FDTRACE YOUR CASE^FS
-
 ^FX -- Vintage and Owner --
-^FO30,278
-^A0N,20,20
+^FO30,264
+^A0N,18,18
 ^FDVintage: ${vintage}^FS
 
-^FO280,278
-^A0N,20,20
+^FO260,264
+^A0N,18,18
 ^FDOwner: ${owner}^FS
 
-^FX -- Separator (short, avoids QR text) --
-^FO30,316
-^GB600,1,1^FS
+^FX -- QR code (mid-right, mag 4, prominent) --
+^FO610,166
+^BQN,2,4
+^FDQA,https://www.craftculture.xyz/cold-chain.html^FS
+
+^FX -- SCAN TO TRACE YOUR CASE (single line below QR) --
+^FO586,322
+^A0N,16,16
+^FDSCAN TO TRACE YOUR CASE^FS
+
+^FX -- Separator --
+^FO30,296
+^GB540,1,1^FS
 
 ^FX -- Lot/Order --
-^FO30,332
-^A0N,26,26
+^FO30,308
+^A0N,24,24
 ^FD${lotRaw}^FS
 
 ^FX -- LWIN --
-^FO30,368
-^A0N,18,18
+^FO30,340
+^A0N,16,16
 ^FDLWIN: ${lwin}^FS
 
 ^XZ`
@@ -245,13 +245,10 @@ ${showQr ? `^FX -- QR code (mid-right, mag 4) --
 ^BQN,2,4
 ^FDQA,https://www.craftculture.xyz/cold-chain.html^FS
 
-^FX -- SCAN TO TRACE YOUR CASE --
-^FO578,228
-^A0N,14,14
-^FDSCAN TO TRACE^FS
-^FO586,244
-^A0N,14,14
-^FDYOUR CASE^FS
+^FX -- SCAN TO TRACE YOUR CASE (single line below QR) --
+^FO566,244
+^A0N,16,16
+^FDSCAN TO TRACE YOUR CASE^FS
 ` : ''}
 ^FX -- Separator --
 ^FO30,196
