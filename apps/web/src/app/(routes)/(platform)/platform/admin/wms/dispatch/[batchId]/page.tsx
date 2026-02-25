@@ -16,6 +16,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useState } from 'react';
+import { toast } from 'sonner';
 
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
@@ -40,6 +41,7 @@ const WMSDispatchBatchDetailPage = () => {
 
   const [showAddOrders, setShowAddOrders] = useState(false);
   const [selectedOrderIds, setSelectedOrderIds] = useState<string[]>([]);
+  const [isPrinting, setIsPrinting] = useState(false);
 
   // Fetch batch
   const { data: batch, isLoading } = useQuery({
@@ -313,21 +315,34 @@ const WMSDispatchBatchDetailPage = () => {
           {batch.orderCount > 0 && (
             <Button
               variant="outline"
+              disabled={isPrinting}
               onClick={async () => {
-                const zpl = generateDispatchLabelZpl({
-                  batchNumber: batch.batchNumber,
-                  distributorName: batch.distributorName ?? 'Unknown',
-                  totalCases: batch.totalCases,
-                  orderNumbers: batch.orders.map((o) => o.orderNumber),
-                  dispatchedAt: batch.dispatchedAt ? new Date(batch.dispatchedAt) : new Date(),
-                  notes: batch.notes,
-                });
-                const printed = await print(zpl, '4x6');
-                if (!printed) downloadZplFile(zpl, `dispatch-${batch.batchNumber}`);
+                setIsPrinting(true);
+                try {
+                  const zpl = generateDispatchLabelZpl({
+                    batchNumber: batch.batchNumber,
+                    distributorName: batch.distributorName ?? 'Unknown',
+                    totalCases: batch.totalCases,
+                    orderNumbers: batch.orders.map((o) => o.orderNumber),
+                    dispatchedAt: batch.dispatchedAt ? new Date(batch.dispatchedAt) : new Date(),
+                    notes: batch.notes,
+                  });
+                  const printed = await print(zpl, '4x6');
+                  if (printed) {
+                    toast.success('Pallet label sent to printer');
+                  } else {
+                    toast.error('No 4x6 printer found — check Printer Settings');
+                    downloadZplFile(zpl, `dispatch-${batch.batchNumber}`);
+                  }
+                } catch {
+                  toast.error('Failed to generate pallet label');
+                } finally {
+                  setIsPrinting(false);
+                }
               }}
             >
-              <ButtonContent iconLeft={IconPrinter}>
-                Print Pallet Label
+              <ButtonContent iconLeft={isPrinting ? IconLoader2 : IconPrinter}>
+                {isPrinting ? 'Printing...' : 'Print Pallet Label'}
               </ButtonContent>
             </Button>
           )}
