@@ -163,7 +163,7 @@ ${isPalletLabel ? `^FX -- PALLET banner (white on black, top-right) --
 ` : ''}
 ^FX -- Barcode --
 ^FO30,75
-^BY${barcodeValue.length > 25 ? '1' : '2'},3,55
+^BY${barcodeValue.length > 32 ? '1' : '2'},3,55
 ^BCN,55,Y,N,N
 ^FD${escapeZpl(barcodeValue)}^FS
 
