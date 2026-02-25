@@ -1053,14 +1053,11 @@ const ColdChainTab = () => (
       {/* Thermal Label Mockup */}
       <div className="mx-auto max-w-lg rounded-xl bg-white p-6 shadow-lg">
         {/* Logo */}
-        <div className="flex items-center gap-2">
-          <div className="flex h-7 w-7 items-center justify-center rounded-md bg-gray-900 text-xs font-bold text-white">
-            C
-          </div>
-          <div className="text-xs font-bold uppercase tracking-wider text-gray-900">
-            Craft &<br />Culture
-          </div>
-        </div>
+        <img
+          src="/images/cc-logo-cropped.png"
+          alt="Craft & Culture"
+          className="h-8 w-auto"
+        />
 
         {/* Divider */}
         <div className="my-3 h-px bg-gray-300" />
@@ -1073,9 +1070,11 @@ const ColdChainTab = () => (
             <p className="mt-2 text-sm font-bold text-gray-900">Distribution Partner</p>
           </div>
           <div className="flex flex-col items-center gap-1">
-            <div className="flex h-20 w-20 items-center justify-center rounded border border-gray-200 bg-gray-50">
-              <Icon icon={IconQrcode} size="lg" className="text-gray-900" />
-            </div>
+            <img
+              src="https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=https://www.craftculture.xyz/cold-chain"
+              alt="QR code linking to cold chain verification"
+              className="h-20 w-20"
+            />
             <p className="text-center text-[9px] font-semibold uppercase tracking-wider text-gray-500">
               Scan to trace your case
             </p>
