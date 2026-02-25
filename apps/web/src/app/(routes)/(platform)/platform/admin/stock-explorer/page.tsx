@@ -557,7 +557,7 @@ const StockExplorerPage = () => {
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
   const [page, setPage] = useState(0);
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
-  const limit = 50;
+  const [limit, setLimit] = useState(50);
 
   // Persisted preferences
   const [density, setDensity] = useState<RowDensity>(() => loadPreference('se-density', 'normal'));
@@ -1192,34 +1192,55 @@ const StockExplorerPage = () => {
           </CardContent>
         </Card>
 
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="flex items-center justify-center gap-1">
-            <PaginationButton
-              onClick={() => setPage(0)}
-              disabled={page === 0}
-              icon={<IconChevronsLeft className="h-4 w-4" />}
-            />
-            <PaginationButton
-              onClick={() => setPage((p) => Math.max(0, p - 1))}
-              disabled={page === 0}
-              icon={<IconChevronLeft className="h-4 w-4" />}
-            />
-            <span className="px-4 text-sm tabular-nums text-text-muted">
-              {page + 1} / {totalPages}
-            </span>
-            <PaginationButton
-              onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
-              disabled={page >= totalPages - 1}
-              icon={<IconChevronRight className="h-4 w-4" />}
-            />
-            <PaginationButton
-              onClick={() => setPage(totalPages - 1)}
-              disabled={page >= totalPages - 1}
-              icon={<IconChevronsRight className="h-4 w-4" />}
-            />
+        {/* Pagination + page size */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs text-text-muted">Show</span>
+            {[50, 100, 200].map((size) => (
+              <button
+                key={size}
+                onClick={() => {
+                  setLimit(size);
+                  setPage(0);
+                }}
+                className={`rounded px-2 py-0.5 text-xs font-medium transition-colors ${
+                  limit === size
+                    ? 'bg-text-primary text-white'
+                    : 'bg-fill-secondary text-text-secondary hover:bg-fill-tertiary'
+                }`}
+              >
+                {size}
+              </button>
+            ))}
           </div>
-        )}
+          {totalPages > 1 && (
+            <div className="flex items-center gap-1">
+              <PaginationButton
+                onClick={() => setPage(0)}
+                disabled={page === 0}
+                icon={<IconChevronsLeft className="h-4 w-4" />}
+              />
+              <PaginationButton
+                onClick={() => setPage((p) => Math.max(0, p - 1))}
+                disabled={page === 0}
+                icon={<IconChevronLeft className="h-4 w-4" />}
+              />
+              <span className="px-4 text-sm tabular-nums text-text-muted">
+                {page + 1} / {totalPages}
+              </span>
+              <PaginationButton
+                onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+                disabled={page >= totalPages - 1}
+                icon={<IconChevronRight className="h-4 w-4" />}
+              />
+              <PaginationButton
+                onClick={() => setPage(totalPages - 1)}
+                disabled={page >= totalPages - 1}
+                icon={<IconChevronsRight className="h-4 w-4" />}
+              />
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

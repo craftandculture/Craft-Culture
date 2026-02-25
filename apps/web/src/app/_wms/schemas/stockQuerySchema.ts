@@ -23,7 +23,7 @@ export const getStockByProductSchema = z.object({
     .enum(['productName', 'totalCases', 'vintage', 'receivedAt'])
     .default('totalCases'),
   sortOrder: z.enum(['asc', 'desc']).default('desc'),
-  limit: z.number().min(1).max(100).default(50),
+  limit: z.number().min(1).max(200).default(50),
   offset: z.number().min(0).default(0),
 });
 
