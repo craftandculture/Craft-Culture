@@ -310,7 +310,7 @@ const StockCheckPage = () => {
   const scanInputRef = useRef<ScanInputHandle>(null);
 
   // Mode selection
-  const [mode, setMode] = useState<CheckMode>('bay');
+  const [mode, setMode] = useState<CheckMode>('product');
 
   // Bay mode state
   const [selectedLocationId, setSelectedLocationId] = useState<string | null>(null);
