@@ -186,13 +186,10 @@ ${productLine2 ? `^FX -- Product name line 2 --
 ^A0N,32,32
 ^FD${packSize}${isPalletLabel ? ` | ${palletCases} Cases` : ''}^FS
 
-^FX -- SCAN TO TRACE YOUR CASE (below QR) --
-^FO648,248
-^A0N,14,14
-^FDSCAN TO TRACE^FS
-^FO656,264
-^A0N,14,14
-^FDYOUR CASE^FS
+^FX -- TRACE YOUR CASE (below QR, bold) --
+^FO640,280
+^A0N,20,20
+^FDTRACE YOUR CASE^FS
 
 ^FX -- Vintage and Owner --
 ^FO30,278
