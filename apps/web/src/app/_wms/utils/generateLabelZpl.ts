@@ -159,6 +159,7 @@ const generateLabelZpl = (data: LabelData) => {
   // Two layouts: with barcode (WMS receiving) and without barcode (Stock Explorer / PCO)
   const zpl = showBarcode
     ? `^XA
+^PR3
 
 ^FX -- C&C logo (200x60 dots) --
 ^FO30,8
@@ -228,6 +229,7 @@ ${producer ? `^FO${vintage !== '-' ? '300' : '30'},232
 
 ^XZ`
     : `^XA
+^PR3
 
 ^FX -- C&C logo (200x60 dots, top-left) --
 ^FO30,10
