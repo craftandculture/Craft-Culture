@@ -45,6 +45,7 @@ import SelectTrigger from '@/app/_ui/components/Select/SelectTrigger';
 import SelectValue from '@/app/_ui/components/Select/SelectValue';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import usePrint from '@/app/_wms/hooks/usePrint';
+import PrinterProvider from '@/app/_wms/providers/PrinterProvider';
 import { generateBatchLabelsZpl } from '@/app/_wms/utils/generateLabelZpl';
 import type { PrivateClientOrder } from '@/database/schema';
 import useTRPC, { useTRPCClient } from '@/lib/trpc/browser';
@@ -1624,4 +1625,11 @@ const AdminPrivateOrderDetailPage = () => {
   );
 };
 
-export default AdminPrivateOrderDetailPage;
+/** Wrap in PrinterProvider since PCO page is outside the WMS layout */
+const AdminPrivateOrderDetailWithPrinter = () => (
+  <PrinterProvider>
+    <AdminPrivateOrderDetailPage />
+  </PrinterProvider>
+);
+
+export default AdminPrivateOrderDetailWithPrinter;

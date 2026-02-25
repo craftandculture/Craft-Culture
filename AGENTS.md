@@ -374,14 +374,20 @@ This repository has the following MCP servers configured in `.mcp.json`:
 
 Web browser automation and interaction capabilities for testing web interfaces and data scraping.
 
-### Neon
+### Neon (DO NOT USE MCP)
 
-Direct integration with the Neon PostgreSQL database for:
+The Neon MCP server hangs and is unreliable. **Never use Neon MCP tools.** Instead, use `psql` or `neonctl` via Bash:
 
-- Database queries and operations
-- Schema inspection and analysis
-- Data management
-- Migration operations
+```bash
+# Run SQL against production (preferred — fast, flexible)
+/usr/local/opt/libpq/bin/psql "postgresql://neondb_owner:npg_reXqxkTIW1M0@ep-wispy-math-agjx83pw.c-2.eu-central-1.aws.neon.tech/neondb?sslmode=require" -c "SELECT count(*) FROM products"
+
+# Branch management via neonctl
+npx neonctl branches list --project-id little-river-49556671
+npx neonctl connection-string --project-id little-river-49556671 --role-name neondb_owner
+```
+
+The Neon MCP entry remains in `.mcp.json` but must not be called.
 
 ### Vercel
 
