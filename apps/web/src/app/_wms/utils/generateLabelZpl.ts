@@ -187,7 +187,7 @@ ${productLine2 ? `^FX -- Product name line 2 --
 ^FD${packSize}${isPalletLabel ? ` | ${palletCases} Cases` : ''}^FS
 
 ^FX -- SCAN TO TRACE YOUR CASE (below QR) --
-^FO596,244
+^FO596,260
 ^A0N,16,16
 ^FDSCAN TO TRACE YOUR CASE^FS
 
