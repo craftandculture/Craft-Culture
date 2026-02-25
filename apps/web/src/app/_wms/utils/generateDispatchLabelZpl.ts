@@ -106,6 +106,10 @@ const generateDispatchLabelZpl = (data: DispatchLabelData) => {
 
   const zpl = `^XA
 
+^FX -- Label dimensions: 4" x 6" at 203 DPI --
+^PW812
+^LL1218
+
 ^FX -- Company header --
 ^FO50,30
 ^A0N,28,28
