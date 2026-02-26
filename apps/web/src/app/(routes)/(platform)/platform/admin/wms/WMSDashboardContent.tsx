@@ -3,6 +3,7 @@
 import {
   IconAlertTriangle,
   IconBarcode,
+  IconBook,
   IconBox,
   IconBoxSeam,
   IconBuildingWarehouse,
@@ -506,6 +507,10 @@ const WMSDashboardContent = () => {
                 <Icon icon={IconHeartbeat} size="sm" colorRole="muted" />
                 <Typography variant="bodySm">Health</Typography>
               </Link>
+              <a href="https://craftculture.xyz/wms-manual" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 rounded-lg p-2 transition-colors hover:bg-fill-secondary">
+                <Icon icon={IconBook} size="sm" colorRole="muted" />
+                <Typography variant="bodySm">Manual</Typography>
+              </a>
             </div>
           </CardContent>
         </Card>
