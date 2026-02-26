@@ -4,6 +4,7 @@ import {
   IconAlertTriangle,
   IconAnchor,
   IconArrowRight,
+  IconBook,
   IconChartBar,
   IconChevronRight,
   IconClipboardList,
@@ -177,8 +178,8 @@ const LogisticsDashboardPage = () => {
           </Card>
 
           {/* Quick Links skeleton */}
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {[...Array(4)].map((_, i) => (
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+            {[...Array(5)].map((_, i) => (
               <Card key={i}>
                 <CardContent className="flex items-center gap-3 p-4">
                   <Skeleton className="h-6 w-6" />
@@ -604,7 +605,7 @@ const LogisticsDashboardPage = () => {
         </Card>
 
         {/* Quick Links */}
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
           <Link href="/platform/admin/logistics/shipments">
             <Card className="cursor-pointer transition-colors hover:border-border-brand">
               <CardContent className="flex items-center gap-3 p-4">
@@ -661,6 +662,20 @@ const LogisticsDashboardPage = () => {
               </CardContent>
             </Card>
           </Link>
+          <a href="https://craftculture.xyz/logistics-manual" target="_blank" rel="noopener noreferrer">
+            <Card className="cursor-pointer transition-colors hover:border-border-brand">
+              <CardContent className="flex items-center gap-3 p-4">
+                <Icon icon={IconBook} size="md" className="text-text-muted" />
+                <div>
+                  <Typography variant="headingSm">Manual</Typography>
+                  <Typography variant="bodyXs" colorRole="muted">
+                    Operators manual
+                  </Typography>
+                </div>
+                <IconChevronRight className="ml-auto h-5 w-5 text-text-muted" />
+              </CardContent>
+            </Card>
+          </a>
         </div>
       </div>
     </div>
