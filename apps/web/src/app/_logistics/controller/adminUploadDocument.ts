@@ -22,21 +22,13 @@ const ALLOWED_DOCUMENT_TYPES = [
 /**
  * Upload a document to a logistics shipment
  *
- * Stores the file in Vercel Blob and creates a database record.
- * Supports BOL, AWB, invoices, permits, certificates, and more.
+ * Supports two modes:
+ * - blobUrl: file already uploaded to Vercel Blob via client upload (any size)
+ * - file: base64 data URL processed server-side (small files only)
  */
 const adminUploadDocument = adminProcedure.input(uploadDocumentSchema).mutation(async ({ input, ctx }) => {
-  const { shipmentId, documentType, documentNumber, issueDate, expiryDate, file, filename } = input;
+  const { shipmentId, documentType, documentNumber, issueDate, expiryDate, filename, blobUrl, file, fileType, fileSize } = input;
   const { user } = ctx;
-
-  // Check if Blob token is configured
-  if (!process.env.BLOB_READ_WRITE_TOKEN) {
-    logger.error('BLOB_READ_WRITE_TOKEN environment variable is not set');
-    throw new TRPCError({
-      code: 'INTERNAL_SERVER_ERROR',
-      message: 'File storage is not configured. Please contact support.',
-    });
-  }
 
   // Verify shipment exists
   const shipment = await db.query.logisticsShipments.findFirst({
@@ -51,46 +43,74 @@ const adminUploadDocument = adminProcedure.input(uploadDocumentSchema).mutation(
   }
 
   try {
-    // Extract base64 data from data URL
-    const base64Data = file.split(',')[1];
-    if (!base64Data) {
+    let finalUrl: string;
+    let finalSize: number;
+    let finalMimeType: string;
+
+    if (blobUrl) {
+      // File already uploaded to Vercel Blob via client upload
+      finalUrl = blobUrl;
+      finalSize = fileSize ?? 0;
+      finalMimeType = fileType;
+    } else if (file) {
+      // Legacy base64 upload path (small files)
+      if (!process.env.BLOB_READ_WRITE_TOKEN) {
+        logger.error('BLOB_READ_WRITE_TOKEN environment variable is not set');
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'File storage is not configured. Please contact support.',
+        });
+      }
+
+      // Extract base64 data from data URL
+      const base64Data = file.split(',')[1];
+      if (!base64Data) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Invalid file format',
+        });
+      }
+
+      // Convert base64 to buffer
+      const buffer = Buffer.from(base64Data, 'base64');
+
+      // Validate actual file content type
+      const detectedType = await fileTypeFromBuffer(buffer);
+      if (!detectedType || !ALLOWED_DOCUMENT_TYPES.includes(detectedType.mime)) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Invalid file type. Allowed: PDF, JPEG, PNG, GIF, WebP',
+        });
+      }
+
+      // Validate file size (max 10MB)
+      const maxSizeBytes = 10 * 1024 * 1024;
+      if (buffer.length > maxSizeBytes) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'File size must be less than 10MB',
+        });
+      }
+
+      // Generate unique filename and upload to Vercel Blob
+      const timestamp = Date.now();
+      const sanitizedFilename = filename.replace(/[^a-zA-Z0-9.-]/g, '_');
+      const blobFilename = `logistics/${shipmentId}/${documentType}/${timestamp}-${sanitizedFilename}`;
+
+      const blob = await put(blobFilename, buffer, {
+        access: 'public',
+        contentType: detectedType.mime,
+      });
+
+      finalUrl = blob.url;
+      finalSize = buffer.length;
+      finalMimeType = detectedType.mime;
+    } else {
       throw new TRPCError({
         code: 'BAD_REQUEST',
-        message: 'Invalid file format',
+        message: 'Either file or blobUrl must be provided',
       });
     }
-
-    // Convert base64 to buffer
-    const buffer = Buffer.from(base64Data, 'base64');
-
-    // Validate actual file content type
-    const detectedType = await fileTypeFromBuffer(buffer);
-    if (!detectedType || !ALLOWED_DOCUMENT_TYPES.includes(detectedType.mime)) {
-      throw new TRPCError({
-        code: 'BAD_REQUEST',
-        message: 'Invalid file type. Allowed: PDF, JPEG, PNG, GIF, WebP',
-      });
-    }
-
-    // Validate file size (max 10MB)
-    const maxSizeBytes = 10 * 1024 * 1024;
-    if (buffer.length > maxSizeBytes) {
-      throw new TRPCError({
-        code: 'BAD_REQUEST',
-        message: 'File size must be less than 10MB',
-      });
-    }
-
-    // Generate unique filename
-    const timestamp = Date.now();
-    const sanitizedFilename = filename.replace(/[^a-zA-Z0-9.-]/g, '_');
-    const blobFilename = `logistics/${shipmentId}/${documentType}/${timestamp}-${sanitizedFilename}`;
-
-    // Upload to Vercel Blob using detected content type
-    const blob = await put(blobFilename, buffer, {
-      access: 'public',
-      contentType: detectedType.mime,
-    });
 
     // Create database record
     const documents = await db
@@ -101,10 +121,10 @@ const adminUploadDocument = adminProcedure.input(uploadDocumentSchema).mutation(
         documentNumber,
         issueDate,
         expiryDate,
-        fileUrl: blob.url,
+        fileUrl: finalUrl,
         fileName: filename,
-        fileSize: buffer.length,
-        mimeType: detectedType.mime,
+        fileSize: finalSize,
+        mimeType: finalMimeType,
         uploadedBy: user.id,
       })
       .returning();

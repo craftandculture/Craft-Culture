@@ -80,6 +80,8 @@ const ShipmentDetailPage = () => {
     productCostPerBottle: '',
   });
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
+  const [editingPackItemId, setEditingPackItemId] = useState<string | null>(null);
+  const [editPack, setEditPack] = useState({ bottlesPerCase: '', bottleSizeMl: '' });
 
   const { data: shipment, isLoading, isError, error, refetch } = useQuery({
     ...api.logistics.admin.getOne.queryOptions({ id: shipmentId }),
@@ -222,7 +224,17 @@ const ShipmentDetailPage = () => {
       vintage: result.vintage || undefined,
       region: result.region || undefined,
       countryOfOrigin: result.country || undefined,
+      bottlesPerCase: result.caseSize,
+      bottleSizeMl: result.bottleSizeMl,
     });
+  };
+
+  const handleSavePack = (itemId: string) => {
+    const bpc = parseInt(editPack.bottlesPerCase, 10);
+    const bsml = parseInt(editPack.bottleSizeMl, 10);
+    if (!bpc || bpc < 1 || !bsml || bsml < 1) return;
+    updateItem({ itemId, bottlesPerCase: bpc, bottleSizeMl: bsml });
+    setEditingPackItemId(null);
   };
 
   const handleUseSupplierSku = (itemId: string, supplierSku: string) => {
@@ -724,9 +736,53 @@ const ShipmentDetailPage = () => {
                             )}
                           </td>
                           <td className="py-3 pr-4 text-center">
-                            <span className="text-xs">
-                              {item.bottlesPerCase || 12}x{(item.bottleSizeMl || 750) / 10}cl
-                            </span>
+                            {editingPackItemId === item.id ? (
+                              <div className="flex items-center gap-1 justify-center">
+                                <input
+                                  type="number"
+                                  value={editPack.bottlesPerCase}
+                                  onChange={(e) => setEditPack((p) => ({ ...p, bottlesPerCase: e.target.value }))}
+                                  className="w-10 rounded border border-border-primary bg-fill-primary px-1 py-0.5 text-center text-xs"
+                                  min={1}
+                                />
+                                <span className="text-xs text-text-muted">x</span>
+                                <input
+                                  type="number"
+                                  value={editPack.bottleSizeMl}
+                                  onChange={(e) => setEditPack((p) => ({ ...p, bottleSizeMl: e.target.value }))}
+                                  className="w-14 rounded border border-border-primary bg-fill-primary px-1 py-0.5 text-center text-xs"
+                                  min={1}
+                                />
+                                <span className="text-xs text-text-muted">ml</span>
+                                <button
+                                  onClick={() => handleSavePack(item.id)}
+                                  className="p-0.5 rounded text-green-600 hover:bg-green-50"
+                                  disabled={isUpdatingItem}
+                                >
+                                  <Icon icon={IconCheck} size="sm" />
+                                </button>
+                                <button
+                                  onClick={() => setEditingPackItemId(null)}
+                                  className="p-0.5 rounded text-text-muted hover:bg-fill-secondary"
+                                >
+                                  <Icon icon={IconX} size="sm" />
+                                </button>
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() => {
+                                  setEditingPackItemId(item.id);
+                                  setEditPack({
+                                    bottlesPerCase: String(item.bottlesPerCase || 12),
+                                    bottleSizeMl: String(item.bottleSizeMl || 750),
+                                  });
+                                }}
+                                className="text-xs hover:underline cursor-pointer"
+                                title="Click to edit pack size"
+                              >
+                                {item.bottlesPerCase || 12}x{(item.bottleSizeMl || 750) / 10}cl
+                              </button>
+                            )}
                           </td>
                           <td className="py-3 pr-4 text-right">{item.cases}</td>
                           <td className="py-3 pr-4 text-right">{item.totalBottles ?? '-'}</td>

@@ -22,20 +22,11 @@ const ALLOWED_DOCUMENT_TYPES = [
  * Partner upload a document to a logistics shipment
  *
  * Verifies the partner has access to the shipment before allowing upload.
- * Stores the file in Vercel Blob and creates a database record.
+ * Supports both blobUrl (client upload) and file (base64) modes.
  */
 const partnerUploadDocument = winePartnerProcedure.input(uploadDocumentSchema).mutation(async ({ input, ctx }) => {
-  const { shipmentId, documentType, documentNumber, issueDate, expiryDate, file, filename } = input;
+  const { shipmentId, documentType, documentNumber, issueDate, expiryDate, file, filename, blobUrl, fileType, fileSize } = input;
   const { user, partner } = ctx;
-
-  // Check if Blob token is configured
-  if (!process.env.BLOB_READ_WRITE_TOKEN) {
-    logger.error('BLOB_READ_WRITE_TOKEN environment variable is not set');
-    throw new TRPCError({
-      code: 'INTERNAL_SERVER_ERROR',
-      message: 'File storage is not configured. Please contact support.',
-    });
-  }
 
   // Verify shipment exists and belongs to this partner
   const [shipment] = await db
@@ -51,46 +42,67 @@ const partnerUploadDocument = winePartnerProcedure.input(uploadDocumentSchema).m
   }
 
   try {
-    // Extract base64 data from data URL
-    const base64Data = file.split(',')[1];
-    if (!base64Data) {
+    let finalUrl: string;
+    let finalSize: number;
+    let finalMimeType: string;
+
+    if (blobUrl) {
+      finalUrl = blobUrl;
+      finalSize = fileSize ?? 0;
+      finalMimeType = fileType;
+    } else if (file) {
+      if (!process.env.BLOB_READ_WRITE_TOKEN) {
+        logger.error('BLOB_READ_WRITE_TOKEN environment variable is not set');
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'File storage is not configured. Please contact support.',
+        });
+      }
+
+      const base64Data = file.split(',')[1];
+      if (!base64Data) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Invalid file format',
+        });
+      }
+
+      const buffer = Buffer.from(base64Data, 'base64');
+
+      const detectedType = await fileTypeFromBuffer(buffer);
+      if (!detectedType || !ALLOWED_DOCUMENT_TYPES.includes(detectedType.mime)) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Invalid file type. Allowed: PDF, JPEG, PNG, GIF, WebP',
+        });
+      }
+
+      const maxSizeBytes = 10 * 1024 * 1024;
+      if (buffer.length > maxSizeBytes) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'File size must be less than 10MB',
+        });
+      }
+
+      const timestamp = Date.now();
+      const sanitizedFilename = filename.replace(/[^a-zA-Z0-9.-]/g, '_');
+      const blobFilename = `logistics/${shipmentId}/${documentType}/${timestamp}-${sanitizedFilename}`;
+
+      const blob = await put(blobFilename, buffer, {
+        access: 'public',
+        contentType: detectedType.mime,
+      });
+
+      finalUrl = blob.url;
+      finalSize = buffer.length;
+      finalMimeType = detectedType.mime;
+    } else {
       throw new TRPCError({
         code: 'BAD_REQUEST',
-        message: 'Invalid file format',
+        message: 'Either file or blobUrl must be provided',
       });
     }
-
-    // Convert base64 to buffer
-    const buffer = Buffer.from(base64Data, 'base64');
-
-    // Validate actual file content type
-    const detectedType = await fileTypeFromBuffer(buffer);
-    if (!detectedType || !ALLOWED_DOCUMENT_TYPES.includes(detectedType.mime)) {
-      throw new TRPCError({
-        code: 'BAD_REQUEST',
-        message: 'Invalid file type. Allowed: PDF, JPEG, PNG, GIF, WebP',
-      });
-    }
-
-    // Validate file size (max 10MB)
-    const maxSizeBytes = 10 * 1024 * 1024;
-    if (buffer.length > maxSizeBytes) {
-      throw new TRPCError({
-        code: 'BAD_REQUEST',
-        message: 'File size must be less than 10MB',
-      });
-    }
-
-    // Generate unique filename
-    const timestamp = Date.now();
-    const sanitizedFilename = filename.replace(/[^a-zA-Z0-9.-]/g, '_');
-    const blobFilename = `logistics/${shipmentId}/${documentType}/${timestamp}-${sanitizedFilename}`;
-
-    // Upload to Vercel Blob using detected content type
-    const blob = await put(blobFilename, buffer, {
-      access: 'public',
-      contentType: detectedType.mime,
-    });
 
     // Create database record
     const documents = await db
@@ -101,10 +113,10 @@ const partnerUploadDocument = winePartnerProcedure.input(uploadDocumentSchema).m
         documentNumber,
         issueDate,
         expiryDate,
-        fileUrl: blob.url,
+        fileUrl: finalUrl,
         fileName: filename,
-        fileSize: buffer.length,
-        mimeType: detectedType.mime,
+        fileSize: finalSize,
+        mimeType: finalMimeType,
         uploadedBy: user.id,
       })
       .returning();

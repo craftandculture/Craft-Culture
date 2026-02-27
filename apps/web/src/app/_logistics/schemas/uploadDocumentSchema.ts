@@ -20,6 +20,10 @@ const mimeTypes = ['application/pdf', 'image/png', 'image/jpeg', 'image/jpg'] as
 
 /**
  * Schema for uploading a document to a logistics shipment
+ *
+ * Supports two upload modes:
+ * - `file`: base64 data URL (for small files < 4MB)
+ * - `blobUrl`: Vercel Blob URL from client upload (for any file size)
  */
 const uploadDocumentSchema = z.object({
   shipmentId: z.string().uuid(),
@@ -27,10 +31,15 @@ const uploadDocumentSchema = z.object({
   documentNumber: z.string().optional(),
   issueDate: z.coerce.date().optional(),
   expiryDate: z.coerce.date().optional(),
-  file: z.string().min(1, 'File is required'),
+  file: z.string().optional(),
+  blobUrl: z.string().url().optional(),
   filename: z.string().min(1, 'Filename is required'),
   fileType: z.enum(mimeTypes),
-});
+  fileSize: z.number().int().min(0).optional(),
+}).refine(
+  (data) => data.file || data.blobUrl,
+  { message: 'Either file or blobUrl must be provided' },
+);
 
 export type UploadDocumentInput = z.infer<typeof uploadDocumentSchema>;
 
