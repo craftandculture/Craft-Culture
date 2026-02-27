@@ -15,6 +15,8 @@ const updateItemSchema = z.object({
   producer: z.string().nullable().optional(),
   vintage: z.number().nullable().optional(),
   region: z.string().nullable().optional(),
+  bottlesPerCase: z.number().int().min(1).nullable().optional(),
+  bottleSizeMl: z.number().int().min(1).nullable().optional(),
 });
 
 /**
@@ -64,6 +66,18 @@ const adminUpdateItem = adminProcedure.input(updateItemSchema).mutation(async ({
   }
   if (updateFields.region !== undefined) {
     updateData.region = updateFields.region;
+  }
+  if (updateFields.bottlesPerCase !== undefined) {
+    updateData.bottlesPerCase = updateFields.bottlesPerCase;
+  }
+  if (updateFields.bottleSizeMl !== undefined) {
+    updateData.bottleSizeMl = updateFields.bottleSizeMl;
+  }
+
+  // Recalculate totalBottles if bottlesPerCase changed
+  if (updateFields.bottlesPerCase !== undefined) {
+    const bpc = updateFields.bottlesPerCase ?? existingItem.bottlesPerCase ?? 12;
+    updateData.totalBottles = existingItem.cases * bpc;
   }
 
   // Update the item

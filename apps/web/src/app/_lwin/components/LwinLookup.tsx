@@ -28,28 +28,37 @@ export interface LwinLookupResult {
   vintage: number | null;
   caseSize: number;
   bottleSizeMl: number;
+  producer: string | null;
+  country: string | null;
+  region: string | null;
 }
 
 interface LwinLookupProps {
   onSelect: (result: LwinLookupResult) => void;
+  productName?: string;
   defaultVintage?: number;
   defaultCaseSize?: number;
   defaultBottleSize?: number;
+  disabled?: boolean;
 }
 
 const LwinLookup = ({
   onSelect,
+  productName,
   defaultVintage,
   defaultCaseSize = 6,
   defaultBottleSize = 750,
 }: LwinLookupProps) => {
   const api = useTRPC();
 
-  const [searchQuery, setSearchQuery] = useState('');
-  const [debouncedQuery, setDebouncedQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState(productName ?? '');
+  const [debouncedQuery, setDebouncedQuery] = useState(productName ?? '');
   const [selectedLwin, setSelectedLwin] = useState<{
     lwin: string;
     displayName: string;
+    producerName: string | null;
+    country: string | null;
+    region: string | null;
   } | null>(null);
 
   // Configuration for LWIN18
@@ -103,6 +112,9 @@ const LwinLookup = ({
         vintage,
         caseSize,
         bottleSizeMl,
+        producer: selectedLwin.producerName,
+        country: selectedLwin.country,
+        region: selectedLwin.region,
       });
     }
   };
@@ -145,7 +157,13 @@ const LwinLookup = ({
               key={wine.lwin}
               type="button"
               onClick={() =>
-                setSelectedLwin({ lwin: wine.lwin, displayName: wine.displayName })
+                setSelectedLwin({
+                  lwin: wine.lwin,
+                  displayName: wine.displayName,
+                  producerName: wine.producerName,
+                  country: wine.country,
+                  region: wine.region,
+                })
               }
               className="flex w-full items-start gap-3 rounded-md p-2 text-left hover:bg-fill-primary"
             >

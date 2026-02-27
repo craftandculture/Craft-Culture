@@ -13,6 +13,7 @@ import {
   IconX,
 } from '@tabler/icons-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { upload } from '@vercel/blob/client';
 import { useCallback, useState } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { toast } from 'sonner';
@@ -115,15 +116,16 @@ const LogisticsDocumentUpload = ({
   const [extractionResult, setExtractionResult] = useState<ExtractionResult | null>(null);
   const [isImporting, setIsImporting] = useState(false);
 
-  // Upload mutation
-  const { mutateAsync: uploadDocument } = useMutation({
-    mutationFn: async (data: { file: string; filename: string; fileType: string }) => {
+  // Upload mutation — creates DB record after file is uploaded to Blob
+  const { mutateAsync: createDocumentRecord } = useMutation({
+    mutationFn: async (data: { blobUrl: string; filename: string; fileType: string; fileSize: number }) => {
       return trpcClient.logistics.admin.uploadDocument.mutate({
         shipmentId,
         documentType: selectedType,
-        file: data.file,
+        blobUrl: data.blobUrl,
         filename: data.filename,
         fileType: data.fileType as 'application/pdf' | 'image/png' | 'image/jpeg' | 'image/jpg',
+        fileSize: data.fileSize,
       });
     },
     onSuccess: () => {
@@ -261,19 +263,18 @@ const LogisticsDocumentUpload = ({
           throw new Error('File size must be less than 10MB');
         }
 
-        // Convert to base64
-        const reader = new FileReader();
-        const base64Promise = new Promise<string>((resolve, reject) => {
-          reader.onload = () => resolve(reader.result as string);
-          reader.onerror = () => reject(new Error('Failed to read file'));
+        // Upload directly to Vercel Blob (bypasses serverless 4.5MB body limit)
+        const blob = await upload(file.name, file, {
+          access: 'public',
+          handleUploadUrl: '/api/upload/blob',
         });
-        reader.readAsDataURL(file);
-        const base64 = await base64Promise;
 
-        await uploadDocument({
-          file: base64,
+        // Create database record with blob URL
+        await createDocumentRecord({
+          blobUrl: blob.url,
           filename: file.name,
           fileType: file.type,
+          fileSize: file.size,
         });
       } catch (err) {
         console.error('Error uploading file:', err);
@@ -282,7 +283,7 @@ const LogisticsDocumentUpload = ({
         setIsUploading(false);
       }
     },
-    [uploadDocument],
+    [createDocumentRecord],
   );
 
   const onDrop = useCallback(
