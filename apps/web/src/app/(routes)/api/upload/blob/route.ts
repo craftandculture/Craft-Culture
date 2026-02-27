@@ -1,4 +1,4 @@
-import { type HandleUploadBody, handleUpload } from '@vercel/blob';
+import { type HandleUploadBody, handleUpload } from '@vercel/blob/client';
 import { NextResponse } from 'next/server';
 
 import getCurrentUser from '@/app/_auth/data/getCurrentUser';
