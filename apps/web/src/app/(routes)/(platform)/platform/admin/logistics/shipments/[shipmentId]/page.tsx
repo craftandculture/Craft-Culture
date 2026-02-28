@@ -14,6 +14,7 @@ import {
   IconSearch,
   IconTrash,
   IconUpload,
+  IconWand,
   IconX,
 } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -63,6 +64,8 @@ const HS_CODES = [
   { value: '22086000', label: 'Vodka' },
   { value: '22060000', label: 'Cider' },
 ];
+
+const hsLabel = (code: string | null) => HS_CODES.find((h) => h.value === code)?.label ?? null;
 
 type ShipmentStatus = LogisticsShipment['status'];
 
@@ -189,6 +192,18 @@ const ShipmentDetailPage = () => {
         } else {
           toast.warning(`Sync completed with errors: ${result.summary.errors} failed`);
         }
+        void refetch();
+      },
+      onError: (error) => {
+        toast.error(error.message);
+      },
+    }),
+  );
+
+  const { mutate: autoAssignHs, isPending: isAutoAssigningHs } = useMutation(
+    api.logistics.admin.autoAssignHsCodes.mutationOptions({
+      onSuccess: (result) => {
+        toast.success(`HS codes assigned: ${result.updated} updated, ${result.skipped} skipped`);
         void refetch();
       },
       onError: (error) => {
@@ -605,7 +620,9 @@ const ShipmentDetailPage = () => {
         {activeTab === 'items' && (() => {
           const items = shipment.items ?? [];
           const mappedCount = items.filter((i) => i.lwin).length;
+          const hsCount = items.filter((i) => i.hsCode).length;
           const totalItems = items.length;
+          const allHsSet = totalItems > 0 && hsCount === totalItems;
           const lwinSheetItem = items.find((i) => i.id === sheetItemId) ?? null;
           const totalCases = items.reduce((sum, i) => sum + (i.cases ?? 0), 0);
           const totalBottles = items.reduce((sum, i) => sum + (i.totalBottles ?? 0), 0);
@@ -645,23 +662,45 @@ const ShipmentDetailPage = () => {
 
           return (
             <div className="space-y-4">
-              {/* Mapping Progress Bar */}
+              {/* Progress Bars */}
               {totalItems > 0 && (
                 <Card>
-                  <CardContent className="px-6 py-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <Typography variant="bodySm" className="font-medium">
-                        LWIN Mapping
-                      </Typography>
-                      <Typography variant="bodyXs" colorRole="muted">
-                        {mappedCount} of {totalItems} mapped
-                      </Typography>
+                  <CardContent className="px-6 py-4 space-y-3">
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <Typography variant="bodyXs" className="font-medium">LWIN Mapping</Typography>
+                        <Typography variant="bodyXs" colorRole="muted">{mappedCount}/{totalItems}</Typography>
+                      </div>
+                      <div className="h-1.5 w-full rounded-full bg-fill-secondary">
+                        <div
+                          className={`h-1.5 rounded-full transition-all ${mappedCount === totalItems ? 'bg-green-500' : 'bg-amber-400'}`}
+                          style={{ width: `${(mappedCount / totalItems) * 100}%` }}
+                        />
+                      </div>
                     </div>
-                    <div className="h-2 w-full rounded-full bg-fill-secondary">
-                      <div
-                        className={`h-2 rounded-full transition-all ${mappedCount === totalItems ? 'bg-green-500' : 'bg-amber-400'}`}
-                        style={{ width: `${totalItems > 0 ? (mappedCount / totalItems) * 100 : 0}%` }}
-                      />
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <Typography variant="bodyXs" className="font-medium">HS Codes</Typography>
+                        <div className="flex items-center gap-2">
+                          {!allHsSet && (
+                            <button
+                              onClick={() => autoAssignHs({ shipmentId })}
+                              disabled={isAutoAssigningHs}
+                              className="flex items-center gap-1 text-xs text-text-brand hover:underline disabled:opacity-50"
+                            >
+                              <Icon icon={IconWand} size="sm" />
+                              {isAutoAssigningHs ? 'Assigning...' : 'Auto-assign'}
+                            </button>
+                          )}
+                          <Typography variant="bodyXs" colorRole="muted">{hsCount}/{totalItems}</Typography>
+                        </div>
+                      </div>
+                      <div className="h-1.5 w-full rounded-full bg-fill-secondary">
+                        <div
+                          className={`h-1.5 rounded-full transition-all ${allHsSet ? 'bg-green-500' : 'bg-red-400'}`}
+                          style={{ width: `${(hsCount / totalItems) * 100}%` }}
+                        />
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
@@ -676,7 +715,8 @@ const ShipmentDetailPage = () => {
                         size="sm"
                         variant="outline"
                         onClick={() => syncToZoho({ shipmentId })}
-                        disabled={isSyncingToZoho || !items.some((i) => i.lwin)}
+                        disabled={isSyncingToZoho || !items.some((i) => i.lwin) || !allHsSet}
+                        title={!allHsSet ? 'All items must have HS codes before syncing' : undefined}
                       >
                         <ButtonContent iconLeft={isSyncingToZoho ? IconLoader2 : IconCloud}>
                           {isSyncingToZoho ? 'Syncing...' : 'Sync to Zoho'}
@@ -783,6 +823,7 @@ const ShipmentDetailPage = () => {
                           <tr className="border-b border-border-muted text-left text-xs uppercase tracking-wide text-text-muted">
                             <th className="pb-3 pl-6 pr-4">Product</th>
                             <th className="pb-3 pr-4">LWIN / SKU</th>
+                            <th className="pb-3 pr-4">HS</th>
                             <th className="pb-3 pr-4 text-center">Pack</th>
                             <th className="pb-3 pr-4 text-right">Cases</th>
                             <th className="pb-3 pr-4 text-right">Bottles</th>
@@ -853,6 +894,26 @@ const ShipmentDetailPage = () => {
                                         <Icon icon={IconSearch} size="sm" />
                                         Map
                                       </span>
+                                    </button>
+                                  )}
+                                </td>
+
+                                {/* HS Code */}
+                                <td className="py-3 pr-4">
+                                  {item.hsCode ? (
+                                    <button
+                                      onClick={() => openSheet(item)}
+                                      className="text-xs font-medium text-green-700 hover:text-text-brand transition-colors"
+                                      title={item.hsCode}
+                                    >
+                                      {hsLabel(item.hsCode) ?? item.hsCode}
+                                    </button>
+                                  ) : (
+                                    <button
+                                      onClick={() => openSheet(item)}
+                                      className="text-xs font-medium text-red-500 hover:text-text-brand transition-colors"
+                                    >
+                                      Missing
                                     </button>
                                   )}
                                 </td>
@@ -974,7 +1035,7 @@ const ShipmentDetailPage = () => {
                             <td className="pb-1 pl-6 pr-4 pt-3">
                               {totalItems} item{totalItems !== 1 ? 's' : ''}
                             </td>
-                            <td className="pb-1 pr-4 pt-3"></td>
+                            <td className="pb-1 pr-4 pt-3" colSpan={2}></td>
                             <td className="pb-1 pr-4 pt-3"></td>
                             <td className="pb-1 pr-4 pt-3 text-right tabular-nums font-semibold text-text-primary">
                               {totalCases}
