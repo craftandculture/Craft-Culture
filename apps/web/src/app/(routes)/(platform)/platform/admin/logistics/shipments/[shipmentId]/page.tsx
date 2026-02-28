@@ -11,6 +11,7 @@ import {
   IconPencil,
   IconPlus,
   IconRefresh,
+  IconSearch,
   IconTrash,
   IconUpload,
   IconX,
@@ -28,6 +29,7 @@ import ShipmentStatusStepper from '@/app/_logistics/components/ShipmentStatusSte
 import ShipmentTracker from '@/app/_logistics/components/ShipmentTracker';
 import type { LwinLookupResult } from '@/app/_lwin/components/LwinLookup';
 import LwinLookup from '@/app/_lwin/components/LwinLookup';
+import Badge from '@/app/_ui/components/Badge/Badge';
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
 import Card from '@/app/_ui/components/Card/Card';
@@ -39,6 +41,10 @@ import SelectContent from '@/app/_ui/components/Select/SelectContent';
 import SelectItem from '@/app/_ui/components/Select/SelectItem';
 import SelectTrigger from '@/app/_ui/components/Select/SelectTrigger';
 import SelectValue from '@/app/_ui/components/Select/SelectValue';
+import Sheet from '@/app/_ui/components/Sheet/Sheet';
+import SheetContent from '@/app/_ui/components/Sheet/SheetContent';
+import SheetDescription from '@/app/_ui/components/Sheet/SheetDescription';
+import SheetTitle from '@/app/_ui/components/Sheet/SheetTitle';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import type { LogisticsShipment } from '@/database/schema';
 import useTRPC from '@/lib/trpc/browser';
@@ -77,9 +83,10 @@ const ShipmentDetailPage = () => {
     productName: '',
     cases: '',
     bottlesPerCase: '12',
+    bottleSizeMl: '750',
     productCostPerBottle: '',
   });
-  const [editingItemId, setEditingItemId] = useState<string | null>(null);
+  const [lwinSheetItemId, setLwinSheetItemId] = useState<string | null>(null);
   const [editingPackItemId, setEditingPackItemId] = useState<string | null>(null);
   const [editPack, setEditPack] = useState({ bottlesPerCase: '', bottleSizeMl: '' });
 
@@ -120,7 +127,7 @@ const ShipmentDetailPage = () => {
       onSuccess: () => {
         toast.success('Item added');
         setIsAddingItem(false);
-        setNewItem({ productName: '', cases: '', bottlesPerCase: '12', productCostPerBottle: '' });
+        setNewItem({ productName: '', cases: '', bottlesPerCase: '12', bottleSizeMl: '750', productCostPerBottle: '' });
         void refetch();
       },
       onError: (error) => {
@@ -145,7 +152,8 @@ const ShipmentDetailPage = () => {
     api.logistics.admin.updateItem.mutationOptions({
       onSuccess: () => {
         toast.success('Item updated');
-        setEditingItemId(null);
+        setLwinSheetItemId(null);
+        setEditingPackItemId(null);
         void refetch();
       },
       onError: (error) => {
@@ -212,6 +220,7 @@ const ShipmentDetailPage = () => {
       productName: newItem.productName,
       cases: parseInt(newItem.cases, 10),
       bottlesPerCase: parseInt(newItem.bottlesPerCase, 10) || 12,
+      bottleSizeMl: parseInt(newItem.bottleSizeMl, 10) || 750,
       productCostPerBottle: newItem.productCostPerBottle ? parseFloat(newItem.productCostPerBottle) : undefined,
     });
   };
@@ -568,256 +577,422 @@ const ShipmentDetailPage = () => {
           </div>
         )}
 
-        {activeTab === 'items' && (
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <Typography variant="headingSm">Items</Typography>
-                <div className="flex gap-2">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => syncToZoho({ shipmentId })}
-                    disabled={isSyncingToZoho || !shipment.items?.some((i) => i.lwin)}
-                  >
-                    <ButtonContent iconLeft={isSyncingToZoho ? IconLoader2 : IconCloud}>
-                      {isSyncingToZoho ? 'Syncing...' : 'Sync to Zoho'}
-                    </ButtonContent>
-                  </Button>
-                  <Button size="sm" onClick={() => setIsAddingItem(true)}>
-                    <ButtonContent iconLeft={IconPlus}>Add Item</ButtonContent>
-                  </Button>
-                </div>
-              </div>
+        {activeTab === 'items' && (() => {
+          const items = shipment.items ?? [];
+          const mappedCount = items.filter((i) => i.lwin).length;
+          const totalItems = items.length;
+          const lwinSheetItem = items.find((i) => i.id === lwinSheetItemId) ?? null;
+          const totalCases = items.reduce((sum, i) => sum + (i.cases ?? 0), 0);
+          const totalBottles = items.reduce((sum, i) => sum + (i.totalBottles ?? 0), 0);
 
-              {isAddingItem && (
-                <div className="mb-6 p-4 border border-border-muted rounded-lg bg-surface-muted">
-                  <div className="grid gap-4 sm:grid-cols-4">
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">Product Name</label>
-                      <Input
-                        placeholder="e.g. Chateau Margaux 2018"
-                        value={newItem.productName}
-                        onChange={(e) => setNewItem((p) => ({ ...p, productName: e.target.value }))}
+          return (
+            <div className="space-y-4">
+              {/* Mapping Progress Bar */}
+              {totalItems > 0 && (
+                <Card>
+                  <CardContent className="px-6 py-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <Typography variant="bodySm" className="font-medium">
+                        LWIN Mapping
+                      </Typography>
+                      <Typography variant="bodyXs" colorRole="muted">
+                        {mappedCount} of {totalItems} mapped
+                      </Typography>
+                    </div>
+                    <div className="h-2 w-full rounded-full bg-fill-secondary">
+                      <div
+                        className={`h-2 rounded-full transition-all ${mappedCount === totalItems ? 'bg-green-500' : 'bg-amber-400'}`}
+                        style={{ width: `${totalItems > 0 ? (mappedCount / totalItems) * 100 : 0}%` }}
                       />
                     </div>
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">Cases</label>
-                      <Input
-                        type="number"
-                        placeholder="20"
-                        value={newItem.cases}
-                        onChange={(e) => setNewItem((p) => ({ ...p, cases: e.target.value }))}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">Bottles/Case</label>
-                      <Input
-                        type="number"
-                        value={newItem.bottlesPerCase}
-                        onChange={(e) => setNewItem((p) => ({ ...p, bottlesPerCase: e.target.value }))}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">Cost/Bottle (USD)</label>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        placeholder="12.00"
-                        value={newItem.productCostPerBottle}
-                        onChange={(e) => setNewItem((p) => ({ ...p, productCostPerBottle: e.target.value }))}
-                      />
-                    </div>
-                  </div>
-                  <div className="flex gap-2 mt-4">
-                    <Button size="sm" onClick={handleAddItem} disabled={isAddingItemPending}>
-                      <ButtonContent>{isAddingItemPending ? 'Adding...' : 'Add'}</ButtonContent>
-                    </Button>
-                    <Button size="sm" variant="outline" onClick={() => setIsAddingItem(false)}>
-                      Cancel
-                    </Button>
-                  </div>
-                </div>
+                  </CardContent>
+                </Card>
               )}
 
-              {!shipment.items?.length ? (
-                <Typography variant="bodyMd" colorRole="muted" className="text-center py-8">
-                  No items added yet
-                </Typography>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b border-border-muted text-left text-xs uppercase text-text-muted">
-                        <th className="pb-3 pr-4">Product</th>
-                        <th className="pb-3 pr-4">LWIN / SKU</th>
-                        <th className="pb-3 pr-4 text-center">Pack</th>
-                        <th className="pb-3 pr-4 text-right">Cases</th>
-                        <th className="pb-3 pr-4 text-right">Bottles</th>
-                        <th className="pb-3 pr-4 text-right">Cost/Btl</th>
-                        <th className="pb-3 pr-4 text-right">Landed/Btl</th>
-                        <th className="pb-3 pr-4 text-right">Margin</th>
-                        <th className="pb-3"></th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-border-muted">
-                      {shipment.items.map((item) => (
-                        <tr key={item.id}>
-                          <td className="py-3 pr-4">
-                            <Typography variant="bodySm" className="font-medium">
-                              {item.productName}
-                            </Typography>
-                            <div className="flex items-center gap-2 mt-0.5">
-                              {item.producer && (
-                                <Typography variant="bodyXs" colorRole="muted">
-                                  {item.producer}
-                                </Typography>
-                              )}
-                              {item.vintage && (
-                                <Typography variant="bodyXs" colorRole="muted">
-                                  {item.vintage}
-                                </Typography>
-                              )}
-                              {item.region && (
-                                <Typography variant="bodyXs" colorRole="muted">
-                                  {item.region}
-                                </Typography>
-                              )}
-                            </div>
-                          </td>
-                          <td className="py-3 pr-4">
-                            {editingItemId === item.id ? (
-                              <div className="space-y-2">
-                                <LwinLookup
-                                  productName={item.productName}
-                                  onSelect={(result) => handleLwinSelect(item.id, result)}
-                                  disabled={isUpdatingItem}
-                                />
-                                {item.supplierSku && !item.lwin && (
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => handleUseSupplierSku(item.id, item.supplierSku!)}
-                                    disabled={isUpdatingItem}
-                                  >
-                                    <ButtonContent>
-                                      Use Supplier SKU ({item.supplierSku})
-                                    </ButtonContent>
-                                  </Button>
-                                )}
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={() => setEditingItemId(null)}
-                                >
-                                  <ButtonContent iconLeft={IconX}>Cancel</ButtonContent>
-                                </Button>
-                              </div>
-                            ) : (
-                              <div className="flex items-center gap-2">
-                                {item.lwin ? (
-                                  <div className="flex items-center gap-1">
-                                    <Icon icon={IconCheck} size="sm" className="text-green-600" />
-                                    <code className="text-xs font-mono bg-fill-secondary px-1.5 py-0.5 rounded">
-                                      {item.lwin}
-                                    </code>
-                                  </div>
-                                ) : (
-                                  <span className="text-text-warning text-xs">Not mapped</span>
-                                )}
-                                <button
-                                  onClick={() => setEditingItemId(item.id)}
-                                  className="p-1 rounded hover:bg-fill-secondary text-text-muted hover:text-text-primary"
-                                  title="Edit LWIN/SKU"
-                                >
-                                  <Icon icon={IconPencil} size="sm" />
-                                </button>
-                              </div>
-                            )}
-                          </td>
-                          <td className="py-3 pr-4 text-center">
-                            {editingPackItemId === item.id ? (
-                              <div className="flex items-center gap-1 justify-center">
-                                <input
-                                  type="number"
-                                  value={editPack.bottlesPerCase}
-                                  onChange={(e) => setEditPack((p) => ({ ...p, bottlesPerCase: e.target.value }))}
-                                  className="w-10 rounded border border-border-primary bg-fill-primary px-1 py-0.5 text-center text-xs"
-                                  min={1}
-                                />
-                                <span className="text-xs text-text-muted">x</span>
-                                <input
-                                  type="number"
-                                  value={editPack.bottleSizeMl}
-                                  onChange={(e) => setEditPack((p) => ({ ...p, bottleSizeMl: e.target.value }))}
-                                  className="w-14 rounded border border-border-primary bg-fill-primary px-1 py-0.5 text-center text-xs"
-                                  min={1}
-                                />
-                                <span className="text-xs text-text-muted">ml</span>
-                                <button
-                                  onClick={() => handleSavePack(item.id)}
-                                  className="p-0.5 rounded text-green-600 hover:bg-green-50"
-                                  disabled={isUpdatingItem}
-                                >
-                                  <Icon icon={IconCheck} size="sm" />
-                                </button>
-                                <button
-                                  onClick={() => setEditingPackItemId(null)}
-                                  className="p-0.5 rounded text-text-muted hover:bg-fill-secondary"
-                                >
-                                  <Icon icon={IconX} size="sm" />
-                                </button>
-                              </div>
-                            ) : (
-                              <button
-                                onClick={() => {
-                                  setEditingPackItemId(item.id);
-                                  setEditPack({
-                                    bottlesPerCase: String(item.bottlesPerCase || 12),
-                                    bottleSizeMl: String(item.bottleSizeMl || 750),
-                                  });
-                                }}
-                                className="text-xs hover:underline cursor-pointer"
-                                title="Click to edit pack size"
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <Typography variant="headingSm">Items</Typography>
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => syncToZoho({ shipmentId })}
+                        disabled={isSyncingToZoho || !items.some((i) => i.lwin)}
+                      >
+                        <ButtonContent iconLeft={isSyncingToZoho ? IconLoader2 : IconCloud}>
+                          {isSyncingToZoho ? 'Syncing...' : 'Sync to Zoho'}
+                        </ButtonContent>
+                      </Button>
+                      <Button size="sm" onClick={() => setIsAddingItem(true)}>
+                        <ButtonContent iconLeft={IconPlus}>Add Item</ButtonContent>
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Add Item Form */}
+                  {isAddingItem && (
+                    <div className="mb-6 rounded-lg border border-border-brand/30 bg-fill-brand/5 p-4">
+                      <Typography variant="bodySm" className="mb-3 font-medium">
+                        New Item
+                      </Typography>
+                      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                        <div className="space-y-1.5 sm:col-span-2 lg:col-span-3">
+                          <label className="text-xs font-medium text-text-muted">Product Name</label>
+                          <Input
+                            placeholder="e.g. Chateau Margaux 2018"
+                            value={newItem.productName}
+                            onChange={(e) => setNewItem((p) => ({ ...p, productName: e.target.value }))}
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-medium text-text-muted">Cases</label>
+                          <Input
+                            type="number"
+                            placeholder="20"
+                            value={newItem.cases}
+                            onChange={(e) => setNewItem((p) => ({ ...p, cases: e.target.value }))}
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-medium text-text-muted">Bottles/Case</label>
+                          <Input
+                            type="number"
+                            value={newItem.bottlesPerCase}
+                            onChange={(e) => setNewItem((p) => ({ ...p, bottlesPerCase: e.target.value }))}
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-medium text-text-muted">Bottle Size</label>
+                          <select
+                            value={newItem.bottleSizeMl}
+                            onChange={(e) => setNewItem((p) => ({ ...p, bottleSizeMl: e.target.value }))}
+                            className="w-full rounded-lg border border-border-primary bg-fill-primary px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                          >
+                            <option value="375">375ml (Half)</option>
+                            <option value="500">500ml</option>
+                            <option value="700">700ml</option>
+                            <option value="750">750ml (Standard)</option>
+                            <option value="1000">1000ml (1L)</option>
+                            <option value="1500">1500ml (Magnum)</option>
+                            <option value="3000">3000ml (Jeroboam)</option>
+                          </select>
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-medium text-text-muted">Cost/Bottle (USD)</label>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            placeholder="12.00"
+                            value={newItem.productCostPerBottle}
+                            onChange={(e) => setNewItem((p) => ({ ...p, productCostPerBottle: e.target.value }))}
+                          />
+                        </div>
+                      </div>
+                      <div className="mt-4 flex gap-2">
+                        <Button size="sm" onClick={handleAddItem} disabled={isAddingItemPending}>
+                          <ButtonContent iconLeft={isAddingItemPending ? IconLoader2 : IconPlus}>
+                            {isAddingItemPending ? 'Adding...' : 'Add Item'}
+                          </ButtonContent>
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={() => setIsAddingItem(false)}>
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Items Table */}
+                  {!items.length ? (
+                    <div className="flex flex-col items-center justify-center py-12 text-center">
+                      <Icon icon={IconPackage} size="lg" className="mb-3 text-text-muted" />
+                      <Typography variant="bodySm" colorRole="muted">
+                        No items added yet
+                      </Typography>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="mt-3"
+                        onClick={() => setIsAddingItem(true)}
+                      >
+                        <ButtonContent iconLeft={IconPlus}>Add First Item</ButtonContent>
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto -mx-6">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b border-border-muted text-left text-xs uppercase tracking-wide text-text-muted">
+                            <th className="pb-3 pl-6 pr-4">Product</th>
+                            <th className="pb-3 pr-4">LWIN / SKU</th>
+                            <th className="pb-3 pr-4 text-center">Pack</th>
+                            <th className="pb-3 pr-4 text-right">Cases</th>
+                            <th className="pb-3 pr-4 text-right">Bottles</th>
+                            <th className="pb-3 pr-4 text-right">Cost/Btl</th>
+                            <th className="pb-3 pr-4 text-right">Landed/Btl</th>
+                            <th className="pb-3 pr-4 text-right">Margin</th>
+                            <th className="pb-3 pr-6"></th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {items.map((item) => {
+                            const metadata = [item.producer, item.vintage, item.region]
+                              .filter(Boolean)
+                              .join(' \u00b7 ');
+
+                            return (
+                              <tr
+                                key={item.id}
+                                className="border-b border-border-muted/50 transition-colors hover:bg-fill-secondary/50"
                               >
-                                {item.bottlesPerCase || 12}x{(item.bottleSizeMl || 750) / 10}cl
-                              </button>
-                            )}
-                          </td>
-                          <td className="py-3 pr-4 text-right">{item.cases}</td>
-                          <td className="py-3 pr-4 text-right">{item.totalBottles ?? '-'}</td>
-                          <td className="py-3 pr-4 text-right">
-                            {item.productCostPerBottle ? `$${item.productCostPerBottle.toFixed(2)}` : '-'}
-                          </td>
-                          <td className="py-3 pr-4 text-right">
-                            {item.landedCostPerBottle ? `$${item.landedCostPerBottle.toFixed(2)}` : '-'}
-                          </td>
-                          <td className="py-3 pr-4 text-right">
-                            {item.marginPercent !== null && item.marginPercent !== undefined ? (
-                              <span className={item.marginPercent >= 0 ? 'text-green-600' : 'text-red-600'}>
-                                {item.marginPercent.toFixed(0)}%
-                              </span>
-                            ) : (
-                              '-'
-                            )}
-                          </td>
-                          <td className="py-3">
-                            <button
-                              onClick={() => removeItem({ itemId: item.id })}
-                              className="p-1 rounded hover:bg-fill-danger/10 text-text-muted hover:text-text-danger"
-                            >
-                              <Icon icon={IconTrash} size="sm" />
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        )}
+                                {/* Product */}
+                                <td className="py-3 pl-6 pr-4">
+                                  <Typography variant="bodySm" className="font-medium leading-snug">
+                                    {item.productName}
+                                  </Typography>
+                                  {metadata && (
+                                    <Typography variant="bodyXs" colorRole="muted" className="mt-0.5">
+                                      {metadata}
+                                    </Typography>
+                                  )}
+                                </td>
+
+                                {/* LWIN / SKU */}
+                                <td className="py-3 pr-4">
+                                  {item.lwin ? (
+                                    <button
+                                      onClick={() => setLwinSheetItemId(item.id)}
+                                      className="group flex items-center gap-1.5"
+                                      title={`LWIN: ${item.lwin} — Click to change`}
+                                    >
+                                      <Badge colorRole="success" size="xs">
+                                        <Icon icon={IconCheck} size="sm" className="mr-0.5" />
+                                        <span className="font-mono">{item.lwin}</span>
+                                      </Badge>
+                                      <Icon
+                                        icon={IconPencil}
+                                        size="sm"
+                                        className="text-text-muted opacity-0 transition-opacity group-hover:opacity-100"
+                                      />
+                                    </button>
+                                  ) : (
+                                    <button
+                                      onClick={() => setLwinSheetItemId(item.id)}
+                                      className="group flex items-center gap-1.5"
+                                    >
+                                      <Badge colorRole="warning" size="xs">
+                                        Not mapped
+                                      </Badge>
+                                      <span className="flex items-center gap-0.5 text-xs text-text-brand opacity-0 transition-opacity group-hover:opacity-100">
+                                        <Icon icon={IconSearch} size="sm" />
+                                        Map
+                                      </span>
+                                    </button>
+                                  )}
+                                </td>
+
+                                {/* Pack */}
+                                <td className="py-3 pr-4 text-center">
+                                  {editingPackItemId === item.id ? (
+                                    <div className="flex items-center gap-1 justify-center">
+                                      <input
+                                        type="number"
+                                        value={editPack.bottlesPerCase}
+                                        onChange={(e) =>
+                                          setEditPack((p) => ({ ...p, bottlesPerCase: e.target.value }))
+                                        }
+                                        className="w-12 rounded border border-border-primary bg-fill-primary px-1.5 py-1 text-center text-xs"
+                                        min={1}
+                                      />
+                                      <span className="text-xs text-text-muted">&times;</span>
+                                      <input
+                                        type="number"
+                                        value={editPack.bottleSizeMl}
+                                        onChange={(e) =>
+                                          setEditPack((p) => ({ ...p, bottleSizeMl: e.target.value }))
+                                        }
+                                        className="w-16 rounded border border-border-primary bg-fill-primary px-1.5 py-1 text-center text-xs"
+                                        min={1}
+                                      />
+                                      <span className="text-xs text-text-muted">ml</span>
+                                      <button
+                                        onClick={() => handleSavePack(item.id)}
+                                        className="rounded p-0.5 text-green-600 hover:bg-green-50"
+                                        disabled={isUpdatingItem}
+                                      >
+                                        <Icon icon={IconCheck} size="sm" />
+                                      </button>
+                                      <button
+                                        onClick={() => setEditingPackItemId(null)}
+                                        className="rounded p-0.5 text-text-muted hover:bg-fill-secondary"
+                                      >
+                                        <Icon icon={IconX} size="sm" />
+                                      </button>
+                                    </div>
+                                  ) : (
+                                    <button
+                                      onClick={() => {
+                                        setEditingPackItemId(item.id);
+                                        setEditPack({
+                                          bottlesPerCase: String(item.bottlesPerCase || 12),
+                                          bottleSizeMl: String(item.bottleSizeMl || 750),
+                                        });
+                                      }}
+                                      className="inline-flex items-center rounded-md border border-border-muted bg-fill-secondary/50 px-2 py-0.5 text-xs font-medium transition-colors hover:border-border-brand hover:bg-fill-brand/5"
+                                      title="Click to edit pack size"
+                                    >
+                                      {item.bottlesPerCase || 12} &times; {(item.bottleSizeMl || 750) / 10}cl
+                                    </button>
+                                  )}
+                                </td>
+
+                                {/* Cases */}
+                                <td className="py-3 pr-4 text-right tabular-nums">
+                                  {item.cases}
+                                </td>
+
+                                {/* Bottles */}
+                                <td className="py-3 pr-4 text-right tabular-nums">
+                                  {item.totalBottles ?? '-'}
+                                </td>
+
+                                {/* Cost/Btl */}
+                                <td className="py-3 pr-4 text-right tabular-nums">
+                                  {item.productCostPerBottle
+                                    ? `$${item.productCostPerBottle.toFixed(2)}`
+                                    : '-'}
+                                </td>
+
+                                {/* Landed/Btl */}
+                                <td className="py-3 pr-4 text-right tabular-nums">
+                                  {item.landedCostPerBottle
+                                    ? `$${item.landedCostPerBottle.toFixed(2)}`
+                                    : '-'}
+                                </td>
+
+                                {/* Margin */}
+                                <td className="py-3 pr-4 text-right tabular-nums">
+                                  {item.marginPercent !== null && item.marginPercent !== undefined ? (
+                                    <span
+                                      className={
+                                        item.marginPercent >= 0 ? 'text-green-600' : 'text-red-600'
+                                      }
+                                    >
+                                      {item.marginPercent.toFixed(0)}%
+                                    </span>
+                                  ) : (
+                                    '-'
+                                  )}
+                                </td>
+
+                                {/* Delete */}
+                                <td className="py-3 pr-6">
+                                  <button
+                                    onClick={() => removeItem({ itemId: item.id })}
+                                    className="rounded p-1 text-text-muted transition-colors hover:bg-fill-danger/10 hover:text-text-danger"
+                                  >
+                                    <Icon icon={IconTrash} size="sm" />
+                                  </button>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                        {/* Summary Footer */}
+                        <tfoot>
+                          <tr className="text-xs font-medium text-text-muted">
+                            <td className="pb-1 pl-6 pr-4 pt-3">
+                              {totalItems} item{totalItems !== 1 ? 's' : ''}
+                            </td>
+                            <td className="pb-1 pr-4 pt-3"></td>
+                            <td className="pb-1 pr-4 pt-3"></td>
+                            <td className="pb-1 pr-4 pt-3 text-right tabular-nums font-semibold text-text-primary">
+                              {totalCases}
+                            </td>
+                            <td className="pb-1 pr-4 pt-3 text-right tabular-nums font-semibold text-text-primary">
+                              {totalBottles}
+                            </td>
+                            <td className="pb-1 pr-4 pt-3" colSpan={4}></td>
+                          </tr>
+                        </tfoot>
+                      </table>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* LWIN Lookup Sheet */}
+              <Sheet
+                open={!!lwinSheetItem}
+                onOpenChange={(open) => {
+                  if (!open) setLwinSheetItemId(null);
+                }}
+              >
+                <SheetContent side="right" className="sm:max-w-lg overflow-y-auto p-6">
+                  <SheetTitle className="mb-1">Map LWIN</SheetTitle>
+                  <SheetDescription className="mb-4 text-sm text-text-muted">
+                    {lwinSheetItem?.productName ?? 'Select a wine'}
+                  </SheetDescription>
+
+                  {lwinSheetItem && (
+                    <div className="space-y-4">
+                      {/* Current item info */}
+                      <div className="rounded-lg border border-border-muted bg-fill-secondary/50 p-3">
+                        <Typography variant="bodySm" className="font-medium">
+                          {lwinSheetItem.productName}
+                        </Typography>
+                        <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-text-muted">
+                          <span>{lwinSheetItem.cases} case{lwinSheetItem.cases !== 1 ? 's' : ''}</span>
+                          <span>
+                            {lwinSheetItem.bottlesPerCase || 12} &times;{' '}
+                            {(lwinSheetItem.bottleSizeMl || 750) / 10}cl
+                          </span>
+                          {lwinSheetItem.lwin && (
+                            <span className="font-mono text-green-600">
+                              Current: {lwinSheetItem.lwin}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* LWIN Lookup */}
+                      <LwinLookup
+                        productName={lwinSheetItem.productName}
+                        defaultCaseSize={lwinSheetItem.bottlesPerCase || 12}
+                        defaultBottleSize={lwinSheetItem.bottleSizeMl || 750}
+                        defaultVintage={lwinSheetItem.vintage ?? undefined}
+                        onSelect={(result) => handleLwinSelect(lwinSheetItem.id, result)}
+                        disabled={isUpdatingItem}
+                      />
+
+                      {/* Use Supplier SKU option */}
+                      {lwinSheetItem.supplierSku && !lwinSheetItem.lwin && (
+                        <div className="border-t border-border-muted pt-4">
+                          <Typography variant="bodyXs" colorRole="muted" className="mb-2">
+                            Or use supplier identifier
+                          </Typography>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="w-full"
+                            onClick={() =>
+                              handleUseSupplierSku(lwinSheetItem.id, lwinSheetItem.supplierSku!)
+                            }
+                            disabled={isUpdatingItem}
+                          >
+                            <ButtonContent>
+                              Use SKU: {lwinSheetItem.supplierSku}
+                            </ButtonContent>
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </SheetContent>
+              </Sheet>
+            </div>
+          );
+        })()}
 
         {activeTab === 'documents' && (
           <Card>
