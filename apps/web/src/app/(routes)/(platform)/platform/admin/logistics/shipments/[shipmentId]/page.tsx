@@ -108,7 +108,7 @@ const ShipmentDetailPage = () => {
   const [editPack, setEditPack] = useState({ bottlesPerCase: '', bottleSizeMl: '' });
   const [sheetForm, setSheetForm] = useState({
     productName: '', producer: '', vintage: '', region: '',
-    countryOfOrigin: '', hsCode: '', cases: '', bottlesPerCase: '',
+    countryOfOrigin: '', hsCode: '', lwin: '', cases: '', bottlesPerCase: '',
     bottleSizeMl: '', productCostPerBottle: '',
   });
 
@@ -259,23 +259,25 @@ const ShipmentDetailPage = () => {
     });
   };
 
-  const handleLwinSelect = (itemId: string, result: LwinLookupResult) => {
+  const handleLwinSelect = (_itemId: string, result: LwinLookupResult) => {
     // Auto-detect HS code: sparkling = 22041000, still wine = 22042100
     const text = `${result.classification ?? ''} ${result.displayName}`.toLowerCase();
     const isSparkling = ['champagne', 'sparkling', 'cava', 'prosecco', 'cremant', 'sekt', 'spumante']
       .some((t) => text.includes(t));
 
-    updateItem({
-      itemId,
+    // Populate the sheet form so the user can review before saving
+    setSheetForm((f) => ({
+      ...f,
       lwin: result.lwin18,
-      producer: result.producer || undefined,
-      vintage: result.vintage || undefined,
-      region: result.region || undefined,
-      countryOfOrigin: result.country || undefined,
+      producer: result.producer || f.producer,
+      vintage: result.vintage ? String(result.vintage) : f.vintage,
+      region: result.region || f.region,
+      countryOfOrigin: result.country || f.countryOfOrigin,
       hsCode: isSparkling ? '22041000' : '22042100',
-      bottlesPerCase: result.caseSize,
-      bottleSizeMl: result.bottleSizeMl,
-    });
+      bottlesPerCase: String(result.caseSize),
+      bottleSizeMl: String(result.bottleSizeMl),
+    }));
+    toast.success('LWIN matched — review fields and save');
   };
 
   const handleSavePack = (itemId: string) => {
@@ -636,6 +638,7 @@ const ShipmentDetailPage = () => {
               region: item.region ?? '',
               countryOfOrigin: item.countryOfOrigin ?? '',
               hsCode: item.hsCode ?? '',
+              lwin: item.lwin ?? '',
               cases: String(item.cases),
               bottlesPerCase: String(item.bottlesPerCase || 12),
               bottleSizeMl: String(item.bottleSizeMl || 750),
@@ -648,6 +651,7 @@ const ShipmentDetailPage = () => {
             updateItem({
               itemId: sheetItemId,
               ...(sheetForm.productName && { productName: sheetForm.productName }),
+              ...(sheetForm.lwin && { lwin: sheetForm.lwin }),
               producer: sheetForm.producer || null,
               vintage: sheetForm.vintage ? parseInt(sheetForm.vintage, 10) : null,
               region: sheetForm.region || null,
@@ -1181,10 +1185,12 @@ const ShipmentDetailPage = () => {
                         <Typography variant="bodySm" className="font-medium mb-3">
                           LWIN Mapping
                         </Typography>
-                        {lwinSheetItem.lwin && (
+                        {(sheetForm.lwin || lwinSheetItem.lwin) && (
                           <div className="mb-3 rounded-lg bg-green-50 p-2 dark:bg-green-900/20">
                             <Typography variant="bodyXs" className="font-mono text-green-700 dark:text-green-400">
-                              Current: {lwinSheetItem.lwin}
+                              {sheetForm.lwin && sheetForm.lwin !== lwinSheetItem.lwin
+                                ? `New: ${sheetForm.lwin}`
+                                : `Current: ${lwinSheetItem.lwin}`}
                             </Typography>
                           </div>
                         )}
