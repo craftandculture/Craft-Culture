@@ -50,6 +50,20 @@ import type { LogisticsShipment } from '@/database/schema';
 import useTRPC from '@/lib/trpc/browser';
 import formatPrice from '@/utils/formatPrice';
 
+const HS_CODES = [
+  { value: '22042100', label: 'Wine' },
+  { value: '22041000', label: 'Sparkling' },
+  { value: '22084000', label: 'Rum' },
+  { value: '22083000', label: 'Whisky' },
+  { value: '22030000', label: 'Beer' },
+  { value: '22082000', label: 'Brandy' },
+  { value: '22089090', label: 'Tequila/Spirit' },
+  { value: '22085000', label: 'Gin' },
+  { value: '22087000', label: 'Liquor' },
+  { value: '22086000', label: 'Vodka' },
+  { value: '22060000', label: 'Cider' },
+];
+
 type ShipmentStatus = LogisticsShipment['status'];
 
 const statusOptions: { value: ShipmentStatus; label: string }[] = [
@@ -86,9 +100,14 @@ const ShipmentDetailPage = () => {
     bottleSizeMl: '750',
     productCostPerBottle: '',
   });
-  const [lwinSheetItemId, setLwinSheetItemId] = useState<string | null>(null);
+  const [sheetItemId, setSheetItemId] = useState<string | null>(null);
   const [editingPackItemId, setEditingPackItemId] = useState<string | null>(null);
   const [editPack, setEditPack] = useState({ bottlesPerCase: '', bottleSizeMl: '' });
+  const [sheetForm, setSheetForm] = useState({
+    productName: '', producer: '', vintage: '', region: '',
+    countryOfOrigin: '', hsCode: '', cases: '', bottlesPerCase: '',
+    bottleSizeMl: '', productCostPerBottle: '',
+  });
 
   const { data: shipment, isLoading, isError, error, refetch } = useQuery({
     ...api.logistics.admin.getOne.queryOptions({ id: shipmentId }),
@@ -152,7 +171,7 @@ const ShipmentDetailPage = () => {
     api.logistics.admin.updateItem.mutationOptions({
       onSuccess: () => {
         toast.success('Item updated');
-        setLwinSheetItemId(null);
+        setSheetItemId(null);
         setEditingPackItemId(null);
         void refetch();
       },
@@ -226,6 +245,11 @@ const ShipmentDetailPage = () => {
   };
 
   const handleLwinSelect = (itemId: string, result: LwinLookupResult) => {
+    // Auto-detect HS code: sparkling = 22041000, still wine = 22042100
+    const text = `${result.classification ?? ''} ${result.displayName}`.toLowerCase();
+    const isSparkling = ['champagne', 'sparkling', 'cava', 'prosecco', 'cremant', 'sekt', 'spumante']
+      .some((t) => text.includes(t));
+
     updateItem({
       itemId,
       lwin: result.lwin18,
@@ -233,6 +257,7 @@ const ShipmentDetailPage = () => {
       vintage: result.vintage || undefined,
       region: result.region || undefined,
       countryOfOrigin: result.country || undefined,
+      hsCode: isSparkling ? '22041000' : '22042100',
       bottlesPerCase: result.caseSize,
       bottleSizeMl: result.bottleSizeMl,
     });
@@ -581,9 +606,42 @@ const ShipmentDetailPage = () => {
           const items = shipment.items ?? [];
           const mappedCount = items.filter((i) => i.lwin).length;
           const totalItems = items.length;
-          const lwinSheetItem = items.find((i) => i.id === lwinSheetItemId) ?? null;
+          const lwinSheetItem = items.find((i) => i.id === sheetItemId) ?? null;
           const totalCases = items.reduce((sum, i) => sum + (i.cases ?? 0), 0);
           const totalBottles = items.reduce((sum, i) => sum + (i.totalBottles ?? 0), 0);
+
+          const openSheet = (item: typeof items[number]) => {
+            setSheetItemId(item.id);
+            setSheetForm({
+              productName: item.productName,
+              producer: item.producer ?? '',
+              vintage: item.vintage ? String(item.vintage) : '',
+              region: item.region ?? '',
+              countryOfOrigin: item.countryOfOrigin ?? '',
+              hsCode: item.hsCode ?? '',
+              cases: String(item.cases),
+              bottlesPerCase: String(item.bottlesPerCase || 12),
+              bottleSizeMl: String(item.bottleSizeMl || 750),
+              productCostPerBottle: item.productCostPerBottle ? String(item.productCostPerBottle) : '',
+            });
+          };
+
+          const handleSaveSheet = () => {
+            if (!sheetItemId) return;
+            updateItem({
+              itemId: sheetItemId,
+              ...(sheetForm.productName && { productName: sheetForm.productName }),
+              producer: sheetForm.producer || null,
+              vintage: sheetForm.vintage ? parseInt(sheetForm.vintage, 10) : null,
+              region: sheetForm.region || null,
+              countryOfOrigin: sheetForm.countryOfOrigin || null,
+              hsCode: sheetForm.hsCode || null,
+              cases: sheetForm.cases ? parseInt(sheetForm.cases, 10) : undefined,
+              bottlesPerCase: sheetForm.bottlesPerCase ? parseInt(sheetForm.bottlesPerCase, 10) : null,
+              bottleSizeMl: sheetForm.bottleSizeMl ? parseInt(sheetForm.bottleSizeMl, 10) : null,
+              productCostPerBottle: sheetForm.productCostPerBottle ? parseFloat(sheetForm.productCostPerBottle) : null,
+            });
+          };
 
           return (
             <div className="space-y-4">
@@ -736,7 +794,10 @@ const ShipmentDetailPage = () => {
                         </thead>
                         <tbody>
                           {items.map((item) => {
-                            const metadata = [item.producer, item.vintage, item.region]
+                            // Skip vintage in metadata if already in product name
+                            const vintageStr = item.vintage ? String(item.vintage) : null;
+                            const showVintage = vintageStr && !item.productName.includes(vintageStr);
+                            const metadata = [item.producer, showVintage ? vintageStr : null, item.region]
                               .filter(Boolean)
                               .join(' \u00b7 ');
 
@@ -745,23 +806,28 @@ const ShipmentDetailPage = () => {
                                 key={item.id}
                                 className="border-b border-border-muted/50 transition-colors hover:bg-fill-secondary/50"
                               >
-                                {/* Product */}
+                                {/* Product — click to edit */}
                                 <td className="py-3 pl-6 pr-4">
-                                  <Typography variant="bodySm" className="font-medium leading-snug">
-                                    {item.productName}
-                                  </Typography>
-                                  {metadata && (
-                                    <Typography variant="bodyXs" colorRole="muted" className="mt-0.5">
-                                      {metadata}
+                                  <button
+                                    onClick={() => openSheet(item)}
+                                    className="text-left group"
+                                  >
+                                    <Typography variant="bodySm" className="font-medium leading-snug group-hover:text-text-brand transition-colors">
+                                      {item.productName}
                                     </Typography>
-                                  )}
+                                    {metadata && (
+                                      <Typography variant="bodyXs" colorRole="muted" className="mt-0.5">
+                                        {metadata}
+                                      </Typography>
+                                    )}
+                                  </button>
                                 </td>
 
                                 {/* LWIN / SKU */}
                                 <td className="py-3 pr-4">
                                   {item.lwin ? (
                                     <button
-                                      onClick={() => setLwinSheetItemId(item.id)}
+                                      onClick={() => openSheet(item)}
                                       className="group flex items-center gap-1.5"
                                       title={`LWIN: ${item.lwin} — Click to change`}
                                     >
@@ -777,7 +843,7 @@ const ShipmentDetailPage = () => {
                                     </button>
                                   ) : (
                                     <button
-                                      onClick={() => setLwinSheetItemId(item.id)}
+                                      onClick={() => openSheet(item)}
                                       className="group flex items-center gap-1.5"
                                     >
                                       <Badge colorRole="warning" size="xs">
@@ -848,7 +914,9 @@ const ShipmentDetailPage = () => {
 
                                 {/* Cases */}
                                 <td className="py-3 pr-4 text-right tabular-nums">
-                                  {item.cases}
+                                  <button onClick={() => openSheet(item)} className="hover:text-text-brand transition-colors">
+                                    {item.cases}
+                                  </button>
                                 </td>
 
                                 {/* Bottles */}
@@ -858,9 +926,11 @@ const ShipmentDetailPage = () => {
 
                                 {/* Cost/Btl */}
                                 <td className="py-3 pr-4 text-right tabular-nums">
-                                  {item.productCostPerBottle
-                                    ? `$${item.productCostPerBottle.toFixed(2)}`
-                                    : '-'}
+                                  <button onClick={() => openSheet(item)} className="hover:text-text-brand transition-colors">
+                                    {item.productCostPerBottle
+                                      ? `$${item.productCostPerBottle.toFixed(2)}`
+                                      : '-'}
+                                  </button>
                                 </td>
 
                                 {/* Landed/Btl */}
@@ -921,71 +991,162 @@ const ShipmentDetailPage = () => {
                 </CardContent>
               </Card>
 
-              {/* LWIN Lookup Sheet */}
-              <Sheet
-                open={!!lwinSheetItem}
-                onOpenChange={(open) => {
-                  if (!open) setLwinSheetItemId(null);
-                }}
-              >
+              {/* Item Editor Sheet */}
+              <Sheet open={!!lwinSheetItem} onOpenChange={(open) => { if (!open) setSheetItemId(null); }}>
                 <SheetContent side="right" className="sm:max-w-lg overflow-y-auto p-6">
-                  <SheetTitle className="mb-1">Map LWIN</SheetTitle>
+                  <SheetTitle className="mb-1">Edit Item</SheetTitle>
                   <SheetDescription className="mb-4 text-sm text-text-muted">
-                    {lwinSheetItem?.productName ?? 'Select a wine'}
+                    Update product details and LWIN mapping
                   </SheetDescription>
 
                   {lwinSheetItem && (
-                    <div className="space-y-4">
-                      {/* Current item info */}
-                      <div className="rounded-lg border border-border-muted bg-fill-secondary/50 p-3">
-                        <Typography variant="bodySm" className="font-medium">
-                          {lwinSheetItem.productName}
-                        </Typography>
-                        <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-text-muted">
-                          <span>{lwinSheetItem.cases} case{lwinSheetItem.cases !== 1 ? 's' : ''}</span>
-                          <span>
-                            {lwinSheetItem.bottlesPerCase || 12} &times;{' '}
-                            {(lwinSheetItem.bottleSizeMl || 750) / 10}cl
-                          </span>
-                          {lwinSheetItem.lwin && (
-                            <span className="font-mono text-green-600">
-                              Current: {lwinSheetItem.lwin}
-                            </span>
-                          )}
+                    <div className="space-y-5">
+                      {/* Editable Fields */}
+                      <div className="space-y-3">
+                        <div className="space-y-1">
+                          <label className="text-xs font-medium text-text-muted">Product Name</label>
+                          <Input
+                            value={sheetForm.productName}
+                            onChange={(e) => setSheetForm((f) => ({ ...f, productName: e.target.value }))}
+                          />
                         </div>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="space-y-1">
+                            <label className="text-xs font-medium text-text-muted">Producer</label>
+                            <Input
+                              value={sheetForm.producer}
+                              onChange={(e) => setSheetForm((f) => ({ ...f, producer: e.target.value }))}
+                              placeholder="e.g. Chateau Margaux"
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-xs font-medium text-text-muted">Vintage</label>
+                            <Input
+                              type="number"
+                              value={sheetForm.vintage}
+                              onChange={(e) => setSheetForm((f) => ({ ...f, vintage: e.target.value }))}
+                              placeholder="NV"
+                            />
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="space-y-1">
+                            <label className="text-xs font-medium text-text-muted">Region</label>
+                            <Input
+                              value={sheetForm.region}
+                              onChange={(e) => setSheetForm((f) => ({ ...f, region: e.target.value }))}
+                              placeholder="e.g. Bordeaux"
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-xs font-medium text-text-muted">Country</label>
+                            <Input
+                              value={sheetForm.countryOfOrigin}
+                              onChange={(e) => setSheetForm((f) => ({ ...f, countryOfOrigin: e.target.value }))}
+                              placeholder="e.g. France"
+                            />
+                          </div>
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-xs font-medium text-text-muted">HS Code</label>
+                          <select
+                            value={sheetForm.hsCode}
+                            onChange={(e) => setSheetForm((f) => ({ ...f, hsCode: e.target.value }))}
+                            className="w-full rounded-lg border border-border-primary bg-fill-primary px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                          >
+                            <option value="">Not set</option>
+                            {HS_CODES.map((hs) => (
+                              <option key={hs.value} value={hs.value}>
+                                {hs.value} — {hs.label}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="grid grid-cols-3 gap-3">
+                          <div className="space-y-1">
+                            <label className="text-xs font-medium text-text-muted">Cases</label>
+                            <Input
+                              type="number"
+                              value={sheetForm.cases}
+                              onChange={(e) => setSheetForm((f) => ({ ...f, cases: e.target.value }))}
+                              min={1}
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-xs font-medium text-text-muted">Btl/Case</label>
+                            <Input
+                              type="number"
+                              value={sheetForm.bottlesPerCase}
+                              onChange={(e) => setSheetForm((f) => ({ ...f, bottlesPerCase: e.target.value }))}
+                              min={1}
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-xs font-medium text-text-muted">Bottle Size</label>
+                            <select
+                              value={sheetForm.bottleSizeMl}
+                              onChange={(e) => setSheetForm((f) => ({ ...f, bottleSizeMl: e.target.value }))}
+                              className="w-full rounded-lg border border-border-primary bg-fill-primary px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                            >
+                              <option value="375">375ml</option>
+                              <option value="500">500ml</option>
+                              <option value="700">700ml</option>
+                              <option value="750">750ml</option>
+                              <option value="1000">1L</option>
+                              <option value="1500">1.5L</option>
+                              <option value="3000">3L</option>
+                            </select>
+                          </div>
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-xs font-medium text-text-muted">Cost/Bottle (USD)</label>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            value={sheetForm.productCostPerBottle}
+                            onChange={(e) => setSheetForm((f) => ({ ...f, productCostPerBottle: e.target.value }))}
+                            placeholder="0.00"
+                          />
+                        </div>
+                        <Button className="w-full" onClick={handleSaveSheet} disabled={isUpdatingItem}>
+                          <ButtonContent iconLeft={isUpdatingItem ? IconLoader2 : IconCheck}>
+                            {isUpdatingItem ? 'Saving...' : 'Save Changes'}
+                          </ButtonContent>
+                        </Button>
                       </div>
 
-                      {/* LWIN Lookup */}
-                      <LwinLookup
-                        productName={lwinSheetItem.productName}
-                        defaultCaseSize={lwinSheetItem.bottlesPerCase || 12}
-                        defaultBottleSize={lwinSheetItem.bottleSizeMl || 750}
-                        defaultVintage={lwinSheetItem.vintage ?? undefined}
-                        onSelect={(result) => handleLwinSelect(lwinSheetItem.id, result)}
-                        disabled={isUpdatingItem}
-                      />
-
-                      {/* Use Supplier SKU option */}
-                      {lwinSheetItem.supplierSku && !lwinSheetItem.lwin && (
-                        <div className="border-t border-border-muted pt-4">
-                          <Typography variant="bodyXs" colorRole="muted" className="mb-2">
-                            Or use supplier identifier
-                          </Typography>
+                      {/* LWIN Mapping */}
+                      <div className="border-t border-border-muted pt-4">
+                        <Typography variant="bodySm" className="font-medium mb-3">
+                          LWIN Mapping
+                        </Typography>
+                        {lwinSheetItem.lwin && (
+                          <div className="mb-3 rounded-lg bg-green-50 p-2 dark:bg-green-900/20">
+                            <Typography variant="bodyXs" className="font-mono text-green-700 dark:text-green-400">
+                              Current: {lwinSheetItem.lwin}
+                            </Typography>
+                          </div>
+                        )}
+                        <LwinLookup
+                          productName={lwinSheetItem.productName}
+                          defaultCaseSize={lwinSheetItem.bottlesPerCase || 12}
+                          defaultBottleSize={lwinSheetItem.bottleSizeMl || 750}
+                          defaultVintage={lwinSheetItem.vintage ?? undefined}
+                          onSelect={(result) => handleLwinSelect(lwinSheetItem.id, result)}
+                          disabled={isUpdatingItem}
+                        />
+                        {lwinSheetItem.supplierSku && !lwinSheetItem.lwin && (
                           <Button
                             size="sm"
                             variant="outline"
-                            className="w-full"
-                            onClick={() =>
-                              handleUseSupplierSku(lwinSheetItem.id, lwinSheetItem.supplierSku!)
-                            }
+                            className="mt-3 w-full"
+                            onClick={() => handleUseSupplierSku(lwinSheetItem.id, lwinSheetItem.supplierSku!)}
                             disabled={isUpdatingItem}
                           >
-                            <ButtonContent>
-                              Use SKU: {lwinSheetItem.supplierSku}
-                            </ButtonContent>
+                            Use SKU: {lwinSheetItem.supplierSku}
                           </Button>
-                        </div>
-                      )}
+                        )}
+                      </div>
                     </div>
                   )}
                 </SheetContent>

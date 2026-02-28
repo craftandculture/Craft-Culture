@@ -31,6 +31,9 @@ export interface LwinLookupResult {
   producer: string | null;
   country: string | null;
   region: string | null;
+  colour: string | null;
+  type: string | null;
+  classification: string | null;
 }
 
 interface LwinLookupProps {
@@ -59,6 +62,9 @@ const LwinLookup = ({
     producerName: string | null;
     country: string | null;
     region: string | null;
+    colour: string | null;
+    type: string | null;
+    classification: string | null;
   } | null>(null);
 
   // Configuration for LWIN18
@@ -115,6 +121,9 @@ const LwinLookup = ({
         producer: selectedLwin.producerName,
         country: selectedLwin.country,
         region: selectedLwin.region,
+        colour: selectedLwin.colour,
+        type: selectedLwin.type,
+        classification: selectedLwin.classification,
       });
     }
   };
@@ -163,6 +172,9 @@ const LwinLookup = ({
                   producerName: wine.producerName,
                   country: wine.country,
                   region: wine.region,
+                  colour: wine.colour ?? null,
+                  type: wine.type ?? null,
+                  classification: wine.classification ?? null,
                 })
               }
               className="flex w-full items-start gap-3 rounded-md p-2 text-left hover:bg-fill-primary"
