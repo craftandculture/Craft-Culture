@@ -3,6 +3,7 @@ import { createTRPCRouter } from '@/lib/trpc/trpc';
 import adminAcceptQuote from './controller/adminAcceptQuote';
 import adminAddItem from './controller/adminAddItem';
 import adminAssignQuoteRequest from './controller/adminAssignQuoteRequest';
+import adminAutoAssignHsCodes from './controller/adminAutoAssignHsCodes';
 import adminCalculateLandedCost from './controller/adminCalculateLandedCost';
 import adminCompareQuotes from './controller/adminCompareQuotes';
 import adminCreate from './controller/adminCreate';
@@ -61,6 +62,7 @@ const adminRouter = createTRPCRouter({
   updateItem: adminUpdateItem,
   removeItem: adminRemoveItem,
   syncItemsToZoho: adminSyncItemsToZoho,
+  autoAssignHsCodes: adminAutoAssignHsCodes,
 
   // Documents
   uploadDocument: adminUploadDocument,
