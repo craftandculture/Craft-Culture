@@ -295,6 +295,8 @@ zohoSalesOrderItems  - Line items for each order
 ## Current Development State
 
 ### Recently Completed
+- **Logistics Items Tab UX** — Full item editor sheet, LWIN mapping with auto-populate (producer, region, country, HS code, vintage, pack config), HS code progress bar with auto-assign, Sync to Zoho guard
+- **Logistics HS Code Management** — Auto-detection (sparkling vs still wine), bulk auto-assign endpoint, 11 supported HS codes, mandatory before Zoho sync
 - WMS Local Server (NUC) — local-first routing for scanner operations (~15ms vs ~200ms)
 - `useWmsApi()` hook with automatic NUC/cloud fallback on Transfer, Pick, Repack pages
 - NUC sync engine — pulls from Neon every 30s, pushes local writes back
