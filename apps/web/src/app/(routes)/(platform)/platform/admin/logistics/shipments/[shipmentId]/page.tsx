@@ -94,6 +94,8 @@ const ShipmentDetailPage = () => {
   const _queryClient = useQueryClient();
 
   const [activeTab, setActiveTab] = useState<TabType>('overview');
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [editedName, setEditedName] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isAddingItem, setIsAddingItem] = useState(false);
   const [newItem, setNewItem] = useState({
@@ -382,7 +384,60 @@ const ShipmentDetailPage = () => {
             </Link>
             <div>
               <div className="flex items-center gap-3">
-                <Typography variant="headingLg">{shipment.shipmentNumber}</Typography>
+                {isEditingName ? (
+                  <form
+                    className="flex items-center gap-2"
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      if (editedName.trim() && editedName.trim() !== shipment.shipmentNumber) {
+                        updateShipment({ id: shipmentId, shipmentNumber: editedName.trim() });
+                      }
+                      setIsEditingName(false);
+                    }}
+                  >
+                    <Input
+                      value={editedName}
+                      onChange={(e) => setEditedName(e.target.value)}
+                      className="h-9 w-56 text-lg font-semibold"
+                      autoFocus
+                      onKeyDown={(e) => {
+                        if (e.key === 'Escape') {
+                          setIsEditingName(false);
+                          setEditedName(shipment.shipmentNumber);
+                        }
+                      }}
+                    />
+                    <Button type="submit" variant="ghost" size="sm">
+                      <Icon icon={IconCheck} size="sm" />
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setIsEditingName(false);
+                        setEditedName(shipment.shipmentNumber);
+                      }}
+                    >
+                      <Icon icon={IconX} size="sm" />
+                    </Button>
+                  </form>
+                ) : (
+                  <button
+                    className="group flex items-center gap-2"
+                    onClick={() => {
+                      setEditedName(shipment.shipmentNumber);
+                      setIsEditingName(true);
+                    }}
+                  >
+                    <Typography variant="headingLg">{shipment.shipmentNumber}</Typography>
+                    <Icon
+                      icon={IconPencil}
+                      size="sm"
+                      className="text-text-muted opacity-0 transition-opacity group-hover:opacity-100"
+                    />
+                  </button>
+                )}
                 <ShipmentStatusBadge status={shipment.status} />
               </div>
               <Typography variant="bodyMd" colorRole="muted">
