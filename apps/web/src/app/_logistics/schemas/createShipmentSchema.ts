@@ -4,6 +4,9 @@ import { z } from 'zod';
  * Schema for creating a new logistics shipment
  */
 const createShipmentSchema = z.object({
+  // Optional display name (e.g. "RAREWINE Air freight 1")
+  name: z.string().max(100).optional(),
+
   // Required fields
   type: z.enum(['inbound', 'outbound', 're_export']),
   transportMode: z.enum(['sea_fcl', 'sea_lcl', 'air', 'road']),

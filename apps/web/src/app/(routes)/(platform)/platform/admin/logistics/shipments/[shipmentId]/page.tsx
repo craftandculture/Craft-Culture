@@ -389,8 +389,12 @@ const ShipmentDetailPage = () => {
                     className="flex items-center gap-2"
                     onSubmit={(e) => {
                       e.preventDefault();
-                      if (editedName.trim() && editedName.trim() !== shipment.shipmentNumber) {
-                        updateShipment({ id: shipmentId, shipmentNumber: editedName.trim() });
+                      const trimmed = editedName.trim();
+                      if (trimmed !== (shipment.name ?? '')) {
+                        updateShipment({
+                          id: shipmentId,
+                          name: trimmed || null,
+                        });
                       }
                       setIsEditingName(false);
                     }}
@@ -398,12 +402,13 @@ const ShipmentDetailPage = () => {
                     <Input
                       value={editedName}
                       onChange={(e) => setEditedName(e.target.value)}
-                      className="h-9 w-56 text-lg font-semibold"
+                      className="h-9 w-64 text-lg font-semibold"
+                      placeholder="e.g. RAREWINE Air freight 1"
                       autoFocus
                       onKeyDown={(e) => {
                         if (e.key === 'Escape') {
                           setIsEditingName(false);
-                          setEditedName(shipment.shipmentNumber);
+                          setEditedName(shipment.name ?? '');
                         }
                       }}
                     />
@@ -416,7 +421,7 @@ const ShipmentDetailPage = () => {
                       size="sm"
                       onClick={() => {
                         setIsEditingName(false);
-                        setEditedName(shipment.shipmentNumber);
+                        setEditedName(shipment.name ?? '');
                       }}
                     >
                       <Icon icon={IconX} size="sm" />
@@ -424,13 +429,15 @@ const ShipmentDetailPage = () => {
                   </form>
                 ) : (
                   <button
-                    className="group flex items-center gap-2"
+                    className="flex items-center gap-2"
                     onClick={() => {
-                      setEditedName(shipment.shipmentNumber);
+                      setEditedName(shipment.name ?? '');
                       setIsEditingName(true);
                     }}
                   >
-                    <Typography variant="headingLg">{shipment.shipmentNumber}</Typography>
+                    <Typography variant="headingLg">
+                      {shipment.name || shipment.shipmentNumber}
+                    </Typography>
                     <Icon
                       icon={IconPencil}
                       size="sm"
@@ -440,6 +447,11 @@ const ShipmentDetailPage = () => {
                 )}
                 <ShipmentStatusBadge status={shipment.status} />
               </div>
+              {shipment.name && (
+                <Typography variant="bodySm" colorRole="muted">
+                  {shipment.shipmentNumber}
+                </Typography>
+              )}
               <Typography variant="bodyMd" colorRole="muted">
                 {shipment.originCity ?? shipment.originCountry ?? 'Origin'} →{' '}
                 {shipment.destinationCity ?? shipment.destinationWarehouse ?? 'Destination'}

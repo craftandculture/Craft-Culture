@@ -362,8 +362,8 @@ const ShipmentsListPage = () => {
                               </span>
                             </div>
                             <Typography variant="headingSm" className="truncate">
-                              {shipment.originCity ?? shipment.originCountry ?? 'Origin'} →{' '}
-                              {shipment.destinationCity ?? shipment.destinationWarehouse ?? 'Destination'}
+                              {shipment.name ??
+                                `${shipment.originCity ?? shipment.originCountry ?? 'Origin'} → ${shipment.destinationCity ?? shipment.destinationWarehouse ?? 'Destination'}`}
                             </Typography>
                             {shipment.carrierName && (
                               <Typography variant="bodySm" colorRole="muted">

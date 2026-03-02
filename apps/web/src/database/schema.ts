@@ -2730,6 +2730,7 @@ export const logisticsShipments = pgTable(
   {
     id: uuid('id').primaryKey().defaultRandom(),
     shipmentNumber: text('shipment_number').notNull().unique(),
+    name: text('name'),
 
     // Shipment type and mode
     type: logisticsShipmentType('type').notNull(),
