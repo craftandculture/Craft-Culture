@@ -1,5 +1,5 @@
 import { TRPCError } from '@trpc/server';
-import { eq } from 'drizzle-orm';
+import { and, eq, ne } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { logisticsShipmentActivityLogs, logisticsShipments } from '@/database/schema';
@@ -35,6 +35,26 @@ const adminUpdate = adminProcedure
           code: 'NOT_FOUND',
           message: 'Shipment not found',
         });
+      }
+
+      // Check shipment number uniqueness if being changed
+      if (updates.shipmentNumber && updates.shipmentNumber !== existing.shipmentNumber) {
+        const [duplicate] = await db
+          .select({ id: logisticsShipments.id })
+          .from(logisticsShipments)
+          .where(
+            and(
+              eq(logisticsShipments.shipmentNumber, updates.shipmentNumber),
+              ne(logisticsShipments.id, id),
+            ),
+          );
+
+        if (duplicate) {
+          throw new TRPCError({
+            code: 'CONFLICT',
+            message: 'Shipment number already exists',
+          });
+        }
       }
 
       // Calculate total landed cost if cost fields are being updated

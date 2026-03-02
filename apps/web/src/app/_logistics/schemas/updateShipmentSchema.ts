@@ -6,6 +6,9 @@ import { z } from 'zod';
 const updateShipmentSchema = z.object({
   id: z.string().uuid(),
 
+  // Shipment identity
+  shipmentNumber: z.string().min(1).max(50).optional(),
+
   // Optional updates
   type: z.enum(['inbound', 'outbound', 're_export']).optional(),
   transportMode: z.enum(['sea_fcl', 'sea_lcl', 'air', 'road']).optional(),
