@@ -21,14 +21,14 @@ const INBOUND_STATUSES = [
  * Map HS code to product category.
  * Uses the same HS code mapping as the Zoho import UPC column.
  */
-const HS_TO_CATEGORY = sql<string | null>`
+const HS_TO_CATEGORY = sql<string | null>`MAX(
   CASE
     WHEN ${logisticsShipmentItems.hsCode} IN ('22042100', '22041000') THEN 'Wine'
     WHEN ${logisticsShipmentItems.hsCode} IN ('22084000', '22083000', '22082000', '22089090', '22085000', '22087000', '22086000') THEN 'Spirits'
     WHEN ${logisticsShipmentItems.hsCode} IN ('22030000', '22060000') THEN 'RTD'
     ELSE NULL
   END
-`;
+)`;
 
 /**
  * Grouping key for inbound items — same product across shipments should merge.
