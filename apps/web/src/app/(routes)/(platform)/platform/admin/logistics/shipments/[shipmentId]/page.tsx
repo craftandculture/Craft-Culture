@@ -434,7 +434,7 @@ const ShipmentDetailPage = () => {
                     <Icon
                       icon={IconPencil}
                       size="sm"
-                      className="text-text-muted opacity-0 transition-opacity group-hover:opacity-100"
+                      className="text-text-muted"
                     />
                   </button>
                 )}
