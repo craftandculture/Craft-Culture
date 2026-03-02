@@ -176,6 +176,13 @@
       "when": 1771494299617,
       "tag": "0024_fuzzy_cobalt_man",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1772474344249,
+      "tag": "0025_exotic_wendell_vaughn",
+      "breakpoints": true
     }
   ]
 }
