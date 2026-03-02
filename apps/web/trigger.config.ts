@@ -7,7 +7,7 @@ export const machineConfig = {
 } as const;
 
 export default defineConfig({
-  project: 'proj_hzlxlpyayhheoggbmmvs',
+  project: 'proj_injcpayjlfvojhpmbgbf',
   build: {
     external: ['sharp'],
     extensions: [
