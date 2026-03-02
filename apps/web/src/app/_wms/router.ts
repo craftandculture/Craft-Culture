@@ -37,6 +37,7 @@ import adminGetCycleCounts from './controller/adminGetCycleCounts';
 import adminGetDispatchBatch from './controller/adminGetDispatchBatch';
 import adminGetDispatchBatches from './controller/adminGetDispatchBatches';
 import adminGetExpiringStock from './controller/adminGetExpiringStock';
+import adminGetInboundStock from './controller/adminGetInboundStock';
 import adminGetLocation from './controller/adminGetLocation';
 import adminGetLocationByBarcode from './controller/adminGetLocationByBarcode';
 import adminGetLocationLabels from './controller/adminGetLocationLabels';
@@ -144,6 +145,7 @@ const stockRouter = createTRPCRouter({
   getOverview: adminGetStockOverview,
   getByProduct: adminGetStockByProduct,
   getByOwner: adminGetStockByOwner,
+  getInbound: adminGetInboundStock,
   getMovements: adminGetMovementHistory,
   getExpiring: adminGetExpiringStock,
   search: adminSearchStock,
