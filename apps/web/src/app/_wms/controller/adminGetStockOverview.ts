@@ -1,7 +1,13 @@
-import { eq, sql } from 'drizzle-orm';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 
 import db from '@/database/client';
-import { wmsLocations, wmsStock, wmsStockMovements } from '@/database/schema';
+import {
+  logisticsShipmentItems,
+  logisticsShipments,
+  wmsLocations,
+  wmsStock,
+  wmsStockMovements,
+} from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
 import { getStockOverviewSchema } from '../schemas/stockQuerySchema';
@@ -31,6 +37,7 @@ const adminGetStockOverview = adminProcedure
       movementStatsResult,
       stockByOwner,
       receivingStockResult,
+      inboundStockResult,
     ] = await Promise.all([
       // Get total stock stats
       db
@@ -97,6 +104,32 @@ const adminGetStockOverview = adminProcedure
         .from(wmsStock)
         .innerJoin(wmsLocations, eq(wmsLocations.id, wmsStock.locationId))
         .where(eq(wmsLocations.locationType, 'receiving')),
+
+      // Get inbound stock from active logistics shipments
+      db
+        .select({
+          inboundCases: sql<number>`COALESCE(SUM(${logisticsShipmentItems.cases}), 0)::int`,
+          inboundShipments: sql<number>`COUNT(DISTINCT ${logisticsShipments.id})::int`,
+        })
+        .from(logisticsShipmentItems)
+        .innerJoin(
+          logisticsShipments,
+          eq(logisticsShipmentItems.shipmentId, logisticsShipments.id),
+        )
+        .where(
+          and(
+            eq(logisticsShipments.type, 'inbound'),
+            inArray(logisticsShipments.status, [
+              'booked',
+              'picked_up',
+              'in_transit',
+              'arrived_port',
+              'customs_clearance',
+              'cleared',
+              'at_warehouse',
+            ]),
+          ),
+        ),
     ]);
 
     const stockStats = stockStatsResult[0];
@@ -105,6 +138,7 @@ const adminGetStockOverview = adminProcedure
     const expiryStats = expiryStatsResult[0];
     const movementStats = movementStatsResult[0];
     const receivingStock = receivingStockResult[0];
+    const inboundStock = inboundStockResult[0];
 
     const totalLocs = locationStats?.totalLocations ?? 0;
     const activeLocs = locationStats?.activeLocations ?? 0;
@@ -141,6 +175,10 @@ const adminGetStockOverview = adminProcedure
         casesInReceiving: receivingStock?.casesInReceiving ?? 0,
       },
       topOwners: stockByOwner,
+      inbound: {
+        cases: inboundStock?.inboundCases ?? 0,
+        shipments: inboundStock?.inboundShipments ?? 0,
+      },
     };
   });
 

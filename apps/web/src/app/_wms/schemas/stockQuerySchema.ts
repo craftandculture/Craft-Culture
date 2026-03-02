@@ -78,4 +78,18 @@ export const searchStockSchema = z.object({
   limit: z.number().min(1).max(50).default(20),
 });
 
+/**
+ * Schema for querying inbound stock from active logistics shipments
+ */
+export const getInboundStockSchema = z.object({
+  search: z.string().optional(),
+  category: z.enum(['Wine', 'Spirits', 'RTD']).optional(),
+  sortBy: z
+    .enum(['productName', 'expectedCases', 'vintage', 'eta'])
+    .default('eta'),
+  sortOrder: z.enum(['asc', 'desc']).default('asc'),
+  limit: z.number().min(1).max(200).default(50),
+  offset: z.number().min(0).default(0),
+});
+
 export default getStockOverviewSchema;

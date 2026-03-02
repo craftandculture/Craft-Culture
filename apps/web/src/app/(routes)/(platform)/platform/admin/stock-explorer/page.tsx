@@ -2,6 +2,7 @@
 
 import {
   IconAdjustments,
+  IconAnchor,
   IconArrowsExchange,
   IconBuildingWarehouse,
   IconChevronDown,
@@ -17,6 +18,7 @@ import {
   IconPackage,
   IconPrinter,
   IconSearch,
+  IconShip,
   IconSortAscending,
   IconSortDescending,
   IconTags,
@@ -28,6 +30,7 @@ import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
+import ShipmentStatusBadge from '@/app/_logistics/components/ShipmentStatusBadge';
 import Button from '@/app/_ui/components/Button/Button';
 import Card from '@/app/_ui/components/Card/Card';
 import CardContent from '@/app/_ui/components/Card/CardContent';
@@ -40,7 +43,7 @@ import useTRPC from '@/lib/trpc/browser';
 
 type SortField = 'productName' | 'totalCases' | 'vintage' | 'receivedAt';
 type SortOrder = 'asc' | 'desc';
-type QuickFilter = 'all' | 'lowStock' | 'reserved' | 'expiring' | 'ownStock' | 'consignment';
+type QuickFilter = 'all' | 'lowStock' | 'reserved' | 'expiring' | 'ownStock' | 'consignment' | 'inbound';
 type CategoryFilter = 'Wine' | 'Spirits' | 'RTD';
 type RowDensity = 'compact' | 'normal' | 'relaxed';
 
@@ -547,6 +550,197 @@ const ProductRow = ({ product, isExpanded, onToggle, density, visibleColumns, on
   );
 };
 
+// ─── Inbound Product Row ─────────────────────────────────────────────────────
+
+interface InboundProduct {
+  groupKey: string;
+  productName: string;
+  producer: string | null;
+  lwin: string | null;
+  vintage: number | null;
+  bottleSizeMl: number | null;
+  bottlesPerCase: number | null;
+  expectedCases: number;
+  expectedBottles: number;
+  shipmentCount: number;
+  earliestEta: Date | null;
+  latestEta: Date | null;
+  category: string | null;
+  shipments: {
+    shipmentId: string;
+    shipmentNumber: string;
+    shipmentStatus: string;
+    partnerName: string | null;
+    cases: number;
+    eta: Date | null;
+    ata: Date | null;
+    originCountry: string | null;
+  }[];
+}
+
+interface InboundProductRowProps {
+  product: InboundProduct;
+  isExpanded: boolean;
+  onToggle: () => void;
+  density: RowDensity;
+}
+
+const InboundProductRow = ({ product, isExpanded, onToggle, density }: InboundProductRowProps) => {
+  const dc = DENSITY_CLASSES[density];
+  const tdClass = dc.td;
+  const tdClassRight = `${dc.td} text-right tabular-nums`;
+
+  const formatEta = (date: Date | null) => {
+    if (!date) return '—';
+    return new Date(date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+  };
+
+  const sizeLabel = product.bottleSizeMl
+    ? product.bottleSizeMl >= 1000
+      ? `${(product.bottleSizeMl / 1000).toFixed(1)}L`
+      : `${product.bottleSizeMl}ml`
+    : '75cl';
+
+  return (
+    <>
+      <tr
+        onClick={onToggle}
+        className={`cursor-pointer border-b border-border-muted border-l-2 border-l-blue-400 transition-colors hover:bg-blue-50/30 ${dc.text}`}
+      >
+        {/* Expand chevron */}
+        <td className={`${tdClass} w-8 text-text-muted`}>
+          <IconChevronDown
+            className={`h-4 w-4 transition-transform ${isExpanded ? 'text-blue-500' : '-rotate-90'}`}
+          />
+        </td>
+
+        {/* Product name */}
+        <td className={`${tdClass} max-w-[280px] truncate font-medium text-text-primary`}>
+          {product.productName}
+        </td>
+
+        {/* Producer */}
+        <td className={`${tdClass} hidden max-w-[160px] truncate text-text-muted lg:table-cell`}>
+          {product.producer ?? '—'}
+        </td>
+
+        {/* LWIN */}
+        <td className={`${tdClass} hidden font-mono text-xs text-text-muted xl:table-cell`}>
+          {product.lwin ?? '—'}
+        </td>
+
+        {/* Vintage */}
+        <td className={`${tdClass} text-text-primary`}>{product.vintage ?? '—'}</td>
+
+        {/* Size */}
+        <td className={`${tdClass} hidden text-text-muted 2xl:table-cell`}>
+          {sizeLabel}
+        </td>
+
+        {/* Pack */}
+        <td className={`${tdClass} hidden text-text-muted 2xl:table-cell`}>
+          {product.bottlesPerCase ?? 12}
+        </td>
+
+        {/* Expected Cases */}
+        <td className={`${tdClassRight} text-base font-bold text-blue-600`}>
+          {product.expectedCases}
+        </td>
+
+        {/* ETA */}
+        <td className={tdClassRight}>
+          <span className="text-text-muted">{formatEta(product.earliestEta)}</span>
+        </td>
+
+        {/* Shipments */}
+        <td className={tdClassRight}>
+          <span className="text-text-muted">{product.shipmentCount}</span>
+        </td>
+
+        {/* Bottles (hidden on inbound) */}
+        <td className={`${tdClassRight} hidden md:table-cell text-text-muted`}>
+          {product.expectedBottles}
+        </td>
+
+        {/* Locs placeholder */}
+        <td className={`${tdClassRight} hidden md:table-cell`}>
+          <span className="text-text-muted">—</span>
+        </td>
+
+        {/* Owners placeholder */}
+        <td className={`${tdClassRight} hidden lg:table-cell`}>
+          <span className="text-text-muted">—</span>
+        </td>
+
+        {/* Status */}
+        <td className={`${tdClass} hidden lg:table-cell`}>
+          <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2 py-0.5 text-[11px] font-medium text-blue-700">
+            <IconAnchor className="h-3 w-3" />
+            Inbound
+          </span>
+        </td>
+      </tr>
+
+      {/* Expanded shipment breakdown */}
+      {isExpanded && product.shipments.length > 0 && (
+        <tr>
+          <td colSpan={20} className="bg-blue-50/30 px-0 py-0">
+            <div className="border-b border-border-muted px-4 py-4 sm:px-8">
+              <Typography variant="bodyXs" className="mb-3 font-semibold uppercase tracking-wider text-text-muted">
+                Shipment Breakdown — {product.shipments.length} shipment{product.shipments.length !== 1 ? 's' : ''}
+              </Typography>
+              <div className="overflow-x-auto">
+                <table className="w-full text-[13px]">
+                  <thead>
+                    <tr className="text-[11px] uppercase tracking-wider text-text-muted">
+                      <th className="px-3 py-1.5 text-left">Shipment</th>
+                      <th className="px-3 py-1.5 text-left">Status</th>
+                      <th className="px-3 py-1.5 text-left">Partner</th>
+                      <th className="px-3 py-1.5 text-right">Cases</th>
+                      <th className="px-3 py-1.5 text-left">ETA</th>
+                      <th className="hidden px-3 py-1.5 text-left sm:table-cell">Origin</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {product.shipments.map((s) => (
+                      <tr key={s.shipmentId} className="border-t border-border-muted">
+                        <td className="px-3 py-2">
+                          <Link
+                            href={`/platform/admin/logistics/shipments/${s.shipmentId}`}
+                            onClick={(e) => e.stopPropagation()}
+                            className="font-medium text-text-brand hover:underline"
+                          >
+                            {s.shipmentNumber}
+                          </Link>
+                        </td>
+                        <td className="px-3 py-2">
+                          <ShipmentStatusBadge status={s.shipmentStatus as 'booked'} />
+                        </td>
+                        <td className="px-3 py-2 text-text-muted">
+                          {s.partnerName ?? '—'}
+                        </td>
+                        <td className="px-3 py-2 text-right tabular-nums font-medium text-text-primary">
+                          {s.cases}
+                        </td>
+                        <td className="px-3 py-2 text-text-muted">
+                          {s.eta ? new Date(s.eta).toLocaleDateString('en-GB') : '—'}
+                        </td>
+                        <td className="hidden px-3 py-2 text-text-muted sm:table-cell">
+                          {s.originCountry ?? '—'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </td>
+        </tr>
+      )}
+    </>
+  );
+};
+
 // ─── Column Toggle Popover ──────────────────────────────────────────────────
 
 interface ColumnToggleProps {
@@ -667,13 +861,22 @@ const StockExplorerPage = () => {
     savePreference('se-columns', visibleColumns);
   }, [visibleColumns]);
 
-  // Fetch stock data
+  const isInboundView = quickFilter === 'inbound';
+
+  // Map sort fields for inbound view
+  const inboundSortBy = sortBy === 'totalCases'
+    ? 'expectedCases' as const
+    : sortBy === 'receivedAt'
+      ? 'eta' as const
+      : (sortBy as 'productName' | 'vintage');
+
+  // Fetch stock data (disabled when viewing inbound)
   const { data: stockData, isLoading } = useQuery({
     ...api.wms.admin.stock.getByProduct.queryOptions({
       search: debouncedSearch || undefined,
       ownerId: ownerId || undefined,
       category: category || undefined,
-      quickFilter: quickFilter !== 'all' ? quickFilter : undefined,
+      quickFilter: quickFilter !== 'all' && quickFilter !== 'inbound' ? quickFilter : undefined,
       vintageFrom: vintageFrom ? Number(vintageFrom) : undefined,
       vintageTo: vintageTo ? Number(vintageTo) : undefined,
       sortBy,
@@ -681,6 +884,20 @@ const StockExplorerPage = () => {
       limit,
       offset: page * limit,
     }),
+    enabled: !isInboundView,
+  });
+
+  // Fetch inbound stock data (only when inbound filter active)
+  const { data: inboundData, isLoading: isLoadingInbound } = useQuery({
+    ...api.wms.admin.stock.getInbound.queryOptions({
+      search: debouncedSearch || undefined,
+      category: category || undefined,
+      sortBy: inboundSortBy,
+      sortOrder,
+      limit,
+      offset: page * limit,
+    }),
+    enabled: isInboundView,
   });
 
   // Fetch overview for KPI cards
@@ -699,8 +916,12 @@ const StockExplorerPage = () => {
   }, [ownerData]);
 
   const products = useMemo(() => stockData?.products ?? [], [stockData]);
-  const totalCount = stockData?.pagination?.total ?? 0;
+  const inboundProducts = useMemo(() => (inboundData?.products ?? []) as InboundProduct[], [inboundData]);
+  const totalCount = isInboundView
+    ? (inboundData?.pagination?.total ?? 0)
+    : (stockData?.pagination?.total ?? 0);
   const totalPages = Math.ceil(totalCount / limit);
+  const activeLoading = isInboundView ? isLoadingInbound : isLoading;
 
   // Composite key for rows: lwin18 + caseConfig to distinguish pack sizes
   const rowKey = useCallback(
@@ -851,6 +1072,7 @@ const StockExplorerPage = () => {
   // Quick filter definitions
   const quickFilters: { key: QuickFilter; label: string }[] = [
     { key: 'all', label: 'All' },
+    { key: 'inbound', label: 'Inbound' },
     { key: 'lowStock', label: 'Low Stock' },
     { key: 'reserved', label: 'Reserved' },
     { key: 'expiring', label: 'Expiring' },
@@ -919,7 +1141,7 @@ const StockExplorerPage = () => {
 
         {/* KPI Cards */}
         {overview && (
-          <div className="grid grid-cols-3 gap-2 lg:grid-cols-6">
+          <div className={`grid grid-cols-3 gap-2 ${overview.inbound.cases > 0 ? 'lg:grid-cols-7' : 'lg:grid-cols-6'}`}>
             {/* Total Stock */}
             <div className="rounded-lg border border-border-muted bg-background-primary px-3 py-2.5 text-center">
               <div className="mx-auto mb-1 flex h-6 w-6 items-center justify-center rounded-md bg-blue-50 text-blue-500">
@@ -1005,6 +1227,29 @@ const StockExplorerPage = () => {
                   : '—'}
               </div>
             </div>
+
+            {/* Inbound */}
+            {overview.inbound.cases > 0 && (
+              <button
+                onClick={() => setQuickFilter(isInboundView ? 'all' : 'inbound')}
+                className={`rounded-lg border px-3 py-2.5 text-center transition-colors ${
+                  isInboundView
+                    ? 'border-blue-300 bg-blue-50 ring-1 ring-blue-200'
+                    : 'border-border-muted bg-background-primary hover:border-blue-200 hover:bg-blue-50/50'
+                }`}
+              >
+                <div className="mx-auto mb-1 flex h-6 w-6 items-center justify-center rounded-md bg-blue-50 text-blue-500">
+                  <IconShip size={13} />
+                </div>
+                <div className="text-lg font-bold leading-tight text-blue-600">
+                  {overview.inbound.cases.toLocaleString()}
+                </div>
+                <div className="text-[11px] text-text-muted">Inbound</div>
+                <div className="text-[10px] text-text-muted">
+                  {overview.inbound.shipments} shipment{overview.inbound.shipments !== 1 ? 's' : ''}
+                </div>
+              </button>
+            )}
           </div>
         )}
 
@@ -1094,8 +1339,12 @@ const StockExplorerPage = () => {
               onClick={() => setQuickFilter(qf.key)}
               className={`rounded-full px-4 py-2 text-sm font-medium transition-colors ${
                 quickFilter === qf.key
-                  ? 'bg-fill-brand text-white'
-                  : 'bg-surface-muted text-text-secondary hover:bg-fill-primary-hover hover:text-text-primary'
+                  ? qf.key === 'inbound'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-fill-brand text-white'
+                  : qf.key === 'inbound'
+                    ? 'bg-blue-50 text-blue-600 hover:bg-blue-100'
+                    : 'bg-surface-muted text-text-secondary hover:bg-fill-primary-hover hover:text-text-primary'
               }`}
             >
               {qf.label}
@@ -1150,11 +1399,11 @@ const StockExplorerPage = () => {
         {/* Results count + pagination info */}
         <div className="flex items-center justify-between text-xs text-text-muted">
           <span>
-            {isLoading ? (
+            {activeLoading ? (
               'Loading...'
             ) : (
               <>
-                {totalCount.toLocaleString()} product{totalCount !== 1 ? 's' : ''}
+                {totalCount.toLocaleString()} {isInboundView ? 'inbound' : ''} product{totalCount !== 1 ? 's' : ''}
                 {debouncedSearch && ` matching "${debouncedSearch}"`}
               </>
             )}
@@ -1218,15 +1467,19 @@ const StockExplorerPage = () => {
                         onClick={() => handleSort('totalCases')}
                       >
                         <span className="flex items-center justify-end gap-1">
-                          Cases {renderSortIcon('totalCases')}
+                          {isInboundView ? 'Expected' : 'Cases'} {renderSortIcon('totalCases')}
                         </span>
                       </th>
                     )}
                     {visibleColumns.available && (
-                      <th className={`${dc.td} text-right ${thBase}`}>Avail</th>
+                      <th className={`${dc.td} text-right ${thBase}`}>
+                        {isInboundView ? 'ETA' : 'Avail'}
+                      </th>
                     )}
                     {visibleColumns.reserved && (
-                      <th className={`${dc.td} text-right ${thBase}`}>Rsvd</th>
+                      <th className={`${dc.td} text-right ${thBase}`}>
+                        {isInboundView ? 'Ships' : 'Rsvd'}
+                      </th>
                     )}
                     {visibleColumns.bottles && (
                       <th className={`${dc.td} hidden text-right md:table-cell ${thBase}`}>
@@ -1251,10 +1504,50 @@ const StockExplorerPage = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {isLoading ? (
+                  {activeLoading ? (
                     Array.from({ length: 6 }).map((_, i) => (
                       <SkeletonRow key={i} density={density} />
                     ))
+                  ) : isInboundView ? (
+                    inboundProducts.length === 0 ? (
+                      <tr>
+                        <td colSpan={visibleColCount} className="py-20 text-center">
+                          <div className="flex flex-col items-center gap-3">
+                            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-50">
+                              <IconShip className="h-6 w-6 text-blue-400" />
+                            </div>
+                            <div>
+                              <Typography variant="bodySm" className="font-medium">
+                                No inbound shipments
+                              </Typography>
+                              <Typography variant="bodyXs" colorRole="muted" className="mt-1">
+                                Items from booked shipments will appear here automatically
+                              </Typography>
+                            </div>
+                            <Link href="/platform/admin/logistics">
+                              <Button variant="outline" size="sm">
+                                <IconShip className="mr-1 h-4 w-4" />
+                                Go to Logistics
+                              </Button>
+                            </Link>
+                          </div>
+                        </td>
+                      </tr>
+                    ) : (
+                      inboundProducts.map((product) => {
+                        const key = product.groupKey;
+                        const isExpanded = expandedRows.has(key);
+                        return (
+                          <InboundProductRow
+                            key={key}
+                            product={product}
+                            isExpanded={isExpanded}
+                            onToggle={() => toggleRow(key)}
+                            density={density}
+                          />
+                        );
+                      })
+                    )
                   ) : products.length === 0 ? (
                     <tr>
                       <td colSpan={visibleColCount} className="py-20 text-center">
