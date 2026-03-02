@@ -863,6 +863,13 @@ const StockExplorerPage = () => {
 
   const isInboundView = quickFilter === 'inbound';
 
+  // Clear category when entering inbound view (items may not have HS codes yet)
+  useEffect(() => {
+    if (isInboundView) {
+      setCategory(undefined);
+    }
+  }, [isInboundView]);
+
   // Map sort fields for inbound view
   const inboundSortBy = sortBy === 'totalCases'
     ? 'expectedCases' as const
