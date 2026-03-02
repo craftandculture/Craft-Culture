@@ -8,6 +8,7 @@ const updateShipmentSchema = z.object({
 
   // Shipment identity
   shipmentNumber: z.string().min(1).max(50).optional(),
+  name: z.string().max(100).nullable().optional(),
 
   // Optional updates
   type: z.enum(['inbound', 'outbound', 're_export']).optional(),

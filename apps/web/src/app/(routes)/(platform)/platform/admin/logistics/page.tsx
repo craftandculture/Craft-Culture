@@ -569,8 +569,8 @@ const LogisticsDashboardPage = () => {
                             <ShipmentStatusBadge status={shipment.status} />
                           </div>
                           <Typography variant="headingSm" className="truncate">
-                            {shipment.originCity ?? shipment.originCountry ?? 'Origin'} →{' '}
-                            {shipment.destinationCity ?? shipment.destinationWarehouse ?? 'Destination'}
+                            {shipment.name ??
+                              `${shipment.originCity ?? shipment.originCountry ?? 'Origin'} → ${shipment.destinationCity ?? shipment.destinationWarehouse ?? 'Destination'}`}
                           </Typography>
                         </div>
                       </div>
