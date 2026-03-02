@@ -898,7 +898,7 @@ const StockExplorerPage = () => {
   const { data: inboundData, isLoading: isLoadingInbound } = useQuery({
     ...api.wms.admin.stock.getInbound.queryOptions({
       search: debouncedSearch || undefined,
-      category: category || undefined,
+      category: undefined,
       sortBy: inboundSortBy,
       sortOrder,
       limit,
