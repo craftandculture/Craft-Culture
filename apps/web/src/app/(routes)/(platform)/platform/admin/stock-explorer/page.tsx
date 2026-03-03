@@ -25,7 +25,7 @@ import {
   IconUsers,
   IconX,
 } from '@tabler/icons-react';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
@@ -268,6 +268,69 @@ const PrintCell = ({ maxQty, onPrint }: PrintCellProps) => {
   );
 };
 
+// ─── BOE Cell (click-to-edit) ────────────────────────────────────────────────
+
+const BoeCell = ({ value, onSave }: { value: string | null; onSave: (v: string) => void }) => {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(value ?? '');
+
+  if (!editing) {
+    return (
+      <td className="hidden px-3 py-2 font-mono text-xs text-text-muted sm:table-cell">
+        <button
+          type="button"
+          className="cursor-pointer hover:underline"
+          onClick={(e) => {
+            e.stopPropagation();
+            setDraft(value ?? '');
+            setEditing(true);
+          }}
+        >
+          {value || '—'}
+        </button>
+      </td>
+    );
+  }
+
+  return (
+    <td className="hidden px-3 py-2 sm:table-cell">
+      <form
+        className="flex items-center gap-1"
+        onSubmit={(e) => {
+          e.preventDefault();
+          const trimmed = draft.trim();
+          if (trimmed !== (value ?? '')) {
+            onSave(trimmed);
+          }
+          setEditing(false);
+        }}
+      >
+        <input
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onClick={(e) => e.stopPropagation()}
+          className="w-28 rounded border border-border-primary bg-background-primary px-1.5 py-0.5 font-mono text-xs focus:border-border-brand focus:outline-none"
+          placeholder="RE BOE"
+          autoFocus
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') {
+              setEditing(false);
+              setDraft(value ?? '');
+            }
+          }}
+        />
+        <button
+          type="submit"
+          onClick={(e) => e.stopPropagation()}
+          className="rounded bg-fill-brand px-2 py-0.5 text-[11px] font-medium text-white transition-colors hover:bg-fill-brand/90"
+        >
+          Save
+        </button>
+      </form>
+    </td>
+  );
+};
+
 // ─── Product Row ────────────────────────────────────────────────────────────
 
 interface ProductRowProps {
@@ -296,6 +359,7 @@ interface ProductRowProps {
       ownerName: string;
       lotNumber: string | null;
       expiryDate: Date | null;
+      reExportBoeNumber: string | null;
     }[];
   };
   isExpanded: boolean;
@@ -303,9 +367,10 @@ interface ProductRowProps {
   density: RowDensity;
   visibleColumns: Record<string, boolean>;
   onPrintLabels: (product: ProductRowProps['product'], loc: ProductRowProps['product']['locations'][number], qty: number) => void;
+  onUpdateBoe: (stockId: string, value: string) => void;
 }
 
-const ProductRow = ({ product, isExpanded, onToggle, density, visibleColumns, onPrintLabels }: ProductRowProps) => {
+const ProductRow = ({ product, isExpanded, onToggle, density, visibleColumns, onPrintLabels, onUpdateBoe }: ProductRowProps) => {
   const dc = DENSITY_CLASSES[density];
   const tdClass = dc.td;
   const tdClassRight = `${dc.td} text-right tabular-nums`;
@@ -471,6 +536,7 @@ const ProductRow = ({ product, isExpanded, onToggle, density, visibleColumns, on
                     <th className="px-3 py-1.5 text-left">Owner</th>
                     <th className="hidden px-3 py-1.5 text-left sm:table-cell">Lot</th>
                     <th className="hidden px-3 py-1.5 text-left sm:table-cell">Expiry</th>
+                    <th className="hidden px-3 py-1.5 text-left sm:table-cell">RE BOE</th>
                     <th className="px-3 py-1.5 text-right">Print</th>
                   </tr>
                 </thead>
@@ -532,6 +598,10 @@ const ProductRow = ({ product, isExpanded, onToggle, density, visibleColumns, on
                             ? new Date(loc.expiryDate).toLocaleDateString('en-GB')
                             : '—'}
                         </td>
+                        <BoeCell
+                          value={loc.reExportBoeNumber}
+                          onSave={(val) => onUpdateBoe(loc.stockId, val)}
+                        />
                         <PrintCell
                           maxQty={loc.quantityCases}
                           onPrint={(qty) => onPrintLabels(product, loc, qty)}
@@ -817,7 +887,27 @@ const ColumnToggle = ({ columns, onChange }: ColumnToggleProps) => {
  */
 const StockExplorerPage = () => {
   const api = useTRPC();
+  const queryClient = useQueryClient();
   const { print } = usePrint();
+
+  // Update RE BOE on a stock record
+  const { mutate: updateBoe } = useMutation({
+    ...api.wms.admin.stock.updateBoe.mutationOptions(),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: api.wms.admin.stock.getByProduct.getQueryKey() });
+      toast.success('RE BOE updated');
+    },
+    onError: () => {
+      toast.error('Failed to update RE BOE');
+    },
+  });
+
+  const handleUpdateBoe = useCallback(
+    (stockId: string, reExportBoeNumber: string) => {
+      updateBoe({ stockId, reExportBoeNumber });
+    },
+    [updateBoe],
+  );
 
   // Search & filters
   const [search, setSearch] = useState('');
@@ -1597,6 +1687,7 @@ const StockExplorerPage = () => {
                           density={density}
                           visibleColumns={visibleColumns}
                           onPrintLabels={handlePrintLabels}
+                          onUpdateBoe={handleUpdateBoe}
                         />
                       );
                     })

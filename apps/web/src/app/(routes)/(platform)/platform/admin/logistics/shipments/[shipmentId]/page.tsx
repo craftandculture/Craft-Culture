@@ -96,8 +96,10 @@ const ShipmentDetailPage = () => {
   const [activeTab, setActiveTab] = useState<TabType>('overview');
   const [isEditingName, setIsEditingName] = useState(false);
   const [editedName, setEditedName] = useState('');
-  const [isEditingBoe, setIsEditingBoe] = useState(false);
-  const [editedBoe, setEditedBoe] = useState('');
+  const [isEditingTransitBoe, setIsEditingTransitBoe] = useState(false);
+  const [editedTransitBoe, setEditedTransitBoe] = useState('');
+  const [isEditingReExportBoe, setIsEditingReExportBoe] = useState(false);
+  const [editedReExportBoe, setEditedReExportBoe] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isAddingItem, setIsAddingItem] = useState(false);
   const [newItem, setNewItem] = useState({
@@ -624,55 +626,106 @@ const ShipmentDetailPage = () => {
                     </>
                   )}
                   {shipment.type === 'inbound' && (
-                    <div className="flex justify-between">
-                      <dt className="text-text-muted">BOE #</dt>
-                      <dd className="font-mono">
-                        {isEditingBoe ? (
-                          <form
-                            className="flex items-center gap-1"
-                            onSubmit={(e) => {
-                              e.preventDefault();
-                              const trimmed = editedBoe.trim();
-                              if (trimmed !== (shipment.boeNumber ?? '')) {
-                                updateShipment({
-                                  id: shipmentId,
-                                  boeNumber: trimmed || undefined,
-                                });
-                              }
-                              setIsEditingBoe(false);
-                            }}
-                          >
-                            <Input
-                              value={editedBoe}
-                              onChange={(e) => setEditedBoe(e.target.value)}
-                              className="h-7 w-40 font-mono text-sm"
-                              placeholder="DEC NO"
-                              autoFocus
-                              onKeyDown={(e) => {
-                                if (e.key === 'Escape') {
-                                  setIsEditingBoe(false);
-                                  setEditedBoe(shipment.boeNumber ?? '');
+                    <>
+                      <div className="flex justify-between">
+                        <dt className="text-text-muted">Transit BOE #</dt>
+                        <dd className="font-mono">
+                          {isEditingTransitBoe ? (
+                            <form
+                              className="flex items-center gap-1"
+                              onSubmit={(e) => {
+                                e.preventDefault();
+                                const trimmed = editedTransitBoe.trim();
+                                if (trimmed !== (shipment.transitBoeNumber ?? '')) {
+                                  updateShipment({
+                                    id: shipmentId,
+                                    transitBoeNumber: trimmed || undefined,
+                                  });
                                 }
+                                setIsEditingTransitBoe(false);
                               }}
-                            />
-                            <Button type="submit" variant="ghost" size="sm">
-                              <Icon icon={IconCheck} size="sm" />
-                            </Button>
-                          </form>
-                        ) : (
-                          <button
-                            type="button"
-                            className="cursor-pointer hover:underline"
-                            onClick={() => {
-                              setEditedBoe(shipment.boeNumber ?? '');
-                              setIsEditingBoe(true);
-                            }}
-                          >
-                            {shipment.boeNumber || '-'}
-                          </button>
-                        )}
-                      </dd>
-                    </div>
+                            >
+                              <Input
+                                value={editedTransitBoe}
+                                onChange={(e) => setEditedTransitBoe(e.target.value)}
+                                className="h-7 w-40 font-mono text-sm"
+                                placeholder="DEC NO"
+                                autoFocus
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Escape') {
+                                    setIsEditingTransitBoe(false);
+                                    setEditedTransitBoe(shipment.transitBoeNumber ?? '');
+                                  }
+                                }}
+                              />
+                              <Button type="submit" variant="ghost" size="sm">
+                                <Icon icon={IconCheck} size="sm" />
+                              </Button>
+                            </form>
+                          ) : (
+                            <button
+                              type="button"
+                              className="cursor-pointer hover:underline"
+                              onClick={() => {
+                                setEditedTransitBoe(shipment.transitBoeNumber ?? '');
+                                setIsEditingTransitBoe(true);
+                              }}
+                            >
+                              {shipment.transitBoeNumber || '-'}
+                            </button>
+                          )}
+                        </dd>
+                      </div>
+                      <div className="flex justify-between">
+                        <dt className="text-text-muted">Re-Export BOE #</dt>
+                        <dd className="font-mono">
+                          {isEditingReExportBoe ? (
+                            <form
+                              className="flex items-center gap-1"
+                              onSubmit={(e) => {
+                                e.preventDefault();
+                                const trimmed = editedReExportBoe.trim();
+                                if (trimmed !== (shipment.reExportBoeNumber ?? '')) {
+                                  updateShipment({
+                                    id: shipmentId,
+                                    reExportBoeNumber: trimmed || undefined,
+                                  });
+                                }
+                                setIsEditingReExportBoe(false);
+                              }}
+                            >
+                              <Input
+                                value={editedReExportBoe}
+                                onChange={(e) => setEditedReExportBoe(e.target.value)}
+                                className="h-7 w-40 font-mono text-sm"
+                                placeholder="RE BOE"
+                                autoFocus
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Escape') {
+                                    setIsEditingReExportBoe(false);
+                                    setEditedReExportBoe(shipment.reExportBoeNumber ?? '');
+                                  }
+                                }}
+                              />
+                              <Button type="submit" variant="ghost" size="sm">
+                                <Icon icon={IconCheck} size="sm" />
+                              </Button>
+                            </form>
+                          ) : (
+                            <button
+                              type="button"
+                              className="cursor-pointer hover:underline"
+                              onClick={() => {
+                                setEditedReExportBoe(shipment.reExportBoeNumber ?? '');
+                                setIsEditingReExportBoe(true);
+                              }}
+                            >
+                              {shipment.reExportBoeNumber || '-'}
+                            </button>
+                          )}
+                        </dd>
+                      </div>
+                    </>
                   )}
                 </dl>
               </CardContent>

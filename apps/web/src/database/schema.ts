@@ -2761,7 +2761,8 @@ export const logisticsShipments = pgTable(
     containerNumber: text('container_number'), // For sea freight
     blNumber: text('bl_number'), // Bill of Lading number
     awbNumber: text('awb_number'), // Airway Bill number
-    boeNumber: text('boe_number'), // Bill of Entry / Customs Declaration number (DEC NO)
+    transitBoeNumber: text('transit_boe_number'), // Transit BOE — customs declaration entering the free zone
+    reExportBoeNumber: text('re_export_boe_number'), // Re-Export BOE — customs declaration for FZ-to-mainland transfer
 
     // Hillebrand integration
     hillebrandShipmentId: integer('hillebrand_shipment_id'),
@@ -3939,6 +3940,7 @@ export const wmsStock = pgTable(
     lotNumber: text('lot_number'),
     receivedAt: timestamp('received_at', { mode: 'date' }),
     shipmentId: uuid('shipment_id').references(() => logisticsShipments.id),
+    reExportBoeNumber: text('re_export_boe_number'), // Re-Export BOE for customs clearance tracking
     salesArrangement: text('sales_arrangement').default('consignment'),
     consignmentCommissionPercent: doublePrecision('consignment_commission_percent'),
     expiryDate: timestamp('expiry_date', { mode: 'date' }),
