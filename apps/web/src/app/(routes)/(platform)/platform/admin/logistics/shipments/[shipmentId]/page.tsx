@@ -623,7 +623,7 @@ const ShipmentDetailPage = () => {
                       </div>
                     </>
                   )}
-                  {(shipment.type === 'outbound' || shipment.type === 're_export') && (
+                  {shipment.type === 'inbound' && (
                     <div className="flex justify-between">
                       <dt className="text-text-muted">BOE #</dt>
                       <dd className="font-mono">
