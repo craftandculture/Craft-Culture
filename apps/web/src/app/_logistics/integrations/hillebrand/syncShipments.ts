@@ -1,7 +1,7 @@
 import { desc, eq, like } from 'drizzle-orm';
 
 import db from '@/database/client';
-import { logisticsShipments } from '@/database/schema';
+import { logisticsDeletedHillebrandIds, logisticsShipments } from '@/database/schema';
 import logger from '@/utils/logger';
 
 import {
@@ -209,6 +209,12 @@ const syncHillebrandShipments = async (): Promise<SyncResult> => {
   };
 
   try {
+    // Load Hillebrand IDs that were previously deleted so we skip them
+    const deletedRows = await db
+      .select({ hillebrandShipmentId: logisticsDeletedHillebrandIds.hillebrandShipmentId })
+      .from(logisticsDeletedHillebrandIds);
+    const deletedHillebrandIds = new Set(deletedRows.map((r) => r.hillebrandShipmentId));
+
     // First try without status filter to get all shipments
     logger.info('Fetching Hillebrand shipments (no status filter)');
     const hillebrandShipments = await getAllHillebrandShipments({ pageSize: 100 });
@@ -252,6 +258,11 @@ const syncHillebrandShipments = async (): Promise<SyncResult> => {
 
     for (const hShipment of hillebrandShipments) {
       try {
+        // Skip shipments that were previously deleted by the user
+        if (deletedHillebrandIds.has(hShipment.id)) {
+          continue;
+        }
+
         // Fetch detailed shipment info (has more data than list endpoint)
         let detailedShipment: HillebrandShipment;
         try {

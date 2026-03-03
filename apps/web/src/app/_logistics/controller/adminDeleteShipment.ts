@@ -3,7 +3,7 @@ import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 
 import db from '@/database/client';
-import { logisticsShipments, wmsReceivingDrafts } from '@/database/schema';
+import { logisticsDeletedHillebrandIds, logisticsShipments, wmsReceivingDrafts } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
 import logger from '@/utils/logger';
 
@@ -35,7 +35,11 @@ const adminDeleteShipment = adminProcedure
     const { user } = ctx;
 
     const [existing] = await db
-      .select({ id: logisticsShipments.id, shipmentNumber: logisticsShipments.shipmentNumber })
+      .select({
+        id: logisticsShipments.id,
+        shipmentNumber: logisticsShipments.shipmentNumber,
+        hillebrandShipmentId: logisticsShipments.hillebrandShipmentId,
+      })
       .from(logisticsShipments)
       .where(eq(logisticsShipments.id, id));
 
@@ -44,6 +48,14 @@ const adminDeleteShipment = adminProcedure
         code: 'NOT_FOUND',
         message: 'Shipment not found',
       });
+    }
+
+    // Record Hillebrand ID so re-sync does not recreate this shipment
+    if (existing.hillebrandShipmentId) {
+      await db
+        .insert(logisticsDeletedHillebrandIds)
+        .values({ hillebrandShipmentId: existing.hillebrandShipmentId })
+        .onConflictDoNothing();
     }
 
     // Delete receiving drafts first (no CASCADE on this FK)
