@@ -563,13 +563,46 @@ const ShipmentDetailPage = () => {
                       </Select>
                     </dd>
                   </div>
-                  <div className="flex justify-between">
+                  <div className="flex items-center justify-between">
                     <dt className="text-text-muted">Type</dt>
-                    <dd className="capitalize">{shipment.type.replace('_', '-')}</dd>
+                    <dd>
+                      <Select
+                        value={shipment.type}
+                        onValueChange={(value: 'inbound' | 'outbound' | 're_export') => {
+                          updateShipment({ id: shipmentId, type: value });
+                        }}
+                      >
+                        <SelectTrigger className="h-8 w-36">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="inbound">Import</SelectItem>
+                          <SelectItem value="outbound">Export</SelectItem>
+                          <SelectItem value="re_export">Re-Export</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </dd>
                   </div>
-                  <div className="flex justify-between">
+                  <div className="flex items-center justify-between">
                     <dt className="text-text-muted">Transport</dt>
-                    <dd className="uppercase">{shipment.transportMode.replace('_', ' ')}</dd>
+                    <dd>
+                      <Select
+                        value={shipment.transportMode}
+                        onValueChange={(value: 'sea_fcl' | 'sea_lcl' | 'air' | 'road') => {
+                          updateShipment({ id: shipmentId, transportMode: value });
+                        }}
+                      >
+                        <SelectTrigger className="h-8 w-36">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="sea_fcl">Sea FCL</SelectItem>
+                          <SelectItem value="sea_lcl">Sea LCL</SelectItem>
+                          <SelectItem value="air">Air</SelectItem>
+                          <SelectItem value="road">Road</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </dd>
                   </div>
                   <div className="flex justify-between">
                     <dt className="text-text-muted">Carrier</dt>
