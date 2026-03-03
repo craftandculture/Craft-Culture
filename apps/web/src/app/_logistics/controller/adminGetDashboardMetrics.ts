@@ -54,6 +54,7 @@ const adminGetDashboardMetrics = adminProcedure.query(async () => {
       .select({
         id: logisticsShipments.id,
         shipmentNumber: logisticsShipments.shipmentNumber,
+        name: logisticsShipments.name,
         status: logisticsShipments.status,
         type: logisticsShipments.type,
         transportMode: logisticsShipments.transportMode,
