@@ -34,7 +34,8 @@ const updateShipmentSchema = z.object({
   containerNumber: z.string().optional(),
   blNumber: z.string().optional(),
   awbNumber: z.string().optional(),
-  boeNumber: z.string().optional(),
+  transitBoeNumber: z.string().optional(),
+  reExportBoeNumber: z.string().optional(),
 
   // Timeline
   etd: z.coerce.date().nullable().optional(),
