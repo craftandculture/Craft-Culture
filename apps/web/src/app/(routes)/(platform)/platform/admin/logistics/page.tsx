@@ -21,7 +21,6 @@ import {
   IconTruck,
 } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { formatDistanceToNow } from 'date-fns';
 import Link from 'next/link';
 import { toast } from 'sonner';
 
@@ -550,51 +549,55 @@ const LogisticsDashboardPage = () => {
               <div className="divide-y divide-border-primary">
                 {metrics.recentShipments.map((shipment) => {
                   const ModeIcon = transportModeIcons[shipment.transportMode] ?? IconShip;
+                  const origin =
+                    shipment.originCity ?? shipment.originCountry ?? 'Origin';
+                  const destination =
+                    shipment.destinationCity ??
+                    shipment.destinationWarehouse ??
+                    'Destination';
 
                   return (
                     <Link
                       key={shipment.id}
                       href={`/platform/admin/logistics/shipments/${shipment.id}`}
-                      className="flex items-center justify-between gap-4 p-4 hover:bg-surface-secondary transition-colors"
+                      className="flex items-start gap-4 p-4 hover:bg-surface-secondary transition-colors"
                     >
-                      <div className="flex items-center gap-4 min-w-0 flex-1">
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-surface-secondary">
-                          <Icon icon={ModeIcon} size="md" className="text-text-muted" />
-                        </div>
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-3 mb-1">
-                            <Typography variant="bodySm" className="font-mono text-text-muted">
-                              {shipment.shipmentNumber}
-                            </Typography>
-                            <ShipmentStatusBadge status={shipment.status} />
-                          </div>
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-surface-secondary mt-0.5">
+                        <Icon icon={ModeIcon} size="md" className="text-text-muted" />
+                      </div>
+
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 mb-0.5">
                           <Typography variant="headingSm" className="truncate">
-                            {shipment.name ??
-                              `${shipment.originCity ?? shipment.originCountry ?? 'Origin'} → ${shipment.destinationCity ?? shipment.destinationWarehouse ?? 'Destination'}`}
+                            {shipment.name ?? `${origin} → ${destination}`}
                           </Typography>
+                          <ShipmentStatusBadge status={shipment.status} />
+                        </div>
+                        <div className="flex items-center gap-2 text-xs text-text-muted">
+                          <span className="font-mono">{shipment.shipmentNumber}</span>
+                          {shipment.name && (
+                            <>
+                              <span>·</span>
+                              <span className="truncate">
+                                {origin} → {destination}
+                              </span>
+                            </>
+                          )}
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-6 text-sm text-text-muted">
-                        <div className="hidden sm:block text-right">
-                          <Typography variant="bodyXs" colorRole="muted">
+                      <div className="flex items-center gap-4 shrink-0">
+                        <div className="text-right">
+                          <Typography variant="bodySm">
                             {shipment.totalCases ?? 0} cases
                           </Typography>
-                        </div>
-                        {shipment.eta && (
-                          <div className="hidden md:block text-right">
+                          {shipment.eta && (
                             <Typography variant="bodyXs" colorRole="muted">
-                              ETA
+                              ETA {formatDate(shipment.eta)}
                             </Typography>
-                            <Typography variant="bodySm">
-                              {formatDate(shipment.eta)}
-                            </Typography>
-                          </div>
-                        )}
-                        <div className="hidden lg:block text-right text-xs">
-                          {formatDistanceToNow(new Date(shipment.createdAt), { addSuffix: true })}
+                          )}
                         </div>
-                        <IconChevronRight className="h-5 w-5 shrink-0" />
+                        <IconChevronRight className="h-5 w-5 text-text-muted" />
                       </div>
                     </Link>
                   );
