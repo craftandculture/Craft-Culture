@@ -16,7 +16,6 @@ import {
   IconTruck,
 } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { formatDistanceToNow } from 'date-fns';
 import Link from 'next/link';
 import { useState } from 'react';
 import { toast } from 'sonner';
@@ -337,6 +336,12 @@ const ShipmentsListPage = () => {
           <div className="space-y-3">
             {shipments.map((shipment) => {
               const ModeIcon = transportModeIcons[shipment.transportMode] ?? IconShip;
+              const origin =
+                shipment.originCity ?? shipment.originCountry ?? 'Origin';
+              const destination =
+                shipment.destinationCity ??
+                shipment.destinationWarehouse ??
+                'Destination';
 
               return (
                 <Link
@@ -346,57 +351,57 @@ const ShipmentsListPage = () => {
                 >
                   <Card className="cursor-pointer transition-colors hover:border-border-brand">
                     <CardContent className="p-4">
-                      <div className="flex items-center justify-between gap-4">
-                        <div className="flex items-center gap-4 min-w-0 flex-1">
-                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-surface-secondary">
-                            <Icon icon={ModeIcon} size="md" className="text-text-muted" />
-                          </div>
-                          <div className="min-w-0">
-                            <div className="flex items-center gap-3 mb-1">
-                              <Typography variant="bodySm" className="font-mono text-text-muted">
-                                {shipment.shipmentNumber}
-                              </Typography>
-                              <ShipmentStatusBadge status={shipment.status} />
-                              <span className="text-xs text-text-muted capitalize">
-                                {shipment.type.replace('_', '-')}
-                              </span>
-                            </div>
-                            <Typography variant="headingSm" className="truncate">
-                              {shipment.name ??
-                                `${shipment.originCity ?? shipment.originCountry ?? 'Origin'} → ${shipment.destinationCity ?? shipment.destinationWarehouse ?? 'Destination'}`}
-                            </Typography>
-                            {shipment.carrierName && (
-                              <Typography variant="bodySm" colorRole="muted">
-                                {shipment.carrierName}
-                                {shipment.containerNumber && ` · ${shipment.containerNumber}`}
-                              </Typography>
-                            )}
-                          </div>
+                      <div className="flex items-start gap-4">
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-surface-secondary mt-0.5">
+                          <Icon icon={ModeIcon} size="md" className="text-text-muted" />
                         </div>
 
-                        <div className="flex items-center gap-6 text-sm text-text-muted">
-                          <div className="hidden sm:block text-right">
-                            <Typography variant="bodyXs" colorRole="muted">
-                              {transportModeLabels[shipment.transportMode]}
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2 mb-0.5">
+                            <Typography variant="headingSm" className="truncate">
+                              {shipment.name ?? `${origin} → ${destination}`}
                             </Typography>
+                            <ShipmentStatusBadge status={shipment.status} />
+                            <span className="text-xs text-text-muted capitalize">
+                              {shipment.type.replace('_', '-')}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2 text-xs text-text-muted">
+                            <span className="font-mono">{shipment.shipmentNumber}</span>
+                            <span>·</span>
+                            <span className="truncate">
+                              {origin} → {destination}
+                            </span>
+                          </div>
+                          {shipment.carrierName && (
+                            <div className="flex items-center gap-2 text-xs text-text-muted mt-1">
+                              <span>{shipment.carrierName}</span>
+                              {shipment.containerNumber && (
+                                <>
+                                  <span>·</span>
+                                  <span>{shipment.containerNumber}</span>
+                                </>
+                              )}
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="flex items-center gap-4 shrink-0">
+                          <div className="text-right">
                             <Typography variant="bodySm">
                               {shipment.totalCases ?? 0} cases
                             </Typography>
-                          </div>
-                          {shipment.eta && (
-                            <div className="hidden md:block text-right">
+                            {shipment.eta ? (
                               <Typography variant="bodyXs" colorRole="muted">
-                                ETA
+                                ETA {formatDate(shipment.eta)}
                               </Typography>
-                              <Typography variant="bodySm">
-                                {formatDate(shipment.eta)}
+                            ) : (
+                              <Typography variant="bodyXs" colorRole="muted">
+                                {transportModeLabels[shipment.transportMode]}
                               </Typography>
-                            </div>
-                          )}
-                          <div className="hidden lg:block text-right text-xs">
-                            {formatDistanceToNow(new Date(shipment.createdAt), { addSuffix: true })}
+                            )}
                           </div>
-                          <IconChevronRight className="h-5 w-5 shrink-0" />
+                          <IconChevronRight className="h-5 w-5 text-text-muted" />
                         </div>
                       </div>
                     </CardContent>
