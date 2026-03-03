@@ -96,6 +96,8 @@ const ShipmentDetailPage = () => {
   const [activeTab, setActiveTab] = useState<TabType>('overview');
   const [isEditingName, setIsEditingName] = useState(false);
   const [editedName, setEditedName] = useState('');
+  const [isEditingBoe, setIsEditingBoe] = useState(false);
+  const [editedBoe, setEditedBoe] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isAddingItem, setIsAddingItem] = useState(false);
   const [newItem, setNewItem] = useState({
@@ -620,6 +622,57 @@ const ShipmentDetailPage = () => {
                         <dd className="font-mono">{shipment.blNumber ?? '-'}</dd>
                       </div>
                     </>
+                  )}
+                  {(shipment.type === 'outbound' || shipment.type === 're_export') && (
+                    <div className="flex justify-between">
+                      <dt className="text-text-muted">BOE #</dt>
+                      <dd className="font-mono">
+                        {isEditingBoe ? (
+                          <form
+                            className="flex items-center gap-1"
+                            onSubmit={(e) => {
+                              e.preventDefault();
+                              const trimmed = editedBoe.trim();
+                              if (trimmed !== (shipment.boeNumber ?? '')) {
+                                updateShipment({
+                                  id: shipmentId,
+                                  boeNumber: trimmed || undefined,
+                                });
+                              }
+                              setIsEditingBoe(false);
+                            }}
+                          >
+                            <Input
+                              value={editedBoe}
+                              onChange={(e) => setEditedBoe(e.target.value)}
+                              className="h-7 w-40 font-mono text-sm"
+                              placeholder="DEC NO"
+                              autoFocus
+                              onKeyDown={(e) => {
+                                if (e.key === 'Escape') {
+                                  setIsEditingBoe(false);
+                                  setEditedBoe(shipment.boeNumber ?? '');
+                                }
+                              }}
+                            />
+                            <Button type="submit" variant="ghost" size="sm">
+                              <Icon icon={IconCheck} size="sm" />
+                            </Button>
+                          </form>
+                        ) : (
+                          <button
+                            type="button"
+                            className="cursor-pointer hover:underline"
+                            onClick={() => {
+                              setEditedBoe(shipment.boeNumber ?? '');
+                              setIsEditingBoe(true);
+                            }}
+                          >
+                            {shipment.boeNumber || '-'}
+                          </button>
+                        )}
+                      </dd>
+                    </div>
                   )}
                 </dl>
               </CardContent>
