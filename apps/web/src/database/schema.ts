@@ -2710,6 +2710,9 @@ export const logisticsDocumentType = pgEnum('logistics_document_type', [
   'health_certificate',
   'insurance_certificate',
   'proof_of_delivery',
+  'gac_invoice',
+  'shipping_invoice',
+  'cargo_photo',
   'other',
 ]);
 
