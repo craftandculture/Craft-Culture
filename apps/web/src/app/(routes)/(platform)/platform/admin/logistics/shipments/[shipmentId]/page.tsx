@@ -566,14 +566,23 @@ const ShipmentDetailPage = () => {
                     <dt className="text-text-muted">Carrier</dt>
                     <dd>{shipment.carrierName ?? '-'}</dd>
                   </div>
-                  <div className="flex justify-between">
-                    <dt className="text-text-muted">Container #</dt>
-                    <dd className="font-mono">{shipment.containerNumber ?? '-'}</dd>
-                  </div>
-                  <div className="flex justify-between">
-                    <dt className="text-text-muted">BOL #</dt>
-                    <dd className="font-mono">{shipment.blNumber ?? '-'}</dd>
-                  </div>
+                  {shipment.transportMode === 'air' ? (
+                    <div className="flex justify-between">
+                      <dt className="text-text-muted">AWB #</dt>
+                      <dd className="font-mono">{shipment.awbNumber ?? '-'}</dd>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex justify-between">
+                        <dt className="text-text-muted">Container #</dt>
+                        <dd className="font-mono">{shipment.containerNumber ?? '-'}</dd>
+                      </div>
+                      <div className="flex justify-between">
+                        <dt className="text-text-muted">BOL #</dt>
+                        <dd className="font-mono">{shipment.blNumber ?? '-'}</dd>
+                      </div>
+                    </>
+                  )}
                 </dl>
               </CardContent>
             </Card>
