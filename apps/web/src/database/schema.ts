@@ -2761,6 +2761,7 @@ export const logisticsShipments = pgTable(
     containerNumber: text('container_number'), // For sea freight
     blNumber: text('bl_number'), // Bill of Lading number
     awbNumber: text('awb_number'), // Airway Bill number
+    boeNumber: text('boe_number'), // Bill of Entry / Customs Declaration number (DEC NO)
 
     // Hillebrand integration
     hillebrandShipmentId: integer('hillebrand_shipment_id'),
