@@ -2824,9 +2824,8 @@ export type LogisticsShipment = typeof logisticsShipments.$inferSelect;
  * Tracks deleted Hillebrand shipment IDs so re-sync does not recreate them
  */
 export const logisticsDeletedHillebrandIds = pgTable('logistics_deleted_hillebrand_ids', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  hillebrandShipmentId: integer('hillebrand_shipment_id').notNull().unique(),
-  deletedAt: timestamp('deleted_at', { withTimezone: true }).defaultNow().notNull(),
+  hillebrandShipmentId: integer('hillebrand_shipment_id').primaryKey(),
+  deletedAt: timestamp('deleted_at').defaultNow(),
 });
 
 /**
