@@ -66,6 +66,9 @@ type DocumentType =
   | 'health_certificate'
   | 'insurance_certificate'
   | 'proof_of_delivery'
+  | 'gac_invoice'
+  | 'shipping_invoice'
+  | 'cargo_photo'
   | 'other';
 
 interface DocumentUploadProps {
@@ -87,6 +90,9 @@ const documentTypeLabels: Record<DocumentType, string> = {
   health_certificate: 'Health Certificate',
   insurance_certificate: 'Insurance Certificate',
   proof_of_delivery: 'Proof of Delivery',
+  gac_invoice: 'GAC Invoice',
+  shipping_invoice: 'Shipping Invoice',
+  cargo_photo: 'Cargo Photo',
   other: 'Other',
 };
 
@@ -107,6 +113,7 @@ const LogisticsDocumentUpload = ({
   const queryClient = useQueryClient();
 
   const [selectedType, setSelectedType] = useState<DocumentType>('commercial_invoice');
+  const [customTitle, setCustomTitle] = useState('');
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
 
@@ -126,6 +133,7 @@ const LogisticsDocumentUpload = ({
         filename: data.filename,
         fileType: data.fileType as 'application/pdf' | 'image/png' | 'image/jpeg' | 'image/jpg',
         fileSize: data.fileSize,
+        notes: selectedType === 'other' && customTitle.trim() ? customTitle.trim() : undefined,
       });
     },
     onSuccess: () => {
@@ -343,6 +351,21 @@ const LogisticsDocumentUpload = ({
           </div>
         </div>
 
+        {selectedType === 'other' && (
+          <div>
+            <Typography variant="bodyXs" colorRole="muted" className="mb-1">
+              Custom Title
+            </Typography>
+            <input
+              value={customTitle}
+              onChange={(e) => setCustomTitle(e.target.value)}
+              className="w-full rounded-md border border-border-primary bg-background-primary px-3 py-2 text-sm focus:border-border-brand focus:outline-none"
+              placeholder="e.g. Warehouse Receipt, Inspection Report..."
+              maxLength={200}
+            />
+          </div>
+        )}
+
         {/* Drag & Drop Zone */}
         <div
           {...getRootProps()}
@@ -408,7 +431,9 @@ const LogisticsDocumentUpload = ({
                       {doc.fileName}
                     </Typography>
                     <Badge colorRole="muted" size="sm">
-                      {documentTypeLabels[doc.documentType as DocumentType] ?? doc.documentType}
+                      {doc.documentType === 'other' && doc.notes
+                        ? doc.notes
+                        : (documentTypeLabels[doc.documentType as DocumentType] ?? doc.documentType)}
                     </Badge>
                   </div>
                   <Typography variant="bodyXs" colorRole="muted">

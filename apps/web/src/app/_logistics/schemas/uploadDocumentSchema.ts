@@ -13,6 +13,9 @@ const documentTypes = [
   'health_certificate',
   'insurance_certificate',
   'proof_of_delivery',
+  'gac_invoice',
+  'shipping_invoice',
+  'cargo_photo',
   'other',
 ] as const;
 
@@ -36,6 +39,7 @@ const uploadDocumentSchema = z.object({
   filename: z.string().min(1, 'Filename is required'),
   fileType: z.enum(mimeTypes),
   fileSize: z.number().int().min(0).optional(),
+  notes: z.string().max(200).optional(),
 }).refine(
   (data) => data.file || data.blobUrl,
   { message: 'Either file or blobUrl must be provided' },

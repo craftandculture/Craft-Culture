@@ -27,7 +27,7 @@ const ALLOWED_DOCUMENT_TYPES = [
  * - file: base64 data URL processed server-side (small files only)
  */
 const adminUploadDocument = adminProcedure.input(uploadDocumentSchema).mutation(async ({ input, ctx }) => {
-  const { shipmentId, documentType, documentNumber, issueDate, expiryDate, filename, blobUrl, file, fileType, fileSize } = input;
+  const { shipmentId, documentType, documentNumber, issueDate, expiryDate, filename, blobUrl, file, fileType, fileSize, notes } = input;
   const { user } = ctx;
 
   // Verify shipment exists
@@ -126,6 +126,7 @@ const adminUploadDocument = adminProcedure.input(uploadDocumentSchema).mutation(
         fileSize: finalSize,
         mimeType: finalMimeType,
         uploadedBy: user.id,
+        notes,
       })
       .returning();
 
