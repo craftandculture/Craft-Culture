@@ -1,4 +1,4 @@
-import { desc, eq, inArray, sql } from 'drizzle-orm';
+import { and, desc, eq, inArray, sql } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { logisticsShipmentItems, logisticsShipments, partners } from '@/database/schema';
@@ -35,13 +35,16 @@ const adminGetPendingShipments = adminProcedure.query(async () => {
     .leftJoin(partners, eq(logisticsShipments.partnerId, partners.id))
     .leftJoin(logisticsShipmentItems, eq(logisticsShipmentItems.shipmentId, logisticsShipments.id))
     .where(
-      inArray(logisticsShipments.status, [
-        'at_warehouse',
-        'cleared',
-        'customs_clearance',
-        'arrived_port',
-        'partially_received',
-      ])
+      and(
+        eq(logisticsShipments.type, 'inbound'),
+        inArray(logisticsShipments.status, [
+          'at_warehouse',
+          'cleared',
+          'customs_clearance',
+          'arrived_port',
+          'partially_received',
+        ]),
+      )
     )
     .groupBy(
       logisticsShipments.id,
