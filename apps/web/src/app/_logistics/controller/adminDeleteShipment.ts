@@ -3,7 +3,7 @@ import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 
 import db from '@/database/client';
-import { logisticsShipments } from '@/database/schema';
+import { logisticsShipments, wmsReceivingDrafts } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
 import logger from '@/utils/logger';
 
@@ -19,6 +19,9 @@ const deleteShipmentSchema = z.object({
  * - logisticsDocuments (CASCADE)
  * - logisticsShipmentActivityLogs (CASCADE)
  * - logisticsInvoiceShipments (CASCADE)
+ *
+ * Manually deleted (no CASCADE):
+ * - wmsReceivingDrafts
  *
  * @example
  *   await trpcClient.logistics.admin.delete.mutate({
@@ -42,6 +45,9 @@ const adminDeleteShipment = adminProcedure
         message: 'Shipment not found',
       });
     }
+
+    // Delete receiving drafts first (no CASCADE on this FK)
+    await db.delete(wmsReceivingDrafts).where(eq(wmsReceivingDrafts.shipmentId, id));
 
     await db.delete(logisticsShipments).where(eq(logisticsShipments.id, id));
 
