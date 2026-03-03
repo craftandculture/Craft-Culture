@@ -66,6 +66,14 @@ const adminReceiveShipmentItem = adminProcedure
 
     const { shipment, partner } = shipmentResult;
 
+    // Block receiving for export shipments — stock was already dispatched
+    if (shipment.type !== 'inbound') {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'Only import (inbound) shipments can be received into WMS.',
+      });
+    }
+
     if (!partner) {
       throw new TRPCError({
         code: 'BAD_REQUEST',
