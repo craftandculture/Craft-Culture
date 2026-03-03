@@ -446,25 +446,21 @@ const ShipmentDetailPage = () => {
                   </button>
                 )}
                 <ShipmentStatusBadge status={shipment.status} />
-                <span
-                  className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${
-                    shipment.type === 'inbound'
-                      ? 'bg-blue-100 text-blue-800'
-                      : 'bg-amber-100 text-amber-800'
-                  }`}
-                >
-                  {shipment.type === 'inbound' ? 'IMPORT' : 'EXPORT'}
+              </div>
+              <div className="flex items-center gap-2 text-sm text-text-muted">
+                {shipment.name && (
+                  <>
+                    <span className="font-mono">{shipment.shipmentNumber}</span>
+                    <span>·</span>
+                  </>
+                )}
+                <span>{shipment.type === 'inbound' ? 'Import' : 'Export'}</span>
+                <span>·</span>
+                <span>
+                  {shipment.originCity ?? shipment.originCountry ?? 'Origin'} →{' '}
+                  {shipment.destinationCity ?? shipment.destinationWarehouse ?? 'Destination'}
                 </span>
               </div>
-              {shipment.name && (
-                <Typography variant="bodySm" colorRole="muted">
-                  {shipment.shipmentNumber}
-                </Typography>
-              )}
-              <Typography variant="bodyMd" colorRole="muted">
-                {shipment.originCity ?? shipment.originCountry ?? 'Origin'} →{' '}
-                {shipment.destinationCity ?? shipment.destinationWarehouse ?? 'Destination'}
-              </Typography>
             </div>
           </div>
           <div className="flex items-center gap-2">
