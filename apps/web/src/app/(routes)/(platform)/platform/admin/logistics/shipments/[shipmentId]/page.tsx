@@ -104,7 +104,6 @@ const ShipmentDetailPage = () => {
   const [editedReExportBoe, setEditedReExportBoe] = useState('');
   const [editingCostField, setEditingCostField] = useState<string | null>(null);
   const [editedCostValue, setEditedCostValue] = useState('');
-  const [showBillUpload, setShowBillUpload] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isAddingItem, setIsAddingItem] = useState(false);
   const [newItem, setNewItem] = useState({
@@ -1462,226 +1461,139 @@ const ShipmentDetailPage = () => {
           </Card>
         )}
 
-        {activeTab === 'costs' && (() => {
-          const costFields: { label: string; field: string; category: string }[] = [
-            { label: 'Freight', field: 'freightCostUsd', category: 'Shipping' },
-            { label: 'Insurance', field: 'insuranceCostUsd', category: 'Shipping' },
-            { label: 'Origin Handling', field: 'originHandlingUsd', category: 'Handling' },
-            { label: 'Destination Handling', field: 'destinationHandlingUsd', category: 'Handling' },
-            { label: 'Customs Clearance', field: 'customsClearanceUsd', category: 'Customs' },
-            { label: 'Gov Fees', field: 'govFeesUsd', category: 'Customs' },
-            { label: 'Delivery', field: 'deliveryCostUsd', category: 'Last mile' },
-            { label: 'Other', field: 'otherCostsUsd', category: 'Other' },
-          ];
+        {activeTab === 'costs' && (
+          <div className="space-y-6">
+            {/* Vendor Bills */}
+            <Card>
+              <CardContent className="p-6">
+                <Typography variant="headingSm" className="mb-4">
+                  Vendor Bills
+                </Typography>
+                <LogisticsDocumentUpload
+                  shipmentId={shipmentId}
+                  documents={(shipment.documents ?? []).filter((d) =>
+                    ['shipping_invoice', 'gac_invoice', 'commercial_invoice', 'customs_declaration', 'delivery_note', 'other'].includes(d.documentType),
+                  )}
+                  onUploadComplete={() => void refetch()}
+                />
+              </CardContent>
+            </Card>
 
-          const billDocTypes = ['shipping_invoice', 'gac_invoice', 'commercial_invoice', 'customs_declaration', 'delivery_note', 'other'];
-          const billDocs = (shipment.documents ?? []).filter((d) => billDocTypes.includes(d.documentType));
-
-          const billTypeLabels: Record<string, string> = {
-            shipping_invoice: 'Shipping Invoice',
-            gac_invoice: 'GAC Invoice',
-            commercial_invoice: 'Commercial Invoice',
-            customs_declaration: 'Customs Declaration',
-            delivery_note: 'Delivery Note',
-            other: 'Other',
-          };
-
-          const handleCostSave = (field: string) => {
-            const parsed = parseFloat(editedCostValue);
-            const value = isNaN(parsed) ? 0 : parsed;
-            const currentValue = (shipment as Record<string, unknown>)[field] as number | null;
-            if (value !== (currentValue ?? 0)) {
-              updateShipment({ id: shipmentId, [field]: value });
-            }
-            setEditingCostField(null);
-            setEditedCostValue('');
-          };
-
-          return (
-            <div className="space-y-6">
-              {/* Vendor Bills */}
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <Typography variant="headingSm">Vendor Bills</Typography>
-                    <Button size="sm" variant="outline" onClick={() => setShowBillUpload(!showBillUpload)}>
-                      <ButtonContent iconLeft={showBillUpload ? IconX : IconUpload}>
-                        {showBillUpload ? 'Close' : 'Upload'}
-                      </ButtonContent>
-                    </Button>
-                  </div>
-
-                  {billDocs.length > 0 && (
-                    <div className="space-y-2">
-                      {billDocs.map((doc) => {
-                        const extracted = doc.extractedData as Record<string, unknown> | null;
-                        const amount = extracted?.totalAmount as number | undefined;
-                        const currency = (extracted?.currency as string) ?? 'USD';
+            {/* Cost Breakdown */}
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <Typography variant="headingSm">Cost Breakdown</Typography>
+                  <Button
+                    size="sm"
+                    onClick={() => calculateLandedCost({ shipmentId })}
+                    disabled={isCalculating || !shipment.items?.length}
+                  >
+                    <ButtonContent iconLeft={isCalculating ? IconLoader2 : IconCalculator}>
+                      {isCalculating ? 'Calculating...' : 'Calculate Landed Cost'}
+                    </ButtonContent>
+                  </Button>
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  {[
+                    [
+                      { label: 'Freight', field: 'freightCostUsd' },
+                      { label: 'Insurance', field: 'insuranceCostUsd' },
+                      { label: 'Origin Handling', field: 'originHandlingUsd' },
+                      { label: 'Destination Handling', field: 'destinationHandlingUsd' },
+                    ],
+                    [
+                      { label: 'Customs Clearance', field: 'customsClearanceUsd' },
+                      { label: 'Gov Fees', field: 'govFeesUsd' },
+                      { label: 'Delivery', field: 'deliveryCostUsd' },
+                      { label: 'Other', field: 'otherCostsUsd' },
+                    ],
+                  ].map((group, gi) => (
+                    <dl key={gi} className="space-y-2">
+                      {group.map(({ label, field }) => {
+                        const value = (shipment as Record<string, unknown>)[field] as number | null;
 
                         return (
-                          <div
-                            key={doc.id}
-                            className="flex items-center gap-3 rounded-lg border border-border-muted px-3 py-2"
-                          >
-                            <Icon icon={IconFileText} size="md" colorRole="muted" />
-                            <div className="flex-1 min-w-0">
-                              <a
-                                href={doc.fileUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-sm font-medium hover:text-text-brand transition-colors truncate block"
-                              >
-                                {doc.notes || doc.fileName}
-                              </a>
-                              <div className="flex items-center gap-2 mt-0.5">
-                                <Badge colorRole="muted" size="xs">
-                                  {doc.documentType === 'other' && doc.notes
-                                    ? doc.notes
-                                    : (billTypeLabels[doc.documentType] ?? doc.documentType)}
-                                </Badge>
-                                <span className="text-xs text-text-muted">
-                                  {new Date(doc.uploadedAt).toLocaleDateString('en-GB', {
-                                    day: '2-digit',
-                                    month: 'short',
-                                    year: 'numeric',
-                                  })}
-                                </span>
-                              </div>
-                            </div>
-                            <div className="text-right shrink-0">
-                              {amount ? (
-                                <Typography variant="bodySm" className="font-medium tabular-nums">
-                                  {formatPrice(amount, currency)}
-                                </Typography>
+                          <div key={field} className="flex justify-between items-center">
+                            <dt className="text-text-muted">{label}</dt>
+                            <dd>
+                              {editingCostField === field ? (
+                                <form
+                                  className="flex items-center gap-1"
+                                  onSubmit={(e) => {
+                                    e.preventDefault();
+                                    const parsed = parseFloat(editedCostValue);
+                                    const val = isNaN(parsed) ? 0 : parsed;
+                                    if (val !== (value ?? 0)) {
+                                      updateShipment({ id: shipmentId, [field]: val });
+                                    }
+                                    setEditingCostField(null);
+                                    setEditedCostValue('');
+                                  }}
+                                >
+                                  <div className="relative">
+                                    <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-text-muted">$</span>
+                                    <Input
+                                      type="number"
+                                      step="0.01"
+                                      min="0"
+                                      value={editedCostValue}
+                                      onChange={(e) => setEditedCostValue(e.target.value)}
+                                      className="h-7 w-28 pl-5 text-right font-mono text-sm"
+                                      autoFocus
+                                      onKeyDown={(e) => {
+                                        if (e.key === 'Escape') {
+                                          setEditingCostField(null);
+                                          setEditedCostValue('');
+                                        }
+                                      }}
+                                    />
+                                  </div>
+                                  <Button type="submit" variant="ghost" size="sm" disabled={isUpdatingShipment}>
+                                    <Icon icon={IconCheck} size="sm" />
+                                  </Button>
+                                </form>
                               ) : (
-                                <Typography variant="bodyXs" colorRole="muted">—</Typography>
+                                <button
+                                  type="button"
+                                  className="cursor-pointer tabular-nums hover:text-text-brand transition-colors"
+                                  onClick={() => {
+                                    setEditingCostField(field);
+                                    setEditedCostValue(value ? String(value) : '');
+                                  }}
+                                >
+                                  {value ? formatPrice(value, 'USD') : '-'}
+                                </button>
                               )}
-                            </div>
+                            </dd>
                           </div>
                         );
                       })}
-                    </div>
-                  )}
-
-                  {showBillUpload ? (
-                    <div className={billDocs.length > 0 ? 'mt-4 pt-4 border-t border-border-muted' : ''}>
-                      <LogisticsDocumentUpload
-                        shipmentId={shipmentId}
-                        documents={[]}
-                        onUploadComplete={() => {
-                          void refetch();
-                        }}
-                      />
-                    </div>
-                  ) : !billDocs.length ? (
-                    <div className="text-center py-8">
-                      <Icon icon={IconFileText} size="lg" className="mx-auto mb-2 text-text-muted" />
+                    </dl>
+                  ))}
+                </div>
+                <div className="mt-6 pt-4 border-t border-border-muted">
+                  <div className="flex justify-between items-center">
+                    <Typography variant="headingSm">Total Landed Cost</Typography>
+                    <Typography variant="headingMd">
+                      {shipment.totalLandedCostUsd ? formatPrice(shipment.totalLandedCostUsd, 'USD') : '-'}
+                    </Typography>
+                  </div>
+                  {shipment.totalBottles && shipment.totalLandedCostUsd ? (
+                    <div className="flex justify-between items-center mt-2">
                       <Typography variant="bodySm" colorRole="muted">
-                        No bills uploaded yet. Upload vendor invoices to track shipment costs.
+                        Per Bottle ({shipment.totalBottles} bottles)
+                      </Typography>
+                      <Typography variant="headingSm" className="text-text-brand">
+                        {formatPrice(shipment.totalLandedCostUsd / shipment.totalBottles, 'USD')}
                       </Typography>
                     </div>
                   ) : null}
-                </CardContent>
-              </Card>
-
-              {/* Cost Breakdown */}
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <Typography variant="headingSm">Cost Breakdown</Typography>
-                    <Button
-                      size="sm"
-                      onClick={() => calculateLandedCost({ shipmentId })}
-                      disabled={isCalculating || !shipment.items?.length}
-                    >
-                      <ButtonContent iconLeft={isCalculating ? IconLoader2 : IconCalculator}>
-                        {isCalculating ? 'Calculating...' : 'Calculate Landed Cost'}
-                      </ButtonContent>
-                    </Button>
-                  </div>
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    {[costFields.slice(0, 4), costFields.slice(4)].map((group, gi) => (
-                      <dl key={gi} className="space-y-2">
-                        {group.map(({ label, field }) => {
-                          const value = (shipment as Record<string, unknown>)[field] as number | null;
-                          const isEditing = editingCostField === field;
-
-                          return (
-                            <div key={field} className="flex justify-between items-center">
-                              <dt className="text-text-muted">{label}</dt>
-                              <dd>
-                                {isEditing ? (
-                                  <form
-                                    className="flex items-center gap-1"
-                                    onSubmit={(e) => {
-                                      e.preventDefault();
-                                      handleCostSave(field);
-                                    }}
-                                  >
-                                    <div className="relative">
-                                      <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-text-muted">$</span>
-                                      <Input
-                                        type="number"
-                                        step="0.01"
-                                        min="0"
-                                        value={editedCostValue}
-                                        onChange={(e) => setEditedCostValue(e.target.value)}
-                                        className="h-7 w-28 pl-5 text-right font-mono text-sm"
-                                        autoFocus
-                                        onKeyDown={(e) => {
-                                          if (e.key === 'Escape') {
-                                            setEditingCostField(null);
-                                            setEditedCostValue('');
-                                          }
-                                        }}
-                                      />
-                                    </div>
-                                    <Button type="submit" variant="ghost" size="sm" disabled={isUpdatingShipment}>
-                                      <Icon icon={IconCheck} size="sm" />
-                                    </Button>
-                                  </form>
-                                ) : (
-                                  <button
-                                    type="button"
-                                    className="cursor-pointer tabular-nums hover:text-text-brand transition-colors"
-                                    onClick={() => {
-                                      setEditingCostField(field);
-                                      setEditedCostValue(value ? String(value) : '');
-                                    }}
-                                  >
-                                    {value ? formatPrice(value, 'USD') : '-'}
-                                  </button>
-                                )}
-                              </dd>
-                            </div>
-                          );
-                        })}
-                      </dl>
-                    ))}
-                  </div>
-                  <div className="mt-6 pt-4 border-t border-border-muted">
-                    <div className="flex justify-between items-center">
-                      <Typography variant="headingSm">Total Landed Cost</Typography>
-                      <Typography variant="headingMd">
-                        {shipment.totalLandedCostUsd ? formatPrice(shipment.totalLandedCostUsd, 'USD') : '-'}
-                      </Typography>
-                    </div>
-                    {shipment.totalBottles && shipment.totalLandedCostUsd ? (
-                      <div className="flex justify-between items-center mt-2">
-                        <Typography variant="bodySm" colorRole="muted">
-                          Per Bottle ({shipment.totalBottles} bottles)
-                        </Typography>
-                        <Typography variant="headingSm" className="text-text-brand">
-                          {formatPrice(shipment.totalLandedCostUsd / shipment.totalBottles, 'USD')}
-                        </Typography>
-                      </div>
-                    ) : null}
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          );
-        })()}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
       </div>
     </div>
   );
