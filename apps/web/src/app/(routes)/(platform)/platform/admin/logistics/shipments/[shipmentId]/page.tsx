@@ -78,6 +78,8 @@ const statusOptions: { value: ShipmentStatus; label: string }[] = [
   { value: 'customs_clearance', label: 'Customs Clearance' },
   { value: 'cleared', label: 'Cleared' },
   { value: 'at_warehouse', label: 'At Warehouse' },
+  { value: 'partially_received', label: 'Partially Received' },
+  { value: 'delivered', label: 'Delivered' },
   { value: 'cancelled', label: 'Cancelled' },
 ];
 
