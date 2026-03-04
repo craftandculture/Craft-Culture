@@ -1504,12 +1504,14 @@ const ShipmentDetailPage = () => {
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between mb-4">
                     <Typography variant="headingSm">Vendor Bills</Typography>
-                    <Button size="sm" variant="outline" onClick={() => setShowBillUpload(true)}>
-                      <ButtonContent iconLeft={IconUpload}>Upload</ButtonContent>
+                    <Button size="sm" variant="outline" onClick={() => setShowBillUpload(!showBillUpload)}>
+                      <ButtonContent iconLeft={showBillUpload ? IconX : IconUpload}>
+                        {showBillUpload ? 'Close' : 'Upload'}
+                      </ButtonContent>
                     </Button>
                   </div>
 
-                  {billDocs.length > 0 ? (
+                  {billDocs.length > 0 && (
                     <div className="space-y-2">
                       {billDocs.map((doc) => {
                         const extracted = doc.extractedData as Record<string, unknown> | null;
@@ -1521,11 +1523,7 @@ const ShipmentDetailPage = () => {
                             key={doc.id}
                             className="flex items-center gap-3 rounded-lg border border-border-muted px-3 py-2"
                           >
-                            <Icon
-                              icon={doc.mimeType?.startsWith('image/') ? IconFileText : IconFileText}
-                              size="md"
-                              colorRole="muted"
-                            />
+                            <Icon icon={IconFileText} size="md" colorRole="muted" />
                             <div className="flex-1 min-w-0">
                               <a
                                 href={doc.fileUrl}
@@ -1563,33 +1561,28 @@ const ShipmentDetailPage = () => {
                         );
                       })}
                     </div>
-                  ) : (
+                  )}
+
+                  {showBillUpload ? (
+                    <div className={billDocs.length > 0 ? 'mt-4 pt-4 border-t border-border-muted' : ''}>
+                      <LogisticsDocumentUpload
+                        shipmentId={shipmentId}
+                        documents={[]}
+                        onUploadComplete={() => {
+                          void refetch();
+                        }}
+                      />
+                    </div>
+                  ) : !billDocs.length ? (
                     <div className="text-center py-8">
                       <Icon icon={IconFileText} size="lg" className="mx-auto mb-2 text-text-muted" />
                       <Typography variant="bodySm" colorRole="muted">
                         No bills uploaded yet. Upload vendor invoices to track shipment costs.
                       </Typography>
                     </div>
-                  )}
+                  ) : null}
                 </CardContent>
               </Card>
-
-              {/* Bill Upload Sheet */}
-              <Sheet open={showBillUpload} onOpenChange={setShowBillUpload}>
-                <SheetContent side="right" className="sm:max-w-lg overflow-y-auto p-6">
-                  <SheetTitle className="mb-1">Upload Vendor Bill</SheetTitle>
-                  <SheetDescription className="mb-4 text-sm text-text-muted">
-                    Upload freight invoices, customs declarations, or other vendor bills
-                  </SheetDescription>
-                  <LogisticsDocumentUpload
-                    shipmentId={shipmentId}
-                    documents={billDocs}
-                    onUploadComplete={() => {
-                      void refetch();
-                    }}
-                  />
-                </SheetContent>
-              </Sheet>
 
               {/* Cost Breakdown */}
               <Card>
