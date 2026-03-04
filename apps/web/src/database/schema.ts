@@ -2968,6 +2968,13 @@ export const logisticsDocuments = pgTable(
         total?: number;
         hsCode?: string;
       }>;
+      // Cost breakdown (vendor bills)
+      costBreakdown?: Array<{
+        category?: string;
+        description?: string;
+        amount?: number;
+        currency?: string;
+      }>;
       // Other
       rawText?: string;
     }>(),
