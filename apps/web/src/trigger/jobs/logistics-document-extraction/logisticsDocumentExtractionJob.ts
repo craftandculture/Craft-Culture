@@ -38,6 +38,17 @@ const logisticsExtractionSchema = z.object({
       }),
     )
     .optional(),
+  // Cost breakdown (for vendor bills / invoices)
+  costBreakdown: z
+    .array(
+      z.object({
+        category: z.string().optional(),
+        description: z.string().optional(),
+        amount: z.number().optional(),
+        currency: z.string().optional(),
+      }),
+    )
+    .optional(),
   // Raw text
   rawText: z.string().optional(),
 });
@@ -86,12 +97,45 @@ This is a Packing List. Focus on extracting:
 - Line items with product details and quantities
 - Package dimensions if available`;
 
+    case 'shipping_invoice':
+      return `${basePrompt}
+This is a Shipping/Freight Invoice. Focus on extracting:
+- Invoice number and date
+- Total amount and currency
+- Cost breakdown: freight charges, surcharges, handling fees, documentation fees
+- Each line item with category, description, amount, and currency in the costBreakdown array`;
+
+    case 'gac_invoice':
+      return `${basePrompt}
+This is a GAC (customs broker) Invoice. Focus on extracting:
+- Invoice number and date
+- Total amount and currency
+- Cost breakdown: customs clearance fees, government fees, handling, documentation
+- Each line item with category, description, amount, and currency in the costBreakdown array`;
+
+    case 'delivery_note':
+      return `${basePrompt}
+This is a Delivery Note or delivery invoice. Focus on extracting:
+- Reference number and date
+- Total amount and currency
+- Cost breakdown: delivery charges, offloading fees, waiting time charges
+- Each line item with category, description, amount, and currency in the costBreakdown array`;
+
+    case 'customs_declaration':
+      return `${basePrompt}
+This is a Customs Declaration document. Focus on extracting:
+- Declaration number and date
+- Duty amounts, government fees, VAT
+- Cost breakdown: each duty/fee line with category, description, amount, and currency
+- Total amount payable`;
+
     default:
       return `${basePrompt}
 Extract any relevant logistics information from this document, including:
 - Reference numbers, dates, amounts
 - Product details and quantities
-- Shipping information`;
+- Shipping information
+- Cost breakdown if this is an invoice or bill`;
   }
 };
 
