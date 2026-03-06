@@ -259,6 +259,7 @@ const WMSReceiveShipmentPage = () => {
 
     if (savedDraft?.items) {
       const loadedItems = new Map<string, ReceivedItem>();
+      // Load draft items
       savedDraft.items.forEach((item) => {
         loadedItems.set(item.id, {
           ...item,
@@ -272,6 +273,33 @@ const WMSReceiveShipmentPage = () => {
               : [],
           totalLabelsPrinted: item.isChecked ? item.receivedCases : 0,
         });
+      });
+      // Merge any shipment items added after the draft was saved
+      shipment.items.forEach((item) => {
+        if (!loadedItems.has(item.id)) {
+          loadedItems.set(item.id, {
+            id: item.id,
+            shipmentItemId: item.id,
+            baseItemId: null,
+            productName: item.productName,
+            producer: item.producer,
+            vintage: item.vintage,
+            lwin: item.lwin,
+            supplierSku: item.supplierSku,
+            expectedCases: item.cases,
+            receivedCases: item.cases,
+            expectedBottlesPerCase: item.bottlesPerCase ?? 12,
+            expectedBottleSizeMl: item.bottleSizeMl ?? 750,
+            receivedBottlesPerCase: item.bottlesPerCase ?? 12,
+            receivedBottleSizeMl: item.bottleSizeMl ?? 750,
+            packChanged: false,
+            isAddedItem: false,
+            isVerified: false,
+            locationAssignments: [],
+            totalLabelsPrinted: 0,
+            photos: [],
+          });
+        }
       });
       setReceivedItems(loadedItems);
       setNotes(savedDraft.notes || '');

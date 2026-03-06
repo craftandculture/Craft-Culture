@@ -54,6 +54,7 @@ const adminGetShipmentForReceiving = adminProcedure
         bottleSizeMl: logisticsShipmentItems.bottleSizeMl,
         totalBottles: logisticsShipmentItems.totalBottles,
         hsCode: logisticsShipmentItems.hsCode,
+        supplierSku: logisticsShipmentItems.supplierSku,
       })
       .from(logisticsShipmentItems)
       .where(eq(logisticsShipmentItems.shipmentId, input.shipmentId))
