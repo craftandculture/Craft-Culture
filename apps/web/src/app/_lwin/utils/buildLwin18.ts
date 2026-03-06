@@ -36,7 +36,9 @@ export interface Lwin18Result {
 export const BOTTLE_SIZES = [
   { ml: 375, label: '375ml (Half)' },
   { ml: 500, label: '500ml' },
+  { ml: 700, label: '700ml' },
   { ml: 750, label: '750ml (Standard)' },
+  { ml: 1000, label: '1L' },
   { ml: 1500, label: '1.5L (Magnum)' },
   { ml: 3000, label: '3L (Double Magnum)' },
   { ml: 6000, label: '6L (Imperial)' },
