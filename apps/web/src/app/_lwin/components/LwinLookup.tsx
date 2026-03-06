@@ -111,28 +111,26 @@ const LwinLookup = ({
       })()
     : null;
 
-  // Build LWIN18 preview for manual mode
-  const manualLwin18Preview =
-    manualMode && /^\d{7}$/.test(manualLwin7)
+  // Build SKU preview for manual mode (supports alphanumeric supplier codes)
+  const manualSkuPreview =
+    manualMode && manualLwin7.length >= 2
       ? (() => {
-          try {
-            return buildLwin18({
-              lwin7: manualLwin7,
-              vintage,
-              caseSize,
-              bottleSizeMl,
-            });
-          } catch {
-            return null;
-          }
+          const vintageStr = vintage
+            ? String(vintage).padStart(4, '0')
+            : '0000';
+          const caseSizeStr = String(caseSize).padStart(2, '0');
+          const bottleSizeStr = String(bottleSizeMl).padStart(5, '0');
+          const lwin18 = `${manualLwin7}-${vintageStr}-${caseSizeStr}-${bottleSizeStr}`;
+          const compact = `${manualLwin7}${vintageStr}${caseSizeStr}${bottleSizeStr}`;
+          return { lwin18, compact };
         })()
       : null;
 
   const handleConfirm = () => {
-    if (manualMode && manualLwin18Preview) {
+    if (manualMode && manualSkuPreview) {
       onSelect({
-        lwin18: manualLwin18Preview.lwin18,
-        compact: manualLwin18Preview.compact,
+        lwin18: manualSkuPreview.lwin18,
+        compact: manualSkuPreview.compact,
         displayName: manualDisplayName || 'Custom Product',
         lwin7: manualLwin7,
         vintage,
@@ -204,23 +202,22 @@ const LwinLookup = ({
       {manualMode && (
         <div className="space-y-3">
           <div>
-            <label className="mb-1 block text-sm font-medium">LWIN7 Code</label>
+            <label className="mb-1 block text-sm font-medium">
+              Product Code
+            </label>
             <input
               type="text"
               value={manualLwin7}
               onChange={(e) => {
-                const val = e.target.value.replace(/\D/g, '').slice(0, 7);
+                const val = e.target.value.replace(/[^a-zA-Z0-9]/g, '');
                 setManualLwin7(val);
               }}
-              placeholder="7-digit LWIN code (e.g. 1831498)"
-              maxLength={7}
-              className="w-full rounded-lg border border-border-primary bg-fill-primary p-2 font-mono focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+              placeholder="LWIN or supplier code (e.g. 1831498, W12008024)"
+              className="w-full rounded-lg border border-border-primary bg-fill-primary p-2 font-mono uppercase focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
             />
-            {manualLwin7.length > 0 && manualLwin7.length < 7 && (
-              <Typography variant="bodyXs" colorRole="muted" className="mt-1">
-                {7 - manualLwin7.length} more digit{7 - manualLwin7.length !== 1 ? 's' : ''} needed
-              </Typography>
-            )}
+            <Typography variant="bodyXs" colorRole="muted" className="mt-1">
+              Standard LWIN (7 digits) or supplier code (alphanumeric)
+            </Typography>
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium">
@@ -360,7 +357,7 @@ const LwinLookup = ({
       )}
 
       {/* Configuration */}
-      {(selectedLwin || (manualMode && /^\d{7}$/.test(manualLwin7))) && (
+      {(selectedLwin || (manualMode && manualLwin7.length >= 2)) && (
         <div className="grid grid-cols-3 gap-4">
           {/* Vintage */}
           <div>
@@ -432,23 +429,23 @@ const LwinLookup = ({
         </Card>
       )}
 
-      {/* LWIN18 Preview (manual mode) */}
-      {manualLwin18Preview && manualMode && (
+      {/* SKU Preview (manual mode) */}
+      {manualSkuPreview && manualMode && (
         <Card className="bg-amber-50 dark:bg-amber-900/20">
           <CardContent className="p-4">
             <div className="mb-1 flex items-center gap-2">
               <Typography variant="bodyXs" colorRole="muted">
-                Generated LWIN18
+                Generated SKU
               </Typography>
               <span className="rounded-full bg-amber-200 px-2 py-0.5 text-[10px] font-medium text-amber-800 dark:bg-amber-800 dark:text-amber-200">
                 Custom
               </span>
             </div>
             <Typography variant="headingSm" className="font-mono text-amber-700 dark:text-amber-400">
-              {manualLwin18Preview.lwin18}
+              {manualSkuPreview.lwin18}
             </Typography>
             <Typography variant="bodyXs" className="mt-1 font-mono text-text-muted">
-              SKU: {manualLwin18Preview.compact}
+              SKU: {manualSkuPreview.compact}
             </Typography>
           </CardContent>
         </Card>
@@ -462,7 +459,7 @@ const LwinLookup = ({
       )}
 
       {/* Confirm Button (manual mode) */}
-      {manualMode && manualLwin18Preview && (
+      {manualMode && manualSkuPreview && (
         <Button variant="primary" className="w-full" onClick={handleConfirm}>
           Use Custom LWIN
         </Button>
