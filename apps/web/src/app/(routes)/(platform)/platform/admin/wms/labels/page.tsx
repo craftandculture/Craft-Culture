@@ -33,8 +33,6 @@ import ZebraPrint from '@/app/_wms/components/ZebraPrint';
 import usePrint from '@/app/_wms/hooks/usePrint';
 import type { BayTotemData } from '@/app/_wms/utils/generateBayTotemZpl';
 import { generateBatchBayTotemsZpl } from '@/app/_wms/utils/generateBayTotemZpl';
-import type { LevelLabelData } from '@/app/_wms/utils/generateLevelLabelZpl';
-import { generateBatchLevelLabelsZpl } from '@/app/_wms/utils/generateLevelLabelZpl';
 import type { LocationLabelData } from '@/app/_wms/utils/generateLocationLabelZpl';
 import {
   generateAreaLabelZpl,
@@ -255,23 +253,15 @@ const WMSLabelsPage = () => {
         );
 
         if (bayLabelSize === '4x6') {
-          // Generate 4x6" per-level labels
-          const labelData: LevelLabelData[] = [];
-          for (const bay of selectedBays) {
-            for (const level of bay.levels) {
-              labelData.push({
-                barcode: level.barcode,
-                locationCode: `${bay.aisle}-${bay.bay}-${level.level}`,
-                aisle: bay.aisle,
-                bay: bay.bay,
-                level: level.level,
-                requiresForklift: level.requiresForklift,
-              });
-            }
-          }
+          // Generate 4x6" bay totem labels (one per bay)
+          const totemData: BayTotemData[] = selectedBays.map((totem) => ({
+            aisle: totem.aisle,
+            bay: totem.bay,
+            levels: totem.levels,
+          }));
 
-          zpl = generateBatchLevelLabelsZpl(labelData);
-          labelCount = labelData.length;
+          zpl = generateBatchBayTotemsZpl(totemData);
+          labelCount = totemData.length;
         } else {
           // Generate 4x2" legacy location labels
           const labelData: LocationLabelData[] = [];
