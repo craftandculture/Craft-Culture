@@ -9,6 +9,8 @@ import Typography from '@/app/_ui/components/Typography/Typography';
 export interface ScanInputProps {
   /** Callback when a barcode is scanned (Enter key pressed) */
   onScan: (barcode: string) => void;
+  /** Callback when an invalid scan is detected (e.g. QR URL instead of barcode) */
+  onInvalidScan?: (message: string) => void;
   /** Placeholder text */
   placeholder?: string;
   /** Whether the input is loading/processing */
@@ -119,6 +121,7 @@ export interface ScanInputHandle {
  */
 const ScanInput = forwardRef<ScanInputHandle, ScanInputProps>(({
   onScan,
+  onInvalidScan,
   placeholder = 'Scan barcode...',
   isLoading = false,
   autoFocus = true,
@@ -289,6 +292,22 @@ const ScanInput = forwardRef<ScanInputHandle, ScanInputProps>(({
       inputRef.current.blur();
     }
 
+    // Detect accidental QR code scans (URLs instead of barcodes)
+    if (
+      scannedValue.startsWith('http://') ||
+      scannedValue.startsWith('https://') ||
+      scannedValue.includes('craftculture.xyz')
+    ) {
+      processingRef.current = false;
+      if (enableFeedback) {
+        playErrorBuzz();
+        triggerVibration([100, 50, 100]);
+      }
+      startCooldown();
+      onInvalidScan?.('Wrong QR — scan the barcode, not the tracing QR code');
+      return;
+    }
+
     // Provide haptic/audio feedback on scan
     if (enableFeedback) {
       playSuccessBeep();
@@ -299,7 +318,7 @@ const ScanInput = forwardRef<ScanInputHandle, ScanInputProps>(({
     startCooldown();
 
     onScan(scannedValue);
-  }, [onScan, isLoading, enableFeedback, startCooldown]);
+  }, [onScan, onInvalidScan, isLoading, enableFeedback, startCooldown]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>) => {

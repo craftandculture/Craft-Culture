@@ -253,6 +253,7 @@ const WMSTransferPage = () => {
                 label="Source location barcode"
                 placeholder="LOC-..."
                 onScan={handleSourceScan}
+                onInvalidScan={setError}
                 isLoading={isSourceScanning}
                 error={error}
               />
@@ -417,6 +418,7 @@ const WMSTransferPage = () => {
                   label="Destination location barcode"
                   placeholder="LOC-..."
                   onScan={handleDestScan}
+                  onInvalidScan={setError}
                   isLoading={isDestScanning}
                   error={error}
                 />
