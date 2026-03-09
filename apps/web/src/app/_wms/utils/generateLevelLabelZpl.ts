@@ -73,6 +73,19 @@ const generateLevelLabelZpl = (data: LevelLabelData) => {
   // Centre the logo (400 dots wide). Label is 812 wide → x = (812 - 400) / 2 = 206
   const logoX = 206;
 
+  // Direction arrow: A,C → right (>>>); B,D → left (<<<)
+  const pointsRight = ['A', 'C'].includes(data.aisle.toUpperCase());
+  const arrowChar = pointsRight ? '>>>' : '<<<';
+  const arrowLabel = pointsRight ? 'BAY DIRECTION >>>' : '<<< BAY DIRECTION';
+  const arrowZpl = `^FO0,1030
+^A0N,80,80
+^FB812,1,0,C
+^FD${arrowChar}^FS
+^FO0,1130
+^A0N,30,30
+^FB812,1,0,C
+^FD${arrowLabel}^FS`;
+
   // Forklift warning line
   const forkliftZpl = data.requiresForklift
     ? `
@@ -88,6 +101,10 @@ const generateLevelLabelZpl = (data: LevelLabelData) => {
 ^LL1218
 ^PR3
 ~SD20
+
+^FX -- Outer border --
+^FO20,20
+^GB772,1178,4^FS
 
 ^FX -- C&C Logo centred --
 ^FO${logoX},30
@@ -128,6 +145,9 @@ ${CC_LOGO_GF}^FS
 ^FB812,1,0,C
 ^FDAISLE ${aisle} \\: BAY ${bay}^FS
 ${forkliftZpl}
+
+^FX -- Direction arrow (A,C = right; B,D = left) --
+${arrowZpl}
 
 ^XZ`;
 
