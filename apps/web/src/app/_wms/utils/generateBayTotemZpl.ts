@@ -1,9 +1,9 @@
 /**
- * Generate ZPL for a Bay Totem label - vertical strip showing all levels for one bay
+ * Generate ZPL for a Bay Totem label — clean, bold, visible from metres away
  *
- * Designed for 4" x 6" (100mm x 150mm) direct thermal labels on Zebra ZD421
- * Mount at eye level (~1.5m) on the upright column
- * All 4 level QR codes scannable from standing position
+ * Designed for 4" x 6" (100mm x 150mm) direct thermal labels on Zebra ZD421.
+ * Mount on rack end-cap at eye level. Shows bay identifier with large QR and
+ * a strip listing all levels in the bay.
  *
  * @example
  *   generateBayTotemZpl({
@@ -12,11 +12,13 @@
  *     levels: [
  *       { level: '03', barcode: 'LOC-A-01-03', requiresForklift: true },
  *       { level: '02', barcode: 'LOC-A-01-02', requiresForklift: true },
- *       { level: '01', barcode: 'LOC-A-01-01', requiresForklift: false },  // Floor level (bay splits)
- *       { level: '00', barcode: 'LOC-A-01-00', requiresForklift: false },  // Floor level
+ *       { level: '01', barcode: 'LOC-A-01-01', requiresForklift: false },
+ *       { level: '00', barcode: 'LOC-A-01-00', requiresForklift: false },
  *     ],
  *   });
  */
+
+import { CC_LOGO_GF } from './zplLogo';
 
 export interface TotemLevel {
   /** Level number (e.g., '00', '01', '02', '03') */
@@ -37,9 +39,9 @@ export interface BayTotemData {
 }
 
 /**
- * Normalize accented characters to ASCII equivalents
+ * Escape special characters for ZPL
  */
-const normalizeAccents = (str: string) => {
+const escapeZpl = (str: string) => {
   return str
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
@@ -47,96 +49,85 @@ const normalizeAccents = (str: string) => {
     .replace(/Œ/g, 'OE')
     .replace(/æ/g, 'ae')
     .replace(/Æ/g, 'AE')
-    .replace(/ß/g, 'ss');
-};
-
-/**
- * Escape special characters for ZPL
- */
-const escapeZpl = (str: string) => {
-  return normalizeAccents(str).replace(/\^/g, ' ').replace(/~/g, ' ');
+    .replace(/ß/g, 'ss')
+    .replace(/\^/g, ' ')
+    .replace(/~/g, ' ');
 };
 
 /**
  * Generate ZPL code for a single bay totem label
  *
  * Label layout (4" x 6" at 203 DPI = 812 x 1218 dots):
- * - Header: Bay identifier in large bold text with border
- * - 4 level sections, each with:
- *   - Large QR code on left
- *   - Location code and level text on right
- *   - Visual badges for forklift indicator
- *   - Clean separator lines
+ * - C&C logo centred at top
+ * - Separator
+ * - Large QR code centred (mag 8), encodes LOC-{aisle}-{bay}
+ * - Bay code ~120pt bold, centred
+ * - Separator
+ * - Levels strip: LVL 00 · 01 · 02 · 03
+ * - Separator
+ * - Footer: AISLE A · BAY 01
  */
 const generateBayTotemZpl = (data: BayTotemData) => {
-  const bayCode = `${escapeZpl(data.aisle)}-${escapeZpl(data.bay)}`;
+  const aisle = escapeZpl(data.aisle);
+  const bay = escapeZpl(data.bay);
+  const bayBarcode = `LOC-${data.aisle}-${data.bay}`;
 
-  // Calculate section height - 6" label at 203 DPI = 1218 dots
-  // Header: ~150 dots, each level section: ~260 dots
-  const headerHeight = 140;
-  const sectionHeight = 260;
-
-  let zpl = `^XA
-
-^FX -- Outer border --
-^FO15,15
-^GB782,1188,3^FS
-
-^FX -- Bay Header with background box --
-^FO25,25
-^GB762,110,110,B^FS
-
-^FX -- Bay Header Text (reversed/white on black) --
-^FO60,45
-^A0N,80,80
-^FR
-^FDBay ${bayCode}^FS
-
-^FX -- Header separator --
-^FO25,140
-^GB762,4,4^FS
-`;
-
-  // Add each level section (from top level to bottom)
-  data.levels.forEach((level, index) => {
-    const yOffset = headerHeight + (index * sectionHeight);
-    const locationCode = `${data.aisle}-${data.bay}-${level.level}`;
-    const levelNum = parseInt(level.level, 10);
-    const levelLabel = levelNum <= 1 ? 'FLOOR' : `LEVEL ${levelNum}`;
-    const forkliftText = level.requiresForklift ? 'FORKLIFT' : '';
-
-    zpl += `
-^FX -- Level ${level.level} Section --
-
-^FX Large QR Code (magnification 7 for easy scanning)
-^FO40,${yOffset + 20}
-^BQN,2,7
-^FDMA,${level.barcode}^FS
-
-^FX Location Code (large and bold)
-^FO260,${yOffset + 25}
-^A0N,70,70
-^FD${escapeZpl(locationCode)}^FS
-
-^FX Level Label
-^FO260,${yOffset + 105}
-^A0N,45,45
-^FD${levelLabel}^FS
-
-^FX Forklift badge (if required)
-${forkliftText ? `^FO260,${yOffset + 160}
-^GB150,40,2^FS
-^FO270,${yOffset + 168}
-^A0N,26,26
-^FD${forkliftText}^FS` : ''}
-
-^FX Separator line
-^FO25,${yOffset + 215}
-^GB762,2,2^FS
-`;
+  // Build levels strip text: "LVL 00 · 01 · 02 · 03"
+  // Sort ascending for the strip display (lowest first, left to right)
+  const sortedLevels = [...data.levels].sort((a, b) => {
+    return parseInt(a.level, 10) - parseInt(b.level, 10);
   });
+  const levelsText = `LVL ${sortedLevels.map((l) => l.level).join(' \\: ')}`;
 
-  zpl += `^XZ`;
+  // Centre the logo (400 dots wide). Label is 812 wide → x = (812 - 400) / 2 = 206
+  const logoX = 206;
+
+  const zpl = `^XA
+^PW812
+^LL1218
+^PR3
+~SD20
+
+^FX -- C&C Logo centred --
+^FO${logoX},30
+${CC_LOGO_GF}^FS
+
+^FX -- Top separator --
+^FO40,165
+^GB732,3,3^FS
+
+^FX -- Large QR code centred (mag 12 ≈ ~300 dots) --
+^FO256,200
+^BQN,2,12
+^FDMA,${bayBarcode}^FS
+
+^FX -- Bay code (~180pt, centred) --
+^FO0,560
+^A0N,180,180
+^FB812,1,0,C
+^FD${aisle} - ${bay}^FS
+
+^FX -- Middle separator --
+^FO40,780
+^GB732,3,3^FS
+
+^FX -- Levels strip centred --
+^FO0,820
+^A0N,55,55
+^FB812,1,0,C
+^FD${levelsText}^FS
+
+^FX -- Lower separator --
+^FO40,900
+^GB732,3,3^FS
+
+^FX -- Footer: AISLE / BAY --
+^FO0,940
+^A0N,44,44
+^FB812,1,0,C
+^FDAISLE ${aisle}  \\:  BAY ${bay}^FS
+
+^XZ`;
 
   return zpl;
 };

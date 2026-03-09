@@ -32,6 +32,8 @@ import ZebraPrint from '@/app/_wms/components/ZebraPrint';
 import usePrint from '@/app/_wms/hooks/usePrint';
 import type { BayTotemData } from '@/app/_wms/utils/generateBayTotemZpl';
 import { generateBatchBayTotemsZpl } from '@/app/_wms/utils/generateBayTotemZpl';
+import type { LevelLabelData } from '@/app/_wms/utils/generateLevelLabelZpl';
+import { generateBatchLevelLabelsZpl } from '@/app/_wms/utils/generateLevelLabelZpl';
 import type { LocationLabelData } from '@/app/_wms/utils/generateLocationLabelZpl';
 import { generateBatchLocationLabelsZpl } from '@/app/_wms/utils/generateLocationLabelZpl';
 import useTRPC from '@/lib/trpc/browser';
@@ -48,6 +50,7 @@ const WMSLabelsPage = () => {
   const [activeTab, setActiveTab] = useState<'case' | 'location' | 'bay' | 'totem'>(shipmentId ? 'case' : 'bay');
   const [selectedLabels, setSelectedLabels] = useState<Set<string>>(new Set());
   const [isPrintingToZebra, setIsPrintingToZebra] = useState(false);
+  const [bayLabelSize, setBayLabelSize] = useState<'4x6' | '4x2'>('4x6');
 
   // Bay editing state
   const [editingBay, setEditingBay] = useState<{ aisle: string; bay: string } | null>(null);
@@ -233,24 +236,44 @@ const WMSLabelsPage = () => {
           selectedLabels.has(`${totem.aisle}-${totem.bay}`),
         );
 
-        // Generate HORIZONTAL location labels for each level in the selected bays
-        const labelData: LocationLabelData[] = [];
-        for (const bay of selectedBays) {
-          for (const level of bay.levels) {
-            labelData.push({
-              barcode: level.barcode,
-              locationCode: `${bay.aisle}-${bay.bay}-${level.level}`,
-              aisle: bay.aisle,
-              bay: bay.bay,
-              level: level.level,
-              locationType: 'rack',
-              requiresForklift: level.requiresForklift,
-            });
+        if (bayLabelSize === '4x6') {
+          // Generate 4x6" per-level labels
+          const labelData: LevelLabelData[] = [];
+          for (const bay of selectedBays) {
+            for (const level of bay.levels) {
+              labelData.push({
+                barcode: level.barcode,
+                locationCode: `${bay.aisle}-${bay.bay}-${level.level}`,
+                aisle: bay.aisle,
+                bay: bay.bay,
+                level: level.level,
+                requiresForklift: level.requiresForklift,
+              });
+            }
           }
-        }
 
-        zpl = generateBatchLocationLabelsZpl(labelData);
-        labelCount = labelData.length;
+          zpl = generateBatchLevelLabelsZpl(labelData);
+          labelCount = labelData.length;
+        } else {
+          // Generate 4x2" legacy location labels
+          const labelData: LocationLabelData[] = [];
+          for (const bay of selectedBays) {
+            for (const level of bay.levels) {
+              labelData.push({
+                barcode: level.barcode,
+                locationCode: `${bay.aisle}-${bay.bay}-${level.level}`,
+                aisle: bay.aisle,
+                bay: bay.bay,
+                level: level.level,
+                locationType: 'rack',
+                requiresForklift: level.requiresForklift,
+              });
+            }
+          }
+
+          zpl = generateBatchLocationLabelsZpl(labelData);
+          labelCount = labelData.length;
+        }
       } else if (activeTab === 'totem' && bayTotemsData) {
         // Filter to only selected totems
         const selectedTotems = bayTotemsData.totems.filter((totem) =>
@@ -269,7 +292,8 @@ const WMSLabelsPage = () => {
       }
 
       if (zpl) {
-        const labelSize = activeTab === 'totem' ? '4x6' : '4x2';
+        const labelSize =
+          activeTab === 'totem' ? '4x6' : activeTab === 'bay' ? bayLabelSize : '4x2';
         const success = await print(zpl, labelSize);
         if (success) {
           toast.success(`Printed ${labelCount} label(s)`);
@@ -806,16 +830,44 @@ const WMSLabelsPage = () => {
                 );
               })}
 
-              {/* Print Info */}
-              <Card className="bg-fill-secondary print:hidden">
+              {/* Label Size Toggle */}
+              <Card className="print:hidden">
                 <CardContent className="p-4">
-                  <div className="flex items-start gap-3">
-                    <Icon icon={IconPrinter} size="md" className="mt-0.5 text-text-muted" />
-                    <div>
-                      <Typography variant="labelMd">Horizontal Location Labels (4&quot; x 2&quot;)</Typography>
-                      <Typography variant="bodyXs" colorRole="muted">
-                        Select bays to print individual location labels for each level. Labels are printed in horizontal format with QR codes.
-                      </Typography>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-start gap-3">
+                      <Icon icon={IconPrinter} size="md" className="mt-0.5 text-text-muted" />
+                      <div>
+                        <Typography variant="labelMd">
+                          {bayLabelSize === '4x6' ? 'Per-Level Labels (4" x 6")' : 'Location Labels (4" x 2")'}
+                        </Typography>
+                        <Typography variant="bodyXs" colorRole="muted">
+                          {bayLabelSize === '4x6'
+                            ? 'Large labels with logo, QR, and location code. Visible from distance.'
+                            : 'Compact horizontal labels with QR code. Legacy format.'}
+                        </Typography>
+                      </div>
+                    </div>
+                    <div className="flex shrink-0 rounded-lg border border-border-primary p-0.5">
+                      <button
+                        onClick={() => setBayLabelSize('4x6')}
+                        className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+                          bayLabelSize === '4x6'
+                            ? 'bg-fill-brand-secondary text-text-brand'
+                            : 'text-text-muted hover:text-text-primary'
+                        }`}
+                      >
+                        4x6&quot;
+                      </button>
+                      <button
+                        onClick={() => setBayLabelSize('4x2')}
+                        className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+                          bayLabelSize === '4x2'
+                            ? 'bg-fill-brand-secondary text-text-brand'
+                            : 'text-text-muted hover:text-text-primary'
+                        }`}
+                      >
+                        4x2&quot;
+                      </button>
                     </div>
                   </div>
                 </CardContent>
