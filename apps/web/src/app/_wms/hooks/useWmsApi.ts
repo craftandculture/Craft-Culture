@@ -62,6 +62,7 @@ const useWmsApi = () => {
               quantityCases: number;
               availableCases: number;
               lotNumber: string | null;
+              vintage: string | null;
               caseConfig: number | null;
               bottleSize: string | null;
             }>;

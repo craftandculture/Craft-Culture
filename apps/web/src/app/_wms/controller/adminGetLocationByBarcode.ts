@@ -88,6 +88,7 @@ const adminGetLocationByBarcode = adminProcedure
         quantityCases: wmsStock.quantityCases,
         availableCases: wmsStock.availableCases,
         lotNumber: wmsStock.lotNumber,
+        vintage: wmsStock.vintage,
         caseConfig: wmsStock.caseConfig,
         bottleSize: wmsStock.bottleSize,
       })

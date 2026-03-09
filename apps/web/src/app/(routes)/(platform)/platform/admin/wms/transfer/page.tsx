@@ -9,6 +9,7 @@ import {
   IconMinus,
   IconPlus,
   IconPrinter,
+  IconSearch,
   IconX,
 } from '@tabler/icons-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -46,6 +47,7 @@ interface StockItem {
   quantityCases: number;
   availableCases: number;
   lotNumber?: string | null;
+  vintage?: string | null;
 }
 
 /**
@@ -60,6 +62,7 @@ const WMSTransferPage = () => {
   const [step, setStep] = useState<WorkflowStep>('scan-source');
   const [sourceLocation, setSourceLocation] = useState<LocationInfo | null>(null);
   const [stockAtSource, setStockAtSource] = useState<StockItem[]>([]);
+  const [stockSearch, setStockSearch] = useState('');
   const [selectedStock, setSelectedStock] = useState<StockItem | null>(null);
   const [transferQuantity, setTransferQuantity] = useState(1);
   const [destLocation, setDestLocation] = useState<LocationInfo | null>(null);
@@ -75,6 +78,8 @@ const WMSTransferPage = () => {
     destStockId: string;
     sourceRemaining: number;
   } | null>(null);
+  const [destLabelCopies, setDestLabelCopies] = useState(1);
+  const [sourceLabelCopies, setSourceLabelCopies] = useState(1);
 
   // Transfer mutation — routes through local NUC when available
   const transferMutation = useMutation({
@@ -90,6 +95,8 @@ const WMSTransferPage = () => {
         destStockId: data.destStockId,
         sourceRemaining: data.sourceRemaining,
       });
+      setDestLabelCopies(data.quantityCases);
+      setSourceLabelCopies(data.sourceRemaining);
       setStep('success');
     },
     onError: (err) => {
@@ -109,7 +116,7 @@ const WMSTransferPage = () => {
       if (!printed) {
         downloadZplFile(data.zpl, `stock-label-${data.quantityCases}cs`);
       }
-      toast.success(`Printed label: ${data.productName} (${data.quantityCases} cases)`);
+      toast.success(`Printed ${data.quantityCases > 1 ? `${data.quantityCases} labels` : 'label'}: ${data.productName}`);
     },
     onError: (error) => {
       toast.error(`Failed to print label: ${error.message}`);
@@ -191,6 +198,7 @@ const WMSTransferPage = () => {
     setStep('scan-source');
     setSourceLocation(null);
     setStockAtSource([]);
+    setStockSearch('');
     setSelectedStock(null);
     setTransferQuantity(1);
     setDestLocation(null);
@@ -277,30 +285,61 @@ const WMSTransferPage = () => {
 
             <Card>
               <CardContent className="p-4">
-                <Typography variant="headingSm" className="mb-4">
+                <Typography variant="headingSm" className="mb-3">
                   Select Stock to Transfer
                 </Typography>
 
+                {stockAtSource.length > 5 && (
+                  <div className="relative mb-3">
+                    <IconSearch className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" />
+                    <input
+                      type="text"
+                      placeholder="Search product, vintage, owner..."
+                      value={stockSearch}
+                      onChange={(e) => setStockSearch(e.target.value)}
+                      className="h-12 w-full rounded-lg border border-border bg-fill-primary pl-10 pr-4 text-sm focus:border-border-brand focus:outline-none"
+                    />
+                  </div>
+                )}
+
                 <div className="space-y-2">
-                  {stockAtSource.map((stock) => (
-                    <button
-                      key={stock.id}
-                      onClick={() => handleSelectStock(stock)}
-                      className="w-full rounded-lg border border-border-primary bg-fill-primary p-4 text-left transition-colors hover:border-border-brand"
-                    >
-                      <Typography variant="bodySm" className="font-medium">
-                        {stock.productName}
-                      </Typography>
-                      <div className="mt-1 flex items-center justify-between">
-                        <Typography variant="bodyXs" colorRole="muted">
-                          {stock.ownerName}
+                  {stockAtSource
+                    .filter((stock) => {
+                      if (!stockSearch) return true;
+                      const q = stockSearch.toLowerCase();
+                      return (
+                        stock.productName.toLowerCase().includes(q) ||
+                        stock.ownerName.toLowerCase().includes(q) ||
+                        (stock.vintage?.toLowerCase().includes(q) ?? false) ||
+                        stock.lwin18.includes(q)
+                      );
+                    })
+                    .map((stock) => (
+                      <button
+                        key={stock.id}
+                        onClick={() => handleSelectStock(stock)}
+                        className="w-full rounded-lg border border-border-primary bg-fill-primary p-4 text-left transition-colors hover:border-border-brand"
+                      >
+                        <Typography variant="bodySm" className="font-medium">
+                          {stock.productName}
                         </Typography>
-                        <Typography variant="bodySm" className="font-medium text-blue-600">
-                          {stock.availableCases} avail
-                        </Typography>
-                      </div>
-                    </button>
-                  ))}
+                        <div className="mt-1 flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            {stock.vintage && (
+                              <Typography variant="bodyXs" className="font-medium">
+                                {stock.vintage}
+                              </Typography>
+                            )}
+                            <Typography variant="bodyXs" colorRole="muted">
+                              {stock.ownerName}
+                            </Typography>
+                          </div>
+                          <Typography variant="bodySm" className="font-medium text-blue-600">
+                            {stock.availableCases} avail
+                          </Typography>
+                        </div>
+                      </button>
+                    ))}
                 </div>
               </CardContent>
             </Card>
@@ -325,7 +364,10 @@ const WMSTransferPage = () => {
                     <Typography variant="bodyXs" colorRole="muted">
                       Moving from {sourceLocation.locationCode}
                     </Typography>
-                    <Typography variant="headingSm">{selectedStock.productName}</Typography>
+                    <Typography variant="headingSm">
+                      {selectedStock.productName}
+                      {selectedStock.vintage ? ` (${selectedStock.vintage})` : ''}
+                    </Typography>
                   </div>
                 </div>
               </CardContent>
@@ -479,32 +521,87 @@ const WMSTransferPage = () => {
               </CardContent>
             </Card>
 
-            {/* Print label buttons */}
-            <div className="space-y-2">
-              {lastSuccess.sourceStockId && (
+            {/* Print label buttons with quantity selectors */}
+            <div className="space-y-3">
+              {/* Destination labels */}
+              <div className="flex items-center gap-2">
+                <div className="flex items-center rounded-lg border border-border">
+                  <button
+                    type="button"
+                    className="flex h-12 w-12 items-center justify-center rounded-l-lg hover:bg-fill-secondary"
+                    onClick={() => setDestLabelCopies((c) => Math.max(1, c - 1))}
+                  >
+                    <IconMinus className="h-4 w-4" />
+                  </button>
+                  <span className="flex h-12 w-10 items-center justify-center text-lg font-semibold">
+                    {destLabelCopies}
+                  </span>
+                  <button
+                    type="button"
+                    className="flex h-12 w-12 items-center justify-center rounded-r-lg hover:bg-fill-secondary"
+                    onClick={() => setDestLabelCopies((c) => c + 1)}
+                  >
+                    <IconPlus className="h-4 w-4" />
+                  </button>
+                </div>
                 <Button
                   variant="outline"
                   size="lg"
-                  className="w-full"
+                  className="min-h-12 flex-1"
                   disabled={isPrinting}
-                  onClick={() => printLabel({ stockId: lastSuccess.sourceStockId! })}
+                  onClick={() =>
+                    printLabel({
+                      stockId: lastSuccess.destStockId,
+                      copies: destLabelCopies,
+                    })
+                  }
                 >
                   <ButtonContent iconLeft={isPrinting ? IconLoader2 : IconPrinter}>
-                    Print Label — {lastSuccess.sourceRemaining} cases at {lastSuccess.fromLocation}
+                    Print — {lastSuccess.toLocation}
                   </ButtonContent>
                 </Button>
+              </div>
+
+              {/* Source labels (if stock remains) */}
+              {lastSuccess.sourceStockId && lastSuccess.sourceRemaining > 0 && (
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center rounded-lg border border-border">
+                    <button
+                      type="button"
+                      className="flex h-12 w-12 items-center justify-center rounded-l-lg hover:bg-fill-secondary"
+                      onClick={() => setSourceLabelCopies((c) => Math.max(1, c - 1))}
+                    >
+                      <IconMinus className="h-4 w-4" />
+                    </button>
+                    <span className="flex h-12 w-10 items-center justify-center text-lg font-semibold">
+                      {sourceLabelCopies}
+                    </span>
+                    <button
+                      type="button"
+                      className="flex h-12 w-12 items-center justify-center rounded-r-lg hover:bg-fill-secondary"
+                      onClick={() => setSourceLabelCopies((c) => c + 1)}
+                    >
+                      <IconPlus className="h-4 w-4" />
+                    </button>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="lg"
+                    className="min-h-12 flex-1"
+                    disabled={isPrinting}
+                    onClick={() =>
+                      printLabel({
+                        stockId: lastSuccess.sourceStockId!,
+                        copies: sourceLabelCopies,
+                      })
+                    }
+                  >
+                    <ButtonContent iconLeft={isPrinting ? IconLoader2 : IconPrinter}>
+                      Print — {lastSuccess.fromLocation}
+                    </ButtonContent>
+                  </Button>
+                </div>
               )}
-              <Button
-                variant="outline"
-                size="lg"
-                className="w-full"
-                disabled={isPrinting}
-                onClick={() => printLabel({ stockId: lastSuccess.destStockId })}
-              >
-                <ButtonContent iconLeft={isPrinting ? IconLoader2 : IconPrinter}>
-                  Print Label — {lastSuccess.quantity} cases at {lastSuccess.toLocation}
-                </ButtonContent>
-              </Button>
             </div>
 
             <div className="flex gap-3">

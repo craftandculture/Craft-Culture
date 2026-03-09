@@ -8,25 +8,26 @@ import { adminProcedure } from '@/lib/trpc/procedures';
 import generateLabelZpl from '../utils/generateLabelZpl';
 
 /**
- * Print a single stock summary label for a stock record
+ * Print stock labels for a stock record
  *
- * Generates a standard WMS label (4"x2") showing the product name,
- * current case count, location, owner, and lot number. Used after
- * transfers or from stock check to get an updated label.
+ * Generates WMS labels (4"x2") showing the product name, location, owner,
+ * and lot number. Supports printing multiple copies (one per case).
  *
  * @example
  *   await trpcClient.wms.admin.labels.printStockLabel.mutate({
  *     stockId: "uuid",
+ *     copies: 4,
  *   });
  */
 const adminPrintStockLabel = adminProcedure
   .input(
     z.object({
       stockId: z.string().uuid(),
+      copies: z.number().int().min(1).max(100).optional(),
     }),
   )
   .mutation(async ({ input }) => {
-    const { stockId } = input;
+    const { stockId, copies } = input;
 
     // Fetch stock record
     const [stock] = await db
@@ -60,19 +61,26 @@ const adminPrintStockLabel = adminProcedure
       .from(wmsLocations)
       .where(eq(wmsLocations.id, stock.locationId));
 
-    // Build pack size with case count
+    const labelCount = copies ?? 1;
+
+    // Build pack size — per-case when printing multiple, summary when single
     const basePack =
       stock.caseConfig && stock.bottleSize
         ? `${stock.caseConfig}x${stock.bottleSize}`
         : '';
-    const packSize = basePack
-      ? `${basePack} | ${stock.quantityCases} Cases`
-      : `${stock.quantityCases} Cases`;
+    const packSize =
+      labelCount > 1
+        ? basePack
+          ? `${basePack} | 1 Case`
+          : '1 Case'
+        : basePack
+          ? `${basePack} | ${stock.quantityCases} Cases`
+          : `${stock.quantityCases} Cases`;
 
     // Use LWIN18 as barcode — stable product identifier scannable across the system
     const barcode = stock.lwin18;
 
-    const zpl = generateLabelZpl({
+    const singleLabel = generateLabelZpl({
       barcode,
       productName: stock.productName,
       lwin18: stock.lwin18,
@@ -82,6 +90,11 @@ const adminPrintStockLabel = adminProcedure
       locationCode: location?.locationCode ?? undefined,
       owner: stock.ownerName ?? undefined,
     });
+
+    // Repeat label for requested copies
+    const zpl = Array.from({ length: labelCount }, () => singleLabel).join(
+      '\n',
+    );
 
     return {
       success: true as const,
