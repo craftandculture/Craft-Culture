@@ -8,9 +8,13 @@ import {
   IconDownload,
   IconLoader2,
   IconMapPin,
+  IconMinus,
   IconPackageImport,
+  IconPlus,
+  IconPrinter,
   IconSearch,
   IconUser,
+  IconX,
 } from '@tabler/icons-react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
@@ -27,6 +31,9 @@ import CapacityBar from '@/app/_wms/components/CapacityBar';
 import ExpiryBadge from '@/app/_wms/components/ExpiryBadge';
 import LocationBadge from '@/app/_wms/components/LocationBadge';
 import OwnerBadge from '@/app/_wms/components/OwnerBadge';
+import usePrint from '@/app/_wms/hooks/usePrint';
+import type { LabelData } from '@/app/_wms/utils/generateLabelZpl';
+import { generateBatchLabelsZpl } from '@/app/_wms/utils/generateLabelZpl';
 import useTRPC from '@/lib/trpc/browser';
 
 type TabView = 'product' | 'location' | 'owner';
@@ -37,8 +44,11 @@ type TabView = 'product' | 'location' | 'owner';
  */
 const WMSStockPage = () => {
   const api = useTRPC();
+  const { print } = usePrint();
   const [activeTab, setActiveTab] = useState<TabView>('product');
   const [searchQuery, setSearchQuery] = useState('');
+  const [printingLoc, setPrintingLoc] = useState<string | null>(null);
+  const [printQty, setPrintQty] = useState(1);
 
   // Fetch stock by product
   const { data: productData, isLoading: productsLoading } = useQuery({
@@ -242,18 +252,95 @@ const WMSStockPage = () => {
                           {product.ownerCount} owner{product.ownerCount !== 1 ? 's' : ''}
                         </Typography>
                         <div className="flex flex-wrap gap-2">
-                          {product.locations.slice(0, 5).map((loc, idx) => (
-                            <div
-                              key={`${loc.locationId}-${idx}`}
-                              className="flex items-center gap-2 rounded bg-fill-secondary px-2 py-1"
-                            >
-                              <LocationBadge locationCode={loc.locationCode} size="sm" />
-                              <Typography variant="bodyXs">
-                                {loc.quantityCases} cs
-                              </Typography>
-                              <OwnerBadge ownerName={loc.ownerName} size="sm" />
-                            </div>
-                          ))}
+                          {product.locations.slice(0, 5).map((loc, idx) => {
+                            const locKey = `${product.lwin18}-${loc.locationId}-${idx}`;
+                            const isExpanded = printingLoc === locKey;
+
+                            return (
+                              <div
+                                key={locKey}
+                                className="flex items-center gap-2 rounded bg-fill-secondary px-2 py-1"
+                              >
+                                <LocationBadge locationCode={loc.locationCode} size="sm" />
+                                <Typography variant="bodyXs">
+                                  {loc.quantityCases} cs
+                                </Typography>
+                                <OwnerBadge ownerName={loc.ownerName} size="sm" />
+
+                                {isExpanded ? (
+                                  <div className="flex items-center gap-1">
+                                    <button
+                                      className="flex h-7 w-7 items-center justify-center rounded bg-fill-primary text-text-muted active:bg-fill-secondary"
+                                      onClick={() => setPrintQty((q) => Math.max(1, q - 1))}
+                                    >
+                                      <IconMinus className="h-3.5 w-3.5" />
+                                    </button>
+                                    <span className="w-6 text-center text-xs font-medium">
+                                      {printQty}
+                                    </span>
+                                    <button
+                                      className="flex h-7 w-7 items-center justify-center rounded bg-fill-primary text-text-muted active:bg-fill-secondary"
+                                      onClick={() =>
+                                        setPrintQty((q) => Math.min(loc.quantityCases, q + 1))
+                                      }
+                                    >
+                                      <IconPlus className="h-3.5 w-3.5" />
+                                    </button>
+                                    <button
+                                      className="flex h-7 items-center gap-1 rounded bg-blue-600 px-2 text-xs font-medium text-white active:bg-blue-700"
+                                      onClick={async () => {
+                                        const packSize = `${product.caseConfig}x${product.bottleSize}`;
+                                        const labels: LabelData[] = Array.from(
+                                          { length: printQty },
+                                          () => ({
+                                            barcode: product.lwin18,
+                                            productName: product.productName,
+                                            producer: product.producer ?? undefined,
+                                            lwin18: product.lwin18,
+                                            packSize,
+                                            vintage: product.vintage ?? undefined,
+                                            locationCode: loc.locationCode,
+                                            owner: loc.ownerName,
+                                            lotNumber: loc.lotNumber ?? undefined,
+                                            showBarcode: true,
+                                          }),
+                                        );
+                                        const zpl = generateBatchLabelsZpl(labels);
+                                        const success = await print(zpl, '4x2');
+                                        if (success) {
+                                          toast.success(
+                                            `Printing ${printQty} label${printQty !== 1 ? 's' : ''}`,
+                                          );
+                                        } else {
+                                          toast.error('Print failed — check printer connection');
+                                        }
+                                        setPrintingLoc(null);
+                                      }}
+                                    >
+                                      <IconPrinter className="h-3.5 w-3.5" />
+                                      Print
+                                    </button>
+                                    <button
+                                      className="flex h-7 w-7 items-center justify-center rounded text-text-muted hover:text-text-primary"
+                                      onClick={() => setPrintingLoc(null)}
+                                    >
+                                      <IconX className="h-3.5 w-3.5" />
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <button
+                                    className="flex h-7 w-7 items-center justify-center rounded text-text-muted hover:text-text-primary active:bg-fill-primary"
+                                    onClick={() => {
+                                      setPrintingLoc(locKey);
+                                      setPrintQty(loc.quantityCases);
+                                    }}
+                                  >
+                                    <IconPrinter className="h-3.5 w-3.5" />
+                                  </button>
+                                )}
+                              </div>
+                            );
+                          })}
                           {product.locations.length > 5 && (
                             <Typography variant="bodyXs" colorRole="muted" className="self-center">
                               +{product.locations.length - 5} more
