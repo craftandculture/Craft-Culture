@@ -16,6 +16,8 @@
  *   });
  */
 
+import { CC_LOGO_GF } from './zplLogo';
+
 export interface LocationLabelData {
   /** Location barcode (e.g., LOC-A-01-02) */
   barcode: string;
@@ -80,7 +82,7 @@ const generateLocationLabelZpl = (data: LocationLabelData) => {
   const locationType = getLocationTypeDisplay(data.locationType);
   const forkliftText = data.requiresForklift ? 'FORKLIFT' : '';
   const levelNum = parseInt(data.level, 10);
-  const levelLabel = levelNum <= 1 ? 'FLOOR' : `LEVEL ${levelNum}`;
+  const levelLabel = isNaN(levelNum) ? '' : levelNum <= 1 ? 'FLOOR' : `LEVEL ${levelNum}`;
 
   // ZPL code for 4" x 2" label at 203 DPI (812 x 406 dots)
   // Centered layout with larger QR code
@@ -131,6 +133,78 @@ ${forkliftText ? `^FO520,240
 ^XZ`;
 
   return zpl;
+};
+
+/**
+ * Generate ZPL for a large 4x6" area label (GOODS INBOUND, SHIPPING, etc.)
+ *
+ * 4x6" at 203 DPI = 812 x 1218 dots. Bold, readable from distance.
+ */
+export const generateAreaLabelZpl = (data: LocationLabelData) => {
+  const locationCode = escapeZpl(data.locationCode);
+  const locationType = getLocationTypeDisplay(data.locationType);
+
+  return `^XA
+^PR3
+~SD20
+^MTD^JUS
+
+^FX -- Outer border --
+^FO20,20
+^GB772,1178,4^FS
+
+^FX -- C&C logo (400x119 dots, centred) --
+^FO206,50
+${CC_LOGO_GF}^FS
+
+^FX -- Separator --
+^FO40,190
+^GB732,3,3^FS
+
+^FX -- Large QR code (centred, mag 10) --
+^FO230,240
+^BQN,2,10
+^FDMA,${data.barcode}^FS
+
+^FX -- Location name (huge, centred) --
+^FO40,620
+^A0N,120,120
+^FB732,2,0,C
+^FD${locationCode}^FS
+
+^FX -- Separator --
+^FO40,860
+^GB732,3,3^FS
+
+^FX -- Location type badge (centred) --
+^FO40,900
+^A0N,60,60
+^FB732,1,0,C
+^FD${locationType}^FS
+
+^FX -- Scan instruction --
+^FO40,1000
+^A0N,28,28
+^FB732,1,0,C
+^FDSCAN QR TO SELECT LOCATION^FS
+
+^FX -- Separator --
+^FO40,1060
+^GB732,3,3^FS
+
+^FX -- Barcode at bottom --
+^FO40,1100
+^A0N,22,22
+^FB732,1,0,C
+^FD${escapeZpl(data.barcode)}^FS
+
+^FX -- craftculture.xyz --
+^FO40,1150
+^A0N,18,18
+^FB732,1,0,C
+^FDcraftculture.xyz^FS
+
+^XZ`;
 };
 
 /**
