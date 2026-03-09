@@ -28,7 +28,7 @@ import ScanInput from '@/app/_wms/components/ScanInput';
 import usePrint from '@/app/_wms/hooks/usePrint';
 import useWmsApi from '@/app/_wms/hooks/useWmsApi';
 import downloadZplFile from '@/app/_wms/utils/downloadZplFile';
-import useTRPC from '@/lib/trpc/browser';
+import generateLabelZpl from '@/app/_wms/utils/generateLabelZpl';
 
 type WorkflowStep = 'scan-source' | 'select-stock' | 'scan-dest' | 'confirm' | 'success';
 
@@ -48,13 +48,14 @@ interface StockItem {
   availableCases: number;
   lotNumber?: string | null;
   vintage?: string | null;
+  caseConfig?: number | null;
+  bottleSize?: string | null;
 }
 
 /**
  * WMS Transfer - mobile workflow for moving stock between locations
  */
 const WMSTransferPage = () => {
-  const api = useTRPC();
   const wmsApi = useWmsApi();
   const queryClient = useQueryClient();
   const { print } = usePrint();
@@ -104,24 +105,39 @@ const WMSTransferPage = () => {
     },
   });
 
-  // Print stock label mutation
-  const { mutate: printLabel, isPending: isPrinting } = useMutation({
-    ...api.wms.admin.labels.printStockLabel.mutationOptions(),
-    onSuccess: async (data) => {
-      if (!data.success) {
-        toast.error(data.error || 'Failed to generate label');
-        return;
-      }
-      const printed = await print(data.zpl, '4x2');
+  // Print labels client-side (avoids NUC→cloud sync delay for stock lookup)
+  const [isPrinting, setIsPrinting] = useState(false);
+  const handlePrintLabels = async (locationCode: string, copies: number) => {
+    if (!selectedStock) return;
+    setIsPrinting(true);
+    try {
+      const bottleSize = selectedStock.bottleSize ?? '750';
+      const caseConfig = selectedStock.caseConfig ?? 6;
+      const sizeLabel = Number(bottleSize) >= 1000 ? `${Number(bottleSize) / 1000}L` : `${bottleSize}ml`;
+      const packSize = `${caseConfig}x${sizeLabel === '750ml' ? '75cl' : sizeLabel}`;
+      const singleLabel = generateLabelZpl({
+        barcode: selectedStock.lwin18,
+        productName: selectedStock.productName,
+        lwin18: selectedStock.lwin18,
+        packSize: copies > 1 ? `${packSize} | 1 Case` : `${packSize} | ${copies} Case${copies !== 1 ? 's' : ''}`,
+        vintage: selectedStock.vintage ?? undefined,
+        lotNumber: selectedStock.lotNumber ?? undefined,
+        locationCode,
+        owner: selectedStock.ownerName,
+        showBarcode: true,
+      });
+      const zpl = Array.from({ length: copies }, () => singleLabel).join('\n');
+      const printed = await print(zpl, '4x2');
       if (!printed) {
-        downloadZplFile(data.zpl, `stock-label-${data.quantityCases}cs`);
+        downloadZplFile(zpl, `stock-label-${locationCode}`);
       }
-      toast.success(`Printed ${data.quantityCases > 1 ? `${data.quantityCases} labels` : 'label'}: ${data.productName}`);
-    },
-    onError: (error) => {
-      toast.error(`Failed to print label: ${error.message}`);
-    },
-  });
+      toast.success(`Printed ${copies > 1 ? `${copies} labels` : 'label'}: ${selectedStock.productName}`);
+    } catch (err) {
+      toast.error(`Failed to print: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    } finally {
+      setIsPrinting(false);
+    }
+  };
 
   const handleSourceScan = async (barcode: string) => {
     setError('');
@@ -551,12 +567,7 @@ const WMSTransferPage = () => {
                   size="lg"
                   className="min-h-12 flex-1"
                   disabled={isPrinting}
-                  onClick={() =>
-                    printLabel({
-                      stockId: lastSuccess.destStockId,
-                      copies: destLabelCopies,
-                    })
-                  }
+                  onClick={() => handlePrintLabels(lastSuccess.toLocation, destLabelCopies)}
                 >
                   <ButtonContent iconLeft={isPrinting ? IconLoader2 : IconPrinter}>
                     Print — {lastSuccess.toLocation}
@@ -591,12 +602,7 @@ const WMSTransferPage = () => {
                     size="lg"
                     className="min-h-12 flex-1"
                     disabled={isPrinting}
-                    onClick={() =>
-                      printLabel({
-                        stockId: lastSuccess.sourceStockId!,
-                        copies: sourceLabelCopies,
-                      })
-                    }
+                    onClick={() => handlePrintLabels(lastSuccess.fromLocation, sourceLabelCopies)}
                   >
                     <ButtonContent iconLeft={isPrinting ? IconLoader2 : IconPrinter}>
                       Print — {lastSuccess.fromLocation}
