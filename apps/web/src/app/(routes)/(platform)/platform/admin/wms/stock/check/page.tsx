@@ -320,6 +320,9 @@ const StockCheckPage = () => {
   // Product mode state
   const [searchedLwin18, setSearchedLwin18] = useState<string | null>(null);
 
+  // Bay stock search
+  const [bayStockSearch, setBayStockSearch] = useState('');
+
   // Shared state
   const [isProductScanning, setIsProductScanning] = useState(false);
   const [scanError, setScanError] = useState<string | null>(null);
@@ -560,6 +563,7 @@ const StockCheckPage = () => {
     setEditingItem(null);
     setAdjustmentReason('');
     setScanError(null);
+    setBayStockSearch('');
     setTimeout(() => scanInputRef.current?.focus(), 100);
   }, []);
 
@@ -572,6 +576,7 @@ const StockCheckPage = () => {
     setAdjustmentReason('');
     setScanError(null);
     setShowLocationList(false);
+    setBayStockSearch('');
   }, []);
 
   // Filter locations for search
@@ -770,6 +775,23 @@ const StockCheckPage = () => {
               </div>
             )}
 
+            {!stockLoading && stockData.stock.length > 10 && (
+              <div className="relative">
+                <Icon
+                  icon={IconSearch}
+                  size="sm"
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted"
+                />
+                <input
+                  type="text"
+                  value={bayStockSearch}
+                  onChange={(e) => setBayStockSearch(e.target.value)}
+                  placeholder="Search products..."
+                  className="w-full rounded-lg border border-border-primary bg-fill-primary py-2 pl-10 pr-4 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                />
+              </div>
+            )}
+
             {!stockLoading && stockData.stock.length === 0 && (
               <Card>
                 <CardContent className="p-8 text-center">
@@ -789,33 +811,55 @@ const StockCheckPage = () => {
               </Card>
             )}
 
-            {!stockLoading && stockData.stock.length > 0 && (
-              <div className="grid gap-3 md:grid-cols-2">
-                {stockData.stock.map((item) => {
-                  const isEditing = editingItem?.stockId === item.id;
-                  return (
-                    <StockItemCard
-                      key={item.id}
-                      item={item}
-                      isEditing={isEditing}
-                      editingItem={editingItem}
-                      adjustmentReason={adjustmentReason}
-                      isAdjusting={isAdjusting}
-                      isPrinting={printingStockId === item.id}
-                      isPrintingStockLabel={printingStockLabelId === item.id}
-                      onStartEditing={() => startEditing(item)}
-                      onCancelEditing={cancelEditing}
-                      onAdjustQty={adjustQty}
-                      onSetQty={setQty}
-                      onSetReason={setAdjustmentReason}
-                      onSave={saveAdjustment}
-                      onPrintLabels={() => handlePrintLabels(item.id)}
-                      onPrintStockLabel={() => handlePrintStockLabel(item.id)}
-                    />
-                  );
-                })}
-              </div>
-            )}
+            {!stockLoading && stockData.stock.length > 0 && (() => {
+              const query = bayStockSearch.toLowerCase();
+              const filteredStock = query
+                ? stockData.stock.filter(
+                    (item) =>
+                      item.productName?.toLowerCase().includes(query) ||
+                      item.producer?.toLowerCase().includes(query) ||
+                      item.lwin18?.toLowerCase().includes(query) ||
+                      item.lotNumber?.toLowerCase().includes(query) ||
+                      item.ownerName?.toLowerCase().includes(query) ||
+                      String(item.vintage ?? '').includes(query),
+                  )
+                : stockData.stock;
+
+              return (
+                <>
+                  {bayStockSearch && (
+                    <Typography variant="bodyXs" colorRole="muted">
+                      Showing {filteredStock.length} of {stockData.stock.length} products
+                    </Typography>
+                  )}
+                  <div className="grid gap-3 md:grid-cols-2">
+                    {filteredStock.map((item) => {
+                      const isEditing = editingItem?.stockId === item.id;
+                      return (
+                        <StockItemCard
+                          key={item.id}
+                          item={item}
+                          isEditing={isEditing}
+                          editingItem={editingItem}
+                          adjustmentReason={adjustmentReason}
+                          isAdjusting={isAdjusting}
+                          isPrinting={printingStockId === item.id}
+                          isPrintingStockLabel={printingStockLabelId === item.id}
+                          onStartEditing={() => startEditing(item)}
+                          onCancelEditing={cancelEditing}
+                          onAdjustQty={adjustQty}
+                          onSetQty={setQty}
+                          onSetReason={setAdjustmentReason}
+                          onSave={saveAdjustment}
+                          onPrintLabels={() => handlePrintLabels(item.id)}
+                          onPrintStockLabel={() => handlePrintStockLabel(item.id)}
+                        />
+                      );
+                    })}
+                  </div>
+                </>
+              );
+            })()}
 
             {!stockLoading && !editingItem && (
               <>
