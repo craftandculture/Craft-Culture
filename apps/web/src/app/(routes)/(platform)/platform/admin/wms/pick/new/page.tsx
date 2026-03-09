@@ -2,10 +2,13 @@
 
 import {
   IconArrowLeft,
+  IconCheck,
   IconLoader2,
   IconPlus,
   IconRefresh,
   IconSearch,
+  IconSquare,
+  IconSquareCheck,
 } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
@@ -35,7 +38,9 @@ const NewPickListPage = () => {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<Tab>('sales');
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
+  const [selectedOrderIds, setSelectedOrderIds] = useState<Set<string>>(
+    new Set(),
+  );
 
   // Fetch Zoho sales orders
   const { data: zohoOrders, isLoading: isLoadingZoho } = useQuery({
@@ -63,19 +68,11 @@ const NewPickListPage = () => {
   // Release Zoho order to pick (creates pick list)
   const releaseToPickMutation = useMutation({
     ...api.zohoSalesOrders.releaseToPick.mutationOptions(),
-    onSuccess: (data) => {
-      void queryClient.invalidateQueries();
-      router.push(`/platform/admin/wms/pick/${data.pickList.id}`);
-    },
   });
 
   // Create PCO pick list
   const createPcoMutation = useMutation({
     ...api.wms.admin.picking.create.mutationOptions(),
-    onSuccess: (data) => {
-      void queryClient.invalidateQueries();
-      router.push(`/platform/admin/wms/pick/${data.pickList.id}`);
-    },
   });
 
   // Sync Zoho orders
@@ -87,23 +84,66 @@ const NewPickListPage = () => {
     },
   });
 
-  const isCreating =
-    releaseToPickMutation.isPending || createPcoMutation.isPending;
-  const createError =
-    releaseToPickMutation.error ?? createPcoMutation.error;
+  const [isCreating, setIsCreating] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
 
-  const handleCreate = () => {
-    if (!selectedOrderId) return;
-    if (activeTab === 'sales') {
-      releaseToPickMutation.mutate({ salesOrderId: selectedOrderId });
+  const toggleOrder = (orderId: string) => {
+    setSelectedOrderIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(orderId)) {
+        next.delete(orderId);
+      } else {
+        next.add(orderId);
+      }
+      return next;
+    });
+  };
+
+  const handleCreate = async () => {
+    if (selectedOrderIds.size === 0) return;
+    setIsCreating(true);
+    setCreateError(null);
+
+    const ids = Array.from(selectedOrderIds);
+    const results = await Promise.allSettled(
+      ids.map((id) =>
+        activeTab === 'sales'
+          ? releaseToPickMutation.mutateAsync({ salesOrderId: id })
+          : createPcoMutation.mutateAsync({ orderId: id }),
+      ),
+    );
+
+    const succeeded = results.filter((r) => r.status === 'fulfilled').length;
+    const failed = results.filter((r) => r.status === 'rejected').length;
+
+    setIsCreating(false);
+    void queryClient.invalidateQueries();
+
+    if (failed === 0) {
+      toast.success(
+        `${succeeded} pick list${succeeded === 1 ? '' : 's'} created`,
+      );
+      router.push('/platform/admin/wms/pick');
+    } else if (succeeded > 0) {
+      toast.warning(
+        `${succeeded} created, ${failed} failed`,
+      );
+      router.push('/platform/admin/wms/pick');
     } else {
-      createPcoMutation.mutate({ orderId: selectedOrderId });
+      const firstError = results.find((r) => r.status === 'rejected') as
+        | PromiseRejectedResult
+        | undefined;
+      setCreateError(
+        firstError?.reason instanceof Error
+          ? firstError.reason.message
+          : 'Failed to create pick lists',
+      );
     }
   };
 
   const handleTabChange = (tab: Tab) => {
     setActiveTab(tab);
-    setSelectedOrderId(null);
+    setSelectedOrderIds(new Set());
     setSearchQuery('');
   };
 
@@ -146,7 +186,7 @@ const NewPickListPage = () => {
           <div className="flex-1">
             <Typography variant="headingMd">New Pick List</Typography>
             <Typography variant="bodySm" colorRole="muted">
-              Select an order to create a pick list
+              Select orders to release for picking
             </Typography>
           </div>
           {activeTab === 'sales' && (
@@ -234,51 +274,83 @@ const NewPickListPage = () => {
                 </CardContent>
               </Card>
             ) : (
-              filteredZohoOrders?.map((order) => (
-                <Card
-                  key={order.id}
-                  className={`cursor-pointer transition-all ${
-                    selectedOrderId === order.id
-                      ? 'border-2 border-brand-500 ring-2 ring-brand-500/20'
-                      : 'hover:border-border-brand'
-                  }`}
-                  onClick={() => setSelectedOrderId(order.id)}
-                >
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <Typography
-                          variant="bodySm"
-                          className="font-semibold"
+              <>
+                {/* Select All */}
+                {filteredZohoOrders && filteredZohoOrders.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const allIds = filteredZohoOrders.map((o) => o.id);
+                      const allSelected = allIds.every((id) =>
+                        selectedOrderIds.has(id),
+                      );
+                      setSelectedOrderIds(
+                        allSelected ? new Set() : new Set(allIds),
+                      );
+                    }}
+                    className="flex w-full items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-text-muted hover:bg-fill-secondary"
+                  >
+                    <Icon
+                      icon={
+                        filteredZohoOrders.every((o) =>
+                          selectedOrderIds.has(o.id),
+                        )
+                          ? IconSquareCheck
+                          : IconSquare
+                      }
+                      size="sm"
+                    />
+                    Select All ({filteredZohoOrders.length})
+                  </button>
+                )}
+                {filteredZohoOrders?.map((order) => (
+                  <Card
+                    key={order.id}
+                    className={`cursor-pointer transition-all ${
+                      selectedOrderIds.has(order.id)
+                        ? 'border-2 border-brand-500 ring-2 ring-brand-500/20'
+                        : 'hover:border-border-brand'
+                    }`}
+                    onClick={() => toggleOrder(order.id)}
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <Typography
+                            variant="bodySm"
+                            className="font-semibold"
+                          >
+                            {order.salesOrderNumber}
+                          </Typography>
+                          <Typography variant="bodyXs" colorRole="muted">
+                            {order.customerName ?? 'Unknown customer'}
+                          </Typography>
+                          <div className="mt-1 flex items-center gap-3 text-xs text-text-muted">
+                            <span>{order.itemCount} items</span>
+                            <span>{order.totalQuantity} cases</span>
+                            <span>
+                              {new Date(
+                                order.createdAt,
+                              ).toLocaleDateString()}
+                            </span>
+                          </div>
+                        </div>
+                        <div
+                          className={`flex h-6 w-6 items-center justify-center rounded ${
+                            selectedOrderIds.has(order.id)
+                              ? 'bg-brand-500 text-white'
+                              : 'border-2 border-border-primary'
+                          }`}
                         >
-                          {order.salesOrderNumber}
-                        </Typography>
-                        <Typography variant="bodyXs" colorRole="muted">
-                          {order.customerName ?? 'Unknown customer'}
-                        </Typography>
-                        <div className="mt-1 flex items-center gap-3 text-xs text-text-muted">
-                          <span>{order.itemCount} items</span>
-                          <span>{order.totalQuantity} cases</span>
-                          <span>
-                            {new Date(order.createdAt).toLocaleDateString()}
-                          </span>
+                          {selectedOrderIds.has(order.id) && (
+                            <Icon icon={IconCheck} size="xs" />
+                          )}
                         </div>
                       </div>
-                      <div
-                        className={`flex h-6 w-6 items-center justify-center rounded-full border-2 ${
-                          selectedOrderId === order.id
-                            ? 'border-brand-500 bg-brand-500'
-                            : 'border-border-primary'
-                        }`}
-                      >
-                        {selectedOrderId === order.id && (
-                          <div className="h-2 w-2 rounded-full bg-white" />
-                        )}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))
+                    </CardContent>
+                  </Card>
+                ))}
+              </>
             )}
           </div>
         )}
@@ -298,59 +370,89 @@ const NewPickListPage = () => {
                 </CardContent>
               </Card>
             ) : (
-              filteredPcoOrders?.map((order) => (
-                <Card
-                  key={order.id}
-                  className={`cursor-pointer transition-all ${
-                    selectedOrderId === order.id
-                      ? 'border-2 border-brand-500 ring-2 ring-brand-500/20'
-                      : 'hover:border-border-brand'
-                  }`}
-                  onClick={() => setSelectedOrderId(order.id)}
-                >
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <Typography
-                          variant="bodySm"
-                          className="font-semibold"
+              <>
+                {/* Select All */}
+                {filteredPcoOrders && filteredPcoOrders.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const allIds = filteredPcoOrders.map((o) => o.id);
+                      const allSelected = allIds.every((id) =>
+                        selectedOrderIds.has(id),
+                      );
+                      setSelectedOrderIds(
+                        allSelected ? new Set() : new Set(allIds),
+                      );
+                    }}
+                    className="flex w-full items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-text-muted hover:bg-fill-secondary"
+                  >
+                    <Icon
+                      icon={
+                        filteredPcoOrders.every((o) =>
+                          selectedOrderIds.has(o.id),
+                        )
+                          ? IconSquareCheck
+                          : IconSquare
+                      }
+                      size="sm"
+                    />
+                    Select All ({filteredPcoOrders.length})
+                  </button>
+                )}
+                {filteredPcoOrders?.map((order) => (
+                  <Card
+                    key={order.id}
+                    className={`cursor-pointer transition-all ${
+                      selectedOrderIds.has(order.id)
+                        ? 'border-2 border-brand-500 ring-2 ring-brand-500/20'
+                        : 'hover:border-border-brand'
+                    }`}
+                    onClick={() => toggleOrder(order.id)}
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <Typography
+                            variant="bodySm"
+                            className="font-semibold"
+                          >
+                            {order.orderNumber}
+                          </Typography>
+                          <Typography variant="bodyXs" colorRole="muted">
+                            {order.clientName ?? 'Unknown client'}
+                          </Typography>
+                          <div className="mt-1 flex items-center gap-3 text-xs text-text-muted">
+                            <span>{order.totalItems ?? 0} items</span>
+                            <span>{order.totalCases ?? 0} cases</span>
+                            <span>
+                              {new Date(
+                                order.createdAt,
+                              ).toLocaleDateString()}
+                            </span>
+                          </div>
+                        </div>
+                        <div
+                          className={`flex h-6 w-6 items-center justify-center rounded ${
+                            selectedOrderIds.has(order.id)
+                              ? 'bg-brand-500 text-white'
+                              : 'border-2 border-border-primary'
+                          }`}
                         >
-                          {order.orderNumber}
-                        </Typography>
-                        <Typography variant="bodyXs" colorRole="muted">
-                          {order.clientName ?? 'Unknown client'}
-                        </Typography>
-                        <div className="mt-1 flex items-center gap-3 text-xs text-text-muted">
-                          <span>{order.totalItems ?? 0} items</span>
-                          <span>{order.totalCases ?? 0} cases</span>
-                          <span>
-                            {new Date(
-                              order.createdAt,
-                            ).toLocaleDateString()}
-                          </span>
+                          {selectedOrderIds.has(order.id) && (
+                            <Icon icon={IconCheck} size="xs" />
+                          )}
                         </div>
                       </div>
-                      <div
-                        className={`flex h-6 w-6 items-center justify-center rounded-full border-2 ${
-                          selectedOrderId === order.id
-                            ? 'border-brand-500 bg-brand-500'
-                            : 'border-border-primary'
-                        }`}
-                      >
-                        {selectedOrderId === order.id && (
-                          <div className="h-2 w-2 rounded-full bg-white" />
-                        )}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))
+                    </CardContent>
+                  </Card>
+                ))}
+              </>
             )}
           </div>
         )}
 
         {/* Create Button */}
-        {selectedOrderId && (
+        {selectedOrderIds.size > 0 && (
           <div className="fixed bottom-0 left-0 right-0 border-t border-border-primary bg-fill-primary p-4 sm:static sm:border-0 sm:bg-transparent sm:p-0">
             <Button
               variant="default"
@@ -361,7 +463,9 @@ const NewPickListPage = () => {
               <ButtonContent
                 iconLeft={isCreating ? IconLoader2 : IconPlus}
               >
-                {isCreating ? 'Creating...' : 'Create Pick List'}
+                {isCreating
+                  ? 'Releasing...'
+                  : `Release ${selectedOrderIds.size} Order${selectedOrderIds.size === 1 ? '' : 's'} to Pick`}
               </ButtonContent>
             </Button>
             {createError && (
@@ -369,7 +473,7 @@ const NewPickListPage = () => {
                 variant="bodyXs"
                 className="mt-2 text-center text-red-600"
               >
-                {createError.message}
+                {createError}
               </Typography>
             )}
           </div>
