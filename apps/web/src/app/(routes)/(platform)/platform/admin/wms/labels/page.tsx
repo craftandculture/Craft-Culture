@@ -4,6 +4,7 @@ import {
   IconArrowLeft,
   IconBarcode,
   IconBox,
+  IconBuildingWarehouse,
   IconCheck,
   IconForklift,
   IconLayoutGrid,
@@ -35,7 +36,10 @@ import { generateBatchBayTotemsZpl } from '@/app/_wms/utils/generateBayTotemZpl'
 import type { LevelLabelData } from '@/app/_wms/utils/generateLevelLabelZpl';
 import { generateBatchLevelLabelsZpl } from '@/app/_wms/utils/generateLevelLabelZpl';
 import type { LocationLabelData } from '@/app/_wms/utils/generateLocationLabelZpl';
-import { generateBatchLocationLabelsZpl } from '@/app/_wms/utils/generateLocationLabelZpl';
+import {
+  generateAreaLabelZpl,
+  generateBatchLocationLabelsZpl,
+} from '@/app/_wms/utils/generateLocationLabelZpl';
 import useTRPC from '@/lib/trpc/browser';
 
 /**
@@ -47,7 +51,7 @@ const WMSLabelsPage = () => {
   const api = useTRPC();
   const queryClient = useQueryClient();
 
-  const [activeTab, setActiveTab] = useState<'case' | 'location' | 'bay' | 'totem'>(shipmentId ? 'case' : 'bay');
+  const [activeTab, setActiveTab] = useState<'case' | 'location' | 'bay' | 'totem' | 'area'>(shipmentId ? 'case' : 'bay');
   const [selectedLabels, setSelectedLabels] = useState<Set<string>>(new Set());
   const [isPrintingToZebra, setIsPrintingToZebra] = useState(false);
   const [bayLabelSize, setBayLabelSize] = useState<'4x6' | '4x2'>('4x6');
@@ -109,6 +113,14 @@ const WMSLabelsPage = () => {
   const aisles = useMemo(() => {
     return Array.from(baysByAisle.keys()).sort();
   }, [baysByAisle]);
+
+  // Filter area locations (receiving, shipping) for area labels tab
+  const areaLocations = useMemo(() => {
+    if (!locationLabelsData) return [];
+    return locationLabelsData.locations.filter(
+      (loc) => loc.locationType === 'receiving' || loc.locationType === 'shipping',
+    );
+  }, [locationLabelsData]);
 
   const markPrintedMutation = useMutation({
     ...api.wms.admin.labels.markPrinted.mutationOptions(),
@@ -183,6 +195,12 @@ const WMSLabelsPage = () => {
         setSelectedLabels(new Set());
       } else {
         setSelectedLabels(new Set(bayTotemsData.totems.map((t) => `${t.aisle}-${t.bay}`)));
+      }
+    } else if (activeTab === 'area') {
+      if (selectedLabels.size === areaLocations.length) {
+        setSelectedLabels(new Set());
+      } else {
+        setSelectedLabels(new Set(areaLocations.map((l) => l.id)));
       }
     }
   };
@@ -289,11 +307,34 @@ const WMSLabelsPage = () => {
 
         zpl = generateBatchBayTotemsZpl(totemData);
         labelCount = totemData.length;
+      } else if (activeTab === 'area') {
+        // Filter to only selected area locations
+        const selectedAreas = areaLocations.filter((loc) => selectedLabels.has(loc.id));
+
+        // Generate 4x6" area labels
+        zpl = selectedAreas
+          .map((loc) =>
+            generateAreaLabelZpl({
+              barcode: loc.barcode,
+              locationCode: loc.locationCode,
+              aisle: loc.aisle,
+              bay: loc.bay,
+              level: loc.level,
+              locationType: loc.locationType,
+              requiresForklift: loc.requiresForklift,
+            }),
+          )
+          .join('\n');
+        labelCount = selectedAreas.length;
       }
 
       if (zpl) {
         const labelSize =
-          activeTab === 'totem' ? '4x6' : activeTab === 'bay' ? bayLabelSize : '4x2';
+          activeTab === 'totem' || activeTab === 'area'
+            ? '4x6'
+            : activeTab === 'bay'
+              ? bayLabelSize
+              : '4x2';
         const success = await print(zpl, labelSize);
         if (success) {
           toast.success(`Printed ${labelCount} label(s)`);
@@ -316,7 +357,7 @@ const WMSLabelsPage = () => {
   const isLoading =
     activeTab === 'case'
       ? caseLabelsLoading
-      : activeTab === 'location'
+      : activeTab === 'location' || activeTab === 'area'
         ? locationLabelsLoading
         : bayTotemsLoading; // bay and totem use bayTotemsData
 
@@ -356,8 +397,8 @@ const WMSLabelsPage = () => {
               </Button>
             )}
 
-            {/* Print to Zebra button for location labels, bays, and totems */}
-            {(activeTab === 'location' || activeTab === 'bay' || activeTab === 'totem') && (
+            {/* Print to Zebra button for location labels, bays, totems, and area labels */}
+            {(activeTab === 'location' || activeTab === 'bay' || activeTab === 'totem' || activeTab === 'area') && (
               <Button
                 variant="default"
                 onClick={handlePrintToZebra}
@@ -434,6 +475,20 @@ const WMSLabelsPage = () => {
               <Icon icon={IconLayoutList} size="sm" />
               Totems (4x6)
               {bayTotemsData && ` (${bayTotemsData.totalTotems})`}
+            </div>
+          </button>
+          <button
+            onClick={() => setActiveTab('area')}
+            className={`border-b-2 px-4 py-2 text-sm font-medium transition-colors ${
+              activeTab === 'area'
+                ? 'border-border-brand text-text-brand'
+                : 'border-transparent text-text-muted hover:text-text-primary'
+            }`}
+          >
+            <div className="flex items-center gap-2">
+              <Icon icon={IconBuildingWarehouse} size="sm" />
+              Area Labels
+              {areaLocations.length > 0 && ` (${areaLocations.length})`}
             </div>
           </button>
         </div>
@@ -888,6 +943,99 @@ const WMSLabelsPage = () => {
                     <ButtonContent iconLeft={IconMapPin}>Create Locations</ButtonContent>
                   </Link>
                 </Button>
+              </CardContent>
+            </Card>
+          )
+        ) : activeTab === 'area' ? (
+          /* Area Labels (4x6) — GOODS INBOUND, SHIPPING */
+          areaLocations.length > 0 ? (
+            <div className="space-y-4">
+              {/* Info banner */}
+              <Card className="print:hidden">
+                <CardContent className="p-4">
+                  <div className="flex items-start gap-3">
+                    <Icon icon={IconBuildingWarehouse} size="md" className="mt-0.5 text-blue-600" />
+                    <div>
+                      <Typography variant="headingSm">Area Labels</Typography>
+                      <Typography variant="bodyXs" colorRole="muted">
+                        Large 4&quot; x 6&quot; labels for warehouse areas (Goods Inbound, Shipping).
+                        Mount on walls or posts at eye level.
+                      </Typography>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Select All */}
+              <div className="flex items-center justify-between print:hidden">
+                <label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={selectedLabels.size === areaLocations.length}
+                    onChange={toggleSelectAll}
+                    className="h-4 w-4 rounded border-border-primary"
+                  />
+                  <Typography variant="bodySm">
+                    Select All ({areaLocations.length} area labels)
+                  </Typography>
+                </label>
+              </div>
+
+              {/* Area Labels Grid */}
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {areaLocations.map((location) => (
+                  <div key={location.id} className="relative">
+                    {/* Checkbox */}
+                    <div className="absolute left-2 top-2 z-10 print:hidden">
+                      <input
+                        type="checkbox"
+                        checked={selectedLabels.has(location.id)}
+                        onChange={() => toggleLabel(location.id)}
+                        className="h-4 w-4 rounded border-border-primary"
+                      />
+                    </div>
+                    {/* Area Card */}
+                    <Card
+                      className={`cursor-pointer transition-colors ${
+                        selectedLabels.has(location.id)
+                          ? 'border-border-brand ring-1 ring-border-brand'
+                          : 'hover:border-border-muted'
+                      }`}
+                      onClick={() => toggleLabel(location.id)}
+                    >
+                      <CardContent className="p-6 text-center">
+                        <div className="mb-3 flex h-16 w-16 mx-auto items-center justify-center rounded-2xl bg-fill-secondary">
+                          <Icon
+                            icon={location.locationType === 'receiving' ? IconPackages : IconShip}
+                            size="lg"
+                            className="text-text-muted"
+                          />
+                        </div>
+                        <Typography variant="headingMd" className="mb-1">
+                          {location.locationCode}
+                        </Typography>
+                        <Typography variant="bodyXs" colorRole="muted" className="mb-2">
+                          {location.barcode}
+                        </Typography>
+                        <span className="inline-block rounded-full bg-fill-secondary px-3 py-1 text-xs uppercase">
+                          {location.locationType}
+                        </span>
+                      </CardContent>
+                    </Card>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <Card className="print:hidden">
+              <CardContent className="p-6 text-center">
+                <Icon icon={IconBuildingWarehouse} size="xl" colorRole="muted" className="mx-auto mb-4" />
+                <Typography variant="headingSm" className="mb-2">
+                  No Area Locations Found
+                </Typography>
+                <Typography variant="bodySm" colorRole="muted">
+                  No receiving or shipping locations configured
+                </Typography>
               </CardContent>
             </Card>
           )
