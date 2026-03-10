@@ -141,7 +141,7 @@ const adminPutaway = adminProcedure
       let ownerName = 'Craft & Culture';
       let producer = null;
       let vintage = null;
-      let bottleSize = '750ml';
+      let bottleSize = '75cl';
       let caseConfig = 12;
       let shipmentId = caseLabel.shipmentId;
 
@@ -158,7 +158,7 @@ const adminPutaway = adminProcedure
           ownerName = sourceStock.ownerName;
           producer = sourceStock.producer;
           vintage = sourceStock.vintage;
-          bottleSize = sourceStock.bottleSize ?? '750ml';
+          bottleSize = sourceStock.bottleSize ?? '75cl';
           caseConfig = sourceStock.caseConfig ?? 12;
           shipmentId = sourceStock.shipmentId;
         }
