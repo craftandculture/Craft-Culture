@@ -171,26 +171,33 @@ const WMSTransferPage = () => {
 
   const handleSelectStock = (stock: StockItem) => {
     setSelectedStock(stock);
-    setTransferQuantity(Math.min(1, stock.availableCases));
+    setTransferQuantity(stock.availableCases);
     // Stay on select-stock step to show quantity selector
   };
 
-  /** Parse a case barcode and auto-select the matching stock item */
+  /** Parse a case/stock barcode and auto-select the matching stock item */
   const handleCaseScan = (barcode: string) => {
     setError('');
-    // Case barcode format: CASE-{lwin18}-{sequence}
-    // Extract LWIN18: everything between CASE- and the last -NNN segment
-    const match = barcode.match(/^CASE-(.+)-\d+$/);
-    if (!match?.[1]) {
-      setError('Invalid case barcode format');
-      return;
+    let lwin18: string;
+
+    if (barcode.startsWith('CASE-')) {
+      // Case label format: CASE-{lwin18}-{sequence}
+      const match = barcode.match(/^CASE-(.+)-\d+$/);
+      if (!match?.[1]) {
+        setError('Invalid case barcode format');
+        return;
+      }
+      lwin18 = match[1];
+    } else {
+      // Stock label barcode is the raw LWIN18 (e.g. 2909015-2019-06-00750)
+      lwin18 = barcode;
     }
-    const lwin18 = match[1];
+
     const matched = stockAtSource.find((s) => s.lwin18 === lwin18);
     if (matched) {
       handleSelectStock(matched);
     } else {
-      setError('No stock matching this case at this location');
+      setError('No stock matching this barcode at this location');
     }
   };
 
@@ -323,8 +330,8 @@ const WMSTransferPage = () => {
             <Card>
               <CardContent className="p-4">
                 <ScanInput
-                  label="Scan case barcode"
-                  placeholder="CASE-..."
+                  label="Scan case or stock label"
+                  placeholder="Scan barcode..."
                   onScan={handleCaseScan}
                   onInvalidScan={setError}
                   error={error}
