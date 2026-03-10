@@ -106,18 +106,14 @@ const adminReconcileCycleCount = adminProcedure
         newQuantity - (stockRecord.reservedCases ?? 0),
       );
 
-      if (newQuantity === 0) {
-        await db.delete(wmsStock).where(eq(wmsStock.id, item.stockId));
-      } else {
-        await db
-          .update(wmsStock)
-          .set({
-            quantityCases: newQuantity,
-            availableCases: newAvailable,
-            updatedAt: new Date(),
-          })
-          .where(eq(wmsStock.id, item.stockId));
-      }
+      await db
+        .update(wmsStock)
+        .set({
+          quantityCases: newQuantity,
+          availableCases: newAvailable,
+          updatedAt: new Date(),
+        })
+        .where(eq(wmsStock.id, item.stockId));
 
       adjustedCount++;
     }
