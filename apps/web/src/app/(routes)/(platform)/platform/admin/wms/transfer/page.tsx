@@ -111,10 +111,9 @@ const WMSTransferPage = () => {
     if (!selectedStock) return;
     setIsPrinting(true);
     try {
-      const bottleSize = selectedStock.bottleSize ?? '750';
+      const bottleSize = selectedStock.bottleSize ?? '75cl';
       const caseConfig = selectedStock.caseConfig ?? 6;
-      const sizeLabel = Number(bottleSize) >= 1000 ? `${Number(bottleSize) / 1000}L` : `${bottleSize}ml`;
-      const packSize = `${caseConfig}x${sizeLabel === '750ml' ? '75cl' : sizeLabel}`;
+      const packSize = `${caseConfig}x${bottleSize}`;
       const singleLabel = generateLabelZpl({
         barcode: selectedStock.lwin18,
         productName: selectedStock.productName,
