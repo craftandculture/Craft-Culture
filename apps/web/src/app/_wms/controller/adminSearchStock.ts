@@ -1,4 +1,4 @@
-import { ilike, or, sql } from 'drizzle-orm';
+import { and, gt, ilike, or, sql } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { wmsLocations, wmsStock } from '@/database/schema';
@@ -33,11 +33,14 @@ const adminSearchStock = adminProcedure
       })
       .from(wmsStock)
       .where(
-        or(
-          ilike(wmsStock.productName, `%${query}%`),
-          ilike(wmsStock.producer, `%${query}%`),
-          ilike(wmsStock.lwin18, `%${query}%`),
-          ilike(wmsStock.ownerName, `%${query}%`),
+        and(
+          gt(wmsStock.quantityCases, 0),
+          or(
+            ilike(wmsStock.productName, `%${query}%`),
+            ilike(wmsStock.producer, `%${query}%`),
+            ilike(wmsStock.lwin18, `%${query}%`),
+            ilike(wmsStock.ownerName, `%${query}%`),
+          ),
         ),
       )
       .groupBy(wmsStock.lwin18, wmsStock.productName, wmsStock.producer, wmsStock.vintage)
@@ -78,7 +81,7 @@ const adminSearchStock = adminProcedure
         totalCases: sql<number>`SUM(${wmsStock.quantityCases})::int`,
       })
       .from(wmsStock)
-      .where(ilike(wmsStock.ownerName, `%${query}%`))
+      .where(and(gt(wmsStock.quantityCases, 0), ilike(wmsStock.ownerName, `%${query}%`)))
       .groupBy(wmsStock.ownerId, wmsStock.ownerName)
       .orderBy(sql`SUM(${wmsStock.quantityCases}) DESC`)
       .limit(limit);

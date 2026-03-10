@@ -1,4 +1,4 @@
-import { desc, eq, sql } from 'drizzle-orm';
+import { and, desc, eq, gt, sql } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { partners, wmsStock } from '@/database/schema';
@@ -37,7 +37,7 @@ const adminGetStockByOwner = adminProcedure
           consignmentCommissionPercent: wmsStock.consignmentCommissionPercent,
         })
         .from(wmsStock)
-        .where(eq(wmsStock.ownerId, ownerId))
+        .where(and(eq(wmsStock.ownerId, ownerId), gt(wmsStock.quantityCases, 0)))
         .groupBy(
           wmsStock.lwin18,
           wmsStock.productName,
@@ -91,6 +91,7 @@ const adminGetStockByOwner = adminProcedure
         purchasedCount: sql<number>`COUNT(*) FILTER (WHERE ${wmsStock.salesArrangement} = 'purchased')::int`,
       })
       .from(wmsStock)
+      .where(gt(wmsStock.quantityCases, 0))
       .groupBy(wmsStock.ownerId, wmsStock.ownerName)
       .orderBy(desc(sql`SUM(${wmsStock.quantityCases})`));
 

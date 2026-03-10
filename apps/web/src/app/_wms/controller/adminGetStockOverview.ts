@@ -1,4 +1,4 @@
-import { and, eq, inArray, sql } from 'drizzle-orm';
+import { and, eq, gt, inArray, sql } from 'drizzle-orm';
 
 import db from '@/database/client';
 import {
@@ -48,7 +48,8 @@ const adminGetStockOverview = adminProcedure
           uniqueProducts: sql<number>`COUNT(DISTINCT ${wmsStock.lwin18})::int`,
           uniqueOwners: sql<number>`COUNT(DISTINCT ${wmsStock.ownerId})::int`,
         })
-        .from(wmsStock),
+        .from(wmsStock)
+        .where(gt(wmsStock.quantityCases, 0)),
 
       // Get location stats
       db
@@ -63,7 +64,8 @@ const adminGetStockOverview = adminProcedure
         .select({
           occupiedLocations: sql<number>`COUNT(DISTINCT ${wmsStock.locationId})::int`,
         })
-        .from(wmsStock),
+        .from(wmsStock)
+        .where(gt(wmsStock.quantityCases, 0)),
 
       // Get expiry alerts
       db
@@ -92,6 +94,7 @@ const adminGetStockOverview = adminProcedure
           productCount: sql<number>`COUNT(DISTINCT ${wmsStock.lwin18})::int`,
         })
         .from(wmsStock)
+        .where(gt(wmsStock.quantityCases, 0))
         .groupBy(wmsStock.ownerId, wmsStock.ownerName)
         .orderBy(sql`SUM(${wmsStock.quantityCases}) DESC`)
         .limit(10),
