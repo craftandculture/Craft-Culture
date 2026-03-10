@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, ilike, or, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, ilike, or, sql } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { wmsLocations, wmsStock } from '@/database/schema';
@@ -35,7 +35,8 @@ const adminGetStockByProduct = adminProcedure
       offset,
     } = input;
 
-    const conditions = [];
+    // Always exclude zero-quantity stock records (leftover from transfers/adjustments)
+    const conditions = [gt(wmsStock.quantityCases, 0)];
 
     if (search) {
       conditions.push(
@@ -164,7 +165,10 @@ const adminGetStockByProduct = adminProcedure
     // For each product, get location breakdown
     const productsWithLocations = await Promise.all(
       products.map(async (product) => {
-        const locationConditions = [eq(wmsStock.lwin18, product.lwin18)];
+        const locationConditions = [
+          eq(wmsStock.lwin18, product.lwin18),
+          gt(wmsStock.quantityCases, 0),
+        ];
         if (product.caseConfig !== null) {
           locationConditions.push(eq(wmsStock.caseConfig, product.caseConfig));
         }
