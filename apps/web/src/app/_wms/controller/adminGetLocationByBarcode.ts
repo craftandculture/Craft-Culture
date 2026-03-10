@@ -1,5 +1,5 @@
 import { TRPCError } from '@trpc/server';
-import { eq } from 'drizzle-orm';
+import { and, eq, gt } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { wmsLocations, wmsStock } from '@/database/schema';
@@ -93,7 +93,7 @@ const adminGetLocationByBarcode = adminProcedure
         bottleSize: wmsStock.bottleSize,
       })
       .from(wmsStock)
-      .where(eq(wmsStock.locationId, location.id));
+      .where(and(eq(wmsStock.locationId, location.id), gt(wmsStock.quantityCases, 0)));
 
     const totalCases = stockAtLocation.reduce((sum, s) => sum + s.quantityCases, 0);
 
