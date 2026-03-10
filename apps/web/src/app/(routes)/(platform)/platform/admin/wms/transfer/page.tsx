@@ -155,10 +155,10 @@ const WMSTransferPage = () => {
       if (result.stock.length === 0) {
         setError('No stock at this location');
       } else if (result.stock.length === 1 && result.stock[0]) {
-        // Auto-select if only one stock item
+        // Auto-select if only one stock item, show quantity selector
         setSelectedStock(result.stock[0]);
         setTransferQuantity(Math.min(1, result.stock[0].availableCases));
-        setStep('scan-dest');
+        setStep('select-stock');
       } else {
         setStep('select-stock');
       }
@@ -172,7 +172,26 @@ const WMSTransferPage = () => {
   const handleSelectStock = (stock: StockItem) => {
     setSelectedStock(stock);
     setTransferQuantity(Math.min(1, stock.availableCases));
-    setStep('scan-dest');
+    // Stay on select-stock step to show quantity selector
+  };
+
+  /** Parse a case barcode and auto-select the matching stock item */
+  const handleCaseScan = (barcode: string) => {
+    setError('');
+    // Case barcode format: CASE-{lwin18}-{sequence}
+    // Extract LWIN18: everything between CASE- and the last -NNN segment
+    const match = barcode.match(/^CASE-(.+)-\d+$/);
+    if (!match?.[1]) {
+      setError('Invalid case barcode format');
+      return;
+    }
+    const lwin18 = match[1];
+    const matched = stockAtSource.find((s) => s.lwin18 === lwin18);
+    if (matched) {
+      handleSelectStock(matched);
+    } else {
+      setError('No stock matching this case at this location');
+    }
   };
 
   const handleDestScan = async (barcode: string) => {
@@ -300,66 +319,151 @@ const WMSTransferPage = () => {
               </CardContent>
             </Card>
 
+            {/* Case barcode scanner */}
             <Card>
               <CardContent className="p-4">
-                <Typography variant="headingSm" className="mb-3">
-                  Select Stock to Transfer
-                </Typography>
-
-                {stockAtSource.length > 5 && (
-                  <div className="relative mb-3">
-                    <IconSearch className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" />
-                    <input
-                      type="text"
-                      placeholder="Search product, vintage, owner..."
-                      value={stockSearch}
-                      onChange={(e) => setStockSearch(e.target.value)}
-                      className="h-12 w-full rounded-lg border border-border bg-fill-primary pl-10 pr-4 text-sm focus:border-border-brand focus:outline-none"
-                    />
-                  </div>
-                )}
-
-                <div className="space-y-2">
-                  {stockAtSource
-                    .filter((stock) => {
-                      if (!stockSearch) return true;
-                      const q = stockSearch.toLowerCase();
-                      return (
-                        stock.productName.toLowerCase().includes(q) ||
-                        stock.ownerName.toLowerCase().includes(q) ||
-                        (stock.vintage?.toLowerCase().includes(q) ?? false) ||
-                        stock.lwin18.includes(q)
-                      );
-                    })
-                    .map((stock) => (
-                      <button
-                        key={stock.id}
-                        onClick={() => handleSelectStock(stock)}
-                        className="w-full rounded-lg border border-border-primary bg-fill-primary p-4 text-left transition-colors hover:border-border-brand"
-                      >
-                        <Typography variant="bodySm" className="font-medium">
-                          {stock.productName}
-                        </Typography>
-                        <div className="mt-1 flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            {stock.vintage && (
-                              <Typography variant="bodyXs" className="font-medium">
-                                {stock.vintage}
-                              </Typography>
-                            )}
-                            <Typography variant="bodyXs" colorRole="muted">
-                              {stock.ownerName}
-                            </Typography>
-                          </div>
-                          <Typography variant="bodySm" className="font-medium text-blue-600">
-                            {stock.availableCases} avail
-                          </Typography>
-                        </div>
-                      </button>
-                    ))}
-                </div>
+                <ScanInput
+                  label="Scan case barcode"
+                  placeholder="CASE-..."
+                  onScan={handleCaseScan}
+                  onInvalidScan={setError}
+                  error={error}
+                />
               </CardContent>
             </Card>
+
+            {/* Selected stock with quantity selector */}
+            {selectedStock ? (
+              <Card className="border-emerald-200 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-900/20">
+                <CardContent className="p-4">
+                  <div className="mb-3 flex items-start gap-3">
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-white">
+                      <IconCheck className="h-4 w-4" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <Typography variant="headingSm">
+                        {selectedStock.productName}
+                      </Typography>
+                      <div className="mt-1 flex items-center gap-2">
+                        {selectedStock.vintage && (
+                          <Typography variant="bodyXs" className="font-medium">
+                            {selectedStock.vintage}
+                          </Typography>
+                        )}
+                        <Typography variant="bodyXs" colorRole="muted">
+                          {selectedStock.ownerName}
+                        </Typography>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setSelectedStock(null)}
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-text-muted hover:bg-fill-secondary"
+                    >
+                      <IconX className="h-4 w-4" />
+                    </button>
+                  </div>
+
+                  {/* Quantity selector */}
+                  <Typography variant="bodySm" className="mb-2 text-center">
+                    Quantity to transfer
+                  </Typography>
+                  <div className="flex items-center justify-center gap-4">
+                    <Button
+                      variant="outline"
+                      size="lg"
+                      onClick={() => adjustQuantity(-1)}
+                      disabled={transferQuantity <= 1}
+                    >
+                      <Icon icon={IconMinus} />
+                    </Button>
+                    <div className="min-w-[80px] text-center">
+                      <Typography variant="headingLg">{transferQuantity}</Typography>
+                      <Typography variant="bodyXs" colorRole="muted">
+                        of {selectedStock.availableCases}
+                      </Typography>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="lg"
+                      onClick={() => adjustQuantity(1)}
+                      disabled={transferQuantity >= selectedStock.availableCases}
+                    >
+                      <Icon icon={IconPlus} />
+                    </Button>
+                  </div>
+
+                  <Button
+                    variant="default"
+                    size="lg"
+                    className="mt-4 w-full"
+                    onClick={() => setStep('scan-dest')}
+                  >
+                    <ButtonContent iconRight={IconArrowRight}>Next: Scan Destination</ButtonContent>
+                  </Button>
+                </CardContent>
+              </Card>
+            ) : (
+              <Card>
+                <CardContent className="p-4">
+                  <Typography variant="headingSm" className="mb-3">
+                    Select Stock to Transfer
+                  </Typography>
+
+                  {stockAtSource.length > 5 && (
+                    <div className="relative mb-3">
+                      <IconSearch className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" />
+                      <input
+                        type="text"
+                        placeholder="Search product, vintage, owner..."
+                        value={stockSearch}
+                        onChange={(e) => setStockSearch(e.target.value)}
+                        className="h-12 w-full rounded-lg border border-border bg-fill-primary pl-10 pr-4 text-sm focus:border-border-brand focus:outline-none"
+                      />
+                    </div>
+                  )}
+
+                  <div className="space-y-2">
+                    {stockAtSource
+                      .filter((stock) => {
+                        if (!stockSearch) return true;
+                        const q = stockSearch.toLowerCase();
+                        return (
+                          stock.productName.toLowerCase().includes(q) ||
+                          stock.ownerName.toLowerCase().includes(q) ||
+                          (stock.vintage?.toLowerCase().includes(q) ?? false) ||
+                          stock.lwin18.includes(q)
+                        );
+                      })
+                      .map((stock) => (
+                        <button
+                          key={stock.id}
+                          onClick={() => handleSelectStock(stock)}
+                          className="w-full rounded-lg border border-border-primary bg-fill-primary p-4 text-left transition-colors hover:border-border-brand"
+                        >
+                          <Typography variant="bodySm" className="font-medium">
+                            {stock.productName}
+                          </Typography>
+                          <div className="mt-1 flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              {stock.vintage && (
+                                <Typography variant="bodyXs" className="font-medium">
+                                  {stock.vintage}
+                                </Typography>
+                              )}
+                              <Typography variant="bodyXs" colorRole="muted">
+                                {stock.ownerName}
+                              </Typography>
+                            </div>
+                            <Typography variant="bodySm" className="font-medium text-blue-600">
+                              {stock.availableCases} avail
+                            </Typography>
+                          </div>
+                        </button>
+                      ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             <Button variant="outline" size="lg" className="w-full" onClick={handleReset}>
               <ButtonContent iconLeft={IconX}>Cancel</ButtonContent>
@@ -379,46 +483,13 @@ const WMSTransferPage = () => {
                   </div>
                   <div className="flex-1">
                     <Typography variant="bodyXs" colorRole="muted">
-                      Moving from {sourceLocation.locationCode}
+                      Moving {transferQuantity} {transferQuantity === 1 ? 'case' : 'cases'} from {sourceLocation.locationCode}
                     </Typography>
                     <Typography variant="headingSm">
                       {selectedStock.productName}
                       {selectedStock.vintage ? ` (${selectedStock.vintage})` : ''}
                     </Typography>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Quantity Selector */}
-            <Card>
-              <CardContent className="p-4">
-                <Typography variant="bodySm" className="mb-3 text-center">
-                  Quantity to transfer
-                </Typography>
-                <div className="flex items-center justify-center gap-4">
-                  <Button
-                    variant="outline"
-                    size="lg"
-                    onClick={() => adjustQuantity(-1)}
-                    disabled={transferQuantity <= 1}
-                  >
-                    <Icon icon={IconMinus} />
-                  </Button>
-                  <div className="min-w-[80px] text-center">
-                    <Typography variant="headingLg">{transferQuantity}</Typography>
-                    <Typography variant="bodyXs" colorRole="muted">
-                      of {selectedStock.availableCases}
-                    </Typography>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="lg"
-                    onClick={() => adjustQuantity(1)}
-                    disabled={transferQuantity >= selectedStock.availableCases}
-                  >
-                    <Icon icon={IconPlus} />
-                  </Button>
                 </div>
               </CardContent>
             </Card>
@@ -441,8 +512,8 @@ const WMSTransferPage = () => {
               </CardContent>
             </Card>
 
-            <Button variant="outline" size="lg" className="w-full" onClick={handleReset}>
-              <ButtonContent iconLeft={IconX}>Cancel</ButtonContent>
+            <Button variant="outline" size="lg" className="w-full" onClick={() => { setStep('select-stock'); }}>
+              <ButtonContent iconLeft={IconArrowLeft}>Back</ButtonContent>
             </Button>
           </div>
         )}
@@ -486,7 +557,7 @@ const WMSTransferPage = () => {
             </Card>
 
             <div className="flex gap-3">
-              <Button variant="outline" size="lg" className="flex-1" onClick={() => setStep('scan-dest')}>
+              <Button variant="outline" size="lg" className="flex-1" onClick={() => { setDestLocation(null); setStep('scan-dest'); }}>
                 <ButtonContent iconLeft={IconArrowLeft}>Back</ButtonContent>
               </Button>
               <Button

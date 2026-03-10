@@ -124,6 +124,21 @@ const WMSReceiveShipmentPage = () => {
   const [isPrinting, setIsPrinting] = useState(false);
   const [printError, setPrintError] = useState<string | null>(null);
 
+  // Add Item state
+  const [showAddItem, setShowAddItem] = useState(false);
+  const [addItemSearch, setAddItemSearch] = useState('');
+  const [addItemForm, setAddItemForm] = useState({
+    productName: '',
+    producer: '',
+    vintage: '' as string,
+    lwin: '',
+    bottlesPerCase: 12,
+    bottleSizeMl: 750,
+    cases: 1,
+  });
+  const [addItemSearchDebounce, setAddItemSearchDebounce] = useState('');
+  const addItemSearchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const scanInputRef = useRef<ScanInputHandle>(null);
   const { print } = usePrint();
@@ -143,6 +158,12 @@ const WMSReceiveShipmentPage = () => {
   // Get locations
   const { data: locations } = useQuery({
     ...api.wms.admin.locations.getMany.queryOptions({}),
+  });
+
+  // Stock search for Add Item
+  const { data: stockSearchResults } = useQuery({
+    ...api.wms.admin.stock.search.queryOptions({ query: addItemSearchDebounce, limit: 10 }),
+    enabled: addItemSearchDebounce.length >= 2,
   });
 
   // Location lookup by barcode
@@ -249,8 +270,17 @@ const WMSReceiveShipmentPage = () => {
   // Get current item - defined early so it can be used in effects
   const getCurrentItem = useCallback((): ReceivedItem | undefined => {
     if (!shipment?.items) return undefined;
-    const itemId = shipment.items[currentProductIndex]?.id;
-    return itemId ? receivedItems.get(itemId) : undefined;
+    // Handle shipment items by index
+    if (currentProductIndex < shipment.items.length) {
+      const itemId = shipment.items[currentProductIndex]?.id;
+      return itemId ? receivedItems.get(itemId) : undefined;
+    }
+    // Handle added items (beyond shipment items)
+    const addedIndex = currentProductIndex - shipment.items.length;
+    const added = Array.from(receivedItems.values()).filter(
+      (ri) => ri.isAddedItem && !shipment.items.some((si) => si.id === ri.id),
+    );
+    return added[addedIndex];
   }, [shipment?.items, currentProductIndex, receivedItems]);
 
   // Initialize from draft or shipment
@@ -360,6 +390,9 @@ const WMSReceiveShipmentPage = () => {
     return () => {
       if (saveTimeoutRef.current) {
         clearTimeout(saveTimeoutRef.current);
+      }
+      if (addItemSearchTimeoutRef.current) {
+        clearTimeout(addItemSearchTimeoutRef.current);
       }
     };
   }, []);
@@ -595,12 +628,28 @@ const WMSReceiveShipmentPage = () => {
   const handleNextProduct = () => {
     if (!shipment?.items) return;
 
+    // Build full list of item IDs including added items
+    const currentAddedItems = Array.from(receivedItems.values()).filter(
+      (ri) => ri.isAddedItem && !shipment.items.some((si) => si.id === ri.id),
+    );
+    const totalCount = shipment.items.length + currentAddedItems.length;
+
+    // Helper to check if item at index is incomplete
+    const isIncomplete = (i: number): boolean => {
+      let ri: ReceivedItem | undefined;
+      if (i < shipment.items.length) {
+        const item = shipment.items[i];
+        if (!item) return false;
+        ri = receivedItems.get(item.id);
+      } else {
+        ri = currentAddedItems[i - shipment.items.length];
+      }
+      return !!ri && !ri.isCommitted && !ri.isSkipped;
+    };
+
     // Find next product that needs work (not committed, not skipped)
-    for (let i = currentProductIndex + 1; i < shipment.items.length; i++) {
-      const item = shipment.items[i];
-      if (!item) continue;
-      const receivedItem = receivedItems.get(item.id);
-      if (receivedItem?.isCommitted || receivedItem?.isSkipped) continue;
+    for (let i = currentProductIndex + 1; i < totalCount; i++) {
+      if (!isIncomplete(i)) continue;
       setCurrentProductIndex(i);
       setProductPhase('verifying');
       return;
@@ -608,10 +657,7 @@ const WMSReceiveShipmentPage = () => {
 
     // If no incomplete found after current, check from beginning
     for (let i = 0; i < currentProductIndex; i++) {
-      const item = shipment.items[i];
-      if (!item) continue;
-      const receivedItem = receivedItems.get(item.id);
-      if (receivedItem?.isCommitted || receivedItem?.isSkipped) continue;
+      if (!isIncomplete(i)) continue;
       setCurrentProductIndex(i);
       setProductPhase('verifying');
       return;
@@ -723,6 +769,86 @@ const WMSReceiveShipmentPage = () => {
     }
   };
 
+  // Debounced search for Add Item
+  const handleAddItemSearchChange = (value: string) => {
+    setAddItemSearch(value);
+    if (addItemSearchTimeoutRef.current) {
+      clearTimeout(addItemSearchTimeoutRef.current);
+    }
+    addItemSearchTimeoutRef.current = setTimeout(() => {
+      setAddItemSearchDebounce(value);
+    }, 300);
+  };
+
+  // Select a product from search results to populate add form
+  const handleSelectSearchResult = (result: { id: string; title: string; subtitle: string }) => {
+    // Parse subtitle: "Producer Vintage"
+    const parts = result.subtitle?.trim().split(/\s+/) ?? [];
+    const maybeVintage = parts[parts.length - 1];
+    const vintage = maybeVintage && /^\d{4}$/.test(maybeVintage) ? maybeVintage : '';
+    const producer = vintage ? parts.slice(0, -1).join(' ') : result.subtitle?.trim() ?? '';
+
+    setAddItemForm({
+      ...addItemForm,
+      productName: result.title ?? '',
+      producer: producer,
+      vintage,
+      lwin: result.id ?? '',
+    });
+    setAddItemSearch('');
+    setAddItemSearchDebounce('');
+  };
+
+  // Add the item to receivedItems
+  const handleAddItem = () => {
+    if (!addItemForm.productName.trim() || addItemForm.cases < 1) return;
+
+    const id = crypto.randomUUID();
+    // Use the first shipment item's ID as shipmentItemId (schema requires it)
+    const fallbackShipmentItemId = shipment?.items?.[0]?.id ?? id;
+
+    const newItem: ReceivedItem = {
+      id,
+      shipmentItemId: fallbackShipmentItemId,
+      baseItemId: null,
+      productName: addItemForm.productName.trim(),
+      producer: addItemForm.producer.trim() || null,
+      vintage: addItemForm.vintage ? parseInt(addItemForm.vintage) : null,
+      lwin: addItemForm.lwin.trim() || null,
+      expectedCases: 0,
+      receivedCases: addItemForm.cases,
+      expectedBottlesPerCase: addItemForm.bottlesPerCase,
+      expectedBottleSizeMl: addItemForm.bottleSizeMl,
+      receivedBottlesPerCase: addItemForm.bottlesPerCase,
+      receivedBottleSizeMl: addItemForm.bottleSizeMl,
+      packChanged: false,
+      isAddedItem: true,
+      isVerified: false,
+      locationAssignments: [],
+      totalLabelsPrinted: 0,
+      photos: [],
+    };
+
+    const newMap = new Map(receivedItems);
+    newMap.set(id, newItem);
+    setReceivedItems(newMap);
+    saveDraft();
+
+    // Reset form
+    setAddItemForm({
+      productName: '',
+      producer: '',
+      vintage: '',
+      lwin: '',
+      bottlesPerCase: 12,
+      bottleSizeMl: 750,
+      cases: 1,
+    });
+    setShowAddItem(false);
+    setAddItemSearch('');
+    setAddItemSearchDebounce('');
+  };
+
   if (shipmentLoading || draftLoading) {
     return (
       <div className="flex min-h-[50vh] items-center justify-center p-6">
@@ -755,30 +881,53 @@ const WMSReceiveShipmentPage = () => {
   }
 
   const currentItem = getCurrentItem();
-  const totalProducts = shipment.items.length;
+
+  // Build combined list: shipment items + added items
+  const addedItems = Array.from(receivedItems.values()).filter(
+    (ri) => ri.isAddedItem && !shipment.items.some((si) => si.id === ri.id),
+  );
+  const totalProducts = shipment.items.length + addedItems.length;
   const completedProducts = Array.from(receivedItems.values()).filter(
     (item) => item.isCommitted || item.isSkipped,
   ).length;
-  const progressPercent = Math.round((completedProducts / totalProducts) * 100);
-  const allComplete = completedProducts === totalProducts;
+  const progressPercent = totalProducts > 0 ? Math.round((completedProducts / totalProducts) * 100) : 0;
+  const allComplete = completedProducts === totalProducts && totalProducts > 0;
 
-  // Filter products by search term
-  const filteredProducts = shipment.items
-    .map((item, index) => ({
+  // Filter products by search term (shipment items + added items)
+  const filteredProducts: {
+    item: { id: string; productName: string; producer?: string | null; vintage?: number | null; lwin?: string | null; cases: number; bottlesPerCase?: number | null; bottleSizeMl?: number | null };
+    index: number;
+    receivedItem: ReceivedItem | undefined;
+  }[] = [
+    ...shipment.items.map((item, index) => ({
       item,
       index,
       receivedItem: receivedItems.get(item.id),
-    }))
-    .filter(({ item, receivedItem }) => {
-      if (!searchTerm) return true;
-      const search = searchTerm.toLowerCase();
-      return (
-        item.productName.toLowerCase().includes(search) ||
-        item.producer?.toLowerCase().includes(search) ||
-        item.lwin?.toLowerCase().includes(search) ||
-        receivedItem?.lwin?.toLowerCase().includes(search)
-      );
-    });
+    })),
+    ...addedItems.map((ri, i) => ({
+      item: {
+        id: ri.id,
+        productName: ri.productName,
+        producer: ri.producer,
+        vintage: ri.vintage,
+        lwin: ri.lwin,
+        cases: ri.receivedCases,
+        bottlesPerCase: ri.receivedBottlesPerCase,
+        bottleSizeMl: ri.receivedBottleSizeMl,
+      },
+      index: shipment.items.length + i,
+      receivedItem: ri,
+    })),
+  ].filter(({ item, receivedItem }) => {
+    if (!searchTerm) return true;
+    const search = searchTerm.toLowerCase();
+    return (
+      item.productName.toLowerCase().includes(search) ||
+      item.producer?.toLowerCase().includes(search) ||
+      item.lwin?.toLowerCase().includes(search) ||
+      receivedItem?.lwin?.toLowerCase().includes(search)
+    );
+  });
 
   // Select a product from the list
   const selectProduct = (index: number) => {
@@ -787,9 +936,14 @@ const WMSReceiveShipmentPage = () => {
       document.activeElement.blur();
     }
     setCurrentProductIndex(index);
-    // Committed items go straight to complete phase (read-only)
-    const item = shipment?.items?.[index];
-    const receivedItem = item ? receivedItems.get(item.id) : undefined;
+    // Determine the receivedItem for this index
+    let receivedItem: ReceivedItem | undefined;
+    if (index < shipment.items.length) {
+      const item = shipment.items[index];
+      receivedItem = item ? receivedItems.get(item.id) : undefined;
+    } else {
+      receivedItem = addedItems[index - shipment.items.length];
+    }
     setProductPhase(receivedItem?.isCommitted ? 'complete' : 'verifying');
     setViewMode('detail');
     // Scroll to top after React renders the detail view
@@ -884,6 +1038,161 @@ const WMSReceiveShipmentPage = () => {
               />
             </div>
 
+            {/* Add Item button / form */}
+            {!showAddItem ? (
+              <button
+                type="button"
+                onClick={() => setShowAddItem(true)}
+                className="flex h-12 w-full items-center justify-center gap-2 rounded-lg border-2 border-dashed border-border-primary bg-fill-primary text-base font-medium text-text-muted transition-colors hover:border-border-brand hover:text-text-primary"
+              >
+                <IconPlus className="h-5 w-5" />
+                Add Item
+              </button>
+            ) : (
+              <Card>
+                <CardContent className="p-4">
+                  <div className="mb-3 flex items-center justify-between">
+                    <Typography variant="headingSm">Add Item</Typography>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowAddItem(false);
+                        setAddItemSearch('');
+                        setAddItemSearchDebounce('');
+                      }}
+                      className="flex h-8 w-8 items-center justify-center rounded-lg text-text-muted hover:bg-fill-secondary"
+                    >
+                      <IconBan className="h-4 w-4" />
+                    </button>
+                  </div>
+
+                  {/* Stock search */}
+                  <div className="relative mb-3">
+                    <IconSearch className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" />
+                    <input
+                      type="text"
+                      placeholder="Search existing stock..."
+                      value={addItemSearch}
+                      onChange={(e) => handleAddItemSearchChange(e.target.value)}
+                      className="h-12 w-full rounded-lg border-2 border-border-primary bg-fill-primary pl-10 pr-4 text-base focus:border-border-brand focus:outline-none"
+                    />
+                    {/* Search results dropdown */}
+                    {addItemSearchDebounce.length >= 2 && stockSearchResults?.results && stockSearchResults.results.length > 0 && addItemSearch && (
+                      <div className="absolute left-0 right-0 top-full z-20 mt-1 max-h-48 overflow-y-auto rounded-lg border border-border-primary bg-fill-primary shadow-lg">
+                        {stockSearchResults.results
+                          .filter((r) => r.type === 'product')
+                          .map((result) => (
+                            <button
+                              key={result.id}
+                              type="button"
+                              onClick={() => handleSelectSearchResult(result)}
+                              className="w-full border-b border-border-primary p-3 text-left last:border-b-0 hover:bg-fill-secondary"
+                            >
+                              <Typography variant="bodySm" className="font-medium">
+                                {result.title}
+                              </Typography>
+                              <Typography variant="bodyXs" colorRole="muted">
+                                {result.subtitle} • {result.meta}
+                              </Typography>
+                            </button>
+                          ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Form fields */}
+                  <div className="space-y-3">
+                    <div>
+                      <label className="mb-1 block text-sm font-medium text-text-secondary">
+                        Product Name *
+                      </label>
+                      <input
+                        type="text"
+                        value={addItemForm.productName}
+                        onChange={(e) => setAddItemForm({ ...addItemForm, productName: e.target.value })}
+                        placeholder="e.g. Chateau Margaux"
+                        className="h-12 w-full rounded-lg border-2 border-border-primary bg-fill-primary px-3 text-base focus:border-border-brand focus:outline-none"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="mb-1 block text-sm font-medium text-text-secondary">
+                          Producer
+                        </label>
+                        <input
+                          type="text"
+                          value={addItemForm.producer}
+                          onChange={(e) => setAddItemForm({ ...addItemForm, producer: e.target.value })}
+                          className="h-12 w-full rounded-lg border-2 border-border-primary bg-fill-primary px-3 text-base focus:border-border-brand focus:outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-sm font-medium text-text-secondary">
+                          Vintage
+                        </label>
+                        <input
+                          type="number"
+                          inputMode="numeric"
+                          value={addItemForm.vintage}
+                          onChange={(e) => setAddItemForm({ ...addItemForm, vintage: e.target.value })}
+                          placeholder="2020"
+                          className="h-12 w-full rounded-lg border-2 border-border-primary bg-fill-primary px-3 text-base focus:border-border-brand focus:outline-none"
+                        />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-3 gap-3">
+                      <div>
+                        <label className="mb-1 block text-sm font-medium text-text-secondary">
+                          Btls/Case
+                        </label>
+                        <input
+                          type="number"
+                          inputMode="numeric"
+                          value={addItemForm.bottlesPerCase}
+                          onChange={(e) => setAddItemForm({ ...addItemForm, bottlesPerCase: parseInt(e.target.value) || 12 })}
+                          className="h-12 w-full rounded-lg border-2 border-border-primary bg-fill-primary px-3 text-center text-base focus:border-border-brand focus:outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-sm font-medium text-text-secondary">
+                          Size (mL)
+                        </label>
+                        <input
+                          type="number"
+                          inputMode="numeric"
+                          value={addItemForm.bottleSizeMl}
+                          onChange={(e) => setAddItemForm({ ...addItemForm, bottleSizeMl: parseInt(e.target.value) || 750 })}
+                          className="h-12 w-full rounded-lg border-2 border-border-primary bg-fill-primary px-3 text-center text-base focus:border-border-brand focus:outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-sm font-medium text-text-secondary">
+                          Cases *
+                        </label>
+                        <input
+                          type="number"
+                          inputMode="numeric"
+                          min={1}
+                          value={addItemForm.cases}
+                          onChange={(e) => setAddItemForm({ ...addItemForm, cases: parseInt(e.target.value) || 1 })}
+                          className="h-12 w-full rounded-lg border-2 border-border-primary bg-fill-primary px-3 text-center text-base focus:border-border-brand focus:outline-none"
+                        />
+                      </div>
+                    </div>
+                    <Button
+                      variant="default"
+                      size="lg"
+                      className="h-12 w-full"
+                      onClick={handleAddItem}
+                      disabled={!addItemForm.productName.trim() || addItemForm.cases < 1}
+                    >
+                      <ButtonContent iconLeft={IconPlus}>Add</ButtonContent>
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             {/* Product list */}
             <div className="space-y-2">
               {filteredProducts.length === 0 ? (
@@ -935,6 +1244,12 @@ const WMSReceiveShipmentPage = () => {
                           ) : (
                             <span className="rounded-full bg-gray-100 px-2 py-1 text-xs font-medium text-gray-600 dark:bg-gray-800 dark:text-gray-400">
                               Pending
+                            </span>
+                          )}
+                          {receivedItem?.isAddedItem && (
+                            <span className="flex items-center gap-1 rounded-full bg-blue-100 px-2 py-1 text-xs font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+                              <IconPlus className="h-3 w-3" />
+                              Added
                             </span>
                           )}
                         </div>
