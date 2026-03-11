@@ -5,6 +5,7 @@ import {
   IconAnchor,
   IconArrowsExchange,
   IconBuildingWarehouse,
+  IconCheck,
   IconChevronDown,
   IconChevronLeft,
   IconChevronRight,
@@ -14,8 +15,11 @@ import {
   IconColumns3,
   IconDownload,
   IconLayoutRows,
+  IconLoader2,
   IconLock,
+  IconMinus,
   IconPackage,
+  IconPlus,
   IconPrinter,
   IconSearch,
   IconShip,
@@ -27,7 +31,7 @@ import {
 } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
 import ShipmentStatusBadge from '@/app/_logistics/components/ShipmentStatusBadge';
@@ -368,9 +372,14 @@ interface ProductRowProps {
   visibleColumns: Record<string, boolean>;
   onPrintLabels: (product: ProductRowProps['product'], loc: ProductRowProps['product']['locations'][number], qty: number) => void;
   onUpdateBoe: (stockId: string, value: string) => void;
+  onAdjustStock: (stockId: string, newQuantity: number, reason: string) => void;
+  isAdjusting: boolean;
 }
 
-const ProductRow = ({ product, isExpanded, onToggle, density, visibleColumns, onPrintLabels, onUpdateBoe }: ProductRowProps) => {
+const ProductRow = ({ product, isExpanded, onToggle, density, visibleColumns, onPrintLabels, onUpdateBoe, onAdjustStock, isAdjusting }: ProductRowProps) => {
+  const [adjustingStockId, setAdjustingStockId] = useState<string | null>(null);
+  const [adjustQty, setAdjustQty] = useState(0);
+  const [adjustReason, setAdjustReason] = useState('');
   const dc = DENSITY_CLASSES[density];
   const tdClass = dc.td;
   const tdClassRight = `${dc.td} text-right tabular-nums`;
@@ -513,15 +522,25 @@ const ProductRow = ({ product, isExpanded, onToggle, density, visibleColumns, on
                       Labels
                     </Button>
                   </Link>
-                  <Link
-                    href={`/platform/admin/wms/stock/adjust?lwin18=${product.lwin18}`}
-                    onClick={(e) => e.stopPropagation()}
+                  <Button
+                    variant={adjustingStockId ? 'primary' : 'outline'}
+                    size="xs"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (adjustingStockId) {
+                        setAdjustingStockId(null);
+                        setAdjustQty(0);
+                        setAdjustReason('');
+                      } else if (product.locations[0]) {
+                        setAdjustingStockId(product.locations[0].stockId);
+                        setAdjustQty(product.locations[0].quantityCases);
+                        setAdjustReason('');
+                      }
+                    }}
                   >
-                    <Button variant="outline" size="xs">
-                      <IconAdjustments className="mr-1 h-3 w-3" />
-                      Adjust
-                    </Button>
-                  </Link>
+                    <IconAdjustments className="mr-1 h-3 w-3" />
+                    {adjustingStockId ? 'Cancel' : 'Adjust'}
+                  </Button>
                 </div>
               </div>
               <div className="overflow-x-auto">
@@ -559,54 +578,124 @@ const ProductRow = ({ product, isExpanded, onToggle, density, visibleColumns, on
                         ? 'Mixed'
                         : 'Shelf';
 
+                    const isThisAdjusting = adjustingStockId === loc.stockId;
+
                     return (
-                      <tr key={loc.stockId} className="border-t border-border-muted">
-                        <td className="px-3 py-2 font-mono text-xs font-medium text-text-brand">
-                          {loc.locationCode}
-                        </td>
-                        <td className="px-3 py-2">
-                          <span className={`inline-flex items-center rounded px-1.5 py-0.5 text-[11px] font-medium ${
-                            loc.storageMethod === 'pallet'
-                              ? 'bg-purple-100 text-purple-700'
-                              : 'bg-blue-50 text-blue-600'
-                          }`}>
-                            {storageLabel}
-                          </span>
-                        </td>
-                        <td className="px-3 py-2 text-right tabular-nums font-medium text-text-primary">
-                          {loc.quantityCases}
-                        </td>
-                        <td className="px-3 py-2 text-right tabular-nums text-text-primary">
-                          {loc.availableCases}
-                        </td>
-                        <td className="px-3 py-2">
-                          <div className="h-1.5 w-full overflow-hidden rounded-full bg-border-muted">
-                            <div
-                              className={`h-full rounded-full ${barColor} transition-all`}
-                              style={{ width: `${Math.min(availPercent, 100)}%` }}
-                            />
-                          </div>
-                        </td>
-                        <td className="px-3 py-2">
-                          <OwnerBadge name={loc.ownerName} />
-                        </td>
-                        <td className="hidden px-3 py-2 font-mono text-xs text-text-muted sm:table-cell">
-                          {loc.lotNumber ?? '—'}
-                        </td>
-                        <td className="hidden px-3 py-2 text-text-muted sm:table-cell">
-                          {loc.expiryDate
-                            ? new Date(loc.expiryDate).toLocaleDateString('en-GB')
-                            : '—'}
-                        </td>
-                        <BoeCell
-                          value={loc.reExportBoeNumber}
-                          onSave={(val) => onUpdateBoe(loc.stockId, val)}
-                        />
-                        <PrintCell
-                          maxQty={loc.quantityCases}
-                          onPrint={(qty) => onPrintLabels(product, loc, qty)}
-                        />
-                      </tr>
+                      <Fragment key={loc.stockId}>
+                        <tr
+                          className={`border-t border-border-muted ${isThisAdjusting ? 'bg-amber-50' : ''}`}
+                          onClick={adjustingStockId ? (e) => {
+                            e.stopPropagation();
+                            setAdjustingStockId(loc.stockId);
+                            setAdjustQty(loc.quantityCases);
+                            setAdjustReason('');
+                          } : undefined}
+                        >
+                          <td className="px-3 py-2 font-mono text-xs font-medium text-text-brand">
+                            {loc.locationCode}
+                          </td>
+                          <td className="px-3 py-2">
+                            <span className={`inline-flex items-center rounded px-1.5 py-0.5 text-[11px] font-medium ${
+                              loc.storageMethod === 'pallet'
+                                ? 'bg-purple-100 text-purple-700'
+                                : 'bg-blue-50 text-blue-600'
+                            }`}>
+                              {storageLabel}
+                            </span>
+                          </td>
+                          <td className="px-3 py-2 text-right tabular-nums font-medium text-text-primary">
+                            {loc.quantityCases}
+                          </td>
+                          <td className="px-3 py-2 text-right tabular-nums text-text-primary">
+                            {loc.availableCases}
+                          </td>
+                          <td className="px-3 py-2">
+                            <div className="h-1.5 w-full overflow-hidden rounded-full bg-border-muted">
+                              <div
+                                className={`h-full rounded-full ${barColor} transition-all`}
+                                style={{ width: `${Math.min(availPercent, 100)}%` }}
+                              />
+                            </div>
+                          </td>
+                          <td className="px-3 py-2">
+                            <OwnerBadge name={loc.ownerName} />
+                          </td>
+                          <td className="hidden px-3 py-2 font-mono text-xs text-text-muted sm:table-cell">
+                            {loc.lotNumber ?? '—'}
+                          </td>
+                          <td className="hidden px-3 py-2 text-text-muted sm:table-cell">
+                            {loc.expiryDate
+                              ? new Date(loc.expiryDate).toLocaleDateString('en-GB')
+                              : '—'}
+                          </td>
+                          <BoeCell
+                            value={loc.reExportBoeNumber}
+                            onSave={(val) => onUpdateBoe(loc.stockId, val)}
+                          />
+                          <PrintCell
+                            maxQty={loc.quantityCases}
+                            onPrint={(qty) => onPrintLabels(product, loc, qty)}
+                          />
+                        </tr>
+                        {isThisAdjusting && (
+                          <tr className="border-t border-amber-200 bg-amber-50">
+                            <td colSpan={20} className="px-3 py-3">
+                              <div className="flex flex-wrap items-center gap-3" onClick={(e) => e.stopPropagation()}>
+                                <span className="text-xs font-medium text-text-muted">Adjust qty:</span>
+                                <div className="flex items-center gap-1">
+                                  <button
+                                    type="button"
+                                    className="flex h-8 w-8 items-center justify-center rounded border border-border-primary bg-background-primary text-lg font-bold transition-colors hover:bg-surface-muted"
+                                    onClick={() => setAdjustQty((q) => Math.max(0, q - 1))}
+                                  >
+                                    <IconMinus className="h-4 w-4" />
+                                  </button>
+                                  <input
+                                    type="number"
+                                    min={0}
+                                    value={adjustQty}
+                                    onChange={(e) => setAdjustQty(Math.max(0, parseInt(e.target.value) || 0))}
+                                    className="h-8 w-16 rounded border border-border-primary bg-background-primary text-center tabular-nums text-sm font-medium focus:border-border-brand focus:outline-none"
+                                  />
+                                  <button
+                                    type="button"
+                                    className="flex h-8 w-8 items-center justify-center rounded border border-border-primary bg-background-primary text-lg font-bold transition-colors hover:bg-surface-muted"
+                                    onClick={() => setAdjustQty((q) => q + 1)}
+                                  >
+                                    <IconPlus className="h-4 w-4" />
+                                  </button>
+                                </div>
+                                {adjustQty !== loc.quantityCases && (
+                                  <span className={`text-xs font-medium ${adjustQty > loc.quantityCases ? 'text-emerald-600' : 'text-red-600'}`}>
+                                    {adjustQty > loc.quantityCases ? '+' : ''}{adjustQty - loc.quantityCases}
+                                  </span>
+                                )}
+                                <input
+                                  type="text"
+                                  value={adjustReason}
+                                  onChange={(e) => setAdjustReason(e.target.value)}
+                                  placeholder="Reason (required)"
+                                  className="h-8 min-w-[200px] flex-1 rounded border border-border-primary bg-background-primary px-2 text-sm focus:border-border-brand focus:outline-none"
+                                />
+                                <button
+                                  type="button"
+                                  disabled={adjustQty === loc.quantityCases || !adjustReason.trim() || isAdjusting}
+                                  className="flex h-8 items-center gap-1 rounded bg-fill-brand px-3 text-sm font-medium text-white transition-colors hover:bg-fill-brand/90 disabled:opacity-50"
+                                  onClick={() => {
+                                    onAdjustStock(loc.stockId, adjustQty, adjustReason.trim());
+                                    setAdjustingStockId(null);
+                                    setAdjustQty(0);
+                                    setAdjustReason('');
+                                  }}
+                                >
+                                  {isAdjusting ? <IconLoader2 className="h-3.5 w-3.5 animate-spin" /> : <IconCheck className="h-3.5 w-3.5" />}
+                                  Save
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </Fragment>
                     );
                   })}
                 </tbody>
@@ -907,6 +996,29 @@ const StockExplorerPage = () => {
       updateBoe({ stockId, reExportBoeNumber });
     },
     [updateBoe],
+  );
+
+  // Adjust stock quantity
+  const { mutate: adjustStock, isPending: isAdjustingStock } = useMutation({
+    ...api.wms.admin.stock.adjustQuantity.mutationOptions(),
+    onSuccess: (data) => {
+      void queryClient.invalidateQueries({ queryKey: api.wms.admin.stock.getByProduct.getQueryKey() });
+      if (data.noChange) {
+        toast.info('No change needed');
+      } else {
+        toast.success(`Stock adjusted: ${data.oldQuantity} → ${data.newQuantity} cases`);
+      }
+    },
+    onError: () => {
+      toast.error('Failed to adjust stock');
+    },
+  });
+
+  const handleAdjustStock = useCallback(
+    (stockId: string, newQuantity: number, reason: string) => {
+      adjustStock({ stockId, newQuantity, reason });
+    },
+    [adjustStock],
   );
 
   // Search & filters
@@ -1688,6 +1800,8 @@ const StockExplorerPage = () => {
                           visibleColumns={visibleColumns}
                           onPrintLabels={handlePrintLabels}
                           onUpdateBoe={handleUpdateBoe}
+                          onAdjustStock={handleAdjustStock}
+                          isAdjusting={isAdjustingStock}
                         />
                       );
                     })
