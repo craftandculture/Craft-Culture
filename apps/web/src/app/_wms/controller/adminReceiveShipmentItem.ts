@@ -19,6 +19,7 @@ import receiveSingleItemSchema from '../schemas/receiveSingleItemSchema';
 import generateCaseLabelBarcode from '../utils/generateCaseLabelBarcode';
 import generateLwin18 from '../utils/generateLwin18';
 import generateMovementNumber from '../utils/generateMovementNumber';
+import getCategoryFromHsCode from '../utils/getCategoryFromHsCode';
 
 /**
  * Receive a single item from a shipment into the WMS (incremental receiving)
@@ -204,6 +205,7 @@ const adminReceiveShipmentItem = adminProcedure
             salesArrangement: 'consignment',
             expiryDate: receivedItem.expiryDate,
             isPerishable: !!receivedItem.expiryDate,
+            category: getCategoryFromHsCode(hsCode),
             notes: stockNotes || undefined,
           })
           .returning();

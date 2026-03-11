@@ -177,6 +177,7 @@ const adminRebuildStockFromMovements = adminProcedure.mutation(async () => {
         availableCases: netCases,
         shipmentId,
         receivedAt: new Date(),
+        category: 'Wine',
         salesArrangement: 'consignment',
       });
       created++;
