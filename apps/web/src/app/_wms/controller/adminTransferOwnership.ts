@@ -135,6 +135,7 @@ const adminTransferOwnership = adminProcedure
             shipmentId: sourceStock.shipmentId,
             salesArrangement: salesArrangement ?? 'consignment',
             consignmentCommissionPercent: consignmentCommissionPercent ?? null,
+            category: sourceStock.category,
             expiryDate: sourceStock.expiryDate,
             isPerishable: sourceStock.isPerishable,
           });

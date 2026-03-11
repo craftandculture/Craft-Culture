@@ -20,6 +20,7 @@ import generateCaseLabelBarcode from '../utils/generateCaseLabelBarcode';
 import generateLotNumber from '../utils/generateLotNumber';
 import generateLwin18 from '../utils/generateLwin18';
 import generateMovementNumber from '../utils/generateMovementNumber';
+import getCategoryFromHsCode from '../utils/getCategoryFromHsCode';
 
 /**
  * Receive a shipment into the WMS
@@ -219,6 +220,7 @@ const adminReceiveShipment = adminProcedure
               salesArrangement: 'consignment',
               expiryDate: receivedItem.expiryDate,
               isPerishable: !!receivedItem.expiryDate,
+              category: getCategoryFromHsCode(hsCode),
               notes: stockNotes || undefined,
             })
             .returning();

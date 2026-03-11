@@ -144,6 +144,7 @@ const adminPutaway = adminProcedure
       let bottleSize = '75cl';
       let caseConfig = 12;
       let shipmentId = caseLabel.shipmentId;
+      let category: string | null = 'Wine';
 
       if (fromLocationId) {
         const [sourceStock] = await db
@@ -161,6 +162,7 @@ const adminPutaway = adminProcedure
           bottleSize = sourceStock.bottleSize ?? '75cl';
           caseConfig = sourceStock.caseConfig ?? 12;
           shipmentId = sourceStock.shipmentId;
+          category = sourceStock.category;
         }
       }
 
@@ -181,6 +183,7 @@ const adminPutaway = adminProcedure
         lotNumber: caseLabel.lotNumber,
         receivedAt: new Date(),
         shipmentId,
+        category,
         salesArrangement: 'consignment',
       });
     }

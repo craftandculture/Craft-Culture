@@ -151,6 +151,7 @@ const adminTransferStock = adminProcedure
           shipmentId: sourceStock.shipmentId,
           salesArrangement: sourceStock.salesArrangement,
           consignmentCommissionPercent: sourceStock.consignmentCommissionPercent,
+          category: sourceStock.category,
           expiryDate: sourceStock.expiryDate,
           isPerishable: sourceStock.isPerishable,
         })
