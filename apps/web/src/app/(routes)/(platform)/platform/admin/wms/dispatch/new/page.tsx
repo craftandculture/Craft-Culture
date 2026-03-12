@@ -308,7 +308,7 @@ const DispatchWizardPage = () => {
                                       : 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300'
                                   }`}
                                 >
-                                  {order.type === 'zoho' ? 'SO' : 'PCO'}
+                                  {order.type === 'zoho' ? (order.orderNumber.startsWith('INV') ? 'INV' : 'SO') : 'PCO'}
                                 </span>
                               </div>
                               <Typography variant="bodyXs" colorRole="muted">

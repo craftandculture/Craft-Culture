@@ -40,7 +40,7 @@ const adminAutoFixStock = adminProcedure.mutation(async ({ ctx }) => {
       sql`NOT EXISTS (
         SELECT 1 FROM ${wmsStockMovements} m
         WHERE m.lwin18 = ${wmsStock.lwin18}
-        AND m.movement_type = 'receive'
+        AND m.movement_type IN ('receive', 'repack_in')
         AND (m.shipment_id = ${wmsStock.shipmentId} OR (m.shipment_id IS NULL AND ${wmsStock.shipmentId} IS NULL))
       )`,
     );
@@ -155,6 +155,8 @@ const adminAutoFixStock = adminProcedure.mutation(async ({ ctx }) => {
       totalPicked: sql<number>`COALESCE(SUM(CASE WHEN ${wmsStockMovements.movementType} = 'pick' THEN ${wmsStockMovements.quantityCases} ELSE 0 END), 0)::int`,
       totalAdjusted: sql<number>`COALESCE(SUM(CASE WHEN ${wmsStockMovements.movementType} = 'adjust' AND ${wmsStockMovements.reasonCode} != 'stock_correction' THEN ${wmsStockMovements.quantityCases} ELSE 0 END), 0)::int`,
       totalCounted: sql<number>`COALESCE(SUM(CASE WHEN ${wmsStockMovements.movementType} = 'count' THEN ${wmsStockMovements.quantityCases} ELSE 0 END), 0)::int`,
+      totalRepackIn: sql<number>`COALESCE(SUM(CASE WHEN ${wmsStockMovements.movementType} = 'repack_in' THEN ${wmsStockMovements.quantityCases} ELSE 0 END), 0)::int`,
+      totalRepackOut: sql<number>`COALESCE(SUM(CASE WHEN ${wmsStockMovements.movementType} = 'repack_out' THEN ${wmsStockMovements.quantityCases} ELSE 0 END), 0)::int`,
     })
     .from(wmsStockMovements);
 
@@ -168,7 +170,9 @@ const adminAutoFixStock = adminProcedure.mutation(async ({ ctx }) => {
     (movementTotals?.totalReceived ?? 0) -
     (movementTotals?.totalPicked ?? 0) +
     (movementTotals?.totalAdjusted ?? 0) +
-    (movementTotals?.totalCounted ?? 0);
+    (movementTotals?.totalCounted ?? 0) +
+    (movementTotals?.totalRepackIn ?? 0) -
+    (movementTotals?.totalRepackOut ?? 0);
 
   const actualStock = stockTotals?.totalCases ?? 0;
   const isReconciled = expectedStock === actualStock;
