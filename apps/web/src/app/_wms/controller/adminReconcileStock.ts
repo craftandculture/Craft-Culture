@@ -23,6 +23,7 @@ const adminReconcileStock = adminProcedure.query(async () => {
       totalAdjusted: sql<number>`COALESCE(SUM(CASE WHEN ${wmsStockMovements.movementType} = 'adjust' AND ${wmsStockMovements.reasonCode} != 'stock_correction' THEN ${wmsStockMovements.quantityCases} ELSE 0 END), 0)::int`,
       totalRepackIn: sql<number>`COALESCE(SUM(CASE WHEN ${wmsStockMovements.movementType} = 'repack_in' THEN ${wmsStockMovements.quantityCases} ELSE 0 END), 0)::int`,
       totalRepackOut: sql<number>`COALESCE(SUM(CASE WHEN ${wmsStockMovements.movementType} = 'repack_out' THEN ${wmsStockMovements.quantityCases} ELSE 0 END), 0)::int`,
+      totalCounted: sql<number>`COALESCE(SUM(CASE WHEN ${wmsStockMovements.movementType} = 'count' THEN ${wmsStockMovements.quantityCases} ELSE 0 END), 0)::int`,
       receiveCount: sql<number>`COUNT(*) FILTER (WHERE ${wmsStockMovements.movementType} = 'receive')::int`,
     })
     .from(wmsStockMovements);
@@ -35,7 +36,7 @@ const adminReconcileStock = adminProcedure.query(async () => {
     })
     .from(wmsStock);
 
-  // Expected stock = received - picked + adjustments + repack_in - repack_out
+  // Expected stock = received - picked + adjustments + repack_in - repack_out + count
   // Note: repack_in and repack_out should balance out in terms of total bottles,
   // but case counts may differ (e.g., 1x12-pack becomes 2x6-packs)
   const expectedStock =
@@ -43,7 +44,8 @@ const adminReconcileStock = adminProcedure.query(async () => {
     (movementTotals?.totalPicked ?? 0) +
     (movementTotals?.totalAdjusted ?? 0) +
     (movementTotals?.totalRepackIn ?? 0) -
-    (movementTotals?.totalRepackOut ?? 0);
+    (movementTotals?.totalRepackOut ?? 0) +
+    (movementTotals?.totalCounted ?? 0);
 
   const actualStock = stockTotals?.totalCases ?? 0;
   const discrepancy = actualStock - expectedStock;
