@@ -31,6 +31,7 @@ import Typography from '@/app/_ui/components/Typography/Typography';
 import type { LabelSize } from '../providers/PrinterProvider';
 import { usePrinterContext } from '../providers/PrinterProvider';
 import generateTestLabelZpl from '../utils/generateTestLabelZpl';
+import wifiPrint from '../utils/wifiPrint';
 
 export interface PrinterSettingsProps {
   open: boolean;
@@ -64,36 +65,10 @@ const PrinterSettings = ({ open, onOpenChange }: PrinterSettingsProps) => {
     });
 
     const zpl = generateTestLabelZpl(printer.name, printer.ip, printer.labelSize);
-    const url = printer.port
-      ? `http://${printer.ip}:${printer.port}/`
-      : `http://${printer.ip}/pstprnt`;
-
-    let sent = false;
-    try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 5000);
-
-      await fetch(url, {
-        method: 'POST',
-        mode: 'no-cors',
-        headers: { 'Content-Type': 'text/plain' },
-        body: zpl,
-        signal: controller.signal,
-      });
-
-      clearTimeout(timeout);
-      sent = true;
-    } catch (err) {
-      // Port 9100 printers (ZT series) accept the ZPL data over raw TCP but
-      // return a non-HTTP response, causing the browser to throw after the data
-      // is already sent. Only treat AbortError (timeout) as unreachable.
-      if (printer.port && err instanceof DOMException && err.name !== 'AbortError') {
-        sent = true;
-      }
-    }
+    const ok = await wifiPrint(zpl, printer.ip, printer.port);
 
     setTestingId(null);
-    setTestResult((prev) => ({ ...prev, [printer.id]: sent ? 'sent' : 'error' }));
+    setTestResult((prev) => ({ ...prev, [printer.id]: ok ? 'sent' : 'error' }));
 
     // Clear previous timer for this printer if any
     if (testTimers.current[printer.id]) clearTimeout(testTimers.current[printer.id]);

@@ -75,7 +75,12 @@ const checkPrinter = async (ip: string, port?: number): Promise<boolean> => {
     });
     clearTimeout(timeout);
     return true;
-  } catch {
+  } catch (err) {
+    // Port 9100 printers (ZT series) accept TCP connections but return
+    // non-HTTP responses. Only treat AbortError (timeout) as offline.
+    if (port && !(err instanceof DOMException && err.name === 'AbortError')) {
+      return true;
+    }
     return false;
   }
 };
