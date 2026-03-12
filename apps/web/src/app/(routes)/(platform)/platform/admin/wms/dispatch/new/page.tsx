@@ -94,7 +94,7 @@ const DispatchWizardPage = () => {
     ...(zohoOrders?.orders ?? []).map((o) => ({
       id: o.id,
       type: 'zoho' as const,
-      orderNumber: o.salesOrderNumber,
+      orderNumber: o.invoiceNumber ?? o.salesOrderNumber,
       customerName: o.customerName,
       totalCases: o.totalCases,
     })),

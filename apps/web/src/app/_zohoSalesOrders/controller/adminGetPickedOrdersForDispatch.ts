@@ -10,7 +10,7 @@ import { and, eq, inArray, isNull, like, or } from 'drizzle-orm';
 import { z } from 'zod';
 
 import db from '@/database/client';
-import { wmsPickLists, zohoSalesOrderItems, zohoSalesOrders } from '@/database/schema';
+import { wmsPickLists, zohoInvoices, zohoSalesOrderItems, zohoSalesOrders } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
 const adminGetPickedOrdersForDispatch = adminProcedure
@@ -61,6 +61,23 @@ const adminGetPickedOrdersForDispatch = adminProcedure
       .from(zohoSalesOrders)
       .where(and(...baseConditions, statusCondition));
 
+    // Look up invoice numbers for the orders
+    const soNumbers = orders.map((o) => o.salesOrderNumber);
+    const invoiceLookup =
+      soNumbers.length > 0
+        ? await db
+            .select({
+              referenceNumber: zohoInvoices.referenceNumber,
+              invoiceNumber: zohoInvoices.invoiceNumber,
+            })
+            .from(zohoInvoices)
+            .where(inArray(zohoInvoices.referenceNumber, soNumbers))
+        : [];
+
+    const invoiceMap = new Map(
+      invoiceLookup.map((inv) => [inv.referenceNumber, inv.invoiceNumber]),
+    );
+
     // Get item counts for each order
     const ordersWithCases = await Promise.all(
       orders.map(async (order) => {
@@ -75,6 +92,7 @@ const adminGetPickedOrdersForDispatch = adminProcedure
 
         return {
           ...order,
+          invoiceNumber: invoiceMap.get(order.salesOrderNumber) ?? null,
           totalCases,
         };
       }),
