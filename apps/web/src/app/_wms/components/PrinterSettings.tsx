@@ -31,7 +31,6 @@ import Typography from '@/app/_ui/components/Typography/Typography';
 import type { LabelSize } from '../providers/PrinterProvider';
 import { usePrinterContext } from '../providers/PrinterProvider';
 import generateTestLabelZpl from '../utils/generateTestLabelZpl';
-import wifiPrint from '../utils/wifiPrint';
 
 export interface PrinterSettingsProps {
   open: boolean;
@@ -53,7 +52,7 @@ const PrinterSettings = ({ open, onOpenChange }: PrinterSettingsProps) => {
   const [formPort, setFormPort] = useState('');
   const [formLabelSize, setFormLabelSize] = useState<LabelSize>('4x2');
   const [testingId, setTestingId] = useState<string | null>(null);
-  const [testResult, setTestResult] = useState<Record<string, 'success' | 'error'>>({});
+  const [testResult, setTestResult] = useState<Record<string, 'sent' | 'error'>>({});
   const testTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 
   const handleTestPrint = useCallback(async (printer: (typeof printers)[number]) => {
@@ -65,10 +64,36 @@ const PrinterSettings = ({ open, onOpenChange }: PrinterSettingsProps) => {
     });
 
     const zpl = generateTestLabelZpl(printer.name, printer.ip, printer.labelSize);
-    const ok = await wifiPrint(zpl, printer.ip, printer.port);
+    const url = printer.port
+      ? `http://${printer.ip}:${printer.port}/`
+      : `http://${printer.ip}/pstprnt`;
+
+    let sent = false;
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 5000);
+
+      await fetch(url, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'text/plain' },
+        body: zpl,
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeout);
+      sent = true;
+    } catch (err) {
+      // Port 9100 printers (ZT series) accept the ZPL data over raw TCP but
+      // return a non-HTTP response, causing the browser to throw after the data
+      // is already sent. Only treat AbortError (timeout) as unreachable.
+      if (printer.port && err instanceof DOMException && err.name !== 'AbortError') {
+        sent = true;
+      }
+    }
 
     setTestingId(null);
-    setTestResult((prev) => ({ ...prev, [printer.id]: ok ? 'success' : 'error' }));
+    setTestResult((prev) => ({ ...prev, [printer.id]: sent ? 'sent' : 'error' }));
 
     // Clear previous timer for this printer if any
     if (testTimers.current[printer.id]) clearTimeout(testTimers.current[printer.id]);
@@ -221,13 +246,13 @@ const PrinterSettings = ({ open, onOpenChange }: PrinterSettingsProps) => {
                   onClick={() => handleTestPrint(printer)}
                   disabled={testingId === printer.id}
                   className={`rounded p-1 ${
-                    testResult[printer.id] === 'success'
+                    testResult[printer.id] === 'sent'
                       ? 'text-emerald-600'
                       : testResult[printer.id] === 'error'
                         ? 'text-red-500'
                         : 'text-text-muted hover:bg-fill-tertiary hover:text-text-primary'
                   }`}
-                  title="Test print"
+                  title={testResult[printer.id] === 'sent' ? 'Sent' : testResult[printer.id] === 'error' ? 'Unreachable' : 'Test print'}
                 >
                   {testingId === printer.id ? (
                     <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
