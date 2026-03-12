@@ -88,7 +88,7 @@ const adminReprintCaseLabels = adminProcedure
 
     // Generate ZPL for all existing labels
     const labelDataForZpl: LabelData[] = existingLabels.map((label) => ({
-      barcode: label.barcode,
+      barcode: label.lwin18,
       productName: label.productName,
       lwin18: label.lwin18,
       packSize,
