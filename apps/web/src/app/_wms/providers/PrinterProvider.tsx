@@ -60,24 +60,37 @@ const savePrinters = (printers: PrinterConfig[]) => {
 };
 
 /**
- * Check if a printer is reachable by hitting its web server.
- * Uses no-cors mode since printers don't set CORS headers.
- * Printers without a web server (port 80) can use port 9100.
+ * Check if a printer is reachable.
+ * Port 80 printers: GET to web server root.
+ * Port 9100 printers: POST a no-op ZPL (~HI = host identification, no print output).
+ * A GET to port 9100 hangs because the raw socket waits for data indefinitely.
  */
 const checkPrinter = async (ip: string, port?: number): Promise<boolean> => {
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), HEALTH_CHECK_TIMEOUT);
-    const url = port ? `http://${ip}:${port}/` : `http://${ip}/`;
-    await fetch(url, {
-      mode: 'no-cors',
-      signal: controller.signal,
-    });
+
+    if (port) {
+      // Port 9100: POST a no-op command so the printer processes and responds
+      await fetch(`http://${ip}:${port}/`, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'text/plain' },
+        body: '~HI',
+        signal: controller.signal,
+      });
+    } else {
+      await fetch(`http://${ip}/`, {
+        mode: 'no-cors',
+        signal: controller.signal,
+      });
+    }
+
     clearTimeout(timeout);
     return true;
   } catch (err) {
-    // Port 9100 printers (ZT series) accept TCP connections but return
-    // non-HTTP responses. Only treat AbortError (timeout) as offline.
+    // Port 9100: the printer accepts data but returns non-HTTP → TypeError.
+    // Only AbortError (timeout) means truly unreachable.
     if (port && !(err instanceof DOMException && err.name === 'AbortError')) {
       return true;
     }
