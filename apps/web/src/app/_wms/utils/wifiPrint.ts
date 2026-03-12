@@ -21,7 +21,7 @@ const wifiPrint = async (zpl: string, printerIp?: string, port?: number): Promis
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 5000);
 
-    const url = port ? `http://${ip}:${port}/` : `http://${ip}/pstprnt`;
+    const url = port && port !== 80 ? `http://${ip}:${port}/` : `http://${ip}/pstprnt`;
 
     await fetch(url, {
       method: 'POST',
