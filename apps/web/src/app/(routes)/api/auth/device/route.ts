@@ -22,7 +22,13 @@ import logger from '@/utils/logger';
 export const GET = async (request: NextRequest) => {
   const url = new URL(request.url);
   const token = url.searchParams.get('token');
-  const redirect = url.searchParams.get('redirect') || '/platform/admin/wms/labels';
+
+  // Validate redirect to prevent open redirect attacks
+  const allowedPrefixes = ['/platform/', '/wms/'];
+  const rawRedirect = url.searchParams.get('redirect') || '/platform/admin/wms/labels';
+  const redirect = allowedPrefixes.some((p) => rawRedirect.startsWith(p))
+    ? rawRedirect
+    : '/platform/admin/wms/labels';
 
   logger.info('[Device Auth] Authentication attempt', {
     hasToken: !!token,

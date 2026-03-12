@@ -104,7 +104,7 @@ export const POST = async (request: NextRequest) => {
     return NextResponse.json({ success: true });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Print failed';
-    console.error('WiFi print error', { error: err, printerIp, printerPort });
+    console.error('WiFi print error', { error: err });
     return NextResponse.json({ error: message }, { status: 502 });
   }
 };
