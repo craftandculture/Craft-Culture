@@ -160,13 +160,17 @@ const WMSPickListDetailPage = () => {
 
     if (!pickingItem) return;
 
-    // Verify case barcode matches the item's LWIN
+    // Verify case barcode contains the item's LWIN
+    // Case barcodes are formatted as CASE-{lwin18}-{seq} (e.g. CASE-1110487-2022-06-00750-001)
+    // Also accept a raw LWIN18 scan or an LWIN18 embedded in any barcode format
     const normalizedScan = barcode.replace(/-/g, '').toLowerCase();
     const normalizedLwin = pickingItem.lwin18.replace(/-/g, '').toLowerCase();
 
-    if (normalizedScan.includes(normalizedLwin) || normalizedLwin.includes(normalizedScan) || barcode.length > 5) {
+    if (normalizedScan.includes(normalizedLwin) || normalizedLwin.includes(normalizedScan)) {
       setCaseVerified(true);
       setScannedBarcodes((prev) => new Set(prev).add(barcode.toUpperCase()));
+    } else {
+      toast.error('Wrong case — barcode does not match this product');
     }
   };
 
