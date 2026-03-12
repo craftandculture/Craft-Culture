@@ -39,6 +39,7 @@ const PrinterSettings = ({ open, onOpenChange }: PrinterSettingsProps) => {
   const [showAddForm, setShowAddForm] = useState(false);
   const [newName, setNewName] = useState('');
   const [newIp, setNewIp] = useState('');
+  const [newPort, setNewPort] = useState('');
   const [newLabelSize, setNewLabelSize] = useState<LabelSize>('4x2');
 
   const handleAdd = () => {
@@ -47,12 +48,14 @@ const PrinterSettings = ({ open, onOpenChange }: PrinterSettingsProps) => {
     addPrinter({
       name: newName.trim(),
       ip: newIp.trim(),
+      port: newPort ? parseInt(newPort, 10) : undefined,
       labelSize: newLabelSize,
       enabled: true,
     });
 
     setNewName('');
     setNewIp('');
+    setNewPort('');
     setNewLabelSize('4x2');
     setShowAddForm(false);
   };
@@ -111,7 +114,8 @@ const PrinterSettings = ({ open, onOpenChange }: PrinterSettingsProps) => {
                     {printer.name}
                   </Typography>
                   <Typography variant="bodyXs" colorRole="muted">
-                    {printer.ip} &middot; {printer.labelSize === '4x2' ? '4" x 2"' : '4" x 6"'}
+                    {printer.ip}{printer.port ? `:${printer.port}` : ''} &middot;{' '}
+                    {printer.labelSize === '4x2' ? '4" x 2"' : '4" x 6"'}
                   </Typography>
                 </div>
 
@@ -168,6 +172,11 @@ const PrinterSettings = ({ open, onOpenChange }: PrinterSettingsProps) => {
                   placeholder="IP address (e.g. 192.168.1.100)"
                   value={newIp}
                   onChange={(e) => setNewIp(e.target.value)}
+                />
+                <Input
+                  placeholder="Port (default: 80, use 9100 for ZT series)"
+                  value={newPort}
+                  onChange={(e) => setNewPort(e.target.value)}
                 />
                 <Select value={newLabelSize} onValueChange={(v) => setNewLabelSize(v as LabelSize)}>
                   <SelectTrigger>
