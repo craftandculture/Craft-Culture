@@ -27,7 +27,10 @@ const usePrint = () => {
       const candidates = printers
         .filter((p) => p.labelSize === labelSize && p.enabled)
         .sort((a, b) => {
-          // Prefer printers known to be online
+          // Prefer primary printer, then online status
+          const aPrimary = a.primary ? 1 : 0;
+          const bPrimary = b.primary ? 1 : 0;
+          if (bPrimary !== aPrimary) return bPrimary - aPrimary;
           const aOnline = printerStatus[a.id] ? 1 : 0;
           const bOnline = printerStatus[b.id] ? 1 : 0;
           return bOnline - aOnline;

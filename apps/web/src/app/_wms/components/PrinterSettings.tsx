@@ -5,6 +5,8 @@ import {
   IconPlus,
   IconPrinter,
   IconPrinterOff,
+  IconStar,
+  IconStarFilled,
   IconTrash,
   IconWifi,
   IconWifiOff,
@@ -43,7 +45,7 @@ export interface PrinterSettingsProps {
  * Add, edit, and remove printers with label size assignments.
  */
 const PrinterSettings = ({ open, onOpenChange }: PrinterSettingsProps) => {
-  const { printers, printerStatus, addPrinter, removePrinter, updatePrinter } =
+  const { printers, printerStatus, addPrinter, removePrinter, updatePrinter, setPrimary } =
     usePrinterContext();
 
   const [showAddForm, setShowAddForm] = useState(false);
@@ -169,6 +171,19 @@ const PrinterSettings = ({ open, onOpenChange }: PrinterSettingsProps) => {
                 key={printer.id}
                 className="flex items-center gap-3 rounded-lg border border-border-primary bg-fill-secondary px-3 py-2.5"
               >
+                {/* Primary star */}
+                <button
+                  onClick={() => setPrimary(printer.id)}
+                  className={`shrink-0 rounded p-0.5 ${
+                    printer.primary
+                      ? 'text-amber-500'
+                      : 'text-gray-300 hover:text-amber-400'
+                  }`}
+                  title={printer.primary ? 'Primary printer' : 'Set as primary'}
+                >
+                  <Icon icon={printer.primary ? IconStarFilled : IconStar} size="sm" />
+                </button>
+
                 {/* Status dot */}
                 <div
                   className={`h-2.5 w-2.5 shrink-0 rounded-full ${
@@ -188,6 +203,9 @@ const PrinterSettings = ({ open, onOpenChange }: PrinterSettingsProps) => {
                   <Typography variant="bodyXs" colorRole="muted">
                     {printer.ip}{printer.port ? `:${printer.port}` : ''} &middot;{' '}
                     {printer.labelSize === '4x2' ? '4" x 2"' : '4" x 6"'}
+                    {printer.primary && (
+                      <span className="ml-1 text-amber-600">&middot; Primary</span>
+                    )}
                   </Typography>
                 </div>
 
