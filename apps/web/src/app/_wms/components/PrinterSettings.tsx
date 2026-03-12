@@ -1,7 +1,15 @@
 'use client';
 
-import { IconPencil, IconPlus, IconPrinter, IconTrash, IconWifi, IconWifiOff } from '@tabler/icons-react';
-import { useState } from 'react';
+import {
+  IconPencil,
+  IconPlus,
+  IconPrinter,
+  IconPrinterOff,
+  IconTrash,
+  IconWifi,
+  IconWifiOff,
+} from '@tabler/icons-react';
+import { useCallback, useRef, useState } from 'react';
 
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
@@ -22,6 +30,8 @@ import Typography from '@/app/_ui/components/Typography/Typography';
 
 import type { LabelSize } from '../providers/PrinterProvider';
 import { usePrinterContext } from '../providers/PrinterProvider';
+import generateTestLabelZpl from '../utils/generateTestLabelZpl';
+import wifiPrint from '../utils/wifiPrint';
 
 export interface PrinterSettingsProps {
   open: boolean;
@@ -42,6 +52,34 @@ const PrinterSettings = ({ open, onOpenChange }: PrinterSettingsProps) => {
   const [formIp, setFormIp] = useState('');
   const [formPort, setFormPort] = useState('');
   const [formLabelSize, setFormLabelSize] = useState<LabelSize>('4x2');
+  const [testingId, setTestingId] = useState<string | null>(null);
+  const [testResult, setTestResult] = useState<Record<string, 'success' | 'error'>>({});
+  const testTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+
+  const handleTestPrint = useCallback(async (printer: (typeof printers)[number]) => {
+    setTestingId(printer.id);
+    setTestResult((prev) => {
+      const next = { ...prev };
+      delete next[printer.id];
+      return next;
+    });
+
+    const zpl = generateTestLabelZpl(printer.name, printer.ip, printer.labelSize);
+    const ok = await wifiPrint(zpl, printer.ip, printer.port);
+
+    setTestingId(null);
+    setTestResult((prev) => ({ ...prev, [printer.id]: ok ? 'success' : 'error' }));
+
+    // Clear previous timer for this printer if any
+    if (testTimers.current[printer.id]) clearTimeout(testTimers.current[printer.id]);
+    testTimers.current[printer.id] = setTimeout(() => {
+      setTestResult((prev) => {
+        const next = { ...prev };
+        delete next[printer.id];
+        return next;
+      });
+    }, 3000);
+  }, []);
 
   const resetForm = () => {
     setFormName('');
@@ -176,6 +214,28 @@ const PrinterSettings = ({ open, onOpenChange }: PrinterSettingsProps) => {
                   }`}
                 >
                   {printer.enabled ? 'On' : 'Off'}
+                </button>
+
+                {/* Test print */}
+                <button
+                  onClick={() => handleTestPrint(printer)}
+                  disabled={testingId === printer.id}
+                  className={`rounded p-1 ${
+                    testResult[printer.id] === 'success'
+                      ? 'text-emerald-600'
+                      : testResult[printer.id] === 'error'
+                        ? 'text-red-500'
+                        : 'text-text-muted hover:bg-fill-tertiary hover:text-text-primary'
+                  }`}
+                  title="Test print"
+                >
+                  {testingId === printer.id ? (
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                  ) : testResult[printer.id] === 'error' ? (
+                    <Icon icon={IconPrinterOff} size="sm" />
+                  ) : (
+                    <Icon icon={IconPrinter} size="sm" />
+                  )}
                 </button>
 
                 {/* Edit */}
