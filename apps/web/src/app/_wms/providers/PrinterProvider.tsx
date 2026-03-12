@@ -13,6 +13,7 @@ interface PrinterConfig {
   port?: number;
   labelSize: LabelSize;
   enabled: boolean;
+  primary?: boolean;
 }
 
 interface PrinterContextValue {
@@ -21,6 +22,7 @@ interface PrinterContextValue {
   addPrinter: (printer: Omit<PrinterConfig, 'id'>) => void;
   removePrinter: (id: string) => void;
   updatePrinter: (id: string, updates: Partial<Omit<PrinterConfig, 'id'>>) => void;
+  setPrimary: (id: string) => void;
 }
 
 const PrinterContext = createContext<PrinterContextValue>({
@@ -29,6 +31,7 @@ const PrinterContext = createContext<PrinterContextValue>({
   addPrinter: () => {},
   removePrinter: () => {},
   updatePrinter: () => {},
+  setPrimary: () => {},
 });
 
 const STORAGE_KEY = 'wms-printers';
@@ -133,6 +136,19 @@ const PrinterProvider = ({ children }: React.PropsWithChildren) => {
     setPrinters((prev) => prev.map((p) => (p.id === id ? { ...p, ...updates } : p)));
   }, []);
 
+  const setPrimary = useCallback((id: string) => {
+    setPrinters((prev) => {
+      const target = prev.find((p) => p.id === id);
+      if (!target) return prev;
+      return prev.map((p) => {
+        if (p.id === id) return { ...p, primary: true };
+        // Clear primary on other printers with the same label size
+        if (p.labelSize === target.labelSize) return { ...p, primary: false };
+        return p;
+      });
+    });
+  }, []);
+
   // Health check all enabled printers periodically
   const checkAllPrinters = useCallback(async () => {
     const enabled = printers.filter((p) => p.enabled);
@@ -168,7 +184,7 @@ const PrinterProvider = ({ children }: React.PropsWithChildren) => {
 
   return (
     <PrinterContext.Provider
-      value={{ printers, printerStatus, addPrinter, removePrinter, updatePrinter }}
+      value={{ printers, printerStatus, addPrinter, removePrinter, updatePrinter, setPrimary }}
     >
       {children}
     </PrinterContext.Provider>
