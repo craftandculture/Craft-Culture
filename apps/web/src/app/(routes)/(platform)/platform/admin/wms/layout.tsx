@@ -1,16 +1,11 @@
 import LocalServerProvider from '@/app/_wms/providers/LocalServerProvider';
-import PrinterProvider from '@/app/_wms/providers/PrinterProvider';
 
 /**
- * WMS layout — wraps all warehouse pages with providers for
- * local server routing and multi-printer management.
+ * WMS layout — wraps all warehouse pages with the local server provider.
+ * PrinterProvider is in the platform layout to cover both the WMS header and page content.
  */
 const WMSLayout = ({ children }: React.PropsWithChildren) => {
-  return (
-    <LocalServerProvider>
-      <PrinterProvider>{children}</PrinterProvider>
-    </LocalServerProvider>
-  );
+  return <LocalServerProvider>{children}</LocalServerProvider>;
 };
 
 export default WMSLayout;

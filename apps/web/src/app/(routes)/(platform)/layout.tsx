@@ -16,6 +16,7 @@ import BrandedLogo from '@/app/_ui/components/Logo/BrandedLogo';
 import PlatformMobileNav from '@/app/_ui/components/MobileNav/PlatformMobileNav';
 import ThemeToggle from '@/app/_ui/components/ThemeToggle/ThemeToggle';
 import WMSHeader from '@/app/_wms/components/WMSHeader';
+import PrinterProvider from '@/app/_wms/providers/PrinterProvider';
 import getQueryClient from '@/lib/react-query';
 import api from '@/lib/trpc/server';
 import tryCatch from '@/utils/tryCatch';
@@ -44,14 +45,16 @@ const PlatformLayout = async ({ children }: React.PropsWithChildren) => {
 
   // WMS Mode layout (clean, no sidebar/footer)
   const wmsLayout = (
-    <div className="bg-background-primary flex min-h-dvh flex-col">
-      <BrandedTitleProvider customerType={user.customerType} />
-      {user.isImpersonated && (
-        <ImpersonationBanner userName={user.name} userEmail={user.email} />
-      )}
-      <WMSHeader userName={user.name ?? user.email} />
-      <div className="flex-1 overflow-auto">{children}</div>
-    </div>
+    <PrinterProvider>
+      <div className="bg-background-primary flex min-h-dvh flex-col">
+        <BrandedTitleProvider customerType={user.customerType} />
+        {user.isImpersonated && (
+          <ImpersonationBanner userName={user.name} userEmail={user.email} />
+        )}
+        <WMSHeader userName={user.name ?? user.email} />
+        <div className="flex-1 overflow-auto">{children}</div>
+      </div>
+    </PrinterProvider>
   );
 
   // Standard platform layout (full admin with sidebar/footer)
