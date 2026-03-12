@@ -154,6 +154,7 @@ const adminAutoFixStock = adminProcedure.mutation(async ({ ctx }) => {
       totalReceived: sql<number>`COALESCE(SUM(CASE WHEN ${wmsStockMovements.movementType} = 'receive' THEN ${wmsStockMovements.quantityCases} ELSE 0 END), 0)::int`,
       totalPicked: sql<number>`COALESCE(SUM(CASE WHEN ${wmsStockMovements.movementType} = 'pick' THEN ${wmsStockMovements.quantityCases} ELSE 0 END), 0)::int`,
       totalAdjusted: sql<number>`COALESCE(SUM(CASE WHEN ${wmsStockMovements.movementType} = 'adjust' AND ${wmsStockMovements.reasonCode} != 'stock_correction' THEN ${wmsStockMovements.quantityCases} ELSE 0 END), 0)::int`,
+      totalCounted: sql<number>`COALESCE(SUM(CASE WHEN ${wmsStockMovements.movementType} = 'count' THEN ${wmsStockMovements.quantityCases} ELSE 0 END), 0)::int`,
     })
     .from(wmsStockMovements);
 
@@ -166,7 +167,8 @@ const adminAutoFixStock = adminProcedure.mutation(async ({ ctx }) => {
   const expectedStock =
     (movementTotals?.totalReceived ?? 0) -
     (movementTotals?.totalPicked ?? 0) +
-    (movementTotals?.totalAdjusted ?? 0);
+    (movementTotals?.totalAdjusted ?? 0) +
+    (movementTotals?.totalCounted ?? 0);
 
   const actualStock = stockTotals?.totalCases ?? 0;
   const isReconciled = expectedStock === actualStock;
