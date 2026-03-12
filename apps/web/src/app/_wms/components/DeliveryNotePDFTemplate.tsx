@@ -410,9 +410,9 @@ const DeliveryNotePDFTemplate = ({
             <Text style={styles.addressLabel}>Ship From</Text>
             <View style={styles.addressBox}>
               <Text style={[styles.addressText, styles.addressBold]}>Craft & Culture FZE</Text>
-              <Text style={styles.addressText}>JAFZA Warehouse</Text>
-              <Text style={styles.addressText}>Jebel Ali Free Zone</Text>
-              <Text style={styles.addressText}>Dubai, UAE</Text>
+              <Text style={styles.addressText}>Warehouse 1.2 (Duty Free)</Text>
+              <Text style={styles.addressText}>RAK Port</Text>
+              <Text style={styles.addressText}>Ras Al Khaimah, UAE</Text>
             </View>
           </View>
           <View style={styles.addressCol}>
