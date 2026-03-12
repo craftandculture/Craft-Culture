@@ -33,11 +33,13 @@ const wifiPrint = async (zpl: string, printerIp?: string, port?: number): Promis
 
     clearTimeout(timeout);
     return true;
-  } catch (err) {
-    // Port 9100 printers (ZT series) accept ZPL over raw TCP but return a
-    // non-HTTP response, causing a TypeError after the data is already sent.
-    // Only treat AbortError (timeout) as a true failure — the label printed.
-    if (port && !(err instanceof DOMException && err.name === 'AbortError')) {
+  } catch {
+    // Port 9100 printers (ZT series) accept ZPL over raw TCP. The browser
+    // sends the body immediately on connection, so the label is already
+    // printed by the time any error fires — whether a TypeError (non-HTTP
+    // response) or AbortError (5s timeout). Treat ALL errors as success;
+    // the health check already handles offline detection.
+    if (port) {
       return true;
     }
     return false;
