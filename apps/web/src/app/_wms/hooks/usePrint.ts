@@ -35,7 +35,7 @@ const usePrint = () => {
 
       // Try each candidate until one succeeds (failover)
       for (const printer of candidates) {
-        const success = await wifiPrint(zpl, printer.ip);
+        const success = await wifiPrint(zpl, printer.ip, printer.port);
         if (success) return true;
       }
 

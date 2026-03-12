@@ -10,6 +10,7 @@ interface PrinterConfig {
   id: string;
   name: string;
   ip: string;
+  port?: number;
   labelSize: LabelSize;
   enabled: boolean;
 }
@@ -61,12 +62,14 @@ const savePrinters = (printers: PrinterConfig[]) => {
 /**
  * Check if a printer is reachable by hitting its web server.
  * Uses no-cors mode since printers don't set CORS headers.
+ * Printers without a web server (port 80) can use port 9100.
  */
-const checkPrinter = async (ip: string): Promise<boolean> => {
+const checkPrinter = async (ip: string, port?: number): Promise<boolean> => {
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), HEALTH_CHECK_TIMEOUT);
-    await fetch(`http://${ip}/`, {
+    const url = port ? `http://${ip}:${port}/` : `http://${ip}/`;
+    await fetch(url, {
       mode: 'no-cors',
       signal: controller.signal,
     });
@@ -120,7 +123,7 @@ const PrinterProvider = ({ children }: React.PropsWithChildren) => {
     const results = await Promise.all(
       enabled.map(async (p) => ({
         id: p.id,
-        online: await checkPrinter(p.ip),
+        online: await checkPrinter(p.ip, p.port),
       })),
     );
 
