@@ -108,6 +108,37 @@ const markSalesOrderAsOpen = async (salesOrderId: string) => {
 };
 
 /**
+ * List all sales orders with a given status, paginating through all pages
+ *
+ * @param status - Zoho sales order status to filter by
+ * @returns All sales orders matching the status
+ */
+const listAllSalesOrdersByStatus = async (status: ZohoSalesOrder['status']) => {
+  const allOrders: ZohoSalesOrder[] = [];
+  let page = 1;
+  let hasMore = true;
+
+  while (hasMore) {
+    const { salesOrders, pageContext } = await listSalesOrders({
+      status,
+      page,
+      perPage: 200,
+    });
+
+    allOrders.push(...salesOrders);
+    hasMore = pageContext.has_more_page;
+    page++;
+
+    // Safety limit to prevent infinite loops
+    if (page > 50) {
+      break;
+    }
+  }
+
+  return allOrders;
+};
+
+/**
  * Get sales orders modified after a specific time
  * Used for incremental sync
  *
@@ -137,6 +168,7 @@ const getSalesOrdersModifiedSince = async (sinceTime: string) => {
 export {
   getSalesOrder,
   getSalesOrdersModifiedSince,
+  listAllSalesOrdersByStatus,
   listOpenSalesOrders,
   listSalesOrders,
   markSalesOrderAsOpen,

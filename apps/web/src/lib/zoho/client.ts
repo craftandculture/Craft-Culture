@@ -20,6 +20,9 @@ interface TokenCache {
 // In-memory token cache
 let tokenCache: TokenCache | null = null;
 
+// Promise-based lock to prevent concurrent token refreshes
+let tokenRefreshPromise: Promise<string> | null = null;
+
 /**
  * Get Zoho API URLs based on configured region
  * - us: zoho.com (default)
@@ -146,7 +149,8 @@ const refreshAccessToken = async (): Promise<string> => {
 };
 
 /**
- * Get a valid access token, refreshing if needed
+ * Get a valid access token, refreshing if needed.
+ * Uses a promise-based lock so concurrent callers share a single refresh.
  */
 const getAccessToken = async (): Promise<string> => {
   // Check if we have a valid cached token (with 5 min buffer)
@@ -154,8 +158,18 @@ const getAccessToken = async (): Promise<string> => {
     return tokenCache.accessToken;
   }
 
-  // Refresh the token
-  return refreshAccessToken();
+  // If a refresh is already in flight, wait for it
+  if (tokenRefreshPromise) {
+    return tokenRefreshPromise;
+  }
+
+  // Start a new refresh and share the promise
+  tokenRefreshPromise = refreshAccessToken();
+  try {
+    return await tokenRefreshPromise;
+  } finally {
+    tokenRefreshPromise = null;
+  }
 };
 
 /**
@@ -185,27 +199,43 @@ const zohoFetch = async <T>(
     fullUrl: url.toString(),
   });
 
-  const response = await fetch(url.toString(), {
-    ...options,
-    headers: {
-      ...options.headers,
-      Authorization: `Zoho-oauthtoken ${token}`,
-      Accept: 'application/json',
-      'Content-Type': 'application/json',
-    },
-  });
+  // 60-second timeout for API calls
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 60000);
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    logger.error('Zoho API error', {
-      endpoint,
-      status: response.status,
-      error: errorText,
+  try {
+    const response = await fetch(url.toString(), {
+      ...options,
+      headers: {
+        ...options.headers,
+        Authorization: `Zoho-oauthtoken ${token}`,
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+      },
+      signal: controller.signal,
     });
-    throw new Error(`Zoho API error: ${response.status} - ${errorText}`);
-  }
 
-  return response.json() as Promise<T>;
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      logger.error('Zoho API error', {
+        endpoint,
+        status: response.status,
+        error: errorText,
+      });
+      throw new Error(`Zoho API error: ${response.status} - ${errorText}`);
+    }
+
+    return response.json() as Promise<T>;
+  } catch (error) {
+    clearTimeout(timeoutId);
+    if (error instanceof Error && error.name === 'AbortError') {
+      logger.error('Zoho API request timeout after 60s', { endpoint });
+      throw new Error(`Zoho API request timed out: ${endpoint}`);
+    }
+    throw error;
+  }
 };
 
 export { getAccessToken, isZohoConfigured, zohoFetch };
