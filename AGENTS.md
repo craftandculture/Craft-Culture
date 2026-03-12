@@ -30,44 +30,50 @@ The WMS module (`apps/web/src/app/_wms/`) handles physical warehouse operations 
 ### Hardware
 
 - **Scanner:** Zebra TC27 (Android-based barcode scanner with Chrome browser)
-- **Printer:** Zebra ZD421 (thermal label printer for 4x6" labels, Bluetooth connected)
+- **Printers:**
+  - ZD421 at `192.168.1.111` — 4x2" case labels (port 80, web server)
+  - ZT231 at `192.168.1.205` — 4x2" case labels (port 9100, raw TCP only)
+  - ZD421 at `192.168.1.170` — 4x6" pallet/dispatch labels (port 80, web server)
 - **Barcode Format:** Code 128 for locations, QR codes for case labels
 
 ### Zebra Printing Setup
 
-The ZebraPrint component (`apps/web/src/app/_wms/components/ZebraPrint.tsx`) handles label printing across different environments:
+The WMS uses WiFi direct printing to Zebra printers via HTTP POST. Printer configs are managed in-app via the Printer Settings dialog (gear icon in WMS header) and stored in localStorage.
 
-**Environments:**
+**Printing Architecture:**
 
-| Environment | Method | How It Works |
-|-------------|--------|--------------|
-| Desktop (Mac/PC) | Zebra Browser Print | Install Browser Print app, auto-detects paired printer |
-| Mobile (TC27) | Web Share API | Share ZPL file → Select "Printer Setup Utility" → Prints |
-| Enterprise Browser | Native Zebra API | Direct Bluetooth printing (paid license required) |
+| Component | Purpose |
+|-----------|---------|
+| `PrinterProvider.tsx` | Context provider — stores configs, health checks every 15s, primary printer per label size |
+| `usePrint.ts` | Hook — routes ZPL to correct printer by label size, primary-first sorting, sequential failover |
+| `wifiPrint.ts` | Utility — sends ZPL via HTTP POST. Port 80 → `/pstprnt`, port 9100 → raw TCP |
+| `PrinterSettings.tsx` | Dialog — add/edit/delete printers, primary star toggle, test print button |
+| `generateTestLabelZpl.ts` | Generates minimal test labels (name, IP, timestamp) for 4x2" and 4x6" |
 
-**Mobile Printing Workflow (TC27 → ZD421):**
+**Port 9100 (ZT series) Behavior:**
+- Raw TCP socket — no web server, no HTTP responses
+- `wifiPrint`: treats ALL catch errors as success (data sent immediately on TCP connect)
+- `checkPrinter`: POSTs `~HI` (no-op ZPL status query). TypeError = online, AbortError (timeout) = offline
+
+**Legacy Mobile Printing (TC27 → ZD421 via Bluetooth):**
 
 1. TC27 must be Bluetooth paired with ZD421 (one-time setup via Android Settings)
 2. Install "Zebra Printer Setup Utility" app on TC27 from Play Store
 3. In WMS, tap Print button → Share sheet appears
 4. Select "Printer Setup Utility" → Label prints immediately
 
-**Why Not Web Bluetooth?**
-Web Bluetooth only supports Bluetooth Low Energy (BLE). The ZD421 connects via Bluetooth Classic (SPP) for printing, which browsers cannot access. The share-to-app workflow is the practical solution for mobile.
-
 **ZPL (Zebra Programming Language):**
-Labels are generated as ZPL code. Example:
-```zpl
-^XA
-^FO50,30^ADN,46,24^FDLOC-A-01-02^FS
-^FO50,100^BY2^BCN,80,Y,N,N^FDLOC-A-01-02^FS
-^XZ
-```
+Labels are generated as ZPL code. All labels use `^MTD^JUS` (direct thermal) and `^PR3` (slow print for quality).
 
 **Key Files:**
-- `ZebraPrint.tsx` - Print component and `useZebraPrint()` hook
-- `generateLocationLabelZpl.ts` - Generate location label ZPL
-- `generateCaseLabelZpl.ts` - Generate case label ZPL
+- `PrinterProvider.tsx` - Multi-printer context with health checks and primary selection
+- `usePrint.ts` - Label-size-based printer routing hook
+- `wifiPrint.ts` - WiFi direct print utility
+- `PrinterSettings.tsx` - Printer management dialog
+- `generateTestLabelZpl.ts` - Test label ZPL generator
+- `generateLabelZpl.ts` - Case label ZPL generator
+- `generateDispatchLabelZpl.ts` - Pallet/dispatch label ZPL generator
+- `generateLocationLabelZpl.ts` - Location label ZPL generator
 
 ### Key WMS Tables
 
