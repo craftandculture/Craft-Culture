@@ -2,7 +2,7 @@ import { TRPCError } from '@trpc/server';
 import { eq } from 'drizzle-orm';
 
 import db from '@/database/client';
-import { users, wmsLocations, wmsPickListItems, wmsPickLists } from '@/database/schema';
+import { users, wmsLocations, wmsPickListItems, wmsPickLists, zohoInvoices } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
 import { getPickListSchema } from '../schemas/pickListSchema';
@@ -67,6 +67,13 @@ const adminGetPickList = adminProcedure
       .leftJoin(wmsLocations, eq(wmsPickListItems.suggestedLocationId, wmsLocations.id))
       .where(eq(wmsPickListItems.pickListId, pickListId));
 
+    // Look up invoice number
+    const [invoice] = await db
+      .select({ invoiceNumber: zohoInvoices.invoiceNumber })
+      .from(zohoInvoices)
+      .where(eq(zohoInvoices.referenceNumber, pickList.orderNumber))
+      .limit(1);
+
     // Calculate progress
     const totalToPick = items.reduce((sum, i) => sum + i.quantityCases, 0);
     const totalPicked = items.reduce((sum, i) => sum + (i.pickedQuantity ?? 0), 0);
@@ -74,6 +81,7 @@ const adminGetPickList = adminProcedure
 
     return {
       ...pickList,
+      invoiceNumber: invoice?.invoiceNumber ?? null,
       items,
       progress: {
         totalItems: items.length,

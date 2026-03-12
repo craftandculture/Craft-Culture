@@ -1,5 +1,5 @@
 import { TRPCError } from '@trpc/server';
-import { eq } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
 
 import db from '@/database/client';
 import {
@@ -7,6 +7,7 @@ import {
   wmsDeliveryNotes,
   wmsDispatchBatchOrders,
   wmsDispatchBatches,
+  zohoInvoices,
 } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
@@ -82,13 +83,36 @@ const adminGetDispatchBatch = adminProcedure
       .leftJoin(users, eq(wmsDeliveryNotes.generatedBy, users.id))
       .where(eq(wmsDeliveryNotes.batchId, batchId));
 
+    // Look up invoice numbers for batch orders
+    const batchOrderNumbers = orders
+      .map((o) => o.orderNumber)
+      .filter((n): n is string => !!n);
+
+    const invoiceLookup =
+      batchOrderNumbers.length > 0
+        ? await db
+            .select({
+              referenceNumber: zohoInvoices.referenceNumber,
+              invoiceNumber: zohoInvoices.invoiceNumber,
+            })
+            .from(zohoInvoices)
+            .where(inArray(zohoInvoices.referenceNumber, batchOrderNumbers))
+        : [];
+
+    const invoiceMap = new Map(
+      invoiceLookup.map((inv) => [inv.referenceNumber, inv.invoiceNumber]),
+    );
+
     // Calculate orders without delivery notes
     const ordersWithDN = new Set(orders.filter((o) => o.deliveryNoteId).map((o) => o.orderId));
     const ordersWithoutDN = orders.filter((o) => !ordersWithDN.has(o.orderId));
 
     return {
       ...batch,
-      orders,
+      orders: orders.map((o) => ({
+        ...o,
+        invoiceNumber: invoiceMap.get(o.orderNumber) ?? null,
+      })),
       deliveryNotes: deliveryNotesList,
       ordersWithoutDeliveryNote: ordersWithoutDN.length,
     };

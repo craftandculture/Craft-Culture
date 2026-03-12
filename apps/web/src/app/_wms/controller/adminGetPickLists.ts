@@ -1,7 +1,7 @@
-import { count, desc, eq } from 'drizzle-orm';
+import { count, desc, eq, inArray } from 'drizzle-orm';
 
 import db from '@/database/client';
-import { users, wmsPickLists } from '@/database/schema';
+import { users, wmsPickLists, zohoInvoices } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
 import { getPickListsSchema } from '../schemas/pickListSchema';
@@ -65,8 +65,31 @@ const adminGetPickLists = adminProcedure
     const inProgressCount =
       statusSummary.find((s) => s.status === 'in_progress')?.count ?? 0;
 
+    // Look up invoice numbers for the fetched pick lists
+    const orderNumbers = pickLists
+      .map((pl) => pl.orderNumber)
+      .filter((n): n is string => !!n);
+
+    const invoiceLookup =
+      orderNumbers.length > 0
+        ? await db
+            .select({
+              referenceNumber: zohoInvoices.referenceNumber,
+              invoiceNumber: zohoInvoices.invoiceNumber,
+            })
+            .from(zohoInvoices)
+            .where(inArray(zohoInvoices.referenceNumber, orderNumbers))
+        : [];
+
+    const invoiceMap = new Map(
+      invoiceLookup.map((inv) => [inv.referenceNumber, inv.invoiceNumber]),
+    );
+
     return {
-      pickLists,
+      pickLists: pickLists.map((pl) => ({
+        ...pl,
+        invoiceNumber: invoiceMap.get(pl.orderNumber) ?? null,
+      })),
       pagination: {
         total: countResult?.count ?? 0,
         limit,

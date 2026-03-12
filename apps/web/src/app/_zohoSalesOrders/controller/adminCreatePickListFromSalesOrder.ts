@@ -20,6 +20,18 @@ import {
 } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
+/**
+ * Convert a raw SKU (18 digits, no dashes) to LWIN18 format (with dashes)
+ *
+ * @example
+ *   formatSkuAsLwin18('100805220210600750') // '1008052-2021-06-00750'
+ */
+const formatSkuAsLwin18 = (sku: string) => {
+  const digits = sku.replace(/\D/g, '');
+  if (digits.length !== 18) return sku;
+  return `${digits.slice(0, 7)}-${digits.slice(7, 11)}-${digits.slice(11, 13)}-${digits.slice(13)}`;
+};
+
 const adminCreatePickListFromSalesOrder = adminProcedure
   .input(z.object({ salesOrderId: z.string().uuid() }))
   .mutation(async ({ input }) => {
@@ -86,33 +98,26 @@ const adminCreatePickListFromSalesOrder = adminProcedure
     const pickListItems = [];
 
     for (const item of orderItems) {
-      // Try to match by SKU first, then by LWIN if available
-      let availableStock = [];
+      // Resolve LWIN18: use explicit lwin18 field, or convert SKU to LWIN18 format
+      const resolvedLwin18 = item.lwin18
+        ? item.lwin18
+        : item.sku
+          ? formatSkuAsLwin18(item.sku)
+          : '';
 
-      if (item.lwin18) {
-        availableStock = await db
-          .select({
-            stockId: wmsStock.id,
-            locationId: wmsStock.locationId,
-            availableCases: wmsStock.availableCases,
-            lwin18: wmsStock.lwin18,
-          })
-          .from(wmsStock)
-          .where(eq(wmsStock.lwin18, item.lwin18))
-          .orderBy(wmsStock.availableCases);
-      } else if (item.sku) {
-        // Try matching by SKU (stored in lwin18 field in some cases)
-        availableStock = await db
-          .select({
-            stockId: wmsStock.id,
-            locationId: wmsStock.locationId,
-            availableCases: wmsStock.availableCases,
-            lwin18: wmsStock.lwin18,
-          })
-          .from(wmsStock)
-          .where(eq(wmsStock.lwin18, item.sku))
-          .orderBy(wmsStock.availableCases);
-      }
+      // Find available stock by LWIN18
+      const availableStock = resolvedLwin18
+        ? await db
+            .select({
+              stockId: wmsStock.id,
+              locationId: wmsStock.locationId,
+              availableCases: wmsStock.availableCases,
+              lwin18: wmsStock.lwin18,
+            })
+            .from(wmsStock)
+            .where(eq(wmsStock.lwin18, resolvedLwin18))
+            .orderBy(wmsStock.availableCases)
+        : [];
 
       // Find first location with enough stock
       const suggestedStock = availableStock.find(
@@ -123,7 +128,7 @@ const adminCreatePickListFromSalesOrder = adminProcedure
         .insert(wmsPickListItems)
         .values({
           pickListId: pickList.id,
-          lwin18: item.lwin18 ?? item.sku ?? '',
+          lwin18: resolvedLwin18,
           productName: item.name,
           quantityCases: item.quantity,
           suggestedLocationId: suggestedStock?.locationId ?? null,

@@ -191,7 +191,7 @@ const WMSPickListsPage = () => {
                             {getStatusBadge(pickList.status ?? 'pending')}
                           </div>
                           <Typography variant="bodyXs" colorRole="muted">
-                            Order: {pickList.orderNumber}
+                            {pickList.invoiceNumber ?? pickList.orderNumber}
                           </Typography>
                           <div className="mt-2 flex items-center gap-4">
                             <Typography variant="bodyXs">

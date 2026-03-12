@@ -273,7 +273,7 @@ const WMSPickListDetailPage = () => {
           <div className="flex-1">
             <Typography variant="headingSm">{data.pickListNumber}</Typography>
             <Typography variant="bodyXs" colorRole="muted">
-              Order: {data.orderNumber}
+              {data.invoiceNumber ?? data.orderNumber}
             </Typography>
           </div>
           {!isComplete && (
