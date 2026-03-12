@@ -126,15 +126,23 @@ wmsDeliveryNotes        - Delivery paperwork for batches
 
 **API Endpoints:**
 ```typescript
-wms.admin.dispatch.create          // Create new batch
-wms.admin.dispatch.getMany         // List batches with filters
-wms.admin.dispatch.getOne          // Get batch with orders
-wms.admin.dispatch.addZohoOrders   // Add Zoho orders to batch
-wms.admin.dispatch.addOrders       // Add PCO orders to batch
-wms.admin.dispatch.updateStatus    // Change batch status
+wms.admin.dispatch.create              // Create new batch
+wms.admin.dispatch.getMany             // List batches with filters
+wms.admin.dispatch.getOne              // Get batch with orders
+wms.admin.dispatch.addZohoOrders       // Add Zoho orders to batch
+wms.admin.dispatch.addOrders           // Add PCO orders to batch
+wms.admin.dispatch.updateStatus        // Change batch status
+wms.admin.dispatch.removeOrder         // Remove order from batch
+wms.admin.dispatch.generateDeliveryNote // Generate delivery note PDF
+wms.admin.dispatch.quickDispatch       // Create batch + add orders + dispatch in one step
 ```
 
-**Flow:**
+**Flow (Quick Dispatch Wizard):**
+1. Select picked orders (Zoho + PCO) in the dispatch wizard
+2. Select distributor, toggle delivery note, add notes
+3. Quick dispatch creates batch, adds orders, generates DN, and marks dispatched in one step
+
+**Flow (Manual):**
 1. Create dispatch batch for a distributor
 2. Add picked orders (Zoho or PCO) to the batch
 3. Update status: Draft → Picking → Staged → Dispatched → Delivered
