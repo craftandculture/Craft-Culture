@@ -325,7 +325,7 @@ const WMSDispatchBatchDetailPage = () => {
                     batchNumber: batch.batchNumber,
                     distributorName: batch.distributorName ?? 'Unknown',
                     totalCases: batch.totalCases,
-                    orderNumbers: batch.orders.map((o) => o.orderNumber),
+                    orderNumbers: batch.orders.map((o) => o.invoiceNumber ?? o.orderNumber),
                     dispatchedAt: batch.dispatchedAt ? new Date(batch.dispatchedAt) : new Date(),
                     notes: batch.notes,
                   });
@@ -390,7 +390,7 @@ const WMSDispatchBatchDetailPage = () => {
                   >
                     <div>
                       <Typography variant="bodySm" className="font-medium">
-                        {order.orderNumber}
+                        {order.invoiceNumber ?? order.orderNumber}
                       </Typography>
                       <Typography variant="bodyXs" colorRole="muted">
                         Added {new Date(order.addedAt).toLocaleDateString()}

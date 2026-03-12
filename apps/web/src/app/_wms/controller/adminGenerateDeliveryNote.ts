@@ -1,6 +1,6 @@
 import { TRPCError } from '@trpc/server';
 import { put } from '@vercel/blob';
-import { eq } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
 import { z } from 'zod';
 
 import db from '@/database/client';
@@ -8,6 +8,7 @@ import {
   wmsDeliveryNotes,
   wmsDispatchBatchOrders,
   wmsDispatchBatches,
+  zohoInvoices,
   zohoSalesOrderItems,
   zohoSalesOrders,
 } from '@/database/schema';
@@ -95,6 +96,23 @@ const adminGenerateDeliveryNote = adminProcedure
       }
     }
 
+    // Look up invoice numbers for the orders
+    const soNumbers = allZohoOrders.map((o) => o.salesOrderNumber);
+    const invoiceLookup =
+      soNumbers.length > 0
+        ? await db
+            .select({
+              referenceNumber: zohoInvoices.referenceNumber,
+              invoiceNumber: zohoInvoices.invoiceNumber,
+            })
+            .from(zohoInvoices)
+            .where(inArray(zohoInvoices.referenceNumber, soNumbers))
+        : [];
+
+    const invoiceMap = new Map(
+      invoiceLookup.map((inv) => [inv.referenceNumber, inv.invoiceNumber]),
+    );
+
     // Get items for each order
     const ordersWithItems = await Promise.all(
       allZohoOrders.map(async (order) => {
@@ -112,7 +130,7 @@ const adminGenerateDeliveryNote = adminProcedure
         const totalCases = items.reduce((sum, item) => sum + item.quantity, 0);
 
         return {
-          orderNumber: order.salesOrderNumber,
+          orderNumber: invoiceMap.get(order.salesOrderNumber) ?? order.salesOrderNumber,
           customerName: order.customerName,
           itemCount: items.length,
           totalCases,
