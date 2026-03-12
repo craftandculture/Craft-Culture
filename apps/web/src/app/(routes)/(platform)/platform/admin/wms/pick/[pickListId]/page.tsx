@@ -136,6 +136,14 @@ const WMSPickListDetailPage = () => {
     setLocationError(null);
     try {
       const result = await locationLookupMutation.mutateAsync({ barcode });
+
+      // Verify scanned location matches the suggested location
+      if (pickingItem?.suggestedLocationId && result.location.id !== pickingItem.suggestedLocationId) {
+        const suggestedCode = data?.items.find((i) => i.id === pickingItem.itemId)?.suggestedLocationCode;
+        setLocationError(`Wrong bay — go to ${suggestedCode ?? 'suggested location'}`);
+        return;
+      }
+
       setPickedLocationId(result.location.id);
       setPickedLocationCode(result.location.locationCode);
       setScanStep('case');
