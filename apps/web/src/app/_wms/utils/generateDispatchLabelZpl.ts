@@ -95,28 +95,40 @@ const generateDispatchLabelZpl = (data: DispatchLabelData) => {
   const dispatchDate = formatDate(data.dispatchedAt);
   const notesText = data.notes ? escapeZpl(truncate(data.notes, 50)) : '';
 
-  // Build order number lines (show up to 5 orders, 50px spacing)
+  // Build order number lines (show up to 5 orders, 38px spacing)
   const displayOrders = data.orderNumbers.slice(0, 5);
+  const ORDER_START_Y = 790;
+  const ORDER_SPACING = 38;
   const orderLines = displayOrders
     .map((orderNum, i) => {
-      const yPos = 790 + i * 50;
+      const yPos = ORDER_START_Y + i * ORDER_SPACING;
       return `^FO70,${yPos}
 ^A0N,34,34
 ^FD${escapeZpl(orderNum)}^FS`;
     })
     .join('\n');
 
-  const moreOrdersLine =
-    data.orderNumbers.length > 5
-      ? `^FO70,${790 + 5 * 50}
+  const hasMoreOrders = data.orderNumbers.length > 5;
+  const moreOrdersLine = hasMoreOrders
+    ? `^FO70,${ORDER_START_Y + displayOrders.length * ORDER_SPACING}
 ^A0N,28,28
 ^FD+${data.orderNumbers.length - 5} more orders^FS`
-      : '';
+    : '';
+
+  // Calculate dynamic Y positions based on order count
+  const lastOrderY = ORDER_START_Y + (displayOrders.length - 1) * ORDER_SPACING;
+  const afterOrdersY = (hasMoreOrders ? lastOrderY + ORDER_SPACING + 38 : lastOrderY + 50);
+  const notesY = afterOrdersY + 30;
+  const footerSepY = notesText ? notesY + 50 : afterOrdersY + 50;
+  const socialY = footerSepY + 25;
+  const bottomSepY = socialY + 40;
+  const summaryY = bottomSepY + 20;
 
   const zpl = `^XA
 ^PW812
 ^LL1218
 ^PR3
+~SD20
 
 ^FX -- C&C logo (400x119 dots, top-left) --
 ^FO50,20
@@ -190,39 +202,39 @@ ${orderLines}
 
 ${moreOrdersLine}
 
-^FX -- Separator --
-^FO30,950
+^FX -- Separator after orders --
+^FO30,${afterOrdersY}
 ^GB752,1,1^FS
 
 ${notesText ? `^FX -- Notes --
-^FO50,980
+^FO50,${notesY}
 ^A0N,34,34
 ^FDNotes: ${notesText}^FS
 ` : ''}
 ^FX -- Footer separator --
-^FO30,1050
+^FO30,${footerSepY}
 ^GB752,2,2^FS
 
 ^FX -- Instagram icon + handle --
-^FO50,1080
+^FO50,${socialY}
 ${INSTAGRAM_ICON}^FS
-^FO85,1083
+^FO85,${socialY + 3}
 ^A0N,22,22
 ^FD@wine.uae^FS
 
 ^FX -- Globe icon + website --
-^FO300,1080
+^FO300,${socialY}
 ${GLOBE_ICON}^FS
-^FO335,1083
+^FO335,${socialY + 3}
 ^A0N,22,22
 ^FDcraftculture.xyz^FS
 
 ^FX -- Bottom separator --
-^FO30,1130
+^FO30,${bottomSepY}
 ^GB752,2,2^FS
 
 ^FX -- Summary footer --
-^FO50,1155
+^FO50,${summaryY}
 ^A0N,22,22
 ^FD${batchNumber} | ${dispatchDate} | ${data.totalCases} cases^FS
 
