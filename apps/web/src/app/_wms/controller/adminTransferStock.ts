@@ -1,8 +1,15 @@
 import { TRPCError } from '@trpc/server';
-import { and, eq, isNull } from 'drizzle-orm';
+import { and, eq, inArray, isNull } from 'drizzle-orm';
 
 import db from '@/database/client';
-import { wmsCaseLabels, wmsLocations, wmsStock, wmsStockMovements } from '@/database/schema';
+import {
+  wmsCaseLabels,
+  wmsLocations,
+  wmsPickListItems,
+  wmsPickLists,
+  wmsStock,
+  wmsStockMovements,
+} from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
 import { transferStockSchema } from '../schemas/transferSchema';
@@ -189,7 +196,32 @@ const adminTransferStock = adminProcedure
       updatedBarcodes.push(caseLabel.barcode);
     }
 
-    // 9. Create movement record
+    // 9. Update pending pick list items that reference the old location
+    const pendingPickItems = await db
+      .select({ id: wmsPickListItems.id })
+      .from(wmsPickListItems)
+      .innerJoin(wmsPickLists, eq(wmsPickLists.id, wmsPickListItems.pickListId))
+      .where(
+        and(
+          eq(wmsPickListItems.lwin18, sourceStock.lwin18),
+          eq(wmsPickListItems.suggestedLocationId, sourceStock.locationId),
+          eq(wmsPickListItems.isPicked, false),
+          inArray(wmsPickLists.status, ['pending', 'in_progress']),
+        ),
+      );
+
+    for (const item of pendingPickItems) {
+      await db
+        .update(wmsPickListItems)
+        .set({
+          suggestedLocationId: toLocationId,
+          suggestedStockId: destStockId,
+          updatedAt: new Date(),
+        })
+        .where(eq(wmsPickListItems.id, item.id));
+    }
+
+    // 10. Create movement record
     const movementNumber = await generateMovementNumber();
     await db.insert(wmsStockMovements).values({
       movementNumber,
