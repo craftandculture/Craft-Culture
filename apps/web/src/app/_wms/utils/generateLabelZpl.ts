@@ -161,6 +161,7 @@ const generateLabelZpl = (data: LabelData) => {
     ? `^XA
 ^PR3
 ~SD20
+^LT12
 
 ^FX -- C&C logo (200x60 dots) --
 ^FO30,8
@@ -222,6 +223,7 @@ ${producer ? `^FO${vintage !== '-' ? '300' : '30'},232
     : `^XA
 ^PR3
 ~SD20
+^LT12
 
 ^FX -- C&C logo (200x60 dots, top-left) --
 ^FO30,10
