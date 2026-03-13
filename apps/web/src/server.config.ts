@@ -21,7 +21,7 @@ const serverConfig = {
   zohoRegion: serverEnv.ZOHO_REGION,
   wmsDeviceToken: serverEnv.WMS_DEVICE_TOKEN,
   wmsDeviceUserEmail: serverEnv.WMS_DEVICE_USER_EMAIL,
-  zebraPrinterIp: serverEnv.ZEBRA_PRINTER_IP || '192.168.1.236',
+  zebraPrinterIp: serverEnv.ZEBRA_PRINTER_IP || '192.168.0.112',
   zebraPrinterPort: 9100,
 } as const;
 
