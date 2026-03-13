@@ -6,6 +6,54 @@ import { useRef, useState } from 'react';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Typography from '@/app/_ui/components/Typography/Typography';
 
+/**
+ * Compress an image file using canvas to reduce size for upload.
+ * Resizes to max 2048px on longest side and compresses as JPEG.
+ */
+const compressImage = (file: File, maxDimension = 2048, quality = 0.8): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+
+      let { width, height } = img;
+
+      // Scale down if larger than max dimension
+      if (width > maxDimension || height > maxDimension) {
+        if (width > height) {
+          height = Math.round((height * maxDimension) / width);
+          width = maxDimension;
+        } else {
+          width = Math.round((width * maxDimension) / height);
+          height = maxDimension;
+        }
+      }
+
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        reject(new Error('Failed to get canvas context'));
+        return;
+      }
+
+      ctx.drawImage(img, 0, 0, width, height);
+      resolve(canvas.toDataURL('image/jpeg', quality));
+    };
+
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error('Failed to load image'));
+    };
+
+    img.src = url;
+  });
+};
+
 export interface PhotoCaptureProps {
   /** Array of existing photo URLs */
   photos: string[];
@@ -62,36 +110,17 @@ const PhotoCapture = ({
       return;
     }
 
-    // Validate file size (3MB max)
-    if (file.size > 3 * 1024 * 1024) {
-      setError('Image must be less than 3MB');
-      return;
-    }
-
     setError(null);
     setIsUploading(true);
 
     try {
-      // Convert to base64
-      const reader = new FileReader();
-      reader.onload = async (event) => {
-        const base64 = event.target?.result as string;
-        try {
-          const url = await onUpload(base64, file.name, file.type);
-          onPhotosChange([...photos, url]);
-        } catch (err) {
-          setError(err instanceof Error ? err.message : 'Failed to upload photo');
-        } finally {
-          setIsUploading(false);
-        }
-      };
-      reader.onerror = () => {
-        setError('Failed to read file');
-        setIsUploading(false);
-      };
-      reader.readAsDataURL(file);
-    } catch {
-      setError('Failed to process photo');
+      // Compress image client-side (max 2048px, JPEG 0.8 quality)
+      const base64 = await compressImage(file);
+      const url = await onUpload(base64, file.name, 'image/jpeg');
+      onPhotosChange([...photos, url]);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to upload photo');
+    } finally {
       setIsUploading(false);
     }
 

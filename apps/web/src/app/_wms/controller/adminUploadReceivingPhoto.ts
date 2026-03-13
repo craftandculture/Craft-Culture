@@ -4,7 +4,7 @@ import { z } from 'zod';
 
 import { adminProcedure } from '@/lib/trpc/procedures';
 
-const MAX_FILE_SIZE = 3 * 1024 * 1024; // 3MB (keeps under Vercel body limit after base64)
+const MAX_FILE_SIZE = 4 * 1024 * 1024; // 4MB (client compresses before upload; stays under Vercel 4.5MB body limit after base64)
 
 const uploadReceivingPhotoSchema = z.object({
   shipmentId: z.string().uuid(),
