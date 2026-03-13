@@ -6,8 +6,8 @@
  *
  * @example
  *   const printed = await wifiPrint(zpl);
- *   const printed = await wifiPrint(zpl, '192.168.1.236');
- *   const printed = await wifiPrint(zpl, '192.168.1.205', 9100);
+ *   const printed = await wifiPrint(zpl, '192.168.0.112');
+ *   const printed = await wifiPrint(zpl, '192.168.0.112', 9100);
  *
  * @param zpl - Raw ZPL string to send to the printer
  * @param printerIp - Optional IP address to target a specific printer
@@ -15,7 +15,7 @@
  * @returns true if print succeeded, false otherwise
  */
 const wifiPrint = async (zpl: string, printerIp?: string, port?: number): Promise<boolean> => {
-  const ip = printerIp || process.env.NEXT_PUBLIC_ZEBRA_PRINTER_IP || '192.168.1.236';
+  const ip = printerIp || process.env.NEXT_PUBLIC_ZEBRA_PRINTER_IP || '192.168.0.112';
 
   try {
     const controller = new AbortController();
