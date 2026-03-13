@@ -53,7 +53,17 @@ const adminGetStockByProduct = adminProcedure
     }
 
     if (category) {
-      conditions.push(eq(wmsStock.category, category));
+      // Include NULL category in Wine filter (legacy imports without category)
+      if (category === 'Wine') {
+        conditions.push(
+          or(
+            eq(wmsStock.category, 'Wine'),
+            sql`${wmsStock.category} IS NULL`,
+          ),
+        );
+      } else {
+        conditions.push(eq(wmsStock.category, category));
+      }
     }
 
     if (hasExpiry) {
