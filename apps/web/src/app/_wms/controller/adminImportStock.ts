@@ -212,7 +212,7 @@ const adminImportStock = adminProcedure
             availableCases: item.quantity,
             lotNumber,
             receivedAt: importedAt,
-            category: item.category,
+            category: item.category || 'Wine',
             salesArrangement: 'consignment',
             notes: notes ?? 'Bulk import from Zoho Inventory',
           })
