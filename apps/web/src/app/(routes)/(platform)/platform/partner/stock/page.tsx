@@ -6,14 +6,15 @@ import {
   IconChevronDown,
   IconChevronRight,
   IconDownload,
-  IconLoader2,
   IconPackage,
   IconRefresh,
   IconSearch,
+  IconSortAscending,
+  IconSortDescending,
 } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import { format, formatDistanceToNow } from 'date-fns';
-import { useMemo, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
@@ -24,6 +25,9 @@ import Input from '@/app/_ui/components/Input/Input';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import LocationBadge from '@/app/_wms/components/LocationBadge';
 import useTRPC from '@/lib/trpc/browser';
+
+type SortField = 'productName' | 'totalCases' | 'vintage';
+type SortOrder = 'asc' | 'desc';
 
 interface MovementBadgeProps {
   type: string;
@@ -58,57 +62,132 @@ const MovementBadge = ({ type, isInbound, qty }: MovementBadgeProps) => {
   );
 };
 
+/** Skeleton loading row */
+const SkeletonRow = () => (
+  <tr className="border-b border-border-muted">
+    {Array.from({ length: 8 }).map((_, i) => (
+      <td key={i} className="px-4 py-3">
+        <div className="h-4 w-full animate-pulse rounded bg-fill-secondary" />
+      </td>
+    ))}
+  </tr>
+);
+
+/** Status dot indicator */
+const StatusIndicator = ({ cases }: { cases: number }) => {
+  if (cases === 0) return <span className="inline-flex items-center gap-1.5 text-xs text-gray-500"><span className="h-2 w-2 rounded-full bg-gray-400" />Out</span>;
+  if (cases === 1) return <span className="inline-flex items-center gap-1.5 text-xs text-red-600"><span className="h-2 w-2 rounded-full bg-red-500" />Final</span>;
+  if (cases <= 2) return <span className="inline-flex items-center gap-1.5 text-xs text-amber-600"><span className="h-2 w-2 rounded-full bg-amber-500" />Low</span>;
+  return <span className="inline-flex items-center gap-1.5 text-xs text-emerald-600"><span className="h-2 w-2 rounded-full bg-emerald-500" />Good</span>;
+};
+
 /**
  * Partner stock view - shows stock owned by the logged-in partner
+ * Matches the Stock Explorer UX with table layout and expandable rows
  */
 const PartnerStockPage = () => {
   const api = useTRPC();
   const [expandedProducts, setExpandedProducts] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [sortField, setSortField] = useState<SortField>('productName');
+  const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>(null);
 
   const { data, isLoading, refetch } = useQuery({
     ...api.wms.partner.getStock.queryOptions(),
   });
 
+  // Debounce search
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 300);
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [search]);
+
   const filteredProducts = useMemo(() => {
     if (!data?.products) return [];
-    if (!search.trim()) return data.products;
-    const q = search.toLowerCase();
-    return data.products.filter(
-      (p) =>
-        p.productName.toLowerCase().includes(q) ||
-        p.lwin18.toLowerCase().includes(q) ||
-        (p.vintage && p.vintage.toLowerCase().includes(q)),
-    );
-  }, [data?.products, search]);
+    let results = data.products;
 
-  const toggleProduct = (lwin18: string) => {
-    const newExpanded = new Set(expandedProducts);
-    if (newExpanded.has(lwin18)) {
-      newExpanded.delete(lwin18);
-    } else {
-      newExpanded.add(lwin18);
+    // Search filter
+    if (debouncedSearch.trim()) {
+      const q = debouncedSearch.toLowerCase();
+      results = results.filter(
+        (p) =>
+          (p.productName ?? '').toLowerCase().includes(q) ||
+          (p.lwin18 ?? '').toLowerCase().includes(q) ||
+          (p.vintage ?? '').toLowerCase().includes(q) ||
+          (p.producer ?? '').toLowerCase().includes(q),
+      );
     }
-    setExpandedProducts(newExpanded);
-  };
+
+    // Sort
+    return [...results].sort((a, b) => {
+      const dir = sortOrder === 'asc' ? 1 : -1;
+      if (sortField === 'productName') {
+        return dir * (a.productName ?? '').localeCompare(b.productName ?? '');
+      }
+      if (sortField === 'totalCases') {
+        return dir * (a.totalCases - b.totalCases);
+      }
+      if (sortField === 'vintage') {
+        return dir * (a.vintage ?? '').localeCompare(b.vintage ?? '');
+      }
+      return 0;
+    });
+  }, [data?.products, debouncedSearch, sortField, sortOrder]);
+
+  const toggleProduct = useCallback((key: string) => {
+    setExpandedProducts((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }, []);
 
   /** Get movements for a specific product */
-  const getProductMovements = (lwin18: string) => {
+  const getProductMovements = useCallback((lwin18: string) => {
     if (!data?.recentMovements) return [];
     return data.recentMovements.filter((m) => m.lwin18 === lwin18);
-  };
+  }, [data?.recentMovements]);
 
   /** Check if a movement is inbound to this partner */
-  const isInbound = (movement: { toOwnerId: string | null; fromOwnerId: string | null }) => {
+  const isInbound = useCallback((movement: { toOwnerId: string | null; fromOwnerId: string | null }) => {
     return movement.toOwnerId === data?.partner.id;
+  }, [data?.partner.id]);
+
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortOrder((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortField(field);
+      setSortOrder('asc');
+    }
+  };
+
+  const renderSortIcon = (field: SortField) => {
+    if (sortField !== field) return null;
+    return (
+      <Icon
+        icon={sortOrder === 'asc' ? IconSortAscending : IconSortDescending}
+        size="xs"
+        className="ml-1 inline"
+      />
+    );
   };
 
   const handleExportCSV = () => {
     if (!data?.products) return;
 
-    const headers = ['Product', 'LWIN-18', 'Vintage', 'Pack', 'Total Cases', 'Available', 'Reserved'];
+    const headers = ['Product', 'Producer', 'LWIN-18', 'Vintage', 'Pack', 'Total Cases', 'Available', 'Reserved'];
     const rows = data.products.map((p) => [
-      p.productName,
+      `"${(p.productName ?? '').replace(/"/g, '""')}"`,
+      `"${(p.producer ?? '').replace(/"/g, '""')}"`,
       p.lwin18,
       p.vintage ?? '',
       `${p.caseConfig}x${p.bottleSize}`,
@@ -127,22 +206,18 @@ const PartnerStockPage = () => {
     window.URL.revokeObjectURL(url);
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex h-96 items-center justify-center">
-        <Icon icon={IconLoader2} className="animate-spin" size="lg" />
-      </div>
-    );
-  }
+  /** Composite row key to handle duplicate lwin18 with different salesArrangement */
+  const rowKey = (product: { lwin18: string; caseConfig: number | null; salesArrangement: string | null }) =>
+    `${product.lwin18}-${product.caseConfig ?? ''}-${product.salesArrangement ?? ''}`;
 
   return (
-    <div className="container mx-auto max-w-5xl px-4 py-6 sm:px-6 sm:py-8">
+    <div className="container mx-auto max-w-[1400px] px-4 py-6 sm:px-6 sm:py-8">
       <div className="space-y-6">
         {/* Header */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <Typography variant="headingLg">Local Stock</Typography>
-            <Typography variant="bodyMd" colorRole="muted">
+            <Typography variant="bodySm" colorRole="muted" className="mt-1">
               Products stored at C&C bonded warehouse
             </Typography>
           </div>
@@ -158,41 +233,51 @@ const PartnerStockPage = () => {
 
         {/* Summary Cards */}
         {data?.summary && (
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <Card>
-              <CardContent className="p-4 text-center">
-                <Typography variant="headingLg">{data.summary.productCount}</Typography>
-                <Typography variant="bodyXs" colorRole="muted">
+              <CardContent className="p-4">
+                <Typography variant="bodyXs" colorRole="muted" className="mb-1">
                   Products
                 </Typography>
+                <Typography variant="headingLg">{data.summary.productCount}</Typography>
               </CardContent>
             </Card>
             <Card>
-              <CardContent className="p-4 text-center">
-                <Typography variant="headingLg">{data.summary.totalCases}</Typography>
-                <Typography variant="bodyXs" colorRole="muted">
+              <CardContent className="p-4">
+                <Typography variant="bodyXs" colorRole="muted" className="mb-1">
                   Total Cases
                 </Typography>
+                <Typography variant="headingLg">{data.summary.totalCases}</Typography>
               </CardContent>
             </Card>
             <Card>
-              <CardContent className="p-4 text-center">
+              <CardContent className="p-4">
+                <Typography variant="bodyXs" colorRole="muted" className="mb-1">
+                  Available
+                </Typography>
                 <Typography variant="headingLg" className="text-emerald-600">
                   {data.summary.availableCases}
                 </Typography>
-                <Typography variant="bodyXs" colorRole="muted">
-                  Available
-                </Typography>
+                {data.summary.totalCases > 0 && (
+                  <Typography variant="bodyXs" colorRole="muted">
+                    {Math.round((data.summary.availableCases / data.summary.totalCases) * 100)}%
+                  </Typography>
+                )}
               </CardContent>
             </Card>
             <Card>
-              <CardContent className="p-4 text-center">
+              <CardContent className="p-4">
+                <Typography variant="bodyXs" colorRole="muted" className="mb-1">
+                  Reserved
+                </Typography>
                 <Typography variant="headingLg" className="text-amber-600">
                   {data.summary.reservedCases}
                 </Typography>
-                <Typography variant="bodyXs" colorRole="muted">
-                  Reserved
-                </Typography>
+                {data.summary.totalCases > 0 && (
+                  <Typography variant="bodyXs" colorRole="muted">
+                    {Math.round((data.summary.reservedCases / data.summary.totalCases) * 100)}%
+                  </Typography>
+                )}
               </CardContent>
             </Card>
           </div>
@@ -200,185 +285,344 @@ const PartnerStockPage = () => {
 
         {/* Search */}
         <Input
-          placeholder="Search by product name, LWIN, or vintage..."
+          placeholder="Search by product name, producer, LWIN, or vintage..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           iconLeft={IconSearch}
-          className="max-w-md"
         />
 
-        {/* Products List */}
-        {!filteredProducts.length ? (
-          <Card>
-            <CardContent className="p-12 text-center">
-              <Icon icon={IconPackage} size="xl" className="mx-auto mb-4 text-text-muted" />
-              <Typography variant="headingSm">
-                {search ? 'No products match your search' : 'No stock yet'}
-              </Typography>
-              <Typography variant="bodyMd" colorRole="muted" className="mt-2">
-                {search
-                  ? 'Try adjusting your search terms'
-                  : 'Your stock will appear here once shipments are received'}
-              </Typography>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="space-y-3">
-            {filteredProducts.map((product) => {
-              const isExpanded = expandedProducts.has(product.lwin18);
-              const productMovements = isExpanded ? getProductMovements(product.lwin18) : [];
-              return (
-                <Card key={product.lwin18}>
-                  <CardContent className="p-0">
-                    {/* Product Header */}
-                    <button
-                      onClick={() => toggleProduct(product.lwin18)}
-                      className="flex w-full items-center justify-between p-4 text-left transition-colors hover:bg-fill-secondary/50"
+        {/* Results count */}
+        <div className="flex items-center justify-between">
+          <Typography variant="bodyXs" colorRole="muted">
+            {filteredProducts.length} {filteredProducts.length === 1 ? 'product' : 'products'}
+            {debouncedSearch && ` matching "${debouncedSearch}"`}
+          </Typography>
+        </div>
+
+        {/* Data Table */}
+        <Card>
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-border-muted bg-surface-secondary/50">
+                    <th className="w-10 px-2 py-3" />
+                    <th
+                      className="cursor-pointer px-4 py-3 text-left transition-colors hover:bg-fill-secondary/50"
+                      onClick={() => handleSort('productName')}
                     >
-                      <div className="flex items-center gap-3">
-                        <Icon
-                          icon={isExpanded ? IconChevronDown : IconChevronRight}
-                          size="sm"
-                          colorRole="muted"
-                        />
-                        <div>
-                          <Typography variant="bodySm" className="font-semibold">
-                            {product.productName}
-                          </Typography>
-                          <div className="flex items-center gap-2">
-                            <Typography variant="bodyXs" colorRole="muted" className="font-mono">
-                              {product.lwin18}
-                            </Typography>
-                            {product.vintage && (
-                              <Typography variant="bodyXs" colorRole="muted">
-                                {product.vintage}
-                              </Typography>
-                            )}
-                            <Typography variant="bodyXs" colorRole="muted">
-                              {product.caseConfig}x{product.bottleSize}
-                            </Typography>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-6 text-right">
-                        <div>
-                          <Typography variant="bodySm" className="font-semibold">
-                            {product.totalCases}
-                          </Typography>
-                          <Typography variant="bodyXs" colorRole="muted">
-                            cases
-                          </Typography>
-                        </div>
-                        <div>
-                          <Typography variant="bodySm" className="font-semibold text-emerald-600">
-                            {product.availableCases}
-                          </Typography>
-                          <Typography variant="bodyXs" colorRole="muted">
-                            available
-                          </Typography>
-                        </div>
-                        {product.reservedCases > 0 && (
-                          <div>
-                            <Typography variant="bodySm" className="font-semibold text-amber-600">
-                              {product.reservedCases}
-                            </Typography>
-                            <Typography variant="bodyXs" colorRole="muted">
-                              reserved
-                            </Typography>
-                          </div>
-                        )}
-                      </div>
-                    </button>
+                      <Typography variant="labelSm">
+                        Product {renderSortIcon('productName')}
+                      </Typography>
+                    </th>
+                    <th className="hidden px-4 py-3 text-left xl:table-cell">
+                      <Typography variant="labelSm">LWIN-18</Typography>
+                    </th>
+                    <th
+                      className="cursor-pointer px-4 py-3 text-center transition-colors hover:bg-fill-secondary/50"
+                      onClick={() => handleSort('vintage')}
+                    >
+                      <Typography variant="labelSm">
+                        Vintage {renderSortIcon('vintage')}
+                      </Typography>
+                    </th>
+                    <th className="hidden px-4 py-3 text-center md:table-cell">
+                      <Typography variant="labelSm">Pack</Typography>
+                    </th>
+                    <th
+                      className="cursor-pointer px-4 py-3 text-right transition-colors hover:bg-fill-secondary/50"
+                      onClick={() => handleSort('totalCases')}
+                    >
+                      <Typography variant="labelSm">
+                        Cases {renderSortIcon('totalCases')}
+                      </Typography>
+                    </th>
+                    <th className="px-4 py-3 text-right">
+                      <Typography variant="labelSm">Available</Typography>
+                    </th>
+                    <th className="px-4 py-3 text-right">
+                      <Typography variant="labelSm">Reserved</Typography>
+                    </th>
+                    <th className="hidden px-4 py-3 text-center lg:table-cell">
+                      <Typography variant="labelSm">Locations</Typography>
+                    </th>
+                    <th className="hidden px-4 py-3 text-center lg:table-cell">
+                      <Typography variant="labelSm">Status</Typography>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {isLoading ? (
+                    <>
+                      <SkeletonRow />
+                      <SkeletonRow />
+                      <SkeletonRow />
+                      <SkeletonRow />
+                      <SkeletonRow />
+                    </>
+                  ) : filteredProducts.length === 0 ? (
+                    <tr>
+                      <td colSpan={10} className="py-16 text-center">
+                        <Icon icon={IconPackage} size="xl" className="mx-auto mb-3 text-text-muted" />
+                        <Typography variant="bodySm" colorRole="muted">
+                          {debouncedSearch ? 'No products match your search' : 'No stock yet'}
+                        </Typography>
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredProducts.map((product) => {
+                      const key = rowKey(product);
+                      const isExpanded = expandedProducts.has(key);
+                      const productMovements = isExpanded ? getProductMovements(product.lwin18) : [];
+                      const availPct = product.totalCases > 0
+                        ? Math.round((product.availableCases / product.totalCases) * 100)
+                        : 0;
 
-                    {/* Expanded Details */}
-                    {isExpanded && (
-                      <div className="border-t border-border-primary bg-fill-secondary/30 px-4 py-3">
-                        {/* Location Details */}
-                        {product.locations && product.locations.length > 0 && (
-                          <div className="mb-4">
-                            <Typography variant="bodyXs" className="mb-2 font-medium text-text-muted">
-                              Location Details
-                            </Typography>
-                            <div className="space-y-2">
-                              {product.locations.map((loc, idx) => (
-                                <div
-                                  key={`${loc.locationId}-${idx}`}
-                                  className="flex items-center justify-between rounded bg-fill-primary p-2"
-                                >
-                                  <div className="flex items-center gap-3">
-                                    <LocationBadge locationCode={loc.locationCode} size="sm" />
-                                    {loc.lotNumber && (
-                                      <Typography variant="bodyXs" colorRole="muted">
-                                        Lot: {loc.lotNumber}
-                                      </Typography>
-                                    )}
-                                    {loc.expiryDate && (
-                                      <Typography variant="bodyXs" className="text-amber-600">
-                                        Exp: {new Date(loc.expiryDate).toLocaleDateString()}
-                                      </Typography>
-                                    )}
-                                  </div>
-                                  <div className="flex items-center gap-4">
-                                    <Typography variant="bodyXs">
-                                      {loc.quantityCases} cases
-                                    </Typography>
-                                    {loc.reservedCases > 0 && (
-                                      <Typography variant="bodyXs" className="text-amber-600">
-                                        ({loc.reservedCases} reserved)
-                                      </Typography>
-                                    )}
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Product Movement History */}
-                        {productMovements.length > 0 && (
-                          <div>
-                            <Typography variant="bodyXs" className="mb-2 font-medium text-text-muted">
-                              Movement History
-                            </Typography>
-                            <div className="space-y-1">
-                              {productMovements.map((m) => (
-                                <div
-                                  key={m.id}
-                                  className="flex items-center justify-between rounded bg-fill-primary px-3 py-2"
-                                >
-                                  <div className="flex items-center gap-3">
-                                    <Typography variant="bodyXs" colorRole="muted" className="w-20 shrink-0">
-                                      {format(new Date(m.performedAt), 'dd MMM yy')}
-                                    </Typography>
-                                    <MovementBadge
-                                      type={m.movementType}
-                                      isInbound={isInbound(m)}
-                                      qty={m.quantityCases}
-                                    />
-                                  </div>
+                      return (
+                        <Fragment key={key}>
+                          {/* Product Row */}
+                          <tr
+                            className="cursor-pointer border-b border-border-muted transition-colors hover:bg-fill-secondary/30"
+                            onClick={() => toggleProduct(key)}
+                          >
+                            <td className="px-2 py-3 text-center">
+                              <Icon
+                                icon={isExpanded ? IconChevronDown : IconChevronRight}
+                                size="sm"
+                                colorRole="muted"
+                              />
+                            </td>
+                            <td className="px-4 py-3">
+                              <div>
+                                <Typography variant="bodySm" className="font-medium">
+                                  {product.productName}
+                                </Typography>
+                                {product.producer && (
                                   <Typography variant="bodyXs" colorRole="muted">
-                                    {m.quantityCases} cases
+                                    {product.producer}
                                   </Typography>
+                                )}
+                              </div>
+                            </td>
+                            <td className="hidden px-4 py-3 xl:table-cell">
+                              <Typography variant="bodyXs" colorRole="muted" className="font-mono">
+                                {product.lwin18}
+                              </Typography>
+                            </td>
+                            <td className="px-4 py-3 text-center">
+                              <Typography variant="bodySm">
+                                {product.vintage ?? 'NV'}
+                              </Typography>
+                            </td>
+                            <td className="hidden px-4 py-3 text-center md:table-cell">
+                              <Typography variant="bodySm" colorRole="muted">
+                                {product.caseConfig}x{product.bottleSize}
+                              </Typography>
+                            </td>
+                            <td className="px-4 py-3 text-right">
+                              <Typography variant="bodySm" className="font-semibold">
+                                {product.totalCases}
+                              </Typography>
+                            </td>
+                            <td className="px-4 py-3 text-right">
+                              <div className="flex items-center justify-end gap-2">
+                                <Typography variant="bodySm" className="font-medium text-emerald-600">
+                                  {product.availableCases}
+                                </Typography>
+                                {/* Availability bar */}
+                                <div className="hidden h-1.5 w-12 overflow-hidden rounded-full bg-gray-200 sm:block">
+                                  <div
+                                    className={`h-full rounded-full transition-all ${
+                                      availPct >= 75 ? 'bg-emerald-500' : availPct >= 25 ? 'bg-amber-500' : 'bg-red-500'
+                                    }`}
+                                    style={{ width: `${availPct}%` }}
+                                  />
                                 </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 text-right">
+                              {product.reservedCases > 0 ? (
+                                <Typography variant="bodySm" className="font-medium text-amber-600">
+                                  {product.reservedCases}
+                                </Typography>
+                              ) : (
+                                <Typography variant="bodySm" colorRole="muted">
+                                  —
+                                </Typography>
+                              )}
+                            </td>
+                            <td className="hidden px-4 py-3 text-center lg:table-cell">
+                              <Typography variant="bodySm" colorRole="muted">
+                                {product.locationCount}
+                              </Typography>
+                            </td>
+                            <td className="hidden px-4 py-3 text-center lg:table-cell">
+                              <StatusIndicator cases={product.availableCases} />
+                            </td>
+                          </tr>
 
-                        {/* No movements message */}
-                        {productMovements.length === 0 && (!product.locations || product.locations.length === 0) && (
-                          <Typography variant="bodyXs" colorRole="muted">
-                            No location or movement data available
-                          </Typography>
-                        )}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
-        )}
+                          {/* Expanded Details */}
+                          {isExpanded && (
+                            <tr>
+                              <td colSpan={10} className="bg-surface-secondary/40 p-0">
+                                <div className="px-6 py-4">
+                                  {/* Location Breakdown */}
+                                  {product.locations && product.locations.length > 0 && (
+                                    <div className="mb-4">
+                                      <Typography variant="labelSm" className="mb-2">
+                                        Location Breakdown
+                                      </Typography>
+                                      <div className="overflow-x-auto rounded-lg border border-border-muted bg-fill-primary">
+                                        <table className="w-full">
+                                          <thead>
+                                            <tr className="border-b border-border-muted bg-surface-secondary/30">
+                                              <th className="px-3 py-2 text-left">
+                                                <Typography variant="labelSm">Location</Typography>
+                                              </th>
+                                              <th className="px-3 py-2 text-right">
+                                                <Typography variant="labelSm">Qty</Typography>
+                                              </th>
+                                              <th className="px-3 py-2 text-right">
+                                                <Typography variant="labelSm">Avail</Typography>
+                                              </th>
+                                              <th className="hidden px-3 py-2 text-left sm:table-cell">
+                                                <Typography variant="labelSm">Lot</Typography>
+                                              </th>
+                                              <th className="hidden px-3 py-2 text-left md:table-cell">
+                                                <Typography variant="labelSm">Expiry</Typography>
+                                              </th>
+                                            </tr>
+                                          </thead>
+                                          <tbody>
+                                            {product.locations.map((loc, idx) => {
+                                              const locAvailPct = loc.quantityCases > 0
+                                                ? Math.round((loc.availableCases / loc.quantityCases) * 100)
+                                                : 0;
+                                              return (
+                                                <tr
+                                                  key={`${loc.locationId}-${idx}`}
+                                                  className="border-b border-border-muted/50 last:border-0"
+                                                >
+                                                  <td className="px-3 py-2">
+                                                    <LocationBadge locationCode={loc.locationCode} size="sm" />
+                                                  </td>
+                                                  <td className="px-3 py-2 text-right">
+                                                    <Typography variant="bodySm" className="font-medium">
+                                                      {loc.quantityCases}
+                                                    </Typography>
+                                                  </td>
+                                                  <td className="px-3 py-2 text-right">
+                                                    <div className="flex items-center justify-end gap-2">
+                                                      <Typography variant="bodySm" className="text-emerald-600">
+                                                        {loc.availableCases}
+                                                      </Typography>
+                                                      <div className="h-1.5 w-10 overflow-hidden rounded-full bg-gray-200">
+                                                        <div
+                                                          className={`h-full rounded-full ${
+                                                            locAvailPct >= 75 ? 'bg-emerald-500' : locAvailPct >= 25 ? 'bg-amber-500' : 'bg-red-500'
+                                                          }`}
+                                                          style={{ width: `${locAvailPct}%` }}
+                                                        />
+                                                      </div>
+                                                    </div>
+                                                  </td>
+                                                  <td className="hidden px-3 py-2 sm:table-cell">
+                                                    <Typography variant="bodyXs" colorRole="muted" className="font-mono">
+                                                      {loc.lotNumber ?? '—'}
+                                                    </Typography>
+                                                  </td>
+                                                  <td className="hidden px-3 py-2 md:table-cell">
+                                                    {loc.expiryDate ? (
+                                                      <Typography variant="bodyXs" className="text-amber-600">
+                                                        {new Date(loc.expiryDate).toLocaleDateString()}
+                                                      </Typography>
+                                                    ) : (
+                                                      <Typography variant="bodyXs" colorRole="muted">—</Typography>
+                                                    )}
+                                                  </td>
+                                                </tr>
+                                              );
+                                            })}
+                                          </tbody>
+                                        </table>
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  {/* Product Movement History */}
+                                  {productMovements.length > 0 && (
+                                    <div>
+                                      <Typography variant="labelSm" className="mb-2">
+                                        Movement History
+                                      </Typography>
+                                      <div className="overflow-x-auto rounded-lg border border-border-muted bg-fill-primary">
+                                        <table className="w-full">
+                                          <thead>
+                                            <tr className="border-b border-border-muted bg-surface-secondary/30">
+                                              <th className="px-3 py-2 text-left">
+                                                <Typography variant="labelSm">Date</Typography>
+                                              </th>
+                                              <th className="px-3 py-2 text-left">
+                                                <Typography variant="labelSm">Type</Typography>
+                                              </th>
+                                              <th className="px-3 py-2 text-right">
+                                                <Typography variant="labelSm">Cases</Typography>
+                                              </th>
+                                            </tr>
+                                          </thead>
+                                          <tbody>
+                                            {productMovements.map((m) => (
+                                              <tr
+                                                key={m.id}
+                                                className="border-b border-border-muted/50 last:border-0"
+                                              >
+                                                <td className="px-3 py-2">
+                                                  <Typography variant="bodyXs" colorRole="muted">
+                                                    {format(new Date(m.performedAt), 'dd MMM yy')}
+                                                  </Typography>
+                                                </td>
+                                                <td className="px-3 py-2">
+                                                  <MovementBadge
+                                                    type={m.movementType}
+                                                    isInbound={isInbound(m)}
+                                                    qty={m.quantityCases}
+                                                  />
+                                                </td>
+                                                <td className="px-3 py-2 text-right">
+                                                  <Typography
+                                                    variant="bodySm"
+                                                    className={`font-medium ${isInbound(m) ? 'text-emerald-600' : 'text-amber-600'}`}
+                                                  >
+                                                    {isInbound(m) ? '+' : '-'}{m.quantityCases}
+                                                  </Typography>
+                                                </td>
+                                              </tr>
+                                            ))}
+                                          </tbody>
+                                        </table>
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  {/* Empty expanded state */}
+                                  {productMovements.length === 0 && (!product.locations || product.locations.length === 0) && (
+                                    <Typography variant="bodyXs" colorRole="muted">
+                                      No location or movement data available
+                                    </Typography>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                        </Fragment>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Recent Activity */}
         {data?.recentMovements && data.recentMovements.length > 0 && (
@@ -392,15 +636,15 @@ const PartnerStockPage = () => {
                   {data.recentMovements.slice(0, 10).map((m) => (
                     <div key={m.id} className="flex items-center justify-between px-4 py-3">
                       <div className="flex items-center gap-3">
-                        <div className={`flex h-8 w-8 items-center justify-center rounded-full ${isInbound(m) ? 'bg-emerald-100' : 'bg-amber-100'}`}>
+                        <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${isInbound(m) ? 'bg-emerald-100' : 'bg-amber-100'}`}>
                           <Icon
                             icon={isInbound(m) ? IconArrowDown : IconArrowUp}
                             size="sm"
                             className={isInbound(m) ? 'text-emerald-600' : 'text-amber-600'}
                           />
                         </div>
-                        <div>
-                          <Typography variant="bodySm" className="font-medium">
+                        <div className="min-w-0">
+                          <Typography variant="bodySm" className="truncate font-medium">
                             {m.productName}
                           </Typography>
                           <Typography variant="bodyXs" colorRole="muted">
@@ -409,11 +653,13 @@ const PartnerStockPage = () => {
                           </Typography>
                         </div>
                       </div>
-                      <MovementBadge
-                        type={m.movementType}
-                        isInbound={isInbound(m)}
-                        qty={m.quantityCases}
-                      />
+                      <div className="shrink-0 pl-3">
+                        <MovementBadge
+                          type={m.movementType}
+                          isInbound={isInbound(m)}
+                          qty={m.quantityCases}
+                        />
+                      </div>
                     </div>
                   ))}
                 </div>
