@@ -12,12 +12,12 @@ const LocalServerContext = createContext<LocalServerContextValue>({
   baseUrl: null,
 });
 
-const HEALTH_CHECK_INTERVAL = 30_000;
+const HEALTH_CHECK_INTERVAL = 10_000;
 const HEALTH_CHECK_TIMEOUT = 2_000;
 
 /**
  * Provides local NUC server availability to WMS pages.
- * Pings the NUC health endpoint every 30s with a 2s timeout.
+ * Pings the NUC health endpoint every 10s with a 2s timeout.
  */
 const LocalServerProvider = ({ children }: React.PropsWithChildren) => {
   const [isAvailable, setIsAvailable] = useState(false);
@@ -55,7 +55,7 @@ const LocalServerProvider = ({ children }: React.PropsWithChildren) => {
     // Check immediately on mount
     void checkHealth();
 
-    // Then check every 30s
+    // Then check every 10s
     timerRef.current = setInterval(() => {
       void checkHealth();
     }, HEALTH_CHECK_INTERVAL);

@@ -43,21 +43,19 @@ const ConnectionStatus = () => {
     };
   }, []);
 
-  // Show local mode indicator as a small pill (always visible when local)
-  if (isLocalAvailable && isOnline && !showBanner) {
-    return (
-      <div className="fixed right-4 top-16 z-40 flex items-center gap-1.5 rounded-full bg-emerald-600 px-3 py-1 shadow-sm">
-        <Icon icon={IconServer} size="xs" className="text-white" />
-        <Typography variant="bodyXs" className="font-medium text-white">
-          Local
-        </Typography>
-      </div>
-    );
-  }
+  // Show local mode indicator as a small pill (always visible when local server is connected)
+  const localPill = isLocalAvailable && isOnline ? (
+    <div className="fixed right-4 top-16 z-40 flex items-center gap-1.5 rounded-full bg-emerald-600 px-3 py-1 shadow-sm">
+      <Icon icon={IconServer} size="xs" className="text-white" />
+      <Typography variant="bodyXs" className="font-medium text-white">
+        Local
+      </Typography>
+    </div>
+  ) : null;
 
-  // Cloud mode — don't show anything (it's the default)
-  if (isOnline && !isLocalAvailable && !showBanner) {
-    return null;
+  // Cloud mode — just show local pill if available
+  if (isOnline && !showBanner) {
+    return localPill;
   }
 
   // Banner states
@@ -72,19 +70,22 @@ const ConnectionStatus = () => {
     );
   }
 
-  // Just came back online
+  // Just came back online — show banner + keep local pill visible
   if (showBanner) {
     return (
-      <div className="fixed left-0 right-0 top-0 z-50 flex items-center justify-center gap-2 bg-emerald-500 px-4 py-2 text-white">
-        <Icon icon={IconWifi} size="sm" className="text-white" />
-        <Typography variant="bodySm" className="font-medium text-white">
-          Back online — syncing changes...
-        </Typography>
-      </div>
+      <>
+        <div className="fixed left-0 right-0 top-0 z-50 flex items-center justify-center gap-2 bg-emerald-500 px-4 py-2 text-white">
+          <Icon icon={IconWifi} size="sm" className="text-white" />
+          <Typography variant="bodySm" className="font-medium text-white">
+            Back online — syncing changes...
+          </Typography>
+        </div>
+        {localPill}
+      </>
     );
   }
 
-  return null;
+  return localPill;
 };
 
 export default ConnectionStatus;

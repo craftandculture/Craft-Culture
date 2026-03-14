@@ -15,7 +15,7 @@ import {
 } from '@tabler/icons-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
@@ -138,10 +138,11 @@ const WMSRepackPage = () => {
   const [repackResult, setRepackResult] = useState<RepackResult | null>(null);
 
   // Repack mutation
-  const repackMutation = useMutation({
+  const { mutate: executeRepack, isPending: isRepacking } = useMutation({
     ...api.wms.admin.operations.repack.mutationOptions(),
     onSuccess: (data) => {
-      void queryClient.invalidateQueries();
+      void queryClient.invalidateQueries({ queryKey: [['wms', 'admin', 'stock']] });
+      void queryClient.invalidateQueries({ queryKey: [['wms', 'admin', 'operations']] });
       setRepackResult({
         repackNumber: data.repackNumber,
         source: {
@@ -170,7 +171,7 @@ const WMSRepackPage = () => {
     },
   });
 
-  const handleSourceLocationScan = async (barcode: string) => {
+  const handleSourceLocationScan = useCallback(async (barcode: string) => {
     setError('');
     setIsSourceScanning(true);
     try {
@@ -198,9 +199,9 @@ const WMSRepackPage = () => {
     } finally {
       setIsSourceScanning(false);
     }
-  };
+  }, [wmsApi]);
 
-  const handleDestinationLocationScan = async (barcode: string) => {
+  const handleDestinationLocationScan = useCallback(async (barcode: string) => {
     setError('');
     try {
       const result = await wmsApi.scanLocation(barcode);
@@ -212,7 +213,7 @@ const WMSRepackPage = () => {
 
       // Execute the repack with the destination location
       if (selectedStock) {
-        repackMutation.mutate({
+        executeRepack({
           stockId: selectedStock.id,
           sourceQuantityCases: 1,
           targetCaseConfig,
@@ -222,7 +223,7 @@ const WMSRepackPage = () => {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Location not found');
     }
-  };
+  }, [wmsApi, selectedStock, targetCaseConfig, executeRepack]);
 
   const handleSelectStock = (stock: StockItem) => {
     setSelectedStock(stock);
@@ -615,12 +616,12 @@ const WMSRepackPage = () => {
                 label="Destination bay barcode"
                 placeholder="LOC-..."
                 onScan={handleDestinationLocationScan}
-                isLoading={repackMutation.isPending}
+                isLoading={isRepacking}
                 error={error}
-                disabled={repackMutation.isPending}
+                disabled={isRepacking}
               />
 
-              {repackMutation.isPending && (
+              {isRepacking && (
                 <div className="mt-4 flex items-center justify-center gap-2 text-blue-600">
                   <IconLoader2 className="h-5 w-5 animate-spin" />
                   <Typography variant="bodySm">Processing repack...</Typography>
@@ -632,7 +633,7 @@ const WMSRepackPage = () => {
                 size="lg"
                 className="mt-4 w-full"
                 onClick={() => setStep('physical-repack')}
-                disabled={repackMutation.isPending}
+                disabled={isRepacking}
               >
                 <ButtonContent iconLeft={IconArrowLeft}>Back</ButtonContent>
               </Button>
