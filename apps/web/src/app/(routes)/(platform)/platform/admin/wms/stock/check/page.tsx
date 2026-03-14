@@ -96,23 +96,35 @@ const getAdjacentLocations = (code: string): { prev: string | null; next: string
 };
 
 /**
- * Extract lwin18 from a case barcode
+ * Extract lwin18 from a case or pallet barcode
  * Case barcode format: CASE-{lwin18}-{sequence}
+ * Pallet barcode format: PLT-{lwin18}-{cases}C
  * Example: CASE-1002720201500600750-001 → 1002720201500600750
+ * Example: PLT-1838989-2022-06-00750-70C → 1838989-2022-06-00750
  */
 const extractLwin18FromBarcode = (barcode: string): string | null => {
   // Check if it's a case barcode
   if (barcode.startsWith('CASE-')) {
     const parts = barcode.split('-');
-    // CASE-{lwin18}-{seq} has at least 3 parts
     if (parts.length >= 3) {
-      // lwin18 is the middle part (could have multiple segments if lwin has dashes)
-      // Join everything except first (CASE) and last (sequence) parts
       const lwin18 = parts.slice(1, -1).join('-');
       return lwin18;
     }
   }
-  // If not a case barcode, assume it's a raw lwin18/SKU
+  // Check if it's a pallet barcode (PLT-{lwin18}-{count}C)
+  if (barcode.startsWith('PLT-')) {
+    const parts = barcode.split('-');
+    if (parts.length >= 3) {
+      // Last segment ends with 'C' (case count) — strip PLT prefix and case count suffix
+      const lastPart = parts[parts.length - 1] ?? '';
+      if (/^\d+C$/i.test(lastPart)) {
+        return parts.slice(1, -1).join('-');
+      }
+      // Fallback: strip just the PLT prefix
+      return parts.slice(1).join('-');
+    }
+  }
+  // If not a case/pallet barcode, assume it's a raw lwin18/SKU
   return barcode;
 };
 
