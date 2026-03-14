@@ -175,7 +175,7 @@ const PartnerStockPage = () => {
         return dir * (a.totalCases - b.totalCases);
       }
       if (sortField === 'vintage') {
-        return dir * (a.vintage ?? '').localeCompare(b.vintage ?? '');
+        return dir * ((a.vintage ?? 0) - (b.vintage ?? 0));
       }
       return 0;
     });
