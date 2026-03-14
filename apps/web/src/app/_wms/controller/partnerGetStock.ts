@@ -1,4 +1,4 @@
-import { desc, eq, or, sql } from 'drizzle-orm';
+import { and, desc, eq, gt, or, sql } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { wmsLocations, wmsStock, wmsStockMovements } from '@/database/schema';
@@ -28,7 +28,7 @@ const partnerGetStock = winePartnerProcedure.query(async ({ ctx: { partner } }) 
       salesArrangement: wmsStock.salesArrangement,
     })
     .from(wmsStock)
-    .where(eq(wmsStock.ownerId, partner.id))
+    .where(and(eq(wmsStock.ownerId, partner.id), gt(wmsStock.quantityCases, 0)))
     .groupBy(
       wmsStock.lwin18,
       wmsStock.productName,
@@ -60,7 +60,7 @@ const partnerGetStock = winePartnerProcedure.query(async ({ ctx: { partner } }) 
     })
     .from(wmsStock)
     .innerJoin(wmsLocations, eq(wmsStock.locationId, wmsLocations.id))
-    .where(eq(wmsStock.ownerId, partner.id))
+    .where(and(eq(wmsStock.ownerId, partner.id), gt(wmsStock.quantityCases, 0)))
     .orderBy(wmsStock.lwin18, wmsLocations.locationCode);
 
   // Group locations by LWIN

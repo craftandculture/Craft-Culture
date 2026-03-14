@@ -1,5 +1,5 @@
 import { TRPCError } from '@trpc/server';
-import { eq } from 'drizzle-orm';
+import { and, eq, gt } from 'drizzle-orm';
 import { z } from 'zod';
 
 import db from '@/database/client';
@@ -56,7 +56,7 @@ const adminGetLocation = adminProcedure
       })
       .from(wmsStock)
       .leftJoin(partners, eq(partners.id, wmsStock.ownerId))
-      .where(eq(wmsStock.locationId, input.id));
+      .where(and(eq(wmsStock.locationId, input.id), gt(wmsStock.quantityCases, 0)));
 
     return {
       ...location,
