@@ -123,6 +123,8 @@ const WMSReceiveShipmentPage = () => {
   const [scanError, setScanError] = useState<string | null>(null);
   const [isPrinting, setIsPrinting] = useState(false);
   const [printError, setPrintError] = useState<string | null>(null);
+  const [palletLabelQty, setPalletLabelQty] = useState(1);
+  const [reprintQty, setReprintQty] = useState<Record<number, number>>({});
 
   // Add Item state
   const [showAddItem, setShowAddItem] = useState(false);
@@ -141,6 +143,7 @@ const WMSReceiveShipmentPage = () => {
 
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const scanInputRef = useRef<ScanInputHandle>(null);
+  const confirmRef = useRef<HTMLDivElement>(null);
   const { print } = usePrint();
 
   // Get shipment details
@@ -383,6 +386,8 @@ const WMSReceiveShipmentPage = () => {
     setScannedLocationId(null);
     setScanError(null);
     setPrintError(null);
+    setPalletLabelQty(1);
+    setReprintQty({});
   }, [currentProductIndex, getCurrentItem]);
 
   // Cleanup
@@ -525,9 +530,9 @@ const WMSReceiveShipmentPage = () => {
       let labelCount: number;
 
       if (isPalletMode) {
-        // Pallet mode: generate 1 label with PALLET banner (no individual case labels in DB)
+        // Pallet mode: generate pallet labels (no individual case labels in DB)
         const palletBarcode = `PLT-${lwin18}-${casesForThisBay}C`;
-        zpl = generateLabelZpl({
+        const singlePalletZpl = generateLabelZpl({
           barcode: palletBarcode,
           productName: currentItem.productName,
           lwin18,
@@ -538,7 +543,8 @@ const WMSReceiveShipmentPage = () => {
           labelType: 'pallet',
           palletCaseCount: casesForThisBay,
         });
-        labelCount = 1;
+        zpl = Array(palletLabelQty).fill(singlePalletZpl).join('\n');
+        labelCount = palletLabelQty;
       } else {
         // Normal mode: create individual case labels in DB
         const result = await createLabelsMutation.mutateAsync({
@@ -591,9 +597,13 @@ const WMSReceiveShipmentPage = () => {
       setScannedLocationId(null);
       setProductPhase('shelving');
       saveDraft();
-      // Scroll to top after labels printed
+      // When all cases assigned, scroll to confirm button; otherwise scroll to top
       requestAnimationFrame(() => {
-        window.scrollTo({ top: 0, behavior: 'instant' });
+        if (remaining === 0 && confirmRef.current) {
+          confirmRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        } else {
+          window.scrollTo({ top: 0, behavior: 'instant' });
+        }
       });
     } catch (err) {
       setPrintError(err instanceof Error ? err.message : 'Failed to create labels');
@@ -745,6 +755,62 @@ const WMSReceiveShipmentPage = () => {
       alert(err instanceof Error ? err.message : 'Failed to save to warehouse');
     } finally {
       setIsCommitting(false);
+    }
+  };
+
+  // Reprint labels for an assignment on a committed item
+  const handleReprintLabels = async (assignment: LocationAssignment, item: ReceivedItem, qty: number) => {
+    setIsPrinting(true);
+    setPrintError(null);
+
+    try {
+      const currentLotNumber = lotNumber || generateLotNumber(1);
+      const lwin18 = item.lwin || `${item.productName.replace(/\s+/g, '-').slice(0, 20)}`;
+      const bottleSizeCl = Math.round(item.receivedBottleSizeMl / 10);
+      const packSize = `${item.receivedBottlesPerCase}x${bottleSizeCl}cl`;
+
+      let zpl: string;
+
+      if (assignment.isPalletized) {
+        const palletBarcode = `PLT-${lwin18}-${assignment.cases}C`;
+        const singleZpl = generateLabelZpl({
+          barcode: palletBarcode,
+          productName: item.productName,
+          lwin18,
+          packSize,
+          vintage: item.vintage ?? undefined,
+          lotNumber: currentLotNumber,
+          owner: shipment?.partnerName ?? undefined,
+          labelType: 'pallet',
+          palletCaseCount: assignment.cases,
+        });
+        zpl = Array(qty).fill(singleZpl).join('\n');
+      } else {
+        const result = await createLabelsMutation.mutateAsync({
+          shipmentId,
+          productName: item.productName,
+          lwin18,
+          packSize,
+          vintage: item.vintage ?? undefined,
+          lotNumber: currentLotNumber,
+          locationId: assignment.locationId,
+          owner: shipment?.partnerName ?? undefined,
+          quantity: qty,
+        });
+        zpl = result.zpl;
+      }
+
+      if (zpl) {
+        const filename = `reprint-${item.productName.replace(/[^a-zA-Z0-9]/g, '-').slice(0, 30)}-${assignment.locationCode}`;
+        const printed = await print(zpl, '4x2');
+        if (!printed) {
+          downloadZplFile(zpl, filename);
+        }
+      }
+    } catch (err) {
+      setPrintError(err instanceof Error ? err.message : 'Failed to reprint labels');
+    } finally {
+      setIsPrinting(false);
     }
   };
 
@@ -927,6 +993,12 @@ const WMSReceiveShipmentPage = () => {
       item.lwin?.toLowerCase().includes(search) ||
       receivedItem?.lwin?.toLowerCase().includes(search)
     );
+  }).sort((a, b) => {
+    const aComplete = a.receivedItem?.isCommitted || a.receivedItem?.isSkipped;
+    const bComplete = b.receivedItem?.isCommitted || b.receivedItem?.isSkipped;
+    if (aComplete && !bComplete) return 1;
+    if (!aComplete && bComplete) return -1;
+    return 0;
   });
 
   // Select a product from the list
@@ -1612,6 +1684,11 @@ const WMSReceiveShipmentPage = () => {
                               of {pendingCases}
                             </div>
                           </div>
+                          {casesForThisBay < pendingCases && (
+                            <Typography variant="bodyXs" colorRole="muted" className="text-center">
+                              Print labels in batches — remaining cases can be printed later
+                            </Typography>
+                          )}
 
                           {/* Pallet toggle */}
                           <button
@@ -1628,7 +1705,7 @@ const WMSReceiveShipmentPage = () => {
                                 Palletise
                               </Typography>
                               <Typography variant="bodyXs" colorRole="muted">
-                                Print 1 pallet label instead of {casesForThisBay} individual labels
+                                Print pallet label(s) instead of {casesForThisBay} individual labels
                               </Typography>
                             </div>
                             <div
@@ -1644,6 +1721,32 @@ const WMSReceiveShipmentPage = () => {
                             </div>
                           </button>
 
+                          {/* Pallet label quantity */}
+                          {isPalletMode && (
+                            <div className="flex items-center gap-3">
+                              <div className="flex-1">
+                                <label className="mb-1 block text-sm font-medium text-text-secondary">
+                                  Pallet labels to print
+                                </label>
+                                <input
+                                  type="number"
+                                  inputMode="numeric"
+                                  min={1}
+                                  max={10}
+                                  value={palletLabelQty}
+                                  onChange={(e) => {
+                                    const parsed = parseInt(e.target.value);
+                                    if (!isNaN(parsed)) setPalletLabelQty(Math.max(1, Math.min(10, parsed)));
+                                  }}
+                                  className="h-12 w-full rounded-lg border-2 border-border-primary bg-fill-primary px-3 text-center text-lg font-semibold focus:border-border-brand focus:outline-none"
+                                />
+                              </div>
+                              <div className="text-center text-sm text-text-muted">
+                                labels
+                              </div>
+                            </div>
+                          )}
+
                           {/* Print button */}
                           <Button
                             variant="default"
@@ -1656,8 +1759,10 @@ const WMSReceiveShipmentPage = () => {
                               {isPrinting
                                 ? 'Printing...'
                                 : isPalletMode
-                                  ? `Print Pallet Label (${casesForThisBay} cases) → ${scannedLocationCode}`
-                                  : `Print ${casesForThisBay} Labels → ${scannedLocationCode}`}
+                                  ? `Print ${palletLabelQty > 1 ? `${palletLabelQty} ` : ''}Pallet Label${palletLabelQty > 1 ? 's' : ''} (${casesForThisBay} cases) → ${scannedLocationCode}`
+                                  : casesForThisBay < pendingCases
+                                    ? `Print ${casesForThisBay} of ${currentItem.receivedCases} Labels → ${scannedLocationCode}`
+                                    : `Print ${casesForThisBay} Labels → ${scannedLocationCode}`}
                             </ButtonContent>
                           </Button>
                         </div>
@@ -1676,7 +1781,7 @@ const WMSReceiveShipmentPage = () => {
 
                   {/* All cases assigned but not committed - show confirm button */}
                   {pendingCases === 0 && currentItem.locationAssignments.length > 0 && !currentItem.isCommitted && (
-                    <div className="space-y-4">
+                    <div ref={confirmRef} className="space-y-4">
                       <div className="flex items-center gap-3 rounded-lg bg-emerald-100 p-4 dark:bg-emerald-900/30">
                         <Icon icon={IconCheck} size="lg" className="text-emerald-600" />
                         <div>
@@ -1689,11 +1794,15 @@ const WMSReceiveShipmentPage = () => {
                         </div>
                       </div>
 
+                      <Typography variant="bodySm" className="text-center font-medium text-emerald-700 dark:text-emerald-300">
+                        Last step — confirm to save to warehouse
+                      </Typography>
+
                       {/* Confirm & Save to warehouse */}
                       <Button
                         variant="default"
                         size="lg"
-                        className="h-14 w-full text-lg"
+                        className="h-14 w-full animate-pulse text-lg ring-2 ring-emerald-400 ring-offset-2"
                         onClick={handleCommitProduct}
                         disabled={isCommitting}
                       >
@@ -1742,6 +1851,73 @@ const WMSReceiveShipmentPage = () => {
                         </div>
                       </div>
 
+                      {/* Reprint labels per assignment */}
+                      {currentItem.locationAssignments.length > 0 && (
+                        <div className="space-y-2">
+                          <Typography variant="headingSm">Reprint Labels</Typography>
+                          {currentItem.locationAssignments.map((assignment, index) => (
+                            <div
+                              key={index}
+                              className={`flex items-center justify-between rounded-lg p-3 ${
+                                assignment.isPalletized
+                                  ? 'bg-indigo-50 dark:bg-indigo-900/20'
+                                  : 'bg-emerald-50 dark:bg-emerald-900/20'
+                              }`}
+                            >
+                              <div className="flex items-center gap-3">
+                                <Icon
+                                  icon={assignment.isPalletized ? IconBoxSeam : IconMapPin}
+                                  className={assignment.isPalletized ? 'text-indigo-600' : 'text-emerald-600'}
+                                />
+                                <div>
+                                  <Typography variant="headingSm" className={
+                                    assignment.isPalletized
+                                      ? 'text-indigo-800 dark:text-indigo-200'
+                                      : 'text-emerald-800 dark:text-emerald-200'
+                                  }>
+                                    {assignment.locationCode}
+                                  </Typography>
+                                  <Typography variant="bodyXs" className={
+                                    assignment.isPalletized
+                                      ? 'text-indigo-700 dark:text-indigo-300'
+                                      : 'text-emerald-700 dark:text-emerald-300'
+                                  }>
+                                    {assignment.cases} cases{assignment.isPalletized ? ' (pallet)' : ''}
+                                  </Typography>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <input
+                                  type="number"
+                                  inputMode="numeric"
+                                  min={1}
+                                  max={assignment.cases}
+                                  value={reprintQty[index] ?? assignment.cases}
+                                  onChange={(e) => {
+                                    const parsed = parseInt(e.target.value);
+                                    if (!isNaN(parsed)) {
+                                      setReprintQty({ ...reprintQty, [index]: Math.max(1, Math.min(assignment.cases, parsed)) });
+                                    }
+                                  }}
+                                  className="h-10 w-16 rounded-lg border-2 border-border-primary bg-fill-primary px-1 text-center text-sm focus:border-border-brand focus:outline-none"
+                                />
+                                <button
+                                  onClick={() => handleReprintLabels(assignment, currentItem, reprintQty[index] ?? assignment.cases)}
+                                  disabled={isPrinting}
+                                  className="flex h-10 w-10 items-center justify-center rounded-lg bg-fill-secondary text-text-muted hover:bg-fill-tertiary hover:text-text-primary disabled:opacity-50"
+                                >
+                                  {isPrinting ? (
+                                    <IconLoader2 className="h-5 w-5 animate-spin" />
+                                  ) : (
+                                    <IconPrinter className="h-5 w-5" />
+                                  )}
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
                       <Button
                         variant="default"
                         size="lg"
@@ -1755,10 +1931,10 @@ const WMSReceiveShipmentPage = () => {
                 </div>
               )}
 
-              {/* Phase: Complete (committed items - read-only) */}
+              {/* Phase: Complete (committed items - read-only with reprint) */}
               {productPhase === 'complete' && currentItem.isCommitted && (
                 <div className="space-y-4">
-                  {/* Location assignments (read-only) */}
+                  {/* Location assignments with reprint */}
                   {currentItem.locationAssignments.length > 0 && (
                     <div className="space-y-2">
                       <Typography variant="headingSm">Assigned Bays</Typography>
@@ -1793,6 +1969,33 @@ const WMSReceiveShipmentPage = () => {
                               </Typography>
                             </div>
                           </div>
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="number"
+                              inputMode="numeric"
+                              min={1}
+                              max={assignment.cases}
+                              value={reprintQty[index] ?? assignment.cases}
+                              onChange={(e) => {
+                                const parsed = parseInt(e.target.value);
+                                if (!isNaN(parsed)) {
+                                  setReprintQty({ ...reprintQty, [index]: Math.max(1, Math.min(assignment.cases, parsed)) });
+                                }
+                              }}
+                              className="h-10 w-16 rounded-lg border-2 border-border-primary bg-fill-primary px-1 text-center text-sm focus:border-border-brand focus:outline-none"
+                            />
+                            <button
+                              onClick={() => handleReprintLabels(assignment, currentItem, reprintQty[index] ?? assignment.cases)}
+                              disabled={isPrinting}
+                              className="flex h-10 w-10 items-center justify-center rounded-lg bg-fill-secondary text-text-muted hover:bg-fill-tertiary hover:text-text-primary disabled:opacity-50"
+                            >
+                              {isPrinting ? (
+                                <IconLoader2 className="h-5 w-5 animate-spin" />
+                              ) : (
+                                <IconPrinter className="h-5 w-5" />
+                              )}
+                            </button>
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -1809,6 +2012,15 @@ const WMSReceiveShipmentPage = () => {
                       </Typography>
                     </div>
                   </div>
+
+                  {printError && (
+                    <div className="flex items-center gap-2 rounded-lg bg-red-50 p-3 dark:bg-red-900/20">
+                      <Icon icon={IconAlertCircle} className="text-red-600" />
+                      <Typography variant="bodySm" className="text-red-800 dark:text-red-300">
+                        {printError}
+                      </Typography>
+                    </div>
+                  )}
 
                   <Button
                     variant="default"
