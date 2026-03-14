@@ -21,7 +21,7 @@ const PlatformMobileNav = ({ user }: PlatformMobileNavProps) => {
   if (isWinePartner) {
     sections.push({
       title: 'Inventory',
-      links: [{ href: '/platform/local-stock', label: 'Local Stock' }],
+      links: [{ href: '/platform/partner/stock', label: 'Local Stock' }],
     });
   } else if (user.role !== 'admin') {
     // Quotes section - for non-wine partners, non-admins (admins get Quotes under Orders section)

@@ -1,4 +1,4 @@
-import { desc, eq, sql } from 'drizzle-orm';
+import { desc, eq, or, sql } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { wmsLocations, wmsStock, wmsStockMovements } from '@/database/schema';
@@ -71,20 +71,29 @@ const partnerGetStock = winePartnerProcedure.query(async ({ ctx: { partner } }) 
     locationsByLwin.set(stock.lwin18, existing);
   }
 
-  // Get recent movements for this partner's stock
+  // Get recent movements for this partner's stock (inbound + outbound)
   const recentMovements = await db
     .select({
       id: wmsStockMovements.id,
       movementNumber: wmsStockMovements.movementNumber,
       movementType: wmsStockMovements.movementType,
       productName: wmsStockMovements.productName,
+      lwin18: wmsStockMovements.lwin18,
       quantityCases: wmsStockMovements.quantityCases,
+      fromOwnerId: wmsStockMovements.fromOwnerId,
+      toOwnerId: wmsStockMovements.toOwnerId,
+      notes: wmsStockMovements.notes,
       performedAt: wmsStockMovements.performedAt,
     })
     .from(wmsStockMovements)
-    .where(eq(wmsStockMovements.toOwnerId, partner.id))
+    .where(
+      or(
+        eq(wmsStockMovements.toOwnerId, partner.id),
+        eq(wmsStockMovements.fromOwnerId, partner.id),
+      ),
+    )
     .orderBy(desc(wmsStockMovements.performedAt))
-    .limit(10);
+    .limit(50);
 
   return {
     partner: {
