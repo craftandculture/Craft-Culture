@@ -11,7 +11,7 @@ import {
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
 import Button from '@/app/_ui/components/Button/Button';
@@ -65,7 +65,7 @@ const WMSPickListDetailPage = () => {
   const pickItemMutation = useMutation({
     ...wmsApi.pickItemMutationOptions(),
     onSuccess: () => {
-      void queryClient.invalidateQueries();
+      void queryClient.invalidateQueries({ queryKey: [['wms', 'admin', 'picking']] });
       setPickingItem(null);
       setPickedLocationCode('');
       setPickedQuantity(0);
@@ -78,7 +78,7 @@ const WMSPickListDetailPage = () => {
   const completeMutation = useMutation({
     ...wmsApi.pickCompleteMutationOptions(),
     onSuccess: () => {
-      void queryClient.invalidateQueries();
+      void queryClient.invalidateQueries({ queryKey: [['wms', 'admin', 'picking']] });
       router.push('/platform/admin/wms/pick');
     },
   });
@@ -96,7 +96,7 @@ const WMSPickListDetailPage = () => {
   });
 
   // Location lookup mutation — routes through local NUC when available
-  const locationLookupMutation = useMutation({
+  const { mutateAsync: lookupLocation } = useMutation({
     ...wmsApi.scanLocationMutationOptions(),
   });
 
@@ -123,7 +123,7 @@ const WMSPickListDetailPage = () => {
   const [isLookingUpLocation, setIsLookingUpLocation] = useState(false);
 
   // Handle location barcode scan
-  const handleLocationScan = async (barcode: string) => {
+  const handleLocationScan = useCallback(async (barcode: string) => {
     setDuplicateScanError(null);
 
     // Check for duplicate scan
@@ -135,7 +135,7 @@ const WMSPickListDetailPage = () => {
     setIsLookingUpLocation(true);
     setLocationError(null);
     try {
-      const result = await locationLookupMutation.mutateAsync({ barcode });
+      const result = await lookupLocation({ barcode });
 
       // Verify scanned location matches the suggested location
       if (pickingItem?.suggestedLocationId && result.location.id !== pickingItem.suggestedLocationId) {
@@ -154,10 +154,10 @@ const WMSPickListDetailPage = () => {
     } finally {
       setIsLookingUpLocation(false);
     }
-  };
+  }, [scannedBarcodes, lookupLocation, pickingItem, data]);
 
   // Handle case barcode scan
-  const handleCaseScan = (barcode: string) => {
+  const handleCaseScan = useCallback((barcode: string) => {
     setDuplicateScanError(null);
 
     // Check for duplicate scan
@@ -180,15 +180,18 @@ const WMSPickListDetailPage = () => {
     } else {
       toast.error('Wrong case — barcode does not match this product');
     }
-  };
+  }, [scannedBarcodes, pickingItem]);
 
   // Get current unpicked item - sorted by location for optimal pick path
-  const unpickedItems = (data?.items.filter((i) => !i.isPicked) ?? []).sort((a, b) => {
-    // Sort by location code for optimal pick path
-    const locA = a.suggestedLocationCode ?? 'ZZZ';
-    const locB = b.suggestedLocationCode ?? 'ZZZ';
-    return locA.localeCompare(locB);
-  });
+  const unpickedItems = useMemo(
+    () =>
+      (data?.items.filter((i) => !i.isPicked) ?? []).sort((a, b) => {
+        const locA = a.suggestedLocationCode ?? 'ZZZ';
+        const locB = b.suggestedLocationCode ?? 'ZZZ';
+        return locA.localeCompare(locB);
+      }),
+    [data?.items],
+  );
   const currentItem = unpickedItems[currentItemIndex];
 
   // Get next location hint for picker

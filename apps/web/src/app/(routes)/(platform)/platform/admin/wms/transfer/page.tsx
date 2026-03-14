@@ -14,7 +14,7 @@ import {
 } from '@tabler/icons-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { toast } from 'sonner';
 
 import Button from '@/app/_ui/components/Button/Button';
@@ -86,7 +86,8 @@ const WMSTransferPage = () => {
   const transferMutation = useMutation({
     ...wmsApi.transferMutationOptions(),
     onSuccess: (data) => {
-      void queryClient.invalidateQueries();
+      void queryClient.invalidateQueries({ queryKey: [['wms', 'admin', 'stock']] });
+      void queryClient.invalidateQueries({ queryKey: [['wms', 'admin', 'operations']] });
       setLastSuccess({
         productName: data.productName,
         quantity: data.quantityCases,
@@ -138,7 +139,7 @@ const WMSTransferPage = () => {
     }
   };
 
-  const handleSourceScan = async (barcode: string) => {
+  const handleSourceScan = useCallback(async (barcode: string) => {
     setError('');
     setIsSourceScanning(true);
     try {
@@ -166,16 +167,16 @@ const WMSTransferPage = () => {
     } finally {
       setIsSourceScanning(false);
     }
-  };
+  }, [wmsApi]);
 
-  const handleSelectStock = (stock: StockItem) => {
+  const handleSelectStock = useCallback((stock: StockItem) => {
     setSelectedStock(stock);
     setTransferQuantity(stock.availableCases);
     // Stay on select-stock step to show quantity selector
-  };
+  }, []);
 
   /** Parse a case/stock barcode and auto-select the matching stock item */
-  const handleCaseScan = (barcode: string) => {
+  const handleCaseScan = useCallback((barcode: string) => {
     setError('');
     let lwin18: string;
 
@@ -198,9 +199,9 @@ const WMSTransferPage = () => {
     } else {
       setError('No stock matching this barcode at this location');
     }
-  };
+  }, [stockAtSource, handleSelectStock]);
 
-  const handleDestScan = async (barcode: string) => {
+  const handleDestScan = useCallback(async (barcode: string) => {
     setError('');
     setIsDestScanning(true);
     try {
@@ -223,7 +224,7 @@ const WMSTransferPage = () => {
     } finally {
       setIsDestScanning(false);
     }
-  };
+  }, [wmsApi, sourceLocation]);
 
   const handleConfirm = () => {
     if (!selectedStock || !destLocation) return;

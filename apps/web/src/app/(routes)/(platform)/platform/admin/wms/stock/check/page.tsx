@@ -34,6 +34,7 @@ import OwnerBadge from '@/app/_wms/components/OwnerBadge';
 import ScanInput from '@/app/_wms/components/ScanInput';
 import type { ScanInputHandle } from '@/app/_wms/components/ScanInput';
 import usePrint from '@/app/_wms/hooks/usePrint';
+import useWmsApi from '@/app/_wms/hooks/useWmsApi';
 import downloadZplFile from '@/app/_wms/utils/downloadZplFile';
 import useTRPC, { useTRPCClient } from '@/lib/trpc/browser';
 
@@ -304,6 +305,7 @@ const StockItemCard = ({
 const StockCheckPage = () => {
   const api = useTRPC();
   const trpcClient = useTRPCClient();
+  const wmsApi = useWmsApi();
   const queryClient = useQueryClient();
   const router = useRouter();
   const { print } = usePrint();
@@ -335,10 +337,8 @@ const StockCheckPage = () => {
     enabled: showLocationList,
   });
 
-  // Lookup location by barcode
-  const { mutateAsync: lookupLocation, isPending: isLookingUp } = useMutation(
-    api.wms.admin.operations.getLocationByBarcode.mutationOptions(),
-  );
+  // Lookup location by barcode — routes through local NUC when available
+  const [isLookingUp, setIsLookingUp] = useState(false);
 
   // Get stock at selected location (bay mode)
   const { data: stockData, isLoading: stockLoading } = useQuery({
@@ -439,7 +439,7 @@ const StockCheckPage = () => {
     printStockLabel({ stockId });
   }, [printStockLabel]);
 
-  // Handle barcode scan for bay mode
+  // Handle barcode scan for bay mode — routes through local NUC when available
   const handleBayScan = useCallback(
     async (barcode: string) => {
       setScanError(null);
@@ -458,15 +458,18 @@ const StockCheckPage = () => {
         }
       }
 
+      setIsLookingUp(true);
       try {
-        const result = await lookupLocation({ barcode });
+        const result = await wmsApi.scanLocation(barcode);
         setSelectedLocationId(result.location.id);
         setShowLocationList(false);
       } catch {
         setScanError(`Location not found: ${barcode}`);
+      } finally {
+        setIsLookingUp(false);
       }
     },
-    [lookupLocation, trpcClient, router],
+    [wmsApi, trpcClient, router],
   );
 
   // Handle barcode scan for product mode
