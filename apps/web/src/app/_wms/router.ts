@@ -65,7 +65,6 @@ import adminMarkLabelsPrinted from './controller/adminMarkLabelsPrinted';
 import adminMovePallet from './controller/adminMovePallet';
 import adminPickItem from './controller/adminPickItem';
 import adminPrintStockLabel from './controller/adminPrintStockLabel';
-import adminPutaway from './controller/adminPutaway';
 import adminQuickDispatch from './controller/adminQuickDispatch';
 import adminRebuildStockFromMovements from './controller/adminRebuildStockFromMovements';
 import adminReceiveShipment from './controller/adminReceiveShipment';
@@ -138,7 +137,6 @@ const operationsRouter = createTRPCRouter({
   getCaseByBarcode: adminGetCaseByBarcode,
   getLocationByBarcode: adminGetLocationByBarcode,
   getStockAtLocation: adminGetStockAtLocation,
-  putaway: adminPutaway,
   transfer: adminTransferStock,
   repack: adminRepack,
 });

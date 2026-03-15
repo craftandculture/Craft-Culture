@@ -5,11 +5,11 @@ import db from '@/database/client';
 import { wmsCaseLabels, wmsLocations, wmsStock } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
-import { getCaseByBarcodeSchema } from '../schemas/putawaySchema';
+import getCaseByBarcodeSchema from '../schemas/getCaseByBarcodeSchema';
 
 /**
  * Get case details by scanning a barcode
- * Used in put-away, transfer, and other mobile workflows
+ * Used in transfer and other mobile workflows
  *
  * @example
  *   await trpcClient.wms.admin.operations.getCaseByBarcode.query({
