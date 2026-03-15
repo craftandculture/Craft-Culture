@@ -375,7 +375,7 @@ interface ProductRowProps {
   onPrintLabels: (product: ProductRowProps['product'], loc: ProductRowProps['product']['locations'][number], qty: number) => void;
   onUpdateBoe: (stockId: string, value: string) => void;
   onAdjustStock: (stockId: string, newQuantity: number, reason: string) => void;
-  onEditName: (lwin18: string, productName: string, producer: string | null) => Promise<void>;
+  onEditName: (lwin18: string, productName: string, producer: string | null) => void;
   isAdjusting: boolean;
   editingLwin18: string | null;
   onStartEditName: (lwin18: string) => void;
@@ -1092,15 +1092,16 @@ const StockExplorerPage = () => {
   const [editingLwin18, setEditingLwin18] = useState<string | null>(null);
 
   const handleEditName = useCallback(
-    async (lwin18: string, productName: string, producer: string | null) => {
+    (lwin18: string, productName: string, producer: string | null) => {
       setEditingLwin18(`saving:${lwin18}`);
-      // Fire mutation but don't await — httpBatchStreamLink hangs the promise indefinitely
+      // Fire mutation — don't await anything, httpBatchStreamLink hangs promises
       trpcClient.wms.admin.stock.updateProductName.mutate({ lwin18, productName, producer }).catch(() => {});
-      // Give server time to process, then refetch
-      await new Promise((r) => setTimeout(r, 1500));
-      await queryClient.invalidateQueries({ queryKey: api.wms.admin.stock.getByProduct.getQueryKey() });
-      toast.success('Product name updated');
-      setEditingLwin18(null);
+      // After 1.5s: close editor, refetch data, show toast
+      setTimeout(() => {
+        setEditingLwin18(null);
+        toast.success('Product name updated');
+        void queryClient.invalidateQueries({ queryKey: api.wms.admin.stock.getByProduct.getQueryKey() });
+      }, 1500);
     },
     [api, queryClient, trpcClient],
   );
