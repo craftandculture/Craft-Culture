@@ -1100,7 +1100,7 @@ const StockExplorerPage = () => {
       setTimeout(() => {
         setEditingLwin18(null);
         toast.success('Product name updated');
-        void queryClient.invalidateQueries({ queryKey: api.wms.admin.stock.getByProduct.getQueryKey() });
+        void queryClient.refetchQueries({ queryKey: api.wms.admin.stock.getByProduct.getQueryKey() });
       }, 1500);
     },
     [api, queryClient, trpcClient],
