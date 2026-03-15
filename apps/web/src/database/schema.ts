@@ -3957,6 +3957,7 @@ export const wmsStock = pgTable(
     isPerishable: boolean('is_perishable').default(false),
     category: text('category'),
     notes: text('notes'),
+    photos: jsonb('photos').$type<string[]>(),
     ...timestamps,
   },
   (table) => [

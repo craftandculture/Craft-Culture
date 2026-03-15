@@ -51,6 +51,7 @@ const receiveSingleItemSchema = z.object({
     countryOfOrigin: z.string().nullable().optional(),
     expiryDate: z.date().optional(),
     notes: z.string().optional(),
+    photos: z.array(z.string().url()).optional(),
     locationAssignments: z.array(locationAssignmentSchema).min(1),
   }),
 });

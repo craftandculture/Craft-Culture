@@ -731,6 +731,7 @@ const WMSReceiveShipmentPage = () => {
           vintage: currentItem.vintage,
           lwin: currentItem.lwin,
           supplierSku: currentItem.supplierSku,
+          photos: currentItem.photos,
           locationAssignments: currentItem.locationAssignments.map((a) => ({
             locationId: a.locationId,
             cases: a.cases,

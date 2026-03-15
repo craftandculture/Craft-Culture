@@ -5,6 +5,7 @@ import {
   IconAnchor,
   IconArrowsExchange,
   IconBuildingWarehouse,
+  IconCamera,
   IconCheck,
   IconChevronDown,
   IconChevronLeft,
@@ -34,6 +35,7 @@ import {
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { toast } from 'sonner';
 
 import ShipmentStatusBadge from '@/app/_logistics/components/ShipmentStatusBadge';
@@ -366,6 +368,7 @@ interface ProductRowProps {
       lotNumber: string | null;
       expiryDate: Date | null;
       reExportBoeNumber: string | null;
+      photos: string[] | null;
     }[];
   };
   isExpanded: boolean;
@@ -386,6 +389,8 @@ const ProductRow = ({ product, isExpanded, onToggle, density, visibleColumns, on
   const [adjustingStockId, setAdjustingStockId] = useState<string | null>(null);
   const [adjustQty, setAdjustQty] = useState(0);
   const [adjustReason, setAdjustReason] = useState('');
+  const [lightboxPhotos, setLightboxPhotos] = useState<string[] | null>(null);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
   const editingName = editingLwin18 === product.lwin18;
   const isSaving = editingLwin18 === `saving:${product.lwin18}`;
   const [editName, setEditName] = useState(product.productName);
@@ -622,6 +627,7 @@ const ProductRow = ({ product, isExpanded, onToggle, density, visibleColumns, on
                     <th className="hidden px-3 py-1.5 text-left sm:table-cell">Lot</th>
                     <th className="hidden px-3 py-1.5 text-left sm:table-cell">Expiry</th>
                     <th className="hidden px-3 py-1.5 text-left sm:table-cell">RE BOE</th>
+                    <th className="hidden px-3 py-1.5 text-center sm:table-cell">Photos</th>
                     <th className="px-3 py-1.5 text-right">Print</th>
                   </tr>
                 </thead>
@@ -698,6 +704,22 @@ const ProductRow = ({ product, isExpanded, onToggle, density, visibleColumns, on
                             value={loc.reExportBoeNumber}
                             onSave={(val) => onUpdateBoe(loc.stockId, val)}
                           />
+                          <td className="hidden px-3 py-2 text-center sm:table-cell">
+                            {loc.photos && loc.photos.length > 0 && (
+                              <button
+                                type="button"
+                                className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs text-text-muted transition-colors hover:bg-surface-muted hover:text-text-primary"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setLightboxPhotos(loc.photos!);
+                                  setLightboxIndex(0);
+                                }}
+                              >
+                                <IconCamera className="h-3.5 w-3.5" />
+                                {loc.photos.length}
+                              </button>
+                            )}
+                          </td>
                           <PrintCell
                             maxQty={loc.quantityCases}
                             onPrint={(qty) => onPrintLabels(product, loc, qty)}
@@ -770,6 +792,51 @@ const ProductRow = ({ product, isExpanded, onToggle, density, visibleColumns, on
             </div>
           </td>
         </tr>
+      )}
+      {lightboxPhotos && createPortal(
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80"
+          onClick={() => setLightboxPhotos(null)}
+        >
+          <div className="relative max-h-[90vh] max-w-[90vw]" onClick={(e) => e.stopPropagation()}>
+            <img
+              src={lightboxPhotos[lightboxIndex]}
+              alt={`Receiving photo ${lightboxIndex + 1}`}
+              className="max-h-[85vh] max-w-[85vw] rounded-lg object-contain"
+            />
+            <button
+              type="button"
+              className="absolute -right-3 -top-3 flex h-8 w-8 items-center justify-center rounded-full bg-white text-text-primary shadow-lg"
+              onClick={() => setLightboxPhotos(null)}
+            >
+              <IconX className="h-4 w-4" />
+            </button>
+            {lightboxPhotos.length > 1 && (
+              <div className="absolute bottom-4 left-1/2 flex -translate-x-1/2 items-center gap-3 rounded-full bg-black/60 px-4 py-2">
+                <button
+                  type="button"
+                  className="text-white disabled:opacity-30"
+                  disabled={lightboxIndex === 0}
+                  onClick={() => setLightboxIndex((i) => i - 1)}
+                >
+                  <IconChevronLeft className="h-5 w-5" />
+                </button>
+                <span className="text-sm text-white">
+                  {lightboxIndex + 1} / {lightboxPhotos.length}
+                </span>
+                <button
+                  type="button"
+                  className="text-white disabled:opacity-30"
+                  disabled={lightboxIndex === lightboxPhotos.length - 1}
+                  onClick={() => setLightboxIndex((i) => i + 1)}
+                >
+                  <IconChevronRight className="h-5 w-5" />
+                </button>
+              </div>
+            )}
+          </div>
+        </div>,
+        document.body,
       )}
     </>
   );
