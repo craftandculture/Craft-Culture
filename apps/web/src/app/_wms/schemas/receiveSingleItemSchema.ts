@@ -34,6 +34,12 @@ const receiveSingleItemSchema = z.object({
   shipmentId: z.string().uuid(),
   lotNumber: z.string().min(1),
   notes: z.string().optional(),
+  // Enriched context for NUC local server (optional — cloud path looks these up from DB)
+  shipmentNumber: z.string().optional(),
+  shipmentType: z.string().optional(),
+  shipmentStatus: z.string().optional(),
+  partnerId: z.string().uuid().optional(),
+  partnerName: z.string().optional(),
   item: z.object({
     shipmentItemId: z.string().uuid(),
     expectedCases: z.number().int().min(0),
