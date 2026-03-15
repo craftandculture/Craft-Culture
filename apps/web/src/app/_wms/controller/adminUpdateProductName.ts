@@ -28,39 +28,27 @@ const adminUpdateProductName = adminProcedure
     const { lwin18, productName, producer } = input;
 
     // Update all three tables in parallel for the given LWIN18
-    const [stockResult, labelsResult, movementsResult] = await Promise.all([
-      // Update wmsStock
+    await Promise.all([
       db
         .update(wmsStock)
         .set({
           productName,
           ...(producer !== undefined ? { producer } : {}),
         })
-        .where(eq(wmsStock.lwin18, lwin18))
-        .returning({ id: wmsStock.id }),
+        .where(eq(wmsStock.lwin18, lwin18)),
 
-      // Update wmsCaseLabels
       db
         .update(wmsCaseLabels)
         .set({ productName })
-        .where(eq(wmsCaseLabels.lwin18, lwin18))
-        .returning({ id: wmsCaseLabels.id }),
+        .where(eq(wmsCaseLabels.lwin18, lwin18)),
 
-      // Update wmsStockMovements
       db
         .update(wmsStockMovements)
         .set({ productName })
-        .where(eq(wmsStockMovements.lwin18, lwin18))
-        .returning({ id: wmsStockMovements.id }),
+        .where(eq(wmsStockMovements.lwin18, lwin18)),
     ]);
 
-    return {
-      updated: {
-        stock: stockResult.length,
-        labels: labelsResult.length,
-        movements: movementsResult.length,
-      },
-    };
+    return { success: true };
   });
 
 export default adminUpdateProductName;
