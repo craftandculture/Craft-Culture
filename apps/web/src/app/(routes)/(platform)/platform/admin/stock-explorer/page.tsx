@@ -1092,8 +1092,9 @@ const StockExplorerPage = () => {
       void queryClient.invalidateQueries({ queryKey: api.wms.admin.stock.getByProduct.getQueryKey() });
       toast.success(`Name updated across ${data.updated.stock} stock, ${data.updated.labels} labels, ${data.updated.movements} movements`);
     },
-    onError: () => {
-      toast.error('Failed to update product name');
+    onError: (error) => {
+      console.error('updateProductName error:', error);
+      toast.error(`Failed to update product name: ${error.message}`);
     },
   });
 
