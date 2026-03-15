@@ -916,6 +916,17 @@ const WMSReceiveShipmentPage = () => {
     setAddItemSearchDebounce('');
   };
 
+  // Delete an added item that hasn't been committed yet
+  const handleDeleteAddedItem = (itemId: string) => {
+    const item = receivedItems.get(itemId);
+    if (!item?.isAddedItem || item.isCommitted) return;
+    if (!confirm(`Remove "${item.productName}" from this receiving session?`)) return;
+    const newMap = new Map(receivedItems);
+    newMap.delete(itemId);
+    setReceivedItems(newMap);
+    saveDraft();
+  };
+
   if (shipmentLoading || draftLoading) {
     return (
       <div className="flex min-h-[50vh] items-center justify-center p-6">
@@ -1320,10 +1331,25 @@ const WMSReceiveShipmentPage = () => {
                             </span>
                           )}
                           {receivedItem?.isAddedItem && (
-                            <span className="flex items-center gap-1 rounded-full bg-blue-100 px-2 py-1 text-xs font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
-                              <IconPlus className="h-3 w-3" />
-                              Added
-                            </span>
+                            <>
+                              <span className="flex items-center gap-1 rounded-full bg-blue-100 px-2 py-1 text-xs font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+                                <IconPlus className="h-3 w-3" />
+                                Added
+                              </span>
+                              {!receivedItem.isCommitted && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDeleteAddedItem(receivedItem.id);
+                                  }}
+                                  className="flex items-center gap-1 rounded-full bg-red-100 px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400"
+                                >
+                                  <IconTrash className="h-3 w-3" />
+                                  Remove
+                                </button>
+                              )}
+                            </>
                           )}
                         </div>
                         <div className="flex items-center gap-2">
