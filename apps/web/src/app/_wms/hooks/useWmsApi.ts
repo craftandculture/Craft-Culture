@@ -154,32 +154,6 @@ const useWmsApi = () => {
     return api.wms.admin.operations.transfer.mutationOptions();
   }, [isAvailable, baseUrl, api]);
 
-  /** Putaway mutation options for useMutation */
-  const putawayMutationOptions = useCallback(() => {
-    if (isAvailable && baseUrl) {
-      return {
-        mutationFn: async (input: {
-          caseBarcode: string;
-          toLocationId: string;
-          notes?: string;
-        }) => {
-          return localFetch<{
-            success: true;
-            caseBarcode: string;
-            fromLocation: { id: string; locationCode: string } | null;
-            toLocation: { id: string; locationCode: string };
-            productName: string;
-            movementNumber: string;
-          }>(baseUrl, '/api/wms/putaway', {
-            method: 'POST',
-            body: JSON.stringify(input),
-          });
-        },
-      };
-    }
-    return api.wms.admin.operations.putaway.mutationOptions();
-  }, [isAvailable, baseUrl, api]);
-
   /** Pick item mutation options for useMutation */
   const pickItemMutationOptions = useCallback(() => {
     if (isAvailable && baseUrl) {
@@ -353,7 +327,7 @@ const useWmsApi = () => {
       scanLocation,
       scanCase,
       transferMutationOptions,
-      putawayMutationOptions,
+
       pickItemMutationOptions,
       pickCompleteMutationOptions,
       pickListQueryOptions,
@@ -364,7 +338,7 @@ const useWmsApi = () => {
       scanLocation,
       scanCase,
       transferMutationOptions,
-      putawayMutationOptions,
+
       pickItemMutationOptions,
       pickCompleteMutationOptions,
       pickListQueryOptions,

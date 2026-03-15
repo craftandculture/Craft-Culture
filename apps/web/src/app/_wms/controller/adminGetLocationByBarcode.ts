@@ -9,7 +9,7 @@ import { getLocationByBarcodeSchema } from '../schemas/transferSchema';
 
 /**
  * Get location details by scanning a barcode
- * Used in transfer, put-away, and other mobile workflows
+ * Used in transfer and other mobile workflows
  *
  * @example
  *   await trpcClient.wms.admin.operations.getLocationByBarcode.query({
