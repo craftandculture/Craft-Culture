@@ -89,36 +89,36 @@ const SkeletonCard = () => (
   </div>
 );
 
-/** Status indicator with colored dot and label */
+/** Status pill badge with colored background */
 const StatusIndicator = ({ cases }: { cases: number }) => {
   if (cases === 0) {
     return (
-      <span className="inline-flex items-center gap-1.5 text-xs">
-        <span className="h-2 w-2 rounded-full bg-border-muted" />
-        <span className="text-text-muted">Out</span>
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-surface-muted px-2 py-0.5 text-[11px] font-medium text-text-muted">
+        <span className="h-1.5 w-1.5 rounded-full bg-border-muted" />
+        Out
       </span>
     );
   }
   if (cases === 1) {
     return (
-      <span className="inline-flex items-center gap-1.5 text-xs">
-        <span className="h-2 w-2 rounded-full bg-red-400" />
-        <span className="text-red-600">Final</span>
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-red-50 px-2 py-0.5 text-[11px] font-medium text-red-600">
+        <span className="h-1.5 w-1.5 rounded-full bg-red-400" />
+        Final
       </span>
     );
   }
   if (cases <= 2) {
     return (
-      <span className="inline-flex items-center gap-1.5 text-xs">
-        <span className="h-2 w-2 rounded-full bg-amber-400" />
-        <span className="text-amber-600">Low</span>
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-600">
+        <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
+        Low
       </span>
     );
   }
   return (
-    <span className="inline-flex items-center gap-1.5 text-xs">
-      <span className="h-2 w-2 rounded-full bg-emerald-500" />
-      <span className="text-emerald-600">Good</span>
+    <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-600">
+      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+      Good
     </span>
   );
 };
@@ -255,7 +255,7 @@ const PartnerStockPage = () => {
           <div>
             <Typography variant="headingLg">Local Stock</Typography>
             <Typography variant="bodySm" colorRole="muted" className="mt-1">
-              Products stored at C&C bonded warehouse
+              {data?.partner?.name ? `${data.partner.name} — ` : ''}Products stored at C&C bonded warehouse
             </Typography>
           </div>
           <div className="flex items-center gap-2">
@@ -270,10 +270,10 @@ const PartnerStockPage = () => {
 
         {/* KPI Cards — Stock Explorer style with colored icon circles */}
         {data?.summary && (
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+          <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
             {/* Products */}
-            <div className="rounded-xl border border-border-muted bg-background-primary px-3 py-3 text-center">
-              <div className="mx-auto mb-1.5 flex h-7 w-7 items-center justify-center rounded-lg bg-blue-50 text-blue-500">
+            <div className="rounded-xl border border-blue-100 bg-gradient-to-b from-blue-50/40 to-background-primary px-3 py-3 text-center shadow-sm">
+              <div className="mx-auto mb-1.5 flex h-7 w-7 items-center justify-center rounded-lg bg-blue-100/70 text-blue-500">
                 <IconTags size={14} />
               </div>
               <div className="text-xl font-bold leading-tight">{data.summary.productCount}</div>
@@ -281,8 +281,8 @@ const PartnerStockPage = () => {
             </div>
 
             {/* Total Cases */}
-            <div className="rounded-xl border border-border-muted bg-background-primary px-3 py-3 text-center">
-              <div className="mx-auto mb-1.5 flex h-7 w-7 items-center justify-center rounded-lg bg-purple-50 text-purple-500">
+            <div className="rounded-xl border border-purple-100 bg-gradient-to-b from-purple-50/40 to-background-primary px-3 py-3 text-center shadow-sm">
+              <div className="mx-auto mb-1.5 flex h-7 w-7 items-center justify-center rounded-lg bg-purple-100/70 text-purple-500">
                 <IconPackage size={14} />
               </div>
               <div className="text-xl font-bold leading-tight">{data.summary.totalCases.toLocaleString()}</div>
@@ -290,9 +290,9 @@ const PartnerStockPage = () => {
             </div>
 
             {/* Available */}
-            <div className="rounded-xl border border-border-muted bg-background-primary px-3 py-3 text-center">
+            <div className="rounded-xl border border-emerald-100 bg-gradient-to-b from-emerald-50/40 to-background-primary px-3 py-3 text-center shadow-sm">
               <div className={`mx-auto mb-1.5 flex h-7 w-7 items-center justify-center rounded-lg ${
-                data.summary.availableCases > 0 ? 'bg-emerald-50 text-emerald-500' : 'bg-surface-muted text-text-muted'
+                data.summary.availableCases > 0 ? 'bg-emerald-100/70 text-emerald-500' : 'bg-surface-muted text-text-muted'
               }`}>
                 <IconCircleCheck size={14} />
               </div>
@@ -301,8 +301,8 @@ const PartnerStockPage = () => {
               </div>
               <div className="text-[11px] text-text-muted">Available</div>
               {data.summary.totalCases > 0 && (
-                <div className="mt-1 flex items-center gap-1.5">
-                  <div className="h-1 flex-1 overflow-hidden rounded-full bg-border-muted">
+                <div className="mt-1.5 flex items-center gap-1.5">
+                  <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-emerald-100">
                     <div
                       className="h-full rounded-full bg-emerald-500 transition-all"
                       style={{ width: `${Math.round((data.summary.availableCases / data.summary.totalCases) * 100)}%` }}
@@ -316,9 +316,9 @@ const PartnerStockPage = () => {
             </div>
 
             {/* Reserved */}
-            <div className="rounded-xl border border-border-muted bg-background-primary px-3 py-3 text-center">
+            <div className="rounded-xl border border-amber-100 bg-gradient-to-b from-amber-50/40 to-background-primary px-3 py-3 text-center shadow-sm">
               <div className={`mx-auto mb-1.5 flex h-7 w-7 items-center justify-center rounded-lg ${
-                data.summary.reservedCases > 0 ? 'bg-amber-50 text-amber-500' : 'bg-surface-muted text-text-muted'
+                data.summary.reservedCases > 0 ? 'bg-amber-100/70 text-amber-500' : 'bg-surface-muted text-text-muted'
               }`}>
                 <IconLock size={14} />
               </div>
@@ -378,7 +378,7 @@ const PartnerStockPage = () => {
               return (
                 <div
                   key={key}
-                  className="overflow-hidden rounded-xl border border-border-muted bg-background-primary"
+                  className="overflow-hidden rounded-xl border border-border-muted bg-background-primary shadow-sm"
                 >
                   {/* Card header — tappable */}
                   <button
@@ -432,7 +432,7 @@ const PartnerStockPage = () => {
 
                       {/* Availability bar */}
                       <div className="mt-2 flex items-center gap-2">
-                        <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-border-muted/50">
+                        <div className="h-2 flex-1 overflow-hidden rounded-full bg-border-muted/40">
                           <div
                             className={`h-full rounded-full transition-all ${
                               availPct >= 75 ? 'bg-emerald-500' : availPct >= 25 ? 'bg-amber-500' : 'bg-red-500'
@@ -517,11 +517,11 @@ const PartnerStockPage = () => {
 
         {/* ─── Desktop Table Layout ───────────────────────────────── */}
         <div className="hidden md:block">
-          <div className="overflow-hidden rounded-xl border border-border-muted bg-background-primary">
+          <div className="overflow-hidden rounded-xl border border-border-muted bg-background-primary shadow-sm">
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b border-border-muted bg-surface-muted/50">
+                  <tr className="border-b border-border-muted bg-surface-muted/60">
                     <th className="w-10 px-2 py-3" />
                     <th
                       className="cursor-pointer px-4 py-3 text-left transition-colors hover:bg-surface-muted"
@@ -600,7 +600,7 @@ const PartnerStockPage = () => {
                         <Fragment key={key}>
                           {/* Product Row */}
                           <tr
-                            className="cursor-pointer border-b border-border-muted transition-colors hover:bg-surface-muted/50"
+                            className="cursor-pointer border-b border-border-muted transition-colors even:bg-surface-muted/20 hover:bg-surface-muted/60"
                             onClick={() => toggleProduct(key)}
                           >
                             <td className="px-2 py-3 text-center">
@@ -647,7 +647,7 @@ const PartnerStockPage = () => {
                                 <Typography variant="bodySm" className="font-medium tabular-nums text-emerald-600">
                                   {product.availableCases}
                                 </Typography>
-                                <div className="h-1.5 w-12 overflow-hidden rounded-full bg-border-muted/50">
+                                <div className="h-2 w-14 overflow-hidden rounded-full bg-border-muted/40">
                                   <div
                                     className={`h-full rounded-full transition-all ${
                                       availPct >= 75 ? 'bg-emerald-500' : availPct >= 25 ? 'bg-amber-500' : 'bg-red-500'
@@ -734,7 +734,7 @@ const PartnerStockPage = () => {
                                                       <span className="text-sm tabular-nums text-emerald-600">
                                                         {loc.availableCases}
                                                       </span>
-                                                      <div className="h-1.5 w-10 overflow-hidden rounded-full bg-border-muted/50">
+                                                      <div className="h-2 w-10 overflow-hidden rounded-full bg-border-muted/40">
                                                         <div
                                                           className={`h-full rounded-full ${
                                                             locAvailPct >= 75 ? 'bg-emerald-500' : locAvailPct >= 25 ? 'bg-amber-500' : 'bg-red-500'
@@ -860,10 +860,10 @@ const PartnerStockPage = () => {
               </div>
               <Typography variant="headingSm">Recent Activity</Typography>
             </div>
-            <div className="overflow-hidden rounded-xl border border-border-muted bg-background-primary">
+            <div className="overflow-hidden rounded-xl border border-border-muted bg-background-primary shadow-sm">
               <div className="divide-y divide-border-muted">
                 {data.recentMovements.slice(0, 10).map((m) => (
-                  <div key={m.id} className="flex items-center justify-between px-4 py-3 transition-colors hover:bg-surface-muted/30">
+                  <div key={m.id} className="flex items-center justify-between px-4 py-3 transition-colors hover:bg-surface-muted/40">
                     <div className="flex items-center gap-3">
                       <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${isInbound(m) ? 'bg-emerald-50' : 'bg-amber-50'}`}>
                         <Icon
