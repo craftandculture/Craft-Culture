@@ -43,6 +43,7 @@ const adminGetStockOverview = adminProcedure
       db
         .select({
           totalCases: sql<number>`COALESCE(SUM(${wmsStock.quantityCases}), 0)::int`,
+          totalBottles: sql<number>`COALESCE(SUM(${wmsStock.quantityCases} * ${wmsStock.caseConfig}), 0)::int`,
           totalAvailable: sql<number>`COALESCE(SUM(${wmsStock.availableCases}), 0)::int`,
           totalReserved: sql<number>`COALESCE(SUM(${wmsStock.reservedCases}), 0)::int`,
           uniqueProducts: sql<number>`COUNT(DISTINCT ${wmsStock.lwin18})::int`,
@@ -149,6 +150,7 @@ const adminGetStockOverview = adminProcedure
     return {
       summary: {
         totalCases: stockStats?.totalCases ?? 0,
+        totalBottles: stockStats?.totalBottles ?? 0,
         availableCases: stockStats?.totalAvailable ?? 0,
         reservedCases: stockStats?.totalReserved ?? 0,
         uniqueProducts: stockStats?.uniqueProducts ?? 0,
