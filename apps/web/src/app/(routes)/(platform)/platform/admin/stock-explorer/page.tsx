@@ -1088,9 +1088,9 @@ const StockExplorerPage = () => {
   // Update product name across all records
   const { mutate: updateProductName, isPending: isEditingName } = useMutation({
     ...api.wms.admin.stock.updateProductName.mutationOptions(),
-    onSuccess: (data) => {
+    onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: api.wms.admin.stock.getByProduct.getQueryKey() });
-      toast.success(`Name updated across ${data.updated.stock} stock, ${data.updated.labels} labels, ${data.updated.movements} movements`);
+      toast.success('Product name updated');
     },
     onError: (error) => {
       console.error('updateProductName error:', error);
