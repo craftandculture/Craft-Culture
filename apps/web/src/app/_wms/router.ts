@@ -91,6 +91,7 @@ import adminUnsealPallet from './controller/adminUnsealPallet';
 import adminUpdateBatchStatus from './controller/adminUpdateBatchStatus';
 import adminUpdateBay from './controller/adminUpdateBay';
 import adminUpdateLocation from './controller/adminUpdateLocation';
+import adminUpdateProductName from './controller/adminUpdateProductName';
 import adminUpdateStockBoe from './controller/adminUpdateStockBoe';
 import adminUploadReceivingPhoto from './controller/adminUploadReceivingPhoto';
 import adminValidateImportItems from './controller/adminValidateImportItems';
@@ -162,6 +163,7 @@ const stockRouter = createTRPCRouter({
   syncToZoho: adminSyncStockToZoho,
   clearAll: adminClearAllStock,
   updateBoe: adminUpdateStockBoe,
+  updateProductName: adminUpdateProductName,
 });
 
 const ownershipRouter = createTRPCRouter({

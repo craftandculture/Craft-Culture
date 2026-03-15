@@ -13,12 +13,14 @@ import {
   IconChevronsRight,
   IconCircleCheck,
   IconColumns3,
+  IconDeviceFloppy,
   IconDownload,
   IconLayoutRows,
   IconLoader2,
   IconLock,
   IconMinus,
   IconPackage,
+  IconPencil,
   IconPlus,
   IconPrinter,
   IconSearch,
@@ -373,13 +375,18 @@ interface ProductRowProps {
   onPrintLabels: (product: ProductRowProps['product'], loc: ProductRowProps['product']['locations'][number], qty: number) => void;
   onUpdateBoe: (stockId: string, value: string) => void;
   onAdjustStock: (stockId: string, newQuantity: number, reason: string) => void;
+  onEditName: (lwin18: string, productName: string, producer: string | null) => void;
   isAdjusting: boolean;
+  isEditingName: boolean;
 }
 
-const ProductRow = ({ product, isExpanded, onToggle, density, visibleColumns, onPrintLabels, onUpdateBoe, onAdjustStock, isAdjusting }: ProductRowProps) => {
+const ProductRow = ({ product, isExpanded, onToggle, density, visibleColumns, onPrintLabels, onUpdateBoe, onAdjustStock, onEditName, isAdjusting, isEditingName }: ProductRowProps) => {
   const [adjustingStockId, setAdjustingStockId] = useState<string | null>(null);
   const [adjustQty, setAdjustQty] = useState(0);
   const [adjustReason, setAdjustReason] = useState('');
+  const [editingName, setEditingName] = useState(false);
+  const [editName, setEditName] = useState(product.productName);
+  const [editProducer, setEditProducer] = useState(product.producer ?? '');
   const dc = DENSITY_CLASSES[density];
   const tdClass = dc.td;
   const tdClassRight = `${dc.td} text-right tabular-nums`;
@@ -398,8 +405,65 @@ const ProductRow = ({ product, isExpanded, onToggle, density, visibleColumns, on
         </td>
 
         {/* Product name */}
-        <td className={`${tdClass} max-w-[280px] truncate font-medium text-text-primary`}>
-          {product.productName}
+        <td className={`${tdClass} max-w-[280px] font-medium text-text-primary`}>
+          {editingName ? (
+            <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+              <div className="flex flex-col gap-1">
+                <input
+                  type="text"
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  className="h-7 w-full rounded border border-border-muted bg-background-primary px-2 text-sm text-text-primary focus:border-border-brand focus:outline-none"
+                  placeholder="Product name"
+                  autoFocus
+                />
+                <input
+                  type="text"
+                  value={editProducer}
+                  onChange={(e) => setEditProducer(e.target.value)}
+                  className="h-7 w-full rounded border border-border-muted bg-background-primary px-2 text-xs text-text-muted focus:border-border-brand focus:outline-none"
+                  placeholder="Producer"
+                />
+              </div>
+              <button
+                onClick={() => {
+                  if (editName.trim()) {
+                    onEditName(product.lwin18, editName.trim(), editProducer.trim() || null);
+                    setEditingName(false);
+                  }
+                }}
+                disabled={isEditingName || !editName.trim()}
+                className="flex h-7 w-7 shrink-0 items-center justify-center rounded bg-emerald-500 text-white transition-colors hover:bg-emerald-600 disabled:opacity-50"
+              >
+                {isEditingName ? <IconLoader2 className="h-3.5 w-3.5 animate-spin" /> : <IconDeviceFloppy className="h-3.5 w-3.5" />}
+              </button>
+              <button
+                onClick={() => {
+                  setEditingName(false);
+                  setEditName(product.productName);
+                  setEditProducer(product.producer ?? '');
+                }}
+                className="flex h-7 w-7 shrink-0 items-center justify-center rounded bg-surface-muted text-text-muted transition-colors hover:bg-red-50 hover:text-red-500"
+              >
+                <IconX className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          ) : (
+            <div className="group/name flex items-center gap-1.5 truncate">
+              <span className="truncate">{product.productName}</span>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setEditName(product.productName);
+                  setEditProducer(product.producer ?? '');
+                  setEditingName(true);
+                }}
+                className="hidden shrink-0 rounded p-0.5 text-text-muted/40 transition-colors hover:bg-surface-muted hover:text-text-brand group-hover/name:inline-flex"
+              >
+                <IconPencil className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          )}
         </td>
 
         {/* Producer */}
@@ -1021,6 +1085,25 @@ const StockExplorerPage = () => {
     [adjustStock],
   );
 
+  // Update product name across all records
+  const { mutate: updateProductName, isPending: isEditingName } = useMutation({
+    ...api.wms.admin.stock.updateProductName.mutationOptions(),
+    onSuccess: (data) => {
+      void queryClient.invalidateQueries({ queryKey: api.wms.admin.stock.getByProduct.getQueryKey() });
+      toast.success(`Name updated across ${data.updated.stock} stock, ${data.updated.labels} labels, ${data.updated.movements} movements`);
+    },
+    onError: () => {
+      toast.error('Failed to update product name');
+    },
+  });
+
+  const handleEditName = useCallback(
+    (lwin18: string, productName: string, producer: string | null) => {
+      updateProductName({ lwin18, productName, producer });
+    },
+    [updateProductName],
+  );
+
   // Search & filters
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -1367,12 +1450,7 @@ const StockExplorerPage = () => {
                 <IconTags size={13} />
               </div>
               <div className="text-lg font-bold leading-tight">{overview.summary.totalBottles.toLocaleString()}</div>
-              <div className="text-[11px] text-text-muted">Bottles</div>
-              <div className="text-[10px] text-text-muted">
-                {overview.summary.totalCases > 0
-                  ? `~${Math.round(overview.summary.totalBottles / overview.summary.totalCases)} per case`
-                  : '—'}
-              </div>
+              <div className="text-[11px] text-text-muted">Items</div>
             </div>
 
             {/* Available */}
@@ -1815,7 +1893,9 @@ const StockExplorerPage = () => {
                           onPrintLabels={handlePrintLabels}
                           onUpdateBoe={handleUpdateBoe}
                           onAdjustStock={handleAdjustStock}
+                          onEditName={handleEditName}
                           isAdjusting={isAdjustingStock}
+                          isEditingName={isEditingName}
                         />
                       );
                     })
