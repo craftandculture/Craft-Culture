@@ -174,9 +174,9 @@ TC27 Scanner → warehouse.craftculture.xyz (Vercel)
     bun:sqlite → sync_queue → push to Neon every 30s
 ```
 
-**Sync Engine:** Pulls 6 tables from Neon cloud every 30s (products, locations, stock, case labels, pick lists, pick list items). Write operations (transfer, putaway, pick) execute locally in SQLite AND queue to `sync_queue` for push to cloud.
+**Sync Engine:** Pulls 7 tables from Neon cloud every 30s (products, locations, stock, case labels, pick lists, pick list items, stock movements). Write operations (transfer, putaway, pick, receive) execute locally in SQLite AND queue to `sync_queue` for push to cloud.
 
-**Local REST Endpoints (v2.0.0):**
+**Local REST Endpoints (v2.1.0):**
 
 | Endpoint | Method | Mirrors tRPC Procedure |
 |----------|--------|------------------------|
@@ -184,6 +184,7 @@ TC27 Scanner → warehouse.craftculture.xyz (Vercel)
 | `/api/wms/scan-case` | POST | `wms.admin.operations.getCaseByBarcode` |
 | `/api/wms/transfer` | POST | `wms.admin.operations.transfer` |
 | `/api/wms/putaway` | POST | `wms.admin.operations.putaway` |
+| `/api/wms/receive-item` | POST | `wms.admin.receiving.receiveShipmentItem` |
 | `/api/wms/pick-lists` | GET | `wms.admin.picking.getMany` |
 | `/api/wms/pick-list/:id` | GET | `wms.admin.picking.getOne` |
 | `/api/wms/pick-item` | POST | `wms.admin.picking.pickItem` |
@@ -197,14 +198,14 @@ apps/web/src/app/_wms/
 └── components/ConnectionStatus.tsx   # Green "Local" / amber "Offline" indicator
 ```
 
-**Pages using local-first routing:** Transfer, Pick detail, Repack
-**Pages still cloud-only:** Receiving, Dispatch, Labels, Stock Explorer (not latency-sensitive)
+**Pages using local-first routing:** Transfer, Pick detail, Repack, Receiving (commit item + location scan)
+**Pages still cloud-only:** Dispatch, Labels, Stock Explorer (not latency-sensitive)
 
 **NUC Server Files (on NUC at `/home/kevin/wms-local-server/`):**
 ```
 src/
 ├── index.ts       # Hono app entry, routes
-├── api/wms.ts     # 8 REST endpoints matching tRPC response shapes
+├── api/wms.ts     # 9 REST endpoints matching tRPC response shapes
 ├── db/client.ts   # bun:sqlite connection
 ├── db/schema.sql  # SQLite table definitions
 └── sync/          # pull.ts, push.ts, engine.ts
@@ -312,7 +313,7 @@ zohoSalesOrderItems  - Line items for each order
 - **Logistics Items Tab UX** — Full item editor sheet, LWIN mapping with auto-populate (producer, region, country, HS code, vintage, pack config), HS code progress bar with auto-assign, Sync to Zoho guard
 - **Logistics HS Code Management** — Auto-detection (sparkling vs still wine), bulk auto-assign endpoint, 11 supported HS codes, mandatory before Zoho sync
 - WMS Local Server (NUC) — local-first routing for scanner operations (~15ms vs ~200ms)
-- `useWmsApi()` hook with automatic NUC/cloud fallback on Transfer, Pick, Repack pages
+- `useWmsApi()` hook with automatic NUC/cloud fallback on Transfer, Pick, Repack, Receiving pages
 - NUC sync engine — pulls from Neon every 30s, pushes local writes back
 - WMS scanner integration with Zebra TC27
 - Transfer, putaway, and repack page fixes (trpcClient pattern)
@@ -329,7 +330,7 @@ zohoSalesOrderItems  - Line items for each order
 - Optimizing mobile printing workflow for high-volume label printing
 
 ### Pending
-- Add Receiving and Dispatch endpoints to NUC local server
+- Add Dispatch endpoint to NUC local server
 - Investigate faster mobile printing options (Enterprise Browser license vs current share workflow)
 - Print case labels during receiving
 - Dispatch confirmation workflow
