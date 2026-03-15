@@ -197,6 +197,7 @@ const adminGetStockByProduct = adminProcedure
             lotNumber: wmsStock.lotNumber,
             expiryDate: wmsStock.expiryDate,
             reExportBoeNumber: wmsStock.reExportBoeNumber,
+            photos: wmsStock.photos,
           })
           .from(wmsStock)
           .innerJoin(wmsLocations, eq(wmsLocations.id, wmsStock.locationId))

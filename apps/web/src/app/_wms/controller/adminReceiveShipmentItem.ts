@@ -207,6 +207,7 @@ const adminReceiveShipmentItem = adminProcedure
             isPerishable: !!receivedItem.expiryDate,
             category: getCategoryFromHsCode(hsCode),
             notes: stockNotes || undefined,
+            photos: receivedItem.photos ?? [],
           })
           .returning();
         stock = newStock;

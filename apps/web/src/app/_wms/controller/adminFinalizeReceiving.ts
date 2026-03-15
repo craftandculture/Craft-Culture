@@ -1,10 +1,11 @@
 import { TRPCError } from '@trpc/server';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
 
 import db from '@/database/client';
-import { logisticsShipments, wmsReceivingDrafts } from '@/database/schema';
+import { logisticsShipments, wmsReceivingDrafts, wmsStock } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
+import logger from '@/utils/logger';
 
 /**
  * Finalize receiving for a shipment
@@ -45,6 +46,45 @@ const adminFinalizeReceiving = adminProcedure
         updatedAt: new Date(),
       })
       .where(eq(logisticsShipments.id, shipmentId));
+
+    // Backfill photos from draft items to stock records before deleting
+    const [draft] = await db
+      .select()
+      .from(wmsReceivingDrafts)
+      .where(eq(wmsReceivingDrafts.shipmentId, shipmentId));
+
+    if (draft?.items) {
+      for (const item of draft.items) {
+        if (item.photos && item.photos.length > 0) {
+          // Find stock records for this shipment matching by product name
+          const stockRecords = await db
+            .select({ id: wmsStock.id, photos: wmsStock.photos })
+            .from(wmsStock)
+            .where(
+              and(
+                eq(wmsStock.shipmentId, shipmentId),
+                eq(wmsStock.productName, item.productName),
+              ),
+            );
+
+          for (const stock of stockRecords) {
+            // Only backfill if stock has no photos yet
+            if (!stock.photos || stock.photos.length === 0) {
+              await db
+                .update(wmsStock)
+                .set({ photos: item.photos })
+                .where(eq(wmsStock.id, stock.id));
+            }
+          }
+
+          logger.info('[FinalizeReceiving] Backfilled photos', {
+            productName: item.productName,
+            photoCount: item.photos.length,
+            stockCount: stockRecords.length,
+          });
+        }
+      }
+    }
 
     // Clean up the receiving draft
     await db
