@@ -45,7 +45,7 @@ import usePrint from '@/app/_wms/hooks/usePrint';
 import PrinterProvider from '@/app/_wms/providers/PrinterProvider';
 import { generateBatchLabelsZpl } from '@/app/_wms/utils/generateLabelZpl';
 import type { LabelData } from '@/app/_wms/utils/generateLabelZpl';
-import useTRPC from '@/lib/trpc/browser';
+import useTRPC, { useTRPCClient } from '@/lib/trpc/browser';
 
 type SortField = 'productName' | 'totalCases' | 'vintage' | 'receivedAt';
 type SortOrder = 'asc' | 'desc';
@@ -1086,23 +1086,24 @@ const StockExplorerPage = () => {
   );
 
   // Update product name across all records
-  const { mutate: updateProductName, isPending: isEditingName } = useMutation({
-    ...api.wms.admin.stock.updateProductName.mutationOptions(),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: api.wms.admin.stock.getByProduct.getQueryKey() });
-      toast.success('Product name updated');
-    },
-    onError: (error) => {
-      console.error('updateProductName error:', error);
-      toast.error(`Failed to update product name: ${error.message}`);
-    },
-  });
+  const trpcClient = useTRPCClient();
+  const [isEditingName, setIsEditingName] = useState(false);
 
   const handleEditName = useCallback(
-    (lwin18: string, productName: string, producer: string | null) => {
-      updateProductName({ lwin18, productName, producer });
+    async (lwin18: string, productName: string, producer: string | null) => {
+      setIsEditingName(true);
+      try {
+        await trpcClient.wms.admin.stock.updateProductName.mutate({ lwin18, productName, producer });
+        void queryClient.invalidateQueries({ queryKey: api.wms.admin.stock.getByProduct.getQueryKey() });
+        toast.success('Product name updated');
+      } catch (error) {
+        console.error('updateProductName error:', error);
+        toast.error('Failed to update product name');
+      } finally {
+        setIsEditingName(false);
+      }
     },
-    [updateProductName],
+    [api, queryClient, trpcClient],
   );
 
   // Search & filters
