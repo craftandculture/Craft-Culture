@@ -375,7 +375,7 @@ interface ProductRowProps {
   onPrintLabels: (product: ProductRowProps['product'], loc: ProductRowProps['product']['locations'][number], qty: number) => void;
   onUpdateBoe: (stockId: string, value: string) => void;
   onAdjustStock: (stockId: string, newQuantity: number, reason: string) => void;
-  onEditName: (lwin18: string, productName: string, producer: string | null) => void;
+  onEditName: (lwin18: string, productName: string, producer: string | null) => Promise<void>;
   isAdjusting: boolean;
   isEditingName: boolean;
 }
@@ -426,9 +426,9 @@ const ProductRow = ({ product, isExpanded, onToggle, density, visibleColumns, on
                 />
               </div>
               <button
-                onClick={() => {
+                onClick={async () => {
                   if (editName.trim()) {
-                    onEditName(product.lwin18, editName.trim(), editProducer.trim() || null);
+                    await onEditName(product.lwin18, editName.trim(), editProducer.trim() || null);
                     setEditingName(false);
                   }
                 }}
