@@ -34,6 +34,7 @@ import ScanInput from '@/app/_wms/components/ScanInput';
 import type { ScanInputHandle } from '@/app/_wms/components/ScanInput';
 import ZebraPrint from '@/app/_wms/components/ZebraPrint';
 import usePrint from '@/app/_wms/hooks/usePrint';
+import useWmsApi from '@/app/_wms/hooks/useWmsApi';
 import downloadZplFile from '@/app/_wms/utils/downloadZplFile';
 import generateLabelZpl from '@/app/_wms/utils/generateLabelZpl';
 import generateLotNumber from '@/app/_wms/utils/generateLotNumber';
@@ -95,6 +96,7 @@ const WMSReceiveShipmentPage = () => {
   const router = useRouter();
   const shipmentId = params.shipmentId as string;
   const api = useTRPC();
+  const wmsApi = useWmsApi();
   const queryClient = useQueryClient();
 
   // View mode: 'list' shows all products with search, 'detail' shows single product
@@ -169,10 +171,8 @@ const WMSReceiveShipmentPage = () => {
     enabled: addItemSearchDebounce.length >= 2,
   });
 
-  // Location lookup by barcode
-  const locationLookupMutation = useMutation({
-    ...api.wms.admin.operations.getLocationByBarcode.mutationOptions(),
-  });
+  // Location lookup by barcode (local-first via NUC)
+  const locationLookupMutation = useMutation(wmsApi.scanLocationMutationOptions());
 
   // Create case labels
   const createLabelsMutation = useMutation({
@@ -209,10 +209,8 @@ const WMSReceiveShipmentPage = () => {
     },
   });
 
-  // Commit single item mutation (incremental receiving)
-  const commitItemMutation = useMutation({
-    ...api.wms.admin.receiving.receiveShipmentItem.mutationOptions(),
-  });
+  // Commit single item mutation (local-first via NUC)
+  const commitItemMutation = useMutation(wmsApi.receiveItemMutationOptions());
 
   // Finalize receiving mutation (mark shipment as delivered)
   const finalizeMutation = useMutation({
@@ -718,6 +716,12 @@ const WMSReceiveShipmentPage = () => {
         shipmentId,
         lotNumber: currentLotNumber,
         notes: currentItem.notes,
+        // Enriched context for NUC local server
+        shipmentNumber: shipment?.shipmentNumber,
+        shipmentType: shipment?.type,
+        shipmentStatus: shipment?.status,
+        partnerId: shipment?.partnerId ?? undefined,
+        partnerName: shipment?.partnerName ?? undefined,
         item: {
           shipmentItemId: currentItem.shipmentItemId,
           expectedCases: currentItem.expectedCases,

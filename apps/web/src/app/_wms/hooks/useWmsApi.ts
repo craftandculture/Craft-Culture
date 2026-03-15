@@ -5,6 +5,7 @@ import { useCallback, useMemo } from 'react';
 import useTRPC, { useTRPCClient } from '@/lib/trpc/browser';
 
 import { useLocalServer } from '../providers/LocalServerProvider';
+import type { ReceiveSingleItem } from '../schemas/receiveSingleItemSchema';
 
 /**
  * Fetch helper that calls the local NUC server with JSON body.
@@ -283,6 +284,32 @@ const useWmsApi = () => {
     [isAvailable, baseUrl, api],
   );
 
+  /** Receive item mutation options for useMutation (incremental receiving) */
+  const receiveItemMutationOptions = useCallback(() => {
+    if (isAvailable && baseUrl) {
+      return {
+        mutationFn: async (input: ReceiveSingleItem) => {
+          return localFetch<{
+            success: true;
+            lwin18: string;
+            productName: string;
+            totalCases: number;
+            stock: Array<{
+              stockId: string;
+              locationId: string;
+              cases: number;
+              caseLabels: Array<{ id: string; barcode: string }>;
+            }>;
+          }>(baseUrl, '/api/wms/receive-item', {
+            method: 'POST',
+            body: JSON.stringify(input),
+          });
+        },
+      };
+    }
+    return api.wms.admin.receiving.receiveShipmentItem.mutationOptions();
+  }, [isAvailable, baseUrl, api]);
+
   /** Location scan mutation options (for useMutation pattern) */
   const scanLocationMutationOptions = useCallback(() => {
     if (isAvailable && baseUrl) {
@@ -327,6 +354,7 @@ const useWmsApi = () => {
       scanLocation,
       scanCase,
       transferMutationOptions,
+      receiveItemMutationOptions,
 
       pickItemMutationOptions,
       pickCompleteMutationOptions,
@@ -338,6 +366,7 @@ const useWmsApi = () => {
       scanLocation,
       scanCase,
       transferMutationOptions,
+      receiveItemMutationOptions,
 
       pickItemMutationOptions,
       pickCompleteMutationOptions,
