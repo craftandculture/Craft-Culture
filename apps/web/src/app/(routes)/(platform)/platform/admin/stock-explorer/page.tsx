@@ -377,14 +377,17 @@ interface ProductRowProps {
   onAdjustStock: (stockId: string, newQuantity: number, reason: string) => void;
   onEditName: (lwin18: string, productName: string, producer: string | null) => Promise<void>;
   isAdjusting: boolean;
-  isEditingName: boolean;
+  editingLwin18: string | null;
+  onStartEditName: (lwin18: string) => void;
+  onCancelEditName: () => void;
 }
 
-const ProductRow = ({ product, isExpanded, onToggle, density, visibleColumns, onPrintLabels, onUpdateBoe, onAdjustStock, onEditName, isAdjusting, isEditingName }: ProductRowProps) => {
+const ProductRow = ({ product, isExpanded, onToggle, density, visibleColumns, onPrintLabels, onUpdateBoe, onAdjustStock, onEditName, isAdjusting, editingLwin18, onStartEditName, onCancelEditName }: ProductRowProps) => {
   const [adjustingStockId, setAdjustingStockId] = useState<string | null>(null);
   const [adjustQty, setAdjustQty] = useState(0);
   const [adjustReason, setAdjustReason] = useState('');
-  const [editingName, setEditingName] = useState(false);
+  const editingName = editingLwin18 === product.lwin18;
+  const isSaving = editingLwin18 === `saving:${product.lwin18}`;
   const [editName, setEditName] = useState(product.productName);
   const [editProducer, setEditProducer] = useState(product.producer ?? '');
   const dc = DENSITY_CLASSES[density];
@@ -406,7 +409,7 @@ const ProductRow = ({ product, isExpanded, onToggle, density, visibleColumns, on
 
         {/* Product name */}
         <td className={`${tdClass} max-w-[280px] font-medium text-text-primary`}>
-          {editingName ? (
+          {editingName || isSaving ? (
             <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
               <div className="flex flex-col gap-1">
                 <input
@@ -426,20 +429,19 @@ const ProductRow = ({ product, isExpanded, onToggle, density, visibleColumns, on
                 />
               </div>
               <button
-                onClick={async () => {
+                onClick={() => {
                   if (editName.trim()) {
-                    await onEditName(product.lwin18, editName.trim(), editProducer.trim() || null);
-                    setEditingName(false);
+                    void onEditName(product.lwin18, editName.trim(), editProducer.trim() || null);
                   }
                 }}
-                disabled={isEditingName || !editName.trim()}
+                disabled={isSaving || !editName.trim()}
                 className="flex h-7 w-7 shrink-0 items-center justify-center rounded bg-emerald-500 text-white transition-colors hover:bg-emerald-600 disabled:opacity-50"
               >
-                {isEditingName ? <IconLoader2 className="h-3.5 w-3.5 animate-spin" /> : <IconDeviceFloppy className="h-3.5 w-3.5" />}
+                {isSaving ? <IconLoader2 className="h-3.5 w-3.5 animate-spin" /> : <IconDeviceFloppy className="h-3.5 w-3.5" />}
               </button>
               <button
                 onClick={() => {
-                  setEditingName(false);
+                  onCancelEditName();
                   setEditName(product.productName);
                   setEditProducer(product.producer ?? '');
                 }}
@@ -456,7 +458,7 @@ const ProductRow = ({ product, isExpanded, onToggle, density, visibleColumns, on
                   e.stopPropagation();
                   setEditName(product.productName);
                   setEditProducer(product.producer ?? '');
-                  setEditingName(true);
+                  onStartEditName(product.lwin18);
                 }}
                 className="hidden shrink-0 rounded p-0.5 text-text-muted/40 transition-colors hover:bg-surface-muted hover:text-text-brand group-hover/name:inline-flex"
               >
@@ -1087,13 +1089,11 @@ const StockExplorerPage = () => {
 
   // Update product name across all records
   const trpcClient = useTRPCClient();
-  const [isEditingName, setIsEditingName] = useState(false);
+  const [editingLwin18, setEditingLwin18] = useState<string | null>(null);
 
   const handleEditName = useCallback(
     async (lwin18: string, productName: string, producer: string | null) => {
-      setIsEditingName(true);
-      // Fire mutation — response parsing via httpBatchStreamLink is unreliable for this endpoint,
-      // but the server update always succeeds. Catch and treat as success, then refetch.
+      setEditingLwin18(`saving:${lwin18}`);
       try {
         await trpcClient.wms.admin.stock.updateProductName.mutate({ lwin18, productName, producer });
       } catch {
@@ -1101,7 +1101,7 @@ const StockExplorerPage = () => {
       }
       await queryClient.invalidateQueries({ queryKey: api.wms.admin.stock.getByProduct.getQueryKey() });
       toast.success('Product name updated');
-      setIsEditingName(false);
+      setEditingLwin18(null);
     },
     [api, queryClient, trpcClient],
   );
@@ -1897,7 +1897,9 @@ const StockExplorerPage = () => {
                           onAdjustStock={handleAdjustStock}
                           onEditName={handleEditName}
                           isAdjusting={isAdjustingStock}
-                          isEditingName={isEditingName}
+                          editingLwin18={editingLwin18}
+                          onStartEditName={setEditingLwin18}
+                          onCancelEditName={() => setEditingLwin18(null)}
                         />
                       );
                     })
