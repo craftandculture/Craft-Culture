@@ -214,12 +214,12 @@ const WMSDispatchBatchDetailPage = () => {
   const canDispatch = batch.status === 'staged' && batch.orderCount > 0;
 
   return (
-    <div className="container mx-auto max-w-4xl px-4 py-6 sm:px-6 sm:py-8">
+    <div className="container mx-auto max-w-lg md:max-w-3xl lg:max-w-5xl px-4 py-6 sm:px-6 sm:py-8">
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center gap-4">
           <Link href="/platform/admin/wms/dispatch">
-            <Button variant="ghost" size="sm">
+            <Button variant="ghost" className="h-12 w-12">
               <Icon icon={IconArrowLeft} size="sm" />
             </Button>
           </Link>
@@ -409,7 +409,7 @@ const WMSDispatchBatchDetailPage = () => {
                       {canAddOrders && (
                         <Button
                           variant="ghost"
-                          size="sm"
+                          className="h-10 w-10"
                           type="button"
                           onClick={() => removeOrderMutation.mutate({ batchId, orderId: order.orderId })}
                           disabled={removeOrderMutation.isPending}
@@ -553,7 +553,7 @@ const WMSDispatchBatchDetailPage = () => {
                             <span className="text-xs text-text-muted">Already added</span>
                           ) : (
                             <div
-                              className={`h-5 w-5 rounded border-2 ${
+                              className={`h-6 w-6 rounded border-2 ${
                                 isSelected
                                   ? 'border-brand-500 bg-brand-500'
                                   : 'border-border-primary'

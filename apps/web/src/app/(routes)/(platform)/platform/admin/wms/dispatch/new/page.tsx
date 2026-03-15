@@ -154,20 +154,20 @@ const DispatchWizardPage = () => {
   );
 
   return (
-    <div className="container mx-auto max-w-2xl px-4 py-6 sm:px-6 sm:py-8">
+    <div className="container mx-auto max-w-2xl px-4 py-6 pb-24 sm:px-6 sm:py-8 sm:pb-8">
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center gap-4">
           {step === 'select-orders' ? (
             <Link href="/platform/admin/wms/dispatch">
-              <Button variant="ghost" size="sm">
+              <Button variant="ghost" className="h-12 w-12">
                 <Icon icon={IconArrowLeft} size="sm" />
               </Button>
             </Link>
           ) : (
             <Button
               variant="ghost"
-              size="sm"
+              className="h-12 w-12"
               onClick={() => {
                 setStep('select-orders');
                 setSearchQuery('');
@@ -323,7 +323,7 @@ const DispatchWizardPage = () => {
                               </Typography>
                             </div>
                             <div
-                              className={`flex h-5 w-5 items-center justify-center rounded border-2 ${
+                              className={`flex h-6 w-6 items-center justify-center rounded border-2 ${
                                 selected
                                   ? 'border-brand-500 bg-brand-500'
                                   : 'border-border-primary'
@@ -469,7 +469,7 @@ const DispatchWizardPage = () => {
                             </Typography>
                           </div>
                           <div
-                            className={`flex h-5 w-5 items-center justify-center rounded-full border-2 ${
+                            className={`flex h-6 w-6 items-center justify-center rounded-full border-2 ${
                               selected
                                 ? 'border-brand-500 bg-brand-500'
                                 : 'border-border-primary'

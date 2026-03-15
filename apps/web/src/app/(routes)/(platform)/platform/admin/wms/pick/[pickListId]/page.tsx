@@ -269,7 +269,7 @@ const WMSPickListDetailPage = () => {
         {/* Header */}
         <div className="flex items-center gap-4">
           <Link href="/platform/admin/wms/pick">
-            <Button variant="ghost" size="sm">
+            <Button variant="ghost" className="h-12 w-12">
               <Icon icon={IconArrowLeft} size="sm" />
             </Button>
           </Link>
@@ -282,10 +282,9 @@ const WMSPickListDetailPage = () => {
           {!isComplete && (
             <Button
               variant="ghost"
-              size="sm"
+              className="h-12 w-12 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
               onClick={handleDelete}
               disabled={deleteMutation.isPending}
-              className="text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
             >
               <Icon icon={deleteMutation.isPending ? IconLoader2 : IconTrash} size="sm" />
             </Button>
