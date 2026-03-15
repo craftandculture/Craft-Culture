@@ -34,9 +34,9 @@ const WMSHeader = ({ userName }: WMSHeaderProps) => {
           {/* Left side - Back button or Menu */}
           <div className="flex items-center gap-3">
             {isWMSDashboard ? (
-              // On dashboard, show link back to admin
+              // On dashboard, show link back to admin home
               <Link
-                href="/platform/admin"
+                href="/platform/admin/home"
                 className="flex items-center gap-2 rounded-lg px-3 py-2 text-text-muted transition-colors hover:bg-fill-secondary hover:text-text-primary"
               >
                 <IconArrowLeft className="h-5 w-5" />
@@ -99,7 +99,7 @@ const WMSHeader = ({ userName }: WMSHeaderProps) => {
                       </Typography>
                     </div>
                     <Link
-                      href="/platform/admin"
+                      href="/platform/admin/home"
                       className="flex items-center gap-2 px-4 py-2 text-sm text-text-muted hover:bg-fill-secondary hover:text-text-primary"
                       onClick={() => setMenuOpen(false)}
                     >
