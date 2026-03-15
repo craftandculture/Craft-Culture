@@ -124,48 +124,48 @@ const StatusIndicator = ({ expiryStatus, availableCases }: StatusIndicatorProps)
   // Priority: expired > expiring (90 days) > stock level
   if (expiryStatus === 'expired') {
     return (
-      <span className="flex items-center gap-1.5">
-        <span className="h-2 w-2 rounded-full bg-red-500" />
-        <span className="text-red-600">Expired</span>
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-red-50 px-2 py-0.5 text-[11px] font-medium text-red-600">
+        <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
+        Expired
       </span>
     );
   }
   if (expiryStatus === 'warning') {
     return (
-      <span className="flex items-center gap-1.5">
-        <span className="h-2 w-2 rounded-full bg-orange-500" />
-        <span className="text-orange-600">Expiring</span>
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-orange-50 px-2 py-0.5 text-[11px] font-medium text-orange-600">
+        <span className="h-1.5 w-1.5 rounded-full bg-orange-500" />
+        Expiring
       </span>
     );
   }
   if (availableCases === 0) {
     return (
-      <span className="flex items-center gap-1.5">
-        <span className="h-2 w-2 rounded-full bg-gray-400" />
-        <span className="text-text-muted">Out of Stock</span>
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-surface-muted px-2 py-0.5 text-[11px] font-medium text-text-muted">
+        <span className="h-1.5 w-1.5 rounded-full bg-border-muted" />
+        Out
       </span>
     );
   }
   if (availableCases === 1) {
     return (
-      <span className="flex items-center gap-1.5">
-        <span className="h-2 w-2 rounded-full bg-red-400" />
-        <span className="text-red-600">Final Case</span>
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-red-50 px-2 py-0.5 text-[11px] font-medium text-red-600">
+        <span className="h-1.5 w-1.5 rounded-full bg-red-400" />
+        Final
       </span>
     );
   }
-  if (availableCases === 2) {
+  if (availableCases <= 2) {
     return (
-      <span className="flex items-center gap-1.5">
-        <span className="h-2 w-2 rounded-full bg-amber-400" />
-        <span className="text-amber-600">Low Stock</span>
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-600">
+        <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
+        Low
       </span>
     );
   }
   return (
-    <span className="flex items-center gap-1.5">
-      <span className="h-2 w-2 rounded-full bg-emerald-500" />
-      <span className="text-emerald-600">Good</span>
+    <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-600">
+      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+      Good
     </span>
   );
 };
@@ -388,7 +388,7 @@ const ProductRow = ({ product, isExpanded, onToggle, density, visibleColumns, on
     <>
       <tr
         onClick={onToggle}
-        className={`cursor-pointer border-b border-border-muted transition-colors hover:bg-surface-muted ${dc.text}`}
+        className={`cursor-pointer border-b border-border-muted transition-colors even:bg-surface-muted/20 hover:bg-surface-muted/60 ${dc.text}`}
       >
         {/* Expand chevron */}
         <td className={`${tdClass} w-8 text-text-muted`}>
@@ -610,7 +610,7 @@ const ProductRow = ({ product, isExpanded, onToggle, density, visibleColumns, on
                             {loc.availableCases}
                           </td>
                           <td className="px-3 py-2">
-                            <div className="h-1.5 w-full overflow-hidden rounded-full bg-border-muted">
+                            <div className="h-2 w-full overflow-hidden rounded-full bg-border-muted/40">
                               <div
                                 className={`h-full rounded-full ${barColor} transition-all`}
                                 style={{ width: `${Math.min(availPercent, 100)}%` }}
@@ -1350,10 +1350,10 @@ const StockExplorerPage = () => {
 
         {/* KPI Cards */}
         {overview && (
-          <div className={`grid grid-cols-3 gap-2 ${overview.inbound.cases > 0 ? 'lg:grid-cols-7' : 'lg:grid-cols-6'}`}>
+          <div className={`grid grid-cols-3 gap-2.5 sm:grid-cols-4 ${overview.inbound.cases > 0 ? 'lg:grid-cols-8' : 'lg:grid-cols-7'}`}>
             {/* Total Stock */}
-            <div className="rounded-lg border border-border-muted bg-background-primary px-3 py-2.5 text-center">
-              <div className="mx-auto mb-1 flex h-6 w-6 items-center justify-center rounded-md bg-blue-50 text-blue-500">
+            <div className="rounded-xl border border-blue-100 bg-gradient-to-b from-blue-50/40 to-background-primary px-3 py-2.5 text-center shadow-sm">
+              <div className="mx-auto mb-1 flex h-6 w-6 items-center justify-center rounded-md bg-blue-100/70 text-blue-500">
                 <IconPackage size={13} />
               </div>
               <div className="text-lg font-bold leading-tight">{overview.summary.totalCases.toLocaleString()}</div>
@@ -1361,9 +1361,23 @@ const StockExplorerPage = () => {
               <div className="text-[10px] text-text-muted">{overview.summary.uniqueProducts} products</div>
             </div>
 
+            {/* Total Bottles */}
+            <div className="rounded-xl border border-indigo-100 bg-gradient-to-b from-indigo-50/40 to-background-primary px-3 py-2.5 text-center shadow-sm">
+              <div className="mx-auto mb-1 flex h-6 w-6 items-center justify-center rounded-md bg-indigo-100/70 text-indigo-500">
+                <IconTags size={13} />
+              </div>
+              <div className="text-lg font-bold leading-tight">{overview.summary.totalBottles.toLocaleString()}</div>
+              <div className="text-[11px] text-text-muted">Bottles</div>
+              <div className="text-[10px] text-text-muted">
+                {overview.summary.totalCases > 0
+                  ? `~${Math.round(overview.summary.totalBottles / overview.summary.totalCases)} per case`
+                  : '—'}
+              </div>
+            </div>
+
             {/* Available */}
-            <div className="rounded-lg border border-border-muted bg-background-primary px-3 py-2.5 text-center">
-              <div className="mx-auto mb-1 flex h-6 w-6 items-center justify-center rounded-md bg-emerald-50 text-emerald-500">
+            <div className="rounded-xl border border-emerald-100 bg-gradient-to-b from-emerald-50/40 to-background-primary px-3 py-2.5 text-center shadow-sm">
+              <div className="mx-auto mb-1 flex h-6 w-6 items-center justify-center rounded-md bg-emerald-100/70 text-emerald-500">
                 <IconCircleCheck size={13} />
               </div>
               <div className="text-lg font-bold leading-tight text-emerald-600">
@@ -1378,9 +1392,9 @@ const StockExplorerPage = () => {
             </div>
 
             {/* Reserved */}
-            <div className="rounded-lg border border-border-muted bg-background-primary px-3 py-2.5 text-center">
+            <div className="rounded-xl border border-amber-100 bg-gradient-to-b from-amber-50/40 to-background-primary px-3 py-2.5 text-center shadow-sm">
               <div className={`mx-auto mb-1 flex h-6 w-6 items-center justify-center rounded-md ${
-                overview.summary.reservedCases > 0 ? 'bg-amber-50 text-amber-500' : 'bg-gray-50 text-gray-300'
+                overview.summary.reservedCases > 0 ? 'bg-amber-100/70 text-amber-500' : 'bg-surface-muted text-text-muted'
               }`}>
                 <IconLock size={13} />
               </div>
@@ -1394,14 +1408,14 @@ const StockExplorerPage = () => {
             </div>
 
             {/* Utilization */}
-            <div className="rounded-lg border border-border-muted bg-background-primary px-3 py-2.5 text-center">
-              <div className="mx-auto mb-1 flex h-6 w-6 items-center justify-center rounded-md bg-purple-50 text-purple-500">
+            <div className="rounded-xl border border-purple-100 bg-gradient-to-b from-purple-50/40 to-background-primary px-3 py-2.5 text-center shadow-sm">
+              <div className="mx-auto mb-1 flex h-6 w-6 items-center justify-center rounded-md bg-purple-100/70 text-purple-500">
                 <IconBuildingWarehouse size={13} />
               </div>
               <div className="text-lg font-bold leading-tight">{overview.locations.utilizationPercent}%</div>
               <div className="text-[11px] text-text-muted">Utilization</div>
               <div className="mt-1 flex items-center gap-1.5">
-                <div className="h-1 flex-1 overflow-hidden rounded-full bg-border-muted">
+                <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-purple-100">
                   <div
                     className="h-full rounded-full bg-purple-500 transition-all"
                     style={{ width: `${overview.locations.utilizationPercent}%` }}
@@ -1414,18 +1428,18 @@ const StockExplorerPage = () => {
             </div>
 
             {/* Movements */}
-            <div className="rounded-lg border border-border-muted bg-background-primary px-3 py-2.5 text-center">
-              <div className="mx-auto mb-1 flex h-6 w-6 items-center justify-center rounded-md bg-cyan-50 text-cyan-500">
+            <div className="rounded-xl border border-cyan-100 bg-gradient-to-b from-cyan-50/40 to-background-primary px-3 py-2.5 text-center shadow-sm">
+              <div className="mx-auto mb-1 flex h-6 w-6 items-center justify-center rounded-md bg-cyan-100/70 text-cyan-500">
                 <IconArrowsExchange size={13} />
               </div>
               <div className="text-lg font-bold leading-tight">{overview.movements.last7Days}</div>
               <div className="text-[11px] text-text-muted">Moves (7d)</div>
-              <div className="text-[10px] text-text-muted">{overview.movements.last24Hours} today</div>
+              <div className="text-[10px] text-text-muted">{overview.movements.last24Hours} (24h)</div>
             </div>
 
             {/* Owners */}
-            <div className="rounded-lg border border-border-muted bg-background-primary px-3 py-2.5 text-center">
-              <div className="mx-auto mb-1 flex h-6 w-6 items-center justify-center rounded-md bg-rose-50 text-rose-500">
+            <div className="rounded-xl border border-rose-100 bg-gradient-to-b from-rose-50/40 to-background-primary px-3 py-2.5 text-center shadow-sm">
+              <div className="mx-auto mb-1 flex h-6 w-6 items-center justify-center rounded-md bg-rose-100/70 text-rose-500">
                 <IconUsers size={13} />
               </div>
               <div className="text-lg font-bold leading-tight">{overview.summary.uniqueOwners}</div>
@@ -1441,13 +1455,13 @@ const StockExplorerPage = () => {
             {overview.inbound.cases > 0 && (
               <button
                 onClick={() => setQuickFilter(isInboundView ? 'all' : 'inbound')}
-                className={`rounded-lg border px-3 py-2.5 text-center transition-colors ${
+                className={`rounded-xl border px-3 py-2.5 text-center shadow-sm transition-colors ${
                   isInboundView
                     ? 'border-blue-300 bg-blue-50 ring-1 ring-blue-200'
-                    : 'border-border-muted bg-background-primary hover:border-blue-200 hover:bg-blue-50/50'
+                    : 'border-blue-100 bg-gradient-to-b from-blue-50/40 to-background-primary hover:border-blue-200 hover:bg-blue-50/50'
                 }`}
               >
-                <div className="mx-auto mb-1 flex h-6 w-6 items-center justify-center rounded-md bg-blue-50 text-blue-500">
+                <div className="mx-auto mb-1 flex h-6 w-6 items-center justify-center rounded-md bg-blue-100/70 text-blue-500">
                   <IconShip size={13} />
                 </div>
                 <div className="text-lg font-bold leading-tight text-blue-600">
@@ -1625,11 +1639,11 @@ const StockExplorerPage = () => {
         </div>
 
         {/* Table */}
-        <Card>
+        <Card className="shadow-sm">
           <CardContent className="p-0">
             <div className="overflow-x-auto">
               <table className={`w-full ${dc.text}`}>
-                <thead className="sticky top-0 z-10 border-b border-border-muted bg-background-primary">
+                <thead className="sticky top-0 z-10 border-b border-border-muted bg-surface-muted/60">
                   <tr>
                     <th className={`${dc.td} w-8`} />
                     <th
