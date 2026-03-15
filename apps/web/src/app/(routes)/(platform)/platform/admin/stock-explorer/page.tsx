@@ -1094,11 +1094,10 @@ const StockExplorerPage = () => {
   const handleEditName = useCallback(
     async (lwin18: string, productName: string, producer: string | null) => {
       setEditingLwin18(`saving:${lwin18}`);
-      try {
-        await trpcClient.wms.admin.stock.updateProductName.mutate({ lwin18, productName, producer });
-      } catch {
-        // Server updates succeed even when stream parsing fails — safe to ignore
-      }
+      // Fire mutation but don't await — httpBatchStreamLink hangs the promise indefinitely
+      trpcClient.wms.admin.stock.updateProductName.mutate({ lwin18, productName, producer }).catch(() => {});
+      // Give server time to process, then refetch
+      await new Promise((r) => setTimeout(r, 1500));
       await queryClient.invalidateQueries({ queryKey: api.wms.admin.stock.getByProduct.getQueryKey() });
       toast.success('Product name updated');
       setEditingLwin18(null);
