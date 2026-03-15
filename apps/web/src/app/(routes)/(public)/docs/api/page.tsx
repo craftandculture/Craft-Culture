@@ -368,7 +368,7 @@ X-RateLimit-Reset: 2025-01-15T10:30:00.000Z`}
         {/* Footer */}
         <footer className="pt-8 border-t border-border-muted">
           <Typography variant="bodySm" colorRole="muted">
-            Last updated: December 2025
+            Last updated: March 2026
           </Typography>
         </footer>
       </div>

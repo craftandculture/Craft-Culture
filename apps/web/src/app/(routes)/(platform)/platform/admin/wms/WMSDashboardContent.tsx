@@ -383,7 +383,7 @@ const WMSDashboardContent = () => {
               <Link href={action.href}>
                 <Card className="cursor-pointer transition-colors hover:border-border-brand active:bg-fill-secondary">
                   <CardContent className="relative flex flex-col items-center justify-center p-6">
-                    <div className="absolute right-2 top-2 cursor-grab opacity-30 hover:opacity-60">
+                    <div className="absolute right-2 top-2 hidden cursor-grab opacity-30 hover:opacity-60 sm:block">
                       <Icon icon={IconGripVertical} size="sm" />
                     </div>
                     <div className={`mb-2 flex h-14 w-14 items-center justify-center rounded-xl ${action.bgColor}`}>
@@ -468,7 +468,7 @@ const WMSDashboardContent = () => {
                       showLabel={false}
                     />
                     <span className="min-w-0 flex-1 truncate text-text-muted">
-                      {movement.productName?.substring(0, 25)}...
+                      {movement.productName}
                     </span>
                     <span className="font-medium text-blue-600">{movement.quantityCases}cs</span>
                   </div>
@@ -482,11 +482,11 @@ const WMSDashboardContent = () => {
         <Card>
           <CardContent className="p-3">
             <div className="grid grid-cols-2 gap-2 md:grid-cols-3 lg:grid-cols-4">
-              <Link href="/platform/admin/wms/movements" className="flex items-center gap-2 rounded-lg p-2 transition-colors hover:bg-fill-secondary">
+              <Link href="/platform/admin/wms/movements" className="flex items-center gap-2 rounded-lg p-3 transition-colors hover:bg-fill-secondary">
                 <Icon icon={IconTransfer} size="sm" colorRole="muted" />
                 <Typography variant="bodySm">Movements</Typography>
               </Link>
-              <Link href="/platform/admin/wms/ownership/requests" className="flex items-center gap-2 rounded-lg p-2 transition-colors hover:bg-fill-secondary">
+              <Link href="/platform/admin/wms/ownership/requests" className="flex items-center gap-2 rounded-lg p-3 transition-colors hover:bg-fill-secondary">
                 <Icon icon={IconUsers} size="sm" colorRole="muted" />
                 <Typography variant="bodySm">Requests</Typography>
                 {pendingRequestCount > 0 && (
@@ -495,19 +495,19 @@ const WMSDashboardContent = () => {
                   </span>
                 )}
               </Link>
-              <Link href="/platform/admin/wms/ownership/transfer" className="flex items-center gap-2 rounded-lg p-2 transition-colors hover:bg-fill-secondary">
+              <Link href="/platform/admin/wms/ownership/transfer" className="flex items-center gap-2 rounded-lg p-3 transition-colors hover:bg-fill-secondary">
                 <Icon icon={IconUserDollar} size="sm" colorRole="muted" />
                 <Typography variant="bodySm">Ownership</Typography>
               </Link>
-              <Link href="/platform/admin/wms/stock/reconcile" className="flex items-center gap-2 rounded-lg p-2 transition-colors hover:bg-fill-secondary">
+              <Link href="/platform/admin/wms/stock/reconcile" className="flex items-center gap-2 rounded-lg p-3 transition-colors hover:bg-fill-secondary">
                 <Icon icon={IconAlertTriangle} size="sm" colorRole="muted" />
                 <Typography variant="bodySm">Reconcile</Typography>
               </Link>
-              <Link href="/platform/admin/wms/health" className="flex items-center gap-2 rounded-lg p-2 transition-colors hover:bg-fill-secondary">
+              <Link href="/platform/admin/wms/health" className="flex items-center gap-2 rounded-lg p-3 transition-colors hover:bg-fill-secondary">
                 <Icon icon={IconHeartbeat} size="sm" colorRole="muted" />
                 <Typography variant="bodySm">Health</Typography>
               </Link>
-              <a href="https://craftculture.xyz/wms-manual" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 rounded-lg p-2 transition-colors hover:bg-fill-secondary">
+              <a href="https://craftculture.xyz/wms-manual" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 rounded-lg p-3 transition-colors hover:bg-fill-secondary">
                 <Icon icon={IconBook} size="sm" colorRole="muted" />
                 <Typography variant="bodySm">Manual</Typography>
               </a>

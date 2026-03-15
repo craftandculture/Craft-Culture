@@ -80,11 +80,11 @@ const WMSPickListsPage = () => {
               Pick Lists
             </Typography>
             <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={() => refetch()}>
+              <Button variant="outline" onClick={() => refetch()}>
                 <Icon icon={IconRefresh} size="sm" />
               </Button>
               <Link href="/platform/admin/wms/pick/new">
-                <Button variant="default" size="sm">
+                <Button variant="default">
                   <ButtonContent iconLeft={IconPlus}>New</ButtonContent>
                 </Button>
               </Link>

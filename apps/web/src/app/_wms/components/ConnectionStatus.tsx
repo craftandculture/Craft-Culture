@@ -1,6 +1,6 @@
 'use client';
 
-import { IconServer, IconWifi, IconWifiOff } from '@tabler/icons-react';
+import { IconCloud, IconServer, IconWifi, IconWifiOff } from '@tabler/icons-react';
 import { useEffect, useRef, useState } from 'react';
 
 import Icon from '@/app/_ui/components/Icon/Icon';
@@ -10,7 +10,7 @@ import { useLocalServer } from '../providers/LocalServerProvider';
 
 /**
  * Connection status indicator for WMS pages.
- * Shows Local Mode (green), Cloud Mode (blue), or Offline (amber).
+ * Shows Local Mode (green), Cloud Mode (amber), or Offline (red banner).
  */
 const ConnectionStatus = () => {
   const [isOnline, setIsOnline] = useState(true);
@@ -53,15 +53,25 @@ const ConnectionStatus = () => {
     </div>
   ) : null;
 
-  // Cloud mode — just show local pill if available
+  // Cloud-only pill (no NUC available but online)
+  const cloudPill = !isLocalAvailable && isOnline ? (
+    <div className="fixed right-4 top-16 z-40 flex items-center gap-1.5 rounded-full bg-amber-500 px-3 py-1 shadow-sm">
+      <Icon icon={IconCloud} size="xs" className="text-white" />
+      <Typography variant="bodyXs" className="font-medium text-white">
+        Cloud
+      </Typography>
+    </div>
+  ) : null;
+
+  // Cloud mode — show appropriate pill
   if (isOnline && !showBanner) {
-    return localPill;
+    return localPill ?? cloudPill;
   }
 
   // Banner states
   if (!isOnline) {
     return (
-      <div className="fixed left-0 right-0 top-0 z-50 flex items-center justify-center gap-2 bg-amber-500 px-4 py-2 text-white">
+      <div className="fixed left-0 right-0 top-14 z-50 flex items-center justify-center gap-2 bg-amber-500 px-4 py-2 text-white">
         <Icon icon={IconWifiOff} size="sm" className="text-white" />
         <Typography variant="bodySm" className="font-medium text-white">
           Offline — Changes will sync when connection returns
@@ -70,22 +80,22 @@ const ConnectionStatus = () => {
     );
   }
 
-  // Just came back online — show banner + keep local pill visible
+  // Just came back online — show banner + keep pill visible
   if (showBanner) {
     return (
       <>
-        <div className="fixed left-0 right-0 top-0 z-50 flex items-center justify-center gap-2 bg-emerald-500 px-4 py-2 text-white">
+        <div className="fixed left-0 right-0 top-14 z-50 flex items-center justify-center gap-2 bg-emerald-500 px-4 py-2 text-white">
           <Icon icon={IconWifi} size="sm" className="text-white" />
           <Typography variant="bodySm" className="font-medium text-white">
             Back online — syncing changes...
           </Typography>
         </div>
-        {localPill}
+        {localPill ?? cloudPill}
       </>
     );
   }
 
-  return localPill;
+  return localPill ?? cloudPill;
 };
 
 export default ConnectionStatus;

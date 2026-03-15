@@ -66,7 +66,7 @@ const WMSHeader = ({ userName }: WMSHeaderProps) => {
             {/* Printer settings */}
             <button
               onClick={() => setPrinterSettingsOpen(true)}
-              className="flex h-10 w-10 items-center justify-center rounded-lg text-text-muted transition-colors hover:bg-fill-secondary hover:text-text-primary"
+              className="flex h-12 w-12 items-center justify-center rounded-lg text-text-muted transition-colors hover:bg-fill-secondary hover:text-text-primary"
             >
               <Icon icon={IconSettings} size="sm" />
             </button>
