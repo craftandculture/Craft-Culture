@@ -38,6 +38,7 @@ import useWmsApi from '@/app/_wms/hooks/useWmsApi';
 import downloadZplFile from '@/app/_wms/utils/downloadZplFile';
 import generateLabelZpl from '@/app/_wms/utils/generateLabelZpl';
 import generateLotNumber from '@/app/_wms/utils/generateLotNumber';
+import generateStockPalletLabelZpl from '@/app/_wms/utils/generateStockPalletLabelZpl';
 import useTRPC from '@/lib/trpc/browser';
 
 interface LocationAssignment {
@@ -777,17 +778,16 @@ const WMSReceiveShipmentPage = () => {
       let zpl: string;
 
       if (assignment.isPalletized) {
-        const palletBarcode = `PLT-${lwin18}-${assignment.cases}C`;
-        const singleZpl = generateLabelZpl({
-          barcode: palletBarcode,
+        const singleZpl = generateStockPalletLabelZpl({
           productName: item.productName,
+          producer: item.producer ?? undefined,
           lwin18,
           packSize,
           vintage: item.vintage ?? undefined,
+          locationCode: assignment.locationCode,
+          ownerName: shipment?.partnerName ?? 'C&C',
+          quantityCases: assignment.cases,
           lotNumber: currentLotNumber,
-          owner: shipment?.partnerName ?? undefined,
-          labelType: 'pallet',
-          palletCaseCount: assignment.cases,
         });
         zpl = Array(qty).fill(singleZpl).join('\n');
       } else {
@@ -807,7 +807,8 @@ const WMSReceiveShipmentPage = () => {
 
       if (zpl) {
         const filename = `reprint-${item.productName.replace(/[^a-zA-Z0-9]/g, '-').slice(0, 30)}-${assignment.locationCode}`;
-        const printed = await print(zpl, '4x2');
+        const labelSize = assignment.isPalletized ? '4x6' : '4x2';
+        const printed = await print(zpl, labelSize);
         if (!printed) {
           downloadZplFile(zpl, filename);
         }
@@ -1923,7 +1924,7 @@ const WMSReceiveShipmentPage = () => {
                                   inputMode="numeric"
                                   min={1}
                                   max={assignment.cases}
-                                  value={reprintQty[index] ?? assignment.cases}
+                                  value={reprintQty[index] ?? (assignment.isPalletized ? 1 : assignment.cases)}
                                   onChange={(e) => {
                                     const parsed = parseInt(e.target.value);
                                     if (!isNaN(parsed)) {
@@ -1933,7 +1934,7 @@ const WMSReceiveShipmentPage = () => {
                                   className="h-10 w-16 rounded-lg border-2 border-border-primary bg-fill-primary px-1 text-center text-sm focus:border-border-brand focus:outline-none"
                                 />
                                 <button
-                                  onClick={() => handleReprintLabels(assignment, currentItem, reprintQty[index] ?? assignment.cases)}
+                                  onClick={() => handleReprintLabels(assignment, currentItem, reprintQty[index] ?? (assignment.isPalletized ? 1 : assignment.cases))}
                                   disabled={isPrinting}
                                   className="flex h-10 w-10 items-center justify-center rounded-lg bg-fill-secondary text-text-muted hover:bg-fill-tertiary hover:text-text-primary disabled:opacity-50"
                                 >
@@ -2006,7 +2007,7 @@ const WMSReceiveShipmentPage = () => {
                               inputMode="numeric"
                               min={1}
                               max={assignment.cases}
-                              value={reprintQty[index] ?? assignment.cases}
+                              value={reprintQty[index] ?? (assignment.isPalletized ? 1 : assignment.cases)}
                               onChange={(e) => {
                                 const parsed = parseInt(e.target.value);
                                 if (!isNaN(parsed)) {
@@ -2016,7 +2017,7 @@ const WMSReceiveShipmentPage = () => {
                               className="h-10 w-16 rounded-lg border-2 border-border-primary bg-fill-primary px-1 text-center text-sm focus:border-border-brand focus:outline-none"
                             />
                             <button
-                              onClick={() => handleReprintLabels(assignment, currentItem, reprintQty[index] ?? assignment.cases)}
+                              onClick={() => handleReprintLabels(assignment, currentItem, reprintQty[index] ?? (assignment.isPalletized ? 1 : assignment.cases))}
                               disabled={isPrinting}
                               className="flex h-10 w-10 items-center justify-center rounded-lg bg-fill-secondary text-text-muted hover:bg-fill-tertiary hover:text-text-primary disabled:opacity-50"
                             >
