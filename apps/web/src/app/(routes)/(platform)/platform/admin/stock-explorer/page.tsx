@@ -216,12 +216,14 @@ const PaginationButton = ({
 
 interface PrintCellProps {
   maxQty: number;
+  defaultQty?: number;
   onPrint: (qty: number) => void;
 }
 
-const PrintCell = ({ maxQty, onPrint }: PrintCellProps) => {
+const PrintCell = ({ maxQty, defaultQty, onPrint }: PrintCellProps) => {
+  const initialQty = defaultQty ?? maxQty;
   const [editing, setEditing] = useState(false);
-  const [qty, setQty] = useState(maxQty);
+  const [qty, setQty] = useState(initialQty);
 
   if (!editing) {
     return (
@@ -229,7 +231,7 @@ const PrintCell = ({ maxQty, onPrint }: PrintCellProps) => {
         <button
           onClick={(e) => {
             e.stopPropagation();
-            setQty(maxQty);
+            setQty(initialQty);
             setEditing(true);
           }}
           className="rounded p-1 text-text-muted transition-colors hover:bg-surface-muted hover:text-text-brand"
@@ -723,6 +725,7 @@ const ProductRow = ({ product, isExpanded, onToggle, density, visibleColumns, on
                           </td>
                           <PrintCell
                             maxQty={loc.quantityCases}
+                            defaultQty={loc.storageMethod === 'pallet' ? 1 : undefined}
                             onPrint={(qty) => onPrintLabels(product, loc, qty)}
                           />
                         </tr>
