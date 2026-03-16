@@ -47,6 +47,7 @@ import usePrint from '@/app/_wms/hooks/usePrint';
 import PrinterProvider from '@/app/_wms/providers/PrinterProvider';
 import { generateBatchLabelsZpl } from '@/app/_wms/utils/generateLabelZpl';
 import type { LabelData } from '@/app/_wms/utils/generateLabelZpl';
+import generateStockPalletLabelZpl from '@/app/_wms/utils/generateStockPalletLabelZpl';
 import useTRPC, { useTRPCClient } from '@/lib/trpc/browser';
 
 type SortField = 'productName' | 'totalCases' | 'vintage' | 'receivedAt';
@@ -1378,7 +1379,7 @@ const StockExplorerPage = () => {
     setPage(0);
   }, []);
 
-  // Print labels handler
+  // Print labels handler — pallet storage uses 4x6" pallet labels, shelf/other uses 4x2" case labels
   const handlePrintLabels = useCallback(
     async (
       product: ProductRowProps['product'],
@@ -1386,24 +1387,51 @@ const StockExplorerPage = () => {
       qty: number,
     ) => {
       const packSize = `${product.caseConfig ?? 12}x${product.bottleSize ?? '75cl'}`;
-      const labels: LabelData[] = Array.from({ length: qty }, () => ({
-        barcode: product.lwin18,
-        productName: product.productName,
-        producer: product.producer ?? undefined,
-        lwin18: product.lwin18,
-        packSize,
-        vintage: product.vintage ?? undefined,
-        locationCode: loc.locationCode,
-        owner: loc.ownerName,
-        lotNumber: loc.lotNumber ?? undefined,
-        showBarcode: true,
-      }));
-      const zpl = generateBatchLabelsZpl(labels);
-      const success = await print(zpl, '4x2');
-      if (success) {
-        toast.success(`Printing ${qty} label${qty !== 1 ? 's' : ''} for ${product.productName}`);
+
+      if (loc.storageMethod === 'pallet') {
+        const zpl = Array.from({ length: qty }, () =>
+          generateStockPalletLabelZpl({
+            productName: product.productName,
+            producer: product.producer ?? undefined,
+            lwin18: product.lwin18,
+            packSize,
+            vintage: product.vintage ?? undefined,
+            locationCode: loc.locationCode,
+            ownerName: loc.ownerName,
+            quantityCases: loc.cases,
+            lotNumber: loc.lotNumber ?? undefined,
+          }),
+        ).join('\n');
+        const success = await print(zpl, '4x6');
+        if (success) {
+          toast.success(
+            `Printing ${qty} pallet label${qty !== 1 ? 's' : ''} for ${product.productName}`,
+          );
+        } else {
+          toast.error('Print failed — check printer connection');
+        }
       } else {
-        toast.error('Print failed — check printer connection');
+        const labels: LabelData[] = Array.from({ length: qty }, () => ({
+          barcode: product.lwin18,
+          productName: product.productName,
+          producer: product.producer ?? undefined,
+          lwin18: product.lwin18,
+          packSize,
+          vintage: product.vintage ?? undefined,
+          locationCode: loc.locationCode,
+          owner: loc.ownerName,
+          lotNumber: loc.lotNumber ?? undefined,
+          showBarcode: true,
+        }));
+        const zpl = generateBatchLabelsZpl(labels);
+        const success = await print(zpl, '4x2');
+        if (success) {
+          toast.success(
+            `Printing ${qty} label${qty !== 1 ? 's' : ''} for ${product.productName}`,
+          );
+        } else {
+          toast.error('Print failed — check printer connection');
+        }
       }
     },
     [print],
