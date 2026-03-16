@@ -775,9 +775,6 @@ const ProductRow = ({ product, isExpanded, onToggle, density, visibleColumns, on
                                   className="flex h-8 items-center gap-1 rounded bg-fill-brand px-3 text-sm font-medium text-white transition-colors hover:bg-fill-brand/90 disabled:opacity-50"
                                   onClick={() => {
                                     onAdjustStock(loc.stockId, adjustQty, adjustReason.trim());
-                                    setAdjustingStockId(null);
-                                    setAdjustQty(0);
-                                    setAdjustReason('');
                                   }}
                                 >
                                   {isAdjusting ? <IconLoader2 className="h-3.5 w-3.5 animate-spin" /> : <IconCheck className="h-3.5 w-3.5" />}
@@ -1139,6 +1136,9 @@ const StockExplorerPage = () => {
   const { mutate: adjustStock, isPending: isAdjustingStock } = useMutation({
     ...api.wms.admin.stock.adjustQuantity.mutationOptions(),
     onSuccess: (data) => {
+      setAdjustingStockId(null);
+      setAdjustQty(0);
+      setAdjustReason('');
       void queryClient.invalidateQueries({ queryKey: api.wms.admin.stock.getByProduct.getQueryKey() });
       if (data.noChange) {
         toast.info('No change needed');
