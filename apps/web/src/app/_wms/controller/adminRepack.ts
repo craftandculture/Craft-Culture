@@ -16,20 +16,151 @@ import generateMovementNumber from '../utils/generateMovementNumber';
 import generateRepackNumber from '../utils/generateRepackNumber';
 
 /**
+ * Build an LWIN18 by replacing the case config portion
+ * LWIN-18 format: LWIN11-VINTAGE-CASECONFIG-BOTTLESIZE
+ */
+const buildLwin18WithConfig = (sourceLwin18: string, newConfig: number) => {
+  const parts = sourceLwin18.split('-');
+  return `${parts.slice(0, -2).join('-')}-${newConfig.toString().padStart(2, '0')}-${parts[parts.length - 1]}`;
+};
+
+/**
+ * Strip existing (Nx) suffix from product name before appending a new one
+ */
+const stripPackSuffix = (name: string) => name.replace(/ \(\d+x\)$/, '');
+
+/**
+ * Find or create a stock record at a location for a given LWIN18/owner/lot
+ */
+const findOrCreateStock = async (
+  targetLwin18: string,
+  targetProductName: string,
+  targetCaseConfig: number,
+  targetQuantityCases: number,
+  targetLocationId: string,
+  sourceStock: {
+    ownerId: string;
+    ownerName: string | null;
+    producer: string | null;
+    vintage: number | null;
+    bottleSize: string | null;
+    lotNumber: string | null;
+    receivedAt: Date | null;
+    shipmentId: string | null;
+    salesArrangement: string | null;
+    consignmentCommissionPercent: number | null;
+    category: string | null;
+    expiryDate: Date | null;
+    isPerishable: boolean | null;
+  },
+) => {
+  const [existing] = await db
+    .select()
+    .from(wmsStock)
+    .where(
+      and(
+        eq(wmsStock.locationId, targetLocationId),
+        eq(wmsStock.lwin18, targetLwin18),
+        eq(wmsStock.ownerId, sourceStock.ownerId),
+        sourceStock.lotNumber === null
+          ? isNull(wmsStock.lotNumber)
+          : eq(wmsStock.lotNumber, sourceStock.lotNumber),
+      ),
+    );
+
+  if (existing) {
+    await db
+      .update(wmsStock)
+      .set({
+        quantityCases: existing.quantityCases + targetQuantityCases,
+        availableCases: existing.availableCases + targetQuantityCases,
+        updatedAt: new Date(),
+      })
+      .where(eq(wmsStock.id, existing.id));
+    return existing.id;
+  }
+
+  const [newStock] = await db
+    .insert(wmsStock)
+    .values({
+      locationId: targetLocationId,
+      ownerId: sourceStock.ownerId,
+      ownerName: sourceStock.ownerName,
+      lwin18: targetLwin18,
+      productName: targetProductName,
+      producer: sourceStock.producer,
+      vintage: sourceStock.vintage,
+      bottleSize: sourceStock.bottleSize,
+      caseConfig: targetCaseConfig,
+      quantityCases: targetQuantityCases,
+      reservedCases: 0,
+      availableCases: targetQuantityCases,
+      lotNumber: sourceStock.lotNumber,
+      receivedAt: sourceStock.receivedAt,
+      shipmentId: sourceStock.shipmentId,
+      salesArrangement: sourceStock.salesArrangement,
+      consignmentCommissionPercent: sourceStock.consignmentCommissionPercent,
+      category: sourceStock.category,
+      expiryDate: sourceStock.expiryDate,
+      isPerishable: sourceStock.isPerishable,
+    })
+    .returning();
+  return newStock.id;
+};
+
+/**
+ * Create case labels for a target LWIN18
+ */
+const createCaseLabels = async (
+  targetLwin18: string,
+  targetProductName: string,
+  count: number,
+  targetLocationId: string,
+  lotNumber: string | null,
+  shipmentId: string | null,
+) => {
+  const labels: Array<{ id: string; barcode: string }> = [];
+  const existingLabelsCount = await db
+    .select({ count: wmsCaseLabels.id })
+    .from(wmsCaseLabels)
+    .where(eq(wmsCaseLabels.lwin18, targetLwin18));
+
+  let sequence = existingLabelsCount.length + 1;
+
+  for (let i = 0; i < count; i++) {
+    const barcode = generateCaseLabelBarcode(targetLwin18, sequence);
+    sequence++;
+
+    const [newLabel] = await db
+      .insert(wmsCaseLabels)
+      .values({
+        barcode,
+        lwin18: targetLwin18,
+        productName: targetProductName,
+        lotNumber,
+        shipmentId,
+        currentLocationId: targetLocationId,
+        isActive: true,
+      })
+      .returning();
+
+    labels.push({ id: newLabel.id, barcode: newLabel.barcode });
+  }
+
+  return labels;
+};
+
+/**
  * Repack stock from one case configuration to another
- * For example: 1x 12-pack → 2x 6-pack
  *
- * @example
- *   await trpcClient.wms.admin.operations.repack.mutate({
- *     stockId: "uuid",
- *     sourceQuantityCases: 1,
- *     targetCaseConfig: 6
- *   });
+ * Supports two modes:
+ * - **even**: 1× 12-pack → 2× 6-pack (bottles divide evenly)
+ * - **uneven**: 1× 6-pack → 1× 2-pack + 1× 4-pack (remove N bottles)
  */
 const adminRepack = adminProcedure
   .input(repackByStockSchema)
   .mutation(async ({ input, ctx }) => {
-    const { stockId, sourceQuantityCases, targetCaseConfig, destinationLocationId, notes } = input;
+    const { stockId, sourceQuantityCases, destinationLocationId, notes } = input;
 
     // 1. Get the source stock record
     const [sourceStock] = await db.select().from(wmsStock).where(eq(wmsStock.id, stockId));
@@ -49,41 +180,221 @@ const adminRepack = adminProcedure
       });
     }
 
-    // 3. Validate repack is valid (must create valid number of target cases)
     const sourceCaseConfig = sourceStock.caseConfig ?? 12;
-    const totalBottles = sourceQuantityCases * sourceCaseConfig;
-
-    if (totalBottles % targetCaseConfig !== 0) {
-      throw new TRPCError({
-        code: 'BAD_REQUEST',
-        message: `Cannot evenly divide ${totalBottles} bottles into ${targetCaseConfig}-packs`,
-      });
-    }
-
-    if (targetCaseConfig >= sourceCaseConfig) {
-      throw new TRPCError({
-        code: 'BAD_REQUEST',
-        message: 'Target case config must be smaller than source',
-      });
-    }
-
-    const targetQuantityCases = totalBottles / targetCaseConfig;
-
-    // Determine destination location (use provided or default to source)
     const targetLocationId = destinationLocationId ?? sourceStock.locationId;
+    const bottleSize = sourceStock.bottleSize ?? '75cl';
+    const baseName = stripPackSuffix(sourceStock.productName);
 
-    // 4. Generate new LWIN-18 for target (change case config portion)
-    // LWIN-18 format: LWIN11-VINTAGE-CASECONFIG-BOTTLESIZE
-    const sourceLwin18Parts = sourceStock.lwin18.split('-');
-    const targetLwin18 = `${sourceLwin18Parts.slice(0, -2).join('-')}-${targetCaseConfig.toString().padStart(2, '0')}-${sourceLwin18Parts[sourceLwin18Parts.length - 1]}`;
+    if (input.mode === 'even') {
+      // ─── EVEN SPLIT ───
+      const { targetCaseConfig } = input;
+      const totalBottles = sourceQuantityCases * sourceCaseConfig;
 
-    // 5. Generate repack number
+      if (totalBottles % targetCaseConfig !== 0) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: `Cannot evenly divide ${totalBottles} bottles into ${targetCaseConfig}-packs`,
+        });
+      }
+
+      if (targetCaseConfig >= sourceCaseConfig) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Target case config must be smaller than source',
+        });
+      }
+
+      const targetQuantityCases = totalBottles / targetCaseConfig;
+      const targetLwin18 = buildLwin18WithConfig(sourceStock.lwin18, targetCaseConfig);
+      const repackNumber = await generateRepackNumber();
+      const targetProductName = `${baseName} (${targetCaseConfig}x)`;
+
+      // Decrease source stock
+      const newSourceQuantity = sourceStock.quantityCases - sourceQuantityCases;
+      const newSourceAvailable = sourceStock.availableCases - sourceQuantityCases;
+
+      await db
+        .update(wmsStock)
+        .set({
+          quantityCases: newSourceQuantity,
+          availableCases: newSourceAvailable,
+          updatedAt: new Date(),
+        })
+        .where(eq(wmsStock.id, stockId));
+
+      // Create or update target stock
+      const targetStockId = await findOrCreateStock(
+        targetLwin18,
+        targetProductName,
+        targetCaseConfig,
+        targetQuantityCases,
+        targetLocationId,
+        sourceStock,
+      );
+
+      // Deactivate source case labels
+      const sourceLabels = await db
+        .select()
+        .from(wmsCaseLabels)
+        .where(
+          and(
+            eq(wmsCaseLabels.currentLocationId, sourceStock.locationId),
+            eq(wmsCaseLabels.lwin18, sourceStock.lwin18),
+            sourceStock.lotNumber === null
+              ? isNull(wmsCaseLabels.lotNumber)
+              : eq(wmsCaseLabels.lotNumber, sourceStock.lotNumber),
+            eq(wmsCaseLabels.isActive, true),
+          ),
+        )
+        .limit(sourceQuantityCases);
+
+      const deactivatedBarcodes: string[] = [];
+      for (const label of sourceLabels) {
+        await db
+          .update(wmsCaseLabels)
+          .set({ isActive: false, updatedAt: new Date() })
+          .where(eq(wmsCaseLabels.id, label.id));
+        deactivatedBarcodes.push(label.barcode);
+      }
+
+      // Create new case labels
+      const newCaseLabels = await createCaseLabels(
+        targetLwin18,
+        targetProductName,
+        targetQuantityCases,
+        targetLocationId,
+        sourceStock.lotNumber,
+        sourceStock.shipmentId,
+      );
+
+      // Create repack record
+      const [repack] = await db
+        .insert(wmsRepacks)
+        .values({
+          repackNumber,
+          sourceLwin18: sourceStock.lwin18,
+          sourceProductName: sourceStock.productName,
+          sourceCaseConfig,
+          sourceQuantityCases,
+          sourceStockId: stockId,
+          targetLwin18,
+          targetProductName,
+          targetCaseConfig,
+          targetQuantityCases,
+          targetStockId,
+          locationId: sourceStock.locationId,
+          ownerId: sourceStock.ownerId,
+          performedBy: ctx.user.id,
+          performedAt: new Date(),
+          notes,
+        })
+        .returning();
+
+      // Create movement records
+      const movementNumberOut = await generateMovementNumber();
+      await db.insert(wmsStockMovements).values({
+        movementNumber: movementNumberOut,
+        movementType: 'repack_out',
+        lwin18: sourceStock.lwin18,
+        productName: sourceStock.productName,
+        quantityCases: sourceQuantityCases,
+        fromLocationId: sourceStock.locationId,
+        lotNumber: sourceStock.lotNumber,
+        scannedBarcodes: deactivatedBarcodes,
+        notes: `Repacked to ${targetCaseConfig}-pack (${repackNumber})`,
+        performedBy: ctx.user.id,
+        performedAt: new Date(),
+      });
+
+      const movementNumberIn = await generateMovementNumber();
+      await db.insert(wmsStockMovements).values({
+        movementNumber: movementNumberIn,
+        movementType: 'repack_in',
+        lwin18: targetLwin18,
+        productName: targetProductName,
+        quantityCases: targetQuantityCases,
+        toLocationId: targetLocationId,
+        lotNumber: sourceStock.lotNumber,
+        scannedBarcodes: newCaseLabels.map((l) => l.barcode),
+        notes: `Repacked from ${sourceCaseConfig}-pack (${repackNumber})`,
+        performedBy: ctx.user.id,
+        performedAt: new Date(),
+      });
+
+      const packSize = `${targetCaseConfig}x${bottleSize}`;
+
+      return {
+        success: true,
+        repackNumber,
+        repackId: repack.id,
+        source: {
+          lwin18: sourceStock.lwin18,
+          productName: sourceStock.productName,
+          caseConfig: sourceCaseConfig,
+          quantityCases: sourceQuantityCases,
+          locationId: sourceStock.locationId,
+          deactivatedBarcodes,
+        },
+        target: {
+          lwin18: targetLwin18,
+          productName: targetProductName,
+          caseConfig: targetCaseConfig,
+          quantityCases: targetQuantityCases,
+          stockId: targetStockId,
+          locationId: targetLocationId,
+          newCaseLabels,
+          packSize,
+          vintage: sourceStock.vintage,
+          owner: sourceStock.ownerName,
+          lotNumber: sourceStock.lotNumber,
+        },
+        target2: null as null | {
+          lwin18: string;
+          productName: string;
+          caseConfig: number;
+          quantityCases: number;
+          stockId: string;
+          locationId: string;
+          newCaseLabels: Array<{ id: string; barcode: string }>;
+          packSize: string;
+          vintage: number | null;
+          owner: string | null;
+          lotNumber: string | null;
+        },
+      };
+    }
+
+    // ─── UNEVEN (CUSTOM) SPLIT ───
+    const { bottlesToRemove } = input;
+
+    if (sourceQuantityCases !== 1) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'Custom split only supports 1 source case at a time',
+      });
+    }
+
+    if (bottlesToRemove >= sourceCaseConfig) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: `Cannot remove ${bottlesToRemove} bottles from a ${sourceCaseConfig}-pack`,
+      });
+    }
+
+    const removedConfig = bottlesToRemove;
+    const remainingConfig = sourceCaseConfig - bottlesToRemove;
+
+    const removedLwin18 = buildLwin18WithConfig(sourceStock.lwin18, removedConfig);
+    const remainingLwin18 = buildLwin18WithConfig(sourceStock.lwin18, remainingConfig);
+
+    const removedProductName = `${baseName} (${removedConfig}x)`;
+    const remainingProductName = `${baseName} (${remainingConfig}x)`;
+
     const repackNumber = await generateRepackNumber();
 
-    // 6. Decrease source stock
-    // Note: Don't delete even if quantity is 0 - wms_repacks has FK reference to source_stock_id
-    const newSourceQuantity = sourceStock.quantityCases - sourceQuantityCases;
-    const newSourceAvailable = sourceStock.availableCases - sourceQuantityCases;
+    // Decrease source stock by 1
+    const newSourceQuantity = sourceStock.quantityCases - 1;
+    const newSourceAvailable = sourceStock.availableCases - 1;
 
     await db
       .update(wmsStock)
@@ -94,64 +405,27 @@ const adminRepack = adminProcedure
       })
       .where(eq(wmsStock.id, stockId));
 
-    // 7. Create or update target stock at destination location
-    const [existingTargetStock] = await db
-      .select()
-      .from(wmsStock)
-      .where(
-        and(
-          eq(wmsStock.locationId, targetLocationId),
-          eq(wmsStock.lwin18, targetLwin18),
-          eq(wmsStock.ownerId, sourceStock.ownerId),
-          sourceStock.lotNumber === null
-            ? isNull(wmsStock.lotNumber)
-            : eq(wmsStock.lotNumber, sourceStock.lotNumber),
-        ),
-      );
+    // Create/update stock for removed portion (target 1)
+    const removedStockId = await findOrCreateStock(
+      removedLwin18,
+      removedProductName,
+      removedConfig,
+      1,
+      targetLocationId,
+      sourceStock,
+    );
 
-    let targetStockId: string;
-    const targetProductName = `${sourceStock.productName} (${targetCaseConfig}x)`;
+    // Create/update stock for remaining portion (target 2)
+    const remainingStockId = await findOrCreateStock(
+      remainingLwin18,
+      remainingProductName,
+      remainingConfig,
+      1,
+      targetLocationId,
+      sourceStock,
+    );
 
-    if (existingTargetStock) {
-      await db
-        .update(wmsStock)
-        .set({
-          quantityCases: existingTargetStock.quantityCases + targetQuantityCases,
-          availableCases: existingTargetStock.availableCases + targetQuantityCases,
-          updatedAt: new Date(),
-        })
-        .where(eq(wmsStock.id, existingTargetStock.id));
-      targetStockId = existingTargetStock.id;
-    } else {
-      const [newStock] = await db
-        .insert(wmsStock)
-        .values({
-          locationId: targetLocationId,
-          ownerId: sourceStock.ownerId,
-          ownerName: sourceStock.ownerName,
-          lwin18: targetLwin18,
-          productName: targetProductName,
-          producer: sourceStock.producer,
-          vintage: sourceStock.vintage,
-          bottleSize: sourceStock.bottleSize,
-          caseConfig: targetCaseConfig,
-          quantityCases: targetQuantityCases,
-          reservedCases: 0,
-          availableCases: targetQuantityCases,
-          lotNumber: sourceStock.lotNumber,
-          receivedAt: sourceStock.receivedAt,
-          shipmentId: sourceStock.shipmentId,
-          salesArrangement: sourceStock.salesArrangement,
-          consignmentCommissionPercent: sourceStock.consignmentCommissionPercent,
-          category: sourceStock.category,
-          expiryDate: sourceStock.expiryDate,
-          isPerishable: sourceStock.isPerishable,
-        })
-        .returning();
-      targetStockId = newStock.id;
-    }
-
-    // 8. Deactivate source case labels
+    // Deactivate 1 source case label
     const sourceLabels = await db
       .select()
       .from(wmsCaseLabels)
@@ -165,50 +439,37 @@ const adminRepack = adminProcedure
           eq(wmsCaseLabels.isActive, true),
         ),
       )
-      .limit(sourceQuantityCases);
+      .limit(1);
 
     const deactivatedBarcodes: string[] = [];
     for (const label of sourceLabels) {
       await db
         .update(wmsCaseLabels)
-        .set({
-          isActive: false,
-          updatedAt: new Date(),
-        })
+        .set({ isActive: false, updatedAt: new Date() })
         .where(eq(wmsCaseLabels.id, label.id));
       deactivatedBarcodes.push(label.barcode);
     }
 
-    // 9. Create new case labels for target cases
-    const newCaseLabels: Array<{ id: string; barcode: string }> = [];
-    const existingLabelsCount = await db
-      .select({ count: wmsCaseLabels.id })
-      .from(wmsCaseLabels)
-      .where(eq(wmsCaseLabels.lwin18, targetLwin18));
+    // Create case labels for both targets
+    const removedLabels = await createCaseLabels(
+      removedLwin18,
+      removedProductName,
+      1,
+      targetLocationId,
+      sourceStock.lotNumber,
+      sourceStock.shipmentId,
+    );
 
-    let sequence = existingLabelsCount.length + 1;
+    const remainingLabels = await createCaseLabels(
+      remainingLwin18,
+      remainingProductName,
+      1,
+      targetLocationId,
+      sourceStock.lotNumber,
+      sourceStock.shipmentId,
+    );
 
-    for (let i = 0; i < targetQuantityCases; i++) {
-      const barcode = generateCaseLabelBarcode(targetLwin18, sequence);
-      sequence++;
-
-      const [newLabel] = await db
-        .insert(wmsCaseLabels)
-        .values({
-          barcode,
-          lwin18: targetLwin18,
-          productName: targetProductName,
-          lotNumber: sourceStock.lotNumber,
-          shipmentId: sourceStock.shipmentId,
-          currentLocationId: targetLocationId,
-          isActive: true,
-        })
-        .returning();
-
-      newCaseLabels.push({ id: newLabel.id, barcode: newLabel.barcode });
-    }
-
-    // 10. Create repack record
+    // Create repack record with both targets
     const [repack] = await db
       .insert(wmsRepacks)
       .values({
@@ -216,13 +477,18 @@ const adminRepack = adminProcedure
         sourceLwin18: sourceStock.lwin18,
         sourceProductName: sourceStock.productName,
         sourceCaseConfig,
-        sourceQuantityCases,
+        sourceQuantityCases: 1,
         sourceStockId: stockId,
-        targetLwin18,
-        targetProductName,
-        targetCaseConfig,
-        targetQuantityCases,
-        targetStockId,
+        targetLwin18: removedLwin18,
+        targetProductName: removedProductName,
+        targetCaseConfig: removedConfig,
+        targetQuantityCases: 1,
+        targetStockId: removedStockId,
+        target2Lwin18: remainingLwin18,
+        target2ProductName: remainingProductName,
+        target2CaseConfig: remainingConfig,
+        target2QuantityCases: 1,
+        target2StockId: remainingStockId,
         locationId: sourceStock.locationId,
         ownerId: sourceStock.ownerId,
         performedBy: ctx.user.id,
@@ -231,40 +497,54 @@ const adminRepack = adminProcedure
       })
       .returning();
 
-    // 11. Create movement records (repack_out and repack_in)
+    // Create 3 movements: 1 repack_out + 2 repack_in
     const movementNumberOut = await generateMovementNumber();
     await db.insert(wmsStockMovements).values({
       movementNumber: movementNumberOut,
       movementType: 'repack_out',
       lwin18: sourceStock.lwin18,
       productName: sourceStock.productName,
-      quantityCases: sourceQuantityCases,
+      quantityCases: 1,
       fromLocationId: sourceStock.locationId,
       lotNumber: sourceStock.lotNumber,
       scannedBarcodes: deactivatedBarcodes,
-      notes: `Repacked to ${targetCaseConfig}-pack (${repackNumber})`,
+      notes: `Custom split to ${removedConfig}-pack + ${remainingConfig}-pack (${repackNumber})`,
       performedBy: ctx.user.id,
       performedAt: new Date(),
     });
 
-    const movementNumberIn = await generateMovementNumber();
+    const movementNumberIn1 = await generateMovementNumber();
     await db.insert(wmsStockMovements).values({
-      movementNumber: movementNumberIn,
+      movementNumber: movementNumberIn1,
       movementType: 'repack_in',
-      lwin18: targetLwin18,
-      productName: targetProductName,
-      quantityCases: targetQuantityCases,
+      lwin18: removedLwin18,
+      productName: removedProductName,
+      quantityCases: 1,
       toLocationId: targetLocationId,
       lotNumber: sourceStock.lotNumber,
-      scannedBarcodes: newCaseLabels.map((l) => l.barcode),
-      notes: `Repacked from ${sourceCaseConfig}-pack (${repackNumber})`,
+      scannedBarcodes: removedLabels.map((l) => l.barcode),
+      notes: `Custom split from ${sourceCaseConfig}-pack — removed portion (${repackNumber})`,
       performedBy: ctx.user.id,
       performedAt: new Date(),
     });
 
-    // Calculate pack size for labels (e.g., "6x75cl")
-    const bottleSize = sourceStock.bottleSize ?? '75cl';
-    const packSize = `${targetCaseConfig}x${bottleSize}`;
+    const movementNumberIn2 = await generateMovementNumber();
+    await db.insert(wmsStockMovements).values({
+      movementNumber: movementNumberIn2,
+      movementType: 'repack_in',
+      lwin18: remainingLwin18,
+      productName: remainingProductName,
+      quantityCases: 1,
+      toLocationId: targetLocationId,
+      lotNumber: sourceStock.lotNumber,
+      scannedBarcodes: remainingLabels.map((l) => l.barcode),
+      notes: `Custom split from ${sourceCaseConfig}-pack — remaining portion (${repackNumber})`,
+      performedBy: ctx.user.id,
+      performedAt: new Date(),
+    });
+
+    const removedPackSize = `${removedConfig}x${bottleSize}`;
+    const remainingPackSize = `${remainingConfig}x${bottleSize}`;
 
     return {
       success: true,
@@ -274,20 +554,32 @@ const adminRepack = adminProcedure
         lwin18: sourceStock.lwin18,
         productName: sourceStock.productName,
         caseConfig: sourceCaseConfig,
-        quantityCases: sourceQuantityCases,
+        quantityCases: 1,
         locationId: sourceStock.locationId,
         deactivatedBarcodes,
       },
       target: {
-        lwin18: targetLwin18,
-        productName: targetProductName,
-        caseConfig: targetCaseConfig,
-        quantityCases: targetQuantityCases,
-        stockId: targetStockId,
+        lwin18: removedLwin18,
+        productName: removedProductName,
+        caseConfig: removedConfig,
+        quantityCases: 1,
+        stockId: removedStockId,
         locationId: targetLocationId,
-        newCaseLabels,
-        // Additional data for label generation
-        packSize,
+        newCaseLabels: removedLabels,
+        packSize: removedPackSize,
+        vintage: sourceStock.vintage,
+        owner: sourceStock.ownerName,
+        lotNumber: sourceStock.lotNumber,
+      },
+      target2: {
+        lwin18: remainingLwin18,
+        productName: remainingProductName,
+        caseConfig: remainingConfig,
+        quantityCases: 1,
+        stockId: remainingStockId,
+        locationId: targetLocationId,
+        newCaseLabels: remainingLabels,
+        packSize: remainingPackSize,
         vintage: sourceStock.vintage,
         owner: sourceStock.ownerName,
         lotNumber: sourceStock.lotNumber,

@@ -4153,6 +4153,11 @@ export const wmsRepacks = pgTable(
     targetCaseConfig: integer('target_case_config').notNull(),
     targetQuantityCases: integer('target_quantity_cases').notNull(),
     targetStockId: uuid('target_stock_id').references(() => wmsStock.id),
+    target2Lwin18: text('target2_lwin18'),
+    target2ProductName: text('target2_product_name'),
+    target2CaseConfig: integer('target2_case_config'),
+    target2QuantityCases: integer('target2_quantity_cases'),
+    target2StockId: uuid('target2_stock_id').references(() => wmsStock.id),
     locationId: uuid('location_id')
       .references(() => wmsLocations.id)
       .notNull(),
