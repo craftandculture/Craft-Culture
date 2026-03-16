@@ -187,7 +187,6 @@ const DispatchWizardPage = () => {
           {step === 'select-orders' && (
             <Button
               variant="ghost"
-              size="sm"
               onClick={() => syncMutation.mutate()}
               disabled={syncMutation.isPending}
             >
