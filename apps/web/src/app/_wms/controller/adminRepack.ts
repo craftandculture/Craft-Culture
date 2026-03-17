@@ -232,9 +232,10 @@ const adminRepack = adminProcedure
       const targetProductName = `${baseName} (${targetCaseConfig}x)`;
 
       // Pre-generate numbers BEFORE transaction (avoids connection pool deadlock)
+      // Use offsets so concurrent calls don't get the same sequence number
       const repackNumber = await generateRepackNumber();
-      const movementNumberOut = await generateMovementNumber();
-      const movementNumberIn = await generateMovementNumber();
+      const movementNumberOut = await generateMovementNumber(0);
+      const movementNumberIn = await generateMovementNumber(1);
 
       return await db.transaction(async (tx) => {
         // Decrease source stock
@@ -420,10 +421,11 @@ const adminRepack = adminProcedure
     const remainingProductName = `${baseName} (${remainingConfig}x)`;
 
     // Pre-generate all numbers BEFORE transaction (avoids connection pool deadlock)
+    // Use offsets so concurrent calls don't get the same sequence number
     const repackNumber = await generateRepackNumber();
-    const movementNumberOut = await generateMovementNumber();
-    const movementNumberIn1 = await generateMovementNumber();
-    const movementNumberIn2 = await generateMovementNumber();
+    const movementNumberOut = await generateMovementNumber(0);
+    const movementNumberIn1 = await generateMovementNumber(1);
+    const movementNumberIn2 = await generateMovementNumber(2);
 
     return await db.transaction(async (tx) => {
       // Decrease source stock by 1

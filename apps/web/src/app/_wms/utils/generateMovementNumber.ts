@@ -11,7 +11,7 @@ import { wmsStockMovements } from '@/database/schema';
  *
  * @returns The generated movement number in format MOV-YYYY-NNNN
  */
-const generateMovementNumber = async () => {
+const generateMovementNumber = async (offset = 0) => {
   const year = new Date().getFullYear();
   const prefix = `MOV-${year}-`;
 
@@ -31,7 +31,7 @@ const generateMovementNumber = async () => {
     nextSequence = lastSequence + 1;
   }
 
-  return `${prefix}${nextSequence.toString().padStart(4, '0')}`;
+  return `${prefix}${(nextSequence + offset).toString().padStart(4, '0')}`;
 };
 
 export default generateMovementNumber;
