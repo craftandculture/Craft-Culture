@@ -31,7 +31,7 @@ import usePrint from '@/app/_wms/hooks/usePrint';
 import useWmsApi from '@/app/_wms/hooks/useWmsApi';
 import downloadZplFile from '@/app/_wms/utils/downloadZplFile';
 import { generateBatchLabelsZpl } from '@/app/_wms/utils/generateLabelZpl';
-import useTRPC from '@/lib/trpc/browser';
+import useTRPC, { useTRPCClient } from '@/lib/trpc/browser';
 
 type WorkflowStep =
   | 'scan-source-bay'
@@ -128,6 +128,7 @@ const getStepNumber = (step: WorkflowStep): number => {
  */
 const WMSRepackPage = () => {
   const api = useTRPC();
+  const trpcClient = useTRPCClient();
   const wmsApi = useWmsApi();
   const queryClient = useQueryClient();
   const { print } = usePrint();
@@ -195,7 +196,8 @@ const WMSRepackPage = () => {
     setError('');
     setIsSourceScanning(true);
     try {
-      const result = await wmsApi.scanLocation(barcode);
+      // Use cloud tRPC directly (not NUC) — repack mutation needs real Neon stock IDs
+      const result = await trpcClient.wms.admin.operations.getLocationByBarcode.mutate({ barcode });
       setSourceLocation({
         id: result.location.id,
         locationCode: result.location.locationCode,
@@ -203,14 +205,9 @@ const WMSRepackPage = () => {
       });
 
       // Filter stock to only items that can be repacked (>1 bottle per case)
-      // De-duplicate by lwin18 (NUC sync produces duplicate rows with different UUIDs)
-      const seen = new Set<string>();
-      const repackableStock = result.stock.filter((s) => {
-        if (!s.caseConfig || s.caseConfig <= 1 || s.availableCases <= 0) return false;
-        if (seen.has(s.lwin18)) return false;
-        seen.add(s.lwin18);
-        return true;
-      });
+      const repackableStock = result.stock.filter(
+        (s) => s.caseConfig && s.caseConfig > 1 && s.availableCases > 0,
+      );
 
       setStockAtLocation(repackableStock as StockItem[]);
 
@@ -224,7 +221,7 @@ const WMSRepackPage = () => {
     } finally {
       setIsSourceScanning(false);
     }
-  }, [wmsApi]);
+  }, [trpcClient]);
 
   const handleDestinationLocationScan = useCallback(async (barcode: string) => {
     setError('');
