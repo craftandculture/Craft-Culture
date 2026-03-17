@@ -270,16 +270,22 @@ const WMSRepackPage = () => {
 
   const handleCaseScan = useCallback(async (barcode: string) => {
     setError('');
-    // Case barcode format: CASE-{lwin18}-{sequence} — extract LWIN18
-    const parts = barcode.replace(/^CASE-/, '').split('-');
-    // LWIN18 is everything except the last part (sequence)
-    const lwin18 = parts.slice(0, -1).join('-');
+    const trimmed = barcode.trim();
 
-    const match = stockAtLocation.find((s) => s.lwin18 === lwin18);
+    // Try direct LWIN18 match first (scanner reads raw LWIN18 from stock labels)
+    let match = stockAtLocation.find((s) => s.lwin18 === trimmed);
+
+    // Try CASE-{lwin18}-{sequence} format (case labels from receiving)
+    if (!match && trimmed.startsWith('CASE-')) {
+      const parts = trimmed.replace(/^CASE-/, '').split('-');
+      const lwin18 = parts.slice(0, -1).join('-');
+      match = stockAtLocation.find((s) => s.lwin18 === lwin18);
+    }
+
     if (match) {
       handleSelectStock(match);
     } else {
-      setError(`No repackable stock matching barcode "${barcode}" at this location`);
+      setError(`No repackable stock matching "${trimmed}" at this location`);
     }
   }, [stockAtLocation, handleSelectStock]);
 
