@@ -94,19 +94,14 @@ const adminTransferStock = adminProcedure
     const newSourceQuantity = sourceStock.quantityCases - quantityCases;
     const newSourceAvailable = sourceStock.availableCases - quantityCases;
 
-    if (newSourceQuantity === 0) {
-      // Delete the stock record if no cases remain
-      await db.delete(wmsStock).where(eq(wmsStock.id, stockId));
-    } else {
-      await db
-        .update(wmsStock)
-        .set({
-          quantityCases: newSourceQuantity,
-          availableCases: newSourceAvailable,
-          updatedAt: new Date(),
-        })
-        .where(eq(wmsStock.id, stockId));
-    }
+    await db
+      .update(wmsStock)
+      .set({
+        quantityCases: newSourceQuantity,
+        availableCases: newSourceAvailable,
+        updatedAt: new Date(),
+      })
+      .where(eq(wmsStock.id, stockId));
 
     // 7. Check if destination already has this stock (same LWIN, lot, owner)
     const [existingDestStock] = await db
