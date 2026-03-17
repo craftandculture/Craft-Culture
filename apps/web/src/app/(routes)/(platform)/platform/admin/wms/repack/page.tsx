@@ -203,9 +203,14 @@ const WMSRepackPage = () => {
       });
 
       // Filter stock to only items that can be repacked (>1 bottle per case)
-      const repackableStock = result.stock.filter(
-        (s) => s.caseConfig && s.caseConfig > 1 && s.availableCases > 0,
-      );
+      // De-duplicate by stock ID (NUC sync may produce duplicate rows)
+      const seen = new Set<string>();
+      const repackableStock = result.stock.filter((s) => {
+        if (!s.caseConfig || s.caseConfig <= 1 || s.availableCases <= 0) return false;
+        if (seen.has(s.id)) return false;
+        seen.add(s.id);
+        return true;
+      });
 
       setStockAtLocation(repackableStock as StockItem[]);
 
