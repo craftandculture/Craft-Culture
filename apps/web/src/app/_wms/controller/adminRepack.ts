@@ -161,22 +161,39 @@ const createCaseLabels = async (
  * - **even**: 1× 12-pack → 2× 6-pack (bottles divide evenly)
  * - **uneven**: 1× 6-pack → 1× 2-pack + 1× 4-pack (remove N bottles)
  *
- * All operations run inside a transaction to prevent partial state.
+ * All DB writes run inside a transaction to prevent partial state.
+ * Number generators (repack/movement) run BEFORE the transaction to avoid
+ * deadlocking the postgres connection pool on Neon serverless.
  */
 const adminRepack = adminProcedure
   .input(repackByStockSchema)
   .mutation(async ({ input, ctx }) => {
     const { stockId, sourceQuantityCases, destinationLocationId, notes } = input;
 
+    console.error('[repack] mutation called', {
+      mode: input.mode,
+      stockId,
+      sourceQuantityCases,
+      destinationLocationId,
+    });
+
     // 1. Get the source stock record (outside transaction for validation)
     const [sourceStock] = await db.select().from(wmsStock).where(eq(wmsStock.id, stockId));
 
     if (!sourceStock) {
+      console.error('[repack] stock NOT FOUND for id:', stockId);
       throw new TRPCError({
         code: 'NOT_FOUND',
         message: 'Stock record not found',
       });
     }
+
+    console.error('[repack] stock found:', {
+      id: sourceStock.id,
+      productName: sourceStock.productName,
+      caseConfig: sourceStock.caseConfig,
+      availableCases: sourceStock.availableCases,
+    });
 
     // 2. Validate quantity
     if (sourceQuantityCases > sourceStock.availableCases) {
@@ -212,8 +229,12 @@ const adminRepack = adminProcedure
 
       const targetQuantityCases = totalBottles / targetCaseConfig;
       const targetLwin18 = buildLwin18WithConfig(sourceStock.lwin18, targetCaseConfig);
-      const repackNumber = await generateRepackNumber();
       const targetProductName = `${baseName} (${targetCaseConfig}x)`;
+
+      // Pre-generate numbers BEFORE transaction (avoids connection pool deadlock)
+      const repackNumber = await generateRepackNumber();
+      const movementNumberOut = await generateMovementNumber();
+      const movementNumberIn = await generateMovementNumber();
 
       return await db.transaction(async (tx) => {
         // Decrease source stock
@@ -299,8 +320,7 @@ const adminRepack = adminProcedure
           })
           .returning();
 
-        // Create movement records
-        const movementNumberOut = await generateMovementNumber();
+        // Create movement records (numbers pre-generated above)
         await tx.insert(wmsStockMovements).values({
           movementNumber: movementNumberOut,
           movementType: 'repack_out',
@@ -315,7 +335,6 @@ const adminRepack = adminProcedure
           performedAt: new Date(),
         });
 
-        const movementNumberIn = await generateMovementNumber();
         await tx.insert(wmsStockMovements).values({
           movementNumber: movementNumberIn,
           movementType: 'repack_in',
@@ -400,7 +419,11 @@ const adminRepack = adminProcedure
     const removedProductName = `${baseName} (${removedConfig}x)`;
     const remainingProductName = `${baseName} (${remainingConfig}x)`;
 
+    // Pre-generate all numbers BEFORE transaction (avoids connection pool deadlock)
     const repackNumber = await generateRepackNumber();
+    const movementNumberOut = await generateMovementNumber();
+    const movementNumberIn1 = await generateMovementNumber();
+    const movementNumberIn2 = await generateMovementNumber();
 
     return await db.transaction(async (tx) => {
       // Decrease source stock by 1
@@ -512,8 +535,7 @@ const adminRepack = adminProcedure
         })
         .returning();
 
-      // Create 3 movements: 1 repack_out + 2 repack_in
-      const movementNumberOut = await generateMovementNumber();
+      // Create 3 movements (numbers pre-generated above)
       await tx.insert(wmsStockMovements).values({
         movementNumber: movementNumberOut,
         movementType: 'repack_out',
@@ -528,7 +550,6 @@ const adminRepack = adminProcedure
         performedAt: new Date(),
       });
 
-      const movementNumberIn1 = await generateMovementNumber();
       await tx.insert(wmsStockMovements).values({
         movementNumber: movementNumberIn1,
         movementType: 'repack_in',
@@ -543,7 +564,6 @@ const adminRepack = adminProcedure
         performedAt: new Date(),
       });
 
-      const movementNumberIn2 = await generateMovementNumber();
       await tx.insert(wmsStockMovements).values({
         movementNumber: movementNumberIn2,
         movementType: 'repack_in',
