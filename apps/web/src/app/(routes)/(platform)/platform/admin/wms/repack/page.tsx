@@ -40,6 +40,7 @@ type WorkflowStep =
   | 'remove-case'
   | 'physical-repack'
   | 'scan-destination-bay'
+  | 'scan-destination2-bay'
   | 'success';
 
 interface LocationInfo {
@@ -109,7 +110,8 @@ const getStepNumber = (step: WorkflowStep): number => {
     'remove-case': 3,
     'physical-repack': 4,
     'scan-destination-bay': 5,
-    'success': 6,
+    'scan-destination2-bay': 6,
+    'success': 7,
   };
   return stepMap[step];
 };
@@ -136,6 +138,7 @@ const WMSRepackPage = () => {
   const [step, setStep] = useState<WorkflowStep>('scan-source-bay');
   const [sourceLocation, setSourceLocation] = useState<LocationInfo | null>(null);
   const [destinationLocation, setDestinationLocation] = useState<LocationInfo | null>(null);
+  const [destination2Location, setDestination2Location] = useState<LocationInfo | null>(null);
   const [stockAtLocation, setStockAtLocation] = useState<StockItem[]>([]);
   const [selectedStock, setSelectedStock] = useState<StockItem | null>(null);
   const [targetCaseConfig, setTargetCaseConfig] = useState<number>(6);
@@ -233,9 +236,9 @@ const WMSRepackPage = () => {
         locationType: result.location.locationType,
       });
 
-      // Execute the repack with the destination location
       if (selectedStock) {
         if (repackMode === 'even') {
+          // Even split: single destination, execute immediately
           executeRepack({
             mode: 'even',
             stockId: selectedStock.id,
@@ -244,19 +247,39 @@ const WMSRepackPage = () => {
             destinationLocationId: result.location.id,
           });
         } else {
-          executeRepack({
-            mode: 'uneven',
-            stockId: selectedStock.id,
-            sourceQuantityCases: 1,
-            bottlesToRemove,
-            destinationLocationId: result.location.id,
-          });
+          // Uneven split: this is the removed portion destination, advance to scan remaining destination
+          setStep('scan-destination2-bay');
         }
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Location not found');
     }
-  }, [wmsApi, selectedStock, repackMode, targetCaseConfig, bottlesToRemove, executeRepack]);
+  }, [wmsApi, selectedStock, repackMode, targetCaseConfig, executeRepack]);
+
+  const handleDestination2LocationScan = useCallback(async (barcode: string) => {
+    setError('');
+    try {
+      const result = await wmsApi.scanLocation(barcode);
+      setDestination2Location({
+        id: result.location.id,
+        locationCode: result.location.locationCode,
+        locationType: result.location.locationType,
+      });
+
+      if (selectedStock && destinationLocation) {
+        executeRepack({
+          mode: 'uneven',
+          stockId: selectedStock.id,
+          sourceQuantityCases: 1,
+          bottlesToRemove,
+          destinationLocationId: destinationLocation.id,
+          destination2LocationId: result.location.id,
+        });
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Location not found');
+    }
+  }, [wmsApi, selectedStock, destinationLocation, bottlesToRemove, executeRepack]);
 
   const handleSelectStock = useCallback((stock: StockItem) => {
     setSelectedStock(stock);
@@ -293,6 +316,7 @@ const WMSRepackPage = () => {
     setStep('scan-source-bay');
     setSourceLocation(null);
     setDestinationLocation(null);
+    setDestination2Location(null);
     setStockAtLocation([]);
     setSelectedStock(null);
     setTargetCaseConfig(6);
@@ -392,7 +416,7 @@ const WMSRepackPage = () => {
 
         {/* Progress indicator */}
         {step !== 'success' && (
-          <StepIndicator currentStep={getStepNumber(step)} totalSteps={6} />
+          <StepIndicator currentStep={getStepNumber(step)} totalSteps={repackMode === 'uneven' ? 7 : 6} />
         )}
 
         {/* Step 1: Scan Source Bay */}
@@ -793,9 +817,13 @@ const WMSRepackPage = () => {
             <CardContent className="p-6">
               <div className="mb-6 text-center">
                 <Icon icon={IconMapPin} size="xl" colorRole="muted" className="mx-auto mb-2" />
-                <Typography variant="headingSm">Step 6: Scan Destination Bay</Typography>
+                <Typography variant="headingSm">
+                  Step 6: {repackMode === 'uneven' ? 'Scan Removed Portion Destination' : 'Scan Destination Bay'}
+                </Typography>
                 <Typography variant="bodyXs" colorRole="muted">
-                  Where will you place the repacked cases?
+                  {repackMode === 'uneven'
+                    ? `Where does the ${bottlesToRemove}-pack go?`
+                    : 'Where will you place the repacked cases?'}
                 </Typography>
               </div>
 
@@ -809,7 +837,7 @@ const WMSRepackPage = () => {
                   </Typography>
                 ) : (
                   <Typography variant="headingSm" className="text-emerald-600">
-                    1x {bottlesToRemove}-pack + 1x {selectedStock.caseConfig - bottlesToRemove}-pack
+                    1x {bottlesToRemove}-pack
                   </Typography>
                 )}
                 <Typography variant="bodyXs" colorRole="muted">
@@ -821,6 +849,71 @@ const WMSRepackPage = () => {
                 label="Destination bay barcode"
                 placeholder="LOC-..."
                 onScan={handleDestinationLocationScan}
+                isLoading={repackMode === 'even' && isRepacking}
+                error={error}
+                disabled={repackMode === 'even' && isRepacking}
+              />
+
+              {repackMode === 'even' && isRepacking && (
+                <div className="mt-4 flex items-center justify-center gap-2 text-blue-600">
+                  <IconLoader2 className="h-5 w-5 animate-spin" />
+                  <Typography variant="bodySm">Processing repack...</Typography>
+                </div>
+              )}
+
+              <Button
+                variant="outline"
+                size="lg"
+                className="mt-4 w-full"
+                onClick={() => setStep('physical-repack')}
+                disabled={repackMode === 'even' && isRepacking}
+              >
+                <ButtonContent iconLeft={IconArrowLeft}>Back</ButtonContent>
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Step 7 (uneven only): Scan Remaining Portion Destination */}
+        {step === 'scan-destination2-bay' && selectedStock && destinationLocation && (
+          <Card>
+            <CardContent className="p-6">
+              <div className="mb-6 text-center">
+                <Icon icon={IconMapPin} size="xl" colorRole="muted" className="mx-auto mb-2" />
+                <Typography variant="headingSm">Step 7: Scan Remaining Portion Destination</Typography>
+                <Typography variant="bodyXs" colorRole="muted">
+                  Where does the {selectedStock.caseConfig - bottlesToRemove}-pack go?
+                </Typography>
+              </div>
+
+              <div className="mb-4 space-y-2">
+                <div className="rounded-lg bg-emerald-50 p-3 dark:bg-emerald-900/20">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Typography variant="bodyXs" colorRole="muted">
+                        Removed {bottlesToRemove}-pack
+                      </Typography>
+                      <LocationBadge locationCode={destinationLocation.locationCode} size="sm" />
+                    </div>
+                    <div className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-600 text-white">
+                      <IconCheck className="h-3 w-3" />
+                    </div>
+                  </div>
+                </div>
+                <div className="rounded-lg bg-fill-secondary p-3">
+                  <Typography variant="bodyXs" colorRole="muted">
+                    Remaining {selectedStock.caseConfig - bottlesToRemove}-pack
+                  </Typography>
+                  <Typography variant="bodySm" className="font-medium text-blue-600">
+                    Scan destination below
+                  </Typography>
+                </div>
+              </div>
+
+              <ScanInput
+                label="Destination bay barcode"
+                placeholder="LOC-..."
+                onScan={handleDestination2LocationScan}
                 isLoading={isRepacking}
                 error={error}
                 disabled={isRepacking}
@@ -837,7 +930,7 @@ const WMSRepackPage = () => {
                 variant="outline"
                 size="lg"
                 className="mt-4 w-full"
-                onClick={() => setStep('physical-repack')}
+                onClick={() => setStep('scan-destination-bay')}
                 disabled={isRepacking}
               >
                 <ButtonContent iconLeft={IconArrowLeft}>Back</ButtonContent>
@@ -914,12 +1007,29 @@ const WMSRepackPage = () => {
                   </div>
                 )}
 
-                <div className="mt-4">
-                  <Typography variant="bodyXs" colorRole="muted">
-                    Placed at
-                  </Typography>
-                  <LocationBadge locationCode={destinationLocation.locationCode} size="sm" />
-                </div>
+                {repackResult.target2 && destination2Location ? (
+                  <div className="mt-4 flex justify-center gap-6">
+                    <div className="text-center">
+                      <Typography variant="bodyXs" colorRole="muted">
+                        {repackResult.target.caseConfig}-pack placed at
+                      </Typography>
+                      <LocationBadge locationCode={destinationLocation.locationCode} size="sm" />
+                    </div>
+                    <div className="text-center">
+                      <Typography variant="bodyXs" colorRole="muted">
+                        {repackResult.target2.caseConfig}-pack placed at
+                      </Typography>
+                      <LocationBadge locationCode={destination2Location.locationCode} size="sm" />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="mt-4">
+                    <Typography variant="bodyXs" colorRole="muted">
+                      Placed at
+                    </Typography>
+                    <LocationBadge locationCode={destinationLocation.locationCode} size="sm" />
+                  </div>
+                )}
               </CardContent>
             </Card>
 

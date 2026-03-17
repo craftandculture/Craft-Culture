@@ -32,6 +32,7 @@ const repackUnevenSchema = z.object({
   ...repackBaseFields,
   mode: z.literal('uneven'),
   bottlesToRemove: z.number().int().positive('Must remove at least 1 bottle'),
+  destination2LocationId: z.string().uuid('Invalid destination location ID').optional(),
 });
 
 /**
