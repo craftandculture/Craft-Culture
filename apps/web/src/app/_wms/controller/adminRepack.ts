@@ -395,7 +395,7 @@ const adminRepack = adminProcedure
     }
 
     // ─── UNEVEN (CUSTOM) SPLIT ───
-    const { bottlesToRemove } = input;
+    const { bottlesToRemove, destination2LocationId } = input;
 
     if (sourceQuantityCases !== 1) {
       throw new TRPCError({
@@ -419,6 +419,10 @@ const adminRepack = adminProcedure
 
     const removedProductName = `${baseName} (${removedConfig}x)`;
     const remainingProductName = `${baseName} (${remainingConfig}x)`;
+
+    // Removed portion goes to destinationLocationId, remaining to destination2LocationId
+    const removedLocationId = targetLocationId;
+    const remainingLocationId = destination2LocationId ?? targetLocationId;
 
     // Pre-generate all numbers BEFORE transaction (avoids connection pool deadlock)
     // Use offsets so concurrent calls don't get the same sequence number
@@ -448,7 +452,7 @@ const adminRepack = adminProcedure
         removedProductName,
         removedConfig,
         1,
-        targetLocationId,
+        removedLocationId,
         sourceStock,
       );
 
@@ -459,7 +463,7 @@ const adminRepack = adminProcedure
         remainingProductName,
         remainingConfig,
         1,
-        targetLocationId,
+        remainingLocationId,
         sourceStock,
       );
 
@@ -494,7 +498,7 @@ const adminRepack = adminProcedure
         removedLwin18,
         removedProductName,
         1,
-        targetLocationId,
+        removedLocationId,
         sourceStock.lotNumber,
         sourceStock.shipmentId,
       );
@@ -504,7 +508,7 @@ const adminRepack = adminProcedure
         remainingLwin18,
         remainingProductName,
         1,
-        targetLocationId,
+        remainingLocationId,
         sourceStock.lotNumber,
         sourceStock.shipmentId,
       );
@@ -558,7 +562,7 @@ const adminRepack = adminProcedure
         lwin18: removedLwin18,
         productName: removedProductName,
         quantityCases: 1,
-        toLocationId: targetLocationId,
+        toLocationId: removedLocationId,
         lotNumber: sourceStock.lotNumber,
         scannedBarcodes: removedLabels.map((l) => l.barcode),
         notes: `Custom split from ${sourceCaseConfig}-pack — removed portion (${repackNumber})`,
@@ -572,7 +576,7 @@ const adminRepack = adminProcedure
         lwin18: remainingLwin18,
         productName: remainingProductName,
         quantityCases: 1,
-        toLocationId: targetLocationId,
+        toLocationId: remainingLocationId,
         lotNumber: sourceStock.lotNumber,
         scannedBarcodes: remainingLabels.map((l) => l.barcode),
         notes: `Custom split from ${sourceCaseConfig}-pack — remaining portion (${repackNumber})`,
@@ -601,7 +605,7 @@ const adminRepack = adminProcedure
           caseConfig: removedConfig,
           quantityCases: 1,
           stockId: removedStockId,
-          locationId: targetLocationId,
+          locationId: removedLocationId,
           newCaseLabels: removedLabels,
           packSize: removedPackSize,
           vintage: sourceStock.vintage,
@@ -614,7 +618,7 @@ const adminRepack = adminProcedure
           caseConfig: remainingConfig,
           quantityCases: 1,
           stockId: remainingStockId,
-          locationId: targetLocationId,
+          locationId: remainingLocationId,
           newCaseLabels: remainingLabels,
           packSize: remainingPackSize,
           vintage: sourceStock.vintage,
