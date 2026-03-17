@@ -258,7 +258,7 @@ const WMSRepackPage = () => {
     }
   }, [wmsApi, selectedStock, repackMode, targetCaseConfig, bottlesToRemove, executeRepack]);
 
-  const handleSelectStock = (stock: StockItem) => {
+  const handleSelectStock = useCallback((stock: StockItem) => {
     setSelectedStock(stock);
     // Default to half the source config, minimum 1
     const defaultTarget = Math.max(1, Math.floor(stock.caseConfig / 2));
@@ -266,7 +266,22 @@ const WMSRepackPage = () => {
     setBottlesToRemove(1);
     setRepackMode('even');
     setStep('select-config');
-  };
+  }, []);
+
+  const handleCaseScan = useCallback(async (barcode: string) => {
+    setError('');
+    // Case barcode format: CASE-{lwin18}-{sequence} — extract LWIN18
+    const parts = barcode.replace(/^CASE-/, '').split('-');
+    // LWIN18 is everything except the last part (sequence)
+    const lwin18 = parts.slice(0, -1).join('-');
+
+    const match = stockAtLocation.find((s) => s.lwin18 === lwin18);
+    if (match) {
+      handleSelectStock(match);
+    } else {
+      setError(`No repackable stock matching barcode "${barcode}" at this location`);
+    }
+  }, [stockAtLocation, handleSelectStock]);
 
   const handleReset = () => {
     setStep('scan-source-bay');
@@ -422,8 +437,17 @@ const WMSRepackPage = () => {
                   Step 2: Select Case to Repack
                 </Typography>
                 <Typography variant="bodyXs" colorRole="muted" className="mb-4">
-                  Choose which case to split
+                  Scan a case barcode or tap to select
                 </Typography>
+
+                <div className="mb-4">
+                  <ScanInput
+                    label="Case barcode"
+                    placeholder="CASE-..."
+                    onScan={handleCaseScan}
+                    error={error}
+                  />
+                </div>
 
                 <div className="space-y-2">
                   {stockAtLocation.map((stock) => (
