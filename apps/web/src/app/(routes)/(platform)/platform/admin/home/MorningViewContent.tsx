@@ -8,6 +8,8 @@ import {
   IconChevronRight,
   IconClock,
   IconCurrencyDollar,
+  IconEye,
+  IconEyeOff,
   IconFileText,
   IconPencil,
   IconPlus,
@@ -103,6 +105,7 @@ const quickActions = [
 const MorningViewContent = () => {
   const api = useTRPC();
   const [currency, setCurrency] = useState<Currency>('USD');
+  const [redacted, setRedacted] = useState(false);
 
   const { data: user } = useQuery({
     ...api.users.getMe.queryOptions(),
@@ -162,29 +165,39 @@ const MorningViewContent = () => {
             {formatDate()} &mdash; Here&apos;s what needs your attention today
           </p>
         </div>
-        <div className="flex items-center rounded-lg border border-border-muted bg-surface-primary p-0.5">
+        <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={() => setCurrency('USD')}
-            className={`rounded-md px-3.5 py-1.5 text-xs font-semibold transition-colors ${
-              currency === 'USD'
-                ? 'bg-fill-brand text-white'
-                : 'text-text-muted hover:text-text-primary'
-            }`}
+            onClick={() => setRedacted((r) => !r)}
+            className="rounded-lg border border-border-muted bg-surface-primary p-1.5 text-text-muted transition-colors hover:text-text-primary"
+            title={redacted ? 'Show values' : 'Hide values'}
           >
-            USD
+            {redacted ? <IconEyeOff className="h-4 w-4" /> : <IconEye className="h-4 w-4" />}
           </button>
-          <button
-            type="button"
-            onClick={() => setCurrency('AED')}
-            className={`rounded-md px-3.5 py-1.5 text-xs font-semibold transition-colors ${
-              currency === 'AED'
-                ? 'bg-fill-brand text-white'
-                : 'text-text-muted hover:text-text-primary'
-            }`}
-          >
-            AED
-          </button>
+          <div className="flex items-center rounded-lg border border-border-muted bg-surface-primary p-0.5">
+            <button
+              type="button"
+              onClick={() => setCurrency('USD')}
+              className={`rounded-md px-3.5 py-1.5 text-xs font-semibold transition-colors ${
+                currency === 'USD'
+                  ? 'bg-fill-brand text-white'
+                  : 'text-text-muted hover:text-text-primary'
+              }`}
+            >
+              USD
+            </button>
+            <button
+              type="button"
+              onClick={() => setCurrency('AED')}
+              className={`rounded-md px-3.5 py-1.5 text-xs font-semibold transition-colors ${
+                currency === 'AED'
+                  ? 'bg-fill-brand text-white'
+                  : 'text-text-muted hover:text-text-primary'
+              }`}
+            >
+              AED
+            </button>
+          </div>
         </div>
       </div>
 
@@ -215,13 +228,13 @@ const MorningViewContent = () => {
                 Invoiced (Month)
               </p>
               <p className="mt-2 text-3xl font-bold tracking-tight text-text-brand">
-                {formatCurrency(
+                {redacted ? '***' : formatCurrency(
                   currency === 'USD' ? data.kpis.revenueMonthUsd : data.kpis.revenueMonthAed,
                   currency,
                 )}
               </p>
               <p className="mt-1.5 text-[12px] font-semibold">
-                {(() => {
+                {redacted ? <span className="font-normal text-text-muted">&nbsp;</span> : (() => {
                   const current = currency === 'USD' ? data.kpis.revenueMonthUsd : data.kpis.revenueMonthAed;
                   const previous = currency === 'USD' ? data.kpis.revenueLastMonthUsd : data.kpis.revenueLastMonthAed;
                   if (previous > 0) {
@@ -241,13 +254,13 @@ const MorningViewContent = () => {
                 Invoiced (Year)
               </p>
               <p className="mt-2 text-3xl font-bold tracking-tight text-text-brand">
-                {formatCurrency(
+                {redacted ? '***' : formatCurrency(
                   currency === 'USD' ? data.kpis.revenueYearUsd : data.kpis.revenueYearAed,
                   currency,
                 )}
               </p>
               <p className="mt-1.5 text-[12px] font-semibold">
-                {(() => {
+                {redacted ? <span className="font-normal text-text-muted">&nbsp;</span> : (() => {
                   const current = currency === 'USD' ? data.kpis.revenueYearUsd : data.kpis.revenueYearAed;
                   const previous = currency === 'USD' ? data.kpis.revenueLastYearUsd : data.kpis.revenueLastYearAed;
                   if (previous > 0) {
@@ -303,7 +316,7 @@ const MorningViewContent = () => {
               </p>
               <p className="mt-1.5 text-[12px] text-text-muted">
                 {data.kpis.overdueInvoices > 0
-                  ? formatCurrency(
+                  ? redacted ? '***' : formatCurrency(
                       currency === 'USD' ? data.kpis.overdueAmountUsd : data.kpis.overdueAmountAed,
                       currency,
                     )
@@ -416,7 +429,7 @@ const MorningViewContent = () => {
                         </p>
                       </div>
                       <p className="shrink-0 tabular-nums text-[13px] font-bold">
-                        {formatCurrency(
+                        {redacted ? '***' : formatCurrency(
                           currency === 'USD' ? order.totalUsd : order.totalAed,
                           currency,
                         )}
