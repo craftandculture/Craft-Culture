@@ -170,30 +170,15 @@ const adminRepack = adminProcedure
   .mutation(async ({ input, ctx }) => {
     const { stockId, sourceQuantityCases, destinationLocationId, notes } = input;
 
-    console.error('[repack] mutation called', {
-      mode: input.mode,
-      stockId,
-      sourceQuantityCases,
-      destinationLocationId,
-    });
-
     // 1. Get the source stock record (outside transaction for validation)
     const [sourceStock] = await db.select().from(wmsStock).where(eq(wmsStock.id, stockId));
 
     if (!sourceStock) {
-      console.error('[repack] stock NOT FOUND for id:', stockId);
       throw new TRPCError({
         code: 'NOT_FOUND',
         message: 'Stock record not found',
       });
     }
-
-    console.error('[repack] stock found:', {
-      id: sourceStock.id,
-      productName: sourceStock.productName,
-      caseConfig: sourceStock.caseConfig,
-      availableCases: sourceStock.availableCases,
-    });
 
     // 2. Validate quantity
     if (sourceQuantityCases > sourceStock.availableCases) {
