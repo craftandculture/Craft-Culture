@@ -190,6 +190,13 @@
       "when": 1773670415476,
       "tag": "0026_first_morph",
       "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1773841084677,
+      "tag": "0027_old_the_hunter",
+      "breakpoints": true
     }
   ]
 }

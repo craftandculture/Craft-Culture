@@ -24,6 +24,7 @@ import {
   IconPencil,
   IconPlus,
   IconPrinter,
+  IconRefresh,
   IconSearch,
   IconShip,
   IconSortAscending,
@@ -71,6 +72,7 @@ const DEFAULT_COLUMNS = {
   cases: true,
   available: true,
   reserved: true,
+  importPrice: true,
   locations: true,
   owners: true,
   status: true,
@@ -342,6 +344,236 @@ const BoeCell = ({ value, onSave }: { value: string | null; onSave: (v: string) 
   );
 };
 
+// ─── Import Price Cell (click-to-edit) ────────────────────────────────────────
+
+const ImportPriceCell = ({
+  value,
+  onSave,
+  density,
+}: {
+  value: number | null;
+  onSave: (v: number) => void;
+  density: string;
+}) => {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(value?.toFixed(2) ?? '');
+
+  if (!editing) {
+    return (
+      <td className={`${density} hidden text-right tabular-nums lg:table-cell`}>
+        <button
+          type="button"
+          className="cursor-pointer text-text-muted hover:text-text-primary hover:underline"
+          onClick={(e) => {
+            e.stopPropagation();
+            setDraft(value?.toFixed(2) ?? '');
+            setEditing(true);
+          }}
+        >
+          {value != null ? `$${value.toFixed(2)}` : '—'}
+        </button>
+      </td>
+    );
+  }
+
+  return (
+    <td className={`${density} hidden lg:table-cell`}>
+      <form
+        className="flex items-center justify-end gap-1"
+        onSubmit={(e) => {
+          e.preventDefault();
+          const num = parseFloat(draft);
+          if (!isNaN(num) && num > 0 && num !== value) {
+            onSave(num);
+          }
+          setEditing(false);
+        }}
+      >
+        <span className="text-xs text-text-muted">$</span>
+        <input
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onClick={(e) => e.stopPropagation()}
+          className="w-20 rounded border border-border-primary bg-background-primary px-1.5 py-0.5 text-right font-mono text-xs tabular-nums focus:border-border-brand focus:outline-none"
+          placeholder="0.00"
+          type="number"
+          step="0.01"
+          min="0"
+          autoFocus
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') {
+              setEditing(false);
+              setDraft(value?.toFixed(2) ?? '');
+            }
+          }}
+        />
+        <button
+          type="submit"
+          onClick={(e) => e.stopPropagation()}
+          className="rounded bg-fill-brand px-2 py-0.5 text-[11px] font-medium text-white transition-colors hover:bg-fill-brand/90"
+        >
+          Save
+        </button>
+      </form>
+    </td>
+  );
+};
+
+// ─── Pricing Section (expanded row) ──────────────────────────────────────────
+
+interface PricingSectionProps {
+  lwin18: string;
+  caseConfig: number;
+}
+
+const PricingSection = ({ lwin18, caseConfig }: PricingSectionProps) => {
+  const api = useTRPC();
+  const queryClient = useQueryClient();
+
+  const { data, isLoading } = useQuery({
+    ...api.wms.admin.stock.pricing.getByProduct.queryOptions({ lwin18 }),
+  });
+
+  const { mutate: autoPopulate, isPending: isAutoPopulating } = useMutation({
+    ...api.wms.admin.stock.pricing.autoPopulate.mutationOptions(),
+    onSuccess: (result) => {
+      void queryClient.invalidateQueries({
+        queryKey: api.wms.admin.stock.pricing.getByProduct.getQueryKey(),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: api.wms.admin.stock.pricing.getBulk.getQueryKey(),
+      });
+      toast.success(
+        `Import price set to $${result.importPricePerBottle.toFixed(2)}/btl from shipment`,
+      );
+    },
+    onError: (err) => {
+      toast.error(err.message);
+    },
+  });
+
+  if (isLoading) {
+    return (
+      <div className="mt-4 border-t border-border-muted pt-4">
+        <div className="flex items-center gap-2 text-xs text-text-muted">
+          <IconLoader2 className="h-3.5 w-3.5 animate-spin" />
+          Loading pricing...
+        </div>
+      </div>
+    );
+  }
+
+  const pricing = data?.pricing;
+  const partners = data?.partners ?? [];
+  const importPrice = pricing?.importPricePerBottle ?? null;
+  const casePrice = importPrice != null ? importPrice * caseConfig : null;
+
+  return (
+    <div className="mt-4 border-t border-border-muted pt-4" onClick={(e) => e.stopPropagation()}>
+      <div className="mb-3 flex items-center justify-between">
+        <Typography
+          variant="bodyXs"
+          className="font-semibold uppercase tracking-wider text-text-muted"
+        >
+          Pricing
+        </Typography>
+        <button
+          type="button"
+          onClick={() => autoPopulate({ lwin18 })}
+          disabled={isAutoPopulating}
+          className="flex items-center gap-1.5 rounded-md border border-border-muted bg-background-primary px-2.5 py-1 text-xs font-medium text-text-secondary transition-colors hover:bg-surface-muted hover:text-text-primary disabled:opacity-50"
+        >
+          {isAutoPopulating ? (
+            <IconLoader2 className="h-3.5 w-3.5 animate-spin" />
+          ) : (
+            <IconRefresh className="h-3.5 w-3.5" />
+          )}
+          Auto-populate
+        </button>
+      </div>
+
+      {importPrice != null ? (
+        <>
+          <div className="mb-3 flex items-center gap-4 text-sm">
+            <span className="text-text-muted">Import:</span>
+            <span className="font-semibold tabular-nums text-text-primary">
+              ${importPrice.toFixed(2)}/btl
+            </span>
+            {casePrice != null && (
+              <span className="tabular-nums text-text-muted">
+                (${casePrice.toFixed(2)}/case)
+              </span>
+            )}
+            <span
+              className={`rounded px-1.5 py-0.5 text-[11px] font-medium ${
+                pricing?.importPriceSource === 'shipment'
+                  ? 'bg-blue-50 text-blue-600'
+                  : 'bg-amber-50 text-amber-600'
+              }`}
+            >
+              {pricing?.importPriceSource === 'shipment' ? 'Shipment' : 'Manual'}
+            </span>
+          </div>
+
+          {partners.length > 0 && (
+            <div>
+              <div className="mb-2 text-xs font-medium text-text-muted">
+                Sales by Partner:
+              </div>
+              <div className="overflow-x-auto">
+                <table className="text-[13px]">
+                  <thead>
+                    <tr className="text-[11px] uppercase tracking-wider text-text-muted">
+                      <th className="px-3 py-1 text-left">Partner</th>
+                      <th className="px-3 py-1 text-right">Margin</th>
+                      <th className="px-3 py-1 text-right">$/btl</th>
+                      <th className="px-3 py-1 text-right">$/case</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {partners
+                      .filter((p) => p.marginPercentage != null && p.marginPercentage > 0)
+                      .sort((a, b) => (b.marginPercentage ?? 0) - (a.marginPercentage ?? 0))
+                      .map((partner) => {
+                        const margin = partner.marginPercentage ?? 0;
+                        const salePriceBottle = importPrice / (1 - margin / 100);
+                        const salePriceCase = salePriceBottle * caseConfig;
+                        return (
+                          <tr
+                            key={partner.id}
+                            className="border-t border-border-muted/50"
+                          >
+                            <td className="px-3 py-1.5 font-medium text-text-primary">
+                              {partner.companyName}
+                            </td>
+                            <td className="px-3 py-1.5 text-right tabular-nums text-text-muted">
+                              {margin.toFixed(1)}%
+                            </td>
+                            <td className="px-3 py-1.5 text-right tabular-nums font-medium text-text-primary">
+                              ${salePriceBottle.toFixed(2)}
+                            </td>
+                            <td className="px-3 py-1.5 text-right tabular-nums text-text-muted">
+                              ${salePriceCase.toFixed(2)}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </>
+      ) : (
+        <div className="text-sm text-text-muted">
+          No import price set. Click &ldquo;Auto-populate&rdquo; to pull from shipment data, or set
+          a price in the Import $/btl column.
+        </div>
+      )}
+    </div>
+  );
+};
+
 // ─── Product Row ────────────────────────────────────────────────────────────
 
 interface ProductRowProps {
@@ -386,9 +618,11 @@ interface ProductRowProps {
   editingLwin18: string | null;
   onStartEditName: (lwin18: string) => void;
   onCancelEditName: () => void;
+  importPrice: number | null;
+  onSetImportPrice: (lwin18: string, price: number) => void;
 }
 
-const ProductRow = ({ product, isExpanded, onToggle, density, visibleColumns, onPrintLabels, onUpdateBoe, onAdjustStock, onEditName, isAdjusting, editingLwin18, onStartEditName, onCancelEditName }: ProductRowProps) => {
+const ProductRow = ({ product, isExpanded, onToggle, density, visibleColumns, onPrintLabels, onUpdateBoe, onAdjustStock, onEditName, isAdjusting, editingLwin18, onStartEditName, onCancelEditName, importPrice, onSetImportPrice }: ProductRowProps) => {
   const [adjustingStockId, setAdjustingStockId] = useState<string | null>(null);
   const [adjustQty, setAdjustQty] = useState(0);
   const [adjustReason, setAdjustReason] = useState('');
@@ -416,7 +650,7 @@ const ProductRow = ({ product, isExpanded, onToggle, density, visibleColumns, on
         </td>
 
         {/* Product name */}
-        <td className={`${tdClass} max-w-[280px] font-medium text-text-primary`}>
+        <td className={`${tdClass} max-w-[360px] font-medium text-text-primary`}>
           {editingName || isSaving ? (
             <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
               <div className="flex flex-col gap-1">
@@ -485,7 +719,7 @@ const ProductRow = ({ product, isExpanded, onToggle, density, visibleColumns, on
 
         {/* LWIN18 */}
         {visibleColumns.lwin18 && (
-          <td className={`${tdClass} hidden font-mono text-xs text-text-muted xl:table-cell`}>
+          <td className={`${tdClass} hidden font-mono text-xs text-text-muted lg:table-cell`}>
             {product.lwin18}
           </td>
         )}
@@ -497,14 +731,14 @@ const ProductRow = ({ product, isExpanded, onToggle, density, visibleColumns, on
 
         {/* Size */}
         {visibleColumns.size && (
-          <td className={`${tdClass} hidden text-text-muted 2xl:table-cell`}>
+          <td className={`${tdClass} hidden text-text-muted xl:table-cell`}>
             {product.bottleSize ?? '75cl'}
           </td>
         )}
 
         {/* Pack */}
         {visibleColumns.pack && (
-          <td className={`${tdClass} hidden text-text-muted 2xl:table-cell`}>
+          <td className={`${tdClass} hidden text-text-muted xl:table-cell`}>
             {product.caseConfig ?? 12}
           </td>
         )}
@@ -534,6 +768,15 @@ const ProductRow = ({ product, isExpanded, onToggle, density, visibleColumns, on
               <span className="text-text-muted">—</span>
             )}
           </td>
+        )}
+
+        {/* Import Price */}
+        {visibleColumns.importPrice && (
+          <ImportPriceCell
+            value={importPrice}
+            onSave={(v) => onSetImportPrice(product.lwin18, v)}
+            density={tdClass}
+          />
         )}
 
         {/* Bottles */}
@@ -790,6 +1033,10 @@ const ProductRow = ({ product, isExpanded, onToggle, density, visibleColumns, on
                 </tbody>
               </table>
               </div>
+              <PricingSection
+                lwin18={product.lwin18}
+                caseConfig={product.caseConfig ?? 12}
+              />
             </div>
           </td>
         </tr>
@@ -1050,6 +1297,7 @@ const COLUMN_LABELS: Record<string, string> = {
   cases: 'Total Cases',
   available: 'Available',
   reserved: 'Reserved',
+  importPrice: 'Import $/btl',
   bottles: 'Bottles',
   locations: 'Locations',
   owners: 'Owners',
@@ -1281,6 +1529,43 @@ const StockExplorerPage = () => {
   }, [ownerData]);
 
   const products = useMemo(() => stockData?.products ?? [], [stockData]);
+
+  // Fetch bulk import prices for visible products
+  const visibleLwin18s = useMemo(
+    () => products.map((p) => p.lwin18),
+    [products],
+  );
+  const { data: bulkPricing } = useQuery({
+    ...api.wms.admin.stock.pricing.getBulk.queryOptions({
+      lwin18s: visibleLwin18s,
+    }),
+    enabled: visibleLwin18s.length > 0 && !isInboundView,
+  });
+
+  // Set import price mutation
+  const { mutate: setImportPrice } = useMutation({
+    ...api.wms.admin.stock.pricing.setImportPrice.mutationOptions(),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: api.wms.admin.stock.pricing.getBulk.getQueryKey(),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: api.wms.admin.stock.pricing.getByProduct.getQueryKey(),
+      });
+      toast.success('Import price updated');
+    },
+    onError: () => {
+      toast.error('Failed to update import price');
+    },
+  });
+
+  const handleSetImportPrice = useCallback(
+    (lwin18: string, price: number) => {
+      setImportPrice({ lwin18, importPricePerBottle: price, source: 'manual' });
+    },
+    [setImportPrice],
+  );
+
   const inboundProducts = useMemo(() => (inboundData?.products ?? []) as InboundProduct[], [inboundData]);
   const totalCount = isInboundView
     ? (inboundData?.pagination?.total ?? 0)
@@ -1334,6 +1619,7 @@ const StockExplorerPage = () => {
       'Total Cases',
       'Available',
       'Reserved',
+      'Import $/btl',
       'Bottles',
       'Locations',
       'Owners',
@@ -1343,21 +1629,25 @@ const StockExplorerPage = () => {
       const str = String(val ?? '');
       return `"${str.replace(/"/g, '""')}"`;
     };
-    const rows = products.map((p) => [
-      csvSafe(p.productName),
-      csvSafe(p.producer),
-      csvSafe(p.lwin18),
-      csvSafe(p.vintage),
-      csvSafe(p.bottleSize),
-      csvSafe(p.caseConfig),
-      csvSafe(p.totalCases),
-      csvSafe(p.availableCases),
-      csvSafe(p.reservedCases),
-      csvSafe(p.totalBottles),
-      csvSafe(p.locationCount),
-      csvSafe(p.ownerCount),
-      csvSafe(p.expiryStatus),
-    ]);
+    const rows = products.map((p) => {
+      const price = bulkPricing?.[p.lwin18]?.importPricePerBottle;
+      return [
+        csvSafe(p.productName),
+        csvSafe(p.producer),
+        csvSafe(p.lwin18),
+        csvSafe(p.vintage),
+        csvSafe(p.bottleSize),
+        csvSafe(p.caseConfig),
+        csvSafe(p.totalCases),
+        csvSafe(p.availableCases),
+        csvSafe(p.reservedCases),
+        csvSafe(price != null ? price.toFixed(2) : ''),
+        csvSafe(p.totalBottles),
+        csvSafe(p.locationCount),
+        csvSafe(p.ownerCount),
+        csvSafe(p.expiryStatus),
+      ];
+    });
     const csv = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
@@ -1366,7 +1656,7 @@ const StockExplorerPage = () => {
     a.download = `stock-export-${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
-  }, [products]);
+  }, [products, bulkPricing]);
 
   // Clear all filters
   const clearFilters = useCallback(() => {
@@ -1476,7 +1766,7 @@ const StockExplorerPage = () => {
   const visibleColCount = 2 + Object.values(visibleColumns).filter(Boolean).length;
 
   return (
-    <div className="container mx-auto max-w-[1600px] px-4 py-6 sm:px-6 sm:py-8">
+    <div className="container mx-auto max-w-[2000px] px-4 py-6 sm:px-6 sm:py-8">
       <div className="space-y-5">
         {/* Header */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -1838,7 +2128,7 @@ const StockExplorerPage = () => {
                       </th>
                     )}
                     {visibleColumns.lwin18 && (
-                      <th className={`${dc.td} hidden text-left xl:table-cell ${thBase}`}>
+                      <th className={`${dc.td} hidden text-left lg:table-cell ${thBase}`}>
                         LWIN18
                       </th>
                     )}
@@ -1853,12 +2143,12 @@ const StockExplorerPage = () => {
                       </th>
                     )}
                     {visibleColumns.size && (
-                      <th className={`${dc.td} hidden text-left 2xl:table-cell ${thBase}`}>
+                      <th className={`${dc.td} hidden text-left xl:table-cell ${thBase}`}>
                         Size
                       </th>
                     )}
                     {visibleColumns.pack && (
-                      <th className={`${dc.td} hidden text-left 2xl:table-cell ${thBase}`}>
+                      <th className={`${dc.td} hidden text-left xl:table-cell ${thBase}`}>
                         Pack
                       </th>
                     )}
@@ -1880,6 +2170,11 @@ const StockExplorerPage = () => {
                     {visibleColumns.reserved && (
                       <th className={`${dc.td} text-right ${thBase}`}>
                         {isInboundView ? 'Ships' : 'Rsvd'}
+                      </th>
+                    )}
+                    {visibleColumns.importPrice && (
+                      <th className={`${dc.td} hidden text-right lg:table-cell ${thBase}`}>
+                        Import&nbsp;$/btl
                       </th>
                     )}
                     {visibleColumns.bottles && (
@@ -1998,6 +2293,8 @@ const StockExplorerPage = () => {
                           editingLwin18={editingLwin18}
                           onStartEditName={setEditingLwin18}
                           onCancelEditName={() => setEditingLwin18(null)}
+                          importPrice={bulkPricing?.[product.lwin18]?.importPricePerBottle ?? null}
+                          onSetImportPrice={handleSetImportPrice}
                         />
                       );
                     })

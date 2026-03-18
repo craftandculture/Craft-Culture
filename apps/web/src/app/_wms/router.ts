@@ -7,6 +7,7 @@ import adminAddZohoOrdersToBatch from './controller/adminAddZohoOrdersToBatch';
 import adminAdjustStockQuantity from './controller/adminAdjustStockQuantity';
 import adminAssignPickList from './controller/adminAssignPickList';
 import adminAutoFixStock from './controller/adminAutoFixStock';
+import adminAutoPopulateImportPrice from './controller/adminAutoPopulateImportPrice';
 import adminBatchCreateLocations from './controller/adminBatchCreateLocations';
 import adminClearAllStock from './controller/adminClearAllStock';
 import adminCompleteCycleCount from './controller/adminCompleteCycleCount';
@@ -30,6 +31,7 @@ import adminGenerateDeliveryNote from './controller/adminGenerateDeliveryNote';
 import adminGetAllStockRecords from './controller/adminGetAllStockRecords';
 import adminGetBayDetails from './controller/adminGetBayDetails';
 import adminGetBayTotems from './controller/adminGetBayTotems';
+import adminGetBulkPricing from './controller/adminGetBulkPricing';
 import adminGetCaseByBarcode from './controller/adminGetCaseByBarcode';
 import adminGetCaseLabels from './controller/adminGetCaseLabels';
 import adminGetCycleCount from './controller/adminGetCycleCount';
@@ -52,6 +54,7 @@ import adminGetPartnerRequests from './controller/adminGetPartnerRequests';
 import adminGetPendingShipments from './controller/adminGetPendingShipments';
 import adminGetPickList from './controller/adminGetPickList';
 import adminGetPickLists from './controller/adminGetPickLists';
+import adminGetProductPricing from './controller/adminGetProductPricing';
 import adminGetReceivingDraft from './controller/adminGetReceivingDraft';
 import adminGetShipmentForReceiving from './controller/adminGetShipmentForReceiving';
 import adminGetStockAtLocation from './controller/adminGetStockAtLocation';
@@ -82,6 +85,7 @@ import adminResolvePartnerRequest from './controller/adminResolvePartnerRequest'
 import adminSaveReceivingDraft from './controller/adminSaveReceivingDraft';
 import adminSealPallet from './controller/adminSealPallet';
 import adminSearchStock from './controller/adminSearchStock';
+import adminSetImportPrice from './controller/adminSetImportPrice';
 import adminStartCycleCount from './controller/adminStartCycleCount';
 import adminSyncStockToZoho from './controller/adminSyncStockToZoho';
 import adminTransferOwnership from './controller/adminTransferOwnership';
@@ -141,6 +145,13 @@ const operationsRouter = createTRPCRouter({
   repack: adminRepack,
 });
 
+const stockPricingRouter = createTRPCRouter({
+  getByProduct: adminGetProductPricing,
+  getBulk: adminGetBulkPricing,
+  setImportPrice: adminSetImportPrice,
+  autoPopulate: adminAutoPopulateImportPrice,
+});
+
 const stockRouter = createTRPCRouter({
   getOverview: adminGetStockOverview,
   getByProduct: adminGetStockByProduct,
@@ -162,6 +173,7 @@ const stockRouter = createTRPCRouter({
   clearAll: adminClearAllStock,
   updateBoe: adminUpdateStockBoe,
   updateProductName: adminUpdateProductName,
+  pricing: stockPricingRouter,
 });
 
 const ownershipRouter = createTRPCRouter({
