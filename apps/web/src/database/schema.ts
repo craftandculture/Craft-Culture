@@ -4843,3 +4843,37 @@ export const supplierWines = pgTable(
 ).enableRLS();
 
 export type SupplierWine = typeof supplierWines.$inferSelect;
+
+/**
+ * WMS Product Pricing — import price per product (one row per LWIN18)
+ */
+export const importPriceSource = pgEnum('import_price_source', [
+  'manual',
+  'shipment',
+]);
+
+export const wmsProductPricing = pgTable(
+  'wms_product_pricing',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    lwin18: text('lwin18').notNull().unique(),
+    importPricePerBottle: doublePrecision('import_price_per_bottle').notNull(),
+    importPriceSource: importPriceSource('import_price_source')
+      .notNull()
+      .default('manual'),
+    shipmentItemId: uuid('shipment_item_id').references(
+      () => logisticsShipmentItems.id,
+      { onDelete: 'set null' },
+    ),
+    notes: text('notes'),
+    updatedBy: uuid('updated_by').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+    ...timestamps,
+  },
+  (table) => [
+    uniqueIndex('wms_product_pricing_lwin18_idx').on(table.lwin18),
+  ],
+).enableRLS();
+
+export type WmsProductPricing = typeof wmsProductPricing.$inferSelect;
