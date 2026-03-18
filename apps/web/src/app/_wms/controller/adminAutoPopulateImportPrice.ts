@@ -25,10 +25,12 @@ const adminAutoPopulateImportPrice = adminProcedure
     const { lwin18 } = input;
 
     // Find the latest shipment item for this LWIN18 via wmsStock → logisticsShipmentItems
+    // Prefer landedCostPerBottle, fall back to productCostPerBottle
     const [shipmentItem] = await db
       .select({
         id: logisticsShipmentItems.id,
         landedCostPerBottle: logisticsShipmentItems.landedCostPerBottle,
+        productCostPerBottle: logisticsShipmentItems.productCostPerBottle,
         productName: logisticsShipmentItems.productName,
         shipmentId: logisticsShipmentItems.shipmentId,
       })
@@ -42,11 +44,16 @@ const adminAutoPopulateImportPrice = adminProcedure
       .orderBy(desc(logisticsShipmentItems.createdAt))
       .limit(1);
 
-    if (!shipmentItem?.landedCostPerBottle) {
+    const costPerBottle =
+      shipmentItem?.landedCostPerBottle ??
+      shipmentItem?.productCostPerBottle ??
+      null;
+
+    if (!shipmentItem || costPerBottle === null) {
       throw new TRPCError({
         code: 'NOT_FOUND',
         message:
-          'No shipment found with landed cost data for this product. Set the price manually.',
+          'No shipment found with cost data for this product. Set the price manually.',
       });
     }
 
@@ -54,7 +61,7 @@ const adminAutoPopulateImportPrice = adminProcedure
       .insert(wmsProductPricing)
       .values({
         lwin18,
-        importPricePerBottle: shipmentItem.landedCostPerBottle,
+        importPricePerBottle: costPerBottle,
         importPriceSource: 'shipment',
         shipmentItemId: shipmentItem.id,
         updatedBy: ctx.user.id,
@@ -62,7 +69,7 @@ const adminAutoPopulateImportPrice = adminProcedure
       .onConflictDoUpdate({
         target: wmsProductPricing.lwin18,
         set: {
-          importPricePerBottle: shipmentItem.landedCostPerBottle,
+          importPricePerBottle: costPerBottle,
           importPriceSource: 'shipment' as const,
           shipmentItemId: shipmentItem.id,
           updatedBy: ctx.user.id,
@@ -74,6 +81,9 @@ const adminAutoPopulateImportPrice = adminProcedure
     return {
       ...result,
       sourceProductName: shipmentItem.productName,
+      costSource: shipmentItem.landedCostPerBottle
+        ? 'landedCost'
+        : 'productCost',
     };
   });
 
