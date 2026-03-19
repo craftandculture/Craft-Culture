@@ -1401,17 +1401,17 @@ const StockExplorerPage = () => {
   // Set import price mutation
   const { mutate: setImportPrice } = useMutation({
     ...api.wms.admin.stock.pricing.setImportPrice.mutationOptions(),
-    onSuccess: () => {
+    onSettled: () => {
       void queryClient.invalidateQueries({
         queryKey: api.wms.admin.stock.pricing.getBulk.getQueryKey(),
       });
-      void queryClient.invalidateQueries({
-        queryKey: api.wms.admin.stock.pricing.getByProduct.getQueryKey(),
-      });
+    },
+    onSuccess: () => {
       toast.success('Import price updated');
     },
-    onError: () => {
-      toast.error('Failed to update import price');
+    onError: (err) => {
+      console.error('setImportPrice error:', err);
+      toast.error(`Price update error: ${err.message}`);
     },
   });
 
