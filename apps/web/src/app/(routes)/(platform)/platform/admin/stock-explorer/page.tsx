@@ -73,6 +73,7 @@ const DEFAULT_COLUMNS = {
   available: true,
   reserved: true,
   importPrice: true,
+  importCasePrice: true,
   locations: true,
   owners: true,
   status: true,
@@ -770,13 +771,22 @@ const ProductRow = ({ product, isExpanded, onToggle, density, visibleColumns, on
           </td>
         )}
 
-        {/* Import Price */}
+        {/* Import Price per Bottle */}
         {visibleColumns.importPrice && (
           <ImportPriceCell
             value={importPrice}
             onSave={(v) => onSetImportPrice(product.lwin18, v)}
             density={tdClass}
           />
+        )}
+
+        {/* Import Price per Case */}
+        {visibleColumns.importCasePrice && (
+          <td className={`${tdClass} hidden text-right tabular-nums text-text-muted lg:table-cell`}>
+            {importPrice != null
+              ? `$${(importPrice * (product.caseConfig ?? 12)).toFixed(2)}`
+              : '—'}
+          </td>
         )}
 
         {/* Bottles */}
@@ -1298,6 +1308,7 @@ const COLUMN_LABELS: Record<string, string> = {
   available: 'Available',
   reserved: 'Reserved',
   importPrice: 'Import $/btl',
+  importCasePrice: 'Import $/case',
   bottles: 'Bottles',
   locations: 'Locations',
   owners: 'Owners',
@@ -1621,6 +1632,7 @@ const StockExplorerPage = () => {
       'Available',
       'Reserved',
       'Import $/btl',
+      'Import $/case',
       'Bottles',
       'Locations',
       'Owners',
@@ -1643,6 +1655,7 @@ const StockExplorerPage = () => {
         csvSafe(p.availableCases),
         csvSafe(p.reservedCases),
         csvSafe(price != null ? price.toFixed(2) : ''),
+        csvSafe(price != null ? (price * (p.caseConfig ?? 12)).toFixed(2) : ''),
         csvSafe(p.totalBottles),
         csvSafe(p.locationCount),
         csvSafe(p.ownerCount),
@@ -2176,6 +2189,11 @@ const StockExplorerPage = () => {
                     {visibleColumns.importPrice && (
                       <th className={`${dc.td} hidden text-right lg:table-cell ${thBase}`}>
                         Import&nbsp;$/btl
+                      </th>
+                    )}
+                    {visibleColumns.importCasePrice && (
+                      <th className={`${dc.td} hidden text-right lg:table-cell ${thBase}`}>
+                        Import&nbsp;$/case
                       </th>
                     )}
                     {visibleColumns.bottles && (
