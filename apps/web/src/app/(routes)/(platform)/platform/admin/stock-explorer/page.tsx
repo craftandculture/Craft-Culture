@@ -24,7 +24,6 @@ import {
   IconPencil,
   IconPlus,
   IconPrinter,
-  IconRefresh,
   IconSearch,
   IconShip,
   IconSortAscending,
@@ -420,160 +419,6 @@ const ImportPriceCell = ({
   );
 };
 
-// ─── Pricing Section (expanded row) ──────────────────────────────────────────
-
-interface PricingSectionProps {
-  lwin18: string;
-  caseConfig: number;
-}
-
-const PricingSection = ({ lwin18, caseConfig }: PricingSectionProps) => {
-  const api = useTRPC();
-  const queryClient = useQueryClient();
-
-  const { data, isLoading } = useQuery({
-    ...api.wms.admin.stock.pricing.getByProduct.queryOptions({ lwin18 }),
-  });
-
-  const { mutate: autoPopulate, isPending: isAutoPopulating } = useMutation({
-    ...api.wms.admin.stock.pricing.autoPopulate.mutationOptions(),
-    onSuccess: (result) => {
-      void queryClient.invalidateQueries({
-        queryKey: api.wms.admin.stock.pricing.getByProduct.getQueryKey(),
-      });
-      void queryClient.invalidateQueries({
-        queryKey: api.wms.admin.stock.pricing.getBulk.getQueryKey(),
-      });
-      toast.success(
-        `Import price set to $${result.importPricePerBottle.toFixed(2)}/btl from shipment`,
-      );
-    },
-    onError: (err) => {
-      toast.error(err.message);
-    },
-  });
-
-  if (isLoading) {
-    return (
-      <div className="mt-4 border-t border-border-muted pt-4">
-        <div className="flex items-center gap-2 text-xs text-text-muted">
-          <IconLoader2 className="h-3.5 w-3.5 animate-spin" />
-          Loading pricing...
-        </div>
-      </div>
-    );
-  }
-
-  const pricing = data?.pricing;
-  const partners = data?.partners ?? [];
-  const importPrice = pricing?.importPricePerBottle ?? null;
-  const casePrice = importPrice != null ? importPrice * caseConfig : null;
-
-  return (
-    <div className="mt-4 border-t border-border-muted pt-4" onClick={(e) => e.stopPropagation()}>
-      <div className="mb-3 flex items-center justify-between">
-        <Typography
-          variant="bodyXs"
-          className="font-semibold uppercase tracking-wider text-text-muted"
-        >
-          Pricing
-        </Typography>
-        <button
-          type="button"
-          onClick={() => autoPopulate({ lwin18 })}
-          disabled={isAutoPopulating}
-          className="flex items-center gap-1.5 rounded-md border border-border-muted bg-background-primary px-2.5 py-1 text-xs font-medium text-text-secondary transition-colors hover:bg-surface-muted hover:text-text-primary disabled:opacity-50"
-        >
-          {isAutoPopulating ? (
-            <IconLoader2 className="h-3.5 w-3.5 animate-spin" />
-          ) : (
-            <IconRefresh className="h-3.5 w-3.5" />
-          )}
-          Auto-populate
-        </button>
-      </div>
-
-      {importPrice != null ? (
-        <>
-          <div className="mb-3 flex items-center gap-4 text-sm">
-            <span className="text-text-muted">Import:</span>
-            <span className="font-semibold tabular-nums text-text-primary">
-              ${importPrice.toFixed(2)}/btl
-            </span>
-            {casePrice != null && (
-              <span className="tabular-nums text-text-muted">
-                (${casePrice.toFixed(2)}/case)
-              </span>
-            )}
-            <span
-              className={`rounded px-1.5 py-0.5 text-[11px] font-medium ${
-                pricing?.importPriceSource === 'shipment'
-                  ? 'bg-blue-50 text-blue-600'
-                  : 'bg-amber-50 text-amber-600'
-              }`}
-            >
-              {pricing?.importPriceSource === 'shipment' ? 'Shipment' : 'Manual'}
-            </span>
-          </div>
-
-          {partners.length > 0 && (
-            <div>
-              <div className="mb-2 text-xs font-medium text-text-muted">
-                Sales by Partner:
-              </div>
-              <div className="overflow-x-auto">
-                <table className="text-[13px]">
-                  <thead>
-                    <tr className="text-[11px] uppercase tracking-wider text-text-muted">
-                      <th className="px-3 py-1 text-left">Partner</th>
-                      <th className="px-3 py-1 text-right">Margin</th>
-                      <th className="px-3 py-1 text-right">$/btl</th>
-                      <th className="px-3 py-1 text-right">$/case</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {partners
-                      .filter((p) => p.marginPercentage != null && p.marginPercentage > 0)
-                      .sort((a, b) => (b.marginPercentage ?? 0) - (a.marginPercentage ?? 0))
-                      .map((partner) => {
-                        const margin = partner.marginPercentage ?? 0;
-                        const salePriceBottle = importPrice / (1 - margin / 100);
-                        const salePriceCase = salePriceBottle * caseConfig;
-                        return (
-                          <tr
-                            key={partner.id}
-                            className="border-t border-border-muted/50"
-                          >
-                            <td className="px-3 py-1.5 font-medium text-text-primary">
-                              {partner.companyName}
-                            </td>
-                            <td className="px-3 py-1.5 text-right tabular-nums text-text-muted">
-                              {margin.toFixed(1)}%
-                            </td>
-                            <td className="px-3 py-1.5 text-right tabular-nums font-medium text-text-primary">
-                              ${salePriceBottle.toFixed(2)}
-                            </td>
-                            <td className="px-3 py-1.5 text-right tabular-nums text-text-muted">
-                              ${salePriceCase.toFixed(2)}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-        </>
-      ) : (
-        <div className="text-sm text-text-muted">
-          No import price set. Click &ldquo;Auto-populate&rdquo; to pull from shipment data, or set
-          a price in the Import $/btl column.
-        </div>
-      )}
-    </div>
-  );
-};
 
 // ─── Product Row ────────────────────────────────────────────────────────────
 
@@ -1046,10 +891,6 @@ const ProductRow = ({ product, isExpanded, onToggle, density, visibleColumns, on
                 </tbody>
               </table>
               </div>
-              <PricingSection
-                lwin18={product.lwin18}
-                caseConfig={product.caseConfig ?? 12}
-              />
             </div>
           </td>
         </tr>
