@@ -1,4 +1,4 @@
-import { and, eq, inArray, isNotNull, sql } from 'drizzle-orm';
+import { and, desc, eq, inArray, isNotNull } from 'drizzle-orm';
 
 import db from '@/database/client';
 import {
@@ -53,10 +53,11 @@ const adminGetBulkPricing = adminProcedure
     const missingLwin18s = lwin18s.filter((l) => !priceMap[l]);
     if (missingLwin18s.length > 0) {
       const shipmentRows = await db
-        .selectDistinctOn([wmsStock.lwin18], {
+        .select({
           lwin18: wmsStock.lwin18,
           productCostPerBottle: logisticsShipmentItems.productCostPerBottle,
           landedCostPerBottle: logisticsShipmentItems.landedCostPerBottle,
+          createdAt: logisticsShipmentItems.createdAt,
         })
         .from(wmsStock)
         .innerJoin(
@@ -72,9 +73,11 @@ const adminGetBulkPricing = adminProcedure
             isNotNull(wmsStock.shipmentId),
           ),
         )
-        .orderBy(wmsStock.lwin18, sql`${logisticsShipmentItems.createdAt} DESC`);
+        .orderBy(desc(logisticsShipmentItems.createdAt));
 
+      // Deduplicate: first occurrence per lwin18 = latest shipment (ordered by createdAt DESC)
       for (const row of shipmentRows) {
+        if (priceMap[row.lwin18]) continue;
         const cost = row.landedCostPerBottle ?? row.productCostPerBottle;
         if (cost != null) {
           priceMap[row.lwin18] = {
