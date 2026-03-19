@@ -780,13 +780,16 @@ const ProductRow = ({ product, isExpanded, onToggle, density, visibleColumns, on
           />
         )}
 
-        {/* Import Price per Case */}
+        {/* Import Price per Case (editable — saves as per-bottle) */}
         {visibleColumns.importCasePrice && (
-          <td className={`${tdClass} hidden text-right tabular-nums text-text-muted lg:table-cell`}>
-            {importPrice != null
-              ? `$${(importPrice * (product.caseConfig ?? 12)).toFixed(2)}`
-              : '—'}
-          </td>
+          <ImportPriceCell
+            value={importPrice != null ? importPrice * (product.caseConfig ?? 12) : null}
+            onSave={(casePrice) => {
+              const perBottle = casePrice / (product.caseConfig ?? 12);
+              onSetImportPrice(product.lwin18, parseFloat(perBottle.toFixed(4)));
+            }}
+            density={tdClass}
+          />
         )}
 
         {/* Bottles */}
