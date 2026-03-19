@@ -1441,9 +1441,10 @@ const StockExplorerPage = () => {
 
   // Persisted preferences
   const [density, setDensity] = useState<RowDensity>(() => loadPreference('se-density', 'normal'));
-  const [visibleColumns, setVisibleColumns] = useState<Record<string, boolean>>(() =>
-    loadPreference('se-columns', DEFAULT_COLUMNS),
-  );
+  const [visibleColumns, setVisibleColumns] = useState<Record<string, boolean>>(() => ({
+    ...DEFAULT_COLUMNS,
+    ...loadPreference('se-columns', DEFAULT_COLUMNS),
+  }));
 
   // Debounce search
   useEffect(() => {
