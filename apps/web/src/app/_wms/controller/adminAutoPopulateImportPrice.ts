@@ -1,5 +1,5 @@
 import { TRPCError } from '@trpc/server';
-import { desc, eq, sql } from 'drizzle-orm';
+import { and, desc, eq } from 'drizzle-orm';
 
 import db from '@/database/client';
 import {
@@ -37,8 +37,10 @@ const adminAutoPopulateImportPrice = adminProcedure
       .from(wmsStock)
       .innerJoin(
         logisticsShipmentItems,
-        sql`${logisticsShipmentItems.shipmentId} = ${wmsStock.shipmentId}
-          AND ${logisticsShipmentItems.lwin} = ${wmsStock.lwin18}`,
+        and(
+          eq(logisticsShipmentItems.shipmentId, wmsStock.shipmentId),
+          eq(logisticsShipmentItems.lwin, wmsStock.lwin18),
+        ),
       )
       .where(eq(wmsStock.lwin18, lwin18))
       .orderBy(desc(logisticsShipmentItems.createdAt))
