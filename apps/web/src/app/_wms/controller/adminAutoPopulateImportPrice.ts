@@ -59,7 +59,7 @@ const adminAutoPopulateImportPrice = adminProcedure
       });
     }
 
-    const [result] = await db
+    await db
       .insert(wmsProductPricing)
       .values({
         lwin18,
@@ -77,11 +77,10 @@ const adminAutoPopulateImportPrice = adminProcedure
           updatedBy: ctx.user.id,
           updatedAt: new Date(),
         },
-      })
-      .returning();
+      });
 
     return {
-      ...result,
+      importPricePerBottle: costPerBottle,
       sourceProductName: shipmentItem.productName,
       costSource: shipmentItem.landedCostPerBottle
         ? 'landedCost'
