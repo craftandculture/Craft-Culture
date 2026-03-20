@@ -29,7 +29,8 @@ const buildLwin18WithConfig = (sourceLwin18: string, newConfig: number) => {
 /**
  * Strip existing (Nx) suffix from product name before appending a new one
  */
-const stripPackSuffix = (name: string) => name.replace(/ \(\d+x\)$/, '');
+const stripPackSuffix = (name: string) =>
+  name.replace(/ \(\d+x\)$/, '').replace(/ \(\d+ Pack\)$/, '');
 
 /**
  * Find or create a stock record at a location for a given LWIN18/owner/lot
