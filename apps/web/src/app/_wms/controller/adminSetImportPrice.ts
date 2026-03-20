@@ -1,12 +1,12 @@
-import { sql } from 'drizzle-orm';
-
-import db from '@/database/client';
+import { client } from '@/database/client';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
 import { setImportPriceSchema } from '../schemas/pricingSchema';
 
 /**
  * Upsert import price for a product by LWIN18
+ *
+ * Uses raw postgres-js client to bypass Drizzle's RLS query builder.
  *
  * @param lwin18 - The product LWIN18 identifier
  * @param importPricePerBottle - Price per bottle in USD
@@ -20,7 +20,7 @@ const adminSetImportPrice = adminProcedure
     const { lwin18, importPricePerBottle, source, shipmentItemId, notes } =
       input;
 
-    await db.execute(sql`
+    await client`
       INSERT INTO wms_product_pricing (lwin18, import_price_per_bottle, import_price_source, shipment_item_id, notes, updated_by)
       VALUES (${lwin18}, ${importPricePerBottle}, ${source}, ${shipmentItemId ?? null}, ${notes ?? null}, ${ctx.user.id})
       ON CONFLICT (lwin18) DO UPDATE SET
@@ -30,7 +30,7 @@ const adminSetImportPrice = adminProcedure
         notes = ${notes ?? null},
         updated_by = ${ctx.user.id},
         updated_at = NOW()
-    `);
+    `;
 
     return { lwin18, importPricePerBottle, source };
   });
