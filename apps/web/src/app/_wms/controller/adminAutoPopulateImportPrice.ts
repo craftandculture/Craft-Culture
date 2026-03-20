@@ -1,10 +1,9 @@
 import { TRPCError } from '@trpc/server';
-import { and, desc, eq } from 'drizzle-orm';
+import { and, desc, eq, sql } from 'drizzle-orm';
 
 import db from '@/database/client';
 import {
   logisticsShipmentItems,
-  wmsProductPricing,
   wmsStock,
 } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
@@ -59,25 +58,16 @@ const adminAutoPopulateImportPrice = adminProcedure
       });
     }
 
-    await db
-      .insert(wmsProductPricing)
-      .values({
-        lwin18,
-        importPricePerBottle: costPerBottle,
-        importPriceSource: 'shipment',
-        shipmentItemId: shipmentItem.id,
-        updatedBy: ctx.user.id,
-      })
-      .onConflictDoUpdate({
-        target: wmsProductPricing.lwin18,
-        set: {
-          importPricePerBottle: costPerBottle,
-          importPriceSource: 'shipment' as const,
-          shipmentItemId: shipmentItem.id,
-          updatedBy: ctx.user.id,
-          updatedAt: new Date(),
-        },
-      });
+    await db.execute(sql`
+      INSERT INTO wms_product_pricing (lwin18, import_price_per_bottle, import_price_source, shipment_item_id, updated_by)
+      VALUES (${lwin18}, ${costPerBottle}, ${'shipment'}, ${shipmentItem.id}, ${ctx.user.id})
+      ON CONFLICT (lwin18) DO UPDATE SET
+        import_price_per_bottle = ${costPerBottle},
+        import_price_source = ${'shipment'},
+        shipment_item_id = ${shipmentItem.id},
+        updated_by = ${ctx.user.id},
+        updated_at = NOW()
+    `);
 
     return {
       importPricePerBottle: costPerBottle,
