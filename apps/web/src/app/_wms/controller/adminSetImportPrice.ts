@@ -19,7 +19,7 @@ const adminSetImportPrice = adminProcedure
     const { lwin18, importPricePerBottle, source, shipmentItemId, notes } =
       input;
 
-    const [result] = await db
+    await db
       .insert(wmsProductPricing)
       .values({
         lwin18,
@@ -39,10 +39,9 @@ const adminSetImportPrice = adminProcedure
           updatedBy: ctx.user.id,
           updatedAt: new Date(),
         },
-      })
-      .returning();
+      });
 
-    return result;
+    return { lwin18, importPricePerBottle, source };
   });
 
 export default adminSetImportPrice;
