@@ -6,6 +6,7 @@ import adminDashboard from './controller/adminDashboard';
 import adminDelete from './controller/adminDelete';
 import adminGetMany from './controller/adminGetMany';
 import adminGetOne from './controller/adminGetOne';
+import adminGetWmsStockForOrder from './controller/adminGetWmsStockForOrder';
 import adminMarkPartnerPaid from './controller/adminMarkPartnerPaid';
 import adminRemoveItem from './controller/adminRemoveItem';
 import adminUpdateItem from './controller/adminUpdateItem';
@@ -23,6 +24,7 @@ import documentsExtract from './controller/documentsExtract';
 import documentsExtractInline from './controller/documentsExtractInline';
 import documentsGetMany from './controller/documentsGetMany';
 import documentsUpload from './controller/documentsUpload';
+import getPartnerWmsStock from './controller/getPartnerWmsStock';
 import itemsAdd from './controller/itemsAdd';
 import itemsBulkUpdateStockStatus from './controller/itemsBulkUpdateStockStatus';
 import itemsRemove from './controller/itemsRemove';
@@ -84,6 +86,7 @@ const privateClientOrdersRouter = createTRPCRouter({
   // Partner dashboard
   partnerDashboard,
   partnerGetStockSource,
+  partnerWmsStock: getPartnerWmsStock,
 
   // Admin procedures
   adminDashboard,
@@ -103,6 +106,7 @@ const privateClientOrdersRouter = createTRPCRouter({
   itemsUpdateStockStatus,
   itemsBulkUpdateStockStatus,
   checkLocalStock,
+  adminWmsStock: adminGetWmsStockForOrder,
 
   // Distributor procedures
   distributorDashboard,

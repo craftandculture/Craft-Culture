@@ -1,8 +1,8 @@
-import { and, eq, ilike, or, sql } from 'drizzle-orm';
+import { and, eq, gt, ilike, or, sql } from 'drizzle-orm';
 import { z } from 'zod';
 
 import db from '@/database/client';
-import { productOffers, products } from '@/database/schema';
+import { wmsStock } from '@/database/schema';
 import { winePartnerProcedure } from '@/lib/trpc/procedures';
 
 const extractedItemSchema = z.object({
@@ -19,41 +19,36 @@ const matchInputSchema = z.object({
   extractedItems: z.array(extractedItemSchema),
 });
 
+interface WmsMatch {
+  lwin18: string;
+  productName: string;
+  producer: string | null;
+  vintage: number | null;
+  bottleSize: string;
+  caseConfig: number | null;
+  availableCases: number;
+}
+
 interface MatchResult {
   extractedIndex: number;
   matched: boolean;
   confidence: 'high' | 'medium' | 'low' | 'none';
-  product?: {
-    id: string;
-    name: string;
-    producer: string | null;
-    year: number | null;
-    region: string | null;
-    country: string | null;
-    lwin18: string;
-  };
-  offer?: {
-    id: string;
-    price: number | null;
-    currency: string | null;
-    unitSize: string | null;
-    unitCount: number | null;
-    availableQuantity: number;
-  };
+  wmsItem?: WmsMatch;
   extracted: z.infer<typeof extractedItemSchema>;
 }
 
 /**
- * Match extracted invoice items against local stock
+ * Match extracted invoice items against WMS warehouse stock.
  *
- * Searches the product catalog for matches based on product name, producer,
- * and vintage. Returns matched products with their local stock offers.
- * Only matches against local_inventory source (C&C warehouse stock).
+ * Searches wmsStock (filtered by partner's ownerId) for matches based on
+ * product name, producer, and vintage. Returns matched WMS items with
+ * available case counts.
  */
 const matchExtractedToLocalStock = winePartnerProcedure
   .input(matchInputSchema)
-  .mutation(async ({ input }) => {
+  .mutation(async ({ ctx, input }) => {
     const { extractedItems } = input;
+    const { partnerId } = ctx;
     const results: MatchResult[] = [];
 
     for (let i = 0; i < extractedItems.length; i++) {
@@ -70,7 +65,7 @@ const matchExtractedToLocalStock = winePartnerProcedure
       // Build search conditions
       const searchConditions = [];
 
-      // Parse vintage from extracted data (could be "2014" or "NV" etc)
+      // Parse vintage from extracted data
       const vintageYear = item.vintage ? parseInt(item.vintage, 10) : null;
       const hasVintage = vintageYear && !isNaN(vintageYear) && vintageYear > 1900;
 
@@ -84,69 +79,57 @@ const matchExtractedToLocalStock = winePartnerProcedure
       // Split name into parts for flexible matching
       const nameParts = normalizedName.split(' ').filter((p) => p.length > 2);
 
-      // Build name matching conditions - try exact first, then fuzzy
+      // Build name matching conditions
       if (item.productName) {
-        // Exact match on full name
-        searchConditions.push(ilike(products.name, `%${item.productName}%`));
+        searchConditions.push(ilike(wmsStock.productName, `%${item.productName}%`));
 
-        // Also try with producer if available
         if (item.producer) {
           searchConditions.push(
             and(
-              ilike(products.name, `%${item.productName}%`),
-              ilike(products.producer, `%${item.producer}%`),
+              ilike(wmsStock.productName, `%${item.productName}%`),
+              ilike(wmsStock.producer, `%${item.producer}%`),
             ),
           );
         }
       }
 
-      // If we have significant name parts, also try partial matching
+      // Partial matching on keywords
       if (nameParts.length >= 2) {
-        // Try matching first 2-3 key words
         const keyWords = nameParts.slice(0, 3);
-        const keyWordConditions = keyWords.map((word) => ilike(products.name, `%${word}%`));
+        const keyWordConditions = keyWords.map((word) => ilike(wmsStock.productName, `%${word}%`));
         if (keyWordConditions.length > 1) {
           searchConditions.push(and(...keyWordConditions));
         }
       }
 
-      // Search for matching products with local inventory offers
+      if (searchConditions.length === 0) {
+        results.push(result);
+        continue;
+      }
+
+      // Search WMS stock grouped by LWIN18+caseConfig for this partner
       const matches = await db
         .select({
-          product: {
-            id: products.id,
-            name: products.name,
-            producer: products.producer,
-            year: products.year,
-            region: products.region,
-            country: products.country,
-            lwin18: products.lwin18,
-          },
-          offer: {
-            id: productOffers.id,
-            price: productOffers.price,
-            currency: productOffers.currency,
-            unitSize: productOffers.unitSize,
-            unitCount: productOffers.unitCount,
-            availableQuantity: productOffers.availableQuantity,
-          },
+          lwin18: wmsStock.lwin18,
+          productName: sql<string>`MIN(${wmsStock.productName})`.as('product_name'),
+          producer: sql<string | null>`MIN(${wmsStock.producer})`.as('producer'),
+          vintage: sql<number | null>`MIN(${wmsStock.vintage})`.as('vintage'),
+          bottleSize: sql<string>`MIN(${wmsStock.bottleSize})`.as('bottle_size'),
+          caseConfig: wmsStock.caseConfig,
+          availableCases: sql<number>`SUM(${wmsStock.availableCases})`.as('available_cases'),
         })
-        .from(products)
-        .innerJoin(productOffers, eq(products.id, productOffers.productId))
+        .from(wmsStock)
         .where(
           and(
-            // Must be local inventory
-            eq(productOffers.source, 'local_inventory'),
-            // Must have available quantity
-            sql`${productOffers.availableQuantity} > 0`,
-            // Match name criteria
+            eq(wmsStock.ownerId, partnerId),
             or(...searchConditions),
           ),
         )
+        .groupBy(wmsStock.lwin18, wmsStock.caseConfig)
+        .having(gt(sql`SUM(${wmsStock.availableCases})`, 0))
         .limit(10);
 
       if (matches.length > 0) {
-        // Score and rank matches
         const firstMatch = matches[0];
         if (!firstMatch) {
           results.push(result);
@@ -160,37 +143,36 @@ const matchExtractedToLocalStock = winePartnerProcedure
           let score = 0;
 
           // Score based on name similarity
-          const productName = match.product.name.toLowerCase();
+          const productName = match.productName.toLowerCase();
           if (productName === normalizedName) {
-            score += 100; // Exact match
+            score += 100;
           } else if (productName.includes(normalizedName)) {
-            score += 80; // Contains full name
+            score += 80;
           } else {
-            // Count matching words
             const matchingWords = nameParts.filter((p) => productName.includes(p));
             score += matchingWords.length * 20;
           }
 
           // Score based on vintage match
-          if (hasVintage && match.product.year) {
-            if (match.product.year === vintageYear) {
-              score += 50; // Exact vintage match
-            } else if (Math.abs(match.product.year - vintageYear) <= 1) {
-              score += 20; // Close vintage
+          if (hasVintage && match.vintage) {
+            if (match.vintage === vintageYear) {
+              score += 50;
+            } else if (Math.abs(match.vintage - vintageYear) <= 1) {
+              score += 20;
             }
           }
 
           // Score based on producer match
-          if (item.producer && match.product.producer) {
+          if (item.producer && match.producer) {
             const prodNormalized = item.producer.toLowerCase();
-            const matchProducer = match.product.producer.toLowerCase();
+            const matchProducer = match.producer.toLowerCase();
             if (matchProducer.includes(prodNormalized) || prodNormalized.includes(matchProducer)) {
               score += 30;
             }
           }
 
-          // Prefer items with more stock
-          if (match.offer.availableQuantity >= item.quantity) {
+          // Prefer items with sufficient stock
+          if (match.availableCases >= item.quantity) {
             score += 10;
           }
 
@@ -210,14 +192,14 @@ const matchExtractedToLocalStock = winePartnerProcedure
 
         result.matched = true;
         result.confidence = confidence;
-        result.product = bestMatch.product;
-        result.offer = {
-          id: bestMatch.offer.id,
-          price: bestMatch.offer.price,
-          currency: bestMatch.offer.currency,
-          unitSize: bestMatch.offer.unitSize,
-          unitCount: bestMatch.offer.unitCount,
-          availableQuantity: bestMatch.offer.availableQuantity,
+        result.wmsItem = {
+          lwin18: bestMatch.lwin18,
+          productName: bestMatch.productName,
+          producer: bestMatch.producer,
+          vintage: bestMatch.vintage,
+          bottleSize: bestMatch.bottleSize,
+          caseConfig: bestMatch.caseConfig,
+          availableCases: bestMatch.availableCases,
         };
       }
 

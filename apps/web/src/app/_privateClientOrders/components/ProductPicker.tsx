@@ -1,6 +1,6 @@
 'use client';
 
-import { IconPencil, IconSearch, IconX } from '@tabler/icons-react';
+import { IconBox, IconPencil, IconSearch, IconX } from '@tabler/icons-react';
 import { useState } from 'react';
 
 import ProductsCombobox from '@/app/_products/components/ProductsCombobox';
@@ -15,9 +15,12 @@ import SelectTrigger from '@/app/_ui/components/Select/SelectTrigger';
 import SelectValue from '@/app/_ui/components/Select/SelectValue';
 import Typography from '@/app/_ui/components/Typography/Typography';
 
+import WmsStockCombobox from './WmsStockCombobox';
+import type { WmsStockItem } from './WmsStockCombobox';
+
 type StockSource = 'partner_local' | 'partner_airfreight' | 'cc_inventory' | 'manual';
 
-interface LineItemData {
+export interface LineItemData {
   productId?: string;
   productOfferId?: string;
   productName: string;
@@ -30,9 +33,10 @@ interface LineItemData {
   source: StockSource;
   quantity: number;
   pricePerCaseUsd: number;
+  availableCases?: number;
 }
 
-interface ProductPickerProps {
+export interface ProductPickerProps {
   value: LineItemData;
   onChange: (data: LineItemData) => void;
   omitProductIds?: string[];
@@ -40,28 +44,42 @@ interface ProductPickerProps {
   index?: number;
   /** Filter products by stock source (cultx or local_inventory) */
   source?: 'cultx' | 'local_inventory';
+  /** Default mode for this picker */
+  defaultMode?: 'wms' | 'search' | 'manual';
+  /** Partner ID for admin WMS stock browsing */
+  wmsOwnerId?: string;
 }
 
 /**
  * Product picker for private client orders.
- * Defaults to catalog search mode with option for manual entry.
+ * Supports WMS stock, catalog search, and manual entry modes.
  */
-const ProductPicker = ({ value, onChange, omitProductIds = [], onRemove, index, source }: ProductPickerProps) => {
-  // Default to search mode - only show manual if explicitly toggled or has manual data without productId
-  const hasManualDataOnly = !value.productId && value.productName.trim().length > 0;
-  const [mode, setMode] = useState<'search' | 'manual'>(hasManualDataOnly ? 'manual' : 'search');
+const ProductPicker = ({
+  value,
+  onChange,
+  omitProductIds = [],
+  onRemove,
+  index,
+  source,
+  defaultMode = 'search',
+  wmsOwnerId,
+}: ProductPickerProps) => {
+  const hasManualDataOnly = !value.productId && value.productName.trim().length > 0 && !value.lwin;
+  const hasWmsData = !value.productId && value.lwin && value.productName.trim().length > 0;
+  const initialMode = hasManualDataOnly ? 'manual' : hasWmsData ? 'wms' : defaultMode;
+  const [mode, setMode] = useState<'wms' | 'search' | 'manual'>(initialMode);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [selectedWmsItem, setSelectedWmsItem] = useState<WmsStockItem | null>(null);
 
   // Check if we have a pre-populated product (from AI matching)
   const hasPrePopulatedProduct = value.productId && value.productName.trim().length > 0;
+  const hasPrePopulatedWms = !value.productId && value.lwin && value.productName.trim().length > 0 && value.source === 'cc_inventory';
 
   const handleProductSelect = (product: Product) => {
     setSelectedProduct(product);
 
     const offer = product.productOffers?.[0];
 
-    // Use raw supplier price, converting to USD if needed
-    // This avoids double markup from the B2B pricing model
     let rawPriceUsd = value.pricePerCaseUsd;
     if (offer?.price) {
       const exchangeRates: Record<string, number> = {
@@ -89,22 +107,40 @@ const ProductPicker = ({ value, onChange, omitProductIds = [], onRemove, index, 
     });
   };
 
-  const handleClearProduct = () => {
-    setSelectedProduct(null);
+  const handleWmsStockSelect = (item: WmsStockItem) => {
+    setSelectedWmsItem(item);
+
     onChange({
       ...value,
       productId: undefined,
       productOfferId: undefined,
+      productName: item.productName,
+      producer: item.producer ?? '',
+      vintage: item.vintage?.toString() ?? '',
+      region: '',
+      lwin: item.lwin18,
+      bottleSize: item.bottleSize ?? '750ml',
+      caseConfig: item.caseConfig ?? 12,
+      pricePerCaseUsd: 0,
+      source: 'cc_inventory',
+      availableCases: item.availableCases,
     });
   };
 
-  const handleModeSwitch = () => {
-    if (mode === 'search') {
-      setMode('manual');
-      handleClearProduct();
-    } else {
-      setMode('search');
-    }
+  const handleClearProduct = () => {
+    setSelectedProduct(null);
+    setSelectedWmsItem(null);
+    onChange({
+      ...value,
+      productId: undefined,
+      productOfferId: undefined,
+      productName: '',
+      producer: '',
+      vintage: '',
+      region: '',
+      lwin: '',
+      availableCases: undefined,
+    });
   };
 
   const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -121,9 +157,11 @@ const ProductPicker = ({ value, onChange, omitProductIds = [], onRemove, index, 
     maximumFractionDigits: 2,
   }).format(lineTotal);
 
+  const modeLabel = mode === 'wms' ? 'Warehouse stock' : mode === 'search' ? 'Search catalog' : 'Manual entry';
+
   return (
     <div className="rounded-lg border border-border-muted bg-surface-secondary/30 p-3">
-      {/* Header row with index and remove */}
+      {/* Header row with index and mode switcher */}
       <div className="mb-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
           {index !== undefined && (
@@ -131,34 +169,39 @@ const ProductPicker = ({ value, onChange, omitProductIds = [], onRemove, index, 
               {index + 1}
             </span>
           )}
-          {mode === 'search' ? (
-            <Typography variant="bodyXs" colorRole="muted">
-              Search catalog
-            </Typography>
-          ) : (
-            <Typography variant="bodyXs" colorRole="muted">
-              Manual entry
-            </Typography>
-          )}
+          <Typography variant="bodyXs" colorRole="muted">
+            {modeLabel}
+          </Typography>
         </div>
         <div className="flex items-center gap-2">
-          {mode === 'search' ? (
+          {mode !== 'wms' && (
             <button
               type="button"
-              onClick={handleModeSwitch}
+              onClick={() => { handleClearProduct(); setMode('wms'); }}
               className="flex items-center gap-1 text-xs text-text-muted transition-colors hover:text-text-primary"
             >
-              <Icon icon={IconPencil} size="xs" />
-              <span className="hidden sm:inline">Enter manually</span>
+              <Icon icon={IconBox} size="xs" />
+              <span className="hidden sm:inline">WMS stock</span>
             </button>
-          ) : (
+          )}
+          {mode !== 'search' && (
             <button
               type="button"
-              onClick={() => setMode('search')}
+              onClick={() => { handleClearProduct(); setMode('search'); }}
               className="flex items-center gap-1 text-xs text-text-muted transition-colors hover:text-text-primary"
             >
               <Icon icon={IconSearch} size="xs" />
-              <span className="hidden sm:inline">Search catalog</span>
+              <span className="hidden sm:inline">Catalog</span>
+            </button>
+          )}
+          {mode !== 'manual' && (
+            <button
+              type="button"
+              onClick={() => { handleClearProduct(); setMode('manual'); }}
+              className="flex items-center gap-1 text-xs text-text-muted transition-colors hover:text-text-primary"
+            >
+              <Icon icon={IconPencil} size="xs" />
+              <span className="hidden sm:inline">Manual</span>
             </button>
           )}
           {onRemove && (
@@ -169,11 +212,58 @@ const ProductPicker = ({ value, onChange, omitProductIds = [], onRemove, index, 
         </div>
       </div>
 
-      {/* Product selection */}
-      {mode === 'search' ? (
+      {/* Product selection by mode */}
+      {mode === 'wms' ? (
+        <div className="mb-3">
+          {hasPrePopulatedWms && !selectedWmsItem ? (
+            <div className="flex items-center justify-between rounded-lg border border-green-200 bg-green-50 px-3 py-2">
+              <div className="flex flex-col gap-0.5 min-w-0">
+                <Typography variant="bodySm" className="font-medium truncate">
+                  {value.productName}
+                </Typography>
+                <div className="flex items-center gap-2 text-xs text-text-muted">
+                  {value.producer && <span>{value.producer}</span>}
+                  {value.vintage && <span>{value.vintage}</span>}
+                  {value.availableCases !== undefined && (
+                    <span className="rounded bg-green-100 px-1.5 py-0.5 text-green-700">
+                      {value.availableCases} cs available
+                    </span>
+                  )}
+                </div>
+              </div>
+              <Button type="button" variant="ghost" size="xs" onClick={handleClearProduct}>
+                <Icon icon={IconX} size="sm" colorRole="muted" />
+              </Button>
+            </div>
+          ) : selectedWmsItem ? (
+            <div className="flex items-center justify-between rounded-lg border border-green-200 bg-green-50 px-3 py-2">
+              <div className="flex flex-col gap-0.5 min-w-0">
+                <Typography variant="bodySm" className="font-medium truncate">
+                  {selectedWmsItem.productName}
+                  {selectedWmsItem.vintage ? ` ${selectedWmsItem.vintage}` : ''}
+                </Typography>
+                <div className="flex items-center gap-2 text-xs text-text-muted">
+                  {selectedWmsItem.producer && <span>{selectedWmsItem.producer}</span>}
+                  <span className="rounded bg-green-100 px-1.5 py-0.5 text-green-700">
+                    {selectedWmsItem.availableCases} cs available
+                  </span>
+                  <span className="text-text-muted/60">{selectedWmsItem.lwin18}</span>
+                </div>
+              </div>
+              <Button type="button" variant="ghost" size="xs" onClick={handleClearProduct}>
+                <Icon icon={IconX} size="sm" colorRole="muted" />
+              </Button>
+            </div>
+          ) : (
+            <WmsStockCombobox
+              onSelect={handleWmsStockSelect}
+              ownerId={wmsOwnerId}
+            />
+          )}
+        </div>
+      ) : mode === 'search' ? (
         <div className="mb-3">
           {hasPrePopulatedProduct && !selectedProduct ? (
-            // Show pre-populated product from AI matching
             <div className="flex items-center justify-between rounded-lg border border-border-brand bg-fill-brand-muted/50 px-3 py-2">
               <div className="flex flex-col gap-0.5 min-w-0">
                 <Typography variant="bodySm" className="font-medium truncate">
