@@ -71,31 +71,21 @@ interface ExtractedData {
   totalAmount?: number;
 }
 
-interface MatchedProduct {
-  id: string;
-  name: string;
-  producer: string | null;
-  year: number | null;
-  region: string | null;
-  country: string | null;
+interface WmsMatchItem {
   lwin18: string;
-}
-
-interface MatchedOffer {
-  id: string;
-  price: number | null;
-  currency: string | null;
-  unitSize: string | null;
-  unitCount: number | null;
-  availableQuantity: number;
+  productName: string;
+  producer: string | null;
+  vintage: number | null;
+  bottleSize: string;
+  caseConfig: number | null;
+  availableCases: number;
 }
 
 interface MatchResult {
   extractedIndex: number;
   matched: boolean;
   confidence: 'high' | 'medium' | 'low' | 'none';
-  product?: MatchedProduct;
-  offer?: MatchedOffer;
+  wmsItem?: WmsMatchItem;
   extracted: ExtractedLineItem;
 }
 
@@ -341,45 +331,28 @@ const PrivateOrderForm = () => {
     if (!extractedData?.lineItems) return;
 
     const newItems: LineItem[] = extractedData.lineItems.map((item, index) => {
-      // Check if we have a match for this item
+      // Check if we have a WMS match for this item
       const match = matchResults?.find((m) => m.extractedIndex === index && m.matched);
 
-      if (match && match.product && match.offer) {
-        // Use raw supplier price, converting to USD if needed
-        // This avoids double markup from the B2B pricing model
-        const exchangeRates: Record<string, number> = {
-          USD: 1,
-          GBP: 1.27,
-          EUR: 1.08,
-        };
-        const rate = exchangeRates[match.offer.currency ?? 'USD'] ?? 1;
-        const rawPriceUsd = match.offer.price
-          ? Math.round(match.offer.price * rate * 100) / 100
-          : 0;
-
-        // Use matched product data - this links to local stock
-        // Fallback to extracted values if offer doesn't have them
+      if (match && match.wmsItem) {
         const bottleSizeFromExtracted = item.bottleSize ? `${item.bottleSize}ml` : '750ml';
 
         return {
           id: crypto.randomUUID(),
-          productId: match.product.id,
-          productOfferId: match.offer.id,
-          productName: match.product.name,
-          producer: match.product.producer || '',
-          vintage: match.product.year?.toString() || '',
-          region: match.product.region || '',
-          lwin: match.product.lwin18 || '',
-          bottleSize: match.offer.unitSize || bottleSizeFromExtracted,
-          caseConfig: match.offer.unitCount || item.caseConfig || 12,
+          productName: match.wmsItem.productName,
+          producer: match.wmsItem.producer || '',
+          vintage: match.wmsItem.vintage?.toString() || '',
+          region: '',
+          lwin: match.wmsItem.lwin18 || '',
+          bottleSize: match.wmsItem.bottleSize || bottleSizeFromExtracted,
+          caseConfig: match.wmsItem.caseConfig || item.caseConfig || 12,
           quantity: item.quantity,
-          pricePerCaseUsd: rawPriceUsd,
-          source: 'cc_inventory' as StockSource, // Local stock!
+          pricePerCaseUsd: item.unitPrice ? Math.round(item.unitPrice * 100) / 100 : 0,
+          source: 'cc_inventory' as StockSource,
         };
       }
 
       // No match - use extracted data as manual entry
-      // Convert bottleSize from ml number to string format (e.g., 750 -> "750ml")
       const bottleSizeStr = item.bottleSize ? `${item.bottleSize}ml` : '750ml';
 
       return {
@@ -397,7 +370,7 @@ const PrivateOrderForm = () => {
       };
     });
 
-    const matchedCount = newItems.filter((i) => i.productId).length;
+    const matchedCount = newItems.filter((i) => i.source === 'cc_inventory').length;
     setLineItems([...lineItems, ...newItems]);
     setExtractedData(null);
     setMatchResults(null);
@@ -766,17 +739,17 @@ const PrivateOrderForm = () => {
                         )}
                         <div className="truncate">
                           <span className="font-medium">{item.productName}</span>
-                          {isMatched && match?.product && (
+                          {isMatched && match?.wmsItem && (
                             <span className="ml-2 text-xs text-green-600">
-                              → {match.product.name}
+                              → {match.wmsItem.productName}
                             </span>
                           )}
                         </div>
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
-                        {isMatched && match?.offer && (
+                        {isMatched && match?.wmsItem && (
                           <span className="text-xs text-green-600">
-                            ${match.offer.price?.toFixed(0)}/cs
+                            {match.wmsItem.availableCases} cs avail
                           </span>
                         )}
                         <span className="text-text-muted">{item.quantity} cs</span>
@@ -841,6 +814,7 @@ const PrivateOrderForm = () => {
                   onRemove={() => handleRemoveLineItem(item.id)}
                   omitProductIds={usedProductIds.filter((id) => id !== item.productId)}
                   source={stockSource}
+                  defaultMode={stockSource === 'local_inventory' ? 'wms' : 'search'}
                 />
               ))}
             </div>
