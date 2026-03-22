@@ -784,7 +784,6 @@ const WMSReceiveShipmentPage = () => {
           lwin18,
           packSize,
           vintage: item.vintage ?? undefined,
-          locationCode: assignment.locationCode,
           ownerName: shipment?.partnerName ?? 'C&C',
           quantityCases: assignment.cases,
           lotNumber: currentLotNumber,

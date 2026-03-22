@@ -1,9 +1,9 @@
 /**
  * Generate ZPL code for a stock pallet label (4x6")
  *
- * Used when printing labels for pallet-stored stock in the Stock Explorer.
- * Displays product info, location, owner, and quantity on a large 4x6" label
- * suitable for sticking on wrapped pallets.
+ * Used when printing labels for pallet-stored stock in the Stock Explorer
+ * and Receiving reprint flow. Displays product info, barcode, owner, and
+ * quantity on a large 4x6" label suitable for sticking on wrapped pallets.
  *
  * @example
  *   generateStockPalletLabelZpl({
@@ -12,7 +12,6 @@
  *     lwin18: '1010279-2015-06-00750',
  *     packSize: '6x75cl',
  *     vintage: 2015,
- *     locationCode: 'A-01-01',
  *     ownerName: 'Cru Wine',
  *     quantityCases: 52,
  *     lotNumber: '2026-01-31-001',
@@ -30,8 +29,6 @@ export interface StockPalletLabelData {
   packSize: string;
   /** Vintage year */
   vintage?: number | string;
-  /** Warehouse location code (e.g., A-01-01) */
-  locationCode: string;
   /** Stock owner name */
   ownerName: string;
   /** Number of cases on the pallet */
@@ -104,14 +101,14 @@ const GLOBE_ICON =
  * Generate ZPL code for a stock pallet label
  *
  * Label layout (4" x 6" at 203 DPI = 812 x 1218 dots):
- * - Top: C&C logo (left) + QR code (right)
+ * - Top: C&C logo (left) + PALLET badge (right)
+ * - Barcode (Code 128, PLT-{lwin18})
  * - Product name (large, up to 2 lines)
- * - Producer + LWIN18
- * - Pack size + vintage
- * - Location code (large)
- * - Owner + quantity
+ * - Vintage + Producer
+ * - Pack size + Cases + Owner
  * - Lot number
- * - Instagram + website footer
+ * - LWIN
+ * - QR code + footer
  */
 const generateStockPalletLabelZpl = (data: StockPalletLabelData) => {
   const [productLine1, productLine2] = splitToTwoLines(
@@ -122,24 +119,29 @@ const generateStockPalletLabelZpl = (data: StockPalletLabelData) => {
   const lwin = escapeZpl(data.lwin18.replace(/^SKU-/, ''));
   const packSize = escapeZpl(data.packSize || '-');
   const vintage = data.vintage ? String(data.vintage) : '';
-  const locationCode = escapeZpl(data.locationCode);
   const ownerName = escapeZpl(truncate(data.ownerName, 30));
   const lotNumber = data.lotNumber ? escapeZpl(truncate(data.lotNumber, 40)) : '';
+  const barcodeValue = `PLT-${data.lwin18.replace(/^SKU-/, '')}`;
 
   // Build ZPL lines with a running Y cursor for clean dynamic layout
   const lines: string[] = [];
   let y = 0;
 
-  // Header: logo + QR
+  // Header: logo + PALLET badge (white on black)
   lines.push(`^FO50,20\n${LOGO_GF}^FS`);
-  lines.push(`^FO620,25\n^BQN,2,5\n^FDQA,https://www.craftculture.xyz/cold-chain.html^FS`);
+  lines.push(`^FO550,20\n^GB230,70,70^FS`);
+  lines.push(`^FO575,30\n^A0N,50,50\n^FR\n^FDPALLET^FS`);
 
-  // Top separator
-  y = 160;
+  // Barcode (Code 128)
+  y = 120;
+  lines.push(`^FO50,${y}\n^BY${barcodeValue.length > 32 ? '1' : '2'},3,80\n^BCN,80,Y,N,N\n^FD${escapeZpl(barcodeValue)}^FS`);
+
+  // Separator
+  y += 130;
   lines.push(`^FO30,${y}\n^GB752,3,3^FS`);
 
   // Product name line 1
-  y += 30;
+  y += 25;
   lines.push(`^FO50,${y}\n^A0N,56,56\n^FD${productLine1}^FS`);
 
   // Product name line 2 (optional)
@@ -148,71 +150,46 @@ const generateStockPalletLabelZpl = (data: StockPalletLabelData) => {
     lines.push(`^FO50,${y}\n^A0N,56,56\n^FD${productLine2}^FS`);
   }
 
-  // Producer (optional)
+  // Vintage + Producer
+  y += 75;
+  if (vintage) {
+    lines.push(`^FO50,${y}\n^A0N,36,36\n^FDVintage: ${vintage}^FS`);
+  }
   if (producer) {
-    y += 70;
-    lines.push(`^FO50,${y}\n^A0N,34,34\n^FD${producer}^FS`);
+    lines.push(`^FO${vintage ? '350' : '50'},${y + 4}\n^A0N,28,28\n^FD${producer}^FS`);
+  }
+
+  // Pack size + Cases + Owner
+  y += 50;
+  lines.push(
+    `^FO50,${y}\n^A0N,28,28\n^FD${packSize} | ${data.quantityCases} Cases | Owner: ${ownerName}^FS`,
+  );
+
+  // Separator
+  y += 45;
+  lines.push(`^FO30,${y}\n^GB752,3,3^FS`);
+
+  // Lot number
+  y += 25;
+  if (lotNumber) {
+    lines.push(`^FO50,${y}\n^A0N,32,32\n^FD${lotNumber}^FS`);
   }
 
   // LWIN
   y += 45;
-  lines.push(`^FO50,${y}\n^A0N,28,28\n^FDLWIN: ${lwin}^FS`);
+  lines.push(`^FO50,${y}\n^A0N,22,22\n^FDLWIN: ${lwin}^FS`);
 
-  // Pack size + vintage
+  // Separator
   y += 40;
-  lines.push(
-    `^FO50,${y}\n^A0N,34,34\n^FD${packSize}${vintage ? '  |  Vintage: ' + vintage : ''}^FS`,
-  );
-
-  // Separator
-  y += 50;
-  lines.push(`^FO30,${y}\n^GB752,3,3^FS`);
-
-  // LOCATION label
-  y += 30;
-  lines.push(`^FO50,${y}\n^A0N,36,36\n^FDLOCATION^FS`);
-
-  // Location code (large)
-  y += 50;
-  lines.push(`^FO50,${y}\n^A0N,80,80\n^FD${locationCode}^FS`);
-
-  // Separator
-  y += 100;
-  lines.push(`^FO30,${y}\n^GB752,3,3^FS`);
-
-  // Owner name
-  const ownerY = y + 30;
-  lines.push(`^FO50,${ownerY}\n^A0N,40,40\n^FD${ownerName}^FS`);
-
-  // Quantity (right side, large)
-  lines.push(`^FO500,${ownerY - 10}\n^A0N,80,80\n^FD${data.quantityCases}^FS`);
-  lines.push(`^FO500,${ownerY + 80}\n^A0N,30,30\n^FDCASES^FS`);
-
-  // Lot number (optional)
-  if (lotNumber) {
-    lines.push(`^FO50,${ownerY + 50}\n^A0N,28,28\n^FDLot: ${lotNumber}^FS`);
-  }
-
-  // Move Y past the owner/qty block
-  y = ownerY + 120;
-
-  // Separator
-  lines.push(`^FO30,${y}\n^GB752,3,3^FS`);
-
-  // SCAN TO TRACE YOUR CASE
-  y += 30;
-  lines.push(`^FO50,${y}\n^A0N,32,32\n^FDSCAN TO TRACE YOUR CASE^FS`);
-
-  // Footer separator
-  y += 55;
   lines.push(`^FO30,${y}\n^GB752,2,2^FS`);
 
-  // Social footer
-  y += 25;
-  lines.push(`^FO50,${y}\n${INSTAGRAM_ICON}^FS`);
-  lines.push(`^FO85,${y + 3}\n^A0N,22,22\n^FD@wine.uae^FS`);
-  lines.push(`^FO300,${y}\n${GLOBE_ICON}^FS`);
-  lines.push(`^FO335,${y + 3}\n^A0N,22,22\n^FDcraftculture.xyz^FS`);
+  // QR code + social footer
+  y += 20;
+  lines.push(`^FO50,${y}\n^BQN,2,4\n^FDQA,https://www.craftculture.xyz/cold-chain.html^FS`);
+  lines.push(`^FO250,${y + 10}\n${INSTAGRAM_ICON}^FS`);
+  lines.push(`^FO285,${y + 13}\n^A0N,22,22\n^FD@wine.uae^FS`);
+  lines.push(`^FO500,${y + 10}\n${GLOBE_ICON}^FS`);
+  lines.push(`^FO535,${y + 13}\n^A0N,22,22\n^FDcraftculture.xyz^FS`);
 
   return `^XA\n^PW812\n^LL1218\n^PR3\n~SD20\n\n${lines.join('\n\n')}\n\n^XZ`;
 };
