@@ -128,8 +128,8 @@ const generateStockPalletLabelZpl = (data: StockPalletLabelData) => {
   const lines: string[] = [];
   let y = 0;
 
-  // Border around entire label
-  lines.push('^FO0,0\n^GB812,1218,3^FS');
+  // Border around label (inset 10 dots from edge for printable area)
+  lines.push('^FO10,10\n^GB792,1198,3^FS');
 
   // Header: logo + PALLET badge (white on black)
   lines.push(`^FO30,25\n${LOGO_GF}^FS`);
