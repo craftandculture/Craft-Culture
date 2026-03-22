@@ -182,7 +182,7 @@ const generateStockPalletLabelZpl = (data: StockPalletLabelData) => {
   lines.push(`^FO520,${y + 105}\n^A0N,28,28\n^FDCASES^FS`);
 
   // Separator
-  y += 155;
+  y += 150;
   lines.push(`^FO15,${y}\n^GB782,3,3^FS`);
 
   // Lot number
@@ -192,20 +192,20 @@ const generateStockPalletLabelZpl = (data: StockPalletLabelData) => {
   }
 
   // LWIN
-  y += 55;
+  y += 50;
   lines.push(`^FO30,${y}\n^A0N,26,26\n^FDLWIN: ${lwin}^FS`);
 
   // Separator
-  y += 50;
+  y += 45;
   lines.push(`^FO15,${y}\n^GB782,2,2^FS`);
 
-  // QR code (left) + social footer (right)
-  y += 30;
-  lines.push(`^FO30,${y}\n^BQN,2,5\n^FDQA,https://www.craftculture.xyz/cold-chain.html^FS`);
-  lines.push(`^FO280,${y + 30}\n${INSTAGRAM_ICON}^FS`);
-  lines.push(`^FO315,${y + 33}\n^A0N,24,24\n^FD@wine.uae^FS`);
-  lines.push(`^FO540,${y + 30}\n${GLOBE_ICON}^FS`);
-  lines.push(`^FO575,${y + 33}\n^A0N,24,24\n^FDcraftculture.xyz^FS`);
+  // QR code (left, mag 4 ~130 dots) + social footer (right)
+  y += 25;
+  lines.push(`^FO30,${y}\n^BQN,2,4\n^FDQA,https://www.craftculture.xyz/cold-chain.html^FS`);
+  lines.push(`^FO280,${y + 40}\n${INSTAGRAM_ICON}^FS`);
+  lines.push(`^FO315,${y + 43}\n^A0N,24,24\n^FD@wine.uae^FS`);
+  lines.push(`^FO540,${y + 40}\n${GLOBE_ICON}^FS`);
+  lines.push(`^FO575,${y + 43}\n^A0N,24,24\n^FDcraftculture.xyz^FS`);
 
   return `^XA\n^PW812\n^LL1218\n^PR3\n~SD20\n\n${lines.join('\n\n')}\n\n^XZ`;
 };
