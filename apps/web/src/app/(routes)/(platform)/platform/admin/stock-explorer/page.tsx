@@ -1547,9 +1547,8 @@ const StockExplorerPage = () => {
             lwin18: product.lwin18,
             packSize,
             vintage: product.vintage ?? undefined,
-            locationCode: loc.locationCode,
             ownerName: loc.ownerName,
-            quantityCases: loc.cases,
+            quantityCases: loc.quantityCases,
             lotNumber: loc.lotNumber ?? undefined,
           }),
         ).join('\n');
