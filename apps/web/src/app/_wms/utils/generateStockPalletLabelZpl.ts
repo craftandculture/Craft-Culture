@@ -101,19 +101,20 @@ const GLOBE_ICON =
  * Generate ZPL code for a stock pallet label
  *
  * Label layout (4" x 6" at 203 DPI = 812 x 1218 dots):
+ * - Border around entire label
  * - Top: C&C logo (left) + PALLET badge (right)
  * - Barcode (Code 128, PLT-{lwin18})
  * - Product name (large, up to 2 lines)
- * - Vintage + Producer
- * - Pack size + Cases + Owner
- * - Lot number
- * - LWIN
- * - QR code + footer
+ * - Producer
+ * - Vintage + Pack size
+ * - Owner (left) + Cases count (right, large)
+ * - Lot number + LWIN
+ * - QR code + social footer
  */
 const generateStockPalletLabelZpl = (data: StockPalletLabelData) => {
   const [productLine1, productLine2] = splitToTwoLines(
     escapeZpl(truncate(data.productName, 60)),
-    24,
+    22,
   );
   const producer = data.producer ? escapeZpl(truncate(data.producer, 40)) : '';
   const lwin = escapeZpl(data.lwin18.replace(/^SKU-/, ''));
@@ -127,69 +128,84 @@ const generateStockPalletLabelZpl = (data: StockPalletLabelData) => {
   const lines: string[] = [];
   let y = 0;
 
-  // Header: logo + PALLET badge (white on black)
-  lines.push(`^FO50,20\n${LOGO_GF}^FS`);
-  lines.push(`^FO550,20\n^GB230,70,70^FS`);
-  lines.push(`^FO575,30\n^A0N,50,50\n^FR\n^FDPALLET^FS`);
+  // Border around entire label
+  lines.push('^FO0,0\n^GB812,1218,3^FS');
 
-  // Barcode (Code 128)
-  y = 120;
-  lines.push(`^FO50,${y}\n^BY${barcodeValue.length > 32 ? '1' : '2'},3,80\n^BCN,80,Y,N,N\n^FD${escapeZpl(barcodeValue)}^FS`);
+  // Header: logo + PALLET badge (white on black)
+  lines.push(`^FO30,25\n${LOGO_GF}^FS`);
+  lines.push('^FO555,22\n^GB235,75,75^FS');
+  lines.push('^FO580,33\n^A0N,55,55\n^FR\n^FDPALLET^FS');
+
+  // Barcode (Code 128, taller for 6" label)
+  y = 160;
+  lines.push(`^FO50,${y}\n^BY${barcodeValue.length > 32 ? '1' : '2'},3,100\n^BCN,100,Y,N,N\n^FD${escapeZpl(barcodeValue)}^FS`);
 
   // Separator
-  y += 130;
-  lines.push(`^FO30,${y}\n^GB752,3,3^FS`);
+  y = 315;
+  lines.push(`^FO15,${y}\n^GB782,3,3^FS`);
 
-  // Product name line 1
-  y += 25;
-  lines.push(`^FO50,${y}\n^A0N,56,56\n^FD${productLine1}^FS`);
+  // Product name line 1 (large)
+  y += 35;
+  lines.push(`^FO30,${y}\n^A0N,66,66\n^FD${productLine1}^FS`);
 
   // Product name line 2 (optional)
   if (productLine2) {
-    y += 65;
-    lines.push(`^FO50,${y}\n^A0N,56,56\n^FD${productLine2}^FS`);
+    y += 80;
+    lines.push(`^FO30,${y}\n^A0N,66,66\n^FD${productLine2}^FS`);
   }
 
-  // Vintage + Producer
-  y += 75;
-  if (vintage) {
-    lines.push(`^FO50,${y}\n^A0N,36,36\n^FDVintage: ${vintage}^FS`);
-  }
+  // Producer (optional)
   if (producer) {
-    lines.push(`^FO${vintage ? '350' : '50'},${y + 4}\n^A0N,28,28\n^FD${producer}^FS`);
+    y += 90;
+    lines.push(`^FO30,${y}\n^A0N,36,36\n^FD${producer}^FS`);
   }
-
-  // Pack size + Cases + Owner
-  y += 50;
-  lines.push(
-    `^FO50,${y}\n^A0N,28,28\n^FD${packSize} | ${data.quantityCases} Cases | Owner: ${ownerName}^FS`,
-  );
 
   // Separator
-  y += 45;
-  lines.push(`^FO30,${y}\n^GB752,3,3^FS`);
+  y += 60;
+  lines.push(`^FO15,${y}\n^GB782,3,3^FS`);
+
+  // Vintage (left) + Pack size (right)
+  y += 40;
+  if (vintage) {
+    lines.push(`^FO30,${y}\n^A0N,48,48\n^FDVintage: ${vintage}^FS`);
+  }
+  lines.push(`^FO${vintage ? '480' : '30'},${y + (vintage ? 10 : 0)}\n^A0N,36,36\n^FD${packSize}^FS`);
+
+  // Separator
+  y += 75;
+  lines.push(`^FO15,${y}\n^GB782,3,3^FS`);
+
+  // Owner (left, large) + Cases count (right, huge)
+  y += 40;
+  lines.push(`^FO30,${y + 20}\n^A0N,50,50\n^FD${ownerName}^FS`);
+  lines.push(`^FO520,${y}\n^A0N,100,100\n^FD${data.quantityCases}^FS`);
+  lines.push(`^FO520,${y + 105}\n^A0N,28,28\n^FDCASES^FS`);
+
+  // Separator
+  y += 155;
+  lines.push(`^FO15,${y}\n^GB782,3,3^FS`);
 
   // Lot number
-  y += 25;
+  y += 35;
   if (lotNumber) {
-    lines.push(`^FO50,${y}\n^A0N,32,32\n^FD${lotNumber}^FS`);
+    lines.push(`^FO30,${y}\n^A0N,38,38\n^FD${lotNumber}^FS`);
   }
 
   // LWIN
-  y += 45;
-  lines.push(`^FO50,${y}\n^A0N,22,22\n^FDLWIN: ${lwin}^FS`);
+  y += 55;
+  lines.push(`^FO30,${y}\n^A0N,26,26\n^FDLWIN: ${lwin}^FS`);
 
   // Separator
-  y += 40;
-  lines.push(`^FO30,${y}\n^GB752,2,2^FS`);
+  y += 50;
+  lines.push(`^FO15,${y}\n^GB782,2,2^FS`);
 
-  // QR code + social footer
-  y += 20;
-  lines.push(`^FO50,${y}\n^BQN,2,4\n^FDQA,https://www.craftculture.xyz/cold-chain.html^FS`);
-  lines.push(`^FO250,${y + 10}\n${INSTAGRAM_ICON}^FS`);
-  lines.push(`^FO285,${y + 13}\n^A0N,22,22\n^FD@wine.uae^FS`);
-  lines.push(`^FO500,${y + 10}\n${GLOBE_ICON}^FS`);
-  lines.push(`^FO535,${y + 13}\n^A0N,22,22\n^FDcraftculture.xyz^FS`);
+  // QR code (left) + social footer (right)
+  y += 30;
+  lines.push(`^FO30,${y}\n^BQN,2,5\n^FDQA,https://www.craftculture.xyz/cold-chain.html^FS`);
+  lines.push(`^FO280,${y + 30}\n${INSTAGRAM_ICON}^FS`);
+  lines.push(`^FO315,${y + 33}\n^A0N,24,24\n^FD@wine.uae^FS`);
+  lines.push(`^FO540,${y + 30}\n${GLOBE_ICON}^FS`);
+  lines.push(`^FO575,${y + 33}\n^A0N,24,24\n^FDcraftculture.xyz^FS`);
 
   return `^XA\n^PW812\n^LL1218\n^PR3\n~SD20\n\n${lines.join('\n\n')}\n\n^XZ`;
 };
