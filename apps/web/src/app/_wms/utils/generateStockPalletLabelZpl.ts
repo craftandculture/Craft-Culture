@@ -199,13 +199,12 @@ const generateStockPalletLabelZpl = (data: StockPalletLabelData) => {
   y += 45;
   lines.push(`^FO15,${y}\n^GB782,2,2^FS`);
 
-  // QR code (left, mag 4 ~130 dots) + social footer (right)
+  // Social footer (centered)
   y += 25;
-  lines.push(`^FO30,${y}\n^BQN,2,4\n^FDQA,https://www.craftculture.xyz/cold-chain.html^FS`);
-  lines.push(`^FO280,${y + 40}\n${INSTAGRAM_ICON}^FS`);
-  lines.push(`^FO315,${y + 43}\n^A0N,24,24\n^FD@wine.uae^FS`);
-  lines.push(`^FO540,${y + 40}\n${GLOBE_ICON}^FS`);
-  lines.push(`^FO575,${y + 43}\n^A0N,24,24\n^FDcraftculture.xyz^FS`);
+  lines.push(`^FO180,${y}\n${INSTAGRAM_ICON}^FS`);
+  lines.push(`^FO215,${y + 3}\n^A0N,24,24\n^FD@wine.uae^FS`);
+  lines.push(`^FO440,${y}\n${GLOBE_ICON}^FS`);
+  lines.push(`^FO475,${y + 3}\n^A0N,24,24\n^FDcraftculture.xyz^FS`);
 
   return `^XA\n^PW812\n^LL1218\n^PR3\n~SD20\n\n${lines.join('\n\n')}\n\n^XZ`;
 };
