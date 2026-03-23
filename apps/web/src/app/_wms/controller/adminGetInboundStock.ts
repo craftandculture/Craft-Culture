@@ -89,6 +89,7 @@ const adminGetInboundStock = adminProcedure
         bottleSizeMl: sql<number | null>`MAX(${logisticsShipmentItems.bottleSizeMl})`,
         bottlesPerCase: sql<number | null>`MAX(${logisticsShipmentItems.bottlesPerCase})`,
         expectedCases: sql<number>`SUM(${logisticsShipmentItems.cases})::int`,
+        costPerBottle: sql<number | null>`MAX(${logisticsShipmentItems.productCostPerBottle})`,
         shipmentCount: sql<number>`COUNT(DISTINCT ${logisticsShipments.id})::int`,
         earliestEta: sql<Date | null>`MIN(${logisticsShipments.eta})`,
         latestEta: sql<Date | null>`MAX(${logisticsShipments.eta})`,
