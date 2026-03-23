@@ -14,6 +14,7 @@ import {
   IconChevronsRight,
   IconCircleCheck,
   IconColumns3,
+  IconCurrencyDollar,
   IconDeviceFloppy,
   IconDownload,
   IconLayoutRows,
@@ -1811,7 +1812,7 @@ const StockExplorerPage = () => {
 
         {/* KPI Cards */}
         {overview && (
-          <div className={`grid grid-cols-3 gap-2.5 sm:grid-cols-4 ${overview.inbound.cases > 0 ? 'lg:grid-cols-8' : 'lg:grid-cols-7'}`}>
+          <div className={`grid grid-cols-3 gap-2.5 sm:grid-cols-4 ${overview.inbound.cases > 0 ? 'lg:grid-cols-9' : 'lg:grid-cols-8'}`}>
             {/* Total Stock */}
             <div className="rounded-xl border border-blue-100 bg-gradient-to-b from-blue-50/40 to-background-primary px-3 py-2.5 text-center shadow-sm">
               <div className="mx-auto mb-1 flex h-6 w-6 items-center justify-center rounded-md bg-blue-100/70 text-blue-500">
@@ -1904,6 +1905,24 @@ const StockExplorerPage = () => {
                 {overview.topOwners[0]
                   ? `${overview.topOwners[0].ownerName}: ${overview.topOwners[0].totalCases}`
                   : '—'}
+              </div>
+            </div>
+
+            {/* Value */}
+            <div className="rounded-xl border border-green-100 bg-gradient-to-b from-green-50/40 to-background-primary px-3 py-2.5 text-center shadow-sm">
+              <div className="mx-auto mb-1 flex h-6 w-6 items-center justify-center rounded-md bg-green-100/70 text-green-600">
+                <IconCurrencyDollar size={13} />
+              </div>
+              <div className="text-lg font-bold leading-tight text-green-700">
+                {overview.valuation.totalValue >= 1000000
+                  ? `$${(overview.valuation.totalValue / 1000000).toFixed(2)}M`
+                  : overview.valuation.totalValue >= 1000
+                    ? `$${(overview.valuation.totalValue / 1000).toFixed(0)}K`
+                    : `$${overview.valuation.totalValue.toFixed(0)}`}
+              </div>
+              <div className="text-[11px] text-text-muted">Value</div>
+              <div className="text-[10px] text-text-muted">
+                {overview.valuation.pricedProducts}/{overview.valuation.totalProducts} priced
               </div>
             </div>
 
