@@ -466,12 +466,19 @@ interface ProductRowProps {
   onCancelEditName: () => void;
   importPrice: number | null;
   onSetImportPrice: (lwin18: string, price: number) => void;
+  onTransferOwnership: (stockId: string, newOwnerId: string, qty: number, notes?: string) => void;
+  isTransferring: boolean;
+  partners: { id: string; name: string; type: string }[];
 }
 
-const ProductRow = ({ product, isExpanded, onToggle, density, visibleColumns, onPrintLabels, onUpdateBoe, onAdjustStock, onEditName, isAdjusting, editingLwin18, onStartEditName, onCancelEditName, importPrice, onSetImportPrice }: ProductRowProps) => {
+const ProductRow = ({ product, isExpanded, onToggle, density, visibleColumns, onPrintLabels, onUpdateBoe, onAdjustStock, onEditName, isAdjusting, editingLwin18, onStartEditName, onCancelEditName, importPrice, onSetImportPrice, onTransferOwnership, isTransferring, partners }: ProductRowProps) => {
   const [adjustingStockId, setAdjustingStockId] = useState<string | null>(null);
   const [adjustQty, setAdjustQty] = useState(0);
   const [adjustReason, setAdjustReason] = useState('');
+  const [transferringStockId, setTransferringStockId] = useState<string | null>(null);
+  const [transferOwnerId, setTransferOwnerId] = useState('');
+  const [transferQty, setTransferQty] = useState(0);
+  const [transferNotes, setTransferNotes] = useState('');
   const [lightboxPhotos, setLightboxPhotos] = useState<string[] | null>(null);
   const [lightboxIndex, setLightboxIndex] = useState(0);
   const editingName = editingLwin18 === product.lwin18;
@@ -755,6 +762,7 @@ const ProductRow = ({ product, isExpanded, onToggle, density, visibleColumns, on
                         : 'Shelf';
 
                     const isThisAdjusting = adjustingStockId === loc.stockId;
+                    const isThisTransferring = transferringStockId === loc.stockId;
 
                     return (
                       <Fragment key={loc.stockId}>
@@ -794,7 +802,23 @@ const ProductRow = ({ product, isExpanded, onToggle, density, visibleColumns, on
                             </div>
                           </td>
                           <td className="px-3 py-2">
-                            <OwnerBadge name={loc.ownerName} />
+                            <div className="group/owner flex items-center gap-1">
+                              <OwnerBadge name={loc.ownerName} />
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setTransferringStockId(loc.stockId);
+                                  setTransferOwnerId('');
+                                  setTransferQty(loc.quantityCases);
+                                  setTransferNotes('');
+                                  setAdjustingStockId(null);
+                                }}
+                                className="hidden shrink-0 rounded p-0.5 text-text-muted/40 transition-colors hover:bg-surface-muted hover:text-text-brand group-hover/owner:inline-flex"
+                                title="Change owner"
+                              >
+                                <IconPencil className="h-3 w-3" />
+                              </button>
+                            </div>
                           </td>
                           <td className="hidden px-3 py-2 font-mono text-xs text-text-muted sm:table-cell">
                             {loc.lotNumber ?? '—'}
@@ -880,6 +904,86 @@ const ProductRow = ({ product, isExpanded, onToggle, density, visibleColumns, on
                                 >
                                   {isAdjusting ? <IconLoader2 className="h-3.5 w-3.5 animate-spin" /> : <IconCheck className="h-3.5 w-3.5" />}
                                   Save
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                        {isThisTransferring && (
+                          <tr className="border-t border-purple-200 bg-purple-50">
+                            <td colSpan={20} className="px-3 py-3">
+                              <div className="flex flex-wrap items-center gap-3" onClick={(e) => e.stopPropagation()}>
+                                <span className="text-xs font-medium text-text-muted">Transfer to:</span>
+                                <select
+                                  value={transferOwnerId}
+                                  onChange={(e) => setTransferOwnerId(e.target.value)}
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="h-8 rounded border border-border-primary bg-background-primary px-2 text-sm focus:border-border-brand focus:outline-none"
+                                >
+                                  <option value="">Select owner...</option>
+                                  {partners
+                                    .filter((p) => p.id !== loc.ownerId)
+                                    .map((p) => (
+                                      <option key={p.id} value={p.id}>{p.name}</option>
+                                    ))}
+                                </select>
+                                <span className="text-xs font-medium text-text-muted">Qty:</span>
+                                <div className="flex items-center gap-1">
+                                  <button
+                                    type="button"
+                                    className="flex h-8 w-8 items-center justify-center rounded border border-border-primary bg-background-primary text-lg font-bold transition-colors hover:bg-surface-muted"
+                                    onClick={() => setTransferQty((q) => Math.max(1, q - 1))}
+                                  >
+                                    <IconMinus className="h-4 w-4" />
+                                  </button>
+                                  <input
+                                    type="number"
+                                    min={1}
+                                    max={loc.quantityCases}
+                                    value={transferQty}
+                                    onChange={(e) => setTransferQty(Math.max(1, Math.min(loc.quantityCases, parseInt(e.target.value) || 1)))}
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="h-8 w-16 rounded border border-border-primary bg-background-primary text-center tabular-nums text-sm font-medium focus:border-border-brand focus:outline-none"
+                                  />
+                                  <button
+                                    type="button"
+                                    className="flex h-8 w-8 items-center justify-center rounded border border-border-primary bg-background-primary text-lg font-bold transition-colors hover:bg-surface-muted"
+                                    onClick={() => setTransferQty((q) => Math.min(loc.quantityCases, q + 1))}
+                                  >
+                                    <IconPlus className="h-4 w-4" />
+                                  </button>
+                                </div>
+                                {transferQty !== loc.quantityCases && (
+                                  <span className="text-xs font-medium text-amber-600">
+                                    Partial ({transferQty}/{loc.quantityCases})
+                                  </span>
+                                )}
+                                <input
+                                  type="text"
+                                  value={transferNotes}
+                                  onChange={(e) => setTransferNotes(e.target.value)}
+                                  onClick={(e) => e.stopPropagation()}
+                                  placeholder="Notes (optional)"
+                                  className="h-8 min-w-[160px] flex-1 rounded border border-border-primary bg-background-primary px-2 text-sm focus:border-border-brand focus:outline-none"
+                                />
+                                <button
+                                  type="button"
+                                  disabled={!transferOwnerId || isTransferring}
+                                  className="flex h-8 items-center gap-1 rounded bg-purple-600 px-3 text-sm font-medium text-white transition-colors hover:bg-purple-700 disabled:opacity-50"
+                                  onClick={() => {
+                                    onTransferOwnership(loc.stockId, transferOwnerId, transferQty, transferNotes.trim() || undefined);
+                                    setTransferringStockId(null);
+                                  }}
+                                >
+                                  {isTransferring ? <IconLoader2 className="h-3.5 w-3.5 animate-spin" /> : <IconCheck className="h-3.5 w-3.5" />}
+                                  Transfer
+                                </button>
+                                <button
+                                  type="button"
+                                  className="flex h-8 items-center rounded px-2 text-sm text-text-muted transition-colors hover:text-text-primary"
+                                  onClick={() => setTransferringStockId(null)}
+                                >
+                                  Cancel
                                 </button>
                               </div>
                             </td>
@@ -1420,6 +1524,33 @@ const StockExplorerPage = () => {
       setImportPrice({ lwin18, importPricePerBottle: price, source: 'manual' });
     },
     [setImportPrice],
+  );
+
+  // Partners list for ownership transfer dropdown
+  const { data: partnersData } = useQuery({
+    ...api.partners.list.queryOptions(),
+  });
+  const partnersList = useMemo(() => partnersData ?? [], [partnersData]);
+
+  // Transfer ownership mutation
+  const { mutate: transferOwnership, isPending: isTransferring } = useMutation({
+    ...api.wms.admin.ownership.transfer.mutationOptions(),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: api.wms.admin.stock.getByProduct.getQueryKey() });
+      void queryClient.invalidateQueries({ queryKey: api.wms.admin.stock.getByOwner.getQueryKey() });
+      void queryClient.invalidateQueries({ queryKey: api.wms.admin.stock.getOverview.getQueryKey() });
+      toast.success('Ownership transferred');
+    },
+    onError: (err) => {
+      toast.error(`Transfer failed: ${err.message}`);
+    },
+  });
+
+  const handleTransferOwnership = useCallback(
+    (stockId: string, newOwnerId: string, quantityCases: number, notes?: string) => {
+      transferOwnership({ stockId, newOwnerId, quantityCases, notes });
+    },
+    [transferOwnership],
   );
 
   const inboundProducts = useMemo(() => (inboundData?.products ?? []) as InboundProduct[], [inboundData]);
@@ -2157,6 +2288,9 @@ const StockExplorerPage = () => {
                           onCancelEditName={() => setEditingLwin18(null)}
                           importPrice={bulkPricing?.[product.lwin18]?.importPricePerBottle ?? null}
                           onSetImportPrice={handleSetImportPrice}
+                          onTransferOwnership={handleTransferOwnership}
+                          isTransferring={isTransferring}
+                          partners={partnersList}
                         />
                       );
                     })
