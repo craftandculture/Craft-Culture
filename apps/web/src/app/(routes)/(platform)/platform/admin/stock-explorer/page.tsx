@@ -1060,6 +1060,7 @@ interface InboundProduct {
   bottleSizeMl: number | null;
   bottlesPerCase: number | null;
   expectedCases: number;
+  costPerBottle: number | null;
   expectedBottles: number;
   shipmentCount: number;
   earliestEta: Date | null;
@@ -1154,6 +1155,24 @@ const InboundProductRow = ({ product, isExpanded, onToggle, density }: InboundPr
         {/* Shipments */}
         <td className={tdClassRight}>
           <span className="text-text-muted">{product.shipmentCount}</span>
+        </td>
+
+        {/* Import $/btl */}
+        <td className={`${tdClass} hidden text-right tabular-nums lg:table-cell`}>
+          {product.costPerBottle != null ? (
+            <span className="text-text-muted">${product.costPerBottle.toFixed(2)}</span>
+          ) : (
+            <span className="text-text-muted">—</span>
+          )}
+        </td>
+
+        {/* Import $/case */}
+        <td className={`${tdClass} hidden text-right tabular-nums lg:table-cell`}>
+          {product.costPerBottle != null ? (
+            <span className="text-text-muted">${(product.costPerBottle * (product.bottlesPerCase ?? 12)).toFixed(2)}</span>
+          ) : (
+            <span className="text-text-muted">—</span>
+          )}
         </td>
 
         {/* Bottles (hidden on inbound) */}
