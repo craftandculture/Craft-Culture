@@ -5,6 +5,7 @@ import {
   logisticsShipmentItems,
   logisticsShipments,
   wmsLocations,
+  wmsProductPricing,
   wmsStock,
   wmsStockMovements,
 } from '@/database/schema';
@@ -38,6 +39,7 @@ const adminGetStockOverview = adminProcedure
       stockByOwner,
       receivingStockResult,
       inboundStockResult,
+      valuationResult,
     ] = await Promise.all([
       // Get total stock stats
       db
@@ -134,6 +136,16 @@ const adminGetStockOverview = adminProcedure
             ]),
           ),
         ),
+
+      // Get total inventory value (cases × bottles_per_case × import_price_per_bottle)
+      db
+        .select({
+          totalValue: sql<number>`COALESCE(SUM(${wmsStock.quantityCases} * ${wmsStock.caseConfig} * ${wmsProductPricing.importPricePerBottle}), 0)::float`,
+          pricedProducts: sql<number>`COUNT(DISTINCT ${wmsStock.lwin18})::int`,
+        })
+        .from(wmsStock)
+        .innerJoin(wmsProductPricing, eq(wmsStock.lwin18, wmsProductPricing.lwin18))
+        .where(gt(wmsStock.quantityCases, 0)),
     ]);
 
     const stockStats = stockStatsResult[0];
@@ -143,6 +155,7 @@ const adminGetStockOverview = adminProcedure
     const movementStats = movementStatsResult[0];
     const receivingStock = receivingStockResult[0];
     const inboundStock = inboundStockResult[0];
+    const valuation = valuationResult[0];
 
     const totalLocs = locationStats?.totalLocations ?? 0;
     const activeLocs = locationStats?.activeLocations ?? 0;
@@ -183,6 +196,11 @@ const adminGetStockOverview = adminProcedure
       inbound: {
         cases: inboundStock?.inboundCases ?? 0,
         shipments: inboundStock?.inboundShipments ?? 0,
+      },
+      valuation: {
+        totalValue: Math.round((valuation?.totalValue ?? 0) * 100) / 100,
+        pricedProducts: valuation?.pricedProducts ?? 0,
+        totalProducts: stockStats?.uniqueProducts ?? 0,
       },
     };
   });
