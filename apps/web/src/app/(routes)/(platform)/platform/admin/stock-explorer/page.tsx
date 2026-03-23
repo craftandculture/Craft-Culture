@@ -1098,7 +1098,7 @@ const InboundProductRow = ({ product, isExpanded, onToggle, density }: InboundPr
   const sizeLabel = product.bottleSizeMl
     ? product.bottleSizeMl >= 1000
       ? `${(product.bottleSizeMl / 1000).toFixed(1)}L`
-      : `${product.bottleSizeMl}ml`
+      : `${product.bottleSizeMl / 10}cl`
     : '75cl';
 
   return (
