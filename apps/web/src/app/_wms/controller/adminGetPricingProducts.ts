@@ -11,6 +11,7 @@ import { getPricingProductsSchema } from '../schemas/pricingManagerSchema';
  *
  * Returns paginated products with import/selling prices, plus summary stats
  * for KPI cards (total products, avg margin, unpriced count, total values).
+ * Falls back to shipment landed cost when no explicit import price exists.
  */
 const adminGetPricingProducts = adminProcedure
   .input(getPricingProductsSchema)
@@ -108,7 +109,6 @@ const adminGetPricingProducts = adminProcedure
         )
         .orderBy(desc(logisticsShipmentItems.createdAt));
 
-      // Build lookup: first occurrence per lwin18 = latest shipment
       for (const row of shipmentRows) {
         if (shipmentPriceMap[row.lwin18] != null) continue;
         const cost = row.landedCostPerBottle ?? row.productCostPerBottle;
@@ -118,7 +118,7 @@ const adminGetPricingProducts = adminProcedure
       }
     }
 
-    // Build final products with shipment cost fallback (immutable — create new objects)
+    // Build final products with shipment cost fallback
     const enrichedProducts = products.map((p) => ({
       ...p,
       importPricePerBottle:
@@ -145,65 +145,38 @@ const adminGetPricingProducts = adminProcedure
 
     const totalCount = countResult?.count ?? 0;
 
-    // Summary stats with shipment cost fallback
-    // Uses a subquery to get the latest shipment cost per LWIN18 for products without explicit pricing
-    const ownerFilter = ownerId ? sql` AND s.owner_id = ${ownerId}` : sql``;
-    const [summaryResult] = await db.execute(sql`
-      WITH shipment_costs AS (
-        SELECT DISTINCT ON (s.lwin18)
-          s.lwin18,
-          COALESCE(si.landed_cost_per_bottle, si.product_cost_per_bottle) AS cost
-        FROM wms_stock s
-        INNER JOIN logistics_shipment_items si
-          ON si.shipment_id = s.shipment_id AND si.lwin = s.lwin18
-        WHERE s.quantity_cases > 0 AND s.shipment_id IS NOT NULL ${ownerFilter}
-        ORDER BY s.lwin18, si.created_at DESC
-      )
-      SELECT
-        COUNT(DISTINCT s.lwin18)::int AS "totalProducts",
-        COALESCE(SUM(s.quantity_cases * s.case_config * COALESCE(p.import_price_per_bottle, sc.cost)), 0)::float AS "totalImportValue",
-        COALESCE(SUM(s.quantity_cases * s.case_config * p.selling_price_per_bottle), 0)::float AS "totalSellingValue",
-        COUNT(DISTINCT CASE WHEN COALESCE(p.import_price_per_bottle, sc.cost) > 0 THEN s.lwin18 END)::int AS "pricedImportCount",
-        COUNT(DISTINCT CASE WHEN p.selling_price_per_bottle IS NOT NULL AND p.selling_price_per_bottle > 0 THEN s.lwin18 END)::int AS "pricedSellingCount"
-      FROM wms_stock s
-      LEFT JOIN wms_product_pricing p ON p.lwin18 = s.lwin18
-      LEFT JOIN shipment_costs sc ON sc.lwin18 = s.lwin18
-      WHERE s.quantity_cases > 0 ${ownerFilter}
-    `);
+    // Summary stats — respect owner filter
+    const summaryConditions = [gt(wmsStock.quantityCases, 0)];
+    if (ownerId) {
+      summaryConditions.push(eq(wmsStock.ownerId, ownerId));
+    }
 
-    const summary = summaryResult as {
-      totalProducts: number;
-      totalImportValue: number;
-      totalSellingValue: number;
-      pricedImportCount: number;
-      pricedSellingCount: number;
-    };
+    const [summaryResult] = await db
+      .select({
+        totalProducts: sql<number>`COUNT(DISTINCT ${wmsStock.lwin18})::int`,
+        totalImportValue: sql<number>`COALESCE(SUM(${wmsStock.quantityCases} * ${wmsStock.caseConfig} * ${wmsProductPricing.importPricePerBottle}), 0)::float`,
+        totalSellingValue: sql<number>`COALESCE(SUM(${wmsStock.quantityCases} * ${wmsStock.caseConfig} * ${wmsProductPricing.sellingPricePerBottle}), 0)::float`,
+        pricedImportCount: sql<number>`COUNT(DISTINCT CASE WHEN ${wmsProductPricing.importPricePerBottle} IS NOT NULL AND ${wmsProductPricing.importPricePerBottle} > 0 THEN ${wmsStock.lwin18} END)::int`,
+        pricedSellingCount: sql<number>`COUNT(DISTINCT CASE WHEN ${wmsProductPricing.sellingPricePerBottle} IS NOT NULL AND ${wmsProductPricing.sellingPricePerBottle} > 0 THEN ${wmsStock.lwin18} END)::int`,
+      })
+      .from(wmsStock)
+      .leftJoin(wmsProductPricing, eq(wmsStock.lwin18, wmsProductPricing.lwin18))
+      .where(and(...summaryConditions));
 
-    // Calculate avg margin with shipment cost fallback — respect owner filter
-    const [marginResult] = await db.execute(sql`
-      WITH shipment_costs AS (
-        SELECT DISTINCT ON (s.lwin18)
-          s.lwin18,
-          COALESCE(si.landed_cost_per_bottle, si.product_cost_per_bottle) AS cost
-        FROM wms_stock s
-        INNER JOIN logistics_shipment_items si
-          ON si.shipment_id = s.shipment_id AND si.lwin = s.lwin18
-        WHERE s.quantity_cases > 0 AND s.shipment_id IS NOT NULL ${ownerFilter}
-        ORDER BY s.lwin18, si.created_at DESC
-      )
-      SELECT AVG(
-        CASE WHEN p.selling_price_per_bottle > 0 AND COALESCE(p.import_price_per_bottle, sc.cost) > 0
-          THEN (1 - COALESCE(p.import_price_per_bottle, sc.cost) / p.selling_price_per_bottle) * 100
-        END
-      ) AS "avgMargin"
-      FROM wms_product_pricing p
-      INNER JOIN (SELECT DISTINCT lwin18 FROM wms_stock WHERE quantity_cases > 0 ${ownerFilter}) s
-        ON s.lwin18 = p.lwin18
-      LEFT JOIN shipment_costs sc ON sc.lwin18 = p.lwin18
-    `) as Array<{ avgMargin: number | null }>;
+    // Calculate avg margin — respect owner filter
+    const ownerSubquery = ownerId
+      ? sql`(SELECT DISTINCT lwin18 FROM wms_stock WHERE quantity_cases > 0 AND owner_id = ${ownerId}) s`
+      : sql`(SELECT DISTINCT lwin18 FROM wms_stock WHERE quantity_cases > 0) s`;
+
+    const [marginResult] = await db
+      .select({
+        avgMargin: sql<number | null>`AVG(CASE WHEN p.selling_price_per_bottle > 0 AND p.import_price_per_bottle > 0 THEN (1 - p.import_price_per_bottle / p.selling_price_per_bottle) * 100 END)`,
+      })
+      .from(sql`wms_product_pricing p`)
+      .innerJoin(ownerSubquery, sql`s.lwin18 = p.lwin18`);
 
     const unpricedCount =
-      (summary?.pricedImportCount ?? 0) - (summary?.pricedSellingCount ?? 0);
+      (summaryResult?.pricedImportCount ?? 0) - (summaryResult?.pricedSellingCount ?? 0);
 
     return {
       products: enrichedProducts,
@@ -214,11 +187,11 @@ const adminGetPricingProducts = adminProcedure
         hasMore: offset + enrichedProducts.length < totalCount,
       },
       summary: {
-        totalProducts: summary?.totalProducts ?? 0,
+        totalProducts: summaryResult?.totalProducts ?? 0,
         avgMargin: marginResult?.avgMargin != null ? Math.round(marginResult.avgMargin * 10) / 10 : null,
         unpricedCount: Math.max(0, unpricedCount),
-        totalImportValue: Math.round((summary?.totalImportValue ?? 0) * 100) / 100,
-        totalSellingValue: Math.round((summary?.totalSellingValue ?? 0) * 100) / 100,
+        totalImportValue: Math.round((summaryResult?.totalImportValue ?? 0) * 100) / 100,
+        totalSellingValue: Math.round((summaryResult?.totalSellingValue ?? 0) * 100) / 100,
       },
     };
   });
