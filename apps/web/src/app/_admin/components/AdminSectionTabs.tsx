@@ -44,6 +44,7 @@ const sectionTabs: Record<string, TabItem[]> = {
   finance: [
     { label: 'Commissions', href: '/platform/admin/commissions' },
     { label: 'Pricing', href: '/platform/admin/pricing' },
+    { label: 'Pricing Manager', href: '/platform/admin/pricing-manager' },
     { label: 'Calculator', href: '/platform/admin/pricing-calculator' },
   ],
   agents: [

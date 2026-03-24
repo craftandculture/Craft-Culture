@@ -4,6 +4,7 @@ import { z } from 'zod';
 export const getPricingProductsSchema = z.object({
   search: z.string().optional(),
   category: z.enum(['Wine', 'Spirits', 'RTD']).optional(),
+  ownerId: z.string().uuid().optional(),
   sortBy: z
     .enum(['productName', 'totalCases', 'importPrice', 'sellingPrice', 'margin'])
     .default('productName'),
