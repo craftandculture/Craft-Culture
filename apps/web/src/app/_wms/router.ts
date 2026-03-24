@@ -9,6 +9,7 @@ import adminAssignPickList from './controller/adminAssignPickList';
 import adminAutoFixStock from './controller/adminAutoFixStock';
 import adminAutoPopulateImportPrice from './controller/adminAutoPopulateImportPrice';
 import adminBatchCreateLocations from './controller/adminBatchCreateLocations';
+import adminBulkApplyMargin from './controller/adminBulkApplyMargin';
 import adminClearAllStock from './controller/adminClearAllStock';
 import adminCompleteCycleCount from './controller/adminCompleteCycleCount';
 import adminCompletePickList from './controller/adminCompletePickList';
@@ -54,6 +55,7 @@ import adminGetPartnerRequests from './controller/adminGetPartnerRequests';
 import adminGetPendingShipments from './controller/adminGetPendingShipments';
 import adminGetPickList from './controller/adminGetPickList';
 import adminGetPickLists from './controller/adminGetPickLists';
+import adminGetPricingProducts from './controller/adminGetPricingProducts';
 import adminGetProductPricing from './controller/adminGetProductPricing';
 import adminGetReceivingDraft from './controller/adminGetReceivingDraft';
 import adminGetShipmentForReceiving from './controller/adminGetShipmentForReceiving';
@@ -86,6 +88,7 @@ import adminSaveReceivingDraft from './controller/adminSaveReceivingDraft';
 import adminSealPallet from './controller/adminSealPallet';
 import adminSearchStock from './controller/adminSearchStock';
 import adminSetImportPrice from './controller/adminSetImportPrice';
+import adminSetSellingPrice from './controller/adminSetSellingPrice';
 import adminStartCycleCount from './controller/adminStartCycleCount';
 import adminSyncStockToZoho from './controller/adminSyncStockToZoho';
 import adminTransferOwnership from './controller/adminTransferOwnership';
@@ -149,7 +152,10 @@ const stockPricingRouter = createTRPCRouter({
   getByProduct: adminGetProductPricing,
   getBulk: adminGetBulkPricing,
   setImportPrice: adminSetImportPrice,
+  setSellingPrice: adminSetSellingPrice,
   autoPopulate: adminAutoPopulateImportPrice,
+  getProducts: adminGetPricingProducts,
+  bulkApplyMargin: adminBulkApplyMargin,
 });
 
 const stockRouter = createTRPCRouter({

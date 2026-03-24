@@ -4858,6 +4858,7 @@ export const wmsProductPricing = pgTable(
     id: uuid('id').primaryKey().defaultRandom(),
     lwin18: text('lwin18').notNull().unique(),
     importPricePerBottle: doublePrecision('import_price_per_bottle').notNull(),
+    sellingPricePerBottle: doublePrecision('selling_price_per_bottle'),
     importPriceSource: importPriceSource('import_price_source')
       .notNull()
       .default('manual'),
