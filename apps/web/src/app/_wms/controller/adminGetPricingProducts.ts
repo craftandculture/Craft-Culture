@@ -15,7 +15,7 @@ import { getPricingProductsSchema } from '../schemas/pricingManagerSchema';
 const adminGetPricingProducts = adminProcedure
   .input(getPricingProductsSchema)
   .query(async ({ input }) => {
-    const { search, category, sortBy, sortOrder, limit, offset } = input;
+    const { search, category, ownerId, sortBy, sortOrder, limit, offset } = input;
 
     const conditions = [gt(sql`SUM(${wmsStock.quantityCases})`, 0)];
     const whereConditions = [gt(wmsStock.quantityCases, 0)];
@@ -38,6 +38,10 @@ const adminGetPricingProducts = adminProcedure
       } else {
         whereConditions.push(eq(wmsStock.category, category));
       }
+    }
+
+    if (ownerId) {
+      whereConditions.push(eq(wmsStock.ownerId, ownerId));
     }
 
     // Sort expression mapping
@@ -91,7 +95,12 @@ const adminGetPricingProducts = adminProcedure
 
     const totalCount = countResult?.count ?? 0;
 
-    // Summary stats query — runs in parallel with the count
+    // Summary stats — respect owner filter
+    const summaryConditions = [gt(wmsStock.quantityCases, 0)];
+    if (ownerId) {
+      summaryConditions.push(eq(wmsStock.ownerId, ownerId));
+    }
+
     const [summaryResult] = await db
       .select({
         totalProducts: sql<number>`COUNT(DISTINCT ${wmsStock.lwin18})::int`,
@@ -102,18 +111,19 @@ const adminGetPricingProducts = adminProcedure
       })
       .from(wmsStock)
       .leftJoin(wmsProductPricing, eq(wmsStock.lwin18, wmsProductPricing.lwin18))
-      .where(gt(wmsStock.quantityCases, 0));
+      .where(and(...summaryConditions));
 
-    // Calculate avg margin from products that have both import and selling prices
+    // Calculate avg margin — respect owner filter
+    const ownerSubquery = ownerId
+      ? sql`(SELECT DISTINCT lwin18 FROM wms_stock WHERE quantity_cases > 0 AND owner_id = ${ownerId}) s`
+      : sql`(SELECT DISTINCT lwin18 FROM wms_stock WHERE quantity_cases > 0) s`;
+
     const [marginResult] = await db
       .select({
         avgMargin: sql<number | null>`AVG(CASE WHEN p.selling_price_per_bottle > 0 AND p.import_price_per_bottle > 0 THEN (1 - p.import_price_per_bottle / p.selling_price_per_bottle) * 100 END)`,
       })
       .from(sql`wms_product_pricing p`)
-      .innerJoin(
-        sql`(SELECT DISTINCT lwin18 FROM wms_stock WHERE quantity_cases > 0) s`,
-        sql`s.lwin18 = p.lwin18`,
-      );
+      .innerJoin(ownerSubquery, sql`s.lwin18 = p.lwin18`);
 
     const unpricedCount =
       (summaryResult?.pricedImportCount ?? 0) - (summaryResult?.pricedSellingCount ?? 0);

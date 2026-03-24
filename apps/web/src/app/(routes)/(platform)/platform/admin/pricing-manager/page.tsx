@@ -11,10 +11,11 @@ import {
   IconSearch,
   IconSortAscending,
   IconSortDescending,
+  IconX,
 } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
 import Card from '@/app/_ui/components/Card/Card';
@@ -25,6 +26,7 @@ import useTRPC from '@/lib/trpc/browser';
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const USD_TO_AED = 3.67;
+const PAGE_SIZES = [50, 100, 200] as const;
 
 type CategoryFilter = 'Wine' | 'Spirits' | 'RTD';
 type SortField = 'productName' | 'totalCases' | 'importPrice' | 'sellingPrice' | 'margin';
@@ -53,7 +55,9 @@ const PriceCell = ({
             setEditing(true);
           }}
         >
-          {value != null && value > 0 ? `$${value.toFixed(2)}` : '\u2014'}
+          {value != null && value > 0 ? `$${value.toFixed(2)}` : (
+            <span className="tracking-widest text-text-muted/50">- -</span>
+          )}
         </button>
       </td>
     );
@@ -163,6 +167,47 @@ const MarginDot = ({ margin }: { margin: number | null }) => {
   return <span className="inline-block h-2 w-2 rounded-full bg-red-500" />;
 };
 
+// ─── Skeleton Row ─────────────────────────────────────────────────────────────
+
+const SkeletonRow = () => (
+  <tr>
+    <td className="px-3 py-3">
+      <div className="h-4 w-40 animate-pulse rounded bg-surface-muted" />
+      <div className="mt-1.5 h-3 w-24 animate-pulse rounded bg-surface-muted" />
+    </td>
+    <td className="px-3 py-3">
+      <div className="h-4 w-16 animate-pulse rounded bg-surface-muted" />
+    </td>
+    <td className="px-3 py-3">
+      <div className="ml-auto h-4 w-10 animate-pulse rounded bg-surface-muted" />
+    </td>
+    <td className="px-3 py-3">
+      <div className="ml-auto h-4 w-14 animate-pulse rounded bg-surface-muted" />
+    </td>
+    <td className="hidden px-3 py-3 lg:table-cell">
+      <div className="ml-auto h-4 w-16 animate-pulse rounded bg-surface-muted" />
+    </td>
+    <td className="px-3 py-3">
+      <div className="ml-auto h-4 w-14 animate-pulse rounded bg-surface-muted" />
+    </td>
+    <td className="hidden px-3 py-3 lg:table-cell">
+      <div className="ml-auto h-4 w-16 animate-pulse rounded bg-surface-muted" />
+    </td>
+    <td className="px-3 py-3">
+      <div className="ml-auto h-4 w-14 animate-pulse rounded bg-surface-muted" />
+    </td>
+    <td className="hidden px-3 py-3 xl:table-cell">
+      <div className="ml-auto h-4 w-14 animate-pulse rounded bg-surface-muted" />
+    </td>
+    <td className="hidden px-3 py-3 xl:table-cell">
+      <div className="ml-auto h-4 w-14 animate-pulse rounded bg-surface-muted" />
+    </td>
+    <td className="hidden px-3 py-3 xl:table-cell">
+      <div className="ml-auto h-4 w-14 animate-pulse rounded bg-surface-muted" />
+    </td>
+  </tr>
+);
+
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 const PricingManagerPage = () => {
@@ -173,15 +218,17 @@ const PricingManagerPage = () => {
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [category, setCategory] = useState<CategoryFilter | undefined>('Wine');
+  const [ownerId, setOwnerId] = useState<string | undefined>(undefined);
   const [sortBy, setSortBy] = useState<SortField>('productName');
   const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
   const [page, setPage] = useState(0);
-  const [limit] = useState(50);
+  const [limit, setLimit] = useState<number>(50);
 
   // Apply Margin popover
   const [showMarginPopover, setShowMarginPopover] = useState(false);
   const [marginPercent, setMarginPercent] = useState('20');
   const [overwriteExisting, setOverwriteExisting] = useState(false);
+  const marginPopoverRef = useRef<HTMLDivElement>(null);
 
   // Debounce search
   useEffect(() => {
@@ -195,19 +242,41 @@ const PricingManagerPage = () => {
   // Reset page on filter change
   useEffect(() => {
     setPage(0);
-  }, [sortBy, sortOrder, category]);
+  }, [sortBy, sortOrder, category, ownerId, limit]);
+
+  // Close margin popover on outside click
+  useEffect(() => {
+    if (!showMarginPopover) return;
+    const handleClick = (e: MouseEvent) => {
+      if (marginPopoverRef.current && !marginPopoverRef.current.contains(e.target as Node)) {
+        setShowMarginPopover(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [showMarginPopover]);
+
+  // Fetch owners for filter dropdown
+  const { data: ownerData } = useQuery({
+    ...api.wms.admin.stock.getByOwner.queryOptions({}),
+  });
+
+  const owners = 'owners' in (ownerData ?? {})
+    ? (ownerData as { owners: Array<{ ownerId: string; ownerName: string | null; totalCases: number }> }).owners
+    : [];
 
   // Query
   const queryInput = useMemo(
     () => ({
       search: debouncedSearch || undefined,
       category,
+      ownerId,
       sortBy,
       sortOrder,
       limit,
       offset: page * limit,
     }),
-    [debouncedSearch, category, sortBy, sortOrder, limit, page],
+    [debouncedSearch, category, ownerId, sortBy, sortOrder, limit, page],
   );
 
   const { data, isLoading } = useQuery(
@@ -219,6 +288,41 @@ const PricingManagerPage = () => {
   const summary = data?.summary;
   const totalCount = pagination?.total ?? 0;
   const totalPages = Math.ceil(totalCount / limit);
+
+  // Active filters for chips
+  const activeFilters: Array<{ key: string; label: string; onRemove: () => void }> = [];
+  if (category) {
+    activeFilters.push({
+      key: 'category',
+      label: category,
+      onRemove: () => setCategory(undefined),
+    });
+  }
+  if (ownerId) {
+    const ownerName = owners.find((o) => o.ownerId === ownerId)?.ownerName ?? 'Unknown';
+    activeFilters.push({
+      key: 'owner',
+      label: ownerName,
+      onRemove: () => setOwnerId(undefined),
+    });
+  }
+  if (debouncedSearch) {
+    activeFilters.push({
+      key: 'search',
+      label: `"${debouncedSearch}"`,
+      onRemove: () => {
+        setSearch('');
+        setDebouncedSearch('');
+      },
+    });
+  }
+
+  const clearAllFilters = () => {
+    setCategory(undefined);
+    setOwnerId(undefined);
+    setSearch('');
+    setDebouncedSearch('');
+  };
 
   // Mutations
   const setImportPriceMut = useMutation({
@@ -393,6 +497,20 @@ const PricingManagerPage = () => {
           ))}
         </div>
 
+        {/* Owner dropdown */}
+        <select
+          value={ownerId ?? ''}
+          onChange={(e) => setOwnerId(e.target.value || undefined)}
+          className="rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm text-text-primary transition-colors focus:border-border-brand focus:outline-none"
+        >
+          <option value="">All Owners</option>
+          {owners.map((o) => (
+            <option key={o.ownerId} value={o.ownerId}>
+              {o.ownerName ?? 'Unknown'} ({o.totalCases} cases)
+            </option>
+          ))}
+        </select>
+
         {/* Search */}
         <div className="relative flex-1 lg:max-w-xs">
           <IconSearch className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" />
@@ -406,7 +524,7 @@ const PricingManagerPage = () => {
         </div>
 
         {/* Apply Margin */}
-        <div className="relative">
+        <div className="relative" ref={marginPopoverRef}>
           <button
             onClick={() => setShowMarginPopover(!showMarginPopover)}
             className="flex items-center gap-2 rounded-lg border border-border-primary bg-background-primary px-4 py-2 text-sm font-medium text-text-primary transition-colors hover:bg-surface-muted"
@@ -489,6 +607,34 @@ const PricingManagerPage = () => {
         </button>
       </div>
 
+      {/* Active filter chips */}
+      {activeFilters.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2">
+          {activeFilters.map((f) => (
+            <span
+              key={f.key}
+              className="flex items-center gap-1 rounded-full border border-border-muted bg-background-primary px-3 py-1 text-xs text-text-secondary"
+            >
+              {f.label}
+              <button
+                onClick={f.onRemove}
+                className="ml-0.5 rounded-full p-0.5 text-text-muted transition-colors hover:bg-surface-muted hover:text-text-primary"
+              >
+                <IconX className="h-3 w-3" />
+              </button>
+            </span>
+          ))}
+          {activeFilters.length > 1 && (
+            <button
+              onClick={clearAllFilters}
+              className="text-xs text-text-muted hover:text-text-primary"
+            >
+              Clear all
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Results count */}
       <div className="flex items-center justify-between text-xs text-text-muted">
         <span>
@@ -513,7 +659,7 @@ const PricingManagerPage = () => {
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="sticky top-0 z-10 border-b border-border-muted bg-surface-muted/60">
+              <thead className="sticky top-0 z-10 border-b border-border-muted bg-surface-muted/60 backdrop-blur-sm">
                 <tr>
                   <th
                     className={`px-3 py-3 text-left ${thBase}`}
@@ -577,11 +723,7 @@ const PricingManagerPage = () => {
               </thead>
               <tbody className="divide-y divide-border-muted">
                 {isLoading ? (
-                  <tr>
-                    <td colSpan={11} className="py-20 text-center">
-                      <IconLoader2 className="mx-auto h-6 w-6 animate-spin text-text-muted" />
-                    </td>
-                  </tr>
+                  Array.from({ length: 8 }).map((_, i) => <SkeletonRow key={i} />)
                 ) : products.length === 0 ? (
                   <tr>
                     <td colSpan={11} className="py-20 text-center text-text-muted">
@@ -699,30 +841,50 @@ const PricingManagerPage = () => {
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-end gap-1">
-          <PaginationButton
-            onClick={() => setPage(0)}
-            disabled={page === 0}
-            icon={<IconChevronsLeft className="h-4 w-4" />}
-          />
-          <PaginationButton
-            onClick={() => setPage((p) => Math.max(0, p - 1))}
-            disabled={page === 0}
-            icon={<IconChevronLeft className="h-4 w-4" />}
-          />
-          <span className="px-4 text-sm tabular-nums text-text-muted">
-            {page + 1} / {totalPages}
-          </span>
-          <PaginationButton
-            onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
-            disabled={page >= totalPages - 1}
-            icon={<IconChevronRight className="h-4 w-4" />}
-          />
-          <PaginationButton
-            onClick={() => setPage(totalPages - 1)}
-            disabled={page >= totalPages - 1}
-            icon={<IconChevronsRight className="h-4 w-4" />}
-          />
+        <div className="flex items-center justify-between">
+          {/* Page size selector */}
+          <div className="flex items-center gap-1 rounded-lg border border-border-muted p-0.5">
+            {PAGE_SIZES.map((size) => (
+              <button
+                key={size}
+                onClick={() => setLimit(size)}
+                className={`rounded-md px-3 py-1 text-xs font-medium transition-colors ${
+                  limit === size
+                    ? 'bg-text-primary text-white'
+                    : 'text-text-muted hover:bg-surface-muted hover:text-text-primary'
+                }`}
+              >
+                {size}
+              </button>
+            ))}
+          </div>
+
+          {/* Page navigation */}
+          <div className="flex items-center gap-1">
+            <PaginationButton
+              onClick={() => setPage(0)}
+              disabled={page === 0}
+              icon={<IconChevronsLeft className="h-4 w-4" />}
+            />
+            <PaginationButton
+              onClick={() => setPage((p) => Math.max(0, p - 1))}
+              disabled={page === 0}
+              icon={<IconChevronLeft className="h-4 w-4" />}
+            />
+            <span className="px-4 text-sm tabular-nums text-text-muted">
+              {page + 1} / {totalPages}
+            </span>
+            <PaginationButton
+              onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+              disabled={page >= totalPages - 1}
+              icon={<IconChevronRight className="h-4 w-4" />}
+            />
+            <PaginationButton
+              onClick={() => setPage(totalPages - 1)}
+              disabled={page >= totalPages - 1}
+              icon={<IconChevronsRight className="h-4 w-4" />}
+            />
+          </div>
         </div>
       )}
     </div>
