@@ -82,6 +82,8 @@ const adminGetPricingProducts = adminProcedure
       .filter((p) => p.importPricePerBottle == null || p.importPricePerBottle <= 0)
       .map((p) => p.lwin18);
 
+    const shipmentPriceMap: Record<string, number> = {};
+
     if (missingLwin18s.length > 0) {
       const shipmentRows = await db
         .select({
@@ -107,7 +109,6 @@ const adminGetPricingProducts = adminProcedure
         .orderBy(desc(logisticsShipmentItems.createdAt));
 
       // Build lookup: first occurrence per lwin18 = latest shipment
-      const shipmentPriceMap: Record<string, number> = {};
       for (const row of shipmentRows) {
         if (shipmentPriceMap[row.lwin18] != null) continue;
         const cost = row.landedCostPerBottle ?? row.productCostPerBottle;
@@ -115,14 +116,16 @@ const adminGetPricingProducts = adminProcedure
           shipmentPriceMap[row.lwin18] = cost;
         }
       }
-
-      // Patch products with shipment costs
-      for (const product of products) {
-        if ((product.importPricePerBottle == null || product.importPricePerBottle <= 0) && shipmentPriceMap[product.lwin18] != null) {
-          (product as { importPricePerBottle: number | null }).importPricePerBottle = shipmentPriceMap[product.lwin18] ?? null;
-        }
-      }
     }
+
+    // Build final products with shipment cost fallback (immutable — create new objects)
+    const enrichedProducts = products.map((p) => ({
+      ...p,
+      importPricePerBottle:
+        p.importPricePerBottle != null && p.importPricePerBottle > 0
+          ? p.importPricePerBottle
+          : shipmentPriceMap[p.lwin18] ?? null,
+    }));
 
     // Count total for pagination
     const countSubquery = db
@@ -203,12 +206,12 @@ const adminGetPricingProducts = adminProcedure
       (summary?.pricedImportCount ?? 0) - (summary?.pricedSellingCount ?? 0);
 
     return {
-      products,
+      products: enrichedProducts,
       pagination: {
         total: totalCount,
         limit,
         offset,
-        hasMore: offset + products.length < totalCount,
+        hasMore: offset + enrichedProducts.length < totalCount,
       },
       summary: {
         totalProducts: summary?.totalProducts ?? 0,
