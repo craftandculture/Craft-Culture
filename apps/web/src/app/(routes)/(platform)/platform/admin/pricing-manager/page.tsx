@@ -25,7 +25,7 @@ import useTRPC from '@/lib/trpc/browser';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const USD_TO_AED = 3.67;
+const IN_BOND_MARKUP = 0.10; // 10% on top of import price
 const PAGE_SIZES = [50, 100, 200] as const;
 
 type CategoryFilter = 'Wine' | 'Spirits' | 'RTD';
@@ -37,9 +37,11 @@ type SortOrder = 'asc' | 'desc';
 const PriceCell = ({
   value,
   onSave,
+  highlight,
 }: {
   value: number | null;
   onSave: (v: number) => void;
+  highlight?: boolean;
 }) => {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value?.toFixed(2) ?? '');
@@ -49,7 +51,7 @@ const PriceCell = ({
       <td className="px-3 py-3 text-right tabular-nums">
         <button
           type="button"
-          className="cursor-pointer text-text-muted hover:text-text-primary hover:underline"
+          className={`cursor-pointer hover:text-text-primary hover:underline ${highlight ? 'font-medium text-violet-600' : 'text-text-muted'}`}
           onClick={() => {
             setDraft(value?.toFixed(2) ?? '');
             setEditing(true);
@@ -196,10 +198,10 @@ const SkeletonRow = () => (
     <td className="px-3 py-3">
       <div className="ml-auto h-4 w-14 animate-pulse rounded bg-surface-muted" />
     </td>
-    <td className="hidden px-3 py-3 xl:table-cell">
-      <div className="ml-auto h-4 w-14 animate-pulse rounded bg-surface-muted" />
+    <td className="hidden px-3 py-3 lg:table-cell">
+      <div className="ml-auto h-4 w-16 animate-pulse rounded bg-surface-muted" />
     </td>
-    <td className="hidden px-3 py-3 xl:table-cell">
+    <td className="px-3 py-3">
       <div className="ml-auto h-4 w-14 animate-pulse rounded bg-surface-muted" />
     </td>
     <td className="hidden px-3 py-3 xl:table-cell">
@@ -289,6 +291,19 @@ const PricingManagerPage = () => {
   const totalCount = pagination?.total ?? 0;
   const totalPages = Math.ceil(totalCount / limit);
 
+  // Fetch owner-specific PC prices when an owner is selected
+  const lwin18s = useMemo(() => products.map((p) => p.lwin18), [products]);
+
+  const { data: ownerPricingData } = useQuery({
+    ...api.wms.admin.stock.pricing.getOwnerPricing.queryOptions({
+      lwin18s,
+      ownerId: ownerId!,
+    }),
+    enabled: !!ownerId && lwin18s.length > 0,
+  });
+
+  const ownerPriceMap = ownerPricingData?.priceMap ?? {};
+
   // Active filters for chips
   const activeFilters: Array<{ key: string; label: string; onRemove: () => void }> = [];
   if (category) {
@@ -338,9 +353,19 @@ const PricingManagerPage = () => {
     ...api.wms.admin.stock.pricing.setSellingPrice.mutationOptions(),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: api.wms.admin.stock.pricing.getProducts.getQueryKey() });
-      toast.success('Selling price updated');
+      toast.success('PC price updated');
     },
-    onError: () => toast.error('Failed to update selling price'),
+    onError: () => toast.error('Failed to update PC price'),
+  });
+
+  const setOwnerPricingMut = useMutation({
+    ...api.wms.admin.stock.pricing.setOwnerPricing.mutationOptions(),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: api.wms.admin.stock.pricing.getOwnerPricing.getQueryKey() });
+      const ownerName = owners.find((o) => o.ownerId === ownerId)?.ownerName ?? 'owner';
+      toast.success(`PC price updated for ${ownerName}`);
+    },
+    onError: () => toast.error('Failed to update owner PC price'),
   });
 
   const bulkApplyMarginMut = useMutation({
@@ -392,6 +417,7 @@ const PricingManagerPage = () => {
     const rows = products.map((p) => {
       const margin = calcMargin(p.importPricePerBottle, p.sellingPricePerBottle);
       const caseConfig = p.caseConfig ?? 12;
+      const inBond = p.importPricePerBottle ? p.importPricePerBottle * (1 + IN_BOND_MARKUP) : null;
       return [
         p.productName,
         p.producer ?? '',
@@ -399,15 +425,15 @@ const PricingManagerPage = () => {
         p.totalCases,
         p.importPricePerBottle?.toFixed(2) ?? '',
         p.importPricePerBottle ? (p.importPricePerBottle * caseConfig).toFixed(2) : '',
+        inBond?.toFixed(2) ?? '',
+        inBond ? (inBond * caseConfig).toFixed(2) : '',
         p.sellingPricePerBottle?.toFixed(2) ?? '',
         p.sellingPricePerBottle ? (p.sellingPricePerBottle * caseConfig).toFixed(2) : '',
         margin != null ? margin.toFixed(1) : '',
-        p.importPricePerBottle ? (p.importPricePerBottle * USD_TO_AED).toFixed(2) : '',
-        p.sellingPricePerBottle ? (p.sellingPricePerBottle * USD_TO_AED).toFixed(2) : '',
       ].join(',');
     });
     const header =
-      'Product,Producer,Pack,Cases,Import $/btl,Import $/case,Sell $/btl,Sell $/case,Margin %,Import AED/btl,Sell AED/btl';
+      'Product,Producer,Pack,Cases,Import $/btl,Import $/case,In Bond $/btl,In Bond $/case,PC Price $/btl,PC Price $/case,Margin %';
     const csv = [header, ...rows].join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
@@ -433,7 +459,7 @@ const PricingManagerPage = () => {
         </div>
         <Typography variant="h2">Pricing Manager</Typography>
         <Typography variant="bodySm" className="text-text-muted">
-          Manage selling prices and margins
+          Import, in bond (B2B), and private client pricing
         </Typography>
       </div>
 
@@ -691,16 +717,32 @@ const PricingManagerPage = () => {
                   <th className="hidden px-3 py-3 text-right text-xs font-medium text-text-muted lg:table-cell">
                     Import $/case
                   </th>
+                  <th className="px-3 py-3 text-right text-xs font-medium text-text-muted">
+                    <span className="flex items-center justify-end gap-1">
+                      In Bond $/btl
+                      <span className="text-[10px] font-normal text-text-muted/60">+{IN_BOND_MARKUP * 100}%</span>
+                    </span>
+                  </th>
+                  <th className="hidden px-3 py-3 text-right text-xs font-medium text-text-muted lg:table-cell">
+                    In Bond $/case
+                  </th>
                   <th
                     className={`px-3 py-3 text-right ${thBase}`}
                     onClick={() => handleSort('sellingPrice')}
                   >
                     <span className="flex items-center justify-end gap-1">
-                      Sell $/btl {renderSortIcon('sellingPrice')}
+                      {ownerId ? (
+                        <span className="text-violet-600">
+                          PC Price $/btl
+                        </span>
+                      ) : (
+                        'PC Price $/btl'
+                      )}
+                      {renderSortIcon('sellingPrice')}
                     </span>
                   </th>
                   <th className="hidden px-3 py-3 text-right text-xs font-medium text-text-muted lg:table-cell">
-                    Sell $/case
+                    PC Price $/case
                   </th>
                   <th
                     className={`px-3 py-3 text-right ${thBase}`}
@@ -713,12 +755,6 @@ const PricingManagerPage = () => {
                   <th className="hidden px-3 py-3 text-right text-xs font-medium text-text-muted xl:table-cell">
                     Margin $/btl
                   </th>
-                  <th className="hidden px-3 py-3 text-right text-xs font-medium text-text-muted xl:table-cell">
-                    Import AED
-                  </th>
-                  <th className="hidden px-3 py-3 text-right text-xs font-medium text-text-muted xl:table-cell">
-                    Sell AED
-                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border-muted">
@@ -726,7 +762,7 @@ const PricingManagerPage = () => {
                   Array.from({ length: 8 }).map((_, i) => <SkeletonRow key={i} />)
                 ) : products.length === 0 ? (
                   <tr>
-                    <td colSpan={11} className="py-20 text-center text-text-muted">
+                    <td colSpan={10} className="py-20 text-center text-text-muted">
                       No products found
                     </td>
                   </tr>
@@ -734,7 +770,10 @@ const PricingManagerPage = () => {
                   products.map((product) => {
                     const caseConfig = product.caseConfig ?? 12;
                     const importPrice = product.importPricePerBottle;
-                    const sellPrice = product.sellingPricePerBottle;
+                    // When owner is selected, use owner-specific PC price (fall back to default)
+                    const ownerPcPrice = ownerId ? ownerPriceMap[product.lwin18] : undefined;
+                    const sellPrice = ownerPcPrice ?? product.sellingPricePerBottle;
+                    const hasOwnerPrice = ownerId != null && ownerPcPrice != null;
                     const margin = calcMargin(importPrice, sellPrice);
                     const marginPerBottle =
                       importPrice && sellPrice && importPrice > 0 && sellPrice > 0
@@ -783,18 +822,50 @@ const PricingManagerPage = () => {
                             : '\u2014'}
                         </td>
 
-                        {/* Sell $/btl (editable) */}
+                        {/* In Bond $/btl (computed) */}
+                        {(() => {
+                          const inBondPrice = importPrice != null && importPrice > 0
+                            ? importPrice * (1 + IN_BOND_MARKUP)
+                            : null;
+                          return (
+                            <>
+                              <td className="px-3 py-3 text-right tabular-nums text-text-secondary">
+                                {inBondPrice != null
+                                  ? `$${inBondPrice.toFixed(2)}`
+                                  : '\u2014'}
+                              </td>
+
+                              {/* In Bond $/case */}
+                              <td className="hidden px-3 py-3 text-right tabular-nums text-text-secondary lg:table-cell">
+                                {inBondPrice != null
+                                  ? `$${(inBondPrice * caseConfig).toFixed(2)}`
+                                  : '\u2014'}
+                              </td>
+                            </>
+                          );
+                        })()}
+
+                        {/* PC Price $/btl (editable) */}
                         <PriceCell
                           value={sellPrice}
-                          onSave={(v) =>
-                            setSellingPriceMut.mutate({
-                              lwin18: product.lwin18,
-                              sellingPricePerBottle: v,
-                            })
-                          }
+                          highlight={hasOwnerPrice}
+                          onSave={(v) => {
+                            if (ownerId) {
+                              setOwnerPricingMut.mutate({
+                                lwin18: product.lwin18,
+                                ownerId,
+                                pcSellingPricePerBottle: v,
+                              });
+                            } else {
+                              setSellingPriceMut.mutate({
+                                lwin18: product.lwin18,
+                                sellingPricePerBottle: v,
+                              });
+                            }
+                          }}
                         />
 
-                        {/* Sell $/case */}
+                        {/* PC Price $/case */}
                         <td className="hidden px-3 py-3 text-right tabular-nums text-text-secondary lg:table-cell">
                           {sellPrice != null && sellPrice > 0
                             ? `$${(sellPrice * caseConfig).toFixed(2)}`
@@ -813,20 +884,6 @@ const PricingManagerPage = () => {
                         <td className="hidden px-3 py-3 text-right tabular-nums text-text-secondary xl:table-cell">
                           {marginPerBottle != null
                             ? `$${marginPerBottle.toFixed(2)}`
-                            : '\u2014'}
-                        </td>
-
-                        {/* Import AED/btl */}
-                        <td className="hidden px-3 py-3 text-right tabular-nums text-text-secondary xl:table-cell">
-                          {importPrice != null && importPrice > 0
-                            ? (importPrice * USD_TO_AED).toFixed(2)
-                            : '\u2014'}
-                        </td>
-
-                        {/* Sell AED/btl */}
-                        <td className="hidden px-3 py-3 text-right tabular-nums text-text-secondary xl:table-cell">
-                          {sellPrice != null && sellPrice > 0
-                            ? (sellPrice * USD_TO_AED).toFixed(2)
                             : '\u2014'}
                         </td>
                       </tr>

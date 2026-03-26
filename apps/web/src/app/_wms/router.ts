@@ -47,6 +47,7 @@ import adminGetLocationLabels from './controller/adminGetLocationLabels';
 import adminGetLocations from './controller/adminGetLocations';
 import adminGetMovementHistory from './controller/adminGetMovementHistory';
 import adminGetOrderReservations from './controller/adminGetOrderReservations';
+import adminGetOwnerPricing from './controller/adminGetOwnerPricing';
 import adminGetPallet from './controller/adminGetPallet';
 import adminGetPalletByBarcode from './controller/adminGetPalletByBarcode';
 import adminGetPalletLabel from './controller/adminGetPalletLabel';
@@ -88,6 +89,7 @@ import adminSaveReceivingDraft from './controller/adminSaveReceivingDraft';
 import adminSealPallet from './controller/adminSealPallet';
 import adminSearchStock from './controller/adminSearchStock';
 import adminSetImportPrice from './controller/adminSetImportPrice';
+import adminSetOwnerPricing from './controller/adminSetOwnerPricing';
 import adminSetSellingPrice from './controller/adminSetSellingPrice';
 import adminStartCycleCount from './controller/adminStartCycleCount';
 import adminSyncStockToZoho from './controller/adminSyncStockToZoho';
@@ -153,6 +155,8 @@ const stockPricingRouter = createTRPCRouter({
   getBulk: adminGetBulkPricing,
   setImportPrice: adminSetImportPrice,
   setSellingPrice: adminSetSellingPrice,
+  setOwnerPricing: adminSetOwnerPricing,
+  getOwnerPricing: adminGetOwnerPricing,
   autoPopulate: adminAutoPopulateImportPrice,
   getProducts: adminGetPricingProducts,
   bulkApplyMargin: adminBulkApplyMargin,

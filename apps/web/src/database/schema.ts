@@ -4878,3 +4878,30 @@ export const wmsProductPricing = pgTable(
 ).enableRLS();
 
 export type WmsProductPricing = typeof wmsProductPricing.$inferSelect;
+
+export const wmsOwnerPricing = pgTable(
+  'wms_owner_pricing',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    lwin18: text('lwin18').notNull(),
+    ownerId: uuid('owner_id')
+      .references(() => partners.id, { onDelete: 'cascade' })
+      .notNull(),
+    pcSellingPricePerBottle: doublePrecision(
+      'pc_selling_price_per_bottle',
+    ).notNull(),
+    updatedBy: uuid('updated_by').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+    ...timestamps,
+  },
+  (table) => [
+    uniqueIndex('wms_owner_pricing_lwin18_owner_idx').on(
+      table.lwin18,
+      table.ownerId,
+    ),
+    index('wms_owner_pricing_owner_id_idx').on(table.ownerId),
+  ],
+).enableRLS();
+
+export type WmsOwnerPricing = typeof wmsOwnerPricing.$inferSelect;
