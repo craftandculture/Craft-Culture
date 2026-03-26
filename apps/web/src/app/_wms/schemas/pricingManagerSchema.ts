@@ -25,3 +25,16 @@ export const bulkApplyMarginSchema = z.object({
   category: z.enum(['Wine', 'Spirits', 'RTD']).optional(),
   overwriteExisting: z.boolean().default(false),
 });
+
+/** Schema for setting a per-owner PC selling price */
+export const setOwnerPricingSchema = z.object({
+  lwin18: z.string().min(1),
+  ownerId: z.string().uuid(),
+  pcSellingPricePerBottle: z.number().positive(),
+});
+
+/** Schema for getting owner pricing for products in view */
+export const getOwnerPricingSchema = z.object({
+  lwin18s: z.array(z.string()).min(1).max(500),
+  ownerId: z.string().uuid(),
+});
