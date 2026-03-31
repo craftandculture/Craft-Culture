@@ -1,5 +1,5 @@
 import { createAnthropic } from '@ai-sdk/anthropic';
-import { logger, schedules, task } from '@trigger.dev/sdk';
+import { logger, task } from '@trigger.dev/sdk';
 import { generateObject } from 'ai';
 import { eq, gt, sql } from 'drizzle-orm';
 import { z } from 'zod';
@@ -274,22 +274,6 @@ Generate a daily Scout brief with:
  */
 export const scoutRunTask = task({
   id: 'scout-run',
-  async run() {
-    return runScoutAnalysis();
-  },
-});
-
-/**
- * The Scout — Daily competitive intelligence agent (scheduled)
- *
- * Runs daily at 06:00 GST.
- */
-export const scoutDailyJob = schedules.task({
-  id: 'scout-daily',
-  cron: {
-    pattern: '0 6 * * *',
-    timezone: 'Asia/Dubai',
-  },
   async run() {
     return runScoutAnalysis();
   },
