@@ -325,7 +325,11 @@ const WMSDispatchBatchDetailPage = () => {
                     batchNumber: batch.batchNumber,
                     distributorName: batch.distributorName ?? 'Unknown',
                     totalCases: batch.totalCases,
-                    orderNumbers: batch.orders.map((o) => o.invoiceNumber ?? o.orderNumber),
+                    orderNumbers: batch.orders.map((o) =>
+                      o.invoiceNumber
+                        ? `${o.invoiceNumber} (${o.orderNumber})`
+                        : o.orderNumber,
+                    ),
                     dispatchedAt: batch.dispatchedAt ? new Date(batch.dispatchedAt) : new Date(),
                     notes: batch.notes,
                   });
@@ -392,6 +396,11 @@ const WMSDispatchBatchDetailPage = () => {
                       <Typography variant="bodySm" className="font-medium">
                         {order.invoiceNumber ?? order.orderNumber}
                       </Typography>
+                      {order.invoiceNumber && order.orderNumber && !order.orderNumber.startsWith('PCO') && (
+                        <Typography variant="bodyXs" colorRole="muted" className="opacity-60">
+                          {order.orderNumber}
+                        </Typography>
+                      )}
                       <Typography variant="bodyXs" colorRole="muted">
                         Added {new Date(order.addedAt).toLocaleDateString()}
                       </Typography>
