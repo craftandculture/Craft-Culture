@@ -9,7 +9,7 @@ import {
   zohoSalesOrderItems,
   zohoSalesOrders,
 } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 /**
  * Add Zoho Sales Orders to a dispatch batch
@@ -22,7 +22,7 @@ import { adminProcedure } from '@/lib/trpc/procedures';
  *     orderIds: ["zoho-order-uuid-1", "zoho-order-uuid-2"]
  *   });
  */
-const adminAddZohoOrdersToBatch = adminProcedure
+const adminAddZohoOrdersToBatch = wmsOperatorProcedure
   .input(
     z.object({
       batchId: z.string().uuid(),

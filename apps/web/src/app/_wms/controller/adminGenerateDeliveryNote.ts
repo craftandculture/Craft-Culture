@@ -12,7 +12,7 @@ import {
   zohoSalesOrderItems,
   zohoSalesOrders,
 } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 import generateDeliveryNoteNumber from '../utils/generateDeliveryNoteNumber';
 import renderDeliveryNotePDF from '../utils/renderDeliveryNotePDF';
@@ -28,7 +28,7 @@ import renderDeliveryNotePDF from '../utils/renderDeliveryNotePDF';
  *     batchId: "uuid",
  *   });
  */
-const adminGenerateDeliveryNote = adminProcedure
+const adminGenerateDeliveryNote = wmsOperatorProcedure
   .input(
     z.object({
       batchId: z.string().uuid(),

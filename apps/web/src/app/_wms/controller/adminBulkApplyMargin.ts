@@ -1,5 +1,5 @@
 import { client } from '@/database/client';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 import { bulkApplyMarginSchema } from '../schemas/pricingManagerSchema';
 
@@ -12,7 +12,7 @@ import { bulkApplyMarginSchema } from '../schemas/pricingManagerSchema';
  * @param category - Optional category filter (Wine, Spirits, RTD)
  * @param overwriteExisting - Whether to overwrite products that already have a selling price
  */
-const adminBulkApplyMargin = adminProcedure
+const adminBulkApplyMargin = wmsOperatorProcedure
   .input(bulkApplyMarginSchema)
   .mutation(async ({ input, ctx }) => {
     const { marginPercent, category, overwriteExisting } = input;

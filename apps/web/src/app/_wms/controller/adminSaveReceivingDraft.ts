@@ -3,7 +3,7 @@ import { z } from 'zod';
 
 import db from '@/database/client';
 import { wmsReceivingDrafts } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 /**
  * Schema for a single draft item
@@ -54,7 +54,7 @@ const draftItemSchema = z.object({
  *     notes: 'Some notes',
  *   });
  */
-const adminSaveReceivingDraft = adminProcedure
+const adminSaveReceivingDraft = wmsOperatorProcedure
   .input(
     z.object({
       shipmentId: z.string().uuid(),

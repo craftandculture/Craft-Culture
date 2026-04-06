@@ -5,7 +5,7 @@ import { z } from 'zod';
 import db from '@/database/client';
 import type { PrivateClientOrder } from '@/database/schema';
 import { privateClientOrderActivityLogs, privateClientOrders } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 import notifyDistributorOfOrderUpdate from '../utils/notifyDistributorOfOrderUpdate';
 import notifyPartnerOfOrderUpdate from '../utils/notifyPartnerOfOrderUpdate';
@@ -21,7 +21,7 @@ const assignDistributorSchema = z.object({
  *
  * Admin assigns a distributor partner to handle delivery of an approved order.
  */
-const ordersAssignDistributor = adminProcedure.input(assignDistributorSchema).mutation(async ({ input, ctx }) => {
+const ordersAssignDistributor = wmsOperatorProcedure.input(assignDistributorSchema).mutation(async ({ input, ctx }) => {
   const { orderId, distributorId, notes } = input;
   const { user } = ctx;
 

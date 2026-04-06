@@ -3,7 +3,7 @@ import { and, eq, isNull } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { wmsLocations, wmsPalletCases, wmsPallets } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 import { getPalletByBarcodeSchema } from '../schemas/palletSchema';
 
@@ -15,7 +15,7 @@ import { getPalletByBarcodeSchema } from '../schemas/palletSchema';
  *     barcode: "PALLET-2026-0001"
  *   });
  */
-const adminGetPalletByBarcode = adminProcedure
+const adminGetPalletByBarcode = wmsOperatorProcedure
   .input(getPalletByBarcodeSchema)
   .query(async ({ input }) => {
     const { barcode } = input;

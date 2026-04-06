@@ -2,7 +2,7 @@ import { and, desc, eq, inArray, sql } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { logisticsShipmentItems, logisticsShipments, partners } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 /**
  * Get shipments that are ready to be received in the WMS
@@ -11,7 +11,7 @@ import { adminProcedure } from '@/lib/trpc/procedures';
  * @example
  *   await trpcClient.wms.admin.receiving.getPendingShipments.query();
  */
-const adminGetPendingShipments = adminProcedure.query(async () => {
+const adminGetPendingShipments = wmsOperatorProcedure.query(async () => {
   // Get inbound shipments that are ready to receive
   // Includes: at_warehouse, cleared, customs_clearance, arrived_port
   const shipments = await db

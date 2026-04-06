@@ -7,7 +7,7 @@ import {
   privateClientOrderItems,
   privateClientOrders,
 } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 /**
  * Get dashboard statistics for admin users
@@ -15,7 +15,7 @@ import { adminProcedure } from '@/lib/trpc/procedures';
  * Returns KPIs including order counts by status, recent orders,
  * orders by partner, and aggregated metrics for the admin dashboard.
  */
-const adminDashboard = adminProcedure.query(async () => {
+const adminDashboard = wmsOperatorProcedure.query(async () => {
   // Get date 30 days ago for "this month" metrics
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);

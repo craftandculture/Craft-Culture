@@ -3,7 +3,7 @@ import { eq } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { wmsCycleCounts } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 import { startCycleCountSchema } from '../schemas/cycleCountSchema';
 
@@ -15,7 +15,7 @@ import { startCycleCountSchema } from '../schemas/cycleCountSchema';
  *     countId: "uuid",
  *   });
  */
-const adminStartCycleCount = adminProcedure
+const adminStartCycleCount = wmsOperatorProcedure
   .input(startCycleCountSchema)
   .mutation(async ({ input }) => {
     const { countId } = input;

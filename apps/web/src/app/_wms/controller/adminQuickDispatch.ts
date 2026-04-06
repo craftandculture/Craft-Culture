@@ -16,7 +16,7 @@ import {
   zohoSalesOrderItems,
   zohoSalesOrders,
 } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 import convertReservationToPick from '../utils/convertReservationToPick';
 import generateBatchNumber from '../utils/generateBatchNumber';
@@ -40,7 +40,7 @@ import renderDeliveryNotePDF from '../utils/renderDeliveryNotePDF';
  *     notes: "Truck #42",
  *   });
  */
-const adminQuickDispatch = adminProcedure
+const adminQuickDispatch = wmsOperatorProcedure
   .input(
     z.object({
       distributorId: z.string().uuid(),

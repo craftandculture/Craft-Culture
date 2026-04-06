@@ -8,7 +8,7 @@ import {
   wmsLocations,
   wmsStock,
 } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 import { createCycleCountSchema } from '../schemas/cycleCountSchema';
 import generateCountNumber from '../utils/generateCountNumber';
@@ -24,7 +24,7 @@ import generateCountNumber from '../utils/generateCountNumber';
  *     locationId: "uuid",
  *   });
  */
-const adminCreateCycleCount = adminProcedure
+const adminCreateCycleCount = wmsOperatorProcedure
   .input(createCycleCountSchema)
   .mutation(async ({ input, ctx }) => {
     const { locationId, notes } = input;

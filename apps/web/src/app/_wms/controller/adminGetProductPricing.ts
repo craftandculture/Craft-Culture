@@ -2,7 +2,7 @@ import { eq } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { partners, wmsProductPricing } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 import { getProductPricingSchema } from '../schemas/pricingSchema';
 
@@ -14,7 +14,7 @@ import { getProductPricingSchema } from '../schemas/pricingSchema';
  *
  * @param lwin18 - The product LWIN18 identifier
  */
-const adminGetProductPricing = adminProcedure
+const adminGetProductPricing = wmsOperatorProcedure
   .input(getProductPricingSchema)
   .query(async ({ input }) => {
     const [pricing] = await db

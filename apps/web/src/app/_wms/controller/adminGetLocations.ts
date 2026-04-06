@@ -2,7 +2,7 @@ import { and, asc, eq, ilike, or, sql } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { wmsLocations, wmsStock } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 import { getLocationsSchema } from '../schemas/locationSchema';
 
@@ -15,7 +15,7 @@ import { getLocationsSchema } from '../schemas/locationSchema';
  *     isActive: true
  *   });
  */
-const adminGetLocations = adminProcedure
+const adminGetLocations = wmsOperatorProcedure
   .input(getLocationsSchema)
   .query(async ({ input }) => {
     console.log('[WMS] adminGetLocations called with input:', input);

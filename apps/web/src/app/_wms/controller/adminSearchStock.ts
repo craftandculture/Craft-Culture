@@ -2,7 +2,7 @@ import { and, gt, ilike, or, sql } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { wmsLocations, wmsStock } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 import { searchStockSchema } from '../schemas/stockQuerySchema';
 
@@ -16,7 +16,7 @@ import { searchStockSchema } from '../schemas/stockQuerySchema';
  *     limit: 20
  *   });
  */
-const adminSearchStock = adminProcedure
+const adminSearchStock = wmsOperatorProcedure
   .input(searchStockSchema)
   .query(async ({ input }) => {
     const { query, limit } = input;

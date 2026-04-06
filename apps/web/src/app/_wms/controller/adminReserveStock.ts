@@ -3,7 +3,7 @@ import { eq, sql } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { wmsStock } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 import { reserveStockSchema } from '../schemas/ownershipSchema';
 
@@ -19,7 +19,7 @@ import { reserveStockSchema } from '../schemas/ownershipSchema';
  *     orderNumber: "PCO-0001"
  *   });
  */
-const adminReserveStock = adminProcedure
+const adminReserveStock = wmsOperatorProcedure
   .input(reserveStockSchema)
   .mutation(async ({ input }) => {
     const { stockId, quantityCases, orderId, orderNumber } = input;

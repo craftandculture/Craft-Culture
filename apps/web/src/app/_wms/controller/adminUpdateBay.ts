@@ -4,7 +4,7 @@ import { z } from 'zod';
 
 import db from '@/database/client';
 import { wmsLocations } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 import logger from '@/utils/logger';
 
 /**
@@ -20,7 +20,7 @@ import logger from '@/utils/logger';
  *     forkliftFromLevel: '01'
  *   });
  */
-const adminUpdateBay = adminProcedure
+const adminUpdateBay = wmsOperatorProcedure
   .input(
     z.object({
       aisle: z.string().min(1).max(10),

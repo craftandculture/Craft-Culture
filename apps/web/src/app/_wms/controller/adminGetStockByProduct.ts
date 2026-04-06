@@ -2,7 +2,7 @@ import { and, asc, desc, eq, gt, ilike, or, sql } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { wmsLocations, wmsStock } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 import { getStockByProductSchema } from '../schemas/stockQuerySchema';
 
@@ -18,7 +18,7 @@ import { getStockByProductSchema } from '../schemas/stockQuerySchema';
  *     offset: 0
  *   });
  */
-const adminGetStockByProduct = adminProcedure
+const adminGetStockByProduct = wmsOperatorProcedure
   .input(getStockByProductSchema)
   .query(async ({ input }) => {
     const {

@@ -2,7 +2,7 @@ import { desc, eq, sql } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { wmsLocations, wmsPallets } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 import { getPalletsSchema } from '../schemas/palletSchema';
 
@@ -15,7 +15,7 @@ import { getPalletsSchema } from '../schemas/palletSchema';
  *     limit: 50
  *   });
  */
-const adminGetPallets = adminProcedure.input(getPalletsSchema).query(async ({ input }) => {
+const adminGetPallets = wmsOperatorProcedure.input(getPalletsSchema).query(async ({ input }) => {
   const { status, ownerId, limit } = input;
 
   // Build where conditions

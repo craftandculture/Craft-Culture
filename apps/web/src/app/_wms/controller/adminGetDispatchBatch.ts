@@ -9,7 +9,7 @@ import {
   wmsDispatchBatches,
   zohoInvoices,
 } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 import { getDispatchBatchSchema } from '../schemas/dispatchBatchSchema';
 
@@ -19,7 +19,7 @@ import { getDispatchBatchSchema } from '../schemas/dispatchBatchSchema';
  * @example
  *   await trpcClient.wms.admin.dispatch.getOne.query({ batchId: "uuid" });
  */
-const adminGetDispatchBatch = adminProcedure
+const adminGetDispatchBatch = wmsOperatorProcedure
   .input(getDispatchBatchSchema)
   .query(async ({ input }) => {
     const { batchId } = input;

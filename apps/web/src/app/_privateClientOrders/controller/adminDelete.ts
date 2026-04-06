@@ -9,7 +9,7 @@ import {
   privateClientOrderItems,
   privateClientOrders,
 } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 const deleteOrderSchema = z.object({
   orderId: z.string().uuid(),
@@ -21,7 +21,7 @@ const deleteOrderSchema = z.object({
  * Deletes the order and all associated data including items, documents, and activity logs.
  * Only orders in draft or cancelled status can be deleted.
  */
-const adminDelete = adminProcedure.input(deleteOrderSchema).mutation(async ({ input }) => {
+const adminDelete = wmsOperatorProcedure.input(deleteOrderSchema).mutation(async ({ input }) => {
   const { orderId } = input;
 
   // Fetch the order

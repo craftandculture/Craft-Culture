@@ -197,6 +197,13 @@
       "when": 1773841084677,
       "tag": "0027_old_the_hunter",
       "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1775476604875,
+      "tag": "0028_warm_absorbing_man",
+      "breakpoints": true
     }
   ]
 }

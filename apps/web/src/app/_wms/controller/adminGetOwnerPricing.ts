@@ -2,7 +2,7 @@ import { and, eq, inArray } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { wmsOwnerPricing } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 import { getOwnerPricingSchema } from '../schemas/pricingManagerSchema';
 
@@ -12,7 +12,7 @@ import { getOwnerPricingSchema } from '../schemas/pricingManagerSchema';
  * Returns a map of lwin18 → pcSellingPricePerBottle for the given owner.
  * Used by the Pricing Manager when an owner filter is active.
  */
-const adminGetOwnerPricing = adminProcedure
+const adminGetOwnerPricing = wmsOperatorProcedure
   .input(getOwnerPricingSchema)
   .query(async ({ input }) => {
     const { lwin18s, ownerId } = input;

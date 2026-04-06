@@ -3,7 +3,7 @@ import { eq } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { wmsLocations } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 import logger from '@/utils/logger';
 
 import { updateLocationSchema } from '../schemas/locationSchema';
@@ -18,7 +18,7 @@ import { updateLocationSchema } from '../schemas/locationSchema';
  *     requiresForklift: true
  *   });
  */
-const adminUpdateLocation = adminProcedure
+const adminUpdateLocation = wmsOperatorProcedure
   .input(updateLocationSchema)
   .mutation(async ({ input }) => {
     try {

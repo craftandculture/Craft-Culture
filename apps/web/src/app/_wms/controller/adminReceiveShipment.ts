@@ -11,7 +11,7 @@ import {
   wmsStock,
   wmsStockMovements,
 } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 import { findOrCreateWineItem } from '@/lib/zoho/items';
 import logger from '@/utils/logger';
 
@@ -33,7 +33,7 @@ import getCategoryFromHsCode from '../utils/getCategoryFromHsCode';
  *     items: [{ shipmentItemId: "uuid", expectedCases: 10, receivedCases: 10 }],
  *   });
  */
-const adminReceiveShipment = adminProcedure
+const adminReceiveShipment = wmsOperatorProcedure
   .input(receiveShipmentSchema)
   .mutation(async ({ input, ctx }) => {
     const { shipmentId, receivingLocationId, items, notes } = input;

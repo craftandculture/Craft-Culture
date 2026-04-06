@@ -2,7 +2,7 @@ import { and, eq } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { wmsLocations, wmsStock, wmsStockReservations } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 import getOrderReservationsSchema from '../schemas/reservationSchema';
 
@@ -17,7 +17,7 @@ import getOrderReservationsSchema from '../schemas/reservationSchema';
  *     orderType: "zoho",
  *   });
  */
-const adminGetOrderReservations = adminProcedure
+const adminGetOrderReservations = wmsOperatorProcedure
   .input(getOrderReservationsSchema)
   .query(async ({ input }) => {
     const { orderId, orderType } = input;

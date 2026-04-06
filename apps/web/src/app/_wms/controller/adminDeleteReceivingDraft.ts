@@ -3,7 +3,7 @@ import { z } from 'zod';
 
 import db from '@/database/client';
 import { wmsReceivingDrafts } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 /**
  * Delete a receiving draft after receiving is completed
@@ -11,7 +11,7 @@ import { adminProcedure } from '@/lib/trpc/procedures';
  * @example
  *   await trpcClient.wms.admin.receiving.deleteDraft.mutate({ shipmentId: 'uuid' });
  */
-const adminDeleteReceivingDraft = adminProcedure
+const adminDeleteReceivingDraft = wmsOperatorProcedure
   .input(z.object({ shipmentId: z.string().uuid() }))
   .mutation(async ({ input }) => {
     await db.delete(wmsReceivingDrafts).where(eq(wmsReceivingDrafts.shipmentId, input.shipmentId));

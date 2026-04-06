@@ -3,7 +3,7 @@ import { and, eq, gt } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { wmsLocations, wmsStock } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 import { getLocationByBarcodeSchema } from '../schemas/transferSchema';
 
@@ -16,7 +16,7 @@ import { getLocationByBarcodeSchema } from '../schemas/transferSchema';
  *     barcode: "LOC-A-01-02"
  *   });
  */
-const adminGetLocationByBarcode = adminProcedure
+const adminGetLocationByBarcode = wmsOperatorProcedure
   .input(getLocationByBarcodeSchema)
   .mutation(async ({ input }) => {
     const { barcode } = input;

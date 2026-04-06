@@ -2,7 +2,7 @@ import { and, asc, desc, eq, ilike, inArray, or, sql } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { logisticsShipmentItems, logisticsShipments, partners } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 import { getInboundStockSchema } from '../schemas/stockQuerySchema';
 
@@ -45,7 +45,7 @@ const GROUP_KEY = sql<string>`
  * Shows items from shipments that are booked through at_warehouse
  * as virtual "inbound" rows in the Stock Explorer.
  */
-const adminGetInboundStock = adminProcedure
+const adminGetInboundStock = wmsOperatorProcedure
   .input(getInboundStockSchema)
   .query(async ({ input }) => {
     const { search, category, sortBy, sortOrder, limit, offset } = input;

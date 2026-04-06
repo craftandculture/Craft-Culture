@@ -4,7 +4,7 @@ import { z } from 'zod';
 
 import db from '@/database/client';
 import { logisticsShipments, wmsReceivingDrafts, wmsStock } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 import logger from '@/utils/logger';
 
 /**
@@ -19,7 +19,7 @@ import logger from '@/utils/logger';
  *     shipmentId: 'uuid',
  *   });
  */
-const adminFinalizeReceiving = adminProcedure
+const adminFinalizeReceiving = wmsOperatorProcedure
   .input(z.object({ shipmentId: z.string().uuid() }))
   .mutation(async ({ input }) => {
     const { shipmentId } = input;

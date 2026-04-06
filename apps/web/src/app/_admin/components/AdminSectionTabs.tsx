@@ -57,14 +57,31 @@ const sectionTabs: Record<string, TabItem[]> = {
   ],
 };
 
+interface AdminSectionTabsProps {
+  userRole?: string;
+}
+
+/** Tabs visible to WMS operators per section */
+const operatorTabOverrides: Record<string, Set<string>> = {
+  orders: new Set(['/platform/admin/private-orders']),
+};
+
 /**
  * Section-aware tab bar for admin navigation
  * Renders horizontal tabs for the current section, sticky below header
  */
-const AdminSectionTabs = () => {
+const AdminSectionTabs = ({ userRole }: AdminSectionTabsProps) => {
   const pathname = usePathname();
   const section = getSectionFromPathname(pathname);
-  const tabs = sectionTabs[section];
+  let tabs = sectionTabs[section];
+
+  // Filter tabs for WMS operators
+  if (userRole === 'wms_operator' && tabs) {
+    const allowedHrefs = operatorTabOverrides[section];
+    if (allowedHrefs) {
+      tabs = tabs.filter((tab) => allowedHrefs.has(tab.href));
+    }
+  }
 
   if (!tabs) return null;
 

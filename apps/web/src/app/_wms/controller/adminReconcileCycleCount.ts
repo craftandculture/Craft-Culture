@@ -8,7 +8,7 @@ import {
   wmsStock,
   wmsStockMovements,
 } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 import { reconcileCycleCountSchema } from '../schemas/cycleCountSchema';
 import generateMovementNumber from '../utils/generateMovementNumber';
@@ -25,7 +25,7 @@ import generateMovementNumber from '../utils/generateMovementNumber';
  *     adjustments: [{ itemId: "uuid", approved: true }],
  *   });
  */
-const adminReconcileCycleCount = adminProcedure
+const adminReconcileCycleCount = wmsOperatorProcedure
   .input(reconcileCycleCountSchema)
   .mutation(async ({ input, ctx }) => {
     const { countId, adjustments } = input;

@@ -6,7 +6,7 @@ import { z } from 'zod';
 import releaseStockReservations from '@/app/_wms/utils/releaseStockReservations';
 import db from '@/database/client';
 import { privateClientOrderActivityLogs, privateClientOrders } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 import type { zohoCreateInvoiceJob } from '@/trigger/jobs/zoho-sync';
 import logger from '@/utils/logger';
 
@@ -41,7 +41,7 @@ const getPartnerNotificationType = (status: string) => {
  * Admins can update the status of any order.
  * Triggers appropriate notifications based on the new status.
  */
-const adminUpdateStatus = adminProcedure
+const adminUpdateStatus = wmsOperatorProcedure
   .input(updateStatusSchema)
   .mutation(async ({ input, ctx }) => {
     const { orderId, status } = input;

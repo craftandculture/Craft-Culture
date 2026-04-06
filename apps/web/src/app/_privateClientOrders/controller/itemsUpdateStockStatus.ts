@@ -9,7 +9,7 @@ import {
   privateClientOrderActivityLogs,
   privateClientOrderItems,
 } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 const stockStatusLabels: Record<string, string> = {
   pending: 'Pending',
@@ -45,7 +45,7 @@ const updateStockStatusSchema = z.object({
  * Updates the stock status and optionally the expected arrival date and notes.
  * Logs the change for audit purposes.
  */
-const itemsUpdateStockStatus = adminProcedure
+const itemsUpdateStockStatus = wmsOperatorProcedure
   .input(updateStockStatusSchema)
   .mutation(async ({ input, ctx }) => {
     const { itemId, stockStatus, stockExpectedAt, stockNotes } = input;

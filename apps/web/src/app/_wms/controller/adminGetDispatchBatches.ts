@@ -2,7 +2,7 @@ import { and, count, desc, eq } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { users, wmsDispatchBatches } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 import { getDispatchBatchesSchema } from '../schemas/dispatchBatchSchema';
 
@@ -13,7 +13,7 @@ import { getDispatchBatchesSchema } from '../schemas/dispatchBatchSchema';
  *   await trpcClient.wms.admin.dispatch.getMany.query({});
  *   await trpcClient.wms.admin.dispatch.getMany.query({ status: 'draft' });
  */
-const adminGetDispatchBatches = adminProcedure
+const adminGetDispatchBatches = wmsOperatorProcedure
   .input(getDispatchBatchesSchema)
   .query(async ({ input }) => {
     const { status, distributorId, limit, offset } = input;

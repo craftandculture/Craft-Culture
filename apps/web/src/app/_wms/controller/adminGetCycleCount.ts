@@ -8,7 +8,7 @@ import {
   wmsLocations,
   wmsStock,
 } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 import { getCycleCountSchema } from '../schemas/cycleCountSchema';
 
@@ -20,7 +20,7 @@ import { getCycleCountSchema } from '../schemas/cycleCountSchema';
  *     countId: "uuid",
  *   });
  */
-const adminGetCycleCount = adminProcedure
+const adminGetCycleCount = wmsOperatorProcedure
   .input(getCycleCountSchema)
   .query(async ({ input }) => {
     const { countId } = input;

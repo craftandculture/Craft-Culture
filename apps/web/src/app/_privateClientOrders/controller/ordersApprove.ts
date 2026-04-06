@@ -10,7 +10,7 @@ import {
   privateClientOrderItems,
   privateClientOrders,
 } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 import notifyPartnerOfOrderUpdate from '../utils/notifyPartnerOfOrderUpdate';
 
@@ -46,7 +46,7 @@ const approveOrderSchema = z.object({
  * - CC_INVENTORY items are marked as 'confirmed' (ready in warehouse)
  * - PARTNER_AIRFREIGHT items are marked as 'pending' with an expected arrival date
  */
-const ordersApprove = adminProcedure.input(approveOrderSchema).mutation(async ({ input, ctx }) => {
+const ordersApprove = wmsOperatorProcedure.input(approveOrderSchema).mutation(async ({ input, ctx }) => {
   const { orderId, notes, lineItems, pricingType, bespokePricing } = input;
   const { user } = ctx;
 

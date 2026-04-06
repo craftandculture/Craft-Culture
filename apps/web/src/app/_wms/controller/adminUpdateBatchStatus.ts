@@ -11,7 +11,7 @@ import {
   zohoSalesOrderItems,
   zohoSalesOrders,
 } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 import { updateBatchStatusSchema } from '../schemas/dispatchBatchSchema';
 import generateMovementNumber from '../utils/generateMovementNumber';
@@ -25,7 +25,7 @@ import generateMovementNumber from '../utils/generateMovementNumber';
  *     status: "dispatched"
  *   });
  */
-const adminUpdateBatchStatus = adminProcedure
+const adminUpdateBatchStatus = wmsOperatorProcedure
   .input(updateBatchStatusSchema)
   .mutation(async ({ input, ctx }) => {
     const { batchId, status, notes } = input;

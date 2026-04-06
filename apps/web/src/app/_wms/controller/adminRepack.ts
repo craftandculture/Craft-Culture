@@ -8,7 +8,7 @@ import {
   wmsStock,
   wmsStockMovements,
 } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 import { repackByStockSchema } from '../schemas/repackSchema';
 import generateCaseLabelBarcode from '../utils/generateCaseLabelBarcode';
@@ -166,7 +166,7 @@ const createCaseLabels = async (
  * Number generators (repack/movement) run BEFORE the transaction to avoid
  * deadlocking the postgres connection pool on Neon serverless.
  */
-const adminRepack = adminProcedure
+const adminRepack = wmsOperatorProcedure
   .input(repackByStockSchema)
   .mutation(async ({ input, ctx }) => {
     const { stockId, sourceQuantityCases, destinationLocationId, notes } = input;

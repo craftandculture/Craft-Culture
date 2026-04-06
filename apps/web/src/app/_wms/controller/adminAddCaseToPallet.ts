@@ -3,7 +3,7 @@ import { and, eq, isNull, sql } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { wmsCaseLabels, wmsPalletCases, wmsPallets, wmsStockMovements } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 import { addCaseToPalletSchema } from '../schemas/palletSchema';
 import generateMovementNumber from '../utils/generateMovementNumber';
@@ -17,7 +17,7 @@ import generateMovementNumber from '../utils/generateMovementNumber';
  *     caseBarcode: "CASE-1010279-2015-06-00750-001"
  *   });
  */
-const adminAddCaseToPallet = adminProcedure
+const adminAddCaseToPallet = wmsOperatorProcedure
   .input(addCaseToPalletSchema)
   .mutation(async ({ input, ctx }) => {
     const { palletId, caseBarcode } = input;

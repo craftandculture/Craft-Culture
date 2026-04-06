@@ -4,7 +4,7 @@ import { z } from 'zod';
 
 import db from '@/database/client';
 import { wmsStock, wmsStockMovements } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 import generateMovementNumber from '../utils/generateMovementNumber';
 
@@ -18,7 +18,7 @@ import generateMovementNumber from '../utils/generateMovementNumber';
  *     reason: "Duplicate record from receiving retry"
  *   });
  */
-const adminDeleteStockRecord = adminProcedure
+const adminDeleteStockRecord = wmsOperatorProcedure
   .input(
     z.object({
       stockId: z.string().uuid(),

@@ -3,7 +3,7 @@ import { z } from 'zod';
 
 import db from '@/database/client';
 import { logisticsShipments, partners, wmsCaseLabels, wmsLocations } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 /**
  * Get case labels for a shipment, ready for printing
@@ -11,7 +11,7 @@ import { adminProcedure } from '@/lib/trpc/procedures';
  * @example
  *   await trpcClient.wms.admin.labels.getCaseLabels.query({ shipmentId: "uuid" });
  */
-const adminGetCaseLabels = adminProcedure
+const adminGetCaseLabels = wmsOperatorProcedure
   .input(z.object({ shipmentId: z.string().uuid() }))
   .query(async ({ input }) => {
     // Get shipment info

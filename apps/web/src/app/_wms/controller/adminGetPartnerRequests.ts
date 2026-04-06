@@ -2,7 +2,7 @@ import { and, desc, eq, sql } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { partners, users, wmsLocations, wmsPartnerRequests, wmsStock } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 import { getPartnerRequestsSchema } from '../schemas/ownershipSchema';
 
@@ -16,7 +16,7 @@ import { getPartnerRequestsSchema } from '../schemas/ownershipSchema';
  *     limit: 50
  *   });
  */
-const adminGetPartnerRequests = adminProcedure
+const adminGetPartnerRequests = wmsOperatorProcedure
   .input(getPartnerRequestsSchema)
   .query(async ({ input }) => {
     const { status, partnerId, requestType, limit, offset } = input;

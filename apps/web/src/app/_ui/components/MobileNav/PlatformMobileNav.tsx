@@ -55,6 +55,32 @@ const PlatformMobileNav = ({ user }: PlatformMobileNavProps) => {
     });
   }
 
+  // WMS Operator sections — limited admin nav
+  if (user.role === 'wms_operator') {
+    sections.push({
+      title: 'Orders',
+      links: [{ href: '/platform/admin/private-orders', label: 'Private Orders' }],
+    });
+    sections.push({
+      title: 'Stock',
+      links: [
+        { href: '/platform/admin/stock-explorer', label: 'Stock Explorer' },
+      ],
+    });
+    sections.push({
+      title: 'Warehouse',
+      links: [
+        { href: '/platform/admin/wms', label: 'WMS Dashboard' },
+        { href: '/platform/admin/wms/receive', label: 'Receiving' },
+        { href: '/platform/admin/wms/pick', label: 'Pick' },
+        { href: '/platform/admin/wms/dispatch', label: 'Dispatch' },
+        { href: '/platform/admin/wms/labels', label: 'Labels' },
+        { href: '/platform/admin/wms/movements', label: 'Movements' },
+        { href: '/platform/admin/wms/cycle-count', label: 'Cycle Count' },
+      ],
+    });
+  }
+
   // Admin sections — 6-section IA matching top nav
   if (user.role === 'admin') {
     sections.push({

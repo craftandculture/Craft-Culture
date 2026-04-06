@@ -3,7 +3,7 @@ import { z } from 'zod';
 
 import db from '@/database/client';
 import { wmsStock } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 const inputSchema = z.object({
   ownerId: z.string().uuid(),
@@ -18,7 +18,7 @@ const inputSchema = z.object({
  * Same as getPartnerWmsStock but takes ownerId as input
  * so admins can browse any partner's warehouse stock.
  */
-const adminGetWmsStockForOrder = adminProcedure
+const adminGetWmsStockForOrder = wmsOperatorProcedure
   .input(inputSchema)
   .query(async ({ input }) => {
     const { ownerId, search, limit, offset } = input;

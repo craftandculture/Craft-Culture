@@ -2,7 +2,7 @@ import { TRPCError } from '@trpc/server';
 
 import db from '@/database/client';
 import { wmsLocations } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 import logger from '@/utils/logger';
 
 import { addBaySchema } from '../schemas/baySchema';
@@ -23,7 +23,7 @@ import generateLocationCode from '../utils/generateLocationCode';
  *     forkliftFromLevel: '01'
  *   });
  */
-const adminAddBay = adminProcedure.input(addBaySchema).mutation(async ({ input }) => {
+const adminAddBay = wmsOperatorProcedure.input(addBaySchema).mutation(async ({ input }) => {
   try {
     const locations: Array<{
       locationCode: string;

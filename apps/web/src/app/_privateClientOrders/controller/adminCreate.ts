@@ -3,7 +3,7 @@ import { z } from 'zod';
 
 import db from '@/database/client';
 import { privateClientOrders } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 import generateOrderNumber from '../utils/generateOrderNumber';
 
@@ -12,7 +12,7 @@ import generateOrderNumber from '../utils/generateOrderNumber';
  *
  * Admins can create orders, optionally on behalf of a partner.
  */
-const adminCreate = adminProcedure
+const adminCreate = wmsOperatorProcedure
   .input(
     z.object({
       partnerId: z.string().uuid({ message: 'Partner is required' }),

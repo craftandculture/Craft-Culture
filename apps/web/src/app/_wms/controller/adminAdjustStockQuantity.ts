@@ -4,7 +4,7 @@ import { z } from 'zod';
 
 import db from '@/database/client';
 import { wmsStock, wmsStockMovements } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 import generateMovementNumber from '../utils/generateMovementNumber';
 
@@ -19,7 +19,7 @@ import generateMovementNumber from '../utils/generateMovementNumber';
  *     reason: "Physical count: found 5 cases, system showed 6"
  *   });
  */
-const adminAdjustStockQuantity = adminProcedure
+const adminAdjustStockQuantity = wmsOperatorProcedure
   .input(
     z.object({
       stockId: z.string().uuid(),

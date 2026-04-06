@@ -2,7 +2,7 @@ import { eq, sql } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { wmsStock } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 /**
  * Deduplicate stock records that were created due to retry errors
@@ -15,7 +15,7 @@ import { adminProcedure } from '@/lib/trpc/procedures';
  * @example
  *   await trpcClient.wms.admin.stock.deduplicate.mutate({});
  */
-const adminDeduplicateStock = adminProcedure.mutation(async () => {
+const adminDeduplicateStock = wmsOperatorProcedure.mutation(async () => {
   // Find all duplicate combinations
   // Note: Using (ARRAY_AGG(id ORDER BY created_at))[1] instead of MIN(id)
   // because PostgreSQL doesn't support MIN() on UUID type

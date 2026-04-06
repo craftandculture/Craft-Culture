@@ -50,6 +50,22 @@ export const adminProcedure = protectedProcedure.use(async ({ ctx, next }) => {
 });
 
 /**
+ * WMS Operator procedure
+ *
+ * Accessible to users with admin or wms_operator role.
+ * Use for WMS, Stock Explorer, and PCO endpoints that warehouse operators need.
+ */
+export const wmsOperatorProcedure = protectedProcedure.use(
+  async ({ ctx, next }) => {
+    ctx.accessControl(
+      () => ctx.user.role === 'admin' || ctx.user.role === 'wms_operator',
+    );
+
+    return await next({ ctx });
+  },
+);
+
+/**
  * Wine Partner procedure
  *
  * Accessible to users linked to a wine partner (wine company) via:

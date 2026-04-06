@@ -3,7 +3,7 @@ import { z } from 'zod';
 
 import db from '@/database/client';
 import { users, wmsReceivingDrafts } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 /**
  * Get the receiving draft for a shipment (if one exists)
@@ -13,7 +13,7 @@ import { adminProcedure } from '@/lib/trpc/procedures';
  * @example
  *   await trpcClient.wms.admin.receiving.getDraft.query({ shipmentId: 'uuid' });
  */
-const adminGetReceivingDraft = adminProcedure
+const adminGetReceivingDraft = wmsOperatorProcedure
   .input(z.object({ shipmentId: z.string().uuid() }))
   .query(async ({ input }) => {
     const [draft] = await db

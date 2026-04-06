@@ -12,7 +12,7 @@ const inputSchema = z
     email: z.string().email().optional(),
     name: z.string().min(1),
     customerType: z.enum(['b2b', 'b2c', 'private_clients']),
-    role: z.enum(['user', 'admin']).default('user'),
+    role: z.enum(['user', 'admin', 'wms_operator']).default('user'),
     approvalStatus: z
       .enum(['pending', 'approved', 'rejected'])
       .default('approved'),

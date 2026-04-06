@@ -2,7 +2,7 @@ import { TRPCError } from '@trpc/server';
 import { put } from '@vercel/blob';
 import { z } from 'zod';
 
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 const MAX_FILE_SIZE = 4 * 1024 * 1024; // 4MB (client compresses before upload; stays under Vercel 4.5MB body limit after base64)
 
@@ -29,7 +29,7 @@ const uploadReceivingPhotoSchema = z.object({
  *     fileType: 'image/jpeg',
  *   });
  */
-const adminUploadReceivingPhoto = adminProcedure
+const adminUploadReceivingPhoto = wmsOperatorProcedure
   .input(uploadReceivingPhotoSchema)
   .mutation(async ({ input }) => {
     const { shipmentId, itemId, file, filename, fileType } = input;

@@ -2,7 +2,7 @@ import { and, desc, eq, gte, lte, sql } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { users, wmsLocations, wmsStockMovements } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 import { getMovementHistorySchema } from '../schemas/stockQuerySchema';
 
@@ -16,7 +16,7 @@ import { getMovementHistorySchema } from '../schemas/stockQuerySchema';
  *     limit: 50
  *   });
  */
-const adminGetMovementHistory = adminProcedure
+const adminGetMovementHistory = wmsOperatorProcedure
   .input(getMovementHistorySchema)
   .query(async ({ input }) => {
     const { movementType, lwin18, locationId, dateFrom, dateTo, limit, offset } = input;

@@ -7,7 +7,7 @@ import {
   privateClientContacts,
   privateClientOrders,
 } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 import { privateClientOrderStatusEnum } from '../schemas/getOrdersSchema';
 
@@ -24,7 +24,7 @@ const adminGetOrdersSchema = z.object({
  *
  * Admins can see all orders across all partners with filtering options.
  */
-const adminGetMany = adminProcedure
+const adminGetMany = wmsOperatorProcedure
   .input(adminGetOrdersSchema)
   .query(async ({ input }) => {
     const { limit, cursor, search, status, partnerId } = input;

@@ -9,7 +9,7 @@ import {
   privateClientOrderActivityLogs,
   privateClientOrderItems,
 } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 const stockStatusLabels: Record<string, string> = {
   pending: 'Pending',
@@ -45,7 +45,7 @@ const bulkUpdateStockStatusSchema = z.object({
  * Admin procedure to update stock status for multiple items at once.
  * Useful for marking entire shipments as arrived or ready.
  */
-const itemsBulkUpdateStockStatus = adminProcedure
+const itemsBulkUpdateStockStatus = wmsOperatorProcedure
   .input(bulkUpdateStockStatusSchema)
   .mutation(async ({ input, ctx }) => {
     const { orderId, itemIds, stockStatus, stockExpectedAt, stockNotes } = input;

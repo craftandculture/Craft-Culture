@@ -1,5 +1,5 @@
 import { client } from '@/database/client';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 import { setImportPriceSchema } from '../schemas/pricingSchema';
 
@@ -14,7 +14,7 @@ import { setImportPriceSchema } from '../schemas/pricingSchema';
  * @param shipmentItemId - Optional reference to the source shipment item
  * @param notes - Optional notes about the price
  */
-const adminSetImportPrice = adminProcedure
+const adminSetImportPrice = wmsOperatorProcedure
   .input(setImportPriceSchema)
   .mutation(async ({ input, ctx }) => {
     const { lwin18, importPricePerBottle, source, shipmentItemId, notes } =

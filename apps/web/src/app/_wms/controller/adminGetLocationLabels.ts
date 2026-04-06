@@ -3,7 +3,7 @@ import { z } from 'zod';
 
 import db from '@/database/client';
 import { wmsLocations } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 import type { LocationLabelData } from '../utils/generateLocationLabelZpl';
 import { generateBatchLocationLabelsZpl } from '../utils/generateLocationLabelZpl';
@@ -20,7 +20,7 @@ import { generateBatchLocationLabelsZpl } from '../utils/generateLocationLabelZp
  *   // Get specific locations
  *   await trpcClient.wms.admin.labels.getLocationLabels.query({ locationIds: ["uuid1", "uuid2"] });
  */
-const adminGetLocationLabels = adminProcedure
+const adminGetLocationLabels = wmsOperatorProcedure
   .input(
     z
       .object({

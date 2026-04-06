@@ -2,7 +2,7 @@ import { eq, sql } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { wmsStock } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 /**
  * Rebuild stock records from movement history
@@ -12,7 +12,7 @@ import { adminProcedure } from '@/lib/trpc/procedures';
  * @example
  *   await trpcClient.wms.admin.stock.rebuildFromMovements.mutate();
  */
-const adminRebuildStockFromMovements = adminProcedure.mutation(async () => {
+const adminRebuildStockFromMovements = wmsOperatorProcedure.mutation(async () => {
   // Calculate net stock per product/location/shipment from all movements
   // This is the source of truth
   // Note: Transfers need special handling - each transfer creates TWO effects:

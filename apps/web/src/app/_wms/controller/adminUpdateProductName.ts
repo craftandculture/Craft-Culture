@@ -3,7 +3,7 @@ import { z } from 'zod';
 
 import db from '@/database/client';
 import { wmsCaseLabels, wmsStock, wmsStockMovements } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 /**
  * Update product name (and optionally producer) across all WMS records for a given LWIN18.
@@ -16,7 +16,7 @@ import { adminProcedure } from '@/lib/trpc/procedures';
  *     producer: 'Chateau Margaux',
  *   });
  */
-const adminUpdateProductName = adminProcedure
+const adminUpdateProductName = wmsOperatorProcedure
   .input(
     z.object({
       lwin18: z.string().min(1),

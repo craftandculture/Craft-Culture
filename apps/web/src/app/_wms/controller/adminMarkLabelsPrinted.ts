@@ -3,7 +3,7 @@ import { z } from 'zod';
 
 import db from '@/database/client';
 import { wmsCaseLabels } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 /**
  * Mark case labels as printed
@@ -11,7 +11,7 @@ import { adminProcedure } from '@/lib/trpc/procedures';
  * @example
  *   await trpcClient.wms.admin.labels.markPrinted.mutate({ labelIds: ["uuid1", "uuid2"] });
  */
-const adminMarkLabelsPrinted = adminProcedure
+const adminMarkLabelsPrinted = wmsOperatorProcedure
   .input(z.object({ labelIds: z.array(z.string().uuid()).min(1) }))
   .mutation(async ({ input }) => {
     await db

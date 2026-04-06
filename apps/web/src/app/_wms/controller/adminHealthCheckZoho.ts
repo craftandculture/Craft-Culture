@@ -1,4 +1,4 @@
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 import { getAccessToken, isZohoConfigured, zohoFetch } from '@/lib/zoho/client';
 
 /**
@@ -7,7 +7,7 @@ import { getAccessToken, isZohoConfigured, zohoFetch } from '@/lib/zoho/client';
  *
  * @returns Zoho health status with configuration and connectivity info
  */
-const adminHealthCheckZoho = adminProcedure.query(async () => {
+const adminHealthCheckZoho = wmsOperatorProcedure.query(async () => {
   const configured = isZohoConfigured();
 
   if (!configured) {
