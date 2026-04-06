@@ -3,7 +3,7 @@ import { and, eq, gt } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { wmsLocations, wmsStock } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 import { getStockAtLocationSchema } from '../schemas/transferSchema';
 
@@ -16,7 +16,7 @@ import { getStockAtLocationSchema } from '../schemas/transferSchema';
  *     locationId: "uuid"
  *   });
  */
-const adminGetStockAtLocation = adminProcedure
+const adminGetStockAtLocation = wmsOperatorProcedure
   .input(getStockAtLocationSchema)
   .query(async ({ input }) => {
     const { locationId } = input;

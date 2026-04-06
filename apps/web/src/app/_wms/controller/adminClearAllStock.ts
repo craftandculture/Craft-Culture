@@ -16,7 +16,7 @@ import {
   wmsStockReservations,
   zohoSalesOrderItems,
 } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 /**
  * Clear ALL WMS stock data for go-live preparation
@@ -30,7 +30,7 @@ import { adminProcedure } from '@/lib/trpc/procedures';
  * @example
  *   await trpcClient.wms.admin.stock.clearAll.mutate({ confirm: true });
  */
-const adminClearAllStock = adminProcedure
+const adminClearAllStock = wmsOperatorProcedure
   .input(z.object({ confirm: z.literal(true) }))
   .mutation(async () => {
     const counts = {

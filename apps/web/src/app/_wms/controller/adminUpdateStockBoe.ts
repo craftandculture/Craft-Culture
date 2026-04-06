@@ -3,7 +3,7 @@ import { z } from 'zod';
 
 import db from '@/database/client';
 import { wmsStock } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 /**
  * Update the Re-Export BOE number on a stock record
@@ -11,7 +11,7 @@ import { adminProcedure } from '@/lib/trpc/procedures';
  * @param stockId - The stock record UUID
  * @param reExportBoeNumber - The Re-Export BOE number to set
  */
-const adminUpdateStockBoe = adminProcedure
+const adminUpdateStockBoe = wmsOperatorProcedure
   .input(
     z.object({
       stockId: z.string().uuid(),

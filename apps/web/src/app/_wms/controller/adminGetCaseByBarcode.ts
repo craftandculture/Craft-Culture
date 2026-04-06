@@ -3,7 +3,7 @@ import { eq } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { wmsCaseLabels, wmsLocations, wmsStock } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 import getCaseByBarcodeSchema from '../schemas/getCaseByBarcodeSchema';
 
@@ -16,7 +16,7 @@ import getCaseByBarcodeSchema from '../schemas/getCaseByBarcodeSchema';
  *     barcode: "CASE-1010279-2015-06-00750-001"
  *   });
  */
-const adminGetCaseByBarcode = adminProcedure
+const adminGetCaseByBarcode = wmsOperatorProcedure
   .input(getCaseByBarcodeSchema)
   .query(async ({ input }) => {
     const { barcode } = input;

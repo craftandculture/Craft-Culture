@@ -9,7 +9,7 @@ import {
   wmsPallets,
   wmsStockMovements,
 } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 import { dissolvePalletSchema } from '../schemas/palletSchema';
 import generateMovementNumber from '../utils/generateMovementNumber';
@@ -24,7 +24,7 @@ import generateMovementNumber from '../utils/generateMovementNumber';
  *     reason: "Pallet no longer needed"
  *   });
  */
-const adminDissolvePallet = adminProcedure
+const adminDissolvePallet = wmsOperatorProcedure
   .input(dissolvePalletSchema)
   .mutation(async ({ input, ctx }) => {
     const { palletId, toLocationId, reason } = input;

@@ -9,7 +9,7 @@ import {
   wmsStock,
   wmsStockMovements,
 } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 import { getStockOverviewSchema } from '../schemas/stockQuerySchema';
 
@@ -19,7 +19,7 @@ import { getStockOverviewSchema } from '../schemas/stockQuerySchema';
  * @example
  *   await trpcClient.wms.admin.stock.getOverview.query({});
  */
-const adminGetStockOverview = adminProcedure
+const adminGetStockOverview = wmsOperatorProcedure
   .input(getStockOverviewSchema)
   .query(async () => {
     // Prepare date constants for queries (as ISO strings for SQL compatibility)

@@ -3,7 +3,7 @@ import { eq } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { privateClientOrderItems, privateClientOrders } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 import addItemSchema from '../schemas/addItemSchema';
 import recalculateOrderTotals from '../utils/recalculateOrderTotals';
@@ -14,7 +14,7 @@ import recalculateOrderTotals from '../utils/recalculateOrderTotals';
  * Admins can add items to any order. Order must be in editable status.
  * Automatically recalculates order totals.
  */
-const adminAddItem = adminProcedure
+const adminAddItem = wmsOperatorProcedure
   .input(addItemSchema)
   .mutation(async ({ input }) => {
     const { orderId, quantity, pricePerCaseUsd, ...itemData } = input;

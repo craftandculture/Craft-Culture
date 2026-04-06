@@ -6,7 +6,7 @@ import {
   wmsProductPricing,
   wmsStock,
 } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 import { getBulkPricingSchema } from '../schemas/pricingSchema';
 
@@ -19,7 +19,7 @@ import { getBulkPricingSchema } from '../schemas/pricingSchema';
  * @param lwin18s - Array of product LWIN18 identifiers
  * @returns Map of lwin18 → import price data
  */
-const adminGetBulkPricing = adminProcedure
+const adminGetBulkPricing = wmsOperatorProcedure
   .input(getBulkPricingSchema)
   .query(async ({ input }) => {
     const { lwin18s } = input;

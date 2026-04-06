@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 import checkLocalStockAvailability from './checkLocalStockAvailability';
 
@@ -14,7 +14,7 @@ const checkLocalStockSchema = z.object({
  * Admin procedure to check C&C warehouse availability
  * for a list of product IDs.
  */
-const checkLocalStock = adminProcedure
+const checkLocalStock = wmsOperatorProcedure
   .input(checkLocalStockSchema)
   .query(async ({ input }) => {
     const { productIds } = input;

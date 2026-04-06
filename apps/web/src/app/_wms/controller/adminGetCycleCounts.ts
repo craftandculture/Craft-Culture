@@ -2,7 +2,7 @@ import { desc, eq, sql } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { wmsCycleCounts, wmsLocations } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 import { getCycleCountsSchema } from '../schemas/cycleCountSchema';
 
@@ -14,7 +14,7 @@ import { getCycleCountsSchema } from '../schemas/cycleCountSchema';
  *     status: 'completed',
  *   });
  */
-const adminGetCycleCounts = adminProcedure
+const adminGetCycleCounts = wmsOperatorProcedure
   .input(getCycleCountsSchema)
   .query(async ({ input }) => {
     const { status, limit, offset } = input;

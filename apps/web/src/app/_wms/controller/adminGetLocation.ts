@@ -4,7 +4,7 @@ import { z } from 'zod';
 
 import db from '@/database/client';
 import { partners, wmsLocations, wmsStock } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 /**
  * Get a single warehouse location with stock details
@@ -14,7 +14,7 @@ import { adminProcedure } from '@/lib/trpc/procedures';
  *     id: "uuid"
  *   });
  */
-const adminGetLocation = adminProcedure
+const adminGetLocation = wmsOperatorProcedure
   .input(z.object({ id: z.string().uuid() }))
   .query(async ({ input }) => {
     const [location] = await db

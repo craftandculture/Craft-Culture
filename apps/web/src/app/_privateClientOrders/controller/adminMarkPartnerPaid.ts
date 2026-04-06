@@ -9,7 +9,7 @@ import {
   privateClientOrderActivityLogs,
   privateClientOrders,
 } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 const adminMarkPartnerPaidSchema = z.object({
   orderId: z.string().uuid(),
@@ -24,7 +24,7 @@ const adminMarkPartnerPaidSchema = z.object({
  * for their stock. This does NOT affect the order status - it's purely
  * for tracking the payment from C&C to the partner.
  */
-const adminMarkPartnerPaid = adminProcedure
+const adminMarkPartnerPaid = wmsOperatorProcedure
   .input(adminMarkPartnerPaidSchema)
   .mutation(async ({ input, ctx }) => {
     const { orderId, reference, notes } = input;

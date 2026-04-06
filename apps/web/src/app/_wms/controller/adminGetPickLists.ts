@@ -2,7 +2,7 @@ import { count, desc, eq, inArray } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { users, wmsPickLists, zohoInvoices } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 import { getPickListsSchema } from '../schemas/pickListSchema';
 
@@ -13,7 +13,7 @@ import { getPickListsSchema } from '../schemas/pickListSchema';
  *   await trpcClient.wms.admin.picking.getMany.query({});
  *   await trpcClient.wms.admin.picking.getMany.query({ status: 'pending' });
  */
-const adminGetPickLists = adminProcedure
+const adminGetPickLists = wmsOperatorProcedure
   .input(getPickListsSchema)
   .query(async ({ input }) => {
     const { status, limit, offset } = input;

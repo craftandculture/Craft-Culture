@@ -11,7 +11,7 @@ import {
   wmsStock,
   wmsStockMovements,
 } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 import generateCaseLabelBarcode from '../utils/generateCaseLabelBarcode';
 import generateLotNumber from '../utils/generateLotNumber';
@@ -53,7 +53,7 @@ const importStockSchema = z.object({
  *     ],
  *   });
  */
-const adminImportStock = adminProcedure
+const adminImportStock = wmsOperatorProcedure
   .input(importStockSchema)
   .mutation(async ({ input, ctx }) => {
     const { ownerId, locationId, items, notes } = input;

@@ -3,7 +3,7 @@ import { eq, sql } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { partners, wmsStock, wmsStockMovements } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 import { transferOwnershipSchema } from '../schemas/ownershipSchema';
 import generateMovementNumber from '../utils/generateMovementNumber';
@@ -21,7 +21,7 @@ import generateMovementNumber from '../utils/generateMovementNumber';
  *     notes: "Transfer to new distributor"
  *   });
  */
-const adminTransferOwnership = adminProcedure
+const adminTransferOwnership = wmsOperatorProcedure
   .input(transferOwnershipSchema)
   .mutation(async ({ input, ctx }) => {
     const {

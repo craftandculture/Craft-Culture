@@ -9,7 +9,7 @@ import {
   wmsStock,
   wmsStockMovements,
 } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 import { pickItemSchema } from '../schemas/pickListSchema';
 import convertReservationToPick from '../utils/convertReservationToPick';
@@ -26,7 +26,7 @@ import generateMovementNumber from '../utils/generateMovementNumber';
  *     pickedQuantity: 5
  *   });
  */
-const adminPickItem = adminProcedure
+const adminPickItem = wmsOperatorProcedure
   .input(pickItemSchema)
   .mutation(async ({ input, ctx }) => {
     const { pickListItemId, pickedFromLocationId, pickedQuantity, notes } = input;

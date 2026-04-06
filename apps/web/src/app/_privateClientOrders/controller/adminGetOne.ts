@@ -11,7 +11,7 @@ import {
   privateClientOrders,
   users,
 } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 /**
  * Get a single private client order by ID for admin view
@@ -19,7 +19,7 @@ import { adminProcedure } from '@/lib/trpc/procedures';
  * Returns the full order with all line items and related data.
  * Admins can view any order regardless of partner ownership.
  */
-const adminGetOne = adminProcedure
+const adminGetOne = wmsOperatorProcedure
   .input(z.object({ id: z.string().uuid() }))
   .query(async ({ input }) => {
     // Get the order with partner info

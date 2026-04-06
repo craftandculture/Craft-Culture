@@ -2,7 +2,7 @@ import { asc, eq, sql } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { wmsLocations, wmsStock, wmsStockMovements } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 /**
  * Reconcile stock records against movement history
@@ -12,7 +12,7 @@ import { adminProcedure } from '@/lib/trpc/procedures';
  * @example
  *   await trpcClient.wms.admin.stock.reconcile.query();
  */
-const adminReconcileStock = adminProcedure.query(async () => {
+const adminReconcileStock = wmsOperatorProcedure.query(async () => {
   // Get total cases from movements (all movement types that affect stock)
   // Exclude 'stock_correction' adjustments - those are data fixes, not physical inventory changes
   // Repack movements: repack_out removes stock, repack_in adds stock (net neutral for total bottles)

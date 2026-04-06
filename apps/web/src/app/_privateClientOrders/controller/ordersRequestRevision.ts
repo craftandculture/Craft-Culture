@@ -4,7 +4,7 @@ import { z } from 'zod';
 
 import db from '@/database/client';
 import { privateClientOrderActivityLogs, privateClientOrders } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 import notifyPartnerOfOrderUpdate from '../utils/notifyPartnerOfOrderUpdate';
 
@@ -19,7 +19,7 @@ const requestRevisionSchema = z.object({
  * Admin requests changes to an order that is under review.
  * The order status changes to 'revision_requested'.
  */
-const ordersRequestRevision = adminProcedure.input(requestRevisionSchema).mutation(async ({ input, ctx }) => {
+const ordersRequestRevision = wmsOperatorProcedure.input(requestRevisionSchema).mutation(async ({ input, ctx }) => {
   const { orderId, reason } = input;
   const { user } = ctx;
 

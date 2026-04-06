@@ -8,7 +8,7 @@ import {
   wmsPallets,
   wmsStockMovements,
 } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 import { dispatchPalletSchema } from '../schemas/palletSchema';
 import generateMovementNumber from '../utils/generateMovementNumber';
@@ -22,7 +22,7 @@ import generateMovementNumber from '../utils/generateMovementNumber';
  *     notes: "Shipped to customer XYZ"
  *   });
  */
-const adminDispatchPallet = adminProcedure
+const adminDispatchPallet = wmsOperatorProcedure
   .input(dispatchPalletSchema)
   .mutation(async ({ input, ctx }) => {
     const { palletId, notes } = input;

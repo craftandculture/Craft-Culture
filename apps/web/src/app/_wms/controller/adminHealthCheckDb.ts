@@ -1,7 +1,7 @@
 import { sql } from 'drizzle-orm';
 
 import db from '@/database/client';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 /**
  * Check database connectivity by executing a simple query
@@ -9,7 +9,7 @@ import { adminProcedure } from '@/lib/trpc/procedures';
  *
  * @returns Database health status with latency in milliseconds
  */
-const adminHealthCheckDb = adminProcedure.query(async () => {
+const adminHealthCheckDb = wmsOperatorProcedure.query(async () => {
   const start = performance.now();
 
   try {

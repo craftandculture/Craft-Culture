@@ -8,7 +8,7 @@ import {
   wmsDispatchBatchOrders,
   wmsDispatchBatches,
 } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 import { addOrdersToBatchSchema } from '../schemas/dispatchBatchSchema';
 
@@ -22,7 +22,7 @@ import { addOrdersToBatchSchema } from '../schemas/dispatchBatchSchema';
  *     orderIds: ["order-uuid-1", "order-uuid-2"]
  *   });
  */
-const adminAddOrdersToBatch = adminProcedure
+const adminAddOrdersToBatch = wmsOperatorProcedure
   .input(addOrdersToBatchSchema)
   .mutation(async ({ input }) => {
     const { batchId, orderIds } = input;

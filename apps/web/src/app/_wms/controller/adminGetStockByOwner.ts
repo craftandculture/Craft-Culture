@@ -2,7 +2,7 @@ import { and, desc, eq, gt, sql } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { partners, wmsStock } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 import { getStockByOwnerSchema } from '../schemas/stockQuerySchema';
 
@@ -14,7 +14,7 @@ import { getStockByOwnerSchema } from '../schemas/stockQuerySchema';
  *   await trpcClient.wms.admin.stock.getByOwner.query({});
  *   await trpcClient.wms.admin.stock.getByOwner.query({ ownerId: "uuid" });
  */
-const adminGetStockByOwner = adminProcedure
+const adminGetStockByOwner = wmsOperatorProcedure
   .input(getStockByOwnerSchema)
   .query(async ({ input }) => {
     const { ownerId } = input;

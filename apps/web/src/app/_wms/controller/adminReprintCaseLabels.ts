@@ -3,7 +3,7 @@ import { z } from 'zod';
 
 import db from '@/database/client';
 import { wmsCaseLabels, wmsStock } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 import generateLabelZpl, { type LabelData } from '../utils/generateLabelZpl';
 
@@ -18,7 +18,7 @@ import generateLabelZpl, { type LabelData } from '../utils/generateLabelZpl';
  *     stockId: "uuid",
  *   });
  */
-const adminReprintCaseLabels = adminProcedure
+const adminReprintCaseLabels = wmsOperatorProcedure
   .input(
     z.object({
       stockId: z.string().uuid(),

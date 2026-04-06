@@ -9,7 +9,7 @@ const inputSchema = z.object({
   userId: z.string().uuid(),
   name: z.string().min(1).optional(),
   customerType: z.enum(['b2b', 'b2c', 'private_clients']).optional(),
-  role: z.enum(['user', 'admin']).optional(),
+  role: z.enum(['user', 'admin', 'wms_operator']).optional(),
   approvalStatus: z.enum(['pending', 'approved', 'rejected']).optional(),
 });
 

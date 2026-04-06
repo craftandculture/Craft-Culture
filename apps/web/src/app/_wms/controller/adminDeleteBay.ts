@@ -3,7 +3,7 @@ import { and, eq, sql } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { wmsLocations, wmsStock } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 import logger from '@/utils/logger';
 
 import { deleteBaySchema } from '../schemas/baySchema';
@@ -20,7 +20,7 @@ import { deleteBaySchema } from '../schemas/baySchema';
  *     bay: '05',
  *   });
  */
-const adminDeleteBay = adminProcedure.input(deleteBaySchema).mutation(async ({ input }) => {
+const adminDeleteBay = wmsOperatorProcedure.input(deleteBaySchema).mutation(async ({ input }) => {
   try {
     const aisle = input.aisle.toUpperCase();
     const bay = input.bay;

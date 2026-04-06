@@ -15,7 +15,7 @@ const AdminLayout = async ({ children }: React.PropsWithChildren) => {
 
   const [user, userError] = await tryCatch(queryClient.fetchQuery(api.users.getMe.queryOptions()));
 
-  if (userError || user.role !== 'admin') {
+  if (userError || !['admin', 'wms_operator'].includes(user.role)) {
     redirect('/platform');
   }
 

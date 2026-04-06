@@ -11,9 +11,9 @@ import { z } from 'zod';
 
 import db from '@/database/client';
 import { wmsPickListItems, wmsPickLists, zohoSalesOrders } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
-const adminDeletePickList = adminProcedure
+const adminDeletePickList = wmsOperatorProcedure
   .input(z.object({ pickListId: z.string().uuid() }))
   .mutation(async ({ input }) => {
     const { pickListId } = input;

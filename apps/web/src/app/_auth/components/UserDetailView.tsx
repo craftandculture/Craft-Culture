@@ -76,7 +76,7 @@ const UserDetailView = ({ userId }: UserDetailViewProps) => {
   const [newEmail, setNewEmail] = useState('');
   const [editedName, setEditedName] = useState('');
   const [editedCustomerType, setEditedCustomerType] = useState<'b2b' | 'b2c' | 'private_clients'>('b2c');
-  const [editedRole, setEditedRole] = useState<'user' | 'admin'>('user');
+  const [editedRole, setEditedRole] = useState<'user' | 'admin' | 'wms_operator'>('user');
 
   // Fetch user data
   const { data, isLoading, error } = useQuery({
@@ -239,6 +239,13 @@ const UserDetailView = ({ userId }: UserDetailViewProps) => {
         </span>
       );
     }
+    if (role === 'wms_operator') {
+      return (
+        <span className="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800">
+          WMS Operator
+        </span>
+      );
+    }
     return null;
   };
 
@@ -256,7 +263,7 @@ const UserDetailView = ({ userId }: UserDetailViewProps) => {
   const handleStartEdit = () => {
     setEditedName(user.name || '');
     setEditedCustomerType(user.customerType as 'b2b' | 'b2c' | 'private_clients');
-    setEditedRole(user.role as 'user' | 'admin');
+    setEditedRole(user.role as 'user' | 'admin' | 'wms_operator');
     setIsEditingProfile(true);
   };
 
@@ -519,6 +526,7 @@ const UserDetailView = ({ userId }: UserDetailViewProps) => {
                         <SelectContent>
                           <SelectItem value="user">User</SelectItem>
                           <SelectItem value="admin">Admin</SelectItem>
+                          <SelectItem value="wms_operator">WMS Operator</SelectItem>
                         </SelectContent>
                       </Select>
                     ) : (

@@ -53,7 +53,7 @@ interface UserToEdit {
   name: string | null;
   email: string;
   customerType: 'b2b' | 'b2c' | 'private_clients';
-  role: 'user' | 'admin';
+  role: 'user' | 'admin' | 'wms_operator';
   approvalStatus: 'pending' | 'approved' | 'rejected';
   isTestUser?: boolean;
 }
@@ -79,7 +79,7 @@ const UserEditDialog = ({
   const [customerType, setCustomerType] = useState<'b2b' | 'b2c' | 'private_clients'>(
     user?.customerType ?? 'b2c',
   );
-  const [role, setRole] = useState<'user' | 'admin'>(user?.role ?? 'user');
+  const [role, setRole] = useState<'user' | 'admin' | 'wms_operator'>(user?.role ?? 'user');
   const [approvalStatus, setApprovalStatus] = useState<'pending' | 'approved' | 'rejected'>(
     user?.approvalStatus ?? 'pending',
   );
@@ -256,6 +256,7 @@ const UserEditDialog = ({
               <SelectContent>
                 <SelectItem value="user">User</SelectItem>
                 <SelectItem value="admin">Admin</SelectItem>
+                <SelectItem value="wms_operator">WMS Operator</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -316,7 +317,7 @@ const UserCreateDialog = ({
   const [customerType, setCustomerType] = useState<'b2b' | 'b2c' | 'private_clients'>(
     'private_clients',
   );
-  const [role, setRole] = useState<'user' | 'admin'>('user');
+  const [role, setRole] = useState<'user' | 'admin' | 'wms_operator'>('user');
   const [approvalStatus, setApprovalStatus] = useState<'pending' | 'approved' | 'rejected'>(
     'approved',
   );
@@ -458,6 +459,7 @@ const UserCreateDialog = ({
               <SelectContent>
                 <SelectItem value="user">User</SelectItem>
                 <SelectItem value="admin">Admin</SelectItem>
+                <SelectItem value="wms_operator">WMS Operator</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -1199,7 +1201,7 @@ const UserManagementPage = () => {
                                   name: user.name,
                                   email: user.email,
                                   customerType: user.customerType as 'b2b' | 'b2c' | 'private_clients',
-                                  role: user.role as 'user' | 'admin',
+                                  role: user.role as 'user' | 'admin' | 'wms_operator',
                                   approvalStatus: user.approvalStatus as 'pending' | 'approved' | 'rejected',
                                 });
                                 setEditDialogOpen(true);
@@ -1339,7 +1341,7 @@ const UserManagementPage = () => {
                               name: user.name,
                               email: user.email,
                               customerType: user.customerType as 'b2b' | 'b2c' | 'private_clients',
-                              role: user.role as 'user' | 'admin',
+                              role: user.role as 'user' | 'admin' | 'wms_operator',
                               approvalStatus: user.approvalStatus as 'pending' | 'approved' | 'rejected',
                             });
                             setEditDialogOpen(true);

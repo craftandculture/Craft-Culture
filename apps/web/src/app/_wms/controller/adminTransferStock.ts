@@ -10,7 +10,7 @@ import {
   wmsStock,
   wmsStockMovements,
 } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 import { transferStockSchema } from '../schemas/transferSchema';
 import generateMovementNumber from '../utils/generateMovementNumber';
@@ -26,7 +26,7 @@ import generateMovementNumber from '../utils/generateMovementNumber';
  *     toLocationId: "uuid"
  *   });
  */
-const adminTransferStock = adminProcedure
+const adminTransferStock = wmsOperatorProcedure
   .input(transferStockSchema)
   .mutation(async ({ input, ctx }) => {
     const { stockId, quantityCases, toLocationId, notes } = input;

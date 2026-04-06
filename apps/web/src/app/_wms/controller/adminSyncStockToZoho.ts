@@ -3,7 +3,7 @@ import { z } from 'zod';
 
 import db from '@/database/client';
 import { wmsStock } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 import { createInventoryAdjustment } from '@/lib/zoho/inventoryAdjustments';
 import { getAllItems, searchItems } from '@/lib/zoho/items';
 import logger from '@/utils/logger';
@@ -17,7 +17,7 @@ import logger from '@/utils/logger';
  * @example
  *   await trpcClient.wms.admin.stock.syncToZoho.mutate({ dryRun: true });
  */
-const adminSyncStockToZoho = adminProcedure
+const adminSyncStockToZoho = wmsOperatorProcedure
   .input(
     z.object({
       dryRun: z.boolean().default(false), // If true, only report what would change

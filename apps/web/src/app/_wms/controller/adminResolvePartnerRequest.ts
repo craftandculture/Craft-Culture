@@ -3,7 +3,7 @@ import { eq } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { wmsPartnerRequests } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 import { resolvePartnerRequestSchema } from '../schemas/ownershipSchema';
 
@@ -18,7 +18,7 @@ import { resolvePartnerRequestSchema } from '../schemas/ownershipSchema';
  *     adminNotes: "Approved for transfer"
  *   });
  */
-const adminResolvePartnerRequest = adminProcedure
+const adminResolvePartnerRequest = wmsOperatorProcedure
   .input(resolvePartnerRequestSchema)
   .mutation(async ({ input, ctx }) => {
     const { requestId, status, adminNotes } = input;

@@ -70,7 +70,7 @@ const PlatformLayout = async ({ children }: React.PropsWithChildren) => {
           <div className="flex items-center gap-3 md:gap-6">
             <PlatformMobileNav user={{ role: user.role, customerType: user.customerType, partner: user.partner }} />
             <Link
-              href={user.role === 'admin' ? '/platform/admin/home' : user.customerType === 'private_clients' && user.partner?.type === 'wine_partner' ? '/platform/partner/stock' : '/platform/quotes'}
+              href={user.role === 'admin' ? '/platform/admin/home' : user.role === 'wms_operator' ? '/platform/admin/wms' : user.customerType === 'private_clients' && user.partner?.type === 'wine_partner' ? '/platform/partner/stock' : '/platform/quotes'}
               className="transition-opacity duration-200 hover:opacity-80"
             >
               <BrandedLogo customerType={user.customerType} height={144} />
@@ -200,7 +200,7 @@ const PlatformLayout = async ({ children }: React.PropsWithChildren) => {
                 </div>
               )}
               {/* Admin top nav - 6 section items */}
-              {user.role === 'admin' && <AdminTopNav />}
+              {(user.role === 'admin' || user.role === 'wms_operator') && <AdminTopNav userRole={user.role} />}
             </nav>
           </div>
           <div className="flex items-center gap-2 sm:gap-3">
@@ -218,7 +218,7 @@ const PlatformLayout = async ({ children }: React.PropsWithChildren) => {
             <UserDropdown user={user} />
           </div>
         </div>
-        {user.role === 'admin' && <AdminSectionTabs />}
+        {(user.role === 'admin' || user.role === 'wms_operator') && <AdminSectionTabs userRole={user.role} />}
       </header>
       <div className="flex-1">{children}</div>
       <BrandedFooter customerType={user.customerType} partnerType={user.partner?.type as 'wine_partner' | 'distributor' | undefined} />

@@ -3,7 +3,7 @@ import { z } from 'zod';
 
 import db from '@/database/client';
 import { wmsLocations } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 import logger from '@/utils/logger';
 
 /**
@@ -15,7 +15,7 @@ import logger from '@/utils/logger';
  *     locationType: "receiving"
  *   });
  */
-const adminCreateSpecialLocation = adminProcedure
+const adminCreateSpecialLocation = wmsOperatorProcedure
   .input(
     z.object({
       name: z.string().min(1).max(50),

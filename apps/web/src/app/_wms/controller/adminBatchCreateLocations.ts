@@ -2,7 +2,7 @@ import { TRPCError } from '@trpc/server';
 
 import db from '@/database/client';
 import { wmsLocations } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 import logger from '@/utils/logger';
 
 import { batchCreateLocationsSchema } from '../schemas/locationSchema';
@@ -24,7 +24,7 @@ import generateLocationCode from '../utils/generateLocationCode';
  *     forkliftFromLevel: "01"
  *   });
  */
-const adminBatchCreateLocations = adminProcedure
+const adminBatchCreateLocations = wmsOperatorProcedure
   .input(batchCreateLocationsSchema)
   .mutation(async ({ input }) => {
     try {

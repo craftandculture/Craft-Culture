@@ -2,7 +2,7 @@ import { and, asc, eq, lte, sql } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { wmsLocations, wmsStock } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 import { getExpiringStockSchema } from '../schemas/stockQuerySchema';
 
@@ -16,7 +16,7 @@ import { getExpiringStockSchema } from '../schemas/stockQuerySchema';
  *     includeExpired: true
  *   });
  */
-const adminGetExpiringStock = adminProcedure
+const adminGetExpiringStock = wmsOperatorProcedure
   .input(getExpiringStockSchema)
   .query(async ({ input }) => {
     const { daysThreshold, includeExpired } = input;

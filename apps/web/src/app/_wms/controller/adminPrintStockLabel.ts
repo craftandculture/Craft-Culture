@@ -3,7 +3,7 @@ import { z } from 'zod';
 
 import db from '@/database/client';
 import { wmsLocations, wmsStock } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 import generateLabelZpl from '../utils/generateLabelZpl';
 
@@ -19,7 +19,7 @@ import generateLabelZpl from '../utils/generateLabelZpl';
  *     copies: 4,
  *   });
  */
-const adminPrintStockLabel = adminProcedure
+const adminPrintStockLabel = wmsOperatorProcedure
   .input(
     z.object({
       stockId: z.string().uuid(),

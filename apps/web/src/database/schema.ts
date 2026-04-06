@@ -33,7 +33,7 @@ export const productSource = pgEnum('product_source', ['cultx', 'local_inventory
 
 export const customerType = pgEnum('user_type', ['b2b', 'b2c', 'private_clients']);
 
-export const userRole = pgEnum('user_role', ['user', 'admin']);
+export const userRole = pgEnum('user_role', ['user', 'admin', 'wms_operator']);
 
 export const approvalStatus = pgEnum('approval_status', [
   'pending',

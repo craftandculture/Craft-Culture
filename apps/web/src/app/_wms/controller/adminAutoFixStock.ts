@@ -2,7 +2,7 @@ import { eq, sql } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { wmsStock, wmsStockMovements } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 import generateMovementNumber from '../utils/generateMovementNumber';
 
@@ -15,7 +15,7 @@ import generateMovementNumber from '../utils/generateMovementNumber';
  * @example
  *   await trpcClient.wms.admin.stock.autoFix.mutate();
  */
-const adminAutoFixStock = adminProcedure.mutation(async ({ ctx }) => {
+const adminAutoFixStock = wmsOperatorProcedure.mutation(async ({ ctx }) => {
   const fixes: Array<{
     type: 'deleted_orphan' | 'merged_duplicate';
     lwin18: string;

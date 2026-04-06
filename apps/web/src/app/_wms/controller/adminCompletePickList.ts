@@ -3,7 +3,7 @@ import { eq } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { wmsPickListItems, wmsPickLists, zohoSalesOrders } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 import { completePickListSchema } from '../schemas/pickListSchema';
 
@@ -16,7 +16,7 @@ import { completePickListSchema } from '../schemas/pickListSchema';
  *     pickListId: "uuid"
  *   });
  */
-const adminCompletePickList = adminProcedure
+const adminCompletePickList = wmsOperatorProcedure
   .input(completePickListSchema)
   .mutation(async ({ input, ctx }) => {
     const { pickListId, notes } = input;

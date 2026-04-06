@@ -3,7 +3,7 @@ import { z } from 'zod';
 
 import db from '@/database/client';
 import { logisticsShipmentItems, logisticsShipments, partners } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 /**
  * Get a single shipment with its items for WMS receiving
@@ -11,7 +11,7 @@ import { adminProcedure } from '@/lib/trpc/procedures';
  * @example
  *   await trpcClient.wms.admin.receiving.getShipmentForReceiving.query({ shipmentId: "uuid" });
  */
-const adminGetShipmentForReceiving = adminProcedure
+const adminGetShipmentForReceiving = wmsOperatorProcedure
   .input(z.object({ shipmentId: z.string().uuid() }))
   .query(async ({ input }) => {
     // Get the shipment with partner info

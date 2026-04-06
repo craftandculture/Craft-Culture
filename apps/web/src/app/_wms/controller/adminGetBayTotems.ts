@@ -3,7 +3,7 @@ import { z } from 'zod';
 
 import db from '@/database/client';
 import { wmsLocations } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 import type { BayTotemData } from '../utils/generateBayTotemZpl';
 import { generateBatchBayTotemsZpl } from '../utils/generateBayTotemZpl';
@@ -21,7 +21,7 @@ import { generateBatchBayTotemsZpl } from '../utils/generateBayTotemZpl';
  *   // Get specific aisle
  *   await trpcClient.wms.admin.labels.getBayTotems.query({ aisle: 'A' });
  */
-const adminGetBayTotems = adminProcedure
+const adminGetBayTotems = wmsOperatorProcedure
   .input(
     z
       .object({

@@ -3,7 +3,7 @@ import { eq } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { users, wmsLocations, wmsPickListItems, wmsPickLists, zohoInvoices } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 import { getPickListSchema } from '../schemas/pickListSchema';
 
@@ -13,7 +13,7 @@ import { getPickListSchema } from '../schemas/pickListSchema';
  * @example
  *   await trpcClient.wms.admin.picking.getOne.query({ pickListId: "uuid" });
  */
-const adminGetPickList = adminProcedure
+const adminGetPickList = wmsOperatorProcedure
   .input(getPickListSchema)
   .query(async ({ input }) => {
     const { pickListId } = input;

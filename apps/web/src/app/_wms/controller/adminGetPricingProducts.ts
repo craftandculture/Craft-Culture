@@ -2,7 +2,7 @@ import { and, asc, desc, eq, gt, ilike, inArray, isNotNull, or, sql } from 'driz
 
 import db from '@/database/client';
 import { logisticsShipmentItems, wmsProductPricing, wmsStock } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 import { getPricingProductsSchema } from '../schemas/pricingManagerSchema';
 
@@ -13,7 +13,7 @@ import { getPricingProductsSchema } from '../schemas/pricingManagerSchema';
  * for KPI cards (total products, avg margin, unpriced count, total values).
  * Falls back to shipment landed cost when no explicit import price exists.
  */
-const adminGetPricingProducts = adminProcedure
+const adminGetPricingProducts = wmsOperatorProcedure
   .input(getPricingProductsSchema)
   .query(async ({ input }) => {
     const { search, category, ownerId, sortBy, sortOrder, limit, offset } = input;

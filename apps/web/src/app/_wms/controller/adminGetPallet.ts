@@ -3,7 +3,7 @@ import { and, eq, isNull } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { wmsLocations, wmsPalletCases, wmsPallets } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 import { getPalletSchema } from '../schemas/palletSchema';
 
@@ -15,7 +15,7 @@ import { getPalletSchema } from '../schemas/palletSchema';
  *     palletId: "pallet-uuid"
  *   });
  */
-const adminGetPallet = adminProcedure.input(getPalletSchema).query(async ({ input }) => {
+const adminGetPallet = wmsOperatorProcedure.input(getPalletSchema).query(async ({ input }) => {
   const { palletId } = input;
 
   // Get pallet with location

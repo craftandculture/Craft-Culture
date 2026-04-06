@@ -3,7 +3,7 @@ import { eq } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { wmsPallets, wmsStockMovements } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 import { sealPalletSchema } from '../schemas/palletSchema';
 import generateMovementNumber from '../utils/generateMovementNumber';
@@ -16,7 +16,7 @@ import generateMovementNumber from '../utils/generateMovementNumber';
  *     palletId: "pallet-uuid"
  *   });
  */
-const adminSealPallet = adminProcedure
+const adminSealPallet = wmsOperatorProcedure
   .input(sealPalletSchema)
   .mutation(async ({ input, ctx }) => {
     const { palletId } = input;

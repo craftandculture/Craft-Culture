@@ -3,7 +3,7 @@ import { eq, sql } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { wmsStock } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 import { releaseReservationSchema } from '../schemas/ownershipSchema';
 
@@ -18,7 +18,7 @@ import { releaseReservationSchema } from '../schemas/ownershipSchema';
  *     reason: "Order cancelled"
  *   });
  */
-const adminReleaseReservation = adminProcedure
+const adminReleaseReservation = wmsOperatorProcedure
   .input(releaseReservationSchema)
   .mutation(async ({ input }) => {
     const { stockId, quantityCases, reason } = input;

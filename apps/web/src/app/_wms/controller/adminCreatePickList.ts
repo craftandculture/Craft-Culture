@@ -9,7 +9,7 @@ import {
   wmsPickLists,
   wmsStock,
 } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 import { createPickListSchema } from '../schemas/pickListSchema';
 import generatePickListNumber from '../utils/generatePickListNumber';
@@ -23,7 +23,7 @@ import generatePickListNumber from '../utils/generatePickListNumber';
  *     orderId: "uuid"
  *   });
  */
-const adminCreatePickList = adminProcedure
+const adminCreatePickList = wmsOperatorProcedure
   .input(createPickListSchema)
   .mutation(async ({ input }) => {
     const { orderId } = input;

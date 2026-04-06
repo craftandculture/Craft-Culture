@@ -3,7 +3,7 @@ import { eq, sql } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { partners, wmsPallets } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 import { createPalletSchema } from '../schemas/palletSchema';
 
@@ -39,7 +39,7 @@ const generatePalletCode = async () => {
  *     notes: "Mixed pallet for storage"
  *   });
  */
-const adminCreatePallet = adminProcedure
+const adminCreatePallet = wmsOperatorProcedure
   .input(createPalletSchema)
   .mutation(async ({ input }) => {
     const { ownerId, storageType, notes } = input;

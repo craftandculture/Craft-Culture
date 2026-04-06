@@ -3,7 +3,7 @@ import { eq } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { partners, wmsDispatchBatches } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 import { createDispatchBatchSchema } from '../schemas/dispatchBatchSchema';
 import generateBatchNumber from '../utils/generateBatchNumber';
@@ -16,7 +16,7 @@ import generateBatchNumber from '../utils/generateBatchNumber';
  *     distributorId: "uuid"
  *   });
  */
-const adminCreateDispatchBatch = adminProcedure
+const adminCreateDispatchBatch = wmsOperatorProcedure
   .input(createDispatchBatchSchema)
   .mutation(async ({ input }) => {
     const { distributorId } = input;

@@ -3,7 +3,7 @@ import { eq } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { wmsPickLists } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 import { assignPickListSchema } from '../schemas/pickListSchema';
 
@@ -16,7 +16,7 @@ import { assignPickListSchema } from '../schemas/pickListSchema';
  *     assignedTo: "user-uuid"
  *   });
  */
-const adminAssignPickList = adminProcedure
+const adminAssignPickList = wmsOperatorProcedure
   .input(assignPickListSchema)
   .mutation(async ({ input }) => {
     const { pickListId, assignedTo } = input;

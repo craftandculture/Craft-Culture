@@ -4,7 +4,7 @@ import { z } from 'zod';
 
 import db from '@/database/client';
 import { privateClientOrderItems } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 import recalculateOrderTotals from '../utils/recalculateOrderTotals';
 
@@ -20,7 +20,7 @@ const NON_EDITABLE_STATUSES = ['delivered', 'cancelled'];
  *
  * Admins can remove items from any order except delivered or cancelled orders.
  */
-const adminRemoveItem = adminProcedure
+const adminRemoveItem = wmsOperatorProcedure
   .input(adminRemoveItemSchema)
   .mutation(async ({ input }) => {
     const { itemId } = input;

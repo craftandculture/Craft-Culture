@@ -16,6 +16,10 @@ import { usePathname } from 'next/navigation';
 import type { IconProp } from '@/app/_ui/components/Icon/Icon';
 import Icon from '@/app/_ui/components/Icon/Icon';
 
+interface AdminTopNavProps {
+  userRole?: string;
+}
+
 interface AdminNavItem {
   label: string;
   href: string;
@@ -89,17 +93,24 @@ const getSectionFromPathname = (pathname: string) => {
   return 'home';
 };
 
+/** Sections visible to WMS operators */
+const operatorSections = new Set(['warehouse', 'stock', 'orders']);
+
 /**
  * Admin top navigation bar with 6 section items
  * Replaces the old sidebar + header pill navigation
  */
-const AdminTopNav = () => {
+const AdminTopNav = ({ userRole }: AdminTopNavProps) => {
   const pathname = usePathname();
   const currentSection = getSectionFromPathname(pathname);
 
+  const visibleItems = userRole === 'wms_operator'
+    ? adminNavItems.filter((item) => operatorSections.has(item.section))
+    : adminNavItems;
+
   return (
     <nav className="hidden items-center gap-1 md:flex">
-      {adminNavItems.map((item) => {
+      {visibleItems.map((item) => {
         const isActive = currentSection === item.section;
 
         return (

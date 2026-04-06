@@ -2,7 +2,7 @@ import { asc, eq } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { wmsLocations, wmsStock } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 /**
  * Get all stock records with full details for verification
@@ -11,7 +11,7 @@ import { adminProcedure } from '@/lib/trpc/procedures';
  * @example
  *   await trpcClient.wms.admin.stock.getAll.query();
  */
-const adminGetAllStockRecords = adminProcedure.query(async () => {
+const adminGetAllStockRecords = wmsOperatorProcedure.query(async () => {
   const records = await db
     .select({
       id: wmsStock.id,
