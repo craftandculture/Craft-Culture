@@ -278,6 +278,11 @@ const WMSPickListDetailPage = () => {
             <Typography variant="bodyXs" colorRole="muted">
               {data.invoiceNumber ?? data.orderNumber}
             </Typography>
+            {data.invoiceNumber && data.orderNumber && (
+              <Typography variant="bodyXs" colorRole="muted" className="opacity-60">
+                {data.orderNumber}
+              </Typography>
+            )}
           </div>
           {!isComplete && (
             <Button

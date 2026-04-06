@@ -178,6 +178,9 @@ const NewPickListPage = () => {
       ? order.salesOrderNumber
           ?.toLowerCase()
           .includes(searchQuery.toLowerCase()) ||
+        order.invoiceNumber
+          ?.toLowerCase()
+          .includes(searchQuery.toLowerCase()) ||
         order.customerName
           ?.toLowerCase()
           .includes(searchQuery.toLowerCase())
@@ -348,11 +351,16 @@ const NewPickListPage = () => {
                               variant="bodySm"
                               className="font-semibold"
                             >
-                              {order.salesOrderNumber}
+                              {order.invoiceNumber ?? order.salesOrderNumber}
                             </Typography>
                             <Typography variant="bodyXs" colorRole="muted">
                               {order.customerName ?? 'Unknown customer'}
                             </Typography>
+                            {order.invoiceNumber && (
+                              <Typography variant="bodyXs" colorRole="muted">
+                                {order.salesOrderNumber}
+                              </Typography>
+                            )}
                             <div className="mt-1 flex items-center gap-3 text-xs text-text-muted">
                               <span>{order.itemCount} items</span>
                               <span>{order.totalQuantity} cases</span>
