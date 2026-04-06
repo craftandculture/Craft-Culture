@@ -3,6 +3,8 @@
 import {
   IconArrowLeft,
   IconCheck,
+  IconChevronDown,
+  IconChevronUp,
   IconLoader2,
   IconPlus,
   IconRefresh,
@@ -41,6 +43,7 @@ const NewPickListPage = () => {
   const [selectedOrderIds, setSelectedOrderIds] = useState<Set<string>>(
     new Set(),
   );
+  const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
 
   // Fetch Zoho sales orders
   const { data: zohoOrders, isLoading: isLoadingZoho } = useQuery({
@@ -59,10 +62,26 @@ const NewPickListPage = () => {
 
   // Fetch PCO orders (cc_approved status, no pick list yet)
   const { data: pcoOrders, isLoading: isLoadingPco } = useQuery({
-    ...api.privateClientOrders.admin.getMany.queryOptions({
+    ...api.privateClientOrders.adminGetMany.queryOptions({
       status: 'cc_approved',
       limit: 50,
     }),
+  });
+
+  // Lazy-load Zoho order items when expanded
+  const { data: expandedZohoOrder, isLoading: isLoadingZohoItems } = useQuery({
+    ...api.zohoSalesOrders.get.queryOptions({
+      id: expandedOrderId ?? '',
+    }),
+    enabled: !!expandedOrderId && activeTab === 'sales',
+  });
+
+  // Lazy-load PCO order items when expanded
+  const { data: expandedPcoOrder, isLoading: isLoadingPcoItems } = useQuery({
+    ...api.privateClientOrders.adminGetOne.queryOptions({
+      id: expandedOrderId ?? '',
+    }),
+    enabled: !!expandedOrderId && activeTab === 'private',
   });
 
   // Release Zoho order to pick (creates pick list)
@@ -97,6 +116,11 @@ const NewPickListPage = () => {
       }
       return next;
     });
+  };
+
+  const toggleExpand = (e: React.MouseEvent, orderId: string) => {
+    e.stopPropagation();
+    setExpandedOrderId((prev) => (prev === orderId ? null : orderId));
   };
 
   const handleCreate = async () => {
@@ -145,6 +169,7 @@ const NewPickListPage = () => {
     setActiveTab(tab);
     setSelectedOrderIds(new Set());
     setSearchQuery('');
+    setExpandedOrderId(null);
   };
 
   // Filter Zoho orders by search
@@ -160,7 +185,7 @@ const NewPickListPage = () => {
   );
 
   // Filter PCO orders by search
-  const filteredPcoOrders = pcoOrders?.orders.filter((order) =>
+  const filteredPcoOrders = pcoOrders?.data.filter((order) =>
     searchQuery
       ? order.orderNumber
           .toLowerCase()
@@ -303,53 +328,106 @@ const NewPickListPage = () => {
                     Select All ({filteredZohoOrders.length})
                   </button>
                 )}
-                {filteredZohoOrders?.map((order) => (
-                  <Card
-                    key={order.id}
-                    className={`cursor-pointer transition-all ${
-                      selectedOrderIds.has(order.id)
-                        ? 'border-2 border-brand-500 ring-2 ring-brand-500/20'
-                        : 'hover:border-border-brand'
-                    }`}
-                    onClick={() => toggleOrder(order.id)}
-                  >
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <Typography
-                            variant="bodySm"
-                            className="font-semibold"
+                {filteredZohoOrders?.map((order) => {
+                  const isExpanded = expandedOrderId === order.id;
+                  return (
+                    <Card
+                      key={order.id}
+                      className={`cursor-pointer transition-all ${
+                        selectedOrderIds.has(order.id)
+                          ? 'border-2 border-brand-500 ring-2 ring-brand-500/20'
+                          : 'hover:border-border-brand'
+                      }`}
+                      onClick={() => toggleOrder(order.id)}
+                    >
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <Typography
+                              variant="bodySm"
+                              className="font-semibold"
+                            >
+                              {order.salesOrderNumber}
+                            </Typography>
+                            <Typography variant="bodyXs" colorRole="muted">
+                              {order.customerName ?? 'Unknown customer'}
+                            </Typography>
+                            <div className="mt-1 flex items-center gap-3 text-xs text-text-muted">
+                              <span>{order.itemCount} items</span>
+                              <span>{order.totalQuantity} cases</span>
+                              <span>
+                                {new Date(
+                                  order.createdAt,
+                                ).toLocaleDateString()}
+                              </span>
+                            </div>
+                          </div>
+                          <div
+                            className={`flex h-6 w-6 items-center justify-center rounded ${
+                              selectedOrderIds.has(order.id)
+                                ? 'bg-brand-500 text-white'
+                                : 'border-2 border-border-primary'
+                            }`}
                           >
-                            {order.salesOrderNumber}
-                          </Typography>
-                          <Typography variant="bodyXs" colorRole="muted">
-                            {order.customerName ?? 'Unknown customer'}
-                          </Typography>
-                          <div className="mt-1 flex items-center gap-3 text-xs text-text-muted">
-                            <span>{order.itemCount} items</span>
-                            <span>{order.totalQuantity} cases</span>
-                            <span>
-                              {new Date(
-                                order.createdAt,
-                              ).toLocaleDateString()}
-                            </span>
+                            {selectedOrderIds.has(order.id) && (
+                              <Icon icon={IconCheck} size="xs" />
+                            )}
                           </div>
                         </div>
-                        <div
-                          className={`flex h-6 w-6 items-center justify-center rounded ${
-                            selectedOrderIds.has(order.id)
-                              ? 'bg-brand-500 text-white'
-                              : 'border-2 border-border-primary'
-                          }`}
+                        {/* View Items toggle */}
+                        <button
+                          type="button"
+                          onClick={(e) => toggleExpand(e, order.id)}
+                          className="mt-2 flex w-full items-center gap-1 text-xs font-medium text-brand-500 hover:text-brand-600"
                         >
-                          {selectedOrderIds.has(order.id) && (
-                            <Icon icon={IconCheck} size="xs" />
-                          )}
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                          <Icon
+                            icon={isExpanded ? IconChevronUp : IconChevronDown}
+                            size="xs"
+                          />
+                          {isExpanded ? 'Hide Items' : 'View Items'}
+                        </button>
+                        {/* Expanded items */}
+                        {isExpanded && (
+                          <div className="mt-2 rounded-md bg-fill-secondary p-3">
+                            {isLoadingZohoItems ? (
+                              <div className="flex items-center justify-center py-2">
+                                <Icon
+                                  icon={IconLoader2}
+                                  size="xs"
+                                  className="animate-spin text-text-muted"
+                                />
+                              </div>
+                            ) : expandedZohoOrder?.items.length ? (
+                              <div className="space-y-1.5">
+                                {expandedZohoOrder.items.map((item) => (
+                                  <div
+                                    key={item.id}
+                                    className="flex items-center justify-between text-xs"
+                                  >
+                                    <span className="truncate text-text-primary">
+                                      {item.name}
+                                    </span>
+                                    <span className="ml-2 shrink-0 text-text-muted">
+                                      x{item.quantity}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <Typography
+                                variant="bodyXs"
+                                colorRole="muted"
+                                className="text-center"
+                              >
+                                No items
+                              </Typography>
+                            )}
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
               </>
             )}
           </div>
@@ -399,53 +477,109 @@ const NewPickListPage = () => {
                     Select All ({filteredPcoOrders.length})
                   </button>
                 )}
-                {filteredPcoOrders?.map((order) => (
-                  <Card
-                    key={order.id}
-                    className={`cursor-pointer transition-all ${
-                      selectedOrderIds.has(order.id)
-                        ? 'border-2 border-brand-500 ring-2 ring-brand-500/20'
-                        : 'hover:border-border-brand'
-                    }`}
-                    onClick={() => toggleOrder(order.id)}
-                  >
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <Typography
-                            variant="bodySm"
-                            className="font-semibold"
+                {filteredPcoOrders?.map((order) => {
+                  const isExpanded = expandedOrderId === order.id;
+                  return (
+                    <Card
+                      key={order.id}
+                      className={`cursor-pointer transition-all ${
+                        selectedOrderIds.has(order.id)
+                          ? 'border-2 border-brand-500 ring-2 ring-brand-500/20'
+                          : 'hover:border-border-brand'
+                      }`}
+                      onClick={() => toggleOrder(order.id)}
+                    >
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <Typography
+                              variant="bodySm"
+                              className="font-semibold"
+                            >
+                              {order.orderNumber}
+                            </Typography>
+                            <Typography variant="bodyXs" colorRole="muted">
+                              {order.clientName ?? 'Unknown client'}
+                            </Typography>
+                            <div className="mt-1 flex items-center gap-3 text-xs text-text-muted">
+                              <span>{order.itemCount ?? 0} items</span>
+                              <span>{order.caseCount ?? 0} cases</span>
+                              <span>
+                                {new Date(
+                                  order.createdAt,
+                                ).toLocaleDateString()}
+                              </span>
+                            </div>
+                          </div>
+                          <div
+                            className={`flex h-6 w-6 items-center justify-center rounded ${
+                              selectedOrderIds.has(order.id)
+                                ? 'bg-brand-500 text-white'
+                                : 'border-2 border-border-primary'
+                            }`}
                           >
-                            {order.orderNumber}
-                          </Typography>
-                          <Typography variant="bodyXs" colorRole="muted">
-                            {order.clientName ?? 'Unknown client'}
-                          </Typography>
-                          <div className="mt-1 flex items-center gap-3 text-xs text-text-muted">
-                            <span>{order.totalItems ?? 0} items</span>
-                            <span>{order.totalCases ?? 0} cases</span>
-                            <span>
-                              {new Date(
-                                order.createdAt,
-                              ).toLocaleDateString()}
-                            </span>
+                            {selectedOrderIds.has(order.id) && (
+                              <Icon icon={IconCheck} size="xs" />
+                            )}
                           </div>
                         </div>
-                        <div
-                          className={`flex h-6 w-6 items-center justify-center rounded ${
-                            selectedOrderIds.has(order.id)
-                              ? 'bg-brand-500 text-white'
-                              : 'border-2 border-border-primary'
-                          }`}
+                        {/* View Items toggle */}
+                        <button
+                          type="button"
+                          onClick={(e) => toggleExpand(e, order.id)}
+                          className="mt-2 flex w-full items-center gap-1 text-xs font-medium text-brand-500 hover:text-brand-600"
                         >
-                          {selectedOrderIds.has(order.id) && (
-                            <Icon icon={IconCheck} size="xs" />
-                          )}
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                          <Icon
+                            icon={isExpanded ? IconChevronUp : IconChevronDown}
+                            size="xs"
+                          />
+                          {isExpanded ? 'Hide Items' : 'View Items'}
+                        </button>
+                        {/* Expanded items */}
+                        {isExpanded && (
+                          <div className="mt-2 rounded-md bg-fill-secondary p-3">
+                            {isLoadingPcoItems ? (
+                              <div className="flex items-center justify-center py-2">
+                                <Icon
+                                  icon={IconLoader2}
+                                  size="xs"
+                                  className="animate-spin text-text-muted"
+                                />
+                              </div>
+                            ) : expandedPcoOrder?.items.length ? (
+                              <div className="space-y-1.5">
+                                {expandedPcoOrder.items.map((item) => (
+                                  <div
+                                    key={item.id}
+                                    className="flex items-center justify-between text-xs"
+                                  >
+                                    <span className="truncate text-text-primary">
+                                      {item.productName}
+                                      {item.producer || item.vintage
+                                        ? ` (${[item.producer, item.vintage].filter(Boolean).join(', ')})`
+                                        : ''}
+                                    </span>
+                                    <span className="ml-2 shrink-0 text-text-muted">
+                                      x{item.quantity}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <Typography
+                                variant="bodyXs"
+                                colorRole="muted"
+                                className="text-center"
+                              >
+                                No items
+                              </Typography>
+                            )}
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
               </>
             )}
           </div>

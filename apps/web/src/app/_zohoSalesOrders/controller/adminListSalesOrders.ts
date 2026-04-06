@@ -8,9 +8,9 @@ import { desc, eq } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { zohoSalesOrderItems, zohoSalesOrders } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
-const adminListSalesOrders = adminProcedure.query(async () => {
+const adminListSalesOrders = wmsOperatorProcedure.query(async () => {
   const orders = await db
     .select()
     .from(zohoSalesOrders)
