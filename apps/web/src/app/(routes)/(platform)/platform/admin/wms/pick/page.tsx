@@ -68,27 +68,29 @@ const WMSPickListsPage = () => {
     <div className="container mx-auto max-w-lg md:max-w-3xl lg:max-w-5xl px-4 py-6">
       <div className="space-y-4">
         {/* Header */}
-        <div className="flex items-start gap-3">
+        <div className="flex items-center gap-3">
           <Link
             href="/platform/admin/wms"
             className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-fill-secondary text-text-muted transition-colors hover:bg-fill-primary hover:text-text-primary active:bg-fill-secondary"
           >
             <IconArrowLeft className="h-6 w-6" />
           </Link>
-          <div className="min-w-0 flex-1">
-            <Typography variant="headingLg" className="mb-1">
-              Pick Lists
-            </Typography>
-            <div className="flex items-center gap-2">
-              <Button variant="outline" onClick={() => refetch()}>
-                <Icon icon={IconRefresh} size="sm" />
+          <Typography variant="headingLg" className="flex-1">
+            Pick Lists
+          </Typography>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => refetch()}
+              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-fill-secondary text-text-muted transition-colors hover:bg-fill-primary hover:text-text-primary active:bg-fill-secondary"
+            >
+              <IconRefresh className="h-5 w-5" />
+            </button>
+            <Link href="/platform/admin/wms/pick/new">
+              <Button variant="default">
+                <ButtonContent iconLeft={IconPlus}>New</ButtonContent>
               </Button>
-              <Link href="/platform/admin/wms/pick/new">
-                <Button variant="default">
-                  <ButtonContent iconLeft={IconPlus}>New</ButtonContent>
-                </Button>
-              </Link>
-            </div>
+            </Link>
           </div>
         </div>
 
@@ -204,7 +206,7 @@ const WMSPickListsPage = () => {
                             )}
                           </div>
                           {/* Progress bar */}
-                          <div className="mt-2 h-1.5 w-full max-w-xs rounded-full bg-fill-secondary">
+                          <div className="mt-2 h-1.5 w-full rounded-full bg-fill-secondary">
                             <div
                               className="h-1.5 rounded-full bg-brand-600"
                               style={{
@@ -213,7 +215,7 @@ const WMSPickListsPage = () => {
                             />
                           </div>
                         </div>
-                        <IconChevronRight className="h-5 w-5 text-text-muted" />
+                        <Icon icon={IconChevronRight} size="sm" colorRole="muted" />
                       </div>
                     </CardContent>
                   </Card>
@@ -223,7 +225,7 @@ const WMSPickListsPage = () => {
 
             {/* Pagination */}
             {data.pagination.total > 0 && (
-              <Typography variant="bodyXs" colorRole="muted" className="text-center">
+              <Typography variant="bodyXs" colorRole="muted" className="text-center md:col-span-2">
                 Showing {data.pickLists.length} of {data.pagination.total} pick lists
               </Typography>
             )}

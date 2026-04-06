@@ -199,14 +199,15 @@ const NewPickListPage = () => {
   const isLoading = activeTab === 'sales' ? isLoadingZoho : isLoadingPco;
 
   return (
-    <div className="container mx-auto max-w-2xl px-4 py-6 sm:px-6 sm:py-8">
+    <div className="container mx-auto max-w-2xl px-4 py-6 pb-24 sm:px-6 sm:py-8 sm:pb-8">
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center gap-4">
-          <Link href="/platform/admin/wms/pick">
-            <Button variant="ghost" size="sm">
-              <Icon icon={IconArrowLeft} size="sm" />
-            </Button>
+        <div className="flex items-center gap-3">
+          <Link
+            href="/platform/admin/wms/pick"
+            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-fill-secondary text-text-muted transition-colors hover:bg-fill-primary hover:text-text-primary active:bg-fill-secondary"
+          >
+            <IconArrowLeft className="h-6 w-6" />
           </Link>
           <div className="flex-1">
             <Typography variant="headingMd">New Pick List</Typography>
@@ -215,18 +216,18 @@ const NewPickListPage = () => {
             </Typography>
           </div>
           {activeTab === 'sales' && (
-            <Button
-              variant="ghost"
-              size="sm"
+            <button
+              type="button"
               onClick={() => syncMutation.mutate()}
               disabled={syncMutation.isPending}
+              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-fill-secondary text-text-muted transition-colors hover:bg-fill-primary hover:text-text-primary active:bg-fill-secondary disabled:opacity-50"
             >
-              <Icon
-                icon={syncMutation.isPending ? IconLoader2 : IconRefresh}
-                size="sm"
-                className={syncMutation.isPending ? 'animate-spin' : ''}
-              />
-            </Button>
+              {syncMutation.isPending ? (
+                <IconLoader2 className="h-5 w-5 animate-spin" />
+              ) : (
+                <IconRefresh className="h-5 w-5" />
+              )}
+            </button>
           )}
         </div>
 
@@ -235,24 +236,24 @@ const NewPickListPage = () => {
           <button
             type="button"
             onClick={() => handleTabChange('sales')}
-            className={`flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+            className={`flex-1 rounded-md px-3 py-3 text-sm font-medium transition-colors ${
               activeTab === 'sales'
                 ? 'bg-fill-primary text-text-primary shadow-sm'
                 : 'text-text-muted hover:text-text-primary'
             }`}
           >
-            Sales Orders
+            Sales Orders{filteredZohoOrders ? ` (${filteredZohoOrders.length})` : ''}
           </button>
           <button
             type="button"
             onClick={() => handleTabChange('private')}
-            className={`flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+            className={`flex-1 rounded-md px-3 py-3 text-sm font-medium transition-colors ${
               activeTab === 'private'
                 ? 'bg-fill-primary text-text-primary shadow-sm'
                 : 'text-text-muted hover:text-text-primary'
             }`}
           >
-            Private Orders
+            Private Orders{filteredPcoOrders ? ` (${filteredPcoOrders.length})` : ''}
           </button>
         </div>
 
@@ -268,7 +269,7 @@ const NewPickListPage = () => {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search orders..."
-            className="w-full rounded-lg border border-border-primary bg-fill-primary py-2 pl-10 pr-4 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+            className="w-full rounded-lg border border-border-primary bg-fill-primary py-3 pl-10 pr-4 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
           />
         </div>
 
@@ -313,7 +314,7 @@ const NewPickListPage = () => {
                         allSelected ? new Set() : new Set(allIds),
                       );
                     }}
-                    className="flex w-full items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-text-muted hover:bg-fill-secondary"
+                    className="flex w-full items-center gap-2 rounded-lg px-4 py-3 text-sm font-medium text-text-muted hover:bg-fill-secondary"
                   >
                     <Icon
                       icon={
@@ -378,7 +379,7 @@ const NewPickListPage = () => {
                         <button
                           type="button"
                           onClick={(e) => toggleExpand(e, order.id)}
-                          className="mt-2 flex w-full items-center gap-1 text-xs font-medium text-brand-500 hover:text-brand-600"
+                          className="mt-2 flex w-full items-center gap-1 py-2 text-sm font-medium text-brand-500 hover:text-brand-600"
                         >
                           <Icon
                             icon={isExpanded ? IconChevronUp : IconChevronDown}
@@ -462,7 +463,7 @@ const NewPickListPage = () => {
                         allSelected ? new Set() : new Set(allIds),
                       );
                     }}
-                    className="flex w-full items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-text-muted hover:bg-fill-secondary"
+                    className="flex w-full items-center gap-2 rounded-lg px-4 py-3 text-sm font-medium text-text-muted hover:bg-fill-secondary"
                   >
                     <Icon
                       icon={
@@ -527,7 +528,7 @@ const NewPickListPage = () => {
                         <button
                           type="button"
                           onClick={(e) => toggleExpand(e, order.id)}
-                          className="mt-2 flex w-full items-center gap-1 text-xs font-medium text-brand-500 hover:text-brand-600"
+                          className="mt-2 flex w-full items-center gap-1 py-2 text-sm font-medium text-brand-500 hover:text-brand-600"
                         >
                           <Icon
                             icon={isExpanded ? IconChevronUp : IconChevronDown}

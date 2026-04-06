@@ -345,6 +345,7 @@ const WMSPickListDetailPage = () => {
               </Typography>
               <Button
                 variant="default"
+                className="w-full"
                 onClick={handleComplete}
                 disabled={completeMutation.isPending}
               >
@@ -577,6 +578,7 @@ const WMSPickListDetailPage = () => {
             <div className="flex gap-3">
               <Button
                 variant="outline"
+                size="lg"
                 className="flex-1"
                 onClick={() => {
                   setPickingItem(null);
@@ -657,10 +659,14 @@ const WMSPickListDetailPage = () => {
                       <Typography variant="bodyXs" className="font-medium">
                         {item.productName}
                       </Typography>
-                      <Typography variant="bodyXs" colorRole="muted">
-                        {item.quantityCases} cases
-                        {item.suggestedLocationCode && ` • ${item.suggestedLocationCode}`}
-                      </Typography>
+                      <div className="flex items-center gap-2">
+                        <Typography variant="bodyXs" colorRole="muted">
+                          {item.quantityCases} cases
+                        </Typography>
+                        {item.suggestedLocationCode && (
+                          <LocationBadge locationCode={item.suggestedLocationCode} size="sm" />
+                        )}
+                      </div>
                     </div>
                   </div>
                 </CardContent>
