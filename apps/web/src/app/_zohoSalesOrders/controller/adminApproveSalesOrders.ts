@@ -11,9 +11,9 @@ import { z } from 'zod';
 
 import db from '@/database/client';
 import { zohoSalesOrders } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
-const adminApproveSalesOrders = adminProcedure
+const adminApproveSalesOrders = wmsOperatorProcedure
   .input(
     z.object({
       orderIds: z.array(z.string().uuid()).min(1, 'Select at least one order'),

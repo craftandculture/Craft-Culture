@@ -20,9 +20,9 @@ import {
   zohoSalesOrderItems,
   zohoSalesOrders,
 } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
-const adminReleaseToPick = adminProcedure
+const adminReleaseToPick = wmsOperatorProcedure
   .input(z.object({ salesOrderId: z.string().uuid() }))
   .mutation(async ({ input }) => {
     const { salesOrderId } = input;

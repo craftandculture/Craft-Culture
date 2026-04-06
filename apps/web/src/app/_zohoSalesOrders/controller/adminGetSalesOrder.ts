@@ -14,9 +14,9 @@ import {
   zohoSalesOrderItems,
   zohoSalesOrders,
 } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
-const adminGetSalesOrder = adminProcedure
+const adminGetSalesOrder = wmsOperatorProcedure
   .input(z.object({ id: z.string().uuid() }))
   .query(async ({ input }) => {
     const [order] = await db

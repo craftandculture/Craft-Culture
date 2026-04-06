@@ -18,7 +18,7 @@ import {
   zohoSalesOrderItems,
   zohoSalesOrders,
 } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 /**
  * Convert a raw SKU (18 digits, no dashes) to LWIN18 format (with dashes)
@@ -32,7 +32,7 @@ const formatSkuAsLwin18 = (sku: string) => {
   return `${digits.slice(0, 7)}-${digits.slice(7, 11)}-${digits.slice(11, 13)}-${digits.slice(13)}`;
 };
 
-const adminCreatePickListFromSalesOrder = adminProcedure
+const adminCreatePickListFromSalesOrder = wmsOperatorProcedure
   .input(z.object({ salesOrderId: z.string().uuid() }))
   .mutation(async ({ input }) => {
     const { salesOrderId } = input;
