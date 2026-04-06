@@ -4624,6 +4624,7 @@ export const zohoSalesOrders = pgTable(
     notes: text('notes'),
     billingAddress: jsonb('billing_address'),
     shippingAddress: jsonb('shipping_address'),
+    invoiceNumber: text('invoice_number'),
     pickListId: uuid('pick_list_id').references(() => wmsPickLists.id),
     dispatchBatchId: uuid('dispatch_batch_id').references(() => wmsDispatchBatches.id),
     zohoCreatedTime: timestamp('zoho_created_time', { mode: 'date' }),

@@ -11,9 +11,9 @@ import { z } from 'zod';
 
 import db from '@/database/client';
 import { wmsPickLists, zohoInvoices, zohoSalesOrderItems, zohoSalesOrders } from '@/database/schema';
-import { adminProcedure } from '@/lib/trpc/procedures';
+import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
-const adminGetPickedOrdersForDispatch = adminProcedure
+const adminGetPickedOrdersForDispatch = wmsOperatorProcedure
   .input(
     z
       .object({

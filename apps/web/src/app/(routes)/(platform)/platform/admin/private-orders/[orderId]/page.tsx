@@ -1123,35 +1123,86 @@ const AdminPrivateOrderDetailPage = () => {
 
         {/* Secondary Info - Horizontal Grid Below */}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {/* Order Summary - Compact */}
+          {/* Order Summary - Full Breakdown for Admin */}
           <Card>
             <CardContent className="p-4">
               <Typography variant="labelSm" colorRole="muted" className="mb-2">
-                Summary ({currency})
+                Pricing Breakdown ({currency})
               </Typography>
-              <div className="space-y-1 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-text-muted">Landed Duty Free</span>
-                  <span>{formatCurrencyValue(getAmount(order.subtotalUsd), currency)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-text-muted">Import Duty (20%)</span>
-                  <span>{formatCurrencyValue(getAmount(order.dutyUsd), currency)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-text-muted">Transfer (0.75%)</span>
-                  <span>{formatCurrencyValue(getAmount(order.logisticsUsd), currency)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-text-muted">VAT (5%)</span>
-                  <span>{formatCurrencyValue(getAmount(order.vatUsd), currency)}</span>
-                </div>
-                <Divider />
-                <div className="flex justify-between font-semibold">
-                  <span>Total</span>
-                  <span>{formatCurrencyValue(getAmount(order.totalUsd), currency)}</span>
-                </div>
-              </div>
+              {(() => {
+                // Calculate derived values for full breakdown
+                const lineItemsTotal = order.items?.reduce(
+                  (sum, item) => sum + Number(item.pricePerCaseUsd) * item.quantity,
+                  0
+                ) ?? 0;
+                const landedDutyFree = Number(order.subtotalUsd) || 0;
+                const ccMargin = landedDutyFree - lineItemsTotal;
+                const dutyUsd = Number(order.dutyUsd) || 0;
+                const transferUsd = Number(order.logisticsUsd) || 0;
+                const dutyPaidLanded = landedDutyFree + dutyUsd + transferUsd;
+                const vatUsd = Number(order.vatUsd) || 0;
+                const totalUsd = Number(order.totalUsd) || 0;
+                const afterDistributor = totalUsd - vatUsd;
+                const distributorMargin = afterDistributor - dutyPaidLanded;
+
+                return (
+                  <div className="space-y-1 text-xs">
+                    {/* Line Items */}
+                    <div className="flex justify-between">
+                      <span className="text-text-muted">Line Items Total</span>
+                      <span>{formatCurrencyValue(getAmount(lineItemsTotal), currency)}</span>
+                    </div>
+                    <div className="flex justify-between text-text-muted">
+                      <span className="pl-2">+ C&C Margin (2.5%)</span>
+                      <span>{formatCurrencyValue(getAmount(ccMargin), currency)}</span>
+                    </div>
+                    <div className="flex justify-between font-medium">
+                      <span>= Landed Duty Free</span>
+                      <span>{formatCurrencyValue(getAmount(landedDutyFree), currency)}</span>
+                    </div>
+
+                    <Divider className="my-1" />
+
+                    {/* Duties & Transfer */}
+                    <div className="flex justify-between text-text-muted">
+                      <span className="pl-2">+ Import Duty (20%)</span>
+                      <span>{formatCurrencyValue(getAmount(dutyUsd), currency)}</span>
+                    </div>
+                    <div className="flex justify-between text-text-muted">
+                      <span className="pl-2">+ Transfer (0.75%)</span>
+                      <span>{formatCurrencyValue(getAmount(transferUsd), currency)}</span>
+                    </div>
+                    <div className="flex justify-between font-medium">
+                      <span>= Duty Paid Landed</span>
+                      <span>{formatCurrencyValue(getAmount(dutyPaidLanded), currency)}</span>
+                    </div>
+
+                    <Divider className="my-1" />
+
+                    {/* Distributor Margin */}
+                    <div className="flex justify-between text-text-muted">
+                      <span className="pl-2">+ Distributor (7.5%)</span>
+                      <span>{formatCurrencyValue(getAmount(distributorMargin), currency)}</span>
+                    </div>
+                    <div className="flex justify-between font-medium">
+                      <span>= Before VAT</span>
+                      <span>{formatCurrencyValue(getAmount(afterDistributor), currency)}</span>
+                    </div>
+
+                    <Divider className="my-1" />
+
+                    {/* VAT & Total */}
+                    <div className="flex justify-between text-text-muted">
+                      <span className="pl-2">+ VAT (5%)</span>
+                      <span>{formatCurrencyValue(getAmount(vatUsd), currency)}</span>
+                    </div>
+                    <div className="flex justify-between font-semibold text-sm pt-1">
+                      <span>Total</span>
+                      <span>{formatCurrencyValue(getAmount(totalUsd), currency)}</span>
+                    </div>
+                  </div>
+                );
+              })()}
             </CardContent>
           </Card>
 
