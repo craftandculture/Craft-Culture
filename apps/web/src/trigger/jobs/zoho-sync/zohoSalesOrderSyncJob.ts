@@ -6,10 +6,14 @@
  */
 
 import { logger, schedules } from '@trigger.dev/sdk';
-import { eq } from 'drizzle-orm';
+import { and, eq, isNull } from 'drizzle-orm';
 
 import reserveStockForOrderItems from '@/app/_wms/utils/reserveStockForOrderItems';
-import { zohoSalesOrderItems, zohoSalesOrders } from '@/database/schema';
+import {
+  zohoInvoices,
+  zohoSalesOrderItems,
+  zohoSalesOrders,
+} from '@/database/schema';
 import { isZohoConfigured } from '@/lib/zoho/client';
 import { getSalesOrder, listAllSalesOrdersByStatus } from '@/lib/zoho/salesOrders';
 import triggerDb from '@/trigger/triggerDb';
@@ -77,6 +81,34 @@ export const zohoSalesOrderSyncJob = schedules.task({
                 .where(eq(zohoSalesOrders.id, existing.id));
               results.updated++;
             }
+
+            // Backfill invoice_number if missing
+            const [needsInvoice] = await triggerDb
+              .select({ id: zohoSalesOrders.id })
+              .from(zohoSalesOrders)
+              .where(
+                and(
+                  eq(zohoSalesOrders.id, existing.id),
+                  isNull(zohoSalesOrders.invoiceNumber),
+                ),
+              )
+              .limit(1);
+
+            if (needsInvoice) {
+              const [invoice] = await triggerDb
+                .select({ invoiceNumber: zohoInvoices.invoiceNumber })
+                .from(zohoInvoices)
+                .where(eq(zohoInvoices.referenceNumber, zohoOrder.salesorder_number))
+                .limit(1);
+
+              if (invoice?.invoiceNumber) {
+                await triggerDb
+                  .update(zohoSalesOrders)
+                  .set({ invoiceNumber: invoice.invoiceNumber })
+                  .where(eq(zohoSalesOrders.id, existing.id));
+              }
+            }
+
             continue;
           }
 
@@ -133,6 +165,27 @@ export const zohoSalesOrderSyncJob = schedules.task({
 
             return order;
           });
+
+          // Link invoice number from zohoInvoices (matched by reference_number = SO number)
+          try {
+            const [invoice] = await triggerDb
+              .select({ invoiceNumber: zohoInvoices.invoiceNumber })
+              .from(zohoInvoices)
+              .where(eq(zohoInvoices.referenceNumber, fullOrder.salesorder_number))
+              .limit(1);
+
+            if (invoice?.invoiceNumber) {
+              await triggerDb
+                .update(zohoSalesOrders)
+                .set({ invoiceNumber: invoice.invoiceNumber })
+                .where(eq(zohoSalesOrders.id, newOrder.id));
+            }
+          } catch (invoiceError) {
+            logger.warn(
+              `Failed to link invoice for ${fullOrder.salesorder_number}`,
+              { error: invoiceError },
+            );
+          }
 
           // Reserve WMS stock for the new order
           try {

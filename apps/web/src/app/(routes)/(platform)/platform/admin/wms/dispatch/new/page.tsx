@@ -58,7 +58,7 @@ const DispatchWizardPage = () => {
 
   // Fetch approved PCO orders
   const { data: pcoOrders, isLoading: isLoadingPco } = useQuery({
-    ...api.privateClientOrders.admin.getMany.queryOptions({
+    ...api.privateClientOrders.adminGetMany.queryOptions({
       status: 'cc_approved',
       limit: 50,
     }),
@@ -98,12 +98,12 @@ const DispatchWizardPage = () => {
       customerName: o.customerName,
       totalCases: o.totalCases,
     })),
-    ...(pcoOrders?.orders ?? []).map((o) => ({
+    ...(pcoOrders?.data ?? []).map((o) => ({
       id: o.id,
       type: 'pco' as const,
       orderNumber: o.orderNumber,
       customerName: o.clientName ?? null,
-      totalCases: o.totalCases ?? 0,
+      totalCases: o.caseCount ?? 0,
     })),
   ];
 

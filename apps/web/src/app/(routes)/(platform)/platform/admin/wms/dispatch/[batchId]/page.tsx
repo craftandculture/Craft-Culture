@@ -51,7 +51,7 @@ const WMSDispatchBatchDetailPage = () => {
 
   // Fetch available PCO orders for adding
   const { data: availablePcoOrders } = useQuery({
-    ...api.privateClientOrders.admin.getMany.queryOptions({
+    ...api.privateClientOrders.adminGetMany.queryOptions({
       status: 'cc_approved',
       limit: 50,
     }),
@@ -76,11 +76,11 @@ const WMSDispatchBatchDetailPage = () => {
         totalCases: o.totalCases,
         type: 'zoho' as const,
       })),
-      ...(availablePcoOrders?.orders ?? []).map((o) => ({
+      ...(availablePcoOrders?.data ?? []).map((o) => ({
         id: o.id,
         orderNumber: o.orderNumber,
         clientName: o.clientName,
-        totalCases: o.totalCases,
+        totalCases: o.caseCount ?? 0,
         type: 'pco' as const,
       })),
     ],
