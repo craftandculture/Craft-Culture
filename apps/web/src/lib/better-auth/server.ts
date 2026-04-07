@@ -23,6 +23,10 @@ const authServerClient = betterAuth({
     : serverConfig.appUrl.toString(),
   basePath: '/api/auth',
   secret: serverConfig.betterAuthSecret,
+  session: {
+    expiresIn: 60 * 60 * 24 * 365 * 10, // 10 years (effectively never)
+    updateAge: 60 * 60 * 24, // Refresh session daily
+  },
   plugins: [
     admin({
       impersonationSessionDuration: 60 * 60, // 1 hour
