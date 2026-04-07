@@ -204,6 +204,13 @@
       "when": 1775476604875,
       "tag": "0028_warm_absorbing_man",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1775549168505,
+      "tag": "0029_yellow_stephen_strange",
+      "breakpoints": true
     }
   ]
 }

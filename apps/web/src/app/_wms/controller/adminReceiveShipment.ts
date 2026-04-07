@@ -202,8 +202,8 @@ const adminReceiveShipment = wmsOperatorProcedure
             .insert(wmsStock)
             .values({
               locationId: itemLocationId,
-              ownerId: partner.id,
-              ownerName: partner.businessName,
+              ownerId: shipmentItem.overrideOwnerId ?? partner.id,
+              ownerName: shipmentItem.overrideOwnerName ?? partner.businessName,
               lwin18,
               supplierSku,
               productName,

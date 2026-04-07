@@ -47,6 +47,7 @@ import SheetContent from '@/app/_ui/components/Sheet/SheetContent';
 import SheetDescription from '@/app/_ui/components/Sheet/SheetDescription';
 import SheetTitle from '@/app/_ui/components/Sheet/SheetTitle';
 import Typography from '@/app/_ui/components/Typography/Typography';
+import OwnerBadge from '@/app/_wms/components/OwnerBadge';
 import type { LogisticsShipment } from '@/database/schema';
 import useTRPC from '@/lib/trpc/browser';
 import formatPrice from '@/utils/formatPrice';
@@ -122,6 +123,7 @@ const ShipmentDetailPage = () => {
     productName: '', producer: '', vintage: '', region: '',
     countryOfOrigin: '', hsCode: '', lwin: '', cases: '', bottlesPerCase: '',
     bottleSizeMl: '', productCostPerBottle: '',
+    overrideOwnerId: '' as string | null, overrideOwnerName: '' as string | null,
   });
 
   const { data: shipment, isLoading, isError, error, refetch } = useQuery({
@@ -154,6 +156,10 @@ const ShipmentDetailPage = () => {
 
   const { data: partners } = useQuery({
     ...api.partners.getMany.queryOptions({ limit: 100 }),
+  });
+
+  const { data: partnersList } = useQuery({
+    ...api.partners.list.queryOptions(),
   });
 
   const { mutate: addItem, isPending: isAddingItemPending } = useMutation(
@@ -914,6 +920,8 @@ const ShipmentDetailPage = () => {
               bottlesPerCase: String(item.bottlesPerCase || 12),
               bottleSizeMl: String(item.bottleSizeMl || 750),
               productCostPerBottle: item.productCostPerBottle ? String(item.productCostPerBottle) : '',
+              overrideOwnerId: item.overrideOwnerId ?? null,
+              overrideOwnerName: item.overrideOwnerName ?? null,
             });
           };
 
@@ -932,6 +940,8 @@ const ShipmentDetailPage = () => {
               bottlesPerCase: sheetForm.bottlesPerCase ? parseInt(sheetForm.bottlesPerCase, 10) : null,
               bottleSizeMl: sheetForm.bottleSizeMl ? parseInt(sheetForm.bottleSizeMl, 10) : null,
               productCostPerBottle: sheetForm.productCostPerBottle ? parseFloat(sheetForm.productCostPerBottle) : null,
+              overrideOwnerId: sheetForm.overrideOwnerId || null,
+              overrideOwnerName: sheetForm.overrideOwnerName || null,
             });
           };
 
@@ -1135,6 +1145,11 @@ const ShipmentDetailPage = () => {
                                       <Typography variant="bodyXs" colorRole="muted" className="mt-0.5">
                                         {metadata}
                                       </Typography>
+                                    )}
+                                    {item.overrideOwnerName && (
+                                      <div className="mt-1">
+                                        <OwnerBadge ownerName={item.overrideOwnerName} size="sm" />
+                                      </div>
                                     )}
                                   </button>
                                 </td>
@@ -1443,6 +1458,33 @@ const ShipmentDetailPage = () => {
                             onChange={(e) => setSheetForm((f) => ({ ...f, productCostPerBottle: e.target.value }))}
                             placeholder="0.00"
                           />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-xs font-medium text-text-muted">Owner (override)</label>
+                          <select
+                            value={sheetForm.overrideOwnerId ?? ''}
+                            onChange={(e) => {
+                              const selectedId = e.target.value || null;
+                              const selectedPartner = partnersList?.find((p) => p.id === selectedId);
+                              setSheetForm((f) => ({
+                                ...f,
+                                overrideOwnerId: selectedId,
+                                overrideOwnerName: selectedPartner?.name ?? null,
+                              }));
+                            }}
+                            className="w-full rounded-lg border border-border-primary bg-fill-primary px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                          >
+                            <option value="">
+                              {shipment.partner?.businessName
+                                ? `${shipment.partner.businessName} (shipment default)`
+                                : 'Inherit from shipment'}
+                            </option>
+                            {partnersList?.map((p) => (
+                              <option key={p.id} value={p.id}>
+                                {p.name}
+                              </option>
+                            ))}
+                          </select>
                         </div>
                         <Button className="w-full" onClick={handleSaveSheet} disabled={isUpdatingItem}>
                           <ButtonContent iconLeft={isUpdatingItem ? IconLoader2 : IconCheck}>
