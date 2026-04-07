@@ -102,6 +102,8 @@ const ShipmentDetailPage = () => {
   const [editedTransitBoe, setEditedTransitBoe] = useState('');
   const [isEditingReExportBoe, setIsEditingReExportBoe] = useState(false);
   const [editedReExportBoe, setEditedReExportBoe] = useState('');
+  const [isEditingAwb, setIsEditingAwb] = useState(false);
+  const [editedAwb, setEditedAwb] = useState('');
   const [editingCostField, setEditingCostField] = useState<string | null>(null);
   const [editedCostValue, setEditedCostValue] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -615,7 +617,52 @@ const ShipmentDetailPage = () => {
                   {shipment.transportMode === 'air' ? (
                     <div className="flex justify-between">
                       <dt className="text-text-muted">AWB #</dt>
-                      <dd className="font-mono">{shipment.awbNumber ?? '-'}</dd>
+                      <dd className="font-mono">
+                        {isEditingAwb ? (
+                          <form
+                            className="flex items-center gap-1"
+                            onSubmit={(e) => {
+                              e.preventDefault();
+                              const trimmed = editedAwb.trim();
+                              if (trimmed !== (shipment.awbNumber ?? '')) {
+                                updateShipment({
+                                  id: shipmentId,
+                                  awbNumber: trimmed || undefined,
+                                });
+                              }
+                              setIsEditingAwb(false);
+                            }}
+                          >
+                            <Input
+                              value={editedAwb}
+                              onChange={(e) => setEditedAwb(e.target.value)}
+                              className="h-7 w-40 font-mono text-sm"
+                              placeholder="AWB number"
+                              autoFocus
+                              onKeyDown={(e) => {
+                                if (e.key === 'Escape') {
+                                  setIsEditingAwb(false);
+                                  setEditedAwb(shipment.awbNumber ?? '');
+                                }
+                              }}
+                            />
+                            <Button type="submit" variant="ghost" size="sm">
+                              <Icon icon={IconCheck} size="sm" />
+                            </Button>
+                          </form>
+                        ) : (
+                          <button
+                            type="button"
+                            className="cursor-pointer hover:underline"
+                            onClick={() => {
+                              setEditedAwb(shipment.awbNumber ?? '');
+                              setIsEditingAwb(true);
+                            }}
+                          >
+                            {shipment.awbNumber || '-'}
+                          </button>
+                        )}
+                      </dd>
                     </div>
                   ) : (
                     <>
