@@ -278,6 +278,24 @@ const authServerClient = betterAuth({
         },
       },
     },
+    verification: {
+      create: {
+        before: async (verification) => {
+          logger.info('[Better Auth] Verification create BEFORE', {
+            identifier: verification.identifier?.substring(0, 10) + '...',
+            expiresAt: verification.expiresAt,
+            hasValue: !!verification.value,
+          });
+          return { data: verification };
+        },
+        after: async (verification) => {
+          logger.info('[Better Auth] Verification create AFTER', {
+            id: verification.id,
+            identifier: verification.identifier?.substring(0, 10) + '...',
+          });
+        },
+      },
+    },
   },
 });
 
