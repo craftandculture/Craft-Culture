@@ -257,7 +257,8 @@ const adminGetMorningView = adminProcedure.query(async () => {
         id: zohoSalesOrders.id,
         orderNumber: zohoSalesOrders.salesOrderNumber,
         customerName: zohoSalesOrders.customerName,
-        totalUsd: zohoSalesOrders.total,
+        total: zohoSalesOrders.total,
+        currencyCode: zohoSalesOrders.currencyCode,
         status: zohoSalesOrders.status,
         createdAt: zohoSalesOrders.createdAt,
       })
@@ -358,16 +359,21 @@ const adminGetMorningView = adminProcedure.query(async () => {
       status: o.status ?? '',
       createdAt: o.createdAt,
     })),
-    ...recentZoho.map((o) => ({
-      id: o.id,
-      orderNumber: o.orderNumber ?? '',
-      source: 'zoho' as const,
-      customerName: o.customerName ?? '',
-      totalUsd: o.totalUsd,
-      totalAed: o.totalUsd * USD_TO_AED,
-      status: o.status ?? '',
-      createdAt: o.createdAt,
-    })),
+    ...recentZoho.map((o) => {
+      const isAed = o.currencyCode === 'AED';
+      const usd = isAed ? o.total / USD_TO_AED : o.total;
+      const aed = isAed ? o.total : o.total * USD_TO_AED;
+      return {
+        id: o.id,
+        orderNumber: o.orderNumber ?? '',
+        source: 'zoho' as const,
+        customerName: o.customerName ?? '',
+        totalUsd: usd,
+        totalAed: aed,
+        status: o.status ?? '',
+        createdAt: o.createdAt,
+      };
+    }),
   ]
     .sort((a, b) => {
       const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
