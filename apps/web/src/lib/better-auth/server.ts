@@ -33,10 +33,16 @@ const authServerClient = betterAuth({
     }),
     magicLink({
       sendMagicLink: async ({ email, token, url }) => {
-        // Log magic link details for debugging
+        // Build a landing page URL instead of the direct API verify URL.
+        // Email clients often prefetch links for security scanning, which
+        // consumes magic link tokens. Our /auth/verify page only redirects
+        // via JS (which email scanners don't execute), protecting the token.
+        const verifyUrl = new URL(url);
+        const landingPageUrl = `${verifyUrl.origin}/auth/verify${verifyUrl.search}`;
+
         logger.info('[Better Auth] Sending magic link', {
           email,
-          url,
+          landingPageUrl,
           tokenLength: token?.length,
           env: serverConfig.env,
         });
@@ -45,7 +51,7 @@ const authServerClient = betterAuth({
           logger.dev('You are in development mode, so no email will be sent');
           logger.dev('Email:', email);
           logger.dev('Token:', token);
-          logger.dev('URL:', url);
+          logger.dev('URL:', landingPageUrl);
           return;
         }
 
@@ -54,8 +60,8 @@ const authServerClient = betterAuth({
           email,
           dataVariables: {
             token,
-            url,
-            magicLink: url, // Template uses {{magicLink}}
+            url: landingPageUrl,
+            magicLink: landingPageUrl,
           },
         });
 
