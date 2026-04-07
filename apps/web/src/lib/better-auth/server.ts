@@ -24,7 +24,7 @@ const authServerClient = betterAuth({
   basePath: '/api/auth',
   secret: serverConfig.betterAuthSecret,
   session: {
-    expiresIn: 60 * 60 * 24 * 365 * 10, // 10 years (effectively never)
+    expiresIn: 60 * 60 * 24 * 399, // 399 days (max cookie Max-Age is 400 days)
     updateAge: 60 * 60 * 24, // Refresh session daily
   },
   plugins: [
