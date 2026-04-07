@@ -112,9 +112,23 @@ export const GET = async (request: NextRequest) => {
 
   logger.info('[Auth] Magic link verify — pre-check', debugInfo);
 
-  // Step 2: Call Better Auth
+  // Step 5: Call Better Auth — capture internal errors via console.error intercept
+  // The better-call router does console.error('# SERVER_ERROR: ', error) before returning 500
+  let capturedServerError: unknown = null;
+  const originalConsoleError = console.error;
+  console.error = (...args: unknown[]) => {
+    if (
+      typeof args[0] === 'string' &&
+      args[0].includes('SERVER_ERROR')
+    ) {
+      capturedServerError = args[1];
+    }
+    originalConsoleError(...args);
+  };
+
   try {
     const response = await handler.GET(request);
+    console.error = originalConsoleError;
 
     // Read the response body
     const cloned = response.clone();
@@ -128,6 +142,22 @@ export const GET = async (request: NextRequest) => {
     debugInfo.responseStatus = response.status;
     debugInfo.responseLocation = response.headers.get('location') ?? 'none';
     debugInfo.responseBody = body?.substring(0, 500);
+
+    // Include captured error details
+    if (capturedServerError) {
+      debugInfo.capturedError =
+        capturedServerError instanceof Error
+          ? capturedServerError.message
+          : String(capturedServerError);
+      debugInfo.capturedStack =
+        capturedServerError instanceof Error
+          ? capturedServerError.stack?.substring(0, 1000)
+          : undefined;
+      debugInfo.capturedType =
+        capturedServerError && typeof capturedServerError === 'object'
+          ? (capturedServerError as Record<string, unknown>).constructor?.name
+          : typeof capturedServerError;
+    }
 
     logger.info('[Auth] Magic link verify — result', debugInfo);
 
@@ -154,6 +184,8 @@ export const GET = async (request: NextRequest) => {
 
     return response;
   } catch (error) {
+    console.error = originalConsoleError;
+
     // Better Auth uses throw for redirects — check if it's a Response
     if (error instanceof Response) {
       debugInfo.redirectStatus = error.status;
