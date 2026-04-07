@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 import db from '@/database/client';
-import { verifications } from '@/database/schema';
+import { sessions, users, verifications } from '@/database/schema';
 import auth from '@/lib/better-auth/server';
 import logger from '@/utils/logger';
 
@@ -27,13 +27,14 @@ export const GET = async (request: NextRequest) => {
     timestamp: new Date().toISOString(),
   };
 
-  // Step 1: Direct DB check — does the token exist?
+  // Step 1: Direct DB check — does the token exist? Also get the value (email).
   if (token) {
     try {
       const rows = await db
         .select({
           id: verifications.id,
           identifier: verifications.identifier,
+          value: verifications.value,
           expiresAt: verifications.expiresAt,
           createdAt: verifications.createdAt,
         })
@@ -47,6 +48,55 @@ export const GET = async (request: NextRequest) => {
         debugInfo.tokenExpired = row.expiresAt < new Date();
         debugInfo.tokenExpiresAt = row.expiresAt?.toISOString();
         debugInfo.tokenCreatedAt = row.createdAt?.toISOString();
+
+        // Step 2: Parse the stored value to get email
+        try {
+          const parsed = JSON.parse(row.value) as { email?: string; name?: string };
+          debugInfo.parsedEmail = parsed.email ?? 'missing';
+          debugInfo.parsedName = parsed.name ?? 'missing';
+
+          // Step 3: Look up user by email (same query Better Auth does)
+          if (parsed.email) {
+            const userRows = await db
+              .select({
+                id: users.id,
+                email: users.email,
+                name: users.name,
+                emailVerified: users.emailVerified,
+                role: users.role,
+                approvalStatus: users.approvalStatus,
+              })
+              .from(users)
+              .where(eq(users.email, parsed.email.toLowerCase()))
+              .limit(1);
+
+            if (userRows.length > 0) {
+              const user = userRows[0];
+              debugInfo.userFound = true;
+              debugInfo.userId = user.id;
+              debugInfo.userEmail = user.email;
+              debugInfo.userName = user.name;
+              debugInfo.userEmailVerified = user.emailVerified;
+              debugInfo.userRole = user.role;
+              debugInfo.userApprovalStatus = user.approvalStatus;
+
+              // Step 4: Count existing sessions for this user
+              const sessionCount = await db
+                .select({ id: sessions.id })
+                .from(sessions)
+                .where(eq(sessions.userId, user.id))
+                .limit(10);
+              debugInfo.existingSessions = sessionCount.length;
+            } else {
+              debugInfo.userFound = false;
+              debugInfo.userSearchEmail = parsed.email.toLowerCase();
+            }
+          }
+        } catch (parseErr) {
+          debugInfo.valueParseError =
+            parseErr instanceof Error ? parseErr.message : 'unknown';
+          debugInfo.rawValue = row.value?.substring(0, 200);
+        }
       } else {
         const countResult = await db
           .select({ id: verifications.id })
